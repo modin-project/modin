@@ -703,11 +703,35 @@ def test_aggregate_error_checking(data):
         modin_series.aggregate("NOT_EXISTS")
 
 
-@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-def test_align(data):
-    modin_series, _ = create_test_series(data)  # noqa: F841
-    with pytest.warns(UserWarning):
-        modin_series.align(modin_series)
+@pytest.mark.parametrize(
+    "test_data, test_data2",
+    [
+        (
+            np.random.uniform(0, 100, size=(2 ** 6)),
+            np.random.uniform(0, 100, size=(2 ** 7)),
+        ),
+        (
+            np.random.uniform(0, 100, size=(2 ** 7)),
+            np.random.uniform(0, 100, size=(2 ** 6)),
+        ),
+    ],
+)
+@pytest.mark.parametrize("join", ["left", "right", "inner", "outer"])
+def test_align(test_data, test_data2, join):
+    index = pd.Index([f"row{i}" for i in range(1, test_data.shape[0] + 1)], name="rows")
+    index2 = pd.Index(
+        [f"row{i}" for i in range(1, test_data2.shape[0] + 1)], name="rows"
+    )
+
+    ms = pd.Series(test_data, index=index)
+    ps = pandas.Series(test_data, index=index)
+    ms2 = pd.Series(test_data2, index=index2)
+    ps2 = pandas.Series(test_data2, index=index2)
+
+    mr1, mr2 = ms.align(ms2, join=join, axis=0)
+    pr1, pr2 = ps.align(ps2, join=join, axis=0)
+    df_equals(mr1, pr1)
+    df_equals(mr2, pr2)
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)

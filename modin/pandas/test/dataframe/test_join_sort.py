@@ -41,6 +41,48 @@ pd.DEFAULT_NPARTITIONS = 4
 matplotlib.use("Agg")
 
 
+@pytest.mark.parametrize(
+    "test_data, test_data2",
+    [
+        (
+            np.random.uniform(0, 100, size=(2 ** 6, 2 ** 6)),
+            np.random.uniform(0, 100, size=(2 ** 7, 2 ** 7)),
+        ),
+        (
+            np.random.uniform(0, 100, size=(2 ** 7, 2 ** 7)),
+            np.random.uniform(0, 100, size=(2 ** 6, 2 ** 6)),
+        ),
+    ],
+)
+@pytest.mark.parametrize("axis", [0, 1])
+@pytest.mark.parametrize("join", ["left", "right", "inner", "outer"])
+def test_align(test_data, test_data2, axis, join):
+    if axis == 1:
+        columns = [f"col{i}" for i in range(test_data.shape[1])]
+        index = pd.Index([i for i in range(1, test_data.shape[0] + 1)], name="rows")
+        columns2 = [f"col{i}" for i in range(test_data2.shape[1])]
+        index2 = pd.Index([i for i in range(1, test_data2.shape[0] + 1)], name="rows")
+    else:
+        columns = [i for i in range(test_data.shape[1])]
+        index = pd.Index(
+            [f"row{i}" for i in range(1, test_data.shape[0] + 1)], name="rows"
+        )
+        columns2 = [i for i in range(test_data2.shape[1])]
+        index2 = pd.Index(
+            [f"row{i}" for i in range(1, test_data2.shape[0] + 1)], name="rows"
+        )
+
+    mdf = pd.DataFrame(test_data, columns=columns, index=index)
+    pdf = pandas.DataFrame(test_data, columns=columns, index=index)
+    mdf2 = pd.DataFrame(test_data2, columns=columns2, index=index2)
+    pdf2 = pandas.DataFrame(test_data2, columns=columns2, index=index2)
+
+    mr1, mr2 = mdf.align(mdf2, join=join, axis=axis)
+    pr1, pr2 = pdf.align(pdf2, join=join, axis=axis)
+    df_equals(mr1, pr1)
+    df_equals(mr2, pr2)
+
+
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_combine(data):
     pandas_df = pandas.DataFrame(data)

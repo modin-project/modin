@@ -1226,9 +1226,12 @@ class BasePandasFrame(object):
         self,
         axis,
         func,
+        wrap_func=True,
         new_index=None,
         new_columns=None,
         dtypes=None,
+        num_objs=1,
+        broadcast=False,
     ):
         """
         Perform a function across an entire axis.
@@ -1239,6 +1242,8 @@ class BasePandasFrame(object):
                 The axis to apply over (0 - rows, 1 - columns).
             func : callable
                 The function to apply.
+            wrap_func : boolean, default True
+                Whether to wrap `func` with `_build_map_reduce` or not.
             new_index : list-like (optional)
                 The index of the result. We may know this in advance,
                 and if not provided it must be computed.
@@ -1249,6 +1254,14 @@ class BasePandasFrame(object):
                 The data types of the result. This is an optimization
                 because there are functions that always result in a particular data
                 type, and allows us to avoid (re)computing it.
+            num_objs : int, default 1
+                The number of Modin Frame objects created.
+            broadcast : boolean, default False
+                The flag indicating use of broadcast algorithm
+                when we apply each left partition to entire right object.
+                It is needed in order to not concatenate right objects after
+                performing `apply` method when num_objs=2 because
+                the first right object is valid after first `apply` call.
 
         Returns
         -------
@@ -1260,12 +1273,15 @@ class BasePandasFrame(object):
         The data shape may change as a result of the function.
         """
         return self.broadcast_apply_full_axis(
-            axis=axis,
-            func=func,
+            None,
+            axis,
+            func,
+            wrap_func=wrap_func,
             new_index=new_index,
             new_columns=new_columns,
             dtypes=dtypes,
-            other=None,
+            num_objs=num_objs,
+            broadcast=broadcast,
         )
 
     def _apply_full_axis_select_indices(
@@ -1582,22 +1598,28 @@ class BasePandasFrame(object):
 
     def broadcast_apply_full_axis(
         self,
+        other,
         axis,
         func,
-        other,
+        wrap_func=True,
         new_index=None,
         new_columns=None,
         dtypes=None,
+        num_objs=1,
+        broadcast=False,
     ):
-        """Broadcast partitions of other dataframe partitions and apply a function along full axis.
+        """
+        Broadcast partitions of other dataframe partitions and apply a function along full axis.
 
         Parameters
         ----------
+            other : other Modin frame to broadcast
             axis : 0 or 1
                 The axis to apply over (0 - rows, 1 - columns).
             func : callable
                 The function to apply.
-            other : other Modin frame to broadcast
+            wrap_func : boolean, default True
+                Whether to wrap `func` with `_build_map_reduce` or not.
             new_index : list-like (optional)
                 The index of the result. We may know this in advance,
                 and if not provided it must be computed.
@@ -1608,6 +1630,14 @@ class BasePandasFrame(object):
                 The data types of the result. This is an optimization
                 because there are functions that always result in a particular data
                 type, and allows us to avoid (re)computing it.
+            num_objs : int, default 1
+                The number of Modin Frame objects created.
+            broadcast : boolean, default False
+                The flag indicating use of broadcast algorithm
+                when we apply each left partition to entire right object.
+                It is needed in order to not concatenate right objects after
+                performing `apply` method when num_objs=2 because
+                the first right object is valid after first `apply` call.
 
         Returns
         -------
@@ -1617,30 +1647,42 @@ class BasePandasFrame(object):
             axis=axis,
             left=self._partitions,
             right=other if other is None else other._partitions,
-            apply_func=self._build_mapreduce_func(axis, func),
+            apply_func=self._build_mapreduce_func(axis, func) if wrap_func else func,
             keep_partitioning=True,
+            num_objs=num_objs,
+            broadcast=broadcast,
         )
-        # Index objects for new object creation. This is shorter than if..else
-        new_axes = [
-            self._compute_axis_labels(i, new_partitions)
-            if new_axis is None
-            else new_axis
-            for i, new_axis in enumerate([new_index, new_columns])
-        ]
-        if dtypes == "copy":
-            dtypes = self._dtypes
-        elif dtypes is not None:
-            dtypes = pandas.Series(
-                [np.dtype(dtypes)] * len(new_axes[1]), index=new_axes[1]
+
+        def compute_result(new_partitions, new_index, new_columns, dtypes):
+            # Index objects for new object creation. This is shorter than if..else
+            new_axes = [
+                self._compute_axis_labels(i, new_partitions)
+                if new_axis is None
+                else new_axis
+                for i, new_axis in enumerate([new_index, new_columns])
+            ]
+            if dtypes == "copy":
+                dtypes = self._dtypes
+            elif dtypes is not None:
+                dtypes = pandas.Series(
+                    [np.dtype(dtypes)] * len(new_axes[1]), index=new_axes[1]
+                )
+            return self.__constructor__(
+                new_partitions,
+                *new_axes,
+                None,
+                None,
+                dtypes,
+                validate_axes="all" if new_partitions.size != 0 else False,
             )
-        return self.__constructor__(
-            new_partitions,
-            *new_axes,
-            None,
-            None,
-            dtypes,
-            validate_axes="all" if new_partitions.size != 0 else False,
-        )
+
+        if isinstance(new_partitions, tuple):
+            return tuple(
+                compute_result(obj, new_index, new_columns, dtypes)
+                for obj in new_partitions
+            )
+        else:
+            return compute_result(new_partitions, new_index, new_columns, dtypes)
 
     def _copartition(self, axis, other, how, sort, force_repartition=False):
         """

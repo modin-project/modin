@@ -383,6 +383,26 @@ class BaseQueryCompiler(abc.ABC):
             self, cond=cond, other=other, **kwargs
         )
 
+    def align(self, other, **kwargs):
+        """
+        Align two objects on their axes with the specified join method.
+
+        Parameters
+        ----------
+        other : BaseQueryCompiler
+            The query compiler of other.
+        **kwargs
+            See pd.DataFrame.align for more info on kwargs.
+
+        Returns
+        -------
+        (BaseQueryCompiler, BaseQueryCompiler)
+            Tuple of aligned query compilers.
+        """
+        return DataFrameDefault.register(pandas.DataFrame.align)(
+            self, other=other, **kwargs
+        )
+
     def merge(self, right, **kwargs):
         """
         Merge DataFrame or named Series objects with a database-style join.

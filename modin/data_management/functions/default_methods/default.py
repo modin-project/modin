@@ -39,26 +39,34 @@ class DefaultMethod(Function):
             df = cls.frame_wrapper(df)
             result = fn(df, *args, **kwargs)
 
-            if (
-                not isinstance(result, pandas.Series)
-                and not isinstance(result, pandas.DataFrame)
-                and func != "to_numpy"
-                and func != pandas.DataFrame.to_numpy
-            ):
-                result = (
-                    pandas.DataFrame(result)
-                    if is_list_like(result)
-                    else pandas.DataFrame([result])
-                )
-            if isinstance(result, pandas.Series):
-                if result.name is None:
-                    result.name = "__reduced__"
-                result = result.to_frame()
+            def compute_result(result):
+                if (
+                    not isinstance(result, pandas.Series)
+                    and not isinstance(result, pandas.DataFrame)
+                    and func != "to_numpy"
+                    and func != pandas.DataFrame.to_numpy
+                ):
+                    result = (
+                        pandas.DataFrame(result)
+                        if is_list_like(result)
+                        else pandas.DataFrame([result])
+                    )
+                if isinstance(result, pandas.Series):
+                    if result.name is None:
+                        result.name = "__reduced__"
+                    result = result.to_frame()
 
-            inplace = kwargs.get("inplace", False)
-            if force_inplace is not None:
-                inplace = force_inplace
-            return result if not inplace else df
+                inplace = kwargs.get("inplace", False)
+                if force_inplace is not None:
+                    inplace = force_inplace
+                return result if not inplace else df
+
+            if isinstance(result, tuple) and all(
+                isinstance(obj, (pandas.DataFrame, pandas.Series)) for obj in result
+            ):
+                return tuple(compute_result(obj) for obj in result)
+            else:
+                return compute_result(result)
 
         return cls.build_wrapper(applyier, fn_name)
 

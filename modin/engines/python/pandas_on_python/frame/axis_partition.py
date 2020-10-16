@@ -27,6 +27,52 @@ class PandasOnPythonFrameAxisPartition(PandasFrameAxisPartition):
     partition_type = PandasOnPythonFramePartition
     instance_type = pandas.DataFrame
 
+    @classmethod
+    def deploy_axis_func(
+        cls,
+        axis,
+        func,
+        num_splits,
+        num_objs,
+        kwargs,
+        maintain_partitioning,
+        *partitions,
+    ):
+        return deploy_python_func(
+            PandasFrameAxisPartition.deploy_axis_func,
+            axis,
+            func,
+            num_splits,
+            num_objs,
+            kwargs,
+            maintain_partitioning,
+            *partitions,
+        )
+
+    @classmethod
+    def deploy_func_between_two_axis_partitions(
+        cls,
+        axis,
+        func,
+        num_splits,
+        num_objs,
+        len_of_left,
+        other_shape,
+        kwargs,
+        *partitions,
+    ):
+        return deploy_python_func(
+            PandasFrameAxisPartition.deploy_func_between_two_axis_partitions,
+            axis,
+            func,
+            num_splits,
+            num_objs,
+            len_of_left,
+            other_shape,
+            kwargs,
+            *partitions,
+        )
+
 
 class PandasOnPythonFrameColumnPartition(PandasOnPythonFrameAxisPartition):
     """The column partition implementation for Ray. All of the implementation
@@ -44,3 +90,23 @@ class PandasOnPythonFrameRowPartition(PandasOnPythonFrameAxisPartition):
     """
 
     axis = 1
+
+
+def deploy_python_func(func, *args):
+    result = func(*args)
+
+    def compute_result(result):
+        if isinstance(result, pandas.DataFrame):
+            return [result, len(result), len(result.columns)]
+        elif all(isinstance(r, pandas.DataFrame) for r in result):
+            return [i for r in result for i in [r, len(r), len(r.columns)]]
+        else:
+            return [i for r in result for i in [r, None, None]]
+
+    if isinstance(result, tuple):
+        whole_result = []
+        for partial_result in result:
+            whole_result += compute_result(partial_result)
+        return whole_result
+    else:
+        return compute_result(result)

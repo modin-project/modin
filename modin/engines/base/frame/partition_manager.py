@@ -215,20 +215,32 @@ class BaseFrameManager(object):
         right,
         keep_partitioning=False,
         lengths=None,
+        num_objs=1,
+        broadcast=False,
     ):
         """
         Broadcast the right partitions to left and apply a function along full axis.
 
         Parameters
         ----------
-        axis : The axis to apply and broadcast over.
-        apply_func : The function to apply.
+        axis : 0 or 1
+            The axis to apply and broadcast over (0 - index, 1 - columns).
+        apply_func : callable
+            The function to apply.
         left : The left partitions.
         right : The right partitions.
-        keep_partitioning : boolean. Default is False
+        keep_partitioning : boolean, default False
             The flag to keep partitions for Modin Frame.
         lengths : list(int)
             The list of lengths to shuffle the object.
+        num_objs : int, default 1
+            The number of Modin Frame objects created.
+        broadcast : boolean, default False
+            The flag indicating use of broadcast algorithm
+            when we apply each left partition to entire right object.
+            It is needed in order to not concatenate right objects after
+            performing `apply` method when num_objs=2 because
+            the first right object is valid after first `apply` call.
 
         Returns
         -------
@@ -251,24 +263,52 @@ class BaseFrameManager(object):
         kw = {
             "num_splits": num_splits,
             "other_axis_partition": right_partitions,
+            "num_objs": num_objs,
         }
         if lengths:
             kw["_lengths"] = lengths
             kw["manual_partition"] = True
 
-        result_blocks = np.array(
-            [
-                part.apply(
+        if num_objs == 1:
+            # For mapping across the entire axis, we don't maintain partitioning because we
+            # may want to line to partitioning up with another BlockPartitions object. Since
+            # we don't need to maintain the partitioning, this gives us the opportunity to
+            # load-balance the data as well.
+            result_blocks = np.array(
+                [
+                    part.apply(
+                        preprocessed_map_func,
+                        **kw,
+                    )
+                    for part in left_partitions
+                ]
+            )
+            # If we are mapping over columns, they are returned to use the same as
+            # rows, so we need to transpose the returned 2D NumPy array to return
+            # the structure to the correct order.
+            return result_blocks.T if not axis else result_blocks
+        else:
+            result_blocks = {k: [] for k in range(num_objs)}
+            for part in left_partitions:
+                partial_result = part.apply(
                     preprocessed_map_func,
                     **kw,
                 )
-                for part in left_partitions
-            ]
-        )
-        # If we are mapping over columns, they are returned to use the same as
-        # rows, so we need to transpose the returned 2D NumPy array to return
-        # the structure to the correct order.
-        return result_blocks.T if not axis else result_blocks
+                for idx, pr in enumerate(partial_result):
+                    # See description on `broadcast` parameter in order to understand
+                    # what is this condition needed for.
+                    if (
+                        idx == 1
+                        and len(result_blocks[idx]) > 0
+                        and num_objs == 2
+                        and broadcast
+                    ):
+                        break
+                    result_blocks[idx].append(pr)
+            return tuple(
+                np.array(obj).T if not axis else np.array(obj)
+                for obj in result_blocks.values()
+            )
 
     @classmethod
     def map_partitions(cls, partitions, map_func):
@@ -306,6 +346,8 @@ class BaseFrameManager(object):
         map_func,
         keep_partitioning=False,
         lengths=None,
+        num_objs=1,
+        broadcast=False,
     ):
         """
         Applies `map_func` to every partition.
@@ -318,10 +360,18 @@ class BaseFrameManager(object):
             The partitions of Modin Frame.
         map_func : callable
             The function to apply.
-        keep_partitioning : bool. Default is False
+        keep_partitioning : boolean. Default is False
             The flag to keep partitions for Modin Frame.
         lengths : list(int)
             The list of lengths to shuffle the object.
+        num_objs : int, default 1
+            The number of Modin Frame objects created.
+        broadcast : boolean, default False
+            The flag indicating use of broadcast algorithm
+            when we apply each left partition to entire right object.
+            It is needed in order to not concatenate right objects after
+            performing `apply` method when num_objs=2 because
+            the first right object is valid after first `apply` call.
 
         Returns
         -------
@@ -334,12 +384,14 @@ class BaseFrameManager(object):
         some global information about the axis.
         """
         return cls.broadcast_axis_partitions(
-            axis=axis,
-            left=partitions,
-            apply_func=map_func,
+            axis,
+            map_func,
+            partitions,
+            None,
             keep_partitioning=keep_partitioning,
-            right=None,
             lengths=lengths,
+            num_objs=num_objs,
+            broadcast=broadcast,
         )
 
     @classmethod

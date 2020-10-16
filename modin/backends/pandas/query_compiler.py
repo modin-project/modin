@@ -220,14 +220,23 @@ class PandasQueryCompiler(BaseQueryCompiler):
         }
 
         result = pandas_op(self.to_pandas(), *args, **kwargs)
-        if isinstance(result, pandas.Series):
-            if result.name is None:
-                result.name = "__reduced__"
-            result = result.to_frame()
-        if isinstance(result, pandas.DataFrame):
-            return self.from_pandas(result, type(self._modin_frame))
+
+        def compute_result(result):
+            if isinstance(result, pandas.Series):
+                if result.name is None:
+                    result.name = "__reduced__"
+                result = result.to_frame()
+            if isinstance(result, pandas.DataFrame):
+                return self.from_pandas(result, type(self._modin_frame))
+            else:
+                return result
+
+        if isinstance(result, tuple) and all(
+            isinstance(obj, pandas.DataFrame) for obj in result
+        ):
+            return tuple(compute_result(obj) for obj in result)
         else:
-            return result
+            return compute_result(result)
 
     def to_pandas(self):
         return self._modin_frame.to_pandas()
@@ -380,6 +389,36 @@ class PandasQueryCompiler(BaseQueryCompiler):
         ),
         join_type="left",
     )
+
+    def align(self, other, **kwargs):
+        """
+        Align two objects on their axes with the specified join method.
+
+        Parameters
+        ----------
+        other : PandasQueryCompiler
+            The query compiler of other.
+        **kwargs
+            See pd.DataFrame.align for more info on kwargs.
+
+        Returns
+        -------
+        (PandasQueryCompiler, PandasQueryCompiler)
+            Tuple of aligned query compilers.
+        """
+        other = other.to_pandas()
+
+        def map_func(df, other=other):
+            return pandas.DataFrame.align(df, other, **kwargs)
+
+        mf1, mf2 = self._modin_frame._apply_full_axis(
+            kwargs.get("axis"),
+            map_func,
+            wrap_func=False,
+            num_objs=2,
+            broadcast=True,
+        )
+        return tuple([self.__constructor__(mf1), self.__constructor__(mf2)])
 
     def where(self, cond, other, **kwargs):
         """Gets values from this manager where cond is true else from other.
@@ -857,7 +896,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 return val
 
         new_modin_frame = self._modin_frame._apply_full_axis(
-            axis=0, func=map_func, new_columns=new_columns
+            0, map_func, new_columns=new_columns
         )
         return self.__constructor__(new_modin_frame)
 
@@ -1830,7 +1869,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             new_columns = self.columns
 
         new_modin_frame = self._modin_frame._apply_full_axis(
-            axis=0, func=map_func, new_columns=new_columns
+            0, map_func, new_columns=new_columns
         )
         return self.__constructor__(new_modin_frame)
 
@@ -2054,8 +2093,8 @@ class PandasQueryCompiler(BaseQueryCompiler):
             lambda df: df.sort_index(
                 axis=axis, level=level, sort_remaining=sort_remaining, **kwargs
             ),
-            new_index,
-            new_columns,
+            new_index=new_index,
+            new_columns=new_columns,
             dtypes="copy" if axis == 0 else None,
         )
         return self.__constructor__(new_modin_frame)
@@ -2758,7 +2797,9 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
         result = self.__constructor__(
             to_group._modin_frame.broadcast_apply_full_axis(
-                axis=0, func=applyier, other=keys_columns._modin_frame
+                keys_columns._modin_frame,
+                0,
+                applyier,
             )
         )
 

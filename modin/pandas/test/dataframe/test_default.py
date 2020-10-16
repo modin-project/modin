@@ -48,7 +48,6 @@ matplotlib.use("Agg")
 @pytest.mark.parametrize(
     "op, make_args",
     [
-        ("align", lambda df: {"other": df}),
         ("expanding", None),
         ("corrwith", lambda df: {"other": df}),
         ("explode", lambda df: {"column": df.columns[0]}),

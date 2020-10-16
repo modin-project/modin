@@ -31,7 +31,14 @@ class PandasOnRayFrameAxisPartition(PandasFrameAxisPartition):
 
     @classmethod
     def deploy_axis_func(
-        cls, axis, func, num_splits, kwargs, maintain_partitioning, *partitions
+        cls,
+        axis,
+        func,
+        num_splits,
+        num_objs,
+        kwargs,
+        maintain_partitioning,
+        *partitions,
     ):
         lengths = kwargs.get("_lengths", None)
         return deploy_ray_func._remote(
@@ -40,16 +47,27 @@ class PandasOnRayFrameAxisPartition(PandasFrameAxisPartition):
                 axis,
                 func,
                 num_splits,
+                num_objs,
                 kwargs,
                 maintain_partitioning,
             )
             + tuple(partitions),
-            num_returns=num_splits * 3 if lengths is None else len(lengths) * 3,
+            num_returns=num_splits * 3 * num_objs
+            if lengths is None
+            else len(lengths) * 3 * num_objs,
         )
 
     @classmethod
     def deploy_func_between_two_axis_partitions(
-        cls, axis, func, num_splits, len_of_left, other_shape, kwargs, *partitions
+        cls,
+        axis,
+        func,
+        num_splits,
+        num_objs,
+        len_of_left,
+        other_shape,
+        kwargs,
+        *partitions,
     ):
         return deploy_ray_func._remote(
             args=(
@@ -57,19 +75,14 @@ class PandasOnRayFrameAxisPartition(PandasFrameAxisPartition):
                 axis,
                 func,
                 num_splits,
+                num_objs,
                 len_of_left,
                 other_shape,
                 kwargs,
             )
             + tuple(partitions),
-            num_returns=num_splits * 3,
+            num_returns=num_splits * 3 * num_objs,
         )
-
-    def _wrap_partitions(self, partitions):
-        return [
-            self.partition_type(partitions[i], partitions[i + 1], partitions[i + 2])
-            for i in range(0, len(partitions), 3)
-        ]
 
 
 class PandasOnRayFrameColumnPartition(PandasOnRayFrameAxisPartition):
@@ -103,9 +116,19 @@ def deploy_ray_func(func, *args):  # pragma: no cover
         The result of the function `func`.
     """
     result = func(*args)
-    if isinstance(result, pandas.DataFrame):
-        return result, len(result), len(result.columns)
-    elif all(isinstance(r, pandas.DataFrame) for r in result):
-        return [i for r in result for i in [r, len(r), len(r.columns)]]
+
+    def compute_result(result):
+        if isinstance(result, pandas.DataFrame):
+            return [result, len(result), len(result.columns)]
+        elif all(isinstance(r, pandas.DataFrame) for r in result):
+            return [i for r in result for i in [r, len(r), len(r.columns)]]
+        else:
+            return [i for r in result for i in [r, None, None]]
+
+    if isinstance(result, tuple):
+        whole_result = []
+        for partial_result in result:
+            whole_result += compute_result(partial_result)
+        return whole_result
     else:
-        return [i for r in result for i in [r, None, None]]
+        return compute_result(result)

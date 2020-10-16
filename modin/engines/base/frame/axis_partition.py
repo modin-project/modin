@@ -12,6 +12,7 @@
 # governing permissions and limitations under the License.
 
 import pandas
+from pandas.core.dtypes.common import is_list_like
 from modin.data_management.utils import split_result_of_axis_func_pandas
 
 NOT_IMPLMENTED_MESSAGE = "Must be implemented in child class"
@@ -90,11 +91,35 @@ class BaseFrameAxisPartition(object):  # pragma: no cover
     instance_type = None
     partition_type = None
 
-    def _wrap_partitions(self, partitions):
-        if isinstance(partitions, self.instance_type):
-            return [self.partition_type(partitions)]
+    def _wrap_partitions(self, partitions, num_objs):
+        if num_objs == 1:
+            return [
+                self.partition_type(partitions[i], partitions[i + 1], partitions[i + 2])
+                for i in range(0, len(partitions), 3)
+            ]
         else:
-            return [self.partition_type(obj) for obj in partitions]
+            result_tuple = tuple()
+            obj_last_idx = (
+                len(partitions) // num_objs
+                if len(partitions) % num_objs == 0
+                else len(partitions) // num_objs + 1
+            )
+            i = 0
+            for _ in range(num_objs):
+                k = 0
+                partial_result = []
+                for j in range(0, obj_last_idx, 3):
+                    partial_result += [
+                        self.partition_type(
+                            partitions[i + j],
+                            partitions[i + j + 1],
+                            partitions[i + j + 2],
+                        )
+                    ]
+                    k = i + j + 3
+                result_tuple += (partial_result,)
+                i = k
+            return result_tuple
 
 
 class PandasFrameAxisPartition(BaseFrameAxisPartition):
@@ -137,6 +162,8 @@ class PandasFrameAxisPartition(BaseFrameAxisPartition):
         Returns:
             A list of `RayRemotePartition` objects.
         """
+        num_objs = kwargs.pop("num_objs", 1)
+
         if num_splits is None:
             num_splits = len(self.list_of_blocks)
 
@@ -154,6 +181,7 @@ class PandasFrameAxisPartition(BaseFrameAxisPartition):
                     self.axis,
                     func,
                     num_splits,
+                    num_objs,
                     len(self.list_of_blocks),
                     other_shape,
                     kwargs,
@@ -165,11 +193,12 @@ class PandasFrameAxisPartition(BaseFrameAxisPartition):
                             for part in axis_partition.list_of_blocks
                         ]
                     ),
-                )
+                ),
+                num_objs,
             )
-        args = [self.axis, func, num_splits, kwargs, maintain_partitioning]
+        args = [self.axis, func, num_splits, num_objs, kwargs, maintain_partitioning]
         args.extend(self.list_of_blocks)
-        return self._wrap_partitions(self.deploy_axis_func(*args))
+        return self._wrap_partitions(self.deploy_axis_func(*args), num_objs)
 
     def shuffle(self, func, lengths, **kwargs):
         """Shuffle the order of the data in this axis based on the `lengths`.
@@ -183,17 +212,25 @@ class PandasFrameAxisPartition(BaseFrameAxisPartition):
         Returns:
             A list of RemotePartition objects split by `lengths`.
         """
+        num_objs = kwargs.pop("num_objs", 1)
         num_splits = len(lengths)
         # We add these to kwargs and will pop them off before performing the operation.
         kwargs["manual_partition"] = True
         kwargs["_lengths"] = lengths
-        args = [self.axis, func, num_splits, kwargs, False]
+        args = [self.axis, func, num_splits, num_objs, kwargs, False]
         args.extend(self.list_of_blocks)
-        return self._wrap_partitions(self.deploy_axis_func(*args))
+        return self._wrap_partitions(self.deploy_axis_func(*args), num_objs)
 
     @classmethod
     def deploy_axis_func(
-        cls, axis, func, num_splits, kwargs, maintain_partitioning, *partitions
+        cls,
+        axis,
+        func,
+        num_splits,
+        num_objs,
+        kwargs,
+        maintain_partitioning,
+        *partitions,
     ):
         """Deploy a function along a full axis in Ray.
 
@@ -201,7 +238,8 @@ class PandasFrameAxisPartition(BaseFrameAxisPartition):
             axis: The axis to perform the function along.
             func: The function to perform.
             num_splits: The number of splits to return
-                (see `split_result_of_axis_func_pandas`)
+                (see `split_result_of_axis_func_pandas`).
+            num_objs: The number of objects to return from pandas function.
             kwargs: A dictionary of keyword arguments.
             maintain_partitioning: If True, keep the old partitioning if possible.
                 If False, create a new partition layout.
@@ -214,35 +252,56 @@ class PandasFrameAxisPartition(BaseFrameAxisPartition):
         manual_partition = kwargs.pop("manual_partition", False)
         lengths = kwargs.pop("_lengths", None)
 
+        def compute_result(result, lengths):
+            if isinstance(result, pandas.Series):
+                if num_splits == 1:
+                    return result
+                return [result] + [pandas.Series([]) for _ in range(num_splits - 1)]
+
+            if manual_partition:
+                # The split function is expecting a list
+                lengths = list(lengths)
+            # We set lengths to None so we don't use the old lengths for the resulting partition
+            # layout. This is done if the number of splits is changing or we are told not to
+            # keep the old partitioning.
+            elif num_splits != len(partitions) or not maintain_partitioning:
+                lengths = None
+            else:
+                if axis == 0:
+                    lengths = [len(part) for part in partitions]
+                    if sum(lengths) != len(result):
+                        lengths = None
+                else:
+                    lengths = [len(part.columns) for part in partitions]
+                    if sum(lengths) != len(result.columns):
+                        lengths = None
+            return split_result_of_axis_func_pandas(axis, num_splits, result, lengths)
+
         dataframe = pandas.concat(list(partitions), axis=axis, copy=False)
         result = func(dataframe, **kwargs)
-        if isinstance(result, pandas.Series):
-            if num_splits == 1:
-                return result
-            return [result] + [pandas.Series([]) for _ in range(num_splits - 1)]
-
-        if manual_partition:
-            # The split function is expecting a list
-            lengths = list(lengths)
-        # We set lengths to None so we don't use the old lengths for the resulting partition
-        # layout. This is done if the number of splits is changing or we are told not to
-        # keep the old partitioning.
-        elif num_splits != len(partitions) or not maintain_partitioning:
-            lengths = None
+        if isinstance(result, tuple) and len(result) == num_objs:
+            result_tuple = tuple()
+            for partial_result in result:
+                if not is_list_like(partial_result):
+                    partial_result = [partial_result]
+                if not isinstance(partial_result, (pandas.Series, pandas.DataFrame)):
+                    partial_result = pandas.DataFrame(partial_result)
+                result_tuple += (compute_result(partial_result, lengths),)
+            return result_tuple
         else:
-            if axis == 0:
-                lengths = [len(part) for part in partitions]
-                if sum(lengths) != len(result):
-                    lengths = None
-            else:
-                lengths = [len(part.columns) for part in partitions]
-                if sum(lengths) != len(result.columns):
-                    lengths = None
-        return split_result_of_axis_func_pandas(axis, num_splits, result, lengths)
+            return compute_result(result, lengths)
 
     @classmethod
     def deploy_func_between_two_axis_partitions(
-        cls, axis, func, num_splits, len_of_left, other_shape, kwargs, *partitions
+        cls,
+        axis,
+        func,
+        num_splits,
+        num_objs,
+        len_of_left,
+        other_shape,
+        kwargs,
+        *partitions,
     ):
         """Deploy a function along a full axis between two data sets in Ray.
 
@@ -252,6 +311,7 @@ class PandasFrameAxisPartition(BaseFrameAxisPartition):
             func: The function to perform.
             num_splits: The number of splits to return
                 (see `split_result_of_axis_func_pandas`).
+            num_objs: The number of objects to return from pandas function.
             len_of_left: The number of values in `partitions` that belong to the
                 left data set.
             other_shape: The shape of right frame in terms of partitions
@@ -279,4 +339,10 @@ class PandasFrameAxisPartition(BaseFrameAxisPartition):
         rt_frame = pandas.concat(combined_axis, axis=axis ^ 1, copy=False)
 
         result = func(lt_frame, rt_frame, **kwargs)
-        return split_result_of_axis_func_pandas(axis, num_splits, result)
+        if isinstance(result, tuple) and len(result) == num_objs:
+            return tuple(
+                split_result_of_axis_func_pandas(axis, num_splits, obj)
+                for obj in result
+            )
+        else:
+            return split_result_of_axis_func_pandas(axis, num_splits, result)
