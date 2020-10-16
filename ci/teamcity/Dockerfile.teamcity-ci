@@ -14,10 +14,9 @@ RUN conda env create -f ${ENVIRONMENT}
 
 # Initialize conda in bash config fiiles:
 RUN conda init bash
+ENV PATH /opt/conda/envs/modin/bin:$PATH
 
 # Activate the environment, and make sure it's activated:
 RUN echo "conda activate modin" > ~/.bashrc
 RUN echo "Make sure environment is activated"
 RUN conda list
-
-ENV PATH /opt/conda/envs/modin/bin:$PATH
