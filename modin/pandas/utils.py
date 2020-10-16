@@ -11,8 +11,27 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
+"""Implement utils for pandas component."""
+
 
 def from_non_pandas(df, index, columns, dtype):
+    """
+    Implement [METHOD_NAME].
+
+    TODO: Add more details for this docstring template.
+
+    Parameters
+    ----------
+    What arguments does this function have.
+    [
+    PARAMETER_NAME: PARAMETERS TYPES
+        Description.
+    ]
+
+    Returns
+    -------
+    What this returns (if anything)
+    """
     from modin.data_management.factories.dispatcher import EngineDispatcher
 
     new_qc = EngineDispatcher.from_non_pandas(df, index, columns, dtype)
@@ -24,11 +43,16 @@ def from_non_pandas(df, index, columns, dtype):
 
 
 def from_pandas(df):
-    """Converts a pandas DataFrame to a Modin DataFrame.
-    Args:
-        df (pandas.DataFrame): The pandas DataFrame to convert.
+    """
+    Convert a pandas DataFrame to a Modin DataFrame.
 
-    Returns:
+    Parameters
+    ----------
+    df: pandas.DataFrame
+        The pandas DataFrame to convert.
+
+    Returns
+    -------
         A new Modin DataFrame object.
     """
     from modin.data_management.factories.dispatcher import EngineDispatcher
@@ -38,12 +62,13 @@ def from_pandas(df):
 
 
 def from_arrow(at):
-    """Converts an Arrow Table to a Modin DataFrame.
+    """
+    Convert an Arrow Table to a Modin DataFrame.
 
     Parameters
     ----------
-        at : Arrow Table
-            The Arrow Table to convert from.
+    at: Arrow Table
+        The Arrow Table to convert from.
 
     Returns
     -------
@@ -68,7 +93,7 @@ def is_scalar(obj):
 
     Parameters
     ----------
-    val : object
+    val: object
         Object to check.
 
     Returns
@@ -76,7 +101,6 @@ def is_scalar(obj):
     bool
         True if given object is scalar and False otherwise.
     """
-
     from pandas.api.types import is_scalar as pandas_is_scalar
     from .base import BasePandasDataset
 
