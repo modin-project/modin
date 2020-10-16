@@ -63,7 +63,8 @@ def make_ray_cluster(make_bootstrap_config_mock):
             make_bootstrap_config_mock,
         ):
             ray_cluster = RayCluster(
-                Provider(name="aws"), add_conda_packages=["scikit-learn>=0.23"]
+                Provider(name="aws"),
+                add_conda_packages=["scikit-learn>=0.23", "modin==0.8.0"],
             )
         return ray_cluster
 
@@ -124,4 +125,5 @@ def test_update_conda_requirements(setup_commands_source, make_ray_cluster):
         in setup_commands_result
     )
     assert "scikit-learn>=0.23" in setup_commands_result
+    assert "modin==0.8.0" in setup_commands_result
     assert "{{CONDA_PACKAGES}}" not in setup_commands_result

@@ -251,7 +251,8 @@ def create(
     worker_node : str, optional
         What machine type to use for worker nodes in the cluster.
     add_conda_packages : list, optional
-        Custom conda packages for remote environments.
+        Custom conda packages for remote environments. By default remote modin version is
+        the same as local version.
     cluster_type : str, optional
         How to spawn the cluster.
         Currently spawning by Ray autoscaler ("rayscale" for general and "omnisci" for Omnisci-based) is supported
