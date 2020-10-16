@@ -7,11 +7,16 @@ ADD git-rev /modin/git-rev
 
 WORKDIR /modin
 
+# Make RUN commands use `bash --login`:
+SHELL ["/bin/bash", "--login", "-c"]
+
 RUN conda env create -f ${ENVIRONMENT}
 
-# Make RUN commands use the new environment:
-SHELL ["conda", "run", "-n", "modin", "/bin/bash", "-c"]
+# Initialize conda in bash config fiiles:
+RUN conda init bash
+ENV PATH /opt/conda/envs/modin/bin:$PATH
 
+# Activate the environment, and make sure it's activated:
+RUN echo "conda activate modin" > ~/.bashrc
+RUN echo "Make sure environment is activated"
 RUN conda list
-
-ENV PATH /opt/conda/envs/env/bin:$PATH
