@@ -27,8 +27,6 @@ import warnings
 from modin.backends.base.query_compiler import BaseQueryCompiler
 from modin.error_message import ErrorMessage
 from modin.utils import try_cast_to_pandas, wrap_udf_function
-
-# from modin.pandas import Index
 from modin.data_management.functions import (
     FoldFunction,
     MapFunction,
@@ -1571,8 +1569,10 @@ class PandasQueryCompiler(BaseQueryCompiler):
             for col_name in empty_df.dtypes.index:
                 # if previosly type of `col_name` was datetime or timedelta
                 if is_datetime_or_timedelta_dtype(self.dtypes[col_name]):
-                    pass
-                    # new_index = Index(empty_df.index.to_list() + ["first"] + ["last"])
+                    new_index = pandas.Index(
+                        empty_df.index.to_list() + ["first"] + ["last"]
+                    )
+                    break
 
         def describe_builder(df, internal_indices=[]):
             return df.iloc[:, internal_indices].describe(**kwargs)
