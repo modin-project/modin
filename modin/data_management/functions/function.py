@@ -11,6 +11,8 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
+from typing import Optional
+
 
 class Function(object):
     def __init__(self):
@@ -27,3 +29,7 @@ class Function(object):
     @classmethod
     def register(cls, func, **kwargs):
         return cls.call(func, **kwargs)
+
+    @classmethod
+    def validate_axis(cls, axis: Optional[int]) -> int:
+        return 0 if axis is None else axis

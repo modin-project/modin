@@ -174,7 +174,6 @@ test_data_diff_dtype = {
     "float_col": [np.NaN, -9.4, 10.1, np.NaN],
     "str_col": ["a", np.NaN, "c", "d"],
     "bool_col": [False, True, True, False],
-    "nan_col": [np.NaN] * 4,
 }
 
 test_data_small_values = list(test_data_small.values())

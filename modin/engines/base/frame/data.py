@@ -1141,9 +1141,9 @@ class BasePandasFrame(object):
 
         axis_validate_mask = [validate_index, validate_columns]
         new_axes = [
-            self.axes[axis]
+            self._compute_axis_labels(axis, new_partitions)
             if should_validate
-            else self._compute_axis_labels(axis, new_partitions)
+            else self.axes[axis]
             for axis, should_validate in enumerate(axis_validate_mask)
         ]
 
@@ -1611,7 +1611,7 @@ class BasePandasFrame(object):
             dtypes = self._dtypes
         elif dtypes is not None:
             dtypes = pandas.Series(
-                [np.dtype(dtypes)] * len(new_columns), index=new_columns
+                [np.dtype(dtypes)] * len(new_axes[1]), index=new_axes[1]
             )
         return self.__constructor__(
             new_partitions,

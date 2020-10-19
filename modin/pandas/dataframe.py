@@ -1625,7 +1625,13 @@ class DataFrame(BasePandasDataset):
             return self.copy()
 
     def _stat_operation(
-        self, op_name: str, axis: int, numeric_only: Optional[bool] = None, **kwargs
+        self,
+        op_name: str,
+        axis: int,
+        skipna: bool,
+        level: Optional[Union[int, str]],
+        numeric_only: Optional[bool] = None,
+        **kwargs,
     ):
         """
         Common function to do statistic reduce operations on frame
@@ -1636,6 +1642,11 @@ class DataFrame(BasePandasDataset):
                 Name of method to apply.
             axis : int,
                 Axis to apply method on.
+            skipna : bool,
+                Exclude NA/null values when computing the result.
+            level : int or level name,
+                If specified `axis` is a MultiIndex, applying method along a particular
+                level, collapsing into a Series
             numeric_only : bool
                 Include only float, int, boolean columns. If None, will attempt
                 to use everything, then use only numeric data.
@@ -1653,10 +1664,12 @@ class DataFrame(BasePandasDataset):
 
         result_qc = getattr(data._query_compiler, op_name)(
             axis=axis,
+            skipna=skipna,
+            level=level,
             numeric_only=numeric_only,
             **kwargs,
         )
-        if kwargs.get("level", None) is not None:
+        if level is not None:
             return self.__constructor__(query_compiler=result_qc)
         return self._reduce_dimension(result_qc)
 
