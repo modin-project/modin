@@ -1634,7 +1634,7 @@ class DataFrame(BasePandasDataset):
         **kwargs,
     ):
         """
-        Common function to do statistic reduce operations on frame
+        Do common statistic reduce operations under frame.
 
         Parameters
         ----------
