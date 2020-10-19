@@ -150,6 +150,16 @@ def copy_df_for_func(func, display_name: str = None):
     return caller
 
 
+def _numeric_only_reduce_fn(applier, *fns):
+    def caller(self, *args, **kwargs):
+        preserve_index = kwargs.get("numeric_only", None) is not None
+        return applier.register(*fns, preserve_index=preserve_index)(
+            self, *args, **kwargs
+        )
+
+    return caller
+
+
 class PandasQueryCompiler(BaseQueryCompiler):
     """This class implements the logic necessary for operating on partitions
     with a Pandas backend. This logic is specific to Pandas."""
@@ -625,10 +635,10 @@ class PandasQueryCompiler(BaseQueryCompiler):
     is_monotonic = _is_monotonic
 
     count = MapReduceFunction.register(pandas.DataFrame.count, pandas.DataFrame.sum)
-    max = MapReduceFunction.register(pandas.DataFrame.max, pandas.DataFrame.max)
-    min = MapReduceFunction.register(pandas.DataFrame.min, pandas.DataFrame.min)
-    sum = MapReduceFunction.register(pandas.DataFrame.sum, pandas.DataFrame.sum)
-    prod = MapReduceFunction.register(pandas.DataFrame.prod, pandas.DataFrame.prod)
+    max = _numeric_only_reduce_fn(MapReduceFunction, pandas.DataFrame.max)
+    min = _numeric_only_reduce_fn(MapReduceFunction, pandas.DataFrame.min)
+    sum = _numeric_only_reduce_fn(MapReduceFunction, pandas.DataFrame.sum)
+    prod = _numeric_only_reduce_fn(MapReduceFunction, pandas.DataFrame.prod)
     any = MapReduceFunction.register(pandas.DataFrame.any, pandas.DataFrame.any)
     all = MapReduceFunction.register(pandas.DataFrame.all, pandas.DataFrame.all)
     memory_usage = MapReduceFunction.register(
@@ -748,15 +758,15 @@ class PandasQueryCompiler(BaseQueryCompiler):
     # Reduction operations
     idxmax = ReductionFunction.register(pandas.DataFrame.idxmax)
     idxmin = ReductionFunction.register(pandas.DataFrame.idxmin)
-    median = ReductionFunction.register(pandas.DataFrame.median)
+    median = _numeric_only_reduce_fn(ReductionFunction, pandas.DataFrame.median)
     nunique = ReductionFunction.register(pandas.DataFrame.nunique)
-    skew = ReductionFunction.register(pandas.DataFrame.skew)
-    kurt = ReductionFunction.register(pandas.DataFrame.kurt)
-    sem = ReductionFunction.register(pandas.DataFrame.sem)
-    std = ReductionFunction.register(pandas.DataFrame.std)
-    var = ReductionFunction.register(pandas.DataFrame.var)
-    sum_min_count = ReductionFunction.register(pandas.DataFrame.sum)
-    prod_min_count = ReductionFunction.register(pandas.DataFrame.prod)
+    skew = _numeric_only_reduce_fn(ReductionFunction, pandas.DataFrame.skew)
+    kurt = _numeric_only_reduce_fn(ReductionFunction, pandas.DataFrame.kurt)
+    sem = _numeric_only_reduce_fn(ReductionFunction, pandas.DataFrame.sem)
+    std = _numeric_only_reduce_fn(ReductionFunction, pandas.DataFrame.std)
+    var = _numeric_only_reduce_fn(ReductionFunction, pandas.DataFrame.var)
+    sum_min_count = _numeric_only_reduce_fn(ReductionFunction, pandas.DataFrame.sum)
+    prod_min_count = _numeric_only_reduce_fn(ReductionFunction, pandas.DataFrame.prod)
     quantile_for_single_value = ReductionFunction.register(pandas.DataFrame.quantile)
     mad = ReductionFunction.register(pandas.DataFrame.mad)
     to_datetime = ReductionFunction.register(

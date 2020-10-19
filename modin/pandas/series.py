@@ -1689,6 +1689,9 @@ class Series(BasePandasDataset):
     def _validate_dtypes(self, numeric_only=False):
         pass
 
+    def _numeric_data(self, axis):
+        return self
+
     def _update_inplace(self, new_query_compiler):
         """
         Implement [METHOD_NAME].

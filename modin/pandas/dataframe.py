@@ -1069,27 +1069,8 @@ class DataFrame(BasePandasDataset):
         )
 
     def median(self, axis=None, skipna=None, level=None, numeric_only=None, **kwargs):
-        axis = self._get_axis_number(axis)
-        if numeric_only is not None and not numeric_only:
-            self._validate_dtypes(numeric_only=True)
-        if level is not None:
-            return self.__constructor__(
-                query_compiler=self._query_compiler.median(
-                    axis=axis,
-                    skipna=skipna,
-                    level=level,
-                    numeric_only=numeric_only,
-                    **kwargs,
-                )
-            )
-        return self._reduce_dimension(
-            self._query_compiler.median(
-                axis=axis,
-                skipna=skipna,
-                level=level,
-                numeric_only=numeric_only,
-                **kwargs,
-            )
+        return self._stat_operation(
+            "median", axis, skipna, level, numeric_only, **kwargs
         )
 
     def melt(
@@ -1561,29 +1542,8 @@ class DataFrame(BasePandasDataset):
     def sem(
         self, axis=None, skipna=None, level=None, ddof=1, numeric_only=None, **kwargs
     ):
-        axis = self._get_axis_number(axis)
-        if numeric_only is not None and not numeric_only:
-            self._validate_dtypes(numeric_only=True)
-        if level is not None:
-            return self.__constructor__(
-                query_compiler=self._query_compiler.sem(
-                    axis=axis,
-                    skipna=skipna,
-                    level=level,
-                    ddof=ddof,
-                    numeric_only=numeric_only,
-                    **kwargs,
-                )
-            )
-        return self._reduce_dimension(
-            self._query_compiler.sem(
-                axis=axis,
-                skipna=skipna,
-                level=level,
-                ddof=ddof,
-                numeric_only=numeric_only,
-                **kwargs,
-            )
+        return self._stat_operation(
+            "sem", axis, skipna, level, numeric_only, ddof=ddof, **kwargs
         )
 
     def set_index(
@@ -1647,28 +1607,7 @@ class DataFrame(BasePandasDataset):
             return frame
 
     def skew(self, axis=None, skipna=None, level=None, numeric_only=None, **kwargs):
-        axis = self._get_axis_number(axis)
-        if numeric_only is not None and not numeric_only:
-            self._validate_dtypes(numeric_only=True)
-        if level is not None:
-            return self.__constructor__(
-                query_compiler=self._query_compiler.skew(
-                    axis=axis,
-                    skipna=skipna,
-                    level=level,
-                    numeric_only=numeric_only,
-                    **kwargs,
-                )
-            )
-        return self._reduce_dimension(
-            self._query_compiler.skew(
-                axis=axis,
-                skipna=skipna,
-                level=level,
-                numeric_only=numeric_only,
-                **kwargs,
-            )
-        )
+        return self._stat_operation("skew", axis, skipna, level, numeric_only, **kwargs)
 
     @property
     def sparse(self):
@@ -1685,32 +1624,29 @@ class DataFrame(BasePandasDataset):
         else:
             return self.copy()
 
-    def std(
-        self, axis=None, skipna=None, level=None, ddof=1, numeric_only=None, **kwargs
-    ):
+    def _stat_operation(self, op_name, axis, skipna, level, numeric_only, **kwargs):
         axis = self._get_axis_number(axis)
         if numeric_only is not None and not numeric_only:
             self._validate_dtypes(numeric_only=True)
+
+        data = self._numeric_data(axis) if numeric_only else self
+
+        result_qc = getattr(data._query_compiler, op_name)(
+            axis=axis,
+            skipna=skipna,
+            level=level,
+            numeric_only=numeric_only,
+            **kwargs,
+        )
         if level is not None:
-            return self.__constructor__(
-                query_compiler=self._query_compiler.std(
-                    axis=axis,
-                    skipna=skipna,
-                    level=level,
-                    ddof=ddof,
-                    numeric_only=numeric_only,
-                    **kwargs,
-                )
-            )
-        return self._reduce_dimension(
-            self._query_compiler.std(
-                axis=axis,
-                skipna=skipna,
-                level=level,
-                ddof=ddof,
-                numeric_only=numeric_only,
-                **kwargs,
-            )
+            return self.__constructor__(query_compiler=result_qc)
+        return self._reduce_dimension(result_qc)
+
+    def std(
+        self, axis=None, skipna=None, level=None, ddof=1, numeric_only=None, **kwargs
+    ):
+        return self._stat_operation(
+            "std", axis, skipna, level, numeric_only, ddof=ddof, **kwargs
         )
 
     def stack(self, level=-1, dropna=True):
@@ -1968,29 +1904,8 @@ class DataFrame(BasePandasDataset):
     def var(
         self, axis=None, skipna=None, level=None, ddof=1, numeric_only=None, **kwargs
     ):
-        axis = self._get_axis_number(axis)
-        if numeric_only is not None and not numeric_only:
-            self._validate_dtypes(numeric_only=True)
-        if level is not None:
-            return self.__constructor__(
-                query_compiler=self._query_compiler.var(
-                    axis=axis,
-                    skipna=skipna,
-                    level=level,
-                    ddof=ddof,
-                    numeric_only=numeric_only,
-                    **kwargs,
-                )
-            )
-        return self._reduce_dimension(
-            self._query_compiler.var(
-                axis=axis,
-                skipna=skipna,
-                level=level,
-                ddof=ddof,
-                numeric_only=numeric_only,
-                **kwargs,
-            )
+        return self._stat_operation(
+            "var", axis, skipna, level, numeric_only, ddof=ddof, **kwargs
         )
 
     def value_counts(
@@ -2266,6 +2181,17 @@ class DataFrame(BasePandasDataset):
         else:
             self._update_inplace(new_query_compiler=new_query_compiler)
 
+    def _numeric_data(self, axis):
+        # Pandas ignores `numeric_only` if `axis` is 1, but we do have to drop
+        # non-numeric columns if `axis` is 0.
+        if axis != 0:
+            return self
+        return self.drop(
+            columns=[
+                i for i in self.dtypes.index if not is_numeric_dtype(self.dtypes[i])
+            ]
+        )
+
     def _validate_dtypes(self, numeric_only=False):
         """
         Help to check that all the dtypes are the same.
@@ -2305,16 +2231,8 @@ class DataFrame(BasePandasDataset):
                 for dtype in self.dtypes
             ):
                 raise TypeError("Cannot compare Numeric and Non-Numeric Types")
-        # Pandas ignores `numeric_only` if `axis` is 1, but we do have to drop
-        # non-numeric columns if `axis` is 0.
-        if numeric_only and axis == 0:
-            return self.drop(
-                columns=[
-                    i for i in self.dtypes.index if not is_numeric_dtype(self.dtypes[i])
-                ]
-            )
-        else:
-            return self
+
+        return self._numeric_data(axis) if numeric_only else self
 
     def _validate_dtypes_sum_prod_mean(self, axis, numeric_only, ignore_axis=False):
         """
@@ -2363,16 +2281,8 @@ class DataFrame(BasePandasDataset):
                 for dtype in self.dtypes
             ):
                 raise TypeError("Cannot operate on Numeric and Non-Numeric Types")
-        # Pandas ignores `numeric_only` if `axis` is 1, but we do have to drop
-        # non-numeric columns if `axis` is 0.
-        if numeric_only and axis == 0:
-            return self.drop(
-                columns=[
-                    i for i in self.dtypes.index if not is_numeric_dtype(self.dtypes[i])
-                ]
-            )
-        else:
-            return self
+
+        return self._numeric_data(axis) if numeric_only else self
 
     def _to_pandas(self):
         return self._query_compiler.to_pandas()

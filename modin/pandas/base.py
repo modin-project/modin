@@ -1334,10 +1334,13 @@ class BasePandasDataset(object):
                 query_compiler=self._query_compiler.apply("kurt", axis, **func_kwargs)
             )
 
-        if numeric_only:
+        if numeric_only is not None and not numeric_only:
             self._validate_dtypes(numeric_only=True)
+
+        data = self._numeric_data(axis) if numeric_only else self
+
         return self._reduce_dimension(
-            self._query_compiler.kurt(
+            data._query_compiler.kurt(
                 axis=axis,
                 skipna=skipna,
                 level=level,
