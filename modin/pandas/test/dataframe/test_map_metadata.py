@@ -14,7 +14,7 @@
 import pytest
 import numpy as np
 import pandas
-import pandas.util.testing as tm
+from pandas.testing import assert_index_equal
 import matplotlib
 import modin.pandas as pd
 from modin.utils import get_current_backend
@@ -120,13 +120,13 @@ def test_indexing():
 def test_empty_df():
     df = pd.DataFrame(index=["a", "b"])
     df_is_empty(df)
-    tm.assert_index_equal(df.index, pd.Index(["a", "b"]))
+    assert_index_equal(df.index, pd.Index(["a", "b"]))
     assert len(df.columns) == 0
 
     df = pd.DataFrame(columns=["a", "b"])
     df_is_empty(df)
     assert len(df.index) == 0
-    tm.assert_index_equal(df.columns, pd.Index(["a", "b"]))
+    assert_index_equal(df.columns, pd.Index(["a", "b"]))
 
     df = pd.DataFrame()
     df_is_empty(df)
@@ -135,13 +135,13 @@ def test_empty_df():
 
     df = pd.DataFrame(index=["a", "b"])
     df_is_empty(df)
-    tm.assert_index_equal(df.index, pd.Index(["a", "b"]))
+    assert_index_equal(df.index, pd.Index(["a", "b"]))
     assert len(df.columns) == 0
 
     df = pd.DataFrame(columns=["a", "b"])
     df_is_empty(df)
     assert len(df.index) == 0
-    tm.assert_index_equal(df.columns, pd.Index(["a", "b"]))
+    assert_index_equal(df.columns, pd.Index(["a", "b"]))
 
     df = pd.DataFrame()
     df_is_empty(df)
@@ -439,7 +439,9 @@ def test_append(data):
 
 
 def test_astype():
-    td = pandas.DataFrame(tm.getSeriesData())
+    from pandas.util.testing import getSeriesData
+
+    td = pandas.DataFrame(getSeriesData())
     modin_df = pd.DataFrame(td.values, index=td.index, columns=td.columns)
     expected_df = pandas.DataFrame(td.values, index=td.index, columns=td.columns)
 

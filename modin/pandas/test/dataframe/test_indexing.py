@@ -14,7 +14,8 @@
 import pytest
 import numpy as np
 import pandas
-import pandas.util.testing as tm
+from pandas.util.testing import getSeriesData
+from pandas.testing import assert_index_equal
 import matplotlib
 import modin.pandas as pd
 import sys
@@ -521,7 +522,7 @@ def test_reindex_like():
 
 
 def test_rename_sanity():
-    test_data = pandas.DataFrame(tm.getSeriesData())
+    test_data = pandas.DataFrame(getSeriesData())
     mapping = {"A": "a", "B": "b", "C": "c", "D": "d"}
 
     modin_df = pd.DataFrame(test_data)
@@ -539,20 +540,20 @@ def test_rename_sanity():
     # gets sorted alphabetical
     df = pandas.DataFrame(data)
     modin_df = pd.DataFrame(data)
-    tm.assert_index_equal(
+    assert_index_equal(
         modin_df.rename(index={"foo": "bar", "bar": "foo"}).index,
         df.rename(index={"foo": "bar", "bar": "foo"}).index,
     )
 
-    tm.assert_index_equal(
+    assert_index_equal(
         modin_df.rename(index=str.upper).index, df.rename(index=str.upper).index
     )
 
     # Using the `mapper` functionality with `axis`
-    tm.assert_index_equal(
+    assert_index_equal(
         modin_df.rename(str.upper, axis=0).index, df.rename(str.upper, axis=0).index
     )
-    tm.assert_index_equal(
+    assert_index_equal(
         modin_df.rename(str.upper, axis=1).columns,
         df.rename(str.upper, axis=1).columns,
     )
@@ -564,14 +565,14 @@ def test_rename_sanity():
     # partial columns
     renamed = test_data.rename(columns={"C": "foo", "D": "bar"})
     modin_df = pd.DataFrame(test_data)
-    tm.assert_index_equal(
+    assert_index_equal(
         modin_df.rename(columns={"C": "foo", "D": "bar"}).index,
         test_data.rename(columns={"C": "foo", "D": "bar"}).index,
     )
 
     # other axis
     renamed = test_data.T.rename(index={"C": "foo", "D": "bar"})
-    tm.assert_index_equal(
+    assert_index_equal(
         test_data.T.rename(index={"C": "foo", "D": "bar"}).index,
         modin_df.T.rename(index={"C": "foo", "D": "bar"}).index,
     )
@@ -583,7 +584,7 @@ def test_rename_sanity():
 
     renamed = renamer.rename(index={"foo": "bar", "bar": "foo"})
     modin_renamed = modin_df.rename(index={"foo": "bar", "bar": "foo"})
-    tm.assert_index_equal(renamed.index, modin_renamed.index)
+    assert_index_equal(renamed.index, modin_renamed.index)
 
     assert renamed.index.name == modin_renamed.index.name
 
@@ -608,13 +609,13 @@ def test_rename_multiindex():
         index={"foo1": "foo3", "bar2": "bar3"},
         columns={"fizz1": "fizz3", "buzz2": "buzz3"},
     )
-    tm.assert_index_equal(renamed.index, modin_renamed.index)
+    assert_index_equal(renamed.index, modin_renamed.index)
 
     renamed = df.rename(
         index={"foo1": "foo3", "bar2": "bar3"},
         columns={"fizz1": "fizz3", "buzz2": "buzz3"},
     )
-    tm.assert_index_equal(renamed.columns, modin_renamed.columns)
+    assert_index_equal(renamed.columns, modin_renamed.columns)
     assert renamed.index.names == modin_renamed.index.names
     assert renamed.columns.names == modin_renamed.columns.names
 
@@ -626,49 +627,49 @@ def test_rename_multiindex():
     modin_renamed = modin_df.rename(
         columns={"fizz1": "fizz3", "buzz2": "buzz3"}, level=0
     )
-    tm.assert_index_equal(renamed.columns, modin_renamed.columns)
+    assert_index_equal(renamed.columns, modin_renamed.columns)
     renamed = df.rename(columns={"fizz1": "fizz3", "buzz2": "buzz3"}, level="fizz")
     modin_renamed = modin_df.rename(
         columns={"fizz1": "fizz3", "buzz2": "buzz3"}, level="fizz"
     )
-    tm.assert_index_equal(renamed.columns, modin_renamed.columns)
+    assert_index_equal(renamed.columns, modin_renamed.columns)
 
     renamed = df.rename(columns={"fizz1": "fizz3", "buzz2": "buzz3"}, level=1)
     modin_renamed = modin_df.rename(
         columns={"fizz1": "fizz3", "buzz2": "buzz3"}, level=1
     )
-    tm.assert_index_equal(renamed.columns, modin_renamed.columns)
+    assert_index_equal(renamed.columns, modin_renamed.columns)
     renamed = df.rename(columns={"fizz1": "fizz3", "buzz2": "buzz3"}, level="buzz")
     modin_renamed = modin_df.rename(
         columns={"fizz1": "fizz3", "buzz2": "buzz3"}, level="buzz"
     )
-    tm.assert_index_equal(renamed.columns, modin_renamed.columns)
+    assert_index_equal(renamed.columns, modin_renamed.columns)
 
     # function
     func = str.upper
     renamed = df.rename(columns=func, level=0)
     modin_renamed = modin_df.rename(columns=func, level=0)
-    tm.assert_index_equal(renamed.columns, modin_renamed.columns)
+    assert_index_equal(renamed.columns, modin_renamed.columns)
     renamed = df.rename(columns=func, level="fizz")
     modin_renamed = modin_df.rename(columns=func, level="fizz")
-    tm.assert_index_equal(renamed.columns, modin_renamed.columns)
+    assert_index_equal(renamed.columns, modin_renamed.columns)
 
     renamed = df.rename(columns=func, level=1)
     modin_renamed = modin_df.rename(columns=func, level=1)
-    tm.assert_index_equal(renamed.columns, modin_renamed.columns)
+    assert_index_equal(renamed.columns, modin_renamed.columns)
     renamed = df.rename(columns=func, level="buzz")
     modin_renamed = modin_df.rename(columns=func, level="buzz")
-    tm.assert_index_equal(renamed.columns, modin_renamed.columns)
+    assert_index_equal(renamed.columns, modin_renamed.columns)
 
     # index
     renamed = df.rename(index={"foo1": "foo3", "bar2": "bar3"}, level=0)
     modin_renamed = modin_df.rename(index={"foo1": "foo3", "bar2": "bar3"}, level=0)
-    tm.assert_index_equal(modin_renamed.index, renamed.index)
+    assert_index_equal(modin_renamed.index, renamed.index)
 
 
 @pytest.mark.skip(reason="Pandas does not pass this test")
 def test_rename_nocopy():
-    test_data = pandas.DataFrame(tm.getSeriesData())
+    test_data = pandas.DataFrame(getSeriesData())
     modin_df = pd.DataFrame(test_data)
     modin_renamed = modin_df.rename(columns={"C": "foo"}, copy=False)
     modin_renamed["foo"] = 1
@@ -676,7 +677,7 @@ def test_rename_nocopy():
 
 
 def test_rename_inplace():
-    test_data = pandas.DataFrame(tm.getSeriesData())
+    test_data = pandas.DataFrame(getSeriesData())
     modin_df = pd.DataFrame(test_data)
 
     df_equals(
@@ -752,7 +753,7 @@ def test_rename_axis():
 
 
 def test_rename_axis_inplace():
-    test_frame = pandas.DataFrame(tm.getSeriesData())
+    test_frame = pandas.DataFrame(getSeriesData())
     modin_df = pd.DataFrame(test_frame)
 
     result = test_frame.copy()
