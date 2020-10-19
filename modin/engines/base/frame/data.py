@@ -114,7 +114,8 @@ class BasePandasFrame(object):
         return self._column_widths_cache
 
     @property
-    def _axis_lengths(self):
+    def _axes_lengths(self):
+        """The row lengths, column widths that can be accessed with an `axis` integer."""
         return [self._row_lengths, self._column_widths]
 
     @property
@@ -248,7 +249,21 @@ class BasePandasFrame(object):
         """The index, columns that can be accessed with an `axis` integer."""
         return [self.index, self.columns]
 
-    def _compute_axis(self, axis, partitions=None):
+    def _compute_axis_labels(self, axis: int, partitions=None):
+        """
+        Computes labels for specific `axis`
+
+        Parameters
+        ----------
+        axis : int, axis to compute labels along
+        partitions : numpy 2D array (optional), partitions from which labels will
+            be grabbed, if no specified, partitions will be considered as `self._partitions`
+
+        Returns
+        -------
+        Pandas.index
+            Labels for the specified `axis`
+        """
         if partitions is None:
             partitions = self._partitions
         return self._frame_mgr_cls.get_indices(
@@ -289,7 +304,7 @@ class BasePandasFrame(object):
                 Whether to update external indices with internal if their lengths
                 do not match or raise an exception in that case.
         """
-        internal_axis = self._compute_axis(axis)
+        internal_axis = self._compute_axis_labels(axis)
         self_axis = self.axes[axis]
         is_equals = self_axis.equals(internal_axis)
         if (
@@ -989,18 +1004,35 @@ class BasePandasFrame(object):
         return _map_reduce_func
 
     def _compute_map_reduce_metadata(self, axis, new_parts, preserve_index=True):
+        """
+        Computes metadata for the result of reduce function.
+
+        Parameters
+        ----------
+            axis : int,
+                The axis on which reduce function was applied
+            new_parts : numpy 2D array
+                Partitions with the result of applied function
+            preserve_index : boolean
+                The flag to preserve labels for the reduced axis.
+
+        Returns
+        -------
+        BasePandasFrame
+            Pandas series containing the reduced data.
+        """
         new_axes, new_axes_lengths = [0, 0], [0, 0]
 
         new_axes[axis] = ["__reduced__"]
         new_axes[axis ^ 1] = (
             self.axes[axis ^ 1]
             if preserve_index
-            else self._compute_axis(axis ^ 1, new_parts)
+            else self._compute_axis_labels(axis ^ 1, new_parts)
         )
 
         new_axes_lengths[axis] = [1]
         new_axes_lengths[axis ^ 1] = (
-            self._axis_lengths[axis ^ 1] if preserve_index else None
+            self._axes_lengths[axis ^ 1] if preserve_index else None
         )
 
         if (axis == 0 or self._dtypes is None) and preserve_index:
@@ -1030,6 +1062,8 @@ class BasePandasFrame(object):
                 The axis to apply the function to (0 - index, 1 - columns).
             func : callable
                 The function to reduce the Manager by. This function takes in a Manager.
+            preserve_index : boolean
+                The flag to preserve labels for the reduced axis.
 
         Returns
         -------
@@ -1109,12 +1143,12 @@ class BasePandasFrame(object):
         new_axes = [
             self.axes[axis]
             if should_validate
-            else self._compute_axis(axis, new_partitions)
+            else self._compute_axis_labels(axis, new_partitions)
             for axis, should_validate in enumerate(axis_validate_mask)
         ]
 
         new_lengths = [
-            self._axis_lengths[axis]
+            self._axes_lengths[axis]
             if len(new_axes[axis]) == len(self.axes[axis])
             else None
             for axis in [0, 1]
@@ -1167,9 +1201,9 @@ class BasePandasFrame(object):
         new_axes, new_lengths = [0, 0], [0, 0]
 
         new_axes[axis] = self.axes[axis]
-        new_axes[axis ^ 1] = self._compute_axis(axis ^ 1, new_partitions)
+        new_axes[axis ^ 1] = self._compute_axis_labels(axis ^ 1, new_partitions)
 
-        new_lengths[axis] = self._axis_lengths[axis]
+        new_lengths[axis] = self._axes_lengths[axis]
         new_lengths[axis ^ 1] = None  # We do not know what the resulting widths will be
 
         return self.__constructor__(
@@ -1518,7 +1552,9 @@ class BasePandasFrame(object):
         )
 
         new_axes = [
-            self._compute_axis(i, new_partitions) if new_axis is None else new_axis
+            self._compute_axis_labels(i, new_partitions)
+            if new_axis is None
+            else new_axis
             for i, new_axis in enumerate([new_index, new_columns])
         ]
 
@@ -1566,7 +1602,9 @@ class BasePandasFrame(object):
         )
         # Index objects for new object creation. This is shorter than if..else
         new_axes = [
-            self._compute_axis(i, new_partitions) if new_axis is None else new_axis
+            self._compute_axis_labels(i, new_partitions)
+            if new_axis is None
+            else new_axis
             for i, new_axis in enumerate([new_index, new_columns])
         ]
         if dtypes == "copy":
@@ -1788,7 +1826,9 @@ class BasePandasFrame(object):
             axis, self._partitions, by._partitions, map_func, reduce_func
         )
         new_axes = [
-            self._compute_axis(i, new_partitions) if new_axis is None else new_axis
+            self._compute_axis_labels(i, new_partitions)
+            if new_axis is None
+            else new_axis
             for i, new_axis in enumerate([new_index, new_columns])
         ]
 

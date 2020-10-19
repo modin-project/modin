@@ -22,12 +22,15 @@ from pandas.core.dtypes.common import (
     is_scalar,
 )
 from pandas.core.base import DataError
+from typing import Type, Callable
 import warnings
+
 
 from modin.backends.base.query_compiler import BaseQueryCompiler
 from modin.error_message import ErrorMessage
 from modin.utils import try_cast_to_pandas, wrap_udf_function
 from modin.data_management.functions import (
+    Function,
     FoldFunction,
     MapFunction,
     MapReduceFunction,
@@ -150,10 +153,26 @@ def copy_df_for_func(func, display_name: str = None):
     return caller
 
 
-def _numeric_only_reduce_fn(applier, *fns):
+def _numeric_only_reduce_fn(applier: Type[Function], *funcs) -> Callable:
+    """
+    Build reduce function for statistic operations with `numeric_only` parameter.
+
+    Parameters
+    ----------
+    applier : Function object to register `funcs`
+    *funcs : list of functions to register in `applier`
+
+    Returns
+    -------
+    callable
+        A callable function to be applied in the partitions
+    """
+
     def caller(self, *args, **kwargs):
+        # If `numeric_only` is None then we don't know what columns/indices will
+        # be dropped at the result of reduction function, and so can't preserve labels
         preserve_index = kwargs.get("numeric_only", None) is not None
-        return applier.register(*fns, preserve_index=preserve_index)(
+        return applier.register(*funcs, preserve_index=preserve_index)(
             self, *args, **kwargs
         )
 
