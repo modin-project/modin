@@ -62,6 +62,25 @@ TEST_FWF_FILENAME = "test_fwf.txt"
 TEST_GBQ_FILENAME = "test_gbq."
 SMALL_ROW_SIZE = 2000
 
+str_single_element = "1"
+str_single_col = """1
+2
+3
+"""
+str_four_cols = """1, 2, 3, 4
+5, 6, 7, 8
+9, 10, 11, 12
+"""
+str_non_unique_cols = """col,col,col,col
+5,6,7,8
+9,10,11,12
+"""
+str_initial_spaces = """col1,col2,col3,col4
+five,  six,  seven,  eight
+    five,    six,    seven,    eight
+five, six,  seven,   eight
+"""
+
 test_csv_dialect_params = {
     "delimiter": "_",
     "doublequote": False,
@@ -317,7 +336,7 @@ def make_csv_file(
                 assert isinstance(additional_col_values, (list, tuple))
                 data.update(
                     {
-                        "col10": random_state.choice(
+                        "col7": random_state.choice(
                             additional_col_values, size=row_size
                         ),
                     }
@@ -608,7 +627,7 @@ def get_unique_filename(
     test_name: str, kwargs: dict = {}, extension: str = "csv", suffix: str = None
 ):
     assert "." not in extension, "please provide pure extenxion name without '.'"
-    prohibited_chars = ['"']
+    prohibited_chars = ['"', "\n"]
     non_prohibited_char = "np_char"
     char_counter = 0
     kwargs_name = dict(kwargs)
@@ -635,13 +654,154 @@ def get_unique_filename(
 
 
 class TestReadCSV:
+    @pytest.mark.parametrize("sep", ["_", ",", ".", "\n"])
+    @pytest.mark.parametrize("delimiter", ["_", ",", ".", "\n"])
+    @pytest.mark.parametrize("decimal", [".", "_"])
+    @pytest.mark.parametrize("thousands", [None, ",", "_", " "])
+    def test_from_csv_delimiters(
+        self, make_csv_file, sep, delimiter, decimal, thousands
+    ):
+        kwargs = {
+            "delimiter": delimiter,
+            "sep": sep,
+            "decimal": decimal,
+            "thousands": thousands,
+        }
+        unique_filename = get_unique_filename("test_from_csv_delimiter", kwargs)
+        make_csv_file(
+            filename=unique_filename,
+            delimiter=delimiter,
+            thousands_separator=thousands,
+            decimal_separator=decimal,
+        )
+
+        eval_io(
+            filepath_or_buffer=unique_filename,
+            fn_name="read_csv",
+            **kwargs,
+        )
+
+    @pytest.mark.parametrize("header", ["infer", None, 0])
+    @pytest.mark.parametrize("index_col", [None, "col1"])
+    @pytest.mark.parametrize("prefix", [None, "_", "col"])
+    @pytest.mark.parametrize(
+        "names", [None, ["col1"], ["c1", "c2", "c3", "c4", "c5", "c6", "c7"]]
+    )
+    @pytest.mark.parametrize("usecols", [["col1"], ["col1", "col2", "col6"], [0, 1, 5]])
+    # @pytest.mark.parametrize("decimal", [".", "_"])
+    # @pytest.mark.parametrize("thousands", [None, ",", "_", " "])
+    def test_from_csv_col_handling(
+        self,
+        make_csv_file,
+        header,
+        index_col,
+        prefix,
+        names,
+        usecols,
+        # decimal,
+        # thousands,
+    ):
+        kwargs = {
+            "header": header,
+            "index_col": index_col,
+            "prefix": prefix,
+            "names": names,
+            "usecols": usecols,
+            # "decimal": decimal,
+            # "thousands": thousands,
+        }
+        unique_filename = get_unique_filename("test_from_csv_col_handling", kwargs)
+        make_csv_file(
+            filename=unique_filename,
+            # thousands_separator=thousands,
+            # decimal_separator=decimal,
+        )
+
+        eval_io(
+            filepath_or_buffer=unique_filename,
+            fn_name="read_csv",
+            **kwargs,
+        )
+
+    @pytest.mark.xfail(reason="infinite recursion error - issue #2032")
+    def test_from_csv_squeeze(self, make_csv_file):
+        unique_filename = get_unique_filename("test_from_csv_squeeze")
+
+        for csv_str in [str_single_element, str_single_col, str_four_cols]:
+            eval_io_from_str(csv_str, unique_filename, squeeze=True)
+            eval_io_from_str(csv_str, unique_filename, header=None, squeeze=True)
+
+    def test_from_csv_mangle_dupe_cols(self):
+        unique_filename = get_unique_filename("test_from_csv_mangle_dupe_cols")
+
+        eval_io_from_str(str_non_unique_cols, unique_filename, mangle_dupe_cols=True)
+
+    @pytest.mark.parametrize("engine", [None, "python", "c"])
+    @pytest.mark.parametrize("true_values", [["Yes"], ["Yes", "true"], None])
+    @pytest.mark.parametrize("false_values", [["No"], ["No", "false"], None])
+    @pytest.mark.parametrize(
+        "converters",
+        [
+            None,
+            {
+                "col1": lambda x: np.int64(x) * 10,
+                "col2": pd.to_datetime,
+                "col4": lambda x: x.replace(":", ";"),
+            },
+        ],
+    )
+    @pytest.mark.parametrize("skipfooter", [0, 10])
+    @pytest.mark.parametrize("dtype", [None, True])
+    def test_from_csv_parsing(
+        self,
+        make_csv_file,
+        engine,
+        true_values,
+        false_values,
+        converters,
+        skipfooter,
+        dtype,
+    ):
+        kwargs = {
+            "engine": engine,
+            "true_values": true_values,
+            "false_values": false_values,
+            "converters": converters,
+            "skipfooter": skipfooter,
+            "dtype": dtype,
+        }
+        unique_filename = get_unique_filename("test_from_csv_converters", kwargs)
+        make_csv_file(
+            filename=unique_filename,
+            additional_col_values=["Yes", "true", "No", "false"]
+            if true_values or false_values
+            else None,
+        )
+
+        if kwargs["dtype"]:
+            kwargs["dtype"] = {
+                col: "object"
+                for col in pandas.read_csv(unique_filename, nrows=1).columns
+            }
+
+        eval_io(
+            filepath_or_buffer=unique_filename,
+            fn_name="read_csv",
+            **kwargs,
+        )
+
+    def test_from_csv_skipinitialspace(self, make_csv_file):
+        unique_filename = get_unique_filename("test_from_csv_skipinitialspace")
+
+        eval_io_from_str(str_initial_spaces, unique_filename, skipinitialspace=True)
+
     @pytest.mark.parametrize("skip_blank_lines", [True, False])
     @pytest.mark.parametrize("na_filter", [True, False])
     @pytest.mark.parametrize("index_col", [None, "col1"])
     @pytest.mark.parametrize("prefix", [None, "_", ".", "col", "COL"])
     @pytest.mark.parametrize("engine", [None, "python", "c"])
     @pytest.mark.parametrize("nrows", [123, None])
-    def test_from_csv(
+    def test_from_csv_na_handling(
         self,
         make_csv_file,
         nrows,
@@ -666,8 +826,6 @@ class TestReadCSV:
             fn_name="read_csv",
             **kwargs,
         )
-
-    # pytest.param({"foo": ["col2", "col4"]}, marks=pytest.mark.xfail(reason="Exception: Internal Error - issue #2073"))
 
     @pytest.mark.parametrize(
         "parse_dates",
@@ -721,40 +879,7 @@ class TestReadCSV:
         eval_io(
             filepath_or_buffer=unique_filename,
             fn_name="read_csv",
-            **kwargs,
-        )
-
-    @pytest.mark.parametrize("header", ["infer", None, 0])
-    @pytest.mark.parametrize("index_col", [None, "col1"])
-    @pytest.mark.parametrize("prefix", [None, "_", "col"])
-    @pytest.mark.parametrize("decimal", [".", "_"])
-    @pytest.mark.parametrize("thousands", [None, ",", "_", " "])
-    def test_from_csv_col_handling(
-        self,
-        make_csv_file,
-        header,
-        index_col,
-        prefix,
-        decimal,
-        thousands,
-    ):
-        kwargs = {
-            "header": header,
-            "index_col": index_col,
-            "prefix": prefix,
-            "decimal": decimal,
-            "thousands": thousands,
-        }
-        unique_filename = get_unique_filename("test_from_csv_col_handling", kwargs)
-        make_csv_file(
-            filename=unique_filename,
-            thousands_separator=thousands,
-            decimal_separator=decimal,
-        )
-
-        eval_io(
-            filepath_or_buffer=unique_filename,
-            fn_name="read_csv",
+            check_kwargs_callable=not callable(date_parser),
             **kwargs,
         )
 
@@ -1010,16 +1135,6 @@ class TestReadCSV:
         with pytest.warns(UserWarning):
             pd.read_csv(unique_filename, skiprows=lambda x: x in [0, 2])
 
-    def test_from_csv_skipfooter(self, make_csv_file):
-        unique_filename = get_unique_filename("test_from_csv_skipfooter")
-        make_csv_file(filename=unique_filename)
-
-        eval_io(
-            filepath_or_buffer=unique_filename,
-            fn_name="read_csv",
-            skipfooter=13,
-        )
-
     def test_from_csv_parse_dates(self, make_csv_file):
         unique_filename = get_unique_filename("test_from_csv_parse_dates")
         make_csv_file(filename=unique_filename)
@@ -1047,63 +1162,6 @@ class TestReadCSV:
             cast_to_str=True,
         )
 
-    @pytest.mark.parametrize(
-        "delimiter",
-        [
-            "_",
-            ":",
-            ";",
-            ",",
-            ".",
-            pytest.param(
-                "\n",
-                marks=pytest.mark.xfail(
-                    reason="DataFrame shape mismatch - issue #2049"
-                ),
-            ),
-        ],
-    )
-    def test_from_csv_delimeter(self, make_csv_file, delimiter):
-        unique_filename = get_unique_filename(
-            "test_from_csv_delimeter",
-            {"delimiter": delimiter if delimiter != "\n" else "n"},
-        )
-        make_csv_file(filename=unique_filename, delimiter=delimiter)
-
-        eval_io(
-            filepath_or_buffer=unique_filename,
-            fn_name="read_csv",
-            delimiter=delimiter,
-        )
-
-    @pytest.mark.xfail(reason="infinite recursion error - issue #2032")
-    def test_from_csv_squeeze(self, make_csv_file):
-        unique_filename = get_unique_filename("test_from_csv_squeeze")
-        # make_csv_file(filename=unique_filename)
-        csv_single_element = "1"
-
-        csv_single_col = """1
-2
-3
-    """
-        csv_bad_quotes = """1, 2, 3, 4
-5, 6, 7, 8
-9, 10, 11, 12
-"""
-
-        for csv_str in [csv_single_element, csv_single_col, csv_bad_quotes]:
-            eval_io_from_str(csv_str, unique_filename, squeeze=True)
-            eval_io_from_str(csv_str, unique_filename, header=None, squeeze=True)
-
-    # @pytest.mark.xfail(reason="pyarrow.lib.ArrowInvalid: CSV parse error: Expected 4 columns, got 1")
-    def test_from_csv_mangle_dupe_cols(self):
-        unique_filename = get_unique_filename("test_from_csv_mangle_dupe_cols")
-        csv_non_unique_cols = """col,col,col,col
-5,6,7,8
-9,10,11,12
-"""
-        eval_io_from_str(csv_non_unique_cols, unique_filename, mangle_dupe_cols=True)
-
     @pytest.mark.parametrize("nrows", [123, None])
     def test_from_csv_sep_none(self, make_csv_file, nrows):
         unique_filename = get_unique_filename(
@@ -1116,47 +1174,6 @@ class TestReadCSV:
         with pytest.warns(ParserWarning):
             modin_df = pd.read_csv(unique_filename, sep=None, nrows=nrows)
         df_equals(modin_df, pandas_df)
-
-    def test_from_csv_converters(self, make_csv_file):
-        unique_filename = get_unique_filename("test_from_csv_converters")
-        make_csv_file(filename=unique_filename)
-        converters = {
-            "col1": lambda x: np.int64(x) * 10,
-            "col2": pd.to_datetime,
-            "col4": lambda x: x.replace(":", ";"),
-        }
-
-        eval_io(
-            filepath_or_buffer=unique_filename,
-            fn_name="read_csv",
-            converters=converters,
-        )
-
-    @pytest.mark.parametrize("true_values", [["Yes"], ["Yes", "true"], None])
-    @pytest.mark.parametrize("false_values", [["No"], ["No", "false"], None])
-    def test_from_csv_true_false_values(self, make_csv_file, true_values, false_values):
-        kwargs = {"true_values": true_values, "false_values": false_values}
-        unique_filename = get_unique_filename("test_from_csv_true_false_values", kwargs)
-        make_csv_file(
-            filename=unique_filename,
-            additional_col_values=["Yes", "true", "No", "false"],
-        )
-
-        eval_io(
-            filepath_or_buffer=unique_filename,
-            fn_name="read_csv",
-            **kwargs,
-        )
-
-    def test_from_csv_skipinitialspace(self, make_csv_file):
-        test_csv_content = """col1,col2,col3,col4
-  five,  six,  seven,  eight
-    five,    six,    seven,    eight
-five, six,  seven,   eight
-"""
-        unique_filename = get_unique_filename("test_from_csv_skipinitialspace")
-
-        eval_io_from_str(test_csv_content, unique_filename, skipinitialspace=True)
 
     @pytest.mark.parametrize("na_filter", [True, False])
     @pytest.mark.parametrize("na_values", ["custom_nan", "73"])
@@ -1310,14 +1327,6 @@ five, "six", seven, "eight
             filepath_or_buffer="modin/pandas/test/data/issue_621.csv",
             fn_name="read_csv",
             **kwargs,
-        )
-
-    @pytest.mark.parametrize("usecols", [["a"], ["a", "b", "e"], [0, 1, 4]])
-    def test_from_csv_with_usecols(self, usecols):
-        eval_io(
-            filepath_or_buffer="modin/pandas/test/data/test_usecols.csv",
-            fn_name="read_csv",
-            usecols=usecols,
         )
 
     @pytest.mark.skipif(Engine.get() == "Python", reason="Using pandas implementation")
