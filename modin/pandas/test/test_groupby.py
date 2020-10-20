@@ -16,7 +16,7 @@ import pandas
 import numpy as np
 import modin.pandas as pd
 from modin.utils import try_cast_to_pandas, get_current_backend
-from modin.pandas.utils import from_pandas
+from modin.pandas.utils import from_pandas, is_scalar
 from .utils import (
     df_equals,
     check_df_columns_have_nans,
@@ -47,6 +47,17 @@ def eval_aggregation(md_df, pd_df, operation=None, by=None, *args, **kwargs):
         *args,
         **kwargs,
     )
+
+
+def build_types_asserter(comparator):
+    def wrapper(obj1, obj2, *args, **kwargs):
+        error_str = f"obj1 and obj2 has incorrect types: {type(obj1)} and {type(obj2)}"
+        assert not (is_scalar(obj1) ^ is_scalar(obj2)), error_str
+        assert obj1.__module__.split(".")[0] == "modin", error_str
+        assert obj2.__module__.split(".")[0] == "pandas", error_str
+        comparator(obj1, obj2, *args, **kwargs)
+
+    return wrapper
 
 
 @pytest.mark.parametrize("as_index", [True, False])
@@ -1038,16 +1049,18 @@ def eval_quantile(modin_groupby, pandas_groupby):
 
 
 def eval___getattr__(modin_groupby, pandas_groupby, item):
-    try:
-        pandas_groupby = pandas_groupby[item]
-        pandas_result = pandas_groupby.count()
-    except Exception as e:
-        with pytest.raises(type(e)):
-            modin_groupby[item].count()
-    else:
-        modin_groupby = modin_groupby[item]
-        modin_result = modin_groupby.count()
-        df_equals(modin_result, pandas_result)
+    eval_general(
+        modin_groupby,
+        pandas_groupby,
+        lambda grp: grp[item].count(),
+        comparator=build_types_asserter(df_equals),
+    )
+    eval_general(
+        modin_groupby,
+        pandas_groupby,
+        lambda grp: getattr(grp, item).count(),
+        comparator=build_types_asserter(df_equals),
+    )
 
 
 def eval_groups(modin_groupby, pandas_groupby):
