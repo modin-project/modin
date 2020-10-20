@@ -28,13 +28,13 @@ from io import BytesIO
 random_state = np.random.RandomState(seed=42)
 
 DATASET_SIZE_DICT = {
-    "small": (2 ** 2, 2 ** 3),
-    "normal": (2 ** 6, 2 ** 8),
-    "big": (2 ** 7, 2 ** 12),
+    "Small": (2 ** 2, 2 ** 3),
+    "Normal": (2 ** 6, 2 ** 8),
+    "Big": (2 ** 7, 2 ** 12),
 }
 
 # Size of test dataframes
-NCOLS, NROWS = DATASET_SIZE_DICT.get(TestDatasetSize.get(), DATASET_SIZE_DICT["normal"])
+NCOLS, NROWS = DATASET_SIZE_DICT.get(TestDatasetSize.get(), DATASET_SIZE_DICT["Normal"])
 
 # Range for values for test data
 RAND_LOW = 0
