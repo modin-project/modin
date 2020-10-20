@@ -140,12 +140,16 @@ def test_describe(data, percentiles):
     )
 
 
+@pytest.mark.parametrize("has_numeric_column", [False, True])
 @pytest.mark.parametrize("datetime_is_numeric", [True, False, None])
-def test_2195(datetime_is_numeric):
+def test_2195(datetime_is_numeric, has_numeric_column):
     data = {
         "categorical": pd.Categorical(["d"] * 10 ** 2),
         "date": [np.datetime64("2000-01-01")] * 10 ** 2,
     }
+
+    if has_numeric_column:
+        data.update({"numeric": [5] * 10 ** 2})
 
     modin_df, pandas_df = pd.DataFrame(data), pandas.DataFrame(data)
 
