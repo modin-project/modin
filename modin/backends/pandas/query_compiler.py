@@ -693,7 +693,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             return self.__constructor__(new_modin_frame)
 
         def map_func(df, *args, **kwargs):
-            return df.squeeze(axis=1).value_counts(**kwargs)
+            return df.squeeze(axis=1).value_counts(**kwargs).to_frame()
 
         def reduce_func(df, *args, **kwargs):
             normalize = kwargs.get("normalize", False)
@@ -764,12 +764,14 @@ class PandasQueryCompiler(BaseQueryCompiler):
                     else:
                         new_index[j] = result.index[j]
                     i += 1
-                return pandas.DataFrame(result, index=new_index)
+                return pandas.DataFrame(
+                    result, index=new_index, columns=["__reduced__"]
+                )
 
             return sort_index_for_equal_values(result, ascending)
 
         return MapReduceFunction.register(
-            map_func, reduce_func, axis=1, preserve_index=False
+            map_func, reduce_func, axis=0, preserve_index=False
         )(self, **kwargs)
 
     # END MapReduce operations
