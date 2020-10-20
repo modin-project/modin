@@ -959,37 +959,25 @@ class TestReadCSV:
 
         df_equals(modin_df, pd_df)
 
-    @pytest.mark.xfail(
-        reason="read_csv works incorrectly here for now, see modin-project/modin #2074 for details"
-    )
+    @pytest.mark.parametrize("skiprows", [2, lambda x: x % 2])
     @pytest.mark.parametrize("nrows", [123, None])
-    def test_from_csv_skiprows(self, make_csv_file, nrows):
-        unique_filename = get_unique_filename(
-            "test_from_csv_skiprows", {"nrows": nrows}
-        )
+    @pytest.mark.parametrize("names", [["c1", "c2", "c3", "c4"], None])
+    def test_from_csv_skiprows(self, make_csv_file, skiprows, nrows, names):
+
+        kwargs = {
+            "skiprows": skiprows,
+            "nrows": nrows,
+            "names": names,
+        }
+
+        unique_filename = get_unique_filename("test_from_csv_skiprows", kwargs)
         make_csv_file(filename=unique_filename)
 
         eval_io(
             filepath_or_buffer=unique_filename,
             fn_name="read_csv",
-            skiprows=2,
-            nrows=nrows,
-        )
-
-        eval_io(
-            filepath_or_buffer=unique_filename,
-            fn_name="read_csv",
-            names=["c1", "c2", "c3", "c4"],
-            skiprows=2,
-            nrows=nrows,
-        )
-
-        eval_io(
-            filepath_or_buffer=unique_filename,
-            fn_name="read_csv",
-            names=["c1", "c2", "c3", "c4"],
-            skiprows=lambda x: x % 2,
-            nrows=nrows,
+            check_kwargs_callable=not callable(skiprows),
+            **kwargs,
         )
 
     @pytest.mark.parametrize(
