@@ -110,7 +110,7 @@ class DataFrameGroupBy(object):
             return object.__getattribute__(self, key)
         except AttributeError as e:
             if key in self._columns:
-                return self._default_to_pandas(lambda df: df.__getitem__(key))
+                return self.__getitem__(key)
             raise e
 
     @property
