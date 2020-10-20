@@ -206,10 +206,7 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
         else:
             shape_hint = None
             new_frame = new_frame._set_columns(list(new_frame.columns)[:-1] + ["size"])
-        new_qc = self.__constructor__(new_frame, shape_hint=shape_hint)
-        if groupby_args["squeeze"]:
-            new_qc = new_qc.squeeze()
-        return new_qc
+        return self.__constructor__(new_frame, shape_hint=shape_hint)
 
     def groupby_sum(self, by, axis, groupby_args, map_args, **kwargs):
         """Groupby with sum aggregation.
@@ -234,10 +231,7 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
         new_frame = self._modin_frame.groupby_agg(
             by, axis, "sum", groupby_args, **kwargs
         )
-        new_qc = self.__constructor__(new_frame)
-        if groupby_args["squeeze"]:
-            new_qc = new_qc.squeeze()
-        return new_qc
+        return self.__constructor__(new_frame)
 
     def groupby_count(self, by, axis, groupby_args, map_args, **kwargs):
         """Perform a groupby count.
@@ -266,10 +260,7 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
         new_frame = self._modin_frame.groupby_agg(
             by, axis, "count", groupby_args, **kwargs
         )
-        new_qc = self.__constructor__(new_frame)
-        if groupby_args["squeeze"]:
-            new_qc = new_qc.squeeze()
-        return new_qc
+        return self.__constructor__(new_frame)
 
     def groupby_dict_agg(self, by, func_dict, groupby_args, agg_args, drop=False):
         """Apply aggregation functions to a grouped dataframe per-column.
@@ -296,10 +287,29 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
         new_frame = self._modin_frame.groupby_agg(
             by, 0, func_dict, groupby_args, **agg_args
         )
-        new_qc = self.__constructor__(new_frame)
-        if groupby_args["squeeze"]:
-            new_qc = new_qc.squeeze()
-        return new_qc
+        return self.__constructor__(new_frame)
+
+    def count(self, axis=0, level=None, **kwargs):
+        return self._agg("count")
+
+    def max(self, axis=0, level=None, **kwargs):
+        return self._agg("max")
+
+    def min(self, axis=0, level=None, **kwargs):
+        return self._agg("min")
+
+    def sum(self, axis=0, level=None, **kwargs):
+        return self._agg("sum")
+
+    def _agg(self, agg, axis=0, level=None, **kwargs):
+        if level is not None or axis != 0:
+            return getattr(super(), agg)(axis=axis, level=level, **kwargs)
+
+        new_frame = self._modin_frame.agg(agg)
+        new_frame = new_frame._set_index(
+            pandas.Index.__new__(pandas.Index, data=["__reduced__"], dtype="O")
+        )
+        return self.__constructor__(new_frame, shape_hint="row")
 
     def _get_index(self):
         if self._modin_frame._has_unsupported_data:

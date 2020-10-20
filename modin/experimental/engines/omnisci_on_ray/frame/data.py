@@ -318,6 +318,21 @@ class OmnisciOnRayFrame(BasePandasFrame):
 
         return new_frame
 
+    def agg(self, agg):
+        assert isinstance(agg, str)
+
+        agg_exprs = OrderedDict()
+        for col in self.columns:
+            agg_exprs[col] = AggregateExpr(agg, self.ref(col))
+
+        return self.__constructor__(
+            columns=self.columns,
+            dtypes=self._dtypes_for_exprs(agg_exprs),
+            op=GroupbyAggNode(self, [], agg_exprs, {"sort": False}),
+            index_cols=None,
+            force_execution_mode=self._force_execution_mode,
+        )
+
     def fillna(
         self,
         value=None,
@@ -1062,7 +1077,38 @@ class OmnisciOnRayFrame(BasePandasFrame):
         return self._index_cache
 
     def _set_index(self, new_index):
-        raise NotImplementedError("OmnisciOnRayFrame._set_index is not yet suported")
+        if not isinstance(new_index, (Index, MultiIndex)):
+            raise NotImplementedError(
+                "OmnisciOnRayFrame._set_index is not yet suported"
+            )
+
+        self._execute()
+
+        assert self._partitions.size == 1
+        obj = self._partitions[0][0].get()
+        if isinstance(obj, pd.DataFrame):
+            raise NotImplementedError(
+                "OmnisciOnRayFrame._set_index is not yet suported"
+            )
+        else:
+            assert isinstance(obj, pyarrow.Table)
+
+            at = obj
+            if self._index_cols:
+                at = at.drop(self._index_cols)
+
+            index_df = pd.DataFrame(data={}, index=new_index.copy())
+            index_df = index_df.reset_index()
+
+            index_at = pyarrow.Table.from_pandas(index_df)
+
+            for i, field in enumerate(at.schema):
+                index_at = index_at.append_column(field, at.column(i))
+
+            index_names = self._mangle_index_names(new_index.names)
+            index_at = index_at.rename_columns(index_names + list(self.columns))
+
+            return self.from_arrow(index_at, index_names, new_index)
 
     def reset_index(self, drop):
         if drop:
@@ -1119,7 +1165,7 @@ class OmnisciOnRayFrame(BasePandasFrame):
         return super(OmnisciOnRayFrame, self)._get_columns()
 
     columns = property(_get_columns)
-    index = property(_get_index, _set_index)
+    index = property(_get_index)
 
     def has_multiindex(self):
         if self._index_cache is not None:
@@ -1196,10 +1242,7 @@ class OmnisciOnRayFrame(BasePandasFrame):
             orig_index_names = df.index.names
             orig_df = df
 
-            index_cols = [
-                f"__index__{i}_{'__None__' if n is None else n}"
-                for i, n in enumerate(df.index.names)
-            ]
+            index_cols = cls._mangle_index_names(df.index.names)
             df.index.names = index_cols
             df = df.reset_index()
 
@@ -1232,7 +1275,14 @@ class OmnisciOnRayFrame(BasePandasFrame):
         )
 
     @classmethod
-    def from_arrow(cls, at):
+    def _mangle_index_names(cls, names):
+        return [
+            f"__index__{i}_{'__None__' if n is None else n}"
+            for i, n in enumerate(names)
+        ]
+
+    @classmethod
+    def from_arrow(cls, at, index_cols=None, index=None):
         (
             new_frame,
             new_lengths,
@@ -1240,11 +1290,18 @@ class OmnisciOnRayFrame(BasePandasFrame):
             unsupported_cols,
         ) = cls._frame_mgr_cls.from_arrow(at, return_dims=True)
 
-        new_columns = pd.Index(data=at.column_names, dtype="O")
-        new_index = pd.RangeIndex(at.num_rows)
+        if index_cols:
+            data_cols = [col for col in at.column_names if col not in index_cols]
+            new_index = index
+        else:
+            data_cols = at.column_names
+            assert index is None
+            new_index = pd.RangeIndex(at.num_rows)
+
+        new_columns = pd.Index(data=data_cols, dtype="O")
         new_dtypes = pd.Series(
             [cls._arrow_type_to_dtype(col.type) for col in at.columns],
-            index=new_columns,
+            index=at.column_names,
         )
 
         if len(unsupported_cols) > 0:
@@ -1260,6 +1317,7 @@ class OmnisciOnRayFrame(BasePandasFrame):
             row_lengths=new_lengths,
             column_widths=new_widths,
             dtypes=new_dtypes,
+            index_cols=index_cols,
             has_unsupported_data=len(unsupported_cols) > 0,
         )
 
