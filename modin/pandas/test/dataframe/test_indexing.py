@@ -522,9 +522,9 @@ def test_reindex_like():
 
 def test_rename_sanity():
     source_df = pandas.DataFrame(test_data["int_data"])[
-        ["col1", "col2", "col3", "col4"]
+        ["col1", "index", "col3", "col4"]
     ]
-    mapping = {"col1": "a", "col2": "b", "col3": "c", "col4": "d"}
+    mapping = {"col1": "a", "index": "b", "col3": "c", "col4": "d"}
 
     modin_df = pd.DataFrame(source_df)
     df_equals(modin_df.rename(columns=mapping), source_df.rename(columns=mapping))
@@ -671,7 +671,7 @@ def test_rename_multiindex():
 @pytest.mark.skip(reason="Pandas does not pass this test")
 def test_rename_nocopy():
     source_df = pandas.DataFrame(test_data["int_data"])[
-        ["col1", "col2", "col3", "col4"]
+        ["col1", "index", "col3", "col4"]
     ]
     modin_df = pd.DataFrame(source_df)
     modin_renamed = modin_df.rename(columns={"col3": "foo"}, copy=False)
@@ -681,7 +681,7 @@ def test_rename_nocopy():
 
 def test_rename_inplace():
     source_df = pandas.DataFrame(test_data["int_data"])[
-        ["col1", "col2", "col3", "col4"]
+        ["col1", "index", "col3", "col4"]
     ]
     modin_df = pd.DataFrame(source_df)
 

@@ -440,7 +440,7 @@ def test_append(data):
 
 
 def test_astype():
-    td = pandas.DataFrame(test_data["int_data"])[["col1", "col2", "col3", "col4"]]
+    td = pandas.DataFrame(test_data["int_data"])[["col1", "index", "col3", "col4"]]
     modin_df = pd.DataFrame(td.values, index=td.index, columns=td.columns)
     expected_df = pandas.DataFrame(td.values, index=td.index, columns=td.columns)
 
@@ -460,13 +460,13 @@ def test_astype():
     expected_df_casted = expected_df.astype("category")
     df_equals(modin_df_casted, expected_df_casted)
 
-    dtype_dict = {"col1": np.int32, "col2": np.int64, "col3": str}
+    dtype_dict = {"col1": np.int32, "index": np.int64, "col3": str}
     modin_df_casted = modin_df.astype(dtype_dict)
     expected_df_casted = expected_df.astype(dtype_dict)
     df_equals(modin_df_casted, expected_df_casted)
 
     # Ignore lint because this is testing bad input
-    bad_dtype_dict = {"col2": np.int32, "col2": np.int64, "col2": str}  # noqa F601
+    bad_dtype_dict = {"index": np.int32, "index": np.int64, "index": str}  # noqa F601
     modin_df_casted = modin_df.astype(bad_dtype_dict)
     expected_df_casted = expected_df.astype(bad_dtype_dict)
     df_equals(modin_df_casted, expected_df_casted)
