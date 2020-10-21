@@ -14,7 +14,6 @@
 import pytest
 import numpy as np
 import pandas
-from pandas.util.testing import getSeriesData
 from pandas.testing import assert_index_equal
 import matplotlib
 import modin.pandas as pd
@@ -522,13 +521,15 @@ def test_reindex_like():
 
 
 def test_rename_sanity():
-    test_data = pandas.DataFrame(getSeriesData())
-    mapping = {"A": "a", "B": "b", "C": "c", "D": "d"}
+    source_df = pandas.DataFrame(test_data["int_data"])[
+        ["col1", "col2", "col3", "col4"]
+    ]
+    mapping = {"col1": "a", "col2": "b", "col3": "c", "col4": "d"}
 
-    modin_df = pd.DataFrame(test_data)
-    df_equals(modin_df.rename(columns=mapping), test_data.rename(columns=mapping))
+    modin_df = pd.DataFrame(source_df)
+    df_equals(modin_df.rename(columns=mapping), source_df.rename(columns=mapping))
 
-    renamed2 = test_data.rename(columns=str.lower)
+    renamed2 = source_df.rename(columns=str.lower)
     df_equals(modin_df.rename(columns=str.lower), renamed2)
 
     modin_df = pd.DataFrame(renamed2)
@@ -563,18 +564,18 @@ def test_rename_sanity():
         modin_df.rename()
 
     # partial columns
-    renamed = test_data.rename(columns={"C": "foo", "D": "bar"})
-    modin_df = pd.DataFrame(test_data)
+    renamed = source_df.rename(columns={"col3": "foo", "col4": "bar"})
+    modin_df = pd.DataFrame(source_df)
     assert_index_equal(
-        modin_df.rename(columns={"C": "foo", "D": "bar"}).index,
-        test_data.rename(columns={"C": "foo", "D": "bar"}).index,
+        modin_df.rename(columns={"col3": "foo", "col4": "bar"}).index,
+        source_df.rename(columns={"col3": "foo", "col4": "bar"}).index,
     )
 
     # other axis
-    renamed = test_data.T.rename(index={"C": "foo", "D": "bar"})
+    renamed = source_df.T.rename(index={"col3": "foo", "col4": "bar"})
     assert_index_equal(
-        test_data.T.rename(index={"C": "foo", "D": "bar"}).index,
-        modin_df.T.rename(index={"C": "foo", "D": "bar"}).index,
+        source_df.T.rename(index={"col3": "foo", "col4": "bar"}).index,
+        modin_df.T.rename(index={"col3": "foo", "col4": "bar"}).index,
     )
 
     # index with name
@@ -669,26 +670,30 @@ def test_rename_multiindex():
 
 @pytest.mark.skip(reason="Pandas does not pass this test")
 def test_rename_nocopy():
-    test_data = pandas.DataFrame(getSeriesData())
-    modin_df = pd.DataFrame(test_data)
-    modin_renamed = modin_df.rename(columns={"C": "foo"}, copy=False)
+    source_df = pandas.DataFrame(test_data["int_data"])[
+        ["col1", "col2", "col3", "col4"]
+    ]
+    modin_df = pd.DataFrame(source_df)
+    modin_renamed = modin_df.rename(columns={"col3": "foo"}, copy=False)
     modin_renamed["foo"] = 1
-    assert (modin_df["C"] == 1).all()
+    assert (modin_df["col3"] == 1).all()
 
 
 def test_rename_inplace():
-    test_data = pandas.DataFrame(getSeriesData())
-    modin_df = pd.DataFrame(test_data)
+    source_df = pandas.DataFrame(test_data["int_data"])[
+        ["col1", "col2", "col3", "col4"]
+    ]
+    modin_df = pd.DataFrame(source_df)
 
     df_equals(
-        modin_df.rename(columns={"C": "foo"}),
-        test_data.rename(columns={"C": "foo"}),
+        modin_df.rename(columns={"col3": "foo"}),
+        source_df.rename(columns={"col3": "foo"}),
     )
 
-    frame = test_data.copy()
+    frame = source_df.copy()
     modin_frame = modin_df.copy()
-    frame.rename(columns={"C": "foo"}, inplace=True)
-    modin_frame.rename(columns={"C": "foo"}, inplace=True)
+    frame.rename(columns={"col3": "foo"}, inplace=True)
+    modin_frame.rename(columns={"col3": "foo"}, inplace=True)
 
     df_equals(modin_frame, frame)
 
@@ -753,7 +758,7 @@ def test_rename_axis():
 
 
 def test_rename_axis_inplace():
-    test_frame = pandas.DataFrame(getSeriesData())
+    test_frame = pandas.DataFrame(test_data["int_data"])
     modin_df = pd.DataFrame(test_frame)
 
     result = test_frame.copy()
