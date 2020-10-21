@@ -99,7 +99,7 @@ def initialize_ray(
 
         cluster = override_is_cluster or IsRayCluster.get()
         redis_address = override_redis_address or RayRedisAddress.get()
-        redis_password = override_redis_password or secrets.token_hex(16)
+        redis_password = override_redis_password or secrets.token_hex(32)
 
         if cluster:
             # We only start ray in a cluster setting for the head node.
