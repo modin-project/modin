@@ -84,6 +84,10 @@ str_delim_whitespaces = """col1 col2  col3   col4
 5 6   7  8
 9  10    11 12
 """
+str_bad_none_quotes = """1, 2, 3, 4
+one, two, three, four
+five, "six", seven, "eight
+"""
 
 test_csv_dialect_params = {
     "delimiter": "_",
@@ -1166,25 +1170,17 @@ class TestReadCSV:
         unique_filename = get_unique_filename(
             "test_from_csv_bad_quotes", {"nrows": nrows}
         )
-        csv_bad_quotes = """1, 2, 3, 4
-one, two, three, four
-five, "six", seven, "eight
-"""
 
-        eval_io_from_str(csv_bad_quotes, unique_filename, nrows=nrows)
+        eval_io_from_str(str_bad_none_quotes, unique_filename, nrows=nrows)
 
     @pytest.mark.parametrize("nrows", [2, None])
     def test_from_csv_quote_none(self, nrows):
         unique_filename = get_unique_filename(
             "test_from_csv_quote_none", {"nrows": nrows}
         )
-        csv_bad_quotes = """1, 2, 3, 4
-one, two, three, four
-five, "six", seven, "eight
-"""
 
         eval_io_from_str(
-            csv_bad_quotes, unique_filename, quoting=csv.QUOTE_NONE, nrows=nrows
+            str_bad_none_quotes, unique_filename, quoting=csv.QUOTE_NONE, nrows=nrows
         )
 
     def test_from_csv_categories(self):
