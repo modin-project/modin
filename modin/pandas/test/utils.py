@@ -15,10 +15,11 @@ import pytest
 import numpy as np
 import math
 import pandas
-from pandas.util.testing import (
-    assert_almost_equal,
+from pandas.testing import (
+    assert_series_equal,
     assert_frame_equal,
-    assert_categorical_equal,
+    assert_index_equal,
+    assert_extension_array_equal,
 )
 import modin.pandas as pd
 from modin.utils import to_pandas
@@ -422,8 +423,7 @@ encoding_types = [
 
 def categories_equals(left, right):
     assert (left.ordered and right.ordered) or (not left.ordered and not right.ordered)
-    is_category_ordered = left.ordered
-    assert_categorical_equal(left, right, check_category_order=is_category_ordered)
+    assert_extension_array_equal(left, right)
 
 
 def df_categories_equals(df1, df2):
@@ -439,12 +439,10 @@ def df_categories_equals(df1, df2):
 
     categories_columns = df1.select_dtypes(include="category").columns
     for column in categories_columns:
-        is_category_ordered = df1[column].dtype.ordered
-        assert_categorical_equal(
+        assert_extension_array_equal(
             df1[column].values,
             df2[column].values,
             check_dtype=False,
-            check_category_order=is_category_ordered,
         )
 
 
@@ -458,12 +456,6 @@ def df_equals(df1, df2):
     Returns:
         True if df1 is equal to df2.
     """
-    types_for_almost_equals = (
-        pandas.core.indexes.range.RangeIndex,
-        pandas.core.indexes.base.Index,
-        np.recarray,
-    )
-
     # Gets AttributError if modin's groupby object is not import like this
     from modin.pandas.groupby import DataFrameGroupBy
 
@@ -522,12 +514,10 @@ def df_equals(df1, df2):
             check_categorical=False,
         )
         df_categories_equals(df1, df2)
-    elif isinstance(df1, types_for_almost_equals) and isinstance(
-        df2, types_for_almost_equals
-    ):
-        assert_almost_equal(df1, df2, check_dtype=False)
+    elif isinstance(df1, pandas.Index) and isinstance(df2, pandas.Index):
+        assert_index_equal(df1, df2)
     elif isinstance(df1, pandas.Series) and isinstance(df2, pandas.Series):
-        assert_almost_equal(df1, df2, check_dtype=False, check_series_type=False)
+        assert_series_equal(df1, df2, check_dtype=False, check_series_type=False)
     elif isinstance(df1, groupby_types) and isinstance(df2, groupby_types):
         for g1, g2 in zip(df1, df2):
             assert g1[0] == g2[0]
@@ -543,6 +533,8 @@ def df_equals(df1, df2):
     elif isinstance(df1, pandas.core.arrays.numpy_.PandasArray):
         assert isinstance(df2, pandas.core.arrays.numpy_.PandasArray)
         assert df1 == df2
+    elif isinstance(df1, np.recarray) and isinstance(df2, np.recarray):
+        np.testing.assert_array_equal(df1, df2)
     else:
         if df1 != df2:
             np.testing.assert_almost_equal(df1, df2)

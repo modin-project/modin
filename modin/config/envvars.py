@@ -204,7 +204,7 @@ class TestDatasetSize(EnvironmentVariable, type=str):
     """
 
     varname = "MODIN_TEST_DATASET_SIZE"
-    choices = ("small", "normal", "big")
+    choices = ("Small", "Normal", "Big")
 
 
 def _check_vars():
