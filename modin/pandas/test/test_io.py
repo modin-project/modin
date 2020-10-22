@@ -1052,6 +1052,26 @@ def test_from_csv_s3(make_csv_file):
     df_equals(modin_df, pandas_df)
 
 
+@pytest.mark.skipif(
+    Engine.get() == "Python",
+    reason="S3-like path doesn't support in pandas with anonymous credentials. See issue #2301.",
+)
+def test_read_parquet_s3():
+    import s3fs
+
+    # Pandas currently supports only default credentials for boto therefore
+    # we use S3FileSystem with `anon=True` for  to make testing possible.
+    dataset_url = "s3://aws-roda-hcls-datalake/chembl_27/chembl_27_public_tissue_dictionary/part-00000-66508102-96fa-4fd9-a0fd-5bc072a74293-c000.snappy.parquet"
+    fs = s3fs.S3FileSystem(anon=True)
+    pandas_df = pandas.read_parquet(fs.open(dataset_url, "rb"))
+    modin_df_s3fs = pd.read_parquet(fs.open(dataset_url, "rb"))
+    df_equals(pandas_df, modin_df_s3fs)
+
+    # Modin supports default and anonymous credentials and resolves this internally.
+    modin_df_s3 = pd.read_parquet(dataset_url)
+    df_equals(pandas_df, modin_df_s3)
+
+
 def test_from_csv_default(make_csv_file):
     # We haven't implemented read_csv from https, but if it's implemented, then this needs to change
     dataset_url = "https://raw.githubusercontent.com/modin-project/modin/master/modin/pandas/test/data/blah.csv"
