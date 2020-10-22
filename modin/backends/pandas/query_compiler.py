@@ -159,8 +159,10 @@ def _numeric_only_reduce_fn(applier: Type[Function], *funcs) -> Callable:
 
     Parameters
     ----------
-    applier : Function object to register `funcs`
-    *funcs : list of functions to register in `applier`
+    applier: Callable
+        Function object to register `funcs`
+    *funcs: list
+        List of functions to register in `applier`
 
     Returns
     -------
@@ -665,18 +667,43 @@ class PandasQueryCompiler(BaseQueryCompiler):
         lambda x, *args, **kwargs: pandas.DataFrame.sum(x),
         axis=0,
     )
-    mean = MapReduceFunction.register(
-        lambda df, **kwargs: df.apply(
-            lambda x: (x.sum(skipna=kwargs.get("skipna", True)), x.count()),
-            axis=kwargs.get("axis", 0),
-            result_type="reduce",
-        ).set_axis(df.axes[kwargs.get("axis", 0) ^ 1], axis=0),
-        lambda df, **kwargs: df.apply(
-            lambda x: x.apply(lambda d: d[0]).sum(skipna=kwargs.get("skipna", True))
-            / x.apply(lambda d: d[1]).sum(skipna=kwargs.get("skipna", True)),
-            axis=kwargs.get("axis", 0),
-        ).set_axis(df.axes[kwargs.get("axis", 0) ^ 1], axis=0),
-    )
+
+    def mean(self, axis, **kwargs):
+        if kwargs.get("level") is not None:
+            return self.default_to_pandas(pandas.DataFrame.mean, axis=axis, **kwargs)
+
+        skipna = kwargs.get("skipna", True)
+
+        def map_apply_fn(ser, **kwargs):
+            try:
+                sum_result = ser.sum(skipna=skipna)
+                count_result = ser.count()
+            except TypeError:
+                return None
+            else:
+                return (sum_result, count_result)
+
+        def reduce_apply_fn(ser, **kwargs):
+            sum_result = ser.apply(lambda x: x[0]).sum(skipna=skipna)
+            count_result = ser.apply(lambda x: x[1]).sum(skipna=skipna)
+            return sum_result / count_result
+
+        def reduce_fn(df, **kwargs):
+            df.dropna(axis=1, inplace=True, how="any")
+            return build_applyier(reduce_apply_fn, axis=axis)(df)
+
+        def build_applyier(func, **applyier_kwargs):
+            def applyier(df, **kwargs):
+                result = df.apply(func, **applyier_kwargs)
+                return result.set_axis(df.axes[axis ^ 1], axis=0)
+
+            return applyier
+
+        return MapReduceFunction.register(
+            build_applyier(map_apply_fn, axis=axis, result_type="reduce"),
+            reduce_fn,
+            preserve_index=(kwargs.get("numeric_only") is not None),
+        )(self, axis=axis, **kwargs)
 
     def value_counts(self, **kwargs):
         """

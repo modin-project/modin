@@ -40,7 +40,7 @@ import itertools
 import functools
 import numpy as np
 import sys
-from typing import Optional, Sequence, Tuple, Union, Mapping
+from typing import Optional, Sequence, Tuple, Union, Mapping, Type
 import warnings
 
 from modin.error_message import ErrorMessage
@@ -1068,11 +1068,6 @@ class DataFrame(BasePandasDataset):
             "lt", other, axis=axis, level=level, broadcast=isinstance(other, Series)
         )
 
-    def median(self, axis=None, skipna=None, level=None, numeric_only=None, **kwargs):
-        return self._stat_operation(
-            "median", axis, skipna, level, numeric_only, **kwargs
-        )
-
     def melt(
         self,
         id_vars=None,
@@ -1539,13 +1534,6 @@ class DataFrame(BasePandasDataset):
         ]
         return self.drop(columns=self.columns[indicate], inplace=False)
 
-    def sem(
-        self, axis=None, skipna=None, level=None, ddof=1, numeric_only=None, **kwargs
-    ):
-        return self._stat_operation(
-            "sem", axis, skipna, level, numeric_only, ddof=ddof, **kwargs
-        )
-
     def set_index(
         self, keys, drop=True, append=False, inplace=False, verify_integrity=False
     ):
@@ -1606,9 +1594,6 @@ class DataFrame(BasePandasDataset):
         if not inplace:
             return frame
 
-    def skew(self, axis=None, skipna=None, level=None, numeric_only=None, **kwargs):
-        return self._stat_operation("skew", axis, skipna, level, numeric_only, **kwargs)
-
     @property
     def sparse(self):
         return self._default_to_pandas(pandas.DataFrame.sparse)
@@ -1623,62 +1608,6 @@ class DataFrame(BasePandasDataset):
             return Series(query_compiler=self.T._query_compiler)
         else:
             return self.copy()
-
-    def _stat_operation(
-        self,
-        op_name: str,
-        axis: int,
-        skipna: bool,
-        level: Optional[Union[int, str]],
-        numeric_only: Optional[bool] = None,
-        **kwargs,
-    ):
-        """
-        Do common statistic reduce operations under frame.
-
-        Parameters
-        ----------
-            op_name : str,
-                Name of method to apply.
-            axis : int,
-                Axis to apply method on.
-            skipna : bool,
-                Exclude NA/null values when computing the result.
-            level : int or level name,
-                If specified `axis` is a MultiIndex, applying method along a particular
-                level, collapsing into a Series
-            numeric_only : bool
-                Include only float, int, boolean columns. If None, will attempt
-                to use everything, then use only numeric data.
-
-        Returns
-        -------
-        Series of DataFrame (if level specified)
-
-        """
-        axis = self._get_axis_number(axis)
-        if numeric_only is not None and not numeric_only:
-            self._validate_dtypes(numeric_only=True)
-
-        data = self._numeric_data(axis) if numeric_only else self
-
-        result_qc = getattr(data._query_compiler, op_name)(
-            axis=axis,
-            skipna=skipna,
-            level=level,
-            numeric_only=numeric_only,
-            **kwargs,
-        )
-        if level is not None:
-            return self.__constructor__(query_compiler=result_qc)
-        return self._reduce_dimension(result_qc)
-
-    def std(
-        self, axis=None, skipna=None, level=None, ddof=1, numeric_only=None, **kwargs
-    ):
-        return self._stat_operation(
-            "std", axis, skipna, level, numeric_only, ddof=ddof, **kwargs
-        )
 
     def stack(self, level=-1, dropna=True):
         if not isinstance(self.columns, pandas.MultiIndex) or (
@@ -1931,13 +1860,6 @@ class DataFrame(BasePandasDataset):
             errors=errors,
         )
         self._update_inplace(new_query_compiler=query_compiler)
-
-    def var(
-        self, axis=None, skipna=None, level=None, ddof=1, numeric_only=None, **kwargs
-    ):
-        return self._stat_operation(
-            "var", axis, skipna, level, numeric_only, ddof=ddof, **kwargs
-        )
 
     def value_counts(
         self,
@@ -2212,13 +2134,13 @@ class DataFrame(BasePandasDataset):
         else:
             self._update_inplace(new_query_compiler=new_query_compiler)
 
-    def _numeric_data(self, axis: int):
+    def _get_numeric_data(self, axis: int):
         """
         Grabs only numeric columns from frame.
 
         Parameters
         ----------
-            axis: int,
+        axis: int
             Axis to inspect on having numeric types only.
             If axis is not 0, returns the frame itself.
 
@@ -2276,7 +2198,7 @@ class DataFrame(BasePandasDataset):
             ):
                 raise TypeError("Cannot compare Numeric and Non-Numeric Types")
 
-        return self._numeric_data(axis) if numeric_only else self
+        return self._get_numeric_data(axis) if numeric_only else self
 
     def _validate_dtypes_sum_prod_mean(self, axis, numeric_only, ignore_axis=False):
         """
@@ -2326,7 +2248,7 @@ class DataFrame(BasePandasDataset):
             ):
                 raise TypeError("Cannot operate on Numeric and Non-Numeric Types")
 
-        return self._numeric_data(axis) if numeric_only else self
+        return self._get_numeric_data(axis) if numeric_only else self
 
     def _to_pandas(self):
         return self._query_compiler.to_pandas()

@@ -1337,7 +1337,7 @@ class BasePandasDataset(object):
         if numeric_only is not None and not numeric_only:
             self._validate_dtypes(numeric_only=True)
 
-        data = self._numeric_data(axis) if numeric_only else self
+        data = self._get_numeric_data(axis) if numeric_only else self
 
         return self._reduce_dimension(
             data._query_compiler.kurt(
@@ -1415,19 +1415,62 @@ class BasePandasDataset(object):
             )
         )
 
-    def mean(self, axis=None, skipna=None, level=None, numeric_only=None, **kwargs):
+    def _stat_operation(
+        self,
+        op_name: str,
+        axis: Union[int, str],
+        skipna: bool,
+        level: Optional[Union[int, str]],
+        numeric_only: Optional[bool] = None,
+        **kwargs,
+    ):
+        """
+        Do common statistic reduce operations under frame.
+
+        Parameters
+        ----------
+        op_name: str,
+            Name of method to apply.
+        axis: int or axis name,
+            Axis to apply method on.
+        skipna: bool,
+            Exclude NA/null values when computing the result.
+        level: int or level name,
+            If specified `axis` is a MultiIndex, applying method along a particular
+            level, collapsing into a Series
+        numeric_only: bool
+            Include only float, int, boolean columns. If None, will attempt
+            to use everything, then use only numeric data.
+
+        Returns
+        -------
+        In case of Series: scalar or Series (if level specified)
+        In case of DataFrame: Series of DataFrame (if level specified)
+
+        """
         axis = self._get_axis_number(axis)
-        data = self._validate_dtypes_sum_prod_mean(
-            axis, numeric_only, ignore_axis=False
+        if numeric_only is not None and not numeric_only:
+            self._validate_dtypes(numeric_only=True)
+
+        data = self._get_numeric_data(axis) if numeric_only else self
+
+        result_qc = getattr(data._query_compiler, op_name)(
+            axis=axis,
+            skipna=skipna,
+            level=level,
+            numeric_only=numeric_only,
+            **kwargs,
         )
-        return data._reduce_dimension(
-            data._query_compiler.mean(
-                axis=axis,
-                skipna=skipna,
-                level=level,
-                numeric_only=numeric_only,
-                **kwargs,
-            )
+        if level is not None:
+            return self.__constructor__(query_compiler=result_qc)
+        return self._reduce_dimension(result_qc)
+
+    def mean(self, axis=None, skipna=None, level=None, numeric_only=None, **kwargs):
+        return self._stat_operation("mean", axis, skipna, level, numeric_only, **kwargs)
+
+    def median(self, axis=None, skipna=None, level=None, numeric_only=None, **kwargs):
+        return self._stat_operation(
+            "median", axis, skipna, level, numeric_only, **kwargs
         )
 
     def memory_usage(self, index=True, deep=False):
@@ -1973,6 +2016,13 @@ class BasePandasDataset(object):
             query_compiler = self._query_compiler.getitem_row_array(samples)
             return self.__constructor__(query_compiler=query_compiler)
 
+    def sem(
+        self, axis=None, skipna=None, level=None, ddof=1, numeric_only=None, **kwargs
+    ):
+        return self._stat_operation(
+            "sem", axis, skipna, level, numeric_only, ddof=ddof, **kwargs
+        )
+
     def set_axis(self, labels, axis=0, inplace=False):
         if is_scalar(labels):
             warnings.warn(
@@ -2062,6 +2112,9 @@ class BasePandasDataset(object):
         else:
             return self.tshift(periods, freq)
 
+    def skew(self, axis=None, skipna=None, level=None, numeric_only=None, **kwargs):
+        return self._stat_operation("skew", axis, skipna, level, numeric_only, **kwargs)
+
     def sort_index(
         self,
         axis=0,
@@ -2121,6 +2174,13 @@ class BasePandasDataset(object):
                 key=key,
             )
         return self._create_or_update_from_compiler(result, inplace)
+
+    def std(
+        self, axis=None, skipna=None, level=None, ddof=1, numeric_only=None, **kwargs
+    ):
+        return self._stat_operation(
+            "std", axis, skipna, level, numeric_only, ddof=ddof, **kwargs
+        )
 
     def sub(self, other, axis="columns", level=None, fill_value=None):
         return self._binary_op(
@@ -2502,6 +2562,13 @@ class BasePandasDataset(object):
             .index
         )
         return self.set_axis(labels=new_labels, axis=axis, inplace=not copy)
+
+    def var(
+        self, axis=None, skipna=None, level=None, ddof=1, numeric_only=None, **kwargs
+    ):
+        return self._stat_operation(
+            "var", axis, skipna, level, numeric_only, ddof=ddof, **kwargs
+        )
 
     def __abs__(self):
         return self.abs()

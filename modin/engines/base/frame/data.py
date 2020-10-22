@@ -255,13 +255,15 @@ class BasePandasFrame(object):
 
         Parameters
         ----------
-        axis : int, axis to compute labels along
-        partitions : numpy 2D array (optional), partitions from which labels will
-            be grabbed, if no specified, partitions will be considered as `self._partitions`
+        axis: int
+            Axis to compute labels along
+        partitions: numpy 2D array (optional)
+            Partitions from which labels will be grabbed,
+            if no specified, partitions will be considered as `self._partitions`
 
         Returns
         -------
-        Pandas.index
+        Pandas.Index
             Labels for the specified `axis`
         """
         if partitions is None:
@@ -1009,12 +1011,12 @@ class BasePandasFrame(object):
 
         Parameters
         ----------
-            axis : int,
-                The axis on which reduce function was applied
-            new_parts : numpy 2D array
-                Partitions with the result of applied function
-            preserve_index : boolean
-                The flag to preserve labels for the reduced axis.
+        axis: int,
+            The axis on which reduce function was applied
+        new_parts: numpy 2D array
+            Partitions with the result of applied function
+        preserve_index: boolean
+            The flag to preserve labels for the reduced axis.
 
         Returns
         -------

@@ -33,7 +33,7 @@ from pandas.core.dtypes.common import (
 from pandas._libs.lib import no_default
 from pandas._typing import IndexKeyFunc
 import sys
-from typing import Union, Optional
+from typing import Union, Optional, Type
 import warnings
 
 from modin.utils import _inherit_docstrings, to_pandas
@@ -817,30 +817,6 @@ class Series(BasePandasDataset):
             )
         )
 
-    def median(self, axis=None, skipna=None, level=None, numeric_only=None, **kwargs):
-        axis = self._get_axis_number(axis)
-        if numeric_only is not None and not numeric_only:
-            self._validate_dtypes(numeric_only=True)
-        if level is not None:
-            return self.__constructor__(
-                query_compiler=self._query_compiler.median(
-                    axis=axis,
-                    skipna=skipna,
-                    level=level,
-                    numeric_only=numeric_only,
-                    **kwargs,
-                )
-            )
-        return self._reduce_dimension(
-            self._query_compiler.median(
-                axis=axis,
-                skipna=skipna,
-                level=level,
-                numeric_only=numeric_only,
-                **kwargs,
-            )
-        )
-
     def memory_usage(self, index=True, deep=False):
         if index:
             result = self._reduce_dimension(
@@ -877,34 +853,6 @@ class Series(BasePandasDataset):
     def nsmallest(self, n=5, keep="first"):
         return Series(query_compiler=self._query_compiler.nsmallest(n=n, keep=keep))
 
-    def sem(
-        self, axis=None, skipna=None, level=None, ddof=1, numeric_only=None, **kwargs
-    ):
-        axis = self._get_axis_number(axis)
-        if numeric_only is not None and not numeric_only:
-            self._validate_dtypes(numeric_only=True)
-        if level is not None:
-            return self.__constructor__(
-                query_compiler=self._query_compiler.sem(
-                    axis=axis,
-                    skipna=skipna,
-                    level=level,
-                    ddof=ddof,
-                    numeric_only=numeric_only,
-                    **kwargs,
-                )
-            )
-        return self._reduce_dimension(
-            self._query_compiler.sem(
-                axis=axis,
-                skipna=skipna,
-                level=level,
-                ddof=ddof,
-                numeric_only=numeric_only,
-                **kwargs,
-            )
-        )
-
     def slice_shift(self, periods=1, axis=0):
         if periods == 0:
             return self.copy()
@@ -937,58 +885,6 @@ class Series(BasePandasDataset):
         )
 
         return result.droplevel(0, axis=1) if result.columns.nlevels > 1 else result
-
-    def skew(self, axis=None, skipna=None, level=None, numeric_only=None, **kwargs):
-        axis = self._get_axis_number(axis)
-        if numeric_only is not None and not numeric_only:
-            self._validate_dtypes(numeric_only=True)
-        if level is not None:
-            return self.__constructor__(
-                query_compiler=self._query_compiler.skew(
-                    axis=axis,
-                    skipna=skipna,
-                    level=level,
-                    numeric_only=numeric_only,
-                    **kwargs,
-                )
-            )
-        return self._reduce_dimension(
-            self._query_compiler.skew(
-                axis=axis,
-                skipna=skipna,
-                level=level,
-                numeric_only=numeric_only,
-                **kwargs,
-            )
-        )
-
-    def std(
-        self, axis=None, skipna=None, level=None, ddof=1, numeric_only=None, **kwargs
-    ):
-        axis = self._get_axis_number(axis)
-        if numeric_only is not None and not numeric_only:
-            self._validate_dtypes(numeric_only=True)
-        if level is not None:
-            return self.__constructor__(
-                query_compiler=self._query_compiler.std(
-                    axis=axis,
-                    skipna=skipna,
-                    level=level,
-                    ddof=ddof,
-                    numeric_only=numeric_only,
-                    **kwargs,
-                )
-            )
-        return self._reduce_dimension(
-            self._query_compiler.std(
-                axis=axis,
-                skipna=skipna,
-                level=level,
-                ddof=ddof,
-                numeric_only=numeric_only,
-                **kwargs,
-            )
-        )
 
     @property
     def plot(
@@ -1471,34 +1367,6 @@ class Series(BasePandasDataset):
             )
         )
 
-    def var(
-        self, axis=None, skipna=None, level=None, ddof=1, numeric_only=None, **kwargs
-    ):
-        axis = self._get_axis_number(axis)
-        if numeric_only is not None and not numeric_only:
-            self._validate_dtypes(numeric_only=True)
-        if level is not None:
-            return self.__constructor__(
-                query_compiler=self._query_compiler.var(
-                    axis=axis,
-                    skipna=skipna,
-                    level=level,
-                    ddof=ddof,
-                    numeric_only=numeric_only,
-                    **kwargs,
-                )
-            )
-        return self._reduce_dimension(
-            self._query_compiler.var(
-                axis=axis,
-                skipna=skipna,
-                level=level,
-                ddof=ddof,
-                numeric_only=numeric_only,
-                **kwargs,
-            )
-        )
-
     def view(self, dtype=None):
         return self.__constructor__(
             query_compiler=self._query_compiler.series_view(dtype=dtype)
@@ -1689,7 +1557,9 @@ class Series(BasePandasDataset):
     def _validate_dtypes(self, numeric_only=False):
         pass
 
-    def _numeric_data(self, axis):
+    def _get_numeric_data(self, axis: int):
+        # `numeric_only` parameter does not supported by Series, so this method
+        # doesn't do anything
         return self
 
     def _update_inplace(self, new_query_compiler):

@@ -19,7 +19,7 @@ class MapReduceFunction(Function):
     def call(cls, map_function, reduce_function, **call_kwds):
         def caller(query_compiler, *args, **kwargs):
             preserve_index = call_kwds.pop("preserve_index", True)
-            axis = call_kwds.get("axis") if "axis" in call_kwds else kwargs.get("axis")
+            axis = call_kwds.get("axis", kwargs.get("axis"))
             return query_compiler.__constructor__(
                 query_compiler._modin_frame._map_reduce(
                     cls.validate_axis(axis),
