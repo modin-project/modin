@@ -25,6 +25,7 @@ Manually add documentation for methods which are not presented in pandas.
 import pandas
 import pandas.core.groupby
 from pandas.core.dtypes.common import is_list_like
+from pandas.core.aggregation import reconstruct_func
 import pandas.core.common as com
 
 from modin.error_message import ErrorMessage
@@ -301,29 +302,40 @@ class DataFrameGroupBy(object):
             # so we throw a different message
             raise NotImplementedError("axis other than 0 is not supported")
         if isinstance(func, dict) or func is None:
-            if func is None:
-                func = {}
-            else:
-                if any(i not in self._df.columns for i in func.keys()):
-                    from pandas.core.base import SpecificationError
 
-                    raise SpecificationError("nested renamer is not supported")
+            def _reconstruct_func(func, **kwargs):
+                relabeling_required, func, new_columns, order = reconstruct_func(
+                    func, **kwargs
+                )
+                # We convert to the string version of the function for simplicity.
+                func = {
+                    k: v
+                    if not callable(v) or v.__name__ not in dir(self)
+                    else v.__name__
+                    for k, v in func.items()
+                }
+                return relabeling_required, func, new_columns, order
+
+            relabeling_required, func_dict, new_columns, order = _reconstruct_func(
+                func, **kwargs
+            )
+
+            if any(i not in self._df.columns for i in func_dict.keys()):
+                from pandas.core.base import SpecificationError
+
+                raise SpecificationError("nested renamer is not supported")
             if isinstance(self._by, type(self._query_compiler)):
                 by = list(self._by.columns)
             else:
                 by = self._by
-            # We convert to the string version of the function for simplicity.
-            func_dict = {
-                k: v if not callable(v) or v.__name__ not in dir(self) else v.__name__
-                for k, v in func.items()
-            }
+
             subset_cols = list(func_dict.keys()) + (
                 list(self._by.columns)
                 if isinstance(self._by, type(self._query_compiler))
                 and all(c in self._df.columns for c in self._by.columns)
                 else []
             )
-            return type(self._df)(
+            result = type(self._df)(
                 query_compiler=self._df[subset_cols]._query_compiler.groupby_dict_agg(
                     by=by,
                     func_dict=func_dict,
@@ -332,6 +344,13 @@ class DataFrameGroupBy(object):
                     drop=self._drop,
                 )
             )
+
+            if relabeling_required:
+                result = result.iloc[:, order]
+                result.columns = new_columns
+
+            return result
+
         if is_list_like(func):
             return self._default_to_pandas(
                 lambda df, *args, **kwargs: df.aggregate(func, *args, **kwargs),

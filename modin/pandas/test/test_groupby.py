@@ -1122,7 +1122,6 @@ def test_groupby_multiindex():
     df_equals(modin_df.groupby(by=by).count(), pandas_df.groupby(by=by).count())
 
 
-@pytest.mark.skip("See Modin issue #2254 for details")
 def test_agg_func_None_rename():
     pandas_df = pandas.DataFrame(
         {
