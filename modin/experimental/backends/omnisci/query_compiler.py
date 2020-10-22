@@ -311,6 +311,22 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
         )
         return self.__constructor__(new_frame, shape_hint="row")
 
+    def value_counts(self, **kwargs):
+        subset = kwargs.get("subset", None)
+        normalize = kwargs.get("normalize", False)
+        sort = kwargs.get("sort", True)
+        ascending = kwargs.get("ascending", False)
+        bins = kwargs.get("bins", False)
+        dropna = kwargs.get("dropna", True)
+
+        if bins or normalize:
+            return super().value_count(**kwargs)
+
+        new_frame = self._modin_frame.value_counts(
+            columns=subset, dropna=dropna, sort=sort, ascending=ascending
+        )
+        return self.__constructor__(new_frame, shape_hint="column")
+
     def _get_index(self):
         if self._modin_frame._has_unsupported_data:
             return default_axis_getter(0)(self)

@@ -846,10 +846,10 @@ class TestGroupby:
 
 class TestAgg:
     data = {
-        "a": [1, 2, None, None, 5, None],
-        "b": [10, 20, None, 40, 50, None],
+        "a": [1, 2, None, None, 1, None],
+        "b": [10, 20, None, 20, 10, None],
         "c": [None, 200, None, 400, 500, 600],
-        "d": [11, 22, 33, 44, 55, 66],
+        "d": [11, 22, 33, 22, 33, 22],
     }
 
     @pytest.mark.parametrize("agg", ["count", "max", "min", "sum"])
@@ -858,6 +858,23 @@ class TestAgg:
             return getattr(df, agg)()
 
         run_and_compare(agg, data=self.data, agg=agg, force_lazy=False)
+
+    @pytest.mark.parametrize("cols", ["a", "d"])
+    @pytest.mark.parametrize("dropna", [True, False])
+    @pytest.mark.parametrize("sort", [True])
+    @pytest.mark.parametrize("ascending", [True, False])
+    def test_value_counts(self, cols, dropna, sort, ascending):
+        def value_counts(df, cols, dropna, sort, ascending, **kwargs):
+            return df[cols].value_counts(dropna=dropna, sort=sort, ascending=ascending)
+
+        run_and_compare(
+            value_counts,
+            data=self.data,
+            cols=cols,
+            dropna=dropna,
+            sort=sort,
+            ascending=ascending,
+        )
 
 
 class TestMerge:
