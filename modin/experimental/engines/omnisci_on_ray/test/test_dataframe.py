@@ -844,6 +844,22 @@ class TestGroupby:
         run_and_compare(groupby, data=self.data)
 
 
+class TestAgg:
+    data = {
+        "a": [1, 2, None, None, 5, None],
+        "b": [10, 20, None, 40, 50, None],
+        "c": [None, 200, None, 400, 500, 600],
+        "d": [11, 22, 33, 44, 55, 66],
+    }
+
+    @pytest.mark.parametrize("agg", ["count", "max", "min", "sum"])
+    def test_simple_agg(self, agg):
+        def agg(df, agg, **kwargs):
+            return getattr(df, agg)()
+
+        run_and_compare(agg, data=self.data, agg=agg, force_lazy=False)
+
+
 class TestMerge:
     data = {
         "a": [1, 2, 3],
