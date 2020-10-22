@@ -294,11 +294,7 @@ def insert_lines_to_csv(
 
 
 @pytest.fixture
-def make_csv_file(
-    filename=TEST_CSV_FILENAME,
-    additional_col_values=None,
-    add_blank_lines=False,
-):
+def make_csv_file():
     """Pytest fixture factory that makes temp csv files for testing.
 
     Yields:
@@ -307,14 +303,14 @@ def make_csv_file(
     filenames = []
 
     def _make_csv_file(
-        filename=filename,
+        filename=TEST_CSV_FILENAME,
         row_size=SMALL_ROW_SIZE,
         force=True,
         delimiter=",",
         encoding=None,
         compression="infer",
-        additional_col_values=additional_col_values,
-        add_blank_lines=add_blank_lines,
+        additional_col_values=None,
+        add_blank_lines=False,
         add_bad_lines=False,
         add_nan_lines=False,
         thousands_separator=None,
