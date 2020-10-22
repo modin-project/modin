@@ -40,7 +40,7 @@ import itertools
 import functools
 import numpy as np
 import sys
-from typing import Optional, Sequence, Tuple, Union, Mapping, Type
+from typing import Optional, Sequence, Tuple, Union, Mapping
 import warnings
 
 from modin.error_message import ErrorMessage

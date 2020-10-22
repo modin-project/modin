@@ -33,7 +33,7 @@ from pandas.core.dtypes.common import (
 from pandas._libs.lib import no_default
 from pandas._typing import IndexKeyFunc
 import sys
-from typing import Union, Optional, Type
+from typing import Union, Optional
 import warnings
 
 from modin.utils import _inherit_docstrings, to_pandas
