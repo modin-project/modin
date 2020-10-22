@@ -22,12 +22,15 @@ from pandas.core.dtypes.common import (
     is_scalar,
 )
 from pandas.core.base import DataError
+from typing import Type, Callable
 import warnings
+
 
 from modin.backends.base.query_compiler import BaseQueryCompiler
 from modin.error_message import ErrorMessage
 from modin.utils import try_cast_to_pandas, wrap_udf_function
 from modin.data_management.functions import (
+    Function,
     FoldFunction,
     MapFunction,
     MapReduceFunction,
@@ -147,6 +150,34 @@ def copy_df_for_func(func, display_name: str = None):
 
     if display_name is not None:
         caller.__name__ = display_name
+    return caller
+
+
+def _numeric_only_reduce_fn(applier: Type[Function], *funcs) -> Callable:
+    """
+    Build reduce function for statistic operations with `numeric_only` parameter.
+
+    Parameters
+    ----------
+    applier: Callable
+        Function object to register `funcs`
+    *funcs: list
+        List of functions to register in `applier`
+
+    Returns
+    -------
+    callable
+        A callable function to be applied in the partitions
+    """
+
+    def caller(self, *args, **kwargs):
+        # If `numeric_only` is None then we don't know what columns/indices will
+        # be dropped at the result of reduction function, and so can't preserve labels
+        preserve_index = kwargs.get("numeric_only", None) is not None
+        return applier.register(*funcs, preserve_index=preserve_index)(
+            self, *args, **kwargs
+        )
+
     return caller
 
 
@@ -625,10 +656,10 @@ class PandasQueryCompiler(BaseQueryCompiler):
     is_monotonic = _is_monotonic
 
     count = MapReduceFunction.register(pandas.DataFrame.count, pandas.DataFrame.sum)
-    max = MapReduceFunction.register(pandas.DataFrame.max, pandas.DataFrame.max)
-    min = MapReduceFunction.register(pandas.DataFrame.min, pandas.DataFrame.min)
-    sum = MapReduceFunction.register(pandas.DataFrame.sum, pandas.DataFrame.sum)
-    prod = MapReduceFunction.register(pandas.DataFrame.prod, pandas.DataFrame.prod)
+    max = _numeric_only_reduce_fn(MapReduceFunction, pandas.DataFrame.max)
+    min = _numeric_only_reduce_fn(MapReduceFunction, pandas.DataFrame.min)
+    sum = _numeric_only_reduce_fn(MapReduceFunction, pandas.DataFrame.sum)
+    prod = _numeric_only_reduce_fn(MapReduceFunction, pandas.DataFrame.prod)
     any = MapReduceFunction.register(pandas.DataFrame.any, pandas.DataFrame.any)
     all = MapReduceFunction.register(pandas.DataFrame.all, pandas.DataFrame.all)
     memory_usage = MapReduceFunction.register(
@@ -636,18 +667,43 @@ class PandasQueryCompiler(BaseQueryCompiler):
         lambda x, *args, **kwargs: pandas.DataFrame.sum(x),
         axis=0,
     )
-    mean = MapReduceFunction.register(
-        lambda df, **kwargs: df.apply(
-            lambda x: (x.sum(skipna=kwargs.get("skipna", True)), x.count()),
-            axis=kwargs.get("axis", 0),
-            result_type="reduce",
-        ).set_axis(df.axes[kwargs.get("axis", 0) ^ 1], axis=0),
-        lambda df, **kwargs: df.apply(
-            lambda x: x.apply(lambda d: d[0]).sum(skipna=kwargs.get("skipna", True))
-            / x.apply(lambda d: d[1]).sum(skipna=kwargs.get("skipna", True)),
-            axis=kwargs.get("axis", 0),
-        ).set_axis(df.axes[kwargs.get("axis", 0) ^ 1], axis=0),
-    )
+
+    def mean(self, axis, **kwargs):
+        if kwargs.get("level") is not None:
+            return self.default_to_pandas(pandas.DataFrame.mean, axis=axis, **kwargs)
+
+        skipna = kwargs.get("skipna", True)
+
+        def map_apply_fn(ser, **kwargs):
+            try:
+                sum_result = ser.sum(skipna=skipna)
+                count_result = ser.count()
+            except TypeError:
+                return None
+            else:
+                return (sum_result, count_result)
+
+        def reduce_apply_fn(ser, **kwargs):
+            sum_result = ser.apply(lambda x: x[0]).sum(skipna=skipna)
+            count_result = ser.apply(lambda x: x[1]).sum(skipna=skipna)
+            return sum_result / count_result
+
+        def reduce_fn(df, **kwargs):
+            df.dropna(axis=1, inplace=True, how="any")
+            return build_applyier(reduce_apply_fn, axis=axis)(df)
+
+        def build_applyier(func, **applyier_kwargs):
+            def applyier(df, **kwargs):
+                result = df.apply(func, **applyier_kwargs)
+                return result.set_axis(df.axes[axis ^ 1], axis=0)
+
+            return applyier
+
+        return MapReduceFunction.register(
+            build_applyier(map_apply_fn, axis=axis, result_type="reduce"),
+            reduce_fn,
+            preserve_index=(kwargs.get("numeric_only") is not None),
+        )(self, axis=axis, **kwargs)
 
     def value_counts(self, **kwargs):
         """
@@ -664,7 +720,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             return self.__constructor__(new_modin_frame)
 
         def map_func(df, *args, **kwargs):
-            return df.squeeze(axis=1).value_counts(**kwargs)
+            return df.squeeze(axis=1).value_counts(**kwargs).to_frame()
 
         def reduce_func(df, *args, **kwargs):
             normalize = kwargs.get("normalize", False)
@@ -735,28 +791,30 @@ class PandasQueryCompiler(BaseQueryCompiler):
                     else:
                         new_index[j] = result.index[j]
                     i += 1
-                return pandas.DataFrame(result, index=new_index)
+                return pandas.DataFrame(
+                    result, index=new_index, columns=["__reduced__"]
+                )
 
             return sort_index_for_equal_values(result, ascending)
 
-        return MapReduceFunction.register(map_func, reduce_func, preserve_index=False)(
-            self, **kwargs
-        )
+        return MapReduceFunction.register(
+            map_func, reduce_func, axis=0, preserve_index=False
+        )(self, **kwargs)
 
     # END MapReduce operations
 
     # Reduction operations
     idxmax = ReductionFunction.register(pandas.DataFrame.idxmax)
     idxmin = ReductionFunction.register(pandas.DataFrame.idxmin)
-    median = ReductionFunction.register(pandas.DataFrame.median)
+    median = _numeric_only_reduce_fn(ReductionFunction, pandas.DataFrame.median)
     nunique = ReductionFunction.register(pandas.DataFrame.nunique)
-    skew = ReductionFunction.register(pandas.DataFrame.skew)
-    kurt = ReductionFunction.register(pandas.DataFrame.kurt)
-    sem = ReductionFunction.register(pandas.DataFrame.sem)
-    std = ReductionFunction.register(pandas.DataFrame.std)
-    var = ReductionFunction.register(pandas.DataFrame.var)
-    sum_min_count = ReductionFunction.register(pandas.DataFrame.sum)
-    prod_min_count = ReductionFunction.register(pandas.DataFrame.prod)
+    skew = _numeric_only_reduce_fn(ReductionFunction, pandas.DataFrame.skew)
+    kurt = _numeric_only_reduce_fn(ReductionFunction, pandas.DataFrame.kurt)
+    sem = _numeric_only_reduce_fn(ReductionFunction, pandas.DataFrame.sem)
+    std = _numeric_only_reduce_fn(ReductionFunction, pandas.DataFrame.std)
+    var = _numeric_only_reduce_fn(ReductionFunction, pandas.DataFrame.var)
+    sum_min_count = _numeric_only_reduce_fn(ReductionFunction, pandas.DataFrame.sum)
+    prod_min_count = _numeric_only_reduce_fn(ReductionFunction, pandas.DataFrame.prod)
     quantile_for_single_value = ReductionFunction.register(pandas.DataFrame.quantile)
     mad = ReductionFunction.register(pandas.DataFrame.mad)
     to_datetime = ReductionFunction.register(

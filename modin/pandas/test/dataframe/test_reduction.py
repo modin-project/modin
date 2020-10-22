@@ -305,26 +305,6 @@ def test_prod(
     df_equals(modin_result, pandas_result)
 
 
-@pytest.mark.parametrize(
-    "numeric_only",
-    [
-        pytest.param(None, marks=pytest.mark.xfail(reason="See #1976 for details")),
-        False,
-        True,
-    ],
-)
-@pytest.mark.parametrize(
-    "min_count", int_arg_values, ids=arg_keys("min_count", int_arg_keys)
-)
-def test_prod_specific(min_count, numeric_only):
-    if min_count == 5 and numeric_only:
-        pytest.xfail("see #1953 for details")
-    eval_general(
-        *create_test_dfs(test_data_diff_dtype),
-        lambda df: df.prod(min_count=min_count, numeric_only=numeric_only),
-    )
-
-
 @pytest.mark.parametrize("is_transposed", [False, True])
 @pytest.mark.parametrize(
     "skipna", bool_arg_values, ids=arg_keys("skipna", bool_arg_keys)
@@ -353,19 +333,17 @@ def test_sum(data, axis, skipna, is_transposed):
     df_equals(modin_result, pandas_result)
 
 
+@pytest.mark.parametrize("fn", ["prod, sum"])
 @pytest.mark.parametrize(
-    "numeric_only",
-    [
-        pytest.param(None, marks=pytest.mark.xfail(reason="See #1976 for details")),
-        False,
-        True,
-    ],
+    "numeric_only", bool_arg_values, ids=arg_keys("numeric_only", bool_arg_keys)
 )
-@pytest.mark.parametrize("min_count", int_arg_values)
-def test_sum_specific(min_count, numeric_only):
+@pytest.mark.parametrize(
+    "min_count", int_arg_values, ids=arg_keys("min_count", int_arg_keys)
+)
+def test_sum_prod_specific(fn, min_count, numeric_only):
     eval_general(
         *create_test_dfs(test_data_diff_dtype),
-        lambda df: df.sum(min_count=min_count, numeric_only=numeric_only),
+        lambda df: getattr(df, fn)(min_count=min_count, numeric_only=numeric_only),
     )
 
 
@@ -375,3 +353,16 @@ def test_sum_single_column(data):
     pandas_df = pandas.DataFrame(data).iloc[:, [0]]
     df_equals(modin_df.sum(), pandas_df.sum())
     df_equals(modin_df.sum(axis=1), pandas_df.sum(axis=1))
+
+
+@pytest.mark.parametrize(
+    "fn", ["max", "min", "median", "mean", "skew", "kurt", "sem", "std", "var"]
+)
+@pytest.mark.parametrize(
+    "numeric_only", bool_arg_values, ids=arg_keys("numeric_only", bool_arg_keys)
+)
+def test_reduction_specific(fn, numeric_only):
+    eval_general(
+        *create_test_dfs(test_data_diff_dtype),
+        lambda df: getattr(df, fn)(numeric_only=numeric_only),
+    )
