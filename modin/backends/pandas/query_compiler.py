@@ -209,7 +209,8 @@ class PandasQueryCompiler(BaseQueryCompiler):
         ----
         This operation takes a distributed object and converts it directly to pandas.
         """
-        ErrorMessage.default_to_pandas(str(pandas_op))
+        op_name = getattr(pandas_op, "__name__", str(pandas_op))
+        ErrorMessage.default_to_pandas(op_name)
         args = (a.to_pandas() if isinstance(a, type(self)) else a for a in args)
         kwargs = {
             k: v.to_pandas if isinstance(v, type(self)) else v
