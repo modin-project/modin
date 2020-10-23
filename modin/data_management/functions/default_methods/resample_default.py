@@ -31,6 +31,12 @@ class Resampler:
 
 
 class ResampleDefault(DefaultMethod):
+    OBJECT_TYPE = "Resampler"
+
     @classmethod
     def register(cls, func, squeeze_self=False, **kwargs):
-        return cls.call(Resampler.build_resample(func, squeeze_self), **kwargs)
+        return cls.call(
+            Resampler.build_resample(func, squeeze_self),
+            fn_name=func.__name__,
+            **kwargs
+        )

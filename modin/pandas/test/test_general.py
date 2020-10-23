@@ -16,6 +16,7 @@ import pytest
 import modin.pandas as pd
 import numpy as np
 from numpy.testing import assert_array_equal
+from modin.utils import get_current_backend
 
 from .utils import test_data_values, test_data_keys, df_equals
 
@@ -437,3 +438,29 @@ def test_to_pandas_indices():
         assert md_df.axes[axis].equal_levels(
             pd_df.axes[axis]
         ), f"Levels of indices at axis {axis} are different!"
+
+
+@pytest.mark.skipif(
+    get_current_backend() != "BaseOnPython",
+    reason="This test make sense only on BaseOnPython backend.",
+)
+@pytest.mark.parametrize(
+    "func, regex",
+    [
+        (lambda df: df.mean(level=0), r"DataFrame\.mean"),
+        (lambda df: df + df, r"DataFrame\.add"),
+        (lambda df: df.index, r"DataFrame\.get_axis\(0\)"),
+        (
+            lambda df: df.drop(columns="col1").squeeze().repeat(2),
+            r"Series\.repeat",
+        ),
+        (lambda df: df.groupby("col1").prod(), r"GroupBy\.prod"),
+        (lambda df: df.rolling(1).count(), r"Rolling\.count"),
+    ],
+)
+def test_default_to_pandas_warning_message(func, regex):
+    data = {"col1": [1, 2, 3], "col2": [4, 5, 6]}
+    df = pd.DataFrame(data)
+
+    with pytest.warns(UserWarning, match=regex):
+        func(df)
