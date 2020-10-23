@@ -97,6 +97,10 @@ class BaseExpr(abc.ABC):
         new_expr = OpExpr("IS NULL", [self], _get_dtype(bool))
         return new_expr
 
+    def is_not_null(self):
+        new_expr = OpExpr("IS NOT NULL", [self], _get_dtype(bool))
+        return new_expr
+
     def bin_op(self, other, op_name):
         if op_name not in self.binary_operations:
             raise NotImplementedError(f"unsupported binary operation {op_name}")
@@ -256,7 +260,8 @@ class AggregateExpr(BaseExpr):
     def __init__(self, agg, op, distinct=False, dtype=None):
         self.agg = agg
         self.operands = [op]
-        self._dtype = dtype if dtype else _agg_dtype(agg, op._dtype)
+        self._dtype = dtype if dtype else _agg_dtype(agg, op._dtype if op else None)
+        assert self._dtype is not None
         self.distinct = distinct
 
     def copy(self):
