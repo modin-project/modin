@@ -447,15 +447,15 @@ def test_to_pandas_indices():
 @pytest.mark.parametrize(
     "func, regex",
     [
-        (lambda df: df.mean(level=0), r"[^D]*DataFrame\.mean"),
-        (lambda df: df + df, r"[^D]*DataFrame\.add"),
-        (lambda df: df.index, r"[^D]*DataFrame.get_axis\(0\)"),
+        (lambda df: df.mean(level=0), r"DataFrame\.mean"),
+        (lambda df: df + df, r"DataFrame\.add"),
+        (lambda df: df.index, r"DataFrame\.get_axis\(0\)"),
         (
             lambda df: df.drop(columns="col1").squeeze().repeat(2),
-            r"[^S]*Series\.repeat",
+            r"Series\.repeat",
         ),
-        (lambda df: df.groupby("col1").prod(), r"[^G]*GroupBy\.prod"),
-        (lambda df: df.rolling(1).count(), r"[^R]*Rolling\.count"),
+        (lambda df: df.groupby("col1").prod(), r"GroupBy\.prod"),
+        (lambda df: df.rolling(1).count(), r"Rolling\.count"),
     ],
 )
 def test_default_to_pandas_warning_message(func, regex):
