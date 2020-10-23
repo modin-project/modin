@@ -852,12 +852,19 @@ class TestAgg:
         "d": [11, 22, 33, 22, 33, 22],
     }
 
-    @pytest.mark.parametrize("agg", ["count", "max", "min", "sum"])
-    def test_simple_agg(self, agg):
-        def agg(df, agg, **kwargs):
-            return getattr(df, agg)()
+    @pytest.mark.parametrize("agg", ["max", "min", "sum", "mean"])
+    @pytest.mark.parametrize("skipna", bool_arg_values)
+    def test_simple_agg(self, agg, skipna):
+        def apply(df, agg, skipna, **kwargs):
+            return getattr(df, agg)(skipna=skipna)
 
-        run_and_compare(agg, data=self.data, agg=agg, force_lazy=False)
+        run_and_compare(apply, data=self.data, agg=agg, skipna=skipna, force_lazy=False)
+
+    def test_count_agg(self):
+        def apply(df, **kwargs):
+            return df.count()
+
+        run_and_compare(apply, data=self.data, force_lazy=False)
 
     @pytest.mark.parametrize("cols", ["a", "d"])
     @pytest.mark.parametrize("dropna", [True, False])
