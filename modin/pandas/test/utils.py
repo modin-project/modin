@@ -659,7 +659,7 @@ def eval_general(
                     ), "exception type not in the list acceptable exception types"
                 if nonacceptable_exception_types is not None:
                     assert not isinstance(
-                        md_e.value, nonacceptable_exception_types
+                        md_e.value, tuple(nonacceptable_exception_types)
                     ), "not acceptable exception type"
         else:
             md_result = fn(modin_df, **md_kwargs)

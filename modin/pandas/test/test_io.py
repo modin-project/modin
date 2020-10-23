@@ -62,6 +62,8 @@ TEST_FWF_FILENAME = "test_fwf.txt"
 TEST_GBQ_FILENAME = "test_gbq."
 SMALL_ROW_SIZE = 2000
 
+test_data_dir = os.path.join(os.path.dirname(__file__), "data")
+
 str_single_element = "1"
 str_single_col = """1
 2
@@ -89,6 +91,9 @@ one, two, three, four
 five, "six", seven, "eight
 """
 
+read_csv_non_acc_exc = [TypeError, FileNotFoundError]
+read_csv_non_acc_exc_without_TypeError = list(read_csv_non_acc_exc).remove(TypeError)
+
 test_csv_dialect_params = {
     "delimiter": "_",
     "doublequote": False,
@@ -104,7 +109,7 @@ def eval_io(
     comparator=df_equals,
     cast_to_str=False,
     check_exception_type=True,
-    nonacceptable_exception_types=(TypeError),
+    nonacceptable_exception_types=read_csv_non_acc_exc,
     *args,
     **kwargs,
 ):
@@ -293,16 +298,10 @@ def insert_lines_to_csv(
         writer.writerows(lines)
 
 
-@pytest.fixture
-def make_csv_file():
-    """Pytest fixture factory that makes temp csv files for testing.
+def _make_csv_file(filenames_list, caching=False):
+    filenames = filenames_list
 
-    Yields:
-        Function that generates csv files
-    """
-    filenames = []
-
-    def _make_csv_file(
+    def _csv_file_maker(
         filename=TEST_CSV_FILENAME,
         row_size=SMALL_ROW_SIZE,
         force=True,
@@ -372,7 +371,6 @@ def make_csv_file():
                 filename = "{}.gz".format(filename)
             elif compression == "zip" or compression == "xz" or compression == "bz2":
                 filename = "{fname}.{comp}".format(fname=filename, comp=compression)
-
             df.to_csv(
                 filename,
                 sep=delimiter,
@@ -417,8 +415,69 @@ def make_csv_file():
             filenames.append(filename)
             return df
 
-    # Return function that generates csv files
-    yield _make_csv_file
+    return _csv_file_maker
+
+
+@pytest.fixture
+def make_csv_file():
+    """Pytest fixture factory that makes temp csv files for testing.
+
+    Yields:
+        Function that generates csv files
+    """
+    filenames = []
+
+    yield _make_csv_file(filenames)
+
+    # Delete csv files that were created
+    for filename in filenames:
+        if os.path.exists(filename):
+            try:
+                os.remove(filename)
+            except PermissionError:
+                pass
+
+
+@pytest.fixture(scope="function")
+def TestReadCSVFixture():
+    filenames = []
+    files_ids = [
+        "test_from_csv_regular",
+        "test_from_csv_blank_lines",
+        "test_from_csv_yes_no",
+        "test_from_csv_nas",
+        "test_from_csv_bad_lines",
+    ]
+    pytest.csvs_names = {file_id: get_unique_filename(file_id) for file_id in files_ids}
+    # test_from_csv_col_handling, test_from_csv_parsing
+    _make_csv_file(filenames)(
+        filename=pytest.csvs_names["test_from_csv_regular"], force=False
+    )
+    _make_csv_file(filenames)(
+        filename=pytest.csvs_names["test_from_csv_yes_no"],
+        force=False,
+        additional_col_values=["Yes", "true", "No", "false"],
+    )
+    # test_from_csv_col_handling
+    _make_csv_file(filenames)(
+        filename=pytest.csvs_names["test_from_csv_blank_lines"],
+        force=False,
+        add_blank_lines=True,
+    )
+    # test_from_csv_na_handling
+    _make_csv_file(filenames)(
+        filename=pytest.csvs_names["test_from_csv_nas"],
+        force=False,
+        add_blank_lines=True,
+        additional_col_values=["<NA>", "N/A", "NA", "NULL", "custom_nan", "73"],
+    )
+    _make_csv_file(filenames)(
+        filename=pytest.csvs_names["test_from_csv_bad_lines"],
+        force=False,
+        add_bad_lines=True,
+    )
+
+    yield
 
     # Delete csv files that were created
     for filename in filenames:
@@ -631,8 +690,12 @@ def get_unique_filename(
     test_name: str,
     kwargs: dict = {},
     extension: str = "csv",
+    data_dir=test_data_dir,
     suffix: str = "",
 ):
+    if len(kwargs) == 0 and extension == "csv" and suffix == "":
+        return os.path.join(data_dir, (test_name + f"_{suffix}" + f".{extension}"))
+
     assert "." not in extension, "please provide pure extenxion name without '.'"
     prohibited_chars = ['"', "\n"]
     non_prohibited_char = "np_char"
@@ -651,9 +714,10 @@ def get_unique_filename(
             for value in kwargs_name.values()
         ]
     )
-    return test_name + parameters_values + f"_{suffix}" + f".{extension}"
+    return os.path.join(data_dir, parameters_values + f"_{suffix}" + f".{extension}")
 
 
+@pytest.mark.usefixtures("TestReadCSVFixture")
 class TestReadCSV:
     # delimiter tests
     @pytest.mark.parametrize("sep", ["_", ",", ".", "\n"])
@@ -694,7 +758,6 @@ class TestReadCSV:
     @pytest.mark.parametrize("skip_blank_lines", [True, False])
     def test_from_csv_col_handling(
         self,
-        make_csv_file,
         header,
         index_col,
         prefix,
@@ -710,13 +773,9 @@ class TestReadCSV:
             "usecols": usecols,
             "skip_blank_lines": skip_blank_lines,
         }
-        unique_filename = get_unique_filename("test_from_csv_col_handling", kwargs)
-        make_csv_file(
-            filename=unique_filename,
-        )
 
         eval_io(
-            filepath_or_buffer=unique_filename,
+            filepath_or_buffer=pytest.csvs_names["test_from_csv_blank_lines"],
             fn_name="read_csv",
             **kwargs,
         )
@@ -756,7 +815,6 @@ class TestReadCSV:
     @pytest.mark.parametrize("names", [["c1", "c2", "c3", "c4"], None])
     def test_from_csv_parsing(
         self,
-        make_csv_file,
         dtype,
         engine,
         converters,
@@ -778,22 +836,20 @@ class TestReadCSV:
             "nrows": nrows,
             "names": names,
         }
-        unique_filename = get_unique_filename("test_from_csv_parsing", kwargs)
-        make_csv_file(
-            filename=unique_filename,
-            additional_col_values=["Yes", "true", "No", "false"]
+
+        filename = (
+            pytest.csvs_names["test_from_csv_yes_no"]
             if true_values or false_values
-            else None,
+            else pytest.csvs_names["test_from_csv_regular"]
         )
 
         if kwargs["dtype"]:
             kwargs["dtype"] = {
-                col: "object"
-                for col in pandas.read_csv(unique_filename, nrows=1).columns
+                col: "object" for col in pandas.read_csv(filename, nrows=1).columns
             }
 
         eval_io(
-            filepath_or_buffer=unique_filename,
+            filepath_or_buffer=filename,
             fn_name="read_csv",
             check_kwargs_callable=not (callable(skiprows) or callable(converters)),
             **kwargs,
@@ -812,7 +868,6 @@ class TestReadCSV:
     @pytest.mark.parametrize("skip_blank_lines", [True, False])
     def test_from_csv_na_handling(
         self,
-        make_csv_file,
         na_values,
         keep_default_na,
         na_filter,
@@ -826,14 +881,9 @@ class TestReadCSV:
             "verbose": verbose,
             "skip_blank_lines": skip_blank_lines,
         }
-        unique_filename = get_unique_filename("test_from_csv_na_handling", kwargs)
-        make_csv_file(
-            filename=unique_filename,
-            add_blank_lines=True,
-            additional_col_values=["<NA>", "N/A", "NA", "NULL", "custom_nan", "73"],
-        )
+        filename = pytest.csvs_names["test_from_csv_nas"]
         eval_io(
-            filepath_or_buffer=unique_filename,
+            filepath_or_buffer=filename,
             fn_name="read_csv",
             **kwargs,
         )
@@ -863,7 +913,6 @@ class TestReadCSV:
     @pytest.mark.parametrize("cache_dates", [True, False])
     def test_from_csv_datetime(
         self,
-        make_csv_file,
         parse_dates,
         infer_datetime_format,
         keep_date_col,
@@ -882,38 +931,33 @@ class TestReadCSV:
             "dayfirst": dayfirst,
             "cache_dates": cache_dates,
         }
-        unique_filename = get_unique_filename("test_from_csv_datetime", kwargs)
-        make_csv_file(filename=unique_filename, add_blank_lines=False)
 
         eval_io(
-            filepath_or_buffer=unique_filename,
+            filepath_or_buffer=pytest.csvs_names["test_from_csv_regular"],
             fn_name="read_csv",
             check_kwargs_callable=not callable(date_parser),
-            nonacceptable_exception_types=None
+            nonacceptable_exception_types=read_csv_non_acc_exc_without_TypeError
             if case_with_TypeError_exc
-            else TypeError,
+            else read_csv_non_acc_exc,
             **kwargs,
         )
 
     # Iteration tests
     @pytest.mark.parametrize("iterator", [True, False])
     def test_from_csv_iteration(self, make_csv_file, iterator):
-        unique_filename = get_unique_filename(
-            "test_from_csv_chunksize", {"iterator": iterator}
-        )
-        make_csv_file(filename=unique_filename)
+        filename = pytest.csvs_names["test_from_csv_regular"]
 
         # Tests __next__ and correctness of reader as an iterator
         # Use larger chunksize to read through file quicker
-        rdf_reader = pd.read_csv(unique_filename, chunksize=500, iterator=iterator)
-        pd_reader = pandas.read_csv(unique_filename, chunksize=500, iterator=iterator)
+        rdf_reader = pd.read_csv(filename, chunksize=500, iterator=iterator)
+        pd_reader = pandas.read_csv(filename, chunksize=500, iterator=iterator)
 
         for modin_df, pd_df in zip(rdf_reader, pd_reader):
             df_equals(modin_df, pd_df)
 
         # Tests that get_chunk works correctly
-        rdf_reader = pd.read_csv(unique_filename, chunksize=1, iterator=iterator)
-        pd_reader = pandas.read_csv(unique_filename, chunksize=1, iterator=iterator)
+        rdf_reader = pd.read_csv(filename, chunksize=1, iterator=iterator)
+        pd_reader = pandas.read_csv(filename, chunksize=1, iterator=iterator)
 
         modin_df = rdf_reader.get_chunk(1)
         pd_df = pd_reader.get_chunk(1)
@@ -921,8 +965,8 @@ class TestReadCSV:
         df_equals(modin_df, pd_df)
 
         # Tests that read works correctly
-        rdf_reader = pd.read_csv(unique_filename, chunksize=1, iterator=iterator)
-        pd_reader = pandas.read_csv(unique_filename, chunksize=1, iterator=iterator)
+        rdf_reader = pd.read_csv(filename, chunksize=1, iterator=iterator)
+        pd_reader = pandas.read_csv(filename, chunksize=1, iterator=iterator)
 
         modin_df = rdf_reader.read()
         pd_df = pd_reader.read()
@@ -1031,14 +1075,9 @@ class TestReadCSV:
             "warn_bad_lines": warn_bad_lines,
             "error_bad_lines": error_bad_lines,
         }
-        unique_filename = get_unique_filename("test_from_csv_col_errors", kwargs)
-        make_csv_file(
-            filename=unique_filename,
-            add_bad_lines=True,
-        )
 
         eval_io(
-            filepath_or_buffer=unique_filename,
+            filepath_or_buffer=pytest.csvs_names["test_from_csv_bad_lines"],
             fn_name="read_csv",
             **kwargs,
         )
@@ -1091,18 +1130,18 @@ class TestReadCSV:
         eval_io(
             filepath_or_buffer=unique_filename_1,
             fn_name="read_csv",
-            nonacceptable_exception_types=None
+            nonacceptable_exception_types=read_csv_non_acc_exc_without_TypeError
             if case_with_TypeError_exc
-            else TypeError,
+            else read_csv_non_acc_exc,
             **kwargs,
         )
 
         eval_io_from_str(
             str_delim_whitespaces,
             unique_filename_2,
-            nonacceptable_exception_types=None
+            nonacceptable_exception_types=read_csv_non_acc_exc_without_TypeError
             if case_with_TypeError_exc
-            else TypeError,
+            else read_csv_non_acc_exc,
             **kwargs,
         )
 
