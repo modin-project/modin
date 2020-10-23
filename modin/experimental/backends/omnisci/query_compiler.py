@@ -289,20 +289,27 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
         )
         return self.__constructor__(new_frame)
 
-    def count(self, axis=0, level=None, **kwargs):
-        return self._agg("count")
+    def count(self, **kwargs):
+        return self._agg("count", **kwargs)
 
-    def max(self, axis=0, level=None, **kwargs):
-        return self._agg("max")
+    def max(self, **kwargs):
+        return self._agg("max", **kwargs)
 
-    def min(self, axis=0, level=None, **kwargs):
-        return self._agg("min")
+    def min(self, **kwargs):
+        return self._agg("min", **kwargs)
 
-    def sum(self, axis=0, level=None, **kwargs):
-        return self._agg("sum")
+    def sum(self, **kwargs):
+        return self._agg("sum", **kwargs)
+
+    def mean(self, **kwargs):
+        return self._agg("mean", **kwargs)
 
     def _agg(self, agg, axis=0, level=None, **kwargs):
         if level is not None or axis != 0:
+            return getattr(super(), agg)(axis=axis, level=level, **kwargs)
+
+        skipna = kwargs.get("skipna", True)
+        if not skipna:
             return getattr(super(), agg)(axis=axis, level=level, **kwargs)
 
         new_frame = self._modin_frame.agg(agg)
