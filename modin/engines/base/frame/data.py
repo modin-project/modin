@@ -285,14 +285,14 @@ class BasePandasFrame(object):
                 [
                     self._partitions[i][j]
                     for j in range(len(self._partitions[i]))
-                    if j < len(self._column_widths) and self._column_widths[j] > 0
+                    if j < len(self._column_widths) and self._column_widths[j] != 0
                 ]
                 for i in range(len(self._partitions))
-                if i < len(self._row_lengths) and self._row_lengths[i] > 0
+                if i < len(self._row_lengths) and self._row_lengths[i] != 0
             ]
         )
-        self._column_widths_cache = [w for w in self._column_widths if w > 0]
-        self._row_lengths_cache = [r for r in self._row_lengths if r > 0]
+        self._column_widths_cache = [w for w in self._column_widths if w != 0]
+        self._row_lengths_cache = [r for r in self._row_lengths if r != 0]
 
     def _validate_axis_equality(self, axis: int, force: bool = False):
         """

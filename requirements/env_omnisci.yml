@@ -12,5 +12,6 @@ dependencies:
   - coverage<5.0
   - pygithub==1.53
   - omniscidbe4py
+  - s3fs>=0.4.2
   - pip:
     - ray>=1.0.0
