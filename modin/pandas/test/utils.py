@@ -630,8 +630,14 @@ def eval_general(
     comparator=df_equals,
     __inplace__=False,
     check_exception_type=True,
+    nonacceptable_exception_types=None,
+    check_kwargs_callable=True,
     **kwargs,
 ):
+    if nonacceptable_exception_types not in (None, False):
+        assert (
+            check_exception_type
+        ), "check_exception_type == False, so nonacceptable_exception_types parameters are not used"
     md_kwargs, pd_kwargs = {}, {}
 
     def execute_callable(fn, inplace=False, md_kwargs={}, pd_kwargs={}):
@@ -645,12 +651,22 @@ def eval_general(
                 repr(fn(modin_df, **md_kwargs))
             if check_exception_type:
                 assert isinstance(md_e.value, type(pd_e))
+                if check_exception_type is not None and not isinstance(
+                    check_exception_type, bool
+                ):
+                    assert isinstance(
+                        md_e.value, check_exception_type
+                    ), "exception type not in the list of acceptable exception types"
+                if nonacceptable_exception_types is not None:
+                    assert not isinstance(
+                        md_e.value, tuple(nonacceptable_exception_types)
+                    ), "not acceptable exception type"
         else:
             md_result = fn(modin_df, **md_kwargs)
             return (md_result, pd_result) if not __inplace__ else (modin_df, pandas_df)
 
     for key, value in kwargs.items():
-        if callable(value):
+        if check_kwargs_callable and callable(value):
             values = execute_callable(value)
             # that means, that callable raised an exception
             if values is None:
