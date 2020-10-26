@@ -38,6 +38,7 @@ from .utils import (
     get_random_string,
     insert_lines_to_csv,
     IO_OPS_DATA_DIR,
+    io_ops_bad_exc,
 )
 
 from modin.config import Engine, Backend
@@ -297,6 +298,32 @@ def make_csv_file():
                 pass
 
 
+@pytest.fixture(scope="class")
+def TestReadCSVFixture():
+    """TestReadCSVFixture makes temp csv files that
+    can be used by several test functions.
+    """
+    filenames = []
+    files_ids = [
+        "test_read_csv_regular",
+    ]
+    pytest.csvs_names = {file_id: get_unique_filename(file_id) for file_id in files_ids}
+    # test_read_csv_datetime
+    _make_csv_file(filenames)(
+        filename=pytest.csvs_names["test_read_csv_regular"], force=False
+    )
+
+    yield
+
+    # Delete csv files that were created
+    for filename in filenames:
+        if os.path.exists(filename):
+            try:
+                os.remove(filename)
+            except PermissionError:
+                pass
+
+
 def setup_json_file(row_size, force=False):
     if os.path.exists(TEST_JSON_FILENAME) and not force:
         pass
@@ -495,6 +522,7 @@ def teardown_fwf_file():
             pass
 
 
+@pytest.mark.usefixtures("TestReadCSVFixture")
 class TestReadCSV:
     # delimiter tests
     @pytest.mark.parametrize("sep", ["_", ",", ".", "\n"])
@@ -521,6 +549,63 @@ class TestReadCSV:
         eval_io(
             filepath_or_buffer=unique_filename,
             fn_name="read_csv",
+            **kwargs,
+        )
+
+    # Datetime Handling tests
+    @pytest.mark.parametrize(
+        "parse_dates",
+        [
+            True,
+            False,
+            ["col2"],
+            ["col2", "col4"],
+            [1, 3],
+            pytest.param(
+                {"foo": ["col2", "col4"]},
+                marks=pytest.mark.xfail(
+                    Engine.get() != "Python",
+                    reason="Exception: Internal Error - issue #2073",
+                ),
+            ),
+        ],
+    )
+    @pytest.mark.parametrize("infer_datetime_format", [True, False])
+    @pytest.mark.parametrize("keep_date_col", [True, False])
+    @pytest.mark.parametrize(
+        "date_parser", [None, lambda x: pd.datetime.strptime(x, "%Y-%m-%d")]
+    )
+    @pytest.mark.parametrize("dayfirst", [True, False])
+    @pytest.mark.parametrize("cache_dates", [True, False])
+    def test_read_csv_datetime(
+        self,
+        parse_dates,
+        infer_datetime_format,
+        keep_date_col,
+        date_parser,
+        dayfirst,
+        cache_dates,
+    ):
+        case_with_TypeError = isinstance(parse_dates, dict) and callable(date_parser)
+        case_with_TypeError_exc = list(io_ops_bad_exc)
+        case_with_TypeError_exc.remove(TypeError)
+
+        kwargs = {
+            "parse_dates": parse_dates,
+            "infer_datetime_format": infer_datetime_format,
+            "keep_date_col": keep_date_col,
+            "date_parser": date_parser,
+            "dayfirst": dayfirst,
+            "cache_dates": cache_dates,
+        }
+
+        eval_io(
+            filepath_or_buffer=pytest.csvs_names["test_read_csv_regular"],
+            fn_name="read_csv",
+            check_kwargs_callable=not callable(date_parser),
+            raising_exceptions=case_with_TypeError_exc
+            if case_with_TypeError
+            else io_ops_bad_exc,
             **kwargs,
         )
 
