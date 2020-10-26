@@ -330,12 +330,14 @@ class BasePandasFrame(object):
     def _validate_internal_indices(self, mode=None, **kwargs):
         """
         Validates and optionally updates internal and external indices
-        of modin_frame in specified mode. There is 3 modes supported:
-            1. "reduced" - force validates on that axes
-                where external indices is ["__reduced__"]
-            2. "all" - validates indices at all axes, optionally force
+        of modin_frame in specified mode. There is 4 modes supported:
+            1. "reduced" - validates on that axis where external
+                indices is ["__reduced__"] for not force
+            2. "reduced+other" - validates on axis where external
+                indices is ["__reduced__"] for not force, and force on another axis
+            3. "all" - validates indices at all axes, optionally force
                 if `force` parameter specified in kwargs
-            3. "custom" - validation follows arguments specified in kwargs.
+            4. "custom" - validation follows arguments specified in kwargs.
 
         Parameters
         ----------
@@ -353,26 +355,38 @@ class BasePandasFrame(object):
             is_force = kwargs.get("force", False)
 
         reduced_sample = pandas.Index(["__reduced__"])
+
+        is_axis_reduced = [self.axes[i].equals(reduced_sample) for i in [0, 1]]
+
         args_dict = {
             "custom": kwargs,
             "reduced": {
-                "validate_index": self.index.equals(reduced_sample),
-                "validate_columns": self.columns.equals(reduced_sample),
-                "force": False,
+                "validate_index": is_axis_reduced[0],
+                "validate_columns": is_axis_reduced[1],
+                "force": [False, False],
+            },
+            "reduced+other": {
+                "validate_index": True,
+                "validate_columns": True,
+                "force": [not is_axis_reduced[0], not is_axis_reduced[1]],
             },
             "all": {
                 "validate_index": True,
                 "validate_columns": True,
-                "force": is_force,
+                "force": [is_force, is_force],
             },
         }
 
         args = args_dict.get(mode, args_dict["custom"])
 
+        def force_getter(axis):
+            force = args.get("force", False)
+            return force[axis] if isinstance(force, list) else force
+
         if args.get("validate_index", True):
-            self._validate_axis_equality(axis=0, force=args.get("force"))
+            self._validate_axis_equality(axis=0, force=force_getter(0))
         if args.get("validate_columns", True):
-            self._validate_axis_equality(axis=1, force=args.get("force"))
+            self._validate_axis_equality(axis=1, force=force_getter(1))
 
     def _apply_index_objs(self, axis=None):
         """Lazily applies the index object (Index or Columns) to the partitions.
@@ -1026,18 +1040,12 @@ class BasePandasFrame(object):
         new_axes, new_axes_lengths = [0, 0], [0, 0]
 
         new_axes[axis] = ["__reduced__"]
-        new_axes[axis ^ 1] = (
-            self.axes[axis ^ 1]
-            if preserve_index
-            else self._compute_axis_labels(axis ^ 1, new_parts)
-        )
+        new_axes[axis ^ 1] = self.axes[axis ^ 1]
 
         new_axes_lengths[axis] = [1]
-        new_axes_lengths[axis ^ 1] = (
-            self._axes_lengths[axis ^ 1] if preserve_index else None
-        )
+        new_axes_lengths[axis ^ 1] = self._axes_lengths[axis ^ 1]
 
-        if (axis == 0 or self._dtypes is None) and preserve_index:
+        if axis == 0 or self._dtypes is None:
             new_dtypes = self._dtypes
         elif preserve_index:
             new_dtypes = pandas.Series(
@@ -1051,7 +1059,7 @@ class BasePandasFrame(object):
             *new_axes,
             *new_axes_lengths,
             new_dtypes,
-            validate_axes="reduced",
+            validate_axes=("reduced" if preserve_index else "reduced+other"),
         )
 
     def _fold_reduce(self, axis, func, preserve_index=True):
