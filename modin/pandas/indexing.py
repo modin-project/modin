@@ -293,7 +293,7 @@ class _LocationIndexerBase(object):
             )
         return self.df.__constructor__(query_compiler=qc_view).squeeze(axis=axis)
 
-    def __setitem__(self, row_lookup, col_lookup, item):
+    def __setitem__(self, row_lookup, col_lookup, item, axis=None):
         """
         Implement [METHOD_NAME].
 
@@ -317,15 +317,11 @@ class _LocationIndexerBase(object):
             col_lookup = range(len(self.qc.columns))[col_lookup]
         # This is True when we dealing with assignment of a full column. This case
         # should be handled in a fastpath with `df[col] = item`.
-        if (
-            len(row_lookup) == len(self.qc.index)
-            and len(col_lookup) == 1
-            and hasattr(self.df, "columns")
-        ):
+        if axis == 0:
             self.df[self.df.columns[col_lookup][0]] = item
         # This is True when we are assigning to a full row. We want to reuse the setitem
         # mechanism to operate along only one axis for performance reasons.
-        elif len(col_lookup) == len(self.qc.columns) and len(row_lookup) == 1:
+        elif axis == 1:
             if hasattr(item, "_query_compiler"):
                 item = item._query_compiler
             new_qc = self.qc.setitem(1, self.qc.index[row_lookup[0]], item)
@@ -417,6 +413,44 @@ class _LocationIndexerBase(object):
         new_qc = self.qc.write_items(row_lookup, col_lookup, item)
         self.df._create_or_update_from_compiler(new_qc, inplace=True)
 
+    def _determine_setitem_axis(self, row_lookup, col_lookup, row_scaler, col_scaler):
+        """
+        Determine an axis along which we should do an assignment:
+            axis = 0: column assignment df[col] = item
+            axis = 1: row assignment df.loc[row] = item
+            axis = None: assignment along both axes
+
+        Parameters
+        ----------
+        row_lookup: slice or list
+            Indexer for rows
+        col_lookup: slice or list
+            Indexer for columns
+        row_scaler: bool
+            Whether indexer for rows was slacar or not
+        col_scaler: bool
+            Whether indexer for columns was slacer or not
+
+        Returns
+        -------
+        int or None
+            None if this will be a both axis assignment, number of axis to assign in other cases.
+        """
+        if self.df.shape == (1, 1):
+            return None if not (row_scaler ^ col_scaler) else 1 if row_scaler else 0
+
+        if (
+            len(row_lookup) == len(self.qc.index)
+            and len(col_lookup) == 1
+            and hasattr(self.df, "columns")
+        ):
+            axis = 0
+        elif len(col_lookup) == len(self.qc.columns) and len(row_lookup) == 1:
+            axis = 1
+        else:
+            axis = None
+        return axis
+
 
 class _LocIndexer(_LocationIndexerBase):
     """An indexer for modin_df.loc[] functionality."""
@@ -507,7 +541,7 @@ class _LocIndexer(_LocationIndexerBase):
         -------
         What this returns (if anything)
         """
-        row_loc, col_loc, _, __, ___ = _parse_tuple(key)
+        row_loc, col_loc, _, row_scaler, col_scaler = _parse_tuple(key)
         if isinstance(row_loc, list) and len(row_loc) == 1:
             if row_loc[0] not in self.qc.index:
                 index = self.qc.index.insert(len(self.qc.index), row_loc[0])
@@ -525,7 +559,14 @@ class _LocIndexer(_LocationIndexerBase):
             self.qc = self.df._query_compiler
         else:
             row_lookup, col_lookup = self._compute_lookup(row_loc, col_loc)
-            super(_LocIndexer, self).__setitem__(row_lookup, col_lookup, item)
+            super(_LocIndexer, self).__setitem__(
+                row_lookup,
+                col_lookup,
+                item,
+                axis=self._determine_setitem_axis(
+                    row_lookup, col_lookup, row_scaler, col_scaler
+                ),
+            )
 
     def _compute_enlarge_labels(self, locator, base_index):
         """
@@ -663,12 +704,19 @@ class _iLocIndexer(_LocationIndexerBase):
         -------
         What this returns (if anything)
         """
-        row_loc, col_loc, _, __, ___ = _parse_tuple(key)
+        row_loc, col_loc, _, row_scaler, col_scaler = _parse_tuple(key)
         self._check_dtypes(row_loc)
         self._check_dtypes(col_loc)
 
         row_lookup, col_lookup = self._compute_lookup(row_loc, col_loc)
-        super(_iLocIndexer, self).__setitem__(row_lookup, col_lookup, item)
+        super(_iLocIndexer, self).__setitem__(
+            row_lookup,
+            col_lookup,
+            item,
+            axis=self._determine_setitem_axis(
+                row_lookup, col_lookup, row_scaler, col_scaler
+            ),
+        )
 
     def _compute_lookup(self, row_loc, col_loc):
         """
