@@ -746,6 +746,40 @@ class TestReadCSV:
         str_non_unique_cols = "col,col,col,col\n" "5, 6, 7, 8\n" "9, 10, 11, 12\n"
         eval_io_from_str(str_non_unique_cols, unique_filename, mangle_dupe_cols=True)
 
+    # NA and Missing Data Handling tests
+    @pytest.mark.parametrize("na_values", ["custom_nan", "73"])
+    @pytest.mark.parametrize("keep_default_na", [True, False])
+    @pytest.mark.parametrize("na_filter", [True, False])
+    @pytest.mark.parametrize("verbose", [True, False])
+    @pytest.mark.parametrize("skip_blank_lines", [True, False])
+    def test_read_csv_na_handling(
+        self,
+        make_csv_file,
+        na_values,
+        keep_default_na,
+        na_filter,
+        verbose,
+        skip_blank_lines,
+    ):
+        kwargs = {
+            "na_values": na_values,
+            "keep_default_na": keep_default_na,
+            "na_filter": na_filter,
+            "verbose": verbose,
+            "skip_blank_lines": skip_blank_lines,
+        }
+        unique_name = get_unique_filename("test_read_csv_na_handling", kwargs)
+        make_csv_file(
+            filename=unique_name,
+            add_blank_lines=True,
+            additional_col_values=["<NA>", "N/A", "NA", "NULL", "custom_nan", "73"],
+        )
+        eval_io(
+            filepath_or_buffer=unique_name,
+            fn_name="read_csv",
+            **kwargs,
+        )
+
     # Datetime Handling tests
     @pytest.mark.parametrize(
         "parse_dates",
