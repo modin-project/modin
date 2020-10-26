@@ -740,6 +740,31 @@ def eval_io(
     )
 
 
+def eval_io_from_str(csv_str: str, unique_filename: str, **kwargs):
+    """Evaluate I/O operation outputs equality check by using `csv_str`
+    data passed as python str (csv test file will be created from `csv_str`).
+
+    Parameters
+    ----------
+    csv_str: str
+        Test data for storing to csv file.
+    unique_filename: str
+        csv file name.
+    """
+    try:
+        with open(unique_filename, "w") as f:
+            f.write(csv_str)
+
+        eval_io(
+            filepath_or_buffer=unique_filename,
+            fn_name="read_csv",
+            **kwargs,
+        )
+
+    finally:
+        os.remove(unique_filename)
+
+
 def create_test_dfs(*args, **kwargs):
     return pd.DataFrame(*args, **kwargs), pandas.DataFrame(*args, **kwargs)
 

@@ -39,6 +39,7 @@ from .utils import (
     insert_lines_to_csv,
     IO_OPS_DATA_DIR,
     io_ops_bad_exc,
+    eval_io_from_str,
 )
 
 from modin.config import Engine, Backend, IsExperimental
@@ -527,6 +528,83 @@ class TestReadCSV:
             fn_name="read_csv",
             **kwargs,
         )
+
+    # Column and Index Locations and Names tests
+    @pytest.mark.xfail(
+        Engine.get() != "Python",
+        reason="many parameters combiantions fails: issue #2312, #2307",
+    )
+    @pytest.mark.parametrize("header", ["infer", None, 0])
+    @pytest.mark.parametrize("index_col", [None, "col1"])
+    @pytest.mark.parametrize("prefix", [None, "_", "col"])
+    @pytest.mark.parametrize(
+        "names", [None, ["col1"], ["c1", "c2", "c3", "c4", "c5", "c6", "c7"]]
+    )
+    @pytest.mark.parametrize(
+        "usecols", [None, ["col1"], ["col1", "col2", "col6"], [0, 1, 5]]
+    )
+    @pytest.mark.parametrize("skip_blank_lines", [True, False])
+    def test_read_csv_col_handling(
+        self,
+        make_csv_file,
+        request,
+        header,
+        index_col,
+        prefix,
+        names,
+        usecols,
+        skip_blank_lines,
+    ):
+        if request.config.getoption("--simulate-cloud").lower() != "off":
+            pytest.xfail(
+                "The reason of tests fail in `cloud` mode is unknown for now - issue #2340"
+            )
+
+        kwargs = {
+            "header": header,
+            "index_col": index_col,
+            "prefix": prefix,
+            "names": names,
+            "usecols": usecols,
+            "skip_blank_lines": skip_blank_lines,
+        }
+
+        unique_name = get_unique_filename("test_read_csv_col_handling", kwargs)
+        make_csv_file(
+            filename=unique_name,
+            add_blank_lines=True,
+        )
+        eval_io(
+            filepath_or_buffer=unique_name,
+            fn_name="read_csv",
+            **kwargs,
+        )
+
+    @pytest.mark.xfail(reason="infinite recursion error - issue #2032")
+    @pytest.mark.parametrize(
+        "test_case", ["single_element", "single_column", "multiple_columns"]
+    )
+    def test_read_csv_squeeze(self, test_case):
+        unique_filename = get_unique_filename("test_read_csv_squeeze")
+
+        str_single_element = "1"
+        str_single_col = "1\n2\n3\n"
+        str_four_cols = "1, 2, 3, 4\n" "5, 6, 7, 8\n" "9, 10, 11, 12\n"
+        case_to_data = {
+            "single_element": str_single_element,
+            "single_column": str_single_col,
+            "multiple_columns": str_four_cols,
+        }
+
+        eval_io_from_str(case_to_data[test_case], unique_filename, squeeze=True)
+        eval_io_from_str(
+            case_to_data[test_case], unique_filename, header=None, squeeze=True
+        )
+
+    def test_read_csv_mangle_dupe_cols(self):
+        unique_filename = get_unique_filename("test_read_csv_mangle_dupe_cols")
+        str_non_unique_cols = "col,col,col,col\n" "5, 6, 7, 8\n" "9, 10, 11, 12\n"
+        eval_io_from_str(str_non_unique_cols, unique_filename, mangle_dupe_cols=True)
 
     # Datetime Handling tests
     @pytest.mark.parametrize(
@@ -1171,21 +1249,6 @@ def test_parse_dates_read_csv():
     df_equals(modin_df, pandas_df)
 
 
-@pytest.mark.parametrize(
-    "kwargs",
-    [
-        {"header": None, "usecols": [0, 7]},
-        {"usecols": [0, 7]},
-        {"names": [0, 7], "usecols": [0, 7]},
-    ],
-)
-def test_from_csv_with_args(kwargs):
-    file_name = "modin/pandas/test/data/issue_621.csv"
-    pandas_df = pandas.read_csv(file_name, **kwargs)
-    modin_df = pd.read_csv(file_name, **kwargs)
-    df_equals(modin_df, pandas_df)
-
-
 def test_from_table(make_csv_file):
     make_csv_file(delimiter="\t")
 
@@ -1197,14 +1260,6 @@ def test_from_table(make_csv_file):
     pandas_df = pandas.read_table(Path(TEST_CSV_FILENAME))
     modin_df = pd.read_table(Path(TEST_CSV_FILENAME))
 
-    df_equals(modin_df, pandas_df)
-
-
-@pytest.mark.parametrize("usecols", [["a"], ["a", "b", "e"], [0, 1, 4]])
-def test_from_csv_with_usecols(usecols):
-    fname = "modin/pandas/test/data/test_usecols.csv"
-    pandas_df = pandas.read_csv(fname, usecols=usecols)
-    modin_df = pd.read_csv(fname, usecols=usecols)
     df_equals(modin_df, pandas_df)
 
 
