@@ -71,6 +71,12 @@ SMALL_ROW_SIZE = 2000
 if not os.path.exists(IO_OPS_DATA_DIR):
     os.mkdir(IO_OPS_DATA_DIR)
 
+str_initial_spaces = """col1,col2,col3,col4
+five,  six,  seven,  eight
+    five,    six,    seven,    eight
+five, six,  seven,   eight
+"""
+
 
 @pytest.fixture
 def make_parquet_file():
@@ -579,6 +585,75 @@ class TestReadCSV:
             fn_name="read_csv",
             **kwargs,
         )
+
+    # General Parsing Configuration
+    @pytest.mark.parametrize("dtype", [None, True])
+    @pytest.mark.parametrize("engine", [None, "python", "c"])
+    @pytest.mark.parametrize(
+        "converters",
+        [
+            None,
+            {
+                "col1": lambda x: np.int64(x) * 10,
+                "col2": pd.to_datetime,
+                "col4": lambda x: x.replace(":", ";"),
+            },
+        ],
+    )
+    @pytest.mark.parametrize("true_values", [["Yes"], ["Yes", "true"], None])
+    @pytest.mark.parametrize("false_values", [["No"], ["No", "false"], None])
+    @pytest.mark.parametrize("skiprows", [2, lambda x: x % 2])
+    @pytest.mark.parametrize("skipfooter", [0, 10])
+    @pytest.mark.parametrize("nrows", [123, None])
+    @pytest.mark.parametrize("names", [["c1", "c2", "c3", "c4"], None])
+    def test_read_csv_parsing(
+        self,
+        dtype,
+        engine,
+        converters,
+        true_values,
+        false_values,
+        skiprows,
+        skipfooter,
+        nrows,
+        names,
+    ):
+        kwargs = {
+            "dtype": dtype,
+            "engine": engine,
+            "converters": converters,
+            "true_values": true_values,
+            "false_values": false_values,
+            "skiprows": skiprows,
+            "skipfooter": skipfooter,
+            "nrows": nrows,
+            "names": names,
+        }
+
+        filename = (
+            pytest.csvs_names["test_read_csv_yes_no"]
+            if true_values or false_values
+            else pytest.csvs_names["test_read_csv_regular"]
+        )
+
+        if kwargs["dtype"]:
+            kwargs["dtype"] = {
+                col: "object" for col in pandas.read_csv(filename, nrows=1).columns
+            }
+
+        eval_io(
+            filepath_or_buffer=filename,
+            fn_name="read_csv",
+            check_exception_type=None,  # issue #2320
+            raising_exceptions=None,
+            check_kwargs_callable=not (callable(skiprows) or callable(converters)),
+            **kwargs,
+        )
+
+    def test_read_csv_skipinitialspace(self, make_csv_file):
+        unique_filename = get_unique_filename("test_read_csv_skipinitialspace")
+
+        eval_io_from_str(str_initial_spaces, unique_filename, skipinitialspace=True)
 
     @pytest.mark.xfail(reason="infinite recursion error - issue #2032")
     @pytest.mark.parametrize(
