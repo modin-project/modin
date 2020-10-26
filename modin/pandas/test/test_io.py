@@ -64,8 +64,10 @@ SMALL_ROW_SIZE = 2000
 
 test_data_dir = os.path.join(os.path.dirname(__file__), "data")
 
-read_csv_non_acc_exc = [TypeError, FileNotFoundError]
-read_csv_non_acc_exc_without_TypeError = list(read_csv_non_acc_exc).remove(TypeError)
+# raising of this exceptions can be caused by unexpected behavior
+# of test, but can passed by eval_io function since the type
+# of this exceptions are the same
+io_ops_bad_exc = [TypeError, FileNotFoundError]
 
 
 def eval_io(
@@ -73,15 +75,34 @@ def eval_io(
     comparator=df_equals,
     cast_to_str=False,
     check_exception_type=True,
-    nonacceptable_exception_types=read_csv_non_acc_exc,
+    nonacceptable_exception_types=io_ops_bad_exc,
     *args,
     **kwargs,
 ):
+    """Evaluate I/O operation outputs equality check.
+
+    Parameters
+    ----------
+    fn_name: str
+        I/O operation name ("read_csv" for example).
+    comparator: obj
+        Function to perform comparison.
+    cast_to_str: bool
+        There could be some missmatches in dtypes, so we're
+        casting the whole frame to `str` before comparison.
+        See issue #1931 for details.
+    check_exception_type: bool, Exception or list of Exceptions
+        Check or not exception types in the case of operation fail
+        (compare exceptions types raised by Pandas and Modin).
+        If `check_exception_type` provided as Exception or list
+        of Exception eval_io will be passed only if occured exception
+        type in the `check_exception_type`.
+    nonacceptable_exception_types: Exception or list of Exceptions
+        Exceptions types that are prohibited.
+    """
+
     def applyier(module, *args, **kwargs):
         result = getattr(module, fn_name)(*args, **kwargs)
-        # There could be some missmatches in dtypes, so we're
-        # casting the whole frame to `str` before comparison.
-        # See issue #1931 for details.
         if cast_to_str:
             result = result.astype(str)
         return result
@@ -205,12 +226,26 @@ def insert_lines_to_csv(
     encoding: str = None,
     **csv_reader_writer_params,
 ):
+    """Insert lines to ".csv" file.
+
+    Parameters
+    ----------
+    csv_name: str
+        ".csv" file that should be modified.
+    lines_positions: list of ints
+        Lines postions that sghould be modified (serial number
+        of line - begins from 0, ends in <rows_number> - 1).
+    lines_type: str
+        Lines types that should be inserted to ".csv" file. Possible types:
+        "blank" - empty line without any delimiters/separators,
+        "bad" - lines with len(lines_data) > cols_number
+    encoding: str
+        Encoding type that should be used during file reading and writing.
+    """
     cols_number = len(pandas.read_csv(csv_name, nrows=1).columns)
     if lines_type == "blank":
-        # empty lines
         lines_data = []
     elif lines_type == "bad":
-        # lines with len(lines_data) > cols_number
         cols_number = len(pandas.read_csv(csv_name, nrows=1).columns)
         lines_data = [x for x in range(cols_number + 1)]
     else:
@@ -304,12 +339,10 @@ def _make_csv_file(filenames):
                 )
 
             if thousands_separator:
-                df["col1"] = df["col1"].apply(
-                    lambda x: f"{x:,d}".replace(",", thousands_separator)
-                )
-                df["col3"] = df["col3"].apply(
-                    lambda x: f"{x:,d}".replace(",", thousands_separator)
-                )
+                for col_id in ["col1", "col3"]:
+                    df[col_id] = df[col_id].apply(
+                        lambda x: f"{x:,d}".replace(",", thousands_separator)
+                    )
                 df["col6"] = df["col6"].apply(
                     lambda x: f"{x:,f}".replace(",", thousands_separator)
                 )
@@ -586,9 +619,28 @@ def get_unique_filename(
     test_name: str,
     kwargs: dict = {},
     extension: str = "csv",
-    data_dir=test_data_dir,
+    data_dir: str = test_data_dir,
     suffix: str = "",
 ):
+    """Returns unique file name with specified parameters.
+
+    Parameters
+    ----------
+    test_name: str
+        name of the test for which the unique file name is needed.
+    kwargs: list of ints
+        Unique combiantion of test parameters for creation of unique name.
+    extension: str
+        Extension of unique file.
+    data_dir: str
+        Data directory where test files will be created.
+    suffix: str
+        String to append to the resulted name.
+
+    Returns
+    -------
+        Unique file name.
+    """
     # shortcut if kwargs parameter os not provided
     if len(kwargs) == 0 and extension == "csv" and suffix == "":
         return os.path.join(data_dir, (test_name + f"_{suffix}" + f".{extension}"))
