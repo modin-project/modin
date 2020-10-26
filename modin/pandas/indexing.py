@@ -415,7 +415,9 @@ class _LocationIndexerBase(object):
 
     def _determine_setitem_axis(self, row_lookup, col_lookup, row_scaler, col_scaler):
         """
-        Determine an axis along which we should do an assignment:
+        Determine an axis along which we should do an assignment.
+
+        Note:
             axis = 0: column assignment df[col] = item
             axis = 1: row assignment df.loc[row] = item
             axis = None: assignment along both axes
