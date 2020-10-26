@@ -357,6 +357,8 @@ class DataFrameGroupBy(object):
             # This is not implemented in pandas,
             # so we throw a different message
             raise NotImplementedError("axis other than 0 is not supported")
+
+        relabeling_required = False
         if isinstance(func, dict) or func is None:
 
             def _reconstruct_func(func, **kwargs):
@@ -380,49 +382,30 @@ class DataFrameGroupBy(object):
                 from pandas.core.base import SpecificationError
 
                 raise SpecificationError("nested renamer is not supported")
-            if isinstance(self._by, type(self._query_compiler)):
-                by = list(self._by.columns)
-            else:
-                by = self._by
-
-            subset_cols = list(func_dict.keys()) + (
-                list(self._by.columns)
-                if isinstance(self._by, type(self._query_compiler))
-                and all(c in self._df.columns for c in self._by.columns)
-                else []
-            )
-            result = type(self._df)(
-                query_compiler=self._df[subset_cols]._query_compiler.groupby_dict_agg(
-                    by=by,
-                    func_dict=func_dict,
-                    groupby_args=self._kwargs,
-                    agg_args=kwargs,
-                    drop=self._drop,
-                )
-            )
-
-            if relabeling_required:
-                result = result.iloc[:, order]
-                result.columns = new_columns
-
-            return result
-
-        if is_list_like(func):
+            func = func_dict
+        elif is_list_like(func):
             return self._default_to_pandas(
                 lambda df, *args, **kwargs: df.aggregate(func, *args, **kwargs),
                 *args,
                 **kwargs,
             )
-        if isinstance(func, str):
+        elif isinstance(func, str):
             agg_func = getattr(self, func, None)
             if callable(agg_func):
                 return agg_func(*args, **kwargs)
-        return self._apply_agg_function(
+
+        result = self._apply_agg_function(
             lambda df, *args, **kwargs: df.aggregate(func, *args, **kwargs),
             drop=self._as_index,
             *args,
             **kwargs,
         )
+
+        if relabeling_required:
+            result = result.iloc[:, order]
+            result.columns = new_columns
+
+        return result
 
     agg = aggregate
 

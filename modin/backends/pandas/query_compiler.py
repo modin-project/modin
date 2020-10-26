@@ -2596,29 +2596,57 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
         as_index = groupby_kwargs.get("as_index", True)
 
-        def groupby_agg_builder(df):
-            # Set `as_index` to True to track the metadata of the grouping object
-            # It is used to make sure that between phases we are constructing the
-            # right index and placing columns in the correct order.
-            groupby_kwargs["as_index"] = True
+        if isinstance(agg_func, dict):
 
-            def compute_groupby(df):
-                grouped_df = df.groupby(by=by, axis=axis, **groupby_kwargs)
+            def groupby_agg_builder(df):
+                # Set `as_index` to True to track the metadata of the grouping object
+                # It is used to make sure that between phases we are constructing the
+                # right index and placing columns in the correct order.
+                groupby_kwargs["as_index"] = True
+
+                def compute_groupby(df):
+                    grouped_df = df.groupby(by=by, axis=axis, **groupby_kwargs)
+                    try:
+                        result = grouped_df.agg(agg_func, **agg_args)
+                    # This happens when the partition is filled with non-numeric data and a
+                    # numeric operation is done. We need to build the index here to avoid
+                    # issues with extracting the index.
+                    except (DataError, TypeError):
+                        result = pandas.DataFrame(index=grouped_df.size().index)
+                    return result
+
                 try:
-                    result = agg_func(grouped_df, **agg_kwargs)
-                # This happens when the partition is filled with non-numeric data and a
-                # numeric operation is done. We need to build the index here to avoid
-                # issues with extracting the index.
-                except (DataError, TypeError):
-                    result = pandas.DataFrame(index=grouped_df.size().index)
-                return result
+                    return compute_groupby(df)
+                # This will happen with Arrow buffer read-only errors. We don't want to copy
+                # all the time, so this will try to fast-path the code first.
+                except (ValueError, KeyError):
+                    return compute_groupby(df.copy())
 
-            try:
-                return compute_groupby(df)
-            # This will happen with Arrow buffer read-only errors. We don't want to copy
-            # all the time, so this will try to fast-path the code first.
-            except (ValueError, KeyError):
-                return compute_groupby(df.copy())
+        else:
+
+            def groupby_agg_builder(df):
+                # Set `as_index` to True to track the metadata of the grouping object
+                # It is used to make sure that between phases we are constructing the
+                # right index and placing columns in the correct order.
+                groupby_kwargs["as_index"] = True
+
+                def compute_groupby(df):
+                    grouped_df = df.groupby(by=by, axis=axis, **groupby_kwargs)
+                    try:
+                        result = agg_func(grouped_df, **agg_kwargs)
+                    # This happens when the partition is filled with non-numeric data and a
+                    # numeric operation is done. We need to build the index here to avoid
+                    # issues with extracting the index.
+                    except (DataError, TypeError):
+                        result = pandas.DataFrame(index=grouped_df.size().index)
+                    return result
+
+                try:
+                    return compute_groupby(df)
+                # This will happen with Arrow buffer read-only errors. We don't want to copy
+                # all the time, so this will try to fast-path the code first.
+                except (ValueError, KeyError):
+                    return compute_groupby(df.copy())
 
         new_modin_frame = self._modin_frame._apply_full_axis(
             axis, lambda df: groupby_agg_builder(df)
