@@ -60,6 +60,26 @@ def is_slice(x):
     return isinstance(x, slice)
 
 
+def compute_sliced_len(slc, sequence_len):
+    """
+    Compute length of sliced object.
+
+    Parameters
+    ----------
+    slc: slice
+        Slice object
+    sequence_len: int
+        Length of sequence, to which slice will be applied
+
+    Returns
+    -------
+    int
+        Length of object after applying slice object on it.
+    """
+    # This will translate slice to a range, from which we can retrieve length
+    return len(range(*slc.indices(sequence_len)))
+
+
 def is_2d(x):
     """
     Implement [METHOD_NAME].
@@ -441,13 +461,23 @@ class _LocationIndexerBase(object):
         if self.df.shape == (1, 1):
             return None if not (row_scaler ^ col_scaler) else 1 if row_scaler else 0
 
+        def get_axis(axis):
+            return self.qc.index if axis == 0 else self.qc.columns
+
+        row_look_len, col_look_len = [
+            len(lookup)
+            if not isinstance(lookup, slice)
+            else compute_sliced_len(lookup, len(get_axis(i)))
+            for i, lookup in enumerate([row_lookup, col_lookup])
+        ]
+
         if (
-            len(row_lookup) == len(self.qc.index)
-            and len(col_lookup) == 1
-            and hasattr(self.df, "columns")
+            row_look_len == len(self.qc.index)
+            and col_look_len == 1
+            and isinstance(self.df, DataFrame)
         ):
             axis = 0
-        elif len(col_lookup) == len(self.qc.columns) and len(row_lookup) == 1:
+        elif col_look_len == len(self.qc.columns) and row_look_len == 1:
             axis = 1
         else:
             axis = None
