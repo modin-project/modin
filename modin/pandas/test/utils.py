@@ -638,7 +638,7 @@ def eval_general(
     nonacceptable_exception_types=None,
     **kwargs,
 ):
-    if not nonacceptable_exception_types:
+    if nonacceptable_exception_types:
         assert (
             check_exception_type
         ), "check_exception_type == False, so nonacceptable_exception_types parameters are not used"
