@@ -2903,6 +2903,7 @@ def test_shift(data):
     df_equals(modin_series.shift(fill_value=777), pandas_series.shift(fill_value=777))
     df_equals(modin_series.shift(periods=7), pandas_series.shift(periods=7))
     df_equals(modin_series.shift(periods=-3), pandas_series.shift(periods=-3))
+    eval_general(modin_series, pandas_series, lambda df: df.shift(axis=1))
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
