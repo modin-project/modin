@@ -1160,6 +1160,15 @@ def test_from_csv_skiprows(make_csv_file, nrows):
     df_equals(modin_df, pandas_df)
 
 
+@pytest.mark.parametrize("names", [list("XYZ"), None])
+@pytest.mark.parametrize("skiprows", [1, 2, 3, 4, None])
+def test_from_csv_skiprows_names(names, skiprows):
+    path = "modin/pandas/test/data/issue_2239.csv"
+    pandas_df = pandas.read_csv(path, names=names, skiprows=skiprows)
+    modin_df = pd.read_csv(path, names=names, skiprows=skiprows)
+    df_equals(pandas_df, modin_df)
+
+
 @pytest.mark.parametrize(
     "encoding", ["latin8", "ISO-8859-1", "latin1", "iso-8859-1", "cp1252", "utf8"]
 )
