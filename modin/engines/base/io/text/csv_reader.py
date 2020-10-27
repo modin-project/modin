@@ -180,11 +180,6 @@ class CSVReader(TextFileReader):
         if index_col is None:
             row_lengths = cls.materialize(index_ids)
             new_index = pandas.RangeIndex(sum(row_lengths))
-            # pandas has a really weird edge case here.
-            if kwargs.get("names", None) is not None and skiprows > 1:
-                new_index = pandas.RangeIndex(
-                    skiprows - 1, new_index.stop + skiprows - 1
-                )
         else:
             index_objs = cls.materialize(index_ids)
             row_lengths = [len(o) for o in index_objs]
