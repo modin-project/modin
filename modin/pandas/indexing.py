@@ -437,11 +437,6 @@ class _LocationIndexerBase(object):
         """
         Determine an axis along which we should do an assignment.
 
-        Note:
-            axis = 0: column assignment df[col] = item
-            axis = 1: row assignment df.loc[row] = item
-            axis = None: assignment along both axes
-
         Parameters
         ----------
         row_lookup: slice or list
@@ -457,6 +452,12 @@ class _LocationIndexerBase(object):
         -------
         int or None
             None if this will be a both axis assignment, number of axis to assign in other cases.
+
+        Notes
+        -----
+            axis = 0: column assignment df[col] = item
+            axis = 1: row assignment df.loc[row] = item
+            axis = None: assignment along both axes
         """
         if self.df.shape == (1, 1):
             return None if not (row_scaler ^ col_scaler) else 1 if row_scaler else 0
@@ -464,7 +465,7 @@ class _LocationIndexerBase(object):
         def get_axis(axis):
             return self.qc.index if axis == 0 else self.qc.columns
 
-        row_look_len, col_look_len = [
+        row_lookup_len, col_lookup_len = [
             len(lookup)
             if not isinstance(lookup, slice)
             else compute_sliced_len(lookup, len(get_axis(i)))
@@ -472,12 +473,12 @@ class _LocationIndexerBase(object):
         ]
 
         if (
-            row_look_len == len(self.qc.index)
-            and col_look_len == 1
+            row_lookup_len == len(self.qc.index)
+            and col_lookup_len == 1
             and isinstance(self.df, DataFrame)
         ):
             axis = 0
-        elif col_look_len == len(self.qc.columns) and row_look_len == 1:
+        elif col_lookup_len == len(self.qc.columns) and row_lookup_len == 1:
             axis = 1
         else:
             axis = None
