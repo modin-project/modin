@@ -1402,23 +1402,34 @@ class BasePandasFrame(object):
                 self._column_widths_cache,
             )
 
-    def broadcast_apply(self, axis, func, other, preserve_labels=True, dtypes=None):
-        """Broadcast partitions of other dataframe partitions and apply a function.
+    def broadcast_apply(
+        self, axis, func, other, join_type="left", preserve_labels=True, dtypes=None
+    ):
+        """
+        Broadcast partitions of other dataframe partitions and apply a function.
 
-        Args:
-            axis: The axis to broadcast over.
-            func: The function to apply.
-            other: The Modin DataFrame to broadcast.
-            preserve_labels: Whether or not to keep labels from this Modin DataFrame.
-            dtypes: "copy" or None. Whether to keep old dtypes or infer new dtypes from
-                data.
+        Parameters
+        ----------
+            axis: int,
+                The axis to broadcast over.
+            func: callable,
+                The function to apply.
+            other: BasePandasFrame
+                The Modin DataFrame to broadcast.
+            join_type: str (optional)
+                The type of join to apply.
+            preserve_labels: boolean (optional)
+                Whether or not to keep labels from this Modin DataFrame.
+            dtypes: "copy" or None (optional)
+                 Whether to keep old dtypes or infer new dtypes from data.
 
-        Returns:
-             A new Modin DataFrame
+        Returns
+        -------
+            BasePandasFrame
         """
         # Only sort the indices if they do not match
         left_parts, right_parts, joined_index = self._copartition(
-            axis, other, "left", sort=not self.axes[axis].equals(other.axes[axis])
+            axis, other, join_type, sort=not self.axes[axis].equals(other.axes[axis])
         )
         # unwrap list returned by `copartition`.
         right_parts = right_parts[0]
@@ -1651,7 +1662,26 @@ class BasePandasFrame(object):
         """
         if isinstance(other, type(self)):
             other = [other]
-        if all(o.axes[axis].equals(self.axes[axis]) for o in other):
+
+        is_aligning_applied = False
+        for i in range(len(other)):
+            if (
+                len(self._partitions) != len(other[i]._partitions)
+                and len(self.axes[0]) == len(other[i].axes[0])
+                and axis == 0
+            ):
+                is_aligning_applied = True
+                self._partitions = self._frame_mgr_cls.map_axis_partitions(
+                    axis, self._partitions, lambda df: df
+                )
+                other[i]._partitions = other[i]._frame_mgr_cls.map_axis_partitions(
+                    axis, other[i]._partitions, lambda df: df
+                )
+
+        if (
+            all(o.axes[axis].equals(self.axes[axis]) for o in other)
+            and not is_aligning_applied
+        ):
             return (
                 self._partitions,
                 [self._simple_shuffle(axis, o) for o in other],
@@ -1664,8 +1694,13 @@ class BasePandasFrame(object):
         left_old_idx = self.axes[axis]
         right_old_idxes = index_other_obj
 
+        is_avoid_reindex = len(joined_index) != len(joined_index.unique()) and axis == 0
         # Start with this and we'll repartition the first time, and then not again.
-        if not left_old_idx.equals(joined_index) or force_repartition:
+        if (
+            not is_aligning_applied
+            and not is_avoid_reindex
+            and (force_repartition or not left_old_idx.equals(joined_index))
+        ):
             reindexed_self = self._frame_mgr_cls.map_axis_partitions(
                 axis, self._partitions, lambda df: df.reindex(joined_index, axis=axis)
             )
@@ -1674,7 +1709,11 @@ class BasePandasFrame(object):
         reindexed_other_list = []
 
         for i in range(len(other)):
-            if right_old_idxes[i].equals(joined_index) and not force_repartition:
+            if (
+                is_aligning_applied
+                or is_avoid_reindex
+                or (not force_repartition and right_old_idxes[i].equals(joined_index))
+            ):
                 reindexed_other = other[i]._partitions
             else:
                 reindexed_other = other[i]._frame_mgr_cls.map_axis_partitions(
@@ -1744,7 +1783,7 @@ class BasePandasFrame(object):
             1, left_parts, lambda l, r: op(l, r), right_parts
         )
         new_columns = self.columns.join(right_frame.columns, how=join_type)
-        return self.__constructor__(new_frame, self.index, new_columns, None, None)
+        return self.__constructor__(new_frame, joined_index, new_columns, None, None)
 
     def _concat(self, axis, others, how, sort):
         """Concatenate this dataframe with one or more others.

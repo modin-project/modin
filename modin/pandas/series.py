@@ -1637,9 +1637,11 @@ class Series(BasePandasDataset):
         """
         if isinstance(other, Series):
             new_self = self.copy()
-            new_self.name = "__reduced__"
             new_other = other.copy()
-            new_other.name = "__reduced__"
+            if self.name == other.name:
+                new_self.name = new_other.name = self.name
+            else:
+                new_self.name = new_other.name = "__reduced__"
         else:
             new_self = self
             new_other = other
