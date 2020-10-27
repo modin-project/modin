@@ -635,13 +635,13 @@ def eval_general(
     comparator=df_equals,
     __inplace__=False,
     check_exception_type=True,
-    nonacceptable_exception_types=None,
+    raising_exceptions=None,
     **kwargs,
 ):
-    if nonacceptable_exception_types:
+    if raising_exceptions:
         assert (
             check_exception_type
-        ), "check_exception_type == False, so nonacceptable_exception_types parameters are not used"
+        ), "if raising_exceptions is not None or False, check_exception_type should be True"
     md_kwargs, pd_kwargs = {}, {}
 
     def execute_callable(fn, inplace=False, md_kwargs={}, pd_kwargs={}):
@@ -655,15 +655,9 @@ def eval_general(
                 repr(fn(modin_df, **md_kwargs))
             if check_exception_type:
                 assert isinstance(md_e.value, type(pd_e))
-                if check_exception_type is not None and not isinstance(
-                    check_exception_type, bool
-                ):
-                    assert isinstance(
-                        md_e.value, check_exception_type
-                    ), f"acceptable exception types are {check_exception_type}, actually raised {md_e.value}"
-                if nonacceptable_exception_types:
+                if raising_exceptions:
                     assert not isinstance(
-                        md_e.value, tuple(nonacceptable_exception_types)
+                        md_e.value, tuple(raising_exceptions)
                     ), f"not acceptable exception type: {md_e.value}"
         else:
             md_result = fn(modin_df, **md_kwargs)
@@ -695,7 +689,7 @@ def eval_io(
     comparator=df_equals,
     cast_to_str=False,
     check_exception_type=True,
-    nonacceptable_exception_types=io_ops_bad_exc,
+    raising_exceptions=io_ops_bad_exc,
     *args,
     **kwargs,
 ):
@@ -711,14 +705,13 @@ def eval_io(
         There could be some missmatches in dtypes, so we're
         casting the whole frame to `str` before comparison.
         See issue #1931 for details.
-    check_exception_type: bool, Exception or list of Exceptions
+    check_exception_type: bool
         Check or not exception types in the case of operation fail
         (compare exceptions types raised by Pandas and Modin).
-        If `check_exception_type` provided as Exception or list
-        of Exception eval_io will be passed only if occured exception
-        type in the `check_exception_type`.
-    nonacceptable_exception_types: Exception or list of Exceptions
-        Exceptions types that are prohibited.
+    raising_exceptions: Exception or list of Exceptions
+        Exceptions that should be raised even if they are raised
+        both by Pandas and Modin (check evaluated only if
+        `check_exception_type` passed as `True`).
     """
 
     def applyier(module, *args, **kwargs):
@@ -732,7 +725,7 @@ def eval_io(
         pandas,
         applyier,
         check_exception_type=check_exception_type,
-        nonacceptable_exception_types=nonacceptable_exception_types,
+        raising_exceptions=raising_exceptions,
         *args,
         **kwargs,
     )
