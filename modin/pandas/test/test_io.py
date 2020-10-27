@@ -25,7 +25,7 @@ import os
 import shutil
 import sqlalchemy as sa
 import csv
-from string import ascii_uppercase, ascii_lowercase, digits
+from string import ascii_letters
 
 from .utils import (
     df_equals,
@@ -62,7 +62,9 @@ TEST_FWF_FILENAME = "test_fwf.txt"
 TEST_GBQ_FILENAME = "test_gbq."
 SMALL_ROW_SIZE = 2000
 
-test_data_dir = os.path.join(os.path.dirname(__file__), "data")
+test_data_dir = os.path.join(os.path.dirname(__file__), "read_csv_data")
+if not os.path.exists(test_data_dir):
+    os.mkdir(test_data_dir)
 
 # raising of this exceptions can be caused by unexpected behavior
 # of test, but can passed by eval_io function since the type
@@ -212,9 +214,7 @@ def teardown_test_file(test_path):
 
 def get_random_string():
     random_string = "".join(
-        random_state.choice(
-            [x for x in ascii_uppercase + ascii_lowercase + digits], size=10
-        ).tolist()
+        random_state.choice([x for x in ascii_letters], size=10).tolist()
     )
     return random_string
 

@@ -631,7 +631,6 @@ def eval_general(
     __inplace__=False,
     check_exception_type=True,
     nonacceptable_exception_types=None,
-    check_kwargs_callable=True,
     **kwargs,
 ):
     if nonacceptable_exception_types not in (None, False):
@@ -666,7 +665,7 @@ def eval_general(
             return (md_result, pd_result) if not __inplace__ else (modin_df, pandas_df)
 
     for key, value in kwargs.items():
-        if check_kwargs_callable and callable(value):
+        if callable(value):
             values = execute_callable(value)
             # that means, that callable raised an exception
             if values is None:
