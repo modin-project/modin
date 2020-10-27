@@ -592,7 +592,7 @@ def get_unique_filename(
     if len(kwargs) == 0 and extension == "csv" and suffix == "":
         return os.path.join(data_dir, (test_name + f"_{suffix}" + f".{extension}"))
 
-    assert "." not in extension, "please provide pure extenxion name without '.'"
+    assert "." not in extension, "please provide pure extension name without '.'"
     prohibited_chars = ['"', "\n"]
     non_prohibited_char = "np_char"
     char_counter = 0
