@@ -33,8 +33,8 @@ from .utils import (
     json_short_bytes,
     json_long_string,
     json_long_bytes,
-    eval_general,
     random_state,
+    eval_io,
 )
 
 from modin.config import Engine, Backend
@@ -65,59 +65,6 @@ SMALL_ROW_SIZE = 2000
 test_data_dir = os.path.join(os.path.dirname(__file__), "read_csv_data")
 if not os.path.exists(test_data_dir):
     os.mkdir(test_data_dir)
-
-# raising of this exceptions can be caused by unexpected behavior
-# of test, but can passed by eval_io function since the type
-# of this exceptions are the same
-io_ops_bad_exc = [TypeError, FileNotFoundError]
-
-
-def eval_io(
-    fn_name,
-    comparator=df_equals,
-    cast_to_str=False,
-    check_exception_type=True,
-    nonacceptable_exception_types=io_ops_bad_exc,
-    *args,
-    **kwargs,
-):
-    """Evaluate I/O operation outputs equality check.
-
-    Parameters
-    ----------
-    fn_name: str
-        I/O operation name ("read_csv" for example).
-    comparator: obj
-        Function to perform comparison.
-    cast_to_str: bool
-        There could be some missmatches in dtypes, so we're
-        casting the whole frame to `str` before comparison.
-        See issue #1931 for details.
-    check_exception_type: bool, Exception or list of Exceptions
-        Check or not exception types in the case of operation fail
-        (compare exceptions types raised by Pandas and Modin).
-        If `check_exception_type` provided as Exception or list
-        of Exception eval_io will be passed only if occured exception
-        type in the `check_exception_type`.
-    nonacceptable_exception_types: Exception or list of Exceptions
-        Exceptions types that are prohibited.
-    """
-
-    def applyier(module, *args, **kwargs):
-        result = getattr(module, fn_name)(*args, **kwargs)
-        if cast_to_str:
-            result = result.astype(str)
-        return result
-
-    eval_general(
-        pd,
-        pandas,
-        applyier,
-        check_exception_type=check_exception_type,
-        nonacceptable_exception_types=nonacceptable_exception_types,
-        *args,
-        **kwargs,
-    )
 
 
 @pytest.fixture

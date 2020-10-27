@@ -420,6 +420,11 @@ encoding_types = [
     "utf_8_sig",
 ]
 
+# raising of this exceptions can be caused by unexpected behavior
+# of I/O operation test, but can passed by eval_io function since
+# the type of this exceptions are the same
+io_ops_bad_exc = [TypeError, FileNotFoundError]
+
 
 def categories_equals(left, right):
     assert (left.ordered and right.ordered) or (not left.ordered and not right.ordered)
@@ -633,7 +638,7 @@ def eval_general(
     nonacceptable_exception_types=None,
     **kwargs,
 ):
-    if nonacceptable_exception_types not in (None, False):
+    if not nonacceptable_exception_types:
         assert (
             check_exception_type
         ), "check_exception_type == False, so nonacceptable_exception_types parameters are not used"
@@ -655,11 +660,11 @@ def eval_general(
                 ):
                     assert isinstance(
                         md_e.value, check_exception_type
-                    ), "exception type not in the list of acceptable exception types"
-                if nonacceptable_exception_types is not None:
+                    ), f"acceptable exception types are {check_exception_type}, actually raised {md_e.value}"
+                if nonacceptable_exception_types:
                     assert not isinstance(
                         md_e.value, tuple(nonacceptable_exception_types)
-                    ), "not acceptable exception type"
+                    ), f"not acceptable exception type: {md_e.value}"
         else:
             md_result = fn(modin_df, **md_kwargs)
             return (md_result, pd_result) if not __inplace__ else (modin_df, pandas_df)
@@ -683,6 +688,54 @@ def eval_general(
     )
     if values is not None:
         comparator(*values)
+
+
+def eval_io(
+    fn_name,
+    comparator=df_equals,
+    cast_to_str=False,
+    check_exception_type=True,
+    nonacceptable_exception_types=io_ops_bad_exc,
+    *args,
+    **kwargs,
+):
+    """Evaluate I/O operation outputs equality check.
+
+    Parameters
+    ----------
+    fn_name: str
+        I/O operation name ("read_csv" for example).
+    comparator: obj
+        Function to perform comparison.
+    cast_to_str: bool
+        There could be some missmatches in dtypes, so we're
+        casting the whole frame to `str` before comparison.
+        See issue #1931 for details.
+    check_exception_type: bool, Exception or list of Exceptions
+        Check or not exception types in the case of operation fail
+        (compare exceptions types raised by Pandas and Modin).
+        If `check_exception_type` provided as Exception or list
+        of Exception eval_io will be passed only if occured exception
+        type in the `check_exception_type`.
+    nonacceptable_exception_types: Exception or list of Exceptions
+        Exceptions types that are prohibited.
+    """
+
+    def applyier(module, *args, **kwargs):
+        result = getattr(module, fn_name)(*args, **kwargs)
+        if cast_to_str:
+            result = result.astype(str)
+        return result
+
+    eval_general(
+        pd,
+        pandas,
+        applyier,
+        check_exception_type=check_exception_type,
+        nonacceptable_exception_types=nonacceptable_exception_types,
+        *args,
+        **kwargs,
+    )
 
 
 def create_test_dfs(*args, **kwargs):
