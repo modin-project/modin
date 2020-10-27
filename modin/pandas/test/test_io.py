@@ -25,7 +25,6 @@ import os
 import shutil
 import sqlalchemy as sa
 import csv
-from string import ascii_letters
 
 from .utils import (
     df_equals,
@@ -35,6 +34,10 @@ from .utils import (
     json_long_bytes,
     random_state,
     eval_io,
+    get_unique_filename,
+    get_random_string,
+    insert_lines_to_csv,
+    IO_OPS_DATA_DIR,
 )
 
 from modin.config import Engine, Backend
@@ -62,9 +65,9 @@ TEST_FWF_FILENAME = "test_fwf.txt"
 TEST_GBQ_FILENAME = "test_gbq."
 SMALL_ROW_SIZE = 2000
 
-test_data_dir = os.path.join(os.path.dirname(__file__), "read_csv_data")
-if not os.path.exists(test_data_dir):
-    os.mkdir(test_data_dir)
+
+if not os.path.exists(IO_OPS_DATA_DIR):
+    os.mkdir(IO_OPS_DATA_DIR)
 
 
 @pytest.fixture
@@ -157,76 +160,6 @@ def assert_files_eq(path1, path2):
 def teardown_test_file(test_path):
     if os.path.exists(test_path):
         os.remove(test_path)
-
-
-def get_random_string():
-    random_string = "".join(
-        random_state.choice([x for x in ascii_letters], size=10).tolist()
-    )
-    return random_string
-
-
-def insert_lines_to_csv(
-    csv_name: str,
-    lines_positions: list,
-    lines_type: str = "blank",
-    encoding: str = None,
-    **csv_reader_writer_params,
-):
-    """Insert lines to ".csv" file.
-
-    Parameters
-    ----------
-    csv_name: str
-        ".csv" file that should be modified.
-    lines_positions: list of ints
-        Lines postions that sghould be modified (serial number
-        of line - begins from 0, ends in <rows_number> - 1).
-    lines_type: str
-        Lines types that should be inserted to ".csv" file. Possible types:
-        "blank" - empty line without any delimiters/separators,
-        "bad" - lines with len(lines_data) > cols_number
-    encoding: str
-        Encoding type that should be used during file reading and writing.
-    """
-    cols_number = len(pandas.read_csv(csv_name, nrows=1).columns)
-    if lines_type == "blank":
-        lines_data = []
-    elif lines_type == "bad":
-        cols_number = len(pandas.read_csv(csv_name, nrows=1).columns)
-        lines_data = [x for x in range(cols_number + 1)]
-    else:
-        raise ValueError(
-            f"acceptable values for  parameter are ['blank', 'bad'], actually passed {lines_type}"
-        )
-    lines = []
-    dialect = "excel"
-    with open(csv_name, "r", encoding=encoding, newline="") as read_file:
-        try:
-            dialect = csv.Sniffer().sniff(read_file.read())
-            read_file.seek(0)
-        except Exception:
-            dialect = None
-
-        reader = csv.reader(
-            read_file,
-            dialect=dialect if dialect is not None else "excel",
-            **csv_reader_writer_params,
-        )
-        counter = 0
-        for row in reader:
-            if counter in lines_positions:
-                lines.append(lines_data)
-            else:
-                lines.append(row)
-            counter += 1
-    with open(csv_name, "w", encoding=encoding, newline="") as write_file:
-        writer = csv.writer(
-            write_file,
-            dialect=dialect if dialect is not None else "excel",
-            **csv_reader_writer_params,
-        )
-        writer.writerows(lines)
 
 
 def _make_csv_file(filenames):
@@ -560,57 +493,6 @@ def teardown_fwf_file():
             os.remove(TEST_FWF_FILENAME)
         except PermissionError:
             pass
-
-
-def get_unique_filename(
-    test_name: str,
-    kwargs: dict = {},
-    extension: str = "csv",
-    data_dir: str = test_data_dir,
-    suffix: str = "",
-):
-    """Returns unique file name with specified parameters.
-
-    Parameters
-    ----------
-    test_name: str
-        name of the test for which the unique file name is needed.
-    kwargs: list of ints
-        Unique combiantion of test parameters for creation of unique name.
-    extension: str
-        Extension of unique file.
-    data_dir: str
-        Data directory where test files will be created.
-    suffix: str
-        String to append to the resulted name.
-
-    Returns
-    -------
-        Unique file name.
-    """
-    # shortcut if kwargs parameter os not provided
-    if len(kwargs) == 0 and extension == "csv" and suffix == "":
-        return os.path.join(data_dir, (test_name + f"_{suffix}" + f".{extension}"))
-
-    assert "." not in extension, "please provide pure extension name without '.'"
-    prohibited_chars = ['"', "\n"]
-    non_prohibited_char = "np_char"
-    char_counter = 0
-    kwargs_name = dict(kwargs)
-    for key, value in kwargs_name.items():
-        for char in prohibited_chars:
-            if isinstance(value, str) and char in value or callable(value):
-                kwargs_name[key] = non_prohibited_char + str(char_counter)
-                char_counter += 1
-    parameters_values = "_".join(
-        [
-            str(value)
-            if not isinstance(value, (list, tuple))
-            else "_".join([str(x) for x in value])
-            for value in kwargs_name.values()
-        ]
-    )
-    return os.path.join(data_dir, parameters_values + f"_{suffix}" + f".{extension}")
 
 
 class TestReadCSV:
