@@ -2596,6 +2596,8 @@ class PandasQueryCompiler(BaseQueryCompiler):
         drop_,
         drop=False,
     ):
+        agg_func = wrap_udf_function(agg_func)
+
         if is_multi_by:
             return self.default_to_pandas(agg_func, *agg_args, **agg_kwargs)
 

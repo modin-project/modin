@@ -547,6 +547,7 @@ class TestGroupby:
 
         run_and_compare(groupby_count, data=self.data, cols=cols, as_index=as_index)
 
+    @pytest.mask.xfail(reason="Currently mean() passes a lambda into backend which cannot be executed on omnisci backend")
     @pytest.mark.parametrize("cols", cols_value)
     @pytest.mark.parametrize("as_index", bool_arg_values)
     def test_groupby_mean(self, cols, as_index):
@@ -576,6 +577,15 @@ class TestGroupby:
             return df.groupby("a").agg({"b": "size"})
 
         run_and_compare(groupby, data=self.data)
+
+    @pytest.mask.xfail(reason="Function specified as a string should be passed into backend API, but currently it is transformed into a lambda")
+    @pytest.mark.parametrize("cols", cols_value)
+    @pytest.mark.parametrize("as_index", bool_arg_values)
+    def test_groupby_agg_mean(self, cols, as_index):
+        def groupby_mean(df, cols, as_index, **kwargs):
+            return df.groupby(cols, as_index=as_index).agg("mean")
+
+        run_and_compare(groupby_mean, data=self.data, cols=cols, as_index=as_index)
 
     taxi_data = {
         "a": [1, 1, 2, 2],

@@ -262,6 +262,24 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
         )
         return self.__constructor__(new_frame)
 
+    def groupby_agg(self,
+                    by,
+                    is_multi_by,
+                    idx_name,
+                    axis,
+                    agg_func,
+                    agg_args,
+                    agg_kwargs,
+                    groupby_kwargs,
+                    drop_,
+                    drop=False,
+    ):
+        # TODO: handle is_multi_by, idx_name and drop args
+        new_frame = self._modin_frame.groupby_agg(
+            by, axis, agg_func, groupby_kwargs, *agg_args, **agg_kwargs
+        )
+        return self.__constructor__(new_frame)
+
     def groupby_dict_agg(self, by, func_dict, groupby_args, agg_args, drop=False):
         """Apply aggregation functions to a grouped dataframe per-column.
 

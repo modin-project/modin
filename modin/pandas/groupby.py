@@ -29,7 +29,7 @@ from pandas.core.aggregation import reconstruct_func
 import pandas.core.common as com
 
 from modin.error_message import ErrorMessage
-from modin.utils import _inherit_docstrings, wrap_udf_function, try_cast_to_pandas
+from modin.utils import _inherit_docstrings, try_cast_to_pandas
 from modin.config import IsExperimental
 from .series import Series
 
@@ -833,8 +833,6 @@ class DataFrameGroupBy(object):
         A new combined DataFrame with the result of all groups.
         """
         assert callable(f), "'{0}' object is not callable".format(type(f))
-
-        f = wrap_udf_function(f)
 
         new_manager = self._query_compiler.groupby_agg(
             by=self._by,

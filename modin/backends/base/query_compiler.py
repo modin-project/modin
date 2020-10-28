@@ -1396,14 +1396,30 @@ class BaseQueryCompiler(abc.ABC):
             drop=drop,
         )
 
-    def groupby_agg(self, by, axis, agg_func, groupby_args, agg_args, drop=False):
+    def groupby_agg(
+        self,
+        by,
+        is_multi_by,
+        idx_name,
+        axis,
+        agg_func,
+        agg_args,
+        agg_kwargs,
+        groupby_kwargs,
+        drop_,
+        drop=False,
+    ):
         return GroupByDefault.register(pandas.core.groupby.DataFrameGroupBy.aggregate)(
             self,
             by=by,
+            is_multi_by=is_multi_by,
+            idx_name=idx_name,
             axis=axis,
             agg_func=agg_func,
-            groupby_args=groupby_args,
             agg_args=agg_args,
+            agg_kwargs=agg_kwargs,
+            groupby_kwargs=groupby_kwargs,
+            drop_=drop_,
             drop=drop,
         )
 
