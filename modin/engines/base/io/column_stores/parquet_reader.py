@@ -12,7 +12,6 @@
 # governing permissions and limitations under the License.
 
 import os
-import s3fs
 
 from modin.engines.base.io.column_stores.column_store_reader import ColumnStoreReader
 from modin.error_message import ErrorMessage
@@ -73,6 +72,8 @@ class ParquetReader(ColumnStoreReader):
         else:
             directory = False
         if not columns:
+            import s3fs
+
             if directory:
                 # Path of the sample file that we will read to get the remaining columns
                 pd = ParquetDataset(path)
