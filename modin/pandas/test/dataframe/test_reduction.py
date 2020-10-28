@@ -358,11 +358,14 @@ def test_sum_single_column(data):
 @pytest.mark.parametrize(
     "fn", ["max", "min", "median", "mean", "skew", "kurt", "sem", "std", "var"]
 )
+@pytest.mark.parametrize("axis", [0, 1])
 @pytest.mark.parametrize(
     "numeric_only", bool_arg_values, ids=arg_keys("numeric_only", bool_arg_keys)
 )
-def test_reduction_specific(fn, numeric_only):
+def test_reduction_specific(fn, numeric_only, axis):
+    if fn == "mean" and axis == 1:
+        pytest.skip("See issue #2313 for details")
     eval_general(
         *create_test_dfs(test_data_diff_dtype),
-        lambda df: getattr(df, fn)(numeric_only=numeric_only),
+        lambda df: getattr(df, fn)(numeric_only=numeric_only, axis=axis),
     )

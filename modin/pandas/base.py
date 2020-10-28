@@ -1449,8 +1449,18 @@ class BasePandasDataset(object):
 
         """
         axis = self._get_axis_number(axis)
-        if numeric_only is not None and not numeric_only:
-            self._validate_dtypes(numeric_only=True)
+        # If `numeric_only` is None, then we can do this precheck to whether or not
+        # frame contains non-numeric columns, if it doesn't, then we can pass to a backend
+        # `numeric_only=False` parameter and make its work easier in that case, rather than
+        # performing under complicate `numeric_only=None` parameter
+        if not numeric_only:
+            try:
+                self._validate_dtypes(numeric_only=True)
+            except TypeError:
+                if numeric_only is not None:
+                    raise
+            else:
+                numeric_only = False
 
         data = self._get_numeric_data(axis) if numeric_only else self
 
