@@ -2583,24 +2583,50 @@ class PandasQueryCompiler(BaseQueryCompiler):
             lambda df: df.groupby(by=by, **groupby_args).agg(func_dict, **agg_args)
         )
 
-    def groupby_agg(self, by, axis, agg_func, groupby_args, agg_args, drop=False):
-        # since we're going to modify `groupby_args` dict in a `groupby_agg_builder`,
+    def groupby_agg(
+        self,
+        by,
+        is_multi_by,
+        idx_name,
+        axis,
+        agg_func,
+        agg_args,
+        agg_kwargs,
+        groupby_kwargs,
+        drop_,
+        drop=False,
+    ):
+        if is_multi_by:
+            return self.default_to_pandas(agg_func, *agg_args, **agg_kwargs)
+
+        by = by.to_pandas().squeeze() if isinstance(by, type(self)) else by
+
+        # For aggregations, pandas behavior does this for the result.
+        # For other operations it does not, so we wait until there is an aggregation to
+        # actually perform this operation.
+        new_self = (
+            self.drop(columns=[idx_name])
+            if idx_name is not None and drop and drop_
+            else self
+        )
+
+        # since we're going to modify `groupby_kwargs` dict in a `groupby_agg_builder`,
         # we want to copy it to not propagate these changes into source dict, in case
         # of unsuccessful end of function
-        groupby_args = groupby_args.copy()
+        groupby_kwargs = groupby_kwargs.copy()
 
-        as_index = groupby_args.get("as_index", True)
+        as_index = groupby_kwargs.get("as_index", True)
 
         def groupby_agg_builder(df):
             # Set `as_index` to True to track the metadata of the grouping object
             # It is used to make sure that between phases we are constructing the
             # right index and placing columns in the correct order.
-            groupby_args["as_index"] = True
+            groupby_kwargs["as_index"] = True
 
             def compute_groupby(df):
-                grouped_df = df.groupby(by=by, axis=axis, **groupby_args)
+                grouped_df = df.groupby(by=by, axis=axis, **groupby_kwargs)
                 try:
-                    result = agg_func(grouped_df, **agg_args)
+                    result = agg_func(grouped_df, **agg_kwargs)
                 # This happens when the partition is filled with non-numeric data and a
                 # numeric operation is done. We need to build the index here to avoid
                 # issues with extracting the index.
@@ -2615,26 +2641,26 @@ class PandasQueryCompiler(BaseQueryCompiler):
             except (ValueError, KeyError):
                 return compute_groupby(df.copy())
 
-        new_modin_frame = self._modin_frame._apply_full_axis(
+        new_modin_frame = new_self._modin_frame._apply_full_axis(
             axis, lambda df: groupby_agg_builder(df)
         )
-        result = self.__constructor__(new_modin_frame)
+        result = new_self.__constructor__(new_modin_frame)
 
         # that means that exception in `compute_groupby` was raised
         # in every partition, so we also should raise it
-        if len(result.columns) == 0 and len(self.columns) != 0:
+        if len(result.columns) == 0 and len(new_self.columns) != 0:
             # determening type of raised exception by applying `aggfunc`
             # to empty DataFrame
             try:
                 agg_func(
                     pandas.DataFrame(index=[1], columns=[1]).groupby(level=0),
-                    **agg_args,
+                    **agg_kwargs,
                 )
             except Exception as e:
                 raise type(e)("No numeric types to aggregate.")
 
         # Reset `as_index` because it was edited inplace.
-        groupby_args["as_index"] = as_index
+        groupby_kwargs["as_index"] = as_index
         if as_index:
             return result
         else:
