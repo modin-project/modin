@@ -549,6 +549,14 @@ class TestGroupby:
 
     @pytest.mark.parametrize("cols", cols_value)
     @pytest.mark.parametrize("as_index", bool_arg_values)
+    def test_groupby_mean(self, cols, as_index):
+        def groupby_mean(df, cols, as_index, **kwargs):
+            return df.groupby(cols, as_index=as_index).mean()
+
+        run_and_compare(groupby_mean, data=self.data, cols=cols, as_index=as_index)
+
+    @pytest.mark.parametrize("cols", cols_value)
+    @pytest.mark.parametrize("as_index", bool_arg_values)
     def test_groupby_proj_sum(self, cols, as_index):
         def groupby_sum(df, cols, as_index, **kwargs):
             return df.groupby(cols, as_index=as_index).c.sum()
