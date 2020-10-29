@@ -177,13 +177,12 @@ def _make_csv_file(filenames):
         add_nan_lines=False,
         thousands_separator=None,
         decimal_separator=None,
-        lineterminator=None,
         comment_col_char=None,
         quoting=csv.QUOTE_MINIMAL,
         quotechar='"',
         doublequote=True,
         escapechar=None,
-        line_terminator=os.linesep,
+        line_terminator=None,
     ):
         if os.path.exists(filename) and not force:
             pass
@@ -588,10 +587,15 @@ class TestReadCSV:
         cache_dates,
     ):
         if request.config.getoption("--simulate-cloud").lower() != "off":
-            pytest.xfail("The reason of tests fail in `cloud` mode is unknown for now")
-        case_with_TypeError = isinstance(parse_dates, dict) and callable(date_parser)
-        case_with_TypeError_exc = list(io_ops_bad_exc)
-        case_with_TypeError_exc.remove(TypeError)
+            pytest.xfail(
+                "The reason of tests fail in `cloud` mode is unknown for now - issue #2340"
+            )
+
+        raising_exceptions = io_ops_bad_exc  # default value
+        if isinstance(parse_dates, dict) and callable(date_parser):
+            # In this case raised TypeError: <lambda>() takes 1 positional argument but 2 were given
+            raising_exceptions = list(io_ops_bad_exc)
+            raising_exceptions.remove(TypeError)
 
         kwargs = {
             "parse_dates": parse_dates,
@@ -606,9 +610,7 @@ class TestReadCSV:
             filepath_or_buffer=pytest.csvs_names["test_read_csv_regular"],
             fn_name="read_csv",
             check_kwargs_callable=not callable(date_parser),
-            raising_exceptions=case_with_TypeError_exc
-            if case_with_TypeError
-            else io_ops_bad_exc,
+            raising_exceptions=raising_exceptions,
             **kwargs,
         )
 
