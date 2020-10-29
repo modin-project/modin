@@ -554,16 +554,11 @@ class _LocIndexer(_LocationIndexerBase):
             and all(col_loc[i] in result.columns.levels[i] for i in range(len(col_loc)))
         ):
             result.columns = result.columns.droplevel(list(range(len(col_loc))))
-        if row_lookup is not None and col_lookup is None:
+        # This is done for cases where the index passed in has other state, like a
+        # frequency in the case of DateTimeIndex.
+        if row_lookup is not None and col_loc == slice(None):
             if isinstance(key, pandas.Index):
                 result.index = key
-            elif isinstance(key, tuple) and isinstance(key[0], pandas.Index):
-                result.index = key[0]
-        if col_lookup is not None and row_lookup is None and hasattr(result, "columns"):
-            if isinstance(key, pandas.Index):
-                result.columns = key
-            elif isinstance(key, tuple) and isinstance(key[-1], pandas.Index):
-                result.columns = key
         return result
 
     def __setitem__(self, key, item):

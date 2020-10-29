@@ -596,7 +596,6 @@ class BasePandasFrame(object):
                 or len(row_internal_indices) > 0
             ]
         )
-
         intermediate = self.__constructor__(
             new_partitions,
             new_index,
