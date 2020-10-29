@@ -608,6 +608,7 @@ class TestReadCSV:
     @pytest.mark.parametrize("names", [["c1", "c2", "c3", "c4"], None])
     def test_read_csv_parsing(
         self,
+        make_csv_file,
         dtype,
         engine,
         converters,
@@ -630,19 +631,20 @@ class TestReadCSV:
             "names": names,
         }
 
-        filename = (
-            pytest.csvs_names["test_read_csv_yes_no"]
+        unique_name = get_unique_filename("test_read_csv_parsing", kwargs)
+        make_csv_file(
+            filename=unique_name,
+            additional_col_values=["Yes", "true", "No", "false"]
             if true_values or false_values
-            else pytest.csvs_names["test_read_csv_regular"]
+            else None,
         )
-
         if kwargs["dtype"]:
             kwargs["dtype"] = {
-                col: "object" for col in pandas.read_csv(filename, nrows=1).columns
+                col: "object" for col in pandas.read_csv(unique_name, nrows=1).columns
             }
 
         eval_io(
-            filepath_or_buffer=filename,
+            filepath_or_buffer=unique_name,
             fn_name="read_csv",
             check_exception_type=None,  # issue #2320
             raising_exceptions=None,
