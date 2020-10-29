@@ -229,7 +229,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         else:
             return result
 
-    def default_to_pandas_groupby(
+    def _default_to_pandas_groupby(
         self, f, by, axis, drop, groupby_kwargs, *args, **kwargs
     ):
         """
@@ -2646,7 +2646,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         agg_func = wrap_udf_function(agg_func)
 
         if is_multi_by:
-            return self.default_to_pandas_groupby(
+            return self._default_to_pandas_groupby(
                 agg_func, by, axis, drop, groupby_kwargs, *agg_args, **agg_kwargs
             )
 

@@ -77,37 +77,6 @@ class BaseQueryCompiler(abc.ABC):
         """
         pass
 
-    @abc.abstractmethod
-    def default_to_pandas_groupby(
-        self, f, by, axis, drop, groupby_kwargs, *args, **kwargs
-    ):
-        """
-        Default to pandas behavior.
-
-        Parameters
-        ----------
-        f : callable
-            The function to apply to each group.
-        by : BaseQueryCompiler, mapping, function, label, or list of labels
-            Used to determine the groups for the groupby.
-        axis : 0 or 1
-            Split along rows (0) or columns (1).
-        drop : boolean
-            The flag in charge of the logic of inserting index into DataFrame columns.
-        groupby_kwargs
-            The keyword arguments for the groupby `pandas_op`
-        args
-            The arguments for the `pandas_op`
-        kwargs
-            The keyword arguments for the `pandas_op`
-
-        Returns
-        -------
-        BaseQueryCompiler
-            The result of the `pandas_op`, converted back to BaseQueryCompiler
-        """
-        pass
-
     # Abstract Methods and Fields: Must implement in children classes
     # In some cases, there you may be able to use the same implementation for
     # some of these abstract methods, but for the sake of generality they are

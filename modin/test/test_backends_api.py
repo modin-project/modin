@@ -27,7 +27,6 @@ def test_base_abstract_methods():
         "from_pandas",
         "from_arrow",
         "default_to_pandas",
-        "default_to_pandas_groupby",
     ]
 
     not_implemented_methods = BASE_BACKEND.__abstractmethods__.difference(
