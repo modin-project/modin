@@ -786,19 +786,26 @@ class BasePandasDataset(object):
 
     def at_time(self, time, asof=False, axis=None):
         axis = self._get_axis_number(axis)
-        if axis == 0:
-            return self.iloc[self.index.indexer_at_time(time, asof=asof)]
-        return self.iloc[:, self.columns.indexer_at_time(time, asof=asof)]
+        idx = self.index if axis == 0 else self.columns
+        indexer = pandas.Series(index=idx).at_time(time, asof=asof).index
+        return self.loc[indexer] if axis == 0 else self.loc[:, indexer]
 
     def between_time(
         self, start_time, end_time, include_start=True, include_end=True, axis=None
     ):
         axis = self._get_axis_number(axis)
         idx = self.index if axis == 0 else self.columns
-        indexer = idx.indexer_between_time(
-            start_time, end_time, include_start=include_start, include_end=include_end
+        indexer = (
+            pandas.Series(index=idx)
+            .between_time(
+                start_time,
+                end_time,
+                include_start=include_start,
+                include_end=include_end,
+            )
+            .index
         )
-        return self.iloc[indexer] if axis == 0 else self.iloc[:, indexer]
+        return self.loc[indexer] if axis == 0 else self.loc[:, indexer]
 
     def bfill(self, axis=None, inplace=False, limit=None, downcast=None):
         return self.fillna(

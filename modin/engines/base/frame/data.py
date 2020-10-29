@@ -603,7 +603,6 @@ class BasePandasFrame(object):
             new_row_lengths,
             new_col_widths,
             new_dtypes,
-            validate_axes="all" if new_partitions.size != 0 else False,
         )
         # Check if monotonically increasing, return if it is. Fast track code path for
         # common case to keep it fast.
