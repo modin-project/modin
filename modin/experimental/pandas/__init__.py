@@ -11,9 +11,9 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-import os
+from modin.config import IsExperimental
 
-os.environ["MODIN_EXPERIMENTAL"] = "True"
+IsExperimental.put(True)
 
 # import numpy_wrap as early as possible to intercept all "import numpy" statements
 # in the user code

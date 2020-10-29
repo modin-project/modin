@@ -11,21 +11,32 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-import os
+"""
+Implement GroupBy public API as Pandas does.
+
+Almost all docstrings for public and magic methods should be inherited from Pandas
+for better maintability. So some codes are ignored in pydocstyle check:
+    - D101: missing docstring in class
+    - D102: missing docstring in public method
+    - D105: missing docstring in magic method
+Manually add documentation for methods which are not presented in pandas.
+"""
+
 import pandas
 import pandas.core.groupby
 from pandas.core.dtypes.common import is_list_like
+from pandas.core.aggregation import reconstruct_func
 import pandas.core.common as com
 
 from modin.error_message import ErrorMessage
 from modin.utils import _inherit_docstrings, wrap_udf_function, try_cast_to_pandas
+from modin.config import IsExperimental
 from .series import Series
 
 
 @_inherit_docstrings(
     pandas.core.groupby.DataFrameGroupBy,
     excluded=[
-        pandas.core.groupby.DataFrameGroupBy,
         pandas.core.groupby.DataFrameGroupBy.__init__,
     ],
 )
@@ -81,99 +92,27 @@ class DataFrameGroupBy(object):
         }
         self._kwargs.update(kwargs)
 
-    @property
-    def _index(self):
-        return self._query_compiler.index
-
-    @property
-    def _sort(self):
-        return self._kwargs.get("sort")
-
-    @property
-    def _as_index(self):
-        return self._kwargs.get("as_index")
+    _index_grouped_cache = None
 
     def __getattr__(self, key):
-        """Afer regular attribute access, looks up the name in the columns
+        """
+        Afer regular attribute access, looks up the name in the columns.
 
-        Args:
-            key (str): Attribute name.
+        Parameters
+        ----------
+        key: str
+            Attribute name.
 
-        Returns:
-            The value of the attribute.
+        Returns
+        -------
+        The value of the attribute.
         """
         try:
             return object.__getattribute__(self, key)
         except AttributeError as e:
             if key in self._columns:
-                return self._default_to_pandas(lambda df: df.__getitem__(key))
+                return self.__getitem__(key)
             raise e
-
-    _index_grouped_cache = None
-
-    @property
-    def _index_grouped(self):
-        if self._index_grouped_cache is None:
-            if hasattr(self._by, "columns") and len(self._by.columns) > 1:
-                by = list(self._by.columns)
-                is_multi_by = True
-            else:
-                by = self._by
-                is_multi_by = self._is_multi_by
-            if is_multi_by:
-                # Because we are doing a collect (to_pandas) here and then groupby, we
-                # end up using pandas implementation. Add the warning so the user is
-                # aware.
-                ErrorMessage.catch_bugs_and_request_email(self._axis == 1)
-                ErrorMessage.default_to_pandas("Groupby with multiple columns")
-                if isinstance(by, list) and all(isinstance(o, str) for o in by):
-                    pandas_df = self._df._query_compiler.getitem_column_array(
-                        by
-                    ).to_pandas()
-                else:
-                    by = try_cast_to_pandas(by)
-                    pandas_df = self._df._to_pandas()
-                self._index_grouped_cache = pandas_df.groupby(by=by).groups
-            else:
-                if isinstance(self._by, type(self._query_compiler)):
-                    by = self._by.to_pandas().squeeze().values
-                else:
-                    by = self._by
-                if self._axis == 0:
-                    self._index_grouped_cache = self._index.groupby(by)
-                else:
-                    self._index_grouped_cache = self._columns.groupby(by)
-        return self._index_grouped_cache
-
-    @property
-    def _iter(self):
-        from .dataframe import DataFrame
-
-        group_ids = self._index_grouped.keys()
-        if self._axis == 0:
-            return (
-                (
-                    k,
-                    DataFrame(
-                        query_compiler=self._query_compiler.getitem_row_array(
-                            self._index.get_indexer_for(self._index_grouped[k].unique())
-                        )
-                    ),
-                )
-                for k in (sorted(group_ids) if self._sort else group_ids)
-            )
-        else:
-            return (
-                (
-                    k,
-                    DataFrame(
-                        query_compiler=self._query_compiler.getitem_column_array(
-                            self._index_grouped[k].unique()
-                        )
-                    ),
-                )
-                for k in (sorted(group_ids) if self._sort else group_ids)
-            )
 
     @property
     def ngroups(self):
@@ -363,29 +302,40 @@ class DataFrameGroupBy(object):
             # so we throw a different message
             raise NotImplementedError("axis other than 0 is not supported")
         if isinstance(func, dict) or func is None:
-            if func is None:
-                func = {}
-            else:
-                if any(i not in self._df.columns for i in func.keys()):
-                    from pandas.core.base import SpecificationError
 
-                    raise SpecificationError("nested renamer is not supported")
+            def _reconstruct_func(func, **kwargs):
+                relabeling_required, func, new_columns, order = reconstruct_func(
+                    func, **kwargs
+                )
+                # We convert to the string version of the function for simplicity.
+                func = {
+                    k: v
+                    if not callable(v) or v.__name__ not in dir(self)
+                    else v.__name__
+                    for k, v in func.items()
+                }
+                return relabeling_required, func, new_columns, order
+
+            relabeling_required, func_dict, new_columns, order = _reconstruct_func(
+                func, **kwargs
+            )
+
+            if any(i not in self._df.columns for i in func_dict.keys()):
+                from pandas.core.base import SpecificationError
+
+                raise SpecificationError("nested renamer is not supported")
             if isinstance(self._by, type(self._query_compiler)):
                 by = list(self._by.columns)
             else:
                 by = self._by
-            # We convert to the string version of the function for simplicity.
-            func_dict = {
-                k: v if not callable(v) or v.__name__ not in dir(self) else v.__name__
-                for k, v in func.items()
-            }
+
             subset_cols = list(func_dict.keys()) + (
                 list(self._by.columns)
                 if isinstance(self._by, type(self._query_compiler))
                 and all(c in self._df.columns for c in self._by.columns)
                 else []
             )
-            return type(self._df)(
+            result = type(self._df)(
                 query_compiler=self._df[subset_cols]._query_compiler.groupby_dict_agg(
                     by=by,
                     func_dict=func_dict,
@@ -394,6 +344,13 @@ class DataFrameGroupBy(object):
                     drop=self._drop,
                 )
             )
+
+            if relabeling_required:
+                result = result.iloc[:, order]
+                result.columns = new_columns
+
+            return result
+
         if is_list_like(func):
             return self._default_to_pandas(
                 lambda df, *args, **kwargs: df.aggregate(func, *args, **kwargs),
@@ -649,10 +606,172 @@ class DataFrameGroupBy(object):
     def take(self, **kwargs):
         return self._default_to_pandas(lambda df: df.take(**kwargs))
 
+    @property
+    def _index(self):
+        """
+        Implement [METHOD_NAME].
+
+        TODO: Add more details for this docstring template.
+
+        Parameters
+        ----------
+        What arguments does this function have.
+        [
+        PARAMETER_NAME: PARAMETERS TYPES
+            Description.
+        ]
+
+        Returns
+        -------
+        What this returns (if anything)
+        """
+        return self._query_compiler.index
+
+    @property
+    def _sort(self):
+        """
+        Implement [METHOD_NAME].
+
+        TODO: Add more details for this docstring template.
+
+        Parameters
+        ----------
+        What arguments does this function have.
+        [
+        PARAMETER_NAME: PARAMETERS TYPES
+            Description.
+        ]
+
+        Returns
+        -------
+        What this returns (if anything)
+        """
+        return self._kwargs.get("sort")
+
+    @property
+    def _as_index(self):
+        """
+        Implement [METHOD_NAME].
+
+        TODO: Add more details for this docstring template.
+
+        Parameters
+        ----------
+        What arguments does this function have.
+        [
+        PARAMETER_NAME: PARAMETERS TYPES
+            Description.
+        ]
+
+        Returns
+        -------
+        What this returns (if anything)
+        """
+        return self._kwargs.get("as_index")
+
+    @property
+    def _iter(self):
+        """
+        Implement [METHOD_NAME].
+
+        TODO: Add more details for this docstring template.
+
+        Parameters
+        ----------
+        What arguments does this function have.
+        [
+        PARAMETER_NAME: PARAMETERS TYPES
+            Description.
+        ]
+
+        Returns
+        -------
+        What this returns (if anything)
+        """
+        from .dataframe import DataFrame
+
+        group_ids = self._index_grouped.keys()
+        if self._axis == 0:
+            return (
+                (
+                    k,
+                    DataFrame(
+                        query_compiler=self._query_compiler.getitem_row_array(
+                            self._index.get_indexer_for(self._index_grouped[k].unique())
+                        )
+                    ),
+                )
+                for k in (sorted(group_ids) if self._sort else group_ids)
+            )
+        else:
+            return (
+                (
+                    k,
+                    DataFrame(
+                        query_compiler=self._query_compiler.getitem_column_array(
+                            self._index_grouped[k].unique()
+                        )
+                    ),
+                )
+                for k in (sorted(group_ids) if self._sort else group_ids)
+            )
+
+    @property
+    def _index_grouped(self):
+        """
+        Implement [METHOD_NAME].
+
+        TODO: Add more details for this docstring template.
+
+        Parameters
+        ----------
+        What arguments does this function have.
+        [
+        PARAMETER_NAME: PARAMETERS TYPES
+            Description.
+        ]
+
+        Returns
+        -------
+        What this returns (if anything)
+        """
+        if self._index_grouped_cache is None:
+            if hasattr(self._by, "columns") and len(self._by.columns) > 1:
+                by = list(self._by.columns)
+                is_multi_by = True
+            else:
+                by = self._by
+                is_multi_by = self._is_multi_by
+            if is_multi_by:
+                # Because we are doing a collect (to_pandas) here and then groupby, we
+                # end up using pandas implementation. Add the warning so the user is
+                # aware.
+                ErrorMessage.catch_bugs_and_request_email(self._axis == 1)
+                ErrorMessage.default_to_pandas("Groupby with multiple columns")
+                if isinstance(by, list) and all(isinstance(o, str) for o in by):
+                    pandas_df = self._df._query_compiler.getitem_column_array(
+                        by
+                    ).to_pandas()
+                else:
+                    by = try_cast_to_pandas(by)
+                    pandas_df = self._df._to_pandas()
+                self._index_grouped_cache = pandas_df.groupby(by=by).groups
+            else:
+                if isinstance(self._by, type(self._query_compiler)):
+                    by = self._by.to_pandas().squeeze().values
+                else:
+                    by = self._by
+                if self._axis == 0:
+                    self._index_grouped_cache = self._index.groupby(by)
+                else:
+                    self._index_grouped_cache = self._columns.groupby(by)
+        return self._index_grouped_cache
+
     def _wrap_aggregation(
         self, qc_method, default_func, drop=True, numeric_only=True, **kwargs
     ):
-        """Perform common metadata transformations and apply groupby functions.
+        """
+        Perform common metadata transformations and apply groupby functions.
 
         Parameters
         ----------
@@ -699,13 +818,19 @@ class DataFrameGroupBy(object):
         return result
 
     def _apply_agg_function(self, f, drop=True, *args, **kwargs):
-        """Perform aggregation and combine stages based on a given function.
+        """
+        Perform aggregation and combine stages based on a given function.
 
-        Args:
-            f: The function to apply to each group.
+        TODO: add types.
 
-        Returns:
-             A new combined DataFrame with the result of all groups.
+        Parameters
+        ----------
+        f:
+            The function to apply to each group.
+
+        Returns
+        -------
+        A new combined DataFrame with the result of all groups.
         """
         assert callable(f), "'{0}' object is not callable".format(type(f))
 
@@ -743,13 +868,19 @@ class DataFrameGroupBy(object):
         return result
 
     def _default_to_pandas(self, f, *args, **kwargs):
-        """Defaults the execution of this function to pandas.
+        """
+        Defaults the execution of this function to pandas.
 
-        Args:
-            f: The function to apply to each group.
+        TODO: add types.
 
-        Returns:
-             A new Modin DataFrame with the result of the pandas function.
+        Parameters
+        ----------
+        f:
+            The function to apply to each group.
+
+        Returns
+        -------
+        A new Modin DataFrame with the result of the pandas function.
         """
         if (
             isinstance(self._by, type(self._query_compiler))
@@ -771,12 +902,12 @@ class DataFrameGroupBy(object):
         return self._df._default_to_pandas(groupby_on_multiple_columns, *args, **kwargs)
 
 
-if os.environ.get("MODIN_EXPERIMENTAL", "").title() == "True":
-    from modin.experimental.cloud.meta_magic import make_wrapped_class
-
-    make_wrapped_class(DataFrameGroupBy, "make_dataframe_groupby_wrapper")
-
-
+@_inherit_docstrings(
+    pandas.core.groupby.SeriesGroupBy,
+    excluded=[
+        pandas.core.groupby.SeriesGroupBy.__init__,
+    ],
+)
 class SeriesGroupBy(DataFrameGroupBy):
     @property
     def ndim(self):
@@ -784,6 +915,23 @@ class SeriesGroupBy(DataFrameGroupBy):
 
     @property
     def _iter(self):
+        """
+        Implement [METHOD_NAME].
+
+        TODO: Add more details for this docstring template.
+
+        Parameters
+        ----------
+        What arguments does this function have.
+        [
+        PARAMETER_NAME: PARAMETERS TYPES
+            Description.
+        ]
+
+        Returns
+        -------
+        What this returns (if anything)
+        """
         group_ids = self._index_grouped.keys()
         if self._axis == 0:
             return (
@@ -809,3 +957,9 @@ class SeriesGroupBy(DataFrameGroupBy):
                 )
                 for k in (sorted(group_ids) if self._sort else group_ids)
             )
+
+
+if IsExperimental.get():
+    from modin.experimental.cloud.meta_magic import make_wrapped_class
+
+    make_wrapped_class(DataFrameGroupBy, "make_dataframe_groupby_wrapper")

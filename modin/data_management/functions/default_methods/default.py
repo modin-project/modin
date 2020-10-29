@@ -19,10 +19,13 @@ import pandas
 
 
 class DefaultMethod(Function):
+    OBJECT_TYPE = "DataFrame"
+
     @classmethod
     def call(cls, func, **call_kwds):
         obj = call_kwds.get("obj_type", pandas.DataFrame)
         force_inplace = call_kwds.get("inplace")
+        fn_name = call_kwds.get("fn_name", getattr(func, "__name__", str(func)))
 
         if isinstance(func, str):
             fn = getattr(obj, func)
@@ -57,28 +60,21 @@ class DefaultMethod(Function):
                 inplace = force_inplace
             return result if not inplace else df
 
-        return cls.build_wrapper(applyier, func)
+        return cls.build_wrapper(applyier, fn_name)
 
     @classmethod
     def register(cls, func, **kwargs):
         return cls.call(func, **kwargs)
 
     @classmethod
-    def build_wrapper(cls, fn, fn_name=None):
-        wrapper = cls.build_default_to_pandas(fn)
+    def build_wrapper(cls, fn, fn_name):
+        wrapper = cls.build_default_to_pandas(fn, fn_name)
 
         def args_cast(self, *args, **kwargs):
             args = try_cast_to_pandas(args)
             kwargs = try_cast_to_pandas(kwargs)
             return wrapper(self, *args, **kwargs)
 
-        if fn_name is None:
-            fn_name = fn.__name__
-        if not isinstance(fn_name, str):
-            fn_name = getattr(fn_name, "__name__", repr(fn_name))
-
-        # setting proper function name that will be printed in default to pandas warning
-        args_cast.__name__ = fn_name
         return args_cast
 
     @classmethod
@@ -89,7 +85,9 @@ class DefaultMethod(Function):
         return property_wrapper
 
     @classmethod
-    def build_default_to_pandas(cls, fn):
+    def build_default_to_pandas(cls, fn, fn_name):
+        fn.__name__ = f"<function {cls.OBJECT_TYPE}.{fn_name}>"
+
         def wrapper(self, *args, **kwargs):
             return self.default_to_pandas(fn, *args, **kwargs)
 

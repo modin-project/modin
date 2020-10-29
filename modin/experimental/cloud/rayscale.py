@@ -13,6 +13,7 @@
 
 import threading
 import os
+import re
 import traceback
 import sys
 from hashlib import sha1
@@ -148,9 +149,12 @@ class RayCluster(BaseCluster):
 
         reqs.extend(self._get_python_version())
 
-        reqs.append(self._get_modin_version())
-
         if self.add_conda_packages:
+            if not any(re.match(r"modin(\W|$)", p) for p in self.add_conda_packages):
+                # user didn't define modin release;
+                # use automatically detected modin release from local context
+                reqs.append(self._get_modin_version())
+
             reqs.extend(self.add_conda_packages)
 
         # this is needed, for example, for dependencies that
@@ -200,9 +204,8 @@ class RayCluster(BaseCluster):
                 yes=True,
                 override_cluster_name=None,
                 no_config_cache=False,
-                log_old_style=False,
-                log_color="auto",
-                verbose=1,
+                redirect_command_output=False,
+                use_login_shells=True,
             )
             # need to re-load the config, as create_or_update_cluster() modifies it
             with open(self.config_file) as inp:
@@ -223,9 +226,6 @@ class RayCluster(BaseCluster):
                 workers_only=False,
                 override_cluster_name=None,
                 keep_min_workers=0,
-                log_old_style=False,
-                log_color="auto",
-                verbose=1,
             )
             self.ready = False
             self.config = None

@@ -27,7 +27,7 @@ jobs:
         with:
           python-version: ${{matrix.python-version}}
           architecture: "x64"
-      - run: pip install ray==0.8.7
+      - run: pip install "ray>=1.0.0"
 
   test-defaults:
     needs: prepare-cache
@@ -324,4 +324,4 @@ jobs:
           conda list
       - run: sudo apt update && sudo apt install -y libhdf5-dev
       - shell: bash -l {0}
-        run: python -m pytest modin/pandas/test/test_io.py::test_from_csv
+        run: python -m pytest modin/pandas/test/test_io.py::TestReadCSV

@@ -58,6 +58,7 @@ class CSVReader(TextFileReader):
         nrows = kwargs.pop("nrows", None)
         names = kwargs.get("names", None)
         index_col = kwargs.get("index_col", None)
+        usecols = kwargs.get("usecols", None)
         if names is None:
             # For the sake of the empty df, we assume no `index_col` to get the correct
             # column names before we build the index. Because we pass `names` in, this
@@ -67,13 +68,22 @@ class CSVReader(TextFileReader):
                 filepath_or_buffer,
                 **dict(kwargs, usecols=None, nrows=0, skipfooter=0, index_col=None),
             ).columns
+        elif index_col is None and not usecols:
+            # When names is set to some list that is smaller than the number of columns
+            # in the file, the first columns are built as a hierarchical index.
+            empty_pd_df = pandas.read_csv(filepath_or_buffer, nrows=0)
+            num_cols = len(empty_pd_df.columns)
+            if num_cols > len(names):
+                index_col = list(range(num_cols - len(names)))
+                if len(index_col) == 1:
+                    index_col = index_col[0]
+                kwargs["index_col"] = index_col
         empty_pd_df = pandas.read_csv(
             filepath_or_buffer, **dict(kwargs, nrows=0, skipfooter=0)
         )
         column_names = empty_pd_df.columns
         skipfooter = kwargs.get("skipfooter", None)
         skiprows = kwargs.pop("skiprows", None)
-        usecols = kwargs.get("usecols", None)
         usecols_md = _validate_usecols_arg(usecols)
         if usecols is not None and usecols_md[1] != "integer":
             del kwargs["usecols"]
@@ -170,11 +180,6 @@ class CSVReader(TextFileReader):
         if index_col is None:
             row_lengths = cls.materialize(index_ids)
             new_index = pandas.RangeIndex(sum(row_lengths))
-            # pandas has a really weird edge case here.
-            if kwargs.get("names", None) is not None and skiprows > 1:
-                new_index = pandas.RangeIndex(
-                    skiprows - 1, new_index.stop + skiprows - 1
-                )
         else:
             index_objs = cls.materialize(index_ids)
             row_lengths = [len(o) for o in index_objs]

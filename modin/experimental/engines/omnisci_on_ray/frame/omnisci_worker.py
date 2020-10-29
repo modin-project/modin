@@ -24,6 +24,8 @@ from dbe import PyDbEngine
 
 sys.setdlopenflags(prev)
 
+from modin.config import OmnisciFragmentSize
+
 
 class OmnisciServer:
     _server = None
@@ -105,11 +107,11 @@ class OmnisciServer:
         if need_cast:
             table = table.cast(new_schema)
 
-        fragment_size = os.environ.get("MODIN_OMNISCI_FRAGMENT_SIZE", None)
+        fragment_size = OmnisciFragmentSize.get()
         if fragment_size is None:
             cpu_count = os.cpu_count()
             if cpu_count is not None:
-                fragment_size = table.num_rows / cpu_count
+                fragment_size = table.num_rows // cpu_count
                 fragment_size = min(fragment_size, 2 ** 25)
                 fragment_size = max(fragment_size, 2 ** 18)
             else:

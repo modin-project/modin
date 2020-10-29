@@ -19,7 +19,7 @@ from pandas.core.dtypes.common import is_list_like
 
 class BinaryDefault(AnyDefault):
     @classmethod
-    def build_default_to_pandas(cls, fn):
+    def build_default_to_pandas(cls, fn, fn_name):
         def bin_ops_wrapper(df, other, *args, **kwargs):
             squeeze_other = kwargs.pop("broadcast", False) or kwargs.pop(
                 "squeeze_other", False
@@ -41,7 +41,4 @@ class BinaryDefault(AnyDefault):
                 result = pandas.DataFrame(result)
             return result
 
-        def wrapper(self, *args, **kwargs):
-            return self.default_to_pandas(bin_ops_wrapper, *args, **kwargs)
-
-        return wrapper
+        return super().build_default_to_pandas(bin_ops_wrapper, fn_name)

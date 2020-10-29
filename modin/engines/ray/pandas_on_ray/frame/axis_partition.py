@@ -43,7 +43,7 @@ class PandasOnRayFrameAxisPartition(PandasFrameAxisPartition):
                 maintain_partitioning,
             )
             + tuple(partitions),
-            num_return_vals=num_splits * 3,
+            num_returns=num_splits * 3,
         )
 
     @classmethod
@@ -61,7 +61,7 @@ class PandasOnRayFrameAxisPartition(PandasFrameAxisPartition):
                 kwargs,
             )
             + tuple(partitions),
-            num_return_vals=num_splits * 3,
+            num_returns=num_splits * 3,
         )
 
     def _wrap_partitions(self, partitions):

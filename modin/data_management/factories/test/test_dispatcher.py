@@ -13,7 +13,8 @@
 
 import pytest
 
-from modin import execution_engine, partition_format, set_backends
+from modin.config import Engine, Backend
+from modin import set_backends
 
 from modin.data_management.factories.dispatcher import (
     EngineDispatcher,
@@ -78,21 +79,21 @@ def test_default_engine():
 
 
 def test_engine_switch():
-    execution_engine.put("Test")
+    Engine.put("Test")
     assert EngineDispatcher.get_engine() == PandasOnTestFactory
     assert EngineDispatcher.get_engine().io_cls == "Foo"
-    execution_engine.put("Python")  # revert engine to default
+    Engine.put("Python")  # revert engine to default
 
-    partition_format.put("Test")
+    Backend.put("Test")
     assert EngineDispatcher.get_engine() == TestOnPythonFactory
     assert EngineDispatcher.get_engine().io_cls == "Bar"
-    partition_format.put("Pandas")  # revert engine to default
+    Backend.put("Pandas")  # revert engine to default
 
 
 def test_engine_wrong_factory():
     with pytest.raises(FactoryNotFoundError):
-        execution_engine.put("BadEngine")
-    execution_engine.put("Python")  # revert engine to default
+        Engine.put("BadEngine")
+    Engine.put("Python")  # revert engine to default
 
 
 def test_set_backends():

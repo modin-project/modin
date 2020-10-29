@@ -11,10 +11,10 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-import os
 import pandas
 import pytest
 import modin.experimental.pandas as pd
+from modin.config import Engine
 from modin.pandas.test.test_io import (  # noqa: F401
     df_equals,
     make_sql_connection,
@@ -22,11 +22,12 @@ from modin.pandas.test.test_io import (  # noqa: F401
 
 
 @pytest.mark.skipif(
-    os.environ.get("MODIN_ENGINE", "Ray").title() == "Dask",
+    Engine.get() == "Dask",
     reason="Dask does not have experimental API",
 )
 def test_from_sql_distributed(make_sql_connection):  # noqa: F811
-    if os.environ.get("MODIN_ENGINE", "") == "Ray":
+    if Engine.get() == "Ray":
+        pytest.xfail("Distributed read_sql is broken, see GH#2194")
         filename = "test_from_sql_distributed.db"
         table = "test_from_sql_distributed"
         conn = make_sql_connection(filename, table)
@@ -45,7 +46,7 @@ def test_from_sql_distributed(make_sql_connection):  # noqa: F811
 
 
 @pytest.mark.skipif(
-    os.environ.get("MODIN_ENGINE", "Ray").title() == "Dask",
+    Engine.get() == "Dask",
     reason="Dask does not have experimental API",
 )
 def test_from_sql_defaults(make_sql_connection):  # noqa: F811

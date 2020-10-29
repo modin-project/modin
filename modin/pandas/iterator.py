@@ -11,18 +11,28 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
+"""Place to define the Modin iterator."""
+
 from collections import Iterator
 
 
 class PartitionIterator(Iterator):
-    def __init__(self, df, axis, func):
-        """PartitionIterator class to define a generator on partitioned data
+    """Iterator on partitioned data."""
 
-        Args:
-            df: The dataframe to iterate over
-            axis: axis to iterate over
-            func: The function to get inner iterables from
-                each partition
+    def __init__(self, df, axis, func):
+        """
+        Construct a iterator on partitioned data.
+
+        TODO: add types.
+
+        Parameters
+        ----------
+        df: DataFrame
+            The dataframe to iterate over.
+        axis:
+            axis to iterate over.
+        func:
+            The function to get inner iterables from each partition.
         """
         self.df = df
         self.axis = axis
@@ -40,12 +50,11 @@ class PartitionIterator(Iterator):
         self.func = func
 
     def __iter__(self):
+        """Implement iterator interface."""
         return self
 
     def __next__(self):
-        return self.next()
-
-    def next(self):
+        """Implement iterator interface."""
         key = next(self.index_iter)
         df = self.df.iloc[key]
         return self.func(df)

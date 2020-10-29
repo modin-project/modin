@@ -14,6 +14,7 @@
 from modin.backends.base.query_compiler import (
     BaseQueryCompiler,
     _set_axis as default_axis_setter,
+    _get_axis as default_axis_getter,
 )
 from modin.backends.pandas.query_compiler import PandasQueryCompiler
 
@@ -23,6 +24,59 @@ from pandas.core.common import is_bool_indexer
 from pandas.core.dtypes.common import is_list_like
 
 
+def is_inoperable(value):
+    if isinstance(value, (tuple, list)):
+        result = False
+        for val in value:
+            result = result or is_inoperable(val)
+        return result
+    elif isinstance(value, dict):
+        return is_inoperable(list(value.values()))
+    else:
+        value = getattr(value, "_query_compiler", value)
+        if hasattr(value, "_modin_frame"):
+            return value._modin_frame._has_unsupported_data
+    return False
+
+
+def build_method_wrapper(name, method):
+    def method_wrapper(self, *args, **kwargs):
+        if is_inoperable([self, args, kwargs]):
+            return getattr(BaseQueryCompiler, name)(self, *args, **kwargs)
+        return method(self, *args, **kwargs)
+
+    return method_wrapper
+
+
+def bind_wrappers(cls):
+    exclude = set(
+        [
+            "__init__",
+            "to_pandas",
+            "from_pandas",
+            "from_arrow",
+            "default_to_pandas",
+            "_get_index",
+            "_set_index",
+            "_get_columns",
+            "_set_columns",
+        ]
+    )
+    for name, method in cls.__dict__.items():
+        if name in exclude:
+            continue
+
+        if callable(method):
+            setattr(
+                cls,
+                name,
+                build_method_wrapper(name, method),
+            )
+
+    return cls
+
+
+@bind_wrappers
 class DFAlgQueryCompiler(BaseQueryCompiler):
     """This class implements the logic necessary for operating on partitions
     with a lazy DataFrame Algebra based backend."""
@@ -109,7 +163,7 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
         )
 
     def groupby_size(
-        query_compiler,
+        self,
         by,
         axis,
         groupby_args,
@@ -139,10 +193,10 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
         -------
         BaseQueryCompiler
         """
-        new_frame = query_compiler._modin_frame.groupby_agg(
+        new_frame = self._modin_frame.groupby_agg(
             by,
             axis,
-            {query_compiler._modin_frame.columns[0]: "size"},
+            {self._modin_frame.columns[0]: "size"},
             groupby_args,
             **kwargs,
         )
@@ -152,12 +206,9 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
         else:
             shape_hint = None
             new_frame = new_frame._set_columns(list(new_frame.columns)[:-1] + ["size"])
-        new_qc = query_compiler.__constructor__(new_frame, shape_hint=shape_hint)
-        if groupby_args["squeeze"]:
-            new_qc = new_qc.squeeze()
-        return new_qc
+        return self.__constructor__(new_frame, shape_hint=shape_hint)
 
-    def groupby_sum(query_compiler, by, axis, groupby_args, map_args, **kwargs):
+    def groupby_sum(self, by, axis, groupby_args, map_args, **kwargs):
         """Groupby with sum aggregation.
 
         Parameters
@@ -177,15 +228,12 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
         QueryCompiler
             A new QueryCompiler
         """
-        new_frame = query_compiler._modin_frame.groupby_agg(
+        new_frame = self._modin_frame.groupby_agg(
             by, axis, "sum", groupby_args, **kwargs
         )
-        new_qc = query_compiler.__constructor__(new_frame)
-        if groupby_args["squeeze"]:
-            new_qc = new_qc.squeeze()
-        return new_qc
+        return self.__constructor__(new_frame)
 
-    def groupby_count(query_compiler, by, axis, groupby_args, map_args, **kwargs):
+    def groupby_count(self, by, axis, groupby_args, map_args, **kwargs):
         """Perform a groupby count.
 
         Parameters
@@ -209,13 +257,10 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
         -------
         QueryCompiler
         """
-        new_frame = query_compiler._modin_frame.groupby_agg(
+        new_frame = self._modin_frame.groupby_agg(
             by, axis, "count", groupby_args, **kwargs
         )
-        new_qc = query_compiler.__constructor__(new_frame)
-        if groupby_args["squeeze"]:
-            new_qc = new_qc.squeeze()
-        return new_qc
+        return self.__constructor__(new_frame)
 
     def groupby_dict_agg(self, by, func_dict, groupby_args, agg_args, drop=False):
         """Apply aggregation functions to a grouped dataframe per-column.
@@ -242,23 +287,73 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
         new_frame = self._modin_frame.groupby_agg(
             by, 0, func_dict, groupby_args, **agg_args
         )
-        new_qc = self.__constructor__(new_frame)
-        if groupby_args["squeeze"]:
-            new_qc = new_qc.squeeze()
-        return new_qc
+        return self.__constructor__(new_frame)
+
+    def count(self, **kwargs):
+        return self._agg("count", **kwargs)
+
+    def max(self, **kwargs):
+        return self._agg("max", **kwargs)
+
+    def min(self, **kwargs):
+        return self._agg("min", **kwargs)
+
+    def sum(self, **kwargs):
+        return self._agg("sum", **kwargs)
+
+    def mean(self, **kwargs):
+        return self._agg("mean", **kwargs)
+
+    def _agg(self, agg, axis=0, level=None, **kwargs):
+        if level is not None or axis != 0:
+            return getattr(super(), agg)(axis=axis, level=level, **kwargs)
+
+        skipna = kwargs.get("skipna", True)
+        if not skipna:
+            return getattr(super(), agg)(axis=axis, level=level, **kwargs)
+
+        new_frame = self._modin_frame.agg(agg)
+        new_frame = new_frame._set_index(
+            pandas.Index.__new__(pandas.Index, data=["__reduced__"], dtype="O")
+        )
+        return self.__constructor__(new_frame, shape_hint="row")
+
+    def value_counts(self, **kwargs):
+        subset = kwargs.get("subset", None)
+        normalize = kwargs.get("normalize", False)
+        sort = kwargs.get("sort", True)
+        ascending = kwargs.get("ascending", False)
+        bins = kwargs.get("bins", False)
+        dropna = kwargs.get("dropna", True)
+
+        if bins or normalize:
+            return super().value_count(**kwargs)
+
+        new_frame = self._modin_frame.value_counts(
+            columns=subset, dropna=dropna, sort=sort, ascending=ascending
+        )
+        return self.__constructor__(new_frame, shape_hint="column")
 
     def _get_index(self):
+        if self._modin_frame._has_unsupported_data:
+            return default_axis_getter(0)(self)
         return self._modin_frame.index
 
     def _set_index(self, index):
+        if self._modin_frame._has_unsupported_data:
+            return default_axis_setter(0)(self, index)
         default_axis_setter(0)(self, index)
         # NotImplementedError: OmnisciOnRayFrame._set_index is not yet suported
         # self._modin_frame.index = index
 
     def _get_columns(self):
+        if self._modin_frame._has_unsupported_data:
+            return default_axis_getter(1)(self)
         return self._modin_frame.columns
 
     def _set_columns(self, columns):
+        if self._modin_frame._has_unsupported_data:
+            return default_axis_setter(1)(self, columns)
         self._modin_frame = self._modin_frame._set_columns(columns)
 
     def fillna(

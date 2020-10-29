@@ -2058,6 +2058,19 @@ def test_loc(data):
     pandas_result = pandas_series.loc[indices]
     df_equals(modin_result, pandas_result)
 
+    # From issue #1988
+    index = pd.MultiIndex.from_product([np.arange(10), np.arange(10)], names=["f", "s"])
+    data = np.arange(100)
+    modin_series = pd.Series(data, index=index).sort_index()
+    pandas_series = pandas.Series(data, index=index).sort_index()
+    modin_result = modin_series.loc[
+        (slice(None), 1),
+    ]
+    pandas_result = pandas_series.loc[
+        (slice(None), 1),
+    ]
+    df_equals(modin_result, pandas_result)
+
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_lt(data):

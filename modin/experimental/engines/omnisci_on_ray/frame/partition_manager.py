@@ -22,10 +22,11 @@ from .partition import OmnisciOnRayFramePartition
 from .omnisci_worker import OmnisciServer
 from .calcite_builder import CalciteBuilder
 from .calcite_serializer import CalciteSerializer
+from modin.config import DoUseCalcite
 
 import pyarrow
 import pandas
-import os
+import re
 
 
 class OmnisciOnRayFrameManager(RayFrameManager):
@@ -47,17 +48,98 @@ class OmnisciOnRayFrameManager(RayFrameManager):
         return 1
 
     @classmethod
-    def from_arrow(cls, at, return_dims=False):
+    def from_pandas(cls, df, return_dims=False):
+        def tuple_wrapper(obj):
+            if not isinstance(obj, tuple):
+                obj = (obj,)
+            return obj
+
+        if df.empty:
+            return (*tuple_wrapper(super().from_pandas(df, return_dims)), [])
+
+        at, unsupported_cols = cls._get_unsupported_cols(df)
+
+        if len(unsupported_cols) > 0:
+            # Putting pandas frame into partitions instead of arrow table, because we know
+            # that all of operations with this frame will be default to pandas and don't want
+            # unnecessaries conversion pandas->arrow->pandas
+            return (
+                *tuple_wrapper(super().from_pandas(df, return_dims)),
+                unsupported_cols,
+            )
+        else:
+            # Since we already have arrow table, putting it into partitions instead
+            # of pandas frame, to skip that phase when we will be putting our frame to OmniSci
+            return cls.from_arrow(at, return_dims, unsupported_cols)
+
+    @classmethod
+    def from_arrow(cls, at, return_dims=False, unsupported_cols=None):
         put_func = cls._partition_class.put_arrow
 
         parts = [[put_func(at)]]
+        if unsupported_cols is None:
+            _, unsupported_cols = cls._get_unsupported_cols(at)
 
         if not return_dims:
-            return np.array(parts)
+            return np.array(parts), unsupported_cols
         else:
             row_lengths = [at.num_rows]
             col_widths = [at.num_columns]
-            return np.array(parts), row_lengths, col_widths
+            return np.array(parts), row_lengths, col_widths, unsupported_cols
+
+    @classmethod
+    def _get_unsupported_cols(cls, obj):
+        """
+        Finds columns with unsupported dtypes by OmniSci, and returns list of it.
+
+        Parameters
+        ----------
+            obj : pandas.DataFrame or pyarrow.Table, object to inspect on
+                unsupported column types.
+
+        Returns
+        -------
+            Tuple of pyarrow.Table representation of `obj` (for future using) and
+            a list of unsupported columns.
+        """
+        if isinstance(obj, (pandas.Series, pandas.DataFrame)):
+            # picking first rows from cols with `dtype="object"` to check its actual type,
+            # in case of homogen columns that saves us unnecessary convertion to arrow table
+            cols = [name for name, col in obj.dtypes.items() if col == "object"]
+            type_samples = obj.iloc[0][cols]
+
+            unsupported_cols = [
+                name for name, col in type_samples.items() if not isinstance(col, str)
+            ]
+
+            if len(unsupported_cols) > 0:
+                return None, unsupported_cols
+
+            try:
+                at = pyarrow.Table.from_pandas(obj)
+            except pyarrow.lib.ArrowTypeError as e:
+                regex = r"Conversion failed for column ([^\W]*)"
+                unsupported_cols = []
+                for msg in e.args:
+                    match = re.findall(regex, msg)
+                    unsupported_cols.extend(match)
+
+                if len(unsupported_cols) == 0:
+                    unsupported_cols = obj.columns
+                return None, unsupported_cols
+            else:
+                obj = at
+
+        return (
+            obj,
+            [
+                field.name
+                for field in obj.schema
+                if not isinstance(field.type, pyarrow.DictionaryType)
+                and field.type.to_pandas_dtype() == np.dtype("O")
+                and field.type != "string"
+            ],
+        )
 
     @classmethod
     def run_exec_plan(cls, plan, index_cols, dtypes, columns):
@@ -88,10 +170,7 @@ class OmnisciOnRayFrameManager(RayFrameManager):
 
         cmd_prefix = "execute relalg "
 
-        use_calcite_env = os.environ.get("MODIN_USE_CALCITE")
-        use_calcite = use_calcite_env is not None and use_calcite_env.lower() == "true"
-
-        if use_calcite:
+        if DoUseCalcite.get():
             cmd_prefix = "execute calcite "
 
         curs = omniSession.executeRA(cmd_prefix + calcite_json)
@@ -102,7 +181,7 @@ class OmnisciOnRayFrameManager(RayFrameManager):
 
         res = np.empty((1, 1), dtype=np.dtype(object))
         # workaround for https://github.com/modin-project/modin/issues/1851
-        if use_calcite:
+        if DoUseCalcite.get():
             at = at.rename_columns(["F_" + str(c) for c in columns])
         res[0][0] = cls._partition_class.put_arrow(at)
 

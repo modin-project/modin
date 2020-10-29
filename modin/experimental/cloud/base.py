@@ -15,6 +15,8 @@ from typing import NamedTuple
 import os
 import sys
 
+from modin.config import SocksProxy
+
 
 class ClusterError(Exception):
     """
@@ -64,7 +66,7 @@ def _which(prog):
 
 
 def _get_ssh_proxy_command():
-    socks_proxy = os.environ.get("MODIN_SOCKS_PROXY", None)
+    socks_proxy = SocksProxy.get()
     if socks_proxy is None:
         return None
     if _which("nc"):

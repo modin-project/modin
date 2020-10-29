@@ -14,7 +14,7 @@
 import pytest
 import numpy as np
 import pandas
-import pandas.util.testing as tm
+from pandas.testing import assert_index_equal
 import matplotlib
 import modin.pandas as pd
 from modin.utils import get_current_backend
@@ -27,6 +27,7 @@ from modin.pandas.test.utils import (
     df_is_empty,
     arg_keys,
     name_contains,
+    test_data,
     test_data_values,
     test_data_keys,
     test_data_with_duplicates_values,
@@ -120,13 +121,13 @@ def test_indexing():
 def test_empty_df():
     df = pd.DataFrame(index=["a", "b"])
     df_is_empty(df)
-    tm.assert_index_equal(df.index, pd.Index(["a", "b"]))
+    assert_index_equal(df.index, pd.Index(["a", "b"]))
     assert len(df.columns) == 0
 
     df = pd.DataFrame(columns=["a", "b"])
     df_is_empty(df)
     assert len(df.index) == 0
-    tm.assert_index_equal(df.columns, pd.Index(["a", "b"]))
+    assert_index_equal(df.columns, pd.Index(["a", "b"]))
 
     df = pd.DataFrame()
     df_is_empty(df)
@@ -135,13 +136,13 @@ def test_empty_df():
 
     df = pd.DataFrame(index=["a", "b"])
     df_is_empty(df)
-    tm.assert_index_equal(df.index, pd.Index(["a", "b"]))
+    assert_index_equal(df.index, pd.Index(["a", "b"]))
     assert len(df.columns) == 0
 
     df = pd.DataFrame(columns=["a", "b"])
     df_is_empty(df)
     assert len(df.index) == 0
-    tm.assert_index_equal(df.columns, pd.Index(["a", "b"]))
+    assert_index_equal(df.columns, pd.Index(["a", "b"]))
 
     df = pd.DataFrame()
     df_is_empty(df)
@@ -439,7 +440,7 @@ def test_append(data):
 
 
 def test_astype():
-    td = pandas.DataFrame(tm.getSeriesData())
+    td = pandas.DataFrame(test_data["int_data"])[["col1", "index", "col3", "col4"]]
     modin_df = pd.DataFrame(td.values, index=td.index, columns=td.columns)
     expected_df = pandas.DataFrame(td.values, index=td.index, columns=td.columns)
 
@@ -459,13 +460,13 @@ def test_astype():
     expected_df_casted = expected_df.astype("category")
     df_equals(modin_df_casted, expected_df_casted)
 
-    dtype_dict = {"A": np.int32, "B": np.int64, "C": str}
+    dtype_dict = {"col1": np.int32, "index": np.int64, "col3": str}
     modin_df_casted = modin_df.astype(dtype_dict)
     expected_df_casted = expected_df.astype(dtype_dict)
     df_equals(modin_df_casted, expected_df_casted)
 
     # Ignore lint because this is testing bad input
-    bad_dtype_dict = {"B": np.int32, "B": np.int64, "B": str}  # noqa F601
+    bad_dtype_dict = {"index": np.int32, "index": np.int64, "index": str}  # noqa F601
     modin_df_casted = modin_df.astype(bad_dtype_dict)
     expected_df_casted = expected_df.astype(bad_dtype_dict)
     df_equals(modin_df_casted, expected_df_casted)

@@ -34,6 +34,24 @@ jobs:
       - run: pip install black
       - run: black --check --diff modin/
 
+  lint-pydocstyle:
+    name: lint (pydocstyle)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 1
+      - uses: actions/setup-python@v2
+        with:
+          python-version: "3.7.x"
+          architecture: "x64"
+      - run: pip install pydocstyle
+      - run: pydocstyle --convention=numpy --add-ignore=D101,D102,D105 modin/pandas/dataframe.py modin/pandas/series.py modin/pandas/groupby.py modin/pandas/base.py
+      - run: pydocstyle --convention=numpy --add-ignore=D101,D103,D105 modin/pandas/io.py
+      - run: pydocstyle --convention=numpy --add-ignore=D101,D102 modin/pandas/series_utils.py
+      - run: pydocstyle --convention=numpy --add-ignore=D103 modin/pandas/general.py
+      - run: pydocstyle --convention=numpy modin/pandas/plotting.py modin/pandas/utils.py modin/pandas/iterator.py modin/pandas/indexing.py
+
   lint-flake8:
     name: lint (flake8)
     runs-on: ubuntu-latest
@@ -74,7 +92,7 @@ jobs:
         with:
           python-version: ${{matrix.python-version}}
           architecture: "x64"
-      - run: pip install ray==0.8.7
+      - run: pip install "ray>=1.0.0"
 
   test-api:
     needs: prepare-cache
@@ -166,7 +184,11 @@ jobs:
           conda list
       - name: Internals tests
         shell: bash -l {0}
-        run: python -m pytest modin/test/test_publisher.py modin/data_management/factories/test/test_dispatcher.py modin/experimental/cloud/test/test_cloud.py
+        run: python -m pytest modin/data_management/factories/test/test_dispatcher.py modin/experimental/cloud/test/test_cloud.py
+      - shell: bash -l {0}
+        run: python -m pytest modin/config/test
+      - shell: bash -l {0}
+        run: python -m pytest modin/test/test_envvar_catcher.py
 
   test-defaults:
     needs: [lint-commit, lint-flake8, lint-black, test-api, test-headers]
@@ -411,7 +433,7 @@ jobs:
           conda info
           conda list
       - shell: bash -l {0}
-        run: python -m pytest --simulate-cloud=normal modin/pandas/test/test_io.py::test_from_csv
+        run: python -m pytest --simulate-cloud=normal modin/pandas/test/test_io.py::TestReadCSV
       - shell: bash -l {0}
         run: bash <(curl -s https://codecov.io/bash)
 
@@ -535,4 +557,4 @@ jobs:
           conda list
       - run: sudo apt update && sudo apt install -y libhdf5-dev
       - shell: bash -l {0}
-        run: python -m pytest modin/pandas/test/test_io.py::test_from_csv
+        run: python -m pytest modin/pandas/test/test_io.py::TestReadCSV

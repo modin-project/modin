@@ -13,13 +13,13 @@
 
 import subprocess
 import signal
-import os
 import random
 import time
 import tempfile
 import sys
 
 from .base import ClusterError, ConnectionDetails, _get_ssh_proxy_command
+from modin.config import DoLogRpyc
 
 RPYC_REQUEST_TIMEOUT = 2400
 
@@ -40,11 +40,7 @@ class Connection:
     def __init__(
         self, details: ConnectionDetails, main_python: str, wrap_cmd=None, log_rpyc=None
     ):
-        self.log_rpyc = (
-            log_rpyc
-            if log_rpyc is not None
-            else os.environ.get("MODIN_LOG_RPYC", "").title() == "True"
-        )
+        self.log_rpyc = log_rpyc if log_rpyc is not None else DoLogRpyc.get()
         self.proc = None
         self.wrap_cmd = wrap_cmd or subprocess.list2cmdline
 

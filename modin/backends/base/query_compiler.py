@@ -23,6 +23,7 @@ from modin.data_management.functions.default_methods import (
     CatDefault,
     GroupByDefault,
 )
+from modin.error_message import ErrorMessage
 
 from pandas.core.dtypes.common import is_scalar
 import pandas.core.resample
@@ -32,6 +33,7 @@ import numpy as np
 
 def _get_axis(axis):
     def axis_getter(self):
+        ErrorMessage.default_to_pandas(f"DataFrame.get_axis({axis})")
         return self.to_pandas().axes[axis]
 
     return axis_getter

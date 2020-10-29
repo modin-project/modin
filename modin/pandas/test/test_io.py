@@ -32,12 +32,17 @@ from .utils import (
     json_short_bytes,
     json_long_string,
     json_long_bytes,
-    eval_general,
+    random_state,
+    eval_io,
+    get_unique_filename,
+    get_random_string,
+    insert_lines_to_csv,
+    IO_OPS_DATA_DIR,
 )
 
-from modin import execution_engine
+from modin.config import Engine, Backend
 
-if os.environ.get("MODIN_BACKEND", "Pandas").lower() == "pandas":
+if Backend.get() == "Pandas":
     import modin.pandas as pd
 else:
     import modin.experimental.pandas as pd
@@ -61,24 +66,8 @@ TEST_GBQ_FILENAME = "test_gbq."
 SMALL_ROW_SIZE = 2000
 
 
-def eval_io(path, fn_name, comparator=df_equals, cast_to_str=False, *args, **kwargs):
-    def applyier(module, *args, **kwargs):
-        result = getattr(module, fn_name)(*args, **kwargs)
-        # There could be some missmatches in dtypes, so we're
-        # casting the whole frame to `str` before comparison.
-        # See issue #1931 for details.
-        if cast_to_str:
-            result = result.astype(str)
-        return result
-
-    eval_general(
-        pd,
-        pandas,
-        applyier,
-        path=path,
-        *args,
-        **kwargs,
-    )
+if not os.path.exists(IO_OPS_DATA_DIR):
+    os.mkdir(IO_OPS_DATA_DIR)
 
 
 @pytest.fixture
@@ -173,48 +162,131 @@ def teardown_test_file(test_path):
         os.remove(test_path)
 
 
-@pytest.fixture
-def make_csv_file(delimiter=",", compression="infer"):
-    """Pytest fixture factory that makes temp csv files for testing.
-
-    Yields:
-        Function that generates csv files
-    """
-    filenames = []
-
-    def _make_csv_file(
+def _make_csv_file(filenames):
+    def _csv_file_maker(
         filename=TEST_CSV_FILENAME,
         row_size=SMALL_ROW_SIZE,
         force=True,
-        delimiter=delimiter,
+        delimiter=",",
         encoding=None,
-        compression=compression,
+        compression="infer",
+        additional_col_values=None,
+        add_blank_lines=False,
+        add_bad_lines=False,
+        add_nan_lines=False,
+        thousands_separator=None,
+        decimal_separator=None,
+        lineterminator=None,
+        comment_col_char=None,
+        quoting=csv.QUOTE_MINIMAL,
+        quotechar='"',
+        doublequote=True,
+        escapechar=None,
+        line_terminator=os.linesep,
     ):
         if os.path.exists(filename) and not force:
             pass
         else:
             dates = pandas.date_range("2000", freq="h", periods=row_size)
-            df = pandas.DataFrame(
-                {
-                    "col1": np.arange(row_size),
-                    "col2": [str(x.date()) for x in dates],
-                    "col3": np.arange(row_size),
-                    "col4": [str(x.time()) for x in dates],
-                }
-            )
+            data = {
+                "col1": np.arange(row_size) * 10,
+                "col2": [str(x.date()) for x in dates],
+                "col3": np.arange(row_size) * 10,
+                "col4": [str(x.time()) for x in dates],
+                "col5": [get_random_string() for _ in range(row_size)],
+                "col6": random_state.uniform(low=0.0, high=10000.0, size=row_size),
+            }
+
+            if additional_col_values is not None:
+                assert isinstance(additional_col_values, (list, tuple))
+                data.update(
+                    {
+                        "col7": random_state.choice(
+                            additional_col_values, size=row_size
+                        ),
+                    }
+                )
+            df = pandas.DataFrame(data)
+            if add_nan_lines:
+                for i in range(0, row_size, row_size // (row_size // 10)):
+                    df.loc[i] = pandas.Series()
+            if comment_col_char:
+                char = comment_col_char if isinstance(comment_col_char, str) else "#"
+                df.insert(
+                    loc=0,
+                    column="col_with_comments",
+                    value=[char if (x + 2) == 0 else x for x in range(row_size)],
+                )
+
+            if thousands_separator:
+                for col_id in ["col1", "col3"]:
+                    df[col_id] = df[col_id].apply(
+                        lambda x: f"{x:,d}".replace(",", thousands_separator)
+                    )
+                df["col6"] = df["col6"].apply(
+                    lambda x: f"{x:,f}".replace(",", thousands_separator)
+                )
+
             if compression == "gzip":
                 filename = "{}.gz".format(filename)
             elif compression == "zip" or compression == "xz" or compression == "bz2":
                 filename = "{fname}.{comp}".format(fname=filename, comp=compression)
-
             df.to_csv(
-                filename, sep=delimiter, encoding=encoding, compression=compression
+                filename,
+                sep=delimiter,
+                encoding=encoding,
+                compression=compression,
+                index=False,
+                decimal=decimal_separator if decimal_separator else ".",
+                line_terminator=line_terminator,
+                quoting=quoting,
+                quotechar=quotechar,
+                doublequote=doublequote,
+                escapechar=escapechar,
             )
+            csv_reader_writer_params = {
+                "delimiter": delimiter,
+                "doublequote": doublequote,
+                "escapechar": escapechar,
+                "lineterminator": line_terminator,
+                "quotechar": quotechar,
+                "quoting": quoting,
+            }
+            if add_blank_lines:
+                insert_lines_to_csv(
+                    csv_name=filename,
+                    lines_positions=[
+                        x for x in range(5, row_size, row_size // (row_size // 10))
+                    ],
+                    lines_type="blank",
+                    encoding=encoding,
+                    **csv_reader_writer_params,
+                )
+            if add_bad_lines:
+                insert_lines_to_csv(
+                    csv_name=filename,
+                    lines_positions=[
+                        x for x in range(6, row_size, row_size // (row_size // 10))
+                    ],
+                    lines_type="bad",
+                    encoding=encoding,
+                    **csv_reader_writer_params,
+                )
             filenames.append(filename)
             return df
 
-    # Return function that generates csv files
-    yield _make_csv_file
+    return _csv_file_maker
+
+
+@pytest.fixture
+def make_csv_file():
+    """Pytest fixture factory that makes temp csv files for testing.
+    Yields:
+        Function that generates csv files
+    """
+    filenames = []
+
+    yield _make_csv_file(filenames)
 
     # Delete csv files that were created
     for filename in filenames:
@@ -421,6 +493,36 @@ def teardown_fwf_file():
             os.remove(TEST_FWF_FILENAME)
         except PermissionError:
             pass
+
+
+class TestReadCSV:
+    # delimiter tests
+    @pytest.mark.parametrize("sep", ["_", ",", ".", "\n"])
+    @pytest.mark.parametrize("delimiter", ["_", ",", ".", "\n"])
+    @pytest.mark.parametrize("decimal", [".", "_"])
+    @pytest.mark.parametrize("thousands", [None, ",", "_", " "])
+    def test_read_csv_delimiters(
+        self, make_csv_file, sep, delimiter, decimal, thousands
+    ):
+        kwargs = {
+            "delimiter": delimiter,
+            "sep": sep,
+            "decimal": decimal,
+            "thousands": thousands,
+        }
+        unique_filename = get_unique_filename("test_read_csv_delimiter", kwargs)
+        make_csv_file(
+            filename=unique_filename,
+            delimiter=delimiter,
+            thousands_separator=thousands,
+            decimal_separator=decimal,
+        )
+
+        eval_io(
+            filepath_or_buffer=unique_filename,
+            fn_name="read_csv",
+            **kwargs,
+        )
 
 
 def test_from_parquet(make_parquet_file):
@@ -1033,9 +1135,7 @@ def test_from_csv_with_usecols(usecols):
     df_equals(modin_df, pandas_df)
 
 
-@pytest.mark.skipif(
-    execution_engine.get().lower() == "python", reason="Using pandas implementation"
-)
+@pytest.mark.skipif(Engine.get() == "Python", reason="Using pandas implementation")
 def test_from_csv_s3(make_csv_file):
     dataset_url = "s3://noaa-ghcn-pds/csv/1788.csv"
     pandas_df = pandas.read_csv(dataset_url)
@@ -1052,6 +1152,26 @@ def test_from_csv_s3(make_csv_file):
     )
 
     df_equals(modin_df, pandas_df)
+
+
+@pytest.mark.skipif(
+    Engine.get() == "Python",
+    reason="S3-like path doesn't support in pandas with anonymous credentials. See issue #2301.",
+)
+def test_read_parquet_s3():
+    import s3fs
+
+    # Pandas currently supports only default credentials for boto therefore
+    # we use S3FileSystem with `anon=True` for  to make testing possible.
+    dataset_url = "s3://aws-roda-hcls-datalake/chembl_27/chembl_27_public_tissue_dictionary/part-00000-66508102-96fa-4fd9-a0fd-5bc072a74293-c000.snappy.parquet"
+    fs = s3fs.S3FileSystem(anon=True)
+    pandas_df = pandas.read_parquet(fs.open(dataset_url, "rb"))
+    modin_df_s3fs = pd.read_parquet(fs.open(dataset_url, "rb"))
+    df_equals(pandas_df, modin_df_s3fs)
+
+    # Modin supports default and anonymous credentials and resolves this internally.
+    modin_df_s3 = pd.read_parquet(dataset_url)
+    df_equals(pandas_df, modin_df_s3)
 
 
 def test_from_csv_default(make_csv_file):
@@ -1095,7 +1215,7 @@ def test_from_csv_chunksize(make_csv_file):
     df_equals(modin_df, pd_df)
 
 
-@pytest.mark.parametrize("nrows", [123, None])
+@pytest.mark.parametrize("nrows", [1, 2, 123, None])
 def test_from_csv_skiprows(make_csv_file, nrows):
     make_csv_file()
 
@@ -1113,6 +1233,22 @@ def test_from_csv_skiprows(make_csv_file, nrows):
 
     pandas_df = pandas.read_csv(
         TEST_CSV_FILENAME,
+        header=None,
+        names=["c1", "c2", "c3", "c4"],
+        skiprows=2,
+        nrows=nrows,
+    )
+    modin_df = pd.read_csv(
+        TEST_CSV_FILENAME,
+        header=None,
+        names=["c1", "c2", "c3", "c4"],
+        skiprows=2,
+        nrows=nrows,
+    )
+    df_equals(modin_df, pandas_df)
+
+    pandas_df = pandas.read_csv(
+        TEST_CSV_FILENAME,
         names=["c1", "c2", "c3", "c4"],
         skiprows=lambda x: x % 2,
         nrows=nrows,
@@ -1124,6 +1260,15 @@ def test_from_csv_skiprows(make_csv_file, nrows):
         nrows=nrows,
     )
     df_equals(modin_df, pandas_df)
+
+
+@pytest.mark.parametrize("names", [list("XYZ"), None])
+@pytest.mark.parametrize("skiprows", [1, 2, 3, 4, None])
+def test_from_csv_skiprows_names(names, skiprows):
+    path = "modin/pandas/test/data/issue_2239.csv"
+    pandas_df = pandas.read_csv(path, names=names, skiprows=skiprows)
+    modin_df = pd.read_csv(path, names=names, skiprows=skiprows)
+    df_equals(pandas_df, modin_df)
 
 
 @pytest.mark.parametrize(
@@ -1187,7 +1332,7 @@ def test_from_csv_parse_dates(make_csv_file):
 @pytest.mark.parametrize("skiprows", [4, 1, 500, None])
 def test_from_csv_newlines_in_quotes(nrows, skiprows):
     eval_io(
-        path="modin/pandas/test/data/newlines.csv",
+        filepath_or_buffer="modin/pandas/test/data/newlines.csv",
         fn_name="read_csv",
         nrows=nrows,
         skiprows=skiprows,
@@ -1708,4 +1853,20 @@ def test_cleanup():
 def test_from_arrow():
     pandas_df = create_test_pandas_dataframe()
     modin_df = from_arrow(pa.Table.from_pandas(pandas_df))
+    df_equals(modin_df, pandas_df)
+
+
+@pytest.mark.parametrize(
+    "kwargs",
+    [
+        {"names": [5, 1, 3, 4, 2, 6]},
+        {"names": [0]},
+        {"names": None, "usecols": [1, 0, 2]},
+        {"names": [3, 1, 2, 5], "usecols": [4, 1, 3, 2]},
+    ],
+)
+def test_csv_names_neq_num_cols(kwargs):
+    file_name = "modin/pandas/test/data/issue_2074.csv"
+    pandas_df = pandas.read_csv(file_name, **kwargs)
+    modin_df = pd.read_csv(file_name, **kwargs)
     df_equals(modin_df, pandas_df)

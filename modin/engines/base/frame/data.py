@@ -114,6 +114,11 @@ class BasePandasFrame(object):
         return self._column_widths_cache
 
     @property
+    def _axes_lengths(self):
+        """The row lengths, column widths that can be accessed with an `axis` integer."""
+        return [self._row_lengths, self._column_widths]
+
+    @property
     def dtypes(self):
         """Compute the data types if they are not cached.
 
@@ -244,6 +249,29 @@ class BasePandasFrame(object):
         """The index, columns that can be accessed with an `axis` integer."""
         return [self.index, self.columns]
 
+    def _compute_axis_labels(self, axis: int, partitions=None):
+        """
+        Computes labels for specific `axis`
+
+        Parameters
+        ----------
+        axis: int
+            Axis to compute labels along
+        partitions: numpy 2D array (optional)
+            Partitions from which labels will be grabbed,
+            if no specified, partitions will be considered as `self._partitions`
+
+        Returns
+        -------
+        Pandas.Index
+            Labels for the specified `axis`
+        """
+        if partitions is None:
+            partitions = self._partitions
+        return self._frame_mgr_cls.get_indices(
+            axis, partitions, lambda df: df.axes[axis]
+        )
+
     def _filter_empties(self):
         """Removes empty partitions to avoid triggering excess computation."""
         if len(self.axes[0]) == 0 or len(self.axes[1]) == 0:
@@ -257,14 +285,14 @@ class BasePandasFrame(object):
                 [
                     self._partitions[i][j]
                     for j in range(len(self._partitions[i]))
-                    if j < len(self._column_widths) and self._column_widths[j] > 0
+                    if j < len(self._column_widths) and self._column_widths[j] != 0
                 ]
                 for i in range(len(self._partitions))
-                if i < len(self._row_lengths) and self._row_lengths[i] > 0
+                if i < len(self._row_lengths) and self._row_lengths[i] != 0
             ]
         )
-        self._column_widths_cache = [w for w in self._column_widths if w > 0]
-        self._row_lengths_cache = [r for r in self._row_lengths if r > 0]
+        self._column_widths_cache = [w for w in self._column_widths if w != 0]
+        self._row_lengths_cache = [r for r in self._row_lengths if r != 0]
 
     def _validate_axis_equality(self, axis: int, force: bool = False):
         """
@@ -278,9 +306,7 @@ class BasePandasFrame(object):
                 Whether to update external indices with internal if their lengths
                 do not match or raise an exception in that case.
         """
-        internal_axis = self._frame_mgr_cls.get_indices(
-            axis, self._partitions, lambda df: df.axes[axis]
-        )
+        internal_axis = self._compute_axis_labels(axis)
         self_axis = self.axes[axis]
         is_equals = self_axis.equals(internal_axis)
         if (
@@ -304,12 +330,14 @@ class BasePandasFrame(object):
     def _validate_internal_indices(self, mode=None, **kwargs):
         """
         Validates and optionally updates internal and external indices
-        of modin_frame in specified mode. There is 3 modes supported:
-            1. "reduced" - force validates on that axes
-                where external indices is ["__reduced__"]
-            2. "all" - validates indices at all axes, optionally force
+        of modin_frame in specified mode. There is 4 modes supported:
+            1. "reduced" - validates on that axis where external
+                indices is ["__reduced__"] for not force
+            2. "reduced+other" - validates on axis where external
+                indices is ["__reduced__"] for not force, and force on another axis
+            3. "all" - validates indices at all axes, optionally force
                 if `force` parameter specified in kwargs
-            3. "custom" - validation follows arguments specified in kwargs.
+            4. "custom" - validation follows arguments specified in kwargs.
 
         Parameters
         ----------
@@ -327,26 +355,38 @@ class BasePandasFrame(object):
             is_force = kwargs.get("force", False)
 
         reduced_sample = pandas.Index(["__reduced__"])
+
+        is_axis_reduced = [self.axes[i].equals(reduced_sample) for i in [0, 1]]
+
         args_dict = {
             "custom": kwargs,
             "reduced": {
-                "validate_index": self.index.equals(reduced_sample),
-                "validate_columns": self.columns.equals(reduced_sample),
-                "force": False,
+                "validate_index": is_axis_reduced[0],
+                "validate_columns": is_axis_reduced[1],
+                "force": [False, False],
+            },
+            "reduced+other": {
+                "validate_index": True,
+                "validate_columns": True,
+                "force": [not is_axis_reduced[0], not is_axis_reduced[1]],
             },
             "all": {
                 "validate_index": True,
                 "validate_columns": True,
-                "force": is_force,
+                "force": [is_force, is_force],
             },
         }
 
         args = args_dict.get(mode, args_dict["custom"])
 
+        def force_getter(axis):
+            force = args.get("force", False)
+            return force[axis] if isinstance(force, list) else force
+
         if args.get("validate_index", True):
-            self._validate_axis_equality(axis=0, force=args.get("force"))
+            self._validate_axis_equality(axis=0, force=force_getter(0))
         if args.get("validate_columns", True):
-            self._validate_axis_equality(axis=1, force=args.get("force"))
+            self._validate_axis_equality(axis=1, force=force_getter(1))
 
     def _apply_index_objs(self, axis=None):
         """Lazily applies the index object (Index or Columns) to the partitions.
@@ -563,7 +603,6 @@ class BasePandasFrame(object):
             new_row_lengths,
             new_col_widths,
             new_dtypes,
-            validate_axes="all" if new_partitions.size != 0 else False,
         )
         # Check if monotonically increasing, return if it is. Fast track code path for
         # common case to keep it fast.
@@ -979,36 +1018,50 @@ class BasePandasFrame(object):
 
         return _map_reduce_func
 
-    def _compute_map_reduce_metadata(self, axis, new_parts):
-        if axis == 0:
-            columns = self.columns
-            index = ["__reduced__"]
-            new_lengths = [1]
-            new_widths = self._column_widths
+    def _compute_map_reduce_metadata(self, axis, new_parts, preserve_index=True):
+        """
+        Computes metadata for the result of reduce function.
+
+        Parameters
+        ----------
+        axis: int,
+            The axis on which reduce function was applied
+        new_parts: numpy 2D array
+            Partitions with the result of applied function
+        preserve_index: boolean
+            The flag to preserve labels for the reduced axis.
+
+        Returns
+        -------
+        BasePandasFrame
+            Pandas series containing the reduced data.
+        """
+        new_axes, new_axes_lengths = [0, 0], [0, 0]
+
+        new_axes[axis] = ["__reduced__"]
+        new_axes[axis ^ 1] = self.axes[axis ^ 1]
+
+        new_axes_lengths[axis] = [1]
+        new_axes_lengths[axis ^ 1] = self._axes_lengths[axis ^ 1]
+
+        if axis == 0 or self._dtypes is None:
             new_dtypes = self._dtypes
+        elif preserve_index:
+            new_dtypes = pandas.Series(
+                [find_common_type(self.dtypes.values)], index=new_axes[axis]
+            )
         else:
-            columns = ["__reduced__"]
-            index = self.index
-            new_lengths = self._row_lengths
-            new_widths = [1]
-            if self._dtypes is not None:
-                new_dtypes = pandas.Series(
-                    np.full(1, find_common_type(self.dtypes.values)),
-                    index=["__reduced__"],
-                )
-            else:
-                new_dtypes = self._dtypes
+            new_dtypes = None
+
         return self.__constructor__(
             new_parts,
-            index,
-            columns,
-            new_lengths,
-            new_widths,
+            *new_axes,
+            *new_axes_lengths,
             new_dtypes,
-            validate_axes="reduced",
+            validate_axes=("reduced" if preserve_index else "reduced+other"),
         )
 
-    def _fold_reduce(self, axis, func):
+    def _fold_reduce(self, axis, func, preserve_index=True):
         """
         Apply function that reduce Manager to series but require knowledge of full axis.
 
@@ -1018,6 +1071,8 @@ class BasePandasFrame(object):
                 The axis to apply the function to (0 - index, 1 - columns).
             func : callable
                 The function to reduce the Manager by. This function takes in a Manager.
+            preserve_index : boolean
+                The flag to preserve labels for the reduced axis.
 
         Returns
         -------
@@ -1028,7 +1083,9 @@ class BasePandasFrame(object):
         new_parts = self._frame_mgr_cls.map_axis_partitions(
             axis, self._partitions, func
         )
-        return self._compute_map_reduce_metadata(axis, new_parts)
+        return self._compute_map_reduce_metadata(
+            axis, new_parts, preserve_index=preserve_index
+        )
 
     def _map_reduce(self, axis, map_func, reduce_func=None, preserve_index=True):
         """
@@ -1062,22 +1119,9 @@ class BasePandasFrame(object):
         reduce_parts = self._frame_mgr_cls.map_axis_partitions(
             axis, map_parts, reduce_func
         )
-        if preserve_index:
-            return self._compute_map_reduce_metadata(axis, reduce_parts)
-        else:
-            if axis == 0:
-                new_index = ["__reduced__"]
-                new_columns = self._frame_mgr_cls.get_indices(
-                    1, reduce_parts, lambda df: df.columns
-                )
-            else:
-                new_index = self._frame_mgr_cls.get_indices(
-                    0, reduce_parts, lambda df: df.index
-                )
-                new_columns = ["__reduced__"]
-            return self.__constructor__(
-                reduce_parts, new_index, new_columns, validate_axes="reduced"
-            )
+        return self._compute_map_reduce_metadata(
+            axis, reduce_parts, preserve_index=preserve_index
+        )
 
     def _map(self, func, dtypes=None, validate_index=False, validate_columns=False):
         """Perform a function that maps across the entire dataset.
@@ -1103,33 +1147,26 @@ class BasePandasFrame(object):
             dtypes = pandas.Series(
                 [np.dtype(dtypes)] * len(self.columns), index=self.columns
             )
-        if validate_index:
-            new_index = self._frame_mgr_cls.get_indices(
-                0, new_partitions, lambda df: df.index
-            )
-        else:
-            new_index = self.index
-        if len(new_index) != len(self.index):
-            new_row_lengths = None
-        else:
-            new_row_lengths = self._row_lengths
 
-        if validate_columns:
-            new_columns = self._frame_mgr_cls.get_indices(
-                1, new_partitions, lambda df: df.columns
-            )
-        else:
-            new_columns = self.columns
-        if len(new_columns) != len(self.columns):
-            new_column_widths = None
-        else:
-            new_column_widths = self._column_widths
+        axis_validate_mask = [validate_index, validate_columns]
+        new_axes = [
+            self._compute_axis_labels(axis, new_partitions)
+            if should_validate
+            else self.axes[axis]
+            for axis, should_validate in enumerate(axis_validate_mask)
+        ]
+
+        new_lengths = [
+            self._axes_lengths[axis]
+            if len(new_axes[axis]) == len(self.axes[axis])
+            else None
+            for axis in [0, 1]
+        ]
+
         return self.__constructor__(
             new_partitions,
-            new_index,
-            new_columns,
-            new_row_lengths,
-            new_column_widths,
+            *new_axes,
+            *new_lengths,
             dtypes=dtypes,
         )
 
@@ -1170,26 +1207,18 @@ class BasePandasFrame(object):
         new_partitions = self._frame_mgr_cls.map_axis_partitions(
             axis, self._partitions, func, keep_partitioning=True
         )
-        if axis == 0:
-            new_index = self.index
-            new_lengths = self._row_lengths
-            new_widths = None  # We do not know what the resulting widths will be
-            new_columns = self._frame_mgr_cls.get_indices(
-                1, new_partitions, lambda df: df.columns
-            )
-        else:
-            new_columns = self.columns
-            new_lengths = None  # We do not know what the resulting lengths will be
-            new_widths = self._column_widths
-            new_index = self._frame_mgr_cls.get_indices(
-                0, new_partitions, lambda df: df.index
-            )
+        new_axes, new_lengths = [0, 0], [0, 0]
+
+        new_axes[axis] = self.axes[axis]
+        new_axes[axis ^ 1] = self._compute_axis_labels(axis ^ 1, new_partitions)
+
+        new_lengths[axis] = self._axes_lengths[axis]
+        new_lengths[axis ^ 1] = None  # We do not know what the resulting widths will be
+
         return self.__constructor__(
             new_partitions,
-            new_index,
-            new_columns,
-            new_lengths,
-            new_widths,
+            *new_axes,
+            *new_lengths,
             self.dtypes if axis == 0 else None,
         )
 
@@ -1380,23 +1409,34 @@ class BasePandasFrame(object):
                 self._column_widths_cache,
             )
 
-    def broadcast_apply(self, axis, func, other, preserve_labels=True, dtypes=None):
-        """Broadcast partitions of other dataframe partitions and apply a function.
+    def broadcast_apply(
+        self, axis, func, other, join_type="left", preserve_labels=True, dtypes=None
+    ):
+        """
+        Broadcast partitions of other dataframe partitions and apply a function.
 
-        Args:
-            axis: The axis to broadcast over.
-            func: The function to apply.
-            other: The Modin DataFrame to broadcast.
-            preserve_labels: Whether or not to keep labels from this Modin DataFrame.
-            dtypes: "copy" or None. Whether to keep old dtypes or infer new dtypes from
-                data.
+        Parameters
+        ----------
+            axis: int,
+                The axis to broadcast over.
+            func: callable,
+                The function to apply.
+            other: BasePandasFrame
+                The Modin DataFrame to broadcast.
+            join_type: str (optional)
+                The type of join to apply.
+            preserve_labels: boolean (optional)
+                Whether or not to keep labels from this Modin DataFrame.
+            dtypes: "copy" or None (optional)
+                 Whether to keep old dtypes or infer new dtypes from data.
 
-        Returns:
-             A new Modin DataFrame
+        Returns
+        -------
+            BasePandasFrame
         """
         # Only sort the indices if they do not match
         left_parts, right_parts, joined_index = self._copartition(
-            axis, other, "left", sort=not self.axes[axis].equals(other.axes[axis])
+            axis, other, join_type, sort=not self.axes[axis].equals(other.axes[axis])
         )
         # unwrap list returned by `copartition`.
         right_parts = right_parts[0]
@@ -1530,15 +1570,15 @@ class BasePandasFrame(object):
             broadcasted_dict,
             keep_remaining,
         )
-        if new_index is None:
-            new_index = self._frame_mgr_cls.get_indices(
-                0, new_partitions, lambda df: df.index
-            )
-        if new_columns is None:
-            new_columns = self._frame_mgr_cls.get_indices(
-                1, new_partitions, lambda df: df.columns
-            )
-        return self.__constructor__(new_partitions, new_index, new_columns)
+
+        new_axes = [
+            self._compute_axis_labels(i, new_partitions)
+            if new_axis is None
+            else new_axis
+            for i, new_axis in enumerate([new_index, new_columns])
+        ]
+
+        return self.__constructor__(new_partitions, *new_axes)
 
     def broadcast_apply_full_axis(
         self,
@@ -1581,24 +1621,21 @@ class BasePandasFrame(object):
             keep_partitioning=True,
         )
         # Index objects for new object creation. This is shorter than if..else
-        if new_columns is None:
-            new_columns = self._frame_mgr_cls.get_indices(
-                1, new_partitions, lambda df: df.columns
-            )
-        if new_index is None:
-            new_index = self._frame_mgr_cls.get_indices(
-                0, new_partitions, lambda df: df.index
-            )
+        new_axes = [
+            self._compute_axis_labels(i, new_partitions)
+            if new_axis is None
+            else new_axis
+            for i, new_axis in enumerate([new_index, new_columns])
+        ]
         if dtypes == "copy":
             dtypes = self._dtypes
         elif dtypes is not None:
             dtypes = pandas.Series(
-                [np.dtype(dtypes)] * len(new_columns), index=new_columns
+                [np.dtype(dtypes)] * len(new_axes[1]), index=new_axes[1]
             )
         return self.__constructor__(
             new_partitions,
-            new_index,
-            new_columns,
+            *new_axes,
             None,
             None,
             dtypes,
@@ -1632,7 +1669,26 @@ class BasePandasFrame(object):
         """
         if isinstance(other, type(self)):
             other = [other]
-        if all(o.axes[axis].equals(self.axes[axis]) for o in other):
+
+        is_aligning_applied = False
+        for i in range(len(other)):
+            if (
+                len(self._partitions) != len(other[i]._partitions)
+                and len(self.axes[0]) == len(other[i].axes[0])
+                and axis == 0
+            ):
+                is_aligning_applied = True
+                self._partitions = self._frame_mgr_cls.map_axis_partitions(
+                    axis, self._partitions, lambda df: df
+                )
+                other[i]._partitions = other[i]._frame_mgr_cls.map_axis_partitions(
+                    axis, other[i]._partitions, lambda df: df
+                )
+
+        if (
+            all(o.axes[axis].equals(self.axes[axis]) for o in other)
+            and not is_aligning_applied
+        ):
             return (
                 self._partitions,
                 [self._simple_shuffle(axis, o) for o in other],
@@ -1645,8 +1701,13 @@ class BasePandasFrame(object):
         left_old_idx = self.axes[axis]
         right_old_idxes = index_other_obj
 
+        is_avoid_reindex = len(joined_index) != len(joined_index.unique()) and axis == 0
         # Start with this and we'll repartition the first time, and then not again.
-        if not left_old_idx.equals(joined_index) or force_repartition:
+        if (
+            not is_aligning_applied
+            and not is_avoid_reindex
+            and (force_repartition or not left_old_idx.equals(joined_index))
+        ):
             reindexed_self = self._frame_mgr_cls.map_axis_partitions(
                 axis, self._partitions, lambda df: df.reindex(joined_index, axis=axis)
             )
@@ -1655,7 +1716,11 @@ class BasePandasFrame(object):
         reindexed_other_list = []
 
         for i in range(len(other)):
-            if right_old_idxes[i].equals(joined_index) and not force_repartition:
+            if (
+                is_aligning_applied
+                or is_avoid_reindex
+                or (not force_repartition and right_old_idxes[i].equals(joined_index))
+            ):
                 reindexed_other = other[i]._partitions
             else:
                 reindexed_other = other[i]._frame_mgr_cls.map_axis_partitions(
@@ -1725,7 +1790,7 @@ class BasePandasFrame(object):
             1, left_parts, lambda l, r: op(l, r), right_parts
         )
         new_columns = self.columns.join(right_frame.columns, how=join_type)
-        return self.__constructor__(new_frame, self.index, new_columns, None, None)
+        return self.__constructor__(new_frame, joined_index, new_columns, None, None)
 
     def _concat(self, axis, others, how, sort):
         """Concatenate this dataframe with one or more others.
@@ -1808,15 +1873,14 @@ class BasePandasFrame(object):
         new_partitions = self._frame_mgr_cls.groupby_reduce(
             axis, self._partitions, by._partitions, map_func, reduce_func
         )
-        if new_columns is None:
-            new_columns = self._frame_mgr_cls.get_indices(
-                1, new_partitions, lambda df: df.columns
-            )
-        if new_index is None:
-            new_index = self._frame_mgr_cls.get_indices(
-                0, new_partitions, lambda df: df.index
-            )
-        return self.__constructor__(new_partitions, new_index, new_columns)
+        new_axes = [
+            self._compute_axis_labels(i, new_partitions)
+            if new_axis is None
+            else new_axis
+            for i, new_axis in enumerate([new_index, new_columns])
+        ]
+
+        return self.__constructor__(new_partitions, *new_axes)
 
     @classmethod
     def from_pandas(cls, df):

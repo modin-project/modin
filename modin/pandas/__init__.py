@@ -13,7 +13,7 @@
 
 import pandas
 
-__pandas_version__ = "1.1.2"
+__pandas_version__ = "1.1.3"
 
 if pandas.__version__ != __pandas_version__:
     import warnings
@@ -87,7 +87,7 @@ import threading
 import os
 import multiprocessing
 
-from .. import execution_engine, partition_format, Publisher
+from modin.config import Engine, Parameter
 
 # Set this so that Pandas doesn't try to multithread by itself
 os.environ["OMP_NUM_THREADS"] = "1"
@@ -102,8 +102,9 @@ _NOINIT_ENGINES = {
 }  # engines that don't require initialization, useful for unit tests
 
 
-def _update_engine(publisher: Publisher):
-    global DEFAULT_NPARTITIONS, dask_client, num_cpus, partition_format
+def _update_engine(publisher: Parameter):
+    global DEFAULT_NPARTITIONS, dask_client, num_cpus
+    from modin.config import Backend, CpuCount
 
     if publisher.get() == "Ray":
         import ray
@@ -111,8 +112,8 @@ def _update_engine(publisher: Publisher):
 
         # With OmniSci backend there is only a single worker per node
         # and we allow it to work on all cores.
-        if partition_format.get() == "Omnisci":
-            os.environ["MODIN_CPUS"] = "1"
+        if Backend.get() == "Omnisci":
+            CpuCount.put(1)
             os.environ["OMP_NUM_THREADS"] = str(multiprocessing.cpu_count())
         if _is_first_update.get("Ray", True):
             initialize_ray()
@@ -132,10 +133,7 @@ def _update_engine(publisher: Publisher):
             except ValueError:
                 from distributed import Client
 
-                num_cpus = (
-                    os.environ.get("MODIN_CPUS", None) or multiprocessing.cpu_count()
-                )
-                dask_client = Client(n_workers=int(num_cpus))
+                dask_client = Client(n_workers=CpuCount.get())
 
     elif publisher.get() == "Cloudray":
         from modin.experimental.cloud import get_connection
@@ -157,14 +155,12 @@ def _update_engine(publisher: Publisher):
                     override_redis_password=ray_constants.REDIS_DEFAULT_PASSWORD,
                 )
 
-            init_remote_ray(partition_format.get())
+            init_remote_ray(Backend.get())
             # import EngineDispatcher here to initialize IO class
             # so it doesn't skew read_csv() timings later on
             import modin.data_management.factories.dispatcher  # noqa: F401
         else:
-            get_connection().modules["modin"].set_backends(
-                "Ray", partition_format.get()
-            )
+            get_connection().modules["modin"].set_backends("Ray", Backend.get())
 
         num_cpus = remote_ray.cluster_resources()["CPU"]
     elif publisher.get() == "Cloudpython":
@@ -179,12 +175,10 @@ def _update_engine(publisher: Publisher):
     DEFAULT_NPARTITIONS = max(4, int(num_cpus))
 
 
-execution_engine.subscribe(_update_engine)
+Engine.subscribe(_update_engine)
 
 from .. import __version__
-from .concat import concat
 from .dataframe import DataFrame
-from .datetimes import to_datetime
 from .io import (
     read_csv,
     read_parquet,
@@ -210,9 +204,9 @@ from .io import (
     json_normalize,
     read_orc,
 )
-from .reshape import get_dummies, melt, crosstab, lreshape, wide_to_long
 from .series import Series
 from .general import (
+    concat,
     isna,
     isnull,
     merge,
@@ -223,8 +217,14 @@ from .general import (
     notna,
     pivot,
     to_numeric,
+    to_datetime,
     unique,
     value_counts,
+    get_dummies,
+    melt,
+    crosstab,
+    lreshape,
+    wide_to_long,
 )
 from .plotting import Plotting as plotting
 
@@ -335,4 +335,4 @@ __all__ = [
     "DEFAULT_NPARTITIONS",
 ]
 
-del pandas
+del pandas, Engine, Parameter

@@ -14,11 +14,14 @@
 import os
 import pandas
 import numpy as np
+import pyarrow
 import pytest
 
-os.environ["MODIN_EXPERIMENTAL"] = "True"
-os.environ["MODIN_ENGINE"] = "ray"
-os.environ["MODIN_BACKEND"] = "omnisci"
+from modin.config import IsExperimental, Engine, Backend
+
+IsExperimental.put(True)
+Engine.put("ray")
+Backend.put("omnisci")
 
 import modin.pandas as pd
 from modin.pandas.test.utils import (
@@ -841,6 +844,46 @@ class TestGroupby:
         run_and_compare(groupby, data=self.data)
 
 
+class TestAgg:
+    data = {
+        "a": [1, 2, None, None, 1, None],
+        "b": [10, 20, None, 20, 10, None],
+        "c": [None, 200, None, 400, 500, 600],
+        "d": [11, 22, 33, 22, 33, 22],
+    }
+
+    @pytest.mark.parametrize("agg", ["max", "min", "sum", "mean"])
+    @pytest.mark.parametrize("skipna", bool_arg_values)
+    def test_simple_agg(self, agg, skipna):
+        def apply(df, agg, skipna, **kwargs):
+            return getattr(df, agg)(skipna=skipna)
+
+        run_and_compare(apply, data=self.data, agg=agg, skipna=skipna, force_lazy=False)
+
+    def test_count_agg(self):
+        def apply(df, **kwargs):
+            return df.count()
+
+        run_and_compare(apply, data=self.data, force_lazy=False)
+
+    @pytest.mark.parametrize("cols", ["a", "d"])
+    @pytest.mark.parametrize("dropna", [True, False])
+    @pytest.mark.parametrize("sort", [True])
+    @pytest.mark.parametrize("ascending", [True, False])
+    def test_value_counts(self, cols, dropna, sort, ascending):
+        def value_counts(df, cols, dropna, sort, ascending, **kwargs):
+            return df[cols].value_counts(dropna=dropna, sort=sort, ascending=ascending)
+
+        run_and_compare(
+            value_counts,
+            data=self.data,
+            cols=cols,
+            dropna=dropna,
+            sort=sort,
+            ascending=ascending,
+        )
+
+
 class TestMerge:
     data = {
         "a": [1, 2, 3],
@@ -1395,6 +1438,56 @@ class TestSort:
     #        ascending=ascending,
     #        na_position=na_position,
     #    )
+
+
+class TestBadData:
+    bad_for_arrow = {
+        "a": ["a", [[1, 2], [3]], [3, 4]],
+        "b": ["b", [1, 2], [3, 4]],
+        "c": ["1", "2", 3],
+    }
+    bad_for_omnisci = {
+        "b": [[1, 2], [3, 4], [5, 6]],
+        "c": ["1", "2", "3"],
+    }
+    ok_data = {"d": np.arange(3), "e": np.arange(3), "f": np.arange(3)}
+
+    def _get_pyarrow_table(self, obj):
+        if not isinstance(obj, (pandas.DataFrame, pandas.Series)):
+            obj = pandas.DataFrame(obj)
+
+        return pyarrow.Table.from_pandas(obj)
+
+    @pytest.mark.parametrize("data", [bad_for_arrow, bad_for_omnisci])
+    def test_construct(self, data):
+        def applier(df, *args, **kwargs):
+            return repr(df)
+
+        run_and_compare(applier, data=data, force_lazy=False)
+
+    def test_from_arrow(self):
+        at = self._get_pyarrow_table(self.bad_for_omnisci)
+        pd_df = pandas.DataFrame(self.bad_for_omnisci)
+        md_df = pd.utils.from_arrow(at)
+
+        # force materialization
+        repr(md_df)
+        df_equals(md_df, pd_df)
+
+    @pytest.mark.parametrize("data", [bad_for_arrow, bad_for_omnisci])
+    def test_methods(self, data):
+        def applier(df, *args, **kwargs):
+            return df.T.drop(columns=[0])
+
+        run_and_compare(applier, data=data, force_lazy=False)
+
+    def test_with_normal_frame(self):
+        def applier(df1, df2, *args, **kwargs):
+            return df2.join(df1)
+
+        run_and_compare(
+            applier, data=self.bad_for_omnisci, data2=self.ok_data, force_lazy=False
+        )
 
 
 if __name__ == "__main__":

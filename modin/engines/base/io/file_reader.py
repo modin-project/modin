@@ -13,7 +13,7 @@
 
 import os
 import re
-from modin import partition_format
+from modin.config import Backend
 
 S3_ADDRESS_REGEX = re.compile("[sS]3://(.*?)/(.*)")
 NOT_IMPLEMENTED_MESSAGE = "Implement in children classes!"
@@ -29,7 +29,7 @@ class FileReader:
         query_compiler = cls._read(*args, **kwargs)
         # TODO (devin-petersohn): Make this section more general for non-pandas kernel
         # implementations.
-        if partition_format.get().lower() != "pandas":
+        if Backend.get() != "Pandas":
             raise NotImplementedError("FIXME")
         import pandas
 
