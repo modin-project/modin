@@ -40,6 +40,7 @@ class TestQC(BaseQueryCompiler):
 
     to_pandas = PandasQueryCompiler.to_pandas
     default_to_pandas = PandasQueryCompiler.default_to_pandas
+    default_to_pandas_groupby = PandasQueryCompiler.default_to_pandas_groupby
 
 
 class BaseOnPythonIO(PandasOnPythonIO):

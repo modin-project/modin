@@ -190,7 +190,8 @@ class PandasQueryCompiler(BaseQueryCompiler):
         self._modin_frame = modin_frame
 
     def default_to_pandas(self, pandas_op, *args, **kwargs):
-        """Default to pandas behavior.
+        """
+        Default to pandas behavior.
 
         Parameters
         ----------
@@ -206,8 +207,8 @@ class PandasQueryCompiler(BaseQueryCompiler):
         PandasQueryCompiler
             The result of the `pandas_op`, converted back to PandasQueryCompiler
 
-        Note
-        ----
+        Notes
+        -----
         This operation takes a distributed object and converts it directly to pandas.
         """
         op_name = getattr(pandas_op, "__name__", str(pandas_op))
@@ -227,6 +228,52 @@ class PandasQueryCompiler(BaseQueryCompiler):
             return self.from_pandas(result, type(self._modin_frame))
         else:
             return result
+
+    def default_to_pandas_groupby(
+        self, f, by, axis, drop, groupby_kwargs, *args, **kwargs
+    ):
+        """
+        Default to pandas behavior.
+
+        Parameters
+        ----------
+        f : callable
+            The function to apply to each group.
+        by : PandasQueryCompiler, mapping, function, label, or list of labels
+            Used to determine the groups for the groupby.
+        axis : 0 or 1
+            Split along rows (0) or columns (1).
+        drop : boolean
+            The flag in charge of the logic of inserting index into DataFrame columns.
+        groupby_kwargs
+            The keyword arguments for the groupby `pandas_op`
+        args
+            The arguments for the `pandas_op`
+        kwargs
+            The keyword arguments for the `pandas_op`
+
+        Returns
+        -------
+        PandasQueryCompiler
+            The result of the `pandas_op`, converted back to PandasQueryCompiler
+
+        Notes
+        -----
+        This operation takes a distributed object and converts it directly to pandas.
+        """
+        if isinstance(by, type(self)) and len(by.columns) == 1:
+            by = by.columns[0] if drop else by.to_pandas().squeeze()
+        elif isinstance(by, type(self)):
+            by = list(by.columns)
+        else:
+            by = by
+
+        by = try_cast_to_pandas(by)
+
+        def groupby_on_multiple_columns(df, *args, **kwargs):
+            return f(df.groupby(by=by, axis=axis, **groupby_kwargs), *args, **kwargs)
+
+        return self.default_to_pandas(groupby_on_multiple_columns, *args, **kwargs)
 
     def to_pandas(self):
         return self._modin_frame.to_pandas()
@@ -2599,7 +2646,9 @@ class PandasQueryCompiler(BaseQueryCompiler):
         agg_func = wrap_udf_function(agg_func)
 
         if is_multi_by:
-            return self.default_to_pandas(agg_func, *agg_args, **agg_kwargs)
+            return self.default_to_pandas_groupby(
+                agg_func, by, axis, drop, groupby_kwargs, *agg_args, **agg_kwargs
+            )
 
         by = by.to_pandas().squeeze() if isinstance(by, type(self)) else by
 
@@ -2608,7 +2657,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         # actually perform this operation.
         new_self = (
             self.drop(columns=[idx_name])
-            if idx_name is not None and drop and drop_
+            if idx_name is not None and drop_ and drop
             else self
         )
 

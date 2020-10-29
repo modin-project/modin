@@ -262,21 +262,22 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
         )
         return self.__constructor__(new_frame)
 
-    def groupby_agg(self,
-                    by,
-                    is_multi_by,
-                    idx_name,
-                    axis,
-                    agg_func,
-                    agg_args,
-                    agg_kwargs,
-                    groupby_kwargs,
-                    drop_,
-                    drop=False,
+    def groupby_agg(
+        self,
+        by,
+        is_multi_by,
+        idx_name,
+        axis,
+        agg_func,
+        agg_args,
+        agg_kwargs,
+        groupby_kwargs,
+        drop_,
+        drop=False,
     ):
-        # TODO: handle is_multi_by, idx_name and drop args
+        # TODO: handle `is_multi_by`, `idx_name`, `agg_args`, `drop_`, `drop` args
         new_frame = self._modin_frame.groupby_agg(
-            by, axis, agg_func, groupby_kwargs, *agg_args, **agg_kwargs
+            by, axis, agg_func, groupby_kwargs, **agg_kwargs
         )
         return self.__constructor__(new_frame)
 
@@ -301,7 +302,7 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
         DFAlgQueryCompiler
             The result of the per-column aggregations on the grouped dataframe.
         """
-        # TODO: handle drop arg
+        # TODO: handle `drop` arg
         new_frame = self._modin_frame.groupby_agg(
             by, 0, func_dict, groupby_args, **agg_args
         )
