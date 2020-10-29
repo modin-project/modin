@@ -1,0 +1,5 @@
+fsspec
+s3fs
+ray==1.0.0
+jupyterlab
+git+https://github.com/modin-project/modin
