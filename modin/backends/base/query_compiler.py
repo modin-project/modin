@@ -1410,10 +1410,29 @@ class BaseQueryCompiler(abc.ABC):
         drop_,
         drop=False,
     ):
-        # TODO: handle `is_multi_by`, `idx_name`, `agg_args`, `drop_`, `drop` args
+        if is_multi_by:
+            if isinstance(by, type(self)) and len(by.columns) == 1:
+                by = by.columns[0] if drop else by.to_pandas().squeeze()
+            elif isinstance(by, type(self)):
+                by = list(by.columns)
+            else:
+                by = by
+        else:
+            by = by.to_pandas().squeeze() if isinstance(by, type(self)) else by
+
+            # For aggregations, pandas behavior does this for the result.
+            # For other operations it does not, so we wait until there is an aggregation to
+            # actually perform this operation.
+            new_self = (
+                self.drop(columns=[idx_name])
+                if idx_name is not None and drop_ and drop
+                else self
+            )
+
         return GroupByDefault.register(pandas.core.groupby.DataFrameGroupBy.aggregate)(
-            self,
+            self if is_multi_by else new_self,
             by=by,
+            is_multi_by=is_multi_by,
             axis=axis,
             agg_func=agg_func,
             groupby_args=groupby_kwargs,
