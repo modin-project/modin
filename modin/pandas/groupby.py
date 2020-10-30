@@ -29,7 +29,7 @@ from pandas.core.aggregation import reconstruct_func
 import pandas.core.common as com
 
 from modin.error_message import ErrorMessage
-from modin.utils import _inherit_docstrings, wrap_udf_function, try_cast_to_pandas
+from modin.utils import _inherit_docstrings, try_cast_to_pandas
 from modin.config import IsExperimental
 from .series import Series
 
@@ -834,28 +834,22 @@ class DataFrameGroupBy(object):
         """
         assert callable(f), "'{0}' object is not callable".format(type(f))
 
-        f = wrap_udf_function(f)
-        if self._is_multi_by:
-            return self._default_to_pandas(f, *args, **kwargs)
-
-        if isinstance(self._by, type(self._query_compiler)):
-            by = self._by.to_pandas().squeeze()
-        else:
-            by = self._by
-
         # For aggregations, pandas behavior does this for the result.
         # For other operations it does not, so we wait until there is an aggregation to
         # actually perform this operation.
-        if self._idx_name is not None and drop and self._drop:
+        if not self._is_multi_by and self._idx_name is not None and drop and self._drop:
             groupby_qc = self._query_compiler.drop(columns=[self._idx_name])
         else:
             groupby_qc = self._query_compiler
+
         new_manager = groupby_qc.groupby_agg(
-            by=by,
+            by=self._by,
+            is_multi_by=self._is_multi_by,
             axis=self._axis,
             agg_func=f,
-            groupby_args=self._kwargs,
-            agg_args=kwargs,
+            agg_args=args,
+            agg_kwargs=kwargs,
+            groupby_kwargs=self._kwargs,
             drop=self._drop,
         )
         if self._idx_name is not None and self._as_index:

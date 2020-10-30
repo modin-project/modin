@@ -58,7 +58,8 @@ class BaseQueryCompiler(abc.ABC):
 
     @abc.abstractmethod
     def default_to_pandas(self, pandas_op, *args, **kwargs):
-        """Default to pandas behavior.
+        """
+        Default to pandas behavior.
 
         Parameters
         ----------
@@ -1396,14 +1397,35 @@ class BaseQueryCompiler(abc.ABC):
             drop=drop,
         )
 
-    def groupby_agg(self, by, axis, agg_func, groupby_args, agg_args, drop=False):
+    def groupby_agg(
+        self,
+        by,
+        is_multi_by,
+        axis,
+        agg_func,
+        agg_args,
+        agg_kwargs,
+        groupby_kwargs,
+        drop=False,
+    ):
+        if is_multi_by:
+            if isinstance(by, type(self)) and len(by.columns) == 1:
+                by = by.columns[0] if drop else by.to_pandas().squeeze()
+            elif isinstance(by, type(self)):
+                by = list(by.columns)
+            else:
+                by = by
+        else:
+            by = by.to_pandas().squeeze() if isinstance(by, type(self)) else by
+
         return GroupByDefault.register(pandas.core.groupby.DataFrameGroupBy.aggregate)(
             self,
             by=by,
+            is_multi_by=is_multi_by,
             axis=axis,
             agg_func=agg_func,
-            groupby_args=groupby_args,
-            agg_args=agg_args,
+            groupby_args=groupby_kwargs,
+            agg_args=agg_kwargs,
             drop=drop,
         )
 
