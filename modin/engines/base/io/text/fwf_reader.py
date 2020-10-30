@@ -116,12 +116,6 @@ class FWFReader(TextFileReader):
                     skiprows += header + 1
                 elif hasattr(header, "__iter__") and not isinstance(header, str):
                     skiprows += max(header) + 1
-                cls.offset(
-                    f,
-                    nrows=skiprows,
-                    quotechar=quotechar,
-                    is_quoting=is_quoting,
-                )
             if kwargs.get("encoding", None) is not None:
                 partition_kwargs["skiprows"] = 1
             # Launch tasks to read partitions
@@ -159,8 +153,9 @@ class FWFReader(TextFileReader):
 
             splits = cls.partitioned_file(
                 f,
-                nrows=nrows,
                 num_partitions=num_partitions,
+                nrows=nrows,
+                skiprows=skiprows,
                 quotechar=quotechar,
                 is_quoting=is_quoting,
             )
