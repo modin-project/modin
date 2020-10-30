@@ -248,7 +248,7 @@ def _make_csv_file(filenames):
                 "delimiter": delimiter,
                 "doublequote": doublequote,
                 "escapechar": escapechar,
-                "lineterminator": line_terminator,
+                "lineterminator": line_terminator if line_terminator else os.linesep,
                 "quotechar": quotechar,
                 "quoting": quoting,
             }
@@ -287,32 +287,6 @@ def make_csv_file():
     filenames = []
 
     yield _make_csv_file(filenames)
-
-    # Delete csv files that were created
-    for filename in filenames:
-        if os.path.exists(filename):
-            try:
-                os.remove(filename)
-            except PermissionError:
-                pass
-
-
-@pytest.fixture(scope="class")
-def TestReadCSVFixture():
-    """TestReadCSVFixture makes temp csv files that
-    can be used by several test functions.
-    """
-    filenames = []
-    files_ids = [
-        "test_read_csv_regular",
-    ]
-    pytest.csvs_names = {file_id: get_unique_filename(file_id) for file_id in files_ids}
-    # test_read_csv_datetime
-    _make_csv_file(filenames)(
-        filename=pytest.csvs_names["test_read_csv_regular"], force=False
-    )
-
-    yield
 
     # Delete csv files that were created
     for filename in filenames:
@@ -521,7 +495,6 @@ def teardown_fwf_file():
             pass
 
 
-@pytest.mark.usefixtures("TestReadCSVFixture")
 class TestReadCSV:
     # delimiter tests
     @pytest.mark.parametrize("sep", ["_", ",", ".", "\n"])
@@ -578,6 +551,7 @@ class TestReadCSV:
     @pytest.mark.parametrize("cache_dates", [True, False])
     def test_read_csv_datetime(
         self,
+        make_csv_file,
         request,
         parse_dates,
         infer_datetime_format,
@@ -606,8 +580,13 @@ class TestReadCSV:
             "cache_dates": cache_dates,
         }
 
+        unique_name = get_unique_filename("test_read_csv_datetime", kwargs)
+        make_csv_file(
+            filename=unique_name,
+        )
+
         eval_io(
-            filepath_or_buffer=pytest.csvs_names["test_read_csv_regular"],
+            filepath_or_buffer=unique_name,
             fn_name="read_csv",
             check_kwargs_callable=not callable(date_parser),
             raising_exceptions=raising_exceptions,
