@@ -229,52 +229,6 @@ class PandasQueryCompiler(BaseQueryCompiler):
         else:
             return result
 
-    def _default_to_pandas_groupby(
-        self, f, by, axis, drop, groupby_kwargs, *args, **kwargs
-    ):
-        """
-        Default to pandas behavior.
-
-        Parameters
-        ----------
-        f : callable
-            The function to apply to each group.
-        by : PandasQueryCompiler, mapping, function, label, or list of labels
-            Used to determine the groups for the groupby.
-        axis : 0 or 1
-            Split along rows (0) or columns (1).
-        drop : boolean
-            The flag in charge of the logic of inserting index into DataFrame columns.
-        groupby_kwargs
-            The keyword arguments for the groupby `pandas_op`
-        args
-            The arguments for the `pandas_op`
-        kwargs
-            The keyword arguments for the `pandas_op`
-
-        Returns
-        -------
-        PandasQueryCompiler
-            The result of the `pandas_op`, converted back to PandasQueryCompiler
-
-        Notes
-        -----
-        This operation takes a distributed object and converts it directly to pandas.
-        """
-        if isinstance(by, type(self)) and len(by.columns) == 1:
-            by = by.columns[0] if drop else by.to_pandas().squeeze()
-        elif isinstance(by, type(self)):
-            by = list(by.columns)
-        else:
-            by = by
-
-        by = try_cast_to_pandas(by)
-
-        def groupby_on_multiple_columns(df, *args, **kwargs):
-            return f(df.groupby(by=by, axis=axis, **groupby_kwargs), *args, **kwargs)
-
-        return self.default_to_pandas(groupby_on_multiple_columns, *args, **kwargs)
-
     def to_pandas(self):
         return self._modin_frame.to_pandas()
 
@@ -2646,8 +2600,17 @@ class PandasQueryCompiler(BaseQueryCompiler):
         agg_func = wrap_udf_function(agg_func)
 
         if is_multi_by:
-            return self._default_to_pandas_groupby(
-                agg_func, by, axis, drop, groupby_kwargs, *agg_args, **agg_kwargs
+            return super().groupby_agg(
+                by=by,
+                is_multi_by=is_multi_by,
+                idx_name=idx_name,
+                axis=axis,
+                agg_func=agg_func,
+                agg_args=agg_args,
+                agg_kwargs=agg_kwargs,
+                groupby_kwargs=groupby_kwargs,
+                drop_=drop_,
+                drop=drop,
             )
 
         by = by.to_pandas().squeeze() if isinstance(by, type(self)) else by
