@@ -834,16 +834,22 @@ class DataFrameGroupBy(object):
         """
         assert callable(f), "'{0}' object is not callable".format(type(f))
 
-        new_manager = self._query_compiler.groupby_agg(
+        # For aggregations, pandas behavior does this for the result.
+        # For other operations it does not, so we wait until there is an aggregation to
+        # actually perform this operation.
+        if not self._is_multi_by and self._idx_name is not None and drop and self._drop:
+            groupby_qc = self._query_compiler.drop(columns=[self._idx_name])
+        else:
+            groupby_qc = self._query_compiler
+
+        new_manager = groupby_qc.groupby_agg(
             by=self._by,
             is_multi_by=self._is_multi_by,
-            idx_name=self._idx_name,
             axis=self._axis,
             agg_func=f,
             agg_args=args,
             agg_kwargs=kwargs,
             groupby_kwargs=self._kwargs,
-            drop_=drop,
             drop=self._drop,
         )
         if self._idx_name is not None and self._as_index:

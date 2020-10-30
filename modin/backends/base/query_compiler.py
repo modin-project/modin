@@ -1401,13 +1401,11 @@ class BaseQueryCompiler(abc.ABC):
         self,
         by,
         is_multi_by,
-        idx_name,
         axis,
         agg_func,
         agg_args,
         agg_kwargs,
         groupby_kwargs,
-        drop_,
         drop=False,
     ):
         if is_multi_by:
@@ -1420,17 +1418,8 @@ class BaseQueryCompiler(abc.ABC):
         else:
             by = by.to_pandas().squeeze() if isinstance(by, type(self)) else by
 
-            # For aggregations, pandas behavior does this for the result.
-            # For other operations it does not, so we wait until there is an aggregation to
-            # actually perform this operation.
-            new_self = (
-                self.drop(columns=[idx_name])
-                if idx_name is not None and drop_ and drop
-                else self
-            )
-
         return GroupByDefault.register(pandas.core.groupby.DataFrameGroupBy.aggregate)(
-            self if is_multi_by else new_self,
+            self,
             by=by,
             is_multi_by=is_multi_by,
             axis=axis,

@@ -2588,13 +2588,11 @@ class PandasQueryCompiler(BaseQueryCompiler):
         self,
         by,
         is_multi_by,
-        idx_name,
         axis,
         agg_func,
         agg_args,
         agg_kwargs,
         groupby_kwargs,
-        drop_,
         drop=False,
     ):
         agg_func = wrap_udf_function(agg_func)
@@ -2603,26 +2601,15 @@ class PandasQueryCompiler(BaseQueryCompiler):
             return super().groupby_agg(
                 by=by,
                 is_multi_by=is_multi_by,
-                idx_name=idx_name,
                 axis=axis,
                 agg_func=agg_func,
                 agg_args=agg_args,
                 agg_kwargs=agg_kwargs,
                 groupby_kwargs=groupby_kwargs,
-                drop_=drop_,
                 drop=drop,
             )
 
         by = by.to_pandas().squeeze() if isinstance(by, type(self)) else by
-
-        # For aggregations, pandas behavior does this for the result.
-        # For other operations it does not, so we wait until there is an aggregation to
-        # actually perform this operation.
-        new_self = (
-            self.drop(columns=[idx_name])
-            if idx_name is not None and drop_ and drop
-            else self
-        )
 
         # since we're going to modify `groupby_kwargs` dict in a `groupby_agg_builder`,
         # we want to copy it to not propagate these changes into source dict, in case
@@ -2655,14 +2642,14 @@ class PandasQueryCompiler(BaseQueryCompiler):
             except (ValueError, KeyError):
                 return compute_groupby(df.copy())
 
-        new_modin_frame = new_self._modin_frame._apply_full_axis(
+        new_modin_frame = self._modin_frame._apply_full_axis(
             axis, lambda df: groupby_agg_builder(df)
         )
-        result = new_self.__constructor__(new_modin_frame)
+        result = self.__constructor__(new_modin_frame)
 
         # that means that exception in `compute_groupby` was raised
         # in every partition, so we also should raise it
-        if len(result.columns) == 0 and len(new_self.columns) != 0:
+        if len(result.columns) == 0 and len(self.columns) != 0:
             # determening type of raised exception by applying `aggfunc`
             # to empty DataFrame
             try:
