@@ -2113,6 +2113,10 @@ class BasePandasDataset(object):
                         new_frame.columns = self.columns.copy()
                     return new_frame
             else:
+                if not isinstance(self, DataFrame):
+                    raise ValueError(
+                        f"No axis named {axis} for object type {type(self)}"
+                    )
                 res_columns = self.columns
                 from .general import concat
 

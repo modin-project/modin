@@ -22,6 +22,7 @@ for better maintability. So some codes are ignored in pydocstyle check:
 Manually add documentation for methods which are not presented in pandas.
 """
 
+import numpy as np
 import pandas
 import pandas.core.groupby
 from pandas.core.dtypes.common import is_list_like
@@ -30,6 +31,7 @@ import pandas.core.common as com
 
 from modin.error_message import ErrorMessage
 from modin.utils import _inherit_docstrings, try_cast_to_pandas
+from modin.backends.base.query_compiler import BaseQueryCompiler
 from modin.config import IsExperimental
 from .series import Series
 
@@ -171,10 +173,64 @@ class DataFrameGroupBy(object):
     def ndim(self):
         return 2  # ndim is always 2 for DataFrames
 
-    def shift(self, periods=1, freq=None, axis=0):
-        return self._default_to_pandas(
-            lambda df: df.shift(periods=periods, freq=freq, axis=axis)
-        )
+    def shift(self, periods=1, freq=None, axis=0, fill_value=None):
+        def _shift(periods, freq, axis, fill_value, is_set_nan_rows=True):
+            from .dataframe import DataFrame
+
+            result = self._df.shift(periods, freq, axis, fill_value)
+
+            if (
+                is_set_nan_rows
+                and isinstance(self._by, BaseQueryCompiler)
+                and (
+                    # Check using `issubset` is effective only in case of MultiIndex
+                    set(self._by.columns).issubset(list(self._df.columns))
+                    if isinstance(self._by.columns, pandas.MultiIndex)
+                    else len(
+                        self._by.columns.unique()
+                        .sort_values()
+                        .difference(self._df.columns.unique().sort_values())
+                    )
+                    == 0
+                )
+                and DataFrame(query_compiler=self._by.isna()).any(axis=None)
+            ):
+                mask_nan_rows = self._df[self._by.columns].isna()
+                if (isinstance(mask_nan_rows, DataFrame)) and len(
+                    mask_nan_rows.columns
+                ) == 1:
+                    mask_nan_rows = mask_nan_rows.squeeze(axis=1)
+                idx_nan_rows = mask_nan_rows[
+                    mask_nan_rows.any(axis=1)
+                    if (isinstance(mask_nan_rows, DataFrame))
+                    else mask_nan_rows
+                ].index
+                result.loc[idx_nan_rows] = np.nan
+            return result
+
+        if freq is None and axis == 1 and self._axis == 0:
+            result = _shift(periods, freq, axis, fill_value)
+        elif (
+            freq is not None
+            and axis == 0
+            and self._axis == 0
+            and isinstance(self._by, BaseQueryCompiler)
+        ):
+            result = _shift(periods, freq, axis, fill_value, is_set_nan_rows=False)
+            new_idx_lvl_arrays = np.concatenate(
+                [self._df[self._by.columns].values.T, [list(result.index)]]
+            )
+            result.index = pandas.MultiIndex.from_arrays(
+                new_idx_lvl_arrays,
+                names=[col_name for col_name in self._by.columns] + [result.index.name],
+            )
+            result = result.dropna(subset=self._by.columns).sort_index()
+        else:
+            result = self._apply_agg_function(
+                lambda df: df.shift(periods, freq, axis, fill_value)
+            )
+            result.index.name = None
+        return result
 
     def nth(self, n, dropna=None):
         return self._default_to_pandas(lambda df: df.nth(n, dropna=dropna))
