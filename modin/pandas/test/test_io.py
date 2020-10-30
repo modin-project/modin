@@ -38,6 +38,7 @@ from .utils import (
     get_random_string,
     insert_lines_to_csv,
     IO_OPS_DATA_DIR,
+    io_ops_bad_exc,
 )
 
 from modin.config import Engine, Backend
@@ -176,13 +177,12 @@ def _make_csv_file(filenames):
         add_nan_lines=False,
         thousands_separator=None,
         decimal_separator=None,
-        lineterminator=None,
         comment_col_char=None,
         quoting=csv.QUOTE_MINIMAL,
         quotechar='"',
         doublequote=True,
         escapechar=None,
-        line_terminator=os.linesep,
+        line_terminator=None,
     ):
         if os.path.exists(filename) and not force:
             pass
@@ -248,7 +248,7 @@ def _make_csv_file(filenames):
                 "delimiter": delimiter,
                 "doublequote": doublequote,
                 "escapechar": escapechar,
-                "lineterminator": line_terminator,
+                "lineterminator": line_terminator if line_terminator else os.linesep,
                 "quotechar": quotechar,
                 "quoting": quoting,
             }
@@ -521,6 +521,75 @@ class TestReadCSV:
         eval_io(
             filepath_or_buffer=unique_filename,
             fn_name="read_csv",
+            **kwargs,
+        )
+
+    # Datetime Handling tests
+    @pytest.mark.parametrize(
+        "parse_dates",
+        [
+            True,
+            False,
+            ["col2"],
+            ["col2", "col4"],
+            [1, 3],
+            pytest.param(
+                {"foo": ["col2", "col4"]},
+                marks=pytest.mark.xfail(
+                    Engine.get() != "Python",
+                    reason="Exception: Internal Error - issue #2073",
+                ),
+            ),
+        ],
+    )
+    @pytest.mark.parametrize("infer_datetime_format", [True, False])
+    @pytest.mark.parametrize("keep_date_col", [True, False])
+    @pytest.mark.parametrize(
+        "date_parser", [None, lambda x: pd.datetime.strptime(x, "%Y-%m-%d")]
+    )
+    @pytest.mark.parametrize("dayfirst", [True, False])
+    @pytest.mark.parametrize("cache_dates", [True, False])
+    def test_read_csv_datetime(
+        self,
+        make_csv_file,
+        request,
+        parse_dates,
+        infer_datetime_format,
+        keep_date_col,
+        date_parser,
+        dayfirst,
+        cache_dates,
+    ):
+        if request.config.getoption("--simulate-cloud").lower() != "off":
+            pytest.xfail(
+                "The reason of tests fail in `cloud` mode is unknown for now - issue #2340"
+            )
+
+        raising_exceptions = io_ops_bad_exc  # default value
+        if isinstance(parse_dates, dict) and callable(date_parser):
+            # In this case raised TypeError: <lambda>() takes 1 positional argument but 2 were given
+            raising_exceptions = list(io_ops_bad_exc)
+            raising_exceptions.remove(TypeError)
+
+        kwargs = {
+            "parse_dates": parse_dates,
+            "infer_datetime_format": infer_datetime_format,
+            "keep_date_col": keep_date_col,
+            "date_parser": date_parser,
+            "dayfirst": dayfirst,
+            "cache_dates": cache_dates,
+        }
+
+        unique_name = get_unique_filename("test_read_csv_datetime", kwargs)
+        make_csv_file(
+            filename=unique_name,
+        )
+
+        eval_io(
+            filepath_or_buffer=unique_name,
+            fn_name="read_csv",
+            check_kwargs_callable=not callable(date_parser),
+            raising_exceptions=raising_exceptions,
             **kwargs,
         )
 
