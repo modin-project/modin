@@ -41,6 +41,7 @@ from modin.config import IsExperimental
 from .base import BasePandasDataset, _ATTRS_NO_LOOKUP
 from .iterator import PartitionIterator
 from .utils import from_pandas, is_scalar
+from .accessor import CachedAccessor, SparseAccessor
 
 
 @_inherit_docstrings(pandas.Series, excluded=[pandas.Series.__init__])
@@ -1187,9 +1188,7 @@ class Series(BasePandasDataset):
             result._query_compiler, inplace=inplace
         )
 
-    @property
-    def sparse(self):
-        return self._default_to_pandas(pandas.Series.sparse)
+    sparse = CachedAccessor("sparse", SparseAccessor)
 
     def squeeze(self, axis=None):
         if axis is not None:
