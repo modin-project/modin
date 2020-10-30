@@ -87,6 +87,10 @@ class TextFileReader(FileReader):
             f.seek(offset_size, os.SEEK_CUR)
             outside_quotes = True
 
+        # after we read `offset_size` bytes, we most likely break the line but
+        # the modin implementation doesn't work correctly in the case, so we must
+        # make sure that the line is read completely to the lineterminator,
+        # which is what the `_read_rows` does
         outside_quotes, _ = cls._read_rows(
             f,
             nrows=1,
