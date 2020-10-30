@@ -54,6 +54,7 @@ from .iterator import PartitionIterator
 from .series import Series
 from .base import BasePandasDataset, _ATTRS_NO_LOOKUP
 from .groupby import DataFrameGroupBy
+from .accessor import CachedAccessor, SparseFrameAccessor
 
 
 @_inherit_docstrings(pandas.DataFrame, excluded=[pandas.DataFrame.__init__])
@@ -1594,9 +1595,7 @@ class DataFrame(BasePandasDataset):
         if not inplace:
             return frame
 
-    @property
-    def sparse(self):
-        return self._default_to_pandas(pandas.DataFrame.sparse)
+    sparse = CachedAccessor("sparse", SparseFrameAccessor)
 
     def squeeze(self, axis=None):
         axis = self._get_axis_number(axis) if axis is not None else None

@@ -4397,17 +4397,18 @@ def test_encode(data, encoding_type):
         df_equals(modin_result, pandas_result)
 
 
-@pytest.mark.parametrize("data", test_string_data_values, ids=test_string_data_keys)
-def test_hasattr_sparse(data):
-    modin_series, pandas_series = create_test_series(data)
-    try:
-        pandas_result = hasattr(pandas_series, "sparse")
-    except Exception as e:
-        with pytest.raises(type(e)):
-            hasattr(modin_series, "sparse")
-    else:
-        modin_result = hasattr(modin_series, "sparse")
-        assert modin_result == pandas_result
+@pytest.mark.parametrize(
+    "is_sparse_data", [True, False], ids=["is_sparse", "is_not_sparse"]
+)
+def test_hasattr_sparse(is_sparse_data):
+    modin_df, pandas_df = (
+        create_test_series(
+            pandas.arrays.SparseArray(test_data["float_nan_data"].values())
+        )
+        if is_sparse_data
+        else create_test_series(test_data["float_nan_data"])
+    )
+    eval_general(modin_df, pandas_df, lambda df: hasattr(df, "sparse"))
 
 
 @pytest.mark.parametrize(
