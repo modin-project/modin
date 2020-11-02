@@ -179,7 +179,7 @@ and improve:
 
 ![Architecture](docs/img/modin_architecture.png)
 
-Visit the [Documentation](https://modin.readthedocs.io/en/latest/architecture.html) for
+Visit the [Documentation](https://modin.readthedocs.io/en/latest/developer/architecture.html) for
 more information!
 
 **`modin.pandas` is currently under active development. Requests and contributions are welcome!**
