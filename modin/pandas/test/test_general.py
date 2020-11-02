@@ -217,6 +217,28 @@ def test_merge_asof():
         )
 
 
+def test_merge_asof_on_variations():
+    # Simplest possible test, just to try out the basic approach
+    left = {"a": [1, 5, 10], "left_val": ["a", "b", "c"]}
+    left_index = [6, 8, 12]
+    right = {"a": [1, 2, 3, 6, 7], "right_val": [1, 2, 3, 6, 7]}
+    right_index = [6, 7, 8, 9, 15]
+    pandas_left, pandas_right = (
+        pandas.DataFrame(left, index=left_index),
+        pandas.DataFrame(right, index=right_index),
+    )
+    modin_left, modin_right = pd.DataFrame(left, index=left_index), pd.DataFrame(
+        right, index=right_index
+    )
+    for on_arguments in [{"on": "a"}]:
+        pandas_merged = pandas.merge_asof(pandas_left, pandas_right, **on_arguments)
+        modin_merged = pd.merge_asof(modin_left, modin_right, **on_arguments)
+        print()
+        print(pandas_merged)
+        print(modin_merged)
+        df_equals(pandas_merged, modin_merged)
+
+
 def test_pivot():
     test_df = pd.DataFrame(
         {

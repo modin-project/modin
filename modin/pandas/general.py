@@ -197,13 +197,15 @@ def merge_asof(
     right_subset.index = left.index
 
     # 4. Merge left and the new shrunken right:
-    return merge(
+    result = merge(
         left,
         right_subset,
         left_index=True,
         right_index=True,
         how="left",
     )
+    result.index = pandas.RangeIndex(start=0, stop=len(result))
+    return result
 
 
 @_inherit_docstrings(pandas.pivot_table)

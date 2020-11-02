@@ -309,17 +309,6 @@ def test_merge(test_data, test_data2):
         modin_df.merge("Non-valid type")
 
 
-def test_merge_asof():
-    # Simplest possible test, just to try out the basic approach
-    left = {"a": [1, 5, 10], "left_val": ["a", "b", "c"]}
-    right = {"a": [1, 2, 3, 6, 7], "right_val": [1, 2, 3, 6, 7]}
-    pandas_left, pandas_right = pandas.DataFrame(left), pandas.DataFrame(right)
-    modin_left, modin_right = pd.DataFrame(left), pd.DataFrame(right)
-    pandas_merged = pandas.merge_asof(pandas_left, pandas_right, on="a")
-    modin_merged = pd.merge_asof(modin_left, modin_right, on="a")
-    df_equals(pandas_merged, modin_merged)
-
-
 @pytest.mark.parametrize("axis", [0, 1])
 @pytest.mark.parametrize(
     "ascending", bool_arg_values, ids=arg_keys("ascending", bool_arg_keys)
