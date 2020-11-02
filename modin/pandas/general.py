@@ -161,6 +161,24 @@ def merge_asof(
 
     ErrorMessage.default_to_pandas("`merge_asof`")
 
+    left_column = None
+    right_column = None
+
+    if on is not None:
+        # if left_on is not None or right_on is not None or left_index or right_index:
+        #   raise ValueError("If 'on' is set, 'left_on', 'right_on', 'left_index', 'right_index' can't be set.")
+        left_on = on
+        right_on = on
+
+    if left_on is not None:
+        left_column = left[left_on]
+    if right_on is not None:
+        right_column = right[right_on]
+
+    # If we haven't set these by now, there's a bug in this function.
+    assert left_column is not None
+    assert right_column is not None
+
     # Working sketch of the new proposed algorithm. Currently just supports
     # "on".
     # TODO support left_on/right_on/left_index/right_index
@@ -169,8 +187,6 @@ def merge_asof(
 
     # 1. Construct Pandas DataFrames with just the on column, and the index as
     # another column.
-    left_column = left[on]
-    right_column = right[on]
     left_pandas_limited = pandas.DataFrame(
         {"on": to_pandas(left_column)}, index=left.index
     )
@@ -193,7 +209,7 @@ def merge_asof(
     # 3. Re-index right using the merged["right_labels"]; at this point right
     # should be same length and (semantically) same order as left:
     right_subset = right.reindex(index=pandas.Index(merged["right_labels"]))
-    right_subset.drop(columns=[on], inplace=True)
+    right_subset.drop(columns=[right_on], inplace=True)
     right_subset.index = left.index
 
     # 4. Merge left and the new shrunken right:
