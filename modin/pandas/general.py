@@ -171,9 +171,18 @@ def merge_asof(
         right_on = on
 
     if left_on is not None:
-        left_column = left[left_on]
+        left_column = to_pandas(left[left_on])
+    elif left_index:
+        left_column = left.index
+    else:
+        raise ValueError()  # TODO testme
+
     if right_on is not None:
-        right_column = right[right_on]
+        right_column = to_pandas(right[right_on])
+    elif right_index:
+        right_column = right.index
+    else:
+        raise ValueError()  # TODO testme
 
     # If we haven't set these by now, there's a bug in this function.
     assert left_column is not None
@@ -187,11 +196,9 @@ def merge_asof(
 
     # 1. Construct Pandas DataFrames with just the on column, and the index as
     # another column.
-    left_pandas_limited = pandas.DataFrame(
-        {"on": to_pandas(left_column)}, index=left.index
-    )
+    left_pandas_limited = pandas.DataFrame({"on": left_column}, index=left.index)
     right_pandas_limited = pandas.DataFrame(
-        {"on": to_pandas(right_column), "right_labels": right.index}
+        {"on": right_column, "right_labels": right.index}
     )
 
     # 2. Use Pandas' merge_asof to figure out how to map labels on left to
@@ -209,10 +216,13 @@ def merge_asof(
     # 3. Re-index right using the merged["right_labels"]; at this point right
     # should be same length and (semantically) same order as left:
     right_subset = right.reindex(index=pandas.Index(merged["right_labels"]))
-    right_subset.drop(columns=[right_on], inplace=True)
+    if not right_index:
+        right_subset.drop(columns=[right_on], inplace=True)
     right_subset.index = left.index
 
     # 4. Merge left and the new shrunken right:
+    # 4. Merge left and the new shrunken right: TODO maybe instead of merge we
+    # just want to concatenate, given all the rows line up?
     result = merge(
         left,
         right_subset,
@@ -220,7 +230,14 @@ def merge_asof(
         right_index=True,
         how="left",
     )
-    result.index = pandas.RangeIndex(start=0, stop=len(result))
+    if left_on is not None and right_index:
+        result.insert(
+            list(result.columns).index(left_on + suffixes[0]),
+            left_on,
+            result[left_on + suffixes[0]],
+        )
+    if not left_index and not right_index:
+        result.index = pandas.RangeIndex(start=0, stop=len(result))
     return result
 
 
