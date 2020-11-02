@@ -30,6 +30,7 @@ class RemoteOmnisci(RayCluster):
         head_node_type: str = None,
         worker_node_type: str = None,
         add_conda_packages: list = None,
+        modin_version: str = None,
     ):
         if worker_count != 0:
             warnings.warn(
@@ -43,4 +44,5 @@ class RemoteOmnisci(RayCluster):
             head_node_type,
             worker_node_type,
             add_conda_packages,
+            modin_version,
         )

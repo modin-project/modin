@@ -138,7 +138,7 @@ class RayCluster(BaseCluster):
         # NOTE: setup_commands may be list with several sets of shell commands
         # this change only first set defining the remote environment
         res = self._update_conda_requirements(config["setup_commands"][0])
-        config["setup_commands"][0] = res
+        config["setup_commands"][0] = self._update_modin_version(res)
 
         return _bootstrap_config(config)
 
@@ -150,10 +150,11 @@ class RayCluster(BaseCluster):
         reqs.extend(self._get_python_version())
 
         if self.add_conda_packages:
-            if not any(re.match(r"modin(\W|$)", p) for p in self.add_conda_packages):
-                # user didn't define modin release;
-                # use automatically detected modin release from local context
-                reqs.append(self._get_modin_version())
+            if any(re.match(r"modin(\W|$)", p) for p in self.add_conda_packages):
+                # user define modin release; prohibited
+                raise ValueError(
+                    "you should specify modin version via modin_version option"
+                )
 
             reqs.extend(self.add_conda_packages)
 
@@ -168,6 +169,9 @@ class RayCluster(BaseCluster):
             "{{CONDA_PACKAGES}}", " ".join(self._conda_requirements())
         )
 
+    def _update_modin_version(self, setup_commands: str):
+        return setup_commands.replace("{{MODIN_VERSION}}", self._get_modin_version())
+
     @staticmethod
     def _get_python_version():
         major = sys.version_info.major
@@ -180,7 +184,7 @@ class RayCluster(BaseCluster):
         from modin import __version__
 
         # for example: 0.8.0+116.g5e50eef.dirty
-        return f"modin=={__version__.split('+')[0]}"
+        return __version__.split("+")[0]
 
     @staticmethod
     def __save_config(config):

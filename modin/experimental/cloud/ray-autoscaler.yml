@@ -120,9 +120,14 @@ setup_commands:
         source ~/.bashrc
         conda create --name modin --yes
         conda activate modin
-        conda install --yes -c intel/label/modin -c conda-forge {{CONDA_PACKAGES}}
+        conda install --yes -c conda-forge {{CONDA_PACKAGES}}
 
-        pip install colorful cloudpickle
+        # required for modin[ray] -> psutil
+        sudo apt-get install gcc
+        pip install modin=={{MODIN_VERSION}}
+        pip install modin[ray]=={{MODIN_VERSION}}
+        pip install modin[remote]=={{MODIN_VERSION}}
+
         # ray now executes "ray stop" which expects "ray" to be in $PATH
         # so place a symlink to current "ray" binary to /usr/local/bin
         sudo ln -s `which ray` /usr/local/bin/ray

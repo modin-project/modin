@@ -57,7 +57,7 @@ def make_create_or_update_cluster_mock():
 
 @pytest.fixture
 def make_ray_cluster(make_bootstrap_config_mock):
-    def ray_cluster(conda_packages=None):
+    def ray_cluster(conda_packages=None, modin_version=None):
         with mock.patch(
             "modin.experimental.cloud.rayscale._bootstrap_config",
             make_bootstrap_config_mock,
@@ -65,6 +65,7 @@ def make_ray_cluster(make_bootstrap_config_mock):
             ray_cluster = RayCluster(
                 Provider(name="aws"),
                 add_conda_packages=conda_packages,
+                modin_version=modin_version,
             )
         return ray_cluster
 
@@ -116,7 +117,7 @@ def test_update_conda_requirements(setup_commands_source, make_ray_cluster):
     fake_version = namedtuple("FakeVersion", "major minor micro")(7, 12, 45)
     with mock.patch("sys.version_info", fake_version):
         setup_commands_result = make_ray_cluster(
-            ["scikit-learn>=0.23", "modin==0.8.0"]
+            ["scikit-learn>=0.23"],
         )._update_conda_requirements(setup_commands_source)
 
     assert f"python>={fake_version.major}.{fake_version.minor}" in setup_commands_result
@@ -125,5 +126,22 @@ def test_update_conda_requirements(setup_commands_source, make_ray_cluster):
         in setup_commands_result
     )
     assert "scikit-learn>=0.23" in setup_commands_result
-    assert "modin==0.8.0" in setup_commands_result
     assert "{{CONDA_PACKAGES}}" not in setup_commands_result
+
+
+@pytest.mark.parametrize(
+    "setup_commands_source",
+    [
+        r"""
+        pip install modin=={{MODIN_VERSION}}
+        pip install modin[remote]=={{MODIN_VERSION}}
+        """
+    ],
+)
+def test_update_modin_version(setup_commands_source, make_ray_cluster):
+    setup_commands_result = make_ray_cluster(
+        modin_version="0.8.1.1"
+    )._update_modin_version(setup_commands_source)
+
+    assert "modin==0.8.1.1" in setup_commands_result
+    assert "{{MODIN_VERSION}}" not in setup_commands_result
