@@ -155,7 +155,7 @@ head_start_ray_commands:
         echo 'export MEMORY_STORE_SIZE=$(awk "/MemFree/ { printf \"%d \\n\", \$2*1024*0.8}" /proc/meminfo)' >> ~/.bashrc
         echo 'export TMPDIR="$(dirname $(mktemp tmp.XXXXXXXXXX -ut))"' >> ~/.bashrc
 
-        ulimit -n 65536; ray start --head --num-redis-shards=1 --redis-shard-ports=6380 --port=6379 --object-manager-port=8076 --autoscaling-config=~/ray_bootstrap_config.yaml --object-store-memory=$MEMORY_STORE_SIZE --plasma-directory=$TMPDIR
+        ulimit -n 65536; ray start --head --redis-shard-ports=6380 --port=6379 --object-manager-port=8076 --autoscaling-config=~/ray_bootstrap_config.yaml --object-store-memory=$MEMORY_STORE_SIZE --plasma-directory=$TMPDIR
 
 # Command to start ray on worker nodes. You don't need to change this.
 worker_start_ray_commands:
