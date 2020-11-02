@@ -262,6 +262,7 @@ class RayCluster(BaseCluster):
             [
                 "bash",
                 "-ic",
-                subprocess.list2cmdline(["conda", "run", "-n", "modin"] + cmd),
+                # workaround for https://github.com/conda/conda/issues/8385
+                subprocess.list2cmdline(["conda", "activate", "modin", "&&"] + cmd),
             ]
         )
