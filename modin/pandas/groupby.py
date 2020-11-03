@@ -395,7 +395,7 @@ class DataFrameGroupBy(object):
                 return agg_func(*args, **kwargs)
 
         result = self._apply_agg_function(
-            lambda df, *args, **kwargs: df.aggregate(func, *args, **kwargs),
+            func,
             drop=self._as_index,
             *args,
             **kwargs,
@@ -871,7 +871,7 @@ class DataFrameGroupBy(object):
         -------
         A new combined DataFrame with the result of all groups.
         """
-        assert callable(f), "'{0}' object is not callable".format(type(f))
+        assert callable(f) or isinstance(f, dict), "'{0}' object is not callable and not a dict".format(type(f))
 
         # For aggregations, pandas behavior does this for the result.
         # For other operations it does not, so we wait until there is an aggregation to

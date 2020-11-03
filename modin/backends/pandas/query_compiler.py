@@ -2573,14 +2573,23 @@ class PandasQueryCompiler(BaseQueryCompiler):
         groupby_kwargs,
         drop=False,
     ):
-        agg_func = wrap_udf_function(agg_func)
+        if callable(agg_func):
+            agg_func = wrap_udf_function(agg_func)
 
         if is_multi_by:
+            # If function was kept as a dictionary until now, it is now necessary to repeat all steps
+            # that were skipped previously, that is, make it a lambda. This is necessary
+            # because default to pandas is unable to operate with dictionary aggregation function argument,
+            # it accepts only callable functions.
+            if isinstance(agg_func, dict):
+                callable_func = lambda df, *args, **kwargs: df.aggregate(agg_func, *agg_args, **agg_kwargs)
+            else:
+                callable_func = agg_func
             return super().groupby_agg(
                 by=by,
                 is_multi_by=is_multi_by,
                 axis=axis,
-                agg_func=agg_func,
+                agg_func=callable_func,
                 agg_args=agg_args,
                 agg_kwargs=agg_kwargs,
                 groupby_kwargs=groupby_kwargs,
@@ -2607,7 +2616,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 def compute_groupby(df):
                     grouped_df = df.groupby(by=by, axis=axis, **groupby_kwargs)
                     try:
-                        result = grouped_df.agg(agg_func, **agg_args)
+                        result = grouped_df.agg(agg_func)
                     # This happens when the partition is filled with non-numeric data and a
                     # numeric operation is done. We need to build the index here to avoid
                     # issues with extracting the index.
@@ -2659,10 +2668,13 @@ class PandasQueryCompiler(BaseQueryCompiler):
             # determening type of raised exception by applying `aggfunc`
             # to empty DataFrame
             try:
-                agg_func(
-                    pandas.DataFrame(index=[1], columns=[1]).groupby(level=0),
-                    **agg_kwargs,
-                )
+                if isinstance(agg_func, dict):
+                    pandas.DataFrame(index=[1], columns=[1]).agg(agg_func)
+                else:
+                    agg_func(
+                        pandas.DataFrame(index=[1], columns=[1]).groupby(level=0),
+                        **agg_kwargs,
+                    )
             except Exception as e:
                 raise type(e)("No numeric types to aggregate.")
 
