@@ -40,7 +40,7 @@ from .utils import (
     IO_OPS_DATA_DIR,
 )
 
-from modin.config import Engine, Backend
+from modin.config import Engine, Backend, IsExperimental
 
 if Backend.get() == "Pandas":
     import modin.pandas as pd
@@ -495,6 +495,10 @@ def teardown_fwf_file():
             pass
 
 
+@pytest.mark.skipif(
+    IsExperimental.get() and Backend.get() == "Pyarrow",
+    reason="Segmentation fault; see PR #2347 ffor details",
+)
 class TestReadCSV:
     # delimiter tests
     @pytest.mark.parametrize("sep", ["_", ",", ".", "\n"])
