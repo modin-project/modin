@@ -392,6 +392,30 @@ class TestMultiIndex:
 
         eval_general(pd, pandas, applier)
 
+    def test_set_index_name(self):
+        index = pandas.Index.__new__(pandas.Index, data=[i for i in range(24)])
+
+        pandas_df = pandas.DataFrame(self.data, index=index)
+        pandas_df.index.name = "new_name"
+        modin_df = pd.DataFrame(self.data, index=index)
+        modin_df._query_compiler.set_index_name("new_name")
+
+        df_equals(pandas_df, modin_df)
+
+    def test_set_index_names(self):
+        index = pandas.MultiIndex.from_tuples(
+            [(i, j, k) for i in range(2) for j in range(3) for k in range(4)]
+        )
+
+        pandas_df = pandas.DataFrame(self.data, index=index)
+        pandas_df.index.names = ["new_name1", "new_name2", "new_name3"]
+        modin_df = pd.DataFrame(self.data, index=index)
+        modin_df._query_compiler.set_index_names(
+            ["new_name1", "new_name2", "new_name3"]
+        )
+
+        df_equals(pandas_df, modin_df)
+
 
 class TestFillna:
     data = {"a": [1, 1, None], "b": [None, None, 2], "c": [3, None, None]}

@@ -1584,6 +1584,50 @@ class BaseQueryCompiler(abc.ABC):
         assert axis == 1
         return isinstance(self.columns, pandas.MultiIndex)
 
+    def get_index_name(self):
+        """
+        Get index name.
+
+        Returns
+        -------
+        hashable
+            Index name, None for MultiIndex.
+        """
+        return self.index.name
+
+    def set_index_name(self, name):
+        """
+        Set index name.
+
+        Parameters
+        ----------
+        name: hashable
+            New index name.
+        """
+        self.index.name = name
+
+    def get_index_names(self):
+        """
+        Get index names.
+
+        Returns
+        -------
+        list
+            Index names.
+        """
+        return self.index.names
+
+    def set_index_names(self, names):
+        """
+        Set index names.
+
+        Parameters
+        ----------
+        names: list
+            New index names.
+        """
+        self.index.names = names
+
     # DateTime methods
 
     dt_ceil = DateTimeDefault.register(pandas.Series.dt.ceil)
