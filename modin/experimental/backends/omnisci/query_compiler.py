@@ -646,6 +646,18 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
         assert axis == 1
         return isinstance(self.columns, pandas.MultiIndex)
 
+    def get_index_name(self):
+        return self._modin_frame.get_index_name()
+
+    def set_index_name(self, name):
+        self._modin_frame = self._modin_frame.set_index_name(name)
+
+    def get_index_names(self):
+        return self._modin_frame.get_index_names()
+
+    def set_index_names(self, names):
+        self._modin_frame = self._modin_frame.set_index_names(names)
+
     def free(self):
         return
 
