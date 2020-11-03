@@ -1646,6 +1646,8 @@ class BasePandasFrame(object):
         """
         Copartition two dataframes.
 
+        Perform aligning of partitions, index and partition blocks.
+
         Parameters
         ----------
             axis : 0 or 1
@@ -1672,6 +1674,7 @@ class BasePandasFrame(object):
 
         is_aligning_applied = False
         for i in range(len(other)):
+            # aligning partitions
             if (
                 len(self._partitions) != len(other[i]._partitions)
                 and len(self.axes[0]) == len(other[i].axes[0])
@@ -1689,11 +1692,13 @@ class BasePandasFrame(object):
             all(o.axes[axis].equals(self.axes[axis]) for o in other)
             and not is_aligning_applied
         ):
+            # aligning self.list_of_blocks
             return (
                 self._partitions,
                 [self._simple_shuffle(axis, o) for o in other],
                 self.axes[axis].copy(),
             )
+
         index_other_obj = [o.axes[axis] for o in other]
         joined_index = self._join_index_objects(axis, index_other_obj, how, sort)
         # We have to set these because otherwise when we perform the functions it may
@@ -1708,6 +1713,7 @@ class BasePandasFrame(object):
             and not is_avoid_reindex
             and (force_repartition or not left_old_idx.equals(joined_index))
         ):
+            # aligning index without aligning partition' blocks
             reindexed_self = self._frame_mgr_cls.map_axis_partitions(
                 axis, self._partitions, lambda df: df.reindex(joined_index, axis=axis)
             )
@@ -1723,10 +1729,13 @@ class BasePandasFrame(object):
             ):
                 reindexed_other = other[i]._partitions
             else:
+                # aligning index with aligning partition' blocks
                 reindexed_other = other[i]._frame_mgr_cls.map_axis_partitions(
                     axis,
                     other[i]._partitions,
                     lambda df: df.reindex(joined_index, axis=axis),
+                    lengths=self._row_lengths if axis == 0 else self._column_widths,
+                    manual_partition=True,
                 )
             reindexed_other_list.append(reindexed_other)
         return reindexed_self, reindexed_other_list, joined_index

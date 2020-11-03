@@ -214,22 +214,27 @@ class BaseFrameManager(object):
         left,
         right,
         keep_partitioning=False,
+        lengths=None,
+        manual_partition=None,
     ):
         """
         Broadcast the right partitions to left and apply a function along full axis.
 
         Parameters
         ----------
-            axis : The axis to apply and broadcast over.
-            apply_func : The function to apply.
-            left : The left partitions.
-            right : The right partitions.
-            keep_partitioning : boolean. Default is False
-                The flag to keep partitions for Modin Frame.
+        axis : The axis to apply and broadcast over.
+        apply_func : The function to apply.
+        left : The left partitions.
+        right : The right partitions.
+        keep_partitioning : boolean. Default is False
+            The flag to keep partitions for Modin Frame.
+        lengths : bool
+            The list of lengths to shuffle the object.
+        manual_partition : list(int)
 
         Returns
         -------
-            A new `np.array` of partition objects.
+        A new `np.array` of partition objects.
         """
         # Since we are already splitting the DataFrame back up after an
         # operation, we will just use this time to compute the number of
@@ -251,6 +256,8 @@ class BaseFrameManager(object):
                     preprocessed_map_func,
                     num_splits=num_splits,
                     other_axis_partition=right_partitions,
+                    _lengths=lengths,
+                    manual_partition=manual_partition,
                 )
                 for part in left_partitions
             ]
@@ -295,20 +302,25 @@ class BaseFrameManager(object):
         partitions,
         map_func,
         keep_partitioning=False,
+        lengths=None,
+        manual_partition=None,
     ):
         """
         Applies `map_func` to every partition.
 
         Parameters
         ----------
-            axis : 0 or 1
-                The axis to perform the map across (0 - index, 1 - columns).
-            partitions : NumPy array
-                The partitions of Modin Frame.
-            map_func : callable
-                The function to apply.
-            keep_partitioning : boolean. Default is False
-                The flag to keep partitions for Modin Frame.
+        axis : 0 or 1
+            The axis to perform the map across (0 - index, 1 - columns).
+        partitions : NumPy array
+            The partitions of Modin Frame.
+        map_func : callable
+            The function to apply.
+        keep_partitioning : bool. Default is False
+            The flag to keep partitions for Modin Frame.
+        lengths : list(int)
+            The list of lengths to shuffle the object.
+        manual_partition : bool
 
         Returns
         -------
@@ -326,6 +338,8 @@ class BaseFrameManager(object):
             apply_func=map_func,
             keep_partitioning=keep_partitioning,
             right=None,
+            lengths=lengths,
+            manual_partition=manual_partition,
         )
 
     @classmethod
