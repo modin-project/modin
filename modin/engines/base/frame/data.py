@@ -1735,7 +1735,7 @@ class BasePandasFrame(object):
                     other[i]._partitions,
                     lambda df: df.reindex(joined_index, axis=axis),
                     lengths=self._row_lengths if axis == 0 else self._column_widths,
-                    manual_partition=True,
+                    manual_partition=False,
                 )
             reindexed_other_list.append(reindexed_other)
         return reindexed_self, reindexed_other_list, joined_index
