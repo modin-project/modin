@@ -390,7 +390,9 @@ class DataFrameGroupBy(object):
                 **kwargs,
             )
         elif isinstance(func, str):
-            agg_func = getattr(self, func, None)
+            # Using "getattr" here masks possible AttributeError which we throw
+            # in __getattr__, so we should call __getattr__ directly instead.
+            agg_func = self.__getattr__(func)
             if callable(agg_func):
                 return agg_func(*args, **kwargs)
 
