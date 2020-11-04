@@ -221,7 +221,7 @@ def test_merge_asof_on_variations():
     # Simplest possible test, just to try out the basic approach
     left = {"a": [1, 5, 10], "left_val": ["a", "b", "c"]}
     left_index = [6, 8, 12]
-    right = {"a": [1, 2, 3, 6, 7], "right_val": [1, 2, 3, 6, 7]}
+    right = {"a": [1, 2, 3, 6, 7], "right_val": ["d", "e", "f", "g", "h"]}
     right_index = [6, 7, 8, 9, 15]
     pandas_left, pandas_right = (
         pandas.DataFrame(left, index=left_index),
@@ -239,9 +239,6 @@ def test_merge_asof_on_variations():
     ]:
         pandas_merged = pandas.merge_asof(pandas_left, pandas_right, **on_arguments)
         modin_merged = pd.merge_asof(modin_left, modin_right, **on_arguments)
-        print(on_arguments)
-        print(pandas_merged)
-        print(modin_merged)
         df_equals(pandas_merged, modin_merged)
 
 

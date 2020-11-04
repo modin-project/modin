@@ -161,6 +161,29 @@ def merge_asof(
 
     ErrorMessage.default_to_pandas("`merge_asof`")
 
+    if left_index and right_on:
+        # No idea how this works, fall back to Pandas slow path.
+        if isinstance(right, DataFrame):
+            right = to_pandas(right)
+        return DataFrame(
+            pandas.merge_asof(
+                to_pandas(left),
+                right,
+                on=on,
+                left_on=left_on,
+                right_on=right_on,
+                left_index=left_index,
+                right_index=right_index,
+                by=by,
+                left_by=left_by,
+                right_by=right_by,
+                suffixes=suffixes,
+                tolerance=tolerance,
+                allow_exact_matches=allow_exact_matches,
+                direction=direction,
+            )
+        )
+
     left_column = None
     right_column = None
 
@@ -190,7 +213,6 @@ def merge_asof(
 
     # Working sketch of the new proposed algorithm. Currently just supports
     # "on".
-    # TODO support left_on/right_on/left_index/right_index
     # TODO support suffixes
     # TODO what does "by" do?
 
@@ -221,8 +243,6 @@ def merge_asof(
     right_subset.index = left.index
 
     # 4. Merge left and the new shrunken right:
-    # 4. Merge left and the new shrunken right: TODO maybe instead of merge we
-    # just want to concatenate, given all the rows line up?
     result = merge(
         left,
         right_subset,
@@ -230,6 +250,8 @@ def merge_asof(
         right_index=True,
         how="left",
     )
+
+    # 5. Clean up to match Pandas output:
     if left_on is not None and right_index:
         result.insert(
             list(result.columns).index(left_on + suffixes[0]),
@@ -238,6 +260,7 @@ def merge_asof(
         )
     if not left_index and not right_index:
         result.index = pandas.RangeIndex(start=0, stop=len(result))
+
     return result
 
 
