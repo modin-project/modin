@@ -218,7 +218,7 @@ def test_merge_asof():
 
 
 def test_merge_asof_on_variations():
-    # Simplest possible test, just to try out the basic approach
+    """on=,left_on=,right_on=,right_index=,left_index= options match Pandas."""
     left = {"a": [1, 5, 10], "left_val": ["a", "b", "c"]}
     left_index = [6, 8, 12]
     right = {"a": [1, 2, 3, 6, 7], "right_val": ["d", "e", "f", "g", "h"]}
@@ -240,6 +240,54 @@ def test_merge_asof_on_variations():
         pandas_merged = pandas.merge_asof(pandas_left, pandas_right, **on_arguments)
         modin_merged = pd.merge_asof(modin_left, modin_right, **on_arguments)
         df_equals(pandas_merged, modin_merged)
+
+
+def test_merge_asof_suffixes():
+    """Suffix variations are handled the same as Pandas."""
+    left = {"a": [1, 5, 10]}
+    right = {"a": [2, 3, 6]}
+    pandas_left, pandas_right = (pandas.DataFrame(left), pandas.DataFrame(right))
+    modin_left, modin_right = pd.DataFrame(left), pd.DataFrame(right)
+    for suffixes in [("a", "b"), (False, "c"), ("d", False)]:
+        pandas_merged = pandas.merge_asof(
+            pandas_left,
+            pandas_right,
+            left_index=True,
+            right_index=True,
+            suffixes=suffixes,
+        )
+        modin_merged = pd.merge_asof(
+            modin_left,
+            modin_right,
+            left_index=True,
+            right_index=True,
+            suffixes=suffixes,
+        )
+        df_equals(pandas_merged, modin_merged)
+
+    with pytest.raises(ValueError):
+        pandas.merge_asof(
+            pandas_left,
+            pandas_right,
+            left_index=True,
+            right_index=True,
+            suffixes=(False, False),
+        )
+    with pytest.raises(ValueError):
+        modin_merged = pd.merge_asof(
+            modin_left,
+            modin_right,
+            left_index=True,
+            right_index=True,
+            suffixes=(False, False),
+        )
+
+
+# TODO test merge_asof
+# by
+# tolerance
+# direction
+# allow_exact_matches
 
 
 def test_pivot():

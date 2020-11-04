@@ -211,9 +211,6 @@ def merge_asof(
     assert left_column is not None
     assert right_column is not None
 
-    # Working sketch of the new proposed algorithm. Currently just supports
-    # "on".
-    # TODO support suffixes
     # TODO what does "by" do?
 
     # 1. Construct Pandas DataFrames with just the on column, and the index as
@@ -248,6 +245,7 @@ def merge_asof(
         right_subset,
         left_index=True,
         right_index=True,
+        suffixes=suffixes,
         how="left",
     )
 
