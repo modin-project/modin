@@ -460,8 +460,6 @@ def test_merge_asof_merge_options():
         ),
     )
 
-    # TODO test for by with list.
-
 
 def test_pivot():
     test_df = pd.DataFrame(
