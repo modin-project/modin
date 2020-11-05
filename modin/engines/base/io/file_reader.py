@@ -137,10 +137,10 @@ class FileReader:
         return os.path.exists(file_path)
 
     @classmethod
-    def deploy(cls, func, args, num_return_vals):
+    def deploy(cls, func, args, num_returns):
         raise NotImplementedError(NOT_IMPLEMENTED_MESSAGE)
 
-    def parse(self, func, args, num_return_vals):
+    def parse(self, func, args, num_returns):
         raise NotImplementedError(NOT_IMPLEMENTED_MESSAGE)
 
     @classmethod

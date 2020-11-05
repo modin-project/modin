@@ -135,27 +135,13 @@ def test_math_alias(math_op, alias):
     assert getattr(pd.DataFrame, math_op) == getattr(pd.DataFrame, alias)
 
 
-@pytest.mark.parametrize("other", ["as_left", 4, 4.0])
+@pytest.mark.parametrize("other", ["as_left", 4, 4.0, "a"])
 @pytest.mark.parametrize("op", ["eq", "ge", "gt", "le", "lt", "ne"])
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_comparison(data, op, other):
     eval_general(
         *create_test_dfs(data),
         lambda df: getattr(df, op)(df if other == "as_left" else other),
-    )
-
-
-@pytest.mark.xfail_backends(
-    ["BaseOnPython"],
-    reason="Test is failing because of mismathing of thrown exceptions. See pandas issue #36377",
-)
-@pytest.mark.parametrize("other", ["a"])
-@pytest.mark.parametrize("op", ["ge", "gt", "le", "lt", "eq", "ne"])
-@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-def test_comparison_except(data, op, other):
-    eval_general(
-        *create_test_dfs(data),
-        lambda df: getattr(df, op)(other),
     )
 
 
