@@ -165,11 +165,16 @@ def merge_asof(
     if (
         # No idea how this works or why it does what it does:
         (left_index and right_on is not None)
-        # If we're copying lots of columns out of Pandas, maybe not worth
-        # trying our path, it's not clear it's any better:
+        # This is the case where by is a list of columns. If we're copying lots
+        # of columns out of Pandas, maybe not worth trying our path, it's not
+        # clear it's any better:
         or not isinstance(by, (str, type(None)))
         or not isinstance(left_by, (str, type(None)))
         or not isinstance(right_by, (str, type(None)))
+        # What does this even mean?! Pandas does _something_...
+        or (on and (left_index or right_index))
+        or (left_on and left_index)
+        or (right_on and right_index)
     ):
         if isinstance(right, DataFrame):
             right = to_pandas(right)
@@ -196,8 +201,8 @@ def merge_asof(
     right_column = None
 
     if on is not None:
-        # if left_on is not None or right_on is not None or left_index or right_index:
-        #   raise ValueError("If 'on' is set, 'left_on', 'right_on', 'left_index', 'right_index' can't be set.")
+        if left_on is not None or right_on is not None:
+            raise ValueError("If 'on' is set, 'left_on' and 'right_on' can't be set.")
         left_on = on
         right_on = on
 
@@ -206,22 +211,22 @@ def merge_asof(
     elif left_index:
         left_column = left.index
     else:
-        raise ValueError()  # TODO testme
+        raise ValueError("Need some sort of 'on' spec")
 
     if right_on is not None:
         right_column = to_pandas(right[right_on])
     elif right_index:
         right_column = right.index
     else:
-        raise ValueError()  # TODO testme
+        raise ValueError("Need some sort of 'on' spec")
 
     # If we haven't set these by now, there's a bug in this function.
     assert left_column is not None
     assert right_column is not None
 
     if by is not None:
-        # if left_by is not None or right_by is not None:
-        #    raise ValueError
+        if left_by is not None or right_by is not None:
+            raise ValueError("Can't have both 'by' and 'left_by' or 'right_by'")
         left_by = right_by = by
 
     # List of columsn case should have been handled by direct Pandas fallback

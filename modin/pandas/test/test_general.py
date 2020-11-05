@@ -283,6 +283,57 @@ def test_merge_asof_suffixes():
         )
 
 
+def test_merge_asof_bad_arguments():
+    left = {"a": [1, 5, 10], "b": [5, 7, 9]}
+    right = {"a": [2, 3, 6], "b": [6, 5, 20]}
+    pandas_left, pandas_right = (pandas.DataFrame(left), pandas.DataFrame(right))
+    modin_left, modin_right = pd.DataFrame(left), pd.DataFrame(right)
+
+    # Can't mix by with left_by/right_by
+    with pytest.raises(ValueError):
+        pandas.merge_asof(
+            pandas_left, pandas_right, on="a", by="b", left_by="can't do with by"
+        )
+    with pytest.raises(ValueError):
+        pd.merge_asof(
+            modin_left, modin_right, on="a", by="b", left_by="can't do with by"
+        )
+    with pytest.raises(ValueError):
+        pandas.merge_asof(
+            pandas_left, pandas_right, by="b", on="a", right_by="can't do with by"
+        )
+    with pytest.raises(ValueError):
+        pd.merge_asof(
+            modin_left, modin_right, by="b", on="a", right_by="can't do with by"
+        )
+
+    # Can't mix on with left_on/right_on
+    with pytest.raises(ValueError):
+        pandas.merge_asof(pandas_left, pandas_right, on="a", left_on="can't do with by")
+    with pytest.raises(ValueError):
+        pd.merge_asof(modin_left, modin_right, on="a", left_on="can't do with by")
+    with pytest.raises(ValueError):
+        pandas.merge_asof(
+            pandas_left, pandas_right, on="a", right_on="can't do with by"
+        )
+    with pytest.raises(ValueError):
+        pd.merge_asof(modin_left, modin_right, on="a", right_on="can't do with by")
+
+    # Need both left and right
+    with pytest.raises(Exception):  # Pandas bug, didn't validate inputs sufficiently
+        pandas.merge_asof(pandas_left, pandas_right, left_on="a")
+    with pytest.raises(ValueError):
+        pd.merge_asof(modin_left, modin_right, left_on="a")
+    with pytest.raises(Exception):  # Pandas bug, didn't validate inputs sufficiently
+        pandas.merge_asof(pandas_left, pandas_right, right_on="a")
+    with pytest.raises(ValueError):
+        pd.merge_asof(modin_left, modin_right, right_on="a")
+    with pytest.raises(ValueError):
+        pandas.merge_asof(pandas_left, pandas_right)
+    with pytest.raises(ValueError):
+        pd.merge_asof(modin_left, modin_right)
+
+
 def test_merge_asof_merge_options():
     modin_quotes = pd.DataFrame(
         {
@@ -408,6 +459,8 @@ def test_merge_asof_merge_options():
             allow_exact_matches=False,
         ),
     )
+
+    # TODO test for by with list.
 
 
 def test_pivot():
