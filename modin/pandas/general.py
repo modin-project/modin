@@ -161,8 +161,16 @@ def merge_asof(
 
     ErrorMessage.default_to_pandas("`merge_asof`")
 
-    if left_index and right_on:
-        # No idea how this works, fall back to Pandas slow path.
+    # Pandas fallbacks for tricky cases:
+    if (
+        # No idea how this works or why it does what it does:
+        (left_index and right_on is not None)
+        # If we're copying lots of columns out of Pandas, maybe not worth
+        # trying our path, it's not clear it's any better:
+        or not isinstance(by, (str, type(None)))
+        or not isinstance(left_by, (str, type(None)))
+        or not isinstance(right_by, (str, type(None)))
+    ):
         if isinstance(right, DataFrame):
             right = to_pandas(right)
         return DataFrame(
@@ -211,14 +219,29 @@ def merge_asof(
     assert left_column is not None
     assert right_column is not None
 
-    # TODO what does "by" do?
+    if by is not None:
+        # if left_by is not None or right_by is not None:
+        #    raise ValueError
+        left_by = right_by = by
 
-    # 1. Construct Pandas DataFrames with just the on column, and the index as
-    # another column.
-    left_pandas_limited = pandas.DataFrame({"on": left_column}, index=left.index)
-    right_pandas_limited = pandas.DataFrame(
-        {"on": right_column, "right_labels": right.index}
-    )
+    # List of columsn case should have been handled by direct Pandas fallback
+    # earlier:
+    assert isinstance(left_by, (str, type(None)))
+    assert isinstance(right_by, (str, type(None)))
+
+    left_pandas_limited = {"on": left_column}
+    right_pandas_limited = {"on": right_column, "right_labels": right.index}
+    extra_kwargs = {}  # extra arguments to Pandas merge_asof
+
+    if left_by is not None or right_by is not None:
+        extra_kwargs["by"] = "by"
+        left_pandas_limited["by"] = to_pandas(left[left_by])
+        right_pandas_limited["by"] = to_pandas(right[right_by])
+
+    # 1. Construct Pandas DataFrames with just the 'on' and optional 'by'
+    # columns, and the index as another column.
+    left_pandas_limited = pandas.DataFrame(left_pandas_limited, index=left.index)
+    right_pandas_limited = pandas.DataFrame(right_pandas_limited)
 
     # 2. Use Pandas' merge_asof to figure out how to map labels on left to
     # labels on the right.
@@ -229,6 +252,7 @@ def merge_asof(
         direction=direction,
         allow_exact_matches=allow_exact_matches,
         tolerance=tolerance,
+        **extra_kwargs,
     )
     # Now merged["right_labels"] shows which labels from right map to left's index.
 
@@ -237,6 +261,8 @@ def merge_asof(
     right_subset = right.reindex(index=pandas.Index(merged["right_labels"]))
     if not right_index:
         right_subset.drop(columns=[right_on], inplace=True)
+    if right_by is not None and left_by == right_by:
+        right_subset.drop(columns=[right_by], inplace=True)
     right_subset.index = left.index
 
     # 4. Merge left and the new shrunken right:
