@@ -1251,11 +1251,11 @@ class OmnisciOnRayFrame(BasePandasFrame):
             return self
 
         names = self._mangle_index_names([name])
+        exprs = OrderedDict()
         if self._index_cols is None:
-            exprs = OrderedDict()
-            exprs[name] = self.ref("__rowid__")
+            exprs[names[0]] = self.ref("__rowid__")
         else:
-            exprs = self._index_exprs()
+            exprs[names[0]] = self.ref(self._index_cols[0])
 
         for col in self.columns:
             exprs[col] = self.ref(col)
