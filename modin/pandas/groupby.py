@@ -873,7 +873,9 @@ class DataFrameGroupBy(object):
         -------
         A new combined DataFrame with the result of all groups.
         """
-        assert callable(f) or isinstance(f, dict), "'{0}' object is not callable and not a dict".format(type(f))
+        assert callable(f) or isinstance(
+            f, dict
+        ), "'{0}' object is not callable and not a dict".format(type(f))
 
         # For aggregations, pandas behavior does this for the result.
         # For other operations it does not, so we wait until there is an aggregation to

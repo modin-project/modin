@@ -2582,7 +2582,11 @@ class PandasQueryCompiler(BaseQueryCompiler):
             # because default to pandas is unable to operate with dictionary aggregation function argument,
             # it accepts only callable functions.
             if isinstance(agg_func, dict):
-                callable_func = lambda df, *args, **kwargs: df.aggregate(agg_func, *agg_args, **agg_kwargs)
+                callable_func = wrap_udf_function(
+                    lambda df, *args, **kwargs: df.aggregate(
+                        agg_func, *agg_args, **agg_kwargs
+                    )
+                )
             else:
                 callable_func = agg_func
             return super().groupby_agg(
