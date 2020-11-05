@@ -3444,6 +3444,26 @@ def test_value_counts(normalize, bins, dropna):
     )
     df_equals(modin_result, pandas_result)
 
+    # from issue #2365
+    arr = np.random.rand(2 ** 6)
+    arr[::10] = np.nan
+    modin_series, pandas_series = create_test_series(arr)
+    modin_result = modin_series.value_counts(dropna=False, ascending=True)
+    pandas_result = sort_index_for_equal_values(
+        pandas_series.value_counts(dropna=False, ascending=True), True
+    )
+    if get_current_backend() == "BaseOnPython":
+        modin_result = sort_index_for_equal_values(modin_result, ascending=True)
+    df_equals(modin_result, pandas_result)
+
+    modin_result = modin_series.value_counts(dropna=False, ascending=False)
+    pandas_result = sort_index_for_equal_values(
+        pandas_series.value_counts(dropna=False, ascending=False), False
+    )
+    if get_current_backend() == "BaseOnPython":
+        modin_result = sort_index_for_equal_values(modin_result, ascending=False)
+    df_equals(modin_result, pandas_result)
+
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_values(data):

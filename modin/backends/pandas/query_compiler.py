@@ -732,18 +732,21 @@ class PandasQueryCompiler(BaseQueryCompiler):
             dropna = kwargs.get("dropna", True)
 
             try:
-                result = df.squeeze(axis=1).groupby(df.index, sort=False).sum()
+                result = (
+                    df.squeeze(axis=1)
+                    .groupby(df.index, sort=False, dropna=dropna)
+                    .sum()
+                )
             # This will happen with Arrow buffer read-only errors. We don't want to copy
             # all the time, so this will try to fast-path the code first.
             except (ValueError):
-                result = df.copy().squeeze(axis=1).groupby(df.index, sort=False).sum()
-
-            if not dropna and np.nan in df.index:
-                result = result.append(
-                    pandas.Series(
-                        [df.squeeze(axis=1).loc[[np.nan]].sum()], index=[np.nan]
-                    )
+                result = (
+                    df.copy()
+                    .squeeze(axis=1)
+                    .groupby(df.index, sort=False, dropna=dropna)
+                    .sum()
                 )
+
             if normalize:
                 result = result / df.squeeze(axis=1).sum()
 
