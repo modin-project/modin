@@ -488,9 +488,6 @@ class BasePandasDataset(object):
         )
 
     def aggregate(self, func=None, axis=0, *args, **kwargs):
-        warnings.warn(
-            "Modin index may not match pandas index due to pandas issue pandas-dev/pandas#36189."
-        )
         axis = self._get_axis_number(axis)
         result = None
 
@@ -686,9 +683,6 @@ class BasePandasDataset(object):
         args=(),
         **kwds,
     ):
-        warnings.warn(
-            "Modin index may not match pandas index due to pandas issue pandas-dev/pandas#36189."
-        )
         axis = self._get_axis_number(axis)
         ErrorMessage.non_verified_udf()
         if isinstance(func, str):

@@ -593,16 +593,10 @@ def test_add_suffix(data):
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 @pytest.mark.parametrize("func", agg_func_values, ids=agg_func_keys)
 def test_agg(data, func):
-    # AssertionError may be arisen in case of
-    # mismathing of index/columns in Modin and pandas.
-    # See details in pandas issue 36189.
-    try:
-        eval_general(
-            *create_test_series(data),
-            lambda df: df.agg(func),
-        )
-    except AssertionError:
-        pass
+    eval_general(
+        *create_test_series(data),
+        lambda df: df.agg(func),
+    )
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
@@ -624,16 +618,10 @@ def test_agg_numeric(request, data, func):
         request.node.name, numeric_dfs
     ):
         axis = 0
-        # AssertionError may be arisen in case of
-        # mismathing of index/columns in Modin and pandas.
-        # See details in pandas issue 36189.
-        try:
-            eval_general(
-                *create_test_series(data),
-                lambda df: df.agg(func, axis),
-            )
-        except AssertionError:
-            pass
+        eval_general(
+            *create_test_series(data),
+            lambda df: df.agg(func, axis),
+        )
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
@@ -656,16 +644,10 @@ def test_agg_numeric_except(request, data, func):
 @pytest.mark.parametrize("func", agg_func_values, ids=agg_func_keys)
 def test_aggregate(data, func):
     axis = 0
-    # AssertionError may be arisen in case of
-    # mismathing of index/columns in Modin and pandas.
-    # See details in pandas issue 36189.
-    try:
-        eval_general(
-            *create_test_series(data),
-            lambda df: df.aggregate(func, axis),
-        )
-    except AssertionError:
-        pass
+    eval_general(
+        *create_test_series(data),
+        lambda df: df.aggregate(func, axis),
+    )
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
@@ -688,16 +670,10 @@ def test_aggregate_numeric(request, data, func):
         request.node.name, numeric_dfs
     ):
         axis = 0
-        # AssertionError may be arisen in case of
-        # mismathing of index/columns in Modin and pandas.
-        # See details in pandas issue 36189.
-        try:
-            eval_general(
-                *create_test_series(data),
-                lambda df: df.agg(func, axis),
-            )
-        except AssertionError:
-            pass
+        eval_general(
+            *create_test_series(data),
+            lambda df: df.agg(func, axis),
+        )
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
@@ -823,16 +799,10 @@ def test_append(data):
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 @pytest.mark.parametrize("func", agg_func_values, ids=agg_func_keys)
 def test_apply(data, func):
-    # AssertionError may be arisen in case of
-    # mismathing of index/columns in Modin and pandas.
-    # See details in pandas issue 36189.
-    try:
-        eval_general(
-            *create_test_series(data),
-            lambda df: df.apply(func),
-        )
-    except AssertionError:
-        pass
+    eval_general(
+        *create_test_series(data),
+        lambda df: df.apply(func),
+    )
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
@@ -871,16 +841,10 @@ def test_apply_external_lib():
 @pytest.mark.parametrize("func", agg_func_values, ids=agg_func_keys)
 def test_apply_numeric(request, data, func):
     if name_contains(request.node.name, numeric_dfs):
-        # AssertionError may be arisen in case of
-        # mismathing of index/columns in Modin and pandas.
-        # See details in pandas issue 36189.
-        try:
-            eval_general(
-                *create_test_series(data),
-                lambda df: df.apply(func),
-            )
-        except AssertionError:
-            pass
+        eval_general(
+            *create_test_series(data),
+            lambda df: df.apply(func),
+        )
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
