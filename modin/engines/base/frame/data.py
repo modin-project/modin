@@ -1681,6 +1681,7 @@ class BasePandasFrame(object):
                 and axis == 0
             ):
                 is_aligning_applied = True
+                # we shouldn't modificate modin frame' partitions directly
                 self._partitions = self._frame_mgr_cls.map_axis_partitions(
                     axis, self._partitions, lambda df: df
                 )
@@ -1721,6 +1722,14 @@ class BasePandasFrame(object):
             reindexed_self = self._partitions
         reindexed_other_list = []
 
+        def get_column_widths(partitions):
+            if len(partitions) > 0:
+                return [obj.width() for obj in partitions[0]]
+
+        def get_row_lengths(partitions):
+            if len(partitions.T) > 0:
+                return [obj.length() for obj in partitions.T[0]]
+
         for i in range(len(other)):
             if (
                 is_aligning_applied
@@ -1734,8 +1743,9 @@ class BasePandasFrame(object):
                     axis,
                     other[i]._partitions,
                     lambda df: df.reindex(joined_index, axis=axis),
-                    lengths=self._row_lengths if axis == 0 else self._column_widths,
-                    manual_partition=True,
+                    lengths=get_row_lengths(reindexed_self)
+                    if axis == 0
+                    else get_column_widths(reindexed_self),
                 )
             reindexed_other_list.append(reindexed_other)
         return reindexed_self, reindexed_other_list, joined_index

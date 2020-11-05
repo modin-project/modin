@@ -215,7 +215,6 @@ class BaseFrameManager(object):
         right,
         keep_partitioning=False,
         lengths=None,
-        manual_partition=None,
     ):
         """
         Broadcast the right partitions to left and apply a function along full axis.
@@ -228,9 +227,8 @@ class BaseFrameManager(object):
         right : The right partitions.
         keep_partitioning : boolean. Default is False
             The flag to keep partitions for Modin Frame.
-        lengths : bool
+        lengths : list(int)
             The list of lengths to shuffle the object.
-        manual_partition : list(int)
 
         Returns
         -------
@@ -250,14 +248,23 @@ class BaseFrameManager(object):
         # may want to line to partitioning up with another BlockPartitions object. Since
         # we don't need to maintain the partitioning, this gives us the opportunity to
         # load-balance the data as well.
+        kw = {
+            "num_splits": num_splits,
+            "other_axis_partition": right_partitions,
+        }
+        if lengths:
+            kw.update(
+                {
+                    "_lengths": lengths,
+                    "manual_partition": True,
+                }
+            )
+
         result_blocks = np.array(
             [
                 part.apply(
                     preprocessed_map_func,
-                    num_splits=num_splits,
-                    other_axis_partition=right_partitions,
-                    _lengths=lengths,
-                    manual_partition=manual_partition,
+                    **kw,
                 )
                 for part in left_partitions
             ]
@@ -303,7 +310,6 @@ class BaseFrameManager(object):
         map_func,
         keep_partitioning=False,
         lengths=None,
-        manual_partition=None,
     ):
         """
         Applies `map_func` to every partition.
@@ -320,7 +326,6 @@ class BaseFrameManager(object):
             The flag to keep partitions for Modin Frame.
         lengths : list(int)
             The list of lengths to shuffle the object.
-        manual_partition : bool
 
         Returns
         -------
@@ -339,7 +344,6 @@ class BaseFrameManager(object):
             keep_partitioning=keep_partitioning,
             right=None,
             lengths=lengths,
-            manual_partition=manual_partition,
         )
 
     @classmethod
