@@ -1674,14 +1674,12 @@ class BasePandasFrame(object):
 
         is_aligning_applied = False
         for i in range(len(other)):
-            # aligning partitions
             if (
                 len(self._partitions) != len(other[i]._partitions)
                 and len(self.axes[0]) == len(other[i].axes[0])
                 and axis == 0
             ):
                 is_aligning_applied = True
-                # we shouldn't modificate modin frame' partitions directly
                 self._partitions = self._frame_mgr_cls.map_axis_partitions(
                     axis, self._partitions, lambda df: df
                 )
@@ -1693,7 +1691,6 @@ class BasePandasFrame(object):
             all(o.axes[axis].equals(self.axes[axis]) for o in other)
             and not is_aligning_applied
         ):
-            # aligning self.list_of_blocks
             return (
                 self._partitions,
                 [self._simple_shuffle(axis, o) for o in other],
@@ -1708,7 +1705,7 @@ class BasePandasFrame(object):
         right_old_idxes = index_other_obj
 
         def make_map_func():
-            if len(joined_index) != len(joined_index.unique()) and axis == 0:
+            if not joined_index.is_unique and axis == 0:
                 return lambda df: df
             return lambda df: df.reindex(joined_index, axis=axis)
 
@@ -1718,7 +1715,6 @@ class BasePandasFrame(object):
         ):
             reindexed_self = self._partitions
         else:
-            # aligning index without aligning partition' blocks
             reindexed_self = self._frame_mgr_cls.map_axis_partitions(
                 axis,
                 self._partitions,
@@ -1740,7 +1736,6 @@ class BasePandasFrame(object):
             ):
                 reindexed_other = other[i]._partitions
             else:
-                # aligning index with aligning partition' blocks
                 reindexed_other = other[i]._frame_mgr_cls.map_axis_partitions(
                     axis,
                     other[i]._partitions,
