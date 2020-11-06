@@ -147,11 +147,12 @@ class PandasFrameAxisPartition(BaseFrameAxisPartition):
                 len(other_axis_partition),
                 len(other_axis_partition[0].list_of_blocks),
             )
-            if not self.axis:
+            if not other_axis_partition[0].axis:
                 other_shape = tuple(reversed(other_shape))
             return self._wrap_partitions(
                 self.deploy_func_between_two_axis_partitions(
                     self.axis,
+                    other_axis_partition[0].axis,
                     func,
                     num_splits,
                     len(self.list_of_blocks),
@@ -242,41 +243,60 @@ class PandasFrameAxisPartition(BaseFrameAxisPartition):
 
     @classmethod
     def deploy_func_between_two_axis_partitions(
-        cls, axis, func, num_splits, len_of_left, other_shape, kwargs, *partitions
+        cls,
+        self_axis,
+        other_axis,
+        func,
+        num_splits,
+        len_of_left,
+        other_shape,
+        kwargs,
+        *partitions,
     ):
-        """Deploy a function along a full axis between two data sets in Ray.
+        """
+        Deploy a function along a full axis between two data sets in Ray.
 
         Parameters
         ----------
-            axis: The axis to perform the function along.
-            func: The function to perform.
-            num_splits: The number of splits to return
-                (see `split_result_of_axis_func_pandas`).
-            len_of_left: The number of values in `partitions` that belong to the
-                left data set.
-            other_shape: The shape of right frame in terms of partitions
-            kwargs: A dictionary of keyword arguments.
-            partitions: All partitions that make up the full axis (row or column)
-                for both data sets.
+            self_axis : 0 or 1
+                The axis to concatenate the `self` along.
+            other_axis : 0 or 1
+                The axis to concatenate the `other` along.
+            func : callable
+                The function to perform over `self` and `other`.
+            num_splits : int
+                The number of splits to return (see `split_result_of_axis_func_pandas`).
+            len_of_left : int
+                The number of values in `partitions` that belong to the left data set.
+            other_shape : tuple
+                The shape of right frame in terms of partitions
+            kwargs
+                A dictionary of keyword arguments.
+            partitions : list
+                All partitions that make up the full axis (row or column) for both data sets.
 
         Returns
         -------
+        list
             A list of Pandas DataFrames.
         """
-        lt_frame = pandas.concat(partitions[:len_of_left], axis=axis, copy=False)
+        lt_frame = pandas.concat(partitions[:len_of_left], axis=self_axis, copy=False)
 
         rt_parts = partitions[len_of_left:]
 
         # reshaping flattened `rt_parts` array into with shape `other_shape`
         combined_axis = [
             pandas.concat(
-                [rt_parts[other_shape[axis] * i + j] for j in range(other_shape[axis])],
-                axis=axis,
+                [
+                    rt_parts[other_shape[other_axis] * i + j]
+                    for j in range(other_shape[other_axis])
+                ],
+                axis=other_axis,
                 copy=False,
             )
-            for i in range(other_shape[axis ^ 1])
+            for i in range(other_shape[other_axis ^ 1])
         ]
-        rt_frame = pandas.concat(combined_axis, axis=axis ^ 1, copy=False)
+        rt_frame = pandas.concat(combined_axis, axis=other_axis ^ 1, copy=False)
 
         result = func(lt_frame, rt_frame, **kwargs)
-        return split_result_of_axis_func_pandas(axis, num_splits, result)
+        return split_result_of_axis_func_pandas(self_axis, num_splits, result)

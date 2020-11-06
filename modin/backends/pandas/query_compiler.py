@@ -1708,17 +1708,16 @@ class PandasQueryCompiler(BaseQueryCompiler):
         PandasQueryCompiler
             The covariance or correlation matrix of the series of the DataFrame.
         """
-        other = self.to_numpy()
-        other_mask = self._isfinite().to_numpy()
-        n_cols = other.shape[1]
-
         if min_periods is None:
             min_periods = 1
 
-        def map_func(df):
+        def map_func(df, other):
             df = df.to_numpy()
-            n_rows = df.shape[0]
+            other = other.to_numpy()
             df_mask = np.isfinite(df)
+            other_mask = np.isfinite(other)
+            n_rows = df.shape[0]
+            n_cols = other.shape[1]
 
             result = np.empty((n_rows, n_cols), dtype=np.float64)
 
@@ -1756,8 +1755,8 @@ class PandasQueryCompiler(BaseQueryCompiler):
         columns = self.columns
         index = columns.copy()
         transponed_self = self.transpose()
-        new_modin_frame = transponed_self._modin_frame._apply_full_axis(
-            1, map_func, new_index=index, new_columns=columns
+        new_modin_frame = transponed_self._modin_frame._apply_full_axis_to_another(
+            1, map_func, self._modin_frame, new_index=index, new_columns=columns
         )
         return transponed_self.__constructor__(new_modin_frame)
 

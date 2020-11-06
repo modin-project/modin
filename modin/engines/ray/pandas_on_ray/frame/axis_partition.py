@@ -48,12 +48,21 @@ class PandasOnRayFrameAxisPartition(PandasFrameAxisPartition):
 
     @classmethod
     def deploy_func_between_two_axis_partitions(
-        cls, axis, func, num_splits, len_of_left, other_shape, kwargs, *partitions
+        cls,
+        self_axis,
+        other_axis,
+        func,
+        num_splits,
+        len_of_left,
+        other_shape,
+        kwargs,
+        *partitions
     ):
         return deploy_ray_func._remote(
             args=(
                 PandasFrameAxisPartition.deploy_func_between_two_axis_partitions,
-                axis,
+                self_axis,
+                other_axis,
                 func,
                 num_splits,
                 len_of_left,

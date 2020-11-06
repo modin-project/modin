@@ -261,6 +261,56 @@ class BaseFrameManager(object):
         return result_blocks.T if not axis else result_blocks
 
     @classmethod
+    def map_axis_partitions_to_another(
+        cls,
+        axis,
+        apply_func,
+        left,
+        right,
+    ):
+        """
+        Applies `apply_func` to every partition.
+
+        Parameters
+        ----------
+            axis : 0 or 1
+                The `self` axis to perform the map across (0 - index, 1 - columns).
+                The `other` axis is `axis ^ 1`.
+            partitions : NumPy array
+                The partitions of Modin Frame.
+            apply_func : callable
+                The function to apply.
+
+        Returns
+        -------
+        NumPy array
+            An array of new partitions for Modin Frame.
+
+        Notes
+        -----
+        This method should be used in the case that `apply_func` relies on
+        some global information about the axis.
+        """
+        preprocessed_map_func = cls.preprocess_func(apply_func)
+        left_partitions = cls.axis_partition(left, axis)
+        right_partitions = cls.axis_partition(right, axis ^ 1)
+        result_blocks = []
+        for l_part in left_partitions:
+            row_blocks = []
+            for r_part in right_partitions:
+                row_blocks += l_part.apply(
+                    preprocessed_map_func,
+                    num_splits=1,
+                    other_axis_partition=r_part,
+                )
+            result_blocks.append(row_blocks)
+        result_blocks = np.array(result_blocks)
+        # If we are mapping over columns, they are returned to use the same as
+        # rows, so we need to transpose the returned 2D NumPy array to return
+        # the structure to the correct order.
+        return result_blocks.T if not axis else result_blocks
+
+    @classmethod
     def map_partitions(cls, partitions, map_func):
         """Applies `map_func` to every partition.
 
