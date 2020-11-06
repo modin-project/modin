@@ -253,12 +253,8 @@ class BaseFrameManager(object):
             "other_axis_partition": right_partitions,
         }
         if lengths:
-            kw.update(
-                {
-                    "_lengths": lengths,
-                    "manual_partition": True,
-                }
-            )
+            kw["_lengths"] = lengths
+            kw["manual_partition"] = True
 
         result_blocks = np.array(
             [

@@ -1897,16 +1897,6 @@ def test_to_gbq():
         modin_df.to_gbq("modin.table")
 
 
-def test_internal_error_2322():
-    accm = pd.DataFrame(["-22\n"] * 162)
-    accm = accm.iloc[2:, :]
-    accm.reset_index(drop=True, inplace=True)
-    accm["T"] = pd.Series(["24.67\n"] * 145)
-
-    # see #2322 for details
-    repr(accm)
-
-
 def test_cleanup():
     filenames = [
         TEST_PARQUET_FILENAME,

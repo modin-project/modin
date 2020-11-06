@@ -1707,20 +1707,23 @@ class BasePandasFrame(object):
         left_old_idx = self.axes[axis]
         right_old_idxes = index_other_obj
 
-        is_avoid_reindex = len(joined_index) != len(joined_index.unique()) and axis == 0
+        def make_map_func():
+            if len(joined_index) != len(joined_index.unique()) and axis == 0:
+                return lambda df: df
+            return lambda df: df.reindex(joined_index, axis=axis)
+
         # Start with this and we'll repartition the first time, and then not again.
-        if (
-            not is_aligning_applied
-            and not is_avoid_reindex
-            and (force_repartition or not left_old_idx.equals(joined_index))
+        if is_aligning_applied or (
+            not force_repartition and left_old_idx.equals(joined_index)
         ):
+            reindexed_self = self._partitions
+        else:
             # aligning index without aligning partition' blocks
             reindexed_self = self._frame_mgr_cls.map_axis_partitions(
-                axis, self._partitions, lambda df: df.reindex(joined_index, axis=axis)
+                axis,
+                self._partitions,
+                make_map_func(),
             )
-        else:
-            reindexed_self = self._partitions
-        reindexed_other_list = []
 
         def get_column_widths(partitions):
             if len(partitions) > 0:
@@ -1730,11 +1733,10 @@ class BasePandasFrame(object):
             if len(partitions.T) > 0:
                 return [obj.length() for obj in partitions.T[0]]
 
+        reindexed_other_list = []
         for i in range(len(other)):
-            if (
-                is_aligning_applied
-                or is_avoid_reindex
-                or (not force_repartition and right_old_idxes[i].equals(joined_index))
+            if is_aligning_applied or (
+                not force_repartition and right_old_idxes[i].equals(joined_index)
             ):
                 reindexed_other = other[i]._partitions
             else:
@@ -1742,7 +1744,7 @@ class BasePandasFrame(object):
                 reindexed_other = other[i]._frame_mgr_cls.map_axis_partitions(
                     axis,
                     other[i]._partitions,
-                    lambda df: df.reindex(joined_index, axis=axis),
+                    make_map_func(),
                     lengths=get_row_lengths(reindexed_self)
                     if axis == 0
                     else get_column_widths(reindexed_self),
