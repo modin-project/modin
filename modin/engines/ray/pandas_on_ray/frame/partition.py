@@ -154,6 +154,14 @@ class PandasOnRayFramePartition(BaseFramePartition):
         """
         return ray.put(func)
 
+    def unwrap(self):
+        """Unwraps the ray.ObjectRef from this partition object.
+
+        Returns:
+            ray.ObjectRef
+        """
+        return self.oid
+
     def length(self):
         if self._length_cache is None:
             if len(self.call_queue):

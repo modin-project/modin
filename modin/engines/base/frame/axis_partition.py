@@ -38,6 +38,8 @@ class BaseFrameAxisPartition(ABC):  # pragma: no cover
     (see below).
     """
 
+    list_of_blocks = None
+
     def apply(
         self,
         func,
@@ -94,6 +96,21 @@ class BaseFrameAxisPartition(ABC):  # pragma: no cover
 
     def _wrap_partitions(self, partitions):
         return [self.partition_type(obj) for obj in partitions]
+
+    def coalesce(self):
+        """Coalesce the axis partitions into a single partition.
+
+        Returns:
+            An axis partition containing only a single coalesced partition
+        """
+        coalesced = self.apply(lambda x: x, num_splits=1, maintain_partitioning=False)
+        return type(self)(coalesced if isinstance(coalesced, list) else [coalesced])
+
+    def unwrap(self, squeeze=False):
+        if squeeze and len(self.list_of_blocks) == 1:
+            return self.list_of_blocks[0]
+        else:
+            return self.list_of_blocks
 
 
 class PandasFrameAxisPartition(BaseFrameAxisPartition):
