@@ -1719,25 +1719,7 @@ class BasePandasFrame(object):
         if isinstance(other, type(self)):
             other = [other]
 
-        is_aligning_applied = False
-        for i in range(len(other)):
-            if (
-                len(self._partitions) != len(other[i]._partitions)
-                and len(self.axes[0]) == len(other[i].axes[0])
-                and axis == 0
-            ):
-                is_aligning_applied = True
-                self._partitions = self._frame_mgr_cls.map_axis_partitions(
-                    axis, self._partitions, lambda df: df
-                )
-                other[i]._partitions = other[i]._frame_mgr_cls.map_axis_partitions(
-                    axis, other[i]._partitions, lambda df: df
-                )
-
-        if (
-            all(o.axes[axis].equals(self.axes[axis]) for o in other)
-            and not is_aligning_applied
-        ):
+        if all(o.axes[axis].equals(self.axes[axis]) for o in other):
             return (
                 self._partitions,
                 [self._simple_shuffle(axis, o) for o in other],
@@ -1757,9 +1739,7 @@ class BasePandasFrame(object):
             return lambda df: df.reindex(joined_index, axis=axis)
 
         # Start with this and we'll repartition the first time, and then not again.
-        if is_aligning_applied or (
-            not force_repartition and left_old_idx.equals(joined_index)
-        ):
+        if not force_repartition and left_old_idx.equals(joined_index):
             reindexed_self = self._partitions
         else:
             reindexed_self = self._frame_mgr_cls.map_axis_partitions(
@@ -1778,9 +1758,7 @@ class BasePandasFrame(object):
 
         reindexed_other_list = []
         for i in range(len(other)):
-            if is_aligning_applied or (
-                not force_repartition and right_old_idxes[i].equals(joined_index)
-            ):
+            if not force_repartition and right_old_idxes[i].equals(joined_index):
                 reindexed_other = other[i]._partitions
             else:
                 reindexed_other = other[i]._frame_mgr_cls.map_axis_partitions(
