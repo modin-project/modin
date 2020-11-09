@@ -214,22 +214,25 @@ class BaseFrameManager(object):
         left,
         right,
         keep_partitioning=False,
+        lengths=None,
     ):
         """
         Broadcast the right partitions to left and apply a function along full axis.
 
         Parameters
         ----------
-            axis : The axis to apply and broadcast over.
-            apply_func : The function to apply.
-            left : The left partitions.
-            right : The right partitions.
-            keep_partitioning : boolean. Default is False
-                The flag to keep partitions for Modin Frame.
+        axis : The axis to apply and broadcast over.
+        apply_func : The function to apply.
+        left : The left partitions.
+        right : The right partitions.
+        keep_partitioning : boolean. Default is False
+            The flag to keep partitions for Modin Frame.
+        lengths : list(int)
+            The list of lengths to shuffle the object.
 
         Returns
         -------
-            A new `np.array` of partition objects.
+        A new `np.array` of partition objects.
         """
         # Since we are already splitting the DataFrame back up after an
         # operation, we will just use this time to compute the number of
@@ -245,12 +248,19 @@ class BaseFrameManager(object):
         # may want to line to partitioning up with another BlockPartitions object. Since
         # we don't need to maintain the partitioning, this gives us the opportunity to
         # load-balance the data as well.
+        kw = {
+            "num_splits": num_splits,
+            "other_axis_partition": right_partitions,
+        }
+        if lengths:
+            kw["_lengths"] = lengths
+            kw["manual_partition"] = True
+
         result_blocks = np.array(
             [
                 part.apply(
                     preprocessed_map_func,
-                    num_splits=num_splits,
-                    other_axis_partition=right_partitions,
+                    **kw,
                 )
                 for part in left_partitions
             ]
@@ -295,20 +305,23 @@ class BaseFrameManager(object):
         partitions,
         map_func,
         keep_partitioning=False,
+        lengths=None,
     ):
         """
         Applies `map_func` to every partition.
 
         Parameters
         ----------
-            axis : 0 or 1
-                The axis to perform the map across (0 - index, 1 - columns).
-            partitions : NumPy array
-                The partitions of Modin Frame.
-            map_func : callable
-                The function to apply.
-            keep_partitioning : boolean. Default is False
-                The flag to keep partitions for Modin Frame.
+        axis : 0 or 1
+            The axis to perform the map across (0 - index, 1 - columns).
+        partitions : NumPy array
+            The partitions of Modin Frame.
+        map_func : callable
+            The function to apply.
+        keep_partitioning : bool. Default is False
+            The flag to keep partitions for Modin Frame.
+        lengths : list(int)
+            The list of lengths to shuffle the object.
 
         Returns
         -------
@@ -326,6 +339,7 @@ class BaseFrameManager(object):
             apply_func=map_func,
             keep_partitioning=keep_partitioning,
             right=None,
+            lengths=lengths,
         )
 
     @classmethod
