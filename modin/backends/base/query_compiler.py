@@ -137,10 +137,9 @@ class BaseQueryCompiler(abc.ABC):
             else:
                 if isinstance(other, (list, np.ndarray)) and len(other) == 1:
                     other = other[0]
-                how = kwargs.pop("join", None)
                 ignore_index = kwargs.pop("ignore_index", None)
-                kwargs["how"] = how
-                result = df.join(other, **kwargs)
+                kwargs["how"] = kwargs.pop("join", None)
+                result = df.join(other, rsuffix="r_", **kwargs)
             if ignore_index:
                 if axis == 0:
                     result = result.reset_index(drop=True)

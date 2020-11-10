@@ -1972,7 +1972,11 @@ class DataFrame(BasePandasDataset):
                     self._query_compiler = value._query_compiler.copy()
                 else:
                     self._create_or_update_from_compiler(
-                        self._query_compiler.concat(1, value._query_compiler),
+                        self._query_compiler.concat(
+                            1,
+                            value._query_compiler,
+                            join="left",
+                        ),
                         inplace=True,
                     )
                 # Now that the data is appended, we need to update the column name for
