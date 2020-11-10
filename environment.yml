@@ -4,7 +4,7 @@ channels:
 dependencies:
   - pandas==1.1.4
   - numpy
-  - pyarrow==1.0
+  - pyarrow>=1.0.0
   - dask[complete]>=2.12.0,<=2.19.0
   - distributed>=2.12.0,<=2.19.0
   - xarray
