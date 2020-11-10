@@ -216,10 +216,6 @@ class PandasFrameAxisPartition(BaseFrameAxisPartition):
 
         dataframe = pandas.concat(list(partitions), axis=axis, copy=False)
         result = func(dataframe, **kwargs)
-        if isinstance(result, pandas.Series):
-            if num_splits == 1:
-                return result
-            return [result] + [pandas.Series([]) for _ in range(num_splits - 1)]
 
         if manual_partition:
             # The split function is expecting a list
