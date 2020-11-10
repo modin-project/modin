@@ -15,20 +15,20 @@ import unittest.mock as mock
 import pytest
 from collections import namedtuple
 from inspect import signature
-from modin.experimental.cloud.rayscale import RayCluster
-from modin.experimental.cloud.cluster import Provider
-from ray.autoscaler.commands import (
+from modin.experimental.cloud.rayscale import (
+    RayCluster,
     create_or_update_cluster,
     teardown_cluster,
     get_head_node_ip,
-    _bootstrap_config,
+    bootstrap_config,
 )
+from modin.experimental.cloud.cluster import Provider
 
 
 @pytest.fixture
 def make_bootstrap_config_mock():
     def bootstrap_config_mock(config, *args, **kwargs):
-        signature(_bootstrap_config).bind(config, *args, **kwargs)
+        signature(bootstrap_config).bind(config, *args, **kwargs)
         config["auth"]["ssh_user"] = "modin"
         config["auth"]["ssh_private_key"] = "X" * 20
         return config
@@ -59,7 +59,7 @@ def make_create_or_update_cluster_mock():
 def make_ray_cluster(make_bootstrap_config_mock):
     def ray_cluster(conda_packages=None):
         with mock.patch(
-            "modin.experimental.cloud.rayscale._bootstrap_config",
+            "modin.experimental.cloud.rayscale.bootstrap_config",
             make_bootstrap_config_mock,
         ):
             ray_cluster = RayCluster(
@@ -71,7 +71,7 @@ def make_ray_cluster(make_bootstrap_config_mock):
     return ray_cluster
 
 
-def test__bootstrap_config(make_ray_cluster):
+def test_bootstrap_config(make_ray_cluster):
     make_ray_cluster()
 
 

@@ -21,12 +21,23 @@ from typing import Callable
 import subprocess
 
 import yaml
-from ray.autoscaler.commands import (
-    create_or_update_cluster,
-    teardown_cluster,
-    get_head_node_ip,
-    _bootstrap_config,
-)
+
+try:
+    # for ray>=1.0.1
+    from ray.autoscaler.sdk import (
+        create_or_update_cluster,
+        teardown_cluster,
+        get_head_node_ip,
+        bootstrap_config,
+    )
+except ModuleNotFoundError:
+    # for ray==1.0.0
+    from ray.autoscaler.commands import (
+        create_or_update_cluster,
+        teardown_cluster,
+        get_head_node_ip,
+        _bootstrap_config as bootstrap_config,
+    )
 
 from .base import (
     CannotSpawnCluster,
@@ -140,7 +151,7 @@ class RayCluster(BaseCluster):
         res = self._update_conda_requirements(config["setup_commands"][0])
         config["setup_commands"][0] = res
 
-        return _bootstrap_config(config)
+        return bootstrap_config(config)
 
     def _conda_requirements(self):
         import shlex
@@ -197,15 +208,9 @@ class RayCluster(BaseCluster):
         try:
             create_or_update_cluster(
                 self.config_file,
-                override_min_workers=None,
-                override_max_workers=None,
                 no_restart=False,
                 restart_only=False,
-                yes=True,
-                override_cluster_name=None,
                 no_config_cache=False,
-                redirect_command_output=False,
-                use_login_shells=True,
             )
             # need to re-load the config, as create_or_update_cluster() modifies it
             with open(self.config_file) as inp:
@@ -220,13 +225,7 @@ class RayCluster(BaseCluster):
 
     def __do_destroy(self):
         try:
-            teardown_cluster(
-                self.config_file,
-                yes=True,
-                workers_only=False,
-                override_cluster_name=None,
-                keep_min_workers=0,
-            )
+            teardown_cluster(self.config_file)
             self.ready = False
             self.config = None
         except BaseException as ex:
@@ -244,7 +243,7 @@ class RayCluster(BaseCluster):
         return ConnectionDetails(
             user_name=self.config["auth"]["ssh_user"],
             key_file=self.config["auth"]["ssh_private_key"],
-            address=get_head_node_ip(self.config_file, override_cluster_name=None),
+            address=get_head_node_ip(self.config_file),
         )
 
     def _get_main_python(self) -> str:
