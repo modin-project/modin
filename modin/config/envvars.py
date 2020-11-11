@@ -197,7 +197,6 @@ class DoUseCalcite(EnvironmentVariable, type=bool):
 
     varname = "MODIN_USE_CALCITE"
     default = True
-    choices = ("True", "False")
 
 
 class TestDatasetSize(EnvironmentVariable, type=str):
