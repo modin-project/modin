@@ -91,10 +91,7 @@ class BaseFrameAxisPartition(object):  # pragma: no cover
     partition_type = None
 
     def _wrap_partitions(self, partitions):
-        if isinstance(partitions, self.instance_type):
-            return [self.partition_type(partitions)]
-        else:
-            return [self.partition_type(obj) for obj in partitions]
+        return [self.partition_type(obj) for obj in partitions]
 
 
 class PandasFrameAxisPartition(BaseFrameAxisPartition):
@@ -216,10 +213,6 @@ class PandasFrameAxisPartition(BaseFrameAxisPartition):
 
         dataframe = pandas.concat(list(partitions), axis=axis, copy=False)
         result = func(dataframe, **kwargs)
-        if isinstance(result, pandas.Series):
-            if num_splits == 1:
-                return result
-            return [result] + [pandas.Series([]) for _ in range(num_splits - 1)]
 
         if manual_partition:
             # The split function is expecting a list
