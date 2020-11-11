@@ -1161,6 +1161,13 @@ def test___setitem__(data):
 
     df_equals(modin_df, pandas_df)
 
+    # from issue #2390
+    modin_df = pd.DataFrame({"a": [1, 2, 3]})
+    pandas_df = pandas.DataFrame({"a": [1, 2, 3]})
+    modin_df["b"] = pd.Series([4, 5, 6, 7, 8])
+    pandas_df["b"] = pandas.Series([4, 5, 6, 7, 8])
+    df_equals(modin_df, pandas_df)
+
 
 def test___setitem__with_mismatched_partitions():
     fname = "200kx99.csv"
