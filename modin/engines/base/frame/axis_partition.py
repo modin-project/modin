@@ -91,10 +91,7 @@ class BaseFrameAxisPartition(object):  # pragma: no cover
     partition_type = None
 
     def _wrap_partitions(self, partitions):
-        if isinstance(partitions, self.instance_type):
-            return [self.partition_type(partitions)]
-        else:
-            return [self.partition_type(obj) for obj in partitions]
+        return [self.partition_type(obj) for obj in partitions]
 
 
 class PandasFrameAxisPartition(BaseFrameAxisPartition):
