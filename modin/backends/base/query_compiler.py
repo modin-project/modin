@@ -1412,8 +1412,6 @@ class BaseQueryCompiler(abc.ABC):
                 by = by.columns[0] if drop else by.to_pandas().squeeze()
             elif isinstance(by, type(self)):
                 by = list(by.columns)
-            else:
-                by = by
         else:
             by = by.to_pandas().squeeze() if isinstance(by, type(self)) else by
 
