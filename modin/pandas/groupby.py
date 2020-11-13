@@ -406,7 +406,6 @@ class DataFrameGroupBy(object):
         if relabeling_required:
             result = result.iloc[:, order]
             result.columns = new_columns
-
         return result
 
     agg = aggregate
