@@ -2606,11 +2606,15 @@ class PandasQueryCompiler(BaseQueryCompiler):
             def compute_groupby(df):
                 grouped_df = df.groupby(by=by, axis=axis, **groupby_kwargs)
                 try:
-                    result = (
-                        grouped_df.agg(agg_func)
-                        if isinstance(agg_func, dict)
-                        else agg_func(grouped_df, **agg_kwargs)
-                    )
+                    if isinstance(agg_func, dict):
+                        # Filter our keys that don't exist in this partition. This happens when some columns
+                        # from this original dataframe didn't end up in every partition.
+                        partition_dict = {
+                            k: v for k, v in agg_func.items() if k in df.columns
+                        }
+                        result = grouped_df.agg(partition_dict)
+                    else:
+                        result = agg_func(grouped_df, **agg_kwargs)
                 # This happens when the partition is filled with non-numeric data and a
                 # numeric operation is done. We need to build the index here to avoid
                 # issues with extracting the index.

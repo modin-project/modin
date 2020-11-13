@@ -1201,7 +1201,7 @@ def test_shift_freq(groupby_axis, shift_axis):
             "by": ["col1"],
             "agg_dict": {
                 "max": (list(test_data["int_data"].keys())[0], np.max),
-                "min": (list(test_data["int_data"].keys())[-2], np.min),
+                "min": (list(test_data["int_data"].keys())[-1], np.min),
             },
         },
     ],
