@@ -149,7 +149,12 @@ def test_mixed_dtypes_groupby(as_index):
             eval_var(modin_groupby, pandas_groupby)
             eval_skew(modin_groupby, pandas_groupby)
 
-        agg_functions = ["min", "max"]
+        agg_functions = [
+            "min",
+            "max",
+            {"col2": "sum"},
+            {"col2": "max", "col4": "sum", "col5": "min"},
+        ]
         for func in agg_functions:
             eval_agg(modin_groupby, pandas_groupby, func)
             eval_aggregate(modin_groupby, pandas_groupby, func)
@@ -479,7 +484,12 @@ def test_single_group_row_groupby():
     eval_prod(modin_groupby, pandas_groupby)
     eval_std(modin_groupby, pandas_groupby)
 
-    agg_functions = ["min", "max"]
+    agg_functions = [
+        "min",
+        "max",
+        {"col2": "sum"},
+        {"col2": "max", "col4": "sum", "col5": "min"},
+    ]
     for func in agg_functions:
         eval_agg(modin_groupby, pandas_groupby, func)
         eval_aggregate(modin_groupby, pandas_groupby, func)
@@ -595,7 +605,7 @@ def test_large_row_groupby(is_by_category):
     # eval_prod(modin_groupby, pandas_groupby) causes overflows
     eval_std(modin_groupby, pandas_groupby)
 
-    agg_functions = ["min", "max"]
+    agg_functions = ["min", "max", {"A": "sum"}, {"A": "max", "B": "sum", "C": "min"}]
     for func in agg_functions:
         eval_agg(modin_groupby, pandas_groupby, func)
         eval_aggregate(modin_groupby, pandas_groupby, func)

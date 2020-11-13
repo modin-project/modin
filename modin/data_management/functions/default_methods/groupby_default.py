@@ -80,7 +80,11 @@ class GroupBy:
 
             grp = df.groupby(by, axis=axis, **groupby_args)
             agg_func = cls.get_func(grp, key, **kwargs)
-            result = agg_func(grp, **agg_args)
+            result = (
+                grp.agg(agg_func, **agg_args)
+                if isinstance(agg_func, dict)
+                else agg_func(grp, **agg_args)
+            )
 
             if not is_multi_by:
                 if as_index:

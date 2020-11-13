@@ -2573,7 +2573,8 @@ class PandasQueryCompiler(BaseQueryCompiler):
         groupby_kwargs,
         drop=False,
     ):
-        agg_func = wrap_udf_function(agg_func)
+        if callable(agg_func):
+            agg_func = wrap_udf_function(agg_func)
 
         if is_multi_by:
             return super().groupby_agg(
@@ -2605,7 +2606,11 @@ class PandasQueryCompiler(BaseQueryCompiler):
             def compute_groupby(df):
                 grouped_df = df.groupby(by=by, axis=axis, **groupby_kwargs)
                 try:
-                    result = agg_func(grouped_df, **agg_kwargs)
+                    result = (
+                        grouped_df.agg(agg_func)
+                        if isinstance(agg_func, dict)
+                        else agg_func(grouped_df, **agg_kwargs)
+                    )
                 # This happens when the partition is filled with non-numeric data and a
                 # numeric operation is done. We need to build the index here to avoid
                 # issues with extracting the index.
@@ -2631,7 +2636,9 @@ class PandasQueryCompiler(BaseQueryCompiler):
             # determening type of raised exception by applying `aggfunc`
             # to empty DataFrame
             try:
-                agg_func(
+                pandas.DataFrame(index=[1], columns=[1]).agg(agg_func) if isinstance(
+                    agg_func, dict
+                ) else agg_func(
                     pandas.DataFrame(index=[1], columns=[1]).groupby(level=0),
                     **agg_kwargs,
                 )

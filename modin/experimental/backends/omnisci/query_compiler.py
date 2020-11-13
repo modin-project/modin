@@ -279,33 +279,6 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
         )
         return self.__constructor__(new_frame)
 
-    def groupby_dict_agg(self, by, func_dict, groupby_args, agg_args, drop=False):
-        """Apply aggregation functions to a grouped dataframe per-column.
-
-        Parameters
-        ----------
-        by : DFAlgQueryCompiler
-            The column to group by
-        func_dict : dict of str, callable/string
-            The dictionary mapping of column to function
-        groupby_args : dict
-            The dictionary of keyword arguments for the group by.
-        agg_args : dict
-            The dictionary of keyword arguments for the aggregation functions
-        drop : bool
-            Whether or not to drop the column from the data.
-
-        Returns
-        -------
-        DFAlgQueryCompiler
-            The result of the per-column aggregations on the grouped dataframe.
-        """
-        # TODO: handle `drop` arg
-        new_frame = self._modin_frame.groupby_agg(
-            by, 0, func_dict, groupby_args, **agg_args
-        )
-        return self.__constructor__(new_frame)
-
     def count(self, **kwargs):
         return self._agg("count", **kwargs)
 

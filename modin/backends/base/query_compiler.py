@@ -1426,16 +1426,6 @@ class BaseQueryCompiler(abc.ABC):
             drop=drop,
         )
 
-    def groupby_dict_agg(self, by, func_dict, groupby_args, agg_args, drop=False):
-        return GroupByDefault.register(pandas.core.groupby.DataFrameGroupBy.aggregate)(
-            self,
-            by=by,
-            func_dict=func_dict,
-            groupby_args=groupby_args,
-            agg_args=agg_args,
-            drop=drop,
-        )
-
     # END Manual Partitioning methods
 
     def unstack(self, level, fill_value):
