@@ -22,6 +22,7 @@ from .utils import (
     check_df_columns_have_nans,
     create_test_dfs,
     eval_general,
+    test_data,
     test_data_values,
     modin_df_almost_equals_pandas,
 )
@@ -1189,23 +1190,30 @@ def test_shift_freq(groupby_axis, shift_axis):
         )
 
 
-def test_agg_func_None_rename():
-    pandas_df = pandas.DataFrame(
+@pytest.mark.parametrize(
+    "by_and_agg_dict",
+    [
         {
-            "col1": np.random.randint(0, 100, size=1000),
-            "col2": np.random.randint(0, 100, size=1000),
-            "col3": np.random.randint(0, 100, size=1000),
-            "col4": np.random.randint(0, 100, size=1000),
+            "by": ["col1", "col2"],
+            "agg_dict": {"max": ("col3", np.max), "min": ("col3", np.min)},
         },
-        index=["row{}".format(i) for i in range(1000)],
-    )
-    modin_df = from_pandas(pandas_df)
+        {
+            "by": ["col1"],
+            "agg_dict": {
+                "max": (list(test_data["int_data"].keys())[0], np.max),
+                "min": (list(test_data["int_data"].keys())[-2], np.min),
+            },
+        },
+    ],
+)
+def test_agg_func_None_rename(by_and_agg_dict):
+    modin_df, pandas_df = create_test_dfs(test_data["int_data"])
 
-    modin_result = modin_df.groupby(["col1", "col2"]).agg(
-        max=("col3", np.max), min=("col3", np.min)
+    modin_result = modin_df.groupby(by_and_agg_dict["by"]).agg(
+        **by_and_agg_dict["agg_dict"]
     )
-    pandas_result = pandas_df.groupby(["col1", "col2"]).agg(
-        max=("col3", np.max), min=("col3", np.min)
+    pandas_result = pandas_df.groupby(by_and_agg_dict["by"]).agg(
+        **by_and_agg_dict["agg_dict"]
     )
     df_equals(modin_result, pandas_result)
 
