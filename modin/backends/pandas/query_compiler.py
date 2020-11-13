@@ -2577,23 +2577,11 @@ class PandasQueryCompiler(BaseQueryCompiler):
             agg_func = wrap_udf_function(agg_func)
 
         if is_multi_by:
-            # If function was kept as a dictionary until now, it is now necessary to repeat all steps
-            # that were skipped previously, that is, make it a lambda. This is necessary
-            # because default to pandas is unable to operate with dictionary aggregation function argument,
-            # it accepts only callable functions.
-            if isinstance(agg_func, dict):
-                callable_func = wrap_udf_function(
-                    lambda df, *args, **kwargs: df.aggregate(
-                        agg_func, *agg_args, **agg_kwargs
-                    )
-                )
-            else:
-                callable_func = agg_func
             return super().groupby_agg(
                 by=by,
                 is_multi_by=is_multi_by,
                 axis=axis,
-                agg_func=callable_func,
+                agg_func=agg_func,
                 agg_args=agg_args,
                 agg_kwargs=agg_kwargs,
                 groupby_kwargs=groupby_kwargs,
