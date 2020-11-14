@@ -51,6 +51,7 @@ jobs:
       - run: pydocstyle --convention=numpy --add-ignore=D101,D102 modin/pandas/series_utils.py
       - run: pydocstyle --convention=numpy --add-ignore=D103 modin/pandas/general.py
       - run: pydocstyle --convention=numpy modin/pandas/plotting.py modin/pandas/utils.py modin/pandas/iterator.py modin/pandas/indexing.py
+      - run: pydocstyle --convention=numpy --add-ignore=D100,D104 modin/engines/base/frame
 
   lint-flake8:
     name: lint (flake8)
