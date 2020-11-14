@@ -180,7 +180,7 @@ and improve:
 ![Architecture](docs/img/modin_architecture.png)
 
 Visit the [Documentation](https://modin.readthedocs.io/en/latest/developer/architecture.html) for
-more information!
+more information, and checkout [the difference between Modin and Dask!](https://github.com/modin-project/modin/tree/master/docs/modin_vs_dask.md)
 
 **`modin.pandas` is currently under active development. Requests and contributions are welcome!**
 
