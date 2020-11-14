@@ -164,6 +164,26 @@ subset of the test suite. In order to run a specific test run:
 
 The entire test suite is automatically run for each pull request.
 
+Building documentation
+----------------------
+
+To build the documentation, please follow the steps below from the project root:
+
+.. code-block:: bash
+
+    cd docs
+    pip install -r requirements-doc.txt
+    sphinx-build -b html . build
+
+To visualize the documentation locally, run the following from `build` folder:
+
+.. code-block:: bash
+
+    python -m http.server <port>
+    # python -m http.server 1234
+
+then open the browser at `0.0.0.0:<port>` (e.g. `0.0.0.0:1234`).
+
 Contributing a new execution framework or in-memory format
 ----------------------------------------------------------
 
