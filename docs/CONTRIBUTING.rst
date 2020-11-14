@@ -167,7 +167,7 @@ The entire test suite is automatically run for each pull request.
 Building documentation
 ----------------------
 
-To build the documentation, please follow the steps below:
+To build the documentation, please follow the steps below from the project root:
 
 .. code-block:: bash
 
