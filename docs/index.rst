@@ -129,6 +129,11 @@ nature, you get a fast DataFrame at 1MB and 1TB+.
    out_of_core
 
 .. toctree::
+   :caption: Examples
+
+   examples/index
+
+.. toctree::
    :caption: Supported APIs
 
    supported_apis/index
