@@ -87,7 +87,7 @@ To ensure that all commit messages in the master branch follow a specific format
 enforce that all commit messages must follow the following format:
 
 .. code-block:: bash
-  FEAT-#9999: Add ``DataFrame.rolling`` functionality, to enable rolling window operations
+  FEAT-#9999: Add `DataFrame.rolling` functionality, to enable rolling window operations
 
 The ``FEAT`` component represents the type of commit. This component of the commit
 message can be one of the following:
