@@ -1728,13 +1728,25 @@ class BasePandasFrame(object):
 
         index_other_obj = [o.axes[axis] for o in other]
         joined_index = self._join_index_objects(axis, index_other_obj, how, sort)
+        # sorting is performed in some cases when sort=`False`
+        # workaround
+        if not sort and all(
+            joined_index.unique().sort_values()
+            == self.axes[axis].unique().sort_values()
+        ):
+            joined_index = self.axes[axis]
         # We have to set these because otherwise when we perform the functions it may
         # end up serializing this entire object.
         left_old_idx = self.axes[axis]
         right_old_idxes = index_other_obj
 
-        def make_map_func():
-            if not joined_index.is_unique and axis == 0:
+        def make_map_func(index):
+            # below works
+            # pandas.DataFrame([0,1,2,3,4,5]).reindex([0,0,1,1,2,2])
+            #
+            # if not joined_index.is_unique and axis == 0:
+            #    return lambda df: df
+            if index.equals(joined_index):
                 return lambda df: df
             return lambda df: df.reindex(joined_index, axis=axis)
 
@@ -1745,7 +1757,7 @@ class BasePandasFrame(object):
             reindexed_self = self._frame_mgr_cls.map_axis_partitions(
                 axis,
                 self._partitions,
-                make_map_func(),
+                make_map_func(left_old_idx),
             )
 
         def get_column_widths(partitions):
@@ -1764,7 +1776,7 @@ class BasePandasFrame(object):
                 reindexed_other = other[i]._frame_mgr_cls.map_axis_partitions(
                     axis,
                     other[i]._partitions,
-                    make_map_func(),
+                    make_map_func(right_old_idxes[i]),
                     lengths=get_row_lengths(reindexed_self)
                     if axis == 0
                     else get_column_widths(reindexed_self),
