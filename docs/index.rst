@@ -134,6 +134,14 @@ nature, you get a fast DataFrame at 1MB and 1TB+.
    examples/index
 
 .. toctree::
+   :caption: How is Modin different from ...?
+
+    comparisons/index
+    comparisons/pandas
+    comparisons/dask
+    comparisons/spark
+
+.. toctree::
    :caption: Supported APIs
 
    supported_apis/index
