@@ -234,7 +234,7 @@ Supported Execution Frameworks and Memory Formats
 
 This is the list of execution frameworks and memory formats supported in Modin. If you
 would like to contribute a new execution framework or memory format, please see the
-documentation page on Contributing_.
+documentation page on :doc:`../CONTRIBUTING`.
 
 - `Pandas on Ray`_
     - Uses the Ray_ execution framework.
