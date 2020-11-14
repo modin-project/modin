@@ -49,7 +49,6 @@ with this project or the open source license(s) involved."
    Signed-off-by: Awesome Developer <developer@example.org>
 
 
-.
 Code without a proper signoff cannot be merged into the
 master branch. Note: You must use your real name (sorry, no pseudonyms or anonymous
 contributions.)
@@ -89,6 +88,7 @@ enforce that all commit messages must follow the following format:
 
 .. code-block:: bash
   FEAT-#9999: Add `DataFrame.rolling` functionality, to enable rolling window operations
+
 The ``FEAT`` component represents the type of commit. This component of the commit
 message can be one of the following:
 
