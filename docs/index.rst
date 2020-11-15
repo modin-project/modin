@@ -136,10 +136,10 @@ nature, you get a fast DataFrame at 1MB and 1TB+.
 .. toctree::
    :caption: How is Modin different from ...?
 
-    comparisons/index
-    comparisons/pandas
-    comparisons/dask
-    comparisons/spark
+   comparisons/index
+   comparisons/pandas
+   comparisons/dask
+   comparisons/spark
 
 .. toctree::
    :caption: Supported APIs
@@ -163,12 +163,6 @@ nature, you get a fast DataFrame at 1MB and 1TB+.
    UsingPandasonDask/index
    UsingPyarrowonRay/index
    UsingSQLonRay/index
-
-.. toctree::
-   :caption: Contributing to Modin
-
-   contributing
-   architecture
 
 .. toctree::
    :caption: Help
