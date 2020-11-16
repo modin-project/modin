@@ -520,6 +520,7 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
         return self._setitem(axis, key, value)
 
     _setitem = PandasQueryCompiler.setitem
+    insert_item = PandasQueryCompiler.insert_item
 
     def insert(self, loc, column, value):
         """Insert new column data.
@@ -534,6 +535,9 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
         """
         if is_list_like(value):
             return super().insert(loc=loc, column=column, value=value)
+        elif isinstance(value, type(self)):
+            value.columns = [column]
+            return self.insert_item(axis=1, loc=loc, value=value)
 
         return self.__constructor__(self._modin_frame.insert(loc, column, value))
 

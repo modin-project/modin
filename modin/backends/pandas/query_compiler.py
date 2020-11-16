@@ -2168,6 +2168,35 @@ class PandasQueryCompiler(BaseQueryCompiler):
         """
         return self.__constructor__(self._modin_frame.mask(row_numeric_idx=key))
 
+    def insert_item(self, axis, loc, value):
+        """
+        Insert the column/row defined by `value` at the specified `loc`
+
+        Parameters
+        ----------
+        axis:
+        """
+        assert isinstance(value, type(self))
+
+        def execute_concat(left, middle, *right):
+            return self.__constructor__(
+                left._concat(
+                    axis=axis, others=[middle, *right], how="outer", sort=False
+                )
+            )
+
+        if 0 < loc < len(self.get_axis(axis)) - 1:
+            first_mask = self._modin_frame.mask(col_numeric_idx=list(range(loc)))
+            second_mask = self._modin_frame.mask(
+                col_numeric_idx=list(range(loc, len(self.get_axis(axis))))
+            )
+            return execute_concat(first_mask, value._modin_frame, second_mask)
+        else:
+            if loc == 0:
+                return execute_concat(value._modin_frame, self._modin_frame)
+            else:
+                return execute_concat(self._modin_frame, value._modin_frame)
+
     def setitem(self, axis, key, value):
         """Set the column defined by `key` to the `value` provided.
 
@@ -2327,10 +2356,12 @@ class PandasQueryCompiler(BaseQueryCompiler):
         Returns:
             A new PandasQueryCompiler with new data inserted.
         """
+
+        if isinstance(value, type(self)):
+            value.columns = [column]
+            return self.insert_item(axis=1, loc=loc, value=value)
+
         if is_list_like(value):
-            # TODO make work with another querycompiler object as `value`.
-            # This will require aligning the indices with a `reindex` and ensuring that
-            # the data is partitioned identically.
             if isinstance(value, pandas.Series):
                 value = value.reindex(self.index)
             else:

@@ -50,7 +50,7 @@ def eval_setitem(md_df, pd_df, value, col=None, loc=None):
     value_getter = value if callable(value) else (lambda *args, **kwargs: value)
 
     eval_general(
-        md_df, pd_df, lambda df: df.__setitem__(idx, value_getter(df)), __inplace__=True
+        md_df, pd_df, lambda df: df.__setitem__(col, value_getter(df)), __inplace__=True
     )
 
 
@@ -1089,7 +1089,7 @@ def test___getattr__(request, data):
 def test___setitem__(data):
     eval_setitem(*create_test_dfs(data), loc=-1, value=1)
     eval_setitem(
-        *create_test_dfs(data), loc=-1, value=lambda df: type(df)(df[columns[0]])
+        *create_test_dfs(data), loc=-1, value=lambda df: type(df)(df[df.columns[0]])
     )
 
     nrows = len(data[list(data.keys())[0]])

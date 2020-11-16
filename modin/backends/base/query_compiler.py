@@ -1502,6 +1502,9 @@ class BaseQueryCompiler(abc.ABC):
     index = property(_get_axis(0), _set_axis(0))
     columns = property(_get_axis(1), _set_axis(1))
 
+    def get_axis(self, axis):
+        return self.index if axis == 0 else self.columns
+
     def view(self, index=None, columns=None):
         index = [] if index is None else index
         columns = [] if columns is None else columns
@@ -1510,6 +1513,17 @@ class BaseQueryCompiler(abc.ABC):
             return df.iloc[index, columns]
 
         return DataFrameDefault.register(applyier)(self)
+
+    def insert_item(self, axis, loc, value):
+        def row_inserter(df, value, loc):
+            first_mask = df.iloc[:loc]
+            second_mask = df.iloc[loc:]
+            return pandas.concat([first_mask, value, second_mask], axis=0)
+
+        if axis == 0:
+            return DataFrameDefault.register(row_inserter)(self, value=value, loc=loc)
+        else:
+            return self.insert(loc=loc, column=value.columns[0], value=value)
 
     def setitem(self, axis, key, value):
         def setitem(df, axis, key, value):
