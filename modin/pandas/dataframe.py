@@ -1984,6 +1984,7 @@ class DataFrame(BasePandasDataset):
                 if len(self.columns) == 0:
                     self._query_compiler = value._query_compiler.copy()
                 else:
+                    value = value.reindex(self.index)
                     self._create_or_update_from_compiler(
                         self._query_compiler.concat(
                             1,
