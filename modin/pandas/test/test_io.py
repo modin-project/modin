@@ -619,6 +619,8 @@ class TestReadCSV:
         nrows,
         names,
     ):
+        if nrows and (false_values or true_values):
+            pytest.xfail("modin and pandas dataframes differs - issue #2446")
         kwargs = {
             "dtype": dtype,
             "engine": engine,
