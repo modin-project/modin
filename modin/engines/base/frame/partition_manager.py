@@ -68,7 +68,11 @@ class BaseFrameManager(ABC):
         -------
             a list of `BaseFrameAxisPartition` objects.
         """
-        return [cls._column_partitions_class(col) for col in partitions.T]
+        if not isinstance(partitions, list):
+            partitions = [partitions]
+        return [
+            cls._column_partitions_class(col) for frame in partitions for col in frame.T
+        ]
 
     @classmethod
     def row_partitions(cls, partitions):
@@ -81,7 +85,9 @@ class BaseFrameManager(ABC):
         -------
             a list of `BaseFrameAxisPartition` objects.
         """
-        return [cls._row_partition_class(row) for row in partitions]
+        if not isinstance(partitions, list):
+            partitions = [partitions]
+        return [cls._row_partition_class(row) for frame in partitions for row in frame]
 
     @classmethod
     def axis_partition(cls, partitions, axis):
@@ -257,6 +263,7 @@ class BaseFrameManager(ABC):
         preprocessed_map_func = cls.preprocess_func(apply_func)
         left_partitions = cls.axis_partition(left, axis)
         right_partitions = None if right is None else cls.axis_partition(right, axis)
+        # breakpoint()
         # For mapping across the entire axis, we don't maintain partitioning because we
         # may want to line to partitioning up with another BlockPartitions object. Since
         # we don't need to maintain the partitioning, this gives us the opportunity to

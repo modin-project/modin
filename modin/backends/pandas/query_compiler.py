@@ -2525,19 +2525,19 @@ class PandasQueryCompiler(BaseQueryCompiler):
         if callable(agg_func):
             agg_func = wrap_udf_function(agg_func)
 
-        if is_multi_by:
-            return super().groupby_agg(
-                by=by,
-                is_multi_by=is_multi_by,
-                axis=axis,
-                agg_func=agg_func,
-                agg_args=agg_args,
-                agg_kwargs=agg_kwargs,
-                groupby_kwargs=groupby_kwargs,
-                drop=drop,
-            )
+        # if is_multi_by:
+        #     return super().groupby_agg(
+        #         by=by,
+        #         is_multi_by=is_multi_by,
+        #         axis=axis,
+        #         agg_func=agg_func,
+        #         agg_args=agg_args,
+        #         agg_kwargs=agg_kwargs,
+        #         groupby_kwargs=groupby_kwargs,
+        #         drop=drop,
+        #     )
 
-        by = by.to_pandas().squeeze() if isinstance(by, type(self)) else by
+        # by = by.to_pandas().squeeze() if isinstance(by, type(self)) else by
 
         # since we're going to modify `groupby_kwargs` dict in a `groupby_agg_builder`,
         # we want to copy it to not propagate these changes into source dict, in case
@@ -2545,14 +2545,43 @@ class PandasQueryCompiler(BaseQueryCompiler):
         groupby_kwargs = groupby_kwargs.copy()
 
         as_index = groupby_kwargs.get("as_index", True)
+        # breakpoint()
 
-        def groupby_agg_builder(df):
+        if not isinstance(by, list):
+            by = [by]
+
+        broadcastable_by = [o._modin_frame for o in by if isinstance(o, type(self))]
+        not_broadcastable_by = [o for o in by if not isinstance(o, type(self))]
+
+        def groupby_agg_builder(df, by=None):
             # Set `as_index` to True to track the metadata of the grouping object
             # It is used to make sure that between phases we are constructing the
             # right index and placing columns in the correct order.
             groupby_kwargs["as_index"] = True
+            #breakpoint()
+            if by is not None:
+                by = by.squeeze(axis=1)
+                if isinstance(by, pandas.DataFrame):
+                    by.columns = [
+                        col if col != "__reduced__" else f"__reduced__{i}"
+                        for i, col in enumerate(by.columns)
+                    ]
+                    df = pandas.concat(
+                        [df] + [by[[o for o in by if o not in df]]],
+                        axis=1,
+                    )
+                    by = list(by.columns)
+
+                if not isinstance(by, list):
+                    by = [by]
+            else:
+                by = []
+
+            by += not_broadcastable_by
+            _drop = drop
 
             def compute_groupby(df):
+                # breakpoint()
                 grouped_df = df.groupby(by=by, axis=axis, **groupby_kwargs)
                 try:
                     if isinstance(agg_func, dict):
@@ -2569,6 +2598,59 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 # issues with extracting the index.
                 except (DataError, TypeError):
                     result = pandas.DataFrame(index=grouped_df.size().index)
+
+                drop = _drop
+
+                if not as_index:
+                    if not isinstance(result.index, pandas.MultiIndex) and (
+                        result.index.name is None or result.index.name in result.columns
+                    ):
+                        drop = False
+                    if drop and isinstance(result.index, pandas.MultiIndex):
+                        has_categorical_by = any(
+                            isinstance(df[o].dtype, pandas.CategoricalDtype)
+                            for o in by
+                            if isinstance(o, str)
+                        )
+
+                        if not has_categorical_by:
+                            duplicated_cols = [
+                                i
+                                for i, name in enumerate(result.index.names)
+                                if name in result.columns
+                            ]
+                            if len(duplicated_cols) == result.index.nlevels:
+                                drop = False
+                            else:
+                                result.index = result.index.droplevel(duplicated_cols)
+                        else:
+                            duplicated_cols = [
+                                name
+                                for name in result.index.names
+                                if name in result.columns
+                            ]
+                            result.drop(columns=duplicated_cols, inplace=True)
+                    result.reset_index(drop=not drop, inplace=True)
+                # breakpoint()
+                new_index_names = [
+                    None
+                    if isinstance(name, str) and name.startswith("__reduced__")
+                    else name
+                    for name in result.index.names
+                ]
+                # breakpoint()
+                cols_to_drop = (
+                    result.columns[result.columns.str.match(r"__reduced__.*")]
+                    if hasattr(result.columns, "str")
+                    else []
+                )
+
+                result.index.names = new_index_names
+
+                # Not dropping columns if result is Series
+                if len(result.columns) > 1:
+                    result.drop(columns=cols_to_drop, inplace=True)
+
                 return result
 
             try:
@@ -2578,8 +2660,11 @@ class PandasQueryCompiler(BaseQueryCompiler):
             except (ValueError, KeyError):
                 return compute_groupby(df.copy())
 
-        new_modin_frame = self._modin_frame._apply_full_axis(
-            axis, lambda df: groupby_agg_builder(df)
+        # breakpoint()
+        new_modin_frame = self._modin_frame.broadcast_apply_full_axis(
+            axis=axis,
+            func=groupby_agg_builder,
+            other=broadcastable_by,
         )
         result = self.__constructor__(new_modin_frame)
 

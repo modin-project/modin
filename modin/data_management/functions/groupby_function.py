@@ -30,8 +30,20 @@ class GroupbyReduceFunction(MapReduceFunction):
             numeric_only=True,
             drop=False,
         ):
+            # breakpoint()
             if not isinstance(by, (type(query_compiler), str)):
                 by = try_cast_to_pandas(by)
+                if isinstance(by, list):
+                    by = [
+                        (
+                            o.squeeze()
+                            if o.columns[0] not in query_compiler.columns
+                            else o.columns[0]
+                        )
+                        if isinstance(o, pandas.DataFrame)
+                        else o
+                        for o in by
+                    ]
                 return query_compiler.default_to_pandas(
                     lambda df: map_func(
                         df.groupby(by=by, axis=axis, **groupby_args), **map_args

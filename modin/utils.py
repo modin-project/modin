@@ -98,7 +98,16 @@ def try_cast_to_pandas(obj):
     if hasattr(obj, "_to_pandas"):
         return obj._to_pandas()
     if hasattr(obj, "to_pandas"):
-        return obj.to_pandas()
+        result = obj.to_pandas()
+        # Query compiler case, it doesn't have logic about convertion to Series
+        if (
+            hasattr(result, "columns")
+            and len(result.columns) == 1
+            and result.columns[0] == "__reduced__"
+        ):
+            result = result.squeeze(axis=1)
+            result.name = None
+        return result
     if isinstance(obj, (list, tuple)):
         return type(obj)([try_cast_to_pandas(o) for o in obj])
     if isinstance(obj, dict):

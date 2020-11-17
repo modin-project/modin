@@ -385,21 +385,35 @@ class DataFrame(BasePandasDataset):
             by = by._query_compiler
         elif is_list_like(by):
             # fastpath for multi column groupby
-            if (
-                not isinstance(by, Series)
-                and axis == 0
-                and all(
-                    (
-                        (isinstance(o, str) and (o in self))
-                        or (isinstance(o, Series) and (o._parent is self))
-                    )
-                    for o in by
+            if axis == 0 and all(
+                (
+                    (isinstance(o, str) and (o in self))
+                    or isinstance(o, Series)
+                    or (is_list_like(o) and len(o) == len(self.axes[axis]))
                 )
+                for o in by
             ):
-                # We can just revert Series back to names because the parent is
-                # this dataframe:
-                by = [o.name if isinstance(o, Series) else o for o in by]
-                by = self.__getitem__(by)._query_compiler
+                internal_by, external_by = [], []
+
+                for current_by in by:
+                    if isinstance(current_by, str):
+                        internal_by.append(current_by)
+                    elif isinstance(current_by, Series):
+                        if current_by._parent is self:
+                            internal_by.append(current_by.name)
+                        else:
+                            external_by.append(current_by._query_compiler)
+                    else:
+                        external_by.append(current_by)
+
+                internal_qc = (
+                    [self[internal_by]._query_compiler] if len(internal_by) else []
+                )
+
+                by = internal_qc + external_by
+                if len(by) == 1 and isinstance(by[0], type(self._query_compiler)):
+                    by = by[0]
+
                 drop = True
             else:
                 mismatch = len(by) != len(self.axes[axis])
@@ -419,6 +433,7 @@ class DataFrame(BasePandasDataset):
                 ):
                     names = [o.name if isinstance(o, Series) else o for o in by]
                     raise KeyError(next(x for x in names if x not in self))
+        # breakpoint()
         return DataFrameGroupBy(
             self,
             by,

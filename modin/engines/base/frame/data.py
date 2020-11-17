@@ -1688,7 +1688,7 @@ class BasePandasFrame(object):
                 The axis to apply over (0 - rows, 1 - columns).
             func : callable
                 The function to apply.
-            other : other Modin frame to broadcast
+            other : others Modin frames to broadcast
             new_index : list-like (optional)
                 The index of the result. We may know this in advance,
                 and if not provided it must be computed.
@@ -1704,10 +1704,15 @@ class BasePandasFrame(object):
         -------
              A new Modin DataFrame
         """
+        if other is not None and not isinstance(other, list):
+            other = [other]
+        other = (
+            [o._partitions for o in other] if other is not None and len(other) else None
+        )
         new_partitions = self._frame_mgr_cls.broadcast_axis_partitions(
             axis=axis,
             left=self._partitions,
-            right=other if other is None else other._partitions,
+            right=other,
             apply_func=self._build_mapreduce_func(axis, func),
             keep_partitioning=True,
         )

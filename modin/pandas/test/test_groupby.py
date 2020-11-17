@@ -258,12 +258,12 @@ class GetColumn:
             marks=pytest.mark.xfail(reason="Excluded because of bug #1554"),
         ),
         # but cum* functions produce undefined results with NaNs so we need to test the same combinations without NaN too
-        ["col5"],
+        ["col5"],  # 10
         ["col1", "col5"],
         ["col5", "col4"],
         ["col4", "col5"],
         ["col5", "col4", "col1"],
-        ["col1", pd.Series([1, 5, 7, 8])],
+        ["col1", pd.Series([1, 5, 7, 8])],  # 15
         [pd.Series([1, 5, 7, 8])],
         [
             pd.Series([1, 5, 7, 8]),
@@ -274,7 +274,7 @@ class GetColumn:
         ],
         ["col1", GetColumn("col5")],
         [GetColumn("col1"), GetColumn("col5")],
-        [GetColumn("col1")],
+        [GetColumn("col1")],  # 20
     ],
 )
 @pytest.mark.parametrize("as_index", [True, False])
@@ -377,7 +377,12 @@ def test_simple_row_groupby(by, as_index, col1_category):
     eval_len(modin_groupby, pandas_groupby)
     eval_sum(modin_groupby, pandas_groupby)
     eval_ngroup(modin_groupby, pandas_groupby)
-    eval_general(modin_groupby, pandas_groupby, lambda df: df.nunique())
+    eval_general(
+        modin_groupby,
+        pandas_groupby,
+        lambda df: df.nunique(),
+        check_exception_type=None,
+    )
     eval_median(modin_groupby, pandas_groupby)
     eval_general(modin_groupby, pandas_groupby, lambda df: df.head(n), is_default=True)
     eval_general(
@@ -1350,7 +1355,8 @@ def test_mixed_columns(columns):
         [(False, "a"), (True, "c")],
     ],
 )
-def test_mixed_columns_not_from_df(columns):
+@pytest.mark.parametrize("as_index", [True, False])
+def test_mixed_columns_not_from_df(columns, as_index):
     """
     Unlike the previous test, in this case the Series is not just a column from
     the original DataFrame, so you can't use a fasttrack.
@@ -1360,15 +1366,17 @@ def test_mixed_columns_not_from_df(columns):
         return [(df[name] + 1) if lookup else name for (lookup, name) in columns]
 
     data = {"a": [1, 1, 2], "b": [11, 11, 22], "c": [111, 111, 222]}
+    groupby_kw = {"as_index": as_index}
 
-    df1 = pandas.DataFrame(data)
-    df1 = pandas.concat([df1])
-    ref = df1.groupby(get_columns(df1)).size()
+    md_df, pd_df = create_test_dfs(data)
+    by_md, by_pd = map(get_columns, [md_df, pd_df])
+    
+    pd_grp = pd_df.groupby(by_pd, **groupby_kw)
+    md_grp = md_df.groupby(by_md, **groupby_kw)
 
-    df2 = pd.DataFrame(data)
-    df2 = pd.concat([df2])
-    exp = df2.groupby(get_columns(df2)).size()
-    df_equals(ref, exp)
+    eval_general(md_grp, pd_grp, lambda grp: grp.size())
+    eval_general(md_grp, pd_grp, lambda grp: grp.agg(lambda df: df.sum()))
+    eval_general(md_grp, pd_grp, lambda grp: grp.first())
 
 
 @pytest.mark.parametrize(

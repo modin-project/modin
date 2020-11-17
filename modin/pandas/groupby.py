@@ -79,7 +79,7 @@ class DataFrameGroupBy(object):
                 and axis == 0
                 and all(
                     (isinstance(obj, str) and obj in self._query_compiler.columns)
-                    or isinstance(obj, Series)
+                    or isinstance(obj, type(self._query_compiler))
                     for obj in self._by
                 )
             )
@@ -271,7 +271,10 @@ class DataFrameGroupBy(object):
     def dtypes(self):
         if self._axis == 1:
             raise ValueError("Cannot call dtypes on groupby with axis=1")
-        return self._apply_agg_function(lambda df: df.dtypes, drop=self._as_index)
+        if self._is_multi_by and not self._as_index:
+            return self.apply(lambda df: df.dtypes)
+        else:
+            return self._apply_agg_function(lambda df: df.dtypes, drop=self._as_index)
 
     def first(self, **kwargs):
         return self._default_to_pandas(lambda df: df.first(**kwargs))
@@ -806,7 +809,10 @@ class DataFrameGroupBy(object):
                         by
                     ).to_pandas()
                 else:
-                    by = try_cast_to_pandas(by)
+                    by = [
+                        o.squeeze() if isinstance(o, pandas.DataFrame) else o
+                        for o in try_cast_to_pandas(by)
+                    ]
                     pandas_df = self._df._to_pandas()
                 self._index_grouped_cache = pandas_df.groupby(by=by).groups
             else:
@@ -849,7 +855,7 @@ class DataFrameGroupBy(object):
         # For aggregations, pandas behavior does this for the result.
         # For other operations it does not, so we wait until there is an aggregation to
         # actually perform this operation.
-        if drop and self._drop and self._as_index:
+        if not self._is_multi_by and drop and self._drop and self._as_index:
             groupby_qc = self._query_compiler.drop(columns=self._by.columns)
         else:
             groupby_qc = self._query_compiler
@@ -942,6 +948,18 @@ class DataFrameGroupBy(object):
             by = self._by
 
         by = try_cast_to_pandas(by)
+
+        if isinstance(by, list):
+            by = [
+                (
+                    o.squeeze()
+                    if o.columns[0] not in self._df._query_compiler.columns
+                    else o.columns[0]
+                )
+                if isinstance(o, pandas.DataFrame)
+                else o
+                for o in by
+            ]
 
         def groupby_on_multiple_columns(df, *args, **kwargs):
             return f(

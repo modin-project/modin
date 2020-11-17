@@ -13,6 +13,7 @@
 
 from abc import ABC
 import pandas
+import numpy as np
 from modin.data_management.utils import split_result_of_axis_func_pandas
 
 
@@ -142,16 +143,16 @@ class PandasFrameAxisPartition(BaseFrameAxisPartition):
         """
         if num_splits is None:
             num_splits = len(self.list_of_blocks)
-
         if other_axis_partition is not None:
             if not isinstance(other_axis_partition, list):
                 other_axis_partition = [other_axis_partition]
-            other_shape = (
-                len(other_axis_partition),
-                len(other_axis_partition[0].list_of_blocks),
-            )
-            if not self.axis:
-                other_shape = tuple(reversed(other_shape))
+
+            other_shape = np.zeros(len(other_axis_partition) + 1, dtype=np.int)
+            for i in range(1, len(other_axis_partition) + 1):
+                other_shape[i] = other_shape[i - 1] + len(
+                    other_axis_partition[i - 1].list_of_blocks
+                )
+
             return self._wrap_partitions(
                 self.deploy_func_between_two_axis_partitions(
                     self.axis,
@@ -265,17 +266,17 @@ class PandasFrameAxisPartition(BaseFrameAxisPartition):
             A list of Pandas DataFrames.
         """
         lt_frame = pandas.concat(partitions[:len_of_left], axis=axis, copy=False)
-
+        # breakpoint()
         rt_parts = partitions[len_of_left:]
 
-        # reshaping flattened `rt_parts` array into with shape `other_shape`
+        # reshaping flattened `rt_parts` array into a frame with shape `other_shape`
         combined_axis = [
             pandas.concat(
-                [rt_parts[other_shape[axis] * i + j] for j in range(other_shape[axis])],
+                [rt_parts[j] for j in range(other_shape[i - 1], other_shape[i])],
                 axis=axis,
                 copy=False,
             )
-            for i in range(other_shape[axis ^ 1])
+            for i in range(1, len(other_shape))
         ]
         rt_frame = pandas.concat(combined_axis, axis=axis ^ 1, copy=False)
 
