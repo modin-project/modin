@@ -15,7 +15,7 @@ jobs:
           node-version: "10.x"
       - run: npm install --save-dev @commitlint/{config-conventional,cli} commitlint-plugin-jira-rules commitlint-config-jira
       - name: Add dependencies for commitlint action
-        run: echo "::set-env name=NODE_PATH::$GITHUB_WORKSPACE/node_modules"
+        run: echo "NODE_PATH=$GITHUB_WORKSPACE/node_modules" >> $GITHUB_ENV
       - run: git remote add upstream https://github.com/modin-project/modin.git
       - run: git fetch upstream
       - run: npx commitlint --from upstream/master --to HEAD --verbose
@@ -108,7 +108,7 @@ jobs:
         with:
           path: ~/.cache/pip
           key: ${{ runner.os }}-python-3.7-pip-${{ github.run_id }}-${{ hashFiles('environment.yml') }}
-      - uses: goanpeca/setup-miniconda@v1.6.0
+      - uses: conda-incubator/setup-miniconda@v2
         with:
           activate-environment: modin
           environment-file: environment.yml
@@ -142,7 +142,7 @@ jobs:
         with:
           path: ~/.cache/pip
           key: ${{ runner.os }}-python-3.6-pip-${{ github.run_id }}-${{ hashFiles('environment.yml') }}
-      - uses: goanpeca/setup-miniconda@v1.6.0
+      - uses: conda-incubator/setup-miniconda@v2
         with:
           activate-environment: modin
           environment-file: environment.yml
@@ -171,7 +171,7 @@ jobs:
         with:
           path: ~/.cache/pip
           key: ${{ runner.os }}-python-3.6-pip-${{ github.run_id }}-${{ hashFiles('environment.yml') }}
-      - uses: goanpeca/setup-miniconda@v1.6.0
+      - uses: conda-incubator/setup-miniconda@v2
         with:
           activate-environment: modin
           environment-file: environment.yml
@@ -212,7 +212,7 @@ jobs:
         with:
           path: ~/.cache/pip
           key: ${{ runner.os }}-python-3.6-pip-${{ github.run_id }}-${{ hashFiles('environment.yml') }}
-      - uses: goanpeca/setup-miniconda@v1.6.0
+      - uses: conda-incubator/setup-miniconda@v2
         with:
           activate-environment: modin
           environment-file: environment.yml
@@ -278,7 +278,7 @@ jobs:
           path: ~/.cache/pip
           key: ${{ runner.os }}-python-3.7-pip-${{ github.run_id }}-${{ hashFiles('environment.yml') }}
       - name: Setting up Modin environment
-        uses: goanpeca/setup-miniconda@v1.6.0
+        uses: conda-incubator/setup-miniconda@v2
         with:
           activate-environment: modin_on_omnisci
           python-version: 3.7.8
@@ -317,7 +317,7 @@ jobs:
         with:
           path: ~/.cache/pip
           key: ${{ runner.os }}-python-${{ matrix.python-version }}-pip-${{ github.run_id }}-${{ hashFiles('environment.yml') }}
-      - uses: goanpeca/setup-miniconda@v1.6.0
+      - uses: conda-incubator/setup-miniconda@v2
         with:
           activate-environment: modin
           environment-file: environment.yml
@@ -385,7 +385,7 @@ jobs:
         with:
           path: ~/.cache/pip
           key: ${{ runner.os }}-python-3.7-pip-${{ github.run_id }}-${{ hashFiles('environment.yml') }}
-      - uses: goanpeca/setup-miniconda@v1.6.0
+      - uses: conda-incubator/setup-miniconda@v2
         with:
           activate-environment: modin
           environment-file: environment.yml
@@ -423,7 +423,7 @@ jobs:
         with:
           path: ~/.cache/pip
           key: ${{ runner.os }}-python-3.7-pip-${{ github.run_id }}-${{ hashFiles('environment.yml') }}
-      - uses: goanpeca/setup-miniconda@v1.6.0
+      - uses: conda-incubator/setup-miniconda@v2
         with:
           activate-environment: modin
           environment-file: environment.yml
@@ -461,7 +461,7 @@ jobs:
         with:
           path: ~\AppData\Local\pip\Cache
           key: ${{ runner.os }}-python-${{ matrix.python-version }}-pip-${{ github.run_id }}-${{ hashFiles('environment.yml') }}
-      - uses: goanpeca/setup-miniconda@v1.6.0
+      - uses: conda-incubator/setup-miniconda@v2
         with:
           activate-environment: modin
           environment-file: environment.yml
@@ -546,7 +546,7 @@ jobs:
         with:
           path: ~/.cache/pip
           key: ${{ runner.os }}-python-${{ matrix.python-version }}-pip-${{ github.run_id }}-${{ hashFiles('environment.yml') }}
-      - uses: goanpeca/setup-miniconda@v1.6.0
+      - uses: conda-incubator/setup-miniconda@v2
         with:
           activate-environment: modin
           environment-file: environment.yml
