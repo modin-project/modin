@@ -2168,7 +2168,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         """
         return self.__constructor__(self._modin_frame.mask(row_numeric_idx=key))
 
-    def insert_item(self, axis, loc, value):
+    def insert_item(self, axis, loc, value, **kwargs):
         """
         Insert the column/row defined by `value` at the specified `loc`
 
@@ -2178,17 +2178,22 @@ class PandasQueryCompiler(BaseQueryCompiler):
         """
         assert isinstance(value, type(self))
 
+        how = kwargs.get("join", "left")
+
         def execute_concat(left, middle, *right):
             return self.__constructor__(
                 left._concat(
-                    axis=axis, others=[middle, *right], how="outer", sort=False
+                    axis=axis, others=[middle, *right], how=how, sort=False
                 )
             )
+        
+        def get_kwargs(value):
+            return {("col_numeric_idx" if axis else "row_numeric_idx"): value}
 
         if 0 < loc < len(self.get_axis(axis)) - 1:
-            first_mask = self._modin_frame.mask(col_numeric_idx=list(range(loc)))
+            first_mask = self._modin_frame.mask(**get_kwargs(list(range(loc))))
             second_mask = self._modin_frame.mask(
-                col_numeric_idx=list(range(loc, len(self.get_axis(axis))))
+                **get_kwargs(list(range(loc, len(self.get_axis(axis)))))
             )
             return execute_concat(first_mask, value._modin_frame, second_mask)
         else:
