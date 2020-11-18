@@ -32,5 +32,6 @@ dependencies:
   - rpyc==4.1.5
   - cloudpickle==1.4.1
   - boto3
+  - github
   - pip:
     - ray>=1.0.0
