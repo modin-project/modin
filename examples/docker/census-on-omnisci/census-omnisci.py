@@ -43,7 +43,7 @@ def read():
     dtypes = {columns_names[i]: columns_types[i] for i in range(len(columns_names))}
 
     df = pd.read_csv(
-        os.path.expanduser('~/ipums_education2income_1970-2010.csv.gz'),
+        os.path.expanduser('~/ipums_education2income_1970-2010.csv'),
         names=columns_names,
         dtype=dtypes,
         skiprows=1,

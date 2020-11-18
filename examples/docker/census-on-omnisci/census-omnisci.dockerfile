@@ -49,8 +49,7 @@ RUN conda update -n base -c defaults conda -y && \
     conda install -c conda-forge scikit-learn && \
     conda clean --all --yes
 
-RUN wget https://rapidsai-data.s3.us-east-2.amazonaws.com/datasets/ipums_education2income_1970-2010.csv.gz \
-    -O "${HOME}/ipums_education2income_1970-2010.csv.gz"
+COPY ipums_education2income_1970-2010.csv "${HOME}/ipums_education2income_1970-2010.csv"
 
 COPY census-omnisci.py "${HOME}/census-omnisci.py"
 
