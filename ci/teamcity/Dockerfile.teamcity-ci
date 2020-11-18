@@ -12,12 +12,18 @@ SHELL ["/bin/bash", "--login", "-c"]
 
 # Initialize conda in bash config files:
 RUN conda init bash
-ENV PATH /opt/conda/envs/modin/bin:$PATH
+ENV PATH /root/anaconda3/envs/modin/bin:$PATH
 
 RUN conda update python -y
 RUN conda env create -f ${ENVIRONMENT}
 
 # Activate the environment, and make sure it's activated:
-RUN echo "conda activate modin" >> ~/.bashrc
+# The following line also removed conda initialization from
+# ~/.bashrc so conda starts complaining that it should be
+# initialized for bash. But it is necessary to do it because
+# activation is not always executed when "docker exec" is used
+# and then conda initialization overwrites PATH with its base
+# environment where python doesn't have any packages installed.
+RUN echo "conda activate modin" > ~/.bashrc
 RUN echo "Make sure environment is activated"
 RUN conda list -n modin
