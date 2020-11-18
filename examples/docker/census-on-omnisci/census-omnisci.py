@@ -49,12 +49,12 @@ def read():
         skiprows=1,
     )
 
-    df.shape
+    df.shape  # to trigger real execution
     df._query_compiler._modin_frame._partitions[0][
         0
     ].frame_id = OmnisciServer().put_arrow_to_omnisci(
         df._query_compiler._modin_frame._partitions[0][0].get()
-    )
+    )  # to trigger real execution
     return df
 
 
@@ -80,7 +80,7 @@ def etl(df):
     y = df["EDUC"]
     X = df.drop(columns=["EDUC", "CPI99"])
 
-    # trigger computation
+    # to trigger real execution
     df.shape
     y.shape
     X.shape
