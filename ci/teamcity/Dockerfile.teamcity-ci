@@ -1,3 +1,11 @@
+# Create images from this container like this (in modin repo root):
+#
+# git rev-parse HEAD > ci/teamcity/git-rev
+#
+# tar cf ci/teamcity/modin.tar .
+#
+# docker build --build-arg ENVIRONMENT=environment.yml -t modin-project/teamcity-ci:${BUILD_NUMBER} -f ci/teamcity/Dockerfile.teamcity-ci ci/teamcity
+
 FROM rayproject/ray:1.0.1
 
 ARG ENVIRONMENT=environment.yml
