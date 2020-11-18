@@ -1,4 +1,4 @@
-FROM modin-project/modin-base
+FROM rayproject/ray:1.0.1
 
 ARG ENVIRONMENT=environment.yml
 
@@ -10,13 +10,14 @@ WORKDIR /modin
 # Make RUN commands use `bash --login`:
 SHELL ["/bin/bash", "--login", "-c"]
 
-RUN conda env create -f ${ENVIRONMENT}
-
-# Initialize conda in bash config fiiles:
+# Initialize conda in bash config files:
 RUN conda init bash
 ENV PATH /opt/conda/envs/modin/bin:$PATH
 
+RUN conda update python -y
+RUN conda env create -f ${ENVIRONMENT}
+
 # Activate the environment, and make sure it's activated:
-RUN echo "conda activate modin" > ~/.bashrc
+RUN echo "conda activate modin" >> ~/.bashrc
 RUN echo "Make sure environment is activated"
-RUN conda list
+RUN conda list -n modin

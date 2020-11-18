@@ -1,5 +1,0 @@
-ARG BASE_IMAGE=ray-project/deploy
-
-FROM ${BASE_IMAGE}
-RUN conda update python -y
-
