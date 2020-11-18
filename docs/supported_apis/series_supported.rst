@@ -474,10 +474,8 @@ the related section on `Defaulting to pandas`_.
 +-----------------------------+---------------------------------+----------------------------------------------------+
 | ``valid``                   | D                               |                                                    |
 +-----------------------------+---------------------------------+----------------------------------------------------+
-| ``value_counts``            | Y                               | The indices of resulting object will be in         |
-|                             |                                 | descending (ascending, if ascending=True) order for|
-|                             |                                 | equal values.                                      |
-|                             |                                 | In pandas indices are located in random order.     |
+| ``value_counts``            | Y                               | The indices order of resulting object may differ   |
+|                             |                                 | from pandas.                                       |
 +-----------------------------+---------------------------------+----------------------------------------------------+
 | ``values``                  | Y                               |                                                    |
 +-----------------------------+---------------------------------+----------------------------------------------------+
