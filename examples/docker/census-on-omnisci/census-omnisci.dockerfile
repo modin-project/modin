@@ -17,7 +17,8 @@ ENV https_proxy ${https_proxy}
 ENV MODIN_BACKEND "omnisci"
 ENV MODIN_EXPERIMENTAL "true"
 
-ARG conda_internal_channel
+ARG conda_extra_channel
+ENV add_extra_channel=${conda_extra_channel:+"-c ${conda_extra_channel}"}
 
 RUN apt-get update --yes \
     && apt-get install wget --yes && \
@@ -49,7 +50,7 @@ RUN conda update -n base -c defaults conda -y && \
     conda install -c intel/label/modin -c conda-forge modin "ray>=1.0.0"
 
 RUN conda activate modin && \
-    conda install -c intel/label/modin -c conda-forge -c intel -c ${conda_internal_channel} \
+    conda install -c intel/label/modin -c conda-forge -c intel ${add_extra_channel} \
         daal4py dpcpp_cpp_rt && \
     conda install -c conda-forge scikit-learn && \
     conda clean --all --yes
