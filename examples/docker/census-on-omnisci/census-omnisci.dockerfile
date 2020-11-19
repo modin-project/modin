@@ -52,7 +52,7 @@ RUN conda update -n base -c defaults conda -y && \
 
 RUN conda activate modin && \
     conda install -c intel/label/modin -c conda-forge -c intel ${add_extra_channel} \
-        daal4py dpcpp_cpp_rt && \
+        "daal4py>=2021.1" dpcpp_cpp_rt && \
     conda install -c conda-forge scikit-learn && \
     conda clean --all --yes
 
