@@ -17,6 +17,8 @@ ENV https_proxy ${https_proxy}
 ENV MODIN_BACKEND "omnisci"
 ENV MODIN_EXPERIMENTAL "true"
 
+ARG conda_internal_channel
+
 RUN apt-get update --yes \
     && apt-get install wget --yes && \
     rm -rf /var/lib/apt/lists/*
@@ -44,8 +46,11 @@ RUN wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -
 RUN conda update -n base -c defaults conda -y && \
     conda create -n modin --yes --no-default-packages && \
     conda activate modin && \
-    conda install -c intel/label/modin -c conda-forge modin "ray>=1.0.0" && \
-    conda install -c intel/label/modin -c conda-forge -c intel -c intel/label/oneapibeta daal4py dpcpp_cpp_rt && \
+    conda install -c intel/label/modin -c conda-forge modin "ray>=1.0.0"
+
+RUN conda activate modin && \
+    conda install -c intel/label/modin -c conda-forge -c intel -c ${conda_internal_channel} \
+        daal4py dpcpp_cpp_rt && \
     conda install -c conda-forge scikit-learn && \
     conda clean --all --yes
 
