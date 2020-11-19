@@ -882,18 +882,18 @@ def make_dict_hash(dict_to_hash):
         Dictionary hash.
     """
 
-    def _make_hash(object_to_hash):
-        if isinstance(object_to_hash, (set, list)):
-            object_hash = hash(frozenset(object_to_hash))
-        elif not isinstance(object_to_hash, dict):
-            object_hash = hash(object_to_hash)
-        elif callable(object_to_hash):
-            object_hash = hash(object_to_hash.__name__)
+    def _make_hash(obj):
+        if isinstance(obj, (set, list, dict)):
+            object_hash = hash(frozenset(obj))
+        elif callable(obj):
+            object_hash = hash(obj.__name__)
         else:
-            object_hash = object_to_hash
+            # conversion to str is done because hash(5) == hash(5.0)
+            object_hash = hash(obj if isinstance(obj, str) else str(obj))
 
         return object_hash
 
+    # process unhashed values from dict_to_hash
     new_dict = {key: _make_hash(value) for key, value in dict_to_hash.items()}
     return hash(frozenset(new_dict))
 
@@ -930,7 +930,7 @@ def get_unique_filename(
     """
     suffix_part = f"_{suffix}" if suffix else ""
     if debug_mode:
-        # shortcut if kwargs parameter os not provided
+        # shortcut if kwargs parameter are not provided
         if len(kwargs) == 0 and extension == "csv" and suffix == "":
             return os.path.join(data_dir, (test_name + suffix_part + f".{extension}"))
 
