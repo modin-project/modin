@@ -37,12 +37,6 @@ from modin.config import IsExperimental
 from .series import Series
 
 
-class Grouper:
-    def __init__(self, parent, raw_by):
-        self._parent = parent
-        self._raw_by = raw_by
-
-
 @_inherit_docstrings(
     pandas.core.groupby.DataFrameGroupBy,
     excluded=[
@@ -477,7 +471,6 @@ class DataFrameGroupBy(object):
         )
 
     def size(self):
-        # breakpoint()
         if self._axis == 0:
             # Series objects in 'by' mean we couldn't handle the case
             # and transform 'by' to a query compiler.
