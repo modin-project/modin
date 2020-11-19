@@ -884,15 +884,15 @@ def make_dict_hash(dict_to_hash):
 
     def _make_hash(object_to_hash):
         if isinstance(object_to_hash, (set, list)):
-            new_object = hash(frozenset(object_to_hash))
+            object_hash = hash(frozenset(object_to_hash))
         elif not isinstance(object_to_hash, dict):
-            new_object = hash(object_to_hash)
+            object_hash = hash(object_to_hash)
         elif callable(object_to_hash):
-            new_object = hash(object_to_hash.__name__)
+            object_hash = hash(object_to_hash.__name__)
         else:
-            new_object = object_to_hash
+            object_hash = object_to_hash
 
-        return new_object
+        return object_hash
 
     new_dict = {key: _make_hash(value) for key, value in dict_to_hash.items()}
     return hash(frozenset(new_dict))

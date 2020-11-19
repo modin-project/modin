@@ -1106,21 +1106,6 @@ def test_from_sas():
 
 
 @pytest.mark.parametrize("nrows", [123, None])
-def test_from_csv(make_csv_file, nrows):
-    make_csv_file()
-
-    pandas_df = pandas.read_csv(TEST_CSV_FILENAME, nrows=nrows)
-    modin_df = pd.read_csv(TEST_CSV_FILENAME, nrows=nrows)
-
-    df_equals(modin_df, pandas_df)
-
-    pandas_df = pandas.read_csv(Path(TEST_CSV_FILENAME), nrows=nrows)
-    modin_df = pd.read_csv(Path(TEST_CSV_FILENAME), nrows=nrows)
-
-    df_equals(modin_df, pandas_df)
-
-
-@pytest.mark.parametrize("nrows", [123, None])
 def test_from_csv_sep_none(make_csv_file, nrows):
     make_csv_file()
 
@@ -1434,53 +1419,6 @@ def test_from_csv_chunksize(make_csv_file):
     df_equals(modin_df, pd_df)
 
 
-@pytest.mark.parametrize("nrows", [1, 2, 123, None])
-def test_from_csv_skiprows(make_csv_file, nrows):
-    make_csv_file()
-
-    pandas_df = pandas.read_csv(TEST_CSV_FILENAME, skiprows=2, nrows=nrows)
-    modin_df = pd.read_csv(TEST_CSV_FILENAME, skiprows=2, nrows=nrows)
-    df_equals(modin_df, pandas_df)
-
-    pandas_df = pandas.read_csv(
-        TEST_CSV_FILENAME, names=["c1", "c2", "c3", "c4"], skiprows=2, nrows=nrows
-    )
-    modin_df = pd.read_csv(
-        TEST_CSV_FILENAME, names=["c1", "c2", "c3", "c4"], skiprows=2, nrows=nrows
-    )
-    df_equals(modin_df, pandas_df)
-
-    pandas_df = pandas.read_csv(
-        TEST_CSV_FILENAME,
-        header=None,
-        names=["c1", "c2", "c3", "c4"],
-        skiprows=2,
-        nrows=nrows,
-    )
-    modin_df = pd.read_csv(
-        TEST_CSV_FILENAME,
-        header=None,
-        names=["c1", "c2", "c3", "c4"],
-        skiprows=2,
-        nrows=nrows,
-    )
-    df_equals(modin_df, pandas_df)
-
-    pandas_df = pandas.read_csv(
-        TEST_CSV_FILENAME,
-        names=["c1", "c2", "c3", "c4"],
-        skiprows=lambda x: x % 2,
-        nrows=nrows,
-    )
-    modin_df = pd.read_csv(
-        TEST_CSV_FILENAME,
-        names=["c1", "c2", "c3", "c4"],
-        skiprows=lambda x: x % 2,
-        nrows=nrows,
-    )
-    df_equals(modin_df, pandas_df)
-
-
 @pytest.mark.parametrize("names", [list("XYZ"), None])
 @pytest.mark.parametrize("skiprows", [1, 2, 3, 4, None])
 def test_from_csv_skiprows_names(names, skiprows):
@@ -1521,15 +1459,6 @@ def test_from_csv_index_col(make_csv_file, nrows):
 
     pandas_df = pandas.read_csv(TEST_CSV_FILENAME, index_col="col1", nrows=nrows)
     modin_df = pd.read_csv(TEST_CSV_FILENAME, index_col="col1", nrows=nrows)
-    df_equals(modin_df, pandas_df)
-
-
-def test_from_csv_skipfooter(make_csv_file):
-    make_csv_file()
-
-    pandas_df = pandas.read_csv(TEST_CSV_FILENAME, skipfooter=13)
-    modin_df = pd.read_csv(TEST_CSV_FILENAME, skipfooter=13)
-
     df_equals(modin_df, pandas_df)
 
 
