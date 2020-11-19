@@ -1370,12 +1370,13 @@ def test_mixed_columns_not_from_df(columns, as_index):
 
     md_df, pd_df = create_test_dfs(data)
     by_md, by_pd = map(get_columns, [md_df, pd_df])
-    
+
     pd_grp = pd_df.groupby(by_pd, **groupby_kw)
     md_grp = md_df.groupby(by_md, **groupby_kw)
 
+    modin_groupby_equals_pandas(md_grp, pd_grp)
     eval_general(md_grp, pd_grp, lambda grp: grp.size())
-    eval_general(md_grp, pd_grp, lambda grp: grp.agg(lambda df: df.sum()))
+    eval_general(md_grp, pd_grp, lambda grp: grp.apply(lambda df: df.sum()))
     eval_general(md_grp, pd_grp, lambda grp: grp.first())
 
 

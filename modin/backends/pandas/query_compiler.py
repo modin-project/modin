@@ -2547,8 +2547,19 @@ class PandasQueryCompiler(BaseQueryCompiler):
         as_index = groupby_kwargs.get("as_index", True)
         # breakpoint()
 
-        if not isinstance(by, list):
+        if isinstance(by, type(self)):
+            internal_by = by.columns
             by = [by]
+        else:
+            if not isinstance(by, list):
+                by = [by]
+            # breakpoint()
+            internal_by = [o for o in by if isinstance(o, str) and o in self.columns]
+            internal_qc = (
+                [self.getitem_column_array(internal_by)] if len(internal_by) else []
+            )
+
+            by = internal_qc + by[len(internal_by) :]
 
         broadcastable_by = [o._modin_frame for o in by if isinstance(o, type(self))]
         not_broadcastable_by = [o for o in by if not isinstance(o, type(self))]
@@ -2558,22 +2569,33 @@ class PandasQueryCompiler(BaseQueryCompiler):
             # It is used to make sure that between phases we are constructing the
             # right index and placing columns in the correct order.
             groupby_kwargs["as_index"] = True
-            #breakpoint()
+            # breakpoint()
             if by is not None:
-                by = by.squeeze(axis=1)
-                if isinstance(by, pandas.DataFrame):
-                    by.columns = [
-                        col if col != "__reduced__" else f"__reduced__{i}"
-                        for i, col in enumerate(by.columns)
-                    ]
+                internal_by_df = by[internal_by]
+                internal_by_df = internal_by_df.squeeze(axis=1)
+
+                if isinstance(internal_by_df, pandas.DataFrame):
                     df = pandas.concat(
-                        [df] + [by[[o for o in by if o not in df]]],
+                        [df]
+                        + [internal_by_df[[o for o in internal_by_df if o not in df]]],
                         axis=1,
                     )
-                    by = list(by.columns)
+                    internal_by_cols = list(internal_by_df.columns)
+                elif is_multi_by:
+                    internal_by_cols = [internal_by_df.name]
+                else:
+                    internal_by_cols = [internal_by_df]
 
-                if not isinstance(by, list):
-                    by = [by]
+                external_by = by.columns.difference(internal_by)
+                external_by_df = by[external_by].squeeze(axis=1)
+
+                if isinstance(external_by_df, pandas.DataFrame):
+                    external_by_cols = [o for _, o in external_by_df.iteritems()]
+                else:
+                    external_by_cols = [external_by_df]
+
+                by = internal_by_cols + external_by_cols
+
             else:
                 by = []
 
@@ -2581,7 +2603,6 @@ class PandasQueryCompiler(BaseQueryCompiler):
             _drop = drop
 
             def compute_groupby(df):
-                # breakpoint()
                 grouped_df = df.groupby(by=by, axis=axis, **groupby_kwargs)
                 try:
                     if isinstance(agg_func, dict):
@@ -2618,6 +2639,10 @@ class PandasQueryCompiler(BaseQueryCompiler):
                                 i
                                 for i, name in enumerate(result.index.names)
                                 if name in result.columns
+                                or (
+                                    isinstance(name, str)
+                                    and name.startswith("__reduced__")
+                                )
                             ]
                             if len(duplicated_cols) == result.index.nlevels:
                                 drop = False

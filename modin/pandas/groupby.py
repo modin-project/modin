@@ -37,6 +37,12 @@ from modin.config import IsExperimental
 from .series import Series
 
 
+class Grouper:
+    def __init__(self, parent, raw_by):
+        self._parent = parent
+        self._raw_by = raw_by
+
+
 @_inherit_docstrings(
     pandas.core.groupby.DataFrameGroupBy,
     excluded=[
@@ -471,11 +477,14 @@ class DataFrameGroupBy(object):
         )
 
     def size(self):
+        # breakpoint()
         if self._axis == 0:
             # Series objects in 'by' mean we couldn't handle the case
             # and transform 'by' to a query compiler.
             # In this case we are just defaulting to pandas.
-            if is_list_like(self._by) and any(isinstance(o, Series) for o in self._by):
+            if is_list_like(self._by) and any(
+                isinstance(o, type(self._df._query_compiler)) for o in self._by
+            ):
                 work_object = DataFrameGroupBy(
                     self._df,
                     self._by,
@@ -950,16 +959,7 @@ class DataFrameGroupBy(object):
         by = try_cast_to_pandas(by)
 
         if isinstance(by, list):
-            by = [
-                (
-                    o.squeeze()
-                    if o.columns[0] not in self._df._query_compiler.columns
-                    else o.columns[0]
-                )
-                if isinstance(o, pandas.DataFrame)
-                else o
-                for o in by
-            ]
+            by = [(o.squeeze()) if isinstance(o, pandas.DataFrame) else o for o in by]
 
         def groupby_on_multiple_columns(df, *args, **kwargs):
             return f(

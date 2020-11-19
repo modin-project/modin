@@ -35,13 +35,7 @@ class GroupbyReduceFunction(MapReduceFunction):
                 by = try_cast_to_pandas(by)
                 if isinstance(by, list):
                     by = [
-                        (
-                            o.squeeze()
-                            if o.columns[0] not in query_compiler.columns
-                            else o.columns[0]
-                        )
-                        if isinstance(o, pandas.DataFrame)
-                        else o
+                        o.squeeze() if isinstance(o, pandas.DataFrame) else o
                         for o in by
                     ]
                 return query_compiler.default_to_pandas(

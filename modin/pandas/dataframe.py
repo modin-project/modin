@@ -380,7 +380,10 @@ class DataFrame(BasePandasDataset):
             else:
                 by = self.__getitem__(by)._query_compiler
         elif isinstance(by, Series):
-            drop = by._parent is self
+            if by._parent is self:
+                drop = True
+            else:
+                drop = False
             idx_name = by.name
             by = by._query_compiler
         elif is_list_like(by):
@@ -406,13 +409,13 @@ class DataFrame(BasePandasDataset):
                     else:
                         external_by.append(current_by)
 
-                internal_qc = (
-                    [self[internal_by]._query_compiler] if len(internal_by) else []
-                )
+                by = internal_by + external_by
 
-                by = internal_qc + external_by
-                if len(by) == 1 and isinstance(by[0], type(self._query_compiler)):
-                    by = by[0]
+                if len(external_by) == 0:
+                    by = self[internal_by]._query_compiler
+
+                # if len(by) == 1 and isinstance(by[0], type(self._query_compiler)):
+                #     by = by[0]
 
                 drop = True
             else:
