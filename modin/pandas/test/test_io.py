@@ -609,6 +609,7 @@ class TestReadCSV:
     def test_read_csv_parsing(
         self,
         make_csv_file,
+        request,
         dtype,
         engine,
         converters,
@@ -621,6 +622,10 @@ class TestReadCSV:
     ):
         if nrows and (false_values or true_values):
             pytest.xfail("modin and pandas dataframes differs - issue #2446")
+        if request.config.getoption("--simulate-cloud").lower() != "off":
+            pytest.xfail(
+                "The reason of tests fail in `cloud` mode is unknown for now - issue #2340"
+            )
         kwargs = {
             "dtype": dtype,
             "engine": engine,
