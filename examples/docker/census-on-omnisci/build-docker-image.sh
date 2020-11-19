@@ -15,6 +15,6 @@
 
 cd "`dirname \"$0\"`"
 
-docker build -f census-omnisci.dockerfile -t census-omnisci \
+docker build -f census-omnisci.dockerfile -t census-omnisci --build-arg no_proxy \
     --build-arg https_proxy --build-arg http_proxy --build-arg conda_extra_channel .
 printf "\n\nTo run the benchmark execute:\n\tdocker run --rm census-omnisci\n"
