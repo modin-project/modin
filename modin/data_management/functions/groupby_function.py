@@ -31,12 +31,7 @@ class GroupbyReduceFunction(MapReduceFunction):
             drop=False,
         ):
             if not isinstance(by, (type(query_compiler), str)):
-                by = try_cast_to_pandas(by)
-                if isinstance(by, list):
-                    by = [
-                        o.squeeze() if isinstance(o, pandas.DataFrame) else o
-                        for o in by
-                    ]
+                by = try_cast_to_pandas(by, squeeze=True)
                 return query_compiler.default_to_pandas(
                     lambda df: map_func(
                         df.groupby(by=by, axis=axis, **groupby_args), **map_args

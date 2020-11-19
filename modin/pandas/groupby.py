@@ -811,10 +811,7 @@ class DataFrameGroupBy(object):
                         by
                     ).to_pandas()
                 else:
-                    by = [
-                        o.squeeze() if isinstance(o, pandas.DataFrame) else o
-                        for o in try_cast_to_pandas(by)
-                    ]
+                    by = try_cast_to_pandas(by, squeeze=True)
                     pandas_df = self._df._to_pandas()
                 self._index_grouped_cache = pandas_df.groupby(by=by).groups
             else:
@@ -949,10 +946,7 @@ class DataFrameGroupBy(object):
         else:
             by = self._by
 
-        by = try_cast_to_pandas(by)
-
-        if isinstance(by, list):
-            by = [(o.squeeze()) if isinstance(o, pandas.DataFrame) else o for o in by]
+        by = try_cast_to_pandas(by, squeeze=True)
 
         def groupby_on_multiple_columns(df, *args, **kwargs):
             return f(
