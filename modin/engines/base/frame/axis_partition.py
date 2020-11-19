@@ -143,6 +143,7 @@ class PandasFrameAxisPartition(BaseFrameAxisPartition):
         """
         if num_splits is None:
             num_splits = len(self.list_of_blocks)
+
         if other_axis_partition is not None:
             if not isinstance(other_axis_partition, list):
                 other_axis_partition = [other_axis_partition]
@@ -266,7 +267,7 @@ class PandasFrameAxisPartition(BaseFrameAxisPartition):
             A list of Pandas DataFrames.
         """
         lt_frame = pandas.concat(partitions[:len_of_left], axis=axis, copy=False)
-        # breakpoint()
+
         rt_parts = partitions[len_of_left:]
 
         # reshaping flattened `rt_parts` array into a frame with shape `other_shape`

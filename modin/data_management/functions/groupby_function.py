@@ -30,7 +30,6 @@ class GroupbyReduceFunction(MapReduceFunction):
             numeric_only=True,
             drop=False,
         ):
-            # breakpoint()
             if not isinstance(by, (type(query_compiler), str)):
                 by = try_cast_to_pandas(by)
                 if isinstance(by, list):

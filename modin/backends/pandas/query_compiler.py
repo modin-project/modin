@@ -2525,27 +2525,12 @@ class PandasQueryCompiler(BaseQueryCompiler):
         if callable(agg_func):
             agg_func = wrap_udf_function(agg_func)
 
-        # if is_multi_by:
-        #     return super().groupby_agg(
-        #         by=by,
-        #         is_multi_by=is_multi_by,
-        #         axis=axis,
-        #         agg_func=agg_func,
-        #         agg_args=agg_args,
-        #         agg_kwargs=agg_kwargs,
-        #         groupby_kwargs=groupby_kwargs,
-        #         drop=drop,
-        #     )
-
-        # by = by.to_pandas().squeeze() if isinstance(by, type(self)) else by
-
         # since we're going to modify `groupby_kwargs` dict in a `groupby_agg_builder`,
         # we want to copy it to not propagate these changes into source dict, in case
         # of unsuccessful end of function
         groupby_kwargs = groupby_kwargs.copy()
 
         as_index = groupby_kwargs.get("as_index", True)
-        # breakpoint()
 
         if isinstance(by, type(self)):
             internal_by = by.columns
@@ -2553,7 +2538,6 @@ class PandasQueryCompiler(BaseQueryCompiler):
         else:
             if not isinstance(by, list):
                 by = [by]
-            # breakpoint()
             internal_by = [o for o in by if isinstance(o, str) and o in self.columns]
             internal_qc = (
                 [self.getitem_column_array(internal_by)] if len(internal_by) else []
@@ -2564,12 +2548,12 @@ class PandasQueryCompiler(BaseQueryCompiler):
         broadcastable_by = [o._modin_frame for o in by if isinstance(o, type(self))]
         not_broadcastable_by = [o for o in by if not isinstance(o, type(self))]
 
-        def groupby_agg_builder(df, by=None):
+        def groupby_agg_builder(df, by=None, drop=False):
             # Set `as_index` to True to track the metadata of the grouping object
             # It is used to make sure that between phases we are constructing the
             # right index and placing columns in the correct order.
             groupby_kwargs["as_index"] = True
-            # breakpoint()
+
             if by is not None:
                 internal_by_df = by[internal_by]
                 internal_by_df = internal_by_df.squeeze(axis=1)
@@ -2600,9 +2584,8 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 by = []
 
             by += not_broadcastable_by
-            _drop = drop
 
-            def compute_groupby(df):
+            def compute_groupby(df, drop=False):
                 grouped_df = df.groupby(by=by, axis=axis, **groupby_kwargs)
                 try:
                     if isinstance(agg_func, dict):
@@ -2620,8 +2603,6 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 except (DataError, TypeError):
                     result = pandas.DataFrame(index=grouped_df.size().index)
 
-                drop = _drop
-
                 if not as_index:
                     if not isinstance(result.index, pandas.MultiIndex) and (
                         result.index.name is None or result.index.name in result.columns
@@ -2635,6 +2616,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
                         )
 
                         if not has_categorical_by:
+                            # Deleting index levels that already exists in the result frame
                             duplicated_cols = [
                                 i
                                 for i, name in enumerate(result.index.names)
@@ -2649,6 +2631,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
                             else:
                                 result.index = result.index.droplevel(duplicated_cols)
                         else:
+                            # Deleting columns that already exists in the result index levels
                             duplicated_cols = [
                                 name
                                 for name in result.index.names
@@ -2656,14 +2639,14 @@ class PandasQueryCompiler(BaseQueryCompiler):
                             ]
                             result.drop(columns=duplicated_cols, inplace=True)
                     result.reset_index(drop=not drop, inplace=True)
-                # breakpoint()
+
                 new_index_names = [
                     None
                     if isinstance(name, str) and name.startswith("__reduced__")
                     else name
                     for name in result.index.names
                 ]
-                # breakpoint()
+
                 cols_to_drop = (
                     result.columns[result.columns.str.match(r"__reduced__.*")]
                     if hasattr(result.columns, "str")
@@ -2679,16 +2662,15 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 return result
 
             try:
-                return compute_groupby(df)
+                return compute_groupby(df, drop)
             # This will happen with Arrow buffer read-only errors. We don't want to copy
             # all the time, so this will try to fast-path the code first.
             except (ValueError, KeyError):
-                return compute_groupby(df.copy())
+                return compute_groupby(df.copy(), drop)
 
-        # breakpoint()
         new_modin_frame = self._modin_frame.broadcast_apply_full_axis(
             axis=axis,
-            func=groupby_agg_builder,
+            func=lambda df, by=None: groupby_agg_builder(df, by, drop),
             other=broadcastable_by,
         )
         result = self.__constructor__(new_modin_frame)
@@ -2708,14 +2690,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             except Exception as e:
                 raise type(e)("No numeric types to aggregate.")
 
-        # Reset `as_index` because it was edited inplace.
-        groupby_kwargs["as_index"] = as_index
-        if as_index:
-            return result
-        else:
-            if result.index.name is None or result.index.name in result.columns:
-                drop = False
-            return result.reset_index(drop=not drop)
+        return result
 
     # END Manual Partitioning methods
 

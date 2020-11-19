@@ -436,7 +436,6 @@ class DataFrame(BasePandasDataset):
                 ):
                     names = [o.name if isinstance(o, Series) else o for o in by]
                     raise KeyError(next(x for x in names if x not in self))
-        # breakpoint()
         return DataFrameGroupBy(
             self,
             by,

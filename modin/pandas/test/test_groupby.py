@@ -258,12 +258,12 @@ class GetColumn:
             marks=pytest.mark.xfail(reason="Excluded because of bug #1554"),
         ),
         # but cum* functions produce undefined results with NaNs so we need to test the same combinations without NaN too
-        ["col5"],  # 10
+        ["col5"],
         ["col1", "col5"],
         ["col5", "col4"],
         ["col4", "col5"],
         ["col5", "col4", "col1"],
-        ["col1", pd.Series([1, 5, 7, 8])],  # 15
+        ["col1", pd.Series([1, 5, 7, 8])],
         [pd.Series([1, 5, 7, 8])],
         [
             pd.Series([1, 5, 7, 8]),
@@ -274,7 +274,7 @@ class GetColumn:
         ],
         ["col1", GetColumn("col5")],
         [GetColumn("col1"), GetColumn("col5")],
-        [GetColumn("col1")],  # 20
+        [GetColumn("col1")],
     ],
 )
 @pytest.mark.parametrize("as_index", [True, False])
