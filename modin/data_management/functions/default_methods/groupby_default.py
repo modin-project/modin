@@ -27,6 +27,8 @@ class GroupBy:
     @classmethod
     def validate_by(cls, by):
         def try_cast_series(df):
+            if isinstance(df, pandas.DataFrame):
+                df = df.squeeze(axis=1)
             if not isinstance(df, pandas.Series):
                 return df
             if df.name == "__reduced__":
@@ -111,6 +113,7 @@ class GroupBy:
             **kwargs
         ):
             if not isinstance(by, (pandas.Series, pandas.DataFrame)):
+                by = cls.validate_by(by)
                 return agg_func(
                     df.groupby(by=by, axis=axis, **groupby_args), **map_args
                 )
