@@ -1736,7 +1736,7 @@ class BasePandasFrame(object):
             None,
             dtypes,
             validate_axes="all"
-            if any(o is None for o in [new_index, new_columns])
+            if any(o is not None for o in [new_index, new_columns])
             else False,
         )
 

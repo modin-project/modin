@@ -91,8 +91,8 @@ class DataFrameGroupBy(object):
             "sort": sort,
             "as_index": as_index,
             "group_keys": group_keys,
-            "squeeze": squeeze,
         }
+        self._squeeze = squeeze
         self._kwargs.update(kwargs)
 
     _index_grouped_cache = None
@@ -283,7 +283,7 @@ class DataFrameGroupBy(object):
         return self.bfill(limit)
 
     def __getitem__(self, key):
-        kwargs = self._kwargs.copy()
+        kwargs = {**self._kwargs.copy(), "squeeze": self._squeeze}
         # Most of time indexing DataFrameGroupBy results in another DataFrameGroupBy object unless circumstances are
         # special in which case SeriesGroupBy has to be returned. Such circumstances are when key equals to a single
         # column name and is not a list of column names or list of one column name.
@@ -484,6 +484,7 @@ class DataFrameGroupBy(object):
                     self._axis,
                     drop=False,
                     idx_name=None,
+                    squeeze=self._squeeze,
                     **self._kwargs,
                 )
                 result = work_object._wrap_aggregation(
@@ -506,6 +507,7 @@ class DataFrameGroupBy(object):
                 self._axis,
                 drop=False,
                 idx_name=None,
+                squeeze=self._squeeze,
                 **self._kwargs,
             )
             result = work_object._wrap_aggregation(
@@ -532,6 +534,7 @@ class DataFrameGroupBy(object):
                 0,
                 drop=self._drop,
                 idx_name=self._idx_name,
+                squeeze=self._squeeze,
                 **self._kwargs,
             ).size()
 
@@ -871,7 +874,7 @@ class DataFrameGroupBy(object):
                 drop=self._drop,
             )
         )
-        if self._kwargs.get("squeeze", False):
+        if self._squeeze:
             return result.squeeze()
         return result
 
@@ -917,7 +920,7 @@ class DataFrameGroupBy(object):
         result = type(self._df)(query_compiler=new_manager)
         if result._query_compiler.get_index_name() == "__reduced__":
             result._query_compiler.set_index_name(None)
-        if self._kwargs.get("squeeze", False):
+        if self._squeeze:
             return result.squeeze()
         return result
 
@@ -950,7 +953,11 @@ class DataFrameGroupBy(object):
 
         def groupby_on_multiple_columns(df, *args, **kwargs):
             return f(
-                df.groupby(by=by, axis=self._axis, **self._kwargs), *args, **kwargs
+                df.groupby(
+                    by=by, axis=self._axis, squeeze=self._squeeze, **self._kwargs
+                ),
+                *args,
+                **kwargs,
             )
 
         return self._df._default_to_pandas(groupby_on_multiple_columns, *args, **kwargs)
