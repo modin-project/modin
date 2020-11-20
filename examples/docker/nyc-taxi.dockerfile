@@ -12,11 +12,16 @@
 # governing permissions and limitations under the License.
 
 FROM ubuntu:18.04
+
+ARG PYTHON_VERSION=3.7
 ENV http_proxy ${http_proxy}
 ENV https_proxy ${https_proxy}
 
-RUN apt-get update --yes \
-    && apt-get install wget --yes && \
+RUN apt-get update --yes && \
+    apt-get install --yes --no-install-recommends --fix-missing \
+        gcc \
+        python${PYTHON_VERSION}-dev \
+        wget && \
     rm -rf /var/lib/apt/lists/*
 
 ENV USER modin
@@ -33,7 +38,7 @@ ENV CONDA_DIR ${HOME}/miniconda
 
 SHELL ["/bin/bash", "--login", "-c"]
 
-RUN wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O /tmp/miniconda3.sh && \
+RUN wget --quiet --no-check-certificate https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O /tmp/miniconda3.sh && \
     bash /tmp/miniconda3.sh -b -p "${CONDA_DIR}" -f -u && \
     "${CONDA_DIR}/bin/conda" init bash && \
     rm -f /tmp/miniconda3.sh && \
@@ -45,7 +50,7 @@ RUN conda update -n base -c defaults conda -y && \
     pip install --no-cache-dir modin[ray] && \
     conda clean --all --yes
 
-RUN wget https://modin-datasets.s3.amazonaws.com/trips_data.csv -O "${HOME}/trips_data.csv"
+RUN wget --quiet --no-check-certificate https://modin-datasets.s3.amazonaws.com/trips_data.csv -O "${HOME}/trips_data.csv"
 
 COPY nyc-taxi.py "${HOME}/nyc-taxi.py"
 
