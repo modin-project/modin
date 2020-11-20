@@ -2561,7 +2561,11 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 if isinstance(internal_by_df, pandas.DataFrame):
                     df = pandas.concat(
                         [df]
-                        + [internal_by_df[[o for o in internal_by_df if o not in df]]],
+                        + [
+                            internal_by_df.iloc[
+                                :, ~internal_by_df.columns.isin(df.columns)
+                            ]
+                        ],
                         axis=1,
                     )
                     internal_by_cols = list(internal_by_df.columns)

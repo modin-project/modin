@@ -1735,7 +1735,9 @@ class BasePandasFrame(object):
             None,
             None,
             dtypes,
-            validate_axes="all" if new_partitions.size != 0 else False,
+            validate_axes="all"
+            if any(o is None for o in [new_index, new_columns])
+            else False,
         )
 
     def _copartition(self, axis, other, how, sort, force_repartition=False):

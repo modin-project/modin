@@ -148,11 +148,11 @@ class PandasFrameAxisPartition(BaseFrameAxisPartition):
             if not isinstance(other_axis_partition, list):
                 other_axis_partition = [other_axis_partition]
 
-            other_shape = np.zeros(len(other_axis_partition) + 1, dtype=np.int)
-            for i in range(1, len(other_axis_partition) + 1):
-                other_shape[i] = other_shape[i - 1] + len(
-                    other_axis_partition[i - 1].list_of_blocks
-                )
+            # (other_shape[i-1], other_shape[i]) will indicate slice
+            # to restore i axis partition
+            other_shape = np.cumsum(
+                [0] + [len(o.list_of_blocks) for o in other_axis_partition]
+            )
 
             return self._wrap_partitions(
                 self.deploy_func_between_two_axis_partitions(
@@ -273,7 +273,7 @@ class PandasFrameAxisPartition(BaseFrameAxisPartition):
         # reshaping flattened `rt_parts` array into a frame with shape `other_shape`
         combined_axis = [
             pandas.concat(
-                [rt_parts[j] for j in range(other_shape[i - 1], other_shape[i])],
+                rt_parts[other_shape[i - 1] : other_shape[i]],
                 axis=axis,
                 copy=False,
             )

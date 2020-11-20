@@ -414,9 +414,6 @@ class DataFrame(BasePandasDataset):
                 if len(external_by) == 0:
                     by = self[internal_by]._query_compiler
 
-                # if len(by) == 1 and isinstance(by[0], type(self._query_compiler)):
-                #     by = by[0]
-
                 drop = True
             else:
                 mismatch = len(by) != len(self.axes[axis])
