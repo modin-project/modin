@@ -204,7 +204,7 @@ class BaseFrameManager(object):
         new_partitions = np.array(
             [
                 [
-                    part.add_to_apply_calls(
+                    part.apply(
                         apply_func,
                         **{other_name: right[col_idx] if axis else right[row_idx]},
                     )
@@ -587,9 +587,7 @@ class BaseFrameManager(object):
     ):
         preprocessed_func = cls.preprocess_func(func)
         return [
-            obj.add_to_apply_calls(
-                preprocessed_func, other=[o.get() for o in broadcasted], **kwargs
-            )
+            obj.apply(preprocessed_func, other=[o.get() for o in broadcasted], **kwargs)
             for obj, broadcasted in zip(partitions, other.T)
         ]
 
@@ -608,9 +606,7 @@ class BaseFrameManager(object):
             A list of BaseFramePartition objects.
         """
         preprocessed_func = cls.preprocess_func(func)
-        return [
-            obj.add_to_apply_calls(preprocessed_func, **kwargs) for obj in partitions
-        ]
+        return [obj.apply(preprocessed_func, **kwargs) for obj in partitions]
 
     @classmethod
     def apply_func_to_select_indices(
