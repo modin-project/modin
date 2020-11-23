@@ -777,9 +777,7 @@ class BasePandasFrame(object):
         def astype_builder(df):
             return df.astype({k: v for k, v in col_dtypes.items() if k in df})
 
-        new_frame = self._frame_mgr_cls.lazy_map_partitions(
-            self._partitions, astype_builder
-        )
+        new_frame = self._frame_mgr_cls.map_partitions(self._partitions, astype_builder)
         return self.__constructor__(
             new_frame,
             self.index,
@@ -1145,7 +1143,7 @@ class BasePandasFrame(object):
         else:
             reduce_func = self._build_mapreduce_func(axis, reduce_func)
 
-        map_parts = self._frame_mgr_cls.lazy_map_partitions(self._partitions, map_func)
+        map_parts = self._frame_mgr_cls.map_partitions(self._partitions, map_func)
         reduce_parts = self._frame_mgr_cls.map_axis_partitions(
             axis, map_parts, reduce_func
         )
@@ -1171,7 +1169,7 @@ class BasePandasFrame(object):
         -------
             A new dataframe.
         """
-        new_partitions = self._frame_mgr_cls.lazy_map_partitions(self._partitions, func)
+        new_partitions = self._frame_mgr_cls.map_partitions(self._partitions, func)
         if dtypes == "copy":
             dtypes = self._dtypes
         elif dtypes is not None:
