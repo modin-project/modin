@@ -11,6 +11,7 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
+from abc import ABC
 import numpy as np
 import pandas
 
@@ -19,7 +20,7 @@ from modin.data_management.utils import compute_chunksize
 from pandas.api.types import union_categoricals
 
 
-class BaseFrameManager(object):
+class BaseFrameManager(ABC):
     """Partition class is the class to use for storing each partition. It must extend the `BaseFramePartition` class.
 
     It is the base class for managing the dataframe data layout and operators.
