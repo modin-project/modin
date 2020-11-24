@@ -319,6 +319,20 @@ def test_merge_asof_bad_arguments():
     with pytest.raises(ValueError):
         pd.merge_asof(modin_left, modin_right, on="a", right_on="can't do with by")
 
+    # Can't mix left_index with left_on or on, similarly for right.
+    with pytest.raises(ValueError):
+        pd.merge_asof(modin_left, modin_right, on="a", right_index=True)
+    with pytest.raises(ValueError):
+        pd.merge_asof(
+            modin_left, modin_right, left_on="a", right_on="a", right_index=True
+        )
+    with pytest.raises(ValueError):
+        pd.merge_asof(modin_left, modin_right, on="a", left_index=True)
+    with pytest.raises(ValueError):
+        pd.merge_asof(
+            modin_left, modin_right, left_on="a", right_on="a", left_index=True
+        )
+
     # Need both left and right
     with pytest.raises(Exception):  # Pandas bug, didn't validate inputs sufficiently
         pandas.merge_asof(pandas_left, pandas_right, left_on="a")

@@ -161,9 +161,20 @@ def merge_asof(
 
     ErrorMessage.default_to_pandas("`merge_asof`")
 
+    # As of Pandas 1.2 these should raise an error; before that it did
+    # something likely random:
+    if (
+        (on and (left_index or right_index))
+        or (left_on and left_index)
+        or (right_on and right_index)
+    ):
+        raise ValueError("Can't combine left/right_index with left/right_on or on.")
+
     # Pandas fallbacks for tricky cases:
     if (
-        # No idea how this works or why it does what it does:
+        # No idea how this works or why it does what it does; and in fact
+        # there's a Pandas bug suggesting it's wrong:
+        # https://github.com/pandas-dev/pandas/issues/33463
         (left_index and right_on is not None)
         # This is the case where by is a list of columns. If we're copying lots
         # of columns out of Pandas, maybe not worth trying our path, it's not
@@ -171,10 +182,6 @@ def merge_asof(
         or not isinstance(by, (str, type(None)))
         or not isinstance(left_by, (str, type(None)))
         or not isinstance(right_by, (str, type(None)))
-        # What does this even mean?! Pandas does _something_...
-        or (on and (left_index or right_index))
-        or (left_on and left_index)
-        or (right_on and right_index)
     ):
         if isinstance(right, DataFrame):
             right = to_pandas(right)
