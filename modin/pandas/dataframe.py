@@ -44,7 +44,7 @@ from typing import Optional, Sequence, Tuple, Union, Mapping
 import warnings
 
 from modin.error_message import ErrorMessage
-from modin.utils import _inherit_docstrings, to_pandas, hashable, try_cast_to_pandas
+from modin.utils import _inherit_docstrings, to_pandas, hashable
 from modin.config import IsExperimental
 from .utils import (
     from_pandas,
