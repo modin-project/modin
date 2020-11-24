@@ -868,36 +868,6 @@ def generate_none_dfs():
     return df, df2
 
 
-def make_dict_hash(dict_to_hash):
-    """Makes a hash from a dictionary considering nested
-    dictionaries, lists, sets or callables.
-
-    Parameters
-    ----------
-    dict_to_hash: dict
-        Dictionary that should be hashed.
-
-    Returns
-    -------
-        Dictionary hash.
-    """
-
-    def _make_hash(obj):
-        if isinstance(obj, (set, list, dict)):
-            object_hash = hash(frozenset(obj))
-        elif callable(obj):
-            object_hash = hash(obj.__name__)
-        else:
-            # conversion to str is done because hash(5) == hash(5.0)
-            object_hash = hash(obj if isinstance(obj, str) else str(obj))
-
-        return object_hash
-
-    # process unhashed values from dict_to_hash
-    new_dict = {key: _make_hash(value) for key, value in dict_to_hash.items()}
-    return hash(frozenset(new_dict))
-
-
 def get_unique_filename(
     test_name: str,
     kwargs: dict = {},
@@ -954,9 +924,10 @@ def get_unique_filename(
         )
         return os.path.join(data_dir, parameters_values + suffix_part + f".{extension}")
     else:
-        unique_id = make_dict_hash(kwargs)
+        import uuid
+
         return os.path.join(
-            data_dir, (test_name + f"_{str(unique_id)}" + suffix_part + f".{extension}")
+            data_dir, (uuid.uuid1().hex + suffix_part + f".{extension}")
         )
 
 

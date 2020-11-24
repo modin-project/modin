@@ -71,12 +71,6 @@ SMALL_ROW_SIZE = 2000
 if not os.path.exists(IO_OPS_DATA_DIR):
     os.mkdir(IO_OPS_DATA_DIR)
 
-str_initial_spaces = """col1,col2,col3,col4
-five,  six,  seven,  eight
-    five,    six,    seven,    eight
-five, six,  seven,   eight
-"""
-
 
 @pytest.fixture
 def make_parquet_file():
@@ -600,28 +594,16 @@ class TestReadCSV:
             },
         ],
     )
-    @pytest.mark.parametrize("true_values", [["Yes"], ["Yes", "true"], None])
-    @pytest.mark.parametrize("false_values", [["No"], ["No", "false"], None])
-    @pytest.mark.parametrize("skiprows", [2, lambda x: x % 2])
     @pytest.mark.parametrize("skipfooter", [0, 10])
-    @pytest.mark.parametrize("nrows", [123, None])
-    @pytest.mark.parametrize("names", [["c1", "c2", "c3", "c4"], None])
-    def test_read_csv_parsing(
+    def test_read_csv_parsing_1(
         self,
         make_csv_file,
         request,
         dtype,
         engine,
         converters,
-        true_values,
-        false_values,
-        skiprows,
         skipfooter,
-        nrows,
-        names,
     ):
-        if nrows and (false_values or true_values):
-            pytest.xfail("modin and pandas dataframes differs - issue #2446")
         if request.config.getoption("--simulate-cloud").lower() != "off":
             pytest.xfail(
                 "The reason of tests fail in `cloud` mode is unknown for now - issue #2340"
@@ -630,6 +612,51 @@ class TestReadCSV:
             "dtype": dtype,
             "engine": engine,
             "converters": converters,
+            "skipfooter": skipfooter,
+        }
+
+        unique_name = get_unique_filename("test_read_csv_parsing", kwargs)
+        make_csv_file(
+            filename=unique_name,
+        )
+        if kwargs["dtype"]:
+            kwargs["dtype"] = {
+                col: "object" for col in pandas.read_csv(unique_name, nrows=1).columns
+            }
+
+        eval_io(
+            filepath_or_buffer=unique_name,
+            fn_name="read_csv",
+            check_exception_type=None,  # issue #2320
+            raising_exceptions=None,
+            check_kwargs_callable=not callable(converters),
+            **kwargs,
+        )
+
+    @pytest.mark.parametrize("true_values", [["Yes"], ["Yes", "true"], None])
+    @pytest.mark.parametrize("false_values", [["No"], ["No", "false"], None])
+    @pytest.mark.parametrize("skiprows", [2, lambda x: x % 2])
+    @pytest.mark.parametrize("skipfooter", [0, 10])
+    @pytest.mark.parametrize("nrows", [123, None])
+    @pytest.mark.parametrize("names", [["c1", "c2", "c3", "c4"], None])
+    def test_read_csv_parsing_2(
+        self,
+        make_csv_file,
+        request,
+        true_values,
+        false_values,
+        skiprows,
+        skipfooter,
+        nrows,
+        names,
+    ):
+        if nrows and (false_values or true_values) and Engine.get() != "Python":
+            pytest.xfail("modin and pandas dataframes differs - issue #2446")
+        if request.config.getoption("--simulate-cloud").lower() != "off":
+            pytest.xfail(
+                "The reason of tests fail in `cloud` mode is unknown for now - issue #2340"
+            )
+        kwargs = {
             "true_values": true_values,
             "false_values": false_values,
             "skiprows": skiprows,
@@ -645,22 +672,24 @@ class TestReadCSV:
             if true_values or false_values
             else None,
         )
-        if kwargs["dtype"]:
-            kwargs["dtype"] = {
-                col: "object" for col in pandas.read_csv(unique_name, nrows=1).columns
-            }
 
         eval_io(
             filepath_or_buffer=unique_name,
             fn_name="read_csv",
             check_exception_type=None,  # issue #2320
             raising_exceptions=None,
-            check_kwargs_callable=not (callable(skiprows) or callable(converters)),
+            check_kwargs_callable=not callable(skiprows),
             **kwargs,
         )
 
     def test_read_csv_skipinitialspace(self, make_csv_file):
         unique_filename = get_unique_filename("test_read_csv_skipinitialspace")
+        str_initial_spaces = (
+            "col1,col2,col3,col4\n"
+            "five,  six,  seven,  eight\n"
+            "    five,    six,    seven,    eight\n"
+            "five, six,  seven,   eight\n"
+        )
 
         eval_io_from_str(str_initial_spaces, unique_filename, skipinitialspace=True)
 
