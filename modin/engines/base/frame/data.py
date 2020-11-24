@@ -1689,7 +1689,9 @@ class BasePandasFrame(object):
             validate_axes="all" if new_partitions.size != 0 else False,
         )
 
-    def _copartition(self, axis, other, how, sort, force_repartition=False):
+    def _copartition(
+        self, axis, other, how, sort, force_repartition=False, reindex=True
+    ):
         """
         Copartition two dataframes.
 
@@ -1726,6 +1728,7 @@ class BasePandasFrame(object):
                 self.axes[axis].copy(),
             )
 
+        # import pdb;pdb.set_trace()
         index_other_obj = [o.axes[axis] for o in other]
         joined_index = self._join_index_objects(axis, index_other_obj, how, sort)
         # sorting is performed in some cases when sort=`False`
@@ -1746,7 +1749,7 @@ class BasePandasFrame(object):
             #
             # if not joined_index.is_unique and axis == 0:
             #    return lambda df: df
-            if index.equals(joined_index):
+            if not reindex or index.equals(joined_index):
                 return lambda df: df
             return lambda df: df.reindex(joined_index, axis=axis)
 
@@ -1835,9 +1838,14 @@ class BasePandasFrame(object):
             A new dataframe.
         """
         left_parts, right_parts, joined_index = self._copartition(
-            0, right_frame, join_type, sort=True
+            0,
+            right_frame,
+            join_type,
+            sort=True,
+            reindex=False,
         )
         # unwrap list returned by `copartition`.
+        # import pdb;pdb.set_trace()
         right_parts = right_parts[0]
         new_frame = self._frame_mgr_cls.binary_operation(
             1, left_parts, lambda l, r: op(l, r), right_parts
