@@ -12,7 +12,16 @@
 # governing permissions and limitations under the License.
 
 import modin.pandas as pd
-from modin.pandas.test.utils import create_test_dfs
+
+import pandas
+import pytest
+
+from modin.pandas.test.utils import (
+    test_data_values,
+    test_data_keys,
+    create_test_dfs,
+    df_equals,
+)
 
 pd.DEFAULT_NPARTITIONS = 4
 
@@ -52,3 +61,47 @@ def test_aligning_partitions():
 
     modin_df2["c"] = modin_df1["b"]
     repr(modin_df2)
+
+
+@pytest.mark.parametrize("axis", [0, 1])
+@pytest.mark.parametrize("item_length", [0, 1, 2])
+@pytest.mark.parametrize("loc", ["first", "first + 1", "middle", "penult", "last"])
+def test_insert_item(axis, item_length, loc):
+    data = test_data_values[0]
+
+    def post_fn(df):
+        return (
+            (df.iloc[:, :-item_length], df.iloc[:, -item_length:])
+            if axis
+            else (df.iloc[:-item_length, :], df.iloc[-item_length:, :])
+        )
+
+    def get_reference(df, value, loc):
+        if axis == 0:
+            first_mask = df.iloc[:loc]
+            second_mask = df.iloc[loc:]
+        else:
+            first_mask = df.iloc[:, :loc]
+            second_mask = df.iloc[:, loc:]
+        return pandas.concat([first_mask, value, second_mask], axis=axis)
+
+    md_frames, pd_frames = create_test_dfs(data, post_fn=post_fn)
+    md_item, md_main = md_frames
+    pd_item, pd_main = pd_frames
+
+    locs_dict = {
+        "first": 0,
+        "first + 1": 1,
+        "middle": len(md_main.axes[axis]) // 2,
+        "penult": len(md_main.axes[axis]) - 1,
+        "last": len(md_main.axes[axis]),
+    }
+
+    loc = locs_dict[loc]
+
+    pd_res = get_reference(pd_main, loc=loc, value=pd_item)
+    md_res = md_main._query_compiler.insert_item(
+        axis=axis, loc=loc, value=md_item._query_compiler
+    ).to_pandas()
+
+    df_equals(md_res, pd_res)

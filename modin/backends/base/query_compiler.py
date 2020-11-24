@@ -1515,15 +1515,16 @@ class BaseQueryCompiler(abc.ABC):
         return DataFrameDefault.register(applyier)(self)
 
     def insert_item(self, axis, loc, value):
-        def row_inserter(df, value, loc):
-            first_mask = df.iloc[:loc]
-            second_mask = df.iloc[loc:]
-            return pandas.concat([first_mask, value, second_mask], axis=0)
+        def item_inserter(df, value, loc):
+            if axis == 0:
+                first_mask = df.iloc[:loc]
+                second_mask = df.iloc[loc:]
+            else:
+                first_mask = df.iloc[:, :loc]
+                second_mask = df.iloc[:, loc:]
+            return pandas.concat([first_mask, value, second_mask], axis=axis)
 
-        if axis == 0:
-            return DataFrameDefault.register(row_inserter)(self, value=value, loc=loc)
-        else:
-            return self.insert(loc=loc, column=value.columns[0], value=value)
+        return DataFrameDefault.register(item_inserter)(self, value=value, loc=loc)
 
     def setitem(self, axis, key, value):
         def setitem(df, axis, key, value):
