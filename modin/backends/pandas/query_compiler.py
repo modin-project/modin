@@ -2168,21 +2168,25 @@ class PandasQueryCompiler(BaseQueryCompiler):
         """
         return self.__constructor__(self._modin_frame.mask(row_numeric_idx=key))
 
-    def insert_item(self, axis, loc, value, **kwargs):
+    def insert_item(self, axis, loc, value):
         """
-        Insert the column/row defined by `value` at the specified `loc`
+        Insert new column/row defined by `value` at the specified `loc`
 
         Parameters
         ----------
-        axis:
+        axis: int, axis to insert along
+        loc: int, position to insert `value`
+        value: PandasQueryCompiler, value to insert
+
+        Returns
+        -------
+            A new PandasQueryCompiler
         """
         assert isinstance(value, type(self))
 
-        how = kwargs.get("join", "left")
-
         def execute_concat(left, middle, *right):
             return self.__constructor__(
-                left._concat(axis, [middle, *right], how, sort=False)
+                left._concat(axis, [middle, *right], "left", sort=False)
             )
 
         def get_kwargs(value):
@@ -2201,14 +2205,6 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 return execute_concat(self._modin_frame, value._modin_frame)
 
     def setitem(self, axis, key, value):
-        if isinstance(value, type(self)) and not value.get_axis(axis).equals(
-            self.get_axis(axis)
-        ):
-            value = value.reindex(axis, self.get_axis(axis))
-
-        return self._setitem(axis=axis, key=key, value=value)
-
-    def _setitem(self, axis, key, value):
         """Set the column defined by `key` to the `value` provided.
 
         Args:
@@ -2218,7 +2214,14 @@ class PandasQueryCompiler(BaseQueryCompiler):
         Returns:
              A new QueryCompiler
         """
+        if isinstance(value, type(self)) and not value.get_axis(axis).equals(
+            self.get_axis(axis)
+        ):
+            value = value.reindex(axis, self.get_axis(axis))
 
+        return self._setitem(axis=axis, key=key, value=value)
+
+    def _setitem(self, axis, key, value):
         def setitem_builder(df, internal_indices=[]):
             df = df.copy()
             if len(internal_indices) == 1:
@@ -2367,10 +2370,12 @@ class PandasQueryCompiler(BaseQueryCompiler):
         Returns:
             A new PandasQueryCompiler with new data inserted.
         """
-        if isinstance(value, (type(self), pandas.Series)) and not value.index.equals(
-            self.index
-        ):
-            value = value.reindex(axis=0, labels=self.index)
+        if isinstance(value, (type(self), pandas.Series)):
+            value = (
+                value
+                if value.index.equals(self.index)
+                else value.reindex(axis=0, labels=self.index)
+            )
         elif is_list_like(value):
             value = list(value)
         else:

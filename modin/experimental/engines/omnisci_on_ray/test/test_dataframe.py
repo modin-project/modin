@@ -494,7 +494,8 @@ class TestConcat:
     def test_setitem_default(self):
         def applier(df, lib, **kwargs):
             df = df + 1
-            df["a"] = lib.Series(np.arange(3))
+            df["a"] = np.arange(3)
+            df["b"] = lib.Series(np.arange(3))
             return df
 
         run_and_compare(applier, data=self.data, force_lazy=False)
@@ -504,29 +505,15 @@ class TestConcat:
             df = df + 1
             df.insert(2, "new_int", 10)
             df.insert(2, "new_float", 5.5)
-            return df
-
-        run_and_compare(applier, data=self.data)
-
-    def test_insert_default(self):
-        def applier(df, **kwargs):
-            df = df + 1
-            df.insert(2, np.arange(3))
-            return df
-
-        run_and_compare(applier, data=self.data, force_lazy=False)
-
-    def test_insert_qc_lazy(self):
-        def applier(df, **kwargs):
-            df = df + 1
             df.insert(loc=2, column="new_a", value=df["a"] + 1)
             return df
 
         run_and_compare(applier, data=self.data)
 
-    def test_insert_qc_default(self):
+    def test_insert_default(self):
         def applier(df, lib, **kwargs):
             df = df + 1
+            df.insert(2, np.arange(3))
             df.insert(loc=2, column="new_a", value=lib.Series(np.arange(3)))
             return df
 

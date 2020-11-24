@@ -921,19 +921,7 @@ def test_dropna_subset_error(data, axis, subset):
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-@pytest.mark.parametrize(
-    "astype",
-    [
-        "category",
-        pytest.param(
-            "int32",
-            marks=pytest.mark.xfail(
-                reason="Modin astype() does not raises ValueError at non-numeric argument when Pandas does."
-            ),
-        ),
-        "float",
-    ],
-)
+@pytest.mark.parametrize("astype", ["category", "int32", "float"])
 def test_insert_dtypes(data, astype):
     modin_df, pandas_df = pd.DataFrame(data), pandas.DataFrame(data)
 

@@ -924,24 +924,21 @@ class DataFrame(BasePandasDataset):
             value = value.squeeze(axis=1)
 
         if not self._query_compiler.lazy_execution and len(self.index) == 0:
-            # Can't insert in distributed way in that case
-            value = try_cast_to_pandas(value)
-            try:
-                value = pandas.Series(value)
-            except (TypeError, ValueError, IndexError):
-                raise ValueError(
-                    "Cannot insert into a DataFrame with no defined index "
-                    "and a value that cannot be converted to a "
-                    "Series"
-                )
+            if not hasattr(value, "index"):
+                try:
+                    value = pandas.Series(value)
+                except (TypeError, ValueError, IndexError):
+                    raise ValueError(
+                        "Cannot insert into a DataFrame with no defined index "
+                        "and a value that cannot be converted to a "
+                        "Series"
+                    )
             new_index = value.index.copy()
             new_columns = self.columns.insert(loc, column)
             new_query_compiler = DataFrame(
                 value, index=new_index, columns=new_columns
             )._query_compiler
         elif len(self.columns) == 0 and loc == 0:
-            # if isinstance(value, (pandas.Series, Series)):
-            #     value = value.reindex(index=self.index)
             new_query_compiler = DataFrame(
                 data=value, columns=[column], index=self.index
             )._query_compiler

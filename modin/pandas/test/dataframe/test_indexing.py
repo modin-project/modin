@@ -1164,9 +1164,16 @@ def test___setitem__(data):
 
     # from issue #2442
     data = {"a": [1, 2, 3, 4]}
+    # Index with duplicated timestamp
     index = pandas.to_datetime(["2020-02-06", "2020-02-06", "2020-02-22", "2020-03-26"])
 
     md_df, pd_df = create_test_dfs(data, index=index)
+    # Setting new column
+    pd_df["b"] = pandas.Series(np.arange(4))
+    md_df["b"] = pd.Series(np.arange(4))
+
+    df_equals(md_df, pd_df)
+    # Setting existing column
     pd_df["b"] = pandas.Series(np.arange(4))
     md_df["b"] = pd.Series(np.arange(4))
 
