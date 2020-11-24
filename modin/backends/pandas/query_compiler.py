@@ -2182,15 +2182,13 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
         def execute_concat(left, middle, *right):
             return self.__constructor__(
-                left._concat(
-                    axis=axis, others=[middle, *right], how=how, sort=False
-                )
+                left._concat(axis, [middle, *right], how, sort=False)
             )
-        
+
         def get_kwargs(value):
             return {("col_numeric_idx" if axis else "row_numeric_idx"): value}
 
-        if 0 < loc < len(self.get_axis(axis)) - 1:
+        if 0 < loc < len(self.get_axis(axis)):
             first_mask = self._modin_frame.mask(**get_kwargs(list(range(loc))))
             second_mask = self._modin_frame.mask(
                 **get_kwargs(list(range(loc, len(self.get_axis(axis)))))
@@ -2203,6 +2201,14 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 return execute_concat(self._modin_frame, value._modin_frame)
 
     def setitem(self, axis, key, value):
+        if isinstance(value, type(self)) and not value.get_axis(axis).equals(
+            self.get_axis(axis)
+        ):
+            value = value.reindex(axis, self.get_axis(axis))
+
+        return self._setitem(axis=axis, key=key, value=value)
+
+    def _setitem(self, axis, key, value):
         """Set the column defined by `key` to the `value` provided.
 
         Args:
@@ -2361,18 +2367,18 @@ class PandasQueryCompiler(BaseQueryCompiler):
         Returns:
             A new PandasQueryCompiler with new data inserted.
         """
+        if isinstance(value, (type(self), pandas.Series)) and not value.index.equals(
+            self.index
+        ):
+            value = value.reindex(axis=0, labels=self.index)
+        elif is_list_like(value):
+            value = list(value)
+        else:
+            value = [value] * len(self.index)
 
         if isinstance(value, type(self)):
             value.columns = [column]
             return self.insert_item(axis=1, loc=loc, value=value)
-
-        if is_list_like(value):
-            if isinstance(value, pandas.Series):
-                value = value.reindex(self.index)
-            else:
-                value = list(value)
-        else:
-            value = [value] * len(self.index)
 
         def insert(df, internal_indices=[]):
             internal_idx = int(internal_indices[0])

@@ -44,7 +44,7 @@ from typing import Optional, Sequence, Tuple, Union, Mapping
 import warnings
 
 from modin.error_message import ErrorMessage
-from modin.utils import _inherit_docstrings, to_pandas, hashable
+from modin.utils import _inherit_docstrings, to_pandas, hashable, try_cast_to_pandas
 from modin.config import IsExperimental
 from .utils import (
     from_pandas,
@@ -923,11 +923,9 @@ class DataFrame(BasePandasDataset):
                 raise ValueError("Wrong number of items passed 2, placement implies 1")
             value = value.squeeze(axis=1)
 
-        if isinstance(value, Series):
-            # TODO: Remove broadcast of Series
-            value = value._to_pandas()
-
         if not self._query_compiler.lazy_execution and len(self.index) == 0:
+            # Can't insert in distributed way in that case
+            value = try_cast_to_pandas(value)
             try:
                 value = pandas.Series(value)
             except (TypeError, ValueError, IndexError):
@@ -942,13 +940,15 @@ class DataFrame(BasePandasDataset):
                 value, index=new_index, columns=new_columns
             )._query_compiler
         elif len(self.columns) == 0 and loc == 0:
+            # if isinstance(value, (pandas.Series, Series)):
+            #     value = value.reindex(index=self.index)
             new_query_compiler = DataFrame(
                 data=value, columns=[column], index=self.index
             )._query_compiler
         else:
             if (
                 is_list_like(value)
-                and not isinstance(value, pandas.Series)
+                and not isinstance(value, (pandas.Series, Series))
                 and len(value) != len(self.index)
             ):
                 raise ValueError("Length of values does not match length of index")
@@ -962,6 +962,8 @@ class DataFrame(BasePandasDataset):
                 )
             if loc < 0:
                 raise ValueError("unbounded slice")
+            if isinstance(value, Series):
+                value = value._query_compiler
             new_query_compiler = self._query_compiler.insert(loc, column, value)
 
         self._update_inplace(new_query_compiler=new_query_compiler)
@@ -1979,34 +1981,8 @@ class DataFrame(BasePandasDataset):
 
     def __setitem__(self, key, value):
         if hashable(key) and key not in self.columns:
-            # Handle new column case first
-            if isinstance(value, Series):
-                if len(self.columns) == 0:
-                    self._query_compiler = value._query_compiler.copy()
-                else:
-                    # If self is not lazy frame, then we can do that fast
-                    # path here by aligning indices at API layer without joining it.
-                    # Otherwise it will be backend responsobility to correctly join indices
-                    # and reindex value.
-                    if not self._query_compiler.lazy_execution:
-                        if not self.index.equals(value.index):
-                            value = value.reindex(self.index)
-                        new_qc = self._query_compiler.insert(
-                            loc=len(self.columns),
-                            column=key,
-                            value=value._query_compiler,
-                        )
-                    else:
-                        new_qc = self._query_compiler.concat(
-                            1,
-                            value._query_compiler,
-                            join="left",
-                        )
-
-                    self._create_or_update_from_compiler(
-                        new_qc,
-                        inplace=True,
-                    )
+            if isinstance(value, Series) and len(self.columns) == 0:
+                self._query_compiler = value._query_compiler.copy()
                 # Now that the data is appended, we need to update the column name for
                 # that column to `key`, otherwise the name could be incorrect. Drop the
                 # last column name from the list (the appended value's name and append
