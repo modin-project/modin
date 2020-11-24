@@ -16,12 +16,12 @@ from distributed.client import _get_global_client
 
 class DaskTask:
     @classmethod
-    def deploy(cls, func, num_return_vals, kwargs):
+    def deploy(cls, func, num_returns, kwargs):
         client = _get_global_client()
         remote_task_future = client.submit(func, **kwargs)
         return [
             client.submit(lambda l, i: l[i], remote_task_future, i)
-            for i in range(num_return_vals)
+            for i in range(num_returns)
         ]
 
     @classmethod

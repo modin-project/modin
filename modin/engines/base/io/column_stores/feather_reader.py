@@ -32,8 +32,7 @@ class FeatherReader(ColumnStoreReader):
             https://arrow.apache.org/docs/python/api.html#feather-format
         """
         if columns is None:
-            from pyarrow.feather import FeatherReader
+            from pyarrow.feather import read_feather
 
-            fr = FeatherReader(path)
-            columns = [fr.get_column_name(i) for i in range(fr.num_columns)]
-        return cls.build_query_compiler(path, columns, use_threads=False)
+            df = read_feather(path)
+        return cls.build_query_compiler(path, df.columns, use_threads=False)

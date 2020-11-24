@@ -148,7 +148,7 @@ class ExperimentalPandasOnRayIO(PandasOnRayIO):
                     columns,
                     chunksize,
                 ),
-                num_return_vals=num_splits + 1,
+                num_returns=num_splits + 1,
             )
             partition_ids.append(
                 [PandasOnRayFramePartition(obj) for obj in partition_id[:-1]]

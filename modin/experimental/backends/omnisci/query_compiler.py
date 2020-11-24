@@ -262,30 +262,20 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
         )
         return self.__constructor__(new_frame)
 
-    def groupby_dict_agg(self, by, func_dict, groupby_args, agg_args, drop=False):
-        """Apply aggregation functions to a grouped dataframe per-column.
-
-        Parameters
-        ----------
-        by : DFAlgQueryCompiler
-            The column to group by
-        func_dict : dict of str, callable/string
-            The dictionary mapping of column to function
-        groupby_args : dict
-            The dictionary of keyword arguments for the group by.
-        agg_args : dict
-            The dictionary of keyword arguments for the aggregation functions
-        drop : bool
-            Whether or not to drop the column from the data.
-
-        Returns
-        -------
-        DFAlgQueryCompiler
-            The result of the per-column aggregations on the grouped dataframe.
-        """
-        # TODO: handle drop arg
+    def groupby_agg(
+        self,
+        by,
+        is_multi_by,
+        axis,
+        agg_func,
+        agg_args,
+        agg_kwargs,
+        groupby_kwargs,
+        drop=False,
+    ):
+        # TODO: handle `is_multi_by`, `agg_args`, `drop` args
         new_frame = self._modin_frame.groupby_agg(
-            by, 0, func_dict, groupby_args, **agg_args
+            by, axis, agg_func, groupby_kwargs, **agg_kwargs
         )
         return self.__constructor__(new_frame)
 
@@ -628,6 +618,18 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
             return self._modin_frame.has_multiindex()
         assert axis == 1
         return isinstance(self.columns, pandas.MultiIndex)
+
+    def get_index_name(self):
+        return self._modin_frame.get_index_name()
+
+    def set_index_name(self, name):
+        self._modin_frame = self._modin_frame.set_index_name(name)
+
+    def get_index_names(self):
+        return self._modin_frame.get_index_names()
+
+    def set_index_names(self, names):
+        self._modin_frame = self._modin_frame.set_index_names(names)
 
     def free(self):
         return

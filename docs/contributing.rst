@@ -49,7 +49,6 @@ with this project or the open source license(s) involved."
    Signed-off-by: Awesome Developer <developer@example.org>
 
 
-.
 Code without a proper signoff cannot be merged into the
 master branch. Note: You must use your real name (sorry, no pseudonyms or anonymous
 contributions.)
@@ -88,7 +87,9 @@ To ensure that all commit messages in the master branch follow a specific format
 enforce that all commit messages must follow the following format:
 
 .. code-block:: bash
-  FEAT-#9999: Add `DataFrame.rolling` functionality, to enable rolling window operations
+
+    FEAT-#9999: Add `DataFrame.rolling` functionality, to enable rolling window operations
+
 The ``FEAT`` component represents the type of commit. This component of the commit
 message can be one of the following:
 
@@ -113,9 +114,9 @@ dependencies for running the tests and formatting the code:
 
 .. code-block:: bash
 
+  conda env create --file environment.yml
+  # or
   pip install -r requirements.txt
-
-For developments under Windows, dependencies can be found in 'env_windows.yml' file. 
 
 Code Formatting and Lint
 ------------------------
@@ -128,13 +129,13 @@ that you run the following from the project root:
   black modin/
 
 We also use flake8_ to check linting errors. Running the following from the project root
-will ensure that it passes the lint checks on Travis:
+will ensure that it passes the lint checks on Github Actions:
 
 .. code-block:: bash
 
   flake8 .
 
-We test that this has been run on our `Travis CI`_ test suite. If you do this and find
+We test that this has been run on our `Github Actions`_ test suite. If you do this and find
 that the tests are still failing, try updating your version of black and flake8.
 
 Adding a test
@@ -164,6 +165,26 @@ subset of the test suite. In order to run a specific test run:
 
 The entire test suite is automatically run for each pull request.
 
+Building documentation
+----------------------
+
+To build the documentation, please follow the steps below from the project root:
+
+.. code-block:: bash
+
+    cd docs
+    pip install -r requirements-doc.txt
+    sphinx-build -b html . build
+
+To visualize the documentation locally, run the following from `build` folder:
+
+.. code-block:: bash
+
+    python -m http.server <port>
+    # python -m http.server 1234
+
+then open the browser at `0.0.0.0:<port>` (e.g. `0.0.0.0:1234`).
+
 Contributing a new execution framework or in-memory format
 ----------------------------------------------------------
 
@@ -181,6 +202,6 @@ More docs on this coming soon...
 .. _internal methods:
 .. _black: https://github.com/ambv/black
 .. _flake8: http://flake8.pycqa.org/en/latest/
-.. _Travis CI: https://travis-ci.org/
+.. _Github Actions: https://github.com/features/actions
 .. _testing:
 .. _developer mailing list: https://groups.google.com/forum/#!forum/modin-dev

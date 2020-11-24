@@ -642,6 +642,7 @@ def eval_general(
     __inplace__=False,
     check_exception_type=True,
     raising_exceptions=None,
+    check_kwargs_callable=True,
     **kwargs,
 ):
     if raising_exceptions:
@@ -670,7 +671,7 @@ def eval_general(
             return (md_result, pd_result) if not __inplace__ else (modin_df, pandas_df)
 
     for key, value in kwargs.items():
-        if callable(value):
+        if check_kwargs_callable and callable(value):
             values = execute_callable(value)
             # that means, that callable raised an exception
             if values is None:
@@ -696,6 +697,7 @@ def eval_io(
     cast_to_str=False,
     check_exception_type=True,
     raising_exceptions=io_ops_bad_exc,
+    check_kwargs_callable=True,
     *args,
     **kwargs,
 ):
@@ -732,9 +734,35 @@ def eval_io(
         applyier,
         check_exception_type=check_exception_type,
         raising_exceptions=raising_exceptions,
+        check_kwargs_callable=check_kwargs_callable,
         *args,
         **kwargs,
     )
+
+
+def eval_io_from_str(csv_str: str, unique_filename: str, **kwargs):
+    """Evaluate I/O operation outputs equality check by using `csv_str`
+    data passed as python str (csv test file will be created from `csv_str`).
+
+    Parameters
+    ----------
+    csv_str: str
+        Test data for storing to csv file.
+    unique_filename: str
+        csv file name.
+    """
+    try:
+        with open(unique_filename, "w") as f:
+            f.write(csv_str)
+
+        eval_io(
+            filepath_or_buffer=unique_filename,
+            fn_name="read_csv",
+            **kwargs,
+        )
+
+    finally:
+        os.remove(unique_filename)
 
 
 def create_test_dfs(*args, **kwargs):

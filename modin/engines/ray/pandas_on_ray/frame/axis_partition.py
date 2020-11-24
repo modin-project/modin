@@ -33,6 +33,7 @@ class PandasOnRayFrameAxisPartition(PandasFrameAxisPartition):
     def deploy_axis_func(
         cls, axis, func, num_splits, kwargs, maintain_partitioning, *partitions
     ):
+        lengths = kwargs.get("_lengths", None)
         return deploy_ray_func._remote(
             args=(
                 PandasFrameAxisPartition.deploy_axis_func,
@@ -43,7 +44,7 @@ class PandasOnRayFrameAxisPartition(PandasFrameAxisPartition):
                 maintain_partitioning,
             )
             + tuple(partitions),
-            num_returns=num_splits * 3,
+            num_returns=num_splits * 3 if lengths is None else len(lengths) * 3,
         )
 
     @classmethod

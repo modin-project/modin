@@ -392,6 +392,30 @@ class TestMultiIndex:
 
         eval_general(pd, pandas, applier)
 
+    def test_set_index_name(self):
+        index = pandas.Index.__new__(pandas.Index, data=[i for i in range(24)])
+
+        pandas_df = pandas.DataFrame(self.data, index=index)
+        pandas_df.index.name = "new_name"
+        modin_df = pd.DataFrame(self.data, index=index)
+        modin_df._query_compiler.set_index_name("new_name")
+
+        df_equals(pandas_df, modin_df)
+
+    def test_set_index_names(self):
+        index = pandas.MultiIndex.from_tuples(
+            [(i, j, k) for i in range(2) for j in range(3) for k in range(4)]
+        )
+
+        pandas_df = pandas.DataFrame(self.data, index=index)
+        pandas_df.index.names = ["new_name1", "new_name2", "new_name3"]
+        modin_df = pd.DataFrame(self.data, index=index)
+        modin_df._query_compiler.set_index_names(
+            ["new_name1", "new_name2", "new_name3"]
+        )
+
+        df_equals(pandas_df, modin_df)
+
 
 class TestFillna:
     data = {"a": [1, 1, None], "b": [None, None, 2], "c": [3, None, None]}
@@ -547,6 +571,17 @@ class TestGroupby:
 
         run_and_compare(groupby_count, data=self.data, cols=cols, as_index=as_index)
 
+    @pytest.mark.xfail(
+        reason="Currently mean() passes a lambda into backend which cannot be executed on omnisci backend"
+    )
+    @pytest.mark.parametrize("cols", cols_value)
+    @pytest.mark.parametrize("as_index", bool_arg_values)
+    def test_groupby_mean(self, cols, as_index):
+        def groupby_mean(df, cols, as_index, **kwargs):
+            return df.groupby(cols, as_index=as_index).mean()
+
+        run_and_compare(groupby_mean, data=self.data, cols=cols, as_index=as_index)
+
     @pytest.mark.parametrize("cols", cols_value)
     @pytest.mark.parametrize("as_index", bool_arg_values)
     def test_groupby_proj_sum(self, cols, as_index):
@@ -568,6 +603,17 @@ class TestGroupby:
             return df.groupby("a").agg({"b": "size"})
 
         run_and_compare(groupby, data=self.data)
+
+    @pytest.mark.xfail(
+        reason="Function specified as a string should be passed into backend API, but currently it is transformed into a lambda"
+    )
+    @pytest.mark.parametrize("cols", cols_value)
+    @pytest.mark.parametrize("as_index", bool_arg_values)
+    def test_groupby_agg_mean(self, cols, as_index):
+        def groupby_mean(df, cols, as_index, **kwargs):
+            return df.groupby(cols, as_index=as_index).agg("mean")
+
+        run_and_compare(groupby_mean, data=self.data, cols=cols, as_index=as_index)
 
     taxi_data = {
         "a": [1, 1, 2, 2],

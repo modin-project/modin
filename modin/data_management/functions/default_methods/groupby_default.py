@@ -61,22 +61,40 @@ class GroupBy:
 
     @classmethod
     def build_aggregate_method(cls, key):
-        def fn(df, by, groupby_args, agg_args, axis=0, drop=False, **kwargs):
+        def fn(
+            df,
+            by,
+            groupby_args,
+            agg_args,
+            axis=0,
+            is_multi_by=None,
+            drop=False,
+            **kwargs
+        ):
             by = cls.validate_by(by)
-            groupby_args = groupby_args.copy()
-            as_index = groupby_args.pop("as_index", True)
-            groupby_args["as_index"] = True
+
+            if not is_multi_by:
+                groupby_args = groupby_args.copy()
+                as_index = groupby_args.pop("as_index", True)
+                groupby_args["as_index"] = True
 
             grp = df.groupby(by, axis=axis, **groupby_args)
             agg_func = cls.get_func(grp, key, **kwargs)
-            result = agg_func(grp, **agg_args)
+            result = (
+                grp.agg(agg_func, **agg_args)
+                if isinstance(agg_func, dict)
+                else agg_func(grp, **agg_args)
+            )
 
-            if as_index:
-                return result
+            if not is_multi_by:
+                if as_index:
+                    return result
+                else:
+                    if result.index.name is None or result.index.name in result.columns:
+                        drop = False
+                    return result.reset_index(drop=not drop)
             else:
-                if result.index.name is None or result.index.name in result.columns:
-                    drop = False
-                return result.reset_index(drop=not drop)
+                return result
 
         return fn
 

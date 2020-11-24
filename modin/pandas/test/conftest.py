@@ -71,7 +71,7 @@ def pytest_configure(config):
         set_base_backend(BASE_BACKEND_NAME)
     else:
         partition, engine = backend.split("On")
-        modin.set_base_backend(engine=engine, partition=backend)
+        modin.set_backends(engine=engine, partition=partition)
 
 
 def pytest_runtest_call(item):

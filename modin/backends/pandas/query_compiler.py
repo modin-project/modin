@@ -190,7 +190,8 @@ class PandasQueryCompiler(BaseQueryCompiler):
         self._modin_frame = modin_frame
 
     def default_to_pandas(self, pandas_op, *args, **kwargs):
-        """Default to pandas behavior.
+        """
+        Default to pandas behavior.
 
         Parameters
         ----------
@@ -206,8 +207,8 @@ class PandasQueryCompiler(BaseQueryCompiler):
         PandasQueryCompiler
             The result of the `pandas_op`, converted back to PandasQueryCompiler
 
-        Note
-        ----
+        Notes
+        -----
         This operation takes a distributed object and converts it directly to pandas.
         """
         op_name = getattr(pandas_op, "__name__", str(pandas_op))
@@ -731,18 +732,21 @@ class PandasQueryCompiler(BaseQueryCompiler):
             dropna = kwargs.get("dropna", True)
 
             try:
-                result = df.squeeze(axis=1).groupby(df.index, sort=False).sum()
+                result = (
+                    df.squeeze(axis=1)
+                    .groupby(df.index, sort=False, dropna=dropna)
+                    .sum()
+                )
             # This will happen with Arrow buffer read-only errors. We don't want to copy
             # all the time, so this will try to fast-path the code first.
             except (ValueError):
-                result = df.copy().squeeze(axis=1).groupby(df.index, sort=False).sum()
-
-            if not dropna and np.nan in df.index:
-                result = result.append(
-                    pandas.Series(
-                        [df.squeeze(axis=1).loc[[np.nan]].sum()], index=[np.nan]
-                    )
+                result = (
+                    df.copy()
+                    .squeeze(axis=1)
+                    .groupby(df.index, sort=False, dropna=dropna)
+                    .sum()
                 )
+
             if normalize:
                 result = result / df.squeeze(axis=1).sum()
 
@@ -2558,49 +2562,59 @@ class PandasQueryCompiler(BaseQueryCompiler):
         method="size",
     )
 
-    def groupby_dict_agg(self, by, func_dict, groupby_args, agg_args, drop=False):
-        """Apply aggregation functions to a grouped dataframe per-column.
+    def groupby_agg(
+        self,
+        by,
+        is_multi_by,
+        axis,
+        agg_func,
+        agg_args,
+        agg_kwargs,
+        groupby_kwargs,
+        drop=False,
+    ):
+        if callable(agg_func):
+            agg_func = wrap_udf_function(agg_func)
 
-        Parameters
-        ----------
-        by : PandasQueryCompiler
-            The column to group by
-        func_dict : dict of str, callable/string
-            The dictionary mapping of column to function
-        groupby_args : dict
-            The dictionary of keyword arguments for the group by.
-        agg_args : dict
-            The dictionary of keyword arguments for the aggregation functions
-        drop : bool
-            Whether or not to drop the column from the data.
+        if is_multi_by:
+            return super().groupby_agg(
+                by=by,
+                is_multi_by=is_multi_by,
+                axis=axis,
+                agg_func=agg_func,
+                agg_args=agg_args,
+                agg_kwargs=agg_kwargs,
+                groupby_kwargs=groupby_kwargs,
+                drop=drop,
+            )
 
-        Returns
-        -------
-        PandasQueryCompiler
-            The result of the per-column aggregations on the grouped dataframe.
-        """
-        return self.default_to_pandas(
-            lambda df: df.groupby(by=by, **groupby_args).agg(func_dict, **agg_args)
-        )
+        by = by.to_pandas().squeeze() if isinstance(by, type(self)) else by
 
-    def groupby_agg(self, by, axis, agg_func, groupby_args, agg_args, drop=False):
-        # since we're going to modify `groupby_args` dict in a `groupby_agg_builder`,
+        # since we're going to modify `groupby_kwargs` dict in a `groupby_agg_builder`,
         # we want to copy it to not propagate these changes into source dict, in case
         # of unsuccessful end of function
-        groupby_args = groupby_args.copy()
+        groupby_kwargs = groupby_kwargs.copy()
 
-        as_index = groupby_args.get("as_index", True)
+        as_index = groupby_kwargs.get("as_index", True)
 
         def groupby_agg_builder(df):
             # Set `as_index` to True to track the metadata of the grouping object
             # It is used to make sure that between phases we are constructing the
             # right index and placing columns in the correct order.
-            groupby_args["as_index"] = True
+            groupby_kwargs["as_index"] = True
 
             def compute_groupby(df):
-                grouped_df = df.groupby(by=by, axis=axis, **groupby_args)
+                grouped_df = df.groupby(by=by, axis=axis, **groupby_kwargs)
                 try:
-                    result = agg_func(grouped_df, **agg_args)
+                    if isinstance(agg_func, dict):
+                        # Filter our keys that don't exist in this partition. This happens when some columns
+                        # from this original dataframe didn't end up in every partition.
+                        partition_dict = {
+                            k: v for k, v in agg_func.items() if k in df.columns
+                        }
+                        result = grouped_df.agg(partition_dict)
+                    else:
+                        result = agg_func(grouped_df, **agg_kwargs)
                 # This happens when the partition is filled with non-numeric data and a
                 # numeric operation is done. We need to build the index here to avoid
                 # issues with extracting the index.
@@ -2626,15 +2640,17 @@ class PandasQueryCompiler(BaseQueryCompiler):
             # determening type of raised exception by applying `aggfunc`
             # to empty DataFrame
             try:
-                agg_func(
+                pandas.DataFrame(index=[1], columns=[1]).agg(agg_func) if isinstance(
+                    agg_func, dict
+                ) else agg_func(
                     pandas.DataFrame(index=[1], columns=[1]).groupby(level=0),
-                    **agg_args,
+                    **agg_kwargs,
                 )
             except Exception as e:
                 raise type(e)("No numeric types to aggregate.")
 
         # Reset `as_index` because it was edited inplace.
-        groupby_args["as_index"] = as_index
+        groupby_kwargs["as_index"] = as_index
         if as_index:
             return result
         else:

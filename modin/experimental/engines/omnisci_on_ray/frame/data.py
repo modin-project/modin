@@ -1235,6 +1235,69 @@ class OmnisciOnRayFrame(BasePandasFrame):
             return isinstance(self._index_cache, MultiIndex)
         return self._index_cols is not None and len(self._index_cols) > 1
 
+    def get_index_name(self):
+        if self._index_cols is None:
+            return None
+        if len(self._index_cols) > 1:
+            return None
+        return self._index_cols[0]
+
+    def set_index_name(self, name):
+        if self.has_multiindex():
+            ErrorMessage.single_warning("Scalar name for MultiIndex is not supported!")
+            return self
+
+        if self._index_cols is None and name is None:
+            return self
+
+        names = self._mangle_index_names([name])
+        exprs = OrderedDict()
+        if self._index_cols is None:
+            exprs[names[0]] = self.ref("__rowid__")
+        else:
+            exprs[names[0]] = self.ref(self._index_cols[0])
+
+        for col in self.columns:
+            exprs[col] = self.ref(col)
+
+        return self.__constructor__(
+            columns=self.columns,
+            dtypes=self._dtypes_for_exprs(exprs),
+            op=TransformNode(self, exprs),
+            index_cols=names,
+            uses_rowid=self._index_cols is None,
+            force_execution_mode=self._force_execution_mode,
+        )
+
+    def get_index_names(self):
+        if self.has_multiindex():
+            return self._index_cols.copy()
+        return [self.get_index_name()]
+
+    def set_index_names(self, names):
+        if not self.has_multiindex():
+            raise ValueError("Can set names for MultiIndex only")
+
+        if len(names) != len(self._index_cols):
+            raise ValueError(
+                f"Unexpected names count: expected {len(self._index_cols)} got {len(names)}"
+            )
+
+        names = self._mangle_index_names(names)
+        exprs = OrderedDict()
+        for old, new in zip(self._index_cols, names):
+            exprs[new] = self.ref(old)
+        for col in self.columns:
+            exprs[col] = self.ref(col)
+
+        return self.__constructor__(
+            columns=self.columns,
+            dtypes=self._dtypes_for_exprs(exprs),
+            op=TransformNode(self, exprs),
+            index_cols=names,
+            force_execution_mode=self._force_execution_mode,
+        )
+
     def to_pandas(self):
         self._execute()
 

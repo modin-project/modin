@@ -22,6 +22,7 @@ from .utils import (
     check_df_columns_have_nans,
     create_test_dfs,
     eval_general,
+    test_data,
     test_data_values,
     modin_df_almost_equals_pandas,
 )
@@ -104,6 +105,7 @@ def test_mixed_dtypes_groupby(as_index):
             modin_df_almost_equals_pandas,
             is_default=True,
         )
+        eval_shift(modin_groupby, pandas_groupby)
         eval_mean(modin_groupby, pandas_groupby)
         eval_any(modin_groupby, pandas_groupby)
         eval_min(modin_groupby, pandas_groupby)
@@ -148,7 +150,12 @@ def test_mixed_dtypes_groupby(as_index):
             eval_var(modin_groupby, pandas_groupby)
             eval_skew(modin_groupby, pandas_groupby)
 
-        agg_functions = ["min", "max"]
+        agg_functions = [
+            "min",
+            "max",
+            {"col2": "sum"},
+            {"col2": "max", "col4": "sum", "col5": "min"},
+        ]
         for func in agg_functions:
             eval_agg(modin_groupby, pandas_groupby, func)
             eval_aggregate(modin_groupby, pandas_groupby, func)
@@ -298,6 +305,7 @@ def test_simple_row_groupby(by, as_index, col1_category):
 
     modin_groupby_equals_pandas(modin_groupby, pandas_groupby)
     eval_ngroups(modin_groupby, pandas_groupby)
+    eval_shift(modin_groupby, pandas_groupby)
     eval_general(modin_groupby, pandas_groupby, lambda df: df.ffill(), is_default=True)
     eval_general(
         modin_groupby,
@@ -437,6 +445,7 @@ def test_single_group_row_groupby():
 
     modin_groupby_equals_pandas(modin_groupby, pandas_groupby)
     eval_ngroups(modin_groupby, pandas_groupby)
+    eval_shift(modin_groupby, pandas_groupby)
     eval_skew(modin_groupby, pandas_groupby)
     eval_general(modin_groupby, pandas_groupby, lambda df: df.ffill(), is_default=True)
     eval_general(
@@ -476,7 +485,12 @@ def test_single_group_row_groupby():
     eval_prod(modin_groupby, pandas_groupby)
     eval_std(modin_groupby, pandas_groupby)
 
-    agg_functions = ["min", "max"]
+    agg_functions = [
+        "min",
+        "max",
+        {"col2": "sum"},
+        {"col2": "max", "col4": "sum", "col5": "min"},
+    ]
     for func in agg_functions:
         eval_agg(modin_groupby, pandas_groupby, func)
         eval_aggregate(modin_groupby, pandas_groupby, func)
@@ -552,6 +566,7 @@ def test_large_row_groupby(is_by_category):
 
     modin_groupby_equals_pandas(modin_groupby, pandas_groupby)
     eval_ngroups(modin_groupby, pandas_groupby)
+    eval_shift(modin_groupby, pandas_groupby)
     eval_skew(modin_groupby, pandas_groupby)
     eval_general(modin_groupby, pandas_groupby, lambda df: df.ffill(), is_default=True)
     eval_general(
@@ -591,7 +606,7 @@ def test_large_row_groupby(is_by_category):
     # eval_prod(modin_groupby, pandas_groupby) causes overflows
     eval_std(modin_groupby, pandas_groupby)
 
-    agg_functions = ["min", "max"]
+    agg_functions = ["min", "max", {"A": "sum"}, {"A": "max", "B": "sum", "C": "min"}]
     for func in agg_functions:
         eval_agg(modin_groupby, pandas_groupby, func)
         eval_aggregate(modin_groupby, pandas_groupby, func)
@@ -666,6 +681,7 @@ def test_simple_col_groupby():
 
     modin_groupby_equals_pandas(modin_groupby, pandas_groupby)
     eval_ngroups(modin_groupby, pandas_groupby)
+    eval_shift(modin_groupby, pandas_groupby)
     eval_skew(modin_groupby, pandas_groupby)
     eval_general(modin_groupby, pandas_groupby, lambda df: df.ffill(), is_default=True)
     eval_general(
@@ -796,6 +812,7 @@ def test_series_groupby(by, as_index_series_or_dataframe):
 
         modin_groupby_equals_pandas(modin_groupby, pandas_groupby)
         eval_ngroups(modin_groupby, pandas_groupby)
+        eval_shift(modin_groupby, pandas_groupby)
         eval_general(
             modin_groupby, pandas_groupby, lambda df: df.ffill(), is_default=True
         )
@@ -1069,7 +1086,26 @@ def eval_groups(modin_groupby, pandas_groupby):
 
 
 def eval_shift(modin_groupby, pandas_groupby):
-    assert modin_groupby.groups == pandas_groupby.groups
+    eval_general(
+        modin_groupby,
+        pandas_groupby,
+        lambda groupby: groupby.shift(),
+    )
+    eval_general(
+        modin_groupby,
+        pandas_groupby,
+        lambda groupby: groupby.shift(periods=0),
+    )
+    eval_general(
+        modin_groupby,
+        pandas_groupby,
+        lambda groupby: groupby.shift(periods=-3),
+    )
+    eval_general(
+        modin_groupby,
+        pandas_groupby,
+        lambda groupby: groupby.shift(axis=1, fill_value=777),
+    )
 
 
 def test_groupby_on_index_values_with_loop():
@@ -1122,23 +1158,68 @@ def test_groupby_multiindex():
     df_equals(modin_df.groupby(by=by).count(), pandas_df.groupby(by=by).count())
 
 
-def test_agg_func_None_rename():
+@pytest.mark.parametrize("groupby_axis", [0, 1])
+@pytest.mark.parametrize("shift_axis", [0, 1])
+def test_shift_freq(groupby_axis, shift_axis):
     pandas_df = pandas.DataFrame(
         {
-            "col1": np.random.randint(0, 100, size=1000),
-            "col2": np.random.randint(0, 100, size=1000),
-            "col3": np.random.randint(0, 100, size=1000),
-            "col4": np.random.randint(0, 100, size=1000),
-        },
-        index=["row{}".format(i) for i in range(1000)],
+            "col1": [1, 0, 2, 3],
+            "col2": [4, 5, np.NaN, 7],
+            "col3": [np.NaN, np.NaN, 12, 10],
+            "col4": [17, 13, 16, 15],
+        }
     )
     modin_df = from_pandas(pandas_df)
 
-    modin_result = modin_df.groupby(["col1", "col2"]).agg(
-        max=("col3", np.max), min=("col3", np.min)
+    new_index = pandas.date_range("1/12/2020", periods=4, freq="S")
+    if groupby_axis == 0 and shift_axis == 0:
+        pandas_df.index = modin_df.index = new_index
+        by = [["col2", "col3"], ["col2"], ["col4"], [0, 1, 0, 2]]
+    else:
+        pandas_df.index = modin_df.index = new_index
+        pandas_df.columns = modin_df.columns = new_index
+        by = [[0, 1, 0, 2]]
+
+    for _by in by:
+        pandas_groupby = pandas_df.groupby(by=_by, axis=groupby_axis)
+        modin_groupby = modin_df.groupby(by=_by, axis=groupby_axis)
+        eval_general(
+            modin_groupby,
+            pandas_groupby,
+            lambda groupby: groupby.shift(axis=shift_axis, freq="S"),
+        )
+
+
+@pytest.mark.parametrize(
+    "by_and_agg_dict",
+    [
+        {
+            "by": [
+                list(test_data["int_data"].keys())[0],
+                list(test_data["int_data"].keys())[1],
+            ],
+            "agg_dict": {
+                "max": (list(test_data["int_data"].keys())[2], np.max),
+                "min": (list(test_data["int_data"].keys())[2], np.min),
+            },
+        },
+        {
+            "by": ["col1"],
+            "agg_dict": {
+                "max": (list(test_data["int_data"].keys())[0], np.max),
+                "min": (list(test_data["int_data"].keys())[-1], np.min),
+            },
+        },
+    ],
+)
+def test_agg_func_None_rename(by_and_agg_dict):
+    modin_df, pandas_df = create_test_dfs(test_data["int_data"])
+
+    modin_result = modin_df.groupby(by_and_agg_dict["by"]).agg(
+        **by_and_agg_dict["agg_dict"]
     )
-    pandas_result = pandas_df.groupby(["col1", "col2"]).agg(
-        max=("col3", np.max), min=("col3", np.min)
+    pandas_result = pandas_df.groupby(by_and_agg_dict["by"]).agg(
+        **by_and_agg_dict["agg_dict"]
     )
     df_equals(modin_result, pandas_result)
 

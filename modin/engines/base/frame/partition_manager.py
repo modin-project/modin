@@ -20,8 +20,11 @@ from pandas.api.types import union_categoricals
 
 
 class BaseFrameManager(object):
-    # Partition class is the class to use for storing each partition. It must
-    # extend the `BaseFramePartition` class.
+    """Partition class is the class to use for storing each partition. It must extend the `BaseFramePartition` class.
+
+    It is the base class for managing the dataframe data layout and operators.
+    """
+
     _partition_class = None
     # Column partitions class is the class to use to create the column partitions.
     _column_partitions_class = None
@@ -43,6 +46,7 @@ class BaseFrameManager(object):
             map_func: The function to be preprocessed.
 
         Returns
+        -------
             The preprocessed version of the `map_func` provided. Note: This
             does not require any specific format, only that the
             `BaseFramePartition.apply` method will recognize it (For the subclass
@@ -54,28 +58,33 @@ class BaseFrameManager(object):
 
     @classmethod
     def column_partitions(cls, partitions):
-        """A list of `BaseFrameAxisPartition` objects.
+        """List of `BaseFrameAxisPartition` objects.
 
         Note: Each value in this list will be an `BaseFrameAxisPartition` object.
             `BaseFrameAxisPartition` is located in `axis_partition.py`.
 
-        Returns a list of `BaseFrameAxisPartition` objects.
+        Returns
+        -------
+            a list of `BaseFrameAxisPartition` objects.
         """
         return [cls._column_partitions_class(col) for col in partitions.T]
 
     @classmethod
     def row_partitions(cls, partitions):
-        """A list of `BaseFrameAxisPartition` objects, represents column partitions.
+        """List of `BaseFrameAxisPartition` objects, represents column partitions.
 
         Note: Each value in this list will an `BaseFrameAxisPartition` object.
             `BaseFrameAxisPartition` is located in `axis_partition.py`.
 
-        Returns a list of `BaseFrameAxisPartition` objects.
+        Returns
+        -------
+            a list of `BaseFrameAxisPartition` objects.
         """
         return [cls._row_partition_class(row) for row in partitions]
 
     @classmethod
     def axis_partition(cls, partitions, axis):
+        """Logically partition along either the columns or the rows."""
         return (
             cls.column_partitions(partitions)
             if not axis
@@ -84,6 +93,7 @@ class BaseFrameManager(object):
 
     @classmethod
     def groupby_reduce(cls, axis, partitions, by, map_func, reduce_func):
+        """Groupby data using the map_func provided along the axis over the partitions then reduce using reduce_func."""
         mapped_partitions = cls.broadcast_apply(
             axis, map_func, left=partitions, right=by, other_name="other"
         )
@@ -101,7 +111,7 @@ class BaseFrameManager(object):
         keep_remaining=False,
     ):
         """
-        Broadcast the right partitions to left and apply a function to selected indices
+        Broadcast the right partitions to left and apply a function to selected indices.
 
         Note: Your internal function must take this kwargs:
             [`internal_indices`, `other`, `internal_other_indices`] to work correctly
@@ -194,7 +204,7 @@ class BaseFrameManager(object):
         new_partitions = np.array(
             [
                 [
-                    part.add_to_apply_calls(
+                    part.apply(
                         apply_func,
                         **{other_name: right[col_idx] if axis else right[row_idx]},
                     )
@@ -214,22 +224,25 @@ class BaseFrameManager(object):
         left,
         right,
         keep_partitioning=False,
+        lengths=None,
     ):
         """
         Broadcast the right partitions to left and apply a function along full axis.
 
         Parameters
         ----------
-            axis : The axis to apply and broadcast over.
-            apply_func : The function to apply.
-            left : The left partitions.
-            right : The right partitions.
-            keep_partitioning : boolean. Default is False
-                The flag to keep partitions for Modin Frame.
+        axis : The axis to apply and broadcast over.
+        apply_func : The function to apply.
+        left : The left partitions.
+        right : The right partitions.
+        keep_partitioning : boolean. Default is False
+            The flag to keep partitions for Modin Frame.
+        lengths : list(int)
+            The list of lengths to shuffle the object.
 
         Returns
         -------
-            A new `np.array` of partition objects.
+        A new `np.array` of partition objects.
         """
         # Since we are already splitting the DataFrame back up after an
         # operation, we will just use this time to compute the number of
@@ -245,12 +258,19 @@ class BaseFrameManager(object):
         # may want to line to partitioning up with another BlockPartitions object. Since
         # we don't need to maintain the partitioning, this gives us the opportunity to
         # load-balance the data as well.
+        kw = {
+            "num_splits": num_splits,
+            "other_axis_partition": right_partitions,
+        }
+        if lengths:
+            kw["_lengths"] = lengths
+            kw["manual_partition"] = True
+
         result_blocks = np.array(
             [
                 part.apply(
                     preprocessed_map_func,
-                    num_splits=num_splits,
-                    other_axis_partition=right_partitions,
+                    **kw,
                 )
                 for part in left_partitions
             ]
@@ -262,12 +282,15 @@ class BaseFrameManager(object):
 
     @classmethod
     def map_partitions(cls, partitions, map_func):
-        """Applies `map_func` to every partition.
+        """Apply `map_func` to every partition.
 
-        Args:
-            map_func: The function to apply.
+        Parameters
+        ----------
+        map_func: callable
+           The function to apply.
 
-        Returns:
+        Returns
+        -------
             A new BaseFrameManager object, the type of object that called this.
         """
         preprocessed_map_func = cls.preprocess_func(map_func)
@@ -280,6 +303,18 @@ class BaseFrameManager(object):
 
     @classmethod
     def lazy_map_partitions(cls, partitions, map_func):
+        """
+        Apply `map_func` to every partition lazily.
+
+        Parameters
+        ----------
+        map_func: callable
+           The function to apply.
+
+        Returns
+        -------
+            A new BaseFrameManager object, the type of object that called this.
+        """
         preprocessed_map_func = cls.preprocess_func(map_func)
         return np.array(
             [
@@ -295,20 +330,23 @@ class BaseFrameManager(object):
         partitions,
         map_func,
         keep_partitioning=False,
+        lengths=None,
     ):
         """
-        Applies `map_func` to every partition.
+        Apply `map_func` to every partition.
 
         Parameters
         ----------
-            axis : 0 or 1
-                The axis to perform the map across (0 - index, 1 - columns).
-            partitions : NumPy array
-                The partitions of Modin Frame.
-            map_func : callable
-                The function to apply.
-            keep_partitioning : boolean. Default is False
-                The flag to keep partitions for Modin Frame.
+        axis : 0 or 1
+            The axis to perform the map across (0 - index, 1 - columns).
+        partitions : NumPy array
+            The partitions of Modin Frame.
+        map_func : callable
+            The function to apply.
+        keep_partitioning : bool. Default is False
+            The flag to keep partitions for Modin Frame.
+        lengths : list(int)
+            The list of lengths to shuffle the object.
 
         Returns
         -------
@@ -326,12 +364,13 @@ class BaseFrameManager(object):
             apply_func=map_func,
             keep_partitioning=keep_partitioning,
             right=None,
+            lengths=lengths,
         )
 
     @classmethod
     def simple_shuffle(cls, axis, partitions, map_func, lengths):
         """
-        Shuffle data using `lengths` via `map_func`
+        Shuffle data using `lengths` via `map_func`.
 
         Parameters
         ----------
@@ -381,7 +420,8 @@ class BaseFrameManager(object):
             right_parts: the other blocks to be concatenated. This is a
                 BaseFrameManager object.
 
-        Returns:
+        Returns
+        -------
             A new BaseFrameManager object, the type of object that called this.
         """
         if type(right_parts) is list:
@@ -396,7 +436,7 @@ class BaseFrameManager(object):
     @classmethod
     def concatenate(cls, dfs):
         """
-        Concatenate Pandas DataFrames with saving 'category' dtype
+        Concatenate Pandas DataFrames with saving 'category' dtype.
 
         Parameters
         ----------
@@ -421,7 +461,8 @@ class BaseFrameManager(object):
     def to_pandas(cls, partitions):
         """Convert this object into a Pandas DataFrame from the partitions.
 
-        Returns:
+        Returns
+        -------
             A Pandas DataFrame
         """
         retrieved_objects = [[obj.to_pandas() for obj in part] for part in partitions]
@@ -462,6 +503,7 @@ class BaseFrameManager(object):
 
     @classmethod
     def from_pandas(cls, df, return_dims=False):
+        """Return the partitions from Pandas DataFrame."""
         num_splits = cls._compute_num_partitions()
         put_func = cls._partition_class.put
         row_chunksize, col_chunksize = compute_chunksize(df, num_splits)
@@ -491,11 +533,12 @@ class BaseFrameManager(object):
 
     @classmethod
     def from_arrow(cls, at, return_dims=False):
+        """Return the partitions from Apache Arrow (PyArrow)."""
         return cls.from_pandas(at.to_pandas(), return_dims=return_dims)
 
     @classmethod
     def get_indices(cls, axis, partitions, index_func=None):
-        """This gets the internal indices stored in the partitions.
+        """Get the internal indices stored in the partitions.
 
         Note: These are the global indices of the object. This is mostly useful
             when you have deleted rows/columns internally, but do not know
@@ -505,7 +548,8 @@ class BaseFrameManager(object):
             axis: This axis to extract the labels. (0 - index, 1 - columns).
             index_func: The function to be used to extract the function.
 
-        Returns:
+        Returns
+        -------
             A Pandas Index object.
         """
         ErrorMessage.catch_bugs_and_request_email(not callable(index_func))
@@ -527,10 +571,11 @@ class BaseFrameManager(object):
 
     @classmethod
     def _compute_num_partitions(cls):
-        """Currently, this method returns the default. In the future it will
-            estimate the optimal number of partitions.
+        """Retrieve the default number of partitions currently. Will estimate the optimal no. of partitions in future.
 
-        :return:
+        Returns
+        -------
+            Number of partitions.
         """
         from modin.pandas import DEFAULT_NPARTITIONS
 
@@ -542,15 +587,13 @@ class BaseFrameManager(object):
     ):
         preprocessed_func = cls.preprocess_func(func)
         return [
-            obj.add_to_apply_calls(
-                preprocessed_func, other=[o.get() for o in broadcasted], **kwargs
-            )
+            obj.apply(preprocessed_func, other=[o.get() for o in broadcasted], **kwargs)
             for obj, broadcasted in zip(partitions, other.T)
         ]
 
     @classmethod
     def _apply_func_to_list_of_partitions(cls, func, partitions, **kwargs):
-        """Applies a function to a list of remote partitions.
+        """Apply a function to a list of remote partitions.
 
         Note: The main use for this is to preprocess the func.
 
@@ -558,19 +601,18 @@ class BaseFrameManager(object):
             func: The func to apply
             partitions: The list of partitions
 
-        Returns:
+        Returns
+        -------
             A list of BaseFramePartition objects.
         """
         preprocessed_func = cls.preprocess_func(func)
-        return [
-            obj.add_to_apply_calls(preprocessed_func, **kwargs) for obj in partitions
-        ]
+        return [obj.apply(preprocessed_func, **kwargs) for obj in partitions]
 
     @classmethod
     def apply_func_to_select_indices(
         cls, axis, partitions, func, indices, keep_remaining=False
     ):
-        """Applies a function to select indices.
+        """Apply a function to select indices.
 
         Note: Your internal function must take a kwarg `internal_indices` for
             this to work correctly. This prevents information leakage of the
@@ -584,7 +626,8 @@ class BaseFrameManager(object):
                 Some operations may want to drop the remaining partitions and
                 keep only the results.
 
-        Returns:
+        Returns
+        -------
             A new BaseFrameManager object, the type of object that called this.
         """
         if partitions.size == 0:
@@ -671,7 +714,7 @@ class BaseFrameManager(object):
     def apply_func_to_select_indices_along_full_axis(
         cls, axis, partitions, func, indices, keep_remaining=False
     ):
-        """Applies a function to a select subset of full columns/rows.
+        """Apply a function to a select subset of full columns/rows.
 
         Note: This should be used when you need to apply a function that relies
             on some global information for the entire column/row, but only need
@@ -680,15 +723,21 @@ class BaseFrameManager(object):
         Important: For your func to operate directly on the indices provided,
             it must use `internal_indices` as a keyword argument.
 
-        Args:
-            axis: The axis to apply the function over (0 - rows, 1 - columns)
-            func: The function to apply.
-            indices: The global indices to apply the func to.
-            keep_remaining: Whether or not to keep the other partitions.
-                Some operations may want to drop the remaining partitions and
-                keep only the results.
+        Parameters
+        ----------
+        axis: int
+            The axis to apply the function over (0 - rows, 1 - columns)
+        func: callable
+            The function to apply.
+        indices: list-like
+            The global indices to apply the func to.
+        keep_remaining: boolean
+            Whether or not to keep the other partitions.
+            Some operations may want to drop the remaining partitions and
+            keep only the results.
 
-        Returns:
+        Returns
+        -------
             A new BaseFrameManager object, the type of object that called this.
         """
         if partitions.size == 0:
@@ -780,7 +829,7 @@ class BaseFrameManager(object):
         item_to_distribute=None,
     ):
         """
-        Apply a function to along both axis
+        Apply a function to along both axis.
 
         Important: For your func to operate directly on the indices provided,
             it must use `row_internal_indices, col_internal_indices` as keyword

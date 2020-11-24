@@ -38,7 +38,7 @@ class ModinDistribution(Distribution):
 
 
 dask_deps = ["dask>=2.12.0,<=2.19.0", "distributed>=2.12.0,<=2.19.0"]
-ray_deps = ["ray>=1.0.0", "pyarrow<0.17"]
+ray_deps = ["ray>=1.0.0", "pyarrow==1.0"]
 remote_deps = ["rpyc==4.1.5", "cloudpickle==1.4.1", "boto3==1.4.8"]
 
 all_deps = dask_deps + ray_deps + remote_deps
@@ -55,7 +55,7 @@ setup(
     url="https://github.com/modin-project/modin",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    install_requires=["pandas==1.1.3", "packaging"],
+    install_requires=["pandas==1.1.4", "packaging"],
     extras_require={
         # can be installed by pip install modin[dask]
         "dask": dask_deps,

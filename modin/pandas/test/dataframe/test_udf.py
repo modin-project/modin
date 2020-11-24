@@ -49,16 +49,10 @@ matplotlib.use("Agg")
 )
 @pytest.mark.parametrize("op", ["agg", "apply"])
 def test_agg_apply(axis, func, op):
-    # AssertionError may be arisen in case of
-    # mismathing of index/columns in Modin and pandas.
-    # See details in pandas issue 36189.
-    try:
-        eval_general(
-            *create_test_dfs(test_data["float_nan_data"]),
-            lambda df: getattr(df, op)(func, axis),
-        )
-    except AssertionError:
-        pass
+    eval_general(
+        *create_test_dfs(test_data["float_nan_data"]),
+        lambda df: getattr(df, op)(func, axis),
+    )
 
 
 @pytest.mark.parametrize("axis", ["rows", "columns"])
@@ -69,16 +63,10 @@ def test_agg_apply(axis, func, op):
 )
 @pytest.mark.parametrize("op", ["agg", "apply"])
 def test_agg_apply_axis_names(axis, func, op):
-    # AssertionError may be arisen in case of
-    # mismathing of index/columns in Modin and pandas.
-    # See details in pandas issue 36189.
-    try:
-        eval_general(
-            *create_test_dfs(test_data["int_data"]),
-            lambda df: getattr(df, op)(func, axis),
-        )
-    except AssertionError:
-        pass
+    eval_general(
+        *create_test_dfs(test_data["int_data"]),
+        lambda df: getattr(df, op)(func, axis),
+    )
 
 
 def test_aggregate_alias():

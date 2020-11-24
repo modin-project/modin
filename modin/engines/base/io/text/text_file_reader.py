@@ -56,96 +56,83 @@ class TextFileReader(FileReader):
     def offset(
         cls,
         f,
-        nrows=None,
-        skiprows=None,
-        chunk_size_bytes=None,
-        quotechar=b'"',
-        is_quoting=True,
+        offset_size: int,
+        quotechar: bytes = b'"',
+        is_quoting: bool = True,
     ):
         """
-        Moves the file offset at the specified amount of bytes/rows.
+        Moves the file offset at the specified amount of bytes.
 
         Parameters
         ----------
-            f: file object
-            nrows: int, number of rows to read. Optional, if not specified will only
-                consider `chunk_size_bytes` parameter.
-            chunk_size_bytes: int, Will read new rows while file pointer
-                is less than `chunk_size_bytes`. Optional, if not specified will only
-                consider `nrows` parameter.
-            skiprows: array or callable (optional), specifies rows to skip
-            quotechar: char that indicates quote in a file
-                (optional, by default it's '\"')
-            is_quoting: bool, Whether or not to consider quotes
-                (optional, by default it's `True`)
+        f: file object
+        offset_size: int
+            Number of bytes to read and ignore.
+        quotechar: bytes, default b'"'
+            Indicate quote in a file.
+        is_quoting: bool, default True
+            Whether or not to consider quotes.
 
         Returns
         -------
-            bool: If file pointer reached the end of the file, but did not find
+        bool
+            If file pointer reached the end of the file, but did not find
             closing quote returns `False`. `True` in any other case.
         """
-        assert (
-            nrows is not None or chunk_size_bytes is not None
-        ), "`nrows` and `chunk_size_bytes` can't be None at the same time"
-
-        if nrows is not None or skiprows is not None:
-            return cls._read_rows(
-                f,
-                nrows=nrows,
-                skiprows=skiprows,
-                quotechar=quotechar,
-                is_quoting=is_quoting,
-                max_bytes=chunk_size_bytes,
-            )[0]
-
-        outside_quotes = True
 
         if is_quoting:
-            chunk = f.read(chunk_size_bytes)
-            line = f.readline()  # Ensure we read up to a newline
-            # We need to ensure that one row isn't split across different partitions
-            outside_quotes = not ((chunk.count(quotechar) + line.count(quotechar)) % 2)
-            while not outside_quotes:
-                line = f.readline()
-                outside_quotes = line.count(quotechar) % 2
-                if not line:
-                    break
+            chunk = f.read(offset_size)
+            outside_quotes = not chunk.count(quotechar) % 2
         else:
-            f.seek(chunk_size_bytes, os.SEEK_CUR)
-            f.readline()
+            f.seek(offset_size, os.SEEK_CUR)
+            outside_quotes = True
+
+        # after we read `offset_size` bytes, we most likely break the line but
+        # the modin implementation doesn't work correctly in the case, so we must
+        # make sure that the line is read completely to the lineterminator,
+        # which is what the `_read_rows` does
+        outside_quotes, _ = cls._read_rows(
+            f,
+            nrows=1,
+            quotechar=quotechar,
+            is_quoting=is_quoting,
+            outside_quotes=outside_quotes,
+        )
+
         return outside_quotes
 
     @classmethod
     def partitioned_file(
         cls,
         f,
-        nrows=None,
-        skiprows=None,
-        num_partitions=None,
-        quotechar=b'"',
-        is_quoting=True,
-        from_begin=False,
+        num_partitions: int = None,
+        nrows: int = None,
+        skiprows: int = None,
+        quotechar: bytes = b'"',
+        is_quoting: bool = True,
     ):
-        """Computes chunk sizes in bytes for every partition.
+        """
+        Compute chunk sizes in bytes for every partition.
 
         Parameters
         ----------
-            f: file to be partitioned
-            nrows: int (optional), number of rows of file to read
-            skiprows: array or callable (optional), specifies rows to skip
-            num_partitions: int, for what number of partitions split a file.
-                Optional, if not specified grabs the value from `modin.pandas.DEFAULT_NPARTITIONS`
-            quotechar: char that indicates quote in a file
-                (optional, by default it's '\"')
-            is_quoting: bool, Whether or not to consider quotes
-                (optional, by default it's `True`)
-            from_begin: bool, Whether or not to set the file pointer to the begining of the file
-                (optional, by default it's `False`)
+        f: file to be partitioned
+        num_partitions: int, optional
+            For what number of partitions split a file.
+            If not specified grabs the value from `modin.pandas.DEFAULT_NPARTITIONS`
+        nrows: int, optional
+            Number of rows of file to read.
+        skiprows: array or callable, optional
+            Specifies rows to skip.
+        quotechar: bytes, default b'"'
+            Indicate quote in a file.
+        is_quoting: bool, default True
+            Whether or not to consider quotes.
 
         Returns
         -------
-            An array, where each element of array is a tuple of two ints:
-            beginning and the end offsets of the current chunk.
+        An array, where each element of array is a tuple of two ints:
+        beginning and the end offsets of the current chunk.
         """
         if num_partitions is None:
             from modin.pandas import DEFAULT_NPARTITIONS
@@ -153,46 +140,54 @@ class TextFileReader(FileReader):
             num_partitions = DEFAULT_NPARTITIONS
 
         result = []
+        file_size = cls.file_size(f)
 
-        old_position = f.tell()
-        if from_begin:
-            f.seek(0, os.SEEK_SET)
-
-        current_start = f.tell()
-        total_bytes = cls.file_size(f)
-
-        # if `nrows` are specified we want to use rows as a part measure
-        if nrows is not None:
-            chunk_size_bytes = None
-            rows_per_part = max(1, num_partitions, nrows // num_partitions)
-        else:
-            chunk_size_bytes = max(1, num_partitions, total_bytes // num_partitions)
-            rows_per_part = None
-            nrows = float("inf")
-
-        rows_readed = 0
-        while f.tell() < total_bytes and rows_readed < nrows:
-            if rows_per_part is not None and rows_readed + rows_per_part > nrows:
-                rows_per_part = nrows - rows_readed
-
-            outside_quotes = cls.offset(
+        if skiprows:
+            outside_quotes, read_rows = cls._read_rows(
                 f,
-                nrows=rows_per_part,
-                skiprows=skiprows,
-                chunk_size_bytes=chunk_size_bytes,
+                nrows=skiprows,
                 quotechar=quotechar,
                 is_quoting=is_quoting,
             )
 
-            result.append((current_start, f.tell()))
-            current_start = f.tell()
-            if rows_per_part is not None:
-                rows_readed += rows_per_part
+        start = f.tell()
 
-            if is_quoting and not outside_quotes:
-                warnings.warn("File has mismatched quotes")
+        if nrows:
+            read_rows_counter = 0
+            partition_size = max(1, num_partitions, nrows // num_partitions)
+            while f.tell() < file_size and read_rows_counter < nrows:
+                if read_rows_counter + partition_size > nrows:
+                    # it's possible only if is_quoting==True
+                    partition_size = nrows - read_rows_counter
+                outside_quotes, read_rows = cls._read_rows(
+                    f,
+                    nrows=partition_size,
+                    quotechar=quotechar,
+                    is_quoting=is_quoting,
+                )
+                result.append((start, f.tell()))
+                start = f.tell()
+                read_rows_counter += read_rows
 
-        f.seek(old_position, os.SEEK_SET)
+                # add outside_quotes
+                if is_quoting and not outside_quotes:
+                    warnings.warn("File has mismatched quotes")
+        else:
+            partition_size = max(1, num_partitions, file_size // num_partitions)
+            while f.tell() < file_size:
+                outside_quotes = cls.offset(
+                    f,
+                    offset_size=partition_size,
+                    quotechar=quotechar,
+                    is_quoting=is_quoting,
+                )
+
+                result.append((start, f.tell()))
+                start = f.tell()
+
+                # add outside_quotes
+                if is_quoting and not outside_quotes:
+                    warnings.warn("File has mismatched quotes")
 
         return result
 
@@ -200,75 +195,48 @@ class TextFileReader(FileReader):
     def _read_rows(
         cls,
         f,
-        nrows=None,
-        skiprows=None,
-        quotechar=b'"',
-        is_quoting=True,
-        max_bytes=None,
+        nrows: int,
+        quotechar: bytes = b'"',
+        is_quoting: bool = True,
+        outside_quotes: bool = True,
     ):
         """
-        Moves the file offset at the specified amount of rows
-        Note: the difference between `offset` is that `_read_rows` is more
-            specific version of `offset` which is focused of reading **rows**.
-            In common case it's better to use `offset`.
+        Move the file offset at the specified amount of rows.
 
         Parameters
         ----------
-            f: file object
-            nrows: int, number of rows to read. Optional, if not specified will only
-                consider `max_bytes` parameter.
-            skiprows: int, array or callable (optional), specifies rows to skip
-            quotechar: char that indicates quote in a file
-                (optional, by default it's '\"')
-            is_quoting: bool, Whether or not to consider quotes
-                (optional, by default it's `True`)
-            max_bytes: int, Will read new rows while file pointer
-                is less than `max_bytes`. Optional, if not specified will only
-                consider `nrows` parameter, if both not specified will read till
-                the end of the file.
+        f: file object
+        nrows: int
+            Number of rows to read.
+        quotechar: bytes, default b'"'
+            Indicate quote in a file.
+        is_quoting: bool, default True
+            Whether or not to consider quotes.
+        outside_quotes: bool, default True
+            Whether the file pointer is within quotes or not at the time this function is called.
 
         Returns
         -------
-            tuple of bool and int,
-                bool: If file pointer reached the end of the file, but did not find
+        tuple of bool and int,
+            bool: If file pointer reached the end of the file, but did not find
                 closing quote returns `False`. `True` in any other case.
-                int: Number of rows that was readed.
+            int: Number of rows that was read.
         """
-        assert skiprows is None or isinstance(
-            skiprows, int
-        ), f"Skiprows as a {type(skiprows)} is not supported yet."
-
-        if nrows is None and max_bytes is None:
-            max_bytes = float("inf")
-
         if nrows is not None and nrows <= 0:
             return True, 0
 
-        # we need this condition to avoid unnecessary checks in `stop_condition`
-        # which executes in a huge for loop
-        if nrows is not None and max_bytes is None:
-            stop_condition = lambda rows_readed: rows_readed >= nrows  # noqa (E731)
-        elif nrows is not None and max_bytes is not None:
-            stop_condition = (
-                lambda rows_readed: f.tell() >= max_bytes or rows_readed >= nrows
-            )  # noqa (E731)
-        else:
-            stop_condition = lambda rows_readed: f.tell() >= max_bytes  # noqa (E731)
+        rows_read = 0
 
-        if max_bytes is not None:
-            max_bytes = max_bytes + f.tell()
-
-        rows_readed = 0
-        outside_quotes = True
         for line in f:
             if is_quoting and line.count(quotechar) % 2:
                 outside_quotes = not outside_quotes
             if outside_quotes:
-                rows_readed += 1
-                if stop_condition(rows_readed):
+                rows_read += 1
+                if rows_read >= nrows:
                     break
 
+        # case when EOF
         if not outside_quotes:
-            rows_readed += 1
+            rows_read += 1
 
-        return outside_quotes, rows_readed
+        return outside_quotes, rows_read

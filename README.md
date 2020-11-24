@@ -6,7 +6,7 @@
 <a href="https://codecov.io/gh/modin-project/modin"><img src="https://codecov.io/gh/modin-project/modin/branch/master/graph/badge.svg" align="center"/></a>
 <a href="https://github.com/modin-project/modin/actions"><img src="https://github.com/modin-project/modin/workflows/master/badge.svg" align="center"></a>
 <a href="https://modin.readthedocs.io/en/latest/?badge=latest"><img alt="" src="https://readthedocs.org/projects/modin/badge/?version=latest" align="center"></a>
-<a href="https://pypi.org/project/modin/"><img alt="" src="https://img.shields.io/badge/pypi-0.8.1.1-blue.svg" align="center"></a>
+<a href="https://pypi.org/project/modin/"><img alt="" src="https://img.shields.io/badge/pypi-0.8.2-blue.svg" align="center"></a>
 </p>
 
 <p align="center"><b>To use Modin, replace the pandas import:</b></p>
@@ -179,8 +179,8 @@ and improve:
 
 ![Architecture](docs/img/modin_architecture.png)
 
-Visit the [Documentation](https://modin.readthedocs.io/en/latest/architecture.html) for
-more information!
+Visit the [Documentation](https://modin.readthedocs.io/en/latest/developer/architecture.html) for
+more information, and checkout [the difference between Modin and Dask!](https://github.com/modin-project/modin/tree/master/docs/modin_vs_dask.md)
 
 **`modin.pandas` is currently under active development. Requests and contributions are welcome!**
 

@@ -30,4 +30,4 @@ Modin has a query compiler that acts as an intermediate layer between the query 
    0    1   2.0            A String of information   True
    1    6  17.0  A String of different information  False
 
-.. _architecture: https://modin.readthedocs.io/en/latest/architecture.html
+.. _architecture: https://modin.readthedocs.io/en/latest/developer/architecture.html

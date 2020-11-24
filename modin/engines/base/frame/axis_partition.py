@@ -18,9 +18,9 @@ NOT_IMPLMENTED_MESSAGE = "Must be implemented in child class"
 
 
 class BaseFrameAxisPartition(object):  # pragma: no cover
-    """This abstract class represents the Parent class for any
-    `ColumnPartition` or `RowPartition` class. This class is intended to
-    simplify the way that operations are performed
+    """An abstract class that represents the Parent class for any `ColumnPartition` or `RowPartition` class.
+
+    This class is intended to simplify the way that operations are performed.
 
     Note 0: The procedures that use this class and its methods assume that
         they have some global knowledge about the entire axis. This may
@@ -46,7 +46,7 @@ class BaseFrameAxisPartition(object):  # pragma: no cover
         maintain_partitioning=True,
         **kwargs,
     ):
-        """Applies a function to a full axis.
+        """Apply a function to a full axis.
 
         Note: The procedures that invoke this method assume full axis
             knowledge. Implement this method accordingly.
@@ -69,7 +69,8 @@ class BaseFrameAxisPartition(object):  # pragma: no cover
                 orientation (the lengths will remain the same). This is ignored between
                 two axis partitions.
 
-        Returns:
+        Returns
+        -------
             A list of `BaseFramePartition` objects.
         """
         raise NotImplementedError(NOT_IMPLMENTED_MESSAGE)
@@ -81,7 +82,8 @@ class BaseFrameAxisPartition(object):  # pragma: no cover
             func: The function to apply before splitting.
             lengths: The list of partition lengths to split the result into.
 
-        Returns:
+        Returns
+        -------
             A list of RemotePartition objects split by `lengths`.
         """
         raise NotImplementedError(NOT_IMPLMENTED_MESSAGE)
@@ -91,16 +93,13 @@ class BaseFrameAxisPartition(object):  # pragma: no cover
     partition_type = None
 
     def _wrap_partitions(self, partitions):
-        if isinstance(partitions, self.instance_type):
-            return [self.partition_type(partitions)]
-        else:
-            return [self.partition_type(obj) for obj in partitions]
+        return [self.partition_type(obj) for obj in partitions]
 
 
 class PandasFrameAxisPartition(BaseFrameAxisPartition):
-    """This abstract class is created to simplify and consolidate the code for
-    AxisPartitions that run pandas. Because much of the code is similar, this allows
-    us to reuse this code.
+    """An abstract class is created to simplify and consolidate the code for AxisPartitions that run pandas.
+
+    Because much of the code is similar, this allows us to reuse this code.
 
     Subclasses must implement `list_of_blocks` which unwraps the `RemotePartition`
     objects and creates something interpretable as a pandas DataFrame.
@@ -118,23 +117,28 @@ class PandasFrameAxisPartition(BaseFrameAxisPartition):
         maintain_partitioning=True,
         **kwargs,
     ):
-        """Applies func to the object in the plasma store.
+        """Apply func to the object in the plasma store.
 
         See notes in Parent class about this method.
 
-        Args:
-            func: The function to apply.
-            num_splits: The number of times to split the result object.
-            other_axis_partition: Another `PandasOnRayFrameAxisPartition` object to apply to
-                func with this one.
-            maintain_partitioning: Whether or not to keep the partitioning in the same
-                orientation as it was previously. This is important because we may be
-                operating on an individual AxisPartition and not touching the rest.
-                In this case, we have to return the partitioning to its previous
-                orientation (the lengths will remain the same). This is ignored between
-                two axis partitions.
+        Parameters
+        ----------
+        func: callable
+            The function to apply.
+        num_splits: int
+            The number of times to split the result object.
+        other_axis_partition: PandasOnRayFrameAxisPartition object
+            Another `PandasOnRayFrameAxisPartition` object to apply to func with this one.
+        maintain_partitioning: boolean
+            Whether or not to keep the partitioning in the same
+            orientation as it was previously. This is important because we may be
+            operating on an individual AxisPartition and not touching the rest.
+            In this case, we have to return the partitioning to its previous
+            orientation (the lengths will remain the same). This is ignored between
+            two axis partitions.
 
-        Returns:
+        Returns
+        -------
             A list of `RayRemotePartition` objects.
         """
         if num_splits is None:
@@ -180,7 +184,8 @@ class PandasFrameAxisPartition(BaseFrameAxisPartition):
             func: The function to apply before splitting.
             lengths: The list of partition lengths to split the result into.
 
-        Returns:
+        Returns
+        -------
             A list of RemotePartition objects split by `lengths`.
         """
         num_splits = len(lengths)
@@ -207,7 +212,8 @@ class PandasFrameAxisPartition(BaseFrameAxisPartition):
                 If False, create a new partition layout.
             partitions: All partitions that make up the full axis (row or column)
 
-        Returns:
+        Returns
+        -------
             A list of Pandas DataFrames.
         """
         # Pop these off first because they aren't expected by the function.
@@ -216,10 +222,6 @@ class PandasFrameAxisPartition(BaseFrameAxisPartition):
 
         dataframe = pandas.concat(list(partitions), axis=axis, copy=False)
         result = func(dataframe, **kwargs)
-        if isinstance(result, pandas.Series):
-            if num_splits == 1:
-                return result
-            return [result] + [pandas.Series([]) for _ in range(num_splits - 1)]
 
         if manual_partition:
             # The split function is expecting a list

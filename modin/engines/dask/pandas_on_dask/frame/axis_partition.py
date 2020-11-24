@@ -43,13 +43,15 @@ class PandasOnDaskFrameAxisPartition(PandasFrameAxisPartition):
             *partitions,
             pure=False,
         )
-        if num_splits == 1:
-            return axis_result
+
+        lengths = kwargs.get("_lengths", None)
+        result_num_splits = len(lengths) if lengths else num_splits
+
         # We have to do this to split it back up. It is already split, but we need to
         # get futures for each.
         return [
             client.submit(lambda l: l[i], axis_result, pure=False)
-            for i in range(num_splits)
+            for i in range(result_num_splits)
         ]
 
     @classmethod
@@ -68,8 +70,6 @@ class PandasOnDaskFrameAxisPartition(PandasFrameAxisPartition):
             *partitions,
             pure=False,
         )
-        if num_splits == 1:
-            return axis_result
         # We have to do this to split it back up. It is already split, but we need to
         # get futures for each.
         return [
