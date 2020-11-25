@@ -178,7 +178,7 @@ jobs:
     env:
       MODIN_ENGINE: ${{matrix.engine}}
       MODIN_MEMORY: 1000000000
-    name: test-ubuntu (engine ${{matrix.engine}}, python ${{matrix.python-version}})
+    name: test-ubuntu all except io part (engine ${{matrix.engine}}, python ${{matrix.python-version}})
     steps:
       - uses: actions/checkout@v2
         with:
@@ -285,7 +285,7 @@ jobs:
     env:
       MODIN_ENGINE: ${{matrix.engine}}
       MODIN_MEMORY: 1000000000
-    name: test-windows
+    name: test-windows all except io part
     steps:
       - uses: actions/checkout@v2
         with:
