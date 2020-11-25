@@ -530,7 +530,7 @@ class TestReadCSV:
         )
 
     # Column and Index Locations and Names tests
-    @pytest.mark.xfail(
+    @pytest.mark.skip(
         Engine.get() != "Python",
         reason="many parameters combiantions fails: issue #2312, #2307",
     )
