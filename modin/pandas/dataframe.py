@@ -380,10 +380,7 @@ class DataFrame(BasePandasDataset):
             else:
                 by = self.__getitem__(by)._query_compiler
         elif isinstance(by, Series):
-            if by._parent is self:
-                drop = True
-            else:
-                drop = False
+            drop = by._parent is self
             idx_name = by.name
             by = by._query_compiler
         elif is_list_like(by):
