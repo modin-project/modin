@@ -1690,7 +1690,7 @@ class BasePandasFrame(object):
         )
 
     def _copartition(
-        self, axis, other, how, sort, force_repartition=False, reindex=True
+        self, axis, other, how, sort, force_repartition=False, reindexer=None
     ):
         """
         Copartition two dataframes.
@@ -1736,9 +1736,20 @@ class BasePandasFrame(object):
         left_old_idx = self.axes[axis]
         right_old_idxes = index_other_obj
 
-        def make_map_func(index):
+        def make_map_func(index, left=True):
             if index.equals(joined_index):
                 return lambda df: df
+            if reindexer == "binary":
+                # case for binary operation with duplicate values; way from pandas
+                _join_index, ilidx, iridx = self.axes[axis].join(
+                    other[0].axes[axis], how=how, sort=sort, return_indexers=True
+                )
+
+                return lambda df: df._reindex_with_indexers(
+                    {axis: [_join_index, ilidx if left else iridx]},
+                    copy=False,
+                    allow_dups=True,
+                )
             return lambda df: df.reindex(joined_index, axis=axis)
 
         # Start with this and we'll repartition the first time, and then not again.
@@ -1767,7 +1778,7 @@ class BasePandasFrame(object):
                 reindexed_other = other[i]._frame_mgr_cls.map_axis_partitions(
                     axis,
                     other[i]._partitions,
-                    make_map_func(right_old_idxes[i]),
+                    make_map_func(right_old_idxes[i], left=False),
                     lengths=get_row_lengths(reindexed_self)
                     if axis == 0
                     else get_column_widths(reindexed_self),
@@ -1830,7 +1841,7 @@ class BasePandasFrame(object):
             right_frame,
             join_type,
             sort=True,
-            reindex=False,
+            reindexer="binary",
         )
         # unwrap list returned by `copartition`.
         # import pdb;pdb.set_trace()

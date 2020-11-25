@@ -36,7 +36,7 @@ def test_aligning_blocks_with_duplicated_index():
 
     data21 = [0]
     data22 = [1, 2, 3]
-    # import pandas as pd
+
     df1 = pd.DataFrame(data11).append(pd.DataFrame(data12))
     df2 = pd.DataFrame(data21).append(pd.DataFrame(data22))
 
