@@ -759,9 +759,9 @@ class TestReadCSV:
         skip_blank_lines,
     ):
         eval_io(
-            filepath_or_buffer=pytest.csvs_names["test_read_csv_nans"],
             fn_name="read_csv",
             # read_csv kwargs
+            filepath_or_buffer=pytest.csvs_names["test_read_csv_nans"],
             na_values=na_values,
             keep_default_na=keep_default_na,
             na_filter=na_filter,
@@ -828,6 +828,37 @@ class TestReadCSV:
             dayfirst=dayfirst,
             cache_dates=cache_dates,
         )
+
+    # Iteration tests
+    @pytest.mark.parametrize("iterator", [True, False])
+    def test_read_csv_iteration(self, make_csv_file, iterator):
+        filename = pytest.csvs_names["test_read_csv_regular"]
+
+        # Tests __next__ and correctness of reader as an iterator
+        # Use larger chunksize to read through file quicker
+        rdf_reader = pd.read_csv(filename, chunksize=500, iterator=iterator)
+        pd_reader = pandas.read_csv(filename, chunksize=500, iterator=iterator)
+
+        for modin_df, pd_df in zip(rdf_reader, pd_reader):
+            df_equals(modin_df, pd_df)
+
+        # Tests that get_chunk works correctly
+        rdf_reader = pd.read_csv(filename, chunksize=1, iterator=iterator)
+        pd_reader = pandas.read_csv(filename, chunksize=1, iterator=iterator)
+
+        modin_df = rdf_reader.get_chunk(1)
+        pd_df = pd_reader.get_chunk(1)
+
+        df_equals(modin_df, pd_df)
+
+        # Tests that read works correctly
+        rdf_reader = pd.read_csv(filename, chunksize=1, iterator=iterator)
+        pd_reader = pandas.read_csv(filename, chunksize=1, iterator=iterator)
+
+        modin_df = rdf_reader.read()
+        pd_df = pd_reader.read()
+
+        df_equals(modin_df, pd_df)
 
 
 def test_from_parquet(make_parquet_file):
@@ -1457,36 +1488,6 @@ def test_from_csv_default(make_csv_file):
         modin_df = pd.read_csv(dataset_url)
 
     df_equals(modin_df, pandas_df)
-
-
-def test_from_csv_chunksize(make_csv_file):
-    make_csv_file()
-
-    # Tests __next__ and correctness of reader as an iterator
-    # Use larger chunksize to read through file quicker
-    rdf_reader = pd.read_csv(TEST_CSV_FILENAME, chunksize=500)
-    pd_reader = pandas.read_csv(TEST_CSV_FILENAME, chunksize=500)
-
-    for modin_df, pd_df in zip(rdf_reader, pd_reader):
-        df_equals(modin_df, pd_df)
-
-    # Tests that get_chunk works correctly
-    rdf_reader = pd.read_csv(TEST_CSV_FILENAME, chunksize=1)
-    pd_reader = pandas.read_csv(TEST_CSV_FILENAME, chunksize=1)
-
-    modin_df = rdf_reader.get_chunk(1)
-    pd_df = pd_reader.get_chunk(1)
-
-    df_equals(modin_df, pd_df)
-
-    # Tests that read works correctly
-    rdf_reader = pd.read_csv(TEST_CSV_FILENAME, chunksize=1)
-    pd_reader = pandas.read_csv(TEST_CSV_FILENAME, chunksize=1)
-
-    modin_df = rdf_reader.read()
-    pd_df = pd_reader.read()
-
-    df_equals(modin_df, pd_df)
 
 
 @pytest.mark.parametrize("names", [list("XYZ"), None])
