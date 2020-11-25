@@ -65,18 +65,25 @@ class ExcelReader(TextFileReader):
         ex.read_manifest()
         ex.read_strings()
         ws = Worksheet(wb)
-        # Convert index to sheet name in file
-        if isinstance(sheet_name, int):
-            sheet_name = "sheet{}".format(sheet_name + 1)
-        else:
-            sheet_name = "sheet{}".format(wb.sheetnames.index(sheet_name) + 1)
-        # Pass this value to the workers
-        kwargs["sheet_name"] = sheet_name
 
         with ZipFile(io) as z:
             from io import BytesIO
 
-            f = z.open("xl/worksheets/{}.xml".format(sheet_name.lower()))
+            # Convert index to sheet name in file
+            if isinstance(sheet_name, int):
+                sheet_name = "sheet{}".format(sheet_name + 1)
+            else:
+                sheet_name = "sheet{}".format(wb.sheetnames.index(sheet_name) + 1)
+            if any(sheet_name.lower() in name for name in z.namelist()):
+                sheet_name = sheet_name.lower()
+            elif any(sheet_name.title() in name for name in z.namelist()):
+                sheet_name = sheet_name.title()
+            else:
+                raise ValueError("Sheet {} not found".format(sheet_name.lower()))
+            # Pass this value to the workers
+            kwargs["sheet_name"] = sheet_name
+
+            f = z.open("xl/worksheets/{}.xml".format(sheet_name))
             f = BytesIO(f.read())
             total_bytes = cls.file_size(f)
 

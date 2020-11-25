@@ -888,6 +888,13 @@ def test_from_excel_all_sheets():
     teardown_excel_file()
 
 
+def test_from_excel_sheetname_title():
+    path = "modin/pandas/test/data/excel_sheetname_title.xlsx"
+    modin_df = pd.read_excel(path)
+    pandas_df = pandas.read_excel(path)
+    df_equals(modin_df, pandas_df)
+
+
 @pytest.mark.parametrize(
     "sheet_name",
     ["Sheet1", "AnotherSpecialName", "SpecialName", "SecondSpecialName", 0, 1, 2, 3],
