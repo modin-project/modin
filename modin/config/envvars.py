@@ -16,7 +16,7 @@ from textwrap import dedent
 import warnings
 from packaging import version
 
-from .pubsub import Parameter, _TYPE_PARAMS
+from .pubsub import Parameter, _TYPE_PARAMS, ExactStr
 
 
 class EnvironmentVariable(Parameter, type=str, abstract=True):
@@ -112,7 +112,7 @@ class IsRayCluster(EnvironmentVariable, type=bool):
     varname = "MODIN_RAY_CLUSTER"
 
 
-class RayRedisAddress(EnvironmentVariable, type=str):
+class RayRedisAddress(EnvironmentVariable, type=ExactStr):
     """
     What Redis address to connect to when running in Ray cluster
     """
@@ -142,7 +142,7 @@ class Memory(EnvironmentVariable, type=int):
     varname = "MODIN_MEMORY"
 
 
-class RayPlasmaDir(EnvironmentVariable, type=str):
+class RayPlasmaDir(EnvironmentVariable, type=ExactStr):
     """
     Path to Plasma storage for Ray
     """
@@ -158,7 +158,7 @@ class IsOutOfCore(EnvironmentVariable, type=bool):
     varname = "MODIN_OUT_OF_CORE"
 
 
-class SocksProxy(EnvironmentVariable, type=str):
+class SocksProxy(EnvironmentVariable, type=ExactStr):
     """
     SOCKS proxy address if it is needed for SSH to work
     """
