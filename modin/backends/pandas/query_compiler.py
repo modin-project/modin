@@ -2214,10 +2214,10 @@ class PandasQueryCompiler(BaseQueryCompiler):
         Returns:
              A new QueryCompiler
         """
-        if isinstance(value, type(self)) and not value.get_axis(axis).equals(
+        if isinstance(value, type(self)) and not value.get_axis(0).equals(
             self.get_axis(axis)
         ):
-            value = value.reindex(axis, self.get_axis(axis))
+            value = value.reindex(0, self.get_axis(axis))
 
         return self._setitem(axis=axis, key=key, value=value)
 

@@ -399,8 +399,8 @@ def test_loc_multi_index():
     df_equals(modin_df.loc[modin_df.index[:7]], pandas_df.loc[pandas_df.index[:7]])
 
 
-@pytest.mark.parametrize("index", [["row1", "row2", "row3"], ["row1"]])
-@pytest.mark.parametrize("columns", [["col1", "col2"], ["col1"]])
+@pytest.mark.parametrize("index", [["row1", "row2", "row3"]])
+@pytest.mark.parametrize("columns", [["col1", "col2"]])
 def test_loc_assignment(index, columns):
     md_df, pd_df = create_test_dfs(index=index, columns=columns)
     for i, ind in enumerate(index):
