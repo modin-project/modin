@@ -515,7 +515,7 @@ class TestReadCSV:
             "decimal": decimal,
             "thousands": thousands,
         }
-        unique_filename = get_unique_filename("test_read_csv_delimiter", kwargs)
+        unique_filename = get_unique_filename()
         make_csv_file(
             filename=unique_filename,
             delimiter=delimiter,
@@ -569,7 +569,7 @@ class TestReadCSV:
             "skip_blank_lines": skip_blank_lines,
         }
 
-        unique_name = get_unique_filename("test_read_csv_col_handling", kwargs)
+        unique_name = get_unique_filename()
         make_csv_file(
             filename=unique_name,
             add_blank_lines=True,
@@ -615,7 +615,7 @@ class TestReadCSV:
             "skipfooter": skipfooter,
         }
 
-        unique_name = get_unique_filename("test_read_csv_parsing", kwargs)
+        unique_name = get_unique_filename()
         make_csv_file(
             filename=unique_name,
         )
@@ -665,7 +665,7 @@ class TestReadCSV:
             "names": names,
         }
 
-        unique_name = get_unique_filename("test_read_csv_parsing", kwargs)
+        unique_name = get_unique_filename()
         make_csv_file(
             filename=unique_name,
             additional_col_values=["Yes", "true", "No", "false"]
@@ -683,7 +683,7 @@ class TestReadCSV:
         )
 
     def test_read_csv_skipinitialspace(self, make_csv_file):
-        unique_filename = get_unique_filename("test_read_csv_skipinitialspace")
+        unique_filename = get_unique_filename()
         str_initial_spaces = (
             "col1,col2,col3,col4\n"
             "five,  six,  seven,  eight\n"
@@ -698,7 +698,7 @@ class TestReadCSV:
         "test_case", ["single_element", "single_column", "multiple_columns"]
     )
     def test_read_csv_squeeze(self, test_case):
-        unique_filename = get_unique_filename("test_read_csv_squeeze")
+        unique_filename = get_unique_filename()
 
         str_single_element = "1"
         str_single_col = "1\n2\n3\n"
@@ -715,7 +715,7 @@ class TestReadCSV:
         )
 
     def test_read_csv_mangle_dupe_cols(self):
-        unique_filename = get_unique_filename("test_read_csv_mangle_dupe_cols")
+        unique_filename = get_unique_filename()
         str_non_unique_cols = "col,col,col,col\n" "5, 6, 7, 8\n" "9, 10, 11, 12\n"
         eval_io_from_str(str_non_unique_cols, unique_filename, mangle_dupe_cols=True)
 
@@ -775,7 +775,7 @@ class TestReadCSV:
             "cache_dates": cache_dates,
         }
 
-        unique_name = get_unique_filename("test_read_csv_datetime", kwargs)
+        unique_name = get_unique_filename()
         make_csv_file(
             filename=unique_name,
         )

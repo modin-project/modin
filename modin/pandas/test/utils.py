@@ -869,7 +869,7 @@ def generate_none_dfs():
 
 
 def get_unique_filename(
-    test_name: str,
+    test_name: str = "test",
     kwargs: dict = {},
     extension: str = "csv",
     data_dir: str = IO_OPS_DATA_DIR,
