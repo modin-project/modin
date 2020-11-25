@@ -1729,7 +1729,10 @@ class BasePandasFrame(object):
             )
 
         index_other_obj = [o.axes[axis] for o in other]
-        joined_index = self._join_index_objects(axis, index_other_obj, how, sort)
+        if how == "reindex_to_self":
+            joined_index = self.axes[axis]
+        else:
+            joined_index = self._join_index_objects(axis, index_other_obj, how, sort)
 
         # We have to set these because otherwise when we perform the functions it may
         # end up serializing this entire object.
