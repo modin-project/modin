@@ -1699,19 +1699,22 @@ class BasePandasFrame(object):
 
         Parameters
         ----------
-            axis : 0 or 1
-                The axis to copartition along (0 - rows, 1 - columns).
-            other : BasePandasFrame
-                The other dataframes(s) to copartition against.
-            how : str
-                How to manage joining the index object ("left", "right", etc.)
-            sort : boolean
-                Whether or not to sort the joined index.
-            force_repartition : boolean
-                Whether or not to force the repartitioning. By default,
-                this method will skip repartitioning if it is possible. This is because
-                reindexing is extremely inefficient. Because this method is used to
-                `join` or `append`, it is vital that the internal indices match.
+        axis : 0 or 1
+            The axis to copartition along (0 - rows, 1 - columns).
+        other : BasePandasFrame
+            The other dataframes(s) to copartition against.
+        how : str
+            How to manage joining the index object ("left", "right", etc.)
+        sort : bool
+            Whether or not to sort the joined index.
+        force_repartition : bool, default False
+            Whether or not to force the repartitioning. By default,
+            this method will skip repartitioning if it is possible. This is because
+            reindexing is extremely inefficient. Because this method is used to
+            `join` or `append`, it is vital that the internal indices match.
+        reindexer : str, default None
+            Defines the operation for which `_copartition` is executed.
+            Allows us to add some specifics (for example, how to make reindex).
 
         Returns
         -------
@@ -1729,10 +1732,7 @@ class BasePandasFrame(object):
             )
 
         index_other_obj = [o.axes[axis] for o in other]
-        if how == "reindex_to_self":
-            joined_index = self.axes[axis]
-        else:
-            joined_index = self._join_index_objects(axis, index_other_obj, how, sort)
+        joined_index = self._join_index_objects(axis, index_other_obj, how, sort)
 
         # We have to set these because otherwise when we perform the functions it may
         # end up serializing this entire object.
@@ -1740,6 +1740,8 @@ class BasePandasFrame(object):
         right_old_idxes = index_other_obj
 
         def make_map_func(index, left=True):
+            # left - specific argument for case of binary operation;
+            # it choose indexer for left or right index
             if index.equals(joined_index):
                 return lambda df: df
             if reindexer == "binary":
@@ -1750,7 +1752,7 @@ class BasePandasFrame(object):
 
                 return lambda df: df._reindex_with_indexers(
                     {axis: [_join_index, ilidx if left else iridx]},
-                    copy=False,
+                    copy=True,
                     allow_dups=True,
                 )
             return lambda df: df.reindex(joined_index, axis=axis)
@@ -1847,7 +1849,6 @@ class BasePandasFrame(object):
             reindexer="binary",
         )
         # unwrap list returned by `copartition`.
-        # import pdb;pdb.set_trace()
         right_parts = right_parts[0]
         new_frame = self._frame_mgr_cls.binary_operation(
             1, left_parts, lambda l, r: op(l, r), right_parts

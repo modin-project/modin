@@ -11,6 +11,7 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
+import pytest
 import modin.pandas as pd
 from modin.pandas.test.utils import create_test_dfs
 
@@ -43,6 +44,7 @@ def test_aligning_blocks_with_duplicated_index():
     repr(df1 - df2)
 
 
+@pytest.mark.xfail(reason="xfail until #2443 is merged")
 def test_aligning_partitions():
     data = [0, 1, 2, 3, 4, 5]
     modin_df1, _ = create_test_dfs({"a": data, "b": data})

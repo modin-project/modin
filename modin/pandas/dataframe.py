@@ -1975,7 +1975,7 @@ class DataFrame(BasePandasDataset):
                         self._query_compiler.concat(
                             1,
                             value._query_compiler,
-                            join="reindex_to_self",
+                            join="left",
                         ),
                         inplace=True,
                     )
