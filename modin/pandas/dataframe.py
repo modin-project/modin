@@ -393,6 +393,8 @@ class DataFrame(BasePandasDataset):
                 )
                 for o in by
             ):
+                # We want to split 'by's into those that belongs to the self (internal_by)
+                # and those that doesn't (external_by)
                 internal_by, external_by = [], []
 
                 for current_by in by:

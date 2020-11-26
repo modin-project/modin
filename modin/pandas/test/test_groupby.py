@@ -61,6 +61,13 @@ def build_types_asserter(comparator):
     return wrapper
 
 
+def df_from_grp(self, grp):
+    if grp.__module__.split(".")[0] == "pandas":
+        return grp._obj_with_exclusions
+    else:
+        return grp._df
+
+
 @pytest.mark.parametrize("as_index", [True, False])
 def test_mixed_dtypes_groupby(as_index):
     frame_data = np.random.randint(97, 198, size=(2 ** 6, 2 ** 4))
@@ -377,11 +384,14 @@ def test_simple_row_groupby(by, as_index, col1_category):
     eval_len(modin_groupby, pandas_groupby)
     eval_sum(modin_groupby, pandas_groupby)
     eval_ngroup(modin_groupby, pandas_groupby)
+    # Pandas raising exception when 'by' contains categorical key and `as_index=False`
+    # because of a bug: https://github.com/pandas-dev/pandas/issues/36698
+    # Modin correctly processes the result, so that's why `check_exception_type=None` in some cases
     eval_general(
         modin_groupby,
         pandas_groupby,
         lambda df: df.nunique(),
-        check_exception_type=None,
+        check_exception_type=None if (col1_category and not as_index) else True,
     )
     eval_median(modin_groupby, pandas_groupby)
     eval_general(modin_groupby, pandas_groupby, lambda df: df.head(n), is_default=True)
@@ -1416,6 +1426,16 @@ def test_unknown_groupby(columns):
         lambda df: df.size(),
         lambda df: df.mean(),
         lambda df: df.quantile(),
+        lambda grp: grp.agg(
+            {
+                df_from_grp(grp).columns[0]: (max, min, sum),
+                df_from_grp(grp).columns[-1]: (sum, min, max),
+            }
+        ),
+        lambda grp: grp.agg(
+            max=(df_from_grp(grp).columns[0], max),
+            sum=(df_from_grp(grp).columns[-1], sum),
+        ),
     ],
 )
 def test_multi_column_groupby_different_partitions(func_to_apply):

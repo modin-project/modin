@@ -149,7 +149,7 @@ class PandasFrameAxisPartition(BaseFrameAxisPartition):
                 other_axis_partition = [other_axis_partition]
 
             # (other_shape[i-1], other_shape[i]) will indicate slice
-            # to restore i axis partition
+            # to restore i-1 axis partition
             other_shape = np.cumsum(
                 [0] + [len(o.list_of_blocks) for o in other_axis_partition]
             )

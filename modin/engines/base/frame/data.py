@@ -1704,11 +1704,9 @@ class BasePandasFrame(object):
         -------
              A new Modin DataFrame
         """
-        if other is not None and not isinstance(other, list):
+        if not isinstance(other, list):
             other = [other]
-        other = (
-            [o._partitions for o in other] if other is not None and len(other) else None
-        )
+        other = [o._partitions for o in other if o is not None] if len(other) else None
         new_partitions = self._frame_mgr_cls.broadcast_axis_partitions(
             axis=axis,
             left=self._partitions,
