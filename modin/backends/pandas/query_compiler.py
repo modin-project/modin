@@ -2606,7 +2606,8 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 # issues with extracting the index.
                 except (DataError, TypeError):
                     result = pandas.DataFrame(index=grouped_df.size().index)
-
+                if isinstance(result, pandas.Series):
+                    result = result.to_frame("__reduced__")
                 if not as_index:
                     if not isinstance(result.index, pandas.MultiIndex) and (
                         result.index.name is None or result.index.name in result.columns

@@ -31,7 +31,7 @@ import pandas.core.common as com
 from types import BuiltinFunctionType
 
 from modin.error_message import ErrorMessage
-from modin.utils import _inherit_docstrings, try_cast_to_pandas
+from modin.utils import _inherit_docstrings, try_cast_to_pandas, wrap_udf_function
 from modin.backends.base.query_compiler import BaseQueryCompiler
 from modin.config import IsExperimental
 from .series import Series
@@ -261,6 +261,7 @@ class DataFrameGroupBy(object):
         return result
 
     def apply(self, func, *args, **kwargs):
+        func = wrap_udf_function(func)
         return self._apply_agg_function(
             # Grouping column in never dropped in groupby.apply, so drop=False
             lambda df: df.apply(func, *args, **kwargs),
