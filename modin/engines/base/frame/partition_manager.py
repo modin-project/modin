@@ -231,6 +231,7 @@ class BaseFrameManager(ABC):
         left,
         right,
         keep_partitioning=False,
+        apply_indices=None,
         lengths=None,
     ):
         """
@@ -244,6 +245,8 @@ class BaseFrameManager(ABC):
         right : The right partitions.
         keep_partitioning : boolean. Default is False
             The flag to keep partitions for Modin Frame.
+        apply_indices : list of ints (optional),
+            Indices of `axis ^ 1` to apply function over.
         lengths : list(int), default None
             The list of lengths to shuffle the object.
 
@@ -275,13 +278,16 @@ class BaseFrameManager(ABC):
             kw["_lengths"] = lengths
             kw["manual_partition"] = True
 
+        if apply_indices is None:
+            apply_indices = np.arange(len(left_partitions))
+
         result_blocks = np.array(
             [
-                part.apply(
+                left_partitions[i].apply(
                     preprocessed_map_func,
                     **kw,
                 )
-                for part in left_partitions
+                for i in apply_indices
             ]
         )
         # If we are mapping over columns, they are returned to use the same as

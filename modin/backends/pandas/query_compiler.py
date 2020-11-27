@@ -2673,10 +2673,13 @@ class PandasQueryCompiler(BaseQueryCompiler):
             except (ValueError, KeyError):
                 return compute_groupby(df.copy(), drop)
 
+        apply_indices = list(agg_func.keys()) if isinstance(agg_func, dict) else None
+
         new_modin_frame = self._modin_frame.broadcast_apply_full_axis(
             axis=axis,
             func=lambda df, by=None: groupby_agg_builder(df, by, drop),
             other=broadcastable_by,
+            apply_indices=apply_indices,
         )
         result = self.__constructor__(new_modin_frame)
 

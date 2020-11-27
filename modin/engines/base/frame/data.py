@@ -1678,6 +1678,7 @@ class BasePandasFrame(object):
         other,
         new_index=None,
         new_columns=None,
+        apply_indices=None,
         dtypes=None,
     ):
         """Broadcast partitions of other dataframe partitions and apply a function along full axis.
@@ -1695,6 +1696,8 @@ class BasePandasFrame(object):
             new_columns : list-like (optional)
                 The columns of the result. We may know this in
                 advance, and if not provided it must be computed.
+            apply_indices : list of ints (optional),
+                Indices of `axis ^ 1` to apply function over.
             dtypes : list-like (optional)
                 The data types of the result. This is an optimization
                 because there are functions that always result in a particular data
@@ -1709,11 +1712,21 @@ class BasePandasFrame(object):
         other = (
             [o._partitions for o in other] if other is not None and len(other) else None
         )
+
+        if apply_indices is not None:
+            numeric_indices = self.axes[axis ^ 1].get_indexer_for(apply_indices)
+            apply_indices = self._get_dict_of_block_index(
+                axis ^ 1, numeric_indices
+            ).keys()
+        else:
+            apply_indices = None
+
         new_partitions = self._frame_mgr_cls.broadcast_axis_partitions(
             axis=axis,
             left=self._partitions,
             right=other,
             apply_func=self._build_mapreduce_func(axis, func),
+            apply_indices=apply_indices,
             keep_partitioning=True,
         )
         # Index objects for new object creation. This is shorter than if..else
