@@ -28,6 +28,8 @@ from io import BytesIO
 import os
 from string import ascii_letters
 import csv
+import json
+from filelock import FileLock
 
 random_state = np.random.RandomState(seed=42)
 
@@ -999,3 +1001,36 @@ def insert_lines_to_csv(
             **csv_reader_writer_params,
         )
         writer.writerows(lines)
+
+
+class SharedVars:
+    """implements variables that can be shared among processes"""
+
+    def __init__(self, shared_file_path: str, data: dict):
+        self._shared_file_path = shared_file_path
+        self._lock = FileLock(f"{self._shared_file_path}.lock")
+        if not os.path.exists(self._shared_file_path):
+            with self._lock:
+                self._write_data(data)
+
+    def _write_data(self, data):
+        open(self._shared_file_path, "a").close()
+        with open(self._shared_file_path, "w") as f:
+            json.dump(data, f)
+
+    def get_var_value(self, var):
+        with self._lock:
+            with open(self._shared_file_path) as f:
+                data = json.load(f)
+        return data[var]
+
+    def set_var_value(self, var, value, append=False):
+        with self._lock:
+            with open(self._shared_file_path) as f:
+                data = json.load(f)
+            if append:
+                assert isinstance(data[var], list)
+                data[var].append(value)
+            else:
+                data[var] = value
+            self._write_data(data)

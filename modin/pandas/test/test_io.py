@@ -40,6 +40,7 @@ from .utils import (
     IO_OPS_DATA_DIR,
     io_ops_bad_exc,
     eval_io_from_str,
+    SharedVars,
 )
 
 from modin.config import Engine, Backend, IsExperimental
@@ -66,6 +67,7 @@ TEST_SAS_FILENAME = os.getcwd() + "/data/test1.sas7bdat"
 TEST_FWF_FILENAME = "test_fwf.txt"
 TEST_GBQ_FILENAME = "test_gbq."
 SMALL_ROW_SIZE = 2000
+READ_CSV_SHARED_DATA_FILE = "read_csv_shared_data.txt"
 
 
 if not os.path.exists(IO_OPS_DATA_DIR):
@@ -298,6 +300,78 @@ def make_csv_file():
                 pass
 
 
+@pytest.fixture(scope="class")
+def TestReadCSVFixture(worker_id):
+    # Process shared variables are needed because `xdist` spawns
+    # workers in separate processes with separate namespaces
+    shared_vars = SharedVars(
+        READ_CSV_SHARED_DATA_FILE,
+        {
+            "setup_started": False,
+            "setup_completed": False,
+            "teardowned_workers": [],
+            "filenames": [],
+            "csvs_names": {},
+        },
+    )
+    if not shared_vars.get_var_value("setup_started"):
+        shared_vars.set_var_value("setup_started", True)
+        filenames = []
+        files_ids = [
+            "test_read_csv_regular",
+            "test_read_csv_blank_lines",
+            "test_read_csv_yes_no",
+        ]
+        pytest.csvs_names = {
+            file_id: get_unique_filename(file_id, debug_mode=True)
+            for file_id in files_ids
+        }
+        # test_read_csv_col_handling, test_read_csv_parsing
+        _make_csv_file(filenames)(
+            filename=pytest.csvs_names["test_read_csv_regular"],
+        )
+        # test_read_csv_parsing
+        _make_csv_file(filenames)(
+            filename=pytest.csvs_names["test_read_csv_yes_no"],
+            additional_col_values=["Yes", "true", "No", "false"],
+        )
+        # test_read_csv_col_handling
+        _make_csv_file(filenames)(
+            filename=pytest.csvs_names["test_read_csv_blank_lines"],
+            add_blank_lines=True,
+        )
+        filenames.extend(
+            [READ_CSV_SHARED_DATA_FILE, f"{READ_CSV_SHARED_DATA_FILE}.lock"]
+        )
+        shared_vars.set_var_value("setup_completed", True)
+        shared_vars.set_var_value("csvs_names", pytest.csvs_names)
+        shared_vars.set_var_value("filenames", filenames)
+
+    else:
+        # wait until first spawned worker finishes fixture setup
+        import time
+
+        while not shared_vars.get_var_value("setup_completed"):
+            time.sleep(1)
+
+        pytest.csvs_names = shared_vars.get_var_value("csvs_names")
+
+    yield
+    shared_vars.set_var_value("teardowned_workers", worker_id, append=True)
+
+    # execute fixture teardown only if all workers finished their tasks
+    if len(shared_vars.get_var_value("teardowned_workers")) == int(
+        os.environ.get("PYTEST_XDIST_WORKER_COUNT", "1")
+    ):
+        # Delete csv files that were created
+        for filename in shared_vars.get_var_value("filenames"):
+            if os.path.exists(filename):
+                try:
+                    os.remove(filename)
+                except PermissionError:
+                    pass
+
+
 def setup_json_file(row_size, force=False):
     if os.path.exists(TEST_JSON_FILENAME) and not force:
         pass
@@ -496,6 +570,7 @@ def teardown_fwf_file():
             pass
 
 
+@pytest.mark.usefixtures("TestReadCSVFixture")
 @pytest.mark.skipif(
     IsExperimental.get() and Backend.get() == "Pyarrow",
     reason="Segmentation fault; see PR #2347 ffor details",
@@ -546,7 +621,6 @@ class TestReadCSV:
     @pytest.mark.parametrize("skip_blank_lines", [True, False])
     def test_read_csv_col_handling(
         self,
-        make_csv_file,
         request,
         header,
         index_col,
@@ -569,13 +643,8 @@ class TestReadCSV:
             "skip_blank_lines": skip_blank_lines,
         }
 
-        unique_name = get_unique_filename()
-        make_csv_file(
-            filename=unique_name,
-            add_blank_lines=True,
-        )
         eval_io(
-            filepath_or_buffer=unique_name,
+            filepath_or_buffer=pytest.csvs_names["test_read_csv_blank_lines"],
             fn_name="read_csv",
             **kwargs,
         )
@@ -597,7 +666,6 @@ class TestReadCSV:
     @pytest.mark.parametrize("skipfooter", [0, 10])
     def test_read_csv_parsing_1(
         self,
-        make_csv_file,
         request,
         dtype,
         engine,
@@ -615,17 +683,16 @@ class TestReadCSV:
             "skipfooter": skipfooter,
         }
 
-        unique_name = get_unique_filename()
-        make_csv_file(
-            filename=unique_name,
-        )
         if kwargs["dtype"]:
             kwargs["dtype"] = {
-                col: "object" for col in pandas.read_csv(unique_name, nrows=1).columns
+                col: "object"
+                for col in pandas.read_csv(
+                    pytest.csvs_names["test_read_csv_regular"], nrows=1
+                ).columns
             }
 
         eval_io(
-            filepath_or_buffer=unique_name,
+            filepath_or_buffer=pytest.csvs_names["test_read_csv_regular"],
             fn_name="read_csv",
             check_exception_type=None,  # issue #2320
             raising_exceptions=None,
@@ -641,7 +708,6 @@ class TestReadCSV:
     @pytest.mark.parametrize("names", [["c1", "c2", "c3", "c4"], None])
     def test_read_csv_parsing_2(
         self,
-        make_csv_file,
         request,
         true_values,
         false_values,
@@ -665,16 +731,8 @@ class TestReadCSV:
             "names": names,
         }
 
-        unique_name = get_unique_filename()
-        make_csv_file(
-            filename=unique_name,
-            additional_col_values=["Yes", "true", "No", "false"]
-            if true_values or false_values
-            else None,
-        )
-
         eval_io(
-            filepath_or_buffer=unique_name,
+            filepath_or_buffer=pytest.csvs_names["test_read_csv_yes_no"],
             fn_name="read_csv",
             check_exception_type=None,  # issue #2320
             raising_exceptions=None,
@@ -746,7 +804,6 @@ class TestReadCSV:
     @pytest.mark.parametrize("cache_dates", [True, False])
     def test_read_csv_datetime(
         self,
-        make_csv_file,
         request,
         parse_dates,
         infer_datetime_format,
@@ -775,13 +832,8 @@ class TestReadCSV:
             "cache_dates": cache_dates,
         }
 
-        unique_name = get_unique_filename()
-        make_csv_file(
-            filename=unique_name,
-        )
-
         eval_io(
-            filepath_or_buffer=unique_name,
+            filepath_or_buffer=pytest.csvs_names["test_read_csv_regular"],
             fn_name="read_csv",
             check_kwargs_callable=not callable(date_parser),
             raising_exceptions=raising_exceptions,
