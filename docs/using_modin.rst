@@ -21,6 +21,8 @@ functional parity with pandas.
 Using Modin on a Single Node
 ----------------------------
 
+**In local (without a cluster) modin will create and manage a local (dask or ray) cluster for the execution**
+
 In order to use the most up-to-date version of Modin, please follow the instructions on
 the `installation page`_
 
