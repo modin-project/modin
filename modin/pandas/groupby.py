@@ -27,6 +27,7 @@ import pandas
 import pandas.core.groupby
 from pandas.core.dtypes.common import is_list_like
 from pandas.core.aggregation import reconstruct_func
+from types import BuiltinFunctionType
 import pandas.core.common as com
 from types import BuiltinFunctionType
 
@@ -261,7 +262,8 @@ class DataFrameGroupBy(object):
         return result
 
     def apply(self, func, *args, **kwargs):
-        func = wrap_udf_function(func)
+        if not isinstance(func, BuiltinFunctionType):
+            func = wrap_udf_function(func)
         return self._apply_agg_function(
             # Grouping column in never dropped in groupby.apply, so drop=False
             lambda df: df.apply(func, *args, **kwargs),
