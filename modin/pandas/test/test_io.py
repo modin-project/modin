@@ -66,7 +66,7 @@ TEST_PICKLE_FILENAME = "test.pkl"
 TEST_SAS_FILENAME = os.getcwd() + "/data/test1.sas7bdat"
 TEST_FWF_FILENAME = "test_fwf.txt"
 TEST_GBQ_FILENAME = "test_gbq."
-SMALL_ROW_SIZE = 2000
+SMALL_ROW_SIZE = 64
 READ_CSV_SHARED_DATA_FILE = "read_csv_shared_data.txt"
 
 
