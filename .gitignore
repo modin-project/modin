@@ -172,3 +172,6 @@ cscope.out
 # Dask workspace
 dask-worker-space/
 node_modules
+
+# Asv stuff
+.asv/
