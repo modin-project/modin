@@ -1460,6 +1460,55 @@ def test_from_sas():
     df_equals(modin_df, pandas_df)
 
 
+@pytest.mark.parametrize("nrows", [123, None])
+def test_from_csv(make_csv_file, nrows):
+    make_csv_file()
+
+    pandas_df = pandas.read_csv(TEST_CSV_FILENAME, nrows=nrows)
+    modin_df = pd.read_csv(TEST_CSV_FILENAME, nrows=nrows)
+
+    df_equals(modin_df, pandas_df)
+
+    pandas_df = pandas.read_csv(Path(TEST_CSV_FILENAME), nrows=nrows)
+    modin_df = pd.read_csv(Path(TEST_CSV_FILENAME), nrows=nrows)
+
+    df_equals(modin_df, pandas_df)
+
+
+def dummy_decorator():
+    """A problematic decorator that does not use `functools.wraps`. this introduce unwanted local variables for
+    inspect.currentframe.
+    """
+
+    def wrapper(method):
+        def wrapped_function(self, *args, **kwargs):
+            result = method(self, *args, **kwargs)
+            return result
+
+        return wrapped_function
+
+    return wrapper
+
+
+@pytest.mark.parametrize("nrows", [123, None])
+def test_from_csv_within_decorator_parse_args_correctly(make_csv_file, nrows):
+    make_csv_file()
+
+    @dummy_decorator()
+    def wrapped_read_csv(file, nrows):
+        return pd.read_csv(file, nrows=nrows)
+
+    pandas_df = pandas.read_csv(TEST_CSV_FILENAME, nrows=nrows)
+    modin_df = wrapped_read_csv(TEST_CSV_FILENAME, nrows=nrows)
+
+    df_equals(modin_df, pandas_df)
+
+    pandas_df = pandas.read_csv(Path(TEST_CSV_FILENAME), nrows=nrows)
+    modin_df = wrapped_read_csv(Path(TEST_CSV_FILENAME), nrows=nrows)
+
+    df_equals(modin_df, pandas_df)
+
+
 @pytest.mark.parametrize("nrows", [35, None])
 def test_from_csv_sep_none(make_csv_file, nrows):
     make_csv_file()
@@ -1638,6 +1687,24 @@ def test_from_table(make_csv_file):
 
     pandas_df = pandas.read_table(Path(TEST_CSV_FILENAME))
     modin_df = pd.read_table(Path(TEST_CSV_FILENAME))
+
+    df_equals(modin_df, pandas_df)
+
+
+def test_from_table_within_decorator_parse_args_correctly(make_csv_file):
+    make_csv_file(delimiter="\t")
+
+    @dummy_decorator()
+    def wrapped_read_table(file):
+        return pd.read_table(file)
+
+    pandas_df = pandas.read_table(TEST_CSV_FILENAME)
+    modin_df = wrapped_read_table(TEST_CSV_FILENAME)
+
+    df_equals(modin_df, pandas_df)
+
+    pandas_df = pandas.read_table(Path(TEST_CSV_FILENAME))
+    modin_df = wrapped_read_table(Path(TEST_CSV_FILENAME))
 
     df_equals(modin_df, pandas_df)
 
