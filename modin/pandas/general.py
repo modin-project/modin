@@ -158,7 +158,6 @@ def merge_asof(
         raise ValueError(
             "can not merge DataFrame with instance of type {}".format(type(right))
         )
-
     ErrorMessage.default_to_pandas("`merge_asof`")
 
     # As of Pandas 1.2 these should raise an error; before that it did
@@ -236,7 +235,7 @@ def merge_asof(
             raise ValueError("Can't have both 'by' and 'left_by' or 'right_by'")
         left_by = right_by = by
 
-    # List of columsn case should have been handled by direct Pandas fallback
+    # List of columns case should have been handled by direct Pandas fallback
     # earlier:
     assert isinstance(left_by, (str, type(None)))
     assert isinstance(right_by, (str, type(None)))
@@ -290,7 +289,7 @@ def merge_asof(
     # 5. Clean up to match Pandas output:
     if left_on is not None and right_index:
         result.insert(
-            list(result.columns).index(left_on + suffixes[0]),
+            result.columns.get_indexer_for(left_on + suffixes[0])[0],
             left_on,
             result[left_on + suffixes[0]],
         )
