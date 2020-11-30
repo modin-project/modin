@@ -1709,7 +1709,8 @@ class BasePandasFrame(object):
             The axis to copartition along (0 - rows, 1 - columns).
         other : BasePandasFrame
             The other dataframes(s) to copartition against.
-        joined_index : Index, default None
+        joined_index : Index
+            The index used for reindexing partitions.
         force_repartition : bool, default False
             Whether or not to force the repartitioning. By default,
             this method will skip repartitioning if it is possible. This is because
@@ -1740,7 +1741,7 @@ class BasePandasFrame(object):
 
         if make_map_reindexer is None:
 
-            def make_map_func(index, left=True):
+            def make_map_func(index, *args, **kwargs):
                 # left - specific argument for case of binary operation;
                 # it choose indexer for left or right index
                 if index.equals(joined_index):
