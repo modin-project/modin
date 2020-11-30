@@ -1707,11 +1707,10 @@ class BasePandasFrame(object):
         -------
              A new Modin DataFrame
         """
-        if other is not None and not isinstance(other, list):
-            other = [other]
-        other = (
-            [o._partitions for o in other] if other is not None and len(other) else None
-        )
+        if other is not None:
+            if not isinstance(other, list):
+                other = [other]
+            other = [o._partitions for o in other] if len(other) else None
 
         if apply_indices is not None:
             numeric_indices = self.axes[axis ^ 1].get_indexer_for(apply_indices)
