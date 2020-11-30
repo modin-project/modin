@@ -40,7 +40,6 @@ from .utils import (
     IO_OPS_DATA_DIR,
     io_ops_bad_exc,
     eval_io_from_str,
-    SharedVars,
 )
 
 from modin.config import Engine, Backend, IsExperimental
@@ -302,74 +301,40 @@ def make_csv_file():
 
 @pytest.fixture(scope="class")
 def TestReadCSVFixture(worker_id):
-    # Process shared variables are needed because `xdist` spawns
-    # workers in separate processes with separate namespaces
-    shared_vars = SharedVars(
-        READ_CSV_SHARED_DATA_FILE,
-        {
-            "setup_started": False,
-            "setup_completed": False,
-            "teardowned_workers": [],
-            "filenames": [],
-            "csvs_names": {},
-        },
+    filenames = []
+    files_ids = [
+        "test_read_csv_regular",
+        "test_read_csv_blank_lines",
+        "test_read_csv_yes_no",
+    ]
+    # each xdist worker spawned in separate process with separate namespace and dataset
+    pytest.csvs_names = {
+        file_id: get_unique_filename(file_id, debug_mode=True, suffix=worker_id)
+        for file_id in files_ids
+    }
+    # test_read_csv_col_handling, test_read_csv_parsing
+    _make_csv_file(filenames)(
+        filename=pytest.csvs_names["test_read_csv_regular"],
     )
-    if not shared_vars.get_var_value("setup_started"):
-        shared_vars.set_var_value("setup_started", True)
-        filenames = []
-        files_ids = [
-            "test_read_csv_regular",
-            "test_read_csv_blank_lines",
-            "test_read_csv_yes_no",
-        ]
-        pytest.csvs_names = {
-            file_id: get_unique_filename(file_id, debug_mode=True)
-            for file_id in files_ids
-        }
-        # test_read_csv_col_handling, test_read_csv_parsing
-        _make_csv_file(filenames)(
-            filename=pytest.csvs_names["test_read_csv_regular"],
-        )
-        # test_read_csv_parsing
-        _make_csv_file(filenames)(
-            filename=pytest.csvs_names["test_read_csv_yes_no"],
-            additional_col_values=["Yes", "true", "No", "false"],
-        )
-        # test_read_csv_col_handling
-        _make_csv_file(filenames)(
-            filename=pytest.csvs_names["test_read_csv_blank_lines"],
-            add_blank_lines=True,
-        )
-        filenames.extend(
-            [READ_CSV_SHARED_DATA_FILE, f"{READ_CSV_SHARED_DATA_FILE}.lock"]
-        )
-        shared_vars.set_var_value("setup_completed", True)
-        shared_vars.set_var_value("csvs_names", pytest.csvs_names)
-        shared_vars.set_var_value("filenames", filenames)
-
-    else:
-        # wait until first spawned worker finishes fixture setup
-        import time
-
-        while not shared_vars.get_var_value("setup_completed"):
-            time.sleep(1)
-
-        pytest.csvs_names = shared_vars.get_var_value("csvs_names")
+    # test_read_csv_parsing
+    _make_csv_file(filenames)(
+        filename=pytest.csvs_names["test_read_csv_yes_no"],
+        additional_col_values=["Yes", "true", "No", "false"],
+    )
+    # test_read_csv_col_handling
+    _make_csv_file(filenames)(
+        filename=pytest.csvs_names["test_read_csv_blank_lines"],
+        add_blank_lines=True,
+    )
 
     yield
-    shared_vars.set_var_value("teardowned_workers", worker_id, append=True)
-
-    # execute fixture teardown only if all workers finished their tasks
-    if len(shared_vars.get_var_value("teardowned_workers")) == int(
-        os.environ.get("PYTEST_XDIST_WORKER_COUNT", "1")
-    ):
-        # Delete csv files that were created
-        for filename in shared_vars.get_var_value("filenames"):
-            if os.path.exists(filename):
-                try:
-                    os.remove(filename)
-                except PermissionError:
-                    pass
+    # Delete csv files that were created
+    for filename in filenames:
+        if os.path.exists(filename):
+            try:
+                os.remove(filename)
+            except PermissionError:
+                pass
 
 
 def setup_json_file(row_size, force=False):
