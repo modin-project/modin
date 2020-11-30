@@ -704,7 +704,7 @@ class TestReadCSV:
     @pytest.mark.parametrize("false_values", [["No"], ["No", "false"], None])
     @pytest.mark.parametrize("skiprows", [2, lambda x: x % 2])
     @pytest.mark.parametrize("skipfooter", [0, 10])
-    @pytest.mark.parametrize("nrows", [123, None])
+    @pytest.mark.parametrize("nrows", [35, None])
     @pytest.mark.parametrize("names", [["c1", "c2", "c3", "c4"], None])
     def test_read_csv_parsing_2(
         self,
@@ -716,7 +716,7 @@ class TestReadCSV:
         nrows,
         names,
     ):
-        if nrows and (false_values or true_values) and Engine.get() != "Python":
+        if false_values or true_values and Engine.get() != "Python":
             pytest.xfail("modin and pandas dataframes differs - issue #2446")
         if request.config.getoption("--simulate-cloud").lower() != "off":
             pytest.xfail(
@@ -1186,7 +1186,7 @@ def test_from_sas():
     df_equals(modin_df, pandas_df)
 
 
-@pytest.mark.parametrize("nrows", [123, None])
+@pytest.mark.parametrize("nrows", [35, None])
 def test_from_csv_sep_none(make_csv_file, nrows):
     make_csv_file()
 
@@ -1534,7 +1534,7 @@ def test_from_csv_default_to_pandas_behavior(make_csv_file):
         pd.read_csv(TEST_CSV_FILENAME, skiprows=lambda x: x in [0, 2])
 
 
-@pytest.mark.parametrize("nrows", [123, None])
+@pytest.mark.parametrize("nrows", [35, None])
 def test_from_csv_index_col(make_csv_file, nrows):
     make_csv_file()
 
