@@ -174,4 +174,5 @@ dask-worker-space/
 node_modules
 
 # Asv stuff
-.asv/
+asv_bench/.asv/
+asv_bench/modin/
