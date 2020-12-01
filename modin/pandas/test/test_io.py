@@ -313,6 +313,7 @@ def TestReadCSVFixture():
         "test_read_csv_regular",
         "test_read_csv_blank_lines",
         "test_read_csv_yes_no",
+        "test_read_csv_nans",
     ]
     # each xdist worker spawned in separate process with separate namespace and dataset
     pytest.csvs_names = {file_id: get_unique_filename() for file_id in files_ids}
@@ -329,6 +330,12 @@ def TestReadCSVFixture():
     _make_csv_file(filenames)(
         filename=pytest.csvs_names["test_read_csv_blank_lines"],
         add_blank_lines=True,
+    )
+    # test_read_csv_nans_handling
+    _make_csv_file(filenames)(
+        filename=pytest.csvs_names["test_read_csv_nans"],
+        add_blank_lines=True,
+        additional_col_values=["<NA>", "N/A", "NA", "NULL", "custom_nan", "73"],
     )
 
     yield
@@ -752,9 +759,8 @@ class TestReadCSV:
     @pytest.mark.parametrize("na_filter", [True, False])
     @pytest.mark.parametrize("verbose", [True, False])
     @pytest.mark.parametrize("skip_blank_lines", [True, False])
-    def test_read_csv_na_handling(
+    def test_read_csv_nans_handling(
         self,
-        make_csv_file,
         na_values,
         keep_default_na,
         na_filter,
@@ -768,14 +774,8 @@ class TestReadCSV:
             "verbose": verbose,
             "skip_blank_lines": skip_blank_lines,
         }
-        unique_name = get_unique_filename("test_read_csv_na_handling", kwargs)
-        make_csv_file(
-            filename=unique_name,
-            add_blank_lines=True,
-            additional_col_values=["<NA>", "N/A", "NA", "NULL", "custom_nan", "73"],
-        )
         eval_io(
-            filepath_or_buffer=unique_name,
+            filepath_or_buffer=pytest.csvs_names["test_read_csv_nans"],
             fn_name="read_csv",
             **kwargs,
         )
