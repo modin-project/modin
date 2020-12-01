@@ -15,6 +15,7 @@ import math
 import numpy as np
 import pandas
 import warnings
+from .utils import SqlQuery
 
 from modin.engines.base.io.file_reader import FileReader
 
@@ -56,11 +57,14 @@ class SQLReader(FileReader):
                 "connection string instead of {}.".format(type(con))
             )
             return cls.single_worker_read(sql, con=con, index_col=index_col, **kwargs)
-        row_cnt_query = "SELECT COUNT(*) FROM ({}) as foo".format(sql)
+
+        sa_engine = sa.create_engine(con)
+        sql_query_engine = SqlQuery(sa_driver=sa_engine.driver)
+        row_cnt_query = sql_query_engine.row_cnt(sql=sql)
+        cols_names_query = sql_query_engine.empty(sql=sql)
+
         row_cnt = pandas.read_sql(row_cnt_query, con).squeeze()
-        cols_names_df = pandas.read_sql(
-            "SELECT * FROM ({}) as foo LIMIT 0".format(sql), con, index_col=index_col
-        )
+        cols_names_df = pandas.read_sql(cols_names_query, con, index_col=index_col)
         cols_names = cols_names_df.columns
         from modin.pandas import DEFAULT_NPARTITIONS
 
@@ -71,9 +75,7 @@ class SQLReader(FileReader):
         limit = math.ceil(row_cnt / num_partitions)
         for part in range(num_partitions):
             offset = part * limit
-            query = "SELECT * FROM ({}) as foo LIMIT {} OFFSET {}".format(
-                sql, limit, offset
-            )
+            query = sql_query_engine.partitioned(sql=sql, limit=limit, offset=offset)
             partition_id = cls.deploy(
                 cls.parse,
                 num_partitions + 2,
