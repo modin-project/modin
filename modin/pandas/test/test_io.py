@@ -560,12 +560,6 @@ class TestReadCSV:
     def test_read_csv_delimiters(
         self, make_csv_file, sep, delimiter, decimal, thousands
     ):
-        kwargs = {
-            "delimiter": delimiter,
-            "sep": sep,
-            "decimal": decimal,
-            "thousands": thousands,
-        }
         unique_filename = get_unique_filename()
         make_csv_file(
             filename=unique_filename,
@@ -575,9 +569,13 @@ class TestReadCSV:
         )
 
         eval_io(
-            filepath_or_buffer=unique_filename,
             fn_name="read_csv",
-            **kwargs,
+            # read_csv kwargs
+            filepath_or_buffer=unique_filename,
+            delimiter=delimiter,
+            sep=sep,
+            decimal=decimal,
+            thousands=thousands,
         )
 
     # Column and Index Locations and Names tests
@@ -610,19 +608,16 @@ class TestReadCSV:
                 "The reason of tests fail in `cloud` mode is unknown for now - issue #2340"
             )
 
-        kwargs = {
-            "header": header,
-            "index_col": index_col,
-            "prefix": prefix,
-            "names": names,
-            "usecols": usecols,
-            "skip_blank_lines": skip_blank_lines,
-        }
-
         eval_io(
-            filepath_or_buffer=pytest.csvs_names["test_read_csv_blank_lines"],
             fn_name="read_csv",
-            **kwargs,
+            # read_csv kwargs
+            filepath_or_buffer=pytest.csvs_names["test_read_csv_blank_lines"],
+            header=header,
+            index_col=index_col,
+            prefix=prefix,
+            names=names,
+            usecols=usecols,
+            skip_blank_lines=skip_blank_lines,
         )
 
     # General Parsing Configuration
@@ -652,15 +647,9 @@ class TestReadCSV:
             pytest.xfail(
                 "The reason of tests fail in `cloud` mode is unknown for now - issue #2340"
             )
-        kwargs = {
-            "dtype": dtype,
-            "engine": engine,
-            "converters": converters,
-            "skipfooter": skipfooter,
-        }
 
-        if kwargs["dtype"]:
-            kwargs["dtype"] = {
+        if dtype:
+            dtype = {
                 col: "object"
                 for col in pandas.read_csv(
                     pytest.csvs_names["test_read_csv_regular"], nrows=1
@@ -668,12 +657,16 @@ class TestReadCSV:
             }
 
         eval_io(
-            filepath_or_buffer=pytest.csvs_names["test_read_csv_regular"],
             fn_name="read_csv",
             check_exception_type=None,  # issue #2320
             raising_exceptions=None,
             check_kwargs_callable=not callable(converters),
-            **kwargs,
+            # read_csv kwargs
+            filepath_or_buffer=pytest.csvs_names["test_read_csv_regular"],
+            dtype=dtype,
+            engine=engine,
+            converters=converters,
+            skipfooter=skipfooter,
         )
 
     @pytest.mark.parametrize("true_values", [["Yes"], ["Yes", "true"], None])
@@ -698,22 +691,20 @@ class TestReadCSV:
             pytest.xfail(
                 "The reason of tests fail in `cloud` mode is unknown for now - issue #2340"
             )
-        kwargs = {
-            "true_values": true_values,
-            "false_values": false_values,
-            "skiprows": skiprows,
-            "skipfooter": skipfooter,
-            "nrows": nrows,
-            "names": names,
-        }
 
         eval_io(
-            filepath_or_buffer=pytest.csvs_names["test_read_csv_yes_no"],
             fn_name="read_csv",
             check_exception_type=None,  # issue #2320
             raising_exceptions=None,
             check_kwargs_callable=not callable(skiprows),
-            **kwargs,
+            # read_csv kwargs
+            filepath_or_buffer=pytest.csvs_names["test_read_csv_yes_no"],
+            true_values=true_values,
+            false_values=false_values,
+            skiprows=skiprows,
+            skipfooter=skipfooter,
+            nrows=nrows,
+            names=names,
         )
 
     def test_read_csv_skipinitialspace(self, make_csv_file):
@@ -767,13 +758,6 @@ class TestReadCSV:
         verbose,
         skip_blank_lines,
     ):
-        kwargs = {
-            "na_values": na_values,
-            "keep_default_na": keep_default_na,
-            "na_filter": na_filter,
-            "verbose": verbose,
-            "skip_blank_lines": skip_blank_lines,
-        }
         eval_io(
             filepath_or_buffer=pytest.csvs_names["test_read_csv_nans"],
             fn_name="read_csv",
@@ -831,21 +815,18 @@ class TestReadCSV:
             raising_exceptions = list(io_ops_bad_exc)
             raising_exceptions.remove(TypeError)
 
-        kwargs = {
-            "parse_dates": parse_dates,
-            "infer_datetime_format": infer_datetime_format,
-            "keep_date_col": keep_date_col,
-            "date_parser": date_parser,
-            "dayfirst": dayfirst,
-            "cache_dates": cache_dates,
-        }
-
         eval_io(
-            filepath_or_buffer=pytest.csvs_names["test_read_csv_regular"],
             fn_name="read_csv",
             check_kwargs_callable=not callable(date_parser),
             raising_exceptions=raising_exceptions,
-            **kwargs,
+            # read_csv kwargs
+            filepath_or_buffer=pytest.csvs_names["test_read_csv_regular"],
+            parse_dates=parse_dates,
+            infer_datetime_format=infer_datetime_format,
+            keep_date_col=keep_date_col,
+            date_parser=date_parser,
+            dayfirst=dayfirst,
+            cache_dates=cache_dates,
         )
 
 
