@@ -22,10 +22,22 @@ class TypeDescriptor(typing.NamedTuple):
     help: str
 
 
+class ExactStr(str):
+    """
+    To be used in type params where no transformations are needed
+    """
+
+
 _TYPE_PARAMS = {
     str: TypeDescriptor(
         decode=lambda value: value.strip().title(),
         normalize=lambda value: value.strip().title(),
+        verify=lambda value: True,
+        help="a case-insensitive string",
+    ),
+    ExactStr: TypeDescriptor(
+        decode=lambda value: value,
+        normalize=lambda value: value,
         verify=lambda value: True,
         help="a string",
     ),

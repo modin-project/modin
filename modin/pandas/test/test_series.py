@@ -21,7 +21,7 @@ from numpy.testing import assert_array_equal
 from pandas.core.base import SpecificationError
 import sys
 
-from modin.utils import to_pandas, get_current_backend
+from modin.utils import to_pandas
 from .utils import (
     random_state,
     RAND_LOW,
@@ -3376,33 +3376,28 @@ def test_value_counts(normalize, bins, dropna):
             i += 1
         return type(result)(result, index=new_index)
 
-    # We sort indices for pandas result because of issue #1650
+    # We sort indices for Modin and pandas result because of issue #1650
     modin_series, pandas_series = create_test_series(test_data_values[0])
-    modin_result = modin_series.value_counts(normalize=normalize, ascending=False)
 
-    if get_current_backend() == "BaseOnPython":
-        modin_result = sort_index_for_equal_values(modin_result, ascending=False)
-
+    modin_result = sort_index_for_equal_values(
+        modin_series.value_counts(normalize=normalize, ascending=False), False
+    )
     pandas_result = sort_index_for_equal_values(
         pandas_series.value_counts(normalize=normalize, ascending=False), False
     )
     df_equals(modin_result, pandas_result)
 
-    modin_result = modin_series.value_counts(bins=bins, ascending=False)
-
-    if get_current_backend() == "BaseOnPython":
-        modin_result = sort_index_for_equal_values(modin_result, ascending=False)
-
+    modin_result = sort_index_for_equal_values(
+        modin_series.value_counts(bins=bins, ascending=False), False
+    )
     pandas_result = sort_index_for_equal_values(
         pandas_series.value_counts(bins=bins, ascending=False), False
     )
     df_equals(modin_result, pandas_result)
 
-    modin_result = modin_series.value_counts(dropna=dropna, ascending=True)
-
-    if get_current_backend() == "BaseOnPython":
-        modin_result = sort_index_for_equal_values(modin_result, ascending=True)
-
+    modin_result = sort_index_for_equal_values(
+        modin_series.value_counts(dropna=dropna, ascending=True), True
+    )
     pandas_result = sort_index_for_equal_values(
         pandas_series.value_counts(dropna=dropna, ascending=True), True
     )
@@ -3412,20 +3407,20 @@ def test_value_counts(normalize, bins, dropna):
     arr = np.random.rand(2 ** 6)
     arr[::10] = np.nan
     modin_series, pandas_series = create_test_series(arr)
-    modin_result = modin_series.value_counts(dropna=False, ascending=True)
+    modin_result = sort_index_for_equal_values(
+        modin_series.value_counts(dropna=False, ascending=True), True
+    )
     pandas_result = sort_index_for_equal_values(
         pandas_series.value_counts(dropna=False, ascending=True), True
     )
-    if get_current_backend() == "BaseOnPython":
-        modin_result = sort_index_for_equal_values(modin_result, ascending=True)
     df_equals(modin_result, pandas_result)
 
-    modin_result = modin_series.value_counts(dropna=False, ascending=False)
+    modin_result = sort_index_for_equal_values(
+        modin_series.value_counts(dropna=False, ascending=False), False
+    )
     pandas_result = sort_index_for_equal_values(
         pandas_series.value_counts(dropna=False, ascending=False), False
     )
-    if get_current_backend() == "BaseOnPython":
-        modin_result = sort_index_for_equal_values(modin_result, ascending=False)
     df_equals(modin_result, pandas_result)
 
 

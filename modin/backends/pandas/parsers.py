@@ -221,7 +221,7 @@ class PandasExcelParser(PandasParser):
         ws = Worksheet(wb)
         # Read the raw data
         with ZipFile(fname) as z:
-            with z.open("xl/worksheets/{}.xml".format(sheet_name.lower())) as file:
+            with z.open("xl/worksheets/{}.xml".format(sheet_name)) as file:
                 file.seek(start)
                 bytes_data = file.read(end - start)
 

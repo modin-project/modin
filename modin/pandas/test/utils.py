@@ -869,11 +869,12 @@ def generate_none_dfs():
 
 
 def get_unique_filename(
-    test_name: str,
+    test_name: str = "test",
     kwargs: dict = {},
     extension: str = "csv",
     data_dir: str = IO_OPS_DATA_DIR,
     suffix: str = "",
+    debug_mode=False,
 ):
     """Returns unique file name with specified parameters.
 
@@ -889,34 +890,47 @@ def get_unique_filename(
         Data directory where test files will be created.
     suffix: str
         String to append to the resulted name.
+    debug_mode: bool
+        Get unique filename containing kwargs values.
+        Otherwise kwargs values will be replaced with hash equivalent.
 
     Returns
     -------
         Unique file name.
     """
-    # shortcut if kwargs parameter os not provided
-    if len(kwargs) == 0 and extension == "csv" and suffix == "":
-        return os.path.join(data_dir, (test_name + f"_{suffix}" + f".{extension}"))
+    suffix_part = f"_{suffix}" if suffix else ""
+    if debug_mode:
+        # shortcut if kwargs parameter are not provided
+        if len(kwargs) == 0 and extension == "csv" and suffix == "":
+            return os.path.join(data_dir, (test_name + suffix_part + f".{extension}"))
 
-    assert "." not in extension, "please provide pure extension name without '.'"
-    prohibited_chars = ['"', "\n"]
-    non_prohibited_char = "np_char"
-    char_counter = 0
-    kwargs_name = dict(kwargs)
-    for key, value in kwargs_name.items():
-        for char in prohibited_chars:
-            if isinstance(value, str) and char in value or callable(value):
-                kwargs_name[key] = non_prohibited_char + str(char_counter)
-                char_counter += 1
-    parameters_values = "_".join(
-        [
-            str(value)
-            if not isinstance(value, (list, tuple))
-            else "_".join([str(x) for x in value])
-            for value in kwargs_name.values()
-        ]
-    )
-    return os.path.join(data_dir, parameters_values + f"_{suffix}" + f".{extension}")
+        assert "." not in extension, "please provide pure extension name without '.'"
+        prohibited_chars = ['"', "\n"]
+        non_prohibited_char = "np_char"
+        char_counter = 0
+        kwargs_name = dict(kwargs)
+        for key, value in kwargs_name.items():
+            for char in prohibited_chars:
+                if isinstance(value, str) and char in value or callable(value):
+                    kwargs_name[key] = non_prohibited_char + str(char_counter)
+                    char_counter += 1
+        parameters_values = "_".join(
+            [
+                str(value)
+                if not isinstance(value, (list, tuple))
+                else "_".join([str(x) for x in value])
+                for value in kwargs_name.values()
+            ]
+        )
+        return os.path.join(
+            data_dir, test_name + parameters_values + suffix_part + f".{extension}"
+        )
+    else:
+        import uuid
+
+        return os.path.join(
+            data_dir, (uuid.uuid1().hex + suffix_part + f".{extension}")
+        )
 
 
 def get_random_string():

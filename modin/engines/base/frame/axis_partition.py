@@ -11,13 +11,12 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
+from abc import ABC
 import pandas
 from modin.data_management.utils import split_result_of_axis_func_pandas
 
-NOT_IMPLMENTED_MESSAGE = "Must be implemented in child class"
 
-
-class BaseFrameAxisPartition(object):  # pragma: no cover
+class BaseFrameAxisPartition(ABC):  # pragma: no cover
     """An abstract class that represents the Parent class for any `ColumnPartition` or `RowPartition` class.
 
     This class is intended to simplify the way that operations are performed.
@@ -73,7 +72,7 @@ class BaseFrameAxisPartition(object):  # pragma: no cover
         -------
             A list of `BaseFramePartition` objects.
         """
-        raise NotImplementedError(NOT_IMPLMENTED_MESSAGE)
+        pass
 
     def shuffle(self, func, lengths, **kwargs):
         """Shuffle the order of the data in this axis based on the `lengths`.
@@ -86,7 +85,7 @@ class BaseFrameAxisPartition(object):  # pragma: no cover
         -------
             A list of RemotePartition objects split by `lengths`.
         """
-        raise NotImplementedError(NOT_IMPLMENTED_MESSAGE)
+        pass
 
     # Child classes must have these in order to correctly subclass.
     instance_type = None

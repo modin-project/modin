@@ -14,7 +14,7 @@
 import os
 import pytest
 
-from modin.config.envvars import EnvironmentVariable, _check_vars
+from modin.config.envvars import EnvironmentVariable, _check_vars, ExactStr
 
 
 @pytest.fixture
@@ -25,9 +25,9 @@ def make_unknown_env():
     del os.environ[varname]
 
 
-@pytest.fixture
-def make_custom_envvar():
-    class CustomVar(EnvironmentVariable, type=str):
+@pytest.fixture(params=[str, ExactStr])
+def make_custom_envvar(request):
+    class CustomVar(EnvironmentVariable, type=request.param):
         """ custom var """
 
         default = 10
@@ -40,7 +40,7 @@ def make_custom_envvar():
 @pytest.fixture
 def set_custom_envvar(make_custom_envvar):
     os.environ[make_custom_envvar.varname] = "  custom  "
-    yield "Custom"
+    yield "Custom" if make_custom_envvar.type is str else "  custom  "
     del os.environ[make_custom_envvar.varname]
 
 
