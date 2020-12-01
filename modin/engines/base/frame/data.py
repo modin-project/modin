@@ -1728,35 +1728,13 @@ class BasePandasFrame(object):
         if isinstance(other, type(self)):
             other = [other]
 
-        if all(o.axes[axis].equals(self.axes[axis]) for o in other):
-            return (
-                self._partitions,
-                [self._simple_shuffle(axis, o) for o in other],
-            )
-
-        # We have to set these because otherwise when we perform the functions it may
-        # end up serializing this entire object.
-        left_old_idx = self.axes[axis]
-        right_old_idxes = [o.axes[axis] for o in other]
-
-        if make_map_reindexer is None:
-
-            def make_map_func(index, *args, **kwargs):
-                if index.equals(joined_index):
-                    return lambda df: df
+        # define helper functions
+        def choose_reindexer(do_reindex, left):
+            if make_map_reindexer:
+                return make_map_reindexer(do_reindex, left)
+            if do_reindex:
                 return lambda df: df.reindex(joined_index, axis=axis)
-
-            make_map_reindexer = make_map_func
-
-        # Start with this and we'll repartition the first time, and then not again.
-        if not force_repartition and left_old_idx.equals(joined_index):
-            reindexed_self = self._partitions
-        else:
-            reindexed_self = self._frame_mgr_cls.map_axis_partitions(
-                axis,
-                self._partitions,
-                make_map_reindexer(left_old_idx),
-            )
+            return lambda df: df
 
         def get_column_widths(partitions):
             if len(partitions) > 0:
@@ -1766,20 +1744,54 @@ class BasePandasFrame(object):
             if len(partitions.T) > 0:
                 return [obj.length() for obj in partitions.T[0]]
 
-        reindexed_other_list = []
+        # define the conditions for reindexing and repartitioning `self` frame
+        do_reindex_self = not self.axes[axis].equals(joined_index)
+        do_repartition_self = force_repartition or do_reindex_self
+
+        # perform repartitioning and reindexing for `self` frame if needed
+        if do_repartition_self:
+            reindexed_self = self._frame_mgr_cls.map_axis_partitions(
+                axis,
+                self._partitions,
+                choose_reindexer(do_reindex_self, left=True),
+            )
+        else:
+            reindexed_self = self._partitions
+
+        # define length of `self` and `other` frames to aligning purpose
+        self_lengths = (
+            get_row_lengths(reindexed_self)
+            if axis == 0
+            else get_column_widths(reindexed_self)
+        )
+        others_lengths = [
+            o._row_lengths if axis == 0 else o._column_widths for o in other
+        ]
+
+        # define the conditions for reindexing and repartitioning `other` frames
+        do_reindex_others = [not o.axes[axis].equals(joined_index) for o in other]
+
+        do_repartition_others = [None] * len(other)
         for i in range(len(other)):
-            if not force_repartition and right_old_idxes[i].equals(joined_index):
-                reindexed_other = other[i]._partitions
-            else:
-                reindexed_other = other[i]._frame_mgr_cls.map_axis_partitions(
+            do_repartition_others[i] = (
+                force_repartition
+                or do_reindex_others[i]
+                or others_lengths[i] != self_lengths
+            )
+
+        # perform repartitioning and reindexing for `other` frames if needed
+        reindexed_other_list = [None] * len(other)
+        for i in range(len(other)):
+            if do_repartition_others[i]:
+                reindexed_other_list[i] = other[i]._frame_mgr_cls.map_axis_partitions(
                     axis,
                     other[i]._partitions,
-                    make_map_reindexer(right_old_idxes[i], left=False),
-                    lengths=get_row_lengths(reindexed_self)
-                    if axis == 0
-                    else get_column_widths(reindexed_self),
+                    choose_reindexer(do_reindex_others[i], left=False),
+                    lengths=self_lengths,
                 )
-            reindexed_other_list.append(reindexed_other)
+            else:
+                reindexed_other_list[i] = other[i]._partitions
+
         return reindexed_self, reindexed_other_list
 
     def _simple_shuffle(self, axis, other):
@@ -1836,10 +1848,10 @@ class BasePandasFrame(object):
             right_frame.axes[0], how=join_type, sort=True, return_indexers=True
         )
 
-        def make_map_reindexer(index, left=True):
+        def make_map_reindexer(do_reindex, left=True):
             # left - specific argument for case of binary operation;
             # it choose indexer for left or right index
-            if index.equals(joined_index):
+            if not do_reindex:
                 return lambda df: df
 
             # case with duplicate values; way from pandas
@@ -1916,7 +1928,7 @@ class BasePandasFrame(object):
                 copartition_axis,
                 others,
                 joined_index,
-                force_repartition=True,
+                force_repartition=False,
             )
             new_lengths = None
             new_widths = None
