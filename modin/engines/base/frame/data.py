@@ -1696,7 +1696,7 @@ class BasePandasFrame(object):
             new_columns : list-like (optional)
                 The columns of the result. We may know this in
                 advance, and if not provided it must be computed.
-            apply_indices : list of ints (optional),
+            apply_indices : list-like (optional),
                 Indices of `axis ^ 1` to apply function over.
             dtypes : list-like (optional)
                 The data types of the result. This is an optimization
@@ -1717,8 +1717,6 @@ class BasePandasFrame(object):
             apply_indices = self._get_dict_of_block_index(
                 axis ^ 1, numeric_indices
             ).keys()
-        else:
-            apply_indices = None
 
         new_partitions = self._frame_mgr_cls.broadcast_axis_partitions(
             axis=axis,
