@@ -16,6 +16,7 @@ import numpy as np
 import pandas
 from pandas.errors import ParserWarning
 from collections import OrderedDict
+from modin.config import TestDatasetSize
 from modin.utils import to_pandas
 from modin.pandas.utils import from_arrow
 from pathlib import Path
@@ -65,8 +66,15 @@ TEST_PICKLE_FILENAME = "test.pkl"
 TEST_SAS_FILENAME = os.getcwd() + "/data/test1.sas7bdat"
 TEST_FWF_FILENAME = "test_fwf.txt"
 TEST_GBQ_FILENAME = "test_gbq."
-SMALL_ROW_SIZE = 2000
 
+DATASET_SIZE_DICT = {
+    "Small": 64,
+    "Normal": 2000,
+    "Big": 20000,
+}
+
+# Number of rows in the test file
+NROWS = DATASET_SIZE_DICT.get(TestDatasetSize.get(), DATASET_SIZE_DICT["Small"])
 
 if not os.path.exists(IO_OPS_DATA_DIR):
     os.mkdir(IO_OPS_DATA_DIR)
@@ -81,7 +89,7 @@ def make_parquet_file():
     """
 
     def _make_parquet_file(
-        row_size=SMALL_ROW_SIZE, force=False, directory=False, partitioned_columns=[]
+        row_size=NROWS, force=False, directory=False, partitioned_columns=[]
     ):
         """Helper function to generate parquet files/directories.
 
@@ -167,7 +175,7 @@ def teardown_test_file(test_path):
 def _make_csv_file(filenames):
     def _csv_file_maker(
         filename=TEST_CSV_FILENAME,
-        row_size=SMALL_ROW_SIZE,
+        row_size=NROWS,
         force=True,
         delimiter=",",
         encoding=None,
@@ -289,6 +297,41 @@ def make_csv_file():
 
     yield _make_csv_file(filenames)
 
+    # Delete csv files that were created
+    for filename in filenames:
+        if os.path.exists(filename):
+            try:
+                os.remove(filename)
+            except PermissionError:
+                pass
+
+
+@pytest.fixture(scope="class")
+def TestReadCSVFixture():
+    filenames = []
+    files_ids = [
+        "test_read_csv_regular",
+        "test_read_csv_blank_lines",
+        "test_read_csv_yes_no",
+    ]
+    # each xdist worker spawned in separate process with separate namespace and dataset
+    pytest.csvs_names = {file_id: get_unique_filename() for file_id in files_ids}
+    # test_read_csv_col_handling, test_read_csv_parsing
+    _make_csv_file(filenames)(
+        filename=pytest.csvs_names["test_read_csv_regular"],
+    )
+    # test_read_csv_parsing
+    _make_csv_file(filenames)(
+        filename=pytest.csvs_names["test_read_csv_yes_no"],
+        additional_col_values=["Yes", "true", "No", "false"],
+    )
+    # test_read_csv_col_handling
+    _make_csv_file(filenames)(
+        filename=pytest.csvs_names["test_read_csv_blank_lines"],
+        add_blank_lines=True,
+    )
+
+    yield
     # Delete csv files that were created
     for filename in filenames:
         if os.path.exists(filename):
@@ -496,6 +539,7 @@ def teardown_fwf_file():
             pass
 
 
+@pytest.mark.usefixtures("TestReadCSVFixture")
 @pytest.mark.skipif(
     IsExperimental.get() and Backend.get() == "Pyarrow",
     reason="Segmentation fault; see PR #2347 ffor details",
@@ -515,7 +559,7 @@ class TestReadCSV:
             "decimal": decimal,
             "thousands": thousands,
         }
-        unique_filename = get_unique_filename("test_read_csv_delimiter", kwargs)
+        unique_filename = get_unique_filename()
         make_csv_file(
             filename=unique_filename,
             delimiter=delimiter,
@@ -530,7 +574,7 @@ class TestReadCSV:
         )
 
     # Column and Index Locations and Names tests
-    @pytest.mark.xfail(
+    @pytest.mark.skipif(
         Engine.get() != "Python",
         reason="many parameters combiantions fails: issue #2312, #2307",
     )
@@ -546,7 +590,6 @@ class TestReadCSV:
     @pytest.mark.parametrize("skip_blank_lines", [True, False])
     def test_read_csv_col_handling(
         self,
-        make_csv_file,
         request,
         header,
         index_col,
@@ -569,23 +612,120 @@ class TestReadCSV:
             "skip_blank_lines": skip_blank_lines,
         }
 
-        unique_name = get_unique_filename("test_read_csv_col_handling", kwargs)
-        make_csv_file(
-            filename=unique_name,
-            add_blank_lines=True,
-        )
         eval_io(
-            filepath_or_buffer=unique_name,
+            filepath_or_buffer=pytest.csvs_names["test_read_csv_blank_lines"],
             fn_name="read_csv",
             **kwargs,
         )
+
+    # General Parsing Configuration
+    @pytest.mark.parametrize("dtype", [None, True])
+    @pytest.mark.parametrize("engine", [None, "python", "c"])
+    @pytest.mark.parametrize(
+        "converters",
+        [
+            None,
+            {
+                "col1": lambda x: np.int64(x) * 10,
+                "col2": pd.to_datetime,
+                "col4": lambda x: x.replace(":", ";"),
+            },
+        ],
+    )
+    @pytest.mark.parametrize("skipfooter", [0, 10])
+    def test_read_csv_parsing_1(
+        self,
+        request,
+        dtype,
+        engine,
+        converters,
+        skipfooter,
+    ):
+        if request.config.getoption("--simulate-cloud").lower() != "off":
+            pytest.xfail(
+                "The reason of tests fail in `cloud` mode is unknown for now - issue #2340"
+            )
+        kwargs = {
+            "dtype": dtype,
+            "engine": engine,
+            "converters": converters,
+            "skipfooter": skipfooter,
+        }
+
+        if kwargs["dtype"]:
+            kwargs["dtype"] = {
+                col: "object"
+                for col in pandas.read_csv(
+                    pytest.csvs_names["test_read_csv_regular"], nrows=1
+                ).columns
+            }
+
+        eval_io(
+            filepath_or_buffer=pytest.csvs_names["test_read_csv_regular"],
+            fn_name="read_csv",
+            check_exception_type=None,  # issue #2320
+            raising_exceptions=None,
+            check_kwargs_callable=not callable(converters),
+            **kwargs,
+        )
+
+    @pytest.mark.parametrize("true_values", [["Yes"], ["Yes", "true"], None])
+    @pytest.mark.parametrize("false_values", [["No"], ["No", "false"], None])
+    @pytest.mark.parametrize("skiprows", [2, lambda x: x % 2])
+    @pytest.mark.parametrize("skipfooter", [0, 10])
+    @pytest.mark.parametrize("nrows", [35, None])
+    @pytest.mark.parametrize("names", [["c1", "c2", "c3", "c4"], None])
+    def test_read_csv_parsing_2(
+        self,
+        request,
+        true_values,
+        false_values,
+        skiprows,
+        skipfooter,
+        nrows,
+        names,
+    ):
+        if false_values or true_values and Engine.get() != "Python":
+            pytest.xfail("modin and pandas dataframes differs - issue #2446")
+        if request.config.getoption("--simulate-cloud").lower() != "off":
+            pytest.xfail(
+                "The reason of tests fail in `cloud` mode is unknown for now - issue #2340"
+            )
+        kwargs = {
+            "true_values": true_values,
+            "false_values": false_values,
+            "skiprows": skiprows,
+            "skipfooter": skipfooter,
+            "nrows": nrows,
+            "names": names,
+        }
+
+        eval_io(
+            filepath_or_buffer=pytest.csvs_names["test_read_csv_yes_no"],
+            fn_name="read_csv",
+            check_exception_type=None,  # issue #2320
+            raising_exceptions=None,
+            check_kwargs_callable=not callable(skiprows),
+            **kwargs,
+        )
+
+    def test_read_csv_skipinitialspace(self, make_csv_file):
+        unique_filename = get_unique_filename()
+        str_initial_spaces = (
+            "col1,col2,col3,col4\n"
+            "five,  six,  seven,  eight\n"
+            "    five,    six,    seven,    eight\n"
+            "five, six,  seven,   eight\n"
+        )
+
+        eval_io_from_str(str_initial_spaces, unique_filename, skipinitialspace=True)
 
     @pytest.mark.xfail(reason="infinite recursion error - issue #2032")
     @pytest.mark.parametrize(
         "test_case", ["single_element", "single_column", "multiple_columns"]
     )
     def test_read_csv_squeeze(self, test_case):
-        unique_filename = get_unique_filename("test_read_csv_squeeze")
+        unique_filename = get_unique_filename()
 
         str_single_element = "1"
         str_single_col = "1\n2\n3\n"
@@ -602,7 +742,7 @@ class TestReadCSV:
         )
 
     def test_read_csv_mangle_dupe_cols(self):
-        unique_filename = get_unique_filename("test_read_csv_mangle_dupe_cols")
+        unique_filename = get_unique_filename()
         str_non_unique_cols = "col,col,col,col\n" "5, 6, 7, 8\n" "9, 10, 11, 12\n"
         eval_io_from_str(str_non_unique_cols, unique_filename, mangle_dupe_cols=True)
 
@@ -633,7 +773,6 @@ class TestReadCSV:
     @pytest.mark.parametrize("cache_dates", [True, False])
     def test_read_csv_datetime(
         self,
-        make_csv_file,
         request,
         parse_dates,
         infer_datetime_format,
@@ -662,13 +801,8 @@ class TestReadCSV:
             "cache_dates": cache_dates,
         }
 
-        unique_name = get_unique_filename("test_read_csv_datetime", kwargs)
-        make_csv_file(
-            filename=unique_name,
-        )
-
         eval_io(
-            filepath_or_buffer=unique_name,
+            filepath_or_buffer=pytest.csvs_names["test_read_csv_regular"],
             fn_name="read_csv",
             check_kwargs_callable=not callable(date_parser),
             raising_exceptions=raising_exceptions,
@@ -677,7 +811,7 @@ class TestReadCSV:
 
 
 def test_from_parquet(make_parquet_file):
-    make_parquet_file(SMALL_ROW_SIZE)
+    make_parquet_file(NROWS)
 
     pandas_df = pandas.read_parquet(TEST_PARQUET_FILENAME)
     modin_df = pd.read_parquet(TEST_PARQUET_FILENAME)
@@ -685,7 +819,7 @@ def test_from_parquet(make_parquet_file):
 
 
 def test_from_parquet_with_columns(make_parquet_file):
-    make_parquet_file(SMALL_ROW_SIZE)
+    make_parquet_file(NROWS)
 
     pandas_df = pandas.read_parquet(TEST_PARQUET_FILENAME, columns=["col1"])
     modin_df = pd.read_parquet(TEST_PARQUET_FILENAME, columns=["col1"])
@@ -693,7 +827,7 @@ def test_from_parquet_with_columns(make_parquet_file):
 
 
 def test_from_parquet_partition(make_parquet_file):
-    make_parquet_file(SMALL_ROW_SIZE, directory=True)
+    make_parquet_file(NROWS, directory=True)
 
     pandas_df = pandas.read_parquet(TEST_PARQUET_FILENAME)
     modin_df = pd.read_parquet(TEST_PARQUET_FILENAME)
@@ -701,7 +835,7 @@ def test_from_parquet_partition(make_parquet_file):
 
 
 def test_from_parquet_partition_with_columns(make_parquet_file):
-    make_parquet_file(SMALL_ROW_SIZE, directory=True)
+    make_parquet_file(NROWS, directory=True)
 
     pandas_df = pandas.read_parquet(TEST_PARQUET_FILENAME, columns=["col1"])
     modin_df = pd.read_parquet(TEST_PARQUET_FILENAME, columns=["col1"])
@@ -709,7 +843,7 @@ def test_from_parquet_partition_with_columns(make_parquet_file):
 
 
 def test_from_parquet_partitioned_columns(make_parquet_file):
-    make_parquet_file(SMALL_ROW_SIZE, partitioned_columns=["col1"])
+    make_parquet_file(NROWS, partitioned_columns=["col1"])
 
     pandas_df = pandas.read_parquet(TEST_PARQUET_FILENAME)
     modin_df = pd.read_parquet(TEST_PARQUET_FILENAME)
@@ -717,7 +851,7 @@ def test_from_parquet_partitioned_columns(make_parquet_file):
 
 
 def test_from_parquet_partitioned_columns_with_columns(make_parquet_file):
-    make_parquet_file(SMALL_ROW_SIZE, partitioned_columns=["col1"])
+    make_parquet_file(NROWS, partitioned_columns=["col1"])
 
     pandas_df = pandas.read_parquet(TEST_PARQUET_FILENAME, columns=["col1"])
     modin_df = pd.read_parquet(TEST_PARQUET_FILENAME, columns=["col1"])
@@ -769,7 +903,7 @@ def test_from_parquet_hdfs():
 
 
 def test_from_json():
-    setup_json_file(SMALL_ROW_SIZE)
+    setup_json_file(NROWS)
 
     pandas_df = pandas.read_json(TEST_JSON_FILENAME)
     modin_df = pd.read_json(TEST_JSON_FILENAME)
@@ -792,7 +926,7 @@ def test_from_json_categories():
 
 
 def test_from_json_lines():
-    setup_json_lines_file(SMALL_ROW_SIZE)
+    setup_json_lines_file(NROWS)
 
     pandas_df = pandas.read_json(TEST_JSON_FILENAME, lines=True)
     modin_df = pd.read_json(TEST_JSON_FILENAME, lines=True)
@@ -815,7 +949,7 @@ def test_read_json_string_bytes(data):
 
 
 def test_from_html():
-    setup_html_file(SMALL_ROW_SIZE)
+    setup_html_file(NROWS)
 
     pandas_df = pandas.read_html(TEST_HTML_FILENAME)[0]
     modin_df = pd.read_html(TEST_HTML_FILENAME)
@@ -827,7 +961,7 @@ def test_from_html():
 
 @pytest.mark.skip(reason="No clipboard on Travis")
 def test_from_clipboard():
-    setup_clipboard(SMALL_ROW_SIZE)
+    setup_clipboard(NROWS)
 
     pandas_df = pandas.read_clipboard()
     modin_df = pd.read_clipboard()
@@ -837,7 +971,7 @@ def test_from_clipboard():
 
 @pytest.mark.xfail(reason="read_excel is broken for now, see #1733 for details")
 def test_from_excel():
-    setup_excel_file(SMALL_ROW_SIZE)
+    setup_excel_file(NROWS)
 
     pandas_df = pandas.read_excel(TEST_EXCEL_FILENAME)
     modin_df = pd.read_excel(TEST_EXCEL_FILENAME)
@@ -848,7 +982,7 @@ def test_from_excel():
 
 
 def test_from_excel_engine():
-    setup_excel_file(SMALL_ROW_SIZE)
+    setup_excel_file(NROWS)
 
     pandas_df = pandas.read_excel(TEST_EXCEL_FILENAME, engine="xlrd")
     with pytest.warns(UserWarning):
@@ -860,7 +994,7 @@ def test_from_excel_engine():
 
 
 def test_from_excel_index_col():
-    setup_excel_file(SMALL_ROW_SIZE)
+    setup_excel_file(NROWS)
 
     pandas_df = pandas.read_excel(TEST_EXCEL_FILENAME, index_col=0)
     with pytest.warns(UserWarning):
@@ -872,7 +1006,7 @@ def test_from_excel_index_col():
 
 
 def test_from_excel_all_sheets():
-    setup_excel_file(SMALL_ROW_SIZE)
+    setup_excel_file(NROWS)
 
     pandas_df = pandas.read_excel(TEST_EXCEL_FILENAME, sheet_name=None)
     modin_df = pd.read_excel(TEST_EXCEL_FILENAME, sheet_name=None)
@@ -908,7 +1042,7 @@ def test_from_excel_sheet_name(sheet_name):
 
 # @pytest.mark.skip(reason="Arrow version mismatch between Pandas and Feather")
 def test_from_feather():
-    setup_feather_file(SMALL_ROW_SIZE)
+    setup_feather_file(NROWS)
 
     pandas_df = pandas.read_feather(TEST_FEATHER_FILENAME)
     modin_df = pd.read_feather(TEST_FEATHER_FILENAME)
@@ -920,7 +1054,7 @@ def test_from_feather():
 
 @pytest.mark.skipif(os.name == "nt", reason="Windows not supported")
 def test_from_hdf():
-    setup_hdf_file(SMALL_ROW_SIZE, format=None)
+    setup_hdf_file(NROWS, format=None)
 
     pandas_df = pandas.read_hdf(TEST_READ_HDF_FILENAME, key="df")
     modin_df = pd.read_hdf(TEST_READ_HDF_FILENAME, key="df")
@@ -932,7 +1066,7 @@ def test_from_hdf():
 
 @pytest.mark.skipif(os.name == "nt", reason="Windows not supported")
 def test_from_hdf_format():
-    setup_hdf_file(SMALL_ROW_SIZE, format="table")
+    setup_hdf_file(NROWS, format="table")
 
     pandas_df = pandas.read_hdf(TEST_READ_HDF_FILENAME, key="df")
     modin_df = pd.read_hdf(TEST_READ_HDF_FILENAME, key="df")
@@ -943,7 +1077,7 @@ def test_from_hdf_format():
 
 
 def test_from_stata():
-    setup_stata_file(SMALL_ROW_SIZE)
+    setup_stata_file(NROWS)
 
     pandas_df = pandas.read_stata(TEST_STATA_FILENAME)
     modin_df = pd.read_stata(TEST_STATA_FILENAME)
@@ -954,7 +1088,7 @@ def test_from_stata():
 
 
 def test_from_pickle():
-    setup_pickle_file(SMALL_ROW_SIZE)
+    setup_pickle_file(NROWS)
 
     pandas_df = pandas.read_pickle(TEST_PICKLE_FILENAME)
     modin_df = pd.read_pickle(TEST_PICKLE_FILENAME)
@@ -1021,22 +1155,7 @@ def test_from_sas():
     df_equals(modin_df, pandas_df)
 
 
-@pytest.mark.parametrize("nrows", [123, None])
-def test_from_csv(make_csv_file, nrows):
-    make_csv_file()
-
-    pandas_df = pandas.read_csv(TEST_CSV_FILENAME, nrows=nrows)
-    modin_df = pd.read_csv(TEST_CSV_FILENAME, nrows=nrows)
-
-    df_equals(modin_df, pandas_df)
-
-    pandas_df = pandas.read_csv(Path(TEST_CSV_FILENAME), nrows=nrows)
-    modin_df = pd.read_csv(Path(TEST_CSV_FILENAME), nrows=nrows)
-
-    df_equals(modin_df, pandas_df)
-
-
-@pytest.mark.parametrize("nrows", [123, None])
+@pytest.mark.parametrize("nrows", [35, None])
 def test_from_csv_sep_none(make_csv_file, nrows):
     make_csv_file()
 
@@ -1350,53 +1469,6 @@ def test_from_csv_chunksize(make_csv_file):
     df_equals(modin_df, pd_df)
 
 
-@pytest.mark.parametrize("nrows", [1, 2, 123, None])
-def test_from_csv_skiprows(make_csv_file, nrows):
-    make_csv_file()
-
-    pandas_df = pandas.read_csv(TEST_CSV_FILENAME, skiprows=2, nrows=nrows)
-    modin_df = pd.read_csv(TEST_CSV_FILENAME, skiprows=2, nrows=nrows)
-    df_equals(modin_df, pandas_df)
-
-    pandas_df = pandas.read_csv(
-        TEST_CSV_FILENAME, names=["c1", "c2", "c3", "c4"], skiprows=2, nrows=nrows
-    )
-    modin_df = pd.read_csv(
-        TEST_CSV_FILENAME, names=["c1", "c2", "c3", "c4"], skiprows=2, nrows=nrows
-    )
-    df_equals(modin_df, pandas_df)
-
-    pandas_df = pandas.read_csv(
-        TEST_CSV_FILENAME,
-        header=None,
-        names=["c1", "c2", "c3", "c4"],
-        skiprows=2,
-        nrows=nrows,
-    )
-    modin_df = pd.read_csv(
-        TEST_CSV_FILENAME,
-        header=None,
-        names=["c1", "c2", "c3", "c4"],
-        skiprows=2,
-        nrows=nrows,
-    )
-    df_equals(modin_df, pandas_df)
-
-    pandas_df = pandas.read_csv(
-        TEST_CSV_FILENAME,
-        names=["c1", "c2", "c3", "c4"],
-        skiprows=lambda x: x % 2,
-        nrows=nrows,
-    )
-    modin_df = pd.read_csv(
-        TEST_CSV_FILENAME,
-        names=["c1", "c2", "c3", "c4"],
-        skiprows=lambda x: x % 2,
-        nrows=nrows,
-    )
-    df_equals(modin_df, pandas_df)
-
-
 @pytest.mark.parametrize("names", [list("XYZ"), None])
 @pytest.mark.parametrize("skiprows", [1, 2, 3, 4, None])
 def test_from_csv_skiprows_names(names, skiprows):
@@ -1431,21 +1503,12 @@ def test_from_csv_default_to_pandas_behavior(make_csv_file):
         pd.read_csv(TEST_CSV_FILENAME, skiprows=lambda x: x in [0, 2])
 
 
-@pytest.mark.parametrize("nrows", [123, None])
+@pytest.mark.parametrize("nrows", [35, None])
 def test_from_csv_index_col(make_csv_file, nrows):
     make_csv_file()
 
     pandas_df = pandas.read_csv(TEST_CSV_FILENAME, index_col="col1", nrows=nrows)
     modin_df = pd.read_csv(TEST_CSV_FILENAME, index_col="col1", nrows=nrows)
-    df_equals(modin_df, pandas_df)
-
-
-def test_from_csv_skipfooter(make_csv_file):
-    make_csv_file()
-
-    pandas_df = pandas.read_csv(TEST_CSV_FILENAME, skipfooter=13)
-    modin_df = pd.read_csv(TEST_CSV_FILENAME, skipfooter=13)
-
     df_equals(modin_df, pandas_df)
 
 
@@ -1752,7 +1815,7 @@ def test_HDFStore():
 
 
 def test_ExcelFile():
-    setup_excel_file(SMALL_ROW_SIZE)
+    setup_excel_file(NROWS)
 
     modin_excel_file = pd.ExcelFile(TEST_EXCEL_FILENAME)
     pandas_excel_file = pandas.ExcelFile(TEST_EXCEL_FILENAME)
