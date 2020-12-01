@@ -11,63 +11,80 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-# Write the benchmarking functions here.
-# See "Writing benchmarks" in the asv docs for more information.
 import modin.pandas as pd
-import numpy as np
+from modin.config import TestDatasetSize
 from .utils import generate_dataframe, RAND_LOW, RAND_HIGH
 
 pd.DEFAULT_NPARTITIONS = 4
 
-
-class TimeGroupBy:
-    param_names = ["rows_cols"]
-    params = [
-        [
-            (100, 1000),
-            (10000, 1000),
-        ]
+if TestDatasetSize.get() == "Big":
+    MERGE_DATA_SIZE = [
+        (5000, 5000, 5000, 5000),
+        (10, 1_000_000, 10, 1_000_000),
+        (1_000_000, 10, 1_000_000, 10),
+    ]
+    GROUPBY_DATA_SIZE = [
+        (5000, 5000),
+        (10, 1_000_000),
+        (1_000_000, 10),
+    ]
+else:
+    MERGE_DATA_SIZE = [
+        (2000, 100, 2000, 100),
+    ]
+    GROUPBY_DATA_SIZE = [
+        (2000, 100),
     ]
 
-    def setup(self, rows_cols):
-        rows, cols = rows_cols
-        # workaround for #2482
-        columns = [str(x) for x in range(cols)]
-        self.df = pd.DataFrame(
-            np.random.randint(0, 100, size=(rows, cols)), columns=columns
+JOIN_DATA_SIZE = MERGE_DATA_SIZE
+ARITHMETIC_DATA_SIZE = GROUPBY_DATA_SIZE
+
+
+class TimeGroupBy:
+    param_names = ["impl", "data_type", "data_size"]
+    params = [
+        ["modin", "pandas"],
+        ["int"],
+        GROUPBY_DATA_SIZE,
+    ]
+
+    def setup(self, impl, data_type, data_size):
+        self.df = generate_dataframe(
+            impl, data_type, data_size[0], data_size[1], RAND_LOW, RAND_HIGH
         )
 
-    # add case for multiple by
-    def time_groupby_sum(self, rows_cols):
-        self.df.groupby(by="1").sum()
+    def time_groupby_sum(self, impl, data_type, data_size):
+        self.df.groupby(by=self.df.columns[0]).sum()
 
-    def time_groupby_mean(self, rows_cols):
-        self.df.groupby(by="1").mean()
+    def time_groupby_mean(self, impl, data_type, data_size):
+        self.df.groupby(by=self.df.columns[0]).mean()
 
-    def time_groupby_count(self, rows_cols):
-        self.df.groupby(by="1").count()
+    def time_groupby_count(self, impl, data_type, data_size):
+        self.df.groupby(by=self.df.columns[0]).count()
 
 
 class TimeJoin:
-    param_names = ["rows_cols", "how"]
+    param_names = ["impl", "data_type", "data_size", "how", "sort"]
     params = [
-        [
-            (100, 1000),
-            (10000, 1000),
-        ],
-        ["outer", "inner", "left", "right"],
+        ["modin", "pandas"],
+        ["int"],
+        JOIN_DATA_SIZE,
+        ["left", "right", "outer", "inner"],
+        [False, True],
     ]
 
-    def setup(self, rows_cols, how):
-        rows, cols = rows_cols
-        # workaround for #2482
-        columns = [str(x) for x in range(cols)]
-        numpy_data = np.random.randint(0, 100, size=(rows, cols))
-        self.df_left = pd.DataFrame(numpy_data, columns=columns)
-        self.df_right = pd.DataFrame(numpy_data, columns=columns)
+    def setup(self, impl, data_type, data_size, how, sort):
+        self.df1 = generate_dataframe(
+            impl, data_type, data_size[0], data_size[1], RAND_LOW, RAND_HIGH
+        )
+        self.df2 = generate_dataframe(
+            impl, data_type, data_size[2], data_size[3], RAND_LOW, RAND_HIGH
+        )
 
-    def time_join(self, rows_cols, how):
-        self.df_left.join(self.df_right, how=how, lsuffix="left_")
+    def time_join(self, impl, data_type, data_size, how, sort):
+        self.df1.join(
+            self.df2, on=self.df1.columns[0], how=how, lsuffix="left_", sort=sort
+        )
 
 
 class TimeMerge:
@@ -75,11 +92,7 @@ class TimeMerge:
     params = [
         ["modin", "pandas"],
         ["int"],
-        [
-            (5000, 5000, 5000, 5000),
-            (10, 1_000_00, 10, 1_000_00),
-            (1_000_00, 10, 1_000_00, 10),
-        ],
+        MERGE_DATA_SIZE,
         ["left", "right", "outer", "inner"],
         [False, True],
     ]
@@ -97,48 +110,27 @@ class TimeMerge:
 
 
 class TimeArithmetic:
-    param_names = ["rows_cols"]
+    param_names = ["impl", "data_type", "data_size", "axis"]
     params = [
-        [
-            (100, 1000),
-            (10000, 1000),
-        ]
+        ["modin", "pandas"],
+        ["int"],
+        ARITHMETIC_DATA_SIZE,
+        [0, 1],
     ]
 
-    def setup(self, rows_cols):
-        rows, cols = rows_cols
-        # workaround for #2482
-        columns = [str(x) for x in range(cols)]
-        self.df = pd.DataFrame(
-            np.random.randint(0, 100, size=(rows, cols)), columns=columns
+    def setup(self, impl, data_type, data_size, axis):
+        self.df = generate_dataframe(
+            impl, data_type, data_size[0], data_size[1], RAND_LOW, RAND_HIGH
         )
 
-    def time_transpose_lazy(self, rows_cols):
-        self.df.T
+    def time_sum(self, impl, data_type, data_size, axis):
+        self.df.sum(axis=axis)
 
-    def time_transpose(self, rows_cols):
-        repr(self.df.T)
+    def time_median(self, impl, data_type, data_size, axis):
+        self.df.median(axis=axis)
 
-    def time_sum(self, rows_cols):
-        self.df.sum()
+    def time_nunique(self, impl, data_type, data_size, axis):
+        self.df.nunique(axis=axis)
 
-    def time_sum_axis_1(self, rows_cols):
-        self.df.sum(axis=1)
-
-    def time_median(self, rows_cols):
-        self.df.median()
-
-    def time_median_axis_1(self, rows_cols):
-        self.df.median(axis=1)
-
-    def time_nunique(self, rows_cols):
-        self.df.nunique()
-
-    def time_nunique_axis_1(self, rows_cols):
-        self.df.nunique(axis=1)
-
-    def time_apply(self, rows_cols):
-        self.df.apply(lambda df: df.sum())
-
-    def time_apply_axis_1(self, rows_cols):
-        self.df.apply(lambda df: df.sum(), axis=1)
+    def time_apply(self, impl, data_type, data_size, axis):
+        self.df.apply(lambda df: df.sum(), axis=axis)
