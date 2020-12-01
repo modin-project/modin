@@ -75,6 +75,16 @@ DATASET_SIZE_DICT = {
 
 # Number of rows in the test file
 NROWS = DATASET_SIZE_DICT.get(TestDatasetSize.get(), DATASET_SIZE_DICT["Small"])
+comp_to_ext = {"infer": "", "gzip": "gz", "bz2": "bz2", "xz": "xz", "zip": "zip"}
+
+test_csv_dialect_params = {
+    "delimiter": "_",
+    "doublequote": False,
+    "escapechar": "d",
+    "quotechar": "d",
+    "quoting": csv.QUOTE_ALL,
+}
+csv.register_dialect("test_csv_dialect", **test_csv_dialect_params)
 
 if not os.path.exists(IO_OPS_DATA_DIR):
     os.mkdir(IO_OPS_DATA_DIR)
@@ -235,11 +245,12 @@ def _make_csv_file(filenames):
                 df["col6"] = df["col6"].apply(
                     lambda x: f"{x:,f}".replace(",", thousands_separator)
                 )
+            filename = (
+                f"{filename}.{comp_to_ext[compression]}"
+                if compression != "infer"
+                else filename
+            )
 
-            if compression == "gzip":
-                filename = "{}.gz".format(filename)
-            elif compression == "zip" or compression == "xz" or compression == "bz2":
-                filename = "{fname}.{comp}".format(fname=filename, comp=compression)
             df.to_csv(
                 filename,
                 sep=delimiter,
@@ -865,6 +876,126 @@ class TestReadCSV:
         pd_df = pd_reader.read()
 
         df_equals(modin_df, pd_df)
+    # Quoting, Compression, and File Format parameters tests
+    @pytest.mark.parametrize("compression", ["infer", "gzip", "bz2", "xz", "zip"])
+    @pytest.mark.parametrize(
+        "encoding",
+        [None, "latin8", "ISO-8859-1", "latin1", "iso-8859-1", "cp1252", "utf8"],
+    )
+    @pytest.mark.parametrize("engine", [None, "python", "c"])
+    def test_read_csv_compression(self, make_csv_file, compression, encoding, engine):
+        unique_filename = get_unique_filename()
+        make_csv_file(
+            filename=unique_filename, encoding=encoding, compression=compression
+        )
+        compressed_file_path = (
+            f"{unique_filename}.{comp_to_ext[compression]}"
+            if compression != "infer"
+            else unique_filename
+        )
+
+        eval_io(
+            fn_name="read_csv",
+            # read_csv kwargs
+            filepath_or_buffer=compressed_file_path,
+            compression=compression,
+            encoding=encoding,
+            engine=engine,
+        )
+
+    @pytest.mark.parametrize("thousands", [None, ",", "_", " "])
+    @pytest.mark.parametrize("decimal", [".", "_"])
+    @pytest.mark.parametrize("lineterminator", [None, "x", "\n"])
+    @pytest.mark.parametrize("escapechar", [None, "d", "x"])
+    @pytest.mark.parametrize("dialect", ["test_csv_dialect", None])
+    def test_read_csv_file_format(
+        self,
+        request,
+        make_csv_file,
+        thousands,
+        decimal,
+        lineterminator,
+        escapechar,
+        dialect,
+    ):
+        if request.config.getoption("--simulate-cloud").lower() != "off" and dialect:
+            pytest.xfail(
+                "The reason of tests fail in `cloud` mode is unknown for now - issue #2340"
+            )
+        elif Engine.get() != "Python" and lineterminator == "x":
+            pytest.xfail("read_csv with Ray engine outputs empty frame - issue #2493")
+        elif Engine.get() != "Python" and escapechar:
+            pytest.xfail(
+                "read_csv with Ray engine fails with some 'escapechar' parameter - issue #2494"
+            )
+
+        unique_filename = get_unique_filename()
+        if dialect:
+            make_csv_file(filename=unique_filename, **test_csv_dialect_params)
+        else:
+            make_csv_file(
+                filename=unique_filename,
+                thousands_separator=thousands,
+                decimal_separator=decimal,
+                escapechar=escapechar,
+                line_terminator=lineterminator,
+            )
+
+        eval_io(
+            check_exception_type=None,  # issue #2320
+            raising_exceptions=None,
+            fn_name="read_csv",
+            # read_csv kwargs
+            filepath_or_buffer=unique_filename,
+            thousands=thousands,
+            decimal=decimal,
+            lineterminator=lineterminator,
+            escapechar=escapechar,
+            dialect=dialect,
+        )
+
+    @pytest.mark.parametrize(
+        "quoting",
+        [csv.QUOTE_ALL, csv.QUOTE_MINIMAL, csv.QUOTE_NONNUMERIC, csv.QUOTE_NONE],
+    )
+    @pytest.mark.parametrize("quotechar", ['"', "_", "d"])
+    @pytest.mark.parametrize("doublequote", [True, False])
+    @pytest.mark.parametrize("comment", [None, "#", "x"])
+    def test_read_csv_quoting(
+        self,
+        make_csv_file,
+        quoting,
+        quotechar,
+        doublequote,
+        comment,
+    ):
+        # in these cases escapechar should be set, otherwise error occures
+        # _csv.Error: need to escape, but no escapechar set"
+        use_escapechar = (
+            not doublequote and quotechar != '"' and quoting != csv.QUOTE_NONE
+        )
+        escapechar = "\\" if use_escapechar else None
+        unique_filename = get_unique_filename()
+
+        make_csv_file(
+            filename=unique_filename,
+            quoting=quoting,
+            quotechar=quotechar,
+            doublequote=doublequote,
+            escapechar=escapechar,
+            comment_col_char=comment,
+        )
+
+        eval_io(
+            fn_name="read_csv",
+            # read_csv kwargs
+            filepath_or_buffer=unique_filename,
+            quoting=quoting,
+            quotechar=quotechar,
+            doublequote=doublequote,
+            escapechar=escapechar,
+            comment=comment,
+        )
 
     # Error Handling parameters tests
     @pytest.mark.xfail(
@@ -1288,58 +1419,6 @@ def test_from_csv_categories():
     df_equals(modin_df, pandas_df)
 
 
-def test_from_csv_gzip(make_csv_file):
-    make_csv_file(compression="gzip")
-    gzip_path = "{}.gz".format(TEST_CSV_FILENAME)
-
-    pandas_df = pandas.read_csv(gzip_path)
-    modin_df = pd.read_csv(gzip_path)
-    df_equals(modin_df, pandas_df)
-
-    pandas_df = pandas.read_csv(gzip_path, compression="gzip")
-    modin_df = pd.read_csv(gzip_path, compression="gzip")
-    df_equals(modin_df, pandas_df)
-
-
-def test_from_csv_bz2(make_csv_file):
-    make_csv_file(compression="bz2")
-    bz2_path = "{}.bz2".format(TEST_CSV_FILENAME)
-
-    pandas_df = pandas.read_csv(bz2_path)
-    modin_df = pd.read_csv(bz2_path)
-    df_equals(modin_df, pandas_df)
-
-    pandas_df = pandas.read_csv(bz2_path, compression="bz2")
-    modin_df = pd.read_csv(bz2_path, compression="bz2")
-    df_equals(modin_df, pandas_df)
-
-
-def test_from_csv_xz(make_csv_file):
-    make_csv_file(compression="xz")
-    xz_path = "{}.xz".format(TEST_CSV_FILENAME)
-
-    pandas_df = pandas.read_csv(xz_path)
-    modin_df = pd.read_csv(xz_path)
-    df_equals(modin_df, pandas_df)
-
-    pandas_df = pandas.read_csv(xz_path, compression="xz")
-    modin_df = pd.read_csv(xz_path, compression="xz")
-    df_equals(modin_df, pandas_df)
-
-
-def test_from_csv_zip(make_csv_file):
-    make_csv_file(compression="zip")
-    zip_path = "{}.zip".format(TEST_CSV_FILENAME)
-
-    pandas_df = pandas.read_csv(zip_path)
-    modin_df = pd.read_csv(zip_path)
-    df_equals(modin_df, pandas_df)
-
-    pandas_df = pandas.read_csv(zip_path, compression="zip")
-    modin_df = pd.read_csv(zip_path, compression="zip")
-    df_equals(modin_df, pandas_df)
-
-
 def test_parse_dates_read_csv():
     pandas_df = pandas.read_csv("modin/pandas/test/data/test_time_parsing.csv")
     modin_df = pd.read_csv("modin/pandas/test/data/test_time_parsing.csv")
@@ -1523,18 +1602,6 @@ def test_from_csv_skiprows_names(names, skiprows):
     pandas_df = pandas.read_csv(path, names=names, skiprows=skiprows)
     modin_df = pd.read_csv(path, names=names, skiprows=skiprows)
     df_equals(pandas_df, modin_df)
-
-
-@pytest.mark.parametrize(
-    "encoding", ["latin8", "ISO-8859-1", "latin1", "iso-8859-1", "cp1252", "utf8"]
-)
-def test_from_csv_encoding(make_csv_file, encoding):
-    make_csv_file(encoding=encoding)
-
-    pandas_df = pandas.read_csv(TEST_CSV_FILENAME, encoding=encoding)
-    modin_df = pd.read_csv(TEST_CSV_FILENAME, encoding=encoding)
-
-    df_equals(modin_df, pandas_df)
 
 
 def test_from_csv_default_to_pandas_behavior(make_csv_file):
