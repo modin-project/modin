@@ -352,23 +352,29 @@ def test_value_counts(normalize, bins, dropna):
             else:
                 new_index[j] = result.index[j]
             i += 1
-        return pandas.Series(result, index=new_index)
+        return type(result)(result, index=new_index)
 
-    # We sort indices for pandas result because of issue #1650
+    # We sort indices for Modin and pandas result because of issue #1650
     values = np.array([3, 1, 2, 3, 4, np.nan])
-    modin_result = pd.value_counts(values, normalize=normalize, ascending=False)
+    modin_result = sort_index_for_equal_values(
+        pd.value_counts(values, normalize=normalize, ascending=False), False
+    )
     pandas_result = sort_index_for_equal_values(
         pandas.value_counts(values, normalize=normalize, ascending=False), False
     )
     df_equals(modin_result, pandas_result)
 
-    modin_result = pd.value_counts(values, bins=bins, ascending=False)
+    modin_result = sort_index_for_equal_values(
+        pd.value_counts(values, bins=bins, ascending=False), False
+    )
     pandas_result = sort_index_for_equal_values(
         pandas.value_counts(values, bins=bins, ascending=False), False
     )
     df_equals(modin_result, pandas_result)
 
-    modin_result = pd.value_counts(values, dropna=dropna, ascending=True)
+    modin_result = sort_index_for_equal_values(
+        pd.value_counts(values, dropna=dropna, ascending=True), True
+    )
     pandas_result = sort_index_for_equal_values(
         pandas.value_counts(values, dropna=dropna, ascending=True), True
     )
