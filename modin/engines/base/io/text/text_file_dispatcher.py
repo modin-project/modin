@@ -11,13 +11,13 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-from modin.engines.base.io.file_reader import FileReader
+from modin.engines.base.io.file_dispatcher import FileDispatcher
 import numpy as np
 import warnings
 import os
 
 
-class TextFileReader(FileReader):
+class TextFileDispatcher(FileDispatcher):
     @classmethod
     def build_partition(cls, partition_ids, row_lengths, column_widths):
         return np.array(

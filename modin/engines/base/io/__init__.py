@@ -12,27 +12,27 @@
 # governing permissions and limitations under the License.
 
 from modin.engines.base.io.io import BaseIO
-from modin.engines.base.io.text.csv_reader import CSVReader
-from modin.engines.base.io.text.fwf_reader import FWFReader
-from modin.engines.base.io.text.json_reader import JSONReader
-from modin.engines.base.io.text.excel_reader import ExcelReader
-from modin.engines.base.io.file_reader import FileReader
-from modin.engines.base.io.text.text_file_reader import TextFileReader
-from modin.engines.base.io.column_stores.parquet_reader import ParquetReader
-from modin.engines.base.io.column_stores.hdf_reader import HDFReader
-from modin.engines.base.io.column_stores.feather_reader import FeatherReader
-from modin.engines.base.io.sql.sql_reader import SQLReader
+from modin.engines.base.io.text.csv_dispatcher import CSVDispatcher
+from modin.engines.base.io.text.fwf_dispatcher import FWFDispatcher
+from modin.engines.base.io.text.json_dispatcher import JSONDispatcher
+from modin.engines.base.io.text.excel_dispatcher import ExcelDispatcher
+from modin.engines.base.io.file_dispatcher import FileDispatcher
+from modin.engines.base.io.text.text_file_dispatcher import TextFileDispatcher
+from modin.engines.base.io.column_stores.parquet_dispatcher import ParquetDispatcher
+from modin.engines.base.io.column_stores.hdf_dispatcher import HDFDispatcher
+from modin.engines.base.io.column_stores.feather_dispatcher import FeatherDispatcher
+from modin.engines.base.io.sql.sql_dispatcher import SQLDispatcher
 
 __all__ = [
     "BaseIO",
-    "CSVReader",
-    "FWFReader",
-    "JSONReader",
-    "FileReader",
-    "TextFileReader",
-    "ParquetReader",
-    "HDFReader",
-    "FeatherReader",
-    "SQLReader",
-    "ExcelReader",
+    "CSVDispatcher",
+    "FWFDispatcher",
+    "JSONDispatcher",
+    "FileDispatcher",
+    "TextFileDispatcher",
+    "ParquetDispatcher",
+    "HDFDispatcher",
+    "FeatherDispatcher",
+    "SQLDispatcher",
+    "ExcelDispatcher",
 ]
