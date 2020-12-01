@@ -777,7 +777,12 @@ class TestReadCSV:
         eval_io(
             filepath_or_buffer=pytest.csvs_names["test_read_csv_nans"],
             fn_name="read_csv",
-            **kwargs,
+            # read_csv kwargs
+            na_values=na_values,
+            keep_default_na=keep_default_na,
+            na_filter=na_filter,
+            verbose=verbose,
+            skip_blank_lines=skip_blank_lines,
         )
 
     # Datetime Handling tests
