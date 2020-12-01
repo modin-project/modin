@@ -1723,7 +1723,7 @@ class BasePandasFrame(object):
         Returns
         -------
         Tuple
-            A tuple (left data, right data list, joined index).
+            A tuple (left data, right data list).
         """
         if isinstance(other, type(self)):
             other = [other]
@@ -1742,8 +1742,6 @@ class BasePandasFrame(object):
         if make_map_reindexer is None:
 
             def make_map_func(index, *args, **kwargs):
-                # left - specific argument for case of binary operation;
-                # it choose indexer for left or right index
                 if index.equals(joined_index):
                     return lambda df: df
                 return lambda df: df.reindex(joined_index, axis=axis)
@@ -1834,7 +1832,7 @@ class BasePandasFrame(object):
         BasePandasFrame
             A new dataframe.
         """
-        joined_index, ilidx, iridx = self.axes[0].join(
+        joined_index, lidx, ridx = self.axes[0].join(
             right_frame.axes[0], how=join_type, sort=True, return_indexers=True
         )
 
@@ -1846,7 +1844,7 @@ class BasePandasFrame(object):
 
             # case with duplicate values; way from pandas
             return lambda df: df._reindex_with_indexers(
-                {0: [joined_index, ilidx if left else iridx]},
+                {0: [joined_index, lidx if left else ridx]},
                 copy=True,
                 allow_dups=True,
             )
