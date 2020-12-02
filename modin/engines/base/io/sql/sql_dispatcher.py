@@ -16,10 +16,10 @@ import numpy as np
 import pandas
 import warnings
 
-from modin.engines.base.io.file_reader import FileReader
+from modin.engines.base.io.file_dispatcher import FileDispatcher
 
 
-class SQLReader(FileReader):
+class SQLDispatcher(FileDispatcher):
     @classmethod
     def _read(cls, sql, con, index_col=None, **kwargs):
         """Reads a SQL query or database table into a DataFrame.

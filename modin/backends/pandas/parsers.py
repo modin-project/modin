@@ -20,7 +20,7 @@ from pandas.core.dtypes.concat import union_categoricals
 from pandas.io.common import infer_compression
 import warnings
 
-from modin.engines.base.io import FileReader
+from modin.engines.base.io import FileDispatcher
 from modin.data_management.utils import split_result_of_axis_func_pandas
 from modin.error_message import ErrorMessage
 
@@ -99,7 +99,9 @@ class PandasCSVParser(PandasParser):
         index_col = kwargs.get("index_col", None)
         if start is not None and end is not None:
             # pop "compression" from kwargs because bio is uncompressed
-            bio = FileReader.file_open(fname, "rb", kwargs.pop("compression", "infer"))
+            bio = FileDispatcher.file_open(
+                fname, "rb", kwargs.pop("compression", "infer")
+            )
             if kwargs.get("encoding", None) is not None:
                 header = b"" + bio.readline()
             else:
@@ -131,7 +133,9 @@ class PandasFWFParser(PandasParser):
         index_col = kwargs.get("index_col", None)
         if start is not None and end is not None:
             # pop "compression" from kwargs because bio is uncompressed
-            bio = FileReader.file_open(fname, "rb", kwargs.pop("compression", "infer"))
+            bio = FileDispatcher.file_open(
+                fname, "rb", kwargs.pop("compression", "infer")
+            )
             if kwargs.get("encoding", None) is not None:
                 header = b"" + bio.readline()
             else:
@@ -331,7 +335,9 @@ class PandasJSONParser(PandasParser):
         end = kwargs.pop("end", None)
         if start is not None and end is not None:
             # pop "compression" from kwargs because bio is uncompressed
-            bio = FileReader.file_open(fname, "rb", kwargs.pop("compression", "infer"))
+            bio = FileDispatcher.file_open(
+                fname, "rb", kwargs.pop("compression", "infer")
+            )
             bio.seek(start)
             to_read = b"" + bio.read(end - start)
             bio.close()

@@ -19,7 +19,7 @@ S3_ADDRESS_REGEX = re.compile("[sS]3://(.*?)/(.*)")
 NOT_IMPLEMENTED_MESSAGE = "Implement in children classes!"
 
 
-class FileReader:
+class FileDispatcher:
     frame_cls = None
     frame_partition_cls = None
     query_compiler_cls = None

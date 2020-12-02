@@ -15,10 +15,10 @@ import numpy as np
 import pandas
 
 from modin.data_management.utils import compute_chunksize
-from modin.engines.base.io.file_reader import FileReader
+from modin.engines.base.io.file_dispatcher import FileDispatcher
 
 
-class ColumnStoreReader(FileReader):
+class ColumnStoreDispatcher(FileDispatcher):
     @classmethod
     def call_deploy(cls, fname, col_partitions, **kwargs):
         from modin.pandas import DEFAULT_NPARTITIONS

@@ -11,10 +11,12 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-from modin.engines.base.io.column_stores.column_store_reader import ColumnStoreReader
+from modin.engines.base.io.column_stores.column_store_dispatcher import (
+    ColumnStoreDispatcher,
+)
 
 
-class FeatherReader(ColumnStoreReader):
+class FeatherDispatcher(ColumnStoreDispatcher):
     @classmethod
     def _read(cls, path, columns=None, **kwargs):
         """Read data from the file path, returning a Modin DataFrame.

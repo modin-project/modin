@@ -11,17 +11,17 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-from modin.engines.base.io.text.text_file_reader import TextFileReader
+from modin.engines.base.io.text.text_file_dispatcher import TextFileDispatcher
 from modin.data_management.utils import compute_chunksize
 from pandas.io.parsers import _validate_usecols_arg
 import pandas
-import csv
+from csv import QUOTE_NONE
 import sys
 
 
-class CSVReader(TextFileReader):
+class FWFDispatcher(TextFileDispatcher):
     @classmethod
-    def _read(cls, filepath_or_buffer, **kwargs):
+    def read(cls, filepath_or_buffer, **kwargs):
         if isinstance(filepath_or_buffer, str):
             if not cls.file_exists(filepath_or_buffer):
                 return cls.single_worker_read(filepath_or_buffer, **kwargs)
@@ -29,7 +29,7 @@ class CSVReader(TextFileReader):
         elif not cls.pathlib_or_pypath(filepath_or_buffer):
             return cls.single_worker_read(filepath_or_buffer, **kwargs)
         compression_type = cls.infer_compression(
-            filepath_or_buffer, kwargs.get("compression")
+            filepath_or_buffer, kwargs.get("compression", "infer")
         )
         if compression_type is not None:
             if (
@@ -52,42 +52,38 @@ class CSVReader(TextFileReader):
         if chunksize is not None:
             return cls.single_worker_read(filepath_or_buffer, **kwargs)
 
+        # If infer_nrows is a significant portion of the number of rows, pandas may be
+        # faster.
+        infer_nrows = kwargs.get("infer_nrows", 100)
+        if infer_nrows > 100:
+            return cls.single_worker_read(filepath_or_buffer, **kwargs)
+
         skiprows = kwargs.get("skiprows")
         if skiprows is not None and not isinstance(skiprows, int):
             return cls.single_worker_read(filepath_or_buffer, **kwargs)
         nrows = kwargs.pop("nrows", None)
         names = kwargs.get("names", None)
         index_col = kwargs.get("index_col", None)
-        usecols = kwargs.get("usecols", None)
         if names is None:
             # For the sake of the empty df, we assume no `index_col` to get the correct
             # column names before we build the index. Because we pass `names` in, this
             # step has to happen without removing the `index_col` otherwise it will not
             # be assigned correctly
-            names = pandas.read_csv(
+            names = pandas.read_fwf(
                 filepath_or_buffer,
                 **dict(kwargs, usecols=None, nrows=0, skipfooter=0, index_col=None),
             ).columns
-        elif index_col is None and not usecols:
-            # When names is set to some list that is smaller than the number of columns
-            # in the file, the first columns are built as a hierarchical index.
-            empty_pd_df = pandas.read_csv(filepath_or_buffer, nrows=0)
-            num_cols = len(empty_pd_df.columns)
-            if num_cols > len(names):
-                index_col = list(range(num_cols - len(names)))
-                if len(index_col) == 1:
-                    index_col = index_col[0]
-                kwargs["index_col"] = index_col
-        empty_pd_df = pandas.read_csv(
+        empty_pd_df = pandas.read_fwf(
             filepath_or_buffer, **dict(kwargs, nrows=0, skipfooter=0)
         )
         column_names = empty_pd_df.columns
         skipfooter = kwargs.get("skipfooter", None)
         skiprows = kwargs.pop("skiprows", None)
+        usecols = kwargs.get("usecols", None)
         usecols_md = _validate_usecols_arg(usecols)
         if usecols is not None and usecols_md[1] != "integer":
             del kwargs["usecols"]
-            all_cols = pandas.read_csv(
+            all_cols = pandas.read_fwf(
                 cls.file_open(filepath_or_buffer, "rb"),
                 **dict(kwargs, nrows=0, skipfooter=0),
             ).columns
@@ -106,7 +102,7 @@ class CSVReader(TextFileReader):
         quotechar = kwargs.get("quotechar", '"').encode(
             encoding if encoding is not None else "UTF-8"
         )
-        is_quoting = kwargs.get("quoting", "") != csv.QUOTE_NONE
+        is_quoting = kwargs.get("quoting", "") != QUOTE_NONE
         with cls.file_open(filepath_or_buffer, "rb", compression_type) as f:
             # Skip the header since we already have the header information and skip the
             # rows we are told to skip.
@@ -175,6 +171,11 @@ class CSVReader(TextFileReader):
         if index_col is None:
             row_lengths = cls.materialize(index_ids)
             new_index = pandas.RangeIndex(sum(row_lengths))
+            # pandas has a really weird edge case here.
+            if kwargs.get("names", None) is not None and skiprows > 1:
+                new_index = pandas.RangeIndex(
+                    skiprows - 1, new_index.stop + skiprows - 1
+                )
         else:
             index_objs = cls.materialize(index_ids)
             row_lengths = [len(o) for o in index_objs]
@@ -185,7 +186,7 @@ class CSVReader(TextFileReader):
         # reported dtypes from differing rows can be different based on the inference in
         # the limited data seen by each worker. We use pandas to compute the exact dtype
         # over the whole column for each column. The index is set below.
-        dtypes = cls.get_dtypes(dtypes_ids) if len(dtypes_ids) > 0 else None
+        dtypes = cls.get_dtypes(dtypes_ids)
 
         partition_ids = cls.build_partition(partition_ids, row_lengths, column_widths)
         # If parse_dates is present, the column names that we have might not be

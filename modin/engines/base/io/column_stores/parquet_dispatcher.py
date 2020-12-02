@@ -13,11 +13,13 @@
 
 import os
 
-from modin.engines.base.io.column_stores.column_store_reader import ColumnStoreReader
+from modin.engines.base.io.column_stores.column_store_dispatcher import (
+    ColumnStoreDispatcher,
+)
 from modin.error_message import ErrorMessage
 
 
-class ParquetReader(ColumnStoreReader):
+class ParquetDispatcher(ColumnStoreDispatcher):
     @classmethod
     def _read(cls, path, engine, columns, **kwargs):
         """Load a parquet object from the file path, returning a Modin DataFrame.

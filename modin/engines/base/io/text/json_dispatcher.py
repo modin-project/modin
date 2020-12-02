@@ -11,7 +11,7 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-from modin.engines.base.io.text.text_file_reader import TextFileReader
+from modin.engines.base.io.text.text_file_dispatcher import TextFileDispatcher
 from modin.data_management.utils import compute_chunksize
 from io import BytesIO
 import pandas
@@ -19,7 +19,7 @@ import numpy as np
 from csv import QUOTE_NONE
 
 
-class JSONReader(TextFileReader):
+class JSONDispatcher(TextFileDispatcher):
     @classmethod
     def _read(cls, path_or_buf, **kwargs):
         if isinstance(path_or_buf, str):

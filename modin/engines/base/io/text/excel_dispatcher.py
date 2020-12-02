@@ -17,13 +17,13 @@ import sys
 import warnings
 
 from modin.data_management.utils import compute_chunksize
-from modin.engines.base.io.text.text_file_reader import TextFileReader
+from modin.engines.base.io.text.text_file_dispatcher import TextFileDispatcher
 
 
 EXCEL_READ_BLOCK_SIZE = 4096
 
 
-class ExcelReader(TextFileReader):
+class ExcelDispatcher(TextFileDispatcher):
     @classmethod
     def _read(cls, io, **kwargs):
         if (
