@@ -1422,10 +1422,11 @@ def test_unknown_groupby(columns):
     "func_to_apply",
     [
         lambda df: df.sum(),
-        lambda df: df.count(),
         lambda df: df.size(),
-        lambda df: df.mean(),
         lambda df: df.quantile(),
+        lambda df: df.dtypes,
+        lambda df: df.apply(lambda df: df.sum()),
+        lambda df: df.apply(lambda df: pandas.Series([1, 2, 3, 4])),
         lambda grp: grp.agg(
             {
                 df_from_grp(grp).columns[0]: (max, min, sum),
@@ -1438,12 +1439,15 @@ def test_unknown_groupby(columns):
         ),
     ],
 )
-def test_multi_column_groupby_different_partitions(func_to_apply):
+@pytest.mark.parametrize("as_index", [True, False])
+def test_multi_column_groupby_different_partitions(func_to_apply, as_index):
     data = test_data_values[0]
     md_df, pd_df = create_test_dfs(data)
 
     # columns that will be located in a different partitions
     by = [pd_df.columns[0], pd_df.columns[-1]]
 
-    md_grp, pd_grp = md_df.groupby(by), pd_df.groupby(by)
+    md_grp, pd_grp = md_df.groupby(by, as_index=as_index), pd_df.groupby(
+        by, as_index=as_index
+    )
     eval_general(md_grp, pd_grp, func_to_apply)
