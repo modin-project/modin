@@ -27,7 +27,6 @@ import pandas
 import pandas.core.groupby
 from pandas.core.dtypes.common import is_list_like
 from pandas.core.aggregation import reconstruct_func
-from types import BuiltinFunctionType
 import pandas.core.common as com
 from types import BuiltinFunctionType
 
@@ -81,6 +80,7 @@ class DataFrameGroupBy(object):
                 and all(
                     (isinstance(obj, str) and obj in self._query_compiler.columns)
                     or isinstance(obj, type(self._query_compiler))
+                    or is_list_like(obj)
                     for obj in self._by
                 )
             )
@@ -274,7 +274,7 @@ class DataFrameGroupBy(object):
     def dtypes(self):
         if self._axis == 1:
             raise ValueError("Cannot call dtypes on groupby with axis=1")
-        if self._is_multi_by and not self._as_index:
+        if not self._as_index:
             return self.apply(lambda df: df.dtypes)
         else:
             return self._apply_agg_function(lambda df: df.dtypes, drop=self._as_index)

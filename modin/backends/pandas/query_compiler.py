@@ -2521,6 +2521,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         agg_kwargs,
         groupby_kwargs,
         drop=False,
+        preserve_labels=True,
     ):
         if callable(agg_func):
             agg_func = wrap_udf_function(agg_func)
@@ -2531,10 +2532,17 @@ class PandasQueryCompiler(BaseQueryCompiler):
         groupby_kwargs = groupby_kwargs.copy()
 
         as_index = groupby_kwargs.get("as_index", True)
-
         if isinstance(by, type(self)):
-            internal_by = by.columns
-            by = [by]
+            # `drop` parameter indicates whether or not 'by' data came
+            # from the `self` frame:
+            # True: 'by' data came from the `self`
+            # False: external 'by' data
+            if drop:
+                internal_by = by.columns
+                by = [by]
+            else:
+                internal_by = []
+                by = [by]
         else:
             if not isinstance(by, list):
                 by = [by]
@@ -2548,31 +2556,30 @@ class PandasQueryCompiler(BaseQueryCompiler):
         broadcastable_by = [o._modin_frame for o in by if isinstance(o, type(self))]
         not_broadcastable_by = [o for o in by if not isinstance(o, type(self))]
 
-        def groupby_agg_builder(df, by=None, drop=False):
+        def groupby_agg_builder(df, by=None, drop=False, partition_idx=None):
             # Set `as_index` to True to track the metadata of the grouping object
             # It is used to make sure that between phases we are constructing the
             # right index and placing columns in the correct order.
             groupby_kwargs["as_index"] = True
 
+            internal_by_cols = pandas.Index([])
+            missmatched_cols = pandas.Index([])
             if by is not None:
                 internal_by_df = by[internal_by]
-                internal_by_df = internal_by_df.squeeze(axis=1)
+                if isinstance(internal_by_df, pandas.Series):
+                    internal_by_df = internal_by_df.to_frame()
 
                 if isinstance(internal_by_df, pandas.DataFrame):
+                    missmatched_cols = internal_by_df.columns.difference(df.columns)
                     df = pandas.concat(
-                        [df]
-                        + [
-                            internal_by_df.iloc[
-                                :, ~internal_by_df.columns.isin(df.columns)
-                            ]
-                        ],
+                        [df, internal_by_df[missmatched_cols]],
                         axis=1,
                     )
-                    internal_by_cols = list(internal_by_df.columns)
+                    internal_by_cols = internal_by_df.columns
                 elif is_multi_by:
-                    internal_by_cols = [internal_by_df.name]
+                    internal_by_cols = pandas.Index([internal_by_df.name])
                 else:
-                    internal_by_cols = [internal_by_df]
+                    internal_by_cols = pandas.Index([internal_by_df])
 
                 external_by = by.columns.difference(internal_by)
                 external_by_df = by[external_by].squeeze(axis=1)
@@ -2582,14 +2589,14 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 else:
                     external_by_cols = [external_by_df]
 
-                by = internal_by_cols + external_by_cols
+                by = internal_by_cols.tolist() + external_by_cols
 
             else:
                 by = []
 
             by += not_broadcastable_by
 
-            def compute_groupby(df, drop=False):
+            def compute_groupby(df, drop=False, partition_idx=0):
                 grouped_df = df.groupby(by=by, axis=axis, **groupby_kwargs)
                 try:
                     if isinstance(agg_func, dict):
@@ -2608,42 +2615,48 @@ class PandasQueryCompiler(BaseQueryCompiler):
                     result = pandas.DataFrame(index=grouped_df.size().index)
                 if isinstance(result, pandas.Series):
                     result = result.to_frame("__reduced__")
+
+                result_cols = result.columns
+                result.drop(columns=missmatched_cols, inplace=True, errors="ignore")
+
                 if not as_index:
-                    if not isinstance(result.index, pandas.MultiIndex) and (
-                        result.index.name is None or result.index.name in result.columns
-                    ):
-                        drop = False
-                    if drop and isinstance(result.index, pandas.MultiIndex):
-                        has_categorical_by = any(
-                            isinstance(df[o].dtype, pandas.CategoricalDtype)
-                            for o in by
-                            if isinstance(o, str)
+                    keep_index_levels = len(by) > 1 and any(
+                        isinstance(x, pandas.CategoricalDtype)
+                        for x in df[internal_by_cols].dtypes
+                    )
+
+                    cols_to_insert = (
+                        internal_by_cols.intersection(result_cols)
+                        if keep_index_levels
+                        else internal_by_cols.difference(result_cols)
+                    )
+
+                    if keep_index_levels:
+                        result.drop(
+                            columns=cols_to_insert, inplace=True, errors="ignore"
                         )
 
-                        if not has_categorical_by:
-                            # Deleting index levels that already exists in the result frame
-                            duplicated_cols = [
+                    drop = True
+                    if partition_idx == 0:
+                        drop = False
+                        if not keep_index_levels:
+                            lvls_to_drop = [
                                 i
                                 for i, name in enumerate(result.index.names)
-                                if name in result.columns
-                                or (
-                                    isinstance(name, str)
-                                    and name.startswith("__reduced__")
-                                )
+                                if name not in cols_to_insert
                             ]
-                            if len(duplicated_cols) == result.index.nlevels:
-                                drop = False
+                            if len(lvls_to_drop) == result.index.nlevels:
+                                drop = True
                             else:
-                                result.index = result.index.droplevel(duplicated_cols)
-                        else:
-                            # Deleting columns that already exists in the result index levels
-                            duplicated_cols = [
-                                name
-                                for name in result.index.names
-                                if name in result.columns
-                            ]
-                            result.drop(columns=duplicated_cols, inplace=True)
-                    result.reset_index(drop=not drop, inplace=True)
+                                result.index = result.index.droplevel(lvls_to_drop)
+
+                    if (
+                        not isinstance(result.index, pandas.MultiIndex)
+                        and result.index.name is None
+                    ):
+                        drop = True
+
+                    result.reset_index(drop=drop, inplace=True)
 
                 new_index_names = [
                     None
@@ -2653,7 +2666,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 ]
 
                 cols_to_drop = (
-                    result.columns[result.columns.str.match(r"__reduced__.*")]
+                    result.columns[result.columns.str.match(r"__reduced__.*", na=False)]
                     if hasattr(result.columns, "str")
                     else []
                 )
@@ -2667,19 +2680,22 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 return result
 
             try:
-                return compute_groupby(df, drop)
+                return compute_groupby(df, drop, partition_idx)
             # This will happen with Arrow buffer read-only errors. We don't want to copy
             # all the time, so this will try to fast-path the code first.
             except (ValueError, KeyError):
-                return compute_groupby(df.copy(), drop)
+                return compute_groupby(df.copy(), drop, partition_idx)
 
         apply_indices = list(agg_func.keys()) if isinstance(agg_func, dict) else None
 
         new_modin_frame = self._modin_frame.broadcast_apply_full_axis(
             axis=axis,
-            func=lambda df, by=None: groupby_agg_builder(df, by, drop),
+            func=lambda df, by=None, partition_idx=None: groupby_agg_builder(
+                df, by, drop, partition_idx
+            ),
             other=broadcastable_by,
             apply_indices=apply_indices,
+            enumerate_partitions=True,
         )
         result = self.__constructor__(new_modin_frame)
 

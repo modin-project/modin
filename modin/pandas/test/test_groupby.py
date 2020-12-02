@@ -247,7 +247,7 @@ class GetColumn:
         ["col1"],
         # col2 contains NaN, is it necessary to test functions like size()
         "col2",
-        ["col2"],
+        ["col2"],  # 5
         pytest.param(
             ["col1", "col2"],
             marks=pytest.mark.xfail(reason="Excluded because of bug #1554"),
@@ -265,12 +265,12 @@ class GetColumn:
             marks=pytest.mark.xfail(reason="Excluded because of bug #1554"),
         ),
         # but cum* functions produce undefined results with NaNs so we need to test the same combinations without NaN too
-        ["col5"],
+        ["col5"],  # 10
         ["col1", "col5"],
         ["col5", "col4"],
         ["col4", "col5"],
         ["col5", "col4", "col1"],
-        ["col1", pd.Series([1, 5, 7, 8])],
+        ["col1", pd.Series([1, 5, 7, 8])],  # 15
         [pd.Series([1, 5, 7, 8])],
         [
             pd.Series([1, 5, 7, 8]),
@@ -281,7 +281,7 @@ class GetColumn:
         ],
         ["col1", GetColumn("col5")],
         [GetColumn("col1"), GetColumn("col5")],
-        [GetColumn("col1")],
+        [GetColumn("col1")],  # 20
     ],
 )
 @pytest.mark.parametrize("as_index", [True, False])
@@ -1363,6 +1363,7 @@ def test_mixed_columns(columns):
         [(True, "a"), (True, "b")],
         [(False, "a"), (False, "b"), (True, "c")],
         [(False, "a"), (True, "c")],
+        [(False, "a"), (True, "c"), (False, [1, 1, 2])],
     ],
 )
 @pytest.mark.parametrize("as_index", [True, False])
@@ -1421,12 +1422,17 @@ def test_unknown_groupby(columns):
 @pytest.mark.parametrize(
     "func_to_apply",
     [
-        lambda df: df.sum(),
+        pytest.param(
+            lambda df: df.sum(), marks=pytest.mark.skip("See modin issue #2512")
+        ),
         lambda df: df.size(),
         lambda df: df.quantile(),
         lambda df: df.dtypes,
         lambda df: df.apply(lambda df: df.sum()),
-        lambda df: df.apply(lambda df: pandas.Series([1, 2, 3, 4])),
+        pytest.param(
+            lambda df: df.apply(lambda df: pandas.Series([1, 2, 3, 4])),
+            marks=pytest.mark.skip("See modin issue #2511"),
+        ),
         lambda grp: grp.agg(
             {
                 df_from_grp(grp).columns[0]: (max, min, sum),
@@ -1440,14 +1446,25 @@ def test_unknown_groupby(columns):
     ],
 )
 @pytest.mark.parametrize("as_index", [True, False])
-def test_multi_column_groupby_different_partitions(func_to_apply, as_index):
+@pytest.mark.parametrize("by_length", [1, 2])
+@pytest.mark.parametrize(
+    "categorical_by",
+    [pytest.param(True, marks=pytest.mark.skip("See modin issue #2513")), False],
+)
+def test_multi_column_groupby_different_partitions(
+    func_to_apply, as_index, by_length, categorical_by
+):
     data = test_data_values[0]
     md_df, pd_df = create_test_dfs(data)
 
-    # columns that will be located in a different partitions
-    by = [pd_df.columns[0], pd_df.columns[-1]]
+    by = [pd_df.columns[-i if i % 2 else i] for i in range(by_length)]
+
+    if categorical_by:
+        md_df = md_df.astype({by[0]: "category"})
+        pd_df = pd_df.astype({by[0]: "category"})
 
     md_grp, pd_grp = md_df.groupby(by, as_index=as_index), pd_df.groupby(
         by, as_index=as_index
     )
+
     eval_general(md_grp, pd_grp, func_to_apply)

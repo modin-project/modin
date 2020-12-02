@@ -232,6 +232,7 @@ class BaseFrameManager(ABC):
         right,
         keep_partitioning=False,
         apply_indices=None,
+        enumerate_partitions=False,
         lengths=None,
     ):
         """
@@ -286,8 +287,9 @@ class BaseFrameManager(ABC):
                 left_partitions[i].apply(
                     preprocessed_map_func,
                     **kw,
+                    **({"partition_idx": idx} if enumerate_partitions else {}),
                 )
-                for i in apply_indices
+                for idx, i in enumerate(apply_indices)
             ]
         )
         # If we are mapping over columns, they are returned to use the same as
