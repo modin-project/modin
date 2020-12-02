@@ -431,6 +431,9 @@ encoding_types = [
 # the type of this exceptions are the same
 io_ops_bad_exc = [TypeError, FileNotFoundError]
 
+# Files compression to extension mapping
+comp_to_ext = {"gzip": "gz", "bz2": "bz2", "xz": "xz", "zip": "zip"}
+
 
 def categories_equals(left, right):
     assert (left.ordered and right.ordered) or (not left.ordered and not right.ordered)

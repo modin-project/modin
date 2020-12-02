@@ -41,6 +41,7 @@ from .utils import (
     IO_OPS_DATA_DIR,
     io_ops_bad_exc,
     eval_io_from_str,
+    comp_to_ext,
 )
 
 from modin.config import Engine, Backend, IsExperimental
@@ -75,16 +76,6 @@ DATASET_SIZE_DICT = {
 
 # Number of rows in the test file
 NROWS = DATASET_SIZE_DICT.get(TestDatasetSize.get(), DATASET_SIZE_DICT["Small"])
-comp_to_ext = {"infer": "", "gzip": "gz", "bz2": "bz2", "xz": "xz", "zip": "zip"}
-
-test_csv_dialect_params = {
-    "delimiter": "_",
-    "doublequote": False,
-    "escapechar": "d",
-    "quotechar": "d",
-    "quoting": csv.QUOTE_ALL,
-}
-csv.register_dialect("test_csv_dialect", **test_csv_dialect_params)
 
 if not os.path.exists(IO_OPS_DATA_DIR):
     os.mkdir(IO_OPS_DATA_DIR)
@@ -250,7 +241,6 @@ def _make_csv_file(filenames):
                 if compression != "infer"
                 else filename
             )
-
             df.to_csv(
                 filename,
                 sep=delimiter,
@@ -876,6 +866,7 @@ class TestReadCSV:
         pd_df = pd_reader.read()
 
         df_equals(modin_df, pd_df)
+
     # Quoting, Compression, and File Format parameters tests
     @pytest.mark.parametrize("compression", ["infer", "gzip", "bz2", "xz", "zip"])
     @pytest.mark.parametrize(
@@ -926,11 +917,19 @@ class TestReadCSV:
             pytest.xfail("read_csv with Ray engine outputs empty frame - issue #2493")
         elif Engine.get() != "Python" and escapechar:
             pytest.xfail(
-                "read_csv with Ray engine fails with some 'escapechar' parameter - issue #2494"
+                "read_csv with Ray engine fails with some 'escapechar' parameters - issue #2494"
             )
 
         unique_filename = get_unique_filename()
         if dialect:
+            test_csv_dialect_params = {
+                "delimiter": "_",
+                "doublequote": False,
+                "escapechar": "d",
+                "quotechar": "d",
+                "quoting": csv.QUOTE_ALL,
+            }
+            csv.register_dialect(dialect, **test_csv_dialect_params)
             make_csv_file(filename=unique_filename, **test_csv_dialect_params)
         else:
             make_csv_file(
