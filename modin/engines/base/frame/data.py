@@ -967,7 +967,7 @@ class BasePandasFrame(object):
         ]
         return OrderedDict(partition_ids_with_indices)
 
-    def _join_index_objects(self, axis, other_index, how, sort):
+    def _join_index_objects(self, axis, others_index, how, sort):
         """
         Join the pair of index objects (columns or rows) by a given strategy.
 
@@ -976,37 +976,83 @@ class BasePandasFrame(object):
 
         Parameters
         ----------
-            axis : 0 or 1
-                The axis index object to join (0 - rows, 1 - columns).
-            other_index : Index
-                The other_index to join on.
-            how : {'left', 'right', 'inner', 'outer'}
-                The type of join to join to make.
-            sort : boolean
-                Whether or not to sort the joined index
+        axis : 0 or 1
+            The axis index object to join (0 - rows, 1 - columns).
+        others_index : list(Index)
+            The others_index to join on. Index of `self` frame should be first.
+        how : {'left', 'right', 'inner', 'outer'}
+            The type of join to join to make.
+        sort : boolean
+            Whether or not to sort the joined index
 
         Returns
         -------
-        Index
-            Joined indices.
+        (Index, func)
+            Joined index with make_reindexer func
         """
+        assert isinstance(others_index, list)
 
-        def merge_index(obj1, obj2):
+        # define helper functions
+        def merge(left_index, right_index):
             if axis == 1 and how == "outer" and not sort:
-                return obj1.union(obj2, sort=False)
+                return left_index.union(right_index, sort=False)
             else:
-                return obj1.join(obj2, how=how, sort=sort)
+                return left_index.join(right_index, how=how, sort=sort)
 
-        if isinstance(other_index, list):
-            joined_obj = self.columns if axis else self.index
-            # TODO: revisit for performance
-            for obj in other_index:
-                joined_obj = merge_index(joined_obj, obj)
-            return joined_obj
-        if axis:
-            return merge_index(self.columns, other_index)
+        # define condition for joining indexes
+        self_index = others_index[0]
+        do_join_index = False
+        for index in others_index[1:]:
+            if not self_index.equals(index):
+                do_join_index = True
+                break
+
+        # define condition for joining indexes with getting indexersы
+        is_duplicates = (
+            any([not index.is_unique for index in others_index]) and axis == 0
+        )
+        indexers = []
+        if is_duplicates:
+            indexers = [None] * len(others_index)
+
+        # perform joining indexes
+        if do_join_index:
+            if len(others_index) == 2 and is_duplicates:
+                # in case of count of indexes > 2 we should perform joining all indexes
+                # after that get indexers
+                # in the fast path we can obtain joined_index and indexers in one call
+                joined_index, indexers[0], indexers[1] = others_index[0].join(
+                    others_index[1], how=how, sort=sort, return_indexers=True
+                )
+            else:
+                joined_index = others_index[0]
+                # TODO: revisit for performance
+                for index in others_index[1:]:
+                    joined_index = merge(joined_index, index)
+
+                if is_duplicates:
+                    for i, index in enumerate(others_index):
+                        indexers[i] = index.get_indexer_for(joined_index)
         else:
-            return self.index.join(other_index, how=how, sort=sort)
+            joined_index = others_index[0].copy()
+
+        def make_reindexer(do_reindex: bool, frame_idx: int):
+            # the order of the frames must match the order of the indexes in `others_index`
+            if not do_reindex:
+                return lambda df: df
+
+            if is_duplicates:
+                assert indexers != []
+
+                return lambda df: df._reindex_with_indexers(
+                    {0: [joined_index, indexers[frame_idx]]},
+                    copy=True,
+                    allow_dups=True,
+                )
+
+            return lambda df: df.reindex(joined_index, axis=axis)
+
+        return joined_index, make_reindexer
 
     # Internal methods
     # These methods are for building the correct answer in a modular way.
@@ -1483,10 +1529,9 @@ class BasePandasFrame(object):
             BasePandasFrame
         """
         # Only sort the indices if they do not match
-        other_index = other.axes[axis]
-        sort = not self.axes[axis].equals(other_index)
-        joined_index = self._join_index_objects(axis, other_index, join_type, sort)
-        left_parts, right_parts = self._copartition(axis, other, joined_index)
+        left_parts, right_parts, joined_index = self._copartition(
+            axis, other, join_type, sort=not self.axes[axis].equals(other.axes[axis])
+        )
         # unwrap list returned by `copartition`.
         right_parts = right_parts[0]
         new_frame = self._frame_mgr_cls.broadcast_apply(
@@ -1690,14 +1735,7 @@ class BasePandasFrame(object):
             validate_axes="all" if new_partitions.size != 0 else False,
         )
 
-    def _copartition(
-        self,
-        axis,
-        other,
-        joined_index,
-        force_repartition=False,
-        make_map_reindexer=None,
-    ):
+    def _copartition(self, axis, other, how, sort, force_repartition=False):
         """
         Copartition two dataframes.
 
@@ -1709,33 +1747,25 @@ class BasePandasFrame(object):
             The axis to copartition along (0 - rows, 1 - columns).
         other : BasePandasFrame
             The other dataframes(s) to copartition against.
-        joined_index : Index
-            The index used for reindexing partitions.
+        how : str
+            How to manage joining the index object ("left", "right", etc.)
+        sort : boolean
+            Whether or not to sort the joined index.
         force_repartition : bool, default False
             Whether or not to force the repartitioning. By default,
             this method will skip repartitioning if it is possible. This is because
             reindexing is extremely inefficient. Because this method is used to
             `join` or `append`, it is vital that the internal indices match.
-        make_map_reindexer : func, default None
-            Defines indexer for specific case.
-            (_copartition works in concat, binary_op, broadcast_apply functions)
 
         Returns
         -------
         Tuple
-            A tuple (left data, right data list).
+            A tuple (left data, right data list, joined index).
         """
         if isinstance(other, type(self)):
             other = [other]
 
         # define helper functions
-        def choose_reindexer(do_reindex, left):
-            if make_map_reindexer:
-                return make_map_reindexer(do_reindex, left)
-            if do_reindex:
-                return lambda df: df.reindex(joined_index, axis=axis)
-            return lambda df: df
-
         def get_column_widths(partitions):
             if len(partitions) > 0:
                 return [obj.width() for obj in partitions[0]]
@@ -1744,8 +1774,14 @@ class BasePandasFrame(object):
             if len(partitions.T) > 0:
                 return [obj.length() for obj in partitions.T[0]]
 
-        # define the conditions for reindexing and repartitioning `self` frame
-        do_reindex_self = not self.axes[axis].equals(joined_index)
+        self_index = self.axes[axis]
+        others_index = [o.axes[axis] for o in other]
+        joined_index, make_reindexer = self._join_index_objects(
+            axis, [self_index] + others_index, how, sort
+        )
+
+        # define conditions for reindexing and repartitioning `self` frame
+        do_reindex_self = not self_index.equals(joined_index)
         do_repartition_self = force_repartition or do_reindex_self
 
         # perform repartitioning and reindexing for `self` frame if needed
@@ -1753,7 +1789,8 @@ class BasePandasFrame(object):
             reindexed_self = self._frame_mgr_cls.map_axis_partitions(
                 axis,
                 self._partitions,
-                choose_reindexer(do_reindex_self, left=True),
+                # self frame has 0 idx
+                make_reindexer(do_reindex_self, 0),
             )
         else:
             reindexed_self = self._partitions
@@ -1768,8 +1805,8 @@ class BasePandasFrame(object):
             o._row_lengths if axis == 0 else o._column_widths for o in other
         ]
 
-        # define the conditions for reindexing and repartitioning `other` frames
-        do_reindex_others = [not o.axes[axis].equals(joined_index) for o in other]
+        # define conditions for reindexing and repartitioning `other` frames
+        do_reindex_others = [not index.equals(joined_index) for index in others_index]
 
         do_repartition_others = [None] * len(other)
         for i in range(len(other)):
@@ -1786,13 +1823,14 @@ class BasePandasFrame(object):
                 reindexed_other_list[i] = other[i]._frame_mgr_cls.map_axis_partitions(
                     axis,
                     other[i]._partitions,
-                    choose_reindexer(do_reindex_others[i], left=False),
+                    # indices of others frame start from 1 (0 - self frame)
+                    make_reindexer(do_reindex_others[i], 1 + i),
                     lengths=self_lengths,
                 )
             else:
                 reindexed_other_list[i] = other[i]._partitions
 
-        return reindexed_self, reindexed_other_list
+        return reindexed_self, reindexed_other_list, joined_index
 
     def _simple_shuffle(self, axis, other):
         """
@@ -1844,28 +1882,8 @@ class BasePandasFrame(object):
         BasePandasFrame
             A new dataframe.
         """
-        joined_index, lidx, ridx = self.axes[0].join(
-            right_frame.axes[0], how=join_type, sort=True, return_indexers=True
-        )
-
-        def make_map_reindexer(do_reindex, left=True):
-            # left - specific argument for case of binary operation;
-            # it choose indexer for left or right index
-            if not do_reindex:
-                return lambda df: df
-
-            # case with duplicate values; way from pandas
-            return lambda df: df._reindex_with_indexers(
-                {0: [joined_index, lidx if left else ridx]},
-                copy=True,
-                allow_dups=True,
-            )
-
-        left_parts, right_parts = self._copartition(
-            0,
-            right_frame,
-            joined_index,
-            make_map_reindexer=make_map_reindexer,
+        left_parts, right_parts, joined_index = self._copartition(
+            0, right_frame, join_type, sort=True
         )
         # unwrap list returned by `copartition`.
         right_parts = right_parts[0]
@@ -1919,16 +1937,8 @@ class BasePandasFrame(object):
                 length for o in others for length in o._column_widths
             ]
         else:
-            copartition_axis = axis ^ 1
-            others_index = [o.axes[copartition_axis] for o in others]
-            joined_index = self._join_index_objects(
-                copartition_axis, others_index, how, sort
-            )
-            left_parts, right_parts = self._copartition(
-                copartition_axis,
-                others,
-                joined_index,
-                force_repartition=False,
+            left_parts, right_parts, joined_index = self._copartition(
+                axis ^ 1, others, how, sort, force_repartition=False
             )
             new_lengths = None
             new_widths = None
