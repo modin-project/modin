@@ -12,10 +12,12 @@
 # governing permissions and limitations under the License.
 
 import modin.pandas as pd
-from modin.config import TestDatasetSize
+from modin.config import CpuCount, TestDatasetSize
 from .utils import generate_dataframe, RAND_LOW, RAND_HIGH
 
-pd.DEFAULT_NPARTITIONS = 4
+# define `MODIN_CPUS` env var to control the number of partitions
+# it should be defined before modin.pandas import
+pd.DEFAULT_NPARTITIONS = CpuCount.get()
 
 if TestDatasetSize.get() == "Big":
     MERGE_DATA_SIZE = [
