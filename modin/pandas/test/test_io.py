@@ -41,7 +41,6 @@ from .utils import (
     IO_OPS_DATA_DIR,
     io_ops_bad_exc,
     eval_io_from_str,
-    comp_to_ext,
 )
 
 from modin.config import Engine, Backend, IsExperimental
@@ -76,6 +75,9 @@ DATASET_SIZE_DICT = {
 
 # Number of rows in the test file
 NROWS = DATASET_SIZE_DICT.get(TestDatasetSize.get(), DATASET_SIZE_DICT["Small"])
+
+# Files compression to extension mapping
+comp_to_ext = {"gzip": "gz", "bz2": "bz2", "xz": "xz", "zip": "zip"}
 
 if not os.path.exists(IO_OPS_DATA_DIR):
     os.mkdir(IO_OPS_DATA_DIR)
@@ -925,11 +927,12 @@ class TestReadCSV:
             test_csv_dialect_params = {
                 "delimiter": "_",
                 "doublequote": False,
-                "escapechar": "d",
+                "escapechar": "\\",
                 "quotechar": "d",
                 "quoting": csv.QUOTE_ALL,
             }
             csv.register_dialect(dialect, **test_csv_dialect_params)
+            dialect = csv.get_dialect(dialect)
             make_csv_file(filename=unique_filename, **test_csv_dialect_params)
         else:
             make_csv_file(
