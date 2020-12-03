@@ -77,7 +77,7 @@ DATASET_SIZE_DICT = {
 NROWS = DATASET_SIZE_DICT.get(TestDatasetSize.get(), DATASET_SIZE_DICT["Small"])
 
 # Files compression to extension mapping
-comp_to_ext = {"gzip": "gz", "bz2": "bz2", "xz": "xz", "zip": "zip"}
+COMP_TO_EXT = {"gzip": "gz", "bz2": "bz2", "xz": "xz", "zip": "zip"}
 
 if not os.path.exists(IO_OPS_DATA_DIR):
     os.mkdir(IO_OPS_DATA_DIR)
@@ -239,7 +239,7 @@ def _make_csv_file(filenames):
                     lambda x: f"{x:,f}".replace(",", thousands_separator)
                 )
             filename = (
-                f"{filename}.{comp_to_ext[compression]}"
+                f"{filename}.{COMP_TO_EXT[compression]}"
                 if compression != "infer"
                 else filename
             )
@@ -882,7 +882,7 @@ class TestReadCSV:
             filename=unique_filename, encoding=encoding, compression=compression
         )
         compressed_file_path = (
-            f"{unique_filename}.{comp_to_ext[compression]}"
+            f"{unique_filename}.{COMP_TO_EXT[compression]}"
             if compression != "infer"
             else unique_filename
         )
