@@ -911,7 +911,7 @@ class TestReadCSV:
         escapechar,
         dialect,
     ):
-        if request.config.getoption("--simulate-cloud").lower() != "off" and dialect:
+        if request.config.getoption("--simulate-cloud").lower() != "off":
             pytest.xfail(
                 "The reason of tests fail in `cloud` mode is unknown for now - issue #2340"
             )
@@ -920,6 +920,10 @@ class TestReadCSV:
         elif Engine.get() != "Python" and escapechar:
             pytest.xfail(
                 "read_csv with Ray engine fails with some 'escapechar' parameters - issue #2494"
+            )
+        elif Engine.get() != "Python" and dialect:
+            pytest.xfail(
+                "read_csv with Ray engine fails with `dialect` parameter - issue #2508"
             )
 
         unique_filename = get_unique_filename()
