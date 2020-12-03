@@ -104,17 +104,15 @@ def _make_parser_func(sep):
         float_precision=None,
     ):
         # ISSUE #2408: parse parameter shared with pandas read_csv and read_table and update with provided args
-        _pd_read_csv_signature = dict(inspect.signature(pandas.read_csv).parameters)
-        _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
-        if kwargs.get("sep", sep) is False:
-            kwargs["sep"] = "\t"
+        _pd_read_csv_signature = {
+            val.name for val in inspect.signature(pandas.read_csv).parameters.values()
+        }
+        _, _, _, f_locals = inspect.getargvalues(inspect.currentframe())
+        if f_locals.get("sep", sep) is False:
+            f_locals["sep"] = "\t"
 
-        shared_keys = set(_pd_read_csv_signature.keys()).intersection(kwargs.keys())
-
-        for key in shared_keys:
-            _pd_read_csv_signature[key] = kwargs[key]
-
-        return _read(**_pd_read_csv_signature)
+        kwargs = {k: v for k, v in f_locals.items() if k in _pd_read_csv_signature}
+        return _read(**kwargs)
 
     return parser_func
 
