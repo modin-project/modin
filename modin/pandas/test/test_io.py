@@ -1042,7 +1042,13 @@ class TestReadCSV:
         memory_map,
         float_precision,
     ):
+        if Engine.get() != "Python" and delimiter == " ":
+            pytest.xfail(
+                "read_csv with Ray engine doesn't \
+                raise exceptions while Pandas raises - issue #2320"
+            )
 
+        # In this case raised TypeError: cannot use a string pattern on a bytes-like object
         case_with_TypeError_exc = (
             engine == "python"
             and delimiter == ","
