@@ -968,7 +968,7 @@ class BasePandasFrame(object):
         return OrderedDict(partition_ids_with_indices)
 
     @staticmethod
-    def _join_index_objects(axis, others_index, how, sort):
+    def _join_index_objects(axis, indexes, how, sort):
         """
         Join the pair of index objects (columns or rows) by a given strategy.
 
@@ -979,8 +979,8 @@ class BasePandasFrame(object):
         ----------
         axis : 0 or 1
             The axis index object to join (0 - rows, 1 - columns).
-        others_index : list(Index)
-            The others_index to join on.
+        indexes : list(Index)
+            The indexes to join on.
         how : {'left', 'right', 'inner', 'outer'}
             The type of join to join to make.
         sort : boolean
@@ -991,7 +991,7 @@ class BasePandasFrame(object):
         (Index, func)
             Joined index with make_reindexer func
         """
-        assert isinstance(others_index, list)
+        assert isinstance(indexes, list)
 
         # define helper functions
         def merge(left_index, right_index):
@@ -1002,40 +1002,40 @@ class BasePandasFrame(object):
 
         # define condition for joining indexes
         do_join_index = False
-        for index in others_index[1:]:
-            if not others_index[0].equals(index):
+        for index in indexes[1:]:
+            if not indexes[0].equals(index):
                 do_join_index = True
                 break
 
         # define condition for joining indexes with getting indexers
-        is_duplicates = any(not index.is_unique for index in others_index) and axis == 0
+        is_duplicates = any(not index.is_unique for index in indexes) and axis == 0
         indexers = []
         if is_duplicates:
-            indexers = [None] * len(others_index)
+            indexers = [None] * len(indexes)
 
         # perform joining indexes
         if do_join_index:
-            if len(others_index) == 2 and is_duplicates:
+            if len(indexes) == 2 and is_duplicates:
                 # in case of count of indexes > 2 we should perform joining all indexes
                 # after that get indexers
                 # in the fast path we can obtain joined_index and indexers in one call
-                joined_index, indexers[0], indexers[1] = others_index[0].join(
-                    others_index[1], how=how, sort=sort, return_indexers=True
+                joined_index, indexers[0], indexers[1] = indexes[0].join(
+                    indexes[1], how=how, sort=sort, return_indexers=True
                 )
             else:
-                joined_index = others_index[0]
+                joined_index = indexes[0]
                 # TODO: revisit for performance
-                for index in others_index[1:]:
+                for index in indexes[1:]:
                     joined_index = merge(joined_index, index)
 
                 if is_duplicates:
-                    for i, index in enumerate(others_index):
+                    for i, index in enumerate(indexes):
                         indexers[i] = index.get_indexer_for(joined_index)
         else:
-            joined_index = others_index[0].copy()
+            joined_index = indexes[0].copy()
 
         def make_reindexer(do_reindex: bool, frame_idx: int):
-            # the order of the frames must match the order of the indexes in `others_index`
+            # the order of the frames must match the order of the indexes
             if not do_reindex:
                 return lambda df: df
 
