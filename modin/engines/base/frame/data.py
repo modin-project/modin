@@ -967,7 +967,8 @@ class BasePandasFrame(object):
         ]
         return OrderedDict(partition_ids_with_indices)
 
-    def _join_index_objects(self, axis, others_index, how, sort):
+    @staticmethod
+    def _join_index_objects(axis, others_index, how, sort):
         """
         Join the pair of index objects (columns or rows) by a given strategy.
 
@@ -979,7 +980,7 @@ class BasePandasFrame(object):
         axis : 0 or 1
             The axis index object to join (0 - rows, 1 - columns).
         others_index : list(Index)
-            The others_index to join on. Index of `self` frame should be first.
+            The others_index to join on.
         how : {'left', 'right', 'inner', 'outer'}
             The type of join to join to make.
         sort : boolean
@@ -1000,17 +1001,14 @@ class BasePandasFrame(object):
                 return left_index.join(right_index, how=how, sort=sort)
 
         # define condition for joining indexes
-        self_index = others_index[0]
         do_join_index = False
         for index in others_index[1:]:
-            if not self_index.equals(index):
+            if not others_index[0].equals(index):
                 do_join_index = True
                 break
 
-        # define condition for joining indexes with getting indexersы
-        is_duplicates = (
-            any([not index.is_unique for index in others_index]) and axis == 0
-        )
+        # define condition for joining indexes with getting indexers
+        is_duplicates = any(not index.is_unique for index in others_index) and axis == 0
         indexers = []
         if is_duplicates:
             indexers = [None] * len(others_index)
@@ -1766,13 +1764,10 @@ class BasePandasFrame(object):
             other = [other]
 
         # define helper functions
-        def get_column_widths(partitions):
-            if len(partitions) > 0:
+        def get_axis_lengths(partitions, axis):
+            if axis:
                 return [obj.width() for obj in partitions[0]]
-
-        def get_row_lengths(partitions):
-            if len(partitions.T) > 0:
-                return [obj.length() for obj in partitions.T[0]]
+            return [obj.length() for obj in partitions.T[0]]
 
         self_index = self.axes[axis]
         others_index = [o.axes[axis] for o in other]
@@ -1796,14 +1791,8 @@ class BasePandasFrame(object):
             reindexed_self = self._partitions
 
         # define length of `self` and `other` frames to aligning purpose
-        self_lengths = (
-            get_row_lengths(reindexed_self)
-            if axis == 0
-            else get_column_widths(reindexed_self)
-        )
-        others_lengths = [
-            o._row_lengths if axis == 0 else o._column_widths for o in other
-        ]
+        self_lengths = get_axis_lengths(reindexed_self, axis)
+        others_lengths = [o._axes_lengths[axis] for o in other]
 
         # define conditions for reindexing and repartitioning `other` frames
         do_reindex_others = [not index.equals(joined_index) for index in others_index]
