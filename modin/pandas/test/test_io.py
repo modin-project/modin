@@ -314,6 +314,7 @@ def TestReadCSVFixture():
         "test_read_csv_blank_lines",
         "test_read_csv_yes_no",
         "test_read_csv_nans",
+        "test_read_csv_bad_lines",
     ]
     # each xdist worker spawned in separate process with separate namespace and dataset
     pytest.csvs_names = {file_id: get_unique_filename() for file_id in files_ids}
@@ -336,6 +337,11 @@ def TestReadCSVFixture():
         filename=pytest.csvs_names["test_read_csv_nans"],
         add_blank_lines=True,
         additional_col_values=["<NA>", "N/A", "NA", "NULL", "custom_nan", "73"],
+    )
+    # test_read_csv_error_handling
+    _make_csv_file(filenames)(
+        filename=pytest.csvs_names["test_read_csv_bad_lines"],
+        add_bad_lines=True,
     )
 
     yield
@@ -859,6 +865,26 @@ class TestReadCSV:
         pd_df = pd_reader.read()
 
         df_equals(modin_df, pd_df)
+
+    # Error Handling parameters tests
+    @pytest.mark.xfail(
+        Engine.get() != "Python",
+        reason="read_csv with Ray engine doen't raise `bad lines` exceptions - issue #2500",
+    )
+    @pytest.mark.parametrize("warn_bad_lines", [True, False])
+    @pytest.mark.parametrize("error_bad_lines", [True, False])
+    def test_read_csv_error_handling(
+        self,
+        warn_bad_lines,
+        error_bad_lines,
+    ):
+        eval_io(
+            fn_name="read_csv",
+            # read_csv kwargs
+            filepath_or_buffer=pytest.csvs_names["test_read_csv_bad_lines"],
+            warn_bad_lines=warn_bad_lines,
+            error_bad_lines=error_bad_lines,
+        )
 
 
 def test_from_parquet(make_parquet_file):
