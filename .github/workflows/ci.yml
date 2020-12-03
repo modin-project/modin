@@ -303,7 +303,7 @@ jobs:
     env:
       MODIN_ENGINE: ray
       MODIN_MEMORY: 1000000000
-      TestDatasetSize: small
+      MODIN_TEST_DATASET_SIZE: small
     name: test-asv-benchmarks
     steps:
       - uses: actions/checkout@v2
