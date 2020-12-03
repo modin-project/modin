@@ -1461,21 +1461,6 @@ def test_from_sas():
     df_equals(modin_df, pandas_df)
 
 
-@pytest.mark.parametrize("nrows", [123, None])
-def test_from_csv(make_csv_file, nrows):
-    make_csv_file()
-
-    pandas_df = pandas.read_csv(TEST_CSV_FILENAME, nrows=nrows)
-    modin_df = pd.read_csv(TEST_CSV_FILENAME, nrows=nrows)
-
-    df_equals(modin_df, pandas_df)
-
-    pandas_df = pandas.read_csv(Path(TEST_CSV_FILENAME), nrows=nrows)
-    modin_df = pd.read_csv(Path(TEST_CSV_FILENAME), nrows=nrows)
-
-    df_equals(modin_df, pandas_df)
-
-
 def test_from_csv_within_decorator(make_csv_file):
     make_csv_file()
 
