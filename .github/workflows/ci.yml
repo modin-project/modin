@@ -297,6 +297,62 @@ jobs:
       - shell: bash -l {0}
         run: bash <(curl -s https://codecov.io/bash)
   
+  test-asv-benchmarks:
+    needs: [lint-commit, lint-flake8, lint-black, test-api, test-headers]
+    runs-on: ubuntu-latest
+    env:
+      MODIN_ENGINE: ray
+      MODIN_MEMORY: 1000000000
+      MODIN_TEST_DATASET_SIZE: small
+    name: test-asv-benchmarks
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 1
+      - name: Cache pip
+        uses: actions/cache@v1
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-python-3.7-pip-${{ github.run_id }}-${{ hashFiles('environment.yml') }}
+      - uses: conda-incubator/setup-miniconda@v2
+        with:
+          activate-environment: modin
+          environment-file: environment.yml
+          python-version: 3.7
+          channel-priority: strict
+          use-only-tar-bz2: true # IMPORTANT: This needs to be set for caching to work properly!
+      - name: Conda environment
+        shell: bash -l {0}
+        run: |
+          conda info
+          conda list
+
+      - name: Running benchmarks
+        shell: bash -l {0}
+        run: |
+          pip install -e .
+          cd asv_bench
+          asv check -E existing
+          git remote add upstream https://github.com/modin-project/modin.git
+          git fetch upstream
+          if git diff upstream/master --name-only | grep -q "^asv_bench/"; then
+              asv machine --yes
+              asv run --quick --show-stderr --python=same --launch-method=spawn | sed "/failed$/ s/^/##[error]/" | tee benchmarks.log
+              if grep "failed" benchmarks.log > /dev/null ; then
+                  exit 1
+              fi
+          else
+              echo "Benchmarks did not run, no changes detected"
+          fi
+        if: always()
+
+      - name: Publish benchmarks artifact
+        uses: actions/upload-artifact@master
+        with:
+          name: Benchmarks log
+          path: asv_bench/benchmarks.log
+        if: failure()
+
   test-all:
     needs: [lint-commit, lint-flake8, lint-black, test-api, test-headers]
     runs-on: ubuntu-latest

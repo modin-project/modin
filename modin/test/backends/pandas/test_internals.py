@@ -12,6 +12,9 @@
 # governing permissions and limitations under the License.
 
 import modin.pandas as pd
+from modin.pandas.test.utils import create_test_dfs
+
+pd.DEFAULT_NPARTITIONS = 4
 
 
 def test_aligning_blocks():
@@ -38,3 +41,14 @@ def test_aligning_blocks_with_duplicated_index():
     df2 = pd.DataFrame(data21).append(pd.DataFrame(data22))
 
     repr(df1 - df2)
+
+
+def test_aligning_partitions():
+    data = [0, 1, 2, 3, 4, 5]
+    modin_df1, _ = create_test_dfs({"a": data, "b": data})
+    modin_df = modin_df1.loc[:2]
+
+    modin_df2 = modin_df.append(modin_df)
+
+    modin_df2["c"] = modin_df1["b"]
+    repr(modin_df2)

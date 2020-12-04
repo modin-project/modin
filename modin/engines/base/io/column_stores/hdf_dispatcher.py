@@ -13,11 +13,13 @@
 
 import pandas
 
-from modin.engines.base.io.column_stores.column_store_reader import ColumnStoreReader
+from modin.engines.base.io.column_stores.column_store_dispatcher import (
+    ColumnStoreDispatcher,
+)
 from modin.error_message import ErrorMessage
 
 
-class HDFReader(ColumnStoreReader):  # pragma: no cover
+class HDFDispatcher(ColumnStoreDispatcher):  # pragma: no cover
     @classmethod
     def _validate_hdf_format(cls, path_or_buf):
         s = pandas.HDFStore(path_or_buf)

@@ -28,6 +28,7 @@ import pandas.core.groupby
 from pandas.core.dtypes.common import is_list_like
 from pandas.core.aggregation import reconstruct_func
 import pandas.core.common as com
+from types import BuiltinFunctionType
 
 from modin.error_message import ErrorMessage
 from modin.utils import _inherit_docstrings, try_cast_to_pandas
@@ -358,6 +359,13 @@ class DataFrameGroupBy(object):
             # so we throw a different message
             raise NotImplementedError("axis other than 0 is not supported")
 
+        if (
+            callable(func)
+            and isinstance(func, BuiltinFunctionType)
+            and func.__name__ in dir(self)
+        ):
+            func = func.__name__
+
         relabeling_required = False
         if isinstance(func, dict) or func is None:
 
@@ -389,6 +397,12 @@ class DataFrameGroupBy(object):
                 *args,
                 **kwargs,
             )
+        elif callable(func):
+            return self._apply_agg_function(
+                lambda grp, *args, **kwargs: grp.aggregate(func, *args, **kwargs),
+                *args,
+                **kwargs,
+            )
         elif isinstance(func, str):
             # Using "getattr" here masks possible AttributeError which we throw
             # in __getattr__, so we should call __getattr__ directly instead.
@@ -398,7 +412,6 @@ class DataFrameGroupBy(object):
 
         result = self._apply_agg_function(
             func,
-            drop=self._as_index,
             *args,
             **kwargs,
         )

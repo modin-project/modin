@@ -172,3 +172,7 @@ cscope.out
 # Dask workspace
 dask-worker-space/
 node_modules
+
+# Asv stuff
+asv_bench/.asv/
+asv_bench/modin/

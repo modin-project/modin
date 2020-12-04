@@ -14,13 +14,13 @@
 from modin.backends.pandas.query_compiler import PandasQueryCompiler
 from modin.engines.ray.generic.io import RayIO
 from modin.engines.base.io import (
-    CSVReader,
-    FWFReader,
-    JSONReader,
-    ParquetReader,
-    FeatherReader,
-    SQLReader,
-    ExcelReader,
+    CSVDispatcher,
+    FWFDispatcher,
+    JSONDispatcher,
+    ParquetDispatcher,
+    FeatherDispatcher,
+    SQLDispatcher,
+    ExcelDispatcher,
 )
 from modin.backends.pandas.parsers import (
     PandasCSVParser,
@@ -45,16 +45,18 @@ class PandasOnRayIO(RayIO):
         query_compiler_cls=PandasQueryCompiler,
         frame_cls=PandasOnRayFrame,
     )
-    read_csv = type("", (RayTask, PandasCSVParser, CSVReader), build_args).read
-    read_fwf = type("", (RayTask, PandasFWFParser, FWFReader), build_args).read
-    read_json = type("", (RayTask, PandasJSONParser, JSONReader), build_args).read
+    read_csv = type("", (RayTask, PandasCSVParser, CSVDispatcher), build_args).read
+    read_fwf = type("", (RayTask, PandasFWFParser, FWFDispatcher), build_args).read
+    read_json = type("", (RayTask, PandasJSONParser, JSONDispatcher), build_args).read
     read_parquet = type(
-        "", (RayTask, PandasParquetParser, ParquetReader), build_args
+        "", (RayTask, PandasParquetParser, ParquetDispatcher), build_args
     ).read
     # Blocked on pandas-dev/pandas#12236. It is faster to default to pandas.
     # read_hdf = type("", (RayTask, PandasHDFParser, HDFReader), build_args).read
     read_feather = type(
-        "", (RayTask, PandasFeatherParser, FeatherReader), build_args
+        "", (RayTask, PandasFeatherParser, FeatherDispatcher), build_args
     ).read
-    read_sql = type("", (RayTask, PandasSQLParser, SQLReader), build_args).read
-    read_excel = type("", (RayTask, PandasExcelParser, ExcelReader), build_args).read
+    read_sql = type("", (RayTask, PandasSQLParser, SQLDispatcher), build_args).read
+    read_excel = type(
+        "", (RayTask, PandasExcelParser, ExcelDispatcher), build_args
+    ).read
