@@ -2521,7 +2521,6 @@ class PandasQueryCompiler(BaseQueryCompiler):
         agg_kwargs,
         groupby_kwargs,
         drop=False,
-        preserve_labels=True,
     ):
         if callable(agg_func):
             agg_func = wrap_udf_function(agg_func)
