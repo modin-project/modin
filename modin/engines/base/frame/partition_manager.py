@@ -238,7 +238,7 @@ class BaseFrameManager(ABC):
         right : The right partitions.
         keep_partitioning : boolean. Default is False
             The flag to keep partitions for Modin Frame.
-        lengths : list(int)
+        lengths : list(int), default None
             The list of lengths to shuffle the object.
 
         Returns
@@ -250,6 +250,8 @@ class BaseFrameManager(ABC):
         # partitions as best we can right now.
         if keep_partitioning:
             num_splits = len(left) if axis == 0 else len(left.T)
+        elif lengths:
+            num_splits = len(lengths)
         else:
             num_splits = cls._compute_num_partitions()
         preprocessed_map_func = cls.preprocess_func(apply_func)
