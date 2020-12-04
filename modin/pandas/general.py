@@ -159,26 +159,144 @@ def merge_asof(
             "can not merge DataFrame with instance of type {}".format(type(right))
         )
     ErrorMessage.default_to_pandas("`merge_asof`")
-    if isinstance(right, DataFrame):
-        right = to_pandas(right)
-    return DataFrame(
-        pandas.merge_asof(
-            to_pandas(left),
-            right,
-            on=on,
-            left_on=left_on,
-            right_on=right_on,
-            left_index=left_index,
-            right_index=right_index,
-            by=by,
-            left_by=left_by,
-            right_by=right_by,
-            suffixes=suffixes,
-            tolerance=tolerance,
-            allow_exact_matches=allow_exact_matches,
-            direction=direction,
+
+    # As of Pandas 1.2 these should raise an error; before that it did
+    # something likely random:
+    if (
+        (on and (left_index or right_index))
+        or (left_on and left_index)
+        or (right_on and right_index)
+    ):
+        raise ValueError("Can't combine left/right_index with left/right_on or on.")
+
+    # Pandas fallbacks for tricky cases:
+    if (
+        # No idea how this works or why it does what it does; and in fact
+        # there's a Pandas bug suggesting it's wrong:
+        # https://github.com/pandas-dev/pandas/issues/33463
+        (left_index and right_on is not None)
+        # This is the case where by is a list of columns. If we're copying lots
+        # of columns out of Pandas, maybe not worth trying our path, it's not
+        # clear it's any better:
+        or not isinstance(by, (str, type(None)))
+        or not isinstance(left_by, (str, type(None)))
+        or not isinstance(right_by, (str, type(None)))
+    ):
+        if isinstance(right, DataFrame):
+            right = to_pandas(right)
+        return DataFrame(
+            pandas.merge_asof(
+                to_pandas(left),
+                right,
+                on=on,
+                left_on=left_on,
+                right_on=right_on,
+                left_index=left_index,
+                right_index=right_index,
+                by=by,
+                left_by=left_by,
+                right_by=right_by,
+                suffixes=suffixes,
+                tolerance=tolerance,
+                allow_exact_matches=allow_exact_matches,
+                direction=direction,
+            )
         )
+
+    left_column = None
+    right_column = None
+
+    if on is not None:
+        if left_on is not None or right_on is not None:
+            raise ValueError("If 'on' is set, 'left_on' and 'right_on' can't be set.")
+        left_on = on
+        right_on = on
+
+    if left_on is not None:
+        left_column = to_pandas(left[left_on])
+    elif left_index:
+        left_column = left.index
+    else:
+        raise ValueError("Need some sort of 'on' spec")
+
+    if right_on is not None:
+        right_column = to_pandas(right[right_on])
+    elif right_index:
+        right_column = right.index
+    else:
+        raise ValueError("Need some sort of 'on' spec")
+
+    # If we haven't set these by now, there's a bug in this function.
+    assert left_column is not None
+    assert right_column is not None
+
+    if by is not None:
+        if left_by is not None or right_by is not None:
+            raise ValueError("Can't have both 'by' and 'left_by' or 'right_by'")
+        left_by = right_by = by
+
+    # List of columns case should have been handled by direct Pandas fallback
+    # earlier:
+    assert isinstance(left_by, (str, type(None)))
+    assert isinstance(right_by, (str, type(None)))
+
+    left_pandas_limited = {"on": left_column}
+    right_pandas_limited = {"on": right_column, "right_labels": right.index}
+    extra_kwargs = {}  # extra arguments to Pandas merge_asof
+
+    if left_by is not None or right_by is not None:
+        extra_kwargs["by"] = "by"
+        left_pandas_limited["by"] = to_pandas(left[left_by])
+        right_pandas_limited["by"] = to_pandas(right[right_by])
+
+    # 1. Construct Pandas DataFrames with just the 'on' and optional 'by'
+    # columns, and the index as another column.
+    left_pandas_limited = pandas.DataFrame(left_pandas_limited, index=left.index)
+    right_pandas_limited = pandas.DataFrame(right_pandas_limited)
+
+    # 2. Use Pandas' merge_asof to figure out how to map labels on left to
+    # labels on the right.
+    merged = pandas.merge_asof(
+        left_pandas_limited,
+        right_pandas_limited,
+        on="on",
+        direction=direction,
+        allow_exact_matches=allow_exact_matches,
+        tolerance=tolerance,
+        **extra_kwargs,
     )
+    # Now merged["right_labels"] shows which labels from right map to left's index.
+
+    # 3. Re-index right using the merged["right_labels"]; at this point right
+    # should be same length and (semantically) same order as left:
+    right_subset = right.reindex(index=pandas.Index(merged["right_labels"]))
+    if not right_index:
+        right_subset.drop(columns=[right_on], inplace=True)
+    if right_by is not None and left_by == right_by:
+        right_subset.drop(columns=[right_by], inplace=True)
+    right_subset.index = left.index
+
+    # 4. Merge left and the new shrunken right:
+    result = merge(
+        left,
+        right_subset,
+        left_index=True,
+        right_index=True,
+        suffixes=suffixes,
+        how="left",
+    )
+
+    # 5. Clean up to match Pandas output:
+    if left_on is not None and right_index:
+        result.insert(
+            result.columns.get_indexer_for(left_on + suffixes[0])[0],
+            left_on,
+            result[left_on + suffixes[0]],
+        )
+    if not left_index and not right_index:
+        result.index = pandas.RangeIndex(start=0, stop=len(result))
+
+    return result
 
 
 @_inherit_docstrings(pandas.pivot_table)
