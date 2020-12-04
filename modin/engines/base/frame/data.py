@@ -981,8 +981,9 @@ class BasePandasFrame(object):
             The axis index object to join (0 - rows, 1 - columns).
         indexes : list(Index)
             The indexes to join on.
-        how : {'left', 'right', 'inner', 'outer'}
-            The type of join to join to make.
+        how : {'left', 'right', 'inner', 'outer', None}
+            The type of join to join to make. If `None` then joined index
+            considered to be the first index in the `indexes` list.
         sort : boolean
             Whether or not to sort the joined index
 
@@ -1001,14 +1002,12 @@ class BasePandasFrame(object):
                 return left_index.join(right_index, how=how, sort=sort)
 
         # define condition for joining indexes
-        do_join_index = False
-        for index in indexes[1:]:
-            if not indexes[0].equals(index):
-                do_join_index = True
-                break
+        do_join_index = how is not None and any(
+            not indexes[0].equals(index) for index in [indexes[1:]]
+        )
 
         # define condition for joining indexes with getting indexers
-        is_duplicates = any(not index.is_unique for index in indexes) and axis == 0
+        is_duplicates = axis == 0 and any(not index.is_unique for index in indexes)
         indexers = []
         if is_duplicates:
             indexers = [None] * len(indexes)
@@ -1027,12 +1026,12 @@ class BasePandasFrame(object):
                 # TODO: revisit for performance
                 for index in indexes[1:]:
                     joined_index = merge(joined_index, index)
-
-                if is_duplicates:
-                    for i, index in enumerate(indexes):
-                        indexers[i] = index.get_indexer_for(joined_index)
         else:
             joined_index = indexes[0].copy()
+
+        if is_duplicates and indexers[0] is None:
+            for i, index in enumerate(indexes):
+                indexers[i] = index.get_indexer_for(joined_index)
 
         def make_reindexer(do_reindex: bool, frame_idx: int):
             # the order of the frames must match the order of the indexes

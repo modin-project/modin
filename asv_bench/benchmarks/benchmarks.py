@@ -30,6 +30,7 @@ if TestDatasetSize.get() == "Big":
         (10, 1_000_000),
         (1_000_000, 10),
     ]
+    DATA_SIZE = [(50_000, 128)]
 else:
     MERGE_DATA_SIZE = [
         (2000, 100, 2000, 100),
@@ -37,6 +38,7 @@ else:
     GROUPBY_DATA_SIZE = [
         (2000, 100),
     ]
+    DATA_SIZE = [(10_000, 128)]
 
 JOIN_DATA_SIZE = MERGE_DATA_SIZE
 ARITHMETIC_DATA_SIZE = GROUPBY_DATA_SIZE
@@ -156,6 +158,70 @@ class TimeBinaryOp:
 
     def time_concat(self, data_type, data_size, binary_op, axis):
         self.op(self.df2, axis=axis)
+
+
+class BaseTimeSetItem:
+    param_names = ["data_type", "data_size", "item_length", "loc", "is_equal_indices"]
+
+    def get_loc(df, loc, axis, item_length):
+        locs_dict = {
+            "zero": 0,
+            "middle": len(df.axes[1]) // 2,
+            "last": -1,
+        }
+        base_loc = locs_dict[loc]
+        return (
+            df.axes[axis][base_loc]
+            if item_length == 1
+            else df.axes[axis][np.arange(base_loc, base_loc + item_length)]
+        )
+
+    def setup(self, data_type, data_size, item_length, loc, axis, is_equal_indices):
+        self.df = generate_dataframe(
+            "modin", data_type, data_size[1], data_size[0], RAND_LOW, RAND_HIGH
+        )
+        self.loc = self.get_loc(self.df, loc, item_length=item_length, axis=1)
+
+        self.item = self.df[self.loc] + 1
+        self.item_raw = self.item.to_numpy()
+        if not is_equal_indices:
+            self.item.index = reversed(self.item.index)
+
+
+class TimeSetItem(BaseTimeSetItem):
+    params = [
+        ["int"],
+        DATA_SIZE,
+        [1, 5],
+        ["zero", "middle", "last"],
+        [True, False],
+    ]
+
+    def time_setitem_qc(self, *args, **kwargs):
+        self.df[self.loc] = self.item
+        repr(self.df)
+
+    def time_setitem_raw(self, *args, **kwargs):
+        self.df[self.loc] = self.item_raw
+        repr(self.df)
+
+
+class TimeInsert(BaseTimeSetItem):
+    params = [
+        ["int"],
+        DATA_SIZE,
+        [1],
+        ["zero", "middle", "last"],
+        [True, False],
+    ]
+
+    def time_setitem_qc(self, *args, **kwargs):
+        self.df.insert(loc=self.loc, column="new_col", value=self.item)
+        repr(df)
+
+    def time_setitem_raw(self, *args, **kwargs):
+        self.df.insert(loc=self.loc, column="new_col", value=self.item_raw)
+        repr(df)
 
 
 class TimeArithmetic:

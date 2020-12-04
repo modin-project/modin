@@ -479,6 +479,8 @@ class TestConcat:
     def test_setitem_lazy(self):
         def applier(df, **kwargs):
             df = df + 1
+            df["a"] = df["a"] + 1
+            df["e"] = df["a"] + 1
             df["new_int8"] = np.int8(10)
             df["new_int16"] = np.int16(10)
             df["new_int32"] = np.int32(10)
@@ -486,7 +488,6 @@ class TestConcat:
             df["new_int"] = 10
             df["new_float"] = 5.5
             df["new_float64"] = np.float64(10.1)
-            df["a"] = df["a"] + 1
             return df
 
         run_and_compare(applier, data=self.data)

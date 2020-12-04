@@ -75,6 +75,16 @@ def test_insert_item(axis, item_length, loc):
             else (df.iloc[:-item_length, :], df.iloc[-item_length:, :])
         )
 
+    def get_loc(frame, loc):
+        locs_dict = {
+            "first": 0,
+            "first + 1": 1,
+            "middle": len(frame.axes[axis]) // 2,
+            "penult": len(frame.axes[axis]) - 1,
+            "last": len(frame.axes[axis]),
+        }
+        return locs_dict[loc]
+
     def get_reference(df, value, loc):
         if axis == 0:
             first_mask = df.iloc[:loc]
@@ -85,22 +95,23 @@ def test_insert_item(axis, item_length, loc):
         return pandas.concat([first_mask, value, second_mask], axis=axis)
 
     md_frames, pd_frames = create_test_dfs(data, post_fn=post_fn)
-    md_item, md_main = md_frames
-    pd_item, pd_main = pd_frames
+    md_item1, md_item2 = md_frames
+    pd_item1, pd_item2 = pd_frames
 
-    locs_dict = {
-        "first": 0,
-        "first + 1": 1,
-        "middle": len(md_main.axes[axis]) // 2,
-        "penult": len(md_main.axes[axis]) - 1,
-        "last": len(md_main.axes[axis]),
-    }
+    index_loc = get_loc(pd_item1, loc)
 
-    loc = locs_dict[loc]
+    pd_res = get_reference(pd_item1, loc=index_loc, value=pd_item2)
+    md_res = md_item1._query_compiler.insert_item(
+        axis=axis, loc=index_loc, value=md_item2._query_compiler
+    ).to_pandas()
 
-    pd_res = get_reference(pd_main, loc=loc, value=pd_item)
-    md_res = md_main._query_compiler.insert_item(
-        axis=axis, loc=loc, value=md_item._query_compiler
+    df_equals(md_res, pd_res)
+
+    index_loc = get_loc(pd_item2, loc)
+
+    pd_res = get_reference(pd_item2, loc=index_loc, value=pd_item1)
+    md_res = md_item2._query_compiler.insert_item(
+        axis=axis, loc=index_loc, value=md_item1._query_compiler
     ).to_pandas()
 
     df_equals(md_res, pd_res)

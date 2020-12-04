@@ -2168,7 +2168,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         """
         return self.__constructor__(self._modin_frame.mask(row_numeric_idx=key))
 
-    def insert_item(self, axis, loc, value):
+    def insert_item(self, axis, loc, value, how="inner", replace=False):
         """
         Insert new column/row defined by `value` at the specified `loc`
 
@@ -2186,23 +2186,24 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
         def execute_concat(left, middle, *right):
             return self.__constructor__(
-                left._concat(axis, [middle, *right], "left", sort=False)
+                left._concat(axis, [middle, *right], how, sort=False)
             )
 
         def get_kwargs(value):
+            # `modin_frame.mask` returns the `self` if all index parameters are `None`
+            # this is that we want to get if `len(value) == len(axis)`
+            value = None if len(value) == len(self.get_axis(axis)) else value
             return {("col_numeric_idx" if axis else "row_numeric_idx"): value}
 
-        if 0 < loc < len(self.get_axis(axis)):
+        if 0 <= loc < len(self.get_axis(axis)) + int(replace):
             first_mask = self._modin_frame.mask(**get_kwargs(list(range(loc))))
+            second_mask_loc = loc + 1 if replace else loc
             second_mask = self._modin_frame.mask(
-                **get_kwargs(list(range(loc, len(self.get_axis(axis)))))
+                **get_kwargs(list(range(second_mask_loc, len(self.get_axis(axis)))))
             )
             return execute_concat(first_mask, value._modin_frame, second_mask)
         else:
-            if loc == 0:
-                return execute_concat(value._modin_frame, self._modin_frame)
-            else:
-                return execute_concat(self._modin_frame, value._modin_frame)
+            return execute_concat(self._modin_frame, value._modin_frame)
 
     def setitem(self, axis, key, value):
         """Set the column defined by `key` to the `value` provided.
@@ -2214,14 +2215,9 @@ class PandasQueryCompiler(BaseQueryCompiler):
         Returns:
              A new QueryCompiler
         """
-        if isinstance(value, type(self)) and not value.get_axis(0).equals(
-            self.get_axis(axis)
-        ):
-            value = value.reindex(0, self.get_axis(axis))
+        return self._setitem(axis=axis, key=key, value=value, how=None)
 
-        return self._setitem(axis=axis, key=key, value=value)
-
-    def _setitem(self, axis, key, value):
+    def _setitem(self, axis, key, value, how="inner"):
         def setitem_builder(df, internal_indices=[]):
             df = df.copy()
             if len(internal_indices) == 1:
@@ -2238,55 +2234,13 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
         if isinstance(value, type(self)):
             value.columns = [key]
-            if axis == 0:
-                idx = self.columns.get_indexer_for([key])[0]
-                if 0 < idx < len(self.columns) - 1:
-                    first_mask = self._modin_frame.mask(
-                        col_numeric_idx=list(range(idx))
-                    )
-                    second_mask = self._modin_frame.mask(
-                        col_numeric_idx=list(range(idx + 1, len(self.columns)))
-                    )
-                    return self.__constructor__(
-                        first_mask._concat(
-                            1, [value._modin_frame, second_mask], "inner", False
-                        )
-                    )
-                else:
-                    mask = self.drop(columns=[key])._modin_frame
-                    if idx == 0:
-                        return self.__constructor__(
-                            value._modin_frame._concat(1, [mask], "inner", False)
-                        )
-                    else:
-                        return self.__constructor__(
-                            mask._concat(1, [value._modin_frame], "inner", False)
-                        )
-            else:
+            if axis == 1:
                 value = value.transpose()
-                idx = self.index.get_indexer_for([key])[0]
-                if 0 < idx < len(self.index) - 1:
-                    first_mask = self._modin_frame.mask(
-                        row_numeric_idx=list(range(idx))
-                    )
-                    second_mask = self._modin_frame.mask(
-                        row_numeric_idx=list(range(idx + 1, len(self.index)))
-                    )
-                    return self.__constructor__(
-                        first_mask._concat(
-                            0, [value._modin_frame, second_mask], "inner", False
-                        )
-                    )
-                else:
-                    mask = self.drop(index=[key])._modin_frame
-                    if idx == 0:
-                        return self.__constructor__(
-                            value._modin_frame._concat(0, [mask], "inner", False)
-                        )
-                    else:
-                        return self.__constructor__(
-                            mask._concat(0, [value._modin_frame], "inner", False)
-                        )
+            idx = self.get_axis(axis ^ 1).get_indexer_for([key])[0]
+            return self.insert_item(axis ^ 1, idx, value, how, replace=True)
+
+        # TODO: rework by passing list-like values to `_apply_select_indices`
+        # as an item to distribute
         if is_list_like(value):
             new_modin_frame = self._modin_frame._apply_full_axis_select_indices(
                 axis,
@@ -2370,26 +2324,23 @@ class PandasQueryCompiler(BaseQueryCompiler):
         Returns:
             A new PandasQueryCompiler with new data inserted.
         """
-        if isinstance(value, (type(self), pandas.Series)):
-            value = (
-                value
-                if value.index.equals(self.index)
-                else value.reindex(axis=0, labels=self.index)
-            )
-        elif is_list_like(value):
-            value = list(value)
-        else:
-            value = [value] * len(self.index)
 
         if isinstance(value, type(self)):
             value.columns = [column]
-            return self.insert_item(axis=1, loc=loc, value=value)
+            return self.insert_item(axis=1, loc=loc, value=value, how=None)
+
+        if is_list_like(value):
+            value = list(value)
+        else:
+            value = [value] * len(self.index)
 
         def insert(df, internal_indices=[]):
             internal_idx = int(internal_indices[0])
             df.insert(internal_idx, column, value)
             return df
 
+        # TODO: rework by passing list-like values to `_apply_select_indices`
+        # as an item to distribute
         new_modin_frame = self._modin_frame._apply_full_axis_select_indices(
             0,
             insert,
