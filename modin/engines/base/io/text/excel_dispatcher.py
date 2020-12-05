@@ -41,7 +41,6 @@ class ExcelDispatcher(TextFileDispatcher):
             return cls.single_worker_read(io, **kwargs)
 
         from zipfile import ZipFile
-        from openpyxl import load_workbook
         from openpyxl.worksheet.worksheet import Worksheet
         from openpyxl.worksheet._reader import WorksheetReader
         from openpyxl.reader.excel import ExcelReader
@@ -59,12 +58,23 @@ class ExcelDispatcher(TextFileDispatcher):
             "Parallel `read_excel` is a new feature! Please email "
             "bug_reports@modin.org if you run into any problems."
         )
-        wb = load_workbook(filename=io, read_only=True)
-        # Get shared strings
-        ex = ExcelReader(io, read_only=True)
-        ex.read_manifest()
-        ex.read_strings()
-        ws = Worksheet(wb)
+
+        # NOTE: ExcelReader() in read-only mode does not close file handle by itself
+        # work around that by passing file object if we received some path
+        io_file = open(io, "rb") if isinstance(io, str) else io
+        try:
+            ex = ExcelReader(io_file, read_only=True)
+            ex.read()
+            wb = ex.wb
+
+            # Get shared strings
+            ex.read_manifest()
+            ex.read_strings()
+            ws = Worksheet(wb)
+        finally:
+            if isinstance(io, str):
+                # close only if it were us who opened the object
+                io_file.close()
 
         with ZipFile(io) as z:
             from io import BytesIO
