@@ -736,7 +736,7 @@ class TestReadCSV:
 
         str_single_element = "1"
         str_single_col = "1\n2\n3\n"
-        str_four_cols = "1, 2, 3, 4\n" "5, 6, 7, 8\n" "9, 10, 11, 12\n"
+        str_four_cols = "1, 2, 3, 4\n5, 6, 7, 8\n9, 10, 11, 12\n"
         case_to_data = {
             "single_element": str_single_element,
             "single_column": str_single_col,
@@ -750,7 +750,7 @@ class TestReadCSV:
 
     def test_read_csv_mangle_dupe_cols(self):
         unique_filename = get_unique_filename()
-        str_non_unique_cols = "col,col,col,col\n" "5, 6, 7, 8\n" "9, 10, 11, 12\n"
+        str_non_unique_cols = "col,col,col,col\n5, 6, 7, 8\n9, 10, 11, 12\n"
         eval_io_from_str(str_non_unique_cols, unique_filename, mangle_dupe_cols=True)
 
     # NA and Missing Data Handling tests
@@ -1048,7 +1048,9 @@ class TestReadCSV:
                 raise exceptions while Pandas raises - issue #2320"
             )
 
-        # In this case raised TypeError: cannot use a string pattern on a bytes-like object
+        # In this case raised TypeError: cannot use a string pattern on a bytes-like object,
+        # so TypeError should be excluded from raising_exceptions list in order to check, that
+        # the same exceptions are raised by Pandas and Modin
         case_with_TypeError_exc = (
             engine == "python"
             and delimiter == ","
