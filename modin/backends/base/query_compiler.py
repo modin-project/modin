@@ -1394,6 +1394,7 @@ class BaseQueryCompiler(abc.ABC):
             reduce_args=reduce_args,
             numeric_only=numeric_only,
             drop=drop,
+            method="size",
         )
 
     def groupby_agg(

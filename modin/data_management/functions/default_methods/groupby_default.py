@@ -140,11 +140,16 @@ class GroupBy:
             grp = df.groupby(by, axis=axis, **groupby_args)
             result = agg_func(grp, **map_args)
 
+            if isinstance(result, pandas.Series):
+                result = result.to_frame()
+
             if not as_index:
                 if (
                     len(result.index.names) == 1 and result.index.names[0] is None
                 ) or all([name in result.columns for name in result.index.names]):
                     drop = False
+                elif kwargs.get("method") == "size":
+                    drop = True
                 result = result.reset_index(drop=not drop)
 
             if result.index.name == "__reduced__":
