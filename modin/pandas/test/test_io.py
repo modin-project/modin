@@ -26,9 +26,9 @@ import os
 import shutil
 import sqlalchemy as sa
 import csv
-from pandas.util._test_decorators import check_file_leaks
 
 from .utils import (
+    check_file_leaks,
     df_equals,
     json_short_string,
     json_short_bytes,

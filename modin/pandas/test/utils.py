@@ -28,6 +28,8 @@ from io import BytesIO
 import os
 from string import ascii_letters
 import csv
+import psutil
+import functools
 
 random_state = np.random.RandomState(seed=42)
 
@@ -1001,3 +1003,36 @@ def insert_lines_to_csv(
             **csv_reader_writer_params,
         )
         writer.writerows(lines)
+
+
+def _get_open_files():
+    """
+    psutil open_files() can return a lot of extra information that we can allow to
+    be different, like file position; for simplicity we care about path and fd only.
+    """
+    return sorted((info.path, info.fd) for info in psutil.Process().open_files())
+
+
+def check_file_leaks(func):
+    """
+    A decorator that ensures that no *newly* opened file handles are left
+    after decorated function is finished.
+    """
+
+    @functools.wraps(func)
+    def check(*a, **kw):
+        fstart = _get_open_files()
+        try:
+            return func(*a, **kw)
+        finally:
+            leaks = []
+            for item in _get_open_files():
+                try:
+                    fstart.remove(item)
+                except ValueError:
+                    leaks.append(item)
+            assert (
+                not leaks
+            ), f"Unexpected open handles left for: {', '.join(item[0] for item in leaks)}"
+
+    return check
