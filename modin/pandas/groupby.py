@@ -900,15 +900,7 @@ class DataFrameGroupBy(object):
             f, dict
         ), "'{0}' object is not callable and not a dict".format(type(f))
 
-        # For aggregations, pandas behavior does this for the result.
-        # For other operations it does not, so we wait until there is an aggregation to
-        # actually perform this operation.
-        if not self._is_multi_by and self._idx_name is not None and drop and self._drop:
-            groupby_qc = self._query_compiler.drop(columns=[self._idx_name])
-        else:
-            groupby_qc = self._query_compiler
-
-        new_manager = groupby_qc.groupby_agg(
+        new_manager = self._query_compiler.groupby_agg(
             by=self._by,
             is_multi_by=self._is_multi_by,
             axis=self._axis,

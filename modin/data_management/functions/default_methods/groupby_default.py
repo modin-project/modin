@@ -75,11 +75,6 @@ class GroupBy:
         ):
             by = cls.validate_by(by)
 
-            if not is_multi_by:
-                groupby_args = groupby_args.copy()
-                as_index = groupby_args.pop("as_index", True)
-                groupby_args["as_index"] = True
-
             grp = df.groupby(by, axis=axis, **groupby_args)
             agg_func = cls.get_func(grp, key, **kwargs)
             result = (
@@ -88,15 +83,7 @@ class GroupBy:
                 else agg_func(grp, **agg_args)
             )
 
-            if not is_multi_by:
-                if as_index:
-                    return result
-                else:
-                    if result.index.name is None or result.index.name in result.columns:
-                        drop = False
-                    return result.reset_index(drop=not drop)
-            else:
-                return result
+            return result
 
         return fn
 
