@@ -16,14 +16,18 @@ from .partition import PandasOnDaskFramePartition
 
 from distributed.client import get_client
 from distributed import Future
+from distributed.utils import get_ip
+import pandas
 
 
 class PandasOnDaskFrameAxisPartition(PandasFrameAxisPartition):
-    def __init__(self, list_of_blocks):
+    def __init__(self, list_of_blocks, bind_ip=False):
         # Unwrap from BaseFramePartition object for ease of use
         for obj in list_of_blocks:
             obj.drain_call_queue()
         self.list_of_blocks = [obj.future for obj in list_of_blocks]
+        if bind_ip:
+            self.list_of_ips = [obj.ip for obj in list_of_blocks]
 
     partition_type = PandasOnDaskFramePartition
     instance_type = Future
@@ -34,6 +38,7 @@ class PandasOnDaskFrameAxisPartition(PandasFrameAxisPartition):
     ):
         client = get_client()
         axis_result = client.submit(
+            deploy_dask_func,
             PandasFrameAxisPartition.deploy_axis_func,
             axis,
             func,
@@ -51,7 +56,7 @@ class PandasOnDaskFrameAxisPartition(PandasFrameAxisPartition):
         # get futures for each.
         return [
             client.submit(lambda l: l[i], axis_result, pure=False)
-            for i in range(result_num_splits)
+            for i in range(result_num_splits * 4)
         ]
 
     @classmethod
@@ -60,6 +65,7 @@ class PandasOnDaskFrameAxisPartition(PandasFrameAxisPartition):
     ):
         client = get_client()
         axis_result = client.submit(
+            deploy_dask_func,
             PandasFrameAxisPartition.deploy_func_between_two_axis_partitions,
             axis,
             func,
@@ -74,7 +80,15 @@ class PandasOnDaskFrameAxisPartition(PandasFrameAxisPartition):
         # get futures for each.
         return [
             client.submit(lambda l: l[i], axis_result, pure=False)
-            for i in range(num_splits)
+            for i in range(num_splits * 4)
+        ]
+
+    def _wrap_partitions(self, partitions):
+        return [
+            self.partition_type(
+                partitions[i], partitions[i + 1], partitions[i + 2], partitions[i + 3]
+            )
+            for i in range(0, len(partitions), 4)
         ]
 
 
@@ -94,3 +108,26 @@ class PandasOnDaskFrameRowPartition(PandasOnDaskFrameAxisPartition):
     """
 
     axis = 1
+
+
+def deploy_dask_func(func, *args):
+    """
+    Run a function on a remote partition.
+
+    Parameters
+    ----------
+    func : callable
+        The function to run.
+
+    Returns
+    -------
+        The result of the function `func`.
+    """
+    result = func(*args)
+    ip = get_ip()
+    if isinstance(result, pandas.DataFrame):
+        return result, len(result), len(result.columns), ip
+    elif all(isinstance(r, pandas.DataFrame) for r in result):
+        return [i for r in result for i in [r, len(r), len(r.columns), ip]]
+    else:
+        return [i for r in result for i in [r, None, None, ip]]

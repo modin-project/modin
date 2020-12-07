@@ -18,11 +18,12 @@ from modin.data_management.utils import length_fn_pandas, width_fn_pandas
 from modin.engines.ray.utils import handle_ray_task_error
 
 import ray
+from ray.services import get_node_ip_address
 from ray.worker import RayTaskError
 
 
 class PandasOnRayFramePartition(BaseFramePartition):
-    def __init__(self, object_id, length=None, width=None, call_queue=None):
+    def __init__(self, object_id, length=None, width=None, ip=None, call_queue=None):
         assert type(object_id) is ray.ObjectID
 
         self.oid = object_id
@@ -31,6 +32,7 @@ class PandasOnRayFramePartition(BaseFramePartition):
         self.call_queue = call_queue
         self._length_cache = length
         self._width_cache = width
+        self.ip = ip
 
     def get(self):
         """Gets the object out of the plasma store.
@@ -60,8 +62,8 @@ class PandasOnRayFramePartition(BaseFramePartition):
         """
         oid = self.oid
         call_queue = self.call_queue + [(func, kwargs)]
-        result, length, width = deploy_ray_func.remote(call_queue, oid)
-        return PandasOnRayFramePartition(result, length, width)
+        result, length, width, ip = deploy_ray_func.remote(call_queue, oid)
+        return PandasOnRayFramePartition(result, length, width, ip)
 
     def add_to_apply_calls(self, func, **kwargs):
         return PandasOnRayFramePartition(
@@ -73,14 +75,17 @@ class PandasOnRayFramePartition(BaseFramePartition):
             return
         oid = self.oid
         call_queue = self.call_queue
-        self.oid, self._length_cache, self._width_cache = deploy_ray_func.remote(
-            call_queue, oid
-        )
+        (
+            self.oid,
+            self._length_cache,
+            self._width_cache,
+            self.ip,
+        ) = deploy_ray_func.remote(call_queue, oid)
         self.call_queue = []
 
     def __copy__(self):
         return PandasOnRayFramePartition(
-            self.oid, self._length_cache, self._width_cache, self.call_queue
+            self.oid, self._length_cache, self._width_cache, call_queue=self.call_queue
         )
 
     def to_pandas(self):
@@ -154,14 +159,6 @@ class PandasOnRayFramePartition(BaseFramePartition):
         """
         return ray.put(func)
 
-    def unwrap(self):
-        """Unwraps the ray.ObjectRef from this partition object.
-
-        Returns:
-            ray.ObjectRef
-        """
-        return self.oid
-
     def length(self):
         if self._length_cache is None:
             if len(self.call_queue):
@@ -210,7 +207,7 @@ def get_index_and_columns(df):
     return len(df.index), len(df.columns)
 
 
-@ray.remote(num_returns=3)
+@ray.remote(num_returns=4)
 def deploy_ray_func(call_queue, partition):  # pragma: no cover
     def deserialize(obj):
         if isinstance(obj, ray.ObjectID):
@@ -239,4 +236,5 @@ def deploy_ray_func(call_queue, partition):  # pragma: no cover
         result,
         len(result) if hasattr(result, "__len__") else 0,
         len(result.columns) if hasattr(result, "columns") else 0,
+        get_node_ip_address(),
     )

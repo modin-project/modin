@@ -17,6 +17,7 @@ from modin.engines.base.frame.partition import BaseFramePartition
 from modin.data_management.utils import length_fn_pandas, width_fn_pandas
 
 from distributed.client import get_client
+from distributed.utils import get_ip
 import cloudpickle as pkl
 
 
@@ -25,7 +26,7 @@ def apply_list_of_funcs(funcs, df):
         if isinstance(func, bytes):
             func = pkl.loads(func)
         df = func(df, **kwargs)
-    return df
+    return df, get_ip()
 
 
 class PandasOnDaskFramePartition(BaseFramePartition):
@@ -40,13 +41,14 @@ class PandasOnDaskFramePartition(BaseFramePartition):
     subclasses. There is no logic for updating inplace.
     """
 
-    def __init__(self, future, length=None, width=None, call_queue=None):
+    def __init__(self, future, length=None, width=None, ip=None, call_queue=None):
         self.future = future
         if call_queue is None:
             call_queue = []
         self.call_queue = call_queue
         self._length_cache = length
         self._width_cache = width
+        self.ip = ip
 
     def get(self):
         """Flushes the call_queue and returns the data.
@@ -81,7 +83,8 @@ class PandasOnDaskFramePartition(BaseFramePartition):
         future = get_client().submit(
             apply_list_of_funcs, call_queue, self.future, pure=False
         )
-        return PandasOnDaskFramePartition(future)
+        futures = [get_client().submit(lambda l: l[i], future) for i in range(2)]
+        return PandasOnDaskFramePartition(futures[0], ip=futures[1])
 
     def add_to_apply_calls(self, func, **kwargs):
         return PandasOnDaskFramePartition(
@@ -91,7 +94,9 @@ class PandasOnDaskFramePartition(BaseFramePartition):
     def drain_call_queue(self):
         if len(self.call_queue) == 0:
             return
-        self.future = self.apply(lambda x: x).future
+        new_partition = self.apply(lambda x: x)
+        self.future = new_partition.future
+        self.ip = new_partition.ip
         self.call_queue = []
 
     def mask(self, row_indices, col_indices):
