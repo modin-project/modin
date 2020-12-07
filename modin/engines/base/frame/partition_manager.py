@@ -452,7 +452,9 @@ class BaseFrameManager(ABC):
             to_concat = (
                 [left_parts] + right_parts if left_parts.size != 0 else right_parts
             )
-            return np.concatenate(to_concat, axis=axis)
+            return (
+                np.concatenate(to_concat, axis=axis) if len(to_concat) else left_parts
+            )
         else:
             return np.append(left_parts, right_parts, axis=axis)
 
