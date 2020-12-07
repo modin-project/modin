@@ -1076,7 +1076,7 @@ class TestReadCSV:
 
         if use_str_data:
             str_delim_whitespaces = (
-                "col1 col2  col3   col4\n" "5 6   7  8\n" "9  10    11 12\n"
+                "col1 col2  col3   col4\n5 6   7  8\n9  10    11 12\n"
             )
             eval_io_from_str(
                 str_delim_whitespaces,
