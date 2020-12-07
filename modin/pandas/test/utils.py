@@ -47,7 +47,7 @@ RAND_LOW = 0
 RAND_HIGH = 100
 
 # Directory for storing I/O operations test data
-IO_OPS_DATA_DIR = os.path.join(os.path.dirname(__file__), "read_csv_data")
+IO_OPS_DATA_DIR = os.path.join(os.path.dirname(__file__), "io_tests_data")
 
 # Input data and functions for the tests
 # The test data that we will test our code against
@@ -645,6 +645,7 @@ def eval_general(
     check_exception_type=True,
     raising_exceptions=None,
     check_kwargs_callable=True,
+    modin_warning=False,
     **kwargs,
 ):
     if raising_exceptions:
@@ -669,7 +670,11 @@ def eval_general(
                         md_e.value, tuple(raising_exceptions)
                     ), f"not acceptable exception type: {md_e.value}"
         else:
-            md_result = fn(modin_df, **md_kwargs)
+            if modin_warning is not False:
+                with pytest.warns(modin_warning):
+                    md_result = fn(modin_df, **md_kwargs)
+            else:
+                md_result = fn(modin_df, **md_kwargs)
             return (md_result, pd_result) if not __inplace__ else (modin_df, pandas_df)
 
     for key, value in kwargs.items():
@@ -908,6 +913,7 @@ def get_unique_filename(
         Unique file name.
     """
     suffix_part = f"_{suffix}" if suffix else ""
+    extension_part = f".{extension}" if extension else ""
     if debug_mode:
         # shortcut if kwargs parameter are not provided
         if len(kwargs) == 0 and extension == "csv" and suffix == "":
@@ -932,14 +938,12 @@ def get_unique_filename(
             ]
         )
         return os.path.join(
-            data_dir, test_name + parameters_values + suffix_part + f".{extension}"
+            data_dir, test_name + parameters_values + suffix_part + extension_part
         )
     else:
         import uuid
 
-        return os.path.join(
-            data_dir, (uuid.uuid1().hex + suffix_part + f".{extension}")
-        )
+        return os.path.join(data_dir, (uuid.uuid1().hex + suffix_part + extension_part))
 
 
 def get_random_string():
