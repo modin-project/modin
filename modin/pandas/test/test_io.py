@@ -736,7 +736,7 @@ class TestReadCSV:
 
         str_single_element = "1"
         str_single_col = "1\n2\n3\n"
-        str_four_cols = "1, 2, 3, 4\n" "5, 6, 7, 8\n" "9, 10, 11, 12\n"
+        str_four_cols = "1, 2, 3, 4\n5, 6, 7, 8\n9, 10, 11, 12\n"
         case_to_data = {
             "single_element": str_single_element,
             "single_column": str_single_col,
@@ -750,7 +750,7 @@ class TestReadCSV:
 
     def test_read_csv_mangle_dupe_cols(self):
         unique_filename = get_unique_filename()
-        str_non_unique_cols = "col,col,col,col\n" "5, 6, 7, 8\n" "9, 10, 11, 12\n"
+        str_non_unique_cols = "col,col,col,col\n5, 6, 7, 8\n9, 10, 11, 12\n"
         eval_io_from_str(str_non_unique_cols, unique_filename, mangle_dupe_cols=True)
 
     # NA and Missing Data Handling tests
@@ -1022,6 +1022,82 @@ class TestReadCSV:
             warn_bad_lines=warn_bad_lines,
             error_bad_lines=error_bad_lines,
         )
+
+    # Internal parameters tests
+    @pytest.mark.parametrize("use_str_data", [True, False])
+    @pytest.mark.parametrize("engine", [None, "python", "c"])
+    @pytest.mark.parametrize("delimiter", [",", " "])
+    @pytest.mark.parametrize("delim_whitespace", [True, False])
+    @pytest.mark.parametrize("low_memory", [True, False])
+    @pytest.mark.parametrize("memory_map", [True, False])
+    @pytest.mark.parametrize("float_precision", [None, "high", "round_trip"])
+    def test_read_csv_internal(
+        self,
+        make_csv_file,
+        use_str_data,
+        engine,
+        delimiter,
+        delim_whitespace,
+        low_memory,
+        memory_map,
+        float_precision,
+    ):
+        if Engine.get() != "Python" and delimiter == " ":
+            pytest.xfail(
+                "read_csv with Ray engine doesn't \
+                raise exceptions while Pandas raises - issue #2320"
+            )
+
+        # In this case raised TypeError: cannot use a string pattern on a bytes-like object,
+        # so TypeError should be excluded from raising_exceptions list in order to check, that
+        # the same exceptions are raised by Pandas and Modin
+        case_with_TypeError_exc = (
+            engine == "python"
+            and delimiter == ","
+            and delim_whitespace
+            and low_memory
+            and memory_map
+            and float_precision is None
+        )
+
+        raising_exceptions = io_ops_bad_exc  # default value
+        if case_with_TypeError_exc:
+            raising_exceptions = list(io_ops_bad_exc)
+            raising_exceptions.remove(TypeError)
+
+        kwargs = {
+            "engine": engine,
+            "delimiter": delimiter,
+            "delim_whitespace": delim_whitespace,
+            "low_memory": low_memory,
+            "memory_map": memory_map,
+            "float_precision": float_precision,
+        }
+
+        unique_filename = get_unique_filename()
+
+        if use_str_data:
+            str_delim_whitespaces = (
+                "col1 col2  col3   col4\n5 6   7  8\n9  10    11 12\n"
+            )
+            eval_io_from_str(
+                str_delim_whitespaces,
+                unique_filename,
+                raising_exceptions=raising_exceptions,
+                **kwargs,
+            )
+        else:
+            make_csv_file(
+                filename=unique_filename,
+                delimiter=delimiter,
+            )
+
+            eval_io(
+                filepath_or_buffer=unique_filename,
+                fn_name="read_csv",
+                raising_exceptions=raising_exceptions,
+                **kwargs,
+            )
 
 
 def test_from_parquet(make_parquet_file):

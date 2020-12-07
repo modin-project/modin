@@ -762,7 +762,11 @@ def eval_io_from_str(csv_str: str, unique_filename: str, **kwargs):
         )
 
     finally:
-        os.remove(unique_filename)
+        if os.path.exists(unique_filename):
+            try:
+                os.remove(unique_filename)
+            except PermissionError:
+                pass
 
 
 def create_test_dfs(*args, **kwargs):
