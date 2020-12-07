@@ -12,6 +12,7 @@
 # governing permissions and limitations under the License.
 
 import os
+import sys
 from textwrap import dedent
 import warnings
 from packaging import version
@@ -206,6 +207,18 @@ class TestDatasetSize(EnvironmentVariable, type=str):
 
     varname = "MODIN_TEST_DATASET_SIZE"
     choices = ("Small", "Normal", "Big")
+
+
+class TrackFileLeaks(EnvironmentVariable, type=bool):
+    """
+    Whether to track for open file handles leakage during testing
+    """
+
+    varname = "MODIN_TEST_TRACK_FILE_LEAKS"
+    # Turn off tracking on Windows by default because
+    # psutil's open_files() can be extremely slow on Windows (up to adding a few hours).
+    # see https://github.com/giampaolo/psutil/pull/597
+    default = sys.platform != "win32"
 
 
 def _check_vars():

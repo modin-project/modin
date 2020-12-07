@@ -23,7 +23,7 @@ from pandas.testing import (
 )
 import modin.pandas as pd
 from modin.utils import to_pandas
-from modin.config import TestDatasetSize
+from modin.config import TestDatasetSize, TrackFileLeaks
 from io import BytesIO
 import os
 from string import ascii_letters
@@ -1018,6 +1018,8 @@ def check_file_leaks(func):
     A decorator that ensures that no *newly* opened file handles are left
     after decorated function is finished.
     """
+    if not TrackFileLeaks.get():
+        return func
 
     @functools.wraps(func)
     def check(*a, **kw):
