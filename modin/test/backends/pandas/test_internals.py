@@ -12,15 +12,7 @@
 # governing permissions and limitations under the License.
 
 import modin.pandas as pd
-
-import pandas
-import pytest
-
-from modin.pandas.test.utils import (
-    test_data_values,
-    create_test_dfs,
-    df_equals,
-)
+from modin.pandas.test.utils import create_test_dfs
 
 pd.DEFAULT_NPARTITIONS = 4
 
@@ -60,58 +52,3 @@ def test_aligning_partitions():
 
     modin_df2["c"] = modin_df1["b"]
     repr(modin_df2)
-
-
-@pytest.mark.parametrize("axis", [0, 1])
-@pytest.mark.parametrize("item_length", [0, 1, 2])
-@pytest.mark.parametrize("loc", ["first", "first + 1", "middle", "penult", "last"])
-def test_insert_item(axis, item_length, loc):
-    data = test_data_values[0]
-
-    def post_fn(df):
-        return (
-            (df.iloc[:, :-item_length], df.iloc[:, -item_length:])
-            if axis
-            else (df.iloc[:-item_length, :], df.iloc[-item_length:, :])
-        )
-
-    def get_loc(frame, loc):
-        locs_dict = {
-            "first": 0,
-            "first + 1": 1,
-            "middle": len(frame.axes[axis]) // 2,
-            "penult": len(frame.axes[axis]) - 1,
-            "last": len(frame.axes[axis]),
-        }
-        return locs_dict[loc]
-
-    def get_reference(df, value, loc):
-        if axis == 0:
-            first_mask = df.iloc[:loc]
-            second_mask = df.iloc[loc:]
-        else:
-            first_mask = df.iloc[:, :loc]
-            second_mask = df.iloc[:, loc:]
-        return pandas.concat([first_mask, value, second_mask], axis=axis)
-
-    md_frames, pd_frames = create_test_dfs(data, post_fn=post_fn)
-    md_item1, md_item2 = md_frames
-    pd_item1, pd_item2 = pd_frames
-
-    index_loc = get_loc(pd_item1, loc)
-
-    pd_res = get_reference(pd_item1, loc=index_loc, value=pd_item2)
-    md_res = md_item1._query_compiler.insert_item(
-        axis=axis, loc=index_loc, value=md_item2._query_compiler
-    ).to_pandas()
-
-    df_equals(md_res, pd_res)
-
-    index_loc = get_loc(pd_item2, loc)
-
-    pd_res = get_reference(pd_item2, loc=index_loc, value=pd_item1)
-    md_res = md_item2._query_compiler.insert_item(
-        axis=axis, loc=index_loc, value=md_item1._query_compiler
-    ).to_pandas()
-
-    df_equals(md_res, pd_res)

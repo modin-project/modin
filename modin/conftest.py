@@ -19,6 +19,11 @@ import modin
 import modin.config
 from modin.config import IsExperimental
 
+from modin.backends import PandasQueryCompiler, BaseQueryCompiler
+from modin.engines.python.pandas_on_python.io import PandasOnPythonIO
+from modin.data_management.factories import factories
+from modin.utils import get_current_backend
+
 
 def pytest_addoption(parser):
     parser.addoption(
@@ -26,6 +31,12 @@ def pytest_addoption(parser):
         action="store",
         default="off",
         help="simulate cloud for testing: off|normal|experimental",
+    )
+    parser.addoption(
+        "--backend",
+        action="store",
+        default=None,
+        help="specifies backend to run tests on",
     )
 
 
@@ -146,3 +157,75 @@ def enforce_config():
     os.environ = PatchedEnv()
     yield
     os.environ = orig_env
+
+
+BASE_BACKEND_NAME = "BaseOnPython"
+
+
+class TestQC(BaseQueryCompiler):
+    def __init__(self, modin_frame):
+        self._modin_frame = modin_frame
+
+    @classmethod
+    def from_pandas(cls, df, data_cls):
+        return cls(data_cls.from_pandas(df))
+
+    @classmethod
+    def from_arrow(cls, at, data_cls):
+        return cls(data_cls.from_arrow(at))
+
+    def free(self):
+        pass
+
+    to_pandas = PandasQueryCompiler.to_pandas
+    default_to_pandas = PandasQueryCompiler.default_to_pandas
+
+
+class BaseOnPythonIO(PandasOnPythonIO):
+    query_compiler_cls = TestQC
+
+
+class BaseOnPythonFactory(factories.BaseFactory):
+    @classmethod
+    def prepare(cls):
+        cls.io_cls = BaseOnPythonIO
+
+
+def set_base_backend(name=BASE_BACKEND_NAME):
+    setattr(factories, f"{name}Factory", BaseOnPythonFactory)
+    modin.set_backends(engine="python", partition=name.split("On")[0])
+
+
+def pytest_configure(config):
+    backend = config.option.backend
+
+    if backend is None:
+        return
+
+    if backend == BASE_BACKEND_NAME:
+        set_base_backend(BASE_BACKEND_NAME)
+    else:
+        partition, engine = backend.split("On")
+        modin.set_backends(engine=engine, partition=partition)
+
+
+def pytest_runtest_call(item):
+    custom_markers = ["xfail", "skip"]
+
+    # dynamicly adding custom markers to tests
+    for custom_marker in custom_markers:
+        for marker in item.iter_markers(name=f"{custom_marker}_backends"):
+            backends = marker.args[0]
+            if not isinstance(backends, list):
+                backends = [backends]
+
+            current_backend = get_current_backend()
+            reason = marker.kwargs.pop("reason", "")
+
+            item.add_marker(
+                getattr(pytest.mark, custom_marker)(
+                    condition=current_backend in backends,
+                    reason=f"Backend {current_backend} does not pass this test. {reason}",
+                    **marker.kwargs,
+                )
+            )

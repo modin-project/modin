@@ -182,7 +182,14 @@ def test_concat_with_empty_frame():
     md_empty1, pd_empty1 = create_test_dfs(index=[1, 2, 3])
     md_empty2, pd_empty2 = create_test_dfs(index=[2, 3, 4])
 
-    df_equals(pd.concat([md_empty1, md_empty2]), pandas.concat([pd_empty1, pd_empty2]))
+    df_equals(
+        pd.concat([md_empty1, md_empty2], axis=0),
+        pandas.concat([pd_empty1, pd_empty2], axis=0),
+    )
+    df_equals(
+        pd.concat([md_empty1, md_empty2], axis=1),
+        pandas.concat([pd_empty1, pd_empty2], axis=1),
+    )
 
 
 @pytest.mark.parametrize("axis", [0, 1])
