@@ -289,7 +289,8 @@ def merge_asof(
     # 5. Clean up to match Pandas output:
     if left_on is not None and right_index:
         result.insert(
-            result.columns.get_indexer_for(left_on + suffixes[0])[0],
+            # In theory this could use get_indexer_for(), but that causes an error:
+            list(result.columns).index(left_on + suffixes[0]),
             left_on,
             result[left_on + suffixes[0]],
         )
