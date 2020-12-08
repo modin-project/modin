@@ -15,7 +15,7 @@ import modin.pandas as pd
 import numpy as np
 
 from modin.config import CpuCount, TestDatasetSize
-from .utils import generate_dataframe, RAND_LOW, RAND_HIGH
+from .utils import generate_dataframe, RAND_LOW, RAND_HIGH, random_string
 
 # define `MODIN_CPUS` env var to control the number of partitions
 # it should be defined before modin.pandas import
@@ -224,11 +224,11 @@ class TimeInsert(BaseTimeSetItem):
     ]
 
     def time_insert_qc(self, *args, **kwargs):
-        self.df.insert(loc=self.iloc, column="new_col_qc", value=self.item)
+        self.df.insert(loc=self.iloc, column=random_string(), value=self.item)
         repr(self.df)
 
     def time_insert_raw(self, *args, **kwargs):
-        self.df.insert(loc=self.iloc, column="new_col_raw", value=self.item_raw)
+        self.df.insert(loc=self.iloc, column=random_string(), value=self.item_raw)
         repr(self.df)
 
 
