@@ -68,7 +68,11 @@ class BaseFrameManager(ABC):
         -------
             a list of `BaseFrameAxisPartition` objects.
         """
-        return [cls._column_partitions_class(col) for col in partitions.T]
+        if not isinstance(partitions, list):
+            partitions = [partitions]
+        return [
+            cls._column_partitions_class(col) for frame in partitions for col in frame.T
+        ]
 
     @classmethod
     def row_partitions(cls, partitions):
@@ -81,7 +85,9 @@ class BaseFrameManager(ABC):
         -------
             a list of `BaseFrameAxisPartition` objects.
         """
-        return [cls._row_partition_class(row) for row in partitions]
+        if not isinstance(partitions, list):
+            partitions = [partitions]
+        return [cls._row_partition_class(row) for frame in partitions for row in frame]
 
     @classmethod
     def axis_partition(cls, partitions, axis):
@@ -225,6 +231,8 @@ class BaseFrameManager(ABC):
         left,
         right,
         keep_partitioning=False,
+        apply_indices=None,
+        enumerate_partitions=False,
         lengths=None,
     ):
         """
@@ -238,6 +246,11 @@ class BaseFrameManager(ABC):
         right : The right partitions.
         keep_partitioning : boolean. Default is False
             The flag to keep partitions for Modin Frame.
+        apply_indices : list of ints (optional),
+            Indices of `axis ^ 1` to apply function over.
+        enumerate_partitions : bool (optional, default False),
+            Whether or not to pass partition index into `apply_func`.
+            Note that `apply_func` must be able to obtain `partition_idx` kwarg.
         lengths : list(int), default None
             The list of lengths to shuffle the object.
 
@@ -269,13 +282,17 @@ class BaseFrameManager(ABC):
             kw["_lengths"] = lengths
             kw["manual_partition"] = True
 
+        if apply_indices is None:
+            apply_indices = np.arange(len(left_partitions))
+
         result_blocks = np.array(
             [
-                part.apply(
+                left_partitions[i].apply(
                     preprocessed_map_func,
                     **kw,
+                    **({"partition_idx": idx} if enumerate_partitions else {}),
                 )
-                for part in left_partitions
+                for idx, i in enumerate(apply_indices)
             ]
         )
         # If we are mapping over columns, they are returned to use the same as

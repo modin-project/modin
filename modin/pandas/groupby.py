@@ -31,7 +31,7 @@ import pandas.core.common as com
 from types import BuiltinFunctionType
 
 from modin.error_message import ErrorMessage
-from modin.utils import _inherit_docstrings, try_cast_to_pandas
+from modin.utils import _inherit_docstrings, try_cast_to_pandas, wrap_udf_function
 from modin.backends.base.query_compiler import BaseQueryCompiler
 from modin.config import IsExperimental
 from .series import Series
@@ -79,7 +79,8 @@ class DataFrameGroupBy(object):
                 and axis == 0
                 and all(
                     (isinstance(obj, str) and obj in self._query_compiler.columns)
-                    or isinstance(obj, Series)
+                    or isinstance(obj, type(self._query_compiler))
+                    or is_list_like(obj)
                     for obj in self._by
                 )
             )
@@ -91,8 +92,8 @@ class DataFrameGroupBy(object):
             "sort": sort,
             "as_index": as_index,
             "group_keys": group_keys,
-            "squeeze": squeeze,
         }
+        self._squeeze = squeeze
         self._kwargs.update(kwargs)
 
     _index_grouped_cache = None
@@ -261,6 +262,8 @@ class DataFrameGroupBy(object):
         return result
 
     def apply(self, func, *args, **kwargs):
+        if not isinstance(func, BuiltinFunctionType):
+            func = wrap_udf_function(func)
         return self._apply_agg_function(
             # Grouping column in never dropped in groupby.apply, so drop=False
             lambda df: df.apply(func, *args, **kwargs),
@@ -271,7 +274,10 @@ class DataFrameGroupBy(object):
     def dtypes(self):
         if self._axis == 1:
             raise ValueError("Cannot call dtypes on groupby with axis=1")
-        return self._apply_agg_function(lambda df: df.dtypes, drop=self._as_index)
+        if not self._as_index:
+            return self.apply(lambda df: df.dtypes)
+        else:
+            return self._apply_agg_function(lambda df: df.dtypes, drop=self._as_index)
 
     def first(self, **kwargs):
         return self._default_to_pandas(lambda df: df.first(**kwargs))
@@ -280,7 +286,7 @@ class DataFrameGroupBy(object):
         return self.bfill(limit)
 
     def __getitem__(self, key):
-        kwargs = self._kwargs.copy()
+        kwargs = {**self._kwargs.copy(), "squeeze": self._squeeze}
         # Most of time indexing DataFrameGroupBy results in another DataFrameGroupBy object unless circumstances are
         # special in which case SeriesGroupBy has to be returned. Such circumstances are when key equals to a single
         # column name and is not a list of column names or list of one column name.
@@ -472,13 +478,16 @@ class DataFrameGroupBy(object):
             # Series objects in 'by' mean we couldn't handle the case
             # and transform 'by' to a query compiler.
             # In this case we are just defaulting to pandas.
-            if is_list_like(self._by) and any(isinstance(o, Series) for o in self._by):
+            if is_list_like(self._by) and any(
+                isinstance(o, type(self._df._query_compiler)) for o in self._by
+            ):
                 work_object = DataFrameGroupBy(
                     self._df,
                     self._by,
                     self._axis,
                     drop=False,
                     idx_name=None,
+                    squeeze=self._squeeze,
                     **self._kwargs,
                 )
                 result = work_object._wrap_aggregation(
@@ -501,6 +510,7 @@ class DataFrameGroupBy(object):
                 self._axis,
                 drop=False,
                 idx_name=None,
+                squeeze=self._squeeze,
                 **self._kwargs,
             )
             result = work_object._wrap_aggregation(
@@ -527,6 +537,7 @@ class DataFrameGroupBy(object):
                 0,
                 drop=self._drop,
                 idx_name=self._idx_name,
+                squeeze=self._squeeze,
                 **self._kwargs,
             ).size()
 
@@ -806,7 +817,7 @@ class DataFrameGroupBy(object):
                         by
                     ).to_pandas()
                 else:
-                    by = try_cast_to_pandas(by)
+                    by = try_cast_to_pandas(by, squeeze=True)
                     pandas_df = self._df._to_pandas()
                 self._index_grouped_cache = pandas_df.groupby(by=by).groups
             else:
@@ -849,7 +860,7 @@ class DataFrameGroupBy(object):
         # For aggregations, pandas behavior does this for the result.
         # For other operations it does not, so we wait until there is an aggregation to
         # actually perform this operation.
-        if drop and self._drop and self._as_index:
+        if not self._is_multi_by and drop and self._drop and self._as_index:
             groupby_qc = self._query_compiler.drop(columns=self._by.columns)
         else:
             groupby_qc = self._query_compiler
@@ -866,7 +877,7 @@ class DataFrameGroupBy(object):
                 drop=self._drop,
             )
         )
-        if self._kwargs.get("squeeze", False):
+        if self._squeeze:
             return result.squeeze()
         return result
 
@@ -889,15 +900,7 @@ class DataFrameGroupBy(object):
             f, dict
         ), "'{0}' object is not callable and not a dict".format(type(f))
 
-        # For aggregations, pandas behavior does this for the result.
-        # For other operations it does not, so we wait until there is an aggregation to
-        # actually perform this operation.
-        if not self._is_multi_by and self._idx_name is not None and drop and self._drop:
-            groupby_qc = self._query_compiler.drop(columns=[self._idx_name])
-        else:
-            groupby_qc = self._query_compiler
-
-        new_manager = groupby_qc.groupby_agg(
+        new_manager = self._query_compiler.groupby_agg(
             by=self._by,
             is_multi_by=self._is_multi_by,
             axis=self._axis,
@@ -912,7 +915,7 @@ class DataFrameGroupBy(object):
         result = type(self._df)(query_compiler=new_manager)
         if result._query_compiler.get_index_name() == "__reduced__":
             result._query_compiler.set_index_name(None)
-        if self._kwargs.get("squeeze", False):
+        if self._squeeze:
             return result.squeeze()
         return result
 
@@ -941,11 +944,15 @@ class DataFrameGroupBy(object):
         else:
             by = self._by
 
-        by = try_cast_to_pandas(by)
+        by = try_cast_to_pandas(by, squeeze=True)
 
         def groupby_on_multiple_columns(df, *args, **kwargs):
             return f(
-                df.groupby(by=by, axis=self._axis, **self._kwargs), *args, **kwargs
+                df.groupby(
+                    by=by, axis=self._axis, squeeze=self._squeeze, **self._kwargs
+                ),
+                *args,
+                **kwargs,
             )
 
         return self._df._default_to_pandas(groupby_on_multiple_columns, *args, **kwargs)

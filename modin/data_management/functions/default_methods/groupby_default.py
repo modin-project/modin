@@ -27,6 +27,8 @@ class GroupBy:
     @classmethod
     def validate_by(cls, by):
         def try_cast_series(df):
+            if isinstance(df, pandas.DataFrame):
+                df = df.squeeze(axis=1)
             if not isinstance(df, pandas.Series):
                 return df
             if df.name == "__reduced__":
@@ -73,11 +75,6 @@ class GroupBy:
         ):
             by = cls.validate_by(by)
 
-            if not is_multi_by:
-                groupby_args = groupby_args.copy()
-                as_index = groupby_args.pop("as_index", True)
-                groupby_args["as_index"] = True
-
             grp = df.groupby(by, axis=axis, **groupby_args)
             agg_func = cls.get_func(grp, key, **kwargs)
             result = (
@@ -86,15 +83,7 @@ class GroupBy:
                 else agg_func(grp, **agg_args)
             )
 
-            if not is_multi_by:
-                if as_index:
-                    return result
-                else:
-                    if result.index.name is None or result.index.name in result.columns:
-                        drop = False
-                    return result.reset_index(drop=not drop)
-            else:
-                return result
+            return result
 
         return fn
 
@@ -111,6 +100,7 @@ class GroupBy:
             **kwargs
         ):
             if not isinstance(by, (pandas.Series, pandas.DataFrame)):
+                by = cls.validate_by(by)
                 return agg_func(
                     df.groupby(by=by, axis=axis, **groupby_args), **map_args
                 )
@@ -137,11 +127,16 @@ class GroupBy:
             grp = df.groupby(by, axis=axis, **groupby_args)
             result = agg_func(grp, **map_args)
 
+            if isinstance(result, pandas.Series):
+                result = result.to_frame()
+
             if not as_index:
                 if (
                     len(result.index.names) == 1 and result.index.names[0] is None
                 ) or all([name in result.columns for name in result.index.names]):
                     drop = False
+                elif kwargs.get("method") == "size":
+                    drop = True
                 result = result.reset_index(drop=not drop)
 
             if result.index.name == "__reduced__":

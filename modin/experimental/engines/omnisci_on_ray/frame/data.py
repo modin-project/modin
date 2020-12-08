@@ -234,8 +234,8 @@ class OmnisciOnRayFrame(BasePandasFrame):
                 for obj in by:
                     if isinstance(obj, str):
                         by_cols.append(obj)
-                    elif hasattr(obj, "_query_compiler"):
-                        by_frames.append(obj._query_compiler._modin_frame)
+                    elif hasattr(obj, "_modin_frame"):
+                        by_frames.append(obj._modin_frame)
                     else:
                         raise NotImplementedError("unsupported groupby args")
                 by_cols = Index.__new__(Index, data=by_cols, dtype=self.columns.dtype)

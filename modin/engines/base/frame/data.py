@@ -1678,6 +1678,8 @@ class BasePandasFrame(object):
         other,
         new_index=None,
         new_columns=None,
+        apply_indices=None,
+        enumerate_partitions=False,
         dtypes=None,
     ):
         """Broadcast partitions of other dataframe partitions and apply a function along full axis.
@@ -1688,13 +1690,18 @@ class BasePandasFrame(object):
                 The axis to apply over (0 - rows, 1 - columns).
             func : callable
                 The function to apply.
-            other : other Modin frame to broadcast
+            other : others Modin frames to broadcast
             new_index : list-like (optional)
                 The index of the result. We may know this in advance,
                 and if not provided it must be computed.
             new_columns : list-like (optional)
                 The columns of the result. We may know this in
                 advance, and if not provided it must be computed.
+            apply_indices : list-like (optional),
+                Indices of `axis ^ 1` to apply function over.
+            enumerate_partitions : bool (optional, default False),
+                Whether or not to pass partition index into applied `func`.
+                Note that `func` must be able to obtain `partition_idx` kwarg.
             dtypes : list-like (optional)
                 The data types of the result. This is an optimization
                 because there are functions that always result in a particular data
@@ -1704,11 +1711,24 @@ class BasePandasFrame(object):
         -------
              A new Modin DataFrame
         """
+        if other is not None:
+            if not isinstance(other, list):
+                other = [other]
+            other = [o._partitions for o in other] if len(other) else None
+
+        if apply_indices is not None:
+            numeric_indices = self.axes[axis ^ 1].get_indexer_for(apply_indices)
+            apply_indices = self._get_dict_of_block_index(
+                axis ^ 1, numeric_indices
+            ).keys()
+
         new_partitions = self._frame_mgr_cls.broadcast_axis_partitions(
             axis=axis,
             left=self._partitions,
-            right=other if other is None else other._partitions,
+            right=other,
             apply_func=self._build_mapreduce_func(axis, func),
+            apply_indices=apply_indices,
+            enumerate_partitions=enumerate_partitions,
             keep_partitioning=True,
         )
         # Index objects for new object creation. This is shorter than if..else
@@ -1730,7 +1750,9 @@ class BasePandasFrame(object):
             None,
             None,
             dtypes,
-            validate_axes="all" if new_partitions.size != 0 else False,
+            validate_axes="all"
+            if any(o is not None for o in [new_index, new_columns])
+            else False,
         )
 
     def _copartition(self, axis, other, how, sort, force_repartition=False):

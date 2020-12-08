@@ -385,21 +385,34 @@ class DataFrame(BasePandasDataset):
             by = by._query_compiler
         elif is_list_like(by):
             # fastpath for multi column groupby
-            if (
-                not isinstance(by, Series)
-                and axis == 0
-                and all(
-                    (
-                        (isinstance(o, str) and (o in self))
-                        or (isinstance(o, Series) and (o._parent is self))
-                    )
-                    for o in by
+            if axis == 0 and all(
+                (
+                    (isinstance(o, str) and (o in self))
+                    or isinstance(o, Series)
+                    or (is_list_like(o) and len(o) == len(self.axes[axis]))
                 )
+                for o in by
             ):
-                # We can just revert Series back to names because the parent is
-                # this dataframe:
-                by = [o.name if isinstance(o, Series) else o for o in by]
-                by = self.__getitem__(by)._query_compiler
+                # We want to split 'by's into those that belongs to the self (internal_by)
+                # and those that doesn't (external_by)
+                internal_by, external_by = [], []
+
+                for current_by in by:
+                    if isinstance(current_by, str):
+                        internal_by.append(current_by)
+                    elif isinstance(current_by, Series):
+                        if current_by._parent is self:
+                            internal_by.append(current_by.name)
+                        else:
+                            external_by.append(current_by._query_compiler)
+                    else:
+                        external_by.append(current_by)
+
+                by = internal_by + external_by
+
+                if len(external_by) == 0:
+                    by = self[internal_by]._query_compiler
+
                 drop = True
             else:
                 mismatch = len(by) != len(self.axes[axis])

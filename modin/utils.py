@@ -81,7 +81,7 @@ def hashable(obj):
     return True
 
 
-def try_cast_to_pandas(obj):
+def try_cast_to_pandas(obj, squeeze=False):
     """
     Converts obj and all nested objects from modin to pandas if it is possible,
     otherwise returns obj
@@ -96,13 +96,25 @@ def try_cast_to_pandas(obj):
         Converted object
     """
     if hasattr(obj, "_to_pandas"):
-        return obj._to_pandas()
+        result = obj._to_pandas()
+        if squeeze:
+            result = result.squeeze(axis=1)
+        return result
     if hasattr(obj, "to_pandas"):
-        return obj.to_pandas()
+        result = obj.to_pandas()
+        if squeeze:
+            result = result.squeeze(axis=1)
+        # Query compiler case, it doesn't have logic about convertion to Series
+        if (
+            isinstance(getattr(result, "name", None), str)
+            and result.name == "__reduced__"
+        ):
+            result.name = None
+        return result
     if isinstance(obj, (list, tuple)):
-        return type(obj)([try_cast_to_pandas(o) for o in obj])
+        return type(obj)([try_cast_to_pandas(o, squeeze=squeeze) for o in obj])
     if isinstance(obj, dict):
-        return {k: try_cast_to_pandas(v) for k, v in obj.items()}
+        return {k: try_cast_to_pandas(v, squeeze=squeeze) for k, v in obj.items()}
     if callable(obj):
         module_hierarchy = getattr(obj, "__module__", "").split(".")
         fn_name = getattr(obj, "__name__", None)

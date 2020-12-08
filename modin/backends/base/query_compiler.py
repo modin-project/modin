@@ -1394,6 +1394,7 @@ class BaseQueryCompiler(abc.ABC):
             reduce_args=reduce_args,
             numeric_only=numeric_only,
             drop=drop,
+            method="size",
         )
 
     def groupby_agg(
@@ -1407,13 +1408,10 @@ class BaseQueryCompiler(abc.ABC):
         groupby_kwargs,
         drop=False,
     ):
-        if is_multi_by:
-            if isinstance(by, type(self)) and len(by.columns) == 1:
-                by = by.columns[0] if drop else by.to_pandas().squeeze()
-            elif isinstance(by, type(self)):
-                by = list(by.columns)
-        else:
-            by = by.to_pandas().squeeze() if isinstance(by, type(self)) else by
+        if isinstance(by, type(self)) and len(by.columns) == 1:
+            by = by.columns[0] if drop else by.to_pandas().squeeze()
+        elif isinstance(by, type(self)):
+            by = list(by.columns)
 
         return GroupByDefault.register(pandas.core.groupby.DataFrameGroupBy.aggregate)(
             self,

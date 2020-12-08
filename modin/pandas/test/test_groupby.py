@@ -61,6 +61,13 @@ def build_types_asserter(comparator):
     return wrapper
 
 
+def df_from_grp(self, grp):
+    if grp.__module__.split(".")[0] == "pandas":
+        return grp._obj_with_exclusions
+    else:
+        return grp._df
+
+
 @pytest.mark.parametrize("as_index", [True, False])
 def test_mixed_dtypes_groupby(as_index):
     frame_data = np.random.randint(97, 198, size=(2 ** 6, 2 ** 4))
@@ -240,7 +247,7 @@ class GetColumn:
         ["col1"],
         # col2 contains NaN, is it necessary to test functions like size()
         "col2",
-        ["col2"],
+        ["col2"],  # 5
         pytest.param(
             ["col1", "col2"],
             marks=pytest.mark.xfail(reason="Excluded because of bug #1554"),
@@ -258,12 +265,12 @@ class GetColumn:
             marks=pytest.mark.xfail(reason="Excluded because of bug #1554"),
         ),
         # but cum* functions produce undefined results with NaNs so we need to test the same combinations without NaN too
-        ["col5"],
+        ["col5"],  # 10
         ["col1", "col5"],
         ["col5", "col4"],
         ["col4", "col5"],
         ["col5", "col4", "col1"],
-        ["col1", pd.Series([1, 5, 7, 8])],
+        ["col1", pd.Series([1, 5, 7, 8])],  # 15
         [pd.Series([1, 5, 7, 8])],
         [
             pd.Series([1, 5, 7, 8]),
@@ -274,7 +281,7 @@ class GetColumn:
         ],
         ["col1", GetColumn("col5")],
         [GetColumn("col1"), GetColumn("col5")],
-        [GetColumn("col1")],
+        [GetColumn("col1")],  # 20
     ],
 )
 @pytest.mark.parametrize("as_index", [True, False])
@@ -342,7 +349,11 @@ def test_simple_row_groupby(by, as_index, col1_category):
 
     # Workaround for Pandas bug #34656. Recreate groupby object for Pandas
     pandas_groupby = pandas_df.groupby(by=pandas_by, as_index=as_index)
-    apply_functions = [lambda df: df.sum(), min]
+    apply_functions = [
+        lambda df: df.sum(),
+        lambda df: pandas.Series([1, 2, 3, 4], name="result"),
+        min,
+    ]
     for func in apply_functions:
         eval_apply(modin_groupby, pandas_groupby, func)
 
@@ -377,7 +388,15 @@ def test_simple_row_groupby(by, as_index, col1_category):
     eval_len(modin_groupby, pandas_groupby)
     eval_sum(modin_groupby, pandas_groupby)
     eval_ngroup(modin_groupby, pandas_groupby)
-    eval_general(modin_groupby, pandas_groupby, lambda df: df.nunique())
+    # Pandas raising exception when 'by' contains categorical key and `as_index=False`
+    # because of a bug: https://github.com/pandas-dev/pandas/issues/36698
+    # Modin correctly processes the result, so that's why `check_exception_type=None` in some cases
+    eval_general(
+        modin_groupby,
+        pandas_groupby,
+        lambda df: df.nunique(),
+        check_exception_type=None if (col1_category and not as_index) else True,
+    )
     eval_median(modin_groupby, pandas_groupby)
     eval_general(modin_groupby, pandas_groupby, lambda df: df.head(n), is_default=True)
     eval_general(
@@ -1348,9 +1367,11 @@ def test_mixed_columns(columns):
         [(True, "a"), (True, "b")],
         [(False, "a"), (False, "b"), (True, "c")],
         [(False, "a"), (True, "c")],
+        [(False, "a"), (True, "c"), (False, [1, 1, 2])],
     ],
 )
-def test_mixed_columns_not_from_df(columns):
+@pytest.mark.parametrize("as_index", [True, False])
+def test_mixed_columns_not_from_df(columns, as_index):
     """
     Unlike the previous test, in this case the Series is not just a column from
     the original DataFrame, so you can't use a fasttrack.
@@ -1360,15 +1381,18 @@ def test_mixed_columns_not_from_df(columns):
         return [(df[name] + 1) if lookup else name for (lookup, name) in columns]
 
     data = {"a": [1, 1, 2], "b": [11, 11, 22], "c": [111, 111, 222]}
+    groupby_kw = {"as_index": as_index}
 
-    df1 = pandas.DataFrame(data)
-    df1 = pandas.concat([df1])
-    ref = df1.groupby(get_columns(df1)).size()
+    md_df, pd_df = create_test_dfs(data)
+    by_md, by_pd = map(get_columns, [md_df, pd_df])
 
-    df2 = pd.DataFrame(data)
-    df2 = pd.concat([df2])
-    exp = df2.groupby(get_columns(df2)).size()
-    df_equals(ref, exp)
+    pd_grp = pd_df.groupby(by_pd, **groupby_kw)
+    md_grp = md_df.groupby(by_md, **groupby_kw)
+
+    modin_groupby_equals_pandas(md_grp, pd_grp)
+    eval_general(md_grp, pd_grp, lambda grp: grp.size())
+    eval_general(md_grp, pd_grp, lambda grp: grp.apply(lambda df: df.sum()))
+    eval_general(md_grp, pd_grp, lambda grp: grp.first())
 
 
 @pytest.mark.parametrize(
@@ -1402,19 +1426,48 @@ def test_unknown_groupby(columns):
 @pytest.mark.parametrize(
     "func_to_apply",
     [
-        lambda df: df.sum(),
-        lambda df: df.count(),
+        pytest.param(
+            lambda df: df.sum(), marks=pytest.mark.skip("See modin issue #2512")
+        ),
         lambda df: df.size(),
-        lambda df: df.mean(),
         lambda df: df.quantile(),
+        lambda df: df.dtypes,
+        lambda df: df.apply(lambda df: df.sum()),
+        pytest.param(
+            lambda df: df.apply(lambda df: pandas.Series([1, 2, 3, 4])),
+            marks=pytest.mark.skip("See modin issue #2511"),
+        ),
+        lambda grp: grp.agg(
+            {
+                df_from_grp(grp).columns[0]: (max, min, sum),
+                df_from_grp(grp).columns[-1]: (sum, min, max),
+            }
+        ),
+        lambda grp: grp.agg(
+            max=(df_from_grp(grp).columns[0], max),
+            sum=(df_from_grp(grp).columns[-1], sum),
+        ),
     ],
 )
-def test_multi_column_groupby_different_partitions(func_to_apply):
+@pytest.mark.parametrize("as_index", [True, False])
+@pytest.mark.parametrize("by_length", [1, 2])
+@pytest.mark.parametrize(
+    "categorical_by",
+    [pytest.param(True, marks=pytest.mark.skip("See modin issue #2513")), False],
+)
+def test_multi_column_groupby_different_partitions(
+    func_to_apply, as_index, by_length, categorical_by
+):
     data = test_data_values[0]
     md_df, pd_df = create_test_dfs(data)
 
-    # columns that will be located in a different partitions
-    by = [pd_df.columns[0], pd_df.columns[-1]]
+    by = [pd_df.columns[-i if i % 2 else i] for i in range(by_length)]
 
-    md_grp, pd_grp = md_df.groupby(by), pd_df.groupby(by)
+    if categorical_by:
+        md_df = md_df.astype({by[0]: "category"})
+        pd_df = pd_df.astype({by[0]: "category"})
+
+    md_grp, pd_grp = md_df.groupby(by, as_index=as_index), pd_df.groupby(
+        by, as_index=as_index
+    )
     eval_general(md_grp, pd_grp, func_to_apply)

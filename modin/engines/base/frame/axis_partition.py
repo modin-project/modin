@@ -13,6 +13,7 @@
 
 from abc import ABC
 import pandas
+import numpy as np
 from modin.data_management.utils import split_result_of_axis_func_pandas
 
 
@@ -146,12 +147,13 @@ class PandasFrameAxisPartition(BaseFrameAxisPartition):
         if other_axis_partition is not None:
             if not isinstance(other_axis_partition, list):
                 other_axis_partition = [other_axis_partition]
-            other_shape = (
-                len(other_axis_partition),
-                len(other_axis_partition[0].list_of_blocks),
+
+            # (other_shape[i-1], other_shape[i]) will indicate slice
+            # to restore i-1 axis partition
+            other_shape = np.cumsum(
+                [0] + [len(o.list_of_blocks) for o in other_axis_partition]
             )
-            if not self.axis:
-                other_shape = tuple(reversed(other_shape))
+
             return self._wrap_partitions(
                 self.deploy_func_between_two_axis_partitions(
                     self.axis,
@@ -268,14 +270,14 @@ class PandasFrameAxisPartition(BaseFrameAxisPartition):
 
         rt_parts = partitions[len_of_left:]
 
-        # reshaping flattened `rt_parts` array into with shape `other_shape`
+        # reshaping flattened `rt_parts` array into a frame with shape `other_shape`
         combined_axis = [
             pandas.concat(
-                [rt_parts[other_shape[axis] * i + j] for j in range(other_shape[axis])],
+                rt_parts[other_shape[i - 1] : other_shape[i]],
                 axis=axis,
                 copy=False,
             )
-            for i in range(other_shape[axis ^ 1])
+            for i in range(1, len(other_shape))
         ]
         rt_frame = pandas.concat(combined_axis, axis=axis ^ 1, copy=False)
 

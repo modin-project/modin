@@ -2525,34 +2525,74 @@ class PandasQueryCompiler(BaseQueryCompiler):
         if callable(agg_func):
             agg_func = wrap_udf_function(agg_func)
 
-        if is_multi_by:
-            return super().groupby_agg(
-                by=by,
-                is_multi_by=is_multi_by,
-                axis=axis,
-                agg_func=agg_func,
-                agg_args=agg_args,
-                agg_kwargs=agg_kwargs,
-                groupby_kwargs=groupby_kwargs,
-                drop=drop,
-            )
-
-        by = by.to_pandas().squeeze() if isinstance(by, type(self)) else by
-
         # since we're going to modify `groupby_kwargs` dict in a `groupby_agg_builder`,
         # we want to copy it to not propagate these changes into source dict, in case
         # of unsuccessful end of function
         groupby_kwargs = groupby_kwargs.copy()
 
         as_index = groupby_kwargs.get("as_index", True)
+        if isinstance(by, type(self)):
+            # `drop` parameter indicates whether or not 'by' data came
+            # from the `self` frame:
+            # True: 'by' data came from the `self`
+            # False: external 'by' data
+            if drop:
+                internal_by = by.columns
+                by = [by]
+            else:
+                internal_by = []
+                by = [by]
+        else:
+            if not isinstance(by, list):
+                by = [by]
+            internal_by = [o for o in by if isinstance(o, str) and o in self.columns]
+            internal_qc = (
+                [self.getitem_column_array(internal_by)] if len(internal_by) else []
+            )
 
-        def groupby_agg_builder(df):
+            by = internal_qc + by[len(internal_by) :]
+
+        broadcastable_by = [o._modin_frame for o in by if isinstance(o, type(self))]
+        not_broadcastable_by = [o for o in by if not isinstance(o, type(self))]
+
+        def groupby_agg_builder(df, by=None, drop=False, partition_idx=None):
             # Set `as_index` to True to track the metadata of the grouping object
             # It is used to make sure that between phases we are constructing the
             # right index and placing columns in the correct order.
             groupby_kwargs["as_index"] = True
 
-            def compute_groupby(df):
+            internal_by_cols = pandas.Index([])
+            missmatched_cols = pandas.Index([])
+            if by is not None:
+                internal_by_df = by[internal_by]
+
+                if isinstance(internal_by_df, pandas.Series):
+                    internal_by_df = internal_by_df.to_frame()
+
+                missmatched_cols = internal_by_df.columns.difference(df.columns)
+                df = pandas.concat(
+                    [df, internal_by_df[missmatched_cols]],
+                    axis=1,
+                    copy=False,
+                )
+                internal_by_cols = internal_by_df.columns
+
+                external_by = by.columns.difference(internal_by)
+                external_by_df = by[external_by].squeeze(axis=1)
+
+                if isinstance(external_by_df, pandas.DataFrame):
+                    external_by_cols = [o for _, o in external_by_df.iteritems()]
+                else:
+                    external_by_cols = [external_by_df]
+
+                by = internal_by_cols.tolist() + external_by_cols
+
+            else:
+                by = []
+
+            by += not_broadcastable_by
+
+            def compute_groupby(df, drop=False, partition_idx=0):
                 grouped_df = df.groupby(by=by, axis=axis, **groupby_kwargs)
                 try:
                     if isinstance(agg_func, dict):
@@ -2569,17 +2609,91 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 # issues with extracting the index.
                 except (DataError, TypeError):
                     result = pandas.DataFrame(index=grouped_df.size().index)
+                if isinstance(result, pandas.Series):
+                    result = result.to_frame(
+                        result.name if result.name is not None else "__reduced__"
+                    )
+
+                result_cols = result.columns
+                result.drop(columns=missmatched_cols, inplace=True, errors="ignore")
+
+                if not as_index:
+                    keep_index_levels = len(by) > 1 and any(
+                        isinstance(x, pandas.CategoricalDtype)
+                        for x in df[internal_by_cols].dtypes
+                    )
+
+                    cols_to_insert = (
+                        internal_by_cols.intersection(result_cols)
+                        if keep_index_levels
+                        else internal_by_cols.difference(result_cols)
+                    )
+
+                    if keep_index_levels:
+                        result.drop(
+                            columns=cols_to_insert, inplace=True, errors="ignore"
+                        )
+
+                    drop = True
+                    if partition_idx == 0:
+                        drop = False
+                        if not keep_index_levels:
+                            lvls_to_drop = [
+                                i
+                                for i, name in enumerate(result.index.names)
+                                if name not in cols_to_insert
+                            ]
+                            if len(lvls_to_drop) == result.index.nlevels:
+                                drop = True
+                            else:
+                                result.index = result.index.droplevel(lvls_to_drop)
+
+                    if (
+                        not isinstance(result.index, pandas.MultiIndex)
+                        and result.index.name is None
+                    ):
+                        drop = True
+
+                    result.reset_index(drop=drop, inplace=True)
+
+                new_index_names = [
+                    None
+                    if isinstance(name, str) and name.startswith("__reduced__")
+                    else name
+                    for name in result.index.names
+                ]
+
+                cols_to_drop = (
+                    result.columns[result.columns.str.match(r"__reduced__.*", na=False)]
+                    if hasattr(result.columns, "str")
+                    else []
+                )
+
+                result.index.names = new_index_names
+
+                # Not dropping columns if result is Series
+                if len(result.columns) > 1:
+                    result.drop(columns=cols_to_drop, inplace=True)
+
                 return result
 
             try:
-                return compute_groupby(df)
+                return compute_groupby(df, drop, partition_idx)
             # This will happen with Arrow buffer read-only errors. We don't want to copy
             # all the time, so this will try to fast-path the code first.
             except (ValueError, KeyError):
-                return compute_groupby(df.copy())
+                return compute_groupby(df.copy(), drop, partition_idx)
 
-        new_modin_frame = self._modin_frame._apply_full_axis(
-            axis, lambda df: groupby_agg_builder(df)
+        apply_indices = list(agg_func.keys()) if isinstance(agg_func, dict) else None
+
+        new_modin_frame = self._modin_frame.broadcast_apply_full_axis(
+            axis=axis,
+            func=lambda df, by=None, partition_idx=None: groupby_agg_builder(
+                df, by, drop, partition_idx
+            ),
+            other=broadcastable_by,
+            apply_indices=apply_indices,
+            enumerate_partitions=True,
         )
         result = self.__constructor__(new_modin_frame)
 
@@ -2598,14 +2712,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             except Exception as e:
                 raise type(e)("No numeric types to aggregate.")
 
-        # Reset `as_index` because it was edited inplace.
-        groupby_kwargs["as_index"] = as_index
-        if as_index:
-            return result
-        else:
-            if result.index.name is None or result.index.name in result.columns:
-                drop = False
-            return result.reset_index(drop=not drop)
+        return result
 
     # END Manual Partitioning methods
 
