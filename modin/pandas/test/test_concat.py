@@ -17,7 +17,13 @@ import pandas
 
 import modin.pandas as pd
 from modin.pandas.utils import from_pandas
-from .utils import df_equals, generate_dfs, generate_multiindex_dfs, generate_none_dfs
+from .utils import (
+    df_equals,
+    generate_dfs,
+    generate_multiindex_dfs,
+    generate_none_dfs,
+    create_test_dfs,
+)
 
 pd.DEFAULT_NPARTITIONS = 4
 
@@ -172,6 +178,11 @@ def test_concat_with_empty_frame():
         pd.concat([modin_empty_df, modin_row]),
         pandas.concat([pandas_empty_df, pandas_row]),
     )
+
+    md_empty1, pd_empty1 = create_test_dfs(index=[1, 2, 3])
+    md_empty2, pd_empty2 = create_test_dfs(index=[2, 3, 4])
+
+    df_equals(pd.concat([md_empty1, md_empty2]), pandas.concat([pd_empty1, pd_empty2]))
 
 
 @pytest.mark.parametrize("axis", [0, 1])

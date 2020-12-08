@@ -1818,15 +1818,6 @@ class BasePandasFrame(object):
         do_reindex_base = not base_index.equals(joined_index)
         do_repartition_base = force_repartition or do_reindex_base
 
-        def reindex(frame, do_reindex=None, idx=None, **kwargs):
-            return (
-                frame._frame_mgr_cls.map_axis_partitions(
-                    axis, frame._partitions, make_reindexer(do_reindex, idx), **kwargs
-                )
-                if frame._partitions.size != 0
-                else frame._partitions
-            )
-
         # perform repartitioning and reindexing for `base_frame` if needed
         if do_repartition_base:
             reindexed_base = base_frame._frame_mgr_cls.map_axis_partitions(
