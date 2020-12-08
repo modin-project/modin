@@ -349,7 +349,11 @@ def test_simple_row_groupby(by, as_index, col1_category):
 
     # Workaround for Pandas bug #34656. Recreate groupby object for Pandas
     pandas_groupby = pandas_df.groupby(by=pandas_by, as_index=as_index)
-    apply_functions = [lambda df: df.sum(), min]
+    apply_functions = [
+        lambda df: df.sum(),
+        lambda df: pandas.Series([1, 2, 3, 4], name="result"),
+        min,
+    ]
     for func in apply_functions:
         eval_apply(modin_groupby, pandas_groupby, func)
 

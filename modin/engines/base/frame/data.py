@@ -1699,6 +1699,9 @@ class BasePandasFrame(object):
                 advance, and if not provided it must be computed.
             apply_indices : list-like (optional),
                 Indices of `axis ^ 1` to apply function over.
+            enumerate_partitions : bool (optional, default False),
+                Whether or not to pass partition index into applied `func`.
+                Note that `func` must be able to obtain `partition_idx` kwarg.
             dtypes : list-like (optional)
                 The data types of the result. This is an optimization
                 because there are functions that always result in a particular data

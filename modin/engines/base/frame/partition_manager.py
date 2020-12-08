@@ -248,6 +248,9 @@ class BaseFrameManager(ABC):
             The flag to keep partitions for Modin Frame.
         apply_indices : list of ints (optional),
             Indices of `axis ^ 1` to apply function over.
+        enumerate_partitions : bool (optional, default False),
+            Whether or not to pass partition index into `apply_func`.
+            Note that `apply_func` must be able to obtain `partition_idx` kwarg.
         lengths : list(int), default None
             The list of lengths to shuffle the object.
 

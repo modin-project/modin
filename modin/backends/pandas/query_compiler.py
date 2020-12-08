@@ -2610,7 +2610,9 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 except (DataError, TypeError):
                     result = pandas.DataFrame(index=grouped_df.size().index)
                 if isinstance(result, pandas.Series):
-                    result = result.to_frame("__reduced__")
+                    result = result.to_frame(
+                        result.name if result.name is not None else "__reduced__"
+                    )
 
                 result_cols = result.columns
                 result.drop(columns=missmatched_cols, inplace=True, errors="ignore")
