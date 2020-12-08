@@ -28,6 +28,7 @@ import sqlalchemy as sa
 import csv
 
 from .utils import (
+    check_file_leaks,
     df_equals,
     json_short_string,
     json_short_bytes,
@@ -1260,6 +1261,7 @@ def test_from_clipboard():
 
 
 @pytest.mark.xfail(reason="read_excel is broken for now, see #1733 for details")
+@check_file_leaks
 def test_from_excel():
     setup_excel_file(NROWS)
 
@@ -1271,6 +1273,7 @@ def test_from_excel():
     teardown_excel_file()
 
 
+@check_file_leaks
 def test_from_excel_engine():
     setup_excel_file(NROWS)
 
@@ -1283,6 +1286,7 @@ def test_from_excel_engine():
     teardown_excel_file()
 
 
+@check_file_leaks
 def test_from_excel_index_col():
     setup_excel_file(NROWS)
 
@@ -1295,6 +1299,7 @@ def test_from_excel_index_col():
     teardown_excel_file()
 
 
+@check_file_leaks
 def test_from_excel_all_sheets():
     setup_excel_file(NROWS)
 
@@ -1312,6 +1317,7 @@ def test_from_excel_all_sheets():
     teardown_excel_file()
 
 
+@check_file_leaks
 def test_from_excel_sheetname_title():
     path = "modin/pandas/test/data/excel_sheetname_title.xlsx"
     modin_df = pd.read_excel(path)
@@ -1323,6 +1329,7 @@ def test_from_excel_sheetname_title():
     "sheet_name",
     ["Sheet1", "AnotherSpecialName", "SpecialName", "SecondSpecialName", 0, 1, 2, 3],
 )
+@check_file_leaks
 def test_from_excel_sheet_name(sheet_name):
     fname = "modin/pandas/test/data/modin_error_book.xlsx"
     modin_df = pd.read_excel(fname, sheet_name=sheet_name)
