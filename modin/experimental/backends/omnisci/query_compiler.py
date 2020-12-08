@@ -514,14 +514,15 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
         Returns:
              A new QueryCompiler
         """
-        if (
-            axis == 1
-            or not isinstance(value, type(self))
-            or (isinstance(value, type(self)) and not self._is_subframe(value))
-        ):
+        if axis == 1 or not isinstance(value, type(self)):
             return super().setitem(axis=axis, key=key, value=value)
 
-        return self._setitem(axis, key, value)
+        try:
+            result = self._setitem(axis, key, value)
+        # OmniSci engine does not yet support cases when `value` is not a subframe of `self`.
+        except NotImplementedError:
+            result = super().setitem(axis=axis, key=key, value=value)
+        return result
 
     _setitem = PandasQueryCompiler._setitem
     insert_item = PandasQueryCompiler.insert_item
@@ -538,12 +539,13 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
             A new DFAlgQueryCompiler with new data inserted.
         """
         if isinstance(value, type(self)):
+            value.columns = [column]
+            try:
+                result = self.insert_item(axis=1, loc=loc, value=value)
             # OmniSci engine does not yet support cases when `value` is not a subframe of `self`.
-            if not self._is_subframe(value):
-                return super().insert(loc=loc, column=column, value=value)
-            else:
-                value.columns = [column]
-                return self.insert_item(axis=1, loc=loc, value=value)
+            except NotImplementedError:
+                result = super().insert(loc=loc, column=column, value=value)
+            return result
 
         if is_list_like(value):
             return super().insert(loc=loc, column=column, value=value)
@@ -646,12 +648,6 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
 
     def free(self):
         return
-
-    def _is_subframe(self, other):
-        return (
-            self._modin_frame._find_common_projections_base(other._modin_frame)
-            is not None
-        )
 
     index = property(_get_index, _set_index)
     columns = property(_get_columns, _set_columns)
