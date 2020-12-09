@@ -131,6 +131,8 @@ import numpy as np
 frame_data = np.random.randint(0, 100, size=(2**10, 2**8))
 df = pd.DataFrame(frame_data)
 ```
+**In local (without a cluster) modin will create and manage a local (dask or ray) cluster for the execution**
+
 
 To use Modin, you do not need to know how many cores your system has and you do not need
 to  specify how to distribute the data. In fact, you can continue using your previous
