@@ -15,6 +15,7 @@ import logging
 import modin.pandas as pd
 import pandas
 import numpy as np
+import uuid
 
 RAND_LOW = 0
 RAND_HIGH = 100
@@ -93,3 +94,7 @@ def generate_dataframe(impl, data_type, ncols, nrows, rand_low, rand_high):
         assert False
     dataframes_cache[cache_key] = df
     return df
+
+
+def random_string():
+    return str(uuid.uuid1())

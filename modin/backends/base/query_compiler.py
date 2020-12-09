@@ -1502,6 +1502,21 @@ class BaseQueryCompiler(abc.ABC):
     index = property(_get_axis(0), _set_axis(0))
     columns = property(_get_axis(1), _set_axis(1))
 
+    def get_axis(self, axis):
+        """
+        Return index labels of the specified axis.
+
+        Parameters
+        ----------
+        axis: int,
+            Axis to return labels on.
+
+        Returns
+        -------
+            Index
+        """
+        return self.index if axis == 0 else self.columns
+
     def view(self, index=None, columns=None):
         index = [] if index is None else index
         columns = [] if columns is None else columns
@@ -1510,6 +1525,43 @@ class BaseQueryCompiler(abc.ABC):
             return df.iloc[index, columns]
 
         return DataFrameDefault.register(applyier)(self)
+
+    def insert_item(self, axis, loc, value, how="inner", replace=False):
+        """
+        Insert new column/row defined by `value` at the specified `loc`
+
+        Parameters
+        ----------
+        axis: int, axis to insert along
+        loc: int, position to insert `value`
+        value: BaseQueryCompiler, value to insert
+        how : str,
+            The type of join to join to make.
+        replace: bool (default False),
+            Whether to insert item at `loc` or to replace item at `loc`.
+
+        Returns
+        -------
+            A new BaseQueryCompiler
+        """
+        assert isinstance(value, type(self))
+
+        def mask(idx):
+            if len(idx) == len(self.get_axis(axis)):
+                return self
+            return (
+                self.getitem_column_array(idx, numeric=True)
+                if axis
+                else self.getitem_row_array(idx)
+            )
+
+        if 0 <= loc < len(self.get_axis(axis)):
+            first_mask = mask(list(range(loc)))
+            second_mask_loc = loc + 1 if replace else loc
+            second_mask = mask(list(range(second_mask_loc, len(self.get_axis(axis)))))
+            return first_mask.concat(axis, [value, second_mask], join=how, sort=False)
+        else:
+            return self.concat(axis, [value], join=how, sort=False)
 
     def setitem(self, axis, key, value):
         def setitem(df, axis, key, value):

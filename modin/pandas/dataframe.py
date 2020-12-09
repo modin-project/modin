@@ -921,21 +921,18 @@ class DataFrame(BasePandasDataset):
         if isinstance(value, (DataFrame, pandas.DataFrame)):
             if len(value.columns) != 1:
                 raise ValueError("Wrong number of items passed 2, placement implies 1")
-            value = value.iloc[:, 0]
-
-        if isinstance(value, Series):
-            # TODO: Remove broadcast of Series
-            value = value._to_pandas()
+            value = value.squeeze(axis=1)
 
         if not self._query_compiler.lazy_execution and len(self.index) == 0:
-            try:
-                value = pandas.Series(value)
-            except (TypeError, ValueError, IndexError):
-                raise ValueError(
-                    "Cannot insert into a DataFrame with no defined index "
-                    "and a value that cannot be converted to a "
-                    "Series"
-                )
+            if not hasattr(value, "index"):
+                try:
+                    value = pandas.Series(value)
+                except (TypeError, ValueError, IndexError):
+                    raise ValueError(
+                        "Cannot insert into a DataFrame with no defined index "
+                        "and a value that cannot be converted to a "
+                        "Series"
+                    )
             new_index = value.index.copy()
             new_columns = self.columns.insert(loc, column)
             new_query_compiler = DataFrame(
@@ -948,7 +945,7 @@ class DataFrame(BasePandasDataset):
         else:
             if (
                 is_list_like(value)
-                and not isinstance(value, pandas.Series)
+                and not isinstance(value, (pandas.Series, Series))
                 and len(value) != len(self.index)
             ):
                 raise ValueError("Length of values does not match length of index")
@@ -962,6 +959,8 @@ class DataFrame(BasePandasDataset):
                 )
             if loc < 0:
                 raise ValueError("unbounded slice")
+            if isinstance(value, Series):
+                value = value._query_compiler
             new_query_compiler = self._query_compiler.insert(loc, column, value)
 
         self._update_inplace(new_query_compiler=new_query_compiler)
@@ -1979,19 +1978,8 @@ class DataFrame(BasePandasDataset):
 
     def __setitem__(self, key, value):
         if hashable(key) and key not in self.columns:
-            # Handle new column case first
-            if isinstance(value, Series):
-                if len(self.columns) == 0:
-                    self._query_compiler = value._query_compiler.copy()
-                else:
-                    self._create_or_update_from_compiler(
-                        self._query_compiler.concat(
-                            1,
-                            value._query_compiler,
-                            join="left",
-                        ),
-                        inplace=True,
-                    )
+            if isinstance(value, Series) and len(self.columns) == 0:
+                self._query_compiler = value._query_compiler.copy()
                 # Now that the data is appended, we need to update the column name for
                 # that column to `key`, otherwise the name could be incorrect. Drop the
                 # last column name from the list (the appended value's name and append

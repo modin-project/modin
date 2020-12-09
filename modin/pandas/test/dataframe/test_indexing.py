@@ -34,12 +34,24 @@ from modin.pandas.test.utils import (
     int_arg_keys,
     int_arg_values,
     create_test_dfs,
+    eval_general,
 )
 
 pd.DEFAULT_NPARTITIONS = 4
 
 # Force matplotlib to not use any Xwindows backend.
 matplotlib.use("Agg")
+
+
+def eval_setitem(md_df, pd_df, value, col=None, loc=None):
+    if loc is not None:
+        col = pd_df.columns[loc]
+
+    value_getter = value if callable(value) else (lambda *args, **kwargs: value)
+
+    eval_general(
+        md_df, pd_df, lambda df: df.__setitem__(col, value_getter(df)), __inplace__=True
+    )
 
 
 @pytest.mark.parametrize(
@@ -387,8 +399,8 @@ def test_loc_multi_index():
     df_equals(modin_df.loc[modin_df.index[:7]], pandas_df.loc[pandas_df.index[:7]])
 
 
-@pytest.mark.parametrize("index", [["row1", "row2", "row3"], ["row1"]])
-@pytest.mark.parametrize("columns", [["col1", "col2"], ["col1"]])
+@pytest.mark.parametrize("index", [["row1", "row2", "row3"]])
+@pytest.mark.parametrize("columns", [["col1", "col2"]])
 def test_loc_assignment(index, columns):
     md_df, pd_df = create_test_dfs(index=index, columns=columns)
     for i, ind in enumerate(index):
@@ -1075,38 +1087,20 @@ def test___getattr__(request, data):
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test___setitem__(data):
-    modin_df = pd.DataFrame(data)
-    pandas_df = pandas.DataFrame(data)
+    eval_setitem(*create_test_dfs(data), loc=-1, value=1)
+    eval_setitem(
+        *create_test_dfs(data), loc=-1, value=lambda df: type(df)(df[df.columns[0]])
+    )
 
-    modin_df.__setitem__(modin_df.columns[-1], 1)
-    pandas_df.__setitem__(pandas_df.columns[-1], 1)
-    df_equals(modin_df, pandas_df)
+    nrows = len(data[list(data.keys())[0]])
+    arr = np.arange(nrows * 2).reshape(-1, 2)
 
-    modin_df = pd.DataFrame(data)
-    pandas_df = pandas.DataFrame(data)
+    eval_setitem(*create_test_dfs(data), loc=-1, value=arr)
+    eval_setitem(*create_test_dfs(data), col="___NON EXISTENT COLUMN", value=arr)
+    eval_setitem(*create_test_dfs(data), loc=0, value=np.arange(nrows))
 
-    modin_df[modin_df.columns[-1]] = pd.DataFrame(modin_df[modin_df.columns[0]])
-    pandas_df[pandas_df.columns[-1]] = pandas.DataFrame(pandas_df[pandas_df.columns[0]])
-    df_equals(modin_df, pandas_df)
-
-    modin_df = pd.DataFrame(data)
-    pandas_df = pandas.DataFrame(data)
-
-    rows = len(modin_df)
-    arr = np.arange(rows * 2).reshape(-1, 2)
-    modin_df[modin_df.columns[-1]] = arr
-    pandas_df[pandas_df.columns[-1]] = arr
-    df_equals(pandas_df, modin_df)
-
-    with pytest.raises(ValueError, match=r"Wrong number of items passed"):
-        modin_df["___NON EXISTENT COLUMN"] = arr
-
-    modin_df[modin_df.columns[0]] = np.arange(len(modin_df))
-    pandas_df[pandas_df.columns[0]] = np.arange(len(pandas_df))
-    df_equals(modin_df, pandas_df)
-
-    modin_df = pd.DataFrame(columns=modin_df.columns)
-    pandas_df = pandas.DataFrame(columns=pandas_df.columns)
+    modin_df = pd.DataFrame(columns=data.keys())
+    pandas_df = pandas.DataFrame(columns=data.keys())
 
     for col in modin_df.columns:
         modin_df[col] = np.arange(1000)
@@ -1167,6 +1161,23 @@ def test___setitem__(data):
     modin_df["b"] = pd.Series([4, 5, 6, 7, 8])
     pandas_df["b"] = pandas.Series([4, 5, 6, 7, 8])
     df_equals(modin_df, pandas_df)
+
+    # from issue #2442
+    data = {"a": [1, 2, 3, 4]}
+    # Index with duplicated timestamp
+    index = pandas.to_datetime(["2020-02-06", "2020-02-06", "2020-02-22", "2020-03-26"])
+
+    md_df, pd_df = create_test_dfs(data, index=index)
+    # Setting new column
+    pd_df["b"] = pandas.Series(np.arange(4))
+    md_df["b"] = pd.Series(np.arange(4))
+
+    df_equals(md_df, pd_df)
+    # Setting existing column
+    pd_df["b"] = pandas.Series(np.arange(4))
+    md_df["b"] = pd.Series(np.arange(4))
+
+    df_equals(md_df, pd_df)
 
 
 def test___setitem__with_mismatched_partitions():

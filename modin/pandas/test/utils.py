@@ -772,7 +772,10 @@ def eval_io_from_str(csv_str: str, unique_filename: str, **kwargs):
 
 
 def create_test_dfs(*args, **kwargs):
-    return pd.DataFrame(*args, **kwargs), pandas.DataFrame(*args, **kwargs)
+    post_fn = kwargs.pop("post_fn", lambda df: df)
+    return map(
+        post_fn, [pd.DataFrame(*args, **kwargs), pandas.DataFrame(*args, **kwargs)]
+    )
 
 
 def generate_dfs():

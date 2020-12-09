@@ -449,7 +449,12 @@ class BaseFrameManager(ABC):
             # but `np.concatenate` can concatenate arrays only if its shapes at
             # specified axis are equals, so filtering empty frames to avoid concat error
             right_parts = [o for o in right_parts if o.size != 0]
-            return np.concatenate([left_parts] + right_parts, axis=axis)
+            to_concat = (
+                [left_parts] + right_parts if left_parts.size != 0 else right_parts
+            )
+            return (
+                np.concatenate(to_concat, axis=axis) if len(to_concat) else left_parts
+            )
         else:
             return np.append(left_parts, right_parts, axis=axis)
 

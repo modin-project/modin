@@ -54,7 +54,9 @@ matplotlib.use("Agg")
 
 
 def eval_insert(modin_df, pandas_df, **kwargs):
-    _kwargs = {"loc": 0, "col": "New column"}
+    if "col" in kwargs and "column" not in kwargs:
+        kwargs["column"] = kwargs.pop("col")
+    _kwargs = {"loc": 0, "column": "New column"}
     _kwargs.update(kwargs)
 
     eval_general(
@@ -921,19 +923,7 @@ def test_dropna_subset_error(data, axis, subset):
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-@pytest.mark.parametrize(
-    "astype",
-    [
-        "category",
-        pytest.param(
-            "int32",
-            marks=pytest.mark.xfail(
-                reason="Modin astype() does not raises ValueError at non-numeric argument when Pandas does."
-            ),
-        ),
-        "float",
-    ],
-)
+@pytest.mark.parametrize("astype", ["category", "int32", "float"])
 def test_insert_dtypes(data, astype):
     modin_df, pandas_df = pd.DataFrame(data), pandas.DataFrame(data)
 
@@ -983,6 +973,12 @@ def test_insert(data):
         pandas_df,
         col="DataFrame insert",
         value=lambda df: df[[df.columns[0]]],
+    )
+    eval_insert(
+        modin_df,
+        pandas_df,
+        col="Different indices",
+        value=lambda df: df[[df.columns[0]]].set_index(df.index[::-1]),
     )
 
     # Bad inserts

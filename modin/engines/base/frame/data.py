@@ -981,8 +981,9 @@ class BasePandasFrame(object):
             The axis index object to join (0 - rows, 1 - columns).
         indexes : list(Index)
             The indexes to join on.
-        how : {'left', 'right', 'inner', 'outer'}
-            The type of join to join to make.
+        how : {'left', 'right', 'inner', 'outer', None}
+            The type of join to join to make. If `None` then joined index
+            considered to be the first index in the `indexes` list.
         sort : boolean
             Whether or not to sort the joined index
 
@@ -1001,24 +1002,24 @@ class BasePandasFrame(object):
                 return left_index.join(right_index, how=how, sort=sort)
 
         # define condition for joining indexes
-        do_join_index = False
-        for index in indexes[1:]:
-            if not indexes[0].equals(index):
-                do_join_index = True
-                break
+        all_indices_equal = all(indexes[0].equals(index) for index in [indexes[1:]])
+        do_join_index = how is not None and not all_indices_equal
 
         # define condition for joining indexes with getting indexers
-        is_duplicates = any(not index.is_unique for index in indexes) and axis == 0
-        indexers = []
-        if is_duplicates:
-            indexers = [None] * len(indexes)
+        need_indexers = (
+            axis == 0
+            and not all_indices_equal
+            and any(not index.is_unique for index in indexes)
+        )
+        indexers = None
 
         # perform joining indexes
         if do_join_index:
-            if len(indexes) == 2 and is_duplicates:
+            if len(indexes) == 2 and need_indexers:
                 # in case of count of indexes > 2 we should perform joining all indexes
                 # after that get indexers
                 # in the fast path we can obtain joined_index and indexers in one call
+                indexers = [None, None]
                 joined_index, indexers[0], indexers[1] = indexes[0].join(
                     indexes[1], how=how, sort=sort, return_indexers=True
                 )
@@ -1027,20 +1028,19 @@ class BasePandasFrame(object):
                 # TODO: revisit for performance
                 for index in indexes[1:]:
                     joined_index = merge(joined_index, index)
-
-                if is_duplicates:
-                    for i, index in enumerate(indexes):
-                        indexers[i] = index.get_indexer_for(joined_index)
         else:
             joined_index = indexes[0].copy()
+
+        if need_indexers and indexers is None:
+            indexers = [index.get_indexer_for(joined_index) for index in indexes]
 
         def make_reindexer(do_reindex: bool, frame_idx: int):
             # the order of the frames must match the order of the indexes
             if not do_reindex:
                 return lambda df: df
 
-            if is_duplicates:
-                assert indexers != []
+            if need_indexers:
+                assert indexers is not None
 
                 return lambda df: df._reindex_with_indexers(
                     {0: [joined_index, indexers[frame_idx]]},
@@ -1797,51 +1797,76 @@ class BasePandasFrame(object):
             axis, [self_index] + others_index, how, sort
         )
 
-        # define conditions for reindexing and repartitioning `self` frame
-        do_reindex_self = not self_index.equals(joined_index)
-        do_repartition_self = force_repartition or do_reindex_self
+        frames = [self] + other
+        non_empty_frames_idx = [
+            i for i, o in enumerate(frames) if o._partitions.size != 0
+        ]
 
-        # perform repartitioning and reindexing for `self` frame if needed
-        if do_repartition_self:
-            reindexed_self = self._frame_mgr_cls.map_axis_partitions(
+        # If all frames are empty
+        if len(non_empty_frames_idx) == 0:
+            return self._partitions, [o._partitions for o in other], joined_index
+
+        base_frame_idx = non_empty_frames_idx[0]
+        base_frame = frames[base_frame_idx]
+
+        other_frames = frames[base_frame_idx + 1 :]
+
+        # Picking first non-empty frame
+        base_frame = frames[non_empty_frames_idx[0]]
+        base_index = base_frame.axes[axis]
+
+        # define conditions for reindexing and repartitioning `self` frame
+        do_reindex_base = not base_index.equals(joined_index)
+        do_repartition_base = force_repartition or do_reindex_base
+
+        # perform repartitioning and reindexing for `base_frame` if needed
+        if do_repartition_base:
+            reindexed_base = base_frame._frame_mgr_cls.map_axis_partitions(
                 axis,
-                self._partitions,
-                # self frame has 0 idx
-                make_reindexer(do_reindex_self, 0),
+                base_frame._partitions,
+                make_reindexer(do_reindex_base, base_frame_idx),
             )
         else:
-            reindexed_self = self._partitions
+            reindexed_base = base_frame._partitions
 
-        # define length of `self` and `other` frames to aligning purpose
-        self_lengths = get_axis_lengths(reindexed_self, axis)
-        others_lengths = [o._axes_lengths[axis] for o in other]
+        # define length of base and `other` frames to aligning purpose
+        base_lengths = get_axis_lengths(reindexed_base, axis)
+        others_lengths = [o._axes_lengths[axis] for o in other_frames]
 
         # define conditions for reindexing and repartitioning `other` frames
-        do_reindex_others = [not index.equals(joined_index) for index in others_index]
+        do_reindex_others = [
+            not o.axes[axis].equals(joined_index) for o in other_frames
+        ]
 
-        do_repartition_others = [None] * len(other)
-        for i in range(len(other)):
+        do_repartition_others = [None] * len(other_frames)
+        for i in range(len(other_frames)):
             do_repartition_others[i] = (
                 force_repartition
                 or do_reindex_others[i]
-                or others_lengths[i] != self_lengths
+                or others_lengths[i] != base_lengths
             )
 
         # perform repartitioning and reindexing for `other` frames if needed
-        reindexed_other_list = [None] * len(other)
-        for i in range(len(other)):
+        reindexed_other_list = [None] * len(other_frames)
+        for i in range(len(other_frames)):
             if do_repartition_others[i]:
-                reindexed_other_list[i] = other[i]._frame_mgr_cls.map_axis_partitions(
+                # indices of others frame start from `base_frame_idx` + 1
+                reindexed_other_list[i] = other_frames[
+                    i
+                ]._frame_mgr_cls.map_axis_partitions(
                     axis,
                     other[i]._partitions,
-                    # indices of others frame start from 1 (0 - self frame)
-                    make_reindexer(do_reindex_others[i], 1 + i),
-                    lengths=self_lengths,
+                    make_reindexer(do_repartition_others[i], base_frame_idx + 1 + i),
+                    lengths=base_lengths,
                 )
             else:
-                reindexed_other_list[i] = other[i]._partitions
-
-        return reindexed_self, reindexed_other_list, joined_index
+                reindexed_other_list[i] = other_frames[i]._partitions
+        reindexed_frames = (
+            [frames[i]._partitions for i in range(base_frame_idx)]
+            + [reindexed_base]
+            + reindexed_other_list
+        )
+        return reindexed_frames[0], reindexed_frames[1:], joined_index
 
     def _simple_shuffle(self, axis, other):
         """

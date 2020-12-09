@@ -517,9 +517,14 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
         if axis == 1 or not isinstance(value, type(self)):
             return super().setitem(axis=axis, key=key, value=value)
 
-        return self._setitem(axis, key, value)
+        try:
+            result = self._setitem(axis, key, value)
+        # OmniSci engine does not yet support cases when `value` is not a subframe of `self`.
+        except NotImplementedError:
+            result = super().setitem(axis=axis, key=key, value=value)
+        return result
 
-    _setitem = PandasQueryCompiler.setitem
+    _setitem = PandasQueryCompiler._setitem
 
     def insert(self, loc, column, value):
         """Insert new column data.
@@ -532,6 +537,15 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
         Returns:
             A new DFAlgQueryCompiler with new data inserted.
         """
+        if isinstance(value, type(self)):
+            value.columns = [column]
+            try:
+                result = self.insert_item(axis=1, loc=loc, value=value)
+            # OmniSci engine does not yet support cases when `value` is not a subframe of `self`.
+            except NotImplementedError:
+                result = super().insert(loc=loc, column=column, value=value)
+            return result
+
         if is_list_like(value):
             return super().insert(loc=loc, column=column, value=value)
 

@@ -476,8 +476,11 @@ class TestConcat:
 
         run_and_compare(concat, data=self.data)
 
-    def test_setitem(self):
+    def test_setitem_lazy(self):
         def applier(df, **kwargs):
+            df = df + 1
+            df["a"] = df["a"] + 1
+            df["e"] = df["a"] + 1
             df["new_int8"] = np.int8(10)
             df["new_int16"] = np.int16(10)
             df["new_int32"] = np.int32(10)
@@ -489,16 +492,32 @@ class TestConcat:
 
         run_and_compare(applier, data=self.data)
 
-    def test_insert(self):
-        def applier(df, **kwargs):
-            df.insert(0, "new_int", 10)
-            df.insert(0, "new_float", 5.5)
-            df.insert(0, "new_list_like", np.arange(len(df)))
-            df.insert(0, "qc_column", df["new_int"])
+    def test_setitem_default(self):
+        def applier(df, lib, **kwargs):
+            df = df + 1
+            df["a"] = np.arange(3)
+            df["b"] = lib.Series(np.arange(3))
             return df
 
-        # setting `force_lazy=False`, because we're expecting to fallback
-        # to pandas in that case, which is not supported in lazy mode
+        run_and_compare(applier, data=self.data, force_lazy=False)
+
+    def test_insert_lazy(self):
+        def applier(df, **kwargs):
+            df = df + 1
+            df.insert(2, "new_int", 10)
+            df.insert(1, "new_float", 5.5)
+            df.insert(0, "new_a", df["a"] + 1)
+            return df
+
+        run_and_compare(applier, data=self.data)
+
+    def test_insert_default(self):
+        def applier(df, lib, **kwargs):
+            df = df + 1
+            df.insert(1, "new_range", np.arange(3))
+            df.insert(1, "new_series", lib.Series(np.arange(3)))
+            return df
+
         run_and_compare(applier, data=self.data, force_lazy=False)
 
     def test_concat_many(self):

@@ -12,8 +12,10 @@
 # governing permissions and limitations under the License.
 
 import modin.pandas as pd
+import numpy as np
+
 from modin.config import CpuCount, TestDatasetSize
-from .utils import generate_dataframe, RAND_LOW, RAND_HIGH
+from .utils import generate_dataframe, RAND_LOW, RAND_HIGH, random_string
 
 # define `MODIN_CPUS` env var to control the number of partitions
 # it should be defined before modin.pandas import
@@ -30,6 +32,7 @@ if TestDatasetSize.get() == "Big":
         (10, 1_000_000),
         (1_000_000, 10),
     ]
+    DATA_SIZE = [(50_000, 128)]
 else:
     MERGE_DATA_SIZE = [
         (2000, 100, 2000, 100),
@@ -37,6 +40,7 @@ else:
     GROUPBY_DATA_SIZE = [
         (2000, 100),
     ]
+    DATA_SIZE = [(10_000, 128)]
 
 JOIN_DATA_SIZE = MERGE_DATA_SIZE
 ARITHMETIC_DATA_SIZE = GROUPBY_DATA_SIZE
@@ -156,6 +160,79 @@ class TimeBinaryOp:
 
     def time_concat(self, data_type, data_size, binary_op, axis):
         self.op(self.df2, axis=axis)
+
+
+class BaseTimeSetItem:
+    param_names = ["data_type", "data_size", "item_length", "loc", "is_equal_indices"]
+
+    @staticmethod
+    def get_loc(df, loc, axis, item_length):
+        locs_dict = {
+            "zero": 0,
+            "middle": len(df.axes[axis]) // 2,
+            "last": len(df.axes[axis]) - 1,
+        }
+        base_loc = locs_dict[loc]
+        range_based_loc = np.arange(
+            base_loc, min(len(df.axes[axis]), base_loc + item_length)
+        )
+        return (
+            (df.axes[axis][base_loc], base_loc)
+            if len(range_based_loc) == 1
+            else (df.axes[axis][range_based_loc], range_based_loc)
+        )
+
+    def trigger_execution(self):
+        self.df.shape
+
+    def setup(self, data_type, data_size, item_length, loc, is_equal_indices):
+        self.df = generate_dataframe(
+            "modin", data_type, data_size[1], data_size[0], RAND_LOW, RAND_HIGH
+        ).copy()
+        self.loc, self.iloc = self.get_loc(
+            self.df, loc, item_length=item_length, axis=1
+        )
+
+        self.item = self.df[self.loc] + 1
+        self.item_raw = self.item.to_numpy()
+        if not is_equal_indices:
+            self.item.index = reversed(self.item.index)
+
+
+class TimeSetItem(BaseTimeSetItem):
+    params = [
+        ["int"],
+        DATA_SIZE,
+        [1],
+        ["zero", "middle", "last"],
+        [True, False],
+    ]
+
+    def time_setitem_qc(self, *args, **kwargs):
+        self.df[self.loc] = self.item
+        self.trigger_execution()
+
+    def time_setitem_raw(self, *args, **kwargs):
+        self.df[self.loc] = self.item_raw
+        self.trigger_execution()
+
+
+class TimeInsert(BaseTimeSetItem):
+    params = [
+        ["int"],
+        DATA_SIZE,
+        [1],
+        ["zero", "middle", "last"],
+        [True, False],
+    ]
+
+    def time_insert_qc(self, *args, **kwargs):
+        self.df.insert(loc=self.iloc, column=random_string(), value=self.item)
+        self.trigger_execution()
+
+    def time_insert_raw(self, *args, **kwargs):
+        self.df.insert(loc=self.iloc, column=random_string(), value=self.item_raw)
+        self.trigger_execution()
 
 
 class TimeArithmetic:
