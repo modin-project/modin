@@ -76,6 +76,7 @@ class ExcelDispatcher(TextFileDispatcher):
                 # close only if it were us who opened the object
                 io_file.close()
 
+        pandas_kw = dict(kwargs)  # preserve original kwargs
         with ZipFile(io) as z:
             from io import BytesIO
 
@@ -129,6 +130,13 @@ class ExcelDispatcher(TextFileDispatcher):
             # Remove column names that are specified as `index_col`
             if index_col is not None:
                 column_names = column_names.drop(column_names[index_col])
+
+            if not all(column_names):
+                # some column names are empty, use pandas reader to take the names from it
+                pandas_kw["nrows"] = 1
+                df = pandas.read_excel(io, **pandas_kw)
+                column_names = df.columns
+
             # Compute partition metadata upfront so it is uniform for all partitions
             chunk_size = max(1, (total_bytes - f.tell()) // num_partitions)
             num_splits = min(len(column_names), num_partitions)

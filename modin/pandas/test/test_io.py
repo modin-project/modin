@@ -1325,6 +1325,13 @@ def test_from_excel_sheetname_title():
     df_equals(modin_df, pandas_df)
 
 
+@check_file_leaks
+def test_excel_empty_line():
+    path = "modin/pandas/test/data/test_emptyline.xlsx"
+    modin_df = pd.read_excel(path)
+    assert str(modin_df)
+
+
 @pytest.mark.parametrize(
     "sheet_name",
     ["Sheet1", "AnotherSpecialName", "SpecialName", "SecondSpecialName", 0, 1, 2, 3],
