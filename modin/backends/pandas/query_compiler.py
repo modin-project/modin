@@ -2168,43 +2168,6 @@ class PandasQueryCompiler(BaseQueryCompiler):
         """
         return self.__constructor__(self._modin_frame.mask(row_numeric_idx=key))
 
-    def insert_item(self, axis, loc, value, how="inner", replace=False):
-        """
-        Insert new column/row defined by `value` at the specified `loc`
-
-        Parameters
-        ----------
-        axis: int, axis to insert along
-        loc: int, position to insert `value`
-        value: PandasQueryCompiler, value to insert
-
-        Returns
-        -------
-            A new PandasQueryCompiler
-        """
-        assert isinstance(value, type(self))
-
-        def execute_concat(left, middle, *right):
-            return self.__constructor__(
-                left._concat(axis, [middle, *right], how, sort=False)
-            )
-
-        def get_kwargs(value):
-            # `modin_frame.mask` returns the `self` if all index parameters are `None`
-            # this is that we want to get if `len(value) == len(axis)`
-            value = None if len(value) == len(self.get_axis(axis)) else value
-            return {("col_numeric_idx" if axis else "row_numeric_idx"): value}
-
-        if 0 <= loc < len(self.get_axis(axis)) + int(replace):
-            first_mask = self._modin_frame.mask(**get_kwargs(list(range(loc))))
-            second_mask_loc = loc + 1 if replace else loc
-            second_mask = self._modin_frame.mask(
-                **get_kwargs(list(range(second_mask_loc, len(self.get_axis(axis)))))
-            )
-            return execute_concat(first_mask, value._modin_frame, second_mask)
-        else:
-            return execute_concat(self._modin_frame, value._modin_frame)
-
     def setitem(self, axis, key, value):
         """Set the column defined by `key` to the `value` provided.
 

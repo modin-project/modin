@@ -28,7 +28,8 @@ pd.DEFAULT_NPARTITIONS = 4
 @pytest.mark.parametrize("axis", [0, 1])
 @pytest.mark.parametrize("item_length", [0, 1, 2])
 @pytest.mark.parametrize("loc", ["first", "first + 1", "middle", "penult", "last"])
-def test_insert_item(axis, item_length, loc):
+@pytest.mark.parametrize("replace", [True, False])
+def test_insert_item(axis, item_length, loc, replace):
     data = test_data_values[0]
 
     def post_fn(df):
@@ -51,9 +52,13 @@ def test_insert_item(axis, item_length, loc):
     def get_reference(df, value, loc):
         if axis == 0:
             first_mask = df.iloc[:loc]
+            if replace:
+                loc += 1
             second_mask = df.iloc[loc:]
         else:
             first_mask = df.iloc[:, :loc]
+            if replace:
+                loc += 1
             second_mask = df.iloc[:, loc:]
         return pandas.concat([first_mask, value, second_mask], axis=axis)
 
@@ -65,16 +70,16 @@ def test_insert_item(axis, item_length, loc):
 
     pd_res = get_reference(pd_item1, loc=index_loc, value=pd_item2)
     md_res = md_item1._query_compiler.insert_item(
-        axis=axis, loc=index_loc, value=md_item2._query_compiler
+        axis=axis, loc=index_loc, value=md_item2._query_compiler, replace=replace
     ).to_pandas()
-
+    # breakpoint()
     df_equals(md_res, pd_res)
 
     index_loc = get_loc(pd_item2, loc)
 
     pd_res = get_reference(pd_item2, loc=index_loc, value=pd_item1)
     md_res = md_item2._query_compiler.insert_item(
-        axis=axis, loc=index_loc, value=md_item1._query_compiler
+        axis=axis, loc=index_loc, value=md_item1._query_compiler, replace=replace
     ).to_pandas()
 
     df_equals(md_res, pd_res)

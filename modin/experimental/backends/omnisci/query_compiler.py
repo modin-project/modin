@@ -525,7 +525,6 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
         return result
 
     _setitem = PandasQueryCompiler._setitem
-    insert_item = PandasQueryCompiler.insert_item
 
     def insert(self, loc, column, value):
         """Insert new column data.
