@@ -2969,22 +2969,3 @@ class PandasQueryCompiler(BaseQueryCompiler):
         return self.default_to_pandas(lambda df: df[df.columns[0]].cat.codes)
 
     # END Cat operations
-
-    def has_multiindex(self, axis=0):
-        """
-        Check if specified axis is indexed by MultiIndex.
-
-        Parameters
-        ----------
-        axis : 0 or 1, default 0
-            The axis to check (0 - index, 1 - columns).
-
-        Returns
-        -------
-        bool
-            True if index at specified axis is MultiIndex and False otherwise.
-        """
-        if axis == 0:
-            return isinstance(self.index, pandas.MultiIndex)
-        assert axis == 1
-        return isinstance(self.columns, pandas.MultiIndex)

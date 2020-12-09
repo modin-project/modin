@@ -368,12 +368,9 @@ class DataFrame(BasePandasDataset):
         elif isinstance(by, str):
             drop = by in self.columns
             idx_name = by
-            if (
-                self._query_compiler.has_multiindex(axis=axis)
-                and by in self.axes[axis].names
-                or hasattr(self.axes[axis], "name")
-                and self.axes[axis].name == by
-            ):
+            if self._query_compiler.has_multiindex(
+                axis=axis
+            ) and by in self._query_compiler.get_index_names(axis):
                 # In this case we pass the string value of the name through to the
                 # partitions. This is more efficient than broadcasting the values.
                 pass
@@ -419,8 +416,7 @@ class DataFrame(BasePandasDataset):
                 if mismatch and all(
                     isinstance(obj, str)
                     and (
-                        obj in self
-                        or (hasattr(self.index, "names") and obj in self.index.names)
+                        obj in self or obj in self._query_compiler.get_index_names(axis)
                     )
                     for obj in by
                 ):

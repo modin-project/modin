@@ -26,6 +26,7 @@ from modin.data_management.functions.default_methods import (
 from modin.error_message import ErrorMessage
 
 from pandas.core.dtypes.common import is_scalar
+from pandas._libs.lib import no_default
 import pandas.core.resample
 import pandas
 import numpy as np
@@ -1621,49 +1622,77 @@ class BaseQueryCompiler(abc.ABC):
         assert axis == 1
         return isinstance(self.columns, pandas.MultiIndex)
 
-    def get_index_name(self):
+    def get_index_name(self, axis=0):
         """
-        Get index name.
+        Get index name of specified axis.
+
+        Parameters
+        ----------
+        axis: int (default 0),
+            Axis to return index name on.
 
         Returns
         -------
         hashable
             Index name, None for MultiIndex.
         """
-        return self.index.name
+        return self.get_axis(axis).name
 
-    def set_index_name(self, name):
+    def set_index_name(
+        self, name=no_default, axis=0, index=no_default, columns=no_default
+    ):
         """
-        Set index name.
+        Set index name for the specified axis.
 
         Parameters
         ----------
-        name: hashable
+        keywords for axes: hashable,
             New index name.
         """
-        self.index.name = name
+        if index is no_default and columns is no_default:
+            if axis == 0:
+                index = name
+            else:
+                columns = name
+        if index is not no_default:
+            self.index.name = index
+        elif columns is not no_default:
+            self.columns.name = columns
 
-    def get_index_names(self):
+    def get_index_names(self, axis=0):
         """
-        Get index names.
+        Get index names of specified axis.
+
+        Parameters
+        ----------
+        axis: int (default 0),
+            Axis to return index names on.
 
         Returns
         -------
         list
             Index names.
         """
-        return self.index.names
+        return self.get_axis(axis).names
 
-    def set_index_names(self, names):
+    def set_index_names(self, names=None, axis=0, index=None, columns=None):
         """
-        Set index names.
+        Set index names for the specified axis.
 
         Parameters
         ----------
-        names: list
+        keywords for axes: list,
             New index names.
         """
-        self.index.names = names
+        if index is None and columns is None:
+            if axis == 0:
+                index = names
+            else:
+                columns = names
+        if index is not None:
+            self.index.names = index
+        elif columns is not None:
+            self.columns.names = columns
 
     # DateTime methods
 

@@ -224,14 +224,15 @@ class DataFrameGroupBy(object):
             )
             result.index = pandas.MultiIndex.from_arrays(
                 new_idx_lvl_arrays,
-                names=[col_name for col_name in self._by.columns] + [result.index.name],
+                names=[col_name for col_name in self._by.columns]
+                + [result._query_compiler.get_index_name()],
             )
             result = result.dropna(subset=self._by.columns).sort_index()
         else:
             result = self._apply_agg_function(
                 lambda df: df.shift(periods, freq, axis, fill_value)
             )
-            result.index.name = None
+            result._query_compiler.set_index_name(None)
         return result
 
     def nth(self, n, dropna=None):
@@ -240,7 +241,7 @@ class DataFrameGroupBy(object):
     def cumsum(self, axis=0, *args, **kwargs):
         result = self._apply_agg_function(lambda df: df.cumsum(axis, *args, **kwargs))
         # pandas does not name the index on cumsum
-        result.index.name = None
+        result._query_compiler.set_index_name(None)
         return result
 
     @property
@@ -258,7 +259,7 @@ class DataFrameGroupBy(object):
     def cummax(self, axis=0, **kwargs):
         result = self._apply_agg_function(lambda df: df.cummax(axis, **kwargs))
         # pandas does not name the index on cummax
-        result.index.name = None
+        result._query_compiler.set_index_name(None)
         return result
 
     def apply(self, func, *args, **kwargs):
@@ -340,7 +341,7 @@ class DataFrameGroupBy(object):
     def cummin(self, axis=0, **kwargs):
         result = self._apply_agg_function(lambda df: df.cummin(axis=axis, **kwargs))
         # pandas does not name the index on cummin
-        result.index.name = None
+        result._query_compiler.set_index_name(None)
         return result
 
     def bfill(self, limit=None):
@@ -438,7 +439,7 @@ class DataFrameGroupBy(object):
     def rank(self, **kwargs):
         result = self._apply_agg_function(lambda df: df.rank(**kwargs))
         # pandas does not name the index on rank
-        result.index.name = None
+        result._query_compiler.set_index_name(None)
         return result
 
     @property
@@ -597,7 +598,7 @@ class DataFrameGroupBy(object):
     def cumprod(self, axis=0, *args, **kwargs):
         result = self._apply_agg_function(lambda df: df.cumprod(axis, *args, **kwargs))
         # pandas does not name the index on cumprod
-        result.index.name = None
+        result._query_compiler.set_index_name(None)
         return result
 
     def __iter__(self):
@@ -611,7 +612,7 @@ class DataFrameGroupBy(object):
             lambda df: df.transform(func, *args, **kwargs)
         )
         # pandas does not name the index on transform
-        result.index.name = None
+        result._query_compiler.set_index_name(None)
         return result
 
     def corr(self, **kwargs):
@@ -620,7 +621,7 @@ class DataFrameGroupBy(object):
     def fillna(self, **kwargs):
         result = self._apply_agg_function(lambda df: df.fillna(**kwargs))
         # pandas does not name the index on fillna
-        result.index.name = None
+        result._query_compiler.set_index_name(None)
         return result
 
     def count(self, **kwargs):
@@ -641,7 +642,7 @@ class DataFrameGroupBy(object):
     def cumcount(self, ascending=True):
         result = self._default_to_pandas(lambda df: df.cumcount(ascending=ascending))
         # pandas does not name the index on cumcount
-        result.index.name = None
+        result._query_compiler.set_index_name(None)
         return result
 
     def tail(self, n=5):

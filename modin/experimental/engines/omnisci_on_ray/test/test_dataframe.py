@@ -54,10 +54,17 @@ def run_and_compare(
     **kwargs
 ):
     def run_modin(
-        fn, data, data2, force_lazy, force_arrow_execute, allow_subqueries, **kwargs
+        fn,
+        data,
+        data2,
+        force_lazy,
+        force_arrow_execute,
+        allow_subqueries,
+        constructor_kwargs,
+        **kwargs
     ):
-        kwargs["df1"] = pd.DataFrame(data)
-        kwargs["df2"] = pd.DataFrame(data2)
+        kwargs["df1"] = pd.DataFrame(data, **constructor_kwargs)
+        kwargs["df2"] = pd.DataFrame(data2, **constructor_kwargs)
         kwargs["df"] = kwargs["df1"]
 
         if force_lazy:
@@ -76,9 +83,10 @@ def run_and_compare(
 
         return exp_res
 
+    constructor_kwargs = kwargs.pop("constructor_kwargs", {})
     try:
-        kwargs["df1"] = pandas.DataFrame(data)
-        kwargs["df2"] = pandas.DataFrame(data2)
+        kwargs["df1"] = pandas.DataFrame(data, **constructor_kwargs)
+        kwargs["df2"] = pandas.DataFrame(data2, **constructor_kwargs)
         kwargs["df"] = kwargs["df1"]
         ref_res = fn(lib=pandas, **kwargs)
     except Exception as e:
@@ -90,6 +98,7 @@ def run_and_compare(
                 force_lazy=force_lazy,
                 force_arrow_execute=force_arrow_execute,
                 allow_subqueries=allow_subqueries,
+                constructor_kwargs=constructor_kwargs,
                 **kwargs
             )
             _ = exp_res.index
@@ -101,6 +110,7 @@ def run_and_compare(
             force_lazy=force_lazy,
             force_arrow_execute=force_arrow_execute,
             allow_subqueries=allow_subqueries,
+            constructor_kwargs=constructor_kwargs,
             **kwargs
         )
         df_equals(ref_res, exp_res)
@@ -633,6 +643,15 @@ class TestGroupby:
             return df.groupby(cols, as_index=as_index).agg("mean")
 
         run_and_compare(groupby_mean, data=self.data, cols=cols, as_index=as_index)
+
+    def test_groupby_lazy_multiindex(self):
+        index = generate_multiindex(len(self.data["a"]))
+
+        def groupby(df, *args, **kwargs):
+            df = df + 1
+            return df.groupby("a").agg({"b": "size"})
+
+        run_and_compare(groupby, data=self.data, constructor_kwargs={"index": index})
 
     taxi_data = {
         "a": [1, 1, 2, 2],
