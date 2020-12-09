@@ -1002,22 +1002,24 @@ class BasePandasFrame(object):
                 return left_index.join(right_index, how=how, sort=sort)
 
         # define condition for joining indexes
-        do_join_index = how is not None and any(
-            not indexes[0].equals(index) for index in [indexes[1:]]
-        )
+        all_indices_equal = all(indexes[0].equals(index) for index in [indexes[1:]])
+        do_join_index = how is not None and not all_indices_equal
 
         # define condition for joining indexes with getting indexers
-        is_duplicates = axis == 0 and any(not index.is_unique for index in indexes)
-        indexers = []
-        if is_duplicates:
-            indexers = [None] * len(indexes)
+        need_indexers = (
+            axis == 0
+            and not all_indices_equal
+            and any(not index.is_unique for index in indexes)
+        )
+        indexers = None
 
         # perform joining indexes
         if do_join_index:
-            if len(indexes) == 2 and is_duplicates:
+            if len(indexes) == 2 and need_indexers:
                 # in case of count of indexes > 2 we should perform joining all indexes
                 # after that get indexers
                 # in the fast path we can obtain joined_index and indexers in one call
+                indexers = [None, None]
                 joined_index, indexers[0], indexers[1] = indexes[0].join(
                     indexes[1], how=how, sort=sort, return_indexers=True
                 )
@@ -1029,17 +1031,16 @@ class BasePandasFrame(object):
         else:
             joined_index = indexes[0].copy()
 
-        if is_duplicates and indexers[0] is None:
-            for i, index in enumerate(indexes):
-                indexers[i] = index.get_indexer_for(joined_index)
+        if need_indexers and indexers is None:
+            indexers = [index.get_indexer_for(joined_index) for index in indexes]
 
         def make_reindexer(do_reindex: bool, frame_idx: int):
             # the order of the frames must match the order of the indexes
             if not do_reindex:
                 return lambda df: df
 
-            if is_duplicates:
-                assert indexers != []
+            if need_indexers:
+                assert indexers is not None
 
                 return lambda df: df._reindex_with_indexers(
                     {0: [joined_index, indexers[frame_idx]]},
