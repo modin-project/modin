@@ -182,6 +182,9 @@ class BaseTimeSetItem:
             else (df.axes[axis][range_based_loc], range_based_loc)
         )
 
+    def trigger_execution(self):
+        self.df.shape
+
     def setup(self, data_type, data_size, item_length, loc, is_equal_indices):
         self.df = generate_dataframe(
             "modin", data_type, data_size[1], data_size[0], RAND_LOW, RAND_HIGH
@@ -207,11 +210,11 @@ class TimeSetItem(BaseTimeSetItem):
 
     def time_setitem_qc(self, *args, **kwargs):
         self.df[self.loc] = self.item
-        repr(self.df)
+        self.trigger_execution()
 
     def time_setitem_raw(self, *args, **kwargs):
         self.df[self.loc] = self.item_raw
-        repr(self.df)
+        self.trigger_execution()
 
 
 class TimeInsert(BaseTimeSetItem):
@@ -225,11 +228,11 @@ class TimeInsert(BaseTimeSetItem):
 
     def time_insert_qc(self, *args, **kwargs):
         self.df.insert(loc=self.iloc, column=random_string(), value=self.item)
-        repr(self.df)
+        self.trigger_execution()
 
     def time_insert_raw(self, *args, **kwargs):
         self.df.insert(loc=self.iloc, column=random_string(), value=self.item_raw)
-        repr(self.df)
+        self.trigger_execution()
 
 
 class TimeArithmetic:
