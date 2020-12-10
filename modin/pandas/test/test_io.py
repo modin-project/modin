@@ -26,6 +26,7 @@ import os
 import shutil
 import sqlalchemy as sa
 import csv
+import tempfile
 
 from .utils import (
     check_file_leaks,
@@ -2014,14 +2015,18 @@ def test_HDFStore():
 
     assert isinstance(modin_store, pd.HDFStore)
 
-    hdf_file = "/tmp/test_read_hdf.hdf5"
-    with pd.HDFStore(hdf_file, mode="w") as store:
-        store.append("data/df1", pd.DataFrame(np.random.randn(5, 5)))
-        store.append("data/df2", pd.DataFrame(np.random.randn(4, 4)))
+    handle, hdf_file = tempfile.mkstemp(suffix=".hdf5", prefix="test_read")
+    os.close(handle)
+    try:
+        with pd.HDFStore(hdf_file, mode="w") as store:
+            store.append("data/df1", pd.DataFrame(np.random.randn(5, 5)))
+            store.append("data/df2", pd.DataFrame(np.random.randn(4, 4)))
 
-    modin_df = pd.read_hdf(hdf_file, key="data/df1", mode="r")
-    pandas_df = pandas.read_hdf(hdf_file, key="data/df1", mode="r")
-    df_equals(modin_df, pandas_df)
+        modin_df = pd.read_hdf(hdf_file, key="data/df1", mode="r")
+        pandas_df = pandas.read_hdf(hdf_file, key="data/df1", mode="r")
+        df_equals(modin_df, pandas_df)
+    finally:
+        os.unlink(hdf_file)
 
 
 def test_ExcelFile():
