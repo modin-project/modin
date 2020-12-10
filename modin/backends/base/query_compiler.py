@@ -26,7 +26,6 @@ from modin.data_management.functions.default_methods import (
 from modin.error_message import ErrorMessage
 
 from pandas.core.dtypes.common import is_scalar
-from pandas._libs.lib import no_default
 import pandas.core.resample
 import pandas
 import numpy as np
@@ -1638,26 +1637,18 @@ class BaseQueryCompiler(abc.ABC):
         """
         return self.get_axis(axis).name
 
-    def set_index_name(
-        self, name=no_default, axis=0, index=no_default, columns=no_default
-    ):
+    def set_index_name(self, name, axis=0):
         """
         Set index name for the specified axis.
 
         Parameters
         ----------
-        keywords for axes: hashable,
+        name: hashable,
             New index name.
+        axis: int (default 0),
+            Axis to set name along.
         """
-        if index is no_default and columns is no_default:
-            if axis == 0:
-                index = name
-            else:
-                columns = name
-        if index is not no_default:
-            self.index.name = index
-        elif columns is not no_default:
-            self.columns.name = columns
+        self.get_axis(axis).name = name
 
     def get_index_names(self, axis=0):
         """
@@ -1675,24 +1666,18 @@ class BaseQueryCompiler(abc.ABC):
         """
         return self.get_axis(axis).names
 
-    def set_index_names(self, names=None, axis=0, index=None, columns=None):
+    def set_index_names(self, names, axis=0):
         """
         Set index names for the specified axis.
 
         Parameters
         ----------
-        keywords for axes: list,
+        names: list,
             New index names.
+        axis: int (default 0),
+            Axis to set names along.
         """
-        if index is None and columns is None:
-            if axis == 0:
-                index = names
-            else:
-                columns = names
-        if index is not None:
-            self.index.names = index
-        elif columns is not None:
-            self.columns.names = columns
+        self.get_axis(axis).names = names
 
     # DateTime methods
 

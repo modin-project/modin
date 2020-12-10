@@ -22,7 +22,6 @@ import pandas
 
 from pandas.core.common import is_bool_indexer
 from pandas.core.dtypes.common import is_list_like
-from pandas._libs.lib import no_default
 
 
 def is_inoperable(value):
@@ -637,32 +636,20 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
     def get_index_name(self, axis=0):
         return self.columns.name if axis else self._modin_frame.get_index_name()
 
-    def set_index_name(
-        self, name=no_default, axis=0, index=no_default, columns=no_default
-    ):
-        if index is no_default and columns is no_default:
-            if axis == 0:
-                index = name
-            else:
-                columns = name
-        if index is not no_default:
-            self._modin_frame = self._modin_frame.set_index_name(index)
-        elif columns is not no_default:
-            self.columns.name = columns
+    def set_index_name(self, name, axis=0):
+        if axis == 0:
+            self._modin_frame = self._modin_frame.set_index_name(name)
+        else:
+            self.columns.name = name
 
     def get_index_names(self, axis=0):
         return self.columns.names if axis else self._modin_frame.get_index_names()
 
-    def set_index_names(self, names=None, axis=0, index=None, columns=None):
-        if index is None and columns is None:
-            if axis == 0:
-                index = names
-            else:
-                columns = names
-        if index is not None:
-            self._modin_frame = self._modin_frame.set_index_names(index)
-        elif columns is not None:
-            self.columns.names = columns
+    def set_index_names(self, names=None, axis=0):
+        if axis == 0:
+            self._modin_frame = self._modin_frame.set_index_names(names)
+        else:
+            self.columns.names = names
 
     def free(self):
         return
