@@ -71,7 +71,7 @@
     // pip (with all the conda available packages installed first,
     // followed by the pip installed packages).
     "matrix": {
-        "pandas": ["1.1.4"],
+        "pandas": ["1.1.5"],
         "packaging": [""],
         "pip+ray": ["1.0.1"],
         "pyarrow": ["1.0"]
