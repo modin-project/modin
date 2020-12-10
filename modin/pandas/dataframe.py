@@ -355,7 +355,7 @@ class DataFrame(BasePandasDataset):
         # strings is passed in, the data used for the groupby is dropped before the
         # groupby takes place.
         drop = False
-
+        # breakpoint()
         if (
             not isinstance(by, (pandas.Series, Series))
             and is_list_like(by)

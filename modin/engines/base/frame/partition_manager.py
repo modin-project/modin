@@ -99,12 +99,25 @@ class BaseFrameManager(ABC):
         )
 
     @classmethod
-    def groupby_reduce(cls, axis, partitions, by, map_func, reduce_func):
+    def groupby_reduce(
+        cls, axis, partitions, by, map_func, reduce_func, apply_indices=None
+    ):
         """Groupby data using the map_func provided along the axis over the partitions then reduce using reduce_func."""
-        mapped_partitions = cls.broadcast_apply(
-            axis, map_func, left=partitions, right=by, other_name="other"
+        if apply_indices is not None:
+            # breakpoint()
+            partitions = (
+                partitions[apply_indices] if axis else partitions[:, apply_indices]
+            )
+
+        if by is not None:
+            mapped_partitions = cls.broadcast_apply(
+                axis, map_func, left=partitions, right=by, other_name="other"
+            )
+        else:
+            mapped_partitions = cls.map_partitions(partitions, map_func)
+        return cls.map_axis_partitions(
+            axis, mapped_partitions, reduce_func, enumerate_partitions=True
         )
-        return cls.map_axis_partitions(axis, mapped_partitions, reduce_func)
 
     @classmethod
     def broadcast_apply_select_indices(
@@ -351,6 +364,7 @@ class BaseFrameManager(ABC):
         map_func,
         keep_partitioning=False,
         lengths=None,
+        enumerate_partitions=False,
     ):
         """
         Apply `map_func` to every partition.
@@ -385,6 +399,7 @@ class BaseFrameManager(ABC):
             keep_partitioning=keep_partitioning,
             right=None,
             lengths=lengths,
+            enumerate_partitions=enumerate_partitions,
         )
 
     @classmethod

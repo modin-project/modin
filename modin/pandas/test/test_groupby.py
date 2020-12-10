@@ -114,6 +114,7 @@ def test_mixed_dtypes_groupby(as_index):
         )
         eval_shift(modin_groupby, pandas_groupby)
         eval_mean(modin_groupby, pandas_groupby)
+        # breakpoint()
         eval_any(modin_groupby, pandas_groupby)
         eval_min(modin_groupby, pandas_groupby)
         eval_general(
@@ -1426,9 +1427,7 @@ def test_unknown_groupby(columns):
 @pytest.mark.parametrize(
     "func_to_apply",
     [
-        pytest.param(
-            lambda df: df.sum(), marks=pytest.mark.skip("See modin issue #2512")
-        ),
+        lambda df: df.sum(),
         lambda df: df.size(),
         lambda df: df.quantile(),
         lambda df: df.dtypes,
