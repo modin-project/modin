@@ -295,12 +295,7 @@ def make_csv_file():
     yield _make_csv_file(filenames)
 
     # Delete csv files that were created
-    for filename in filenames:
-        if os.path.exists(filename):
-            try:
-                os.remove(filename)
-            except PermissionError:
-                pass
+    teardown_test_files(filenames)
 
 
 @pytest.fixture(scope="class")
@@ -343,12 +338,7 @@ def TestReadCSVFixture():
 
     yield
     # Delete csv files that were created
-    for filename in filenames:
-        if os.path.exists(filename):
-            try:
-                os.remove(filename)
-            except PermissionError:
-                pass
+    teardown_test_files(filenames)
 
 
 def setup_json_file(filename=TEST_JSON_FILENAME, row_size=NROWS, force=True):
@@ -371,11 +361,6 @@ def setup_json_lines_file(filename=TEST_JSON_FILENAME, row_size=NROWS, force=Tru
         df.to_json(filename, lines=True, orient="records")
 
 
-def teardown_json_file(filename=TEST_JSON_FILENAME):
-    if os.path.exists(filename):
-        os.remove(filename)
-
-
 def setup_html_file(filename=TEST_HTML_FILENAME, row_size=NROWS, force=True):
     if os.path.exists(filename) and not force:
         pass
@@ -384,11 +369,6 @@ def setup_html_file(filename=TEST_HTML_FILENAME, row_size=NROWS, force=True):
             {"col1": np.arange(row_size), "col2": np.arange(row_size)}
         )
         df.to_html(filename)
-
-
-def teardown_html_file(filename=TEST_HTML_FILENAME):
-    if os.path.exists(filename):
-        os.remove(filename)
 
 
 def setup_clipboard(row_size=NROWS):
@@ -406,14 +386,6 @@ def setup_excel_file(filename=TEST_EXCEL_FILENAME, row_size=NROWS, force=True):
         df.to_excel(filename)
 
 
-def teardown_excel_file(filename=TEST_EXCEL_FILENAME):
-    if os.path.exists(filename):
-        try:
-            os.remove(filename)
-        except PermissionError:
-            pass
-
-
 def setup_feather_file(filename=TEST_FEATHER_FILENAME, row_size=NROWS, force=True):
     if os.path.exists(filename) and not force:
         pass
@@ -422,11 +394,6 @@ def setup_feather_file(filename=TEST_FEATHER_FILENAME, row_size=NROWS, force=Tru
             {"col1": np.arange(row_size), "col2": np.arange(row_size)}
         )
         df.to_feather(filename)
-
-
-def teardown_feather_file(filename=TEST_FEATHER_FILENAME):
-    if os.path.exists(filename):
-        os.remove(filename)
 
 
 def setup_hdf_file(
@@ -441,11 +408,6 @@ def setup_hdf_file(
         df.to_hdf(filename, key="df", format=format)
 
 
-def teardown_hdf_file(filename=TEST_READ_HDF_FILENAME):
-    if os.path.exists(filename):
-        os.remove(filename)
-
-
 def setup_stata_file(filename=TEST_STATA_FILENAME, row_size=NROWS, force=True):
     if os.path.exists(filename) and not force:
         pass
@@ -456,11 +418,6 @@ def setup_stata_file(filename=TEST_STATA_FILENAME, row_size=NROWS, force=True):
         df.to_stata(filename)
 
 
-def teardown_stata_file(filename=TEST_STATA_FILENAME):
-    if os.path.exists(filename):
-        os.remove(filename)
-
-
 def setup_pickle_file(filename=TEST_PICKLE_FILENAME, row_size=NROWS, force=True):
     if os.path.exists(filename) and not force:
         pass
@@ -469,11 +426,6 @@ def setup_pickle_file(filename=TEST_PICKLE_FILENAME, row_size=NROWS, force=True)
             {"col1": np.arange(row_size), "col2": np.arange(row_size)}
         )
         df.to_pickle(filename)
-
-
-def teardown_pickle_file(filename=TEST_PICKLE_FILENAME):
-    if os.path.exists(filename):
-        os.remove(filename)
 
 
 @pytest.fixture
@@ -507,10 +459,8 @@ def make_sql_connection():
 
     yield _sql_connection
 
-    # Takedown the fixture
-    for filename in filenames:
-        if os.path.exists(filename):
-            os.remove(filename)
+    # Teardown the fixture
+    teardown_test_files(filenames)
 
 
 def setup_fwf_file(filename=TEST_FWF_FILENAME, force=True, fwf_data=None):
@@ -541,14 +491,6 @@ ACW000116041980TAVG -340  k -500  k  -35  k  524  k 1071  k 1534  k 1655  k 1502
 
     with open(filename, "w") as f:
         f.write(fwf_data)
-
-
-def teardown_fwf_file(filename=TEST_FWF_FILENAME):
-    if os.path.exists(filename):
-        try:
-            os.remove(filename)
-        except PermissionError:
-            pass
 
 
 def eval_to_file(modin_obj, pandas_obj, fn, extension, **fn_kwargs):
@@ -1161,7 +1103,6 @@ class TestCsv:
 
         eval_io(
             fn_name="read_csv",
-            # cast_to_str=True,
             # read_csv kwargs
             filepath_or_buffer="modin/pandas/test/data/test_time_parsing.csv",
             names=names,
@@ -1517,7 +1458,7 @@ class TestJson:
                 path_or_buf=unique_filename,
             )
         finally:
-            teardown_json_file(filename=unique_filename)
+            teardown_test_files([unique_filename])
 
     def test_read_json_categories(self):
         eval_io(
@@ -1538,7 +1479,7 @@ class TestJson:
                 lines=True,
             )
         finally:
-            teardown_json_file(filename=unique_filename)
+            teardown_test_files([unique_filename])
 
     @pytest.mark.parametrize(
         "data",
@@ -1572,7 +1513,7 @@ class TestExcel:
                 io=unique_filename,
             )
         finally:
-            teardown_excel_file(filename=unique_filename)
+            teardown_test_files([unique_filename])
 
     @check_file_leaks
     def test_read_excel_engine(self):
@@ -1587,7 +1528,7 @@ class TestExcel:
                 engine="xlrd",
             )
         finally:
-            teardown_excel_file(filename=unique_filename)
+            teardown_test_files([unique_filename])
 
     @check_file_leaks
     def test_read_excel_index_col(self):
@@ -1603,7 +1544,7 @@ class TestExcel:
                 index_col=0,
             )
         finally:
-            teardown_excel_file(filename=unique_filename)
+            teardown_test_files([unique_filename])
 
     @check_file_leaks
     def test_read_excel_all_sheets(self):
@@ -1622,7 +1563,7 @@ class TestExcel:
             for key in pandas_df.keys():
                 df_equals(modin_df.get(key), pandas_df.get(key))
         finally:
-            teardown_excel_file(filename=unique_filename)
+            teardown_test_files([unique_filename])
 
     @check_file_leaks
     def test_read_excel_sheetname_title(self):
@@ -1675,7 +1616,7 @@ class TestExcel:
             modin_excel_file.close()
             pandas_excel_file.close()
         finally:
-            teardown_excel_file(filename=unique_filename)
+            teardown_test_files([unique_filename])
 
     @pytest.mark.xfail(strict=False, reason="Flaky test, defaults to pandas")
     def test_to_excel(self):
@@ -1711,7 +1652,7 @@ class TestHdf:
                 key="df",
             )
         finally:
-            teardown_hdf_file(filename=unique_filename)
+            teardown_test_files([unique_filename])
 
     @pytest.mark.skipif(os.name == "nt", reason="Windows not supported")
     def test_read_hdf_format(self):
@@ -1726,7 +1667,7 @@ class TestHdf:
                 key="df",
             )
         finally:
-            teardown_hdf_file(filename=unique_filename)
+            teardown_test_files([unique_filename])
 
     @pytest.mark.skipif(os.name == "nt", reason="Windows not supported")
     def test_HDFStore(self):
@@ -1862,7 +1803,7 @@ class TestHtml:
             setup_html_file(filename=unique_filename)
             eval_io(fn_name="read_html", io=unique_filename)
         finally:
-            teardown_html_file(filename=unique_filename)
+            teardown_test_files([unique_filename])
 
     def test_to_html(self):
         modin_df, pandas_df = create_test_dfs(TEST_DATA)
@@ -1892,7 +1833,7 @@ class TestFwf:
             )
             assert isinstance(df, pd.DataFrame)
         finally:
-            teardown_fwf_file(filename=unique_filename)
+            teardown_test_files([unique_filename])
 
     @pytest.mark.parametrize(
         "kwargs",
@@ -1935,7 +1876,7 @@ class TestFwf:
 
             df_equals(modin_df, pandas_df)
         finally:
-            teardown_fwf_file(filename=unique_filename)
+            teardown_test_files([unique_filename])
 
     @pytest.mark.parametrize("usecols", [["a"], ["a", "b", "d"], [0, 1, 3]])
     def test_fwf_file_usecols(self, usecols):
@@ -1959,7 +1900,7 @@ class TestFwf:
                 usecols=usecols,
             )
         finally:
-            teardown_fwf_file(filename=unique_filename)
+            teardown_test_files([unique_filename])
 
     def test_fwf_file_chunksize(self):
         unique_filename = get_unique_filename(extension="txt")
@@ -1991,7 +1932,7 @@ class TestFwf:
 
             df_equals(modin_df, pd_df)
         finally:
-            teardown_fwf_file(filename=unique_filename)
+            teardown_test_files([unique_filename])
 
     @pytest.mark.parametrize("nrows", [13, None])
     def test_fwf_file_skiprows(self, nrows):
@@ -2016,7 +1957,7 @@ class TestFwf:
                 nrows=nrows,
             )
         finally:
-            teardown_fwf_file(filename=unique_filename)
+            teardown_test_files([unique_filename])
 
     def test_fwf_file_index_col(self):
         fwf_data = (
@@ -2038,7 +1979,7 @@ class TestFwf:
                 index_col="c",
             )
         finally:
-            teardown_fwf_file(filename=unique_filename)
+            teardown_test_files([unique_filename])
 
     def test_fwf_file_skipfooter(self):
         unique_filename = get_unique_filename(extension="txt")
@@ -2052,7 +1993,7 @@ class TestFwf:
                 skipfooter=2,
             )
         finally:
-            teardown_fwf_file(filename=unique_filename)
+            teardown_test_files([unique_filename])
 
     def test_fwf_file_parse_dates(self):
         dates = pandas.date_range("2000", freq="h", periods=10)
@@ -2082,7 +2023,7 @@ class TestFwf:
                 parse_dates={"time": ["col2", "col4"]},
             )
         finally:
-            teardown_fwf_file(filename=unique_filename)
+            teardown_test_files([unique_filename])
 
 
 class TestGbq:
@@ -2115,7 +2056,7 @@ class TestStata:
                 filepath_or_buffer=unique_filename,
             )
         finally:
-            teardown_stata_file(filename=unique_filename)
+            teardown_test_files([unique_filename])
 
     def test_to_stata(self):
         modin_df, pandas_df = create_test_dfs(TEST_DATA)
@@ -2136,7 +2077,7 @@ class TestFeather:
                 path=unique_filename,
             )
         finally:
-            teardown_feather_file(filename=unique_filename)
+            teardown_test_files([unique_filename])
 
     def test_to_feather(self):
         modin_df, pandas_df = create_test_dfs(TEST_DATA)
@@ -2180,7 +2121,7 @@ class TestPickle:
                 filepath_or_buffer=unique_filename,
             )
         finally:
-            teardown_pickle_file(filename=unique_filename)
+            teardown_test_files([unique_filename])
 
     def test_to_pickle(self):
         modin_df, pandas_df = create_test_dfs(TEST_DATA)
