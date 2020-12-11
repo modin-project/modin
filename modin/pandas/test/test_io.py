@@ -1119,7 +1119,7 @@ class TestCsv:
 
         eval_io_from_str(csv_bad_quotes, unique_filename, nrows=nrows)
 
-    def test_read_csv_categories(request, self):
+    def test_read_csv_categories(self, request):
         if request.config.getoption("--simulate-cloud").lower() != "off":
             pytest.skip(
                 "The reason of tests fail in `cloud` mode is unknown for now - issue #2340"
