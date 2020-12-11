@@ -633,17 +633,23 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
         assert axis == 1
         return isinstance(self.columns, pandas.MultiIndex)
 
-    def get_index_name(self):
-        return self._modin_frame.get_index_name()
+    def get_index_name(self, axis=0):
+        return self.columns.name if axis else self._modin_frame.get_index_name()
 
-    def set_index_name(self, name):
-        self._modin_frame = self._modin_frame.set_index_name(name)
+    def set_index_name(self, name, axis=0):
+        if axis == 0:
+            self._modin_frame = self._modin_frame.set_index_name(name)
+        else:
+            self.columns.name = name
 
-    def get_index_names(self):
-        return self._modin_frame.get_index_names()
+    def get_index_names(self, axis=0):
+        return self.columns.names if axis else self._modin_frame.get_index_names()
 
-    def set_index_names(self, names):
-        self._modin_frame = self._modin_frame.set_index_names(names)
+    def set_index_names(self, names=None, axis=0):
+        if axis == 0:
+            self._modin_frame = self._modin_frame.set_index_names(names)
+        else:
+            self.columns.names = names
 
     def free(self):
         return

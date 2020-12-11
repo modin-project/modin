@@ -1621,49 +1621,63 @@ class BaseQueryCompiler(abc.ABC):
         assert axis == 1
         return isinstance(self.columns, pandas.MultiIndex)
 
-    def get_index_name(self):
+    def get_index_name(self, axis=0):
         """
-        Get index name.
+        Get index name of specified axis.
+
+        Parameters
+        ----------
+        axis: int (default 0),
+            Axis to return index name on.
 
         Returns
         -------
         hashable
             Index name, None for MultiIndex.
         """
-        return self.index.name
+        return self.get_axis(axis).name
 
-    def set_index_name(self, name):
+    def set_index_name(self, name, axis=0):
         """
-        Set index name.
+        Set index name for the specified axis.
 
         Parameters
         ----------
-        name: hashable
+        name: hashable,
             New index name.
+        axis: int (default 0),
+            Axis to set name along.
         """
-        self.index.name = name
+        self.get_axis(axis).name = name
 
-    def get_index_names(self):
+    def get_index_names(self, axis=0):
         """
-        Get index names.
+        Get index names of specified axis.
+
+        Parameters
+        ----------
+        axis: int (default 0),
+            Axis to return index names on.
 
         Returns
         -------
         list
             Index names.
         """
-        return self.index.names
+        return self.get_axis(axis).names
 
-    def set_index_names(self, names):
+    def set_index_names(self, names, axis=0):
         """
-        Set index names.
+        Set index names for the specified axis.
 
         Parameters
         ----------
-        names: list
+        names: list,
             New index names.
+        axis: int (default 0),
+            Axis to set names along.
         """
-        self.index.names = names
+        self.get_axis(axis).names = names
 
     # DateTime methods
 
