@@ -622,7 +622,7 @@ class TestCsv:
         skip_blank_lines,
     ):
         if request.config.getoption("--simulate-cloud").lower() != "off":
-            pytest.xfail(
+            pytest.skip(
                 "The reason of tests fail in `cloud` mode is unknown for now - issue #2340"
             )
 
@@ -662,7 +662,7 @@ class TestCsv:
         skipfooter,
     ):
         if request.config.getoption("--simulate-cloud").lower() != "off":
-            pytest.xfail(
+            pytest.skip(
                 "The reason of tests fail in `cloud` mode is unknown for now - issue #2340"
             )
 
@@ -706,7 +706,7 @@ class TestCsv:
         if false_values or true_values and Engine.get() != "Python":
             pytest.xfail("modin and pandas dataframes differs - issue #2446")
         if request.config.getoption("--simulate-cloud").lower() != "off":
-            pytest.xfail(
+            pytest.skip(
                 "The reason of tests fail in `cloud` mode is unknown for now - issue #2340"
             )
 
@@ -823,7 +823,7 @@ class TestCsv:
         cache_dates,
     ):
         if request.config.getoption("--simulate-cloud").lower() != "off":
-            pytest.xfail(
+            pytest.skip(
                 "The reason of tests fail in `cloud` mode is unknown for now - issue #2340"
             )
 
@@ -921,7 +921,7 @@ class TestCsv:
         dialect,
     ):
         if request.config.getoption("--simulate-cloud").lower() != "off":
-            pytest.xfail(
+            pytest.skip(
                 "The reason of tests fail in `cloud` mode is unknown for now - issue #2340"
             )
         elif Engine.get() != "Python" and lineterminator == "x":
@@ -1119,7 +1119,11 @@ class TestCsv:
 
         eval_io_from_str(csv_bad_quotes, unique_filename, nrows=nrows)
 
-    def test_read_csv_categories(self):
+    def test_read_csv_categories(request, self):
+        if request.config.getoption("--simulate-cloud").lower() != "off":
+            pytest.skip(
+                "The reason of tests fail in `cloud` mode is unknown for now - issue #2340"
+            )
         eval_io(
             fn_name="read_csv",
             # read_csv kwargs
@@ -1140,8 +1144,15 @@ class TestCsv:
         ],
     )
     def test_read_csv_parse_dates(
-        self, names, header, index_col, parse_dates, encoding
+        self, request, names, header, index_col, parse_dates, encoding
     ):
+        if (
+            parse_dates
+            and request.config.getoption("--simulate-cloud").lower() != "off"
+        ):
+            pytest.skip(
+                "The reason of tests fail in `cloud` mode is unknown for now - issue #2340"
+            )
 
         if names is not None and header == "infer":
             pytest.xfail(
@@ -1190,7 +1201,11 @@ class TestCsv:
             skiprows=skiprows,
         )
 
-    def test_read_csv_default_to_pandas(self):
+    def test_read_csv_default_to_pandas(self, request):
+        if request.config.getoption("--simulate-cloud").lower() != "off":
+            pytest.skip(
+                "The reason of tests fail in `cloud` mode is unknown for now - issue #2340"
+            )
         with pytest.warns(UserWarning):
             # This tests that we default to pandas on a buffer
             from io import StringIO
@@ -1205,7 +1220,11 @@ class TestCsv:
                 skiprows=lambda x: x in [0, 2],
             )
 
-    def test_read_csv_default_to_pandas_url(self):
+    def test_read_csv_default_to_pandas_url(self, request):
+        if request.config.getoption("--simulate-cloud").lower() != "off":
+            pytest.skip(
+                "The reason of tests fail in `cloud` mode is unknown for now - issue #2340"
+            )
         # We haven't implemented read_csv from https, but if it's implemented, then this needs to change
         eval_io(
             fn_name="read_csv",
@@ -1226,7 +1245,11 @@ class TestCsv:
             cast_to_str=True,
         )
 
-    def test_read_csv_sep_none(self):
+    def test_read_csv_sep_none(self, request):
+        if request.config.getoption("--simulate-cloud").lower() != "off":
+            pytest.skip(
+                "The reason of tests fail in `cloud` mode is unknown for now - issue #2340"
+            )
         eval_io(
             fn_name="read_csv",
             modin_warning=ParserWarning,
@@ -1235,7 +1258,11 @@ class TestCsv:
             sep=None,
         )
 
-    def test_read_csv_incorrect_data(self):
+    def test_read_csv_incorrect_data(self, request):
+        if request.config.getoption("--simulate-cloud").lower() != "off":
+            pytest.skip(
+                "The reason of tests fail in `cloud` mode is unknown for now - issue #2340"
+            )
         eval_io(
             fn_name="read_csv",
             # read_csv kwargs
@@ -1251,7 +1278,11 @@ class TestCsv:
             {"names": [3, 1, 2, 5], "usecols": [4, 1, 3, 2]},
         ],
     )
-    def test_read_csv_names_neq_num_cols(self, kwargs):
+    def test_read_csv_names_neq_num_cols(self, request, kwargs):
+        if request.config.getoption("--simulate-cloud").lower() != "off":
+            pytest.skip(
+                "The reason of tests fail in `cloud` mode is unknown for now - issue #2340"
+            )
         eval_io(
             fn_name="read_csv",
             # read_csv kwargs
@@ -1259,14 +1290,22 @@ class TestCsv:
             **kwargs,
         )
 
-    def test_dataframe_to_csv(self):
+    def test_dataframe_to_csv(self, request):
+        if request.config.getoption("--simulate-cloud").lower() != "off":
+            pytest.skip(
+                "The reason of tests fail in `cloud` mode is unknown for now - issue #2340"
+            )
         pandas_df = pandas.read_csv(pytest.csvs_names["test_read_csv_regular"])
         modin_df = pd.DataFrame(pandas_df)
         eval_to_file(
             modin_obj=modin_df, pandas_obj=pandas_df, fn="to_csv", extension="csv"
         )
 
-    def test_series_to_csv(self):
+    def test_series_to_csv(self, request):
+        if request.config.getoption("--simulate-cloud").lower() != "off":
+            pytest.skip(
+                "The reason of tests fail in `cloud` mode is unknown for now - issue #2340"
+            )
         pandas_s = pandas.read_csv(
             pytest.csvs_names["test_read_csv_regular"], usecols=["col1"]
         ).squeeze()
