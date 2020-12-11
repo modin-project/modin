@@ -1730,26 +1730,26 @@ class TestHdf:
 
     @pytest.mark.skipif(os.name == "nt", reason="Windows not supported")
     def test_HDFStore(self):
-        modin_store = pd.HDFStore(TEST_WRITE_HDF_FILENAME_MODIN)
-        pandas_store = pandas.HDFStore(TEST_WRITE_HDF_FILENAME_PANDAS)
-
-        modin_df, pandas_df = create_test_dfs(TEST_DATA)
-
-        modin_store["foo"] = modin_df
-        pandas_store["foo"] = pandas_df
-
-        assert assert_files_eq(
-            TEST_WRITE_HDF_FILENAME_MODIN, TEST_WRITE_HDF_FILENAME_PANDAS
-        )
-        modin_df = modin_store.get("foo")
-        pandas_df = pandas_store.get("foo")
-        df_equals(modin_df, pandas_df)
-
-        assert isinstance(modin_store, pd.HDFStore)
-
-        handle, hdf_file = tempfile.mkstemp(suffix=".hdf5", prefix="test_read")
-        os.close(handle)
         try:
+            modin_store = pd.HDFStore(TEST_WRITE_HDF_FILENAME_MODIN)
+            pandas_store = pandas.HDFStore(TEST_WRITE_HDF_FILENAME_PANDAS)
+
+            modin_df, pandas_df = create_test_dfs(TEST_DATA)
+
+            modin_store["foo"] = modin_df
+            pandas_store["foo"] = pandas_df
+
+            assert assert_files_eq(
+                TEST_WRITE_HDF_FILENAME_MODIN, TEST_WRITE_HDF_FILENAME_PANDAS
+            )
+            modin_df = modin_store.get("foo")
+            pandas_df = pandas_store.get("foo")
+            df_equals(modin_df, pandas_df)
+
+            assert isinstance(modin_store, pd.HDFStore)
+
+            handle, hdf_file = tempfile.mkstemp(suffix=".hdf5", prefix="test_read")
+            os.close(handle)
             with pd.HDFStore(hdf_file, mode="w") as store:
                 store.append("data/df1", pd.DataFrame(np.random.randn(5, 5)))
                 store.append("data/df2", pd.DataFrame(np.random.randn(4, 4)))
@@ -1759,6 +1759,9 @@ class TestHdf:
             df_equals(modin_df, pandas_df)
         finally:
             os.unlink(hdf_file)
+            teardown_test_files(
+                [TEST_WRITE_HDF_FILENAME_MODIN, TEST_WRITE_HDF_FILENAME_PANDAS]
+            )
 
 
 class TestSql:
