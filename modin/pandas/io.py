@@ -103,9 +103,15 @@ def _make_parser_func(sep):
         memory_map=False,
         float_precision=None,
     ):
-        _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
-        if kwargs.get("sep", sep) is False:
-            kwargs["sep"] = "\t"
+        # ISSUE #2408: parse parameter shared with pandas read_csv and read_table and update with provided args
+        _pd_read_csv_signature = {
+            val.name for val in inspect.signature(pandas.read_csv).parameters.values()
+        }
+        _, _, _, f_locals = inspect.getargvalues(inspect.currentframe())
+        if f_locals.get("sep", sep) is False:
+            f_locals["sep"] = "\t"
+
+        kwargs = {k: v for k, v in f_locals.items() if k in _pd_read_csv_signature}
         return _read(**kwargs)
 
     return parser_func

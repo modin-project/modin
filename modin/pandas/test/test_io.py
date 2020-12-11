@@ -43,6 +43,7 @@ from .utils import (
     IO_OPS_DATA_DIR,
     io_ops_bad_exc,
     eval_io_from_str,
+    dummy_decorator,
 )
 
 from modin.config import Engine, Backend, IsExperimental
@@ -1460,6 +1461,28 @@ def test_from_sas():
     df_equals(modin_df, pandas_df)
 
 
+def test_from_csv_within_decorator(make_csv_file):
+    make_csv_file()
+
+    @dummy_decorator()
+    def wrapped_read_csv(file, method):
+        if method == "pandas":
+            return pandas.read_csv(file)
+
+        if method == "modin":
+            return pd.read_csv(file)
+
+    pandas_df = wrapped_read_csv(TEST_CSV_FILENAME, method="pandas")
+    modin_df = wrapped_read_csv(TEST_CSV_FILENAME, method="modin")
+
+    df_equals(modin_df, pandas_df)
+
+    pandas_df = wrapped_read_csv(Path(TEST_CSV_FILENAME), method="pandas")
+    modin_df = wrapped_read_csv(Path(TEST_CSV_FILENAME), method="modin")
+
+    df_equals(modin_df, pandas_df)
+
+
 @pytest.mark.parametrize("nrows", [35, None])
 def test_from_csv_sep_none(make_csv_file, nrows):
     make_csv_file()
@@ -1638,6 +1661,28 @@ def test_from_table(make_csv_file):
 
     pandas_df = pandas.read_table(Path(TEST_CSV_FILENAME))
     modin_df = pd.read_table(Path(TEST_CSV_FILENAME))
+
+    df_equals(modin_df, pandas_df)
+
+
+def test_from_table_within_decorator(make_csv_file):
+    make_csv_file(delimiter="\t")
+
+    @dummy_decorator()
+    def wrapped_read_table(file, method):
+        if method == "pandas":
+            return pandas.read_table(file)
+
+        if method == "modin":
+            return pd.read_table(file)
+
+    pandas_df = wrapped_read_table(TEST_CSV_FILENAME, method="pandas")
+    modin_df = wrapped_read_table(TEST_CSV_FILENAME, method="modin")
+
+    df_equals(modin_df, pandas_df)
+
+    pandas_df = wrapped_read_table(Path(TEST_CSV_FILENAME), method="pandas")
+    modin_df = wrapped_read_table(Path(TEST_CSV_FILENAME), method="modin")
 
     df_equals(modin_df, pandas_df)
 

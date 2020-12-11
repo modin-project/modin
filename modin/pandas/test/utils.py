@@ -1045,3 +1045,18 @@ def check_file_leaks(func):
             ), f"Unexpected open handles left for: {', '.join(item[0] for item in leaks)}"
 
     return check
+
+
+def dummy_decorator():
+    """A problematic decorator that does not use `functools.wraps`. This introduces unwanted local variables for
+    inspect.currentframe. This decorator is used in test_io to test `read_csv` and `read_table`
+    """
+
+    def wrapper(method):
+        def wrapped_function(self, *args, **kwargs):
+            result = method(self, *args, **kwargs)
+            return result
+
+        return wrapped_function
+
+    return wrapper
