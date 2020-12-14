@@ -161,7 +161,11 @@ def assert_files_eq(path1, path2):
 
 def teardown_test_file(test_path):
     if os.path.exists(test_path):
-        os.remove(test_path)
+        # PermissionError can occure because of issue #2533
+        try:
+            os.remove(test_path)
+        except PermissionError:
+            pass
 
 
 def teardown_test_files(test_paths: list):
