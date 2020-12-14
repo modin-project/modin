@@ -111,6 +111,7 @@ def make_parquet_file():
         """Helper function to generate parquet files/directories.
 
         Args:
+            filename: The name of test file, that should be created.
             row_size: Number of rows for the dataframe.
             force: Create a new file/directory even if one already exists.
             directory: Create a partitioned directory using pyarrow.
@@ -498,6 +499,14 @@ ACW000116041980TAVG -340  k -500  k  -35  k  524  k 1071  k 1534  k 1655  k 1502
 
 
 def eval_to_file(modin_obj, pandas_obj, fn, extension, **fn_kwargs):
+    """Helper function to test `to_<extension>` methods.
+
+    Args:
+        modin_obj: Modin DataFrame or Series to test `to_<extension>` method.
+        pandas_obj: Pandas DataFrame or Series to test `to_<extension>` method.
+        fn: name of the method, that should be tested.
+        extension: Extension of the test file.
+    """
     unique_filename_modin = get_unique_filename(extension=extension)
     unique_filename_pandas = get_unique_filename(extension=extension)
 
@@ -1118,21 +1127,11 @@ class TestCsv:
 
     @pytest.mark.skipif(Engine.get() == "Python", reason="Using pandas implementation")
     def test_read_csv_s3(self):
-        dataset_url = "s3://noaa-ghcn-pds/csv/1788.csv"
-        pandas_df = pandas.read_csv(dataset_url)
-
-        # This first load is to trigger all the import deprecation warnings
-        modin_df = pd.read_csv(dataset_url)
-
-        # This will warn if it defaults to pandas behavior, but it shouldn't
-        with pytest.warns(None) as record:
-            modin_df = pd.read_csv(dataset_url)
-
-        assert not any(
-            "defaulting to pandas implementation" in str(err) for err in record.list
+        eval_io(
+            fn_name="read_csv",
+            # read_csv kwargs
+            filepath_or_buffer="s3://noaa-ghcn-pds/csv/1788.csv",
         )
-
-        df_equals(modin_df, pandas_df)
 
     @pytest.mark.parametrize("names", [list("XYZ"), None])
     @pytest.mark.parametrize("skiprows", [1, 2, 3, 4, None])
@@ -1307,7 +1306,8 @@ class TestTable:
 
 
 class TestParquet:
-    def test_read_parquet(self, make_parquet_file):
+    @pytest.mark.parametrize("columns", [None, ["col1"]])
+    def test_read_parquet(self, make_parquet_file, columns):
         unique_filename = get_unique_filename(extension="parquet")
         make_parquet_file(filename=unique_filename)
 
@@ -1315,20 +1315,11 @@ class TestParquet:
             fn_name="read_parquet",
             # read_parquet kwargs
             path=unique_filename,
+            columns=columns,
         )
 
-    def test_read_parquet_with_columns(self, make_parquet_file):
-        unique_filename = get_unique_filename(extension="parquet")
-        make_parquet_file(filename=unique_filename)
-
-        eval_io(
-            fn_name="read_parquet",
-            # read_parquet kwargs
-            path=unique_filename,
-            columns=["col1"],
-        )
-
-    def test_read_parquet_partition(self, make_parquet_file):
+    @pytest.mark.parametrize("columns", [None, ["col1"]])
+    def test_read_parquet_directory(self, make_parquet_file, columns):  #
 
         unique_filename = get_unique_filename(extension=None)
         make_parquet_file(filename=unique_filename, directory=True)
@@ -1336,30 +1327,11 @@ class TestParquet:
             fn_name="read_parquet",
             # read_parquet kwargs
             path=unique_filename,
+            columns=columns,
         )
 
-    def test_read_parquet_partition_with_columns(self, make_parquet_file):
-
-        unique_filename = get_unique_filename(extension=None)
-        make_parquet_file(filename=unique_filename, directory=True)
-        eval_io(
-            fn_name="read_parquet",
-            # read_parquet kwargs
-            path=unique_filename,
-            columns=["col1"],
-        )
-
-    def test_read_parquet_partitioned_columns(self, make_parquet_file):
-
-        unique_filename = get_unique_filename(extension=None)
-        make_parquet_file(filename=unique_filename, partitioned_columns=["col1"])
-        eval_io(
-            fn_name="read_parquet",
-            # read_parquet kwargs
-            path=unique_filename,
-        )
-
-    def test_read_parquet_partitioned_columns_with_columns(self, make_parquet_file):
+    @pytest.mark.parametrize("columns", [None, ["col1"]])
+    def test_read_parquet_partitioned_directory(self, make_parquet_file, columns):
         unique_filename = get_unique_filename(extension=None)
         make_parquet_file(filename=unique_filename, partitioned_columns=["col1"])
 
@@ -1367,7 +1339,7 @@ class TestParquet:
             fn_name="read_parquet",
             # read_parquet kwargs
             path=unique_filename,
-            columns=["col1"],
+            columns=columns,
         )
 
     def test_read_parquet_pandas_index(self):
@@ -1452,7 +1424,8 @@ class TestParquet:
 
 
 class TestJson:
-    def test_read_json(self):
+    @pytest.mark.parametrize("lines", [False, True])
+    def test_read_json(self, lines):
         unique_filename = get_unique_filename(extension="json")
         try:
             setup_json_file(filename=unique_filename)
@@ -1460,6 +1433,7 @@ class TestJson:
                 fn_name="read_json",
                 # read_json kwargs
                 path_or_buf=unique_filename,
+                lines=lines,
             )
         finally:
             teardown_test_files([unique_filename])
@@ -1471,19 +1445,6 @@ class TestJson:
             path_or_buf="modin/pandas/test/data/test_categories.json",
             dtype={"one": "int64", "two": "category"},
         )
-
-    def test_read_json_lines(self):
-        unique_filename = get_unique_filename(extension="json")
-        try:
-            setup_json_lines_file(filename=unique_filename)
-            eval_io(
-                fn_name="read_json",
-                # read_json kwargs
-                path_or_buf=unique_filename,
-                lines=True,
-            )
-        finally:
-            teardown_test_files([unique_filename])
 
     @pytest.mark.parametrize(
         "data",
@@ -1645,25 +1606,11 @@ class TestExcel:
 
 class TestHdf:
     @pytest.mark.skipif(os.name == "nt", reason="Windows not supported")
-    def test_read_hdf(self):
+    @pytest.mark.parametrize("format", [None, "table"])
+    def test_read_hdf(self, format):
         unique_filename = get_unique_filename(extension="hdf")
         try:
-            setup_hdf_file(filename=unique_filename, format=None)
-            eval_io(
-                fn_name="read_hdf",
-                # read_hdf kwargs
-                path_or_buf=unique_filename,
-                key="df",
-            )
-        finally:
-            teardown_test_files([unique_filename])
-
-    @pytest.mark.skipif(os.name == "nt", reason="Windows not supported")
-    def test_read_hdf_format(self):
-        unique_filename = get_unique_filename(extension="hdf")
-        try:
-            setup_hdf_file(filename=unique_filename, format="table")
-
+            setup_hdf_file(filename=unique_filename, format=format)
             eval_io(
                 fn_name="read_hdf",
                 # read_hdf kwargs
@@ -1766,35 +1713,24 @@ class TestSql:
         for modin_df, pandas_df in zip(modin_gen, pandas_gen):
             df_equals(modin_df, pandas_df)
 
-    def test_to_sql_without_index(self, make_sql_connection):
-        table_name = "tbl_without_index"
+    @pytest.mark.parametrize("index", [False, True])
+    def test_to_sql(self, make_sql_connection, index):
+        table_name = f"test_to_sql_{str(index)}"
         modin_df, pandas_df = create_test_dfs(TEST_DATA)
 
         # We do not pass the table name so the fixture won't generate a table
-        conn = make_sql_connection("test_to_sql.db")
-        modin_df.to_sql(table_name, conn, index=False)
-        df_modin_sql = pandas.read_sql(table_name, con=conn)
+        conn = make_sql_connection(f"{table_name}_modin.db")
+        modin_df.to_sql(table_name, conn, index=index)
+        df_modin_sql = pandas.read_sql(
+            table_name, con=conn, index_col="index" if index else None
+        )
 
         # We do not pass the table name so the fixture won't generate a table
-        conn = make_sql_connection("test_to_sql_pandas.db")
-        pandas_df.to_sql(table_name, conn, index=False)
-        df_pandas_sql = pandas.read_sql(table_name, con=conn)
-
-        assert df_modin_sql.sort_index().equals(df_pandas_sql.sort_index())
-
-    def test_to_sql_with_index(self, make_sql_connection):
-        table_name = "tbl_with_index"
-        modin_df, pandas_df = create_test_dfs(TEST_DATA)
-
-        # We do not pass the table name so the fixture won't generate a table
-        conn = make_sql_connection("test_to_sql_with_index_1.db")
-        modin_df.to_sql(table_name, conn)
-        df_modin_sql = pandas.read_sql(table_name, con=conn, index_col="index")
-
-        # We do not pass the table name so the fixture won't generate a table
-        conn = make_sql_connection("test_to_sql_with_index_2.db")
-        pandas_df.to_sql(table_name, conn)
-        df_pandas_sql = pandas.read_sql(table_name, con=conn, index_col="index")
+        conn = make_sql_connection(f"{table_name}_pandas.db")
+        pandas_df.to_sql(table_name, conn, index=index)
+        df_pandas_sql = pandas.read_sql(
+            table_name, con=conn, index_col="index" if index else None
+        )
 
         assert df_modin_sql.sort_index().equals(df_pandas_sql.sort_index())
 

@@ -943,7 +943,7 @@ def get_unique_filename(
     else:
         import uuid
 
-        return os.path.join(data_dir, (uuid.uuid1().hex + suffix_part + extension_part))
+        return os.path.join(data_dir, uuid.uuid1().hex + suffix_part + extension_part)
 
 
 def get_random_string():
