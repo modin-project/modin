@@ -641,6 +641,7 @@ def test_large_row_groupby(is_by_category):
         min,
         sum,
         {"A": "sum"},
+        {"A": lambda df: df.sum()},
         {"A": "max", "B": "sum", "C": "min"},
     ]
     for func in agg_functions:
@@ -1437,7 +1438,7 @@ def test_unknown_groupby(columns):
         ),
         lambda grp: grp.agg(
             {
-                df_from_grp(grp).columns[0]: (max, min, sum),
+                df_from_grp(grp).columns[0]: (("new_max", max), min, sum),
                 df_from_grp(grp).columns[-1]: (sum, min, max),
             }
         ),

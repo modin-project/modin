@@ -29,6 +29,7 @@ from pandas.core.dtypes.common import is_list_like
 from pandas.core.aggregation import reconstruct_func
 import pandas.core.common as com
 from types import BuiltinFunctionType
+from collections.abc import Iterable
 
 from modin.error_message import ErrorMessage
 from modin.utils import _inherit_docstrings, try_cast_to_pandas, wrap_udf_function
@@ -376,22 +377,15 @@ class DataFrameGroupBy(object):
         relabeling_required = False
         if isinstance(func, dict) or func is None:
 
-            def _reconstruct_func(func, **kwargs):
-                relabeling_required, func, new_columns, order = reconstruct_func(
-                    func, **kwargs
-                )
-                # We convert to the string version of the function for simplicity.
-                func = {
-                    k: v
-                    if not callable(v) or v.__name__ not in dir(self)
-                    else v.__name__
-                    for k, v in func.items()
-                }
-                return relabeling_required, func, new_columns, order
+            def try_get_str_func(o):
+                if not isinstance(o, str) and isinstance(o, Iterable):
+                    return [try_get_str_func(v) for v in o]
+                return o.__name__ if callable(o) and o.__name__ in dir(self) else o
 
-            relabeling_required, func_dict, new_columns, order = _reconstruct_func(
+            relabeling_required, func_dict, new_columns, order = reconstruct_func(
                 func, **kwargs
             )
+            func_dict = {k: try_get_str_func(v) for k, v in func_dict.items()}
 
             if any(i not in self._df.columns for i in func_dict.keys()):
                 from pandas.core.base import SpecificationError

@@ -23,7 +23,7 @@ from pandas.core.dtypes.common import (
 )
 from pandas.core.base import DataError
 from typing import Type, Callable
-from collections.abc import Container
+from collections.abc import Iterable
 import warnings
 
 
@@ -2462,7 +2462,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         map_dict = {}
         reduce_dict = {}
         rename_columns = any(
-            not isinstance(fn, str) and isinstance(fn, Container)
+            not isinstance(fn, str) and isinstance(fn, Iterable)
             for fn in agg_func.values()
         )
         for col, col_funcs in agg_func.items():
@@ -2475,11 +2475,8 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
             map_fns = []
             for i, fn in enumerate(col_funcs):
-                if not isinstance(fn, str) and isinstance(fn, Container):
-                    assert (
-                        len(fn) == 2
-                    ), f"Incorrect number of values to unpack. (got {len(fn)} expected 2)"
-                    future_col_name, func = fn[0], fn[1]
+                if not isinstance(fn, str) and isinstance(fn, Iterable):
+                    future_col_name, func = fn
                 elif isinstance(fn, str):
                     future_col_name, func = fn, fn
                 else:
