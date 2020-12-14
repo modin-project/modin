@@ -260,3 +260,6 @@ class TimeArithmetic:
 
     def time_apply(self, impl, data_type, data_size, axis):
         self.df.apply(lambda df: df.sum(), axis=axis)
+    
+    def time_mean(self, impl, data_type, data_size, axis):
+        self.df.mean(axis=axis)
