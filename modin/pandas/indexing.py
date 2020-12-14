@@ -391,12 +391,16 @@ class _LocationIndexerBase(object):
                     "an iterable"
                 )
             if hasattr(item, "columns"):
-                if not all(idx in item.columns for idx in col_lookup):
+                own_cols = self.qc.columns
+                # convert indices in column lookup to column names, as Pandas reindex expects them so
+                lookup = [own_cols[idx] for idx in col_lookup]
+                if not all(col in item.columns for col in lookup):
+                    # TODO: think if it is needed to handle cases when columns have duplicate names
                     raise ValueError(
                         "Must have equal len keys and value when setting "
                         "with an iterable"
                     )
-                item = item.reindex(index=row_lookup, columns=col_lookup)
+                item = item.reindex(index=row_lookup, columns=lookup)
             else:
                 item = item.reindex(index=row_lookup)
         try:
