@@ -411,6 +411,16 @@ def test_loc_assignment(index, columns):
     df_equals(md_df, pd_df)
 
 
+@pytest.mark.parametrize("columns", [["col1", "col2", "col3"]])
+def test_loc_iter_assignment(columns):
+    md_df, pd_df = create_test_dfs(
+        {col: [idx] for idx, col in enumerate(columns)}, columns=columns
+    )
+    md_df.loc[:, columns[:-1]] = md_df.loc[:, columns[:-1]].astype("float")
+    pd_df.loc[:, columns[:-1]] = pd_df.loc[:, columns[:-1]].astype("float")
+    df_equals(md_df, pd_df)
+
+
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_loc_nested_assignment(data):
     modin_df = pd.DataFrame(data)
