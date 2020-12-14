@@ -2465,16 +2465,14 @@ class PandasQueryCompiler(BaseQueryCompiler):
             not isinstance(fn, str) and isinstance(fn, Container)
             for fn in agg_func.values()
         )
-        # breakpoint()
         for col, col_funcs in agg_func.items():
-            # single function without renaming
             if not rename_columns:
                 map_dict[col], reduce_dict[col] = groupby_reduce_functions[col_funcs]
                 continue
 
             if isinstance(col_funcs, str):
                 col_funcs = [col_funcs]
-            # breakpoint()
+
             map_fns = []
             for i, fn in enumerate(col_funcs):
                 if not isinstance(fn, str) and isinstance(fn, Container):
@@ -2486,11 +2484,11 @@ class PandasQueryCompiler(BaseQueryCompiler):
                     future_col_name, func = fn, fn
                 else:
                     raise TypeError
-                # breakpoint()
+
                 map_fns.append((future_col_name, groupby_reduce_functions[func][0]))
                 reduce_dict[(col, future_col_name)] = groupby_reduce_functions[func][1]
             map_dict[col] = map_fns
-        # breakpoint()
+
         return GroupbyReduceFunction.register(map_dict, reduce_dict)(
             query_compiler=self,
             by=by,

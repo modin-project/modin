@@ -104,7 +104,6 @@ class BaseFrameManager(ABC):
     ):
         """Groupby data using the map_func provided along the axis over the partitions then reduce using reduce_func."""
         if apply_indices is not None:
-            # breakpoint()
             partitions = (
                 partitions[apply_indices] if axis else partitions[:, apply_indices]
             )

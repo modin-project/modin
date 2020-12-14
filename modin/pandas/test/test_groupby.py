@@ -114,7 +114,6 @@ def test_mixed_dtypes_groupby(as_index):
         )
         eval_shift(modin_groupby, pandas_groupby)
         eval_mean(modin_groupby, pandas_groupby)
-        # breakpoint()
         eval_any(modin_groupby, pandas_groupby)
         eval_min(modin_groupby, pandas_groupby)
         eval_general(
