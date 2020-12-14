@@ -2023,6 +2023,8 @@ class BasePandasFrame(object):
             new_columns: Index (optional),
                 The columns of the result. We may know this in advance,
                 and if not provided it must be computed.
+            apply_indices : list-like (optional),
+                Indices of `axis ^ 1` to apply groupby over.
 
         Returns
         -------

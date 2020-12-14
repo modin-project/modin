@@ -102,7 +102,28 @@ class BaseFrameManager(ABC):
     def groupby_reduce(
         cls, axis, partitions, by, map_func, reduce_func, apply_indices=None
     ):
-        """Groupby data using the map_func provided along the axis over the partitions then reduce using reduce_func."""
+        """
+        Groupby data using the map_func provided along the axis over the partitions then reduce using reduce_func.
+
+        Parameters
+        ----------
+            axis: int,
+                Axis to groupby over.
+            partitions: numpy 2D array,
+                Partitions of the ModinFrame to groupby.
+            by: numpy 2D array (optional),
+                Partitions of 'by' to broadcast.
+            map_func: callable,
+                Map function.
+            reduce_func: callable,
+                Reduce function.
+            apply_indices : list of ints (optional),
+                Indices of `axis ^ 1` to apply function over.
+
+        Returns
+        -------
+            Partitions with applied groupby.
+        """
         if apply_indices is not None:
             partitions = (
                 partitions[apply_indices] if axis else partitions[:, apply_indices]
