@@ -1280,7 +1280,7 @@ class TestTable:
         make_csv_file(filename=unique_filename, delimiter="\t")
         eval_io(
             fn_name="read_table",
-            # read_pickle kwargs
+            # read_table kwargs
             filepath_or_buffer=unique_filename,
         )
 
@@ -2110,7 +2110,7 @@ class TestClipboard:
 
 
 class TestPickle:
-    def test_from_pickle(self):
+    def test_read_pickle(self):
         unique_filename = get_unique_filename(extension="pkl")
         try:
             setup_pickle_file(filename=unique_filename)
