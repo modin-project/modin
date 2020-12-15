@@ -359,4 +359,4 @@ jobs:
           conda list
       - run: sudo apt update && sudo apt install -y libhdf5-dev
       - shell: bash -l {0}
-        run: python -m pytest modin/pandas/test/test_io.py::TestReadCSV
+        run: python -m pytest modin/pandas/test/test_io.py::TestCsv
