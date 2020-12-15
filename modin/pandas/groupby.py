@@ -391,6 +391,8 @@ class DataFrameGroupBy(object):
                 from pandas.core.base import SpecificationError
 
                 raise SpecificationError("nested renamer is not supported")
+            if func is None:
+                kwargs = {}
             func = func_dict
         elif is_list_like(func):
             return self._default_to_pandas(

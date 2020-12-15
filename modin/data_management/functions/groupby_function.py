@@ -99,15 +99,6 @@ class GroupbyReduceFunction(MapReduceFunction):
             insert_levels = partition_idx == 0 and (drop or method == "size")
             result.reset_index(drop=not insert_levels, inplace=True)
 
-        cols_to_drop = list(
-            result.columns[result.columns.str.match(r"__reduced__.*", na=False)]
-            if hasattr(result.columns, "str")
-            else []
-        )
-
-        if method != "size" and len(cols_to_drop) > 0 and len(df.columns) > 1:
-            result.drop(columns=cols_to_drop, inplace=True, errors="ignore")
-
         return result
 
     @classmethod
