@@ -645,7 +645,6 @@ def eval_general(
     check_exception_type=True,
     raising_exceptions=None,
     check_kwargs_callable=True,
-    modin_warning=False,
     **kwargs,
 ):
     if raising_exceptions:
@@ -670,11 +669,7 @@ def eval_general(
                         md_e.value, tuple(raising_exceptions)
                     ), f"not acceptable exception type: {md_e.value}"
         else:
-            if modin_warning is not False:
-                with pytest.warns(modin_warning):
-                    md_result = fn(modin_df, **md_kwargs)
-            else:
-                md_result = fn(modin_df, **md_kwargs)
+            md_result = fn(modin_df, **md_kwargs)
             return (md_result, pd_result) if not __inplace__ else (modin_df, pandas_df)
 
     for key, value in kwargs.items():
@@ -705,6 +700,7 @@ def eval_io(
     check_exception_type=True,
     raising_exceptions=io_ops_bad_exc,
     check_kwargs_callable=True,
+    modin_warning=None,
     *args,
     **kwargs,
 ):
@@ -727,6 +723,7 @@ def eval_io(
         Exceptions that should be raised even if they are raised
         both by Pandas and Modin (check evaluated only if
         `check_exception_type` passed as `True`).
+    modin_warning: Warning that should be raised by Modin.
     """
 
     def applyier(module, *args, **kwargs):
@@ -735,16 +732,23 @@ def eval_io(
             result = result.astype(str)
         return result
 
-    eval_general(
-        pd,
-        pandas,
-        applyier,
-        check_exception_type=check_exception_type,
-        raising_exceptions=raising_exceptions,
-        check_kwargs_callable=check_kwargs_callable,
-        *args,
-        **kwargs,
-    )
+    def call_eval_general():
+        eval_general(
+            pd,
+            pandas,
+            applyier,
+            check_exception_type=check_exception_type,
+            raising_exceptions=raising_exceptions,
+            check_kwargs_callable=check_kwargs_callable,
+            *args,
+            **kwargs,
+        )
+
+    if modin_warning:
+        with pytest.warns(modin_warning):
+            call_eval_general()
+    else:
+        call_eval_general()
 
 
 def eval_io_from_str(csv_str: str, unique_filename: str, **kwargs):

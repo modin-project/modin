@@ -55,19 +55,6 @@ else:
 
 pd.DEFAULT_NPARTITIONS = 4
 
-TEST_PARQUET_FILENAME = os.path.join(IO_OPS_DATA_DIR, "test.parquet")
-TEST_CSV_FILENAME = os.path.join(IO_OPS_DATA_DIR, "test.csv")
-TEST_JSON_FILENAME = os.path.join(IO_OPS_DATA_DIR, "test.json")
-TEST_HTML_FILENAME = os.path.join(IO_OPS_DATA_DIR, "test.html")
-TEST_EXCEL_FILENAME = os.path.join(IO_OPS_DATA_DIR, "test.xlsx")
-TEST_FEATHER_FILENAME = os.path.join(IO_OPS_DATA_DIR, "test.feather")
-TEST_READ_HDF_FILENAME = os.path.join(IO_OPS_DATA_DIR, "test.hdf")
-TEST_WRITE_HDF_FILENAME_MODIN = os.path.join(IO_OPS_DATA_DIR, "test_write_modin.hdf")
-TEST_WRITE_HDF_FILENAME_PANDAS = os.path.join(IO_OPS_DATA_DIR, "test_write_pandas.hdf")
-TEST_STATA_FILENAME = os.path.join(IO_OPS_DATA_DIR, "test.dta")
-TEST_PICKLE_FILENAME = os.path.join(IO_OPS_DATA_DIR, "test.pkl")
-TEST_FWF_FILENAME = os.path.join(IO_OPS_DATA_DIR, "test_fwf.txt")
-
 DATASET_SIZE_DICT = {
     "Small": 64,
     "Normal": 2000,
@@ -102,7 +89,7 @@ def make_parquet_file():
     filenames = []
 
     def _make_parquet_file(
-        filename=TEST_PARQUET_FILENAME,
+        filename,
         row_size=NROWS,
         force=True,
         directory=False,
@@ -176,7 +163,7 @@ def teardown_test_files(test_paths: list):
 
 def _make_csv_file(filenames):
     def _csv_file_maker(
-        filename=TEST_CSV_FILENAME,
+        filename,
         row_size=NROWS,
         force=True,
         delimiter=",",
@@ -346,7 +333,7 @@ def TestReadCSVFixture():
     teardown_test_files(filenames)
 
 
-def setup_json_file(filename=TEST_JSON_FILENAME, row_size=NROWS, force=True):
+def setup_json_file(filename, row_size=NROWS, force=True):
     if os.path.exists(filename) and not force:
         pass
     else:
@@ -356,7 +343,7 @@ def setup_json_file(filename=TEST_JSON_FILENAME, row_size=NROWS, force=True):
         df.to_json(filename)
 
 
-def setup_json_lines_file(filename=TEST_JSON_FILENAME, row_size=NROWS, force=True):
+def setup_json_lines_file(filename, row_size=NROWS, force=True):
     if os.path.exists(filename) and not force:
         pass
     else:
@@ -366,7 +353,7 @@ def setup_json_lines_file(filename=TEST_JSON_FILENAME, row_size=NROWS, force=Tru
         df.to_json(filename, lines=True, orient="records")
 
 
-def setup_html_file(filename=TEST_HTML_FILENAME, row_size=NROWS, force=True):
+def setup_html_file(filename, row_size=NROWS, force=True):
     if os.path.exists(filename) and not force:
         pass
     else:
@@ -381,7 +368,7 @@ def setup_clipboard(row_size=NROWS):
     df.to_clipboard()
 
 
-def setup_excel_file(filename=TEST_EXCEL_FILENAME, row_size=NROWS, force=True):
+def setup_excel_file(filename, row_size=NROWS, force=True):
     if os.path.exists(filename) and not force:
         pass
     else:
@@ -391,7 +378,7 @@ def setup_excel_file(filename=TEST_EXCEL_FILENAME, row_size=NROWS, force=True):
         df.to_excel(filename)
 
 
-def setup_feather_file(filename=TEST_FEATHER_FILENAME, row_size=NROWS, force=True):
+def setup_feather_file(filename, row_size=NROWS, force=True):
     if os.path.exists(filename) and not force:
         pass
     else:
@@ -401,9 +388,7 @@ def setup_feather_file(filename=TEST_FEATHER_FILENAME, row_size=NROWS, force=Tru
         df.to_feather(filename)
 
 
-def setup_hdf_file(
-    filename=TEST_READ_HDF_FILENAME, row_size=NROWS, force=True, format=None
-):
+def setup_hdf_file(filename, row_size=NROWS, force=True, format=None):
     if os.path.exists(filename) and not force:
         pass
     else:
@@ -413,7 +398,7 @@ def setup_hdf_file(
         df.to_hdf(filename, key="df", format=format)
 
 
-def setup_stata_file(filename=TEST_STATA_FILENAME, row_size=NROWS, force=True):
+def setup_stata_file(filename, row_size=NROWS, force=True):
     if os.path.exists(filename) and not force:
         pass
     else:
@@ -423,7 +408,7 @@ def setup_stata_file(filename=TEST_STATA_FILENAME, row_size=NROWS, force=True):
         df.to_stata(filename)
 
 
-def setup_pickle_file(filename=TEST_PICKLE_FILENAME, row_size=NROWS, force=True):
+def setup_pickle_file(filename, row_size=NROWS, force=True):
     if os.path.exists(filename) and not force:
         pass
     else:
@@ -468,7 +453,7 @@ def make_sql_connection():
     teardown_test_files(filenames)
 
 
-def setup_fwf_file(filename=TEST_FWF_FILENAME, force=True, fwf_data=None):
+def setup_fwf_file(filename, force=True, fwf_data=None):
     if not force and os.path.exists(filename):
         return
 
@@ -1623,17 +1608,17 @@ class TestHdf:
     @pytest.mark.skipif(os.name == "nt", reason="Windows not supported")
     def test_HDFStore(self):
         try:
-            modin_store = pd.HDFStore(TEST_WRITE_HDF_FILENAME_MODIN)
-            pandas_store = pandas.HDFStore(TEST_WRITE_HDF_FILENAME_PANDAS)
+            unique_filename_modin = get_unique_filename(extension="hdf")
+            unique_filename_pandas = get_unique_filename(extension="hdf")
+            modin_store = pd.HDFStore(unique_filename_modin)
+            pandas_store = pandas.HDFStore(unique_filename_pandas)
 
             modin_df, pandas_df = create_test_dfs(TEST_DATA)
 
             modin_store["foo"] = modin_df
             pandas_store["foo"] = pandas_df
 
-            assert assert_files_eq(
-                TEST_WRITE_HDF_FILENAME_MODIN, TEST_WRITE_HDF_FILENAME_PANDAS
-            )
+            assert assert_files_eq(unique_filename_modin, unique_filename_pandas)
             modin_df = modin_store.get("foo")
             pandas_df = pandas_store.get("foo")
             df_equals(modin_df, pandas_df)
@@ -1651,9 +1636,7 @@ class TestHdf:
             df_equals(modin_df, pandas_df)
         finally:
             os.unlink(hdf_file)
-            teardown_test_files(
-                [TEST_WRITE_HDF_FILENAME_MODIN, TEST_WRITE_HDF_FILENAME_PANDAS]
-            )
+            teardown_test_files([unique_filename_modin, unique_filename_pandas])
 
 
 class TestSql:
