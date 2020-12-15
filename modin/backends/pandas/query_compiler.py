@@ -677,33 +677,31 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
         skipna = kwargs.get("skipna", True)
 
-        def map_apply_fn(ser, **kwargs):
-            try:
-                sum_result = ser.sum(skipna=skipna)
-                count_result = ser.count()
-            except TypeError:
-                return None
-            else:
-                return (sum_result, count_result)
-
-        def reduce_apply_fn(ser, **kwargs):
-            sum_result = ser.apply(lambda x: x[0]).sum(skipna=skipna)
-            count_result = ser.apply(lambda x: x[1]).sum(skipna=skipna)
-            return sum_result / count_result
+        # TODO-FIX: this function may work incorrectly with user-defined "numeric" values.
+        # Since `count(numeric_only=True)` discards all unknown "numeric" types, we can get incorrect
+        # divisor inside the reduce function.
+        def map_fn(df, **kwargs):
+            result = pandas.DataFrame(
+                {
+                    "sum": df.sum(axis=axis, skipna=skipna),
+                    "count": df.count(axis=axis, numeric_only=True),
+                }
+            )
+            return result if axis else result.T
 
         def reduce_fn(df, **kwargs):
-            df.dropna(axis=1, inplace=True, how="any")
-            return build_applyier(reduce_apply_fn, axis=axis)(df)
+            sum_cols = df["sum"] if axis else df.loc["sum"]
+            count_cols = df["count"] if axis else df.loc["count"]
 
-        def build_applyier(func, **applyier_kwargs):
-            def applyier(df, **kwargs):
-                result = df.apply(func, **applyier_kwargs)
-                return result.set_axis(df.axes[axis ^ 1], axis=0)
-
-            return applyier
+            if not isinstance(sum_cols, pandas.Series):
+                # If we got `NaN` as the result of the sum in any axis partition,
+                # then we must consider the whole sum as `NaN`, so setting `skipna=False`
+                sum_cols = sum_cols.sum(axis=axis, skipna=False)
+                count_cols = count_cols.sum(axis=axis, skipna=False)
+            return sum_cols / count_cols
 
         return MapReduceFunction.register(
-            build_applyier(map_apply_fn, axis=axis, result_type="reduce"),
+            map_fn,
             reduce_fn,
             preserve_index=(kwargs.get("numeric_only") is not None),
         )(self, axis=axis, **kwargs)
