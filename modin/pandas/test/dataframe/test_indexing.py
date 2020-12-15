@@ -411,13 +411,28 @@ def test_loc_assignment(index, columns):
     df_equals(md_df, pd_df)
 
 
-@pytest.mark.parametrize("columns", [["col1", "col2", "col3"]])
-def test_loc_iter_assignment(columns):
-    md_df, pd_df = create_test_dfs(
-        {col: [idx] for idx, col in enumerate(columns)}, columns=columns
+@pytest.fixture
+def loc_iter_dfs():
+    columns = ["col1", "col2", "col3"]
+    index = ["row1", "row2", "row3"]
+    return create_test_dfs(
+        {col: ([idx] * len(index)) for idx, col in enumerate(columns)},
+        columns=columns,
+        index=index,
     )
-    md_df.loc[:, columns[:-1]] = md_df.loc[:, columns[:-1]].astype("float")
-    pd_df.loc[:, columns[:-1]] = pd_df.loc[:, columns[:-1]].astype("float")
+
+
+@pytest.mark.parametrize("reverse_order", [False, True])
+@pytest.mark.parametrize("axis", [0, 1])
+def test_loc_iter_assignment(loc_iter_dfs, reverse_order, axis):
+    md_df, pd_df = loc_iter_dfs
+
+    select = [slice(None), slice(None)]
+    select[axis] = sorted(pd_df.axes[axis][:-1], reverse=reverse_order)
+    select = tuple(select)
+
+    pd_df.loc[select] = pd_df.loc[select].copy()
+    md_df.loc[select] = md_df.loc[select].copy()
     df_equals(md_df, pd_df)
 
 
