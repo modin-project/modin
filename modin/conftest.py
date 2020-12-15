@@ -154,6 +154,9 @@ def enforce_config():
         def __getattr__(self, name):
             return getattr(orig_env, name)
 
+        def __iter__(self):
+            return iter(orig_env)
+
     os.environ = PatchedEnv()
     yield
     os.environ = orig_env

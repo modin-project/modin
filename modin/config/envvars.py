@@ -233,7 +233,7 @@ def _check_vars():
         and issubclass(obj, EnvironmentVariable)
         and not obj.is_abstract
     }
-    found_names = {name for name in os.environ.keys() if name.startswith("MODIN_")}
+    found_names = {name for name in os.environ if name.startswith("MODIN_")}
     unknown = found_names - valid_names
     if unknown:
         warnings.warn(
