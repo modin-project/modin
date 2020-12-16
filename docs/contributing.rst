@@ -165,6 +165,54 @@ subset of the test suite. In order to run a specific test run:
 
 The entire test suite is automatically run for each pull request.
 
+Performance measurement
+-----------------------
+
+To track the performance of various functionality of the modin project, we use the asv_ tool.
+
+Various scenarios in which it may be needed with appropriate command:
+* It is necessary to check the impact of the new patch on the performance of a certain set of operations:
+
+.. code-block:: bash
+
+  asv continuous -f 1.05 src/master HEAD -b TimeGroupBy --launch-method=spawn
+
+* It is necessary to check the healthy of benchmarks after making changes or writing new ones:
+
+.. code-block:: bash
+
+  asv run --quick --show-stderr --python=same --launch-method=spawn
+
+* You just need to run the entire test suite to get the current time numbers:
+
+.. code-block:: bash
+
+  asv run --launch-method=spawn
+
+* It is necessary to check the range of commits for performance degradation:
+
+.. code-block:: bash
+
+ asv run [start_hash]..[end_hash] --launch-method=spawn
+ asv publish
+ asv preview
+
+For more consistent results, you may need to use the following parameters:
+* -a sample_time=1
+* -a warmup_time=1
+* -a processes=4
+
+Some details about using modin on ray with asv:
+* --launch-method=forkserver is not working
+* Each set of parameters for each test is launched in its own process, which brings
+a large overhead, since for each process redis server and other necessary binaries
+from ray initialization are started and destroyed.
+
+Some details for maintenance:
+* `modin/asv_bench/asv.conf.json` contains the modin dependencies, with which testing takes place.
+We need to keep them up to date according to the dependencies in `setup.py`.
+
+
 Building documentation
 ----------------------
 
@@ -204,4 +252,5 @@ More docs on this coming soon...
 .. _flake8: http://flake8.pycqa.org/en/latest/
 .. _Github Actions: https://github.com/features/actions
 .. _testing:
+.. _asv: https://github.com/airspeed-velocity/asv#airspeed-velocity
 .. _developer mailing list: https://groups.google.com/forum/#!forum/modin-dev
