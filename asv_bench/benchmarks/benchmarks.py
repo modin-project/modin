@@ -17,11 +17,8 @@
 import modin.pandas as pd
 import numpy as np
 
-from modin.config import CpuCount, TestDatasetSize
+from modin.config import TestDatasetSize
 from .utils import generate_dataframe, RAND_LOW, RAND_HIGH, random_string
-
-# define `MODIN_CPUS` env var to control the number of partitions
-# it should be defined before modin.pandas import
 
 ASV_USE_IMPL = "modin"
 
@@ -48,6 +45,26 @@ else:
         (10, 10_000),
         (10_000, 10),
     ]
+
+
+class TimeMultiColumnGroupby:
+    param_names = ["data_size", "count_columns"]
+    params = [
+        UNARY_OP_DATA_SIZE,
+        [6]
+    ]
+
+    def setup(self, data_size, count_columns):
+        self.df = generate_dataframe(
+            ASV_USE_IMPL, "int", data_size[1], data_size[0], RAND_LOW, RAND_HIGH
+        )
+        self.groupby_columns = [col for col in self.df.columns[:count_columns]]
+
+    def time_groupby_agg_quan(self, data_size, count_columns):
+        self.df.groupby(by=self.groupby_columns).agg("quantile")
+
+    def time_groupby_agg_mean(self, data_size, count_columns):
+        self.df.groupby(by=self.groupby_columns).apply(lambda df: df.mean())
 
 
 class TimeGroupByDefaultAggregations:
@@ -199,7 +216,6 @@ class BaseTimeSetItem:
 
 class TimeSetItem(BaseTimeSetItem):
     params = [
-        ["int"],
         UNARY_OP_DATA_SIZE,
         [1],
         ["zero", "middle", "last"],
@@ -217,7 +233,6 @@ class TimeSetItem(BaseTimeSetItem):
 
 class TimeInsert(BaseTimeSetItem):
     params = [
-        ["int"],
         UNARY_OP_DATA_SIZE,
         [1],
         ["zero", "middle", "last"],
@@ -256,6 +271,6 @@ class TimeArithmetic:
 
     def time_apply(self, data_size, axis):
         self.df.apply(lambda df: df.sum(), axis=axis)
-    
-    def time_mean(self, impl, data_type, data_size, axis):
+
+    def time_mean(self, data_size, axis):
         self.df.mean(axis=axis)
