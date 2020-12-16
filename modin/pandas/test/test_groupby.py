@@ -1456,7 +1456,7 @@ def test_unknown_groupby(columns):
             {
                 list(test_data_values[0].keys())[1]: [
                     ("new_sum", "sum"),
-                    ("new_prod", "prod"),
+                    ("new_min", "min"),
                 ],
                 list(test_data_values[0].keys())[-2]: np.sum,
             }
