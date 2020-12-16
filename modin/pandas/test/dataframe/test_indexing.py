@@ -436,6 +436,17 @@ def test_loc_iter_assignment(loc_iter_dfs, reverse_order, axis):
     df_equals(md_df, pd_df)
 
 
+@pytest.mark.parametrize("reverse_order", [False, True])
+@pytest.mark.parametrize("axis", [0, 1])
+def test_loc_order(loc_iter_dfs, reverse_order, axis):
+    md_df, pd_df = loc_iter_dfs
+
+    select = [slice(None), slice(None)]
+    select[axis] = sorted(pd_df.axes[axis][:-1], reverse=reverse_order)
+    select = tuple(select)
+
+    df_equals(pd_df.loc[select], md_df.loc[select])
+
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_loc_nested_assignment(data):
     modin_df = pd.DataFrame(data)
