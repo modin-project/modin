@@ -98,6 +98,18 @@ class TimeGroupByDefaultAggregations:
     def time_groupby_mean(self, data_size):
         execute(self.df.groupby(by=self.groupby_column).mean())
 
+    def time_groupby_dictionary_reduction(self, impl, data_type, data_size):
+        cols_to_agg = self.df.columns[1:4]
+        self.df.groupby(by=self.df.columns[0]).agg(
+            {k: v for k, v in zip(cols_to_agg, ["sum", "count", "any"])}
+        )
+
+    def time_groupby_dictionary_aggregation(self, impl, data_type, data_size):
+        cols_to_agg = self.df.columns[1:4]
+        self.df.groupby(by=self.df.columns[0]).agg(
+            {k: v for k, v in zip(cols_to_agg, ["quantile", "std", "median"])}
+        )
+
 
 class TimeJoin:
     param_names = ["data_size", "how", "sort"]
