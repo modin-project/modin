@@ -14,13 +14,17 @@
 # define `MODIN_CPUS` env var to control the number of partitions
 # it should be defined before modin.pandas import (in case of using os.environ)
 
+# define `MODIN_ASV_USE_IMPL` env var to choose library for using in performance
+# measurements
+
 import modin.pandas as pd
 import numpy as np
+import pandas
 
-from modin.config import TestDatasetSize
+from modin.config import TestDatasetSize, AsvImplementation
 from .utils import generate_dataframe, RAND_LOW, RAND_HIGH, random_string
 
-ASV_USE_IMPL = "modin"
+ASV_USE_IMPL = AsvImplementation.get()
 
 if TestDatasetSize.get() == "Big":
     BINARY_OP_DATA_SIZE = [
@@ -31,7 +35,8 @@ if TestDatasetSize.get() == "Big":
     ]
     UNARY_OP_DATA_SIZE = [
         (5000, 5000),
-        (10, 1_000_000),
+        # the case extremely inefficient
+        # (10, 1_000_000),
         (1_000_000, 10),
     ]
 else:
@@ -47,12 +52,16 @@ else:
     ]
 
 
+def trigger_execution(func):
+    def real_executor(*arg, **kwargs):
+        return func(*arg, **kwargs).shape
+
+    return real_executor
+
+
 class TimeMultiColumnGroupby:
     param_names = ["data_size", "count_columns"]
-    params = [
-        UNARY_OP_DATA_SIZE,
-        [6]
-    ]
+    params = [UNARY_OP_DATA_SIZE, [6]]
 
     def setup(self, data_size, count_columns):
         self.df = generate_dataframe(
@@ -60,11 +69,13 @@ class TimeMultiColumnGroupby:
         )
         self.groupby_columns = [col for col in self.df.columns[:count_columns]]
 
+    @trigger_execution
     def time_groupby_agg_quan(self, data_size, count_columns):
-        self.df.groupby(by=self.groupby_columns).agg("quantile")
+        return self.df.groupby(by=self.groupby_columns).agg("quantile")
 
+    @trigger_execution
     def time_groupby_agg_mean(self, data_size, count_columns):
-        self.df.groupby(by=self.groupby_columns).apply(lambda df: df.mean())
+        return self.df.groupby(by=self.groupby_columns).apply(lambda df: df.mean())
 
 
 class TimeGroupByDefaultAggregations:
@@ -79,17 +90,21 @@ class TimeGroupByDefaultAggregations:
         )
         self.groupby_column = self.df.columns[0]
 
+    @trigger_execution
     def time_groupby_count(self, data_size):
-        self.df.groupby(by=self.groupby_column).count()
+        return self.df.groupby(by=self.groupby_column).count()
 
+    @trigger_execution
     def time_groupby_size(self, data_size):
-        self.df.groupby(by=self.groupby_column).size()
+        return self.df.groupby(by=self.groupby_column).size()
 
+    @trigger_execution
     def time_groupby_sum(self, data_size):
-        self.df.groupby(by=self.groupby_column).sum()
+        return self.df.groupby(by=self.groupby_column).sum()
 
+    @trigger_execution
     def time_groupby_mean(self, data_size):
-        self.df.groupby(by=self.groupby_column).mean()
+        return self.df.groupby(by=self.groupby_column).mean()
 
 
 class TimeJoin:
@@ -108,10 +123,11 @@ class TimeJoin:
             ASV_USE_IMPL, "int", data_size[3], data_size[2], RAND_LOW, RAND_HIGH
         )
 
+    @trigger_execution
     def time_join(self, data_size, how, sort):
-        self.df1.join(
+        return self.df1.join(
             self.df2, on=self.df1.columns[0], how=how, lsuffix="left_", sort=sort
-        ).shape
+        )
 
 
 class TimeMerge:
@@ -130,8 +146,9 @@ class TimeMerge:
             ASV_USE_IMPL, "int", data_size[3], data_size[2], RAND_LOW, RAND_HIGH
         )
 
+    @trigger_execution
     def time_merge(self, data_size, how, sort):
-        self.df1.merge(self.df2, on=self.df1.columns[0], how=how, sort=sort).shape
+        return self.df1.merge(self.df2, on=self.df1.columns[0], how=how, sort=sort)
 
 
 class TimeConcat:
@@ -151,8 +168,14 @@ class TimeConcat:
             ASV_USE_IMPL, "int", data_size[3], data_size[2], RAND_LOW, RAND_HIGH
         )
 
+    @trigger_execution
     def time_concat(self, data_size, how, axis):
-        pd.concat([self.df1, self.df2], axis=axis, join=how).shape
+        if ASV_USE_IMPL == "modin":
+            return pd.concat([self.df1, self.df2], axis=axis, join=how)
+        elif ASV_USE_IMPL == "pandas":
+            return pandas.concat([self.df1, self.df2], axis=axis, join=how)
+        else:
+            raise NotImplementedError
 
 
 class TimeBinaryOp:
@@ -173,8 +196,9 @@ class TimeBinaryOp:
         )
         self.op = getattr(self.df1, binary_op)
 
+    @trigger_execution
     def time_binary_op(self, data_size, binary_op, axis):
-        self.op(self.df2, axis=axis)
+        return self.op(self.df2, axis=axis)
 
 
 class BaseTimeSetItem:
@@ -196,9 +220,6 @@ class BaseTimeSetItem:
             if len(range_based_loc) == 1
             else (df.axes[axis][range_based_loc], range_based_loc)
         )
-
-    def trigger_execution(self):
-        self.df.shape
 
     def setup(self, data_size, item_length, loc, is_equal_indices):
         self.df = generate_dataframe(
@@ -222,13 +243,15 @@ class TimeSetItem(BaseTimeSetItem):
         [True, False],
     ]
 
+    @trigger_execution
     def time_setitem_qc(self, *args, **kwargs):
         self.df[self.loc] = self.item
-        self.trigger_execution()
+        return self.df
 
+    @trigger_execution
     def time_setitem_raw(self, *args, **kwargs):
         self.df[self.loc] = self.item_raw
-        self.trigger_execution()
+        return self.df
 
 
 class TimeInsert(BaseTimeSetItem):
@@ -239,13 +262,15 @@ class TimeInsert(BaseTimeSetItem):
         [True, False],
     ]
 
+    @trigger_execution
     def time_insert_qc(self, *args, **kwargs):
         self.df.insert(loc=self.iloc, column=random_string(), value=self.item)
-        self.trigger_execution()
+        return self.df
 
+    @trigger_execution
     def time_insert_raw(self, *args, **kwargs):
         self.df.insert(loc=self.iloc, column=random_string(), value=self.item_raw)
-        self.trigger_execution()
+        return self.df
 
 
 class TimeArithmetic:
@@ -260,17 +285,22 @@ class TimeArithmetic:
             ASV_USE_IMPL, "int", data_size[1], data_size[0], RAND_LOW, RAND_HIGH
         )
 
+    @trigger_execution
     def time_sum(self, data_size, axis):
-        self.df.sum(axis=axis)
+        return self.df.sum(axis=axis)
 
+    @trigger_execution
     def time_median(self, data_size, axis):
-        self.df.median(axis=axis)
+        return self.df.median(axis=axis)
 
+    @trigger_execution
     def time_nunique(self, data_size, axis):
-        self.df.nunique(axis=axis)
+        return self.df.nunique(axis=axis)
 
+    @trigger_execution
     def time_apply(self, data_size, axis):
-        self.df.apply(lambda df: df.sum(), axis=axis)
+        return self.df.apply(lambda df: df.sum(), axis=axis)
 
+    @trigger_execution
     def time_mean(self, data_size, axis):
-        self.df.mean(axis=axis)
+        return self.df.mean(axis=axis)
