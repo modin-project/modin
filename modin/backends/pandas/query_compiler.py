@@ -2509,6 +2509,12 @@ class PandasQueryCompiler(BaseQueryCompiler):
     ):
         def is_reduce_fn(o, deep_level=0):
             if not isinstance(o, str) and isinstance(o, Container):
+                # `deep_level` parameter specifies the number of nested containers that was met:
+                # - if it's 0, then we're outside of container, `o` could be either function name
+                #   or container of function names/renamers.
+                # - if it's 1, then we're inside container of function names/renamers. `o` must be
+                #   either function name or renamer (renamer is some container which length == 2,
+                #   the first element is the new column name and the second is the function name).
                 assert deep_level == 0 or (
                     deep_level > 0 and len(o) == 2
                 ), f"Got the renamer with incorrect length, expected 2 got {len(o)}."
