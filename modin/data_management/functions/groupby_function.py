@@ -14,7 +14,7 @@
 import pandas
 
 from .mapreducefunction import MapReduceFunction
-from modin.utils import try_cast_to_pandas
+from modin.utils import try_cast_to_pandas, hashable
 
 
 class GroupbyReduceFunction(MapReduceFunction):
@@ -113,7 +113,9 @@ class GroupbyReduceFunction(MapReduceFunction):
         numeric_only=True,
         **kwargs,
     ):
-        if not isinstance(by, (type(query_compiler), str)):
+        if not (isinstance(by, (type(query_compiler)) or hashable(by))) or isinstance(
+            by, pandas.Grouper
+        ):
             by = try_cast_to_pandas(by, squeeze=True)
             default_func = (
                 (lambda grp: grp.agg(map_func))

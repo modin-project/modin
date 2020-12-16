@@ -365,7 +365,7 @@ class DataFrame(BasePandasDataset):
 
         if callable(by):
             by = self.index.map(by)
-        elif isinstance(by, str):
+        elif hashable(by) and not isinstance(by, pandas.Grouper):
             drop = by in self.columns
             idx_name = by
             if self._query_compiler.has_multiindex(
@@ -374,7 +374,7 @@ class DataFrame(BasePandasDataset):
                 # In this case we pass the string value of the name through to the
                 # partitions. This is more efficient than broadcasting the values.
                 pass
-            else:
+            elif level is None:
                 by = self.__getitem__(by)._query_compiler
         elif isinstance(by, Series):
             drop = by._parent is self
@@ -384,7 +384,7 @@ class DataFrame(BasePandasDataset):
             # fastpath for multi column groupby
             if axis == 0 and all(
                 (
-                    (isinstance(o, str) and (o in self))
+                    (hashable(o) and (o in self))
                     or isinstance(o, Series)
                     or (is_list_like(o) and len(o) == len(self.axes[axis]))
                 )
@@ -395,7 +395,7 @@ class DataFrame(BasePandasDataset):
                 internal_by, external_by = [], []
 
                 for current_by in by:
-                    if isinstance(current_by, str):
+                    if hashable(current_by):
                         internal_by.append(current_by)
                     elif isinstance(current_by, Series):
                         if current_by._parent is self:
@@ -414,7 +414,7 @@ class DataFrame(BasePandasDataset):
             else:
                 mismatch = len(by) != len(self.axes[axis])
                 if mismatch and all(
-                    isinstance(obj, str)
+                    hashable(obj)
                     and (
                         obj in self or obj in self._query_compiler.get_index_names(axis)
                     )
@@ -424,7 +424,7 @@ class DataFrame(BasePandasDataset):
                     # we default to pandas in this case.
                     pass
                 elif mismatch and any(
-                    isinstance(obj, str) and obj not in self.columns for obj in by
+                    hashable(obj) and obj not in self.columns for obj in by
                 ):
                     names = [o.name if isinstance(o, Series) else o for o in by]
                     raise KeyError(next(x for x in names if x not in self))

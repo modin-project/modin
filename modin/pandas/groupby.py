@@ -32,7 +32,12 @@ from types import BuiltinFunctionType
 from collections.abc import Iterable
 
 from modin.error_message import ErrorMessage
-from modin.utils import _inherit_docstrings, try_cast_to_pandas, wrap_udf_function
+from modin.utils import (
+    _inherit_docstrings,
+    try_cast_to_pandas,
+    wrap_udf_function,
+    hashable,
+)
 from modin.backends.base.query_compiler import BaseQueryCompiler
 from modin.config import IsExperimental
 from .series import Series
@@ -79,7 +84,7 @@ class DataFrameGroupBy(object):
                 not isinstance(by, type(self._query_compiler))
                 and axis == 0
                 and all(
-                    (isinstance(obj, str) and obj in self._query_compiler.columns)
+                    (hashable(obj) and obj in self._query_compiler.columns)
                     or isinstance(obj, type(self._query_compiler))
                     or is_list_like(obj)
                     for obj in self._by
@@ -324,7 +329,7 @@ class DataFrameGroupBy(object):
         if (
             self._is_multi_by
             and isinstance(self._by, list)
-            and not all(isinstance(o, str) for o in self._by)
+            and not all(hashable(o) and o in self._df for o in self._by)
         ):
             raise NotImplementedError(
                 "Column lookups on GroupBy with arbitrary Series in by"
@@ -809,7 +814,14 @@ class DataFrameGroupBy(object):
                 # aware.
                 ErrorMessage.catch_bugs_and_request_email(self._axis == 1)
                 ErrorMessage.default_to_pandas("Groupby with multiple columns")
-                if isinstance(by, list) and all(isinstance(o, str) for o in by):
+                if isinstance(by, list) and all(
+                    hashable(o)
+                    and (
+                        o in self._df
+                        or o in self._df._query_compiler.get_index_names(self._axis)
+                    )
+                    for o in by
+                ):
                     pandas_df = self._df._query_compiler.getitem_column_array(
                         by
                     ).to_pandas()
