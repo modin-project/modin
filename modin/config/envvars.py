@@ -221,6 +221,17 @@ class TrackFileLeaks(EnvironmentVariable, type=bool):
     default = sys.platform != "win32"
 
 
+class AsvImplementation(EnvironmentVariable, type=ExactStr):
+    """
+    Allows to select a library that we will use for testing performance.
+    """
+
+    varname = "MODIN_ASV_USE_IMPL"
+    choices = ("modin", "pandas")
+
+    default = "modin"
+
+
 def _check_vars():
     """
     Look out for any environment variables that start with "MODIN_" prefix
