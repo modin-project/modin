@@ -57,46 +57,62 @@ def execute(df):
     return df.shape
 
 
-class TimeMultiColumnGroupby:
-    param_names = ["data_size", "count_columns"]
-    params = [UNARY_OP_DATA_SIZE, [6]]
-
-    def setup(self, data_size, count_columns):
+class BaseTimeGroupBy:
+    def setup(self, data_size, ncols=1):
         self.df = generate_dataframe(
             ASV_USE_IMPL, "int", data_size[1], data_size[0], RAND_LOW, RAND_HIGH
         )
-        self.groupby_columns = [col for col in self.df.columns[:count_columns]]
+        self.groupby_columns = self.df.columns[:ncols].tolist()
 
-    def time_groupby_agg_quan(self, data_size, count_columns):
+
+class TimeMultiColumnGroupby(BaseTimeGroupBy):
+    param_names = ["data_size", "ncols"]
+    params = [UNARY_OP_DATA_SIZE, [6]]
+
+    def time_groupby_agg_quan(self, data_size, ncols):
         execute(self.df.groupby(by=self.groupby_columns).agg("quantile"))
 
-    def time_groupby_agg_mean(self, data_size, count_columns):
+    def time_groupby_agg_mean(self, data_size, ncols):
         execute(self.df.groupby(by=self.groupby_columns).apply(lambda df: df.mean()))
 
 
-class TimeGroupByDefaultAggregations:
+class TimeGroupByDefaultAggregations(BaseTimeGroupBy):
     param_names = ["data_size"]
     params = [
         UNARY_OP_DATA_SIZE,
     ]
 
-    def setup(self, data_size):
-        self.df = generate_dataframe(
-            ASV_USE_IMPL, "int", data_size[1], data_size[0], RAND_LOW, RAND_HIGH
-        )
-        self.groupby_column = self.df.columns[0]
-
     def time_groupby_count(self, data_size):
-        execute(self.df.groupby(by=self.groupby_column).count())
+        execute(self.df.groupby(by=self.groupby_columns).count())
 
     def time_groupby_size(self, data_size):
-        execute(self.df.groupby(by=self.groupby_column).size())
+        execute(self.df.groupby(by=self.groupby_columns).size())
 
     def time_groupby_sum(self, data_size):
-        execute(self.df.groupby(by=self.groupby_column).sum())
+        execute(self.df.groupby(by=self.groupby_columns).sum())
 
     def time_groupby_mean(self, data_size):
-        execute(self.df.groupby(by=self.groupby_column).mean())
+        execute(self.df.groupby(by=self.groupby_columns).mean())
+
+
+class TimeGroupByDictionaryAggregation(BaseTimeGroupBy):
+    param_names = ["data_size", "operation_type"]
+    params = [UNARY_OP_DATA_SIZE, ["reduction", "aggregation"]]
+    operations = {
+        "reduction": ["sum", "count", "prod"],
+        "aggregation": ["quantile", "std", "median"],
+    }
+
+    def setup(self, data_size, operation_type):
+        super().setup(data_size)
+        self.cols_to_agg = self.df.columns[1:4]
+        operations = self.operations[operation_type]
+        self.agg_dict = {
+            c: operations[i % len(operations)] for i, c in enumerate(self.cols_to_agg)
+        }
+
+    def time_groupby_dict_agg(self, data_size, operation_type):
+        execute(self.df.groupby(by=self.groupby_columns).agg(self.agg_dict))
 
 
 class TimeJoin:

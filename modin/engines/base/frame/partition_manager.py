@@ -99,12 +99,45 @@ class BaseFrameManager(ABC):
         )
 
     @classmethod
-    def groupby_reduce(cls, axis, partitions, by, map_func, reduce_func):
-        """Groupby data using the map_func provided along the axis over the partitions then reduce using reduce_func."""
-        mapped_partitions = cls.broadcast_apply(
-            axis, map_func, left=partitions, right=by, other_name="other"
+    def groupby_reduce(
+        cls, axis, partitions, by, map_func, reduce_func, apply_indices=None
+    ):
+        """
+        Groupby data using the map_func provided along the axis over the partitions then reduce using reduce_func.
+
+        Parameters
+        ----------
+            axis: int,
+                Axis to groupby over.
+            partitions: numpy 2D array,
+                Partitions of the ModinFrame to groupby.
+            by: numpy 2D array (optional),
+                Partitions of 'by' to broadcast.
+            map_func: callable,
+                Map function.
+            reduce_func: callable,
+                Reduce function.
+            apply_indices : list of ints (optional),
+                Indices of `axis ^ 1` to apply function over.
+
+        Returns
+        -------
+            Partitions with applied groupby.
+        """
+        if apply_indices is not None:
+            partitions = (
+                partitions[apply_indices] if axis else partitions[:, apply_indices]
+            )
+
+        if by is not None:
+            mapped_partitions = cls.broadcast_apply(
+                axis, map_func, left=partitions, right=by, other_name="other"
+            )
+        else:
+            mapped_partitions = cls.map_partitions(partitions, map_func)
+        return cls.map_axis_partitions(
+            axis, mapped_partitions, reduce_func, enumerate_partitions=True
         )
-        return cls.map_axis_partitions(axis, mapped_partitions, reduce_func)
 
     @classmethod
     def broadcast_apply_select_indices(
@@ -351,6 +384,7 @@ class BaseFrameManager(ABC):
         map_func,
         keep_partitioning=False,
         lengths=None,
+        enumerate_partitions=False,
     ):
         """
         Apply `map_func` to every partition.
@@ -367,6 +401,9 @@ class BaseFrameManager(ABC):
             The flag to keep partitions for Modin Frame.
         lengths : list(int)
             The list of lengths to shuffle the object.
+        enumerate_partitions : bool (optional, default False),
+            Whether or not to pass partition index into `map_func`.
+            Note that `map_func` must be able to obtain `partition_idx` kwarg.
 
         Returns
         -------
@@ -385,6 +422,7 @@ class BaseFrameManager(ABC):
             keep_partitioning=keep_partitioning,
             right=None,
             lengths=lengths,
+            enumerate_partitions=enumerate_partitions,
         )
 
     @classmethod

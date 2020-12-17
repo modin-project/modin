@@ -20,174 +20,243 @@ from modin.utils import try_cast_to_pandas
 class GroupbyReduceFunction(MapReduceFunction):
     @classmethod
     def call(cls, map_func, reduce_func, *call_args, **call_kwds):
-        def caller(
-            query_compiler,
-            by,
-            axis,
-            groupby_args,
-            map_args,
-            reduce_args=None,
-            numeric_only=True,
-            drop=False,
-        ):
-            if not isinstance(by, (type(query_compiler), str)):
-                by = try_cast_to_pandas(by, squeeze=True)
-                return query_compiler.default_to_pandas(
-                    lambda df: map_func(
-                        df.groupby(by=by, axis=axis, **groupby_args), **map_args
-                    )
+        assert not (
+            isinstance(map_func, dict) ^ isinstance(reduce_func, dict)
+        ) and not (
+            callable(map_func) ^ callable(reduce_func)
+        ), "Map and reduce functions must be either both dict or both callable."
+
+        return lambda *args, **kwargs: cls.caller(
+            *args, map_func=map_func, reduce_func=reduce_func, **kwargs, **call_kwds
+        )
+
+    @classmethod
+    def map(
+        cls,
+        df,
+        other=None,
+        axis=0,
+        by=None,
+        groupby_args=None,
+        map_func=None,
+        map_args=None,
+        drop=False,
+    ):
+        # Set `as_index` to True to track the metadata of the grouping object
+        # It is used to make sure that between phases we are constructing the
+        # right index and placing columns in the correct order.
+        groupby_args["as_index"] = True
+        groupby_args["observed"] = True
+        if other is not None:
+            other = other.squeeze(axis=axis ^ 1)
+            if isinstance(other, pandas.DataFrame):
+                df = pandas.concat(
+                    [df] + [other[[o for o in other if o not in df]]],
+                    axis=1,
                 )
-            assert axis == 0, "Can only groupby reduce with axis=0"
+                other = list(other.columns)
+            by_part = other
+        else:
+            by_part = by
 
-            if numeric_only:
-                qc = query_compiler.getitem_column_array(
-                    query_compiler._modin_frame._numeric_columns(True)
+        apply_func = cls.try_filter_dict(map_func, df)
+        result = apply_func(
+            df.groupby(by=by_part, axis=axis, **groupby_args), **map_args
+        )
+        return result
+
+    @classmethod
+    def reduce(
+        cls,
+        df,
+        partition_idx=0,
+        axis=0,
+        groupby_args=None,
+        reduce_func=None,
+        reduce_args=None,
+        drop=False,
+        **kwargs,
+    ):
+        by_part = list(df.index.names)
+        if drop and len(df.columns.intersection(by_part)) > 0:
+            df.drop(columns=by_part, errors="ignore", inplace=True)
+
+        groupby_args = groupby_args.copy()
+        method = kwargs.get("method", None)
+        as_index = groupby_args["as_index"]
+
+        # Set `as_index` to True to track the metadata of the grouping object
+        groupby_args["as_index"] = True
+
+        # since now index levels contain out 'by', in the reduce phace
+        # we want to group on these levels
+        groupby_args["level"] = list(range(len(df.index.names)))
+
+        apply_func = cls.try_filter_dict(reduce_func, df)
+        result = apply_func(df.groupby(axis=axis, **groupby_args), **reduce_args)
+
+        if not as_index:
+            insert_levels = partition_idx == 0 and (drop or method == "size")
+            result.reset_index(drop=not insert_levels, inplace=True)
+
+        return result
+
+    @classmethod
+    def caller(
+        cls,
+        query_compiler,
+        by,
+        axis,
+        groupby_args,
+        map_args,
+        map_func,
+        numeric_only=True,
+        **kwargs,
+    ):
+        if not isinstance(by, (type(query_compiler), str)):
+            by = try_cast_to_pandas(by, squeeze=True)
+            default_func = (
+                (lambda grp: grp.agg(map_func))
+                if isinstance(map_func, dict)
+                else map_func
+            )
+            return query_compiler.default_to_pandas(
+                lambda df: default_func(
+                    df.groupby(by=by, axis=axis, **groupby_args), **map_args
                 )
-            else:
-                qc = query_compiler
-            # since we're going to modify `groupby_args` dict in a `compute_map`,
-            # we want to copy it to not propagate these changes into source dict, in case
-            # of unsuccessful end of function
-            groupby_args = groupby_args.copy()
+            )
+        assert axis == 0, "Can only groupby reduce with axis=0"
 
-            as_index = groupby_args.get("as_index", True)
-            observed = groupby_args.get("observed", False)
+        if numeric_only:
+            qc = query_compiler.getitem_column_array(
+                query_compiler._modin_frame._numeric_columns(True)
+            )
+        else:
+            qc = query_compiler
 
-            if isinstance(by, str):
+        map_fn, reduce_fn = cls.build_map_reduce_functions(
+            by=by,
+            axis=axis,
+            groupby_args=groupby_args,
+            map_func=map_func,
+            map_args=map_args,
+            **kwargs,
+        )
 
-                def _map(df):
-                    # Set `as_index` to True to track the metadata of the grouping
-                    # object It is used to make sure that between phases we are
-                    # constructing the right index and placing columns in the correct
-                    # order.
-                    groupby_args["as_index"] = True
-                    groupby_args["observed"] = True
+        broadcastable_by = getattr(by, "_modin_frame", None)
+        apply_indices = list(map_func.keys()) if isinstance(map_func, dict) else None
+        new_modin_frame = qc._modin_frame.groupby_reduce(
+            axis, broadcastable_by, map_fn, reduce_fn, apply_indices=apply_indices
+        )
 
-                    result = map_func(
-                        df.groupby(by=by, axis=axis, **groupby_args), **map_args
-                    )
-                    # The _modin_groupby_ prefix indicates that this is the first
-                    # partition, and since we may need to insert the grouping data in
-                    # the reduce phase
-                    if (
-                        not isinstance(result.index, pandas.MultiIndex)
-                        and result.index.name is not None
-                        and result.index.name in result.columns
-                    ):
-                        result.index.name = "{}{}".format(
-                            "_modin_groupby_", result.index.name
-                        )
-                    return result
+        result = query_compiler.__constructor__(new_modin_frame)
+        if result.index.name == "__reduced__":
+            result.index.name = None
+        return result
 
-            else:
+    @staticmethod
+    def try_filter_dict(agg_func, df):
+        if not isinstance(agg_func, dict):
+            return agg_func
+        partition_dict = {k: v for k, v in agg_func.items() if k in df.columns}
+        return lambda grp: grp.agg(partition_dict)
 
-                def _map(df, other):
-                    def compute_map(df, other):
-                        # Set `as_index` to True to track the metadata of the grouping object
-                        # It is used to make sure that between phases we are constructing the
-                        # right index and placing columns in the correct order.
-                        groupby_args["as_index"] = True
-                        groupby_args["observed"] = True
+    @classmethod
+    def build_map_reduce_functions(
+        cls,
+        by,
+        axis,
+        groupby_args,
+        map_func,
+        map_args,
+        reduce_func,
+        reduce_args,
+        drop,
+        **kwargs,
+    ):
+        # if by is a query compiler, then it will be broadcasted explicit via
+        # groupby_reduce method of the modin frame and so we don't want secondary
+        # implicit broadcastion via passing it as an function argument.
+        if hasattr(by, "_modin_frame"):
+            by = None
 
-                        other = other.squeeze(axis=axis ^ 1)
-                        if isinstance(other, pandas.DataFrame):
-                            df = pandas.concat(
-                                [df] + [other[[o for o in other if o not in df]]],
-                                axis=1,
-                            )
-                            other = list(other.columns)
-                        result = map_func(
-                            df.groupby(by=other, axis=axis, **groupby_args), **map_args
-                        )
-                        # if `other` has category dtype, then pandas will drop that
-                        # column after groupby, inserting it back to correctly process
-                        # reduce phase
-                        if (
-                            drop
-                            and not as_index
-                            and isinstance(other, pandas.Series)
-                            and isinstance(other.dtype, pandas.CategoricalDtype)
-                            and result.index.name is not None
-                            and result.index.name not in result.columns
-                        ):
-                            result.insert(
-                                loc=0, column=result.index.name, value=result.index
-                            )
-                        # The _modin_groupby_ prefix indicates that this is the first partition,
-                        # and since we may need to insert the grouping data in the reduce phase
-                        if (
-                            not isinstance(result.index, pandas.MultiIndex)
-                            and result.index.name is not None
-                            and result.index.name in result.columns
-                        ):
-                            result.index.name = "{}{}".format(
-                                "_modin_groupby_", result.index.name
-                            )
-                        return result
-
-                    try:
-                        return compute_map(df, other)
-                    # This will happen with Arrow buffer read-only errors. We don't want to copy
-                    # all the time, so this will try to fast-path the code first.
-                    except ValueError:
-                        return compute_map(df.copy(), other.copy())
-
-            def _reduce(df):
-                def compute_reduce(df):
-                    other_len = len(df.index.names)
-                    df = df.reset_index(drop=False)
-                    # See note above about setting `as_index`
-                    groupby_args["as_index"] = as_index
-                    groupby_args["observed"] = observed
-                    if other_len > 1:
-                        by_part = list(df.columns[0:other_len])
-                    else:
-                        by_part = df.columns[0]
-                    result = reduce_func(
-                        df.groupby(by=by_part, axis=axis, **groupby_args), **reduce_args
-                    )
-                    if (
-                        not isinstance(result.index, pandas.MultiIndex)
-                        and result.index.name is not None
-                        and "_modin_groupby_" in result.index.name
-                    ):
-                        result.index.name = result.index.name[len("_modin_groupby_") :]
-                    if isinstance(by_part, str) and by_part in result.columns:
-                        if "_modin_groupby_" in by_part and drop:
-                            col_name = by_part[len("_modin_groupby_") :]
-                            new_result = result.drop(columns=col_name, errors="ignore")
-                            new_result.columns = [
-                                col_name if "_modin_groupby_" in c else c
-                                for c in new_result.columns
-                            ]
-                            return new_result
-                        else:
-                            return (
-                                result.drop(columns=by_part)
-                                if call_kwds.get("method", None) != "size"
-                                else result
-                            )
-                    return result
-
-                try:
-                    return compute_reduce(df)
-                # This will happen with Arrow buffer read-only errors. We don't want to copy
-                # all the time, so this will try to fast-path the code first.
-                except ValueError:
-                    return compute_reduce(df.copy())
-
-            # TODO: try to precompute `new_index` and `new_columns`
-            if isinstance(by, str):
-                new_modin_frame = qc._modin_frame._map_reduce(
-                    axis, _map, reduce_func=_reduce, preserve_index=False
+        def _map(df, other=None, **kwargs):
+            def wrapper(df, other=None):
+                return cls.map(
+                    df,
+                    other,
+                    axis=axis,
+                    by=by,
+                    groupby_args=groupby_args.copy(),
+                    map_func=map_func,
+                    map_args=map_args,
+                    drop=drop,
+                    **kwargs,
                 )
-            else:
-                new_modin_frame = qc._modin_frame.groupby_reduce(
-                    axis, by._modin_frame, _map, _reduce
-                )
-            result = query_compiler.__constructor__(new_modin_frame)
-            if result.index.name == "__reduced__":
-                result.index.name = None
+
+            try:
+                result = wrapper(df, other)
+            # This will happen with Arrow buffer read-only errors. We don't want to copy
+            # all the time, so this will try to fast-path the code first.
+            except ValueError:
+                result = wrapper(df.copy(), other if other is None else other.copy())
             return result
 
-        return caller
+        def _reduce(df, **call_kwargs):
+            def wrapper(df):
+                return cls.reduce(
+                    df,
+                    axis=axis,
+                    groupby_args=groupby_args,
+                    reduce_func=reduce_func,
+                    reduce_args=reduce_args,
+                    drop=drop,
+                    **kwargs,
+                    **call_kwargs,
+                )
+
+            try:
+                result = wrapper(df)
+            # This will happen with Arrow buffer read-only errors. We don't want to copy
+            # all the time, so this will try to fast-path the code first.
+            except ValueError:
+                result = wrapper(df.copy())
+            return result
+
+        return _map, _reduce
+
+
+groupby_reduce_functions = {
+    "all": (
+        lambda df, *args, **kwargs: df.all(*args, **kwargs),
+        lambda df, *args, **kwargs: df.all(*args, **kwargs),
+    ),
+    "any": (
+        lambda df, *args, **kwargs: df.any(*args, **kwargs),
+        lambda df, *args, **kwargs: df.any(*args, **kwargs),
+    ),
+    "count": (
+        lambda df, *args, **kwargs: df.count(*args, **kwargs),
+        lambda df, *args, **kwargs: df.sum(*args, **kwargs),
+    ),
+    "max": (
+        lambda df, *args, **kwargs: df.max(*args, **kwargs),
+        lambda df, *args, **kwargs: df.max(*args, **kwargs),
+    ),
+    "min": (
+        lambda df, *args, **kwargs: df.min(*args, **kwargs),
+        lambda df, *args, **kwargs: df.min(*args, **kwargs),
+    ),
+    "prod": (
+        lambda df, *args, **kwargs: df.prod(*args, **kwargs),
+        lambda df, *args, **kwargs: df.prod(*args, **kwargs),
+    ),
+    "size": (
+        lambda df, *args, **kwargs: pandas.DataFrame(df.size(*args, **kwargs)),
+        lambda df, *args, **kwargs: df.sum(*args, **kwargs),
+    ),
+    "sum": (
+        lambda df, *args, **kwargs: df.sum(*args, **kwargs),
+        lambda df, *args, **kwargs: df.sum(*args, **kwargs),
+    ),
+}

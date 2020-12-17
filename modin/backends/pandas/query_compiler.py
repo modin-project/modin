@@ -23,6 +23,7 @@ from pandas.core.dtypes.common import (
 )
 from pandas.core.base import DataError
 from typing import Type, Callable
+from collections.abc import Iterable, Container
 import warnings
 
 
@@ -37,6 +38,7 @@ from modin.data_management.functions import (
     ReductionFunction,
     BinaryFunction,
     GroupbyReduceFunction,
+    groupby_reduce_functions,
 )
 
 
@@ -2443,32 +2445,56 @@ class PandasQueryCompiler(BaseQueryCompiler):
     # nature. They require certain data to exist on the same partition, and
     # after the shuffle, there should be only a local map required.
 
-    groupby_count = GroupbyReduceFunction.register(
-        lambda df, **kwargs: df.count(**kwargs), lambda df, **kwargs: df.sum(**kwargs)
-    )
-    groupby_any = GroupbyReduceFunction.register(
-        lambda df, **kwargs: df.any(**kwargs), lambda df, **kwargs: df.any(**kwargs)
-    )
-    groupby_min = GroupbyReduceFunction.register(
-        lambda df, **kwargs: df.min(**kwargs), lambda df, **kwargs: df.min(**kwargs)
-    )
-    groupby_prod = GroupbyReduceFunction.register(
-        lambda df, **kwargs: df.prod(**kwargs), lambda df, **kwargs: df.prod(**kwargs)
-    )
-    groupby_max = GroupbyReduceFunction.register(
-        lambda df, **kwargs: df.max(**kwargs), lambda df, **kwargs: df.max(**kwargs)
-    )
-    groupby_all = GroupbyReduceFunction.register(
-        lambda df, **kwargs: df.all(**kwargs), lambda df, **kwargs: df.all(**kwargs)
-    )
-    groupby_sum = GroupbyReduceFunction.register(
-        lambda df, **kwargs: df.sum(**kwargs), lambda df, **kwargs: df.sum(**kwargs)
-    )
+    groupby_count = GroupbyReduceFunction.register(*groupby_reduce_functions["count"])
+    groupby_any = GroupbyReduceFunction.register(*groupby_reduce_functions["any"])
+    groupby_min = GroupbyReduceFunction.register(*groupby_reduce_functions["min"])
+    groupby_prod = GroupbyReduceFunction.register(*groupby_reduce_functions["prod"])
+    groupby_max = GroupbyReduceFunction.register(*groupby_reduce_functions["max"])
+    groupby_all = GroupbyReduceFunction.register(*groupby_reduce_functions["all"])
+    groupby_sum = GroupbyReduceFunction.register(*groupby_reduce_functions["sum"])
     groupby_size = GroupbyReduceFunction.register(
-        lambda df, **kwargs: pandas.DataFrame(df.size()),
-        lambda df, **kwargs: df.sum(),
-        method="size",
+        *groupby_reduce_functions["size"], method="size"
     )
+
+    def _groupby_dict_reduce(
+        self, by, axis, agg_func, agg_args, agg_kwargs, groupby_kwargs, drop=False
+    ):
+        map_dict = {}
+        reduce_dict = {}
+        rename_columns = any(
+            not isinstance(fn, str) and isinstance(fn, Iterable)
+            for fn in agg_func.values()
+        )
+        for col, col_funcs in agg_func.items():
+            if not rename_columns:
+                map_dict[col], reduce_dict[col] = groupby_reduce_functions[col_funcs]
+                continue
+
+            if isinstance(col_funcs, str):
+                col_funcs = [col_funcs]
+
+            map_fns = []
+            for i, fn in enumerate(col_funcs):
+                if not isinstance(fn, str) and isinstance(fn, Iterable):
+                    new_col_name, func = fn
+                elif isinstance(fn, str):
+                    new_col_name, func = fn, fn
+                else:
+                    raise TypeError
+
+                map_fns.append((new_col_name, groupby_reduce_functions[func][0]))
+                reduce_dict[(col, new_col_name)] = groupby_reduce_functions[func][1]
+            map_dict[col] = map_fns
+        return GroupbyReduceFunction.register(map_dict, reduce_dict)(
+            query_compiler=self,
+            by=by,
+            axis=axis,
+            groupby_args=groupby_kwargs,
+            map_args=agg_kwargs,
+            reduce_args=agg_kwargs,
+            numeric_only=False,
+            drop=drop,
+        )
 
     def groupby_agg(
         self,
@@ -2481,6 +2507,31 @@ class PandasQueryCompiler(BaseQueryCompiler):
         groupby_kwargs,
         drop=False,
     ):
+        def is_reduce_fn(fn, deep_level=0):
+            if not isinstance(fn, str) and isinstance(fn, Container):
+                # `deep_level` parameter specifies the number of nested containers that was met:
+                # - if it's 0, then we're outside of container, `fn` could be either function name
+                #   or container of function names/renamers.
+                # - if it's 1, then we're inside container of function names/renamers. `fn` must be
+                #   either function name or renamer (renamer is some container which length == 2,
+                #   the first element is the new column name and the second is the function name).
+                assert deep_level == 0 or (
+                    deep_level > 0 and len(fn) == 2
+                ), f"Got the renamer with incorrect length, expected 2 got {len(fn)}."
+                return (
+                    all(is_reduce_fn(f, deep_level + 1) for f in fn)
+                    if deep_level == 0
+                    else is_reduce_fn(fn[1], deep_level + 1)
+                )
+            return isinstance(fn, str) and fn in groupby_reduce_functions
+
+        if isinstance(agg_func, dict) and all(
+            is_reduce_fn(x) for x in agg_func.values()
+        ):
+            return self._groupby_dict_reduce(
+                by, axis, agg_func, agg_args, agg_kwargs, groupby_kwargs, drop
+            )
+
         if callable(agg_func):
             agg_func = wrap_udf_function(agg_func)
 

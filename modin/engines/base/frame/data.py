@@ -1996,26 +1996,50 @@ class BasePandasFrame(object):
         )
 
     def groupby_reduce(
-        self, axis, by, map_func, reduce_func, new_index=None, new_columns=None
+        self,
+        axis,
+        by,
+        map_func,
+        reduce_func,
+        new_index=None,
+        new_columns=None,
+        apply_indices=None,
     ):
         """Groupby another dataframe and aggregate the result.
 
-        Args:
-            axis: The axis to groupby and aggregate over.
-            by: The dataframe to group by.
-            map_func: The map component of the aggregation.
-            reduce_func: The reduce component of the aggregation.
-            new_index: (optional) The index of the result. We may know this in advance,
+        Parameters
+        ----------
+            axis: int,
+                The axis to groupby and aggregate over.
+            by: ModinFrame (optional),
+                The dataframe to group by.
+            map_func: callable,
+                The map component of the aggregation.
+            reduce_func: callable,
+                The reduce component of the aggregation.
+            new_index: Index (optional),
+                The index of the result. We may know this in advance,
                 and if not provided it must be computed.
-            new_columns: (optional) The columns of the result. We may know this in
-                advance, and if not provided it must be computed.
+            new_columns: Index (optional),
+                The columns of the result. We may know this in advance,
+                and if not provided it must be computed.
+            apply_indices : list-like (optional),
+                Indices of `axis ^ 1` to apply groupby over.
 
         Returns
         -------
              A new dataframe.
         """
+        by_parts = by if by is None else by._partitions
+
+        if apply_indices is not None:
+            numeric_indices = self.axes[axis ^ 1].get_indexer_for(apply_indices)
+            apply_indices = list(
+                self._get_dict_of_block_index(axis ^ 1, numeric_indices).keys()
+            )
+
         new_partitions = self._frame_mgr_cls.groupby_reduce(
-            axis, self._partitions, by._partitions, map_func, reduce_func
+            axis, self._partitions, by_parts, map_func, reduce_func, apply_indices
         )
         new_axes = [
             self._compute_axis_labels(i, new_partitions)

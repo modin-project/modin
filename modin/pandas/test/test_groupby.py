@@ -61,13 +61,6 @@ def build_types_asserter(comparator):
     return wrapper
 
 
-def df_from_grp(self, grp):
-    if grp.__module__.split(".")[0] == "pandas":
-        return grp._obj_with_exclusions
-    else:
-        return grp._df
-
-
 @pytest.mark.parametrize("as_index", [True, False])
 def test_mixed_dtypes_groupby(as_index):
     frame_data = np.random.randint(97, 198, size=(2 ** 6, 2 ** 4))
@@ -641,6 +634,7 @@ def test_large_row_groupby(is_by_category):
         min,
         sum,
         {"A": "sum"},
+        {"A": lambda df: df.sum()},
         {"A": "max", "B": "sum", "C": "min"},
     ]
     for func in agg_functions:
@@ -1246,15 +1240,32 @@ def test_shift_freq(groupby_axis, shift_axis):
                 "min": (list(test_data["int_data"].keys())[-1], np.min),
             },
         },
+        {
+            "by": [
+                list(test_data["int_data"].keys())[0],
+                list(test_data["int_data"].keys())[-1],
+            ],
+            "agg_dict": {
+                "max": (list(test_data["int_data"].keys())[1], max),
+                "min": (list(test_data["int_data"].keys())[-1], min),
+            },
+        },
     ],
 )
-def test_agg_func_None_rename(by_and_agg_dict):
+@pytest.mark.parametrize(
+    "as_index",
+    [
+        True,
+        pytest.param(False, marks=pytest.mark.xfail(reason="See modin issue #2543")),
+    ],
+)
+def test_agg_func_None_rename(by_and_agg_dict, as_index):
     modin_df, pandas_df = create_test_dfs(test_data["int_data"])
 
-    modin_result = modin_df.groupby(by_and_agg_dict["by"]).agg(
+    modin_result = modin_df.groupby(by_and_agg_dict["by"], as_index=as_index).agg(
         **by_and_agg_dict["agg_dict"]
     )
-    pandas_result = pandas_df.groupby(by_and_agg_dict["by"]).agg(
+    pandas_result = pandas_df.groupby(by_and_agg_dict["by"], as_index=as_index).agg(
         **by_and_agg_dict["agg_dict"]
     )
     df_equals(modin_result, pandas_result)
@@ -1426,9 +1437,7 @@ def test_unknown_groupby(columns):
 @pytest.mark.parametrize(
     "func_to_apply",
     [
-        pytest.param(
-            lambda df: df.sum(), marks=pytest.mark.skip("See modin issue #2512")
-        ),
+        lambda df: df.sum(),
         lambda df: df.size(),
         lambda df: df.quantile(),
         lambda df: df.dtypes,
@@ -1439,13 +1448,27 @@ def test_unknown_groupby(columns):
         ),
         lambda grp: grp.agg(
             {
-                df_from_grp(grp).columns[0]: (max, min, sum),
-                df_from_grp(grp).columns[-1]: (sum, min, max),
+                list(test_data_values[0].keys())[1]: (max, min, sum),
+                list(test_data_values[0].keys())[-2]: (sum, min, max),
             }
         ),
         lambda grp: grp.agg(
-            max=(df_from_grp(grp).columns[0], max),
-            sum=(df_from_grp(grp).columns[-1], sum),
+            {
+                list(test_data_values[0].keys())[1]: [
+                    ("new_sum", "sum"),
+                    ("new_min", "min"),
+                ],
+                list(test_data_values[0].keys())[-2]: np.sum,
+            }
+        ),
+        pytest.param(
+            lambda grp: grp.agg(
+                {
+                    list(test_data_values[0].keys())[1]: (max, min, sum),
+                    list(test_data_values[0].keys())[-1]: (sum, min, max),
+                }
+            ),
+            marks=pytest.mark.skip("See modin issue #2542"),
         ),
     ],
 )
