@@ -155,10 +155,10 @@ def initialize_ray(
                 import psutil
                 from modin.error_message import ErrorMessage
 
-                plasma_dir = os.path.dirname(global_node._plasma_store_socket_name)
-                palsma_free_space_GB = psutil.disk_usage(plasma_dir).free // 10 ** 9
+                ray_session_dir = os.path.dirname(global_node._session_dir)
+                ray_free_space_GB = psutil.disk_usage(ray_session_dir).free // 10 ** 9
                 ErrorMessage.single_warning(
-                    f"Modin Ray engine was started with {palsma_free_space_GB} GB free space avaliable for Plasma store, "
+                    f"Modin Ray engine was started with {ray_free_space_GB} GB free space avaliable, "
                     "if it is not enough for your application, please set environment variable "
                     "MODIN_ON_RAY_PLASMA_DIR=/directory/without/space/limiting"
                 )
