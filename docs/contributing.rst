@@ -168,9 +168,9 @@ The entire test suite is automatically run for each pull request.
 Performance measurement
 -----------------------
 
-To track the performance of various functionality of Modin, we use Asv_ tool.
+We use Asv_ tool for performance tracking of various Modin functionality.
 
-Various scenarios in which it may be needed with appropriate command:
+Here are some scenarios in which Asv can be used:
 
 * It is necessary to check the impact of the new patch on the performance of a certain set of operations:
 
@@ -178,7 +178,7 @@ Various scenarios in which it may be needed with appropriate command:
 
   asv continuous -f 1.05 src/master HEAD -b TimeGroupBy --launch-method=spawn
 
-* It is necessary to check the healthy of benchmarks after making changes or writing new ones:
+* It is necessary to check presence of errors inside of benchmarks after making changes or writing new ones:
 
 .. code-block:: bash
 
