@@ -463,6 +463,15 @@ def test_iloc_nested_assignment(data):
     df_equals(modin_df, pandas_df)
 
 
+def test_loc_series():
+    md_df, pd_df = create_test_dfs({"a": [1, 2], "b": [3, 4]})
+
+    pd_df.loc[pd_df["a"] > 1, "b"] = np.log(pd_df["b"])
+    md_df.loc[md_df["a"] > 1, "b"] = np.log(md_df["b"])
+
+    df_equals(pd_df, md_df)
+
+
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_pop(request, data):
     modin_df = pd.DataFrame(data)
