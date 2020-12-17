@@ -118,7 +118,9 @@ def test_create_or_update_cluster(make_ray_cluster, make_create_or_update_cluste
     ],
 )
 def test_update_conda_requirements(
-    make_ray_cluster, setup_commands_source, user_packages,
+    make_ray_cluster,
+    setup_commands_source,
+    user_packages,
 ):
     fake_version = namedtuple("FakeVersion", "major minor micro")(7, 12, 45)
     with mock.patch("sys.version_info", fake_version):
