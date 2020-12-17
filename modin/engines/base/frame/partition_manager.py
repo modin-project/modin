@@ -401,6 +401,9 @@ class BaseFrameManager(ABC):
             The flag to keep partitions for Modin Frame.
         lengths : list(int)
             The list of lengths to shuffle the object.
+        enumerate_partitions : bool (optional, default False),
+            Whether or not to pass partition index into `map_func`.
+            Note that `map_func` must be able to obtain `partition_idx` kwarg.
 
         Returns
         -------

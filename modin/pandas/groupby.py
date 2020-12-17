@@ -377,15 +377,15 @@ class DataFrameGroupBy(object):
         relabeling_required = False
         if isinstance(func, dict) or func is None:
 
-            def try_get_str_func(o):
-                if not isinstance(o, str) and isinstance(o, Iterable):
-                    return [try_get_str_func(v) for v in o]
-                return o.__name__ if callable(o) and o.__name__ in dir(self) else o
+            def try_get_str_func(fn):
+                if not isinstance(fn, str) and isinstance(fn, Iterable):
+                    return [try_get_str_func(f) for f in fn]
+                return fn.__name__ if callable(fn) and fn.__name__ in dir(self) else fn
 
             relabeling_required, func_dict, new_columns, order = reconstruct_func(
                 func, **kwargs
             )
-            func_dict = {k: try_get_str_func(v) for k, v in func_dict.items()}
+            func_dict = {col: try_get_str_func(fn) for col, fn in func_dict.items()}
 
             if any(i not in self._df.columns for i in func_dict.keys()):
                 from pandas.core.base import SpecificationError

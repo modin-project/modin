@@ -2476,14 +2476,14 @@ class PandasQueryCompiler(BaseQueryCompiler):
             map_fns = []
             for i, fn in enumerate(col_funcs):
                 if not isinstance(fn, str) and isinstance(fn, Iterable):
-                    future_col_name, func = fn
+                    new_col_name, func = fn
                 elif isinstance(fn, str):
-                    future_col_name, func = fn, fn
+                    new_col_name, func = fn, fn
                 else:
                     raise TypeError
 
-                map_fns.append((future_col_name, groupby_reduce_functions[func][0]))
-                reduce_dict[(col, future_col_name)] = groupby_reduce_functions[func][1]
+                map_fns.append((new_col_name, groupby_reduce_functions[func][0]))
+                reduce_dict[(col, new_col_name)] = groupby_reduce_functions[func][1]
             map_dict[col] = map_fns
         return GroupbyReduceFunction.register(map_dict, reduce_dict)(
             query_compiler=self,
@@ -2507,23 +2507,23 @@ class PandasQueryCompiler(BaseQueryCompiler):
         groupby_kwargs,
         drop=False,
     ):
-        def is_reduce_fn(o, deep_level=0):
-            if not isinstance(o, str) and isinstance(o, Container):
+        def is_reduce_fn(fn, deep_level=0):
+            if not isinstance(fn, str) and isinstance(fn, Container):
                 # `deep_level` parameter specifies the number of nested containers that was met:
-                # - if it's 0, then we're outside of container, `o` could be either function name
+                # - if it's 0, then we're outside of container, `fn` could be either function name
                 #   or container of function names/renamers.
-                # - if it's 1, then we're inside container of function names/renamers. `o` must be
+                # - if it's 1, then we're inside container of function names/renamers. `fn` must be
                 #   either function name or renamer (renamer is some container which length == 2,
                 #   the first element is the new column name and the second is the function name).
                 assert deep_level == 0 or (
-                    deep_level > 0 and len(o) == 2
-                ), f"Got the renamer with incorrect length, expected 2 got {len(o)}."
+                    deep_level > 0 and len(fn) == 2
+                ), f"Got the renamer with incorrect length, expected 2 got {len(fn)}."
                 return (
-                    all(is_reduce_fn(v, deep_level + 1) for v in o)
+                    all(is_reduce_fn(f, deep_level + 1) for f in fn)
                     if deep_level == 0
-                    else is_reduce_fn(o[1], deep_level + 1)
+                    else is_reduce_fn(fn[1], deep_level + 1)
                 )
-            return isinstance(o, str) and o in groupby_reduce_functions
+            return isinstance(fn, str) and fn in groupby_reduce_functions
 
         if isinstance(agg_func, dict) and all(
             is_reduce_fn(x) for x in agg_func.values()

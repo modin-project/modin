@@ -58,21 +58,21 @@ def execute(df):
 
 
 class BaseTimeGroupBy:
-    def setup(self, data_size, count_columns=1):
+    def setup(self, data_size, ncols=1):
         self.df = generate_dataframe(
             ASV_USE_IMPL, "int", data_size[1], data_size[0], RAND_LOW, RAND_HIGH
         )
-        self.groupby_columns = self.df.columns[:count_columns].tolist()
+        self.groupby_columns = self.df.columns[:ncols].tolist()
 
 
 class TimeMultiColumnGroupby(BaseTimeGroupBy):
-    param_names = ["data_size", "count_columns"]
+    param_names = ["data_size", "ncols"]
     params = [UNARY_OP_DATA_SIZE, [6]]
 
-    def time_groupby_agg_quan(self, data_size, count_columns):
+    def time_groupby_agg_quan(self, data_size, ncols):
         execute(self.df.groupby(by=self.groupby_columns).agg("quantile"))
 
-    def time_groupby_agg_mean(self, data_size, count_columns):
+    def time_groupby_agg_mean(self, data_size, ncols):
         execute(self.df.groupby(by=self.groupby_columns).apply(lambda df: df.mean()))
 
 
