@@ -62,7 +62,7 @@ class BaseTimeGroupBy:
         self.df = generate_dataframe(
             ASV_USE_IMPL, "int", data_size[1], data_size[0], RAND_LOW, RAND_HIGH
         )
-        self.groupby_columns = [col for col in self.df.columns[:count_columns]]
+        self.groupby_columns = self.df.columns[:count_columns].tolist()
 
 
 class TimeMultiColumnGroupby(BaseTimeGroupBy):
@@ -96,34 +96,23 @@ class TimeGroupByDefaultAggregations(BaseTimeGroupBy):
 
 
 class TimeGroupByDictionaryAggregation(BaseTimeGroupBy):
-    param_names = ["data_size"]
-    params = [
-        UNARY_OP_DATA_SIZE,
-    ]
-    reduction_operations = ["sum", "count", "prod"]
-    agg_operations = ["quantile", "std", "median"]
+    param_names = ["data_size", "operation_type"]
+    params = [UNARY_OP_DATA_SIZE, ["reduction", "aggregation"]]
+    operations = {
+        "reduction": ["sum", "count", "prod"],
+        "aggregation": ["quantile", "std", "median"],
+    }
 
-    def setup(self, data_size):
+    def setup(self, data_size, operation_type):
         super().setup(data_size)
         self.cols_to_agg = self.df.columns[1:4]
+        operations = self.operations[operation_type]
+        self.agg_dict = {
+            c: operations[i % len(operations)] for i, c in enumerate(self.cols_to_agg)
+        }
 
-    @trigger_execution
-    def time_groupby_dictionary_reduction(self, data_size):
-        return self.df.groupby(by=self.groupby_columns).agg(
-            {
-                c: self.reduction_operations[i % len(self.reduction_operations)]
-                for i, c in enumerate(self.cols_to_agg)
-            }
-        )
-
-    @trigger_execution
-    def time_groupby_dictionary_aggregation(self, data_size):
-        return self.df.groupby(by=self.groupby_columns).agg(
-            {
-                c: self.agg_operations[i % len(self.agg_operations)]
-                for i, c in enumerate(self.cols_to_agg)
-            }
-        )
+    def time_groupby_dict_agg(self, data_size, operation_type):
+        execute(self.df.groupby(by=self.groupby_columns).agg(self.agg_dict))
 
 
 class TimeJoin:
