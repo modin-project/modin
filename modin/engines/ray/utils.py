@@ -148,20 +148,20 @@ def initialize_ray(
                 _memory=object_store_memory,
                 _lru_evict=True,
             )
-            import psutil
-            from ray.ray_constants import PROCESS_TYPE_PLASMA_STORE
-            from modin.error_message import ErrorMessage
 
-            plasma_stdout_dir = os.path.dirname(
-                ray.worker._global_node.all_processes[PROCESS_TYPE_PLASMA_STORE][
-                    0
-                ].stdout_file
-            )
-            plasma_free_space = psutil.disk_usage(plasma_stdout_dir).free // 10 ** 9
-            ErrorMessage.single_warning(
-                f"Modin-on-Ray Plasma started with {plasma_free_space} GB free space, "
-                "if it is not enough for your application, do export MODIN_ON_RAY_PLASMA_DIR=/directory/without/space/limiting"
-            )
+            global_node = ray.worker._global_node
+            # Check only for head node
+            if global_node.head:
+                import psutil
+                from modin.error_message import ErrorMessage
+
+                plasma_dir = os.path.dirname(global_node._plasma_store_socket_name)
+                palsma_free_space_GB = psutil.disk_usage(plasma_dir).free // 10 ** 9
+                ErrorMessage.single_warning(
+                    f"Modin Ray engine was started with {palsma_free_space_GB} GB free space avaliable for Plasma store, "
+                    "if it is not enough for your application, please set environment variable "
+                    "MODIN_ON_RAY_PLASMA_DIR=/directory/without/space/limiting"
+                )
 
         _move_stdlib_ahead_of_site_packages()
         ray.worker.global_worker.run_function_on_all_workers(
