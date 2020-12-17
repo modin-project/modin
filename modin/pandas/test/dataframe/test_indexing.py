@@ -436,8 +436,8 @@ def test_loc_iter_assignment(loc_iter_dfs, reverse_order, axis):
     select[axis] = sorted(pd_df.axes[axis][:-1], reverse=reverse_order)
     select = tuple(select)
 
-    pd_df.loc[select] = pd_df.loc[select].copy()
-    md_df.loc[select] = md_df.loc[select].copy()
+    pd_df.loc[select] = pd_df.loc[select] + pd_df.loc[select]
+    md_df.loc[select] = md_df.loc[select] + md_df.loc[select]
     df_equals(md_df, pd_df)
 
 
