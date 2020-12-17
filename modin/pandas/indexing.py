@@ -384,7 +384,7 @@ class _LocationIndexerBase(object):
         """
         # It is valid to pass a DataFrame or Series to __setitem__ that is larger than
         # the target the user is trying to overwrite. This
-        if isinstance(item, (pandas.Series, pandas.DataFrame, DataFrame)):
+        if isinstance(item, (pandas.Series, pandas.DataFrame, Series, DataFrame)):
             if not all(idx in item.index for idx in row_lookup):
                 raise ValueError(
                     "Must have equal len keys and value when setting with "
