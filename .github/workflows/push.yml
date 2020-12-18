@@ -1,47 +1,13 @@
 name: master
 on: push
 jobs:
-  prepare-cache:
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        os: ["ubuntu-latest",  "windows-latest"]
-        python-version: ["3.6", "3.7", "3.8"]
-    steps:
-      - uses: actions/checkout@v2
-        with:
-          fetch-depth: 1
-      - name: Cache pip if Ubuntu
-        if: startsWith(runner.os, 'Linux')
-        uses: actions/cache@v1
-        with:
-          path: ~/.cache/pip
-          key: ${{ runner.os }}-python-${{ matrix.python-version }}-pip-${{ github.run_id }}-${{ hashFiles('environment.yml') }}
-      - name: Cache pip if Windows
-        if: startsWith(runner.os, 'Windows')
-        uses: actions/cache@v1
-        with:
-          path: ~\AppData\Local\pip\Cache
-          key: ${{ runner.os }}-python-${{ matrix.python-version }}-pip-${{ github.run_id }}-${{ hashFiles('environment.yml') }}
-      - uses: actions/setup-python@v2
-        with:
-          python-version: ${{matrix.python-version}}
-          architecture: "x64"
-      - run: pip install "ray>=1.0.0"
-
   test-internals:
-    needs: prepare-cache
     runs-on: ubuntu-latest
     name: test-internals
     steps:
       - uses: actions/checkout@v2
         with:
           fetch-depth: 1
-      - name: Cache pip
-        uses: actions/cache@v1
-        with:
-          path: ~/.cache/pip
-          key: ${{ runner.os }}-python-3.6-pip-${{ github.run_id }}-${{ hashFiles('environment.yml') }}
       - uses: conda-incubator/setup-miniconda@v2
         with:
           activate-environment: modin
@@ -65,7 +31,6 @@ jobs:
         run: python -m pytest modin/test/backends/pandas/test_internals.py
 
   test-defaults:
-    needs: prepare-cache
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -78,11 +43,6 @@ jobs:
       - uses: actions/checkout@v2
         with:
           fetch-depth: 1
-      - name: Cache pip
-        uses: actions/cache@v1
-        with:
-          path: ~/.cache/pip
-          key: ${{ runner.os }}-python-3.6-pip-${{ github.run_id }}-${{ hashFiles('environment.yml') }}
       - uses: conda-incubator/setup-miniconda@v2
         with:
           activate-environment: modin
@@ -131,7 +91,6 @@ jobs:
         run: bash <(curl -s https://codecov.io/bash)
 
   test-omnisci:
-    needs: prepare-cache
     runs-on: ubuntu-latest
     env:
       MODIN_MEMORY: 1000000000
@@ -143,11 +102,6 @@ jobs:
       - uses: actions/checkout@v2
         with:
           fetch-depth: 1
-      - name: Cache pip
-        uses: actions/cache@v1
-        with:
-          path: ~/.cache/pip
-          key: ${{ runner.os }}-python-3.7-pip-${{ github.run_id }}-${{ hashFiles('environment.yml') }}
       - name: Setting up Modin environment
         uses: conda-incubator/setup-miniconda@v2
         with:
@@ -169,7 +123,6 @@ jobs:
         run: bash <(curl -s https://codecov.io/bash)
 
   test-all:
-    needs: prepare-cache
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -183,11 +136,6 @@ jobs:
       - uses: actions/checkout@v2
         with:
           fetch-depth: 1
-      - name: Cache pip
-        uses: actions/cache@v1
-        with:
-          path: ~/.cache/pip
-          key: ${{ runner.os }}-python-${{ matrix.python-version }}-pip-${{ github.run_id }}-${{ hashFiles('environment.yml') }}
       - uses: conda-incubator/setup-miniconda@v2
         with:
           activate-environment: modin
@@ -240,7 +188,6 @@ jobs:
         run: bash <(curl -s https://codecov.io/bash)
 
   test-windows:
-    needs: prepare-cache
     runs-on: windows-latest
     strategy:
       matrix:
@@ -255,11 +202,6 @@ jobs:
       - uses: actions/checkout@v2
         with:
           fetch-depth: 1
-      - name: Cache pip
-        uses: actions/cache@v1
-        with:
-          path: ~\AppData\Local\pip\Cache
-          key: ${{ runner.os }}-python-${{ matrix.python-version }}-pip-${{ github.run_id }}-${{ hashFiles('environment.yml') }}
       - uses: conda-incubator/setup-miniconda@v2
         with:
           activate-environment: modin
@@ -327,7 +269,6 @@ jobs:
         run: codecov -f ./coverage.xml
 
   test-pyarrow:
-    needs: prepare-cache
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -340,11 +281,6 @@ jobs:
       - uses: actions/checkout@v2
         with:
           fetch-depth: 1
-      - name: Cache pip
-        uses: actions/cache@v1
-        with:
-          path: ~/.cache/pip
-          key: ${{ runner.os }}-python-${{ matrix.python-version }}-pip-${{ github.run_id }}-${{ hashFiles('environment.yml') }}
       - uses: conda-incubator/setup-miniconda@v2
         with:
           activate-environment: modin
