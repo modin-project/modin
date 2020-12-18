@@ -29,7 +29,7 @@ import warnings
 
 from modin.backends.base.query_compiler import BaseQueryCompiler
 from modin.error_message import ErrorMessage
-from modin.utils import try_cast_to_pandas, wrap_udf_function
+from modin.utils import try_cast_to_pandas, wrap_udf_function, hashable
 from modin.data_management.functions import (
     Function,
     FoldFunction,
@@ -2555,7 +2555,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         else:
             if not isinstance(by, list):
                 by = [by]
-            internal_by = [o for o in by if isinstance(o, str) and o in self.columns]
+            internal_by = [o for o in by if hashable(o) and o in self.columns]
             internal_qc = (
                 [self.getitem_column_array(internal_by)] if len(internal_by) else []
             )
