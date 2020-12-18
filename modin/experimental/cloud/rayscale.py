@@ -167,6 +167,8 @@ class RayCluster(BaseCluster):
                 reqs.append(self._get_modin_version())
 
             reqs.extend(self.add_conda_packages)
+        else:
+            reqs.append(self._get_modin_version())
 
         # this is needed, for example, for dependencies that
         # looks like: "scikit-learn>=0.23"
