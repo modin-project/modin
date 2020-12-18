@@ -1047,7 +1047,10 @@ def check_file_leaks(func):
                 try:
                     fstart.remove(item)
                 except ValueError:
-                    leaks.append(item)
+                    # ignore files in /proc/, as they have nothing to do with
+                    # modin reading any data (and this is what we care about)
+                    if not item[0].startswith("/proc/"):
+                        leaks.append(item)
             assert (
                 not leaks
             ), f"Unexpected open handles left for: {', '.join(item[0] for item in leaks)}"
