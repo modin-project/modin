@@ -10,6 +10,7 @@ jobs:
           fetch-depth: 1
       - uses: conda-incubator/setup-miniconda@v2
         with:
+          installer-url: https://github.com/conda-forge/miniforge/releases/download/4.9.2-4/Mambaforge-4.9.2-4-${{ runner.os }}-x86_64.${{ fromJSON('["exe", "sh"]')[runner.os != 'Windows'] }}
           activate-environment: modin
           environment-file: environment.yml
           python-version: 3.6
@@ -45,6 +46,7 @@ jobs:
           fetch-depth: 1
       - uses: conda-incubator/setup-miniconda@v2
         with:
+          installer-url: https://github.com/conda-forge/miniforge/releases/download/4.9.2-4/Mambaforge-4.9.2-4-${{ runner.os }}-x86_64.${{ fromJSON('["exe", "sh"]')[runner.os != 'Windows'] }}
           activate-environment: modin
           environment-file: environment.yml
           python-version: 3.6
@@ -105,6 +107,7 @@ jobs:
       - name: Setting up Modin environment
         uses: conda-incubator/setup-miniconda@v2
         with:
+          installer-url: https://github.com/conda-forge/miniforge/releases/download/4.9.2-4/Mambaforge-4.9.2-4-${{ runner.os }}-x86_64.${{ fromJSON('["exe", "sh"]')[runner.os != 'Windows'] }}
           activate-environment: modin_on_omnisci
           python-version: 3.7.8
           environment-file: requirements/env_omnisci.yml
@@ -138,6 +141,7 @@ jobs:
           fetch-depth: 1
       - uses: conda-incubator/setup-miniconda@v2
         with:
+          installer-url: https://github.com/conda-forge/miniforge/releases/download/4.9.2-4/Mambaforge-4.9.2-4-${{ runner.os }}-x86_64.${{ fromJSON('["exe", "sh"]')[runner.os != 'Windows'] }}
           activate-environment: modin
           environment-file: environment.yml
           python-version: ${{matrix.python-version}}
@@ -204,6 +208,7 @@ jobs:
           fetch-depth: 1
       - uses: conda-incubator/setup-miniconda@v2
         with:
+          installer-url: https://github.com/conda-forge/miniforge/releases/download/4.9.2-4/Mambaforge-4.9.2-4-${{ runner.os }}-x86_64.${{ fromJSON('["exe", "sh"]')[runner.os != 'Windows'] }}
           activate-environment: modin
           environment-file: environment.yml
           python-version: ${{matrix.python-version}}
@@ -283,6 +288,7 @@ jobs:
           fetch-depth: 1
       - uses: conda-incubator/setup-miniconda@v2
         with:
+          installer-url: https://github.com/conda-forge/miniforge/releases/download/4.9.2-4/Mambaforge-4.9.2-4-${{ runner.os }}-x86_64.${{ fromJSON('["exe", "sh"]')[runner.os != 'Windows'] }}
           activate-environment: modin
           environment-file: environment.yml
           python-version: ${{matrix.python-version}}
