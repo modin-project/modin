@@ -385,20 +385,24 @@ class _LocationIndexerBase(object):
         # It is valid to pass a DataFrame or Series to __setitem__ that is larger than
         # the target the user is trying to overwrite. This
         if isinstance(item, (pandas.Series, pandas.DataFrame, Series, DataFrame)):
-            if not all(idx in item.index for idx in row_lookup):
+            # convert indices in lookups to names, as Pandas reindex expects them to be so
+            index_values = self.qc.index[row_lookup]
+            if not all(idx in item.index for idx in index_values):
                 raise ValueError(
                     "Must have equal len keys and value when setting with "
                     "an iterable"
                 )
             if hasattr(item, "columns"):
-                if not all(idx in item.columns for idx in col_lookup):
+                column_values = self.qc.columns[col_lookup]
+                if not all(col in item.columns for col in column_values):
+                    # TODO: think if it is needed to handle cases when columns have duplicate names
                     raise ValueError(
                         "Must have equal len keys and value when setting "
                         "with an iterable"
                     )
-                item = item.reindex(index=row_lookup, columns=col_lookup)
+                item = item.reindex(index=index_values, columns=column_values)
             else:
-                item = item.reindex(index=row_lookup)
+                item = item.reindex(index=index_values)
         try:
             item = np.array(item)
             if np.prod(to_shape) == np.prod(item.shape):
