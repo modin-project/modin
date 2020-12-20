@@ -3287,16 +3287,19 @@ def test_unique(data):
     modin_result = modin_series.unique()
     pandas_result = pandas_series.unique()
     assert_array_equal(modin_result, pandas_result)
+    assert modin_result.shape == pandas_result.shape
 
     modin_result = pd.Series([2, 1, 3, 3], name="A").unique()
     pandas_result = pandas.Series([2, 1, 3, 3], name="A").unique()
     assert_array_equal(modin_result, pandas_result)
+    assert modin_result.shape == pandas_result.shape
 
     modin_result = pd.Series([pd.Timestamp("2016-01-01") for _ in range(3)]).unique()
     pandas_result = pandas.Series(
         [pd.Timestamp("2016-01-01") for _ in range(3)]
     ).unique()
     assert_array_equal(modin_result, pandas_result)
+    assert modin_result.shape == pandas_result.shape
 
     modin_result = pd.Series(
         [pd.Timestamp("2016-01-01", tz="US/Eastern") for _ in range(3)]
@@ -3305,10 +3308,12 @@ def test_unique(data):
         [pd.Timestamp("2016-01-01", tz="US/Eastern") for _ in range(3)]
     ).unique()
     assert_array_equal(modin_result, pandas_result)
+    assert modin_result.shape == pandas_result.shape
 
     modin_result = pandas.Series(pd.Categorical(list("baabc"))).unique()
     pandas_result = pd.Series(pd.Categorical(list("baabc"))).unique()
     assert_array_equal(modin_result, pandas_result)
+    assert modin_result.shape == pandas_result.shape
 
     modin_result = pd.Series(
         pd.Categorical(list("baabc"), categories=list("abc"), ordered=True)
@@ -3317,6 +3322,7 @@ def test_unique(data):
         pd.Categorical(list("baabc"), categories=list("abc"), ordered=True)
     ).unique()
     assert_array_equal(modin_result, pandas_result)
+    assert modin_result.shape == pandas_result.shape
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
