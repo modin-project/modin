@@ -1345,7 +1345,8 @@ class Series(BasePandasDataset):
         )
 
     def unique(self):
-        return self._query_compiler.unique().to_numpy().squeeze()
+        # Ensure we don't return a scalar to match shape of Panda's output
+        return np.atleast_1d(self._query_compiler.unique().to_numpy().squeeze())
 
     def update(self, other):
         if not isinstance(other, Series):
