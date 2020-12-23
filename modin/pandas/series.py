@@ -1345,7 +1345,9 @@ class Series(BasePandasDataset):
         )
 
     def unique(self):
-        return self._query_compiler.unique().to_numpy().squeeze()
+        return self.__constructor__(
+            query_compiler=self._query_compiler.unique()
+        ).to_numpy()
 
     def update(self, other):
         if not isinstance(other, Series):

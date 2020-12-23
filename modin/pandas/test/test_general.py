@@ -528,10 +528,12 @@ def test_unique():
     modin_result = pd.unique([2, 1, 3, 3])
     pandas_result = pandas.unique([2, 1, 3, 3])
     assert_array_equal(modin_result, pandas_result)
+    assert modin_result.shape == pandas_result.shape
 
     modin_result = pd.unique(pd.Series([2] + [1] * 5))
     pandas_result = pandas.unique(pandas.Series([2] + [1] * 5))
     assert_array_equal(modin_result, pandas_result)
+    assert modin_result.shape == pandas_result.shape
 
     modin_result = pd.unique(
         pd.Series([pd.Timestamp("20160101"), pd.Timestamp("20160101")])
@@ -540,6 +542,7 @@ def test_unique():
         pandas.Series([pandas.Timestamp("20160101"), pandas.Timestamp("20160101")])
     )
     assert_array_equal(modin_result, pandas_result)
+    assert modin_result.shape == pandas_result.shape
 
     modin_result = pd.unique(
         pd.Series(
@@ -558,6 +561,7 @@ def test_unique():
         )
     )
     assert_array_equal(modin_result, pandas_result)
+    assert modin_result.shape == pandas_result.shape
 
     modin_result = pd.unique(
         pd.Index(
@@ -576,10 +580,12 @@ def test_unique():
         )
     )
     assert_array_equal(modin_result, pandas_result)
+    assert modin_result.shape == pandas_result.shape
 
     modin_result = pd.unique(pd.Series(pd.Categorical(list("baabc"))))
     pandas_result = pandas.unique(pandas.Series(pandas.Categorical(list("baabc"))))
     assert_array_equal(modin_result, pandas_result)
+    assert modin_result.shape == pandas_result.shape
 
 
 @pytest.mark.parametrize("normalize, bins, dropna", [(True, 3, False)])
