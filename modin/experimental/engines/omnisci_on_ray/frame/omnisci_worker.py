@@ -34,10 +34,10 @@ class OmnisciServer:
     def start_server(cls):
         if cls._server is None:
             cls._server = PyDbEngine(
-                enable_union=1,
-                enable_columnar_output=1,
-                enable_lazy_fetch=0,
-                null_div_by_zero=1,
+                "enable-union",
+                "enable-columnar-output",
+                "null-div-by-zero",
+                **{"enable-lazy-fetch": 0},
             )
 
     @classmethod
