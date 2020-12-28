@@ -4,7 +4,7 @@ channels:
   - conda-forge
 dependencies:
   - pandas==1.1.5
-  - pyarrow>=1.0.0
+  - pyarrow==1.0.0
   - numpy
   - pip
   - pytest>=6.0.1
