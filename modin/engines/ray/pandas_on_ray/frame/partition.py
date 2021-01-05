@@ -95,7 +95,7 @@ class PandasOnRayFramePartition(BaseFramePartition):
 
     def to_numpy(self, **kwargs):
         """
-        Convert the object stored in this parition to a NumPy array.
+        Convert the object stored in this partition to a NumPy array.
 
         Returns
         -------
