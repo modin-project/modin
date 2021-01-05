@@ -12,7 +12,6 @@
 # governing permissions and limitations under the License.
 
 import builtins
-import threading
 import os
 import sys
 
@@ -94,7 +93,7 @@ def initialize_ray(
     """
     import ray
 
-    if threading.current_thread().name == "MainThread" or override_is_cluster:
+    if not ray.is_initialized() or override_is_cluster:
         import secrets
 
         cluster = override_is_cluster or IsRayCluster.get()
@@ -111,6 +110,17 @@ def initialize_ray(
                 logging_level=100,
             )
         else:
+            from modin.error_message import ErrorMessage
+
+            # This string is intentionally formatted this way. We want it indented in
+            # the warning message.
+            ErrorMessage.not_initialized(
+                "Ray",
+                """
+    import ray
+    ray.init()
+""",
+            )
             object_store_memory = Memory.get()
             plasma_directory = RayPlasmaDir.get()
             if IsOutOfCore.get():

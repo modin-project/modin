@@ -32,7 +32,8 @@ from pandas._typing import FilePathOrBuffer
 
 from modin.error_message import ErrorMessage
 from .dataframe import DataFrame
-from modin.utils import _inherit_func_docstring, _inherit_docstrings
+from modin.utils import _inherit_func_docstring, _inherit_docstrings, Engine
+from . import _update_engine
 
 PQ_INDEX_REGEX = re.compile(r"__index_level_\d+__")
 
@@ -130,6 +131,7 @@ def _read(**kwargs):
     """
     from modin.data_management.factories.dispatcher import EngineDispatcher
 
+    Engine.subscribe(_update_engine)
     pd_obj = EngineDispatcher.read_csv(**kwargs)
     # This happens when `read_csv` returns a TextFileReader object for iterating through
     if isinstance(pd_obj, pandas.io.parsers.TextFileReader):
@@ -149,6 +151,7 @@ read_csv = _inherit_func_docstring(pandas.read_csv)(_make_parser_func(sep=","))
 def read_parquet(path, engine: str = "auto", columns=None, **kwargs):
     from modin.data_management.factories.dispatcher import EngineDispatcher
 
+    Engine.subscribe(_update_engine)
     return DataFrame(
         query_compiler=EngineDispatcher.read_parquet(
             path=path, columns=columns, engine=engine, **kwargs
@@ -178,6 +181,7 @@ def read_json(
 
     from modin.data_management.factories.dispatcher import EngineDispatcher
 
+    Engine.subscribe(_update_engine)
     return DataFrame(query_compiler=EngineDispatcher.read_json(**kwargs))
 
 
@@ -204,6 +208,7 @@ def read_gbq(
 
     from modin.data_management.factories.dispatcher import EngineDispatcher
 
+    Engine.subscribe(_update_engine)
     return DataFrame(query_compiler=EngineDispatcher.read_gbq(**kwargs))
 
 
@@ -229,6 +234,7 @@ def read_html(
 
     from modin.data_management.factories.dispatcher import EngineDispatcher
 
+    Engine.subscribe(_update_engine)
     return DataFrame(query_compiler=EngineDispatcher.read_html(**kwargs))
 
 
@@ -274,6 +280,7 @@ def read_excel(
 
     from modin.data_management.factories.dispatcher import EngineDispatcher
 
+    Engine.subscribe(_update_engine)
     intermediate = EngineDispatcher.read_excel(**kwargs)
     if isinstance(intermediate, (OrderedDict, dict)):
         parsed = type(intermediate)()
@@ -303,6 +310,7 @@ def read_hdf(
 
     from modin.data_management.factories.dispatcher import EngineDispatcher
 
+    Engine.subscribe(_update_engine)
     return DataFrame(query_compiler=EngineDispatcher.read_hdf(**kwargs))
 
 
@@ -332,6 +340,7 @@ def read_stata(
 
     from modin.data_management.factories.dispatcher import EngineDispatcher
 
+    Engine.subscribe(_update_engine)
     return DataFrame(query_compiler=EngineDispatcher.read_stata(**kwargs))
 
 
@@ -348,6 +357,7 @@ def read_sas(
 
     from modin.data_management.factories.dispatcher import EngineDispatcher
 
+    Engine.subscribe(_update_engine)
     return DataFrame(query_compiler=EngineDispatcher.read_sas(**kwargs))
 
 
@@ -359,6 +369,7 @@ def read_pickle(
 
     from modin.data_management.factories.dispatcher import EngineDispatcher
 
+    Engine.subscribe(_update_engine)
     return DataFrame(query_compiler=EngineDispatcher.read_pickle(**kwargs))
 
 
@@ -377,6 +388,7 @@ def read_sql(
 
     from modin.data_management.factories.dispatcher import EngineDispatcher
 
+    Engine.subscribe(_update_engine)
     if kwargs.get("chunksize") is not None:
         ErrorMessage.default_to_pandas("Parameters provided [chunksize]")
         df_gen = pandas.read_sql(**kwargs)
@@ -396,6 +408,7 @@ def read_fwf(
 ):
     from modin.data_management.factories.dispatcher import EngineDispatcher
 
+    Engine.subscribe(_update_engine)
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
     kwargs.update(kwargs.pop("kwds", {}))
     pd_obj = EngineDispatcher.read_fwf(**kwargs)
@@ -424,6 +437,7 @@ def read_sql_table(
 
     from modin.data_management.factories.dispatcher import EngineDispatcher
 
+    Engine.subscribe(_update_engine)
     return DataFrame(query_compiler=EngineDispatcher.read_sql_table(**kwargs))
 
 
@@ -441,6 +455,7 @@ def read_sql_query(
 
     from modin.data_management.factories.dispatcher import EngineDispatcher
 
+    Engine.subscribe(_update_engine)
     return DataFrame(query_compiler=EngineDispatcher.read_sql_query(**kwargs))
 
 
@@ -452,6 +467,7 @@ def read_spss(
 ):
     from modin.data_management.factories.dispatcher import EngineDispatcher
 
+    Engine.subscribe(_update_engine)
     return DataFrame(
         query_compiler=EngineDispatcher.read_spss(path, usecols, convert_categoricals)
     )
@@ -466,6 +482,7 @@ def to_pickle(
 ):
     from modin.data_management.factories.dispatcher import EngineDispatcher
 
+    Engine.subscribe(_update_engine)
     if isinstance(obj, DataFrame):
         obj = obj._query_compiler
     return EngineDispatcher.to_pickle(
@@ -485,6 +502,7 @@ def json_normalize(
     max_level: Optional[int] = None,
 ) -> DataFrame:
     ErrorMessage.default_to_pandas("json_normalize")
+    Engine.subscribe(_update_engine)
     return DataFrame(
         pandas.json_normalize(
             data, record_path, meta, meta_prefix, record_prefix, errors, sep, max_level
@@ -497,6 +515,7 @@ def read_orc(
     path: FilePathOrBuffer, columns: Optional[List[str]] = None, **kwargs
 ) -> DataFrame:
     ErrorMessage.default_to_pandas("read_orc")
+    Engine.subscribe(_update_engine)
     return DataFrame(pandas.read_orc(path, columns, **kwargs))
 
 

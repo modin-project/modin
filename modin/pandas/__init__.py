@@ -83,7 +83,6 @@ from pandas import (
     NamedAgg,
     NA,
 )
-import threading
 import os
 import multiprocessing
 
@@ -118,24 +117,14 @@ def _update_engine(publisher: Parameter):
         if _is_first_update.get("Ray", True):
             initialize_ray()
         num_cpus = ray.cluster_resources()["CPU"]
-    elif publisher.get() == "Dask":  # pragma: no cover
+    elif publisher.get() == "Dask":
         from distributed.client import get_client
 
-        if threading.current_thread().name == "MainThread" and _is_first_update.get(
-            "Dask", True
-        ):
-            import warnings
+        if _is_first_update.get("Dask", True):
+            from modin.engines.dask.utils import initialize_dask
 
-            warnings.warn("The Dask Engine for Modin is experimental.")
-
-            try:
-                dask_client = get_client()
-            except ValueError:
-                from distributed import Client
-
-                dask_client = Client(n_workers=CpuCount.get())
-
-            num_cpus = len(dask_client.ncores())
+            initialize_dask()
+        num_cpus = len(get_client().ncores())
 
     elif publisher.get() == "Cloudray":
         from modin.experimental.cloud import get_connection
@@ -176,8 +165,6 @@ def _update_engine(publisher: Parameter):
     _is_first_update[publisher.get()] = False
     DEFAULT_NPARTITIONS = max(4, int(num_cpus))
 
-
-Engine.subscribe(_update_engine)
 
 from .. import __version__
 from .dataframe import DataFrame

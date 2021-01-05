@@ -75,3 +75,11 @@ class ErrorMessage(object):
         cls.single_warning(
             f"`{operation}` implementation has mismatches with pandas:\n{message}."
         )
+
+    @classmethod
+    def not_initialized(cls, engine, code):
+        warnings.warn(
+            "{} execution environment not yet initialized. Initializing...\n"
+            "To remove this warning, run the following python code before doing dataframe operations:\n"
+            "{}".format(engine, code)
+        )
