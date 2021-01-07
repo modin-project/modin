@@ -5,3 +5,4 @@
 # These owners will own everything in the Omnisci engine component
 # of Modin.
 /modin/experimental/backends/omnisci/**    @modin-project/intel-team
+/modin/experimental/engines/omnisci_on_ray/**    @modin-project/intel-team
