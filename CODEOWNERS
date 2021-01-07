@@ -1,0 +1,7 @@
+# These owners will be the default owners for everything in
+# the repo. Unless a later match takes precedence,
+*    @devin-petersohn
+
+# These owners will own everything in the Omnisci engine component
+# of Modin.
+/modin/experimental/backends/omnisci/**    @modin-project/intel-team
