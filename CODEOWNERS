@@ -1,0 +1,12 @@
+# These owners will be the default owners for everything in
+# the repo unless a later match takes precedence,
+*    @modin-project/modin-core
+
+# These owners will review everything in the Omnisci engine component
+# of Modin.
+/modin/experimental/backends/omnisci/**    @modin-project/modin-omnisci
+/modin/experimental/engines/omnisci_on_ray/**    @modin-project/modin-omnisci
+
+# These owners will review everything related to the xgboost implementation
+# in Modin
+/modin/experimental/xgboost/**  @modin-project/modin-xgboost
