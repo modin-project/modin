@@ -13,6 +13,8 @@
 
 """Implement utils for pandas component."""
 
+from pandas import MultiIndex
+
 
 def from_non_pandas(df, index, columns, dtype):
     """
@@ -105,3 +107,35 @@ def is_scalar(obj):
     from .base import BasePandasDataset
 
     return not isinstance(obj, BasePandasDataset) and pandas_is_scalar(obj)
+
+
+def from_modin_frame(df, sortorder=None, names=None):
+    """
+    Make a MultiIndex from a DataFrame.
+
+    Parameters
+    ----------
+    df : DataFrame
+        DataFrame to be converted to MultiIndex.
+    sortorder : int, optional
+        Level of sortedness (must be lexicographically sorted by that
+        level).
+    names : list-like, optional
+        If no names are provided, use the column names, or tuple of column
+        names if the columns is a MultiIndex. If a sequence, overwrite
+        names with the given sequence.
+
+    Returns
+    -------
+    MultiIndex
+        The MultiIndex representation of the given DataFrame.
+    """
+    from .dataframe import DataFrame
+
+    if isinstance(df, DataFrame):
+        df = df._to_pandas()
+    return _original_pandas_MultiIndex_from_frame(df, sortorder, names)
+
+
+_original_pandas_MultiIndex_from_frame = MultiIndex.from_frame
+MultiIndex.from_frame = from_modin_frame
