@@ -16,7 +16,7 @@ dependencies:
   - feather-format
   - lxml
   - openpyxl
-  - xlrd
+  - xlrd<=1.2.0
   - matplotlib<=3.2.2
   - sqlalchemy
   - pandas-gbq
