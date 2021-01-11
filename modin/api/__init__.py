@@ -11,6 +11,6 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-from .partition_unwrapper import unwrap_column_partitions, unwrap_row_partitions
+from .partition_api import unwrap_partitions
 
-__all__ = ["unwrap_column_partitions", "unwrap_row_partitions"]
+__all__ = ["unwrap_partitions"]

@@ -24,7 +24,7 @@ def from_non_pandas(df, index, columns, dtype):
     ----------
     What arguments does this function have.
     [
-    PARAMETER_NAME: PARAMETERS TYPES
+    PARAMETER_NAME : PARAMETERS TYPES
         Description.
     ]
 
@@ -48,7 +48,7 @@ def from_pandas(df):
 
     Parameters
     ----------
-    df: pandas.DataFrame
+    df : pandas.DataFrame
         The pandas DataFrame to convert.
 
     Returns
@@ -67,7 +67,7 @@ def from_arrow(at):
 
     Parameters
     ----------
-    at: Arrow Table
+    at : Arrow Table
         The Arrow Table to convert from.
 
     Returns
@@ -93,7 +93,7 @@ def is_scalar(obj):
 
     Parameters
     ----------
-    val: object
+    val : object
         Object to check.
 
     Returns

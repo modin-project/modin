@@ -85,10 +85,8 @@ class PandasOnDaskFrameAxisPartition(PandasFrameAxisPartition):
 
     def _wrap_partitions(self, partitions):
         return [
-            self.partition_type(
-                partitions[i], partitions[i + 1], partitions[i + 2], partitions[i + 3]
-            )
-            for i in range(0, len(partitions), 4)
+            self.partition_type(future, length, width, ip)
+            for (future, length, width, ip) in zip(*[iter(partitions)] * 4)
         ]
 
 
