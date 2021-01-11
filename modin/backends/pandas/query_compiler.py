@@ -2483,7 +2483,12 @@ class PandasQueryCompiler(BaseQueryCompiler):
                     raise TypeError
 
                 map_fns.append((new_col_name, groupby_reduce_functions[func][0]))
-                reduce_dict[(col, new_col_name)] = groupby_reduce_functions[func][1]
+                reduced_col_name = (
+                    (*col, new_col_name)
+                    if isinstance(col, tuple)
+                    else (col, new_col_name)
+                )
+                reduce_dict[reduced_col_name] = groupby_reduce_functions[func][1]
             map_dict[col] = map_fns
         return GroupbyReduceFunction.register(map_dict, reduce_dict)(
             query_compiler=self,

@@ -425,6 +425,20 @@ class DataFrameGroupBy(object):
         )
 
         if relabeling_required:
+            if not self._as_index:
+                nby_cols = len(result.columns) - len(new_columns)
+                order = np.concatenate([np.arange(nby_cols), order + nby_cols])
+                by_cols = result.columns[:nby_cols]
+                new_columns = pandas.Index(new_columns)
+                if by_cols.nlevels != new_columns.nlevels:
+                    by_cols = by_cols.remove_unused_levels()
+                    empty_levels = [
+                        i
+                        for i, level in enumerate(by_cols.levels)
+                        if len(level) == 1 and level[0] == ""
+                    ]
+                    by_cols = by_cols.droplevel(empty_levels)
+                new_columns = by_cols.append(new_columns)
             result = result.iloc[:, order]
             result.columns = new_columns
         return result
