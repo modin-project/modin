@@ -25,6 +25,7 @@ from .utils import (
     test_data,
     test_data_values,
     modin_df_almost_equals_pandas,
+    generate_multiindex,
 )
 
 pd.DEFAULT_NPARTITIONS = 4
@@ -1247,18 +1248,25 @@ def test_shift_freq(groupby_axis, shift_axis):
             ],
             "agg_dict": {
                 "max": (list(test_data["int_data"].keys())[1], max),
-                "min": (list(test_data["int_data"].keys())[-1], min),
+                "min": (list(test_data["int_data"].keys())[-2], min),
             },
         },
+        pytest.param(
+            {
+                "by": [
+                    list(test_data["int_data"].keys())[0],
+                    list(test_data["int_data"].keys())[-1],
+                ],
+                "agg_dict": {
+                    "max": (list(test_data["int_data"].keys())[1], max),
+                    "min": (list(test_data["int_data"].keys())[-1], min),
+                },
+            },
+            marks=pytest.mark.skip("See Modin issue #2542"),
+        ),
     ],
 )
-@pytest.mark.parametrize(
-    "as_index",
-    [
-        True,
-        pytest.param(False, marks=pytest.mark.xfail(reason="See modin issue #2543")),
-    ],
-)
+@pytest.mark.parametrize("as_index", [True, False])
 def test_agg_func_None_rename(by_and_agg_dict, as_index):
     modin_df, pandas_df = create_test_dfs(test_data["int_data"])
 
@@ -1269,6 +1277,44 @@ def test_agg_func_None_rename(by_and_agg_dict, as_index):
         **by_and_agg_dict["agg_dict"]
     )
     df_equals(modin_result, pandas_result)
+
+
+@pytest.mark.parametrize(
+    "as_index",
+    [
+        True,
+        pytest.param(
+            False,
+            marks=pytest.mark.xfail_backends(
+                ["BaseOnPython"], reason="See Pandas issue #39103"
+            ),
+        ),
+    ],
+)
+@pytest.mark.parametrize("by_length", [1, 3])
+@pytest.mark.parametrize(
+    "agg_fns",
+    [["sum", "min", "max"], ["mean", "quantile"]],
+    ids=["reduction", "aggregation"],
+)
+def test_dict_agg_rename_mi_columns(as_index, by_length, agg_fns):
+    md_df, pd_df = create_test_dfs(test_data["int_data"])
+    mi_columns = generate_multiindex(len(md_df.columns), nlevels=4)
+
+    md_df.columns, pd_df.columns = mi_columns, mi_columns
+
+    by = list(md_df.columns[:by_length])
+    agg_cols = list(md_df.columns[by_length : by_length + 3])
+
+    agg_dict = {
+        f"custom-{i}" + str(agg_fns[i % len(agg_fns)]): (col, agg_fns[i % len(agg_fns)])
+        for i, col in enumerate(agg_cols)
+    }
+
+    md_res = md_df.groupby(by, as_index=as_index).agg(**agg_dict)
+    pd_res = md_df.groupby(by, as_index=as_index).agg(**agg_dict)
+
+    df_equals(md_res, pd_res)
 
 
 @pytest.mark.parametrize(
