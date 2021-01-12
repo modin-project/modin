@@ -133,7 +133,7 @@ jobs:
   test-clean-install-windows:
     needs: [ lint-commit, lint-flake8, lint-black, test-api, test-headers ]
     runs-on: windows-latest
-    name: test-clean-install-windowsgit
+    name: test-clean-install-windows
     steps:
       - uses: actions/checkout@v2
         with:
