@@ -126,6 +126,10 @@ jobs:
       - uses: actions/checkout@v2
         with:
           fetch-depth: 1
+      - uses: actions/setup-python@v2
+        with:
+          python-version: "3.7.x"
+          architecture: "x64"
       - name: Clean install and run
         shell: bash -l {0}
         run: |
@@ -141,6 +145,10 @@ jobs:
       - uses: actions/checkout@v2
         with:
           fetch-depth: 1
+      - uses: actions/setup-python@v2
+        with:
+          python-version: "3.7.x"
+          architecture: "x64"
       - name: Clean install and run
         shell: bash -l {0}
         run: |
