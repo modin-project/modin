@@ -36,12 +36,13 @@ import sys
 from typing import Union, Optional
 import warnings
 
-from modin.utils import _inherit_docstrings, to_pandas
+from modin.utils import _inherit_docstrings, to_pandas, Engine
 from modin.config import IsExperimental
 from .base import BasePandasDataset, _ATTRS_NO_LOOKUP
 from .iterator import PartitionIterator
 from .utils import from_pandas, is_scalar
 from .accessor import CachedAccessor, SparseAccessor
+from . import _update_engine
 
 
 @_inherit_docstrings(pandas.Series, excluded=[pandas.Series.__init__])
@@ -77,6 +78,7 @@ class Series(BasePandasDataset):
         query_compiler: query_compiler
             A query compiler object to create the Series from.
         """
+        Engine.subscribe(_update_engine)
         if isinstance(data, type(self)):
             query_compiler = data._query_compiler.copy()
             if index is not None:

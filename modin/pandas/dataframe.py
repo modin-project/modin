@@ -45,11 +45,12 @@ import warnings
 
 from modin.error_message import ErrorMessage
 from modin.utils import _inherit_docstrings, to_pandas, hashable
-from modin.config import IsExperimental
+from modin.config import Engine, IsExperimental
 from .utils import (
     from_pandas,
     from_non_pandas,
 )
+from . import _update_engine
 from .iterator import PartitionIterator
 from .series import Series
 from .base import BasePandasDataset, _ATTRS_NO_LOOKUP
@@ -87,6 +88,7 @@ class DataFrame(BasePandasDataset):
         query_compiler: query_compiler
             A query compiler object to manage distributed computation.
         """
+        Engine.subscribe(_update_engine)
         if isinstance(data, (DataFrame, Series)):
             self._query_compiler = data._query_compiler.copy()
             if index is not None and any(i not in data.index for i in index):

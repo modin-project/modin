@@ -15,7 +15,8 @@ import inspect
 
 from . import DataFrame
 from modin.data_management.factories.dispatcher import EngineDispatcher
-from modin.config import IsExperimental
+from modin.config import IsExperimental, Engine
+from ...pandas import _update_engine
 
 
 def read_sql(
@@ -63,6 +64,7 @@ def read_sql(
     Returns:
         Pandas Dataframe
     """
+    Engine.subscribe(_update_engine)
     assert IsExperimental.get(), "This only works in experimental mode"
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
     return DataFrame(query_compiler=EngineDispatcher.read_sql(**kwargs))
