@@ -158,21 +158,6 @@ def initialize_ray(
                 _memory=object_store_memory,
                 _lru_evict=True,
             )
-
-            global_node = ray.worker._global_node
-            # Check only for head node
-            if global_node.head:
-                import psutil
-                from modin.error_message import ErrorMessage
-
-                ray_session_dir = os.path.dirname(global_node._session_dir)
-                ray_free_space_GB = psutil.disk_usage(ray_session_dir).free // 10 ** 9
-                ErrorMessage.single_warning(
-                    f"Modin Ray engine was started with {ray_free_space_GB} GB free space avaliable, "
-                    "if it is not enough for your application, please set environment variable "
-                    "MODIN_ON_RAY_PLASMA_DIR=/directory/without/space/limiting"
-                )
-
         _move_stdlib_ahead_of_site_packages()
         ray.worker.global_worker.run_function_on_all_workers(
             _move_stdlib_ahead_of_site_packages
