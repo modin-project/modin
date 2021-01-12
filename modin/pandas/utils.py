@@ -109,14 +109,14 @@ def is_scalar(obj):
     return not isinstance(obj, BasePandasDataset) and pandas_is_scalar(obj)
 
 
-def from_modin_frame(df, sortorder=None, names=None):
+def from_modin_frame_to_mi(df, sortorder=None, names=None):
     """
-    Make a MultiIndex from a DataFrame.
+    Make a pandas.MultiIndex from a DataFrame.
 
     Parameters
     ----------
     df : DataFrame
-        DataFrame to be converted to MultiIndex.
+        DataFrame to be converted to pandas.MultiIndex.
     sortorder : int, optional
         Level of sortedness (must be lexicographically sorted by that
         level).
@@ -127,15 +127,18 @@ def from_modin_frame(df, sortorder=None, names=None):
 
     Returns
     -------
-    MultiIndex
-        The MultiIndex representation of the given DataFrame.
+    pandas.MultiIndex
+        The pandas.MultiIndex representation of the given DataFrame.
     """
     from .dataframe import DataFrame
 
     if isinstance(df, DataFrame):
+        from modin.error_message import ErrorMessage
+
+        ErrorMessage.default_to_pandas("`MultiIndex.from_frame`")
         df = df._to_pandas()
     return _original_pandas_MultiIndex_from_frame(df, sortorder, names)
 
 
 _original_pandas_MultiIndex_from_frame = MultiIndex.from_frame
-MultiIndex.from_frame = from_modin_frame
+MultiIndex.from_frame = from_modin_frame_to_mi
