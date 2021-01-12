@@ -126,12 +126,12 @@ jobs:
       - uses: actions/checkout@v2
         with:
           fetch-depth: 1
-      - shell: bash -l {0}
-        run: pip install -e .[all]
-      - shell: bash -l {0}
-        run: MODIN_ENGINE=dask python -c "import modin.pandas as pd; print(pd.DataFrame([1,2,3])"
-      - shell: bash -l {0}
-        run: MODIN_ENGINE=ray python -c "import modin.pandas as pd; print(pd.DataFrame([1,2,3])"
+      - name: Clean install and run
+        shell: bash -l {0}
+        run: |
+          python -m pip install -e .[all]
+          MODIN_ENGINE=dask python -c "import modin.pandas as pd; print(pd.DataFrame([1,2,3])"
+          MODIN_ENGINE=ray python -c "import modin.pandas as pd; print(pd.DataFrame([1,2,3])"
 
   test-clean-install-windows:
     needs: [ lint-commit, lint-flake8, lint-black, test-api, test-headers ]
@@ -141,12 +141,12 @@ jobs:
       - uses: actions/checkout@v2
         with:
           fetch-depth: 1
-      - shell: bash -l {0}
-        run: pip install -e .[all]
-      - shell: bash -l {0}
-        run: MODIN_ENGINE=dask python -c "import modin.pandas as pd; print(pd.DataFrame([1,2,3])"
-      - shell: bash -l {0}
-        run: MODIN_ENGINE=ray python -c "import modin.pandas as pd; print(pd.DataFrame([1,2,3])"
+      - name: Clean install and run
+        shell: bash -l {0}
+        run: |
+          python -m pip install -e .[all]
+          MODIN_ENGINE=dask python -c "import modin.pandas as pd; print(pd.DataFrame([1,2,3])"
+          MODIN_ENGINE=ray python -c "import modin.pandas as pd; print(pd.DataFrame([1,2,3])"
 
   test-internals:
     needs: [lint-commit, lint-flake8, lint-black, test-api, test-headers]
