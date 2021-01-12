@@ -245,6 +245,7 @@ def read_clipboard(sep=r"\s+", **kwargs):  # pragma: no cover
 
     from modin.data_management.factories.dispatcher import EngineDispatcher
 
+    Engine.subscribe(_update_engine)
     return DataFrame(query_compiler=EngineDispatcher.read_clipboard(**kwargs))
 
 
@@ -320,6 +321,7 @@ def read_feather(path, columns=None, use_threads: bool = True):
 
     from modin.data_management.factories.dispatcher import EngineDispatcher
 
+    Engine.subscribe(_update_engine)
     return DataFrame(query_compiler=EngineDispatcher.read_feather(**kwargs))
 
 
