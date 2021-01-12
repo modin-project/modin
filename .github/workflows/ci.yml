@@ -118,6 +118,30 @@ jobs:
         shell: bash -l {0}
         run: python -m pytest modin/test/test_headers.py
 
+  test-clean-install-ubuntu:
+    needs: [lint-commit, lint-flake8, lint-black, test-api, test-headers]
+    runs-on: ubuntu-latest
+    name: test-clean-install-ubuntu
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 1
+      run: pip install -e .[all]
+      run: MODIN_ENGINE=dask python -c "import modin.pandas as pd; print(pd.DataFrame([1,2,3])"
+      run: MODIN_ENGINE=ray python -c "import modin.pandas as pd; print(pd.DataFrame([1,2,3])"
+
+  test-clean-install-windows:
+    needs: [ lint-commit, lint-flake8, lint-black, test-api, test-headers ]
+    runs-on: windows-latest
+    name: test-clean-install-ubuntu
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 1
+      run: pip install -e .[all]
+      run: MODIN_ENGINE=dask python -c "import modin.pandas as pd; print(pd.DataFrame([1,2,3])"
+      run: MODIN_ENGINE=ray python -c "import modin.pandas as pd; print(pd.DataFrame([1,2,3])"
+
   test-internals:
     needs: [lint-commit, lint-flake8, lint-black, test-api, test-headers]
     runs-on: ubuntu-latest
