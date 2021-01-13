@@ -45,20 +45,25 @@ def unwrap_partitions(api_layer_object, axis=None, bind_ip=False):
     if axis is None:
 
         def _unwrap_partitions(oid):
-            return [
-                tuple(partition.ip, getattr(partition, oid))
-                if bind_ip
-                else getattr(partition, oid)
-                for row in api_layer_object._query_compiler._modin_frame._partitions
-                for partition in row
-            ]
+            if bind_ip:
+                return [
+                    (partition.ip, getattr(partition, oid))
+                    for row in api_layer_object._query_compiler._modin_frame._partitions
+                    for partition in row
+                ]
+            else:
+                return [
+                    getattr(partition, oid)
+                    for row in api_layer_object._query_compiler._modin_frame._partitions
+                    for partition in row
+                ]
 
         actual_engine = type(
             api_layer_object._query_compiler._modin_frame._partitions[0][0]
         ).__name__
-        if any(actual_engine == engine for engine in ["PandasOnRayFramePartition"]):
+        if actual_engine in ("PandasOnRayFramePartition",):
             return _unwrap_partitions("oid")
-        elif any(actual_engine == engine for engine in ["PandasOnDaskFramePartition"]):
+        elif actual_engine in ("PandasOnDaskFramePartition",):
             return _unwrap_partitions("future")
         raise ValueError(
             f"Do not know how to unwrap '{actual_engine}' underlying partitions"
