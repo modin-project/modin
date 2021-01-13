@@ -13,7 +13,7 @@
 
 import pandas
 
-__pandas_version__ = "1.1.5"
+__pandas_version__ = "1.2.0"
 
 if pandas.__version__ != __pandas_version__:
     import warnings
