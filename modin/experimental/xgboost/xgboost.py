@@ -23,7 +23,7 @@ import numpy as np
 import pandas
 
 from modin.config import Engine
-from modin.developer import unwrap_row_partitions
+from modin.api import unwrap_partitions
 
 if Engine.get() == "Ray":
     import ray
@@ -362,8 +362,8 @@ def train(
 
     X, y = dtrain
     assert len(X) == len(y)
-    X_row_parts = unwrap_row_partitions(X, bind_ip=not evenly_data_distribution)
-    y_row_parts = unwrap_row_partitions(y, bind_ip=not evenly_data_distribution)
+    X_row_parts = unwrap_partitions(X, axis=0, bind_ip=not evenly_data_distribution)
+    y_row_parts = unwrap_partitions(y, axis=0, bind_ip=not evenly_data_distribution)
     assert len(X_row_parts) == len(y_row_parts), "Unaligned train data"
 
     # Create remote actors
@@ -383,8 +383,8 @@ def train(
                 lambda actor, *X_y: actor.add_eval_data.remote(
                     *X_y, eval_method=eval_method
                 ),
-                unwrap_row_partitions(eval_X, bind_ip=not evenly_data_distribution),
-                unwrap_row_partitions(eval_y, bind_ip=not evenly_data_distribution),
+                unwrap_partitions(eval_X, axis=0, bind_ip=not evenly_data_distribution),
+                unwrap_partitions(eval_y, axis=0, bind_ip=not evenly_data_distribution),
                 evenly_data_distribution=evenly_data_distribution,
             )
 
@@ -458,7 +458,7 @@ def predict(
         )
 
     X, _ = data
-    X_row_parts = unwrap_row_partitions(X, bind_ip=not evenly_data_distribution)
+    X_row_parts = unwrap_partitions(X, axis=0, bind_ip=not evenly_data_distribution)
 
     # Create remote actors
     actors = create_actors(nthread=nthread)
