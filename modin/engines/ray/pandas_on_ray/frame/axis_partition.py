@@ -17,14 +17,17 @@ from modin.engines.base.frame.axis_partition import PandasFrameAxisPartition
 from .partition import PandasOnRayFramePartition
 
 import ray
+from ray.services import get_node_ip_address
 
 
 class PandasOnRayFrameAxisPartition(PandasFrameAxisPartition):
-    def __init__(self, list_of_blocks):
+    def __init__(self, list_of_blocks, bind_ip=False):
         # Unwrap from BaseFramePartition object for ease of use
         for obj in list_of_blocks:
             obj.drain_call_queue()
         self.list_of_blocks = [obj.oid for obj in list_of_blocks]
+        if bind_ip:
+            self.list_of_ips = [obj.ip for obj in list_of_blocks]
 
     partition_type = PandasOnRayFramePartition
     instance_type = ray.ObjectID
@@ -44,7 +47,7 @@ class PandasOnRayFrameAxisPartition(PandasFrameAxisPartition):
                 maintain_partitioning,
             )
             + tuple(partitions),
-            num_returns=num_splits * 3 if lengths is None else len(lengths) * 3,
+            num_returns=num_splits * 4 if lengths is None else len(lengths) * 4,
         )
 
     @classmethod
@@ -62,13 +65,13 @@ class PandasOnRayFrameAxisPartition(PandasFrameAxisPartition):
                 kwargs,
             )
             + tuple(partitions),
-            num_returns=num_splits * 3,
+            num_returns=num_splits * 4,
         )
 
     def _wrap_partitions(self, partitions):
         return [
-            self.partition_type(partitions[i], partitions[i + 1], partitions[i + 2])
-            for i in range(0, len(partitions), 3)
+            self.partition_type(object_id, length, width, ip)
+            for (object_id, length, width, ip) in zip(*[iter(partitions)] * 4)
         ]
 
 
@@ -92,20 +95,27 @@ class PandasOnRayFrameRowPartition(PandasOnRayFrameAxisPartition):
 
 @ray.remote
 def deploy_ray_func(func, *args):  # pragma: no cover
-    """Run a function on a remote partition.
+    """
+    Run a function on a remote partition.
 
-    Note: Ray functions are not detected by codecov (thus pragma: no cover)
+    Parameters
+    ----------
+    func : callable
+        The function to run.
 
-    Args:
-        func: The function to run.
-
-    Returns:
+    Returns
+    -------
         The result of the function `func`.
+
+    Notes
+    -----
+    Ray functions are not detected by codecov (thus pragma: no cover)
     """
     result = func(*args)
+    ip = get_node_ip_address()
     if isinstance(result, pandas.DataFrame):
-        return result, len(result), len(result.columns)
+        return result, len(result), len(result.columns), ip
     elif all(isinstance(r, pandas.DataFrame) for r in result):
-        return [i for r in result for i in [r, len(r), len(r.columns)]]
+        return [i for r in result for i in [r, len(r), len(r.columns), ip]]
     else:
-        return [i for r in result for i in [r, None, None]]
+        return [i for r in result for i in [r, None, None, ip]]

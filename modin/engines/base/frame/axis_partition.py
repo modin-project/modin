@@ -95,6 +95,56 @@ class BaseFrameAxisPartition(ABC):  # pragma: no cover
     def _wrap_partitions(self, partitions):
         return [self.partition_type(obj) for obj in partitions]
 
+    def coalesce(self, bind_ip=False):
+        """
+        Coalesce the axis partitions into a single partition.
+
+        Parameters
+        ----------
+        bind_ip : boolean, default False
+            Whether to bind node ip address to a single partition or not.
+
+        Returns
+        -------
+        BaseFrameAxisPartition
+            An axis partition containing only a single coalesced partition.
+        """
+        coalesced = self.apply(lambda x: x, num_splits=1, maintain_partitioning=False)
+        return type(self)(coalesced, bind_ip=bind_ip)
+
+    def unwrap(self, squeeze=False, bind_ip=False):
+        """
+        Unwrap partitions from axis partition.
+
+        Parameters
+        ----------
+        squeeze : boolean, default False
+            The flag used to unwrap only one partition.
+        bind_ip : boolean, default False
+            Whether to bind node ip address to each partition or not.
+
+        Returns
+        -------
+        list
+            List of partitions from axis partition.
+
+        Notes
+        -----
+        In case bind_ip=True, list containing tuples of Ray.ObjectRef/Dask.Future
+        to node ip addresses and unwrapped partitions, respectively, is returned
+        if Ray/Dask is used as an engine.
+        """
+        if squeeze and len(self.list_of_blocks) == 1:
+            if bind_ip:
+                return self.list_of_ips[0], self.list_of_blocks[0]
+            else:
+                return self.list_of_blocks[0]
+        else:
+            if bind_ip:
+                return list(zip(self.list_of_ips, self.list_of_blocks))
+            else:
+                return self.list_of_blocks
+
 
 class PandasFrameAxisPartition(BaseFrameAxisPartition):
     """An abstract class is created to simplify and consolidate the code for AxisPartitions that run pandas.
