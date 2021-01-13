@@ -818,6 +818,24 @@ class TestCsv:
 
         df_equals(modin_df, pd_df)
 
+    def test_read_csv_encoding_976(self):
+        file_name = "modin/pandas/test/data/issue_976.csv"
+        names = [str(i) for i in range(11)]
+
+        kwargs = {
+            "sep": ";",
+            "names": names,
+            "encoding": "windows-1251",
+        }
+        df1 = pd.read_csv(file_name, **kwargs)
+        df2 = pandas.read_csv(file_name, **kwargs)
+        # these columns contain data of various types in partitions
+        # see #1931 for details;
+        df1 = df1.drop(["4", "5"], axis=1)
+        df2 = df2.drop(["4", "5"], axis=1)
+
+        df_equals(df1, df2)
+
     # Quoting, Compression, and File Format parameters tests
     @pytest.mark.parametrize("compression", ["infer", "gzip", "bz2", "xz", "zip"])
     @pytest.mark.parametrize(

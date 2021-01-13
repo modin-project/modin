@@ -59,6 +59,7 @@ class CSVDispatcher(TextFileDispatcher):
         names = kwargs.get("names", None)
         index_col = kwargs.get("index_col", None)
         usecols = kwargs.get("usecols", None)
+        encoding = kwargs.get("encoding", None)
         if names is None:
             # For the sake of the empty df, we assume no `index_col` to get the correct
             # column names before we build the index. Because we pass `names` in, this
@@ -71,7 +72,9 @@ class CSVDispatcher(TextFileDispatcher):
         elif index_col is None and not usecols:
             # When names is set to some list that is smaller than the number of columns
             # in the file, the first columns are built as a hierarchical index.
-            empty_pd_df = pandas.read_csv(filepath_or_buffer, nrows=0)
+            empty_pd_df = pandas.read_csv(
+                filepath_or_buffer, nrows=0, encoding=encoding
+            )
             num_cols = len(empty_pd_df.columns)
             if num_cols > len(names):
                 index_col = list(range(num_cols - len(names)))
