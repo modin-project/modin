@@ -75,7 +75,16 @@ class BaseTimeGroupBy:
 
 class TimeMultiColumnGroupby(BaseTimeGroupBy):
     param_names = ["data_size", "ncols"]
-    params = [UNARY_OP_DATA_SIZE, [6]]
+    params = [
+        [
+            (5000, 5000),
+            (10_000, 10),
+            # TODO: after optimization try to use UNARY_OP_DATA_SIZE here
+        ]
+        if ASV_DATASET_SIZE == "Big"
+        else UNARY_OP_DATA_SIZE,
+        [6],
+    ]
 
     def time_groupby_agg_quan(self, data_size, ncols):
         execute(self.df.groupby(by=self.groupby_columns).agg("quantile"))
@@ -150,7 +159,13 @@ class TimeJoin:
 class TimeMerge:
     param_names = ["data_size", "how", "sort"]
     params = [
-        BINARY_OP_DATA_SIZE,
+        [
+            (5000, 5000, 5000, 5000),
+            (125_000, 15, 100_000, 10),
+            # TODO: after optimization try to use BINARY_OP_DATA_SIZE here
+        ]
+        if ASV_DATASET_SIZE == "Big"
+        else BINARY_OP_DATA_SIZE,
         ["left", "inner"],
         [False],
     ]
