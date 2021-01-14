@@ -54,5 +54,5 @@ RUN wget --quiet --no-check-certificate https://modin-datasets.s3.amazonaws.com/
 
 COPY nyc-taxi.py "${HOME}/nyc-taxi.py"
 
-ENTRYPOINT ["/bin/bash", "--login", "-c", "conda run \"$@\"", "/bin/bash", "-n", "modin", "/usr/bin/env", "--"]
+ENTRYPOINT ["/bin/bash", "--login", "-c", "http_proxy= https_proxy= conda run \"$@\"", "/bin/bash", "-n", "modin", "/usr/bin/env", "--"]
 CMD ["python", "${HOME}/nyc-taxi.py"]
