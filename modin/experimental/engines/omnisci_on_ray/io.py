@@ -129,6 +129,7 @@ class OmnisciOnRayIO(RayIO):
         low_memory=True,
         memory_map=False,
         float_precision=None,
+        storage_options=None,
     ):
         items = locals().copy()
         mykwargs = {k: items[k] for k in items if k in cls.arg_keys}

@@ -111,6 +111,7 @@ class BaseIO(object):
         low_memory=True,
         memory_map=False,
         float_precision=None,
+        storage_options=None,
     ):
         kwargs = {
             "filepath_or_buffer": filepath_or_buffer,
@@ -162,6 +163,7 @@ class BaseIO(object):
             "low_memory": low_memory,
             "memory_map": memory_map,
             "float_precision": float_precision,
+            "storage_options": storage_options,
         }
         ErrorMessage.default_to_pandas("`read_csv`")
         return cls._read(**kwargs)
