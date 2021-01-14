@@ -188,11 +188,12 @@ def ml(train_final, test_final):
 
     cpu_params = {
         "objective": "multi:softprob",
+        "eval_metric": "merror",
         "tree_method": "hist",
         "nthread": 16,
         "num_class": 14,
         "max_depth": 7,
-        "silent": 1,
+        "verbosity": 1,
         "subsample": 0.7,
         "colsample_bytree": 0.7,
     }
@@ -212,7 +213,7 @@ def ml(train_final, test_final):
         evals=watchlist,
         feval=func_loss,
         early_stopping_rounds=10,
-        verbose_eval=1000,
+        verbose_eval=None,
     )
 
     yp = clf.predict(dvalid)
