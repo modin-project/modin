@@ -11,6 +11,6 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-from .partition_api import unwrap_partitions
+from .partition_api import unwrap_partitions, create_df_from_partitions
 
-__all__ = ["unwrap_partitions"]
+__all__ = ["unwrap_partitions", "create_df_from_partitions"]
