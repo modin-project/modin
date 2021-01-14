@@ -35,7 +35,9 @@ class BaseIO(object):
         return cls.query_compiler_cls.from_arrow(at, cls.frame_cls)
 
     @classmethod
-    def read_parquet(cls, path, engine, columns, **kwargs):
+    def read_parquet(
+        cls, path, engine, columns, storage_options, use_nullable_dtypes, **kwargs
+    ):
         """Load a parquet object from the file path, returning a Modin DataFrame.
            Modin only supports pyarrow engine for now.
 
@@ -51,7 +53,11 @@ class BaseIO(object):
             https://arrow.apache.org/docs/python/parquet.html
         """
         ErrorMessage.default_to_pandas("`read_parquet`")
-        return cls.from_pandas(pandas.read_parquet(path, engine, columns, **kwargs))
+        return cls.from_pandas(
+            pandas.read_parquet(
+                path, engine, columns, storage_options, use_nullable_dtypes, **kwargs
+            )
+        )
 
     @classmethod
     def read_csv(

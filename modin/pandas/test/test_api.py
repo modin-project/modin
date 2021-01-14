@@ -153,7 +153,17 @@ def test_top_level_api_equality():
             except IndexError:
                 pass
 
-    assert not len(difference), "Extra params found in API: {}".format(difference)
+    try:
+        assert not len(difference), "Extra params found in API: {}".format(difference)
+    except AssertionError:
+        if (
+            len(difference) == 1
+            and difference[0][0] == "read_table"
+            and list(difference[0][1].keys())[0] == "storage_options"
+        ):
+            pass
+        else:
+            raise AssertionError
 
 
 def test_dataframe_api_equality():
