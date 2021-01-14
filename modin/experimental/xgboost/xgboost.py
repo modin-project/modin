@@ -57,9 +57,9 @@ def _start_rabit_tracker(num_workers: int):
 class RabitContext:
     """Context to connect a worker to a rabit tracker"""
 
-    def __init__(self, actor_id, args):
+    def __init__(self, actor_ip, args):
         self.args = args
-        self.args.append(("DMLC_TASK_ID=[modin.xgboost]:" + actor_id).encode())
+        self.args.append(("DMLC_TASK_ID=[modin.xgboost]: " + actor_ip).encode())
 
     def __enter__(self):
         xgb.rabit.init(self.args)
@@ -124,7 +124,7 @@ class ModinXGBoostActor:
         evals_result = dict()
 
         s = time.time()
-        with RabitContext(str(id(self)), rabit_args):
+        with RabitContext(self._ip, rabit_args):
             bst = xgb.train(
                 local_params,
                 local_dtrain,
@@ -175,13 +175,13 @@ def create_actors(num_cpus=1, nthread=cpu_count()):
     num_nodes = len(ray.nodes())
 
     # Create remote actors
-    actors = [
-        ModinXGBoostActor.options(num_cpus=num_cpus, resources={node_info: 1.0}).remote(
-            node_info.split("node:")[-1], nthread=nthread
-        )
+    actors = {
+        node_info.split("node:")[-1]: ModinXGBoostActor.options(
+            num_cpus=num_cpus, resources={node_info: 1.0}
+        ).remote(node_info.split("node:")[-1], nthread=nthread)
         for node_info in ray.cluster_resources()
         if "node" in node_info
-    ]
+    }
 
     assert num_nodes == len(
         actors
@@ -191,11 +191,25 @@ def create_actors(num_cpus=1, nthread=cpu_count()):
 
 
 def _split_data_across_actors(
-    actors, set_func, X_parts, y_parts=None, evenly_data_distribution=True
+    actors: Dict, set_func, X_parts, y_parts=None, evenly_data_distribution=True
 ):
+    if not evenly_data_distribution:
+        actors_ips = list(actors.keys())
+        partitions_ips = [ray.get(row_part[0]) for row_part in X_parts]
+        if len(np.unique(actors_ips)) != len(np.unique(partitions_ips)):
+            empty_nodes_ips = list(set(actors_ips) - set(partitions_ips))
+            import warnings
+
+            for ip in empty_nodes_ips:
+                actors.pop(ip)
+                warnings.warn(
+                    f"Node {ip} isn't used due to it doesn't contain any data."
+                )
+
     X_parts_by_actors = _set_row_partitions_to_actors(
         actors, X_parts, evenly_data_distribution=evenly_data_distribution
     )
+
     if y_parts is not None:
         y_parts_by_actors = _set_row_partitions_to_actors(
             actors,
@@ -204,30 +218,19 @@ def _split_data_across_actors(
             evenly_data_distribution=evenly_data_distribution,
         )
 
-    # Need to add assert on order of actors in case evenly_data_distribution=False
-    for i, actor in enumerate(actors):
-
-        X_parts = (
-            X_parts_by_actors[i]
-            if evenly_data_distribution
-            else X_parts_by_actors[i][2]
-        )
+    for ip, actor in actors.items():
+        X_parts = X_parts_by_actors[ip][0]
         if y_parts is None:
             set_func(actor, *X_parts)
         else:
-            y_parts = (
-                y_parts_by_actors[i]
-                if evenly_data_distribution
-                else y_parts_by_actors[i][2]
-            )
+            y_parts = y_parts_by_actors[ip][0]
             set_func(actor, *(X_parts + y_parts))
 
 
 def _set_row_partitions_to_actors(
-    actors, row_partitions, data_for_aligning=None, evenly_data_distribution=True
+    actors: Dict, row_partitions, data_for_aligning=None, evenly_data_distribution=True
 ):
-
-    row_partitions_to_actors = []
+    row_partitions_by_actors = {ip: ([], []) for ip in actors}
     if evenly_data_distribution:
         num_actors = len(actors)
         row_parts_last_idx = (
@@ -236,79 +239,28 @@ def _set_row_partitions_to_actors(
             else len(row_partitions) // num_actors + 1
         )
         start_idx = 0
-        for actor in actors:
+        for ip, actor in actors.items():
             idx_slice = (
                 slice(start_idx, start_idx + row_parts_last_idx)
                 if start_idx + row_parts_last_idx < len(row_partitions)
                 else slice(start_idx, len(row_partitions))
             )
-            row_partitions_to_actors.append(row_partitions[idx_slice])
+            row_partitions_by_actors[ip][0].extend(row_partitions[idx_slice])
             start_idx += row_parts_last_idx
     else:
-        actors_ips = [ray.get(actor.get_actor_ip.remote()) for actor in actors]
         partitions_ips = [ray.get(row[0]) for row in row_partitions]
 
-        # If one of the actors doesn't contain partitions we make evenly
-        # distribution of data by nodes.
-        if (
-            len(np.unique(actors_ips)) != len(np.unique(partitions_ips))
-            and data_for_aligning is None
-        ):
-            return _get_evenly_distr_of_partitions_by_ips(
-                actors, actors_ips, row_partitions
-            )
-
         if data_for_aligning is None:
-            for actor_ip in actors_ips:
-                actor_row_partitions = []
-                order_of_indexes = []
-                for i, row in enumerate(row_partitions):
-                    if partitions_ips[i] in actor_ip:
-                        actor_row_partitions.append(row[1])
-                        order_of_indexes.append(i)
-
-                row_partitions_to_actors.append(
-                    (actor_ip, order_of_indexes, actor_row_partitions)
-                )
+            for i, row_part in enumerate(row_partitions):
+                row_partitions_by_actors[partitions_ips[i]][0].append(row_part[1])
+                row_partitions_by_actors[partitions_ips[i]][1].append(i)
         else:
-            for (actor_ip, order_of_indexes, _) in data_for_aligning:
-                actor_row_partitions = []
+            for ip, (_, order_of_indexes) in data_for_aligning.items():
+                row_partitions_by_actors[ip][1].extend(order_of_indexes)
                 for row_idx in order_of_indexes:
-                    actor_row_partitions.append(row_partitions[row_idx][1])
+                    row_partitions_by_actors[ip][0].append(row_partitions[row_idx][1])
 
-                row_partitions_to_actors.append(
-                    (actor_ip, order_of_indexes, actor_row_partitions)
-                )
-
-    return row_partitions_to_actors
-
-
-def _get_evenly_distr_of_partitions_by_ips(actors, actors_ips, row_partitions):
-    num_actors = len(actors)
-    row_parts_last_idx = (
-        len(row_partitions) // num_actors
-        if len(row_partitions) % num_actors == 0
-        else len(row_partitions) // num_actors + 1
-    )
-    row_partitions_to_actors = []
-    start_idx = 0
-    for actor, ip in zip(actors, actors_ips):
-        last = (
-            (start_idx + row_parts_last_idx)
-            if (start_idx + row_parts_last_idx < len(row_partitions))
-            else len(row_partitions)
-        )
-
-        actor_row_partitions = []
-        order_of_indexes = []
-        for first in range(start_idx, last):
-            actor_row_partitions.append(row_partitions[first][1])
-            order_of_indexes.append(first)
-        start_idx += row_parts_last_idx
-
-        row_partitions_to_actors.append((ip, order_of_indexes, actor_row_partitions))
-
-    return row_partitions_to_actors
+    return row_partitions_by_actors
 
 
 def train(
@@ -406,7 +358,10 @@ def train(
     rabit_args = [("%s=%s" % item).encode() for item in env.items()]
 
     # Train
-    fut = [actor.train.remote(rabit_args, params, *args, **kwargs) for actor in actors]
+    fut = [
+        actor.train.remote(rabit_args, params, *args, **kwargs)
+        for _, actor in actors.items()
+    ]
 
     # All results should be the same because of Rabit tracking. So we just
     # return the first one.
@@ -475,7 +430,9 @@ def predict(
     s = time.time()
 
     # Predict
-    predictions = [actor.predict.remote(booster, **kwargs) for actor in actors]
+    predictions = [
+        actor.predict.remote(booster, **kwargs) for _, actor in actors.items()
+    ]
     result = ray.get(predictions)
     LOGGER.info(f"Prediction time: {time.time() - s} s")
     LOGGER.info("Prediction finished")
