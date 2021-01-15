@@ -14,7 +14,6 @@
 
 import time
 import logging
-from threading import Thread
 from typing import Dict, Optional
 from multiprocessing import cpu_count
 
@@ -25,44 +24,9 @@ import numpy as np
 import pandas
 
 from modin.api import unwrap_partitions
+from .utils import start_rabit_tracker, stop_rabit_tracker, RabitContext
 
 LOGGER = logging.getLogger("[modin.xgboost]")
-
-
-def _start_rabit_tracker(num_workers: int):
-    """Start Rabit tracker. The workers connect to this tracker to share
-    their results."""
-    host = get_node_ip_address()
-
-    env = {"DMLC_NUM_WORKER": num_workers}
-    rabit_tracker = xgb.RabitTracker(hostIP=host, nslave=num_workers)
-
-    # Get tracker Host + IP
-    env.update(rabit_tracker.slave_envs())
-    rabit_tracker.start(num_workers)
-
-    # Wait until context completion
-    thread = Thread(target=rabit_tracker.join)
-    thread.daemon = True
-    thread.start()
-
-    return env
-
-
-class RabitContext:
-    """Context to connect a worker to a rabit tracker"""
-
-    def __init__(self, actor_ip, args):
-        self.args = args
-        self.args.append(("DMLC_TASK_ID=[modin.xgboost]: " + actor_ip).encode())
-
-    def __enter__(self):
-        xgb.rabit.init(self.args)
-        LOGGER.info("-------------- rabit started ------------------")
-
-    def __exit__(self, *args):
-        xgb.rabit.finalize()
-        LOGGER.info("-------------- rabit finished ------------------")
 
 
 @ray.remote
@@ -78,7 +42,7 @@ class ModinXGBoostActor:
     def get_actor_ip(self):
         return self._ip
 
-    def _get_dmatrix(self, *X_y):
+    def _get_dmatrix(self, X_y):
         s = time.time()
         X = X_y[: len(X_y) // 2]
         y = X_y[len(X_y) // 2 :]
@@ -94,7 +58,7 @@ class ModinXGBoostActor:
         return xgb.DMatrix(X, y)
 
     def set_train_data(self, *X_y, add_as_eval_method=None):
-        self._dtrain = self._get_dmatrix(*X_y)
+        self._dtrain = self._get_dmatrix(list(X_y))
 
         if add_as_eval_method is not None:
             self._evals.append((self._dtrain, add_as_eval_method))
@@ -107,7 +71,7 @@ class ModinXGBoostActor:
             self._dpredict.append(xgb.DMatrix(x, None))
 
     def add_eval_data(self, *X_y, eval_method):
-        self._evals.append((self._get_dmatrix(*X_y), eval_method))
+        self._evals.append((self._get_dmatrix(list(X_y)), eval_method))
 
     def train(self, rabit_args, params, *args, **kwargs):
         local_params = params.copy()
@@ -163,19 +127,6 @@ def create_actors(num_cpus=1, nthread=cpu_count()):
 def _split_data_across_actors(
     actors: Dict, set_func, X_parts, y_parts=None, evenly_data_distribution=True
 ):
-    if not evenly_data_distribution:
-        actors_ips = list(actors.keys())
-        partitions_ips = [ray.get(row_part[0]) for row_part in X_parts]
-        if len(np.unique(actors_ips)) != len(np.unique(partitions_ips)):
-            empty_nodes_ips = list(set(actors_ips) - set(partitions_ips))
-            import warnings
-
-            for ip in empty_nodes_ips:
-                actors.pop(ip)
-                warnings.warn(
-                    f"Node {ip} isn't used due to it doesn't contain any data."
-                )
-
     X_parts_by_actors = _set_row_partitions_to_actors(
         actors, X_parts, evenly_data_distribution=evenly_data_distribution
     )
@@ -202,28 +153,43 @@ def _set_row_partitions_to_actors(
 ):
     row_partitions_by_actors = {ip: ([], []) for ip in actors}
     if evenly_data_distribution:
-        num_actors = len(actors)
-        row_parts_last_idx = (
-            len(row_partitions) // num_actors
-            if len(row_partitions) % num_actors == 0
-            else len(row_partitions) // num_actors + 1
+        _distribute_partitions_evenly(
+            actors,
+            row_partitions_by_actors,
+            row_partitions,
+            is_partitions_have_ip=False,
         )
-        start_idx = 0
-        for ip, actor in actors.items():
-            idx_slice = (
-                slice(start_idx, start_idx + row_parts_last_idx)
-                if start_idx + row_parts_last_idx < len(row_partitions)
-                else slice(start_idx, len(row_partitions))
-            )
-            row_partitions_by_actors[ip][0].extend(row_partitions[idx_slice])
-            start_idx += row_parts_last_idx
     else:
-        partitions_ips = [ray.get(row[0]) for row in row_partitions]
-
         if data_for_aligning is None:
-            for i, row_part in enumerate(row_partitions):
-                row_partitions_by_actors[partitions_ips[i]][0].append(row_part[1])
-                row_partitions_by_actors[partitions_ips[i]][1].append(i)
+            actors_ips = list(actors.keys())
+            partitions_ips = [ray.get(row_part[0]) for row_part in row_partitions]
+
+            empty_actor_ips = []
+            for ip in actors_ips:
+                if ip not in set(partitions_ips):
+                    empty_actor_ips.append(ip)
+
+            # In case portion of nodes without data is more than 10%, data
+            # redistribution between nodes will be applied.
+            if len(empty_actor_ips) / len(actors_ips) < 0.1:
+                import warnings
+
+                for ip in empty_actor_ips:
+                    actors.pop(ip)
+                    row_partitions_by_actors.pop(ip)
+                    warnings.warn(
+                        f"Node {ip} isn't used due to it doesn't contain any data."
+                    )
+                for i, row_part in enumerate(row_partitions):
+                    row_partitions_by_actors[partitions_ips[i]][0].append(row_part[1])
+                    row_partitions_by_actors[partitions_ips[i]][1].append(i)
+            else:
+                _distribute_partitions_evenly(
+                    actors,
+                    row_partitions_by_actors,
+                    row_partitions,
+                    is_partitions_have_ip=True,
+                )
         else:
             for ip, (_, order_of_indexes) in data_for_aligning.items():
                 row_partitions_by_actors[ip][1].extend(order_of_indexes)
@@ -231,6 +197,40 @@ def _set_row_partitions_to_actors(
                     row_partitions_by_actors[ip][0].append(row_partitions[row_idx][1])
 
     return row_partitions_by_actors
+
+
+def _distribute_partitions_evenly(
+    actors: Dict,
+    row_partitions_by_actors: Dict,
+    row_partitions,
+    is_partitions_have_ip,
+):
+    num_actors = len(actors)
+    row_parts_last_idx = (
+        len(row_partitions) // num_actors
+        if len(row_partitions) % num_actors == 0
+        else len(row_partitions) // num_actors + 1
+    )
+
+    start_idx = 0
+    for ip, actor in actors.items():
+        if is_partitions_have_ip:
+            last_idx = (
+                (start_idx + row_parts_last_idx)
+                if (start_idx + row_parts_last_idx < len(row_partitions))
+                else len(row_partitions)
+            )
+            row_partitions_by_actors[ip][1].extend(list(range(start_idx, last_idx)))
+            for idx in range(start_idx, last_idx):
+                row_partitions_by_actors[ip][0].append(row_partitions[idx][1])
+        else:
+            idx_slice = (
+                slice(start_idx, start_idx + row_parts_last_idx)
+                if start_idx + row_parts_last_idx < len(row_partitions)
+                else slice(start_idx, len(row_partitions))
+            )
+            row_partitions_by_actors[ip][0].extend(row_partitions[idx_slice])
+        start_idx += row_parts_last_idx
 
 
 def _train(
@@ -287,7 +287,7 @@ def _train(
 
     s = time.time()
     # Start Rabit tracker
-    env = _start_rabit_tracker(len(actors))
+    tracker, env = start_rabit_tracker(len(actors), get_node_ip_address())
     rabit_args = [("%s=%s" % item).encode() for item in env.items()]
 
     # Train
@@ -299,6 +299,7 @@ def _train(
     # All results should be the same because of Rabit tracking. So we just
     # return the first one.
     result = ray.get(fut[0])
+    stop_rabit_tracker(tracker)
     LOGGER.info(f"Training time: {time.time() - s} s")
     return result
 
