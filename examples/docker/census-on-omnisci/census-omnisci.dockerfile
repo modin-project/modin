@@ -21,7 +21,7 @@ ENV MODIN_EXPERIMENTAL "true"
 ARG conda_extra_channel
 ENV add_extra_channel=${conda_extra_channel:+"-c ${conda_extra_channel}"}
 
-RUN apt-get update --yes \
+RUN apt-get update --yes && apt-get upgrade --yes \
     && apt-get install wget --yes && \
     rm -rf /var/lib/apt/lists/*
 
@@ -53,7 +53,7 @@ RUN conda update -n base -c defaults conda -y && \
 RUN conda activate modin && \
     conda install -c intel/label/modin -c conda-forge -c intel ${add_extra_channel} \
         "daal4py>=2021.1" dpcpp_cpp_rt && \
-    conda install -c conda-forge scikit-learn && \
+    conda install -c conda-forge "scikit-learn<0.24.0" && \
     conda clean --all --yes
 
 COPY ipums_education2income_1970-2010.csv "${HOME}/ipums_education2income_1970-2010.csv"
