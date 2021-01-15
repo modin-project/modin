@@ -18,8 +18,6 @@ import modin.pandas as pd
 
 from .utils import df_equals, test_data_values, test_data_keys
 
-pd.DEFAULT_NPARTITIONS = 4
-
 
 def create_test_series(vals):
     if isinstance(vals, dict):

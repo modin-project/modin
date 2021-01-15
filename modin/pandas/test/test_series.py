@@ -68,7 +68,6 @@ from .utils import (
     test_data_diff_dtype,
 )
 
-pd.DEFAULT_NPARTITIONS = 4
 
 # Force matplotlib to not use any Xwindows backend.
 matplotlib.use("Agg")

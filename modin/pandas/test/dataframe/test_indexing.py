@@ -37,7 +37,6 @@ from modin.pandas.test.utils import (
     eval_general,
 )
 
-pd.DEFAULT_NPARTITIONS = 4
 
 # Force matplotlib to not use any Xwindows backend.
 matplotlib.use("Agg")

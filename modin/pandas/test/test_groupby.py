@@ -28,8 +28,6 @@ from .utils import (
     generate_multiindex,
 )
 
-pd.DEFAULT_NPARTITIONS = 4
-
 
 def modin_groupby_equals_pandas(modin_groupby, pandas_groupby):
     for g1, g2 in zip(modin_groupby, pandas_groupby):

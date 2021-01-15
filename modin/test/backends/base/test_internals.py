@@ -11,8 +11,6 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-import modin.pandas as pd
-
 import pandas
 import pytest
 
@@ -21,8 +19,6 @@ from modin.pandas.test.utils import (
     create_test_dfs,
     df_equals,
 )
-
-pd.DEFAULT_NPARTITIONS = 4
 
 
 @pytest.mark.parametrize("axis", [0, 1])

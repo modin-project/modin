@@ -14,8 +14,6 @@
 import modin.pandas as pd
 from modin.pandas.test.utils import create_test_dfs
 
-pd.DEFAULT_NPARTITIONS = 4
-
 
 def test_aligning_blocks():
     # Test problem when modin frames have the same number of rows, but different

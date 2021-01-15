@@ -25,8 +25,6 @@ from .utils import (
     create_test_dfs,
 )
 
-pd.DEFAULT_NPARTITIONS = 4
-
 
 def test_df_concat():
     df, df2 = generate_dfs()

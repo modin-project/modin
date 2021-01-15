@@ -159,6 +159,8 @@ jobs:
   test-internals:
     needs: [lint-commit, lint-flake8, lint-black, test-api, test-headers]
     runs-on: ubuntu-latest
+    env:
+      MODIN_CPUS: 4
     name: test-internals
     steps:
       - uses: actions/checkout@v2
@@ -197,6 +199,7 @@ jobs:
     env:
       MODIN_MEMORY: 1000000000
       MODIN_TEST_DATASET_SIZE: "small"
+      MODIN_CPUS: 4
     name: Test ${{ matrix.backend }} backend, Python 3.6
     steps:
       - uses: actions/checkout@v2
@@ -345,6 +348,7 @@ jobs:
     env:
       MODIN_ENGINE: ${{matrix.engine}}
       MODIN_MEMORY: 1000000000
+      MODIN_CPUS: 4
     name: test-ubuntu (engine ${{matrix.engine}}, python ${{matrix.python-version}})
     steps:
       - uses: actions/checkout@v2
@@ -408,6 +412,7 @@ jobs:
       MODIN_ENGINE: "python"
       MODIN_EXPERIMENTAL: "True"
       MODIN_MEMORY: 1000000000
+      MODIN_CPUS: 4
     name: test experimental
     steps:
       - uses: actions/checkout@v2
@@ -474,6 +479,7 @@ jobs:
     env:
       MODIN_ENGINE: ${{matrix.engine}}
       MODIN_MEMORY: 1000000000
+      MODIN_CPUS: 4
     name: test-windows
     steps:
       - uses: actions/checkout@v2
