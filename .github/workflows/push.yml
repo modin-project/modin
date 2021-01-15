@@ -12,7 +12,7 @@ jobs:
         with:
           activate-environment: modin
           environment-file: environment.yml
-          python-version: 3.6
+          python-version: 3.7
           channel-priority: strict
           use-only-tar-bz2: true # IMPORTANT: This needs to be set for caching to work properly!
       - name: Conda environment
@@ -42,7 +42,7 @@ jobs:
     env:
       MODIN_MEMORY: 1000000000
       MODIN_TEST_DATASET_SIZE: "small"
-    name: Test ${{ matrix.backend }} backend, Python 3.6
+    name: Test ${{ matrix.backend }} backend, Python 3.7
     steps:
       - uses: actions/checkout@v2
         with:
@@ -51,7 +51,7 @@ jobs:
         with:
           activate-environment: modin
           environment-file: environment.yml
-          python-version: 3.6
+          python-version: 3.7
           channel-priority: strict
           use-only-tar-bz2: true # IMPORTANT: This needs to be set for caching to work properly!
       - name: Conda environment
@@ -130,7 +130,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ["3.6", "3.7", "3.8"]
+        python-version: ["3.7", "3.8"]
         engine: ["python", "ray", "dask"]
     env:
       MODIN_ENGINE: ${{matrix.engine}}
@@ -195,7 +195,7 @@ jobs:
     runs-on: windows-latest
     strategy:
       matrix:
-        python-version: ["3.6", "3.7", "3.8"]
+        python-version: ["3.7", "3.8"]
         engine: ["ray", "dask"]
         part: ["DataFrame", 3]
     env:
@@ -276,7 +276,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ["3.6", "3.7", "3.8"]
+        python-version: ["3.7", "3.8"]
     env:
       MODIN_BACKEND: pyarrow
       MODIN_EXPERIMENTAL: "True"
