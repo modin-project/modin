@@ -90,9 +90,8 @@ from modin.config import Engine, Parameter
 
 # Set this so that Pandas doesn't try to multithread by itself
 os.environ["OMP_NUM_THREADS"] = "1"
-DEFAULT_NPARTITIONS = 4
-num_cpus = 1
 
+num_cpus = 1
 
 _is_first_update = {}
 dask_client = None
@@ -102,7 +101,7 @@ _NOINIT_ENGINES = {
 
 
 def _update_engine(publisher: Parameter):
-    global DEFAULT_NPARTITIONS, dask_client, num_cpus
+    global dask_client, num_cpus
     from modin.config import Backend, CpuCount
 
     if publisher.get() == "Ray":
@@ -163,7 +162,6 @@ def _update_engine(publisher: Parameter):
         raise ImportError("Unrecognized execution engine: {}.".format(publisher.get()))
 
     _is_first_update[publisher.get()] = False
-    DEFAULT_NPARTITIONS = max(4, int(num_cpus))
 
 
 from .. import __version__
@@ -321,7 +319,6 @@ __all__ = [
     "value_counts",
     "datetime",
     "NamedAgg",
-    "DEFAULT_NPARTITIONS",
 ]
 
 del pandas, Engine, Parameter

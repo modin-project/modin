@@ -18,6 +18,7 @@ import warnings
 from modin.engines.ray.pandas_on_ray.io import PandasOnRayIO
 from modin.backends.pandas.parsers import _split_result_for_readers
 from modin.engines.ray.pandas_on_ray.frame.partition import PandasOnRayFramePartition
+from modin.config import NPartitions
 
 import ray
 
@@ -117,7 +118,7 @@ class ExperimentalPandasOnRayIO(PandasOnRayIO):
             )
         #  starts the distributed alternative
         cols_names, query = get_query_info(sql, con, partition_column)
-        num_parts = min(cls.frame_mgr_cls._compute_num_partitions(), max_sessions)
+        num_parts = min(NPartitions.get(), max_sessions)
         num_splits = min(len(cols_names), num_parts)
         diff = (upper_bound - lower_bound) + 1
         min_size = diff // num_parts

@@ -24,8 +24,9 @@ from .utils import (
     generate_none_dfs,
     create_test_dfs,
 )
+from modin.config import NPartitions
 
-pd.DEFAULT_NPARTITIONS = 4
+NPartitions.put(4)
 
 
 def test_df_concat():

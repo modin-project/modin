@@ -21,8 +21,9 @@ from modin.pandas.test.utils import (
     create_test_dfs,
     df_equals,
 )
+from modin.config import NPartitions
 
-pd.DEFAULT_NPARTITIONS = 4
+NPartitions.put(4)
 
 
 @pytest.mark.parametrize("axis", [0, 1])

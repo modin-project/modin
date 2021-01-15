@@ -17,6 +17,7 @@ import pandas
 import warnings
 
 from modin.engines.base.io.file_dispatcher import FileDispatcher
+from modin.config import NPartitions
 
 
 class SQLDispatcher(FileDispatcher):
@@ -62,9 +63,7 @@ class SQLDispatcher(FileDispatcher):
             "SELECT * FROM ({}) as foo LIMIT 0".format(sql), con, index_col=index_col
         )
         cols_names = cols_names_df.columns
-        from modin.pandas import DEFAULT_NPARTITIONS
-
-        num_partitions = DEFAULT_NPARTITIONS
+        num_partitions = NPartitions.get()
         partition_ids = []
         index_ids = []
         dtype_ids = []

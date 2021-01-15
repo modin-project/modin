@@ -18,6 +18,8 @@ import pandas
 import csv
 import sys
 
+from modin.config import NPartitions
+
 
 class CSVDispatcher(TextFileDispatcher):
     @classmethod
@@ -130,9 +132,7 @@ class CSVDispatcher(TextFileDispatcher):
             index_ids = []
             dtypes_ids = []
             # Max number of partitions available
-            from modin.pandas import DEFAULT_NPARTITIONS
-
-            num_partitions = DEFAULT_NPARTITIONS
+            num_partitions = NPartitions.get()
             # This is the number of splits for the columns
             num_splits = min(len(column_names), num_partitions)
             # Metadata

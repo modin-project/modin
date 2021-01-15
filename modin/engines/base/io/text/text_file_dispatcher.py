@@ -16,6 +16,8 @@ import numpy as np
 import warnings
 import os
 
+from modin.config import NPartitions
+
 
 class TextFileDispatcher(FileDispatcher):
     @classmethod
@@ -135,9 +137,7 @@ class TextFileDispatcher(FileDispatcher):
         beginning and the end offsets of the current chunk.
         """
         if num_partitions is None:
-            from modin.pandas import DEFAULT_NPARTITIONS
-
-            num_partitions = DEFAULT_NPARTITIONS
+            num_partitions = NPartitions.get()
 
         result = []
         file_size = cls.file_size(f)
