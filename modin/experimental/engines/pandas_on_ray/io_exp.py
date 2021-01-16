@@ -237,6 +237,92 @@ class ExperimentalPandasOnRayIO(PandasOnRayIO):
         # blocking operation
         result.to_pandas()
 
+    @classmethod
+    def read_pickle(cls, filepath_or_buffer, compression="infer"):
+        if not isinstance(filepath_or_buffer, str):
+            warnings.warn("Defaulting to Modin core implementation")
+            return PandasOnRayIO.read_pickle(
+                filepath_or_buffer,
+                compression=compression,
+            )
+
+        num_splits = 1  # try to measure
+        num_partitions = 4  # get_meta_info(filepath_or_buffer)
+        partition_ids = []
+        lengths_ids = []
+        widths_ids = []
+        for idx_file in range(num_partitions):
+            partition_id = _read_pickle_files_in_folder._remote(
+                args=(
+                    filepath_or_buffer,
+                    compression,
+                    idx_file,
+                    num_splits,
+                ),
+                num_returns=num_splits + 2,
+            )
+            partition_ids.append(partition_id[:-2])
+            lengths_ids.append(partition_id[-2])
+            widths_ids.append(partition_id[-1])
+
+        lengths = ray.get(lengths_ids)
+        # while num_splits is 1, widths are equal
+        widths = ray.get(widths_ids)
+
+        partition_ids = build_partition(partition_ids, lengths, [widths[0]])
+
+        new_index = cls.frame_cls._frame_mgr_cls.get_indices(
+            0, partition_ids, lambda df: df.axes[0]
+        )
+        new_columns = cls.frame_cls._frame_mgr_cls.get_indices(
+            1, partition_ids, lambda df: df.axes[1]
+        )
+
+        return cls.query_compiler_cls(
+            cls.frame_cls(partition_ids, new_index, new_columns)
+        )
+
+
+def build_partition(partition_ids, row_lengths, column_widths):
+    return np.array(
+        [
+            [
+                PandasOnRayFramePartition(
+                    partition_ids[i][j],
+                    length=row_lengths[i],
+                    width=column_widths[j],
+                )
+                for j in range(len(partition_ids[i]))
+            ]
+            for i in range(len(partition_ids))
+        ]
+    )
+
+
+@ray.remote
+def _read_pickle_files_in_folder(
+    filepath: str,
+    compression: str,
+    idx_file: int,
+    num_splits: int,
+):  # pragma: no cover
+    """
+    Use a Ray task to read a pickle file under filepath folder.
+
+    TODO: add parameters descriptors
+    """
+
+    def choose_file(filepath, idx_file):
+        return filepath + "/" + filepath + str(idx_file)
+
+    filepath = choose_file(filepath, idx_file)
+
+    df = pandas.read_pickle(filepath, compression)
+    length = len(df)
+    width = len(df.columns)
+
+    return _split_result_for_readers(1, num_splits, df) + [length, width]
+
 
 # Ray functions are not detected by codecov (thus pragma: no cover)
 @ray.remote
