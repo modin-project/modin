@@ -1279,6 +1279,20 @@ class TestCsv:
 
         df_equals(modin_df, pandas_df)
 
+    @pytest.mark.parametrize("read_mode", ["r", "rb"])
+    def test_read_csv_file_handle(self, request, read_mode, make_csv_file):
+        if request.config.getoption("--simulate-cloud").lower() != "off":
+            pytest.skip("Cannot pickle file handles. See comments in PR #2625")
+
+        unique_filename = get_unique_filename()
+        make_csv_file(filename=unique_filename)
+
+        with open(unique_filename, mode=read_mode) as buffer:
+            df_pandas = pandas.read_csv(buffer)
+            buffer.seek(0)
+            df_modin = pd.read_csv(buffer)
+            df_equals(df_modin, df_pandas)
+
 
 class TestTable:
     def test_read_table(self, make_csv_file):
@@ -1466,6 +1480,21 @@ class TestJson:
         eval_to_file(
             modin_obj=modin_df, pandas_obj=pandas_df, fn="to_json", extension="json"
         )
+
+    @pytest.mark.parametrize("read_mode", ["r", "rb"])
+    def test_read_json_file_handle(self, request, read_mode):
+        if request.config.getoption("--simulate-cloud").lower() != "off":
+            pytest.skip("Cannot pickle file handles. See comments in PR #2625")
+        unique_filename = get_unique_filename(extension="json")
+        try:
+            setup_json_file(filename=unique_filename)
+            with open(unique_filename, mode=read_mode) as buf:
+                df_pandas = pandas.read_json(buf)
+                buf.seek(0)
+                df_modin = pd.read_json(buf)
+                df_equals(df_pandas, df_modin)
+        finally:
+            teardown_test_files([unique_filename])
 
 
 class TestExcel:
@@ -1965,6 +1994,19 @@ class TestFwf:
             )
         finally:
             teardown_test_files([unique_filename])
+
+    @pytest.mark.parametrize("read_mode", ["r", "rb"])
+    def test_read_fwf_file_handle(self, request, read_mode):
+        if request.config.getoption("--simulate-cloud").lower() != "off":
+            pytest.skip("Cannot pickle file handles. See comments in PR #2625")
+        unique_filename = get_unique_filename("txt")
+        setup_fwf_file(filename=unique_filename)
+
+        with open(unique_filename, mode=read_mode) as buffer:
+            df_pandas = pandas.read_fwf(buffer)
+            buffer.seek(0)
+            df_modin = pd.read_fwf(buffer)
+            df_equals(df_modin, df_pandas)
 
 
 class TestGbq:

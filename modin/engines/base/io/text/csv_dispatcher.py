@@ -22,6 +22,7 @@ import sys
 class CSVDispatcher(TextFileDispatcher):
     @classmethod
     def _read(cls, filepath_or_buffer, **kwargs):
+        filepath_or_buffer = cls.get_path_or_buffer(filepath_or_buffer)
         if isinstance(filepath_or_buffer, str):
             if not cls.file_exists(filepath_or_buffer):
                 return cls.single_worker_read(filepath_or_buffer, **kwargs)
