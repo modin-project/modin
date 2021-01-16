@@ -18,6 +18,7 @@ Any function or class can be considered experimental API if it is not strictly r
 backend API, even if it is only extending the API.
 """
 
+import os
 import numpy as np
 import pandas
 import warnings
@@ -216,6 +217,25 @@ class ExperimentalPandasOnRayIO(PandasOnRayIO):
         )
         new_query_compiler._modin_frame.synchronize_labels(axis=0)
         return new_query_compiler
+
+    @classmethod
+    def to_pickle(cls, qc, **kwargs):
+        root_dir = kwargs["path"]
+        if not os.path.exists(root_dir):
+            os.mkdir(root_dir)
+        kwargs["path"] = root_dir + "/" + kwargs["path"]
+
+        def func(df, **kw):
+            partition_idx = kw["partition_idx"]
+            kwargs["path"] = kwargs["path"] + str(partition_idx)
+            df.to_pickle(**kwargs)
+            return pandas.DataFrame()
+
+        result = qc._modin_frame._apply_full_axis(
+            1, func, new_index=[], new_columns=[], enumerate_partitions=True
+        )
+        # blocking operation
+        result.to_pandas()
 
 
 # Ray functions are not detected by codecov (thus pragma: no cover)

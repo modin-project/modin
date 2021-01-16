@@ -1363,6 +1363,7 @@ class PandasFrame(object):
         new_index=None,
         new_columns=None,
         dtypes=None,
+        enumerate_partitions=False,
     ):
         """
         Perform a function across an entire axis.
@@ -1400,6 +1401,7 @@ class PandasFrame(object):
             new_columns=new_columns,
             dtypes=dtypes,
             other=None,
+            enumerate_partitions=enumerate_partitions,
         )
 
     def apply_full_axis_select_indices(

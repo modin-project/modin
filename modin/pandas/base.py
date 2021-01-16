@@ -2695,9 +2695,13 @@ class BasePandasDataset(object):
         protocol=pkl.HIGHEST_PROTOCOL,
         storage_options: StorageOptions = None,
     ):  # pragma: no cover
-        return self._default_to_pandas(
-            "to_pickle",
-            path,
+        new_query_compiler = self._query_compiler
+
+        from modin.data_management.factories.dispatcher import EngineDispatcher
+
+        EngineDispatcher.to_pickle(
+            new_query_compiler,
+            path=path,
             compression=compression,
             protocol=protocol,
             storage_options=storage_options,
