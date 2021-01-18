@@ -83,7 +83,7 @@ def unwrap_partitions(api_layer_object, axis=None, bind_ip=False):
         ]
 
 
-def create_df_from_partitions(partitions, axis, engine):
+def create_df_from_partitions(partitions, axis, factory):
     """
     Create DataFrame from remote partitions.
 
@@ -99,46 +99,32 @@ def create_df_from_partitions(partitions, axis, engine):
         - `axis` to 0 if you want to create DataFrame from row partitions.
         - `axis` to 1 if you want to create DataFrame from column partitions.
         - `axis` to None if you want to create DataFrame from 2D list of partitions.
-    engine : int
-        The parameter is used to choose the engine for remote partitions which DataFrame will be created from.
-        Possible variants: ("PandasOnRayFramePartition", "PandasOnDaskFramePartition").
-        You have to specify index of the set: 0 - PandasOnRayFramePartition, 1 - PandasOnDaskFramePartition.
+    factory : int
+        The parameter is used to choose the factory for remote partitions which DataFrame will be created from.
+        Possible variants: ("PandasOnRayFactory", "PandasOnDaskFactory").
+        You have to specify index of the set: 0 - PandasOnRayFactory, 1 - PandasOnDaskFactory.
 
     Returns
     -------
     DataFrame
         DataFrame instance created from remote partitions.
     """
-    if engine == 0:
-        from modin.engines.ray.pandas_on_ray.frame.partition import (
-            PandasOnRayFramePartition,
-        )
-        from modin.engines.ray.pandas_on_ray.frame.partition_manager import (
-            PandasOnRayFrameManager,
-        )
-        from modin.engines.ray.pandas_on_ray.frame.partition_manager import (
-            PandasOnRayFrame,
-        )
+    if factory == 0:
+        from modin.data_management.factories.factories import PandasOnRayFactory
 
-        partition_class = PandasOnRayFramePartition
-        partition_frame_class = PandasOnRayFrame
-        partition_mgr_class = PandasOnRayFrameManager
-    elif engine == 1:
-        from modin.engines.dask.pandas_on_dask.frame.partition import (
-            PandasOnDaskFramePartition,
-        )
-        from modin.engines.dask.pandas_on_dask.frame.partition_manager import (
-            DaskFrameManager,
-        )
-        from modin.engines.dask.pandas_on_dask.frame.data import PandasOnDaskFrame
+        actual_factory = PandasOnRayFactory
+    elif factory == 1:
+        from modin.data_management.factories.factories import PandasOnDaskFactory
 
-        partition_class = PandasOnDaskFramePartition
-        partition_frame_class = PandasOnDaskFrame
-        partition_mgr_class = DaskFrameManager
+        actual_factory = PandasOnDaskFactory
     else:
         raise ValueError(
-            f"Got unacceptable index {engine} of the engines' list. Possible variants are {0} or {1}."
+            f"Got unacceptable index {factory} of the factories' list. Possible variants are {0} or {1}."
         )
+
+    partition_class = actual_factory.io_cls.frame_cls._frame_mgr_cls._partition_class
+    partition_frame_class = actual_factory.io_cls.frame_cls
+    partition_mgr_class = actual_factory.io_cls.frame_cls._frame_mgr_cls
 
     if axis is None:
         if isinstance(partitions[0][0], tuple):
