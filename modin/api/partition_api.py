@@ -83,7 +83,7 @@ def unwrap_partitions(api_layer_object, axis=None, bind_ip=False):
         ]
 
 
-def create_df_from_partitions(partitions, axis, factory):
+def create_df_from_partitions(partitions, axis):
     """
     Create DataFrame from remote partitions.
 
@@ -94,37 +94,24 @@ def create_df_from_partitions(partitions, axis, factory):
         Or list containing tuples of Ray.ObjectRef/Dask.Future referencing to ip addresses of partitions
         and partitions itself in depend of the engine used.
     axis : None, 0 or 1
-        The `axis` parameter is used to identify what is the partitions passed.
+        The `axis` parameter is used to identify what are the partitions passed.
         You have to set:
         - `axis` to 0 if you want to create DataFrame from row partitions.
         - `axis` to 1 if you want to create DataFrame from column partitions.
         - `axis` to None if you want to create DataFrame from 2D list of partitions.
-    factory : int
-        The parameter is used to choose the factory for remote partitions which DataFrame will be created from.
-        Possible variants: ("PandasOnRayFactory", "PandasOnDaskFactory").
-        You have to specify index of the set: 0 - PandasOnRayFactory, 1 - PandasOnDaskFactory.
 
     Returns
     -------
     DataFrame
         DataFrame instance created from remote partitions.
     """
-    if factory == 0:
-        from modin.data_management.factories.factories import PandasOnRayFactory
+    from modin.data_management.factories.dispatcher import EngineDispatcher
 
-        actual_factory = PandasOnRayFactory
-    elif factory == 1:
-        from modin.data_management.factories.factories import PandasOnDaskFactory
+    factory = EngineDispatcher.get_engine()
 
-        actual_factory = PandasOnDaskFactory
-    else:
-        raise ValueError(
-            f"Got unacceptable index {factory} of the factories' list. Possible variants are {0} or {1}."
-        )
-
-    partition_class = actual_factory.io_cls.frame_cls._frame_mgr_cls._partition_class
-    partition_frame_class = actual_factory.io_cls.frame_cls
-    partition_mgr_class = actual_factory.io_cls.frame_cls._frame_mgr_cls
+    partition_class = factory.io_cls.frame_cls._frame_mgr_cls._partition_class
+    partition_frame_class = factory.io_cls.frame_cls
+    partition_mgr_class = factory.io_cls.frame_cls._frame_mgr_cls
 
     if axis is None:
         if isinstance(partitions[0][0], tuple):
