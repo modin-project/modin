@@ -163,14 +163,14 @@ def _set_row_partitions_to_actors(
         if data_for_aligning is None:
             actors_ips = list(actors.keys())
             partitions_ips = [ray.get(row_part[0]) for row_part in row_partitions]
-
+            unique_partitions_ips = set(partitions_ips)
             empty_actor_ips = []
             for ip in actors_ips:
-                if ip not in set(partitions_ips):
+                if ip not in unique_partitions_ips:
                     empty_actor_ips.append(ip)
 
-            # In case portion of nodes without data is more than 10%, data
-            # redistribution between nodes will be applied.
+            # In case portion of nodes without data is less than 10%,
+            # no data redistribution between nodes will be performed.
             if len(empty_actor_ips) / len(actors_ips) < 0.1:
                 import warnings
 
@@ -178,7 +178,7 @@ def _set_row_partitions_to_actors(
                     actors.pop(ip)
                     row_partitions_by_actors.pop(ip)
                     warnings.warn(
-                        f"Node {ip} isn't used due to it doesn't contain any data."
+                        f"Node {ip} isn't used as it doesn't contain any data."
                     )
                 for i, row_part in enumerate(row_partitions):
                     row_partitions_by_actors[partitions_ips[i]][0].append(row_part[1])
