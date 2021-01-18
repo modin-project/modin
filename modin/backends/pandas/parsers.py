@@ -253,8 +253,8 @@ class PandasExcelParser(PandasParser):
         from openpyxl.worksheet.worksheet import Worksheet
         from pandas.core.dtypes.common import is_list_like
         from pandas.io.excel._util import (
-            _fill_mi_header,
-            _maybe_convert_usecols,
+            fill_mi_header,
+            maybe_convert_usecols,
         )
         from pandas.io.parsers import TextParser
         import re
@@ -308,7 +308,7 @@ class PandasExcelParser(PandasParser):
         # Attach cells to worksheet object
         reader.bind_cells()
         data = PandasExcelParser.get_sheet_data(ws, kwargs.pop("convert_float", True))
-        usecols = _maybe_convert_usecols(kwargs.pop("usecols", None))
+        usecols = maybe_convert_usecols(kwargs.pop("usecols", None))
         header = kwargs.pop("header", 0)
         index_col = kwargs.pop("index_col", None)
         # skiprows is handled externally
@@ -321,7 +321,7 @@ class PandasExcelParser(PandasParser):
             control_row = [True] * len(data[0])
 
             for row in header:
-                data[row], control_row = _fill_mi_header(data[row], control_row)
+                data[row], control_row = fill_mi_header(data[row], control_row)
         # Handle MultiIndex for row Index if necessary
         if is_list_like(index_col):
             # Forward fill values for MultiIndex index.
