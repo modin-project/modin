@@ -17,23 +17,23 @@ import xgboost as xgb
 LOGGER = logging.getLogger("[modin.xgboost]")
 
 
-def start_rabit_tracker(num_workers: int, host_ip):
-    """Start Rabit tracker. The workers connect to this tracker to share
-    their results."""
-    host = host_ip
+class RabitContextManager:
+    def __init__(self, num_workers: int, host_ip):
+        """Start Rabit tracker. The workers connect to this tracker to share
+        their results."""
 
-    env = {"DMLC_NUM_WORKER": num_workers}
-    rabit_tracker = xgb.RabitTracker(hostIP=host, nslave=num_workers)
+        self.env = {"DMLC_NUM_WORKER": num_workers}
+        self.rabit_tracker = xgb.RabitTracker(hostIP=host_ip, nslave=num_workers)
 
-    # Get tracker Host + IP
-    env.update(rabit_tracker.slave_envs())
-    rabit_tracker.start(num_workers)
+        # Get tracker Host + IP
+        self.env.update(self.rabit_tracker.slave_envs())
+        self.rabit_tracker.start(num_workers)
 
-    return rabit_tracker, env
+    def __enter__(self):
+        return self.env
 
-
-def stop_rabit_tracker(rabit_tracker):
-    rabit_tracker.join()
+    def __exit__(self, type, value, traceback):
+        self.rabit_tracker.join()
 
 
 class RabitContext:

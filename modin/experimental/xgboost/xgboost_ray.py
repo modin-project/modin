@@ -24,7 +24,7 @@ import numpy as np
 import pandas
 
 from modin.api import unwrap_partitions
-from .utils import start_rabit_tracker, stop_rabit_tracker, RabitContext
+from .utils import RabitContext, RabitContextManager
 
 LOGGER = logging.getLogger("[modin.xgboost]")
 
@@ -286,22 +286,20 @@ def _train(
     LOGGER.info(f"Data preparation time: {time.time() - s} s")
 
     s = time.time()
-    # Start Rabit tracker
-    tracker, env = start_rabit_tracker(len(actors), get_node_ip_address())
-    rabit_args = [("%s=%s" % item).encode() for item in env.items()]
+    with RabitContextManager(len(actors), get_node_ip_address()) as env:
+        rabit_args = [("%s=%s" % item).encode() for item in env.items()]
 
-    # Train
-    fut = [
-        actor.train.remote(rabit_args, params, *args, **kwargs)
-        for _, actor in actors.items()
-    ]
+        # Train
+        fut = [
+            actor.train.remote(rabit_args, params, *args, **kwargs)
+            for _, actor in actors.items()
+        ]
 
-    # All results should be the same because of Rabit tracking. So we just
-    # return the first one.
-    result = ray.get(fut[0])
-    stop_rabit_tracker(tracker)
-    LOGGER.info(f"Training time: {time.time() - s} s")
-    return result
+        # All results should be the same because of Rabit tracking. So we just
+        # return the first one.
+        result = ray.get(fut[0])
+        LOGGER.info(f"Training time: {time.time() - s} s")
+        return result
 
 
 def _predict(
