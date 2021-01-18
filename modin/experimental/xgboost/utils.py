@@ -22,14 +22,13 @@ class RabitContextManager:
         """Start Rabit tracker. The workers connect to this tracker to share
         their results."""
 
-        self.env = {"DMLC_NUM_WORKER": num_workers}
-        self.rabit_tracker = xgb.RabitTracker(hostIP=host_ip, nslave=num_workers)
-
-        # Get tracker Host + IP
-        self.env.update(self.rabit_tracker.slave_envs())
-        self.rabit_tracker.start(num_workers)
+        self._num_workers = num_workers
+        self.env = {"DMLC_NUM_WORKER": self._num_workers}
+        self.rabit_tracker = xgb.RabitTracker(hostIP=host_ip, nslave=self._num_workers)
 
     def __enter__(self):
+        self.env.update(self.rabit_tracker.slave_envs())
+        self.rabit_tracker.start(self._num_workers)
         return self.env
 
     def __exit__(self, type, value, traceback):

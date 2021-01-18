@@ -58,7 +58,7 @@ class ModinXGBoostActor:
         return xgb.DMatrix(X, y)
 
     def set_train_data(self, *X_y, add_as_eval_method=None):
-        self._dtrain = self._get_dmatrix(list(X_y))
+        self._dtrain = self._get_dmatrix(X_y)
 
         if add_as_eval_method is not None:
             self._evals.append((self._dtrain, add_as_eval_method))
@@ -71,7 +71,7 @@ class ModinXGBoostActor:
             self._dpredict.append(xgb.DMatrix(x, None))
 
     def add_eval_data(self, *X_y, eval_method):
-        self._evals.append((self._get_dmatrix(list(X_y)), eval_method))
+        self._evals.append((self._get_dmatrix(X_y), eval_method))
 
     def train(self, rabit_args, params, *args, **kwargs):
         local_params = params.copy()
