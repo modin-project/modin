@@ -39,9 +39,6 @@ class ModinXGBoostActor:
 
         LOGGER.info(f"Actor <{self._ip}>, nthread = {self._nthreads} was initialized.")
 
-    def get_actor_ip(self):
-        return self._ip
-
     def _get_dmatrix(self, X_y):
         s = time.time()
         X = X_y[: len(X_y) // 2]
@@ -127,12 +124,30 @@ def create_actors(num_cpus=1, nthread=cpu_count()):
 def _split_data_across_actors(
     actors: Dict, set_func, X_parts, y_parts=None, evenly_data_distribution=True
 ):
-    X_parts_by_actors = _set_row_partitions_to_actors(
+    """
+    Split row partitions of data between actors.
+
+    Parameters
+    ----------
+    actors : dict
+        Dictionary of used actors.
+    set_func : callable
+        The function for setting data in actor.
+    X_parts : list
+        Row partitions of X data.
+    y_parts : list, default None
+        Row partitions of y data.
+    evenly_data_distribution : boolean, default True
+        Whether make evenly distribution of partitions between nodes or not.
+        In case `False` minimal datatransfer between nodes will be provided
+        but the data may not be evenly distributed.
+    """
+    X_parts_by_actors = _assign_row_partitions_to_actors(
         actors, X_parts, evenly_data_distribution=evenly_data_distribution
     )
 
     if y_parts is not None:
-        y_parts_by_actors = _set_row_partitions_to_actors(
+        y_parts_by_actors = _assign_row_partitions_to_actors(
             actors,
             y_parts,
             X_parts_by_actors,
@@ -148,16 +163,39 @@ def _split_data_across_actors(
             set_func(actor, *(X_parts + y_parts))
 
 
-def _set_row_partitions_to_actors(
+def _assign_row_partitions_to_actors(
     actors: Dict, row_partitions, data_for_aligning=None, evenly_data_distribution=True
 ):
+    """
+    Assign row_partitions to actors.
+
+    Parameters
+    ----------
+    actors : dict
+        Dictionary of used actors.
+    row_partitions : list
+        Row partitions of data to assign.
+    data_for_aligning : dict, default None
+        Data according to the order of which should be
+        distributed row_partitions. Used to align y with X.
+    evenly_data_distribution : boolean, default True
+        Whether make evenly distribution of partitions between nodes or not.
+        In case `False` minimal datatransfer between nodes will be provided
+        but the data may not be evenly distributed.
+
+    Returns
+    -------
+    dict
+        Dictionary of assigned to actors partitions
+        as {ip: (partitions, order)}.
+    """
     row_partitions_by_actors = {ip: ([], []) for ip in actors}
     if evenly_data_distribution:
-        _distribute_partitions_evenly(
+        _assign_partitions_evenly(
             actors,
-            row_partitions_by_actors,
             row_partitions,
-            is_partitions_have_ip=False,
+            False,
+            row_partitions_by_actors,
         )
     else:
         if data_for_aligning is None:
@@ -184,11 +222,11 @@ def _set_row_partitions_to_actors(
                     row_partitions_by_actors[partitions_ips[i]][0].append(row_part[1])
                     row_partitions_by_actors[partitions_ips[i]][1].append(i)
             else:
-                _distribute_partitions_evenly(
+                _assign_partitions_evenly(
                     actors,
-                    row_partitions_by_actors,
                     row_partitions,
-                    is_partitions_have_ip=True,
+                    True,
+                    row_partitions_by_actors,
                 )
         else:
             for ip, (_, order_of_indexes) in data_for_aligning.items():
@@ -199,12 +237,27 @@ def _set_row_partitions_to_actors(
     return row_partitions_by_actors
 
 
-def _distribute_partitions_evenly(
+def _assign_partitions_evenly(
     actors: Dict,
-    row_partitions_by_actors: Dict,
     row_partitions,
     is_partitions_have_ip,
+    row_partitions_by_actors: Dict,
 ):
+    """
+    Make evenly assigning of row_partitions to actors.
+
+    Parameters
+    ----------
+    actors : dict
+        Dictionary of used actors.
+    row_partitions : list
+        Row partitions of data to assign.
+    is_partitions_have_ip : boolean
+        Whether each value of row_partitions is (ip, partition).
+    row_partitions_by_actors : dict
+        Dictionary of assigned to actors partitions
+        as {ip: (partitions, order)}. Output parameter.
+    """
     num_actors = len(actors)
     row_parts_last_idx = (
         len(row_partitions) // num_actors
