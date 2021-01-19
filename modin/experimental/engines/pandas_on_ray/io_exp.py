@@ -369,11 +369,11 @@ def _read_pickle_files_in_folder(
 
     TODO: add parameters descriptors
     """
-    from io import BytesIO
-
     with open(filepath, mode="rb") as src:
         src.seek(position)
-        df = pandas.read_pickle(BytesIO(src.read(length)), compression)
+        # read_pickle can read several pickled objects from file
+        # so we can work with file instead of BytesIO
+        df = pandas.read_pickle(src, compression)
 
     length = len(df)
     width = len(df.columns)
