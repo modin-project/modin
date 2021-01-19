@@ -531,13 +531,36 @@ class PandasQueryCompiler(BaseQueryCompiler):
         """
         drop = kwargs.get("drop", False)
         level = kwargs.get("level", None)
-        # TODO Implement level
-        if level is not None or self.has_multiindex():
-            return self.default_to_pandas(pandas.DataFrame.reset_index, **kwargs)
         if not drop:
-            return self.__constructor__(self._modin_frame.from_labels())
-        new_self = self.copy()
-        new_self.index = pandas.RangeIndex(len(new_self.index))
+            if level is not None:
+                if not isinstance(level, (tuple, list)):
+                    level = [level]
+                level = [self.index._get_level_number(lev) for lev in level]
+                if len(level) < self.index.nlevels:
+                    # We handle this by separately computing the index. We could just
+                    # put the labels into the data and pull them back out, but that is
+                    # expensive.
+                    new_index = self.index.droplevel(level)
+                    # These are the index levels that will remain after the reset_index
+                    keep_levels = [i for i in range(len(self.index.names)) if i not in level]
+                    new_copy = self.copy()
+                    # Change the index to have only the levels that will be inserted
+                    # into the data. We will replace the old levels later.
+                    new_copy.index = self.index.droplevel(keep_levels)
+                    new_copy.index.names = [
+                        "level_{}".format(i) if new_copy.index.names[i] is None else new_copy.index.names[i]
+                        for i in range(len(new_copy.index.names))]
+                    new_modin_frame = new_copy._modin_frame.from_labels()
+                    # Replace the levels that will remain as a part of the index.
+                    new_modin_frame.index = new_index
+                else:
+                    new_modin_frame = self._modin_frame.from_labels()
+            else:
+                new_modin_frame = self._modin_frame.from_labels()
+            new_self = self.__constructor__(new_modin_frame)
+        else:
+            new_self = self.copy()
+            new_self.index = pandas.RangeIndex(len(new_self.index))
         return new_self
 
     def set_index_from_columns(
