@@ -101,6 +101,9 @@ class ModinXGBoostActor:
         LOGGER.info(f"Local prediction time: {time.time() - s} s")
         return np.concatenate(predictions)
 
+    def exit_actor(self):
+        ray.actor.exit_actor()
+
 
 def create_actors(num_cpus=1, nthread=cpu_count()):
     num_nodes = len(ray.nodes())
@@ -213,6 +216,7 @@ def _assign_row_partitions_to_actors(
                 import warnings
 
                 for ip in empty_actor_ips:
+                    actors[ip].exit_actor.remote()
                     actors.pop(ip)
                     row_partitions_by_actors.pop(ip)
                     warnings.warn(
@@ -388,4 +392,4 @@ def _predict(
     result = ray.get(predictions)
     LOGGER.info(f"Prediction time: {time.time() - s} s")
 
-    return result[0]
+    return np.concatenate(result)
