@@ -238,7 +238,7 @@ class ExperimentalPandasOnRayIO(PandasOnRayIO):
 
     @classmethod
     def to_pickle(cls, qc, **kwargs):
-        num_partitions = 4
+        num_partitions = cls.frame_cls._frame_mgr_cls._compute_num_partitions()
         header_size = cls.get_header_size(num_partitions)
 
         def func(df, **kw):
@@ -257,9 +257,8 @@ class ExperimentalPandasOnRayIO(PandasOnRayIO):
         result = qc._modin_frame._apply_full_axis(
             1, func, new_index=[], new_columns=[], enumerate_partitions=True
         )
-        import shutil
 
-        # from time import time
+        import shutil
 
         # import pdb;pdb.set_trace()
         header_pattern = cls.create_header_pattern(num_partitions)
@@ -271,15 +270,13 @@ class ExperimentalPandasOnRayIO(PandasOnRayIO):
             # take into account first partition
             locations.append(header_size)
             locations.append(dst.tell() - header_size)
-            for idx in range(1, 4):
+            for idx in range(1, num_partitions):
                 cur_pos = dst.tell()
-                # start = time()
                 with open(kwargs["path"] + str(idx), mode="rb") as src:
                     shutil.copyfileobj(src, dst)
                 os.remove(kwargs["path"] + str(idx))
                 locations.append(cur_pos)
                 locations.append(dst.tell() - cur_pos)
-                # print(f"copy {idx} file {time()-start}")
 
         header = header_pattern.format(
             cls.format_modin_pickle_files, num_partitions, *locations
@@ -296,32 +293,40 @@ class ExperimentalPandasOnRayIO(PandasOnRayIO):
                 compression=compression,
             )
 
-        num_splits = 1  # try to measure
-        num_partitions = 4  # get_meta_info(filepath_or_buffer)
         partition_ids = []
         lengths_ids = []
         widths_ids = []
 
-        header_size = cls.get_header_size(num_partitions)
-        # import pdb;pdb.set_trace()
+        import re
+
+        locations = []
+        header_size = cls.get_header_size(num_partitions=0)
+        with open(filepath_or_buffer, mode="rb") as src:
+            header = re.split(b"\s+", src.read(header_size))
+            num_partitions = int(header[2])
+            full_header_size = cls.get_header_size(num_partitions)
+            locations = re.split(
+                b"\s+", src.read(full_header_size - header_size).strip(b" ")
+            )
+
+        locations = [int(x) for x in locations]
         for idx_file in range(num_partitions):
             partition_id = _read_pickle_files_in_folder._remote(
                 args=(
                     filepath_or_buffer,
                     compression,
-                    idx_file,
-                    header_size,
+                    locations[idx_file * 2],
+                    locations[1 + idx_file * 2],
                 ),
-                num_returns=num_splits + 2,
+                num_returns=3,
             )
             partition_ids.append(partition_id[:-2])
             lengths_ids.append(partition_id[-2])
             widths_ids.append(partition_id[-1])
 
         lengths = ray.get(lengths_ids)
-        # while num_splits is 1, widths are equal
         widths = ray.get(widths_ids)
-
+        # while num_splits is 1, need only one value
         partition_ids = build_partition(partition_ids, lengths, [widths[0]])
 
         new_index = cls.frame_cls._frame_mgr_cls.get_indices(
@@ -356,28 +361,20 @@ def build_partition(partition_ids, row_lengths, column_widths):
 def _read_pickle_files_in_folder(
     filepath: str,
     compression: str,
-    idx_file: int,
-    header_size: int,
+    position: int,
+    length: int,
 ):  # pragma: no cover
     """
     Use a Ray task to read a pickle file under filepath folder.
 
     TODO: add parameters descriptors
     """
-
-    # def choose_file(filepath, idx_file):
-    #    return filepath + "/" + filepath + str(idx_file)
-
-    # filepath = choose_file(filepath, idx_file)
     from io import BytesIO
-    import re
 
     with open(filepath, mode="rb") as src:
-        header = re.split(b"\s+", src.read(header_size))
-        position = int(header[3 + idx_file * 2])
-        length = int(header[4 + idx_file * 2])
         src.seek(position)
         df = pandas.read_pickle(BytesIO(src.read(length)), compression)
+
     length = len(df)
     width = len(df.columns)
     num_splits = 1
