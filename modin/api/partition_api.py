@@ -128,33 +128,24 @@ def create_df_from_partitions(partitions, axis):
                     for row in partitions
                 ]
             )
+    elif axis == 0:
+        if isinstance(partitions[0], tuple):
+            parts = np.array(
+                [[partition_class(partition, ip=ip)] for ip, partition in partitions]
+            )
+        else:
+            parts = np.array([[partition_class(partition)] for partition in partitions])
+    elif axis == 1:
+        if isinstance(partitions[0], tuple):
+            parts = np.array(
+                [[partition_class(partition, ip=ip) for ip, partition in partitions]]
+            )
+        else:
+            parts = np.array([[partition_class(partition) for partition in partitions]])
     else:
-        if axis == 0:
-            if isinstance(partitions[0], tuple):
-                parts = np.array(
-                    [
-                        [partition_class(partition, ip=ip)]
-                        for ip, partition in partitions
-                    ]
-                )
-            else:
-                parts = np.array(
-                    [[partition_class(partition)] for partition in partitions]
-                )
-        elif axis == 1:
-            if isinstance(partitions[0], tuple):
-                parts = np.array(
-                    [
-                        [
-                            partition_class(partition, ip=ip)
-                            for ip, partition in partitions
-                        ]
-                    ]
-                )
-            else:
-                parts = np.array(
-                    [[partition_class(partition) for partition in partitions]]
-                )
+        raise ValueError(
+            f"Got unacceptable value of axis {axis}. Possible values are {0}, {1} or {None}."
+        )
 
     index = partition_mgr_class.get_indices(0, parts, lambda df: df.axes[0])
     columns = partition_mgr_class.get_indices(1, parts, lambda df: df.axes[1])
