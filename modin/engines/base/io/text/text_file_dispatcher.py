@@ -121,7 +121,7 @@ class TextFileDispatcher(FileDispatcher):
         f: file to be partitioned
         num_partitions: int, optional
             For what number of partitions split a file.
-            If not specified grabs the value from `modin.pandas.DEFAULT_NPARTITIONS`
+            If not specified grabs the value from `modin.config.NPartitions.get()`
         nrows: int, optional
             Number of rows of file to read.
         skiprows: array or callable, optional
