@@ -302,11 +302,12 @@ class ExperimentalPandasOnRayIO(PandasOnRayIO):
         locations = []
         header_size = cls.get_header_size(num_partitions=0)
         with open(filepath_or_buffer, mode="rb") as src:
-            header = re.split(b"\s+", src.read(header_size))
+            header = re.split(b"\s+", src.read(header_size))  # noqa: W605
             num_partitions = int(header[2])
             full_header_size = cls.get_header_size(num_partitions)
             locations = re.split(
-                b"\s+", src.read(full_header_size - header_size).strip(b" ")
+                b"\s+",  # noqa: W605
+                src.read(full_header_size - header_size).strip(b" "),
             )
 
         locations = [int(x) for x in locations]
