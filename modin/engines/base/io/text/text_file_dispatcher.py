@@ -14,10 +14,28 @@
 from modin.engines.base.io.file_dispatcher import FileDispatcher
 import numpy as np
 import warnings
+import io
 import os
 
 
 class TextFileDispatcher(FileDispatcher):
+    @classmethod
+    def get_path_or_buffer(cls, filepath_or_buffer):
+        """Given a buffer, try and extract the filepath from it so that we can
+        use it without having to fall back to Pandas and share file objects between
+        workers. Given a filepath, return it immediately.
+        """
+        if isinstance(filepath_or_buffer, (io.BufferedReader, io.TextIOWrapper)):
+            buffer_filepath = filepath_or_buffer.name
+            if cls.file_exists(buffer_filepath):
+                warnings.warn(
+                    "For performance reasons, the filepath will be "
+                    "used in place of the file handle passed in "
+                    "to load the data"
+                )
+                return cls.get_path(buffer_filepath)
+        return filepath_or_buffer
+
     @classmethod
     def build_partition(cls, partition_ids, row_lengths, column_widths):
         return np.array(
