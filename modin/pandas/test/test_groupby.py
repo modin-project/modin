@@ -27,8 +27,9 @@ from .utils import (
     modin_df_almost_equals_pandas,
     generate_multiindex,
 )
+from modin.config import NPartitions
 
-pd.DEFAULT_NPARTITIONS = 4
+NPartitions.put(4)
 
 
 def modin_groupby_equals_pandas(modin_groupby, pandas_groupby):

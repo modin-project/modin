@@ -22,6 +22,7 @@ import numpy as np
 import pandas
 
 from .utils import generate_dataframe, RAND_LOW, RAND_HIGH, random_string
+from modin.config import NPartitions
 
 try:
     from modin.config import TestDatasetSize, AsvImplementation
@@ -32,7 +33,7 @@ except ImportError:
     # The same benchmarking code can be run for different versions of Modin, so in
     # case of an error importing important variables, we'll just use predefined values
     ASV_USE_IMPL = "modin"
-    ASV_DATASET_SIZE = "Big" if pd.DEFAULT_NPARTITIONS >= 32 else "Small"
+    ASV_DATASET_SIZE = "Big" if NPartitions.get() >= 32 else "Small"
 
 if ASV_DATASET_SIZE == "Big":
     BINARY_OP_DATA_SIZE = [

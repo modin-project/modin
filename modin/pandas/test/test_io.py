@@ -52,8 +52,9 @@ if Backend.get() == "Pandas":
     import modin.pandas as pd
 else:
     import modin.experimental.pandas as pd
+from modin.config import NPartitions
 
-pd.DEFAULT_NPARTITIONS = 4
+NPartitions.put(4)
 
 DATASET_SIZE_DICT = {
     "Small": 64,

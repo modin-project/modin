@@ -18,6 +18,8 @@ import pandas
 import numpy as np
 from csv import QUOTE_NONE
 
+from modin.config import NPartitions
+
 
 class JSONDispatcher(TextFileDispatcher):
     @classmethod
@@ -38,9 +40,7 @@ class JSONDispatcher(TextFileDispatcher):
         empty_pd_df = pandas.DataFrame(columns=columns)
 
         with cls.file_open(path_or_buf, "rb", kwargs.get("compression", "infer")) as f:
-            from modin.pandas import DEFAULT_NPARTITIONS
-
-            num_partitions = DEFAULT_NPARTITIONS
+            num_partitions = NPartitions.get()
             num_splits = min(len(columns), num_partitions)
 
             partition_ids = []

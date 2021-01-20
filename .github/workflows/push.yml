@@ -29,6 +29,8 @@ jobs:
         run: python -m pytest modin/test/test_envvar_catcher.py
       - shell: bash -l {0}
         run: python -m pytest modin/test/backends/pandas/test_internals.py
+      - shell: bash -l {0}
+        run: python -m pytest modin/test/test_envvar_npartitions.py
 
   test-defaults:
     runs-on: ubuntu-latest

@@ -143,6 +143,18 @@ class Memory(EnvironmentVariable, type=int):
     varname = "MODIN_MEMORY"
 
 
+class NPartitions(EnvironmentVariable, type=int):
+    """
+    How many partitions to use by default
+    """
+
+    varname = "MODIN_NPARTITIONS"
+
+    @classmethod
+    def _get_default(cls):
+        return CpuCount.get()
+
+
 class RayPlasmaDir(EnvironmentVariable, type=ExactStr):
     """
     Path to Plasma storage for Ray

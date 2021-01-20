@@ -17,8 +17,9 @@ import pandas
 import modin.pandas as pd
 
 from .utils import df_equals, test_data_values, test_data_keys
+from modin.config import NPartitions
 
-pd.DEFAULT_NPARTITIONS = 4
+NPartitions.put(4)
 
 
 def create_test_series(vals):

@@ -16,22 +16,21 @@ import pandas
 
 from modin.data_management.utils import compute_chunksize
 from modin.engines.base.io.file_dispatcher import FileDispatcher
+from modin.config import NPartitions
 
 
 class ColumnStoreDispatcher(FileDispatcher):
     @classmethod
     def call_deploy(cls, fname, col_partitions, **kwargs):
-        from modin.pandas import DEFAULT_NPARTITIONS
-
         return np.array(
             [
                 cls.deploy(
                     cls.parse,
-                    DEFAULT_NPARTITIONS + 2,
+                    NPartitions.get() + 2,
                     dict(
                         fname=fname,
                         columns=cols,
-                        num_splits=DEFAULT_NPARTITIONS,
+                        num_splits=NPartitions.get(),
                         **kwargs,
                     ),
                 )
@@ -57,8 +56,7 @@ class ColumnStoreDispatcher(FileDispatcher):
 
     @classmethod
     def build_index(cls, partition_ids):
-        from modin.pandas import DEFAULT_NPARTITIONS
-
+        num_partitions = NPartitions.get()
         index_len = cls.materialize(partition_ids[-2][0])
         if isinstance(index_len, int):
             index = pandas.RangeIndex(index_len)
@@ -66,27 +64,26 @@ class ColumnStoreDispatcher(FileDispatcher):
             index = index_len
             index_len = len(index)
         index_chunksize = compute_chunksize(
-            pandas.DataFrame(index=index), DEFAULT_NPARTITIONS, axis=0
+            pandas.DataFrame(index=index), num_partitions, axis=0
         )
         if index_chunksize > index_len:
-            row_lengths = [index_len] + [0 for _ in range(DEFAULT_NPARTITIONS - 1)]
+            row_lengths = [index_len] + [0 for _ in range(num_partitions - 1)]
         else:
             row_lengths = [
                 index_chunksize
-                if i != DEFAULT_NPARTITIONS - 1
-                else index_len - (index_chunksize * (DEFAULT_NPARTITIONS - 1))
-                for i in range(DEFAULT_NPARTITIONS)
+                if i != num_partitions - 1
+                else index_len - (index_chunksize * (num_partitions - 1))
+                for i in range(num_partitions)
             ]
         return index, row_lengths
 
     @classmethod
     def build_columns(cls, columns):
-        from modin.pandas import DEFAULT_NPARTITIONS
-
+        num_partitions = NPartitions.get()
         column_splits = (
-            len(columns) // DEFAULT_NPARTITIONS
-            if len(columns) % DEFAULT_NPARTITIONS == 0
-            else len(columns) // DEFAULT_NPARTITIONS + 1
+            len(columns) // num_partitions
+            if len(columns) % num_partitions == 0
+            else len(columns) // num_partitions + 1
         )
         col_partitions = [
             columns[i : i + column_splits]

@@ -17,6 +17,8 @@ import pandas
 
 from modin.error_message import ErrorMessage
 from modin.data_management.utils import compute_chunksize
+from modin.config import NPartitions
+
 from pandas.api.types import union_categoricals
 
 
@@ -299,7 +301,7 @@ class BaseFrameManager(ABC):
         elif lengths:
             num_splits = len(lengths)
         else:
-            num_splits = cls._compute_num_partitions()
+            num_splits = NPartitions.get()
         preprocessed_map_func = cls.preprocess_func(apply_func)
         left_partitions = cls.axis_partition(left, axis)
         right_partitions = None if right is None else cls.axis_partition(right, axis)
@@ -567,7 +569,7 @@ class BaseFrameManager(ABC):
     @classmethod
     def from_pandas(cls, df, return_dims=False):
         """Return the partitions from Pandas DataFrame."""
-        num_splits = cls._compute_num_partitions()
+        num_splits = NPartitions.get()
         put_func = cls._partition_class.put
         row_chunksize, col_chunksize = compute_chunksize(df, num_splits)
         parts = [
@@ -631,18 +633,6 @@ class BaseFrameManager(ABC):
             )
         # TODO FIX INFORMATION LEAK!!!!1!!1!!
         return new_idx[0].append(new_idx[1:]) if len(new_idx) else new_idx
-
-    @classmethod
-    def _compute_num_partitions(cls):
-        """Retrieve the default number of partitions currently. Will estimate the optimal no. of partitions in future.
-
-        Returns
-        -------
-            Number of partitions.
-        """
-        from modin.pandas import DEFAULT_NPARTITIONS
-
-        return DEFAULT_NPARTITIONS
 
     @classmethod
     def _apply_func_to_list_of_partitions_broadcast(
@@ -960,7 +950,7 @@ class BaseFrameManager(ABC):
             [
                 left_partitions[i].apply(
                     func,
-                    num_splits=cls._compute_num_partitions(),
+                    num_splits=NPartitions.get(),
                     other_axis_partition=right_partitions[i],
                 )
                 for i in range(len(left_partitions))

@@ -17,6 +17,8 @@ import warnings
 import io
 import os
 
+from modin.config import NPartitions
+
 
 class TextFileDispatcher(FileDispatcher):
     @classmethod
@@ -137,7 +139,7 @@ class TextFileDispatcher(FileDispatcher):
         f: file to be partitioned
         num_partitions: int, optional
             For what number of partitions split a file.
-            If not specified grabs the value from `modin.pandas.DEFAULT_NPARTITIONS`
+            If not specified grabs the value from `modin.config.NPartitions.get()`
         nrows: int, optional
             Number of rows of file to read.
         skiprows: array or callable, optional
@@ -153,9 +155,7 @@ class TextFileDispatcher(FileDispatcher):
         beginning and the end offsets of the current chunk.
         """
         if num_partitions is None:
-            from modin.pandas import DEFAULT_NPARTITIONS
-
-            num_partitions = DEFAULT_NPARTITIONS
+            num_partitions = NPartitions.get()
 
         result = []
         file_size = cls.file_size(f)

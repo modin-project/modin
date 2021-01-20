@@ -18,7 +18,7 @@ import warnings
 
 from modin.data_management.utils import compute_chunksize
 from modin.engines.base.io.text.text_file_dispatcher import TextFileDispatcher
-
+from modin.config import NPartitions
 
 EXCEL_READ_BLOCK_SIZE = 4096
 
@@ -98,9 +98,7 @@ class ExcelDispatcher(TextFileDispatcher):
             f = BytesIO(f.read())
             total_bytes = cls.file_size(f)
 
-            from modin.pandas import DEFAULT_NPARTITIONS
-
-            num_partitions = DEFAULT_NPARTITIONS
+            num_partitions = NPartitions.get()
             # Read some bytes from the sheet so we can extract the XML header and first
             # line. We need to make sure we get the first line of the data as well
             # because that is where the column names are. The header information will

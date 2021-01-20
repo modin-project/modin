@@ -13,8 +13,9 @@
 
 import modin.pandas as pd
 from modin.pandas.test.utils import create_test_dfs
+from modin.config import NPartitions
 
-pd.DEFAULT_NPARTITIONS = 4
+NPartitions.put(4)
 
 
 def test_aligning_blocks():
