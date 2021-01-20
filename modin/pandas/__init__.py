@@ -91,8 +91,6 @@ from modin.config import Engine, Parameter
 # Set this so that Pandas doesn't try to multithread by itself
 os.environ["OMP_NUM_THREADS"] = "1"
 
-num_cpus = 1
-
 _is_first_update = {}
 dask_client = None
 _NOINIT_ENGINES = {
@@ -101,11 +99,10 @@ _NOINIT_ENGINES = {
 
 
 def _update_engine(publisher: Parameter):
-    global dask_client, num_cpus
+    global dask_client
     from modin.config import Backend, CpuCount
 
     if publisher.get() == "Ray":
-        import ray
         from modin.engines.ray.utils import initialize_ray
 
         # With OmniSci backend there is only a single worker per node
@@ -115,21 +112,15 @@ def _update_engine(publisher: Parameter):
             os.environ["OMP_NUM_THREADS"] = str(multiprocessing.cpu_count())
         if _is_first_update.get("Ray", True):
             initialize_ray()
-        num_cpus = ray.cluster_resources()["CPU"]
     elif publisher.get() == "Dask":
-        from distributed.client import get_client
-
         if _is_first_update.get("Dask", True):
             from modin.engines.dask.utils import initialize_dask
 
             initialize_dask()
-        num_cpus = len(get_client().ncores())
-
     elif publisher.get() == "Cloudray":
         from modin.experimental.cloud import get_connection
 
         conn = get_connection()
-        remote_ray = conn.modules["ray"]
         if _is_first_update.get("Cloudray", True):
 
             @conn.teleport
@@ -151,8 +142,6 @@ def _update_engine(publisher: Parameter):
             import modin.data_management.factories.dispatcher  # noqa: F401
         else:
             get_connection().modules["modin"].set_backends("Ray", Backend.get())
-
-        num_cpus = remote_ray.cluster_resources()["CPU"]
     elif publisher.get() == "Cloudpython":
         from modin.experimental.cloud import get_connection
 

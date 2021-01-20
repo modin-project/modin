@@ -187,6 +187,8 @@ jobs:
         run: python -m pytest modin/test/backends/base/test_internals.py
       - shell: bash -l {0}
         run: python -m pytest modin/test/backends/pandas/test_internals.py
+      - shell: bash -l {0}
+        run: python -m pytest modin/test/test_envvar_npartitions.py
 
   test-defaults:
     needs: [lint-commit, lint-flake8, lint-black, test-api, test-headers]
