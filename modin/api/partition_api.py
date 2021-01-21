@@ -113,6 +113,7 @@ def create_df_from_partitions(partitions, axis):
     partition_frame_class = factory.io_cls.frame_cls
     partition_mgr_class = factory.io_cls.frame_cls._frame_mgr_cls
 
+    # When collecting partitions to NumPy array they will be kept row-wise
     if axis is None:
         if isinstance(partitions[0][0], tuple):
             parts = np.array(
@@ -128,6 +129,7 @@ def create_df_from_partitions(partitions, axis):
                     for row in partitions
                 ]
             )
+    # When collecting partitions to NumPy array they will be kept row-wise
     elif axis == 0:
         if isinstance(partitions[0], tuple):
             parts = np.array(
@@ -135,6 +137,7 @@ def create_df_from_partitions(partitions, axis):
             )
         else:
             parts = np.array([[partition_class(partition)] for partition in partitions])
+    # When collecting partitions to NumPy array they will be kept column-wise
     elif axis == 1:
         if isinstance(partitions[0], tuple):
             parts = np.array(
