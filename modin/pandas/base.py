@@ -1687,36 +1687,11 @@ class BasePandasDataset(object):
         tolerance=None,
     ):
         axis = self._get_axis_number(axis)
-        ############################################
-        # ORIGINAL CODE
-        # if (
-        #     level is not None
-        #     or (
-        #         (columns is not None or axis == 1)
-        #         and self._query_compiler.has_multiindex(axis=1)
-        #     )
-        #     or (
-        #         (index is not None or axis == 0)
-        #         and self._query_compiler.has_multiindex()
-        #     )
-        # ):
-        #     return self._default_to_pandas(
-        #         "reindex",
-        #         labels=labels,
-        #         index=index,
-        #         columns=columns,
-        #         axis=axis,
-        #         method=method,
-        #         copy=copy,
-        #         level=level,
-        #         fill_value=fill_value,
-        #         limit=limit,
-        #         tolerance=tolerance,
-        #     )
-        ############################################
         multiindex_axis1 = self._query_compiler.has_multiindex(axis=1)
         multiindex_axis0 = self._query_compiler.has_multiindex()
-        if level is not None or (columns is not None and multiindex_axis1) or (index is not None and multiindex_axis0):
+        if (columns is not None and multiindex_axis1) or (
+            index is not None and multiindex_axis0
+        ):
             return self._default_to_pandas(
                 "reindex",
                 labels=labels,
@@ -1729,14 +1704,18 @@ class BasePandasDataset(object):
                 limit=limit,
                 tolerance=tolerance,
             )
-        if (axis == 1 and multiindex_axis1) or (axis == 0 and multiindex_axis0):
+        if (
+            level is not None
+            or (axis == 1 and multiindex_axis1)
+            or (axis == 0 and multiindex_axis0)
+        ):
             return self._default_to_pandas(
                 "reindex",
                 labels=labels,
-                axis=axis,
+                level=level,
                 method=method,
                 copy=copy,
-                level=level,
+                axis=axis,
                 fill_value=fill_value,
                 limit=limit,
                 tolerance=tolerance,
