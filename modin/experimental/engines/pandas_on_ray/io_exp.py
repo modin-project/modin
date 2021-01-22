@@ -91,7 +91,6 @@ class ExperimentalPandasOnRayIO(PandasOnRayIO):
         "", (RayTask, PandasCSVGlobParser, CSVGlobDispatcher), build_args
     )._read
     read_parquet_remote_task = _read_parquet_columns
-    format_modin_pickle_files = 0.1
 
     @classmethod
     def read_sql(
@@ -220,104 +219,57 @@ class ExperimentalPandasOnRayIO(PandasOnRayIO):
         return new_query_compiler
 
     @classmethod
-    def create_header_pattern(cls, num_partitions):
-        locations_pattern = " ".join(["{:12}"] * num_partitions * 2)
-        # format: - "modin format of pickle files XXX: num_partitions: XXX,
-        # locations: position + lengths for all partitions
-        header_pattern = "modin_format_of_pickle_files {:3} {:3} " + locations_pattern
-        return header_pattern
-
-    @classmethod
-    def get_header_size(cls, num_partitions):
-        # starts with `modin_format_of_pickle_files` - 28 bytes in utf-8 encoding
-        # format - 3 bytes, num_splits - 3 bytes
-        # for partition: position - 12 bytes, lengths - 12 bytes
-        # all numbers splits by whitespace symbol
-        count_whitespaces = (3 + num_partitions * 2) - 1
-        return 28 + 6 + 24 * num_partitions + count_whitespaces
-
-    @classmethod
     def to_pickle(cls, qc, **kwargs):
-        num_partitions = cls.frame_cls._frame_mgr_cls._compute_num_partitions()
-        header_size = cls.get_header_size(num_partitions)
-
         def func(df, **kw):
-            partition_idx = kw["partition_idx"]
-            if partition_idx == 0:
-                with open(kwargs["path"], mode="wb") as dst:
-                    # dummy header
-                    dst.write(b"X" * header_size)
-                    kwargs["path"] = dst
-                    df.to_pickle(**kwargs)
+            path = kwargs["path"]
+            idx = str(kw["partition_idx"])
+            if "*" in path:
+                new_path = path.replace("*", idx)
             else:
-                kwargs["path"] = kwargs["path"] + str(partition_idx)
-                df.to_pickle(**kwargs)
+                split_path = path.split(".")
+                # update file basename
+                split_path[0] = split_path[0] + idx
+                new_path = ".".join(split_path)
+            kwargs["path"] = new_path
+
+            df.to_pickle(**kwargs)
             return pandas.DataFrame()
 
-        result = qc._modin_frame._apply_full_axis(
-            1, func, new_index=[], new_columns=[], enumerate_partitions=True
+        result = qc._modin_frame.broadcast_apply_full_axis(
+            1, func, other=None, new_index=[], new_columns=[], enumerate_partitions=True
         )
-
-        import shutil
-
-        # import pdb;pdb.set_trace()
-        header_pattern = cls.create_header_pattern(num_partitions)
-        # blocking operation
         result.to_pandas()
-
-        locations = []
-        with open(kwargs["path"], mode="ab+") as dst:
-            # take into account first partition
-            locations.append(header_size)
-            locations.append(dst.tell() - header_size)
-            for idx in range(1, num_partitions):
-                cur_pos = dst.tell()
-                with open(kwargs["path"] + str(idx), mode="rb") as src:
-                    shutil.copyfileobj(src, dst)
-                os.remove(kwargs["path"] + str(idx))
-                locations.append(cur_pos)
-                locations.append(dst.tell() - cur_pos)
-
-        header = header_pattern.format(
-            cls.format_modin_pickle_files, num_partitions, *locations
-        )
-        with open(kwargs["path"], mode="rb+") as dst:
-            dst.write(header.encode())
 
     @classmethod
     def read_pickle(cls, filepath_or_buffer, compression="infer"):
-        if not isinstance(filepath_or_buffer, str):
+        if not isinstance(filepath_or_buffer, (str, list)):
             warnings.warn("Defaulting to Modin core implementation")
             return PandasOnRayIO.read_pickle(
                 filepath_or_buffer,
                 compression=compression,
             )
 
+        if isinstance(filepath_or_buffer, list) and not all(
+            map(lambda filepath: isinstance(filepath, str), filepath_or_buffer)
+        ):
+            raise TypeError(
+                f"Only support list[str], passed value: {filepath_or_buffer}"
+            )
+
+        if len(filepath_or_buffer) == 0:
+            raise ValueError(
+                "filepath_or_buffer parameter of read_pickle is empty list"
+            )
+
         partition_ids = []
         lengths_ids = []
         widths_ids = []
 
-        import re
-
-        locations = []
-        header_size = cls.get_header_size(num_partitions=0)
-        with open(filepath_or_buffer, mode="rb") as src:
-            header = re.split(b"\s+", src.read(header_size))  # noqa: W605
-            num_partitions = int(header[2])
-            full_header_size = cls.get_header_size(num_partitions)
-            locations = re.split(
-                b"\s+",  # noqa: W605
-                src.read(full_header_size - header_size).strip(b" "),
-            )
-
-        locations = [int(x) for x in locations]
-        for idx_file in range(num_partitions):
+        for file_name in filepath_or_buffer:
             partition_id = _read_pickle_files_in_folder._remote(
                 args=(
-                    filepath_or_buffer,
+                    file_name,
                     compression,
-                    locations[idx_file * 2],
-                    locations[1 + idx_file * 2],
                 ),
                 num_returns=3,
             )
@@ -362,19 +314,13 @@ def build_partition(partition_ids, row_lengths, column_widths):
 def _read_pickle_files_in_folder(
     filepath: str,
     compression: str,
-    position: int,
-    length: int,
 ):  # pragma: no cover
     """
     Use a Ray task to read a pickle file under filepath folder.
 
     TODO: add parameters descriptors
     """
-    with open(filepath, mode="rb") as src:
-        src.seek(position)
-        # read_pickle can read several pickled objects from file
-        # so we can work with file instead of BytesIO
-        df = pandas.read_pickle(src, compression)
+    df = pandas.read_pickle(filepath, compression)
 
     length = len(df)
     width = len(df.columns)
