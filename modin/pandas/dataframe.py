@@ -2090,7 +2090,6 @@ class DataFrame(BasePandasDataset):
     __mod__ = mod
     __imod__ = mod  # pragma: no cover
     __rmod__ = rmod
-    __div__ = div
     __rdiv__ = rdiv
 
     @property

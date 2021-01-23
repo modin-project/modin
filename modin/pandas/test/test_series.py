@@ -308,12 +308,6 @@ def test___delitem__(data):
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-def test___div__(data):
-    modin_series, pandas_series = create_test_series(data)
-    inter_df_math_helper(modin_series, pandas_series, "__div__")
-
-
-@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_divmod(data):
     modin_series, pandas_series = create_test_series(data)
     inter_df_math_helper(modin_series, pandas_series, "divmod")

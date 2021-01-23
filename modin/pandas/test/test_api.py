@@ -153,6 +153,7 @@ def test_top_level_api_equality():
             except IndexError:
                 pass
 
+    # See pandas issue #39167 for more info
     try:
         assert not len(difference), "Extra params found in API: {}".format(difference)
     except AssertionError:

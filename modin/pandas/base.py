@@ -339,6 +339,17 @@ class BasePandasDataset(object):
                 getattr(getattr(pandas, type(self).__name__), op), other, **kwargs
             )
         other = self._validate_other(other, axis, numeric_or_object_only=True)
+        exclude_list = [
+            "__add__",
+            "__and__",
+            "__rand__",
+            "__or__",
+            "__ror__",
+            "__xor__",
+            "__rxor__",
+        ]
+        if op in exclude_list:
+            kwargs.pop("axis")
         new_query_compiler = getattr(self._query_compiler, op)(other, **kwargs)
         return self._create_or_update_from_compiler(new_query_compiler)
 

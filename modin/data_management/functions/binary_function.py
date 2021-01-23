@@ -23,6 +23,7 @@ class BinaryFunction(Function):
         def caller(query_compiler, other, *args, **kwargs):
             axis = kwargs.get("axis", 0)
             broadcast = kwargs.pop("broadcast", False)
+            squeeze_self = kwargs.pop("squeeze_self", None)
             join_type = call_kwds.get("join_type", "outer")
             if isinstance(other, type(query_compiler)):
                 if broadcast:
@@ -57,7 +58,12 @@ class BinaryFunction(Function):
                     new_columns = query_compiler.columns
                     new_modin_frame = query_compiler._modin_frame._apply_full_axis(
                         axis,
-                        lambda df: func(df, other, *args, **kwargs),
+                        lambda df: func(
+                            df.squeeze(axis=1) if squeeze_self else df,
+                            other,
+                            *args,
+                            **kwargs
+                        ),
                         new_index=query_compiler.index,
                         new_columns=new_columns,
                     )

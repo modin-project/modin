@@ -143,7 +143,10 @@ class Series(BasePandasDataset):
 
     def __and__(self, other):
         new_self, new_other = self._prepare_inter_op(other)
-        return super(Series, new_self).__and__(new_other)
+        return new_self._binary_op("__and__", new_other, axis=0, squeeze_self=True)
+
+    def __rand__(self, other):
+        return self._binary_op("__rand__", other, axis=0, squeeze_self=True)
 
     def __array__(self, dtype=None):
         return super(Series, self).__array__(dtype).flatten()
@@ -168,12 +171,6 @@ class Series(BasePandasDataset):
         if key not in self.keys():
             raise KeyError(key)
         self.drop(labels=key, inplace=True)
-
-    def __div__(self, right):
-        return self.div(right)
-
-    def __rdiv__(self, left):
-        return self.rdiv(left)
 
     def __divmod__(self, right):
         return self.divmod(right)
