@@ -458,7 +458,9 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
             kwargs["sort"] = False
 
-            def map_func(left, right=right, kwargs=kwargs):
+            def map_func(left, right=right, kwargs=None):
+                if kwargs is None:
+                    kwargs = kwargs
                 return pandas.merge(left, right, **kwargs)
 
             new_self = self.__constructor__(
@@ -520,7 +522,9 @@ class PandasQueryCompiler(BaseQueryCompiler):
         if how in ["left", "inner"]:
             right = right.to_pandas()
 
-            def map_func(left, right=right, kwargs=kwargs):
+            def map_func(left, right=right, kwargs=None):
+                if kwargs is None:
+                    kwargs = kwargs
                 return pandas.DataFrame.join(left, right, **kwargs)
 
             new_self = self.__constructor__(
@@ -1587,7 +1591,9 @@ class PandasQueryCompiler(BaseQueryCompiler):
                     )
                     break
 
-        def describe_builder(df, internal_indices=[]):
+        def describe_builder(df, internal_indices=None):
+            if internal_indices is None:
+                internal_indices = []
             return df.iloc[:, internal_indices].describe(**kwargs)
 
         return self.__constructor__(
@@ -2044,7 +2050,11 @@ class PandasQueryCompiler(BaseQueryCompiler):
         else:
             to_broadcast = None
 
-        def applyier(df, internal_indices, other=[], internal_other_indices=[]):
+        def applyier(df, internal_indices, other=None, internal_other_indices=None):
+            if other is None:
+                other = []
+            if internal_other_indices is None:
+                internal_other_indices = []
             if len(other):
                 other = pandas.concat(other, axis=1)
                 columns_to_add = other.columns.difference(df.columns)
@@ -2181,7 +2191,9 @@ class PandasQueryCompiler(BaseQueryCompiler):
         return self._setitem(axis=axis, key=key, value=value, how=None)
 
     def _setitem(self, axis, key, value, how="inner"):
-        def setitem_builder(df, internal_indices=[]):
+        def setitem_builder(df, internal_indices=None):
+            if internal_indices is None:
+                internal_indices = []
             df = df.copy()
             if len(internal_indices) == 1:
                 if axis == 0:
@@ -2297,7 +2309,9 @@ class PandasQueryCompiler(BaseQueryCompiler):
         else:
             value = [value] * len(self.index)
 
-        def insert(df, internal_indices=[]):
+        def insert(df, internal_indices=None):
+            if internal_indices is None:
+                internal_indices = []
             internal_idx = int(internal_indices[0])
             df.insert(internal_idx, column, value)
             return df
@@ -2374,7 +2388,9 @@ class PandasQueryCompiler(BaseQueryCompiler):
         if "axis" not in kwargs:
             kwargs["axis"] = axis
 
-        def dict_apply_builder(df, func_dict={}):
+        def dict_apply_builder(df, func_dict=None):
+            if func_dict is None:
+                func_dict = {}
             # Sometimes `apply` can return a `Series`, but we require that internally
             # all objects are `DataFrame`s.
             return pandas.DataFrame(df.apply(func_dict, *args, **kwargs))
