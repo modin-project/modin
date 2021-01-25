@@ -25,7 +25,7 @@ def _inherit_func_docstring(source_func):
     return decorator
 
 
-def _inherit_docstrings(parent, excluded=[]):
+def _inherit_docstrings(parent, excluded=None):
     """Creates a decorator which overwrites a decorated class' __doc__
     attribute with parent's __doc__ attribute. Also overwrites __doc__ of
     methods and properties defined in the class with the __doc__ of matching
@@ -40,6 +40,8 @@ def _inherit_docstrings(parent, excluded=[]):
         function: decorator which replaces the decorated class' documentation
             parent's documentation.
     """
+    if excluded is None:
+        excluded = []
 
     def decorator(cls):
         if parent not in excluded:

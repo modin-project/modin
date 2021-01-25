@@ -94,7 +94,7 @@ def make_parquet_file():
         row_size=NROWS,
         force=True,
         directory=False,
-        partitioned_columns=[],
+        partitioned_columns=None,
     ):
         """Helper function to generate parquet files/directories.
 
@@ -106,6 +106,8 @@ def make_parquet_file():
             partitioned_columns: Create a partitioned directory using pandas.
             Will be ignored if directory=True.
         """
+        if partitioned_columns is None:
+            partitioned_columns = []
         df = pandas.DataFrame(
             {"col1": np.arange(row_size), "col2": np.arange(row_size)}
         )

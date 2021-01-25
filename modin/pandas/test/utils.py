@@ -653,7 +653,11 @@ def eval_general(
         ), "if raising_exceptions is not None or False, check_exception_type should be True"
     md_kwargs, pd_kwargs = {}, {}
 
-    def execute_callable(fn, inplace=False, md_kwargs={}, pd_kwargs={}):
+    def execute_callable(fn, inplace=False, md_kwargs=None, pd_kwargs=None):
+        if md_kwargs is None:
+            md_kwargs = {}
+        if pd_kwargs is None:
+            pd_kwargs = {}
         try:
             pd_result = fn(pandas_df, **pd_kwargs)
         except Exception as pd_e:
@@ -698,7 +702,7 @@ def eval_io(
     comparator=df_equals,
     cast_to_str=False,
     check_exception_type=True,
-    raising_exceptions=io_ops_bad_exc,
+    raising_exceptions=None,
     check_kwargs_callable=True,
     modin_warning=None,
     *args,
@@ -725,6 +729,8 @@ def eval_io(
         `check_exception_type` passed as `True`).
     modin_warning: Warning that should be raised by Modin.
     """
+    if raising_exceptions is None:
+        raising_exceptions = io_ops_bad_exc
 
     def applyier(module, *args, **kwargs):
         result = getattr(module, fn_name)(*args, **kwargs)
@@ -888,7 +894,7 @@ def generate_none_dfs():
 
 def get_unique_filename(
     test_name: str = "test",
-    kwargs: dict = {},
+    kwargs: dict = None,
     extension: str = "csv",
     data_dir: str = IO_OPS_DATA_DIR,
     suffix: str = "",
@@ -916,6 +922,8 @@ def get_unique_filename(
     -------
         Unique file name.
     """
+    if kwargs is None:
+        kwargs = {}
     suffix_part = f"_{suffix}" if suffix else ""
     extension_part = f".{extension}" if extension else ""
     if debug_mode:
