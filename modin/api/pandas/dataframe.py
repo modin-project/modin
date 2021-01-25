@@ -83,7 +83,7 @@ def unwrap_partitions(api_layer_object, axis=None, bind_ip=False):
         ]
 
 
-def create_df_from_partitions(partitions, axis):
+def from_partitions(partitions, axis):
     """
     Create DataFrame from remote partitions.
 
@@ -113,7 +113,9 @@ def create_df_from_partitions(partitions, axis):
     partition_frame_class = factory.io_cls.frame_cls
     partition_mgr_class = factory.io_cls.frame_cls._frame_mgr_cls
 
-    # When collecting partitions to NumPy array they will be kept row-wise
+    # Since we store partitions of Modin DataFrame as a 2D NumPy array we need to place
+    # passed partitions to 2D NumPy array to pass it to internal Modin Frame class.
+    # `axis=None` - convert 2D list to 2D NumPy array
     if axis is None:
         if isinstance(partitions[0][0], tuple):
             parts = np.array(
@@ -129,7 +131,7 @@ def create_df_from_partitions(partitions, axis):
                     for row in partitions
                 ]
             )
-    # When collecting partitions to NumPy array they will be kept row-wise
+    # `axis=0` - place row partitions to 2D NumPy array so that each row of the array is one row partition.
     elif axis == 0:
         if isinstance(partitions[0], tuple):
             parts = np.array(
@@ -137,7 +139,7 @@ def create_df_from_partitions(partitions, axis):
             )
         else:
             parts = np.array([[partition_class(partition)] for partition in partitions])
-    # When collecting partitions to NumPy array they will be kept column-wise
+    # `axis=1` - place column partitions to 2D NumPy array so that each column of the array is one column partition.
     elif axis == 1:
         if isinstance(partitions[0], tuple):
             parts = np.array(

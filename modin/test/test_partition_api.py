@@ -16,7 +16,7 @@ import pandas
 import pytest
 
 import modin.pandas as pd
-from modin.api import unwrap_partitions, create_df_from_partitions
+from modin.api.pandas import unwrap_partitions, from_partitions
 from modin.config import Engine, NPartitions
 from modin.pandas.test.utils import df_equals
 
@@ -79,7 +79,7 @@ def test_unwrap_partitions(axis):
 
 
 @pytest.mark.parametrize("axis", [None, 0, 1])
-def test_create_df_from_partitions(axis):
+def test_from_partitions(axis):
     data = np.random.randint(0, 100, size=(2 ** 16, 2 ** 8))
     df1, df2 = pandas.DataFrame(data), pandas.DataFrame(data)
     expected_df = pandas.concat([df1, df2], axis=1 if axis is None else axis)
@@ -94,5 +94,5 @@ def test_create_df_from_partitions(axis):
             futures = [client.scatter([df1, df2], hash=False)]
         else:
             futures = client.scatter([df1, df2], hash=False)
-    actual_df = create_df_from_partitions(futures, axis)
+    actual_df = from_partitions(futures, axis)
     df_equals(expected_df, actual_df)

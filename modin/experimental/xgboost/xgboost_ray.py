@@ -23,7 +23,7 @@ from ray.services import get_node_ip_address
 import numpy as np
 import pandas
 
-from modin.api import unwrap_partitions
+from modin.api.pandas import unwrap_partitions
 from .utils import RabitContext, RabitContextManager
 
 LOGGER = logging.getLogger("[modin.xgboost]")
