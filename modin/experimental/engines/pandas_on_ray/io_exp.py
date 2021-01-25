@@ -220,6 +220,21 @@ class ExperimentalPandasOnRayIO(PandasOnRayIO):
 
     @classmethod
     def to_pickle(cls, qc, **kwargs):
+        """
+        In experimental mode, all partitions are written to their own separate file.
+
+        The filenames is determined as follows:
+        - if `*` in the filename then it will be replaced by the increasing sequence 0, 1, 2, …
+        - if ``*` is not the filename, then by default it is assumed that it is between
+            file' basename and extensions.
+
+        Example #1: 4 partitions and input filename="partition.pkl.gz", then filenames will be:
+        `partition0.pkl.gz`, `partition1.pkl.gz`, `partition2.pkl.gz`, `partition3.pkl.gz`.
+
+        Example #2: 4 partitions and input filename="partition.pkl*", then filenames will be:
+        `partition.pkl0`, `partition.pkl1`, `partition.pkl2`, `partition.pkl3`.
+        """
+
         def func(df, **kw):
             path = kwargs["path"]
             idx = str(kw["partition_idx"])
@@ -242,6 +257,12 @@ class ExperimentalPandasOnRayIO(PandasOnRayIO):
 
     @classmethod
     def read_pickle(cls, filepath_or_buffer, compression="infer"):
+        """
+        In experimental mode, we can pass a list of files as an input parameter.
+
+        Note: the number of partitions is equal to the number of input files.
+        """
+
         if not isinstance(filepath_or_buffer, (str, list)):
             warnings.warn("Defaulting to Modin core implementation")
             return PandasOnRayIO.read_pickle(
