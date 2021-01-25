@@ -265,6 +265,13 @@ class ExperimentalPandasOnRayIO(PandasOnRayIO):
         lengths_ids = []
         widths_ids = []
 
+        if (
+            len(filepath_or_buffer)
+            != cls.frame_cls._frame_mgr_cls._compute_num_partitions()
+        ):
+            # do we need to do a repartitioning?
+            warnings.warn("can be inefficient partitioning")
+
         for file_name in filepath_or_buffer:
             partition_id = _read_pickle_files_in_folder._remote(
                 args=(
