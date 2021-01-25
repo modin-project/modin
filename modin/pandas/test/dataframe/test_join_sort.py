@@ -33,6 +33,7 @@ from modin.pandas.test.utils import (
     test_data,
     generate_multiindex,
     eval_general,
+    rotate_decimal_digits,
 )
 from modin.config import NPartitions
 
@@ -374,89 +375,81 @@ def test_sort_multiindex(sort_remaining):
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+@pytest.mark.parametrize(
+    "by",
+    [
+        "first",
+        "first,last",
+        "first,last,middle",
+        "multiindex_level0",
+        "multiindex_level1,multiindex_level0",
+        "multiindex_level0,last,first,multiindex_level1",
+    ],
+)
 @pytest.mark.parametrize("axis", axis_values, ids=axis_keys)
 @pytest.mark.parametrize(
-    "ascending", bool_arg_values, ids=arg_keys("ascending", bool_arg_keys)
+    "ascending",
+    bool_arg_values + ["list_first_True", "list_first_False"],
+    ids=arg_keys("ascending", bool_arg_keys + ["list_first_True", "list_first_False"]),
 )
+@pytest.mark.parametrize(
+    "inplace", bool_arg_values, ids=arg_keys("inplace", bool_arg_keys)
+)
+@pytest.mark.parametrize("kind", ["mergesort", "quicksort", "heapsort"])
 @pytest.mark.parametrize("na_position", ["first", "last"], ids=["first", "last"])
-def test_sort_values(request, data, axis, ascending, na_position):
-    modin_df = pd.DataFrame(data)
-    pandas_df = pandas.DataFrame(data)
+@pytest.mark.parametrize(
+    "ignore_index", bool_arg_values, ids=arg_keys("ignore_index", bool_arg_keys)
+)
+@pytest.mark.parametrize("key", [None, rotate_decimal_digits])
+def test_sort_values(
+    data, by, axis, ascending, inplace, kind, na_position, ignore_index, key
+):
+    if "multiindex" in by:
+        index = generate_multiindex(len(data[list(data.keys())[0]]), nlevels=2)
+        columns = generate_multiindex(len(data.keys()), nlevels=2)
+        data = {columns[ind]: data[key] for ind, key in enumerate(data)}
+    else:
+        index = None
+        columns = None
 
-    if "empty_data" not in request.node.name and (
-        (axis == 0 or axis == "over rows")
-        or name_contains(request.node.name, numeric_dfs)
-    ):
-        index = modin_df.index if axis == 1 or axis == "columns" else modin_df.columns
-        key = index[0]
-        modin_result = modin_df.sort_values(
-            key,
-            axis=axis,
-            ascending=ascending,
-            na_position=na_position,
-            inplace=False,
-        )
-        pandas_result = pandas_df.sort_values(
-            key,
-            axis=axis,
-            ascending=ascending,
-            na_position=na_position,
-            inplace=False,
-        )
-        df_equals(modin_result, pandas_result)
+    modin_df = pd.DataFrame(data, index=index, columns=columns)
+    pandas_df = pandas.DataFrame(data, index=index, columns=columns)
 
-        modin_df_cp = modin_df.copy()
-        pandas_df_cp = pandas_df.copy()
-        modin_df_cp.sort_values(
-            key,
-            axis=axis,
-            ascending=ascending,
-            na_position=na_position,
-            inplace=True,
-        )
-        pandas_df_cp.sort_values(
-            key,
-            axis=axis,
-            ascending=ascending,
-            na_position=na_position,
-            inplace=True,
-        )
-        df_equals(modin_df_cp, pandas_df_cp)
+    index = modin_df.index if axis == 1 or axis == "columns" else modin_df.columns
 
-        keys = [key, index[-1]]
-        modin_result = modin_df.sort_values(
-            keys,
-            axis=axis,
-            ascending=ascending,
-            na_position=na_position,
-            inplace=False,
-        )
-        pandas_result = pandas_df.sort_values(
-            keys,
-            axis=axis,
-            ascending=ascending,
-            na_position=na_position,
-            inplace=False,
-        )
-        df_equals(modin_result, pandas_result)
+    # Parse "by" spec
+    by_list = []
+    for b in by.split(","):
+        if b == "first":
+            by_list.append(index[0])
+        elif b == "last":
+            by_list.append(index[-1])
+        elif b == "middle":
+            by_list.append(index[len(index) // 2])
+        elif b.startswith("multiindex_level"):
+            by_list.append(index.names[int(b[len("multiindex_level") :])])
+        else:
+            raise Exception('Unknown "by" specifier:' + b)
 
-        modin_df_cp = modin_df.copy()
-        pandas_df_cp = pandas_df.copy()
-        modin_df_cp.sort_values(
-            keys,
+    # Create "ascending" list
+    if ascending in ["list_first_True", "list_first_False"]:
+        start = 0 if ascending == "list_first_False" else 1
+        ascending = [i & 1 > 0 for i in range(start, len(by_list) + start)]
+
+    eval_general(
+        modin_df,
+        pandas_df,
+        lambda df: df.sort_values(
+            by_list,
             axis=axis,
             ascending=ascending,
+            inplace=inplace,
+            kind=kind,
             na_position=na_position,
-            inplace=True,
-        )
-        pandas_df_cp.sort_values(
-            keys,
-            axis=axis,
-            ascending=ascending,
-            na_position=na_position,
-            inplace=True,
-        )
-        df_equals(modin_df_cp, pandas_df_cp)
+            ignore_index=ignore_index,
+            key=key,
+        ),
+    )
 
 
 def test_sort_values_with_duplicates():

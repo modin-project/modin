@@ -1243,3 +1243,9 @@ def sort_index_for_equal_values(series, ascending=False):
         res.index = res.index.droplevel(0)
     res.name = series.name
     return res
+
+
+def rotate_decimal_digits(number):
+    tens = number / 10
+    ones = number % 10
+    return tens + ones * 10
