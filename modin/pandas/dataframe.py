@@ -2007,7 +2007,7 @@ class DataFrame(BasePandasDataset):
 
         if not isinstance(key, str):
 
-            if isinstance(key, DataFrame) or isinstance(key, np.ndarray):
+            if isinstance(key, (DataFrame, np.ndarray)):
                 if isinstance(key, np.ndarray):
                     if key.shape != self.shape:
                         raise ValueError("Array must be same shape as DataFrame")
