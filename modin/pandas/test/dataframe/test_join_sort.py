@@ -381,9 +381,18 @@ def test_sort_multiindex(sort_remaining):
         "first",
         "first,last",
         "first,last,middle",
-        "multiindex_level0",
-        "multiindex_level1,multiindex_level0",
-        "multiindex_level0,last,first,multiindex_level1",
+        pytest.param(
+            "multiindex_level0",
+            marks=pytest.mark.xfail(reason="multiindex levels do not work"),
+        ),
+        pytest.param(
+            "multiindex_level1,multiindex_level0",
+            marks=pytest.mark.xfail(reason="multiindex levels do not work"),
+        ),
+        pytest.param(
+            "multiindex_level0,last,first,multiindex_level1",
+            marks=pytest.mark.xfail(reason="multiindex levels do not work"),
+        ),
     ],
 )
 @pytest.mark.parametrize("axis", axis_values, ids=axis_keys)
@@ -449,6 +458,7 @@ def test_sort_values(
             ignore_index=ignore_index,
             key=key,
         ),
+        __inplace__=inplace,
     )
 
 

@@ -682,7 +682,7 @@ def eval_general(
                     ), f"not acceptable exception type: {md_e.value}"
         else:
             md_result = fn(modin_df, **md_kwargs)
-            return (md_result, pd_result) if not __inplace__ else (modin_df, pandas_df)
+            return (md_result, pd_result) if not inplace else (modin_df, pandas_df)
 
     for key, value in kwargs.items():
         if check_kwargs_callable and callable(value):
