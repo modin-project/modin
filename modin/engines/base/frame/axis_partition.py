@@ -141,7 +141,7 @@ class BaseFrameAxisPartition(ABC):  # pragma: no cover
                     return self.list_of_ips[0], self.list_of_blocks[0]
                 else:
                     raise ValueError(
-                        "Passed `bind_ip=True` but `MODIN_ENABLE_PARTITIONS_API` env var was not exported."
+                        "Passed `bind_ip=True` but partition IPs API was not enabled."
                     )
             else:
                 return self.list_of_blocks[0]
@@ -151,7 +151,7 @@ class BaseFrameAxisPartition(ABC):  # pragma: no cover
                     return list(zip(self.list_of_ips, self.list_of_blocks))
                 else:
                     raise ValueError(
-                        "Passed `bind_ip=True` but `MODIN_ENABLE_PARTITIONS_API` env var was not exported."
+                        "Passed `bind_ip=True` but partition IPs API was not enabled."
                     )
             else:
                 return self.list_of_blocks

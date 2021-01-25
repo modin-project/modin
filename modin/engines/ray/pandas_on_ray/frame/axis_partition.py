@@ -18,10 +18,7 @@ from modin.engines.base.frame.axis_partition import PandasFrameAxisPartition
 from .partition import PandasOnRayFramePartition
 
 import ray
-
-
-if EnablePartitionIPs.get():
-    from ray.services import get_node_ip_address
+from ray.services import get_node_ip_address
 
 
 class PandasOnRayFrameAxisPartition(PandasFrameAxisPartition):
@@ -35,7 +32,7 @@ class PandasOnRayFrameAxisPartition(PandasFrameAxisPartition):
                 self.list_of_ips = [obj.ip for obj in list_of_blocks]
             else:
                 raise ValueError(
-                    "Passed `bind_ip=True` but `MODIN_ENABLE_PARTITIONS_API` env var was not exported."
+                    "Passed `bind_ip=True` but partition IPs API was not enabled."
                 )
 
     partition_type = PandasOnRayFramePartition

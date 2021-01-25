@@ -32,7 +32,7 @@ class PandasOnDaskFrameAxisPartition(PandasFrameAxisPartition):
                 self.list_of_ips = [obj.ip for obj in list_of_blocks]
             else:
                 raise ValueError(
-                    "Passed `bind_ip=True` but `MODIN_ENABLE_PARTITIONS_API` env var was not exported."
+                    "Passed `bind_ip=True` but partition IPs API was not enabled."
                 )
 
     partition_type = PandasOnDaskFramePartition

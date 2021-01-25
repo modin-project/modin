@@ -27,7 +27,10 @@ def apply_list_of_funcs(funcs, df):
         if isinstance(func, bytes):
             func = pkl.loads(func)
         df = func(df, **kwargs)
-    return df, get_ip() if EnablePartitionIPs.get() else df
+    if EnablePartitionIPs.get():
+        return df, get_ip()
+    else:
+        return df
 
 
 class PandasOnDaskFramePartition(BaseFramePartition):

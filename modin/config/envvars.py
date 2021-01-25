@@ -161,10 +161,7 @@ class EnablePartitionIPs(EnvironmentVariable, type=bool):
     """
 
     varname = "MODIN_ENABLE_PARTITIONS_IPS"
-
-    @classmethod
-    def _get_default(cls):
-        return False
+    default = False
 
 
 class RayPartitionThreshold(EnvironmentVariable, type=int):
