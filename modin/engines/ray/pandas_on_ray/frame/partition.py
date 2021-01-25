@@ -13,13 +13,17 @@
 
 import pandas
 
-from modin.engines.base.frame.partition import BaseFramePartition
+from modin.config import EnablePartitionIPs
 from modin.data_management.utils import length_fn_pandas, width_fn_pandas
+from modin.engines.base.frame.partition import BaseFramePartition
 from modin.engines.ray.utils import handle_ray_task_error
 
 import ray
-from ray.services import get_node_ip_address
 from ray.worker import RayTaskError
+
+
+if EnablePartitionIPs.get():
+    from ray.services import get_node_ip_address
 
 
 class PandasOnRayFramePartition(BaseFramePartition):
@@ -62,8 +66,12 @@ class PandasOnRayFramePartition(BaseFramePartition):
         """
         oid = self.oid
         call_queue = self.call_queue + [(func, kwargs)]
-        result, length, width, ip = deploy_ray_func.remote(call_queue, oid)
-        return PandasOnRayFramePartition(result, length, width, ip)
+        if EnablePartitionIPs.get():
+            result, length, width, ip = deploy_ray_func.remote(call_queue, oid)
+            return PandasOnRayFramePartition(result, length, width, ip)
+        else:
+            result, length, width = deploy_ray_func.remote(call_queue, oid)
+            return PandasOnRayFramePartition(result, length, width)
 
     def add_to_apply_calls(self, func, **kwargs):
         return PandasOnRayFramePartition(
@@ -75,12 +83,19 @@ class PandasOnRayFramePartition(BaseFramePartition):
             return
         oid = self.oid
         call_queue = self.call_queue
-        (
-            self.oid,
-            self._length_cache,
-            self._width_cache,
-            self.ip,
-        ) = deploy_ray_func.remote(call_queue, oid)
+        if EnablePartitionIPs.get():
+            (
+                self.oid,
+                self._length_cache,
+                self._width_cache,
+                self.ip,
+            ) = deploy_ray_func.remote(call_queue, oid)
+        else:
+            (
+                self.oid,
+                self._length_cache,
+                self._width_cache,
+            ) = deploy_ray_func.remote(call_queue, oid)
         self.call_queue = []
 
     def __copy__(self):
@@ -207,7 +222,7 @@ def get_index_and_columns(df):
     return len(df.index), len(df.columns)
 
 
-@ray.remote(num_returns=4)
+@ray.remote(num_returns=4 if EnablePartitionIPs.get() else 3)
 def deploy_ray_func(call_queue, partition):  # pragma: no cover
     def deserialize(obj):
         if isinstance(obj, ray.ObjectRef):
@@ -232,9 +247,17 @@ def deploy_ray_func(call_queue, partition):  # pragma: no cover
     # we absolutely have to.
     except ValueError:
         result = func(partition.copy(), **kwargs)
-    return (
-        result,
-        len(result) if hasattr(result, "__len__") else 0,
-        len(result.columns) if hasattr(result, "columns") else 0,
-        get_node_ip_address(),
-    )
+
+    if EnablePartitionIPs.get():
+        return (
+            result,
+            len(result) if hasattr(result, "__len__") else 0,
+            len(result.columns) if hasattr(result, "columns") else 0,
+            get_node_ip_address(),
+        )
+    else:
+        return (
+            result,
+            len(result) if hasattr(result, "__len__") else 0,
+            len(result.columns) if hasattr(result, "columns") else 0,
+        )

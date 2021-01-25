@@ -155,6 +155,26 @@ class NPartitions(EnvironmentVariable, type=int):
         return CpuCount.get()
 
 
+class EnablePartitionIPs(EnvironmentVariable, type=bool):
+    """
+    Whether to enable use of IPs for remote partitions of not
+    """
+
+    varname = "MODIN_ENABLE_PARTITIONS_IPS"
+
+    @classmethod
+    def _get_default(cls):
+        return False
+
+
+class RayPartitionThreshold(EnvironmentVariable, type=int):
+    """
+    What objects can be saved in in-process store (in bytes)
+    """
+
+    varname = "MODIN_ON_RAY_PARTITION_THRESHOLD"
+
+
 class RayPlasmaDir(EnvironmentVariable, type=ExactStr):
     """
     Path to Plasma storage for Ray

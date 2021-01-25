@@ -13,8 +13,9 @@
 
 import pandas
 
-from modin.engines.base.frame.partition import BaseFramePartition
+from modin.config import EnablePartitionIPs
 from modin.data_management.utils import length_fn_pandas, width_fn_pandas
+from modin.engines.base.frame.partition import BaseFramePartition
 
 from distributed.client import get_client
 from distributed.utils import get_ip
@@ -26,7 +27,7 @@ def apply_list_of_funcs(funcs, df):
         if isinstance(func, bytes):
             func = pkl.loads(func)
         df = func(df, **kwargs)
-    return df, get_ip()
+    return df, get_ip() if EnablePartitionIPs.get() else df
 
 
 class PandasOnDaskFramePartition(BaseFramePartition):
@@ -83,8 +84,11 @@ class PandasOnDaskFramePartition(BaseFramePartition):
         future = get_client().submit(
             apply_list_of_funcs, call_queue, self.future, pure=False
         )
-        futures = [get_client().submit(lambda l: l[i], future) for i in range(2)]
-        return PandasOnDaskFramePartition(futures[0], ip=futures[1])
+        if EnablePartitionIPs.get():
+            futures = [get_client().submit(lambda l: l[i], future) for i in range(2)]
+            return PandasOnDaskFramePartition(futures[0], ip=futures[1])
+        else:
+            return PandasOnDaskFramePartition(future)
 
     def add_to_apply_calls(self, func, **kwargs):
         return PandasOnDaskFramePartition(
@@ -95,8 +99,11 @@ class PandasOnDaskFramePartition(BaseFramePartition):
         if len(self.call_queue) == 0:
             return
         new_partition = self.apply(lambda x: x)
-        self.future = new_partition.future
-        self.ip = new_partition.ip
+        if EnablePartitionIPs.get():
+            self.future = new_partition.future
+            self.ip = new_partition.ip
+        else:
+            self.future = new_partition.future
         self.call_queue = []
 
     def mask(self, row_indices, col_indices):

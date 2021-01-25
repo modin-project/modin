@@ -14,6 +14,7 @@
 from abc import ABC
 import pandas
 import numpy as np
+from modin.config import EnablePartitionIPs
 from modin.data_management.utils import split_result_of_axis_func_pandas
 
 
@@ -136,12 +137,22 @@ class BaseFrameAxisPartition(ABC):  # pragma: no cover
         """
         if squeeze and len(self.list_of_blocks) == 1:
             if bind_ip:
-                return self.list_of_ips[0], self.list_of_blocks[0]
+                if EnablePartitionIPs.get():
+                    return self.list_of_ips[0], self.list_of_blocks[0]
+                else:
+                    raise ValueError(
+                        "Passed `bind_ip=True` but `MODIN_ENABLE_PARTITIONS_API` env var was not exported."
+                    )
             else:
                 return self.list_of_blocks[0]
         else:
             if bind_ip:
-                return list(zip(self.list_of_ips, self.list_of_blocks))
+                if EnablePartitionIPs.get():
+                    return list(zip(self.list_of_ips, self.list_of_blocks))
+                else:
+                    raise ValueError(
+                        "Passed `bind_ip=True` but `MODIN_ENABLE_PARTITIONS_API` env var was not exported."
+                    )
             else:
                 return self.list_of_blocks
 

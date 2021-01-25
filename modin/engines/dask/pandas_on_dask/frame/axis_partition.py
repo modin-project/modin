@@ -11,6 +11,7 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
+from modin.config import EnablePartitionIPs
 from modin.engines.base.frame.axis_partition import PandasFrameAxisPartition
 from .partition import PandasOnDaskFramePartition
 
@@ -27,7 +28,12 @@ class PandasOnDaskFrameAxisPartition(PandasFrameAxisPartition):
             obj.drain_call_queue()
         self.list_of_blocks = [obj.future for obj in list_of_blocks]
         if bind_ip:
-            self.list_of_ips = [obj.ip for obj in list_of_blocks]
+            if EnablePartitionIPs.get():
+                self.list_of_ips = [obj.ip for obj in list_of_blocks]
+            else:
+                raise ValueError(
+                    "Passed `bind_ip=True` but `MODIN_ENABLE_PARTITIONS_API` env var was not exported."
+                )
 
     partition_type = PandasOnDaskFramePartition
     instance_type = Future
@@ -51,12 +57,13 @@ class PandasOnDaskFrameAxisPartition(PandasFrameAxisPartition):
 
         lengths = kwargs.get("_lengths", None)
         result_num_splits = len(lengths) if lengths else num_splits
+        factor = 4 if EnablePartitionIPs.get() else 3
 
         # We have to do this to split it back up. It is already split, but we need to
         # get futures for each.
         return [
             client.submit(lambda l: l[i], axis_result, pure=False)
-            for i in range(result_num_splits * 4)
+            for i in range(result_num_splits * factor)
         ]
 
     @classmethod
@@ -76,18 +83,25 @@ class PandasOnDaskFrameAxisPartition(PandasFrameAxisPartition):
             *partitions,
             pure=False,
         )
+        factor = 4 if EnablePartitionIPs.get() else 3
         # We have to do this to split it back up. It is already split, but we need to
         # get futures for each.
         return [
             client.submit(lambda l: l[i], axis_result, pure=False)
-            for i in range(num_splits * 4)
+            for i in range(num_splits * factor)
         ]
 
     def _wrap_partitions(self, partitions):
-        return [
-            self.partition_type(future, length, width, ip)
-            for (future, length, width, ip) in zip(*[iter(partitions)] * 4)
-        ]
+        if EnablePartitionIPs.get():
+            return [
+                self.partition_type(future, length, width, ip)
+                for (future, length, width, ip) in zip(*[iter(partitions)] * 4)
+            ]
+        else:
+            return [
+                self.partition_type(future, length, width)
+                for (future, length, width) in zip(*[iter(partitions)] * 3)
+            ]
 
 
 class PandasOnDaskFrameColumnPartition(PandasOnDaskFrameAxisPartition):
@@ -122,10 +136,18 @@ def deploy_dask_func(func, *args):
         The result of the function `func`.
     """
     result = func(*args)
-    ip = get_ip()
-    if isinstance(result, pandas.DataFrame):
-        return result, len(result), len(result.columns), ip
-    elif all(isinstance(r, pandas.DataFrame) for r in result):
-        return [i for r in result for i in [r, len(r), len(r.columns), ip]]
+    if EnablePartitionIPs.get():
+        ip = get_ip()
+        if isinstance(result, pandas.DataFrame):
+            return result, len(result), len(result.columns), ip
+        elif all(isinstance(r, pandas.DataFrame) for r in result):
+            return [i for r in result for i in [r, len(r), len(r.columns), ip]]
+        else:
+            return [i for r in result for i in [r, None, None, ip]]
     else:
-        return [i for r in result for i in [r, None, None, ip]]
+        if isinstance(result, pandas.DataFrame):
+            return result, len(result), len(result.columns)
+        elif all(isinstance(r, pandas.DataFrame) for r in result):
+            return [i for r in result for i in [r, len(r), len(r.columns)]]
+        else:
+            return [i for r in result for i in [r, None, None]]
