@@ -26,8 +26,13 @@ import warnings
 from modin.backends.pandas.parsers import _split_result_for_readers, PandasCSVGlobParser
 from modin.backends.pandas.query_compiler import PandasQueryCompiler
 from modin.engines.ray.pandas_on_ray.io import PandasOnRayIO
+<<<<<<< HEAD
 from modin.engines.base.io import CSVGlobDispatcher
 from modin.engines.ray.pandas_on_ray.frame.data import PandasOnRayFrame
+=======
+from modin.backends.pandas.parsers import _split_result_for_readers
+from modin.engines.base.io.file_dispatcher import FileDispatcher
+>>>>>>> FEAT-#1300: remove code duplication
 from modin.engines.ray.pandas_on_ray.frame.partition import PandasOnRayFramePartition
 from modin.engines.ray.task_wrapper import RayTask
 from modin.config import NPartitions
@@ -305,6 +310,8 @@ class ExperimentalPandasOnRayIO(PandasOnRayIO):
             lengths_ids.append(partition_id[-2])
             widths_ids.append(partition_id[-1])
 
+        build_partition = type("", (FileDispatcher,), cls.build_args).build_partition
+
         lengths = ray.get(lengths_ids)
         widths = ray.get(widths_ids)
         # while num_splits is 1, need only one value
@@ -320,22 +327,6 @@ class ExperimentalPandasOnRayIO(PandasOnRayIO):
         return cls.query_compiler_cls(
             cls.frame_cls(partition_ids, new_index, new_columns)
         )
-
-
-def build_partition(partition_ids, row_lengths, column_widths):
-    return np.array(
-        [
-            [
-                PandasOnRayFramePartition(
-                    partition_ids[i][j],
-                    length=row_lengths[i],
-                    width=column_widths[j],
-                )
-                for j in range(len(partition_ids[i]))
-            ]
-            for i in range(len(partition_ids))
-        ]
-    )
 
 
 @ray.remote

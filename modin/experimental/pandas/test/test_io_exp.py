@@ -158,7 +158,8 @@ def test_read_multiple_csv_s3():
     modin_df = modin_df.reset_index(drop=True)
 
     df_equals(modin_df, pandas_df)
-=======
+
+
 @pytest.mark.skipif(
     Engine.get() == "Dask",
     reason="Dask does not have experimental API",
@@ -182,4 +183,3 @@ def test_distributed_pickling(compression):
     # clean up
     for pickle_file in pickle_files:
         os.remove(pickle_file)
->>>>>>> FEAT-#1300: add test

@@ -21,6 +21,7 @@ for direct files processing.
 import os
 import re
 from modin.config import Backend
+import numpy as np
 
 S3_ADDRESS_REGEX = re.compile("[sS]3://(.*?)/(.*)")
 NOT_IMPLEMENTED_MESSAGE = "Implement in children classes!"
@@ -278,3 +279,19 @@ class FileDispatcher:
         Should be implemented in the task class (for example in the `RayTask`).
         """
         raise NotImplementedError(NOT_IMPLEMENTED_MESSAGE)
+
+    @classmethod
+    def build_partition(cls, partition_ids, row_lengths, column_widths):
+        return np.array(
+            [
+                [
+                    cls.frame_partition_cls(
+                        partition_ids[i][j],
+                        length=row_lengths[i],
+                        width=column_widths[j],
+                    )
+                    for j in range(len(partition_ids[i]))
+                ]
+                for i in range(len(partition_ids))
+            ]
+        )
