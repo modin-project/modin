@@ -482,13 +482,21 @@ class Series(BasePandasDataset):
         keep_shape: bool = False,
         keep_equal: bool = False,
     ):
-        return self._default_to_pandas(
-            pandas.Series.compare,
-            other=other,
+        if not isinstance(other, Series):
+            raise TypeError(f"Cannot compare Series to {type(other)}")
+        result = self.to_frame().compare(
+            other.to_frame(),
             align_axis=align_axis,
             keep_shape=keep_shape,
             keep_equal=keep_equal,
         )
+        if align_axis == "columns" or align_axis == 1:
+            # Pandas.DataFrame.Compare returns a dataframe with a multidimensional index object as the
+            # columns so we have to change column object back.
+            result.columns = pandas.Index(["self", "other"])
+        else:
+            result = result.squeeze().rename(None)
+        return result
 
     def corr(self, other, method="pearson", min_periods=None):
         if method == "pearson":

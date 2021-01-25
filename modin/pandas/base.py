@@ -207,6 +207,7 @@ class BasePandasDataset(object):
         numeric_or_time_only=False,
         numeric_or_object_only=False,
         comparison_dtypes_only=False,
+        compare_index=False,
     ):
         """
         Help to check validity of other in inter-df operations.
@@ -260,6 +261,9 @@ class BasePandasDataset(object):
                     else len(self._query_compiler.columns)
                 )
             ]
+        if compare_index:
+            if not self.index.equals(other.index):
+                raise TypeError("Cannot perform operation with non-equal index")
         # Do dtype checking.
         if numeric_only:
             if not all(

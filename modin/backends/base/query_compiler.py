@@ -1884,5 +1884,6 @@ class BaseQueryCompiler(abc.ABC):
     kurt = DataFrameDefault.register(pandas.DataFrame.kurt)
     sum_min_count = DataFrameDefault.register(pandas.DataFrame.sum)
     prod_min_count = DataFrameDefault.register(pandas.DataFrame.prod)
+    compare = DataFrameDefault.register(pandas.DataFrame.compare)
 
     # End of DataFrame methods

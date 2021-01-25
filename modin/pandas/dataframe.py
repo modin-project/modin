@@ -566,12 +566,16 @@ class DataFrame(BasePandasDataset):
         keep_shape: bool = False,
         keep_equal: bool = False,
     ) -> "DataFrame":
-        return self._default_to_pandas(
-            pandas.DataFrame.compare,
-            other=other,
-            align_axis=align_axis,
-            keep_shape=keep_shape,
-            keep_equal=keep_equal,
+        if not isinstance(other, DataFrame):
+            raise TypeError(f"Cannot compare DataFrame to {type(other)}")
+        other = self._validate_other(other, 0, compare_index=True)
+        return self.__constructor__(
+            query_compiler=self._query_compiler.compare(
+                other,
+                align_axis=align_axis,
+                keep_shape=keep_shape,
+                keep_equal=keep_equal,
+            )
         )
 
     def corr(self, method="pearson", min_periods=1):
