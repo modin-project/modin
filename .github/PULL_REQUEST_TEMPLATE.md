@@ -8,7 +8,7 @@ if you have questions about contributing.
 
 <!-- Please give a short brief about these changes. -->
 
-- [ ] commit message follows format outlined [here](https://modin.readthedocs.io/en/latest/contrbuting.html)
+- [ ] commit message follows format outlined [here](https://modin.readthedocs.io/en/latest/contributing.html)
 - [ ] passes `flake8 modin`
 - [ ] passes `black --check modin`
 - [ ] signed commit with `git commit -s` <!-- you can amend your commit with a signature via `git commit -amend -s` -->
