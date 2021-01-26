@@ -2125,6 +2125,15 @@ class BasePandasDataset(object):
             # Check obvious case first
             return self.copy()
 
+        if fill_value is no_default:
+            nan_values = dict()
+            for name, dtype in dict(self.dtypes).items():
+                nan_values[name] = (
+                    pandas.NAT if is_datetime_or_timedelta_dtype(dtype) else pandas.NA
+                )
+
+            fill_value = nan_values
+
         empty_frame = False
         if axis == "index" or axis == 0:
             if abs(periods) >= len(self.index):
