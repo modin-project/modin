@@ -16,7 +16,7 @@ import pandas
 import pytest
 
 import modin.pandas as pd
-from modin.api.pandas import unwrap_partitions, from_partitions
+from modin.distributed.dataframe.pandas import unwrap_partitions, from_partitions
 from modin.config import Engine, NPartitions
 from modin.pandas.test.utils import df_equals
 
