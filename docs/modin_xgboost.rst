@@ -1,15 +1,15 @@
 Distributed XGBoost on Modin (experimental)
 ===========================================
 
-Modin provides own effective implementation of a distributed XGBoost machine learning 
+Modin provides an implementation of distributed XGBoost machine learning 
 algorithm on Modin DataFrames. Please note that this feature is experimental and behavior or 
 interfaces could be changed.
 
 Install XGBoost on Modin
 ------------------------
 
-Modin comes with all the dependencies exclude of ``xgboost`` package by default.
-Currently, the distributed XGBoost on Modin supports the Ray backend only, therefore, see
+Modin comes with all the dependencies except ``xgboost`` package by default.
+Currently, distributed XGBoost on Modin is only supported on the Ray backend, therefore, see
 the `installation page`_ for more information on installing Modin with the Ray backend.
 To install ``xgboost`` package you can use ``pip``:
 
@@ -30,9 +30,9 @@ parameter which is returned as part of function return value instead of argument
 ``predict`` is separate function unlike ``xgboost.Booster.predict`` which uses an additional argument
 ``model``. ``model`` could be ``xgboost.Booster`` or output of ``modin.experimental.xgboost`` function.
 
-Both of function have additional parameters `nthread` and `evenly_data_distribution`.
-`nthread` sets number of threads to use per node in cluster.
-`evenly_data_distribution` sets rule of distribution data between nodes in cluster.
+Both functions have additional parameters ``nthread`` and ``evenly_data_distribution``.
+``nthread`` sets number of threads to use per node in cluster.
+``evenly_data_distribution`` sets rule of distribution data between nodes in cluster.
 
 
 Type of input data
@@ -126,10 +126,10 @@ Modes of a data distribution
 Modin XGBoost provides two approaches for an internal data ditribution which could be
 switched by `evenly_data_distribution` parameter of ``train/predict`` functions:
 
-* `evenly_data_distribution` = `True`: in this case the input data of ``train/predict``
+* ``evenly_data_distribution = True``: in this case the input data of ``train/predict``
   functions will be distributed evenly between nodes in a cluster to ensure evenly utilization of nodes (default behavior).
 
-* `evenly_data_distribution` = `False` :  in this case partitions of input data of ``train/predict``
+* ``evenly_data_distribution = False`` :  in this case partitions of input data of ``train/predict``
   functions will not transfer between nodes in cluster in case empty nodes is <10%,
   if portion of empty nodes is ≥10% evenly data distribution will be applied.
   This method provides minimal data transfers between nodes but doesn't guarantee effective utilization of nodes.
