@@ -291,10 +291,7 @@ class ExperimentalPandasOnRayIO(PandasOnRayIO):
         lengths_ids = []
         widths_ids = []
 
-        if (
-            len(filepath_or_buffer)
-            != cls.frame_cls._frame_mgr_cls._compute_num_partitions()
-        ):
+        if len(filepath_or_buffer) != NPartitions.get():
             # do we need to do a repartitioning?
             warnings.warn("can be inefficient partitioning")
 

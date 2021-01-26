@@ -161,8 +161,8 @@ def test_read_multiple_csv_s3():
 
 
 @pytest.mark.skipif(
-    Engine.get() == "Dask",
-    reason="Dask does not have experimental API",
+    not Engine.get() == "Ray",
+    reason=f"{Engine.get()} does not have experimental API",
 )
 @pytest.mark.parametrize("compression", [None, "gzip"])
 def test_distributed_pickling(compression):
