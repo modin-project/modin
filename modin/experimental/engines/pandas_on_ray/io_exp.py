@@ -26,13 +26,9 @@ import warnings
 from modin.backends.pandas.parsers import _split_result_for_readers, PandasCSVGlobParser
 from modin.backends.pandas.query_compiler import PandasQueryCompiler
 from modin.engines.ray.pandas_on_ray.io import PandasOnRayIO
-<<<<<<< HEAD
 from modin.engines.base.io import CSVGlobDispatcher
 from modin.engines.ray.pandas_on_ray.frame.data import PandasOnRayFrame
-=======
-from modin.backends.pandas.parsers import _split_result_for_readers
 from modin.engines.base.io.file_dispatcher import FileDispatcher
->>>>>>> FEAT-#1300: remove code duplication
 from modin.engines.ray.pandas_on_ray.frame.partition import PandasOnRayFramePartition
 from modin.engines.ray.task_wrapper import RayTask
 from modin.config import NPartitions

@@ -518,6 +518,8 @@ jobs:
       - shell: bash -l {0}
         run: python -m pytest modin/pandas/test/test_io.py
       - shell: bash -l {0}
+        run: python -m pytest modin/experimental/pandas/test/test_io_exp.py
+      - shell: bash -l {0}
         run: |
           curl -o codecov https://codecov.io/bash
           VERSION=$(grep -o 'VERSION=\"[0-9\.]*\"' codecov | cut -d'"' -f2);
