@@ -170,6 +170,6 @@ nature, you get a fast DataFrame at 1MB and 1TB+.
    troubleshooting
    contact
 
-.. _Dataframe: https://pandas.pydata.org/pandas-docs/version/0.23.4/generated/pandas.DataFrame.html
+.. _Dataframe: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.html
 .. _Ray: https://github.com/ray-project/ray/
 .. _Dask: https://dask.org/

@@ -10,7 +10,7 @@ Install Modin out of core
 -------------------------
 
 Modin now comes with all the dependencies for out of core functionality by default! See
-the `installation page`_ for more information on installing Modin.
+the :doc:`installation page </installation>` for more information on installing Modin.
 
 Starting Modin with out of core enabled
 ---------------------------------------
@@ -62,5 +62,4 @@ This example creates a 40GB DataFrame from 20 identical 2GB DataFrames and perfo
 various operations on them. Feel free to play around with this code and let us know what
 you think!
 
-.. _Dataframe: https://pandas.pydata.org/pandas-docs/version/0.23.4/generated/pandas.DataFrame.html
-.. _`installation page`: installation.html
+.. _Dataframe: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.html

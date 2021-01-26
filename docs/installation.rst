@@ -84,7 +84,7 @@ You may already have a recent version of Dask_ installed, in which case you can 
 Building Modin from Source
 --------------------------
 
-If you're planning on contributing_ to Modin, you will need to ensure that you are
+If you're planning on :doc:`contributing </contributing>` to Modin, you will need to ensure that you are
 building Modin from the local repository that you are working off of. Occasionally,
 there are issues in overlapping Modin installs from pypi and from source. To avoid these
 issues, we recommend uninstalling Modin before you install from source:
@@ -109,8 +109,6 @@ Once cloned, ``cd`` into the ``modin`` directory and use ``pip`` to install:
 
 .. _`GitHub repo`: https://github.com/modin-project/modin/tree/master
 .. _issue: https://github.com/modin-project/modin/issues
-.. _`out of core`: out_of_core.html
 .. _WSL: https://docs.microsoft.com/en-us/windows/wsl/install-win10
 .. _Ray: http://ray.readthedocs.io
-.. _contributing: contributing.html
 .. _Dask: https://github.com/dask/dask

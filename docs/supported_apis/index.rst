@@ -5,7 +5,7 @@ For your convenience, we have compiled a list of currently implemented APIs and 
 available in Modin. This documentation is updated as new methods and APIs are merged
 into the master branch, and not necessarily correct as of the most recent release. In
 order to install the latest version of Modin, follow the directions found on the
-`installation page`_.
+:doc:`installation page </installation>`.
 
 Questions on implementation details
 -----------------------------------
@@ -33,20 +33,17 @@ Modin.
 
 The exact methods we have implemented are listed in the respective subsections:
 
-* DataFrame_
-* Series_
-* utilities_
-* `I/O`_
+* :doc:`DataFrame </supported_apis/dataframe_supported>`
+* :doc:`Series </supported_apis/series_supported>`
+* :doc:`utilities </supported_apis/utilities_supported>`
+* :doc:`I/O </supported_apis/io_supported>`
 
 We have taken a community-driven approach to implementing new methods. We did a `study
 on pandas usage`_ to learn what the most-used APIs are. Modin currently supports **93%**
 of the pandas API based on our study of pandas usage, and we are actively expanding the
 API.
 
-.. _DataFrame: dataframe_supported.html
-.. _Series: series_supported.html
-.. _utilities: utilities_supported.html
-.. _I/O: io_supported.html
-.. _study on pandas usage: https://github.com/modin-project/study_kaggle_usage
+.. _DataFrame: https://modin.readthedocs.io/en/latest/supported_apis/dataframe_supported.html
+.. _Series: https://modin.readthedocs.io/en/latest/supported_apis/series_supported.html
+.. _utilities: https://modin.readthedocs.io/en/latest/supported_apis/utilities_supported.html
 .. _`developer mailing list`: https://groups.google.com/forum/#!forum/modin-dev
-.. _`installation page`: installation.html#building-modin-from-source
