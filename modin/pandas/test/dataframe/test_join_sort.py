@@ -407,12 +407,17 @@ def test_sort_multiindex(sort_remaining):
 @pytest.mark.parametrize("kind", ["mergesort", "quicksort", "heapsort"])
 @pytest.mark.parametrize("na_position", ["first", "last"], ids=["first", "last"])
 @pytest.mark.parametrize(
-    "ignore_index", bool_arg_values, ids=arg_keys("ignore_index", bool_arg_keys)
+    "ignore_index",
+    bool_arg_values,
+    ids=arg_keys("ignore_index", bool_arg_keys),
 )
 @pytest.mark.parametrize("key", [None, rotate_decimal_digits])
 def test_sort_values(
     data, by, axis, ascending, inplace, kind, na_position, ignore_index, key
 ):
+    if (axis == 1 or axis == "columns") and ignore_index:
+        pytest.skip("Pandas bug #39426 which is fixed in Pandas 1.3")
+
     if "multiindex" in by:
         index = generate_multiindex(len(data[list(data.keys())[0]]), nlevels=2)
         columns = generate_multiindex(len(data.keys()), nlevels=2)
