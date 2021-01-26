@@ -15,9 +15,7 @@ from collections import OrderedDict
 import numpy as np
 import pandas
 from pandas.core.indexes.api import ensure_index, Index, RangeIndex
-from pandas.core.indexes.datetimes import DatetimeIndex
 from pandas.core.dtypes.common import is_numeric_dtype
-from typing import Union
 
 from modin.backends.pandas.query_compiler import PandasQueryCompiler
 from modin.error_message import ErrorMessage
@@ -46,7 +44,6 @@ class BasePandasFrame(object):
         row_lengths=None,
         column_widths=None,
         dtypes=None,
-        validate_axes: Union[bool, str] = False,
     ):
         """Initialize a dataframe.
 
@@ -60,8 +57,6 @@ class BasePandasFrame(object):
             column_widths : (optional) The width of each partition in the columns. The
                 "width" of each of the block partitions. Is computed if not provided.
             dtypes : (optional) The data types for the dataframe.
-            validate_axes : (optional) Whether or not validate for equality
-                internal indices of partitions and passed `index` and `columns`.
         """
         self._partitions = partitions
         self._index_cache = ensure_index(index)
@@ -83,8 +78,6 @@ class BasePandasFrame(object):
             )
         self._column_widths_cache = column_widths
         self._dtypes = dtypes
-        if validate_axes is not False:
-            self._validate_internal_indices(mode=validate_axes)
         self._filter_empties()
 
     @property
@@ -235,30 +228,6 @@ class BasePandasFrame(object):
                 self._dtypes.index = new_columns
         self._apply_index_objs(axis=1)
 
-    def _set_axis(self, axis, new_axis, cache_only=False):
-        """Replace the current labels at the specified axis with the new one.
-
-        Parameters
-        ----------
-            axis : int,
-                Axis to set labels along
-            new_axis : Index,
-                The replacement labels
-            cache_only : bool,
-                Whether to change only external indices, or propagate it
-                into partitions
-        """
-        if axis:
-            if not cache_only:
-                self._set_columns(new_axis)
-            else:
-                self._columns_cache = ensure_index(new_axis)
-        else:
-            if not cache_only:
-                self._set_index(new_axis)
-            else:
-                self._index_cache = ensure_index(new_axis)
-
     columns = property(_get_columns, _set_columns)
     index = property(_get_index, _set_index)
 
@@ -311,101 +280,6 @@ class BasePandasFrame(object):
         )
         self._column_widths_cache = [w for w in self._column_widths if w != 0]
         self._row_lengths_cache = [r for r in self._row_lengths if r != 0]
-
-    def _validate_axis_equality(self, axis: int, force: bool = False):
-        """
-        Validate internal and external indices of modin_frame at the specified axis.
-
-        Parameters
-        ----------
-            axis : 0 or 1
-                Axis to validate indices along (0 - index, 1 - columns).
-            force : boolean, default False
-                Whether to update external indices with internal if their lengths
-                do not match or raise an exception in that case.
-        """
-        internal_axis = self._compute_axis_labels(axis)
-        self_axis = self.axes[axis]
-        is_equals = self_axis.equals(internal_axis)
-        if (
-            isinstance(self_axis, DatetimeIndex)
-            and isinstance(internal_axis, DatetimeIndex)
-            and is_equals
-        ):
-            if getattr(self_axis, "freq") != getattr(internal_axis, "freq"):
-                is_equals = False
-                force = True
-        is_lenghts_matches = len(self_axis) == len(internal_axis)
-        if not is_equals:
-            if not is_lenghts_matches:
-                if axis:
-                    self._column_widths_cache = None
-                else:
-                    self._row_lengths_cache = None
-            new_axis = self_axis if is_lenghts_matches and not force else internal_axis
-            self._set_axis(axis, new_axis, cache_only=not is_lenghts_matches)
-
-    def _validate_internal_indices(self, mode=None, **kwargs):
-        """
-        Validate and optionally updates internal and external indices of modin_frame in specified mode.
-
-        There are 4 modes supported:
-            1. "reduced" - validates on that axis where external
-                indices is ["__reduced__"] for not force
-            2. "reduced+other" - validates on axis where external
-                indices is ["__reduced__"] for not force, and force on another axis
-            3. "all" - validates indices at all axes, optionally force
-                if `force` parameter specified in kwargs
-            4. "custom" - validation follows arguments specified in kwargs.
-
-        Parameters
-        ----------
-            mode : str or bool, default None
-            validate_index : bool, (optional, could be specified via `mode`)
-            validate_columns : bool, (optional, could be specified via `mode`)
-            force : bool (optional, could be specified via `mode`)
-                Whether to update external indices with internal if their lengths
-                do not match or raise an exception in that case.
-        """
-        if isinstance(mode, bool):
-            is_force = mode
-            mode = "all"
-        else:
-            is_force = kwargs.get("force", False)
-
-        reduced_sample = pandas.Index(["__reduced__"])
-
-        is_axis_reduced = [self.axes[i].equals(reduced_sample) for i in [0, 1]]
-
-        args_dict = {
-            "custom": kwargs,
-            "reduced": {
-                "validate_index": is_axis_reduced[0],
-                "validate_columns": is_axis_reduced[1],
-                "force": [False, False],
-            },
-            "reduced+other": {
-                "validate_index": True,
-                "validate_columns": True,
-                "force": [not is_axis_reduced[0], not is_axis_reduced[1]],
-            },
-            "all": {
-                "validate_index": True,
-                "validate_columns": True,
-                "force": [is_force, is_force],
-            },
-        }
-
-        args = args_dict.get(mode, args_dict["custom"])
-
-        def force_getter(axis):
-            force = args.get("force", False)
-            return force[axis] if isinstance(force, list) else force
-
-        if args.get("validate_index", True):
-            self._validate_axis_equality(axis=0, force=force_getter(0))
-        if args.get("validate_columns", True):
-            self._validate_axis_equality(axis=1, force=force_getter(1))
 
     def _apply_index_objs(self, axis=None):
         """Lazily applies the index object (Index or Columns) to the partitions.
@@ -1111,7 +985,10 @@ class BasePandasFrame(object):
         new_axes, new_axes_lengths = [0, 0], [0, 0]
 
         new_axes[axis] = ["__reduced__"]
-        new_axes[axis ^ 1] = self.axes[axis ^ 1]
+        if preserve_index:
+            new_axes[axis ^ 1] = self.axes[axis ^ 1]
+        else:
+            new_axes[axis ^ 1] = self._compute_axis_labels(axis ^ 1, new_parts)
 
         new_axes_lengths[axis] = [1]
         new_axes_lengths[axis ^ 1] = self._axes_lengths[axis ^ 1]
@@ -1124,14 +1001,14 @@ class BasePandasFrame(object):
             )
         else:
             new_dtypes = None
-
-        return self.__constructor__(
+        result = self.__constructor__(
             new_parts,
             *new_axes,
             *new_axes_lengths,
             new_dtypes,
-            validate_axes=("reduced" if preserve_index else "reduced+other"),
         )
+        result._apply_index_objs(axis)
+        return result
 
     def _fold_reduce(self, axis, func, preserve_index=True):
         """
@@ -1744,16 +1621,18 @@ class BasePandasFrame(object):
             dtypes = pandas.Series(
                 [np.dtype(dtypes)] * len(new_axes[1]), index=new_axes[1]
             )
-        return self.__constructor__(
+        result = self.__constructor__(
             new_partitions,
             *new_axes,
             None,
             None,
             dtypes,
-            validate_axes="all"
-            if any(o is not None for o in [new_index, new_columns])
-            else False,
         )
+        if new_index is not None:
+            result._apply_index_objs(0)
+        if new_columns is not None:
+            result._apply_index_objs(1)
+        return result
 
     def _copartition(self, axis, other, how, sort, force_repartition=False):
         """
@@ -2128,6 +2007,8 @@ class BasePandasFrame(object):
             else:
                 df = pandas.DataFrame(columns=self.columns, index=self.index)
         else:
+            print(df.axes)
+            print(self.axes)
             for axis in [0, 1]:
                 ErrorMessage.catch_bugs_and_request_email(
                     not df.axes[axis].equals(self.axes[axis]),
