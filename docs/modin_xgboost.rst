@@ -10,7 +10,7 @@ Install XGBoost on Modin
 
 Modin comes with all the dependencies except ``xgboost`` package by default.
 Currently, distributed XGBoost on Modin is only supported on the Ray backend, therefore, see
-the `installation page`_ for more information on installing Modin with the Ray backend.
+the :doc:`installation page </installation>` for more information on installing Modin with the Ray backend.
 To install ``xgboost`` package you can use ``pip``:
 
 .. code-block:: bash
@@ -136,7 +136,6 @@ switched by `evenly_data_distribution` parameter of ``train/predict`` functions:
   Most effective in case when all cluster nodes are occupied by data.
 
 
-.. _Dataframe: https://pandas.pydata.org/pandas-docs/version/0.23.4/generated/pandas.DataFrame.html
-.. _`installation page`: installation.html
+.. _Dataframe: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.html
 .. _`starting ray`: https://docs.ray.io/en/master/starting-ray.html
 .. _`the Iris Dataset`: https://scikit-learn.org/stable/auto_examples/datasets/plot_iris_dataset.html
