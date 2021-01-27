@@ -248,14 +248,14 @@ class PandasExcelParser(PandasParser):
             """
             b = match.group(0)
             return re.sub(
-                b"\d+",  # noqa: W605
+                br"\d+",
                 lambda c: str(int(c.group(0).decode("utf-8")) - _skiprows).encode(
                     "utf-8"
                 ),
                 b,
             )
 
-        bytes_data = re.sub(b'r="[A-Z]*\d+"', update_row_nums, bytes_data)  # noqa: W605
+        bytes_data = re.sub(br'r="[A-Z]*\d+"', update_row_nums, bytes_data)
         bytesio = BytesIO(excel_header + bytes_data + footer)
         # Use openpyxl to read/parse sheet data
         reader = WorksheetReader(ws, bytesio, ex.shared_strings, False)
