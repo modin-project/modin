@@ -2646,7 +2646,10 @@ class BasePandasDataset(object):
 
     def transform(self, func, axis=0, *args, **kwargs):
         kwargs["is_transform"] = True
-        result = self.agg(func, axis=axis, *args, **kwargs)
+        try:
+            result = self.agg(func, axis=axis, *args, **kwargs)
+        except Exception:
+            raise ValueError("Transform function failed")
         try:
             assert len(result) == len(self)
         except Exception:
