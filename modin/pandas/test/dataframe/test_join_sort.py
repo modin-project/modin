@@ -316,31 +316,37 @@ def test_merge(test_data, test_data2):
 )
 @pytest.mark.parametrize("na_position", ["first", "last"], ids=["first", "last"])
 def test_sort_index(axis, ascending, na_position):
-    data = test_data["float_nan_data"]
-    modin_df, pandas_df = pd.DataFrame(data), pandas.DataFrame(data)
+    # pandas raises the exception when `ascending=None` (pandas issue 39434).
+    # Since we handle the case `axis=None`, after which `axis=0`, then there is no the exception in Modin.
+    if ascending is not None:
+        data = test_data["float_nan_data"]
+        modin_df, pandas_df = pd.DataFrame(data), pandas.DataFrame(data)
 
-    # Change index value so sorting will actually make a difference
-    if axis == 0:
-        length = len(modin_df.index)
+        # Change index value so sorting will actually make a difference
+        if axis == 0:
+            length = len(modin_df.index)
+            for df in [modin_df, pandas_df]:
+                df.index = [(i - length / 2) % length for i in range(length)]
+
+        # Add NaNs to sorted index
         for df in [modin_df, pandas_df]:
-            df.index = [(i - length / 2) % length for i in range(length)]
+            sort_index = df.axes[axis]
+            df.set_axis(
+                [
+                    np.nan if i % 2 == 0 else sort_index[i]
+                    for i in range(len(sort_index))
+                ],
+                axis=axis,
+                inplace=True,
+            )
 
-    # Add NaNs to sorted index
-    for df in [modin_df, pandas_df]:
-        sort_index = df.axes[axis]
-        df.set_axis(
-            [np.nan if i % 2 == 0 else sort_index[i] for i in range(len(sort_index))],
-            axis=axis,
-            inplace=True,
+        eval_general(
+            modin_df,
+            pandas_df,
+            lambda df: df.sort_index(
+                axis=axis, ascending=ascending, na_position=na_position
+            ),
         )
-
-    eval_general(
-        modin_df,
-        pandas_df,
-        lambda df: df.sort_index(
-            axis=axis, ascending=ascending, na_position=na_position
-        ),
-    )
 
 
 @pytest.mark.parametrize("axis", ["rows", "columns"])
