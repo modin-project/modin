@@ -2007,8 +2007,6 @@ class BasePandasFrame(object):
             else:
                 df = pandas.DataFrame(columns=self.columns, index=self.index)
         else:
-            print(df.axes)
-            print(self.axes)
             for axis in [0, 1]:
                 ErrorMessage.catch_bugs_and_request_email(
                     not df.axes[axis].equals(self.axes[axis]),
