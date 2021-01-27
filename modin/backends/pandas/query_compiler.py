@@ -601,7 +601,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
     def is_monotonic_increasing(self):
         def is_monotonic_increasing(df):
-            return pandas.DataFrame([df.squeeze(axis=1).is_monotonic])
+            return pandas.DataFrame([df.squeeze(axis=1).is_monotonic_increasing])
 
         return self.default_to_pandas(is_monotonic_increasing)
 
