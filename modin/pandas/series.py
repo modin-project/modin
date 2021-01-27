@@ -215,7 +215,19 @@ class Series(BasePandasDataset):
 
     def __or__(self, other):
         new_self, new_other = self._prepare_inter_op(other)
-        return super(Series, new_self).__or__(new_other)
+        return new_self._binary_op("__or__", new_other, axis=0, squeeze_self=True)
+
+    def __ror__(self, other):
+        new_self, new_other = self._prepare_inter_op(other)
+        return self._binary_op("__ror__", other, axis=0, squeeze_self=True)
+
+    def __xor__(self, other):
+        new_self, new_other = self._prepare_inter_op(other)
+        return new_self._binary_op("__xor__", new_other, axis=0, squeeze_self=True)
+
+    def __rxor__(self, other):
+        new_self, new_other = self._prepare_inter_op(other)
+        return new_self._binary_op("__rxor__", new_other, axis=0, squeeze_self=True)
 
     def __pow__(self, right):
         return self.pow(right)
@@ -287,10 +299,6 @@ class Series(BasePandasDataset):
     @property
     def values(self):
         return super(Series, self).to_numpy().flatten()
-
-    def __xor__(self, other):
-        new_self, new_other = self._prepare_inter_op(other)
-        return super(Series, new_self).__xor__(new_other)
 
     def add(self, other, level=None, fill_value=None, axis=0):
         new_self, new_other = self._prepare_inter_op(other)
