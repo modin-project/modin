@@ -894,7 +894,7 @@ class Series(BasePandasDataset):
             )
 
     def shift(self, periods=1, freq=None, axis=0, fill_value=None):
-        return super().shift(
+        return super(type(self), self).shift(
             periods=periods, freq=freq, axis=axis, fill_value=fill_value
         )
 
