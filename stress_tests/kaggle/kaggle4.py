@@ -51,7 +51,7 @@ sns.distplot(train["SalePrice"], fit=norm)
 (mu, sigma) = norm.fit(train["SalePrice"])
 print("\n mu = {:.2f} and sigma = {:.2f}\n".format(mu, sigma))
 plt.legend(
-    ["Normal dist. ($\mu=$ {:.2f} and $\sigma=$ {:.2f} )".format(mu, sigma)],
+    [r"Normal dist. ($\mu=$ {:.2f} and $\sigma=$ {:.2f} )".format(mu, sigma)],
     loc="best",  # noqa: W605
 )
 plt.ylabel("Frequency")
@@ -64,7 +64,7 @@ sns.distplot(train["SalePrice"], fit=norm)
 (mu, sigma) = norm.fit(train["SalePrice"])
 print("\n mu = {:.2f} and sigma = {:.2f}\n".format(mu, sigma))
 plt.legend(
-    ["Normal dist. ($\mu=$ {:.2f} and $\sigma=$ {:.2f} )".format(mu, sigma)],
+    [r"Normal dist. ($\mu=$ {:.2f} and $\sigma=$ {:.2f} )".format(mu, sigma)],
     loc="best",  # noqa: W605
 )
 plt.ylabel("Frequency")

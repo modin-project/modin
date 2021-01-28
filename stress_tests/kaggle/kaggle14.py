@@ -50,7 +50,7 @@ plt.show()
 data["Initial"] = 0
 for i in data:
     data["Initial"] = data.Name.str.extract(
-        "([A-Za-z]+)\."  # noqa: W605
+        r"([A-Za-z]+)\."  # noqa: W605
     )  # lets extract the Salutations
 pd.crosstab(data.Initial, data.Sex).T.style.background_gradient(
     cmap="summer_r"

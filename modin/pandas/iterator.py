@@ -13,7 +13,7 @@
 
 """Place to define the Modin iterator."""
 
-from collections import Iterator
+from collections.abc import Iterator
 
 
 class PartitionIterator(Iterator):
