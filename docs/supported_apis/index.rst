@@ -43,7 +43,5 @@ on pandas usage`_ to learn what the most-used APIs are. Modin currently supports
 of the pandas API based on our study of pandas usage, and we are actively expanding the
 API.
 
-.. _DataFrame: https://modin.readthedocs.io/en/latest/supported_apis/dataframe_supported.html
-.. _Series: https://modin.readthedocs.io/en/latest/supported_apis/series_supported.html
-.. _utilities: https://modin.readthedocs.io/en/latest/supported_apis/utilities_supported.html
 .. _`developer mailing list`: https://groups.google.com/forum/#!forum/modin-dev
+.. _`study on pandas usage`: https://github.com/modin-project/study_kaggle_usage
