@@ -1336,6 +1336,17 @@ class DataFrame(BasePandasDataset):
         **kwargs,
     ):
         axis = self._get_axis_number(axis)
+        if level is not None:
+            return self._default_to_pandas(
+                "prod",
+                axis=axis,
+                skipna=skipna,
+                level=level,
+                numeric_only=numeric_only,
+                min_count=min_count,
+                **kwargs,
+            )
+
         axis_to_apply = self.columns if axis else self.index
         if (
             skipna is not False
@@ -1348,17 +1359,6 @@ class DataFrame(BasePandasDataset):
             )
 
         data = self._validate_dtypes_sum_prod_mean(axis, numeric_only, ignore_axis=True)
-        if level is not None:
-            return data.__constructor__(
-                query_compiler=data._query_compiler.prod_min_count(
-                    axis=axis,
-                    skipna=skipna,
-                    level=level,
-                    numeric_only=numeric_only,
-                    min_count=min_count,
-                    **kwargs,
-                )
-            )
         if min_count > 1:
             return data._reduce_dimension(
                 data._query_compiler.prod_min_count(
@@ -1671,15 +1671,14 @@ class DataFrame(BasePandasDataset):
             axis, numeric_only, ignore_axis=False
         )
         if level is not None:
-            return data.__constructor__(
-                query_compiler=data._query_compiler.sum_min_count(
-                    axis=axis,
-                    skipna=skipna,
-                    level=level,
-                    numeric_only=numeric_only,
-                    min_count=min_count,
-                    **kwargs,
-                )
+            return self._default_to_pandas(
+                "sum",
+                axis=axis,
+                skipna=skipna,
+                level=level,
+                numeric_only=numeric_only,
+                min_count=min_count,
+                **kwargs,
             )
         if min_count > 1:
             return data._reduce_dimension(
@@ -2204,7 +2203,11 @@ class DataFrame(BasePandasDataset):
             ):
                 raise TypeError("Cannot compare Numeric and Non-Numeric Types")
 
-        return self._get_numeric_data(axis) if numeric_only else self
+        return (
+            self._get_numeric_data(axis)
+            if numeric_only is None or numeric_only
+            else self
+        )
 
     def _validate_dtypes_sum_prod_mean(self, axis, numeric_only, ignore_axis=False):
         """
@@ -2254,7 +2257,11 @@ class DataFrame(BasePandasDataset):
             ):
                 raise TypeError("Cannot operate on Numeric and Non-Numeric Types")
 
-        return self._get_numeric_data(axis) if numeric_only else self
+        return (
+            self._get_numeric_data(axis)
+            if numeric_only is None or numeric_only
+            else self
+        )
 
     def _to_pandas(self):
         return self._query_compiler.to_pandas()

@@ -943,22 +943,21 @@ class Series(BasePandasDataset):
         **kwargs,
     ):
         axis = self._get_axis_number(axis)
+        if level is not None:
+            return self._default_to_pandas(
+                "prod",
+                axis=axis,
+                skipna=skipna,
+                level=level,
+                numeric_only=numeric_only,
+                min_count=min_count,
+                **kwargs,
+            )
         new_index = self.columns if axis else self.index
         if min_count > len(new_index):
             return np.nan
 
         data = self._validate_dtypes_sum_prod_mean(axis, numeric_only, ignore_axis=True)
-        if level is not None:
-            return data.__constructor__(
-                query_compiler=data._query_compiler.prod_min_count(
-                    axis=axis,
-                    skipna=skipna,
-                    level=level,
-                    numeric_only=numeric_only,
-                    min_count=min_count,
-                    **kwargs,
-                )
-            )
         if min_count > 1:
             return data._reduce_dimension(
                 data._query_compiler.prod_min_count(
@@ -1227,6 +1226,17 @@ class Series(BasePandasDataset):
         **kwargs,
     ):
         axis = self._get_axis_number(axis)
+        if level is not None:
+            return self._default_to_pandas(
+                "sum",
+                axis=axis,
+                skipna=skipna,
+                level=level,
+                numeric_only=numeric_only,
+                min_count=min_count,
+                **kwargs,
+            )
+
         new_index = self.columns if axis else self.index
         if min_count > len(new_index):
             return np.nan
@@ -1234,17 +1244,6 @@ class Series(BasePandasDataset):
         data = self._validate_dtypes_sum_prod_mean(
             axis, numeric_only, ignore_axis=False
         )
-        if level is not None:
-            return data.__constructor__(
-                query_compiler=data._query_compiler.sum_min_count(
-                    axis=axis,
-                    skipna=skipna,
-                    level=level,
-                    numeric_only=numeric_only,
-                    min_count=min_count,
-                    **kwargs,
-                )
-            )
         if min_count > 1:
             return data._reduce_dimension(
                 data._query_compiler.sum_min_count(
@@ -1455,7 +1454,7 @@ class Series(BasePandasDataset):
 
     @property
     def is_monotonic(self):
-        return self._reduce_dimension(self._query_compiler.is_monotonic())
+        return self._reduce_dimension(self._query_compiler.is_monotonic_increasing())
 
     is_monotonic_increasing = is_monotonic
 

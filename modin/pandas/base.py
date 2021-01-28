@@ -1342,7 +1342,11 @@ class BasePandasDataset(object):
         if numeric_only is not None and not numeric_only:
             self._validate_dtypes(numeric_only=True)
 
-        data = self._get_numeric_data(axis) if numeric_only else self
+        data = (
+            self._get_numeric_data(axis)
+            if numeric_only is None or numeric_only
+            else self
+        )
 
         return self._reduce_dimension(
             data._query_compiler.kurt(
@@ -1408,6 +1412,15 @@ class BasePandasDataset(object):
         )
 
     def max(self, axis=None, skipna=None, level=None, numeric_only=None, **kwargs):
+        if level is not None:
+            return self._default_to_pandas(
+                "max",
+                axis=axis,
+                skipna=skipna,
+                level=level,
+                numeric_only=numeric_only,
+                **kwargs,
+            )
         axis = self._get_axis_number(axis)
         data = self._validate_dtypes_min_max(axis, numeric_only)
         return data._reduce_dimension(
@@ -1454,6 +1467,15 @@ class BasePandasDataset(object):
 
         """
         axis = self._get_axis_number(axis)
+        if level is not None:
+            return self._default_to_pandas(
+                op_name,
+                axis=axis,
+                skipna=skipna,
+                level=level,
+                numeric_only=numeric_only,
+                **kwargs,
+            )
         # If `numeric_only` is None, then we can do this precheck to whether or not
         # frame contains non-numeric columns, if it doesn't, then we can pass to a backend
         # `numeric_only=False` parameter and make its work easier in that case, rather than
@@ -1467,8 +1489,11 @@ class BasePandasDataset(object):
             else:
                 numeric_only = False
 
-        data = self._get_numeric_data(axis) if numeric_only else self
-
+        data = (
+            self._get_numeric_data(axis)
+            if numeric_only is None or numeric_only
+            else self
+        )
         result_qc = getattr(data._query_compiler, op_name)(
             axis=axis,
             skipna=skipna,
@@ -1476,8 +1501,6 @@ class BasePandasDataset(object):
             numeric_only=numeric_only,
             **kwargs,
         )
-        if level is not None:
-            return self.__constructor__(query_compiler=result_qc)
         return self._reduce_dimension(result_qc)
 
     def mean(self, axis=None, skipna=None, level=None, numeric_only=None, **kwargs):
@@ -1494,6 +1517,15 @@ class BasePandasDataset(object):
         )
 
     def min(self, axis=None, skipna=None, level=None, numeric_only=None, **kwargs):
+        if level is not None:
+            return self._default_to_pandas(
+                "min",
+                axis=axis,
+                skipna=skipna,
+                level=level,
+                numeric_only=numeric_only,
+                **kwargs,
+            )
         axis = self._get_axis_number(axis)
         data = self._validate_dtypes_min_max(axis, numeric_only)
         return data._reduce_dimension(
@@ -1598,7 +1630,6 @@ class BasePandasDataset(object):
         # check that all qs are between 0 and 1
         validate_percentile(q)
         axis = self._get_axis_number(axis)
-
         if isinstance(q, (pandas.Series, np.ndarray, pandas.Index, list)):
             return self.__constructor__(
                 query_compiler=self._query_compiler.quantile_for_list_of_values(

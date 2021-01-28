@@ -493,14 +493,14 @@ class BaseQueryCompiler(abc.ABC):
     # we will implement a Distributed Series, and this will be returned
     # instead.
 
-    def is_monotonic(self):
+    def is_monotonic_increasing(self):
         """Return boolean if values in the object are monotonic_increasing.
 
         Returns
         -------
             bool
         """
-        return SeriesDefault.register(pandas.Series.is_monotonic)(self)
+        return SeriesDefault.register(pandas.Series.is_monotonic_increasing)(self)
 
     def is_monotonic_decreasing(self):
         """Return boolean if values in the object are monotonic_decreasing.
