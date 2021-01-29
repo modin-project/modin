@@ -159,9 +159,6 @@ class TextFileDispatcher(FileDispatcher):
                 List, where each element of the list is a list of dictionaries. The inner lists
                 of dictionaries contains the data file of the cunk and chunk start and end offsets for its corresponding file.
         """
-
-        # TODO (WILLIAM) : dont forget to update json and fwf as they depend on this function as well.
-
         if type(files) != list:
             files = [files]
 

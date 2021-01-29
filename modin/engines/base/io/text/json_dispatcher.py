@@ -66,8 +66,10 @@ class JSONDispatcher(TextFileDispatcher):
                 num_partitions=num_partitions,
                 is_quoting=(args.get("quoting", "") != QUOTE_NONE),
             )
-            for start, end in splits:
-                args.update({"start": start, "end": end})
+            for split in splits:
+                # We know that there will always be one split for json objects because json objects do not support glob paths.
+                split = split[0]
+                args.update({"start": split["start"], "end": split["end"]})
                 partition_id = cls.deploy(cls.parse, num_splits + 3, args)
                 partition_ids.append(partition_id[:-3])
                 index_ids.append(partition_id[-3])
