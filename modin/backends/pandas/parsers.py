@@ -95,7 +95,7 @@ class PandasCSVParser(PandasParser):
         warnings.filterwarnings("ignore")
         num_splits = kwargs.pop("num_splits", None)
         index_col = kwargs.get("index_col", None)
-        chunks = kwargs.get("chunks", [])
+        chunks = kwargs.pop("chunks", [])
 
         pandas_dfs = []
         for chunk in chunks:
@@ -120,12 +120,12 @@ class PandasCSVParser(PandasParser):
                 pandas_dfs.append(pandas.read_csv(fname, **kwargs))
 
         # Combine read in data.
-        if len(pandas_df) > 1:
-            pandas_df = pd.concat(pandas_dfs)
-        elif len(pandas_df) > 0:
-            pandas_df = pandas_df[0]
+        if len(pandas_dfs) > 1:
+            pandas_df = pandas.concat(pandas_dfs)
+        elif len(pandas_dfs) > 0:
+            pandas_df = pandas_dfs[0]
         else:
-            pandas_df = pd.DataFrame()
+            pandas_df = pandas.DataFrame()
         
         # Set internal index.
         if index_col is not None:
