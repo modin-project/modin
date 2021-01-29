@@ -11,14 +11,16 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-from modin.engines.base.io.text.text_file_dispatcher import TextFileDispatcher
-from modin.data_management.utils import compute_chunksize
-from pandas.io.parsers import _validate_usecols_arg
-import pandas
+from contextlib import ExitStack
 import csv
+import pandas
 import sys
 
+from pandas.io.parsers import _validate_usecols_arg
+
 from modin.config import NPartitions
+from modin.data_management.utils import compute_chunksize
+from modin.engines.base.io.text.text_file_dispatcher import TextFileDispatcher
 
 
 class CSVDispatcher(TextFileDispatcher):
@@ -37,6 +39,7 @@ class CSVDispatcher(TextFileDispatcher):
         # We read multiple csv files when the file path is a list of absolute file paths. We assume that all of the files will be essentially replicas of the 
         # first file but with different data values.
         read_multiple = False
+        other_filepaths = []
         if type(filepath_or_buffer) == list:
             if len(filepath_or_buffer) > 1:
                 read_multiple = True
@@ -127,8 +130,13 @@ class CSVDispatcher(TextFileDispatcher):
         )
         is_quoting = kwargs.get("quoting", "") != csv.QUOTE_NONE
 
-        # TODO (WILLIAM): Open multiple files simultaneously.
-        with cls.file_open(filepath_or_buffer, "rb", compression_type) as f:
+        # with cls.file_open(filepath_or_buffer, "rb", compression_type) as f:
+        with ExitStack() as stack:
+            files = [stack.enter_context(cls.file_open(filepath_or_buffer, "rb", compression_type))]
+            if read_multiple:
+                for file_name in other_filepaths:
+                    files.append(stack.enter_context(cls.file_open(file_name, "rb", compression_type)))
+
             # Skip the header since we already have the header information and skip the
             # rows we are told to skip.
             if isinstance(skiprows, int) or skiprows is None:
@@ -169,13 +177,12 @@ class CSVDispatcher(TextFileDispatcher):
                 ]
 
             args = {
-                "fname": filepath_or_buffer,
                 "num_splits": num_splits,
                 **partition_kwargs,
             }
 
             splits = cls.partitioned_file(
-                f,
+                files,
                 num_partitions=num_partitions,
                 nrows=nrows,
                 skiprows=skiprows,
@@ -183,9 +190,8 @@ class CSVDispatcher(TextFileDispatcher):
                 is_quoting=is_quoting,
             )
 
-            # TODO (WILLIAM) Make this handle multiple.
-            for start, end in splits:
-                args.update({"start": start, "end": end})
+            for chunks in splits:
+                args.update({"chunks": chunks})
                 partition_id = cls.deploy(cls.parse, num_splits + 2, args)
                 partition_ids.append(partition_id[:-2])
                 index_ids.append(partition_id[-2])

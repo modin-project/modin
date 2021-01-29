@@ -138,7 +138,7 @@ class FileDispatcher:
         return size
 
     @classmethod
-    def file_exists(cls, file_path: str, os.PathLike], glob_path: bool = False) -> bool:
+    def file_exists(cls, file_path: str, glob_path: bool = False) -> bool:
         """
         Checks if the file_path leads to an existing file.
 

@@ -91,28 +91,43 @@ class PandasParser(object):
 
 class PandasCSVParser(PandasParser):
     @staticmethod
-    def parse(fname, **kwargs):
+    def parse(**kwargs):
         warnings.filterwarnings("ignore")
         num_splits = kwargs.pop("num_splits", None)
-        start = kwargs.pop("start", None)
-        end = kwargs.pop("end", None)
         index_col = kwargs.get("index_col", None)
-        if start is not None and end is not None:
-            # pop "compression" from kwargs because bio is uncompressed
-            bio = FileDispatcher.file_open(
-                fname, "rb", kwargs.pop("compression", "infer")
-            )
-            if kwargs.get("encoding", None) is not None:
-                header = b"" + bio.readline()
+        chunks = kwargs.get("chunks", [])
+
+        pandas_dfs = []
+        for chunk in chunks:
+            fname = chunk["fname"]
+            start = chunk["start"]
+            end = chunk["end"]
+            if start is not None and end is not None:
+                # pop "compression" from kwargs because bio is uncompressed
+                bio = FileDispatcher.file_open(
+                    fname, "rb", kwargs.pop("compression", "infer")
+                )
+                if kwargs.get("encoding", None) is not None:
+                    header = b"" + bio.readline()
+                else:
+                    header = b""
+                bio.seek(start)
+                to_read = header + bio.read(end - start)
+                bio.close()
+                pandas_dfs.append(pandas.read_csv(BytesIO(to_read), **kwargs))
             else:
-                header = b""
-            bio.seek(start)
-            to_read = header + bio.read(end - start)
-            bio.close()
-            pandas_df = pandas.read_csv(BytesIO(to_read), **kwargs)
+                # This only happens when we are reading with only one worker (Default)
+                pandas_dfs.append(pandas.read_csv(fname, **kwargs))
+
+        # Combine read in data.
+        if len(pandas_df) > 1:
+            pandas_df = pd.concat(pandas_dfs)
+        elif len(pandas_df) > 0:
+            pandas_df = pandas_df[0]
         else:
-            # This only happens when we are reading with only one worker (Default)
-            return pandas.read_csv(fname, **kwargs)
+            pandas_df = pd.DataFrame()
+        
+        # Set internal index.
         if index_col is not None:
             index = pandas_df.index
         else:
