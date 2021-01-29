@@ -22,15 +22,27 @@ from modin.config import NPartitions
 
 
 class CSVDispatcher(TextFileDispatcher):
+
     @classmethod
     def _read(cls, filepath_or_buffer, **kwargs):
+        # Ensures that the file is a string file path. Otherwise, default to pandas.
         filepath_or_buffer = cls.get_path_or_buffer(filepath_or_buffer)
         if isinstance(filepath_or_buffer, str):
-            if not cls.file_exists(filepath_or_buffer):
+            if not cls.file_exists(filepath_or_buffer, glob_path=True):
                 return cls.single_worker_read(filepath_or_buffer, **kwargs)
-            filepath_or_buffer = cls.get_path(filepath_or_buffer)
+            filepath_or_buffer = cls.get_path(filepath_or_buffer, glob_path=True)
         elif not cls.pathlib_or_pypath(filepath_or_buffer):
             return cls.single_worker_read(filepath_or_buffer, **kwargs)
+
+        # We read multiple csv files when the file path is a list of absolute file paths. We assume that all of the files will be essentially replicas of the 
+        # first file but with different data values.
+        read_multiple = False
+        if type(filepath_or_buffer) == list:
+            if len(filepath_or_buffer) > 1:
+                read_multiple = True
+                other_filepaths = filepath_or_buffer[1:]
+            filepath_or_buffer = filepath_or_buffer[0]
+
         compression_type = cls.infer_compression(
             filepath_or_buffer, kwargs.get("compression")
         )
@@ -58,6 +70,7 @@ class CSVDispatcher(TextFileDispatcher):
         skiprows = kwargs.get("skiprows")
         if skiprows is not None and not isinstance(skiprows, int):
             return cls.single_worker_read(filepath_or_buffer, **kwargs)
+        
         nrows = kwargs.pop("nrows", None)
         names = kwargs.get("names", None)
         index_col = kwargs.get("index_col", None)
@@ -67,7 +80,7 @@ class CSVDispatcher(TextFileDispatcher):
             # For the sake of the empty df, we assume no `index_col` to get the correct
             # column names before we build the index. Because we pass `names` in, this
             # step has to happen without removing the `index_col` otherwise it will not
-            # be assigned correctly
+            # be assigned correctly.
             names = pandas.read_csv(
                 filepath_or_buffer,
                 **dict(kwargs, usecols=None, nrows=0, skipfooter=0, index_col=None),
@@ -113,6 +126,8 @@ class CSVDispatcher(TextFileDispatcher):
             encoding if encoding is not None else "UTF-8"
         )
         is_quoting = kwargs.get("quoting", "") != csv.QUOTE_NONE
+
+        # TODO (WILLIAM): Open multiple files simultaneously.
         with cls.file_open(filepath_or_buffer, "rb", compression_type) as f:
             # Skip the header since we already have the header information and skip the
             # rows we are told to skip.
@@ -167,6 +182,8 @@ class CSVDispatcher(TextFileDispatcher):
                 quotechar=quotechar,
                 is_quoting=is_quoting,
             )
+
+            # TODO (WILLIAM) Make this handle multiple.
             for start, end in splits:
                 args.update({"start": start, "end": end})
                 partition_id = cls.deploy(cls.parse, num_splits + 2, args)
@@ -191,6 +208,7 @@ class CSVDispatcher(TextFileDispatcher):
         # over the whole column for each column. The index is set below.
         dtypes = cls.get_dtypes(dtypes_ids) if len(dtypes_ids) > 0 else None
 
+        # TODO (WILLIAM): Handle multiple files simultaneously.
         partition_ids = cls.build_partition(partition_ids, row_lengths, column_widths)
         # If parse_dates is present, the column names that we have might not be
         # the same length as the returned column names. If we do need to modify

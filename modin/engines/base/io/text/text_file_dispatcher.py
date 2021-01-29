@@ -136,10 +136,11 @@ class TextFileDispatcher(FileDispatcher):
 
         Parameters
         ----------
-        f: file to be partitioned
+        f: file 
+            File to be partitioned.
         num_partitions: int, optional
             For what number of partitions split a file.
-            If not specified grabs the value from `modin.config.NPartitions.get()`
+            If not specified grabs the value from `modin.config.NPartitions.get()`.
         nrows: int, optional
             Number of rows of file to read.
         skiprows: array or callable, optional
@@ -151,8 +152,9 @@ class TextFileDispatcher(FileDispatcher):
 
         Returns
         -------
-        An array, where each element of array is a tuple of two ints:
-        beginning and the end offsets of the current chunk.
+            np.array
+                An array, where each element of array is a tuple of two ints:
+                beginning and the end offsets of the current chunk.
         """
         if num_partitions is None:
             num_partitions = NPartitions.get()
@@ -168,44 +170,32 @@ class TextFileDispatcher(FileDispatcher):
                 is_quoting=is_quoting,
             )
 
+        # TODO (WILLIAM): Handle multiple files simultaneously.
         start = f.tell()
 
-        if nrows:
-            read_rows_counter = 0
-            partition_size = max(1, num_partitions, nrows // num_partitions)
-            while f.tell() < file_size and read_rows_counter < nrows:
-                if read_rows_counter + partition_size > nrows:
-                    # it's possible only if is_quoting==True
-                    partition_size = nrows - read_rows_counter
-                outside_quotes, read_rows = cls._read_rows(
-                    f,
-                    nrows=partition_size,
-                    quotechar=quotechar,
-                    is_quoting=is_quoting,
-                )
-                result.append((start, f.tell()))
-                start = f.tell()
-                read_rows_counter += read_rows
+        read_rows_counter = 0
+        partition_size = max(1, num_partitions, (nrows if nrows else file_size) // num_partitions)
+        while f.tell() < file_size:
+            if read_rows >= n_rows:
+                break
 
-                # add outside_quotes
-                if is_quoting and not outside_quotes:
-                    warnings.warn("File has mismatched quotes")
-        else:
-            partition_size = max(1, num_partitions, file_size // num_partitions)
-            while f.tell() < file_size:
-                outside_quotes = cls.offset(
-                    f,
-                    offset_size=partition_size,
-                    quotechar=quotechar,
-                    is_quoting=is_quoting,
-                )
+            if nrows and read_rows_counter + partition_size > nrows:
+                # It's possible only if is_quoting==True.
+                partition_size = nrows - read_rows_counter
 
-                result.append((start, f.tell()))
-                start = f.tell()
+            outside_quotes, read_rows = cls._read_rows(
+                f,
+                nrows=partition_size,
+                quotechar=quotechar,
+                is_quoting=is_quoting,
+            )
+            result.append((start, f.tell()))
+            start = f.tell()
+            read_rows_counter += read_rows
 
-                # add outside_quotes
-                if is_quoting and not outside_quotes:
-                    warnings.warn("File has mismatched quotes")
+            # Add outside_quotes.
+            if is_quoting and not outside_quotes:
+                warnings.warn("File has mismatched quotes")
 
         return result
 
