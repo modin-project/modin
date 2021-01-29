@@ -128,6 +128,7 @@ class TextFileDispatcher(FileDispatcher):
         num_partitions: int = None,
         nrows: int = None,
         skiprows: int = None,
+        skip_header: int = None,
         quotechar: bytes = b'"',
         is_quoting: bool = True,
     ):
@@ -143,8 +144,10 @@ class TextFileDispatcher(FileDispatcher):
             If not specified grabs the value from `modin.config.NPartitions.get()`.
         nrows: int, optional
             Number of rows of file to read.
-        skiprows: array or callable, optional
+        skiprows: int, optional
             Specifies rows to skip.
+        skip_header: int, optional
+            Specifies header rows to skip.
         quotechar: bytes, default b'"'
             Indicate quote in a file.
         is_quoting: bool, default True
@@ -166,14 +169,24 @@ class TextFileDispatcher(FileDispatcher):
             num_partitions = NPartitions.get()
 
         file_sizes = [cls.file_size(f) for f in files]
-        partition_size = max(1, num_partitions, (nrows if nrows else sum(file_sizes)) // num_partitions)
-        
+        partition_size = max(
+            1, num_partitions, (nrows if nrows else sum(file_sizes)) // num_partitions
+        )
+
         result = []
-        split_ind = 0 
+        split_ind = 0
         split_result = []
         split_size = 0
         read_rows_counter = 0
         for f, f_size in zip(files, file_sizes):
+            if skip_header:
+                outside_quotes, read_rows = cls._read_rows(
+                    f,
+                    nrows=skip_header,
+                    quotechar=quotechar,
+                    is_quoting=is_quoting,
+                )
+
             if skiprows:
                 # TODO(williamma12): Handle when skiprows > number of rows in file. Currently returns empty df.
                 outside_quotes, read_rows = cls._read_rows(

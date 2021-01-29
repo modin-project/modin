@@ -24,7 +24,6 @@ from modin.engines.base.io.text.text_file_dispatcher import TextFileDispatcher
 
 
 class CSVDispatcher(TextFileDispatcher):
-
     @classmethod
     def _read(cls, filepath_or_buffer, **kwargs):
         # Ensures that the file is a string file path. Otherwise, default to pandas.
@@ -36,7 +35,7 @@ class CSVDispatcher(TextFileDispatcher):
         elif not cls.pathlib_or_pypath(filepath_or_buffer):
             return cls.single_worker_read(filepath_or_buffer, **kwargs)
 
-        # We read multiple csv files when the file path is a list of absolute file paths. We assume that all of the files will be essentially replicas of the 
+        # We read multiple csv files when the file path is a list of absolute file paths. We assume that all of the files will be essentially replicas of the
         # first file but with different data values.
         read_multiple = False
         other_filepaths = []
@@ -73,7 +72,7 @@ class CSVDispatcher(TextFileDispatcher):
         skiprows = kwargs.get("skiprows")
         if skiprows is not None and not isinstance(skiprows, int):
             return cls.single_worker_read(filepath_or_buffer, **kwargs)
-        
+
         nrows = kwargs.pop("nrows", None)
         names = kwargs.get("names", None)
         index_col = kwargs.get("index_col", None)
@@ -132,10 +131,18 @@ class CSVDispatcher(TextFileDispatcher):
 
         # with cls.file_open(filepath_or_buffer, "rb", compression_type) as f:
         with ExitStack() as stack:
-            files = [stack.enter_context(cls.file_open(filepath_or_buffer, "rb", compression_type))]
+            files = [
+                stack.enter_context(
+                    cls.file_open(filepath_or_buffer, "rb", compression_type)
+                )
+            ]
             if read_multiple:
                 for file_name in other_filepaths:
-                    files.append(stack.enter_context(cls.file_open(file_name, "rb", compression_type)))
+                    files.append(
+                        stack.enter_context(
+                            cls.file_open(file_name, "rb", compression_type)
+                        )
+                    )
 
             # Skip the header since we already have the header information and skip the
             # rows we are told to skip.
@@ -144,11 +151,13 @@ class CSVDispatcher(TextFileDispatcher):
                     skiprows = 0
                 header = kwargs.get("header", "infer")
                 if header == "infer" and kwargs.get("names", None) is None:
-                    skiprows += 1
+                    skip_header = 1
                 elif isinstance(header, int):
-                    skiprows += header + 1
+                    skip_header = header + 1
                 elif hasattr(header, "__iter__") and not isinstance(header, str):
-                    skiprows += max(header) + 1
+                    skip_header += max(header) + 1
+                else:
+                    skip_header = 0
             if kwargs.get("encoding", None) is not None:
                 partition_kwargs["skiprows"] = 1
             # Launch tasks to read partitions
@@ -177,6 +186,7 @@ class CSVDispatcher(TextFileDispatcher):
                 ]
 
             args = {
+                "fname": filepath_or_buffer,
                 "num_splits": num_splits,
                 **partition_kwargs,
             }
@@ -186,6 +196,7 @@ class CSVDispatcher(TextFileDispatcher):
                 num_partitions=num_partitions,
                 nrows=nrows,
                 skiprows=skiprows,
+                skip_header=skip_header,
                 quotechar=quotechar,
                 is_quoting=is_quoting,
             )
@@ -214,7 +225,6 @@ class CSVDispatcher(TextFileDispatcher):
         # over the whole column for each column. The index is set below.
         dtypes = cls.get_dtypes(dtypes_ids) if len(dtypes_ids) > 0 else None
 
-        # TODO (WILLIAM): Handle multiple files simultaneously.
         partition_ids = cls.build_partition(partition_ids, row_lengths, column_widths)
         # If parse_dates is present, the column names that we have might not be
         # the same length as the returned column names. If we do need to modify

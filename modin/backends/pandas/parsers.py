@@ -91,11 +91,11 @@ class PandasParser(object):
 
 class PandasCSVParser(PandasParser):
     @staticmethod
-    def parse(**kwargs):
+    def parse(fname, **kwargs):
         warnings.filterwarnings("ignore")
         num_splits = kwargs.pop("num_splits", None)
         index_col = kwargs.get("index_col", None)
-        chunks = kwargs.pop("chunks", [])
+        chunks = kwargs.pop("chunks", [{"fname": fname, "start": None, "end": None}])
 
         pandas_dfs = []
         for chunk in chunks:
@@ -126,7 +126,7 @@ class PandasCSVParser(PandasParser):
             pandas_df = pandas_dfs[0]
         else:
             pandas_df = pandas.DataFrame()
-        
+
         # Set internal index.
         if index_col is not None:
             index = pandas_df.index

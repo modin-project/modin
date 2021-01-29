@@ -67,7 +67,7 @@ class FileDispatcher:
 
         Returns
         -------
-            
+
         """
         if S3_ADDRESS_REGEX.search(file_path):
             return file_path
