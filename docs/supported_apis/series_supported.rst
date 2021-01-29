@@ -11,7 +11,7 @@ The second column is a flag for whether or not there is an implementation in Mod
 the method in the left column. ``Y`` stands for yes, ``N`` stands for no, ``P`` stands
 for partial (meaning some parameters may not be supported yet), and ``D`` stands for
 default to pandas. To learn more about the implementations that default to pandas, see
-the related section on `Defaulting to pandas`_.
+the related section on :doc:`Defaulting to pandas </supported_apis/index>`.
 
 +-----------------------------+---------------------------------+----------------------------------------------------+
 | Series method               | Modin Implementation? (Y/N/P/D) | Notes for Current implementation                   |
@@ -487,4 +487,3 @@ the related section on `Defaulting to pandas`_.
 +-----------------------------+---------------------------------+----------------------------------------------------+
 
 .. _`GitHub repository`: https://github.com/modin-project/modin/issues
-.. _`Defaulting to pandas`: index.html

@@ -24,7 +24,7 @@ Using Modin on a Single Node
 **In local (without a cluster) modin will create and manage a local (dask or ray) cluster for the execution**
 
 In order to use the most up-to-date version of Modin, please follow the instructions on
-the `installation page`_
+the :doc:`installation page </installation>`.
 
 Once you import the library, you should see something similar to the following output:
 
@@ -52,7 +52,7 @@ Please note, the API is not yet complete. For some methods, you may see the foll
 
   NotImplementedError: To contribute to Modin, please visit github.com/modin-project/modin.
 
-We have compiled a list of `currently supported methods`_.
+We have compiled a list of :doc:`currently supported methods </supported_apis/index>`.
 
 If you would like to request a particular method be implemented, feel free to `open an
 issue`_. Before you open an issue please make sure that someone else has not already
@@ -90,7 +90,7 @@ you can customize your Ray environment for use in Modin!
 Exceeding memory (Out of core pandas)
 """""""""""""""""""""""""""""""""""""
 
-Modin experimentally supports out of core operations. See more on the `Out of Core`_
+Modin experimentally supports out of core operations. See more on the :doc:`Out of Core </out_of_core>`
 documentation page.
 
 Reducing or limiting the resources Modin can use
@@ -134,13 +134,10 @@ Examples
 You can find an example on our recent `blog post`_ or on the `Jupyter Notebook`_ that we
 used to create the blog post.
 
-.. _`DataFrame`: https://pandas.pydata.org/pandas-docs/version/0.23.4/generated/pandas.DataFrame.html
+.. _`DataFrame`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.html
 .. _`pandas`: https://pandas.pydata.org/pandas-docs/stable/
-.. _`installation page`: https://modin.readthedocs.io/en/latest/installation.html
-.. _`currently supported methods`: https://modin.readthedocs.io/en/latest/pandas_supported.html
 .. _`open an issue`: https://github.com/modin-project/modin/issues
 .. _`autoscaler documentation`: https://ray.readthedocs.io/en/latest/autoscaling.html
 .. _`Ray's documentation`: https://ray.readthedocs.io/en/latest/api.html
 .. _`blog post`: https://rise.cs.berkeley.edu/blog/pandas-on-ray-early-lessons/
 .. _`Jupyter Notebook`: https://gist.github.com/devin-petersohn/f424d9fb5579a96507c709a36d487f24#file-pandas_on_ray_blog_post_0-ipynb
-.. _`Out of Core`: out_of_core.html
