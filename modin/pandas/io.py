@@ -25,7 +25,6 @@ Manually add documentation for methods which are not presented in pandas.
 import inspect
 import pickle
 import pandas
-import pandas._libs.lib as lib
 import pathlib
 import re
 from collections import OrderedDict
@@ -41,7 +40,7 @@ PQ_INDEX_REGEX = re.compile(r"__index_level_\d+__")
 
 
 # CSV and table
-def _make_parser_func(sep=lib.no_default, method=None):
+def _make_parser_func(sep):
     """
     Create a parser function from the given sep.
 
@@ -49,8 +48,6 @@ def _make_parser_func(sep=lib.no_default, method=None):
     ----------
     sep : str
         The separator default to use for the parser.
-    method : str
-        The parameter needed to override value of `sep` for `read_table` and `read_csv`.
 
     Returns
     -------
@@ -118,10 +115,6 @@ def _make_parser_func(sep=lib.no_default, method=None):
             f_locals["sep"] = "\t"
 
         kwargs = {k: v for k, v in f_locals.items() if k in _pd_read_csv_signature}
-        if method == "read_table":
-            kwargs["sep"] = "\t"
-        elif method == "read_csv":
-            kwargs["sep"] = ","
         return _read(**kwargs)
 
     return parser_func
@@ -152,12 +145,8 @@ def _read(**kwargs):
     return DataFrame(query_compiler=pd_obj)
 
 
-read_table = _inherit_func_docstring(pandas.read_table)(
-    _make_parser_func(method="read_table")
-)
-read_csv = _inherit_func_docstring(pandas.read_csv)(
-    _make_parser_func(method="read_csv")
-)
+read_table = _inherit_func_docstring(pandas.read_table)(_make_parser_func(sep="\t"))
+read_csv = _inherit_func_docstring(pandas.read_csv)(_make_parser_func(sep=","))
 
 
 @_inherit_func_docstring(pandas.read_parquet)
