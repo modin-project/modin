@@ -1687,10 +1687,8 @@ class BasePandasDataset(object):
         tolerance=None,
     ):
         axis = self._get_axis_number(axis)
-        multiindex_axis1 = self._query_compiler.has_multiindex(axis=1)
-        multiindex_axis0 = self._query_compiler.has_multiindex()
-        if (columns is not None and multiindex_axis1) or (
-            index is not None and multiindex_axis0
+        if (columns is not None and self._query_compiler.has_multiindex(axis=1)) or (
+            index is not None and self._query_compiler.has_multiindex()
         ):
             return self._default_to_pandas(
                 "reindex",
@@ -1706,8 +1704,8 @@ class BasePandasDataset(object):
             )
         if (
             level is not None
-            or (axis == 1 and multiindex_axis1)
-            or (axis == 0 and multiindex_axis0)
+            or (axis == 1 and self._query_compiler.has_multiindex(axis=1))
+            or (axis == 0 and self._query_compiler.has_multiindex())
         ):
             return self._default_to_pandas(
                 "reindex",
