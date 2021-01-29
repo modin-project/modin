@@ -27,3 +27,4 @@ pandas_gbq
 cloudpickle
 rpyc==4.1.5
 asv
+xgboost>=1.3
