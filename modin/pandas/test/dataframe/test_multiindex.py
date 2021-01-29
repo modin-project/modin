@@ -14,28 +14,10 @@
 import pytest
 import numpy as np
 import pandas
-from pandas.testing import assert_index_equal
-import matplotlib
 import modin.pandas as pd
-import sys
 
 from modin.pandas.test.utils import (
     df_equals,
-    name_contains,
-    test_data_values,
-    test_data_keys,
-    numeric_dfs,
-    axis_keys,
-    axis_values,
-    bool_arg_keys,
-    bool_arg_values,
-    eval_general,
-    create_test_dfs,
-    generate_multiindex,
-    test_data_resample,
-    test_data,
-    test_data_diff_dtype,
-    modin_df_almost_equals_pandas,
 )
 
 
