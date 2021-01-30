@@ -117,7 +117,7 @@ class PandasCSVParser(PandasParser):
                 pandas_dfs.append(pandas.read_csv(BytesIO(to_read), **kwargs))
             else:
                 # This only happens when we are reading with only one worker (Default)
-                pandas_dfs.append(pandas.read_csv(fname, **kwargs))
+                return pandas.read_csv(fname, **kwargs)
 
         # Combine read in data.
         if len(pandas_dfs) > 1:
