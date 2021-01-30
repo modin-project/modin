@@ -1305,6 +1305,7 @@ class TestCsv:
             df_modin = pd.read_csv(buffer)
             df_equals(df_modin, df_pandas)
 
+    @pytest.mark.skipif(Engine.get() == "Python", reason="Pandas does not support glob paths.")
     def test_read_multiple_csv(self, request):
         files = [
             pytest.csvs_names["test_read_csv_multiple1"],
