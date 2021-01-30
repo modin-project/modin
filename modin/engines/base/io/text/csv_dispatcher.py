@@ -155,7 +155,7 @@ class CSVDispatcher(TextFileDispatcher):
                 elif isinstance(header, int):
                     skip_header = header + 1
                 elif hasattr(header, "__iter__") and not isinstance(header, str):
-                    skip_header += max(header) + 1
+                    skip_header = max(header) + 1
                 else:
                     skip_header = 0
             if kwargs.get("encoding", None) is not None:
