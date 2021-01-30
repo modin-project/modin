@@ -16,6 +16,7 @@ import numpy as np
 import pandas
 from pandas.core.indexes.api import ensure_index, Index, RangeIndex
 from pandas.core.dtypes.common import is_numeric_dtype
+from typing import List, Hashable
 
 from modin.backends.pandas.query_compiler import PandasQueryCompiler
 from modin.error_message import ErrorMessage
@@ -595,6 +596,29 @@ class BasePandasFrame(object):
         )
         # Propagate the new row labels to the all dataframe partitions
         result._apply_index_objs(0)
+        return result
+
+    def to_labels(self, column_list: List[Hashable]) -> "BasePandasFrame":
+        """Move one or more columns into the row labels. Previous labels are dropped.
+
+        Parameters
+        ----------
+        column_list : list of hashable
+            The list of column names to place as the new row labels.
+
+        Returns
+        -------
+            A new BasePandasFrame that has the updated labels.
+        """
+        extracted_columns = self.mask(col_indices=column_list).to_pandas()
+        if len(column_list) == 1:
+            new_labels = pandas.Index(extracted_columns.squeeze(axis=1))
+        else:
+            new_labels = pandas.MultiIndex.from_frame(extracted_columns)
+        result = self.mask(
+            col_indices=[i for i in self.columns if i not in column_list]
+        )
+        result.index = new_labels
         return result
 
     def reorder_labels(self, row_numeric_idx=None, col_numeric_idx=None):
