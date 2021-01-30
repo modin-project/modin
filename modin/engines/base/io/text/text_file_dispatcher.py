@@ -155,9 +155,9 @@ class TextFileDispatcher(FileDispatcher):
 
         Returns
         -------
-            list
-                List, where each element of the list is a list of dictionaries. The inner lists
-                of dictionaries contains the data file of the cunk and chunk start and end offsets for its corresponding file.
+        list
+            List, where each element of the list is a list of dictionaries. The inner lists
+            of dictionaries contains the data file of the cunk and chunk start and end offsets for its corresponding file.
         """
         if type(files) != list:
             files = [files]

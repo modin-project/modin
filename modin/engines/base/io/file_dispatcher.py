@@ -67,7 +67,8 @@ class FileDispatcher:
 
         Returns
         -------
-
+        str or list
+            String or list of strings of absolute file paths.
         """
         if S3_ADDRESS_REGEX.search(file_path):
             return file_path
@@ -151,8 +152,8 @@ class FileDispatcher:
 
         Returns
         -------
-            bool
-                True if the file path is valid.
+        bool
+            True if the file path is valid.
         """
         if isinstance(file_path, str):
 
