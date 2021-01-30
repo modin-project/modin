@@ -171,7 +171,6 @@ class TextFileDispatcher(FileDispatcher):
         )
 
         result = []
-        split_ind = 0
         split_result = []
         split_size = 0
         read_rows_counter = 0
