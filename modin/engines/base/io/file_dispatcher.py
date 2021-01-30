@@ -60,9 +60,9 @@ class FileDispatcher:
 
         Parameters
         ----------
-        file_path : str
+        file_path: str
             String representing a path.
-        glob_path : bool
+        glob_path: bool
             True if the file_path should be treated as a glob string.
 
         Returns
@@ -144,9 +144,9 @@ class FileDispatcher:
 
         Parameters
         ----------
-        file_path : str
+        file_path: str
             Strin representing a path.
-        glob_path : bool
+        glob_path: bool
             True if the file_path should be treated as a glob string.
 
         Returns
