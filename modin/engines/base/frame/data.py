@@ -536,7 +536,7 @@ class BasePandasFrame(object):
             row_numeric_idx=new_row_order, col_numeric_idx=new_col_order
         )
 
-    def from_labels(self):
+    def from_labels(self) -> "BasePandasFrame":
         """Convert the row labels to a column of data, inserted at the first position.
 
         Returns
@@ -583,7 +583,9 @@ class BasePandasFrame(object):
             [0],
             keep_remaining=True,
         )
-        new_column_widths = [len(self.index.names) + self._column_widths[0]] + self._column_widths[1:]
+        new_column_widths = [
+            len(self.index.names) + self._column_widths[0]
+        ] + self._column_widths[1:]
         result = self.__constructor__(
             new_parts,
             new_row_labels,
