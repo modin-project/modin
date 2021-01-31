@@ -542,10 +542,10 @@ class BasePandasFrame(object):
         Returns
         -------
         BasePandasFrame
-            A new BasePandasFrame
+            A new BasePandasFrame.
         """
         new_row_labels = pandas.RangeIndex(len(self.index))
-        # Column labels are different for multilevel index
+        # Column labels are different for multilevel index.
         if len(self.index.names) > 1:
             # We will also use the `new_column_names` in the calculation of the internal metadata, so this is a
             # lightweight way of ensuring the metadata matches.
@@ -583,13 +583,13 @@ class BasePandasFrame(object):
             [0],
             keep_remaining=True,
         )
+        new_column_widths = [len(self.index.names) + self._column_widths[0]] + self._column_widths[1:]
         result = self.__constructor__(
             new_parts,
             new_row_labels,
             new_columns,
             row_lengths=self._row_lengths_cache,
-            column_widths=[len(self.index.names) + self._column_widths[0]]
-            + self._column_widths[1:],
+            column_widths=new_column_widths,
         )
         # Propagate the new row labels to the all dataframe partitions
         result._apply_index_objs(0)
