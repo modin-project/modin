@@ -222,7 +222,6 @@ class TextFileDispatcher(FileDispatcher):
                         # Ensure that we will not read more than nrows.
                         read_size = nrows - read_rows_counter
 
-                    # TODO (williamma12): read_rows should not be reading the partition_size number of rows because that is ncol * nrow.
                     outside_quotes, read_rows = cls._read_rows(
                         f,
                         nrows=read_size,
