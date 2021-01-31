@@ -67,7 +67,7 @@ def test_from_sql_defaults(make_sql_connection):  # noqa: F811
     df_equals(modin_df_from_table, pandas_df)
 
 @pytest.mark.skipif(
-    Engine.get() == "Python", reason="Pandas does not support glob paths."
+    Engine.get() != "Ray", reason="Currently only support Ray engine for glob paths."
 )
 def test_read_multiple_csv(make_csv_file):
     base_name = get_unique_filename(extension="")
