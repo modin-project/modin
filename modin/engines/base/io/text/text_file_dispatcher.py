@@ -209,12 +209,15 @@ class TextFileDispatcher(FileDispatcher):
                 read_size = partition_size - split_size
 
                 if nrows:
-                    if read_rows >= nrows:
-                        # Finish when we have read enough rows.
+                    if read_rows_counter >= nrows:
+                        # # Finish when we have read enough rows.
+                        if len(split_result) > 0:
+                            # Add last split into the result.
+                            result.append(split_result)
                         return result
-                    elif read_rows_counter + partition_size > nrows:
+                    elif read_rows_counter + read_size > nrows:
                         # Ensure that we will not read more than nrows.
-                        partition_size = nrows - read_rows_counter
+                        read_size = nrows - read_rows_counter
 
                     # TODO (williamma12): read_rows should not be reading the partition_size number of rows because that is ncol * nrow.
                     outside_quotes, read_rows = cls._read_rows(
