@@ -13,6 +13,7 @@
 
 from modin.engines.base.io.io import BaseIO
 from modin.engines.base.io.text.csv_dispatcher import CSVDispatcher
+from modin.engines.base.io.text.csv_glob_dispatcher import CSVGlobDispatcher
 from modin.engines.base.io.text.fwf_dispatcher import FWFDispatcher
 from modin.engines.base.io.text.json_dispatcher import JSONDispatcher
 from modin.engines.base.io.text.excel_dispatcher import ExcelDispatcher
@@ -26,6 +27,7 @@ from modin.engines.base.io.sql.sql_dispatcher import SQLDispatcher
 __all__ = [
     "BaseIO",
     "CSVDispatcher",
+    "CSVGlobDispatcher",
     "FWFDispatcher",
     "JSONDispatcher",
     "FileDispatcher",

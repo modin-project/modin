@@ -11,18 +11,21 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-from modin.engines.base.io.file_dispatcher import FileDispatcher
-import numpy as np
-import warnings
 import io
 import os
+from typing import List, Tuple
+import warnings
+
+import numpy as np
+from pandas._typing import FilePathOrBuffer
 
 from modin.config import NPartitions
+from modin.engines.base.io.file_dispatcher import FileDispatcher
 
 
 class TextFileDispatcher(FileDispatcher):
     @classmethod
-    def get_path_or_buffer(cls, filepath_or_buffer):
+    def get_path_or_buffer(cls, filepath_or_buffer: FilePathOrBuffer) -> str:
         """Given a buffer, try and extract the filepath from it so that we can
         use it without having to fall back to Pandas and share file objects between
         workers. Given a filepath, return it immediately.
@@ -124,33 +127,34 @@ class TextFileDispatcher(FileDispatcher):
     @classmethod
     def partitioned_file(
         cls,
-        files,
-        fnames,
+        f,
+        fname: str,
         num_partitions: int = None,
+        partition_size: int = None,
         nrows: int = None,
         skiprows: int = None,
         skip_header: int = None,
         quotechar: bytes = b'"',
         is_quoting: bool = True,
-    ):
+    ) -> Tuple[List[Tuple[str, int, int]], int]:
         """
         Compute chunk sizes in bytes for every partition.
 
         Parameters
         ----------
-        files: file or list of files
+        f: file
             File(s) to be partitioned.
-        fnames: str or list of str
+        fname: str
             File name(s) to be partitioned.
         num_partitions: int, optional
             For what number of partitions split a file.
             If not specified grabs the value from `modin.config.NPartitions.get()`.
+        partition_size: int, optional
+            Specifies the partition size. Overrides num_partitions argument.
         nrows: int, optional
             Number of rows of file to read.
         skiprows: int, optional
             Specifies rows to skip.
-        skip_header: int, optional
-            Specifies header rows to skip.
         quotechar: bytes, default b'"'
             Indicate quote in a file.
         is_quoting: bool, default True
@@ -158,99 +162,65 @@ class TextFileDispatcher(FileDispatcher):
 
         Returns
         -------
-        list
-            List, where each element of the list is a list of dictionaries. The inner lists
-            of dictionaries contains the data file of the cunk and chunk start and end offsets for its corresponding file.
+        (list, int)
+            First is a list of tuples consisting of the file name, start offset, and end offset of each partition split. Second is the number of rows read including skipped rows.
         """
-        if type(files) != list:
-            files = [files]
+        file_size = cls.file_size(f)
+        if partition_size is None:
+            if num_partitions is None:
+                num_partitions = NPartitions.get()
+            partition_size = max(
+                1, num_partitions, (nrows if nrows else file_size) // num_partitions
+            )
 
-        if num_partitions is None:
-            num_partitions = NPartitions.get()
+        skip_read_rows = 0
+        if skiprows:
+            # TODO(williamma12): Handle when skiprows > number of rows in file. Currently returns empty df.
+            outside_quotes, skip_read_rows = cls._read_rows(
+                f,
+                nrows=skiprows,
+                quotechar=quotechar,
+                is_quoting=is_quoting,
+            )
 
-        file_sizes = [cls.file_size(f) for f in files]
-        partition_size = max(
-            1, num_partitions, (nrows if nrows else sum(file_sizes)) // num_partitions
-        )
+        start = f.tell()
 
         result = []
-        split_result = []
-        split_size = 0
         read_rows_counter = 0
-        for f, fname, f_size in zip(files, fnames, file_sizes):
-            if skip_header:
+        while f.tell() < file_size:
+
+            if nrows:
+                if read_rows_counter >= nrows:
+                    # Finish when we have read enough rows.
+                    break
+                elif read_rows_counter + partition_size > nrows:
+                    # Ensure that we will not read more than nrows.
+                    partition_size = nrows - read_rows_counter
+
                 outside_quotes, read_rows = cls._read_rows(
                     f,
-                    nrows=skip_header,
+                    nrows=partition_size,
+                    quotechar=quotechar,
+                    is_quoting=is_quoting,
+                )
+                read_rows_counter += read_rows
+            else:
+                outside_quotes = cls.offset(
+                    f,
+                    offset_size=partition_size,
                     quotechar=quotechar,
                     is_quoting=is_quoting,
                 )
 
-            if skiprows:
-                # TODO(williamma12): Handle when skiprows > number of rows in file. Currently returns empty df.
-                outside_quotes, read_rows = cls._read_rows(
-                    f,
-                    nrows=skiprows,
-                    quotechar=quotechar,
-                    is_quoting=is_quoting,
-                )
-                skiprows -= read_rows
-                if skiprows > 0:
-                    continue
-
+            result.append((fname, start, f.tell()))
             start = f.tell()
 
-            while f.tell() < f_size:
-                if split_size >= partition_size:
-                    # Create a new split when the split has reached partition_size.
-                    # This is mainly used when we are reading row-wise partitioned files.
-                    result.append(split_result)
-                    split_result = []
-                    split_size = 0
+            # Add outside_quotes.
+            if is_quoting and not outside_quotes:
+                warnings.warn("File has mismatched quotes")
 
-                # We calculate the amount that we need to read based off of how much of the split we have already read.
-                read_size = partition_size - split_size
-
-                if nrows:
-                    if read_rows_counter >= nrows:
-                        # # Finish when we have read enough rows.
-                        if len(split_result) > 0:
-                            # Add last split into the result.
-                            result.append(split_result)
-                        return result
-                    elif read_rows_counter + read_size > nrows:
-                        # Ensure that we will not read more than nrows.
-                        read_size = nrows - read_rows_counter
-
-                    outside_quotes, read_rows = cls._read_rows(
-                        f,
-                        nrows=read_size,
-                        quotechar=quotechar,
-                        is_quoting=is_quoting,
-                    )
-                    split_size += read_rows
-                    read_rows_counter += read_rows
-                else:
-                    outside_quotes = cls.offset(
-                        f,
-                        offset_size=read_size,
-                        quotechar=quotechar,
-                        is_quoting=is_quoting,
-                    )
-
-                split_result.append({"fname": fname, "start": start, "end": f.tell()})
-                split_size += f.tell() - start
-                start = f.tell()
-
-                # Add outside_quotes.
-                if is_quoting and not outside_quotes:
-                    warnings.warn("File has mismatched quotes")
-
-        # Add last split into the result.
-        if len(split_result) > 0:
-            result.append(split_result)
-
-        return result
+        total_rows_read = read_rows_counter + skip_read_rows
+        return result, total_rows_read
 
     @classmethod
     def _read_rows(

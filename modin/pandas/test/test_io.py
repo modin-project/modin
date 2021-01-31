@@ -328,17 +328,6 @@ def TestReadCSVFixture():
         filename=pytest.csvs_names["test_read_csv_bad_lines"],
         add_bad_lines=True,
     )
-    # test_read_multiple_csv
-    read_multiple_name = get_unique_filename(extension=None)
-    pytest.csvs_names["test_read_csv_glob"] = "{}_*.csv".format(read_multiple_name)
-    pytest.csvs_names["test_read_csv_multiple1"] = "{}_1.csv".format(read_multiple_name)
-    pytest.csvs_names["test_read_csv_multiple2"] = "{}_2.csv".format(read_multiple_name)
-    _make_csv_file(filenames)(
-        filename=pytest.csvs_names["test_read_csv_multiple1"],
-    )
-    _make_csv_file(filenames)(
-        filename=pytest.csvs_names["test_read_csv_multiple2"],
-    )
 
     yield
     # Delete csv files that were created
@@ -1304,29 +1293,6 @@ class TestCsv:
             buffer.seek(0)
             df_modin = pd.read_csv(buffer)
             df_equals(df_modin, df_pandas)
-
-    @pytest.mark.skipif(
-        Engine.get() == "Python", reason="Pandas does not support glob paths."
-    )
-    def test_read_multiple_csv(self, request):
-        files = [
-            pytest.csvs_names["test_read_csv_multiple1"],
-            pytest.csvs_names["test_read_csv_multiple2"],
-        ]
-        glob_path = pytest.csvs_names["test_read_csv_glob"]
-
-        pandas_df1 = pandas.concat(pandas.read_csv(fname) for fname in files)
-        pandas_df2 = pandas.concat(pandas.read_csv(fname) for fname in files[::-1])
-        # We have to reset the index because concating mucks with the indices.
-        pandas_df1 = pandas_df1.reset_index(drop=True)
-        pandas_df2 = pandas_df2.reset_index(drop=True)
-        modin_df = pd.read_csv(glob_path)
-
-        # Glob does not guarantee ordering so we have to test both.
-        try:
-            df_equals(modin_df, pandas_df1)
-        except AssertionError:
-            df_equals(modin_df, pandas_df2)
 
 
 class TestTable:

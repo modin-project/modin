@@ -18,7 +18,9 @@ from modin.config import Engine
 from modin.pandas.test.test_io import (  # noqa: F401
     df_equals,
     make_sql_connection,
+    make_csv_file,
 )
+from modin.pandas.test.utils import get_unique_filename
 
 
 @pytest.mark.skipif(
@@ -63,3 +65,27 @@ def test_from_sql_defaults(make_sql_connection):  # noqa: F811
 
     df_equals(modin_df_from_query, pandas_df)
     df_equals(modin_df_from_table, pandas_df)
+
+@pytest.mark.skipif(
+    Engine.get() == "Python", reason="Pandas does not support glob paths."
+)
+def test_read_multiple_csv(make_csv_file):
+    base_name = get_unique_filename(extension="")
+    glob_path = "{}_*.csv".format(base_name)
+    files = ["{}_{}.csv".format(base_name, i) for i in range(2)]
+    for fname in files:
+        make_csv_file(fname)
+
+    pandas_df1 = pandas.concat([pandas.read_csv(fname) for fname in files])
+    pandas_df2 = pandas.concat([pandas.read_csv(fname) for fname in files[::-1]])
+    # We have to reset the index because concating mucks with the indices.
+    pandas_df1 = pandas_df1.reset_index(drop=True)
+    pandas_df2 = pandas_df2.reset_index(drop=True)
+    modin_df = pd.read_csv(glob_path)
+
+    # Glob does not guarantee ordering so we have to test both.
+    try:
+        df_equals(modin_df, pandas_df1)
+    except AssertionError:
+        df_equals(modin_df, pandas_df2)
+

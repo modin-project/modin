@@ -15,9 +15,13 @@ import numpy as np
 import pandas
 import warnings
 
+from modin.backends.pandas.parsers import _split_result_for_readers, PandasCSVGlobParser
+from modin.backends.pandas.query_compiler import PandasQueryCompiler
 from modin.engines.ray.pandas_on_ray.io import PandasOnRayIO
-from modin.backends.pandas.parsers import _split_result_for_readers
+from modin.engines.base.io import CSVGlobDispatcher
+from modin.engines.ray.pandas_on_ray.frame.data import PandasOnRayFrame
 from modin.engines.ray.pandas_on_ray.frame.partition import PandasOnRayFramePartition
+from modin.engines.ray.task_wrapper import RayTask
 from modin.config import NPartitions
 
 import ray
@@ -53,6 +57,12 @@ def _read_parquet_columns(path, columns, num_splits, kwargs):  # pragma: no cove
 
 
 class ExperimentalPandasOnRayIO(PandasOnRayIO):
+    build_args = dict(
+        frame_partition_cls=PandasOnRayFramePartition,
+        query_compiler_cls=PandasQueryCompiler,
+        frame_cls=PandasOnRayFrame,
+    )
+    read_csv = type("", (RayTask, PandasCSVGlobParser, CSVGlobDispatcher), build_args)._read
     read_parquet_remote_task = _read_parquet_columns
 
     @classmethod

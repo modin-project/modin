@@ -11,29 +11,38 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
+from contextlib import ExitStack
 import csv
-import pandas
+import glob
+import os
 import sys
+from typing import List
 
+import pandas
 from pandas.io.parsers import _validate_usecols_arg
-from pandas._typing import FilePathOrBuffer
 
 from modin.config import NPartitions
 from modin.data_management.utils import compute_chunksize
-from modin.engines.base.io.text.text_file_dispatcher import TextFileDispatcher
+from modin.engines.base.io.file_dispatcher import S3_ADDRESS_REGEX
+from modin.engines.base.io.text.csv_dispatcher import CSVDispatcher
 
 
-class CSVDispatcher(TextFileDispatcher):
+class CSVGlobDispatcher(CSVDispatcher):
     @classmethod
-    def _read(cls, filepath_or_buffer: FilePathOrBuffer, **kwargs):
+    def _read(cls, filepath_or_buffer, **kwargs):
         # Ensures that the file is a string file path. Otherwise, default to pandas.
         filepath_or_buffer = cls.get_path_or_buffer(filepath_or_buffer)
         if isinstance(filepath_or_buffer, str):
-            if not cls.file_exists(filepath_or_buffer):
+            if not cls.glob_file_exists(filepath_or_buffer):
                 return cls.single_worker_read(filepath_or_buffer, **kwargs)
-            filepath_or_buffer = cls.get_path(filepath_or_buffer)
+            filepath_or_buffer = cls.get_glob_path(filepath_or_buffer)
         elif not cls.pathlib_or_pypath(filepath_or_buffer):
             return cls.single_worker_read(filepath_or_buffer, **kwargs)
+
+        # We read multiple csv files when the file path is a list of absolute file paths. We assume that all of the files will be essentially replicas of the
+        # first file but with different data values.
+        glob_filepaths = filepath_or_buffer
+        filepath_or_buffer = filepath_or_buffer[0]
 
         compression_type = cls.infer_compression(
             filepath_or_buffer, kwargs.get("compression")
@@ -119,7 +128,12 @@ class CSVDispatcher(TextFileDispatcher):
         )
         is_quoting = kwargs.get("quoting", "") != csv.QUOTE_NONE
 
-        with cls.file_open(filepath_or_buffer, "rb", compression_type) as f:
+        with ExitStack() as stack:
+            files = [
+                stack.enter_context(cls.file_open(fname, "rb", compression_type))
+                for fname in glob_filepaths
+            ]
+
             # Skip the header since we already have the header information and skip the
             # rows we are told to skip.
             if isinstance(skiprows, int) or skiprows is None:
@@ -134,7 +148,6 @@ class CSVDispatcher(TextFileDispatcher):
                     skip_header = max(header) + 1
                 else:
                     skip_header = 0
-                skiprows += skip_header
             if kwargs.get("encoding", None) is not None:
                 partition_kwargs["skiprows"] = 1
             # Launch tasks to read partitions
@@ -163,23 +176,25 @@ class CSVDispatcher(TextFileDispatcher):
                 ]
 
             args = {
-                "fname": filepath_or_buffer,
                 "num_splits": num_splits,
                 **partition_kwargs,
             }
 
-            splits, _ = cls.partitioned_file(
-                f,
-                filepath_or_buffer,
+            splits = cls.partitioned_multiple_files(
+                files,
+                glob_filepaths,
                 num_partitions=num_partitions,
                 nrows=nrows,
                 skiprows=skiprows,
+                skip_header=skip_header,
                 quotechar=quotechar,
                 is_quoting=is_quoting,
             )
 
-            for _, start, end in splits:
-                args.update({"start": start, "end": end})
+            print("SPLITS:\n{}".format(splits))
+            for chunks in splits:
+                print("CHUNKS:\n{}".format(chunks))
+                args.update({"chunks": chunks})
                 partition_id = cls.deploy(cls.parse, num_splits + 2, args)
                 partition_ids.append(partition_id[:-2])
                 index_ids.append(partition_id[-2])
@@ -245,3 +260,178 @@ class CSVDispatcher(TextFileDispatcher):
         if index_col is None:
             new_query_compiler._modin_frame._apply_index_objs(axis=0)
         return new_query_compiler
+
+    @classmethod
+    def glob_file_exists(cls, glob_path: str) -> bool:
+        """
+        Checks if the glob_path is valid.
+
+        Parameters
+        ----------
+        glob_path: str
+            String representing a path.
+
+        Returns
+        -------
+        bool
+            True if the glob path is valid.
+        """
+        if isinstance(glob_path, str):
+            if S3_ADDRESS_REGEX.search(glob_path):
+                return len(cls._s3_path(glob_path, True)) > 0
+        return len(glob.glob(glob_path)) > 0
+
+    @classmethod
+    def get_glob_path(cls, file_path: str) -> list:
+        """
+        Returns the path of the file(s).
+
+        Parameters
+        ----------
+        file_path: str
+            String representing a path.
+
+        Returns
+        -------
+        list
+            List of strings of absolute file paths.
+        """
+        if S3_ADDRESS_REGEX.search(file_path):
+            return cls._s3_path(file_path, True)
+        else:
+            relative_paths = glob.glob(file_path)
+            abs_paths = [os.path.abspath(path) for path in relative_paths]
+            return abs_paths
+
+    @classmethod
+    def partitioned_multiple_files(
+        cls,
+        files,
+        fnames: List[str],
+        num_partitions: int = None,
+        nrows: int = None,
+        skiprows: int = None,
+        skip_header: int = None,
+        quotechar: bytes = b'"',
+        is_quoting: bool = True,
+    ):
+        """
+        Compute chunk sizes in bytes for every partition.
+
+        Parameters
+        ----------
+        files: file
+            Files to be partitioned.
+        fnames: str
+            File names to be partitioned.
+        num_partitions: int, optional
+            For what number of partitions split a file.
+            If not specified grabs the value from `modin.config.NPartitions.get()`.
+        nrows: int, optional
+            Number of rows of file to read.
+        skiprows: int, optional
+            Specifies rows to skip.
+        skip_header: int, optional
+            Specifies header rows to skip.
+        quotechar: bytes, default b'"'
+            Indicate quote in a file.
+        is_quoting: bool, default True
+            Whether or not to consider quotes.
+
+        Returns
+        -------
+        list
+            List of list consisting of tuples, which contain data of which files make up each corresponding partition. The tuples consisting of the file name, start offset, and end offset of each partition split.
+        """
+        if num_partitions is None:
+            num_partitions = NPartitions.get()
+
+        file_size = sum(cls.file_size(f) for f in files)
+        partition_size = max(
+            1, num_partitions, (nrows if nrows else file_size) // num_partitions
+        )
+
+        final_result = []
+        split_result = []
+        split_size = 0
+        read_rows_counter = 0
+        for f, fname in zip(files, fnames):
+            if skip_header:
+                outside_quotes, read_rows = cls._read_rows(
+                    f,
+                    nrows=skip_header,
+                    quotechar=quotechar,
+                    is_quoting=is_quoting,
+                )
+
+            # Fill up the rest of the partition before partitioning the rest of the file.
+            if split_size > 0:
+                remainder_size = partition_size - split_size
+                start = f.tell()
+                if nrows:
+                    outside_quotes, read_rows = cls._read_rows(
+                        f,
+                        nrows=remainder_size,
+                        quotechar=quotechar,
+                        is_quoting=is_quoting,
+                    )
+                    split_size += read_rows
+                    nrows -= read_rows
+                    end = f.tell()
+                else:
+                    outside_quotes = cls.offset(
+                        f,
+                        offset_size=remainder_size,
+                        quotechar=quotechar,
+                        is_quoting=is_quoting,
+                    )
+                    end = f.tell()
+                    split_size += (end - start)
+                split_result.append((fname, start, end))
+                if split_size < partition_size:
+                    continue
+                else:
+                    final_result.append(split_result)
+                    split_result = []
+                    split_size = 0
+
+            file_splits, rows_read = cls.partitioned_file(
+                f,
+                fname,
+                partition_size=partition_size,
+                nrows=nrows,
+                skiprows=skiprows,
+                quotechar=quotechar,
+                is_quoting=is_quoting,
+            )
+
+            if rows_read > 0 and skiprows:
+                if skiprows > rows_read:
+                    skiprows -= rows_read
+                    continue
+                else:
+                    rows_read -= skiprows
+            
+            # Calculate if the last split needs to be carried over to the next file.
+            if nrows:
+                last_size = rows_read % partition_size
+                full_last_partition = last_size == 0
+                nrows -= rows_read
+            else:
+                _, last_start, last_end = file_splits[-1]
+                last_size = (last_end - last_start)
+                full_last_partition = last_size >= partition_size
+
+            if full_last_partition:
+                final_result.append(file_splits)
+            else:
+                final_result.append(file_splits[:-1])
+                split_result = [file_splits[-1]]
+                split_size = last_size
+
+        # Add straggler splits into the final result.
+        if split_size > 0:
+            final_result.append(split_result)
+
+        return final_result
+

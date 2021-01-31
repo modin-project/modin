@@ -11,10 +11,9 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-import glob
 import os
 import re
-from typing import Union
+from typing import List
 
 from modin.config import Backend
 
@@ -54,7 +53,7 @@ class FileDispatcher:
         raise NotImplementedError(NOT_IMPLEMENTED_MESSAGE)
 
     @classmethod
-    def get_path(cls, file_path: str, glob_path: bool = False) -> Union[list, str]:
+    def get_path(cls, file_path: str) -> str:
         """
         Returns the path of the file(s).
 
@@ -62,20 +61,14 @@ class FileDispatcher:
         ----------
         file_path: str
             String representing a path.
-        glob_path: bool
-            True if the file_path should be treated as a glob string.
 
         Returns
         -------
-        str or list
-            String or list of strings of absolute file paths.
+        str
+            String of strings of absolute file paths.
         """
         if S3_ADDRESS_REGEX.search(file_path):
-            return file_path
-        elif glob_path:
-            relative_paths = glob.glob(file_path)
-            abs_paths = [os.path.abspath(path) for path in relative_paths]
-            return abs_paths
+            return _s3_path(file_path, False)[0]
         else:
             return os.path.abspath(file_path)
 
@@ -138,17 +131,57 @@ class FileDispatcher:
         f.seek(cur_pos, os.SEEK_SET)
         return size
 
+    @staticmethod
+    def _s3_path(s3_path: str, glob: bool) -> List[str]:
+        """
+        Get s3 file paths.
+
+        Parameters
+        ----------
+        s3_path: str
+            String of s3 path.
+        glob: bool
+            True if the path is a glob path.
+
+        Returns
+        -------
+        list[str]
+            List of s3 files based on the path.
+        """
+        # S3FS does not allow captial S in s3 addresses.
+        if s3_path[0] == "S":
+            s3_path = "{}{}".format("s", s3_path[1:])
+
+        import s3fs as S3FS
+        from botocore.exceptions import NoCredentialsError
+
+        def get_file_path(fs_handle) -> List[str]:
+            if not glob:
+                if fs_handle.exists(s3_path):
+                    return [s3_path]
+                else:
+                    return []
+            else:
+                return fs_handle.glob(s3_path)
+
+        s3fs = S3FS.S3FileSystem(anon=False)
+        try:
+            return get_file_path(s3fs)
+        except NoCredentialsError:
+            pass
+        s3fs = S3FS.S3FileSystem(anon=True)
+        return get_file_path(s3fs)
+
+
     @classmethod
-    def file_exists(cls, file_path: str, glob_path: bool = False) -> bool:
+    def file_exists(cls, file_path: str) -> bool:
         """
         Checks if the file_path leads to an existing file.
 
         Parameters
         ----------
         file_path: str
-            Strin representing a path.
-        glob_path: bool
-            True if the file_path should be treated as a glob string.
+            String representing a path.
 
         Returns
         -------
@@ -156,27 +189,8 @@ class FileDispatcher:
             True if the file path is valid.
         """
         if isinstance(file_path, str):
-
-            # Check if the path is an s3 address.
-            match = S3_ADDRESS_REGEX.search(file_path)
-            if match is not None:
-                # S3FS does not allow captial S in s3 addresses.
-                if file_path[0] == "S":
-                    file_path = "{}{}".format("s", file_path[1:])
-
-                import s3fs as S3FS
-                from botocore.exceptions import NoCredentialsError
-
-                s3fs = S3FS.S3FileSystem(anon=False)
-                exists = False
-                try:
-                    exists = s3fs.exists(file_path) or exists
-                except NoCredentialsError:
-                    pass
-                s3fs = S3FS.S3FileSystem(anon=True)
-                return exists or s3fs.exists(file_path)
-            if glob_path:
-                return len(glob.glob(file_path)) > 0
+            if S3_ADDRESS_REGEX.search(file_path):
+                return len(_s3_path(file_path, False)) > 0
         return os.path.exists(file_path)
 
     @classmethod
