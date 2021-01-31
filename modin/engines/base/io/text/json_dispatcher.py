@@ -63,6 +63,7 @@ class JSONDispatcher(TextFileDispatcher):
 
             splits = cls.partitioned_file(
                 f,
+                path_or_buf,
                 num_partitions=num_partitions,
                 is_quoting=(args.get("quoting", "") != QUOTE_NONE),
             )

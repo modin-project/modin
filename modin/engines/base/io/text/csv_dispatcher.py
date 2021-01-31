@@ -131,18 +131,14 @@ class CSVDispatcher(TextFileDispatcher):
 
         # with cls.file_open(filepath_or_buffer, "rb", compression_type) as f:
         with ExitStack() as stack:
+            fnames = [filepath_or_buffer]
+            if read_multiple:
+                fnames += other_filepaths
             files = [
                 stack.enter_context(
-                    cls.file_open(filepath_or_buffer, "rb", compression_type)
-                )
+                    cls.file_open(fname, "rb", compression_type)
+                ) for fname in fnames
             ]
-            if read_multiple:
-                for file_name in other_filepaths:
-                    files.append(
-                        stack.enter_context(
-                            cls.file_open(file_name, "rb", compression_type)
-                        )
-                    )
 
             # Skip the header since we already have the header information and skip the
             # rows we are told to skip.
@@ -193,6 +189,7 @@ class CSVDispatcher(TextFileDispatcher):
 
             splits = cls.partitioned_file(
                 files,
+                fnames,
                 num_partitions=num_partitions,
                 nrows=nrows,
                 skiprows=skiprows,

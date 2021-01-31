@@ -125,6 +125,7 @@ class TextFileDispatcher(FileDispatcher):
     def partitioned_file(
         cls,
         files,
+        fnames,
         num_partitions: int = None,
         nrows: int = None,
         skiprows: int = None,
@@ -139,6 +140,8 @@ class TextFileDispatcher(FileDispatcher):
         ----------
         files: file or list of files
             File(s) to be partitioned.
+        fnames: str or list of str
+            File name(s) to be partitioned.
         num_partitions: int, optional
             For what number of partitions split a file.
             If not specified grabs the value from `modin.config.NPartitions.get()`.
@@ -174,7 +177,7 @@ class TextFileDispatcher(FileDispatcher):
         split_result = []
         split_size = 0
         read_rows_counter = 0
-        for f, f_size in zip(files, file_sizes):
+        for f, fname, f_size in zip(files, fnames, file_sizes):
             if skip_header:
                 outside_quotes, read_rows = cls._read_rows(
                     f,
@@ -236,7 +239,7 @@ class TextFileDispatcher(FileDispatcher):
                         is_quoting=is_quoting,
                     )
 
-                split_result.append({"fname": f.name, "start": start, "end": f.tell()})
+                split_result.append({"fname": fname, "start": start, "end": f.tell()})
                 split_size += f.tell() - start
                 start = f.tell()
 

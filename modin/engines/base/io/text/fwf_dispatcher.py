@@ -154,6 +154,7 @@ class FWFDispatcher(TextFileDispatcher):
 
             splits = cls.partitioned_file(
                 f,
+                filepath_or_buffer,
                 num_partitions=num_partitions,
                 nrows=nrows,
                 skiprows=skiprows,
