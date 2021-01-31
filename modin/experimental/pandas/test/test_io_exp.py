@@ -17,6 +17,7 @@ import modin.experimental.pandas as pd
 from modin.config import Engine
 from modin.pandas.test.test_io import (  # noqa: F401
     df_equals,
+    eval_io,
     make_sql_connection,
     make_csv_file,
 )
@@ -66,10 +67,11 @@ def test_from_sql_defaults(make_sql_connection):  # noqa: F811
     df_equals(modin_df_from_query, pandas_df)
     df_equals(modin_df_from_table, pandas_df)
 
+
 @pytest.mark.skipif(
     Engine.get() != "Ray", reason="Currently only support Ray engine for glob paths."
 )
-def test_read_multiple_csv(make_csv_file):
+def test_read_multiple_csv(make_csv_file):  # noqa: F811
     base_name = get_unique_filename(extension="")
     glob_path = "{}_*.csv".format(base_name)
     files = ["{}_{}.csv".format(base_name, i) for i in range(2)]
@@ -89,3 +91,10 @@ def test_read_multiple_csv(make_csv_file):
     except AssertionError:
         df_equals(modin_df, pandas_df2)
 
+
+def test_read_csv_s3(self):
+    eval_io(
+        fn_name="read_csv",
+        # read_csv kwargs
+        filepath_or_buffer="s3://noaa-ghcn-pds/csv/178*.csv",
+    )

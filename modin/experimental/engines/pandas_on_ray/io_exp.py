@@ -62,7 +62,9 @@ class ExperimentalPandasOnRayIO(PandasOnRayIO):
         query_compiler_cls=PandasQueryCompiler,
         frame_cls=PandasOnRayFrame,
     )
-    read_csv = type("", (RayTask, PandasCSVGlobParser, CSVGlobDispatcher), build_args)._read
+    read_csv = type(
+        "", (RayTask, PandasCSVGlobParser, CSVGlobDispatcher), build_args
+    )._read
     read_parquet_remote_task = _read_parquet_columns
 
     @classmethod

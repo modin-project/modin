@@ -73,6 +73,7 @@ def read_sql(
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
     return DataFrame(query_compiler=EngineDispatcher.read_sql(**kwargs))
 
+
 # CSV and table
 def _make_parser_func(sep):
     """

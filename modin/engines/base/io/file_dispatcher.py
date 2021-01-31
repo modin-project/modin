@@ -68,7 +68,7 @@ class FileDispatcher:
             String of strings of absolute file paths.
         """
         if S3_ADDRESS_REGEX.search(file_path):
-            return _s3_path(file_path, False)[0]
+            return cls._s3_path(file_path, False)[0]
         else:
             return os.path.abspath(file_path)
 
@@ -172,7 +172,6 @@ class FileDispatcher:
         s3fs = S3FS.S3FileSystem(anon=True)
         return get_file_path(s3fs)
 
-
     @classmethod
     def file_exists(cls, file_path: str) -> bool:
         """
@@ -190,7 +189,7 @@ class FileDispatcher:
         """
         if isinstance(file_path, str):
             if S3_ADDRESS_REGEX.search(file_path):
-                return len(_s3_path(file_path, False)) > 0
+                return len(cls._s3_path(file_path, False)) > 0
         return os.path.exists(file_path)
 
     @classmethod

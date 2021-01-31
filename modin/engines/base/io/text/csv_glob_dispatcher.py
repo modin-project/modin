@@ -354,7 +354,6 @@ class CSVGlobDispatcher(CSVDispatcher):
         final_result = []
         split_result = []
         split_size = 0
-        read_rows_counter = 0
         for f, fname in zip(files, fnames):
             if skip_header:
                 outside_quotes, read_rows = cls._read_rows(
@@ -369,7 +368,7 @@ class CSVGlobDispatcher(CSVDispatcher):
                 remainder_size = partition_size - split_size
                 start = f.tell()
                 if nrows:
-                    outside_quotes, read_rows = cls._read_rows(
+                    _, read_rows = cls._read_rows(
                         f,
                         nrows=remainder_size,
                         quotechar=quotechar,
@@ -379,14 +378,14 @@ class CSVGlobDispatcher(CSVDispatcher):
                     nrows -= read_rows
                     end = f.tell()
                 else:
-                    outside_quotes = cls.offset(
+                    cls.offset(
                         f,
                         offset_size=remainder_size,
                         quotechar=quotechar,
                         is_quoting=is_quoting,
                     )
                     end = f.tell()
-                    split_size += (end - start)
+                    split_size += end - start
                 split_result.append((fname, start, end))
                 if split_size < partition_size:
                     continue
@@ -411,7 +410,7 @@ class CSVGlobDispatcher(CSVDispatcher):
                     continue
                 else:
                     rows_read -= skiprows
-            
+
             # Calculate if the last split needs to be carried over to the next file.
             if nrows:
                 last_size = rows_read % partition_size
@@ -419,7 +418,7 @@ class CSVGlobDispatcher(CSVDispatcher):
                 nrows -= rows_read
             else:
                 _, last_start, last_end = file_splits[-1]
-                last_size = (last_end - last_start)
+                last_size = last_end - last_start
                 full_last_partition = last_size >= partition_size
 
             if full_last_partition:
@@ -434,4 +433,3 @@ class CSVGlobDispatcher(CSVDispatcher):
             final_result.append(split_result)
 
         return final_result
-
