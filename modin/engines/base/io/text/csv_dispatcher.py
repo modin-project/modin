@@ -135,9 +135,8 @@ class CSVDispatcher(TextFileDispatcher):
             if read_multiple:
                 fnames += other_filepaths
             files = [
-                stack.enter_context(
-                    cls.file_open(fname, "rb", compression_type)
-                ) for fname in fnames
+                stack.enter_context(cls.file_open(fname, "rb", compression_type))
+                for fname in fnames
             ]
 
             # Skip the header since we already have the header information and skip the
