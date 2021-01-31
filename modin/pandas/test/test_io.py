@@ -1325,7 +1325,7 @@ class TestCsv:
         # Glob does not guarantee ordering so we have to test both.
         try:
             df_equals(modin_df, pandas_df1)
-        except:
+        except AssertionError:
             df_equals(modin_df, pandas_df2)
 
 
