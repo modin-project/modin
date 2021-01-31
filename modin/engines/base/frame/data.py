@@ -536,6 +536,67 @@ class BasePandasFrame(object):
             row_numeric_idx=new_row_order, col_numeric_idx=new_col_order
         )
 
+    def from_labels(self) -> "BasePandasFrame":
+        """Convert the row labels to a column of data, inserted at the first position.
+
+        Returns
+        -------
+        BasePandasFrame
+            A new BasePandasFrame.
+        """
+        new_row_labels = pandas.RangeIndex(len(self.index))
+        # Column labels are different for multilevel index.
+        if len(self.index.names) > 1:
+            # We will also use the `new_column_names` in the calculation of the internal metadata, so this is a
+            # lightweight way of ensuring the metadata matches.
+            new_column_names = pandas.Index(
+                [
+                    self.index.names[i]
+                    if self.index.names[i] is not None
+                    else "level_{}".format(i)
+                    for i in range(len(self.index.names))
+                ]
+            )
+            new_columns = new_column_names.append(self.columns)
+        else:
+            # See note above about usage of `new_column_names`.
+            new_column_names = pandas.Index(
+                [
+                    self.index.names[0]
+                    if self.index.names[0] is not None
+                    else "index"
+                    if "index" not in self.columns
+                    else "level_{}".format(0)
+                ]
+            )
+            new_columns = new_column_names.append(self.columns)
+
+        def from_labels_executor(df, **kwargs):
+            # Setting the names here ensures that external and internal metadata always match.
+            df.index.names = new_column_names
+            return df.reset_index()
+
+        new_parts = self._frame_mgr_cls.apply_func_to_select_indices(
+            0,
+            self._partitions,
+            from_labels_executor,
+            [0],
+            keep_remaining=True,
+        )
+        new_column_widths = [
+            len(self.index.names) + self._column_widths[0]
+        ] + self._column_widths[1:]
+        result = self.__constructor__(
+            new_parts,
+            new_row_labels,
+            new_columns,
+            row_lengths=self._row_lengths_cache,
+            column_widths=new_column_widths,
+        )
+        # Propagate the new row labels to the all dataframe partitions
+        result._apply_index_objs(0)
+        return result
+
     def reorder_labels(self, row_numeric_idx=None, col_numeric_idx=None):
         """Reorder the column and or rows in this DataFrame.
 

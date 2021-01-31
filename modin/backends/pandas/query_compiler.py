@@ -533,16 +533,8 @@ class PandasQueryCompiler(BaseQueryCompiler):
         if level is not None or self.has_multiindex():
             return self.default_to_pandas(pandas.DataFrame.reset_index, **kwargs)
         if not drop:
-            new_column_name = (
-                self.index.name
-                if self.index.name is not None
-                else "index"
-                if "index" not in self.columns
-                else "level_0"
-            )
-            new_self = self.insert(0, new_column_name, self.index)
-        else:
-            new_self = self.copy()
+            return self.__constructor__(self._modin_frame.from_labels())
+        new_self = self.copy()
         new_self.index = pandas.RangeIndex(len(new_self.index))
         return new_self
 
