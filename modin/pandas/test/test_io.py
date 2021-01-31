@@ -1315,12 +1315,18 @@ class TestCsv:
         ]
         glob_path = pytest.csvs_names["test_read_csv_glob"]
 
-        pandas_df = pandas.concat(pandas.read_csv(fname) for fname in files)
+        pandas_df1 = pandas.concat(pandas.read_csv(fname) for fname in files)
+        pandas_df2 = pandas.concat(pandas.read_csv(fname) for fname in files[::-1])
         # We have to reset the index because concating mucks with the indices.
-        pandas_df = pandas_df.reset_index(drop=True)
+        pandas_df1 = pandas_df1.reset_index(drop=True)
+        pandas_df2 = pandas_df2.reset_index(drop=True)
         modin_df = pd.read_csv(glob_path)
 
-        df_equals(modin_df, pandas_df)
+        # Glob does not guarantee ordering so we have to test both.
+        try:
+            df_equals(modin_df, pandas_df1)
+        except:
+            df_equals(modin_df, pandas_df2)
 
 
 class TestTable:
