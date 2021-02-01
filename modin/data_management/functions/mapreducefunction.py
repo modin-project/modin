@@ -23,8 +23,8 @@ class MapReduceFunction(Function):
             return query_compiler.__constructor__(
                 query_compiler._modin_frame._map_reduce(
                     cls.validate_axis(axis),
-                    lambda x: map_function(x, *args, **kwargs),
-                    lambda y: reduce_function(y, *args, **kwargs),
+                    lambda x, *args, **kwargs: map_function(x, *args, **kwargs),
+                    lambda y, *args, **kwargs: reduce_function(y, *args, **kwargs),
                     preserve_index=preserve_index,
                 )
             )

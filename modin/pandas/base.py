@@ -509,10 +509,7 @@ class BasePandasDataset(object):
         result = None
 
         if axis == 0:
-            try:
-                result = self._aggregate(func, _axis=axis, *args, **kwargs)
-            except TypeError:
-                pass
+            result = self._aggregate(func, _axis=axis, *args, **kwargs)
         if result is None:
             kwargs.pop("is_transform", None)
             return self.apply(func, axis=axis, args=args, **kwargs)
@@ -2649,7 +2646,7 @@ class BasePandasDataset(object):
         kwargs["is_transform"] = True
         try:
             result = self.agg(func, axis=axis, *args, **kwargs)
-        except Exception:
+        except TypeError:
             raise ValueError("Transform function failed")
         try:
             assert len(result) == len(self)
