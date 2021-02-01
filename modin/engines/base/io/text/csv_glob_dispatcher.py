@@ -191,7 +191,8 @@ class CSVGlobDispatcher(CSVDispatcher):
                 is_quoting=is_quoting,
             )
 
-            print("SPLITS:\n{}".format(splits))
+            print("num_partitions: {}".format(num_partitions))
+            print("SPLITS:\n{}".format(len(splits)))
             for chunks in splits:
                 print("CHUNKS:\n{}".format(chunks))
                 args.update({"chunks": chunks})
@@ -346,17 +347,18 @@ class CSVGlobDispatcher(CSVDispatcher):
         if num_partitions is None:
             num_partitions = NPartitions.get()
 
-        file_size = sum(cls.file_size(f) for f in files)
+        file_sizes = [cls.file_size(f) for f in files]
         partition_size = max(
-            1, num_partitions, (nrows if nrows else file_size) // num_partitions
+            1, num_partitions, (nrows if nrows else sum(file_sizes)) // num_partitions
         )
 
         final_result = []
         split_result = []
         split_size = 0
-        for f, fname in zip(files, fnames):
+        print("PARTITION_SIZE: {}".format(partition_size))
+        for f, fname, fsize in zip(files, fnames, file_sizes):
             if skip_header:
-                outside_quotes, read_rows = cls._read_rows(
+                cls._read_rows(
                     f,
                     nrows=skip_header,
                     quotechar=quotechar,
@@ -365,19 +367,19 @@ class CSVGlobDispatcher(CSVDispatcher):
 
             # Fill up the rest of the partition before partitioning the rest of the file.
             if split_size > 0:
-                remainder_size = partition_size - split_size
                 start = f.tell()
                 if nrows:
-                    _, read_rows = cls._read_rows(
+                    print("NROWS: {}".format(nrows))
+                    remainder_size = min(partition_size, nrows) - split_size
+                    _, read_size = cls._read_rows(
                         f,
                         nrows=remainder_size,
                         quotechar=quotechar,
                         is_quoting=is_quoting,
                     )
-                    split_size += read_rows
-                    nrows -= read_rows
                     end = f.tell()
                 else:
+                    remainder_size = partition_size - split_size
                     cls.offset(
                         f,
                         offset_size=remainder_size,
@@ -385,15 +387,29 @@ class CSVGlobDispatcher(CSVDispatcher):
                         is_quoting=is_quoting,
                     )
                     end = f.tell()
-                    split_size += end - start
+                    read_size = end - start
+
+                print("REMAINDER SIZE: {}".format(remainder_size))
+                print("SPLIT SIZE: {}".format(read_size))
                 split_result.append((fname, start, end))
-                if split_size < partition_size:
+                split_size += read_size
+                if read_size < remainder_size:
                     continue
                 else:
+                    if nrows:
+                        nrows -= split_size
+                    print("+++")
                     final_result.append(split_result)
                     split_result = []
                     split_size = 0
 
+            if nrows == 0:
+                break 
+
+            if f.tell() == fsize:
+                continue 
+
+            DEBUG_START = f.tell()
             file_splits, rows_read = cls.partitioned_file(
                 f,
                 fname,
@@ -403,8 +419,12 @@ class CSVGlobDispatcher(CSVDispatcher):
                 quotechar=quotechar,
                 is_quoting=is_quoting,
             )
+            DEBUG_END = f.tell()
+            # print("FILE READ: {}".format(rows_read))
+            print("FILE READ: {}".format(DEBUG_END - DEBUG_START))
+            print("---")
 
-            if rows_read > 0 and skiprows:
+            if skiprows:
                 if skiprows > rows_read:
                     skiprows -= rows_read
                     continue
@@ -422,11 +442,17 @@ class CSVGlobDispatcher(CSVDispatcher):
                 full_last_partition = last_size >= partition_size
 
             if full_last_partition:
+                print("+++")
                 final_result.append(file_splits)
             else:
-                final_result.append(file_splits[:-1])
+                # Don't append anything if the file was too small for one partition.
+                if len(file_splits) > 1: 
+                    print("+++")
+                    final_result.append(file_splits[:-1])
                 split_result = [file_splits[-1]]
                 split_size = last_size
+                if nrows:
+                    nrows += split_size
 
         # Add straggler splits into the final result.
         if split_size > 0:

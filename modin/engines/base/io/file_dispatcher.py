@@ -162,7 +162,9 @@ class FileDispatcher:
                 else:
                     return []
             else:
-                return fs_handle.glob(s3_path)
+                s3_paths = fs_handle.glob(s3_path)
+                s3_addresses = ["{}{}".format("s3://", path) for path in s3_paths]
+                return s3_addresses
 
         s3fs = S3FS.S3FileSystem(anon=False)
         try:

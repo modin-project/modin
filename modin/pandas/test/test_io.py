@@ -171,6 +171,7 @@ def _make_csv_file(filenames):
         encoding=None,
         compression="infer",
         additional_col_values=None,
+        remove_randomness=False,
         add_blank_lines=False,
         add_bad_lines=False,
         add_nan_lines=False,
@@ -206,6 +207,8 @@ def _make_csv_file(filenames):
                     }
                 )
             df = pandas.DataFrame(data)
+            if remove_randomness:
+                df = df[["col1", "col2", "col3", "col4"]]
             if add_nan_lines:
                 for i in range(0, row_size, row_size // (row_size // 10)):
                     df.loc[i] = pandas.Series()

@@ -19,7 +19,8 @@ from modin.pandas.test.test_io import (  # noqa: F401
     df_equals,
     eval_io,
     make_sql_connection,
-    make_csv_file,
+    _make_csv_file,
+    teardown_test_files,
 )
 from modin.pandas.test.utils import get_unique_filename
 
@@ -68,33 +69,64 @@ def test_from_sql_defaults(make_sql_connection):  # noqa: F811
     df_equals(modin_df_from_table, pandas_df)
 
 
+@pytest.fixture(scope="class")
+def TestReadGlobCSVFixture():
+    filenames = []
+
+    base_name = get_unique_filename(extension="")
+    pytest.glob_path = "{}_*.csv".format(base_name)
+    pytest.files = ["{}_{}.csv".format(base_name, i) for i in range(11)]
+    for fname in pytest.files:
+        _make_csv_file(filenames)(fname, row_size=11, remove_randomness=True)
+
+    yield
+
+    teardown_test_files(filenames)
+
+@pytest.mark.usefixtures("TestReadGlobCSVFixture")
 @pytest.mark.skipif(
     Engine.get() != "Ray", reason="Currently only support Ray engine for glob paths."
 )
-def test_read_multiple_csv(make_csv_file):  # noqa: F811
-    base_name = get_unique_filename(extension="")
-    glob_path = "{}_*.csv".format(base_name)
-    files = ["{}_{}.csv".format(base_name, i) for i in range(2)]
-    for fname in files:
-        make_csv_file(fname)
+class TestCsvGlob:
+    def test_read_multiple_small_csv(self):  # noqa: F811
+        pandas_df = pandas.concat([pandas.read_csv(fname) for fname in pytest.files])
+        modin_df = pd.read_csv(pytest.glob_path)
 
-    pandas_df1 = pandas.concat([pandas.read_csv(fname) for fname in files])
-    pandas_df2 = pandas.concat([pandas.read_csv(fname) for fname in files[::-1]])
-    # We have to reset the index because concating mucks with the indices.
-    pandas_df1 = pandas_df1.reset_index(drop=True)
-    pandas_df2 = pandas_df2.reset_index(drop=True)
-    modin_df = pd.read_csv(glob_path)
+        # Indexes get messed up when concatting so we reset both.
+        pandas_df = pandas_df.reset_index(drop=True)
+        modin_df = modin_df.reset_index(drop=True)
 
-    # Glob does not guarantee ordering so we have to test both.
-    try:
-        df_equals(modin_df, pandas_df1)
-    except AssertionError:
-        df_equals(modin_df, pandas_df2)
+        # Glob does not guarantee ordering so we have to test both.
+        df_equals(modin_df, pandas_df)
 
 
-def test_read_csv_s3(self):
-    eval_io(
-        fn_name="read_csv",
-        # read_csv kwargs
-        filepath_or_buffer="s3://noaa-ghcn-pds/csv/178*.csv",
-    )
+    @pytest.mark.parametrize("nrows", [35, 100])
+    def test_read_multiple_csv_nrows(self, request, nrows):  # noqa: F811
+        pandas_df = pandas.concat([pandas.read_csv(fname) for fname in pytest.files])
+        pandas_df = pandas_df.iloc[:nrows, :]
+        
+        modin_df = pd.read_csv(pytest.glob_path, nrows=nrows)
+
+        # Indexes get messed up when concatting so we reset both.
+        pandas_df = pandas_df.reset_index(drop=True)
+        modin_df = modin_df.reset_index(drop=True)
+
+        # Glob does not guarantee ordering so we have to test both.
+        df_equals(modin_df, pandas_df)
+
+
+@pytest.mark.skipif(
+    Engine.get() != "Ray", reason="Currently only support Ray engine for glob paths."
+)
+def test_read_multiple_csv_s3():
+    modin_df = pd.read_csv("S3://noaa-ghcn-pds/csv/178*.csv")
+
+    # We have to specify the columns because the column names are not identical. Since we specified the column names, we also have to skip the original column names.
+    pandas_dfs = [pandas.read_csv("s3://noaa-ghcn-pds/csv/178{}.csv".format(i), names=modin_df.columns, skiprows=[0]) for i in range(10)]
+    pandas_df = pd.concat(pandas_dfs)
+    
+    # Indexes get messed up when concatting so we reset both.
+    pandas_df = pandas_df.reset_index(drop=True)
+    modin_df = modin_df.reset_index(drop=True)
+
+    df_equals(modin_df, pandas_df)
