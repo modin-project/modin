@@ -34,4 +34,5 @@ dependencies:
   - boto3
   - asv
   - ray-core >=1.0.0
-  - py-xgboost >=1.3
+  - pip:
+      - xgboost >=1.3
