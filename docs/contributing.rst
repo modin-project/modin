@@ -114,9 +114,9 @@ dependencies for running the tests and formatting the code:
 
 .. code-block:: bash
 
-  conda env create --file environment.yml
+  conda env create --file environment-dev.yml
   # or
-  pip install -r requirements.txt
+  pip install -r requirements-dev.txt
 
 Code Formatting and Lint
 ------------------------

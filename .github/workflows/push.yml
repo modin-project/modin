@@ -11,7 +11,7 @@ jobs:
       - uses: conda-incubator/setup-miniconda@v2
         with:
           activate-environment: modin
-          environment-file: environment.yml
+          environment-file: environment-dev.yml
           python-version: 3.7
           channel-priority: strict
           use-only-tar-bz2: true # IMPORTANT: This needs to be set for caching to work properly!
@@ -50,7 +50,7 @@ jobs:
       - uses: conda-incubator/setup-miniconda@v2
         with:
           activate-environment: modin
-          environment-file: environment.yml
+          environment-file: environment-dev.yml
           python-version: 3.7
           channel-priority: strict
           use-only-tar-bz2: true # IMPORTANT: This needs to be set for caching to work properly!
@@ -143,7 +143,7 @@ jobs:
       - uses: conda-incubator/setup-miniconda@v2
         with:
           activate-environment: modin
-          environment-file: environment.yml
+          environment-file: environment-dev.yml
           python-version: ${{matrix.python-version}}
           channel-priority: strict
           use-only-tar-bz2: true # IMPORTANT: This needs to be set for caching to work properly!
@@ -209,7 +209,7 @@ jobs:
       - uses: conda-incubator/setup-miniconda@v2
         with:
           activate-environment: modin
-          environment-file: environment.yml
+          environment-file: environment-dev.yml
           python-version: ${{matrix.python-version}}
           channel-priority: strict
           use-only-tar-bz2: true # IMPORTANT: This needs to be set for caching to work properly!
@@ -288,7 +288,7 @@ jobs:
       - uses: conda-incubator/setup-miniconda@v2
         with:
           activate-environment: modin
-          environment-file: environment.yml
+          environment-file: environment-dev.yml
           python-version: ${{matrix.python-version}}
           channel-priority: strict
           use-only-tar-bz2: true # IMPORTANT: This needs to be set for caching to work properly!
