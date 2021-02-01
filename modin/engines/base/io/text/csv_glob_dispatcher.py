@@ -404,10 +404,10 @@ class CSVGlobDispatcher(CSVDispatcher):
                     split_size = 0
 
             if nrows == 0:
-                break 
+                break
 
             if f.tell() == fsize:
-                continue 
+                continue
 
             DEBUG_START = f.tell()
             file_splits, rows_read = cls.partitioned_file(
@@ -446,7 +446,7 @@ class CSVGlobDispatcher(CSVDispatcher):
                 final_result.append(file_splits)
             else:
                 # Don't append anything if the file was too small for one partition.
-                if len(file_splits) > 1: 
+                if len(file_splits) > 1:
                     print("+++")
                     final_result.append(file_splits[:-1])
                 split_result = [file_splits[-1]]
