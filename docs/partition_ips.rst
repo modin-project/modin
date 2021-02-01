@@ -17,7 +17,7 @@ Install Modin Partition IPs
 ----------------------------
 
 Modin now comes with all the dependencies for partitions IPs functionality by default! See
-the `installation page`_ for more information on installing Modin.
+the :doc:`installation page </installation>` for more information on installing Modin.
 
 Starting Modin with Partition IPs enabled
 ------------------------------------------
@@ -26,7 +26,7 @@ Partition IPs is detected from an environment variable.
 
 .. code-block:: bash
 
-   export MODIN_ENABLE_PARTITIONS_API=true
+   export MODIN_ENABLE_PARTITION_API=True
 
 How to handle objects that are lower than 100 kB
 -------------------------------------------
@@ -53,12 +53,10 @@ Before you run this, please make sure you follow the instructions listed above.
 .. code-block:: python
 
   import modin.pandas as pd
-  from modin.api import unwrap_partitions, create_df_from_partitions
+  from modin.distributed.dataframe.pandas import unwrap_partitions, from_partitions
   df = pd.read_csv("/path/to/your/file")
   partitions = unwrap_partitions(df, axis=0, bind_ip=True)
   print(partitions)
   # Also, you can create Modin DataFrame from remote partitions including their IPs
-  new_df = create_df_from_partitions(partitions, 0)
+  new_df = from_partitions(partitions, 0)
   print(new_df)
-
-.. _`installation page`: installation.rst

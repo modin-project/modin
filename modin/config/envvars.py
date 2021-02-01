@@ -160,7 +160,7 @@ class EnablePartitionIPs(EnvironmentVariable, type=bool):
     Whether to enable use of IPs for remote partitions of not
     """
 
-    varname = "MODIN_ENABLE_PARTITIONS_IPS"
+    varname = "MODIN_ENABLE_PARTITION_IPS"
     default = False
 
 

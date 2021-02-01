@@ -13,6 +13,7 @@
 
 import numpy as np
 
+from modin.config import EnablePartitionIPs
 from modin.engines.base.frame.partition_manager import BaseFrameManager
 from .axis_partition import (
     PandasOnDaskFrameColumnPartition,
@@ -23,10 +24,11 @@ from modin.error_message import ErrorMessage
 import pandas
 
 from distributed.client import _get_global_client
+from distributed.utils import get_ip
 import cloudpickle as pkl
 
 
-def deploy_func(df, apply_func, call_queue_df=None, call_queues_other=None, *others):
+def deploy_func(df, apply_func, call_queue_df, call_queues_other, *others):
     if call_queue_df is not None and len(call_queue_df) > 0:
         for call, kwargs in call_queue_df:
             if isinstance(call, bytes):
@@ -47,7 +49,10 @@ def deploy_func(df, apply_func, call_queue_df=None, call_queues_other=None, *oth
         new_others[i] = other
     if isinstance(apply_func, bytes):
         apply_func = pkl.loads(apply_func)
-    return apply_func(df, new_others)
+    if EnablePartitionIPs.get():
+        return apply_func(df, new_others), get_ip()
+    else:
+        return apply_func(df, new_others)
 
 
 class DaskFrameManager(BaseFrameManager):
@@ -109,10 +114,10 @@ class DaskFrameManager(BaseFrameManager):
             return apply_func(df, **{other_name: other})
 
         client = _get_global_client()
-        return np.array(
-            [
+        if EnablePartitionIPs.get():
+            new_partitions = np.array(
                 [
-                    PandasOnDaskFramePartition(
+                    [
                         client.submit(
                             deploy_func,
                             part.future,
@@ -128,9 +133,56 @@ class DaskFrameManager(BaseFrameManager):
                             ),
                             pure=False,
                         )
-                    )
-                    for col_idx, part in enumerate(left[row_idx])
+                        for col_idx, part in enumerate(left[row_idx])
+                    ]
+                    for row_idx in range(len(left))
                 ]
-                for row_idx in range(len(left))
-            ]
-        )
+            )
+            new_partitions = np.array(
+                [
+                    [
+                        tuple(
+                            [
+                                client.submit(lambda l, i: l[i], part, i)
+                                for i in range(2)
+                            ]
+                        )
+                        for part in row
+                    ]
+                    for row in new_partitions
+                ]
+            )
+            new_partitions = np.array(
+                [
+                    [PandasOnDaskFramePartition(part[0], ip=part[1]) for part in row]
+                    for row in new_partitions
+                ]
+            )
+        else:
+            new_partitions = np.array(
+                [
+                    [
+                        PandasOnDaskFramePartition(
+                            client.submit(
+                                deploy_func,
+                                part.future,
+                                mapper,
+                                part.call_queue,
+                                [obj[col_idx].call_queue for obj in right]
+                                if axis
+                                else [obj.call_queue for obj in right[row_idx]],
+                                *(
+                                    [obj[col_idx].future for obj in right]
+                                    if axis
+                                    else [obj.future for obj in right[row_idx]]
+                                ),
+                                pure=False,
+                            )
+                        )
+                        for col_idx, part in enumerate(left[row_idx])
+                    ]
+                    for row_idx in range(len(left))
+                ]
+            )
+
+        return new_partitions

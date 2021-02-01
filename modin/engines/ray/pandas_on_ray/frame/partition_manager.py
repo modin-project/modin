@@ -13,6 +13,7 @@
 
 import numpy as np
 
+from modin.config import EnablePartitionIPs
 from modin.engines.ray.generic.frame.partition_manager import RayFrameManager
 from .axis_partition import (
     PandasOnRayFrameColumnPartition,
@@ -23,10 +24,11 @@ from modin.error_message import ErrorMessage
 import pandas
 
 import ray
+from ray.services import get_node_ip_address
 
 
 @ray.remote
-def func(df, apply_func, call_queue_df=None, call_queues_other=None, *others):
+def func(df, apply_func, call_queue_df, call_queues_other, *others):
     if call_queue_df is not None and len(call_queue_df) > 0:
         for call, kwargs in call_queue_df:
             if isinstance(call, ray.ObjectRef):
@@ -45,7 +47,10 @@ def func(df, apply_func, call_queue_df=None, call_queues_other=None, *others):
                     kwargs = ray.get(kwargs)
                 other = call(other, **kwargs)
         new_others[i] = other
-    return apply_func(df, new_others)
+    if EnablePartitionIPs.get():
+        return apply_func(df, new_others), get_node_ip_address()
+    else:
+        return apply_func(df, new_others)
 
 
 class PandasOnRayFrameManager(RayFrameManager):
@@ -106,28 +111,65 @@ class PandasOnRayFrameManager(RayFrameManager):
             return apply_func(df, **{other_name: other})
 
         mapper = ray.put(mapper)
-        new_partitions = np.array(
-            [
+        if EnablePartitionIPs.get():
+            new_partitions = np.array(
                 [
-                    PandasOnRayFramePartition(
-                        func.remote(
-                            part.oid,
-                            mapper,
-                            part.call_queue,
-                            [obj[col_idx].call_queue for obj in right]
-                            if axis
-                            else [obj.call_queue for obj in right[row_idx]],
-                            *(
-                                [obj[col_idx].oid for obj in right]
-                                if axis
-                                else [obj.oid for obj in right[row_idx]]
-                            ),
+                    [
+                        (
+                            func._remote(
+                                args=(
+                                    part.oid,
+                                    mapper,
+                                    part.call_queue,
+                                    [obj[col_idx].call_queue for obj in right]
+                                    if axis
+                                    else [obj.call_queue for obj in right[row_idx]],
+                                    *(
+                                        [obj[col_idx].oid for obj in right]
+                                        if axis
+                                        else [obj.oid for obj in right[row_idx]]
+                                    ),
+                                ),
+                                num_returns=2,
+                            )
                         )
-                    )
-                    for col_idx, part in enumerate(left[row_idx])
+                        for col_idx, part in enumerate(left[row_idx])
+                    ]
+                    for row_idx in range(len(left))
                 ]
-                for row_idx in range(len(left))
-            ]
-        )
+            )
+            new_partitions = np.array(
+                [
+                    [PandasOnRayFramePartition(part[0], ip=part[1]) for part in row]
+                    for row in new_partitions
+                ]
+            )
+        else:
+            new_partitions = np.array(
+                [
+                    [
+                        PandasOnRayFramePartition(
+                            func._remote(
+                                args=(
+                                    part.oid,
+                                    mapper,
+                                    part.call_queue,
+                                    [obj[col_idx].call_queue for obj in right]
+                                    if axis
+                                    else [obj.call_queue for obj in right[row_idx]],
+                                    *(
+                                        [obj[col_idx].oid for obj in right]
+                                        if axis
+                                        else [obj.oid for obj in right[row_idx]]
+                                    ),
+                                ),
+                                num_returns=1,
+                            )
+                        )
+                        for col_idx, part in enumerate(left[row_idx])
+                    ]
+                    for row_idx in range(len(left))
+                ]
+            )
 
         return new_partitions
