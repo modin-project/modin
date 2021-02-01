@@ -23,8 +23,8 @@ class BinaryFunction(Function):
         def caller(query_compiler, other, *args, **kwargs):
             axis = kwargs.get("axis", 0)
             broadcast = kwargs.pop("broadcast", False)
-            squeeze_self = kwargs.pop("squeeze_self", None)
             join_type = call_kwds.get("join_type", "outer")
+            squeeze_self = kwargs.pop("squeeze_self", None)
             if isinstance(other, type(query_compiler)):
                 if broadcast:
                     assert (
@@ -55,17 +55,37 @@ class BinaryFunction(Function):
                     )
             else:
                 if isinstance(other, (list, np.ndarray, pandas.Series)):
-                    new_columns = query_compiler.columns
+                    if len(query_compiler.columns) == 1:
+
+                        def _apply_func(df):
+                            result = func(
+                                df.squeeze(axis=1) if squeeze_self else df,
+                                other,
+                                *args,
+                                **kwargs
+                            )
+                            return pandas.DataFrame(result)
+
+                        apply_func = _apply_func
+                        build_mapreduce_func = False
+                    else:
+
+                        def _apply_func(df):
+                            return func(
+                                df.squeeze(axis=1) if squeeze_self else df,
+                                other,
+                                *args,
+                                **kwargs
+                            )
+
+                        apply_func = _apply_func
+                        build_mapreduce_func = True
                     new_modin_frame = query_compiler._modin_frame._apply_full_axis(
                         axis,
-                        lambda df: func(
-                            df.squeeze(axis=1) if squeeze_self else df,
-                            other,
-                            *args,
-                            **kwargs
-                        ),
+                        apply_func,
                         new_index=query_compiler.index,
-                        new_columns=new_columns,
+                        new_columns=query_compiler.columns,
+                        build_mapreduce_func=build_mapreduce_func,
                     )
                 else:
                     new_modin_frame = query_compiler._modin_frame._map(

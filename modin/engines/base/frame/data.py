@@ -1272,6 +1272,7 @@ class BasePandasFrame(object):
         new_index=None,
         new_columns=None,
         dtypes=None,
+        build_mapreduce_func=True,
     ):
         """
         Perform a function across an entire axis.
@@ -1309,6 +1310,7 @@ class BasePandasFrame(object):
             new_columns=new_columns,
             dtypes=dtypes,
             other=None,
+            build_mapreduce_func=build_mapreduce_func,
         )
 
     def _apply_full_axis_select_indices(
@@ -1643,6 +1645,7 @@ class BasePandasFrame(object):
         apply_indices=None,
         enumerate_partitions=False,
         dtypes=None,
+        build_mapreduce_func=True,
     ):
         """Broadcast partitions of other dataframe partitions and apply a function along full axis.
 
@@ -1688,7 +1691,9 @@ class BasePandasFrame(object):
             axis=axis,
             left=self._partitions,
             right=other,
-            apply_func=self._build_mapreduce_func(axis, func),
+            apply_func=self._build_mapreduce_func(axis, func)
+            if build_mapreduce_func
+            else func,
             apply_indices=apply_indices,
             enumerate_partitions=enumerate_partitions,
             keep_partitioning=True,
@@ -1713,9 +1718,9 @@ class BasePandasFrame(object):
             None,
             dtypes,
         )
-        if new_index is not None:
+        if new_axes[0] is not None:
             result._apply_index_objs(0)
-        if new_columns is not None:
+        if new_axes[1] is not None:
             result._apply_index_objs(1)
         return result
 

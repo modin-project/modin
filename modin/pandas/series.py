@@ -146,6 +146,7 @@ class Series(BasePandasDataset):
         return new_self._binary_op("__and__", new_other, axis=0, squeeze_self=True)
 
     def __rand__(self, other):
+        new_self, new_other = self._prepare_inter_op(other)
         return self._binary_op("__rand__", other, axis=0, squeeze_self=True)
 
     def __array__(self, dtype=None):

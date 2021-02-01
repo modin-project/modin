@@ -341,6 +341,7 @@ class BasePandasDataset(object):
         other = self._validate_other(other, axis, numeric_or_object_only=True)
         exclude_list = [
             "__add__",
+            "__radd__",
             "__and__",
             "__rand__",
             "__or__",
