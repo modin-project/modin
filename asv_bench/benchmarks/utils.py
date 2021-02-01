@@ -98,3 +98,11 @@ def generate_dataframe(impl, data_type, ncols, nrows, rand_low, rand_high):
 
 def random_string():
     return str(uuid.uuid1())
+
+
+def random_columns(df_columns, columns_number):
+    return list(random_state.choice(df_columns, size=columns_number))
+
+
+def random_booleans(number):
+    return list(random_state.choice([True, False], size=number))
