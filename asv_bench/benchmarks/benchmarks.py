@@ -57,12 +57,12 @@ if ASV_DATASET_SIZE == "Big":
     ]
 else:
     BINARY_OP_DATA_SIZE = [
-        (256, 256, 256, 256),
+        (250, 250, 250, 250),
         (20, 10_000, 10, 25_000),
         (10_000, 20, 25_000, 10),
     ]
     UNARY_OP_DATA_SIZE = [
-        (256, 256),
+        (250, 250),
         (10, 10_000),
         (10_000, 10),
     ]
@@ -75,17 +75,15 @@ def execute(df):
 
 class BaseTimeGroupBy:
     def setup(self, data_size, groupby_ncols=1):
-        count_cols = data_size[1] - groupby_ncols
-        count_groups = 100
         self.df, self.groupby_columns = generate_dataframe(
             ASV_USE_IMPL,
             "int",
             data_size[0],
-            count_cols,
+            data_size[1],
             RAND_LOW,
             RAND_HIGH,
             groupby_ncols,
-            count_groups,
+            count_groups=100 if ASV_DATASET_SIZE == "big" else 5,
         )
 
 

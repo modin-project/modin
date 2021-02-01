@@ -85,7 +85,12 @@ def generate_dataframe(
     groupby_ncols=None,
     count_groups=None,
 ):
+    assert not (
+        (groupby_ncols is None) ^ (count_groups is None)
+    ), "You must either specify both parameters 'groupby_ncols' and 'count_groups' or none of them."
+
     if groupby_ncols and count_groups:
+        ncols -= groupby_ncols
         cache_key = (
             impl,
             data_type,
