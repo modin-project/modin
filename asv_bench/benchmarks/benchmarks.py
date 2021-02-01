@@ -74,30 +74,32 @@ def execute(df):
 
 
 class BaseTimeGroupBy:
-    def setup(self, data_size, ncols=1):
-        self.df = generate_dataframe(
-            ASV_USE_IMPL, "int", data_size[1], data_size[0], RAND_LOW, RAND_HIGH
+    def setup(self, data_size, groupby_ncols=1):
+        count_cols = data_size[1] - groupby_ncols
+        count_groups = 100
+        self.df, self.groupby_columns = generate_dataframe(
+            ASV_USE_IMPL,
+            "int",
+            data_size[0],
+            count_cols,
+            RAND_LOW,
+            RAND_HIGH,
+            groupby_ncols,
+            count_groups,
         )
-        self.groupby_columns = self.df.columns[:ncols].tolist()
 
 
-class TimeMultiColumnGroupby(BaseTimeGroupBy):
-    param_names = ["data_size", "ncols"]
+class TimeGroupByMultiColumn(BaseTimeGroupBy):
+    param_names = ["data_size", "groupby_ncols"]
     params = [
-        [
-            (5000, 5000),
-            (10_000, 10),
-            # TODO: after optimization try to use UNARY_OP_DATA_SIZE here
-        ]
-        if ASV_DATASET_SIZE == "Big"
-        else UNARY_OP_DATA_SIZE,
+        UNARY_OP_DATA_SIZE,
         [6],
     ]
 
-    def time_groupby_agg_quan(self, data_size, ncols):
+    def time_groupby_agg_quan(self, data_size, groupby_ncols):
         execute(self.df.groupby(by=self.groupby_columns).agg("quantile"))
 
-    def time_groupby_agg_mean(self, data_size, ncols):
+    def time_groupby_agg_mean(self, data_size, groupby_ncols):
         execute(self.df.groupby(by=self.groupby_columns).apply(lambda df: df.mean()))
 
 
@@ -150,44 +152,40 @@ class TimeJoin:
 
     def setup(self, data_size, how, sort):
         self.df1 = generate_dataframe(
-            ASV_USE_IMPL, "int", data_size[1], data_size[0], RAND_LOW, RAND_HIGH
+            ASV_USE_IMPL, "int", data_size[0], data_size[1], RAND_LOW, RAND_HIGH
         )
         self.df2 = generate_dataframe(
-            ASV_USE_IMPL, "int", data_size[3], data_size[2], RAND_LOW, RAND_HIGH
+            ASV_USE_IMPL, "int", data_size[2], data_size[3], RAND_LOW, RAND_HIGH
         )
 
     def time_join(self, data_size, how, sort):
-        execute(
-            self.df1.join(
-                self.df2, on=self.df1.columns[0], how=how, lsuffix="left_", sort=sort
-            )
-        )
+        # join dataframes on index to get the predictable shape
+        execute(self.df1.join(self.df2, how=how, lsuffix="left_", sort=sort))
 
 
 class TimeMerge:
     param_names = ["data_size", "how", "sort"]
     params = [
-        [
-            (5000, 5000, 5000, 5000),
-            (125_000, 15, 100_000, 10),
-            # TODO: after optimization try to use BINARY_OP_DATA_SIZE here
-        ]
-        if ASV_DATASET_SIZE == "Big"
-        else BINARY_OP_DATA_SIZE,
+        BINARY_OP_DATA_SIZE,
         ["left", "inner"],
         [False],
     ]
 
     def setup(self, data_size, how, sort):
         self.df1 = generate_dataframe(
-            ASV_USE_IMPL, "int", data_size[1], data_size[0], RAND_LOW, RAND_HIGH
+            ASV_USE_IMPL, "int", data_size[0], data_size[1], RAND_LOW, RAND_HIGH
         )
         self.df2 = generate_dataframe(
-            ASV_USE_IMPL, "int", data_size[3], data_size[2], RAND_LOW, RAND_HIGH
+            ASV_USE_IMPL, "int", data_size[2], data_size[3], RAND_LOW, RAND_HIGH
         )
 
     def time_merge(self, data_size, how, sort):
-        execute(self.df1.merge(self.df2, on=self.df1.columns[0], how=how, sort=sort))
+        # merge dataframes by index to get the predictable shape
+        execute(
+            self.df1.merge(
+                self.df2, left_index=True, right_index=True, how=how, sort=sort
+            )
+        )
 
 
 class TimeConcat:
@@ -199,12 +197,11 @@ class TimeConcat:
     ]
 
     def setup(self, data_size, how, axis):
-        # shape for generate_dataframe: first - ncols, second - nrows
         self.df1 = generate_dataframe(
-            ASV_USE_IMPL, "int", data_size[1], data_size[0], RAND_LOW, RAND_HIGH
+            ASV_USE_IMPL, "int", data_size[0], data_size[1], RAND_LOW, RAND_HIGH
         )
         self.df2 = generate_dataframe(
-            ASV_USE_IMPL, "int", data_size[3], data_size[2], RAND_LOW, RAND_HIGH
+            ASV_USE_IMPL, "int", data_size[2], data_size[3], RAND_LOW, RAND_HIGH
         )
 
     def time_concat(self, data_size, how, axis):
@@ -225,12 +222,11 @@ class TimeBinaryOp:
     ]
 
     def setup(self, data_size, binary_op, axis):
-        # shape for generate_dataframe: first - ncols, second - nrows
         self.df1 = generate_dataframe(
-            ASV_USE_IMPL, "int", data_size[1], data_size[0], RAND_LOW, RAND_HIGH
+            ASV_USE_IMPL, "int", data_size[0], data_size[1], RAND_LOW, RAND_HIGH
         )
         self.df2 = generate_dataframe(
-            ASV_USE_IMPL, "int", data_size[3], data_size[2], RAND_LOW, RAND_HIGH
+            ASV_USE_IMPL, "int", data_size[2], data_size[3], RAND_LOW, RAND_HIGH
         )
         self.op = getattr(self.df1, binary_op)
 
@@ -260,7 +256,7 @@ class BaseTimeSetItem:
 
     def setup(self, data_size, item_length, loc, is_equal_indices):
         self.df = generate_dataframe(
-            ASV_USE_IMPL, "int", data_size[1], data_size[0], RAND_LOW, RAND_HIGH
+            ASV_USE_IMPL, "int", data_size[0], data_size[1], RAND_LOW, RAND_HIGH
         ).copy()
         self.loc, self.iloc = self.get_loc(
             self.df, loc, item_length=item_length, axis=1
@@ -315,7 +311,7 @@ class TimeArithmetic:
 
     def setup(self, data_size, axis):
         self.df = generate_dataframe(
-            ASV_USE_IMPL, "int", data_size[1], data_size[0], RAND_LOW, RAND_HIGH
+            ASV_USE_IMPL, "int", data_size[0], data_size[1], RAND_LOW, RAND_HIGH
         )
 
     def time_sum(self, data_size, axis):
