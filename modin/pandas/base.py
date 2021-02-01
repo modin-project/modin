@@ -2321,7 +2321,11 @@ class BasePandasDataset(object):
             "errors": errors,
             "storage_options": storage_options,
         }
-        return self._default_to_pandas("to_csv", **kwargs)
+        new_query_compiler = self._query_compiler
+
+        from modin.data_management.factories.dispatcher import EngineDispatcher
+
+        return EngineDispatcher.to_csv(new_query_compiler, **kwargs)
 
     def to_dict(self, orient="dict", into=dict):  # pragma: no cover
         return self._default_to_pandas("to_dict", orient=orient, into=into)

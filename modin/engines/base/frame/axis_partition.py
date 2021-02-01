@@ -165,6 +165,7 @@ class PandasFrameAxisPartition(BaseFrameAxisPartition):
         num_splits=None,
         other_axis_partition=None,
         maintain_partitioning=True,
+        queue=None,
         **kwargs,
     ):
         """Apply func to the object in the plasma store.
@@ -222,7 +223,7 @@ class PandasFrameAxisPartition(BaseFrameAxisPartition):
                     ),
                 )
             )
-        args = [self.axis, func, num_splits, kwargs, maintain_partitioning]
+        args = [self.axis, func, num_splits, kwargs, maintain_partitioning, queue]
         args.extend(self.list_of_blocks)
         return self._wrap_partitions(self.deploy_axis_func(*args))
 
@@ -249,7 +250,7 @@ class PandasFrameAxisPartition(BaseFrameAxisPartition):
 
     @classmethod
     def deploy_axis_func(
-        cls, axis, func, num_splits, kwargs, maintain_partitioning, *partitions
+        cls, axis, func, num_splits, kwargs, maintain_partitioning, queue, *partitions
     ):
         """Deploy a function along a full axis in Ray.
 
@@ -272,7 +273,7 @@ class PandasFrameAxisPartition(BaseFrameAxisPartition):
         lengths = kwargs.pop("_lengths", None)
 
         dataframe = pandas.concat(list(partitions), axis=axis, copy=False)
-        result = func(dataframe, **kwargs)
+        result = func(dataframe, queue, **kwargs)
 
         if manual_partition:
             # The split function is expecting a list

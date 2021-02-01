@@ -1643,6 +1643,7 @@ class BasePandasFrame(object):
         apply_indices=None,
         enumerate_partitions=False,
         dtypes=None,
+        queue=None,
     ):
         """Broadcast partitions of other dataframe partitions and apply a function along full axis.
 
@@ -1692,6 +1693,7 @@ class BasePandasFrame(object):
             apply_indices=apply_indices,
             enumerate_partitions=enumerate_partitions,
             keep_partitioning=True,
+            queue=queue,
         )
         # Index objects for new object creation. This is shorter than if..else
         new_axes = [
