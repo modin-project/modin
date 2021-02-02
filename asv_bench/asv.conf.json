@@ -21,7 +21,7 @@
     // Customizable commands for building, installing, and
     // uninstalling the project. See asv.conf.json documentation.
     //
-    // "install_command": ["in-dir={env_dir} python -mpip install {wheel_file}"],
+    "install_command": ["in-dir={env_dir} python -mpip install {wheel_file}[ray]"],
     // "uninstall_command": ["return-code=any python -mpip uninstall -y {project}"],
     // "build_command": [
     //     "python setup.py build",
@@ -70,12 +70,10 @@
     // the package name by 'pip+', and the package will be installed via
     // pip (with all the conda available packages installed first,
     // followed by the pip installed packages).
-    "matrix": {
-        "pandas": ["1.1.5"],
-        "packaging": [""],
-        "pip+ray": ["1.0.1"],
-        "pyarrow": ["1.0"]
-    },
+    // "matrix": {
+    //    "pip+ray": ["1.0.1"],
+    //    "pyarrow": ["1.0"]
+    // },
     // Combinations of libraries/python versions can be excluded/included
     // from the set to test. Each entry is a dictionary containing additional
     // key-value pairs to include/exclude.

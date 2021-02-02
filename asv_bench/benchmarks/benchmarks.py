@@ -31,13 +31,26 @@ from .utils import (
 )
 
 try:
+    from modin import config  # noqa: F401
+
+    OLD_MODIN_VERSION = False
+except ImportError:
+    OLD_MODIN_VERSION = True
+
+try:
     from modin.config import NPartitions
 
     NPARTITIONS = NPartitions.get()
 except ImportError:
-    from modin.config import CpuCount
+    if not OLD_MODIN_VERSION:
+        from modin.config import CpuCount
 
-    NPARTITIONS = CpuCount.get()
+        NPARTITIONS = CpuCount.get()
+    else:
+        import os
+        import multiprocessing
+
+        NPARTITIONS = int(os.environ.get("MODIN_CPUS", multiprocessing.cpu_count()))
 
 try:
     from modin.config import TestDatasetSize, AsvImplementation
