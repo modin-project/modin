@@ -43,7 +43,7 @@ try:
     from modin.config import TestDatasetSize, AsvImplementation
 
     ASV_USE_IMPL = AsvImplementation.get()
-    ASV_DATASET_SIZE = TestDatasetSize.get()
+    ASV_DATASET_SIZE = TestDatasetSize.get() or "Small"
 except ImportError:
     # The same benchmarking code can be run for different versions of Modin, so in
     # case of an error importing important variables, we'll just use predefined values
