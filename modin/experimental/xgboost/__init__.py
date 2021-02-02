@@ -12,5 +12,6 @@
 # governing permissions and limitations under the License.
 
 from .xgboost import ModinDMatrix, train, predict
+from .utils import DistributionType
 
-__all__ = ["ModinDMatrix", "train", "predict"]
+__all__ = ["ModinDMatrix", "train", "predict", "DistributionType"]

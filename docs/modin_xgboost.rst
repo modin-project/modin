@@ -128,17 +128,19 @@ All processing will be in a `single node` mode.
 Modes of a data distribution
 ----------------------------
 
-Modin XGBoost provides two approaches for an internal data ditribution which could be
-switched by `evenly_data_distribution` parameter of ``train/predict`` functions:
+Modin XGBoost provides three approaches for an internal data ditribution which could be
+switched by `distribution_type` parameter of ``train/predict`` functions. Types of distribution
+are described in ``DistributionType`` enum.
 
-* ``evenly_data_distribution = True``: in this case the input data of ``train/predict``
-  functions will be distributed evenly between nodes in a cluster to ensure evenly utilization of nodes (default behavior).
+.. automodule:: modin.experimental.xgboost
+  :noindex:
+  :members: DistributionType
 
-* ``evenly_data_distribution = False`` :  in this case partitions of input data of ``train/predict``
-  functions will not transfer between nodes in cluster in case empty nodes is <10%,
-  if portion of empty nodes is ≥10% evenly data distribution will be applied.
-  This method provides minimal data transfers between nodes but doesn't guarantee effective utilization of nodes.
-  Most effective in case when all cluster nodes are occupied by data.
+:note: In case ``distribution_type`` parameter of ``train/predict`` functions is ``DistributionType.LOCALLY``,
+partitions of input data for those functions will not transfer between nodes in cluster in case empty nodes is <10%,
+if portion of empty nodes is ≥10%, evenly data distribution will be applied.
+This method provides minimal data transfers between nodes but doesn't guarantee effective utilization of nodes.
+Most effective in case when all cluster nodes are occupied by data.
 
 
 .. _Dataframe: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.html
