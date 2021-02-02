@@ -218,6 +218,10 @@ class ExperimentalBaseFactory(BaseFactory):
                 del kwargs["max_sessions"]
         return cls.io_cls.read_sql(**kwargs)
 
+    @classmethod
+    def _read_csv(cls, **kwargs):
+        return cls.io_cls.read_csv_glob(**kwargs)
+
 
 class ExperimentalPandasOnRayFactory(ExperimentalBaseFactory, PandasOnRayFactory):
     @classmethod
