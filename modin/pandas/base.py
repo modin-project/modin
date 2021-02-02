@@ -2651,7 +2651,7 @@ class BasePandasDataset(object):
         kwargs["is_transform"] = True
         try:
             result = self.agg(func, axis=axis, *args, **kwargs)
-        except TypeError:
+        except Exception:
             raise ValueError("Transform function failed")
         try:
             assert len(result) == len(self)
