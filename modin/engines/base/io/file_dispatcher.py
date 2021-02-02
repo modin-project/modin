@@ -13,8 +13,6 @@
 
 import os
 import re
-from typing import List
-
 from modin.config import Backend
 
 S3_ADDRESS_REGEX = re.compile("[sS]3://(.*?)/(.*)")
@@ -53,22 +51,9 @@ class FileDispatcher:
         raise NotImplementedError(NOT_IMPLEMENTED_MESSAGE)
 
     @classmethod
-    def get_path(cls, file_path: str) -> str:
-        """
-        Returns the path of the file(s).
-
-        Parameters
-        ----------
-        file_path: str
-            String representing a path.
-
-        Returns
-        -------
-        str
-            String of strings of absolute file paths.
-        """
+    def get_path(cls, file_path):
         if S3_ADDRESS_REGEX.search(file_path):
-            return cls._s3_path(file_path, False)[0]
+            return file_path
         else:
             return os.path.abspath(file_path)
 
@@ -131,67 +116,24 @@ class FileDispatcher:
         f.seek(cur_pos, os.SEEK_SET)
         return size
 
-    @staticmethod
-    def _s3_path(s3_path: str, glob: bool) -> List[str]:
-        """
-        Get s3 file paths.
-
-        Parameters
-        ----------
-        s3_path: str
-            String of s3 path.
-        glob: bool
-            True if the path is a glob path.
-
-        Returns
-        -------
-        list[str]
-            List of s3 files based on the path.
-        """
-        # S3FS does not allow captial S in s3 addresses.
-        if s3_path[0] == "S":
-            s3_path = "{}{}".format("s", s3_path[1:])
-
-        import s3fs as S3FS
-        from botocore.exceptions import NoCredentialsError
-
-        def get_file_path(fs_handle) -> List[str]:
-            if not glob:
-                if fs_handle.exists(s3_path):
-                    return [s3_path]
-                else:
-                    return []
-            else:
-                s3_paths = fs_handle.glob(s3_path)
-                s3_addresses = ["{}{}".format("s3://", path) for path in s3_paths]
-                return s3_addresses
-
-        s3fs = S3FS.S3FileSystem(anon=False)
-        try:
-            return get_file_path(s3fs)
-        except NoCredentialsError:
-            pass
-        s3fs = S3FS.S3FileSystem(anon=True)
-        return get_file_path(s3fs)
-
     @classmethod
-    def file_exists(cls, file_path: str) -> bool:
-        """
-        Checks if the file_path leads to an existing file.
-
-        Parameters
-        ----------
-        file_path: str
-            String representing a path.
-
-        Returns
-        -------
-        bool
-            True if the file path is valid.
-        """
+    def file_exists(cls, file_path):
         if isinstance(file_path, str):
-            if S3_ADDRESS_REGEX.search(file_path):
-                return len(cls._s3_path(file_path, False)) > 0
+            match = S3_ADDRESS_REGEX.search(file_path)
+            if match is not None:
+                if file_path[0] == "S":
+                    file_path = "{}{}".format("s", file_path[1:])
+                import s3fs as S3FS
+                from botocore.exceptions import NoCredentialsError
+
+                s3fs = S3FS.S3FileSystem(anon=False)
+                exists = False
+                try:
+                    exists = s3fs.exists(file_path) or exists
+                except NoCredentialsError:
+                    pass
+                s3fs = S3FS.S3FileSystem(anon=True)
+                return exists or s3fs.exists(file_path)
         return os.path.exists(file_path)
 
     @classmethod

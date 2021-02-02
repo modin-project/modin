@@ -11,21 +11,19 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
+from modin.engines.base.io.file_dispatcher import FileDispatcher
+import numpy as np
+import warnings
 import io
 import os
-from typing import List, Tuple
-import warnings
-
-import numpy as np
-from pandas._typing import FilePathOrBuffer
+from typing import Tuple, List
 
 from modin.config import NPartitions
-from modin.engines.base.io.file_dispatcher import FileDispatcher
 
 
 class TextFileDispatcher(FileDispatcher):
     @classmethod
-    def get_path_or_buffer(cls, filepath_or_buffer: FilePathOrBuffer) -> str:
+    def get_path_or_buffer(cls, filepath_or_buffer):
         """Given a buffer, try and extract the filepath from it so that we can
         use it without having to fall back to Pandas and share file objects between
         workers. Given a filepath, return it immediately.

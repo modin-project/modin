@@ -113,8 +113,6 @@ class PandasCSVParser(PandasParser):
         else:
             # This only happens when we are reading with only one worker (Default)
             return pandas.read_csv(fname, **kwargs)
-
-        # Set internal index.
         if index_col is not None:
             index = pandas_df.index
         else:

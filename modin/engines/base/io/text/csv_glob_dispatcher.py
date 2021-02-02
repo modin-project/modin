@@ -33,9 +33,9 @@ class CSVGlobDispatcher(CSVDispatcher):
         # Ensures that the file is a string file path. Otherwise, default to pandas.
         filepath_or_buffer = cls.get_path_or_buffer(filepath_or_buffer)
         if isinstance(filepath_or_buffer, str):
-            if not cls.glob_file_exists(filepath_or_buffer):
+            if not cls.file_exists(filepath_or_buffer):
                 return cls.single_worker_read(filepath_or_buffer, **kwargs)
-            filepath_or_buffer = cls.get_glob_path(filepath_or_buffer)
+            filepath_or_buffer = cls.get_path(filepath_or_buffer)
         elif not cls.pathlib_or_pypath(filepath_or_buffer):
             return cls.single_worker_read(filepath_or_buffer, **kwargs)
 
@@ -260,13 +260,13 @@ class CSVGlobDispatcher(CSVDispatcher):
         return new_query_compiler
 
     @classmethod
-    def glob_file_exists(cls, glob_path: str) -> bool:
+    def file_exists(cls, file_path: str) -> bool:
         """
-        Checks if the glob_path is valid.
+        Checks if the file_path is valid.
 
         Parameters
         ----------
-        glob_path: str
+        file_path: str
             String representing a path.
 
         Returns
@@ -274,13 +274,26 @@ class CSVGlobDispatcher(CSVDispatcher):
         bool
             True if the glob path is valid.
         """
-        if isinstance(glob_path, str):
-            if S3_ADDRESS_REGEX.search(glob_path):
-                return len(cls._s3_path(glob_path, True)) > 0
-        return len(glob.glob(glob_path)) > 0
+        if isinstance(file_path, str):
+            match = S3_ADDRESS_REGEX.search(file_path)
+            if match is not None:
+                if file_path[0] == "S":
+                    file_path = "{}{}".format("s", file_path[1:])
+                import s3fs as S3FS
+                from botocore.exceptions import NoCredentialsError
+
+                s3fs = S3FS.S3FileSystem(anon=False)
+                exists = False
+                try:
+                    exists = len(s3fs.glob(file_path)) > 0 or exists
+                except NoCredentialsError:
+                    pass
+                s3fs = S3FS.S3FileSystem(anon=True)
+                return exists or len(s3fs.glob(file_path)) > 0
+        return len(glob.glob(file_path)) > 0
 
     @classmethod
-    def get_glob_path(cls, file_path: str) -> list:
+    def get_path(cls, file_path: str) -> list:
         """
         Returns the path of the file(s).
 
@@ -295,7 +308,25 @@ class CSVGlobDispatcher(CSVDispatcher):
             List of strings of absolute file paths.
         """
         if S3_ADDRESS_REGEX.search(file_path):
-            return cls._s3_path(file_path, True)
+            # S3FS does not allow captial S in s3 addresses.
+            if file_path[0] == "S":
+                file_path = "{}{}".format("s", file_path[1:])
+
+            import s3fs as S3FS
+            from botocore.exceptions import NoCredentialsError
+
+            def get_file_path(fs_handle) -> List[str]:
+                file_paths = fs_handle.glob(file_path)
+                s3_addresses = ["{}{}".format("s3://", path) for path in file_paths]
+                return s3_addresses
+
+            s3fs = S3FS.S3FileSystem(anon=False)
+            try:
+                return get_file_path(s3fs)
+            except NoCredentialsError:
+                pass
+            s3fs = S3FS.S3FileSystem(anon=True)
+            return get_file_path(s3fs)
         else:
             relative_paths = glob.glob(file_path)
             abs_paths = [os.path.abspath(path) for path in relative_paths]

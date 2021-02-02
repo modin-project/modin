@@ -11,22 +11,19 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-import csv
+from modin.engines.base.io.text.text_file_dispatcher import TextFileDispatcher
+from modin.data_management.utils import compute_chunksize
+from pandas.io.parsers import _validate_usecols_arg
 import pandas
+import csv
 import sys
 
-from pandas.io.parsers import _validate_usecols_arg
-from pandas._typing import FilePathOrBuffer
-
 from modin.config import NPartitions
-from modin.data_management.utils import compute_chunksize
-from modin.engines.base.io.text.text_file_dispatcher import TextFileDispatcher
 
 
 class CSVDispatcher(TextFileDispatcher):
     @classmethod
-    def _read(cls, filepath_or_buffer: FilePathOrBuffer, **kwargs):
-        # Ensures that the file is a string file path. Otherwise, default to pandas.
+    def _read(cls, filepath_or_buffer, **kwargs):
         filepath_or_buffer = cls.get_path_or_buffer(filepath_or_buffer)
         if isinstance(filepath_or_buffer, str):
             if not cls.file_exists(filepath_or_buffer):
@@ -34,7 +31,6 @@ class CSVDispatcher(TextFileDispatcher):
             filepath_or_buffer = cls.get_path(filepath_or_buffer)
         elif not cls.pathlib_or_pypath(filepath_or_buffer):
             return cls.single_worker_read(filepath_or_buffer, **kwargs)
-
         compression_type = cls.infer_compression(
             filepath_or_buffer, kwargs.get("compression")
         )
@@ -62,7 +58,6 @@ class CSVDispatcher(TextFileDispatcher):
         skiprows = kwargs.get("skiprows")
         if skiprows is not None and not isinstance(skiprows, int):
             return cls.single_worker_read(filepath_or_buffer, **kwargs)
-
         nrows = kwargs.pop("nrows", None)
         names = kwargs.get("names", None)
         index_col = kwargs.get("index_col", None)
@@ -72,7 +67,7 @@ class CSVDispatcher(TextFileDispatcher):
             # For the sake of the empty df, we assume no `index_col` to get the correct
             # column names before we build the index. Because we pass `names` in, this
             # step has to happen without removing the `index_col` otherwise it will not
-            # be assigned correctly.
+            # be assigned correctly
             names = pandas.read_csv(
                 filepath_or_buffer,
                 **dict(kwargs, usecols=None, nrows=0, skipfooter=0, index_col=None),
@@ -118,7 +113,6 @@ class CSVDispatcher(TextFileDispatcher):
             encoding if encoding is not None else "UTF-8"
         )
         is_quoting = kwargs.get("quoting", "") != csv.QUOTE_NONE
-
         with cls.file_open(filepath_or_buffer, "rb", compression_type) as f:
             # Skip the header since we already have the header information and skip the
             # rows we are told to skip.
@@ -127,14 +121,11 @@ class CSVDispatcher(TextFileDispatcher):
                     skiprows = 0
                 header = kwargs.get("header", "infer")
                 if header == "infer" and kwargs.get("names", None) is None:
-                    skip_header = 1
+                    skiprows += 1
                 elif isinstance(header, int):
-                    skip_header = header + 1
+                    skiprows += header + 1
                 elif hasattr(header, "__iter__") and not isinstance(header, str):
-                    skip_header = max(header) + 1
-                else:
-                    skip_header = 0
-                skiprows += skip_header
+                    skiprows += max(header) + 1
             if kwargs.get("encoding", None) is not None:
                 partition_kwargs["skiprows"] = 1
             # Launch tasks to read partitions
