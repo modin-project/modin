@@ -219,6 +219,7 @@ class TestDatasetSize(EnvironmentVariable, type=str):
 
     varname = "MODIN_TEST_DATASET_SIZE"
     choices = ("Small", "Normal", "Big")
+    default = "Small"
 
 
 class TrackFileLeaks(EnvironmentVariable, type=bool):

@@ -42,30 +42,38 @@ except ImportError:
     ASV_USE_IMPL = "modin"
     ASV_DATASET_SIZE = "Big" if NPartitions.get() >= 32 else "Small"
 
-if ASV_DATASET_SIZE == "Big":
-    BINARY_OP_DATA_SIZE = [
+BINARY_OP_DATA_SIZE = {
+    "Big": [
         ((5000, 5000), (5000, 5000)),
         # the case extremely inefficient
         # ((20, 500_000), (10, 1_000_000)),
         ((500_000, 20), (1_000_000, 10)),
-    ]
-    UNARY_OP_DATA_SIZE = [
+    ],
+    "Small": [
+        ((250, 250), (250, 250)),
+        ((20, 10_000), (10, 25_000)),
+        ((10_000, 20), (25_000, 10)),
+    ],
+}
+
+UNARY_OP_DATA_SIZE = {
+    "Big": [
         (5000, 5000),
         # the case extremely inefficient
         # (10, 1_000_000),
         (1_000_000, 10),
-    ]
-else:
-    BINARY_OP_DATA_SIZE = [
-        ((250, 250), (250, 250)),
-        ((20, 10_000), (10, 25_000)),
-        ((10_000, 20), (25_000, 10)),
-    ]
-    UNARY_OP_DATA_SIZE = [
+    ],
+    "Small": [
         (250, 250),
         (10, 10_000),
         (10_000, 10),
-    ]
+    ],
+}
+
+GROUPBY_NGROUPS = {
+    "Big": 100,
+    "Small": 5,
+}
 
 
 def execute(df):
@@ -82,14 +90,14 @@ class BaseTimeGroupBy:
             RAND_LOW,
             RAND_HIGH,
             groupby_ncols,
-            count_groups=100 if ASV_DATASET_SIZE == "big" else 5,
+            count_groups=GROUPBY_NGROUPS[ASV_DATASET_SIZE],
         )
 
 
 class TimeGroupByMultiColumn(BaseTimeGroupBy):
     param_names = ["shape", "groupby_ncols"]
     params = [
-        UNARY_OP_DATA_SIZE,
+        UNARY_OP_DATA_SIZE[ASV_DATASET_SIZE],
         [6],
     ]
 
@@ -103,7 +111,7 @@ class TimeGroupByMultiColumn(BaseTimeGroupBy):
 class TimeGroupByDefaultAggregations(BaseTimeGroupBy):
     param_names = ["shape"]
     params = [
-        UNARY_OP_DATA_SIZE,
+        UNARY_OP_DATA_SIZE[ASV_DATASET_SIZE],
     ]
 
     def time_groupby_count(self, shape):
@@ -121,7 +129,7 @@ class TimeGroupByDefaultAggregations(BaseTimeGroupBy):
 
 class TimeGroupByDictionaryAggregation(BaseTimeGroupBy):
     param_names = ["shape", "operation_type"]
-    params = [UNARY_OP_DATA_SIZE, ["reduction", "aggregation"]]
+    params = [UNARY_OP_DATA_SIZE[ASV_DATASET_SIZE], ["reduction", "aggregation"]]
     operations = {
         "reduction": ["sum", "count", "prod"],
         "aggregation": ["quantile", "std", "median"],
@@ -142,7 +150,7 @@ class TimeGroupByDictionaryAggregation(BaseTimeGroupBy):
 class TimeJoin:
     param_names = ["shapes", "how", "sort"]
     params = [
-        BINARY_OP_DATA_SIZE,
+        BINARY_OP_DATA_SIZE[ASV_DATASET_SIZE],
         ["left", "inner"],
         [False],
     ]
@@ -163,7 +171,7 @@ class TimeJoin:
 class TimeMerge:
     param_names = ["shapes", "how", "sort"]
     params = [
-        BINARY_OP_DATA_SIZE,
+        BINARY_OP_DATA_SIZE[ASV_DATASET_SIZE],
         ["left", "inner"],
         [False],
     ]
@@ -188,7 +196,7 @@ class TimeMerge:
 class TimeConcat:
     param_names = ["shapes", "how", "axis"]
     params = [
-        BINARY_OP_DATA_SIZE,
+        BINARY_OP_DATA_SIZE[ASV_DATASET_SIZE],
         ["inner"],
         [0, 1],
     ]
@@ -213,7 +221,7 @@ class TimeConcat:
 class TimeBinaryOp:
     param_names = ["shapes", "binary_op", "axis"]
     params = [
-        BINARY_OP_DATA_SIZE,
+        BINARY_OP_DATA_SIZE[ASV_DATASET_SIZE],
         ["mul"],
         [0, 1],
     ]
@@ -267,7 +275,7 @@ class BaseTimeSetItem:
 
 class TimeSetItem(BaseTimeSetItem):
     params = [
-        UNARY_OP_DATA_SIZE,
+        UNARY_OP_DATA_SIZE[ASV_DATASET_SIZE],
         [1],
         ["zero", "middle", "last"],
         [True, False],
@@ -284,7 +292,7 @@ class TimeSetItem(BaseTimeSetItem):
 
 class TimeInsert(BaseTimeSetItem):
     params = [
-        UNARY_OP_DATA_SIZE,
+        UNARY_OP_DATA_SIZE[ASV_DATASET_SIZE],
         [1],
         ["zero", "middle", "last"],
         [True, False],
@@ -302,7 +310,7 @@ class TimeInsert(BaseTimeSetItem):
 class TimeArithmetic:
     param_names = ["shape", "axis"]
     params = [
-        UNARY_OP_DATA_SIZE,
+        UNARY_OP_DATA_SIZE[ASV_DATASET_SIZE],
         [0, 1],
     ]
 
