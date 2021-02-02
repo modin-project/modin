@@ -185,7 +185,6 @@ def read_table(
     low_memory=True,
     memory_map=False,
     float_precision=None,
-    storage_options: StorageOptions = None,
 ):
     # ISSUE #2408: parse parameter shared with pandas read_csv and read_table and update with provided args
     _pd_read_csv_signature = {

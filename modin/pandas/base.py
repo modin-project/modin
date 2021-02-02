@@ -2217,6 +2217,11 @@ class BasePandasDataset(object):
         ignore_index: bool = False,
         key: Optional[IndexKeyFunc] = None,
     ):
+        # pandas throws this exception. See pandas issie #39434
+        if ascending is None:
+            raise ValueError(
+                "the `axis` parameter is not supported in the pandas implementation of argsort()"
+            )
         axis = self._get_axis_number(axis)
         inplace = validate_bool_kwarg(inplace, "inplace")
         new_query_compiler = self._query_compiler.sort_index(

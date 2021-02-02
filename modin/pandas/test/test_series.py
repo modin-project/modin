@@ -2908,38 +2908,28 @@ def test_slice_shift(data, index, periods):
 )
 @pytest.mark.parametrize("na_position", ["first", "last"], ids=["first", "last"])
 def test_sort_index(data, ascending, sort_remaining, na_position):
-    # pandas raises the exception when `ascending=None` (pandas issue 39434).
-    # Since we handle the case `axis=None`, after which `axis=0`, then there is no the exception in Modin.
-    if ascending is not None:
-        modin_series, pandas_series = create_test_series(data)
-        df_equals(
-            modin_series.sort_index(
-                ascending=ascending,
-                sort_remaining=sort_remaining,
-                na_position=na_position,
-            ),
-            pandas_series.sort_index(
-                ascending=ascending,
-                sort_remaining=sort_remaining,
-                na_position=na_position,
-            ),
-        )
+    modin_series, pandas_series = create_test_series(data)
+    eval_general(
+        modin_series,
+        pandas_series,
+        lambda df: df.sort_index(
+            ascending=ascending,
+            sort_remaining=sort_remaining,
+            na_position=na_position,
+        ),
+    )
 
-        modin_series_cp = modin_series.copy()
-        pandas_series_cp = pandas_series.copy()
-        modin_series_cp.sort_index(
+    eval_general(
+        modin_series.copy(),
+        pandas_series.copy(),
+        lambda df: df.sort_index(
             ascending=ascending,
             sort_remaining=sort_remaining,
             na_position=na_position,
             inplace=True,
-        )
-        pandas_series_cp.sort_index(
-            ascending=ascending,
-            sort_remaining=sort_remaining,
-            na_position=na_position,
-            inplace=True,
-        )
-        df_equals(modin_series_cp, pandas_series_cp)
+        ),
+        __inplace__=True,
+    )
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
