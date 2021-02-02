@@ -1718,9 +1718,9 @@ class BasePandasFrame(object):
             None,
             dtypes,
         )
-        if new_axes[0] is not None:
+        if new_index is not None:
             result._apply_index_objs(0)
-        if new_axes[1] is not None:
+        if new_columns is not None:
             result._apply_index_objs(1)
         return result
 
