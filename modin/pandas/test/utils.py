@@ -663,7 +663,6 @@ def eval_general(
                 # repr to force materialization
                 repr(fn(modin_df, **md_kwargs))
             if check_exception_type:
-                # breakpoint()
                 assert isinstance(md_e.value, type(pd_e))
                 if raising_exceptions:
                     assert not isinstance(

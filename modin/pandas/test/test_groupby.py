@@ -1544,7 +1544,7 @@ def test_multi_column_groupby_different_partitions(
     md_grp, pd_grp = md_df.groupby(by, as_index=as_index), pd_df.groupby(
         by, as_index=as_index
     )
-    # breakpoint()
+
     eval_general(md_grp, pd_grp, func_to_apply)
 
 
