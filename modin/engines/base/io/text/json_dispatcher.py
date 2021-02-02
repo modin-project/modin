@@ -61,13 +61,12 @@ class JSONDispatcher(TextFileDispatcher):
 
             args = {"fname": path_or_buf, "num_splits": num_splits, **kwargs}
 
-            splits, _ = cls.partitioned_file(
+            splits = cls.partitioned_file(
                 f,
-                path_or_buf,
                 num_partitions=num_partitions,
                 is_quoting=(args.get("quoting", "") != QUOTE_NONE),
             )
-            for _, start, end in splits:
+            for start, end in splits:
                 args.update({"start": start, "end": end})
                 partition_id = cls.deploy(cls.parse, num_splits + 3, args)
                 partition_ids.append(partition_id[:-3])

@@ -152,16 +152,15 @@ class FWFDispatcher(TextFileDispatcher):
                 **partition_kwargs,
             }
 
-            splits, _ = cls.partitioned_file(
+            splits = cls.partitioned_file(
                 f,
-                filepath_or_buffer,
                 num_partitions=num_partitions,
                 nrows=nrows,
                 skiprows=skiprows,
                 quotechar=quotechar,
                 is_quoting=is_quoting,
             )
-            for _, start, end in splits:
+            for start, end in splits:
                 args.update({"start": start, "end": end})
                 partition_id = cls.deploy(cls.parse, num_splits + 2, args)
                 partition_ids.append(partition_id[:-2])

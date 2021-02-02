@@ -16,7 +16,6 @@ import numpy as np
 import warnings
 import io
 import os
-from typing import Tuple, List
 
 from modin.config import NPartitions
 
@@ -126,32 +125,24 @@ class TextFileDispatcher(FileDispatcher):
     def partitioned_file(
         cls,
         f,
-        fname: str,
         num_partitions: int = None,
-        partition_size: int = None,
         nrows: int = None,
         skiprows: int = None,
-        skip_header: int = None,
         quotechar: bytes = b'"',
         is_quoting: bool = True,
-    ) -> Tuple[List[Tuple[str, int, int]], int]:
+    ):
         """
         Compute chunk sizes in bytes for every partition.
 
         Parameters
         ----------
-        f: file
-            File(s) to be partitioned.
-        fname: str
-            File name(s) to be partitioned.
+        f: file to be partitioned
         num_partitions: int, optional
             For what number of partitions split a file.
-            If not specified grabs the value from `modin.config.NPartitions.get()`.
-        partition_size: int, optional
-            Specifies the partition size. Overrides num_partitions argument.
+            If not specified grabs the value from `modin.config.NPartitions.get()`
         nrows: int, optional
             Number of rows of file to read.
-        skiprows: int, optional
+        skiprows: array or callable, optional
             Specifies rows to skip.
         quotechar: bytes, default b'"'
             Indicate quote in a file.
@@ -160,21 +151,17 @@ class TextFileDispatcher(FileDispatcher):
 
         Returns
         -------
-        (list, int)
-            First is a list of tuples consisting of the file name, start offset, and end offset of each partition split. Second is the number of rows read including skipped rows.
+        An array, where each element of array is a tuple of two ints:
+        beginning and the end offsets of the current chunk.
         """
-        file_size = cls.file_size(f)
-        if partition_size is None:
-            if num_partitions is None:
-                num_partitions = NPartitions.get()
-            partition_size = max(
-                1, num_partitions, (nrows if nrows else file_size) // num_partitions
-            )
+        if num_partitions is None:
+            num_partitions = NPartitions.get()
 
-        skip_read_rows = 0
+        result = []
+        file_size = cls.file_size(f)
+
         if skiprows:
-            # TODO(williamma12): Handle when skiprows > number of rows in file. Currently returns empty df.
-            outside_quotes, skip_read_rows = cls._read_rows(
+            outside_quotes, read_rows = cls._read_rows(
                 f,
                 nrows=skiprows,
                 quotechar=quotechar,
@@ -183,26 +170,29 @@ class TextFileDispatcher(FileDispatcher):
 
         start = f.tell()
 
-        result = []
-        read_rows_counter = 0
-        while f.tell() < file_size:
-
-            if nrows:
-                if read_rows_counter >= nrows:
-                    # Finish when we have read enough rows.
-                    break
-                elif read_rows_counter + partition_size > nrows:
-                    # Ensure that we will not read more than nrows.
+        if nrows:
+            read_rows_counter = 0
+            partition_size = max(1, num_partitions, nrows // num_partitions)
+            while f.tell() < file_size and read_rows_counter < nrows:
+                if read_rows_counter + partition_size > nrows:
+                    # it's possible only if is_quoting==True
                     partition_size = nrows - read_rows_counter
-
                 outside_quotes, read_rows = cls._read_rows(
                     f,
                     nrows=partition_size,
                     quotechar=quotechar,
                     is_quoting=is_quoting,
                 )
+                result.append((start, f.tell()))
+                start = f.tell()
                 read_rows_counter += read_rows
-            else:
+
+                # add outside_quotes
+                if is_quoting and not outside_quotes:
+                    warnings.warn("File has mismatched quotes")
+        else:
+            partition_size = max(1, num_partitions, file_size // num_partitions)
+            while f.tell() < file_size:
                 outside_quotes = cls.offset(
                     f,
                     offset_size=partition_size,
@@ -210,15 +200,14 @@ class TextFileDispatcher(FileDispatcher):
                     is_quoting=is_quoting,
                 )
 
-            result.append((fname, start, f.tell()))
-            start = f.tell()
+                result.append((start, f.tell()))
+                start = f.tell()
 
-            # Add outside_quotes.
-            if is_quoting and not outside_quotes:
-                warnings.warn("File has mismatched quotes")
+                # add outside_quotes
+                if is_quoting and not outside_quotes:
+                    warnings.warn("File has mismatched quotes")
 
-        total_rows_read = read_rows_counter + skip_read_rows
-        return result, total_rows_read
+        return result
 
     @classmethod
     def _read_rows(

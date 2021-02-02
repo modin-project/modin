@@ -17,6 +17,7 @@ import glob
 import os
 import sys
 from typing import List
+import warnings
 
 import pandas
 from pandas.io.parsers import _validate_usecols_arg
@@ -180,7 +181,7 @@ class CSVGlobDispatcher(CSVDispatcher):
                 **partition_kwargs,
             }
 
-            splits = cls.partitioned_multiple_files(
+            splits = cls.partitioned_file(
                 files,
                 glob_filepaths,
                 num_partitions=num_partitions,
@@ -333,10 +334,10 @@ class CSVGlobDispatcher(CSVDispatcher):
             return abs_paths
 
     @classmethod
-    def partitioned_multiple_files(
+    def partitioned_file(
         cls,
         files,
-        fnames: List[str],
+        fnames,
         num_partitions: int = None,
         nrows: int = None,
         skiprows: int = None,
@@ -349,10 +350,10 @@ class CSVGlobDispatcher(CSVDispatcher):
 
         Parameters
         ----------
-        files: file
-            Files to be partitioned.
-        fnames: str
-            File names to be partitioned.
+        files: file or list of files
+            File(s) to be partitioned.
+        fnames: str or list of str
+            File name(s) to be partitioned.
         num_partitions: int, optional
             For what number of partitions split a file.
             If not specified grabs the value from `modin.config.NPartitions.get()`.
@@ -367,11 +368,19 @@ class CSVGlobDispatcher(CSVDispatcher):
         is_quoting: bool, default True
             Whether or not to consider quotes.
 
+        Notes
+        -----
+        The logic gets really complicated if we try to use the TextFileDispatcher.partitioned_file().
+
         Returns
         -------
         list
-            List of list consisting of tuples, which contain data of which files make up each corresponding partition. The tuples consisting of the file name, start offset, and end offset of each partition split.
+            List, where each element of the list is a list of dictionaries. The inner lists
+            of dictionaries contains the data file of the cunk and chunk start and end offsets for its corresponding file.
         """
+        if type(files) != list:
+            files = [files]
+
         if num_partitions is None:
             num_partitions = NPartitions.get()
 
@@ -380,105 +389,79 @@ class CSVGlobDispatcher(CSVDispatcher):
             1, num_partitions, (nrows if nrows else sum(file_sizes)) // num_partitions
         )
 
-        final_result = []
-        partial_partition = []
-        partial_partition_size = 0
-        for f, fname, fsize in zip(files, fnames, file_sizes):
-            # We skip the headers of every file before trying to read from them.
-            if skip_header:
-                cls._read_rows(
+        result = []
+        split_result = []
+        split_size = 0
+        read_rows_counter = 0
+        for f, fname, f_size in zip(files, fnames, file_sizes):
+            if skiprows or skip_header:
+                skip_amount = (skiprows if skiprows else 0) + (
+                    skip_header if skip_header else 0
+                )
+
+                # TODO(williamma12): Handle when skiprows > number of rows in file. Currently returns empty df.
+                outside_quotes, read_rows = cls._read_rows(
                     f,
-                    nrows=skip_header,
+                    nrows=skip_amount,
                     quotechar=quotechar,
                     is_quoting=is_quoting,
                 )
+                if skiprows:
+                    skiprows -= read_rows
+                    if skiprows > 0:
+                        # We have more rows to skip than the amount read in the file.
+                        continue
 
-            # Fill up the rest of the partition before partitioning the rest of the file.
-            if partial_partition_size > 0:
+            start = f.tell()
+
+            while f.tell() < f_size:
+                if split_size >= partition_size:
+                    # Create a new split when the split has reached partition_size.
+                    # This is mainly used when we are reading row-wise partitioned files.
+                    result.append(split_result)
+                    split_result = []
+                    split_size = 0
+
+                # We calculate the amount that we need to read based off of how much of the split we have already read.
+                read_size = partition_size - split_size
+
+                if nrows:
+                    if read_rows_counter >= nrows:
+                        # # Finish when we have read enough rows.
+                        if len(split_result) > 0:
+                            # Add last split into the result.
+                            result.append(split_result)
+                        return result
+                    elif read_rows_counter + read_size > nrows:
+                        # Ensure that we will not read more than nrows.
+                        read_size = nrows - read_rows_counter
+
+                    outside_quotes, read_rows = cls._read_rows(
+                        f,
+                        nrows=read_size,
+                        quotechar=quotechar,
+                        is_quoting=is_quoting,
+                    )
+                    split_size += read_rows
+                    read_rows_counter += read_rows
+                else:
+                    outside_quotes = cls.offset(
+                        f,
+                        offset_size=read_size,
+                        quotechar=quotechar,
+                        is_quoting=is_quoting,
+                    )
+
+                split_result.append((fname, start, f.tell()))
+                split_size += f.tell() - start
                 start = f.tell()
-                if nrows:
-                    remainder_size = min(partition_size, nrows) - partial_partition_size
-                    _, read_size = cls._read_rows(
-                        f,
-                        nrows=remainder_size,
-                        quotechar=quotechar,
-                        is_quoting=is_quoting,
-                    )
-                    end = f.tell()
-                else:
-                    remainder_size = partition_size - partial_partition_size
-                    cls.offset(
-                        f,
-                        offset_size=remainder_size,
-                        quotechar=quotechar,
-                        is_quoting=is_quoting,
-                    )
-                    end = f.tell()
-                    read_size = end - start
 
-                partial_partition.append((fname, start, end))
-                partial_partition_size += read_size
-                if read_size < remainder_size:
-                    # The file that we were reading was too small to fill the carried over partiton (partial_partition).
-                    continue
-                else:
-                    if nrows:
-                        nrows -= partial_partition_size
-                    final_result.append(partial_partition)
-                    partial_partition = []
-                    partial_partition_size = 0
+                # Add outside_quotes.
+                if is_quoting and not outside_quotes:
+                    warnings.warn("File has mismatched quotes")
 
-            if nrows == 0:
-                # We stop reading here having completed, if necessary, the partial partition.
-                break
+        # Add last split into the result.
+        if len(split_result) > 0:
+            result.append(split_result)
 
-            if f.tell() == fsize:
-                # Don't bother reading an empty file.
-                continue
-
-            file_splits, rows_read = cls.partitioned_file(
-                f,
-                fname,
-                partition_size=partition_size,
-                nrows=nrows,
-                skiprows=skiprows,
-                quotechar=quotechar,
-                is_quoting=is_quoting,
-            )
-
-            if skiprows:
-                # Update bookkeeping on skipped rows.
-                if skiprows > rows_read:
-                    # Wanted to skip more rows than what was available in the file.
-                    skiprows -= rows_read
-                    continue
-                else:
-                    rows_read -= skiprows
-
-            # Calculate if the last split needs to be carried over to the next file.
-            if nrows:
-                last_size = rows_read % partition_size
-                full_last_partition = last_size == 0
-                nrows -= rows_read
-            else:
-                _, last_start, last_end = file_splits[-1]
-                last_size = last_end - last_start
-                full_last_partition = last_size >= partition_size
-
-            if full_last_partition:
-                final_result.append(file_splits)
-            else:
-                if len(file_splits) > 1:
-                    # Don't append anything if the file was too small for one partition.
-                    final_result.append(file_splits[:-1])
-                partial_partition = [file_splits[-1]]
-                partial_partition_size = last_size
-                if nrows:
-                    # We add the carried over partition because we need it to calculate the how much to read for the partial partition.
-                    nrows += partial_partition_size
-
-        # Add straggler splits into the final result.
-        if partial_partition_size > 0:
-            final_result.append(partial_partition)
-
-        return final_result
+        return result
