@@ -29,6 +29,7 @@ from pandas.core.dtypes.common import is_scalar
 import pandas.core.resample
 import pandas
 import numpy as np
+from typing import List, Hashable
 
 
 def _get_axis(axis):
@@ -483,6 +484,30 @@ class BaseQueryCompiler(abc.ABC):
             New QueryCompiler with updated data and reset index.
         """
         return DataFrameDefault.register(pandas.DataFrame.reset_index)(self, **kwargs)
+
+    def set_index_from_columns(
+        self, keys: List[Hashable], drop: bool = True, append: bool = False
+    ):
+        """Create new row labels from a list of columns.
+
+        Parameters
+        ----------
+        keys : list of hashable
+            The list of column names that will become the new index.
+        drop : boolean
+            Whether or not to drop the columns provided in the `keys` argument.
+        append : boolean
+            Whether or not to add the columns in `keys` as new levels appended to the
+            existing index.
+
+        Returns
+        -------
+        PandasQueryCompiler
+            A new QueryCompiler with updated index.
+        """
+        return DataFrameDefault.register(pandas.DataFrame.set_index)(
+            self, keys=keys, drop=drop, append=append
+        )
 
     # END Abstract reindex/reset_index
 

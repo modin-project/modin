@@ -30,7 +30,6 @@ from pandas.core.dtypes.common import (
     is_list_like,
     is_numeric_dtype,
 )
-from pandas.core.indexes.api import ensure_index_from_sequences
 from pandas.util._validators import validate_bool_kwarg
 from pandas.io.formats.printing import pprint_thing
 from pandas._libs.lib import no_default
@@ -40,7 +39,7 @@ import itertools
 import functools
 import numpy as np
 import sys
-from typing import Optional, Sequence, Tuple, Union, Mapping
+from typing import Optional, Sequence, Tuple, Union, Mapping, Iterator
 import warnings
 
 from modin.error_message import ErrorMessage
@@ -1555,59 +1554,51 @@ class DataFrame(BasePandasDataset):
         inplace = validate_bool_kwarg(inplace, "inplace")
         if not isinstance(keys, list):
             keys = [keys]
-        if inplace:
-            frame = self
-        else:
-            frame = self.copy()
 
-        arrays = []
-        names = []
-        if append:
-            names = [x for x in self.index.names]
-            if self._query_compiler.has_multiindex():
-                for i in range(self.index.nlevels):
-                    arrays.append(self.index._get_level_values(i))
+        if any(
+            isinstance(col, (pandas.Index, Series, np.ndarray, list, Iterator))
+            for col in keys
+        ):
+            # The current implementation cannot mix a list column labels and list like
+            # objects.
+            if not all(
+                isinstance(col, (pandas.Index, Series, np.ndarray, list, Iterator))
+                for col in keys
+            ):
+                return self._default_to_pandas(
+                    "set_index",
+                    keys,
+                    drop=drop,
+                    append=append,
+                    inplace=inplace,
+                    verify_integrity=verify_integrity,
+                )
+            if inplace:
+                frame = self
             else:
-                arrays.append(self.index)
-        to_remove = []
-        for col in keys:
-            if isinstance(col, pandas.MultiIndex):
-                # append all but the last column so we don't have to modify
-                # the end of this loop
-                for n in range(col.nlevels - 1):
-                    arrays.append(col._get_level_values(n))
-
-                level = col._get_level_values(col.nlevels - 1)
-                names.extend(col.names)
-            elif isinstance(col, pandas.Series):
-                level = col._values
-                names.append(col.name)
-            elif isinstance(col, pandas.Index):
-                level = col
-                names.append(col.name)
-            elif isinstance(col, (list, np.ndarray, pandas.Index)):
-                level = col
-                names.append(None)
+                frame = self.copy()
+            # These are single-threaded objects, so we might as well let pandas do the
+            # calculation so that it matches.
+            frame.index = (
+                pandas.DataFrame(index=self.index)
+                .set_index(keys, append=append, verify_integrity=verify_integrity)
+                .index
+            )
+            if not inplace:
+                return frame
             else:
-                level = frame[col]._to_pandas()._values
-                names.append(col)
-                if drop:
-                    to_remove.append(col)
-            arrays.append(level)
-        index = ensure_index_from_sequences(arrays, names)
+                return
+        new_query_compiler = self._query_compiler.set_index_from_columns(
+            keys, drop=drop, append=append
+        )
 
-        if verify_integrity and not index.is_unique:
-            duplicates = index.get_duplicates()
-            raise ValueError("Index has duplicate keys: %s" % duplicates)
+        if verify_integrity and not new_query_compiler.index.is_unique:
+            duplicates = new_query_compiler.index[
+                new_query_compiler.index.duplicated()
+            ].unique()
+            raise ValueError(f"Index has duplicate keys: {duplicates}")
 
-        for c in to_remove:
-            del frame[c]
-        # clear up memory usage
-        index._cleanup()
-        frame.index = index
-
-        if not inplace:
-            return frame
+        return self._create_or_update_from_compiler(new_query_compiler, inplace=inplace)
 
     sparse = CachedAccessor("sparse", SparseFrameAccessor)
 

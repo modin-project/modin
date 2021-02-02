@@ -15,6 +15,7 @@ import numpy as np
 import pandas
 from pandas.core.common import is_bool_indexer
 from pandas.core.indexing import check_bool_indexer
+from pandas.core.indexes.api import ensure_index_from_sequences
 from pandas.core.dtypes.common import (
     is_list_like,
     is_numeric_dtype,
@@ -22,6 +23,7 @@ from pandas.core.dtypes.common import (
 )
 from pandas.core.base import DataError
 from collections.abc import Iterable, Container
+from typing import List, Hashable
 import warnings
 
 
@@ -537,6 +539,56 @@ class PandasQueryCompiler(BaseQueryCompiler):
         new_self = self.copy()
         new_self.index = pandas.RangeIndex(len(new_self.index))
         return new_self
+
+    def set_index_from_columns(
+        self, keys: List[Hashable], drop: bool = True, append: bool = False
+    ):
+        """Create new row labels from a list of columns.
+
+        Parameters
+        ----------
+        keys : list of hashable
+            The list of column names that will become the new index.
+        drop : boolean
+            Whether or not to drop the columns provided in the `keys` argument
+        append : boolean
+            Whether or not to add the columns in `keys` as new levels appended to the
+            existing index.
+
+        Returns
+        -------
+        PandasQueryCompiler
+            A new QueryCompiler with updated index.
+        """
+        new_modin_frame = self._modin_frame.to_labels(keys)
+        if append:
+            arrays = []
+            # Appending keeps the original order of the index levels, then appends the
+            # new index objects.
+            names = list(self.index.names)
+            if isinstance(self.index, pandas.MultiIndex):
+                for i in range(self.index.nlevels):
+                    arrays.append(self.index._get_level_values(i))
+            else:
+                arrays.append(self.index)
+
+            # Add the names in the correct order.
+            names.extend(new_modin_frame.index.names)
+            if isinstance(new_modin_frame.index, pandas.MultiIndex):
+                for i in range(new_modin_frame.index.nlevels):
+                    arrays.append(new_modin_frame.index._get_level_values(i))
+            else:
+                arrays.append(new_modin_frame.index)
+            new_modin_frame.index = ensure_index_from_sequences(arrays, names)
+        if not drop:
+            # The algebraic operator for this operation always drops the column, but we
+            # can copy the data in this object and just use the index from the result of
+            # the query compiler call.
+            result = self._modin_frame.copy()
+            result.index = new_modin_frame.index
+        else:
+            result = new_modin_frame
+        return self.__constructor__(result)
 
     # END Reindex/reset_index
 
