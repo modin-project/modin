@@ -21,7 +21,14 @@ import modin.pandas as pd
 import numpy as np
 import pandas
 
-from .utils import generate_dataframe, RAND_LOW, RAND_HIGH, random_string
+from .utils import (
+    generate_dataframe,
+    RAND_LOW,
+    RAND_HIGH,
+    random_string,
+    random_columns,
+    random_booleans,
+)
 from modin.config import NPartitions
 
 try:
@@ -325,3 +332,26 @@ class TimeArithmetic:
 
     def time_mean(self, data_size, axis):
         execute(self.df.mean(axis=axis))
+
+
+class TimeSortValues:
+    param_names = ["data_size", "columns_number", "ascending_list"]
+    params = [
+        UNARY_OP_DATA_SIZE,
+        [1, 2, 10, 100],
+        [False, True],
+    ]
+
+    def setup(self, data_size, columns_number, ascending_list):
+        self.df = generate_dataframe(
+            ASV_USE_IMPL, "int", data_size[1], data_size[0], RAND_LOW, RAND_HIGH
+        )
+        self.columns = random_columns(self.df.columns, columns_number)
+        self.ascending = (
+            random_booleans(columns_number)
+            if ascending_list
+            else bool(random_booleans(1)[0])
+        )
+
+    def time_sort_values(self, data_size, columns_number, ascending_list):
+        execute(self.df.sort_values(self.columns, ascending=self.ascending))
