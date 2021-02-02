@@ -342,17 +342,15 @@ class TimeArithmetic:
 
 
 class TimeSortValues:
-    param_names = ["data_size", "columns_number", "ascending_list"]
+    param_names = ["shape", "columns_number", "ascending_list"]
     params = [
-        UNARY_OP_DATA_SIZE,
+        UNARY_OP_DATA_SIZE[ASV_DATASET_SIZE],
         [1, 2, 10, 100],
         [False, True],
     ]
 
-    def setup(self, data_size, columns_number, ascending_list):
-        self.df = generate_dataframe(
-            ASV_USE_IMPL, "int", data_size[1], data_size[0], RAND_LOW, RAND_HIGH
-        )
+    def setup(self, shape, columns_number, ascending_list):
+        self.df = generate_dataframe(ASV_USE_IMPL, "int", *shape, RAND_LOW, RAND_HIGH)
         self.columns = random_columns(self.df.columns, columns_number)
         self.ascending = (
             random_booleans(columns_number)
@@ -360,5 +358,5 @@ class TimeSortValues:
             else bool(random_booleans(1)[0])
         )
 
-    def time_sort_values(self, data_size, columns_number, ascending_list):
+    def time_sort_values(self, shape, columns_number, ascending_list):
         execute(self.df.sort_values(self.columns, ascending=self.ascending))
