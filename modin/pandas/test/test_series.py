@@ -3176,17 +3176,10 @@ def test_transform(data, func):
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 @pytest.mark.parametrize("func", agg_func_except_values, ids=agg_func_except_keys)
 def test_transform_except(data, func):
-    # 1) SpecificationError is arisen because we treat a Series as a DataFrame.
-    #    See details in pandas issues 36036.
-    # 2) AssertionError is arisen because of mismatching of thrown exceptions
-    #    (SpecificationError in Modin, ValueError in pandas).
-    #    Since we perform `transform` via `apply` then SpecificationError is arisen earlier.
-    #    That's why the exception are mismathed.
-    with pytest.raises((SpecificationError, AssertionError)):
-        eval_general(
-            *create_test_series(data),
-            lambda df: df.transform(func),
-        )
+    eval_general(
+        *create_test_series(data),
+        lambda df: df.transform(func),
+    )
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
