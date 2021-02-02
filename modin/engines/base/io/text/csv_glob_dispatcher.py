@@ -16,7 +16,7 @@ import csv
 import glob
 import os
 import sys
-from typing import List
+from typing import List, Tuple
 import warnings
 
 import pandas
@@ -337,14 +337,14 @@ class CSVGlobDispatcher(CSVDispatcher):
     def partitioned_file(
         cls,
         files,
-        fnames,
+        fnames: List[str],
         num_partitions: int = None,
         nrows: int = None,
         skiprows: int = None,
         skip_header: int = None,
         quotechar: bytes = b'"',
         is_quoting: bool = True,
-    ):
+    ) -> List[List[Tuple[str, int, int]]]:
         """
         Compute chunk sizes in bytes for every partition.
 
@@ -375,8 +375,8 @@ class CSVGlobDispatcher(CSVDispatcher):
         Returns
         -------
         list
-            List, where each element of the list is a list of dictionaries. The inner lists
-            of dictionaries contains the data file of the cunk and chunk start and end offsets for its corresponding file.
+            List, where each element of the list is a list of tuples. The inner lists
+            of tuples contains the data file name of the chunk, chunk start offset, and chunk end offsets for its corresponding file.
         """
         if type(files) != list:
             files = [files]
