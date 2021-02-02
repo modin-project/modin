@@ -203,17 +203,9 @@ class DataFrameGroupBy(object):
                 )
                 and DataFrame(query_compiler=self._by.isna()).any(axis=None)
             ):
-                mask_nan_rows = self._df[self._by.columns].isna()
-                if (isinstance(mask_nan_rows, DataFrame)) and len(
-                    mask_nan_rows.columns
-                ) == 1:
-                    mask_nan_rows = mask_nan_rows.squeeze(axis=1)
-                idx_nan_rows = mask_nan_rows[
-                    mask_nan_rows.any(axis=1)
-                    if (isinstance(mask_nan_rows, DataFrame))
-                    else mask_nan_rows
-                ].index
-                result.loc[idx_nan_rows] = np.nan
+                mask_nan_rows = self._df[self._by.columns].isna().any(axis=1)
+                # drop NaN groups
+                result = result.loc[~mask_nan_rows]
             return result
 
         if freq is None and axis == 1 and self._axis == 0:
@@ -271,11 +263,7 @@ class DataFrameGroupBy(object):
     def apply(self, func, *args, **kwargs):
         if not isinstance(func, BuiltinFunctionType):
             func = wrap_udf_function(func)
-        return self._apply_agg_function(
-            # Grouping column in never dropped in groupby.apply, so drop=False
-            lambda df: df.apply(func, *args, **kwargs),
-            drop=False,
-        )
+        return self._apply_agg_function(lambda df: df.apply(func, *args, **kwargs))
 
     @property
     def dtypes(self):
@@ -284,7 +272,7 @@ class DataFrameGroupBy(object):
         if not self._as_index:
             return self.apply(lambda df: df.dtypes)
         else:
-            return self._apply_agg_function(lambda df: df.dtypes, drop=self._as_index)
+            return self._apply_agg_function(lambda df: df.dtypes)
 
     def first(self, **kwargs):
         return self._default_to_pandas(lambda df: df.first(**kwargs))
@@ -634,7 +622,9 @@ class DataFrameGroupBy(object):
         return self._default_to_pandas(lambda df: df.corr(**kwargs))
 
     def fillna(self, **kwargs):
-        result = self._apply_agg_function(lambda df: df.fillna(**kwargs))
+        result = self._apply_agg_function(
+            lambda df: df.fillna(**kwargs), overwrite_groupby_kwargs={"as_index": True}
+        )
         # pandas does not name the index on fillna
         result._query_compiler.set_index_name(None)
         return result
@@ -904,7 +894,7 @@ class DataFrameGroupBy(object):
             return result.squeeze()
         return result
 
-    def _apply_agg_function(self, f, drop=True, *args, **kwargs):
+    def _apply_agg_function(self, f, overwrite_groupby_kwargs=None, *args, **kwargs):
         """
         Perform aggregation and combine stages based on a given function.
 
@@ -912,8 +902,10 @@ class DataFrameGroupBy(object):
 
         Parameters
         ----------
-        f:
+        f: callable,
             The function to apply to each group.
+        overwrite_groupby_kwargs: dict (optional),
+            GroupBy kwargs to overwrite.
 
         Returns
         -------
@@ -922,7 +914,9 @@ class DataFrameGroupBy(object):
         assert callable(f) or isinstance(
             f, dict
         ), "'{0}' object is not callable and not a dict".format(type(f))
-
+        groupby_kwargs = self._kwargs.copy()
+        if overwrite_groupby_kwargs is not None:
+            groupby_kwargs.update(overwrite_groupby_kwargs)
         new_manager = self._query_compiler.groupby_agg(
             by=self._by,
             is_multi_by=self._is_multi_by,
@@ -930,7 +924,7 @@ class DataFrameGroupBy(object):
             agg_func=f,
             agg_args=args,
             agg_kwargs=kwargs,
-            groupby_kwargs=self._kwargs,
+            groupby_kwargs=groupby_kwargs,
             drop=self._drop,
         )
         if self._idx_name is not None and self._as_index:

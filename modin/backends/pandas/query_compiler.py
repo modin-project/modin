@@ -2530,11 +2530,18 @@ class PandasQueryCompiler(BaseQueryCompiler):
                         for x in df[internal_by_cols].dtypes
                     )
 
-                    cols_to_insert = (
-                        internal_by_cols.intersection(result_cols)
-                        if keep_index_levels
-                        else internal_by_cols.difference(result_cols)
-                    )
+                    if internal_by_cols.nlevels != result_cols.nlevels:
+                        cols_to_insert = (
+                            pandas.Index([])
+                            if keep_index_levels
+                            else internal_by_cols.copy()
+                        )
+                    else:
+                        cols_to_insert = (
+                            internal_by_cols.intersection(result_cols)
+                            if keep_index_levels
+                            else internal_by_cols.difference(result_cols)
+                        )
 
                     if keep_index_levels:
                         result.drop(

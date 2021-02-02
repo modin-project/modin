@@ -78,7 +78,8 @@ class GroupbyReduceFunction(MapReduceFunction):
         **kwargs,
     ):
         by_part = list(df.index.names)
-        if drop and len(df.columns.intersection(by_part)) > 0:
+        # breakpoint()
+        if drop and len(df.columns.intersection(pandas.Index(by_part))) > 0:
             df.drop(columns=by_part, errors="ignore", inplace=True)
 
         groupby_args = groupby_args.copy()
