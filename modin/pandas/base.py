@@ -1687,26 +1687,33 @@ class BasePandasDataset(object):
         tolerance=None,
     ):
         axis = self._get_axis_number(axis)
-        if (
-            level is not None
-            or (
-                (columns is not None or axis == 1)
-                and self._query_compiler.has_multiindex(axis=1)
-            )
-            or (
-                (index is not None or axis == 0)
-                and self._query_compiler.has_multiindex()
-            )
+        if (columns is not None and self._query_compiler.has_multiindex(axis=1)) or (
+            index is not None and self._query_compiler.has_multiindex()
         ):
             return self._default_to_pandas(
                 "reindex",
                 labels=labels,
                 index=index,
                 columns=columns,
-                axis=axis,
                 method=method,
                 copy=copy,
                 level=level,
+                fill_value=fill_value,
+                limit=limit,
+                tolerance=tolerance,
+            )
+        if (
+            level is not None
+            or (axis == 1 and self._query_compiler.has_multiindex(axis=1))
+            or (axis == 0 and self._query_compiler.has_multiindex())
+        ):
+            return self._default_to_pandas(
+                "reindex",
+                labels=labels,
+                level=level,
+                method=method,
+                copy=copy,
+                axis=axis,
                 fill_value=fill_value,
                 limit=limit,
                 tolerance=tolerance,
