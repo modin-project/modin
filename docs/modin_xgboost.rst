@@ -24,15 +24,18 @@ XGBoost Train and Predict
 Distributed XGBoost functionality is placed in ``modin.experimental.xgboost`` module.
 ``modin.experimental.xgboost`` provides a xgboost-like API for ``train`` and ``predict`` functions.
 
-``train`` has all arguments of ``xgboost.train`` function exclude the `evals_result`
+.. automodule:: modin.experimental.xgboost
+  :members: train
+
+``train`` has all arguments of the ``xgboost.train`` function except for ``evals_result``
 parameter which is returned as part of function return value instead of argument.
 
-``predict`` is separate function unlike ``xgboost.Booster.predict`` which uses an additional argument
-``model``. ``model`` could be ``xgboost.Booster`` or output of ``modin.experimental.xgboost`` function.
+.. automodule:: modin.experimental.xgboost
+  :noindex:
+  :members: predict
 
-Both functions have additional parameters ``nthread`` and ``evenly_data_distribution``.
-``nthread`` sets number of threads to use per node in cluster.
-``evenly_data_distribution`` sets rule of distribution data between nodes in cluster.
+``predict`` is similar to ``xgboost.Booster.predict`` with an additional argument,
+``model``.
 
 
 ModinDMatrix
@@ -40,7 +43,9 @@ ModinDMatrix
 
 Data is passed to ``modin.experimental.xgboost`` functions via a ``ModinDMatrix`` object.
 
-The ``ModinDMatrix`` stores data as Modin DataFrames internally. 
+.. automodule:: modin.experimental.xgboost
+  :noindex:
+  :members: ModinDMatrix
 
 Currently, the ``ModinDMatrix`` supports ``modin.pandas.DataFrame`` only as an input.
 
