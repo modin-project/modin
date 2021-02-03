@@ -48,7 +48,7 @@ RUN wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -
 RUN conda update -n base -c defaults conda -y && \
     conda create -n modin --yes --no-default-packages && \
     conda activate modin && \
-    conda install -c intel/label/modin -c conda-forge modin "ray>=1.0.0"
+    conda install -c intel/label/modin -c conda-forge modin "ray>=1.0.0" "numpy<1.20.0"
 
 RUN conda activate modin && \
     conda install -c intel/label/modin -c conda-forge -c intel ${add_extra_channel} \

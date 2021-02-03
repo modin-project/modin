@@ -48,7 +48,7 @@ RUN wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -
 RUN conda update -n base -c defaults conda -y && \
     conda create -n modin --yes --no-default-packages && \
     conda activate modin && \
-    conda install -c intel/label/modin -c conda-forge omniscidbe4py "ray-core>=1.0" \
+    conda install -c intel/label/modin -c conda-forge "numpy<1.20.0" omniscidbe4py "ray-core>=1.0" \
         "ray-autoscaler>=1.0" pandas==1.1.5 cloudpickle==1.4.1 rpyc==4.1.5 "dask>=2.12.0" && \
     conda install -c intel/label/modin -c conda-forge modin==0.8.3
 
