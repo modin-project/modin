@@ -63,5 +63,5 @@ setup(
         "remote": remote_deps,
         "all": all_deps,
     },
-    python_requires=">=3.6.1",
+    python_requires=">=3.7.1",
 )
