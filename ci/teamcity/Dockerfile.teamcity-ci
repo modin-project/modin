@@ -4,11 +4,11 @@
 #
 # tar cf ci/teamcity/modin.tar .
 #
-# docker build --build-arg ENVIRONMENT=environment.yml -t modin-project/teamcity-ci:${BUILD_NUMBER} -f ci/teamcity/Dockerfile.teamcity-ci ci/teamcity
+# docker build --build-arg ENVIRONMENT=environment-dev.yml -t modin-project/teamcity-ci:${BUILD_NUMBER} -f ci/teamcity/Dockerfile.teamcity-ci ci/teamcity
 
 FROM rayproject/ray:1.0.1
 
-ARG ENVIRONMENT=environment.yml
+ARG ENVIRONMENT=environment-dev.yml
 
 ADD modin.tar /modin
 ADD git-rev /modin/git-rev
