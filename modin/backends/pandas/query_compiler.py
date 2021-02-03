@@ -637,17 +637,40 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
     # MapReduce operations
 
-    def is_monotonic_decreasing(self):
-        def is_monotonic_decreasing(df):
-            return pandas.DataFrame([df.squeeze(axis=1).is_monotonic_decreasing])
+    def _is_monotonic(self, func_type=None):
+        funcs = {
+            "increasing": lambda df: df.is_monotonic_increasing,
+            "decreasing": lambda df: df.is_monotonic_decreasing,
+        }
+        monotonic_fn = funcs.get(func_type, funcs["increasing"])
 
-        return self.default_to_pandas(is_monotonic_decreasing)
+        def is_monotonic_map(df):
+            df = df.squeeze(axis=1)
+            is_part_monotonic = monotonic_fn(df)
+            # In addition to check that all partitions are separately monotonic,
+            # we also need to check if the edges of all partitions are monotonic.
+            # We can do it in the reduce phase, for that purpose we memorizing the edge
+            # values of partitions inside "edges" column.
+            return pandas.DataFrame(
+                {
+                    "is_part_monotonic": [is_part_monotonic] * 2,
+                    "edges": [df.iloc[0], df.iloc[-1]],
+                }
+            )
+
+        def is_monotonic_reduce(df):
+            result = (
+                monotonic_fn(df["edges"]) if df["is_part_monotonic"].all() else False
+            )
+            return pandas.Series([result], name="__reduced__").to_frame()
+
+        return MapReduceFunction.register(is_monotonic_map, is_monotonic_reduce)(self)
+
+    def is_monotonic_decreasing(self):
+        return self._is_monotonic(func_type="decreasing")
 
     def is_monotonic_increasing(self):
-        def is_monotonic_increasing(df):
-            return pandas.DataFrame([df.squeeze(axis=1).is_monotonic_increasing])
-
-        return self.default_to_pandas(is_monotonic_increasing)
+        return self._is_monotonic(func_type="increasing")
 
     count = MapReduceFunction.register(pandas.DataFrame.count, pandas.DataFrame.sum)
     max = MapReduceFunction.register(pandas.DataFrame.max)

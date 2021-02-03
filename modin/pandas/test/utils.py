@@ -185,6 +185,17 @@ test_data_diff_dtype = {
     "bool_col": [False, True, True, False],
 }
 
+test_data_monotonic = {
+    "increasing": np.arange(257),
+    "decreasing": np.arange(257, 0, -1),
+    "not monotonic": np.concatenate(
+        [np.arange(32), np.arange(-32, 0), np.arange(-1, 31), np.arange(32)]
+    ),
+}
+
+test_data_monotonic_values = list(test_data_monotonic.values())
+test_data_monotonic_keys = list(test_data_monotonic.keys())
+
 test_data_small_values = list(test_data_small.values())
 test_data_small_keys = list(test_data_small.keys())
 
