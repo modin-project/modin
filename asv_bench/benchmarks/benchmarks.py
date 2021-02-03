@@ -17,6 +17,7 @@
 # define `MODIN_ASV_USE_IMPL` env var to choose library for using in performance
 # measurements
 
+import os
 import modin.pandas as pd
 import numpy as np
 import pandas
@@ -45,8 +46,8 @@ try:
 except ImportError:
     # The same benchmarking code can be run for different versions of Modin, so in
     # case of an error importing important variables, we'll just use predefined values
-    ASV_USE_IMPL = "modin"
-    ASV_DATASET_SIZE = "Small"
+    ASV_USE_IMPL = os.environ.get("MODIN_ASV_USE_IMPL", "modin")
+    ASV_DATASET_SIZE = os.environ.get("MODIN_TEST_DATASET_SIZE", "Small")
 
 BINARY_OP_DATA_SIZE = {
     "Big": [
