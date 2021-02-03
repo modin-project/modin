@@ -18,8 +18,8 @@ To install ``xgboost`` package you can use ``pip``:
   pip install xgboost
 
 
-Learning Interfaces
--------------------
+XGBoost Train and Predict
+-------------------------
 
 Distributed XGBoost functionality is placed in ``modin.experimental.xgboost`` module.
 ``modin.experimental.xgboost`` provides a xgboost-like API for ``train`` and ``predict`` functions.
@@ -35,8 +35,8 @@ Both functions have additional parameters ``nthread`` and ``evenly_data_distribu
 ``evenly_data_distribution`` sets rule of distribution data between nodes in cluster.
 
 
-Type of input data
-------------------
+ModinDMatrix
+------------
 
 Data is passed to ``modin.experimental.xgboost`` functions via a ``ModinDMatrix`` object.
 
