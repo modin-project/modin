@@ -31,26 +31,11 @@ from .utils import (
 )
 
 try:
-    from modin import config  # noqa: F401
-
-    OLD_MODIN_VERSION = False
-except ImportError:
-    OLD_MODIN_VERSION = True
-
-try:
     from modin.config import NPartitions
 
     NPARTITIONS = NPartitions.get()
 except ImportError:
-    if not OLD_MODIN_VERSION:
-        from modin.config import CpuCount
-
-        NPARTITIONS = CpuCount.get()
-    else:
-        import os
-        import multiprocessing
-
-        NPARTITIONS = int(os.environ.get("MODIN_CPUS", multiprocessing.cpu_count()))
+    NPARTITIONS = pd.DEFAULT_NPARTITIONS
 
 try:
     from modin.config import TestDatasetSize, AsvImplementation
@@ -61,7 +46,7 @@ except ImportError:
     # The same benchmarking code can be run for different versions of Modin, so in
     # case of an error importing important variables, we'll just use predefined values
     ASV_USE_IMPL = "modin"
-    ASV_DATASET_SIZE = "Big" if NPARTITIONS >= 32 else "Small"
+    ASV_DATASET_SIZE = "Small"
 
 BINARY_OP_DATA_SIZE = {
     "Big": [
