@@ -77,6 +77,7 @@ def TestReadGlobCSVFixture():
     pytest.glob_path = "{}_*.csv".format(base_name)
     pytest.files = ["{}_{}.csv".format(base_name, i) for i in range(11)]
     for fname in pytest.files:
+        # Glob does not guarantee ordering so we have to remove the randomness in the generated csvs.
         _make_csv_file(filenames)(fname, row_size=11, remove_randomness=True)
 
     yield
@@ -97,7 +98,6 @@ class TestCsvGlob:
         pandas_df = pandas_df.reset_index(drop=True)
         modin_df = modin_df.reset_index(drop=True)
 
-        # Glob does not guarantee ordering so we have to test both.
         df_equals(modin_df, pandas_df)
 
     @pytest.mark.parametrize("nrows", [35, 100])
@@ -111,7 +111,6 @@ class TestCsvGlob:
         pandas_df = pandas_df.reset_index(drop=True)
         modin_df = modin_df.reset_index(drop=True)
 
-        # Glob does not guarantee ordering so we have to test both.
         df_equals(modin_df, pandas_df)
 
 
