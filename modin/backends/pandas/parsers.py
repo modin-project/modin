@@ -124,6 +124,52 @@ class PandasCSVParser(PandasParser):
         ]
 
 
+class PandasCSVGlobParser(PandasCSVParser):
+    @staticmethod
+    def parse(chunks, **kwargs):
+        warnings.filterwarnings("ignore")
+        num_splits = kwargs.pop("num_splits", None)
+        index_col = kwargs.get("index_col", None)
+
+        pandas_dfs = []
+        for fname, start, end in chunks:
+            if start is not None and end is not None:
+                # pop "compression" from kwargs because bio is uncompressed
+                bio = FileDispatcher.file_open(
+                    fname, "rb", kwargs.pop("compression", "infer")
+                )
+                if kwargs.get("encoding", None) is not None:
+                    header = b"" + bio.readline()
+                else:
+                    header = b""
+                bio.seek(start)
+                to_read = header + bio.read(end - start)
+                bio.close()
+                pandas_dfs.append(pandas.read_csv(BytesIO(to_read), **kwargs))
+            else:
+                # This only happens when we are reading with only one worker (Default)
+                return pandas.read_csv(fname, **kwargs)
+
+        # Combine read in data.
+        if len(pandas_dfs) > 1:
+            pandas_df = pandas.concat(pandas_dfs)
+        elif len(pandas_dfs) > 0:
+            pandas_df = pandas_dfs[0]
+        else:
+            pandas_df = pandas.DataFrame()
+
+        # Set internal index.
+        if index_col is not None:
+            index = pandas_df.index
+        else:
+            # The lengths will become the RangeIndex
+            index = len(pandas_df)
+        return _split_result_for_readers(1, num_splits, pandas_df) + [
+            index,
+            pandas_df.dtypes,
+        ]
+
+
 class PandasFWFParser(PandasParser):
     @staticmethod
     def parse(fname, **kwargs):
