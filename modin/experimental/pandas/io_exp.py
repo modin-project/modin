@@ -168,7 +168,11 @@ def _read(**kwargs):
     from modin.data_management.factories.dispatcher import EngineDispatcher
 
     Engine.subscribe(_update_engine)
-    pd_obj = EngineDispatcher.read_csv(**kwargs)
+
+    try:
+        pd_obj = EngineDispatcher.read_csv_glob(**kwargs)
+    except AttributeError:
+        raise AttributeError("read_csv_glob() is only implemented for pandas on Ray.")
 
     # This happens when `read_csv` returns a TextFileReader object for iterating through
     if isinstance(pd_obj, pandas.io.parsers.TextFileReader):
@@ -181,4 +185,4 @@ def _read(**kwargs):
     return DataFrame(query_compiler=pd_obj)
 
 
-read_csv = _make_parser_func(sep=",")
+read_csv_glob = _make_parser_func(sep=",")

@@ -91,7 +91,7 @@ def TestReadGlobCSVFixture():
 class TestCsvGlob:
     def test_read_multiple_small_csv(self):  # noqa: F811
         pandas_df = pandas.concat([pandas.read_csv(fname) for fname in pytest.files])
-        modin_df = pd.read_csv(pytest.glob_path)
+        modin_df = pd.read_csv_glob(pytest.glob_path)
 
         # Indexes get messed up when concatting so we reset both.
         pandas_df = pandas_df.reset_index(drop=True)
@@ -105,7 +105,7 @@ class TestCsvGlob:
         pandas_df = pandas.concat([pandas.read_csv(fname) for fname in pytest.files])
         pandas_df = pandas_df.iloc[:nrows, :]
 
-        modin_df = pd.read_csv(pytest.glob_path, nrows=nrows)
+        modin_df = pd.read_csv_glob(pytest.glob_path, nrows=nrows)
 
         # Indexes get messed up when concatting so we reset both.
         pandas_df = pandas_df.reset_index(drop=True)
@@ -119,7 +119,7 @@ class TestCsvGlob:
     Engine.get() != "Ray", reason="Currently only support Ray engine for glob paths."
 )
 def test_read_multiple_csv_s3():
-    modin_df = pd.read_csv("S3://noaa-ghcn-pds/csv/178*.csv")
+    modin_df = pd.read_csv_glob("S3://noaa-ghcn-pds/csv/178*.csv")
 
     # We have to specify the columns because the column names are not identical. Since we specified the column names, we also have to skip the original column names.
     pandas_dfs = [
