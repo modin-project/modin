@@ -359,3 +359,29 @@ class TimeSortValues:
 
     def time_sort_values(self, shape, columns_number, ascending_list):
         execute(self.df.sort_values(self.columns, ascending=self.ascending))
+
+
+class TimeFillna:
+    param_names = ["shape", "limit"]
+    params = [UNARY_OP_DATA_SIZE[ASV_DATASET_SIZE], [None, 0.8]]
+
+    def setup(self, shape, limit):
+        columns = [f"col{x}" for x in range(shape[1])]
+
+        if ASV_USE_IMPL == "modin":
+            self.df = pd.DataFrame(
+                np.nan, index=pd.RangeIndex(shape[0]), columns=columns
+            )
+        elif ASV_USE_IMPL == "pandas":
+            self.df = pandas.DataFrame(
+                np.nan, index=pandas.RangeIndex(shape[0]), columns=columns
+            )
+        else:
+            raise NotImplementedError
+
+        self.limit = None
+        if limit:
+            self.limit = int(limit * shape[0])
+
+    def time_fillna(self, shape, limit):
+        execute(self.df.fillna(0, limit=self.limit))
