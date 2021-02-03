@@ -20,11 +20,6 @@ import xgboost as xgb
 
 from modin.config import Engine
 
-if Engine.get() == "Ray":
-    from .xgboost_ray import _train, _predict
-else:
-    raise ValueError("Current version supports only Ray engine as MODIN_ENGINE.")
-
 LOGGER = logging.getLogger("[modin.xgboost]")
 
 
@@ -99,6 +94,12 @@ def train(
                          'eval': {'logloss': ['0.480385', '0.357756']}}}
     """
     LOGGER.info("Training started")
+
+    if Engine.get() == "Ray":
+        from .xgboost_ray import _train
+    else:
+        raise ValueError("Current version supports only Ray engine.")
+
     result = _train(
         dtrain, nthread, evenly_data_distribution, params, *args, evals=evals, **kwargs
     )
@@ -136,6 +137,11 @@ def predict(
         Array with prediction results.
     """
     LOGGER.info("Prediction started")
+
+    if Engine.get() == "Ray":
+        from .xgboost_ray import _predict
+    else:
+        raise ValueError("Current version supports only Ray engine.")
 
     if isinstance(model, xgb.Booster):
         booster = model

@@ -221,6 +221,8 @@ jobs:
       - name: Install HDF5
         run: sudo apt update && sudo apt install -y libhdf5-dev
       - shell: bash -l {0}
+        run: pytest modin/experimental/xgboost/test/test_default.py --backend=${{ matrix.backend }}
+      - shell: bash -l {0}
         run: python -m pytest modin/test/backends/base/test_internals.py --backend=${{ matrix.backend }}
       - shell: bash -l {0}
         run: pytest modin/pandas/test/dataframe/test_binary.py --backend=${{ matrix.backend }}
@@ -368,6 +370,8 @@ jobs:
           conda list
       - name: Install HDF5
         run: sudo apt update && sudo apt install -y libhdf5-dev
+      - shell: bash -l {0}
+        run: pytest modin/experimental/xgboost/test/test_default.py
       - shell: bash -l {0}
         run: pytest modin/pandas/test/dataframe/test_binary.py
       - shell: bash -l {0}
