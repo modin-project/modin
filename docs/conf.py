@@ -10,7 +10,7 @@
 import modin
 
 project = u"Modin"
-copyright = u"2018-2020, Modin"
+copyright = u"2018-2021, Modin"
 author = u"Modin contributors"
 
 # The short X.Y version
