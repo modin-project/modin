@@ -134,6 +134,7 @@ class CpuCount(EnvironmentVariable, type=int):
 
         return multiprocessing.cpu_count()
 
+
 class GpuCount(EnvironmentVariable, type=int):
     """
     How may GPU devices to utilize across the whole distribution
@@ -152,6 +153,7 @@ class GpuCount(EnvironmentVariable, type=int):
     #             f"MODIN-GPU doesn't know the number of available GPUs. "
     #         )
     #         return 1
+
 
 class Memory(EnvironmentVariable, type=int):
     """
