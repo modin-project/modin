@@ -487,3 +487,16 @@ class TimeValueCountsSeries(BaseTimeValueCounts):
 
     def time_value_counts(self, shape, bins):
         execute(self.df.value_counts(bins=bins))
+
+
+class TimeAstype:
+    param_names = ["shape"]
+    params = [
+        UNARY_OP_DATA_SIZE[ASV_DATASET_SIZE],
+    ]
+
+    def setup(self, shape):
+        self.df = generate_dataframe(ASV_USE_IMPL, "int", *shape, RAND_LOW, RAND_HIGH)
+
+    def time_astype(self, shape):
+        execute(self.df.astype("float64"))
