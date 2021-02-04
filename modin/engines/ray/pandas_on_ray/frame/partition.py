@@ -24,7 +24,7 @@ from ray.worker import RayTaskError
 
 class PandasOnRayFramePartition(BaseFramePartition):
     def __init__(self, object_id, length=None, width=None, ip=None, call_queue=None):
-        assert type(object_id) is ray.ObjectID
+        assert type(object_id) is ray.ObjectRef
 
         self.oid = object_id
         if call_queue is None:
@@ -50,7 +50,7 @@ class PandasOnRayFramePartition(BaseFramePartition):
     def apply(self, func, **kwargs):
         """Apply a function to the object stored in this partition.
 
-        Note: It does not matter if func is callable or an ObjectID. Ray will
+        Note: It does not matter if func is callable or an ObjectRef. Ray will
             handle it correctly either way. The keyword arguments are sent as a
             dictionary.
 
@@ -155,7 +155,7 @@ class PandasOnRayFramePartition(BaseFramePartition):
             func: The function to preprocess.
 
         Returns:
-            A ray.ObjectID.
+            A ray.ObjectRef.
         """
         return ray.put(func)
 
@@ -167,7 +167,7 @@ class PandasOnRayFramePartition(BaseFramePartition):
                 self._length_cache, self._width_cache = get_index_and_columns.remote(
                     self.oid
                 )
-        if isinstance(self._length_cache, ray.ObjectID):
+        if isinstance(self._length_cache, ray.ObjectRef):
             try:
                 self._length_cache = ray.get(self._length_cache)
             except RayTaskError as e:
@@ -182,7 +182,7 @@ class PandasOnRayFramePartition(BaseFramePartition):
                 self._length_cache, self._width_cache = get_index_and_columns.remote(
                     self.oid
                 )
-        if isinstance(self._width_cache, ray.ObjectID):
+        if isinstance(self._width_cache, ray.ObjectRef):
             try:
                 self._width_cache = ray.get(self._width_cache)
             except RayTaskError as e:
@@ -210,7 +210,7 @@ def get_index_and_columns(df):
 @ray.remote(num_returns=4)
 def deploy_ray_func(call_queue, partition):  # pragma: no cover
     def deserialize(obj):
-        if isinstance(obj, ray.ObjectID):
+        if isinstance(obj, ray.ObjectRef):
             return ray.get(obj)
         return obj
 

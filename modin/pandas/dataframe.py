@@ -76,7 +76,7 @@ class DataFrame(BasePandasDataset):
         data: NumPy ndarray (structured or homogeneous) or dict:
             Dict can contain Series, arrays, constants, or list-like
             objects.
-        index: pandas.Index, list, ObjectID
+        index: pandas.Index, list
             The row index for this DataFrame.
         columns: pandas.Index
             The column names for this DataFrame, in pandas Index object.
