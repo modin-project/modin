@@ -364,14 +364,19 @@ class TimeSortValues:
 
 
 class TimeFillna:
-    param_names = ["shape", "limit"]
-    params = [UNARY_OP_DATA_SIZE[ASV_DATASET_SIZE], [None, 0.8]]
+    param_names = ["shape", "limit", "inplace"]
+    params = [UNARY_OP_DATA_SIZE[ASV_DATASET_SIZE], [None, 0.8], [False, True]]
 
-    def setup(self, shape, limit):
+    def setup(self, shape, limit, inplace):
         pd = IMPL[ASV_USE_IMPL]
         columns = [f"col{x}" for x in range(shape[1])]
         self.df = pd.DataFrame(np.nan, index=pd.RangeIndex(shape[0]), columns=columns)
         self.limit = int(limit * shape[0]) if limit else None
 
-    def time_fillna(self, shape, limit):
-        execute(self.df.fillna(0, limit=self.limit))
+    def time_fillna(self, shape, limit, inplace):
+        kw = {"value": 0.0, "limit": self.limit, "inplace": inplace}
+        if inplace:
+            self.df.fillna(**kw)
+            execute(self.df)
+        else:
+            execute(self.df.fillna(**kw))
