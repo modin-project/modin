@@ -359,3 +359,17 @@ class TimeSortValues:
 
     def time_sort_values(self, shape, columns_number, ascending_list):
         execute(self.df.sort_values(self.columns, ascending=self.ascending))
+
+
+class TimeHead:
+    param_names = ["shape"]
+    params = [
+        UNARY_OP_DATA_SIZE[ASV_DATASET_SIZE],
+    ]
+
+    def setup(self, shape):
+        self.df = generate_dataframe(ASV_USE_IMPL, "int", *shape, RAND_LOW, RAND_HIGH)
+        self.head_count = int(0.8 * len(self.df.index))
+
+    def time_head(self, shape):
+        execute(self.df.head(self.head_count))
