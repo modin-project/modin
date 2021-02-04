@@ -362,16 +362,21 @@ class TimeSortValues:
 
 
 class TimeDrop:
-    param_names = ["shape", "axis"]
+    param_names = ["shape", "axis", "drop_ncols"]
     params = [
         UNARY_OP_DATA_SIZE[ASV_DATASET_SIZE],
         [0, 1],
+        [1, 0.8],
     ]
 
-    def setup(self, shape, axis):
+    def setup(self, shape, axis, drop_ncols):
         self.df = generate_dataframe(ASV_USE_IMPL, "int", *shape, RAND_LOW, RAND_HIGH)
-        drop_count = int(len(self.df.axes[axis]) * 0.8)
+        drop_count = (
+            int(len(self.df.axes[axis]) * drop_ncols)
+            if isinstance(drop_ncols, float)
+            else drop_ncols
+        )
         self.labels = self.df.axes[axis][:drop_count]
 
-    def time_drop(self, shape, axis):
+    def time_drop(self, shape, axis, drop_ncols):
         execute(self.df.drop(self.labels, axis))
