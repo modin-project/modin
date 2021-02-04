@@ -30,8 +30,8 @@ data_cache = dict()
 dataframes_cache = dict()
 
 
-def gen_int_data(ncols, nrows, rand_low, rand_high):
-    cache_key = ("int", ncols, nrows, rand_low, rand_high)
+def gen_int_data(nrows, ncols, rand_low, rand_high):
+    cache_key = ("int", nrows, ncols, rand_low, rand_high)
     if cache_key in data_cache:
         return data_cache[cache_key]
 
@@ -48,8 +48,8 @@ def gen_int_data(ncols, nrows, rand_low, rand_high):
     return data
 
 
-def gen_str_int_data(ncols, nrows, rand_low, rand_high):
-    cache_key = ("str_int", ncols, nrows, rand_low, rand_high)
+def gen_str_int_data(nrows, ncols, rand_low, rand_high):
+    cache_key = ("str_int", nrows, ncols, rand_low, rand_high)
     if cache_key in data_cache:
         return data_cache[cache_key]
 
@@ -58,7 +58,7 @@ def gen_str_int_data(ncols, nrows, rand_low, rand_high):
             nrows, ncols, rand_low, rand_high
         )
     )
-    data = gen_int_data(ncols, nrows, rand_low, rand_high).copy()
+    data = gen_int_data(nrows, ncols, rand_low, rand_high).copy()
     data["gb_col"] = [
         "str_{}".format(random_state.randint(rand_low, rand_high)) for i in range(nrows)
     ]
@@ -66,17 +66,44 @@ def gen_str_int_data(ncols, nrows, rand_low, rand_high):
     return data
 
 
-def gen_data(data_type, ncols, nrows, rand_low, rand_high):
+def gen_data(data_type, nrows, ncols, rand_low, rand_high):
     if data_type == "int":
-        return gen_int_data(ncols, nrows, rand_low, rand_high)
+        return gen_int_data(nrows, ncols, rand_low, rand_high)
     elif data_type == "str_int":
-        return gen_str_int_data(ncols, nrows, rand_low, rand_high)
+        return gen_str_int_data(nrows, ncols, rand_low, rand_high)
     else:
         assert False
 
 
-def generate_dataframe(impl, data_type, ncols, nrows, rand_low, rand_high):
-    cache_key = (impl, data_type, ncols, nrows, rand_low, rand_high)
+def generate_dataframe(
+    impl,
+    data_type,
+    nrows,
+    ncols,
+    rand_low,
+    rand_high,
+    groupby_ncols=None,
+    count_groups=None,
+):
+    assert not (
+        (groupby_ncols is None) ^ (count_groups is None)
+    ), "You must either specify both parameters 'groupby_ncols' and 'count_groups' or none of them."
+
+    if groupby_ncols and count_groups:
+        ncols -= groupby_ncols
+        cache_key = (
+            impl,
+            data_type,
+            nrows,
+            ncols,
+            rand_low,
+            rand_high,
+            groupby_ncols,
+            count_groups,
+        )
+    else:
+        cache_key = (impl, data_type, nrows, ncols, rand_low, rand_high)
+
     if cache_key in dataframes_cache:
         return dataframes_cache[cache_key]
 
@@ -85,13 +112,24 @@ def generate_dataframe(impl, data_type, ncols, nrows, rand_low, rand_high):
             impl, data_type, nrows, ncols, rand_low, rand_high
         )
     )
-    data = gen_data(data_type, ncols, nrows, rand_low, rand_high)
+    data = gen_data(data_type, nrows, ncols, rand_low, rand_high)
+
+    if groupby_ncols and count_groups:
+        groupby_columns = [f"groupby_col{x}" for x in range(groupby_ncols)]
+        for groupby_col in groupby_columns:
+            data[groupby_col] = np.tile(np.arange(count_groups), nrows // count_groups)
+
     if impl == "modin":
         df = pd.DataFrame(data)
     elif impl == "pandas":
         df = pandas.DataFrame(data)
     else:
         assert False
+
+    if groupby_ncols and count_groups:
+        dataframes_cache[cache_key] = df, groupby_columns
+        return df, groupby_columns
+
     dataframes_cache[cache_key] = df
     return df
 
