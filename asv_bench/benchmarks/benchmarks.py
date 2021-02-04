@@ -359,3 +359,19 @@ class TimeSortValues:
 
     def time_sort_values(self, shape, columns_number, ascending_list):
         execute(self.df.sort_values(self.columns, ascending=self.ascending))
+
+
+class TimeDrop:
+    param_names = ["shape", "axis"]
+    params = [
+        UNARY_OP_DATA_SIZE[ASV_DATASET_SIZE],
+        [0, 1],
+    ]
+
+    def setup(self, shape, axis):
+        self.df = generate_dataframe(ASV_USE_IMPL, "int", *shape, RAND_LOW, RAND_HIGH)
+        drop_count = int(len(self.df.axes[axis]) * 0.8)
+        self.labels = self.df.axes[axis][:drop_count]
+
+    def time_drop(self, shape, axis):
+        execute(self.df.drop(self.labels, axis))
