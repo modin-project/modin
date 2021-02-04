@@ -49,6 +49,8 @@ except ImportError:
     ASV_USE_IMPL = os.environ.get("MODIN_ASV_USE_IMPL", "modin")
     ASV_DATASET_SIZE = os.environ.get("MODIN_TEST_DATASET_SIZE", "Small")
 
+assert ASV_USE_IMPL in ("modin", "pandas")
+
 BINARY_OP_DATA_SIZE = {
     "Big": [
         ((5000, 5000), (5000, 5000)),
@@ -80,6 +82,11 @@ UNARY_OP_DATA_SIZE = {
 GROUPBY_NGROUPS = {
     "Big": 100,
     "Small": 5,
+}
+
+IMPL = {
+    "modin": pd,
+    "pandas": pandas,
 }
 
 
@@ -217,12 +224,7 @@ class TimeConcat:
         )
 
     def time_concat(self, shapes, how, axis):
-        if ASV_USE_IMPL == "modin":
-            execute(pd.concat([self.df1, self.df2], axis=axis, join=how))
-        elif ASV_USE_IMPL == "pandas":
-            execute(pandas.concat([self.df1, self.df2], axis=axis, join=how))
-        else:
-            raise NotImplementedError
+        execute(IMPL[ASV_USE_IMPL].concat([self.df1, self.df2], axis=axis, join=how))
 
 
 class TimeBinaryOp:
@@ -366,22 +368,10 @@ class TimeFillna:
     params = [UNARY_OP_DATA_SIZE[ASV_DATASET_SIZE], [None, 0.8]]
 
     def setup(self, shape, limit):
+        pd = IMPL[ASV_USE_IMPL]
         columns = [f"col{x}" for x in range(shape[1])]
-
-        if ASV_USE_IMPL == "modin":
-            self.df = pd.DataFrame(
-                np.nan, index=pd.RangeIndex(shape[0]), columns=columns
-            )
-        elif ASV_USE_IMPL == "pandas":
-            self.df = pandas.DataFrame(
-                np.nan, index=pandas.RangeIndex(shape[0]), columns=columns
-            )
-        else:
-            raise NotImplementedError
-
-        self.limit = None
-        if limit:
-            self.limit = int(limit * shape[0])
+        self.df = pd.DataFrame(np.nan, index=pd.RangeIndex(shape[0]), columns=columns)
+        self.limit = int(limit * shape[0]) if limit else None
 
     def time_fillna(self, shape, limit):
         execute(self.df.fillna(0, limit=self.limit))
