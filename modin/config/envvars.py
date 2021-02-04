@@ -94,7 +94,7 @@ class Backend(EnvironmentVariable, type=str):
 
     varname = "MODIN_BACKEND"
     default = "Pandas"
-    choices = ("Pandas", "OmniSci", "Pyarrow")
+    choices = ("Pandas", "OmniSci", "Pyarrow", "cuDF")
 
 
 class IsExperimental(EnvironmentVariable, type=bool):
@@ -135,6 +135,14 @@ class CpuCount(EnvironmentVariable, type=int):
         return multiprocessing.cpu_count()
 
 
+class GpuCount(EnvironmentVariable, type=int):
+    """
+    How may GPU devices to utilize across the whole distribution
+    """
+
+    varname = "MODIN_GPUS"
+
+
 class Memory(EnvironmentVariable, type=int):
     """
     How much memory give to each Ray worker (in bytes)
@@ -152,7 +160,10 @@ class NPartitions(EnvironmentVariable, type=int):
 
     @classmethod
     def _get_default(cls):
-        return CpuCount.get()
+        if Backend.get() == "cuDF":
+            return GpuCount.get()
+        else:
+            return CpuCount.get()
 
 
 class RayPlasmaDir(EnvironmentVariable, type=ExactStr):
