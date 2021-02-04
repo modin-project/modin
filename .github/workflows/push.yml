@@ -134,125 +134,90 @@ jobs:
       matrix:
         python-version: ["3.7", "3.8"]
         engine: ["python", "ray", "dask"]
+        enable_partition_ips: ["False", "True"]
     env:
       MODIN_ENGINE: ${{matrix.engine}}
       MODIN_MEMORY: 1000000000
+      MODIN_ENABLE_PARTITION_IPS: ${{matrix.enable_partition_ips}}
     name: test-ubuntu (engine ${{matrix.engine}}, python ${{matrix.python-version}})
     steps:
-      - uses: actions/checkout@v2
+      - if: env.MODIN_ENABLE_PARTITION_IPS == 'False' || (env.MODIN_ENABLE_PARTITION_IPS == 'True' && matrix.engine != 'python')
+        uses: actions/checkout@v2
         with:
           fetch-depth: 1
-      - uses: conda-incubator/setup-miniconda@v2
+      - if: env.MODIN_ENABLE_PARTITION_IPS == 'False' || (env.MODIN_ENABLE_PARTITION_IPS == 'True' && matrix.engine != 'python')
+        uses: conda-incubator/setup-miniconda@v2
         with:
           activate-environment: modin
           environment-file: environment-dev.yml
           python-version: ${{matrix.python-version}}
           channel-priority: strict
           use-only-tar-bz2: true # IMPORTANT: This needs to be set for caching to work properly!
-      - name: Conda environment
+      - if: env.MODIN_ENABLE_PARTITION_IPS == 'False' || (env.MODIN_ENABLE_PARTITION_IPS == 'True' && matrix.engine != 'python')
+        name: Conda environment
         shell: bash -l {0}
         run: |
           conda info
           conda list
-      - name: Install HDF5
+      - if: env.MODIN_ENABLE_PARTITION_IPS == 'False'
+        name: Install HDF5
         run: sudo apt update && sudo apt install -y libhdf5-dev
-      - shell: bash -l {0}
-        run: pytest modin/experimental/xgboost/test/test_default.py
-      - shell: bash -l {0}
-        run: pytest modin/pandas/test/dataframe/test_binary.py
-      - shell: bash -l {0}
-        run: pytest modin/pandas/test/dataframe/test_default.py
-      - shell: bash -l {0}
-        run: pytest modin/pandas/test/dataframe/test_indexing.py
-      - shell: bash -l {0}
-        run: pytest modin/pandas/test/dataframe/test_iter.py
-      - shell: bash -l {0}
-        run: pytest modin/pandas/test/dataframe/test_join_sort.py
-      - shell: bash -l {0}
-        run: pytest modin/pandas/test/dataframe/test_map_metadata.py
-      - shell: bash -l {0}
-        run: pytest modin/pandas/test/dataframe/test_reduction.py
-      - shell: bash -l {0}
-        run: pytest modin/pandas/test/dataframe/test_udf.py
-      - shell: bash -l {0}
-        run: pytest modin/pandas/test/dataframe/test_window.py
-      - shell: bash -l {0}
-        run: python -m pytest modin/pandas/test/test_series.py
-      - shell: bash -l {0}
-        run: python -m pytest modin/pandas/test/test_rolling.py
-      - shell: bash -l {0}
-        run: python -m pytest modin/pandas/test/test_concat.py
-      - shell: bash -l {0}
-        run: python -m pytest modin/pandas/test/test_groupby.py
-      - shell: bash -l {0}
-        run: python -m pytest modin/pandas/test/test_reshape.py
-      - shell: bash -l {0}
-        run: python -m pytest modin/pandas/test/test_general.py
-      - shell: bash -l {0}
-        run: python -m pytest modin/pandas/test/test_io.py
-      - shell: bash -l {0}
-        run: python -m pytest modin/experimental/pandas/test/test_io_exp.py
-      - shell: bash -l {0}
-        run: bash <(curl -s https://codecov.io/bash)
-
-  test-all-with-partition-ips-enabled:
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        python-version: ["3.7", "3.8"]
-        engine: ["ray", "dask"]
-    env:
-      MODIN_ENGINE: ${{matrix.engine}}
-      MODIN_MEMORY: 1000000000
-      MODIN_ENABLE_PARTITION_IPS: "True"
-    name: test-ubuntu (engine ${{matrix.engine}}, python ${{matrix.python-version}}) with partition IPs enabled
-    steps:
-      - uses: actions/checkout@v2
-        with:
-          fetch-depth: 1
-      - uses: conda-incubator/setup-miniconda@v2
-        with:
-          activate-environment: modin
-          environment-file: environment.yml
-          python-version: ${{matrix.python-version}}
-          channel-priority: strict
-          use-only-tar-bz2: true # IMPORTANT: This needs to be set for caching to work properly!
-      - name: Conda environment
+      - if: env.MODIN_ENABLE_PARTITION_IPS == 'False' || (env.MODIN_ENABLE_PARTITION_IPS == 'True' && matrix.engine != 'python')
         shell: bash -l {0}
-        run: |
-          conda info
-          conda list
-      - shell: bash -l {0}
+        run: pytest modin/experimental/xgboost/test/test_default.py
+      - if: env.MODIN_ENABLE_PARTITION_IPS == 'False' || (env.MODIN_ENABLE_PARTITION_IPS == 'True' && matrix.engine != 'python')
+        shell: bash -l {0}
         run: pytest modin/pandas/test/dataframe/test_binary.py
-      - shell: bash -l {0}
+      - if: env.MODIN_ENABLE_PARTITION_IPS == 'False' || (env.MODIN_ENABLE_PARTITION_IPS == 'True' && matrix.engine != 'python')
+        shell: bash -l {0}
         run: pytest modin/pandas/test/dataframe/test_default.py
-      - shell: bash -l {0}
+      - if: env.MODIN_ENABLE_PARTITION_IPS == 'False' || (env.MODIN_ENABLE_PARTITION_IPS == 'True' && matrix.engine != 'python')
+        shell: bash -l {0}
         run: pytest modin/pandas/test/dataframe/test_indexing.py
-      - shell: bash -l {0}
+      - if: env.MODIN_ENABLE_PARTITION_IPS == 'False' || (env.MODIN_ENABLE_PARTITION_IPS == 'True' && matrix.engine != 'python')
+        shell: bash -l {0}
         run: pytest modin/pandas/test/dataframe/test_iter.py
-      - shell: bash -l {0}
+      - if: env.MODIN_ENABLE_PARTITION_IPS == 'False' || (env.MODIN_ENABLE_PARTITION_IPS == 'True' && matrix.engine != 'python')
+        shell: bash -l {0}
         run: pytest modin/pandas/test/dataframe/test_join_sort.py
-      - shell: bash -l {0}
+      - if: env.MODIN_ENABLE_PARTITION_IPS == 'False' || (env.MODIN_ENABLE_PARTITION_IPS == 'True' && matrix.engine != 'python')
+        shell: bash -l {0}
         run: pytest modin/pandas/test/dataframe/test_map_metadata.py
-      - shell: bash -l {0}
+      - if: env.MODIN_ENABLE_PARTITION_IPS == 'False' || (env.MODIN_ENABLE_PARTITION_IPS == 'True' && matrix.engine != 'python')
+        shell: bash -l {0}
         run: pytest modin/pandas/test/dataframe/test_reduction.py
-      - shell: bash -l {0}
+      - if: env.MODIN_ENABLE_PARTITION_IPS == 'False' || (env.MODIN_ENABLE_PARTITION_IPS == 'True' && matrix.engine != 'python')
+        shell: bash -l {0}
         run: pytest modin/pandas/test/dataframe/test_udf.py
-      - shell: bash -l {0}
+      - if: env.MODIN_ENABLE_PARTITION_IPS == 'False' || (env.MODIN_ENABLE_PARTITION_IPS == 'True' && matrix.engine != 'python')
+        shell: bash -l {0}
         run: pytest modin/pandas/test/dataframe/test_window.py
-      - shell: bash -l {0}
+      - if: env.MODIN_ENABLE_PARTITION_IPS == 'False' || (env.MODIN_ENABLE_PARTITION_IPS == 'True' && matrix.engine != 'python')
+        shell: bash -l {0}
         run: python -m pytest modin/pandas/test/test_series.py
-      - shell: bash -l {0}
+      - if: env.MODIN_ENABLE_PARTITION_IPS == 'False' || (env.MODIN_ENABLE_PARTITION_IPS == 'True' && matrix.engine != 'python')
+        shell: bash -l {0}
         run: python -m pytest modin/pandas/test/test_rolling.py
-      - shell: bash -l {0}
+      - if: env.MODIN_ENABLE_PARTITION_IPS == 'False' || (env.MODIN_ENABLE_PARTITION_IPS == 'True' && matrix.engine != 'python')
+        shell: bash -l {0}
         run: python -m pytest modin/pandas/test/test_concat.py
-      - shell: bash -l {0}
+      - if: env.MODIN_ENABLE_PARTITION_IPS == 'False' || (env.MODIN_ENABLE_PARTITION_IPS == 'True' && matrix.engine != 'python')
+        shell: bash -l {0}
         run: python -m pytest modin/pandas/test/test_groupby.py
-      - shell: bash -l {0}
+      - if: env.MODIN_ENABLE_PARTITION_IPS == 'False' || (env.MODIN_ENABLE_PARTITION_IPS == 'True' && matrix.engine != 'python')
+        shell: bash -l {0}
         run: python -m pytest modin/pandas/test/test_reshape.py
-      - shell: bash -l {0}
+      - if: env.MODIN_ENABLE_PARTITION_IPS == 'False' || (env.MODIN_ENABLE_PARTITION_IPS == 'True' && matrix.engine != 'python')
+        shell: bash -l {0}
         run: python -m pytest modin/pandas/test/test_general.py
-      - shell: bash -l {0}
+      - if: env.MODIN_ENABLE_PARTITION_IPS == 'False'
+        shell: bash -l {0}
+        run: python -m pytest modin/pandas/test/test_io.py
+      - if: env.MODIN_ENABLE_PARTITION_IPS == 'False'
+        shell: bash -l {0}
+        run: python -m pytest modin/experimental/pandas/test/test_io_exp.py
+      - if: env.MODIN_ENABLE_PARTITION_IPS == 'False' || (env.MODIN_ENABLE_PARTITION_IPS == 'True' && matrix.engine != 'python')
+        shell: bash -l {0}
         run: bash <(curl -s https://codecov.io/bash)
 
   test-windows:

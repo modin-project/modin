@@ -1,5 +1,5 @@
 Partition IPs in Modin (experimental)
-======================================
+=====================================
 
 If you are working with Modin DataFrame and would like to unwrap its remote partitions
 for your needs  (pass them to another function that will be processed on a concrete node of the cluster,
@@ -14,13 +14,13 @@ with ``pandas`` backend because ``Dask`` saves any objects in the worker process
 Please let us know what you think!
 
 Install Modin Partition IPs
-----------------------------
+---------------------------
 
 Modin now comes with all the dependencies for partitions IPs functionality by default! See
 the :doc:`installation page </installation>` for more information on installing Modin.
 
 Starting Modin with Partition IPs enabled
-------------------------------------------
+-----------------------------------------
 
 Partition IPs is detected from an environment variable.
 
@@ -29,7 +29,7 @@ Partition IPs is detected from an environment variable.
    export MODIN_ENABLE_PARTITION_API=True
 
 How to handle objects that are lower than 100 kB
--------------------------------------------
+------------------------------------------------
 
 * If you are sure that each of the remote partitions being unwrapped is higher than 100 kB, you can just import Modin or perform ``ray.init()`` manually.
 
@@ -46,7 +46,7 @@ When specifying ``nbytes`` equal to 0, all the objects will be saved to shared-m
 Note that when specifying the threshold the performance of some Modin operations may change.
 
 Running an example with Partition IPs
---------------------------------------
+-------------------------------------
 
 Before you run this, please make sure you follow the instructions listed above.
 
