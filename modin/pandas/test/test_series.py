@@ -1858,12 +1858,20 @@ def test_is_monotonic(data):
     modin_series, pandas_series = create_test_series(data)
     assert modin_series.is_monotonic == pandas_series.is_monotonic
 
+    modin_series.name = "some_name"
+    pandas_series.name = "some_name"
+    assert modin_series.is_monotonic == pandas_series.is_monotonic
+
 
 @pytest.mark.parametrize(
     "data", test_data_monotonic_values, ids=test_data_monotonic_keys
 )
 def test_is_monotonic_decreasing(data):
     modin_series, pandas_series = create_test_series(data)
+    assert modin_series.is_monotonic_decreasing == pandas_series.is_monotonic_decreasing
+
+    modin_series.name = "some_name"
+    pandas_series.name = "some_name"
     assert modin_series.is_monotonic_decreasing == pandas_series.is_monotonic_decreasing
 
 
@@ -1873,6 +1881,10 @@ def test_is_monotonic_decreasing(data):
 def test_is_monotonic_increasing(data):
     modin_series, pandas_series = create_test_series(data)
     assert modin_series.is_monotonic_increasing == pandas_series.is_monotonic_increasing
+
+    modin_series.name = "some_name"
+    pandas_series.name = "some_name"
+    assert modin_series.is_monotonic_decreasing == pandas_series.is_monotonic_decreasing
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)

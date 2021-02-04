@@ -643,6 +643,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             "decreasing": lambda df: df.is_monotonic_decreasing,
         }
         monotonic_fn = funcs.get(func_type, funcs["increasing"])
+        series_name = self.columns[0]
 
         def is_monotonic_map(df):
             df = df.squeeze(axis=1)
@@ -662,7 +663,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             result = (
                 monotonic_fn(df["edges"]) if df["is_part_monotonic"].all() else False
             )
-            return pandas.Series([result], name="__reduced__").to_frame()
+            return pandas.Series([result], name=series_name).to_frame()
 
         return MapReduceFunction.register(is_monotonic_map, is_monotonic_reduce)(self)
 
