@@ -100,7 +100,7 @@ _NOINIT_ENGINES = {
 
 def _update_engine(publisher: Parameter):
     global dask_client
-    from modin.config import Backend, CpuCount
+    from modin.config import Backend, CpuCount, GpuCount
 
     if publisher.get() == "Ray":
         from modin.engines.ray.utils import initialize_ray
