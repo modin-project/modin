@@ -30,7 +30,7 @@ class PandasOnRayFrameAxisPartition(PandasFrameAxisPartition):
             self.list_of_ips = [obj.ip for obj in list_of_blocks]
 
     partition_type = PandasOnRayFramePartition
-    instance_type = ray.ObjectID
+    instance_type = ray.ObjectRef
 
     @classmethod
     def deploy_axis_func(
