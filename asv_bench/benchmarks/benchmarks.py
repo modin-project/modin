@@ -487,3 +487,36 @@ class TimeValueCountsSeries(BaseTimeValueCounts):
 
     def time_value_counts(self, shape, bins):
         execute(self.df.value_counts(bins=bins))
+
+
+class TimeIndexing:
+    param_names = ["shape", "indexer_type"]
+    params = [
+        UNARY_OP_DATA_SIZE[ASV_DATASET_SIZE],
+        [
+            "scalar",
+            "bool",
+            "slice",
+            "list",
+            "function",
+        ],
+    ]
+
+    def setup(self, shape, indexer_type):
+        self.df = generate_dataframe(ASV_USE_IMPL, "int", *shape, RAND_LOW, RAND_HIGH)
+        if indexer_type == "bool":
+            self.indexer = [False, True] * (shape[0] // 2)
+        elif indexer_type == "scalar":
+            self.indexer = shape[0] // 2
+        elif indexer_type == "slice":
+            self.indexer = slice(0, shape[0], 2)
+        elif indexer_type == "list":
+            self.indexer = [x for x in range(shape[0])]
+        elif indexer_type == "function":
+            self.indexer = lambda df: df.index[::-2]
+
+    def time_iloc(self, shape, indexer_type):
+        execute(self.df.iloc[self.indexer])
+
+    def time_loc(self, shape, indexer_type):
+        execute(self.df.loc[self.indexer])
