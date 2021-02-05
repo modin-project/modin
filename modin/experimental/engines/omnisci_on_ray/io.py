@@ -19,6 +19,9 @@ from modin.error_message import ErrorMessage
 from pyarrow.csv import read_csv, ParseOptions, ConvertOptions, ReadOptions
 import pyarrow as pa
 
+import pandas
+from pandas.io.parsers import _validate_usecols_arg
+
 
 class OmnisciOnRayIO(RayIO):
 
@@ -172,6 +175,43 @@ class OmnisciOnRayIO(RayIO):
                     "Specified a delimiter and delim_whitespace=True; you can only specify one."
                 )
 
+            usecols_md, usecols_names_dtypes = _validate_usecols_arg(usecols)
+            if usecols_md:
+                empty_pd_df = pandas.read_csv(
+                    **dict(
+                        mykwargs,
+                        nrows=0,
+                        skipfooter=0,
+                        usecols=None,
+                        engine=None if engine == "arrow" else engine,
+                    )
+                )
+                column_names = empty_pd_df.columns
+                if usecols_names_dtypes == "string":
+                    if usecols_md.issubset(set(column_names)):
+                        # columns should be sorted because pandas doesn't preserve columns order
+                        usecols_md = [
+                            col_name
+                            for col_name in column_names
+                            if col_name in usecols_md
+                        ]
+                    else:
+                        raise NotImplementedError(
+                            "values passed in the `usecols` parameter don't match columns names"
+                        )
+                elif usecols_names_dtypes == "integer":
+                    # columns should be sorted because pandas doesn't preserve columns order
+                    usecols_md = sorted(usecols_md)
+                    if len(column_names) < max(usecols_md):
+                        raise NotImplementedError(
+                            "max usecols value is higher than the number of columns"
+                        )
+                    usecols_md = [column_names[i] for i in usecols_md]
+                elif callable(usecols_md):
+                    usecols_md = [
+                        col_name for col_name in column_names if usecols_md(col_name)
+                    ]
+
             po = ParseOptions(
                 delimiter="\\s+" if delim_whitespace else delimiter,
                 quote_char=quotechar,
@@ -190,7 +230,7 @@ class OmnisciOnRayIO(RayIO):
                 # didn't passed explicitly as an array or a dict
                 timestamp_parsers=[""] if isinstance(parse_dates, bool) else None,
                 strings_can_be_null=None,
-                include_columns=None,
+                include_columns=usecols_md,
                 include_missing_columns=None,
                 auto_dict_encode=None,
                 auto_dict_max_cardinality=None,

@@ -328,6 +328,36 @@ class TestCSV:
             parse_dates=parse_dates,
         )
 
+    @pytest.mark.parametrize("engine", [None, "arrow"])
+    @pytest.mark.parametrize(
+        "usecols",
+        [
+            None,
+            ["col1"],
+            ["col1", "col1"],
+            ["col1", "col2", "col6"],
+            ["col6", "col2", "col1"],
+            [0],
+            [0, 0],
+            [0, 1, 5],
+            [5, 1, 0],
+            lambda x: x in ["col1", "col2"],
+        ],
+    )
+    def test_read_csv_col_handling(
+        self,
+        engine,
+        usecols,
+    ):
+        eval_io(
+            fn_name="read_csv",
+            check_kwargs_callable=not callable(usecols),
+            md_extra_kwargs={"engine": engine},
+            # read_csv kwargs
+            filepath_or_buffer=pytest.csvs_names["test_read_csv_regular"],
+            usecols=usecols,
+        )
+
 
 class TestMasks:
     data = {
