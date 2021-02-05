@@ -41,6 +41,8 @@ def modin_groupby_equals_pandas(modin_groupby, pandas_groupby):
 def eval_aggregation(md_df, pd_df, operation=None, by=None, *args, **kwargs):
     if by is None:
         by = md_df.columns[0]
+    if operation is None:
+        operation = {}
     return eval_general(
         md_df,
         pd_df,
@@ -1361,18 +1363,26 @@ def test_agg_exceptions(operation):
     eval_aggregation(*create_test_dfs(data), operation=operation)
 
 
+@pytest.mark.skip(
+    "Pandas raises a ValueError on empty dictionary aggregation since 1.2.0"
+    "It's unclear is that was made on purpose or it is a bug. That question"
+    "was asked in https://github.com/pandas-dev/pandas/issues/39609."
+    "So until the answer this test is disabled."
+)
 @pytest.mark.parametrize(
     "kwargs",
     [
         {
-            "Max": ("c", np.max),
-            "Sum": ("c", np.sum),
+            "Max": ("cnt", np.max),
+            "Sum": ("cnt", np.sum),
+            "Num": ("c", pd.Series.nunique),
             "Num1": ("c", pandas.Series.nunique),
         },
         {
             "func": {
-                "Max": ("c", np.max),
-                "Sum": ("c", np.sum),
+                "Max": ("cnt", np.max),
+                "Sum": ("cnt", np.sum),
+                "Num": ("c", pd.Series.nunique),
                 "Num1": ("c", pandas.Series.nunique),
             }
         },
@@ -1480,36 +1490,29 @@ def test_unknown_groupby(columns):
 @pytest.mark.parametrize(
     "func_to_apply",
     [
-        pytest.param(lambda df: df.sum(), id="sum"),
-        pytest.param(lambda df: df.size(), id="size"),
-        pytest.param(lambda df: df.quantile(), id="quantile"),
-        pytest.param(lambda df: df.dtypes, id="dtypes"),
-        pytest.param(lambda df: df.apply(lambda df: df.sum()), id="apply(sum)"),
+        lambda df: df.sum(),
+        lambda df: df.size(),
+        lambda df: df.quantile(),
+        lambda df: df.dtypes,
+        lambda df: df.apply(lambda df: df.sum()),
         pytest.param(
             lambda df: df.apply(lambda df: pandas.Series([1, 2, 3, 4])),
             marks=pytest.mark.skip("See modin issue #2511"),
-            id="apply_return_series",
         ),
-        pytest.param(
-            lambda grp: grp.agg(
-                {
-                    list(test_data_values[0].keys())[1]: (max, min, sum),
-                    list(test_data_values[0].keys())[-2]: (sum, min, max),
-                }
-            ),
-            id="dict_built-in_fns_agg",
+        lambda grp: grp.agg(
+            {
+                list(test_data_values[0].keys())[1]: (max, min, sum),
+                list(test_data_values[0].keys())[-2]: (sum, min, max),
+            }
         ),
-        pytest.param(
-            lambda grp: grp.agg(
-                {
-                    list(test_data_values[0].keys())[1]: [
-                        ("new_sum", "sum"),
-                        ("new_min", "min"),
-                    ],
-                    list(test_data_values[0].keys())[-2]: np.sum,
-                }
-            ),
-            id="dict_mixed_agg",
+        lambda grp: grp.agg(
+            {
+                list(test_data_values[0].keys())[1]: [
+                    ("new_sum", "sum"),
+                    ("new_min", "min"),
+                ],
+                list(test_data_values[0].keys())[-2]: np.sum,
+            }
         ),
         pytest.param(
             lambda grp: grp.agg(
@@ -1519,7 +1522,6 @@ def test_unknown_groupby(columns):
                 }
             ),
             marks=pytest.mark.skip("See modin issue #2542"),
-            id="dict_agg_by_intersection",
         ),
     ],
 )
@@ -1544,7 +1546,6 @@ def test_multi_column_groupby_different_partitions(
     md_grp, pd_grp = md_df.groupby(by, as_index=as_index), pd_df.groupby(
         by, as_index=as_index
     )
-
     eval_general(md_grp, pd_grp, func_to_apply)
 
 
