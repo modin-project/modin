@@ -115,6 +115,12 @@ def _update_engine(publisher: Parameter):
             os.environ["OMP_NUM_THREADS"] = str(multiprocessing.cpu_count())
         if _is_first_update.get("Ray", True):
             initialize_ray()
+        if Backend.get() == "cudf":
+            num_gpus = ray.cluster_resources()["GPU"]
+            from modin.engines.ray.cudf_on_ray.partition_manager import GPU_MANAGERS
+            from modin.engines.ray.cudf_on_ray.gpu_managers import GPUManager
+            for i in range(int(num_gpus)):
+                GPU_MANAGERS.append(GPUManager.remote(i))
     elif publisher.get() == "Dask":
         if _is_first_update.get("Dask", True):
             from modin.engines.dask.utils import initialize_dask
