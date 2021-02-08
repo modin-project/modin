@@ -57,7 +57,8 @@ def call_progress_bar(result_parts, line_no):
         ray.wait(futures, num_returns=i)
         progress_bars[pbar_id].update(1)
         progress_bars[pbar_id].refresh()
-    progress_bars[pbar_id].close()
+    if progress_bars[pbar_id].n == progress_bars[pbar_id].total:
+        progress_bars[pbar_id].close()
 
 
 def display_time_updates(bar):
