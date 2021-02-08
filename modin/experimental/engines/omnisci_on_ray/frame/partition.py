@@ -23,7 +23,7 @@ class OmnisciOnRayFramePartition(BaseFramePartition):
     def __init__(
         self, object_id=None, frame_id=None, arrow_table=None, length=None, width=None
     ):
-        assert type(object_id) is ray.ObjectID
+        assert type(object_id) is ray.ObjectRef
 
         self.oid = object_id
         self.frame_id = frame_id
