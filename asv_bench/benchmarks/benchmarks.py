@@ -92,7 +92,7 @@ IMPL = {
 
 def execute(df):
     "Make sure the calculations are done."
-    return df.shape
+    return df.shape, df.dtypes
 
 
 class BaseTimeGroupBy:
@@ -490,13 +490,14 @@ class TimeValueCountsSeries(BaseTimeValueCounts):
 
 
 class TimeAstype:
-    param_names = ["shape"]
+    param_names = ["shape", "dtype"]
     params = [
         UNARY_OP_DATA_SIZE[ASV_DATASET_SIZE],
+        ["float64", "category"],
     ]
 
-    def setup(self, shape):
+    def setup(self, shape, dtype):
         self.df = generate_dataframe(ASV_USE_IMPL, "int", *shape, RAND_LOW, RAND_HIGH)
 
-    def time_astype(self, shape):
-        execute(self.df.astype("float64"))
+    def time_astype(self, shape, dtype):
+        execute(self.df.astype(dtype))
