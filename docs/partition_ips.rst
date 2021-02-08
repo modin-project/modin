@@ -19,15 +19,6 @@ Install Modin Partition IPs
 Modin now comes with all the dependencies for partitions IPs functionality by default! See
 the :doc:`installation page </installation>` for more information on installing Modin.
 
-Starting Modin with Partition IPs enabled
------------------------------------------
-
-Partition IPs is detected from an environment variable.
-
-.. code-block:: bash
-
-   export MODIN_ENABLE_PARTITION_API=True
-
 How to handle objects that are lower than 100 kB
 ------------------------------------------------
 

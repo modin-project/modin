@@ -13,7 +13,6 @@
 
 import numpy as np
 
-from modin.config import EnablePartitionIPs
 from modin.backends.pandas.query_compiler import PandasQueryCompiler
 from modin.pandas.dataframe import DataFrame
 
@@ -47,9 +46,6 @@ def unwrap_partitions(api_layer_object, axis=None, bind_ip=False):
         raise ValueError(
             f"Only API Layer objects may be passed in here, got {type(api_layer_object)} instead."
         )
-
-    if bind_ip and not EnablePartitionIPs.get():
-        raise ValueError("Passed `bind_ip=True` but partition IPs API was not enabled.")
 
     if axis is None:
 
@@ -122,10 +118,6 @@ def from_partitions(partitions, axis):
     # `axis=None` - convert 2D list to 2D NumPy array
     if axis is None:
         if isinstance(partitions[0][0], tuple):
-            if not EnablePartitionIPs.get():
-                raise ValueError(
-                    "Passed `partitions` with IPs but partition IPs API was not enabled."
-                )
             parts = np.array(
                 [
                     [partition_class(partition, ip=ip) for ip, partition in row]
@@ -142,10 +134,6 @@ def from_partitions(partitions, axis):
     # `axis=0` - place row partitions to 2D NumPy array so that each row of the array is one row partition.
     elif axis == 0:
         if isinstance(partitions[0], tuple):
-            if not EnablePartitionIPs.get():
-                raise ValueError(
-                    "Passed `partitions` with IPs but partition IPs API was not enabled."
-                )
             parts = np.array(
                 [[partition_class(partition, ip=ip)] for ip, partition in partitions]
             )
@@ -154,10 +142,6 @@ def from_partitions(partitions, axis):
     # `axis=1` - place column partitions to 2D NumPy array so that each column of the array is one column partition.
     elif axis == 1:
         if isinstance(partitions[0], tuple):
-            if not EnablePartitionIPs.get():
-                raise ValueError(
-                    "Passed `partitions` with IPs but partition IPs API was not enabled."
-                )
             parts = np.array(
                 [[partition_class(partition, ip=ip) for ip, partition in partitions]]
             )

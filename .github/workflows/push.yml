@@ -134,90 +134,65 @@ jobs:
       matrix:
         python-version: ["3.7", "3.8"]
         engine: ["python", "ray", "dask"]
-        enable_partition_ips: ["False", "True"]
     env:
       MODIN_ENGINE: ${{matrix.engine}}
       MODIN_MEMORY: 1000000000
-      MODIN_ENABLE_PARTITION_IPS: ${{matrix.enable_partition_ips}}
     name: test-ubuntu (engine ${{matrix.engine}}, python ${{matrix.python-version}})
     steps:
-      - if: env.MODIN_ENABLE_PARTITION_IPS == 'False' || (env.MODIN_ENABLE_PARTITION_IPS == 'True' && matrix.engine != 'python')
-        uses: actions/checkout@v2
+      - uses: actions/checkout@v2
         with:
           fetch-depth: 1
-      - if: env.MODIN_ENABLE_PARTITION_IPS == 'False' || (env.MODIN_ENABLE_PARTITION_IPS == 'True' && matrix.engine != 'python')
-        uses: conda-incubator/setup-miniconda@v2
+      - uses: conda-incubator/setup-miniconda@v2
         with:
           activate-environment: modin
           environment-file: environment-dev.yml
           python-version: ${{matrix.python-version}}
           channel-priority: strict
           use-only-tar-bz2: true # IMPORTANT: This needs to be set for caching to work properly!
-      - if: env.MODIN_ENABLE_PARTITION_IPS == 'False' || (env.MODIN_ENABLE_PARTITION_IPS == 'True' && matrix.engine != 'python')
-        name: Conda environment
+      - name: Conda environment
         shell: bash -l {0}
         run: |
           conda info
           conda list
-      - if: env.MODIN_ENABLE_PARTITION_IPS == 'False'
-        name: Install HDF5
+      - name: Install HDF5
         run: sudo apt update && sudo apt install -y libhdf5-dev
-      - if: env.MODIN_ENABLE_PARTITION_IPS == 'False' || (env.MODIN_ENABLE_PARTITION_IPS == 'True' && matrix.engine != 'python')
-        shell: bash -l {0}
+      - shell: bash -l {0}
         run: pytest modin/experimental/xgboost/test/test_default.py
-      - if: env.MODIN_ENABLE_PARTITION_IPS == 'False' || (env.MODIN_ENABLE_PARTITION_IPS == 'True' && matrix.engine != 'python')
-        shell: bash -l {0}
+      - shell: bash -l {0}
         run: pytest modin/pandas/test/dataframe/test_binary.py
-      - if: env.MODIN_ENABLE_PARTITION_IPS == 'False' || (env.MODIN_ENABLE_PARTITION_IPS == 'True' && matrix.engine != 'python')
-        shell: bash -l {0}
+      - shell: bash -l {0}
         run: pytest modin/pandas/test/dataframe/test_default.py
-      - if: env.MODIN_ENABLE_PARTITION_IPS == 'False' || (env.MODIN_ENABLE_PARTITION_IPS == 'True' && matrix.engine != 'python')
-        shell: bash -l {0}
+      - shell: bash -l {0}
         run: pytest modin/pandas/test/dataframe/test_indexing.py
-      - if: env.MODIN_ENABLE_PARTITION_IPS == 'False' || (env.MODIN_ENABLE_PARTITION_IPS == 'True' && matrix.engine != 'python')
-        shell: bash -l {0}
+      - shell: bash -l {0}
         run: pytest modin/pandas/test/dataframe/test_iter.py
-      - if: env.MODIN_ENABLE_PARTITION_IPS == 'False' || (env.MODIN_ENABLE_PARTITION_IPS == 'True' && matrix.engine != 'python')
-        shell: bash -l {0}
+      - shell: bash -l {0}
         run: pytest modin/pandas/test/dataframe/test_join_sort.py
-      - if: env.MODIN_ENABLE_PARTITION_IPS == 'False' || (env.MODIN_ENABLE_PARTITION_IPS == 'True' && matrix.engine != 'python')
-        shell: bash -l {0}
+      - shell: bash -l {0}
         run: pytest modin/pandas/test/dataframe/test_map_metadata.py
-      - if: env.MODIN_ENABLE_PARTITION_IPS == 'False' || (env.MODIN_ENABLE_PARTITION_IPS == 'True' && matrix.engine != 'python')
-        shell: bash -l {0}
+      - shell: bash -l {0}
         run: pytest modin/pandas/test/dataframe/test_reduction.py
-      - if: env.MODIN_ENABLE_PARTITION_IPS == 'False' || (env.MODIN_ENABLE_PARTITION_IPS == 'True' && matrix.engine != 'python')
-        shell: bash -l {0}
+      - shell: bash -l {0}
         run: pytest modin/pandas/test/dataframe/test_udf.py
-      - if: env.MODIN_ENABLE_PARTITION_IPS == 'False' || (env.MODIN_ENABLE_PARTITION_IPS == 'True' && matrix.engine != 'python')
-        shell: bash -l {0}
+      - shell: bash -l {0}
         run: pytest modin/pandas/test/dataframe/test_window.py
-      - if: env.MODIN_ENABLE_PARTITION_IPS == 'False' || (env.MODIN_ENABLE_PARTITION_IPS == 'True' && matrix.engine != 'python')
-        shell: bash -l {0}
+      - shell: bash -l {0}
         run: python -m pytest modin/pandas/test/test_series.py
-      - if: env.MODIN_ENABLE_PARTITION_IPS == 'False' || (env.MODIN_ENABLE_PARTITION_IPS == 'True' && matrix.engine != 'python')
-        shell: bash -l {0}
+      - shell: bash -l {0}
         run: python -m pytest modin/pandas/test/test_rolling.py
-      - if: env.MODIN_ENABLE_PARTITION_IPS == 'False' || (env.MODIN_ENABLE_PARTITION_IPS == 'True' && matrix.engine != 'python')
-        shell: bash -l {0}
+      - shell: bash -l {0}
         run: python -m pytest modin/pandas/test/test_concat.py
-      - if: env.MODIN_ENABLE_PARTITION_IPS == 'False' || (env.MODIN_ENABLE_PARTITION_IPS == 'True' && matrix.engine != 'python')
-        shell: bash -l {0}
+      - shell: bash -l {0}
         run: python -m pytest modin/pandas/test/test_groupby.py
-      - if: env.MODIN_ENABLE_PARTITION_IPS == 'False' || (env.MODIN_ENABLE_PARTITION_IPS == 'True' && matrix.engine != 'python')
-        shell: bash -l {0}
+      - shell: bash -l {0}
         run: python -m pytest modin/pandas/test/test_reshape.py
-      - if: env.MODIN_ENABLE_PARTITION_IPS == 'False' || (env.MODIN_ENABLE_PARTITION_IPS == 'True' && matrix.engine != 'python')
-        shell: bash -l {0}
+      - shell: bash -l {0}
         run: python -m pytest modin/pandas/test/test_general.py
-      - if: env.MODIN_ENABLE_PARTITION_IPS == 'False'
-        shell: bash -l {0}
+      - shell: bash -l {0}
         run: python -m pytest modin/pandas/test/test_io.py
-      - if: env.MODIN_ENABLE_PARTITION_IPS == 'False'
-        shell: bash -l {0}
+      - shell: bash -l {0}
         run: python -m pytest modin/experimental/pandas/test/test_io_exp.py
-      - if: env.MODIN_ENABLE_PARTITION_IPS == 'False' || (env.MODIN_ENABLE_PARTITION_IPS == 'True' && matrix.engine != 'python')
-        shell: bash -l {0}
+      - shell: bash -l {0}
         run: bash <(curl -s https://codecov.io/bash)
 
   test-windows:

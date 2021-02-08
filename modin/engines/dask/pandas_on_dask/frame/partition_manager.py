@@ -13,7 +13,6 @@
 
 import numpy as np
 
-from modin.config import EnablePartitionIPs
 from modin.engines.base.frame.partition_manager import BaseFrameManager
 from .axis_partition import (
     PandasOnDaskFrameColumnPartition,
@@ -49,10 +48,7 @@ def deploy_func(df, apply_func, call_queue_df, call_queues_other, *others):
         new_others[i] = other
     if isinstance(apply_func, bytes):
         apply_func = pkl.loads(apply_func)
-    if EnablePartitionIPs.get():
-        return apply_func(df, new_others), get_ip()
-    else:
-        return apply_func(df, new_others)
+    return apply_func(df, new_others), get_ip()
 
 
 class DaskFrameManager(BaseFrameManager):
@@ -114,75 +110,39 @@ class DaskFrameManager(BaseFrameManager):
             return apply_func(df, **{other_name: other})
 
         client = _get_global_client()
-        if EnablePartitionIPs.get():
-            new_partitions = np.array(
+        futures = np.array(
+            [
                 [
-                    [
-                        client.submit(
-                            deploy_func,
-                            part.future,
-                            mapper,
-                            part.call_queue,
-                            [obj[col_idx].call_queue for obj in right]
+                    client.submit(
+                        deploy_func,
+                        part.future,
+                        mapper,
+                        part.call_queue,
+                        [obj[col_idx].call_queue for obj in right]
+                        if axis
+                        else [obj.call_queue for obj in right[row_idx]],
+                        *(
+                            [obj[col_idx].future for obj in right]
                             if axis
-                            else [obj.call_queue for obj in right[row_idx]],
-                            *(
-                                [obj[col_idx].future for obj in right]
-                                if axis
-                                else [obj.future for obj in right[row_idx]]
-                            ),
-                            pure=False,
-                        )
-                        for col_idx, part in enumerate(left[row_idx])
-                    ]
-                    for row_idx in range(len(left))
+                            else [obj.future for obj in right[row_idx]]
+                        ),
+                        pure=False,
+                    )
+                    for col_idx, part in enumerate(left[row_idx])
                 ]
-            )
-            new_partitions = np.array(
-                [
-                    [
-                        tuple(
-                            [
-                                client.submit(lambda l, i: l[i], part, i)
-                                for i in range(2)
-                            ]
-                        )
-                        for part in row
-                    ]
-                    for row in new_partitions
+                for row_idx in range(len(left))
+            ]
+        )
+        new_partitions = np.empty(
+            (futures.shape[0], futures.shape[1]),
+            dtype=PandasOnDaskFramePartition,
+        )
+        for i in range(len(futures.shape[0])):
+            for j in range(len(futures.shape[1])):
+                future = [
+                    client.submit(lambda l: l[k], futures[i][j]) for k in range(2)
                 ]
-            )
-            new_partitions = np.array(
-                [
-                    [PandasOnDaskFramePartition(part[0], ip=part[1]) for part in row]
-                    for row in new_partitions
-                ]
-            )
-        else:
-            new_partitions = np.array(
-                [
-                    [
-                        PandasOnDaskFramePartition(
-                            client.submit(
-                                deploy_func,
-                                part.future,
-                                mapper,
-                                part.call_queue,
-                                [obj[col_idx].call_queue for obj in right]
-                                if axis
-                                else [obj.call_queue for obj in right[row_idx]],
-                                *(
-                                    [obj[col_idx].future for obj in right]
-                                    if axis
-                                    else [obj.future for obj in right[row_idx]]
-                                ),
-                                pure=False,
-                            )
-                        )
-                        for col_idx, part in enumerate(left[row_idx])
-                    ]
-                    for row_idx in range(len(left))
-                ]
-            )
-
+                new_partitions[i][j] = PandasOnDaskFramePartition(
+                    future[0], ip=future[1]
+                )
         return new_partitions

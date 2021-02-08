@@ -13,7 +13,6 @@
 
 import pandas
 
-from modin.config import EnablePartitionIPs
 from modin.engines.base.frame.axis_partition import PandasFrameAxisPartition
 from .partition import PandasOnRayFramePartition
 
@@ -28,12 +27,7 @@ class PandasOnRayFrameAxisPartition(PandasFrameAxisPartition):
             obj.drain_call_queue()
         self.list_of_blocks = [obj.oid for obj in list_of_blocks]
         if bind_ip:
-            if EnablePartitionIPs.get():
-                self.list_of_ips = [obj.ip for obj in list_of_blocks]
-            else:
-                raise ValueError(
-                    "Passed `bind_ip=True` but partition IPs API was not enabled."
-                )
+            self.list_of_ips = [obj.ip for obj in list_of_blocks]
 
     partition_type = PandasOnRayFramePartition
     instance_type = ray.ObjectRef
@@ -43,7 +37,6 @@ class PandasOnRayFrameAxisPartition(PandasFrameAxisPartition):
         cls, axis, func, num_splits, kwargs, maintain_partitioning, *partitions
     ):
         lengths = kwargs.get("_lengths", None)
-        factor = 4 if EnablePartitionIPs.get() else 3
         return deploy_ray_func._remote(
             args=(
                 PandasFrameAxisPartition.deploy_axis_func,
@@ -54,16 +47,13 @@ class PandasOnRayFrameAxisPartition(PandasFrameAxisPartition):
                 maintain_partitioning,
             )
             + tuple(partitions),
-            num_returns=num_splits * factor
-            if lengths is None
-            else len(lengths) * factor,
+            num_returns=num_splits * 4 if lengths is None else len(lengths) * 4,
         )
 
     @classmethod
     def deploy_func_between_two_axis_partitions(
         cls, axis, func, num_splits, len_of_left, other_shape, kwargs, *partitions
     ):
-        factor = 4 if EnablePartitionIPs.get() else 3
         return deploy_ray_func._remote(
             args=(
                 PandasFrameAxisPartition.deploy_func_between_two_axis_partitions,
@@ -75,20 +65,14 @@ class PandasOnRayFrameAxisPartition(PandasFrameAxisPartition):
                 kwargs,
             )
             + tuple(partitions),
-            num_returns=num_splits * factor,
+            num_returns=num_splits * 4,
         )
 
     def _wrap_partitions(self, partitions):
-        if EnablePartitionIPs.get():
-            return [
-                self.partition_type(object_id, length, width, ip)
-                for (object_id, length, width, ip) in zip(*[iter(partitions)] * 4)
-            ]
-        else:
-            return [
-                self.partition_type(object_id, length, width)
-                for (object_id, length, width) in zip(*[iter(partitions)] * 3)
-            ]
+        return [
+            self.partition_type(object_id, length, width, ip)
+            for (object_id, length, width, ip) in zip(*[iter(partitions)] * 4)
+        ]
 
 
 class PandasOnRayFrameColumnPartition(PandasOnRayFrameAxisPartition):
@@ -128,18 +112,10 @@ def deploy_ray_func(func, *args):  # pragma: no cover
     Ray functions are not detected by codecov (thus pragma: no cover)
     """
     result = func(*args)
-    if EnablePartitionIPs.get():
-        ip = get_node_ip_address()
-        if isinstance(result, pandas.DataFrame):
-            return result, len(result), len(result.columns), ip
-        elif all(isinstance(r, pandas.DataFrame) for r in result):
-            return [i for r in result for i in [r, len(r), len(r.columns), ip]]
-        else:
-            return [i for r in result for i in [r, None, None, ip]]
+    ip = get_node_ip_address()
+    if isinstance(result, pandas.DataFrame):
+        return result, len(result), len(result.columns), ip
+    elif all(isinstance(r, pandas.DataFrame) for r in result):
+        return [i for r in result for i in [r, len(r), len(r.columns), ip]]
     else:
-        if isinstance(result, pandas.DataFrame):
-            return result, len(result), len(result.columns)
-        elif all(isinstance(r, pandas.DataFrame) for r in result):
-            return [i for r in result for i in [r, len(r), len(r.columns)]]
-        else:
-            return [i for r in result for i in [r, None, None]]
+        return [i for r in result for i in [r, None, None, ip]]

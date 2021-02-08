@@ -155,15 +155,6 @@ class NPartitions(EnvironmentVariable, type=int):
         return CpuCount.get()
 
 
-class EnablePartitionIPs(EnvironmentVariable, type=bool):
-    """
-    Whether to enable use of IPs for remote partitions of not
-    """
-
-    varname = "MODIN_ENABLE_PARTITION_IPS"
-    default = False
-
-
 class RayPartitionThreshold(EnvironmentVariable, type=int):
     """
     What objects can be saved in in-process store (in bytes)
