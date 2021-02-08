@@ -32,7 +32,7 @@ jobs:
           python-version: "3.7.x"
           architecture: "x64"
       - run: pip install black
-      - run: black --check --diff modin/
+      - run: black --check --diff modin/ asv_bench/benchmarks
 
   lint-pydocstyle:
     name: lint (pydocstyle)
@@ -65,7 +65,7 @@ jobs:
           python-version: "3.7.x"
           architecture: "x64"
       - run: pip install flake8 flake8-print
-      - run: flake8 --enable=T modin
+      - run: flake8 --enable=T modin/ asv_bench/benchmarks
 
   test-api:
     runs-on: ubuntu-latest
