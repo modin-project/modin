@@ -426,24 +426,28 @@ class TimeFillna:
 
 class BaseTimeValueCounts:
     subset_params = {
-        "all": lambda df: df,
-        "half": lambda df: df.iloc[:, : len(df.columns) // 2],
+        "all": lambda shape: shape[1],
+        "half": lambda shape: shape[1] // 2,
     }
 
     def setup(self, shape, subset="all"):
+        try:
+            subset = self.subset_params[subset]
+        except KeyError:
+            raise KeyError(
+                f"Invalid value for 'subset={subset}'. Allowed: {list(self.subset_params.keys())}"
+            )
+        ncols = subset(shape)
         self.df, _ = generate_dataframe(
             ASV_USE_IMPL,
             "int",
             *shape,
             RAND_LOW,
             RAND_HIGH,
-            groupby_ncols=shape[1],
+            groupby_ncols=ncols,
             count_groups=GROUPBY_NGROUPS[ASV_DATASET_SIZE],
         )
-        assert (
-            subset in self.subset_params.keys()
-        ), f"Invalid value for 'subset={subset}'. Allowed: {list(self.subset_params.keys())}"
-        self.subset = self.subset_params[subset](self.df).columns.tolist()
+        self.subset = self.df.columns[:ncols].tolist()
 
 
 class TimeValueCountsFrame(BaseTimeValueCounts):
