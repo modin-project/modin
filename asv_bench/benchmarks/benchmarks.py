@@ -227,6 +227,27 @@ class TimeConcat:
         execute(IMPL[ASV_USE_IMPL].concat([self.df1, self.df2], axis=axis, join=how))
 
 
+class TimeAppend:
+    param_names = ["shapes", "sort"]
+    params = [
+        BINARY_OP_DATA_SIZE[ASV_DATASET_SIZE],
+        [False, True],
+    ]
+
+    def setup(self, shapes, sort):
+        self.df1 = generate_dataframe(
+            ASV_USE_IMPL, "int", *shapes[0], RAND_LOW, RAND_HIGH
+        )
+        self.df2 = generate_dataframe(
+            ASV_USE_IMPL, "int", *shapes[1], RAND_LOW, RAND_HIGH
+        )
+        if sort:
+            self.df1.columns = self.df1.columns[::-1]
+
+    def time_append(self, shapes, sort):
+        execute(self.df1.append(self.df2, sort=sort))
+
+
 class TimeBinaryOp:
     param_names = ["shapes", "binary_op", "axis"]
     params = [
