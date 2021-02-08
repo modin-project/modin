@@ -56,10 +56,20 @@ def progress_bar_wrapper(f):
                     index,
                 ) = inspect.getframeinfo(current_frame)
                 current_frame = current_frame.f_back
-            threading.Thread(
+            t = threading.Thread(
                 target=call_progress_bar,
                 args=(result_parts, line_number),
-            ).start()
+            )
+            t.start()
+            # We need to know whether or not we are in a jupyter notebook
+            from IPython import get_ipython
+
+            try:
+                ipy_str = str(type(get_ipython()))
+                if "zmqshell" not in ipy_str:
+                    t.join()
+            except:
+                pass
         return result_parts
 
     return magic

@@ -13,6 +13,7 @@
 
 import ray
 import os
+import sys
 import time
 import threading
 import warnings
@@ -27,7 +28,12 @@ def call_progress_bar(result_parts, line_no):
         from tqdm.autonotebook import tqdm as tqdm_notebook
         from IPython import get_ipython
 
-    cell_no = get_ipython().execution_count
+    try:
+        cell_no = get_ipython().execution_count
+    # This happens if we are not in ipython or jupyter.
+    # No progress bar is supported in that case.
+    except AttributeError:
+        return
     pbar_id = str(cell_no) + "-" + str(line_no)
     futures = [x.oid for row in result_parts for x in row]
     bar_format = (
@@ -38,9 +44,14 @@ def call_progress_bar(result_parts, line_no):
     )
     bar_lock.acquire()
     if pbar_id in progress_bars:
-        progress_bars[pbar_id].container.children[0].max = progress_bars[
-            pbar_id
-        ].container.children[0].max + len(futures)
+        if hasattr(progress_bars[pbar_id], "container"):
+            if hasattr(progress_bars[pbar_id].container.children[0], "max"):
+                index = 0
+            else:
+                index = 1
+            progress_bars[pbar_id].container.children[index].max = progress_bars[
+                pbar_id
+            ].container.children[index].max + len(futures)
         progress_bars[pbar_id].total = progress_bars[pbar_id].total + len(futures)
         progress_bars[pbar_id].refresh()
     else:
@@ -66,11 +77,7 @@ def display_time_updates(bar):
 
 
 def show_time_updates(p_bar):
-    if hasattr(p_bar.container.children[0], "max"):
-        index = 0
-    else:
-        index = 1
-    while p_bar.container.children[index].max > p_bar.n:
+    while p_bar.total > p_bar.n:
         time.sleep(1)
-        if p_bar.container.children[index].max > p_bar.n:
+        if p_bar.total > p_bar.n:
             p_bar.refresh()
