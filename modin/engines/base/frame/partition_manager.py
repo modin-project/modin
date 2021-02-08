@@ -14,13 +14,13 @@
 from abc import ABC
 import numpy as np
 import pandas
+import warnings
 
 from modin.error_message import ErrorMessage
 from modin.data_management.utils import compute_chunksize
 from modin.config import NPartitions, ProgressBar
 
 from pandas.api.types import union_categoricals
-from tqdm import tqdm_notebook
 import os
 
 
@@ -140,11 +140,7 @@ class BaseFrameManager(ABC):
         else:
             mapped_partitions = cls.map_partitions(partitions, map_func)
         return cls.map_axis_partitions(
-            axis,
-            mapped_partitions,
-            reduce_func,
-            enumerate_partitions=True,
-            name="groupby",
+            axis, mapped_partitions, reduce_func, enumerate_partitions=True
         )
 
     @classmethod
@@ -594,6 +590,10 @@ class BaseFrameManager(ABC):
             else "{desc}: {percentage:3.0f}%{bar} Elapsed time: {elapsed}, estimated remaining time: {remaining}"
         )
         if ProgressBar.get():
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore")
+                from tqdm.autonotebook import tqdm as tqdm_notebook
+
             pbar = tqdm_notebook(
                 total=round(update_count),
                 desc="Building DataFrame",

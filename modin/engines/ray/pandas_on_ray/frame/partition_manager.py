@@ -11,7 +11,9 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
+import inspect
 import numpy as np
+import threading
 
 from modin.config import ProgressBar
 from modin.engines.ray.generic.frame.partition_manager import RayFrameManager
@@ -20,12 +22,11 @@ from .axis_partition import (
     PandasOnRayFrameRowPartition,
 )
 from .partition import PandasOnRayFramePartition
+from .modin_aqp import call_progress_bar
 from modin.error_message import ErrorMessage
 import pandas
+
 import ray
-from .modin_aqp import call_progress_bar
-import threading
-import inspect
 
 
 def progress_bar_wrapper(f):
@@ -94,8 +95,6 @@ class PandasOnRayFrameManager(RayFrameManager):
     _partition_class = PandasOnRayFramePartition
     _column_partitions_class = PandasOnRayFrameColumnPartition
     _row_partition_class = PandasOnRayFrameRowPartition
-    progress_bar = None
-    bar_count = 0
 
     @classmethod
     def get_indices(cls, axis, partitions, index_func=None):

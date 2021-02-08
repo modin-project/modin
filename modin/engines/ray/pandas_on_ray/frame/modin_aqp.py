@@ -12,17 +12,21 @@
 # governing permissions and limitations under the License.
 
 import ray
-from tqdm import tqdm_notebook
 import os
 import time
 import threading
-from IPython import get_ipython
+import warnings
 
 progress_bars = {}
 bar_lock = threading.Lock()
 
 
 def call_progress_bar(result_parts, line_no):
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        from tqdm.autonotebook import tqdm as tqdm_notebook
+        from IPython import get_ipython
+
     cell_no = get_ipython().execution_count
     pbar_id = str(cell_no) + "-" + str(line_no)
     futures = [x.oid for row in result_parts for x in row]
@@ -61,7 +65,11 @@ def display_time_updates(bar):
 
 
 def show_time_updates(p_bar):
-    while p_bar.container.children[0].max > p_bar.n:
+    if hasattr(p_bar.container.children[0], "max"):
+        index = 0
+    else:
+        index = 1
+    while p_bar.container.children[index].max > p_bar.n:
         time.sleep(1)
-        if p_bar.container.children[0].max > p_bar.n:
+        if p_bar.container.children[index].max > p_bar.n:
             p_bar.refresh()
