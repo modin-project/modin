@@ -57,7 +57,7 @@ class PickleExperimentalDispatcher(FileDispatcher):
                 cls.parse,
                 3,
                 dict(
-                    file_name,
+                    filepath=file_name,
                     **kwargs,
                 ),
             )
