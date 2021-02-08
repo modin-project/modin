@@ -301,6 +301,19 @@ class PandasCSVGlobParser(PandasCSVParser):
         ]
 
 
+class PandasPickleExperimentalParser(PandasParser):
+    @staticmethod
+    def parse(filepath, **kwargs):
+        warnings.filterwarnings("ignore")
+        num_splits = 1
+
+        df = pandas.read_pickle(filepath, **kwargs)
+        length = len(df)
+        width = len(df.columns)
+
+        return _split_result_for_readers(1, num_splits, df) + [length, width]
+
+
 @doc(_doc_pandas_parser_class, data_type="tables with fixed-width formatted lines")
 class PandasFWFParser(PandasParser):
     @staticmethod

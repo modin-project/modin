@@ -23,12 +23,15 @@ import numpy as np
 import pandas
 import warnings
 
-from modin.backends.pandas.parsers import _split_result_for_readers, PandasCSVGlobParser
+from modin.backends.pandas.parsers import (
+    _split_result_for_readers,
+    PandasCSVGlobParser,
+    PandasPickleExperimentalParser,
+)
 from modin.backends.pandas.query_compiler import PandasQueryCompiler
 from modin.engines.ray.pandas_on_ray.io import PandasOnRayIO
-from modin.engines.base.io import CSVGlobDispatcher
+from modin.engines.base.io import CSVGlobDispatcher, PickleExperimentalDispatcher
 from modin.engines.ray.pandas_on_ray.frame.data import PandasOnRayFrame
-from modin.engines.base.io.file_dispatcher import FileDispatcher
 from modin.engines.ray.pandas_on_ray.frame.partition import PandasOnRayFramePartition
 from modin.engines.ray.task_wrapper import RayTask
 from modin.config import NPartitions
@@ -90,6 +93,11 @@ class ExperimentalPandasOnRayIO(PandasOnRayIO):
     )
     read_csv_glob = type(
         "", (RayTask, PandasCSVGlobParser, CSVGlobDispatcher), build_args
+    )._read
+    read_pickle = type(
+        "",
+        (RayTask, PandasPickleExperimentalParser, PickleExperimentalDispatcher),
+        build_args,
     )._read
     read_parquet_remote_task = _read_parquet_columns
 
@@ -255,89 +263,6 @@ class ExperimentalPandasOnRayIO(PandasOnRayIO):
             1, func, other=None, new_index=[], new_columns=[], enumerate_partitions=True
         )
         result.to_pandas()
-
-    @classmethod
-    def read_pickle(cls, filepath_or_buffer, compression="infer"):
-        """
-        In experimental mode, we can pass a list of files as an input parameter.
-
-        Note: the number of partitions is equal to the number of input files.
-        """
-
-        if not isinstance(filepath_or_buffer, (str, list)):
-            warnings.warn("Defaulting to Modin core implementation")
-            return PandasOnRayIO.read_pickle(
-                filepath_or_buffer,
-                compression=compression,
-            )
-
-        if isinstance(filepath_or_buffer, list) and not all(
-            map(lambda filepath: isinstance(filepath, str), filepath_or_buffer)
-        ):
-            raise TypeError(
-                f"Only support list[str], passed value: {filepath_or_buffer}"
-            )
-
-        if len(filepath_or_buffer) == 0:
-            raise ValueError(
-                "filepath_or_buffer parameter of read_pickle is empty list"
-            )
-
-        partition_ids = []
-        lengths_ids = []
-        widths_ids = []
-
-        if len(filepath_or_buffer) != NPartitions.get():
-            # do we need to do a repartitioning?
-            warnings.warn("can be inefficient partitioning")
-
-        for file_name in filepath_or_buffer:
-            partition_id = _read_pickle_files_in_folder._remote(
-                args=(
-                    file_name,
-                    compression,
-                ),
-                num_returns=3,
-            )
-            partition_ids.append(partition_id[:-2])
-            lengths_ids.append(partition_id[-2])
-            widths_ids.append(partition_id[-1])
-
-        build_partition = type("", (FileDispatcher,), cls.build_args).build_partition
-
-        lengths = ray.get(lengths_ids)
-        widths = ray.get(widths_ids)
-        # while num_splits is 1, need only one value
-        partition_ids = build_partition(partition_ids, lengths, [widths[0]])
-
-        new_index = cls.frame_cls._frame_mgr_cls.get_indices(
-            0, partition_ids, lambda df: df.axes[0]
-        )
-        new_columns = cls.frame_cls._frame_mgr_cls.get_indices(
-            1, partition_ids, lambda df: df.axes[1]
-        )
-
-        return cls.query_compiler_cls(
-            cls.frame_cls(partition_ids, new_index, new_columns)
-        )
-
-
-@ray.remote
-def _read_pickle_files_in_folder(
-    filepath: str,
-    compression: str,
-):  # pragma: no cover
-    """
-    Use a Ray task to read a pickle file under filepath folder.
-
-    TODO: add parameters descriptors
-    """
-    df = pandas.read_pickle(filepath, compression)
-
-    length = len(df)
-    width = len(df.columns)
-    num_splits = 1
-    return _split_result_for_readers(1, num_splits, df) + [length, width]
 
 
 # Ray functions are not detected by codecov (thus pragma: no cover)
