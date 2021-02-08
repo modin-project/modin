@@ -385,16 +385,21 @@ class TimeDrop:
 
 
 class TimeHead:
-    param_names = ["shape"]
+    param_names = ["shape", "head_count"]
     params = [
         UNARY_OP_DATA_SIZE[ASV_DATASET_SIZE],
+        [5, 0.8],
     ]
 
-    def setup(self, shape):
+    def setup(self, shape, head_count):
         self.df = generate_dataframe(ASV_USE_IMPL, "int", *shape, RAND_LOW, RAND_HIGH)
-        self.head_count = int(0.8 * len(self.df.index))
+        self.head_count = (
+            int(head_count * len(self.df.index))
+            if isinstance(head_count, float)
+            else head_count
+        )
 
-    def time_head(self, shape):
+    def time_head(self, shape, head_count):
         execute(self.df.head(self.head_count))
 
 
