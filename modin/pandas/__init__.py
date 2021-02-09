@@ -13,7 +13,7 @@
 
 import pandas
 
-__pandas_version__ = "1.1.5"
+__pandas_version__ = "1.2.1"
 
 if pandas.__version__ != __pandas_version__:
     import warnings
@@ -43,6 +43,7 @@ from pandas import (
     to_timedelta,
     set_eng_float_format,
     options,
+    Flags,
     set_option,
     NaT,
     PeriodIndex,
@@ -57,6 +58,8 @@ from pandas import (
     Int16Dtype,
     Int32Dtype,
     Int64Dtype,
+    Float32Dtype,
+    Float64Dtype,
     StringDtype,
     BooleanDtype,
     CategoricalDtype,

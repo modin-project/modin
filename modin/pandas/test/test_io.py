@@ -1526,7 +1526,7 @@ class TestExcel:
                 modin_warning=UserWarning,
                 # read_excel kwargs
                 io=unique_filename,
-                engine="xlrd",
+                engine="openpyxl",
             )
         finally:
             teardown_test_files([unique_filename])
@@ -1566,6 +1566,9 @@ class TestExcel:
         finally:
             teardown_test_files([unique_filename])
 
+    @pytest.mark.xfail(
+        reason="pandas throws the exception. See pandas issue #39250 for more info"
+    )
     @check_file_leaks
     def test_read_excel_sheetname_title(self):
         eval_io(

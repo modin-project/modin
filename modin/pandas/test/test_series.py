@@ -308,12 +308,6 @@ def test___delitem__(data):
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-def test___div__(data):
-    modin_series, pandas_series = create_test_series(data)
-    inter_df_math_helper(modin_series, pandas_series, "__div__")
-
-
-@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_divmod(data):
     modin_series, pandas_series = create_test_series(data)
     inter_df_math_helper(modin_series, pandas_series, "divmod")
@@ -2915,30 +2909,27 @@ def test_slice_shift(data, index, periods):
 @pytest.mark.parametrize("na_position", ["first", "last"], ids=["first", "last"])
 def test_sort_index(data, ascending, sort_remaining, na_position):
     modin_series, pandas_series = create_test_series(data)
-    df_equals(
-        modin_series.sort_index(
-            ascending=ascending, sort_remaining=sort_remaining, na_position=na_position
-        ),
-        pandas_series.sort_index(
-            ascending=ascending, sort_remaining=sort_remaining, na_position=na_position
+    eval_general(
+        modin_series,
+        pandas_series,
+        lambda df: df.sort_index(
+            ascending=ascending,
+            sort_remaining=sort_remaining,
+            na_position=na_position,
         ),
     )
 
-    modin_series_cp = modin_series.copy()
-    pandas_series_cp = pandas_series.copy()
-    modin_series_cp.sort_index(
-        ascending=ascending,
-        sort_remaining=sort_remaining,
-        na_position=na_position,
-        inplace=True,
+    eval_general(
+        modin_series.copy(),
+        pandas_series.copy(),
+        lambda df: df.sort_index(
+            ascending=ascending,
+            sort_remaining=sort_remaining,
+            na_position=na_position,
+            inplace=True,
+        ),
+        __inplace__=True,
     )
-    pandas_series_cp.sort_index(
-        ascending=ascending,
-        sort_remaining=sort_remaining,
-        na_position=na_position,
-        inplace=True,
-    )
-    df_equals(modin_series_cp, pandas_series_cp)
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
@@ -3185,17 +3176,10 @@ def test_transform(data, func):
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 @pytest.mark.parametrize("func", agg_func_except_values, ids=agg_func_except_keys)
 def test_transform_except(data, func):
-    # 1) SpecificationError is arisen because we treat a Series as a DataFrame.
-    #    See details in pandas issues 36036.
-    # 2) AssertionError is arisen because of mismatching of thrown exceptions
-    #    (SpecificationError in Modin, ValueError in pandas).
-    #    Since we perform `transform` via `apply` then SpecificationError is arisen earlier.
-    #    That's why the exception are mismathed.
-    with pytest.raises((SpecificationError, AssertionError)):
-        eval_general(
-            *create_test_series(data),
-            lambda df: df.transform(func),
-        )
+    eval_general(
+        *create_test_series(data),
+        lambda df: df.transform(func),
+    )
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)

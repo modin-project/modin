@@ -77,7 +77,10 @@ class GroupbyReduceFunction(MapReduceFunction):
         drop=False,
         **kwargs,
     ):
-        by_part = list(df.index.names)
+        # Wrapping names into an Index should be unnecessary, however
+        # there is a bug in pandas with intersection that forces us to do so:
+        # https://github.com/pandas-dev/pandas/issues/39699
+        by_part = pandas.Index(df.index.names)
         if drop and len(df.columns.intersection(by_part)) > 0:
             df.drop(columns=by_part, errors="ignore", inplace=True)
 

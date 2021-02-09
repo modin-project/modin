@@ -16,7 +16,7 @@ from modin.experimental.backends.omnisci.query_compiler import DFAlgQueryCompile
 from .partition_manager import OmnisciOnRayFrameManager
 
 from pandas.core.index import ensure_index, Index, MultiIndex, RangeIndex
-from pandas.core.dtypes.common import _get_dtype, is_list_like, is_bool_dtype
+from pandas.core.dtypes.common import get_dtype, is_list_like, is_bool_dtype
 from modin.error_message import ErrorMessage
 import pandas as pd
 
@@ -143,7 +143,7 @@ class OmnisciOnRayFrame(BasePandasFrame):
     def id_str(self):
         return f"frame${self.id}"
 
-    def _get_dtype(self, col):
+    def get_dtype(self, col):
         # If we search for an index column type in a MultiIndex then we need to
         # extend index column names to tuples.
         if isinstance(self._dtypes, MultiIndex) and not isinstance(col, tuple):
@@ -152,8 +152,8 @@ class OmnisciOnRayFrame(BasePandasFrame):
 
     def ref(self, col):
         if col == "__rowid__":
-            return InputRefExpr(self, col, _get_dtype(int))
-        return InputRefExpr(self, col, self._get_dtype(col))
+            return InputRefExpr(self, col, get_dtype(int))
+        return InputRefExpr(self, col, self.get_dtype(col))
 
     def mask(
         self,
@@ -604,7 +604,7 @@ class OmnisciOnRayFrame(BasePandasFrame):
                     assert index_width == 1, "unexpected index width"
                     aligned_index = ["__index__"]
                     exprs["__index__"] = frame.ref("__rowid__")
-                    aligned_index_dtypes = [_get_dtype(int)]
+                    aligned_index_dtypes = [get_dtype(int)]
                     uses_rowid = True
                 aligned_dtypes = aligned_index_dtypes + new_dtypes
             else:
@@ -781,10 +781,10 @@ class OmnisciOnRayFrame(BasePandasFrame):
         col = self.columns[-1]
         exprs = self._index_exprs()
         col_expr = self.ref(col)
-        code_expr = OpExpr("KEY_FOR_STRING", [col_expr], _get_dtype("int32"))
+        code_expr = OpExpr("KEY_FOR_STRING", [col_expr], get_dtype("int32"))
         null_val = LiteralExpr(np.int32(-1))
         exprs[col] = build_if_then_else(
-            col_expr.is_null(), null_val, code_expr, _get_dtype("int32")
+            col_expr.is_null(), null_val, code_expr, get_dtype("int32")
         )
 
         return self.__constructor__(

@@ -54,12 +54,11 @@ class BinaryFunction(Function):
                     )
             else:
                 if isinstance(other, (list, np.ndarray, pandas.Series)):
-                    new_columns = query_compiler.columns
                     new_modin_frame = query_compiler._modin_frame._apply_full_axis(
                         axis,
                         lambda df: func(df, other, *args, **kwargs),
                         new_index=query_compiler.index,
-                        new_columns=new_columns,
+                        new_columns=query_compiler.columns,
                     )
                 else:
                     new_modin_frame = query_compiler._modin_frame._map(

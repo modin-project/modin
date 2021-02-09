@@ -141,7 +141,7 @@ class ExcelDispatcher(TextFileDispatcher):
             kwargs["fname"] = io
             # Skiprows will be used to inform a partition how many rows come before it.
             kwargs["skiprows"] = 0
-            row_count = 0
+            rows_to_skip = 0
             data_ids = []
             index_ids = []
             dtypes_ids = []
@@ -168,7 +168,7 @@ class ExcelDispatcher(TextFileDispatcher):
 
             while f.tell() < total_bytes:
                 args = kwargs
-                args["skiprows"] = row_count + args["skiprows"]
+                args["skiprows"] = rows_to_skip
                 args["start"] = f.tell()
                 chunk = f.read(chunk_size)
                 # This edge case can happen when we have reached the end of the data
@@ -190,6 +190,21 @@ class ExcelDispatcher(TextFileDispatcher):
                 # If there is no data, exit before triggering computation.
                 if b"</row>" not in chunk and b"</sheetData>" in chunk:
                     break
+                # We need to make sure we include all rows, even those that have no
+                # data. Getting the number of the last row will turn into the number of
+                # skipped rows, so if there are any rows missing between the last row
+                # seen here and the first row the next partition reads, the parser will
+                # have to include those rows in that specific partition to match the
+                # expected behavior. We subtract 1 here because the header is included
+                # in the skip values, and we do not want to skip the header.
+                rows_to_skip = (
+                    int(
+                        chunk[: last_index + len(row_close_tag)]
+                        .split(b'<row r="')[-1]
+                        .split(b'"')[0]
+                    )
+                    - 1
+                )
                 remote_results_list = cls.deploy(cls.parse, num_splits + 2, args)
                 data_ids.append(remote_results_list[:-2])
                 index_ids.append(remote_results_list[-2])

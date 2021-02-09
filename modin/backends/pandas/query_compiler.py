@@ -650,8 +650,6 @@ class PandasQueryCompiler(BaseQueryCompiler):
         return self.default_to_pandas(is_monotonic_increasing)
 
     count = MapReduceFunction.register(pandas.DataFrame.count, pandas.DataFrame.sum)
-    max = MapReduceFunction.register(pandas.DataFrame.max)
-    min = MapReduceFunction.register(pandas.DataFrame.min)
     sum = MapReduceFunction.register(pandas.DataFrame.sum)
     prod = MapReduceFunction.register(pandas.DataFrame.prod)
     any = MapReduceFunction.register(pandas.DataFrame.any, pandas.DataFrame.any)
@@ -661,6 +659,34 @@ class PandasQueryCompiler(BaseQueryCompiler):
         lambda x, *args, **kwargs: pandas.DataFrame.sum(x),
         axis=0,
     )
+
+    def max(self, axis, **kwargs):
+        def map_func(df, **kwargs):
+            return pandas.DataFrame.max(df, **kwargs)
+
+        def reduce_func(df, **kwargs):
+            if kwargs.get("numeric_only", False):
+                kwargs = kwargs.copy()
+                kwargs["numeric_only"] = False
+            return pandas.DataFrame.max(df, **kwargs)
+
+        return MapReduceFunction.register(map_func, reduce_func)(
+            self, axis=axis, **kwargs
+        )
+
+    def min(self, axis, **kwargs):
+        def map_func(df, **kwargs):
+            return pandas.DataFrame.min(df, **kwargs)
+
+        def reduce_func(df, **kwargs):
+            if kwargs.get("numeric_only", False):
+                kwargs = kwargs.copy()
+                kwargs["numeric_only"] = False
+            return pandas.DataFrame.min(df, **kwargs)
+
+        return MapReduceFunction.register(map_func, reduce_func)(
+            self, axis=axis, **kwargs
+        )
 
     def mean(self, axis, **kwargs):
         if kwargs.get("level") is not None:
@@ -2530,11 +2556,18 @@ class PandasQueryCompiler(BaseQueryCompiler):
                         for x in df[internal_by_cols].dtypes
                     )
 
-                    cols_to_insert = (
-                        internal_by_cols.intersection(result_cols)
-                        if keep_index_levels
-                        else internal_by_cols.difference(result_cols)
-                    )
+                    if internal_by_cols.nlevels != result_cols.nlevels:
+                        cols_to_insert = (
+                            pandas.Index([])
+                            if keep_index_levels
+                            else internal_by_cols.copy()
+                        )
+                    else:
+                        cols_to_insert = (
+                            internal_by_cols.intersection(result_cols)
+                            if keep_index_levels
+                            else internal_by_cols.difference(result_cols)
+                        )
 
                     if keep_index_levels:
                         result.drop(

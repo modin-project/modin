@@ -253,8 +253,8 @@ class PandasExcelParser(PandasParser):
         from openpyxl.worksheet.worksheet import Worksheet
         from pandas.core.dtypes.common import is_list_like
         from pandas.io.excel._util import (
-            _fill_mi_header,
-            _maybe_convert_usecols,
+            fill_mi_header,
+            maybe_convert_usecols,
         )
         from pandas.io.parsers import TextParser
         import re
@@ -308,7 +308,7 @@ class PandasExcelParser(PandasParser):
         # Attach cells to worksheet object
         reader.bind_cells()
         data = PandasExcelParser.get_sheet_data(ws, kwargs.pop("convert_float", True))
-        usecols = _maybe_convert_usecols(kwargs.pop("usecols", None))
+        usecols = maybe_convert_usecols(kwargs.pop("usecols", None))
         header = kwargs.pop("header", 0)
         index_col = kwargs.pop("index_col", None)
         # skiprows is handled externally
@@ -321,7 +321,7 @@ class PandasExcelParser(PandasParser):
             control_row = [True] * len(data[0])
 
             for row in header:
-                data[row], control_row = _fill_mi_header(data[row], control_row)
+                data[row], control_row = fill_mi_header(data[row], control_row)
         # Handle MultiIndex for row Index if necessary
         if is_list_like(index_col):
             # Forward fill values for MultiIndex index.
@@ -339,7 +339,6 @@ class PandasExcelParser(PandasParser):
                             data[row][col] = last
                         else:
                             last = data[row][col]
-
         parser = TextParser(
             data,
             header=header,
@@ -352,7 +351,7 @@ class PandasExcelParser(PandasParser):
         # In excel if you create a row with only a border (no values), this parser will
         # interpret that as a row of NaN values. Pandas discards these values, so we
         # also must discard these values.
-        pandas_df = parser.read().dropna(how="all")
+        pandas_df = parser.read()
         # Since we know the number of rows that occur before this partition, we can
         # correctly assign the index in cases of RangeIndex. If it is not a RangeIndex,
         # the index is already correct because it came from the data.

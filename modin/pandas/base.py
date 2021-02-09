@@ -41,9 +41,10 @@ from pandas.core.indexing import convert_to_index_sliceable
 from pandas.util._validators import validate_bool_kwarg, validate_percentile
 from pandas._libs.lib import no_default
 from pandas._typing import (
+    IndexKeyFunc,
+    StorageOptions,
     TimedeltaConvertibleTypes,
     TimestampConvertibleTypes,
-    IndexKeyFunc,
 )
 import re
 from typing import Optional, Union
@@ -338,6 +339,18 @@ class BasePandasDataset(object):
                 getattr(getattr(pandas, type(self).__name__), op), other, **kwargs
             )
         other = self._validate_other(other, axis, numeric_or_object_only=True)
+        exclude_list = [
+            "__add__",
+            "__radd__",
+            "__and__",
+            "__rand__",
+            "__or__",
+            "__ror__",
+            "__xor__",
+            "__rxor__",
+        ]
+        if op in exclude_list:
+            kwargs.pop("axis")
         new_query_compiler = getattr(self._query_compiler, op)(other, **kwargs)
         return self._create_or_update_from_compiler(new_query_compiler)
 
@@ -496,10 +509,7 @@ class BasePandasDataset(object):
         result = None
 
         if axis == 0:
-            try:
-                result = self._aggregate(func, _axis=axis, *args, **kwargs)
-            except TypeError:
-                pass
+            result = self._aggregate(func, _axis=axis, *args, **kwargs)
         if result is None:
             kwargs.pop("is_transform", None)
             return self.apply(func, axis=axis, args=args, **kwargs)
@@ -1301,6 +1311,7 @@ class BasePandasDataset(object):
         convert_string: bool = True,
         convert_integer: bool = True,
         convert_boolean: bool = True,
+        convert_floating: bool = True,
     ):
         return self._default_to_pandas(
             "convert_dtypes",
@@ -2094,10 +2105,35 @@ class BasePandasDataset(object):
             obj.set_axis(labels, axis=axis, inplace=True)
             return obj
 
-    def shift(self, periods=1, freq=None, axis=0, fill_value=None):
+    def set_flags(
+        self, *, copy: bool = False, allows_duplicate_labels: Optional[bool] = None
+    ):
+        return self._default_to_pandas(
+            pandas.DataFrame.set_flags,
+            copy=copy,
+            allows_duplicate_labels=allows_duplicate_labels,
+        )
+
+    @property
+    def flags(self):
+        def flags(df):
+            return df.flags
+
+        return self._default_to_pandas(flags)
+
+    def shift(self, periods=1, freq=None, axis=0, fill_value=no_default):
         if periods == 0:
             # Check obvious case first
             return self.copy()
+
+        if fill_value is no_default:
+            nan_values = dict()
+            for name, dtype in dict(self.dtypes).items():
+                nan_values[name] = (
+                    pandas.NAT if is_datetime_or_timedelta_dtype(dtype) else pandas.NA
+                )
+
+            fill_value = nan_values
 
         empty_frame = False
         if axis == "index" or axis == 0:
@@ -2184,6 +2220,11 @@ class BasePandasDataset(object):
         ignore_index: bool = False,
         key: Optional[IndexKeyFunc] = None,
     ):
+        # pandas throws this exception. See pandas issie #39434
+        if ascending is None:
+            raise ValueError(
+                "the `axis` parameter is not supported in the pandas implementation of argsort()"
+            )
         axis = self._get_axis_number(axis)
         inplace = validate_bool_kwarg(inplace, "inplace")
         new_query_compiler = self._query_compiler.sort_index(
@@ -2296,6 +2337,7 @@ class BasePandasDataset(object):
         escapechar=None,
         decimal=".",
         errors: str = "strict",
+        storage_options: StorageOptions = None,
     ):  # pragma: no cover
 
         kwargs = {
@@ -2319,6 +2361,7 @@ class BasePandasDataset(object):
             "escapechar": escapechar,
             "decimal": decimal,
             "errors": errors,
+            "storage_options": storage_options,
         }
         return self._default_to_pandas("to_csv", **kwargs)
 
@@ -2343,25 +2386,27 @@ class BasePandasDataset(object):
         inf_rep="inf",
         verbose=True,
         freeze_panes=None,
+        storage_options: StorageOptions = None,
     ):  # pragma: no cover
         return self._default_to_pandas(
             "to_excel",
             excel_writer,
-            sheet_name,
-            na_rep,
-            float_format,
-            columns,
-            header,
-            index,
-            index_label,
-            startrow,
-            startcol,
-            engine,
-            merge_cells,
-            encoding,
-            inf_rep,
-            verbose,
-            freeze_panes,
+            sheet_name=sheet_name,
+            na_rep=na_rep,
+            float_format=float_format,
+            columns=columns,
+            header=header,
+            index=index,
+            index_label=index_label,
+            startrow=startrow,
+            startcol=startcol,
+            engine=engine,
+            merge_cells=merge_cells,
+            encoding=encoding,
+            inf_rep=inf_rep,
+            verbose=verbose,
+            freeze_panes=freeze_panes,
+            storage_options=storage_options,
         )
 
     def to_hdf(self, path_or_buf, key, format="table", **kwargs):  # pragma: no cover
@@ -2382,6 +2427,7 @@ class BasePandasDataset(object):
         compression="infer",
         index=True,
         indent=None,
+        storage_options: StorageOptions = None,
     ):  # pragma: no cover
         return self._default_to_pandas(
             "to_json",
@@ -2396,6 +2442,7 @@ class BasePandasDataset(object):
             compression=compression,
             index=index,
             indent=indent,
+            storage_options=storage_options,
         )
 
     def to_latex(
@@ -2421,6 +2468,7 @@ class BasePandasDataset(object):
         multirow=None,
         caption=None,
         label=None,
+        position=None,
     ):  # pragma: no cover
         return self._default_to_pandas(
             "to_latex",
@@ -2447,9 +2495,21 @@ class BasePandasDataset(object):
             label=None,
         )
 
-    def to_markdown(self, buf=None, mode=None, index: bool = True, **kwargs):
+    def to_markdown(
+        self,
+        buf=None,
+        mode: str = "wt",
+        index: bool = True,
+        storage_options: StorageOptions = None,
+        **kwargs,
+    ):
         return self._default_to_pandas(
-            "to_markdown", buf=buf, mode=mode, index=index, **kwargs
+            "to_markdown",
+            buf=buf,
+            mode=mode,
+            index=index,
+            storage_options=storage_options,
+            **kwargs,
         )
 
     def to_numpy(self, dtype=None, copy=False, na_value=no_default):
@@ -2464,10 +2524,18 @@ class BasePandasDataset(object):
         return self._default_to_pandas("to_period", freq=freq, axis=axis, copy=copy)
 
     def to_pickle(
-        self, path, compression="infer", protocol=pkl.HIGHEST_PROTOCOL
+        self,
+        path,
+        compression="infer",
+        protocol=pkl.HIGHEST_PROTOCOL,
+        storage_options: StorageOptions = None,
     ):  # pragma: no cover
         return self._default_to_pandas(
-            "to_pickle", path, compression=compression, protocol=protocol
+            "to_pickle",
+            path,
+            compression=compression,
+            protocol=protocol,
+            storage_options=storage_options,
         )
 
     def to_string(
@@ -2584,7 +2652,10 @@ class BasePandasDataset(object):
 
     def transform(self, func, axis=0, *args, **kwargs):
         kwargs["is_transform"] = True
-        result = self.agg(func, axis=axis, *args, **kwargs)
+        try:
+            result = self.agg(func, axis=axis, *args, **kwargs)
+        except Exception:
+            raise ValueError("Transform function failed")
         try:
             assert len(result) == len(self)
         except Exception:

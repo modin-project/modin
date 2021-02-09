@@ -116,8 +116,6 @@ def test_math_functions_level(op):
         ("sub", "subtract"),
         ("add", "__add__"),
         ("radd", "__radd__"),
-        ("div", "__div__"),
-        ("rdiv", "__rdiv__"),
         ("truediv", "__truediv__"),
         ("rtruediv", "__rtruediv__"),
         ("floordiv", "__floordiv__"),

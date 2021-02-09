@@ -1313,7 +1313,7 @@ def test_dict_agg_rename_mi_columns(as_index, by_length, agg_fns):
     }
 
     md_res = md_df.groupby(by, as_index=as_index).agg(**agg_dict)
-    pd_res = md_df.groupby(by, as_index=as_index).agg(**agg_dict)
+    pd_res = pd_df.groupby(by, as_index=as_index).agg(**agg_dict)
 
     df_equals(md_res, pd_res)
 
@@ -1363,6 +1363,12 @@ def test_agg_exceptions(operation):
     eval_aggregation(*create_test_dfs(data), operation=operation)
 
 
+@pytest.mark.skip(
+    "Pandas raises a ValueError on empty dictionary aggregation since 1.2.0"
+    "It's unclear is that was made on purpose or it is a bug. That question"
+    "was asked in https://github.com/pandas-dev/pandas/issues/39609."
+    "So until the answer this test is disabled."
+)
 @pytest.mark.parametrize(
     "kwargs",
     [

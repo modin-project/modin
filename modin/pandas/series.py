@@ -142,8 +142,16 @@ class Series(BasePandasDataset):
         return self.add(left)
 
     def __and__(self, other):
+        if isinstance(other, (list, np.ndarray, pandas.Series)):
+            return self._default_to_pandas(pandas.Series.__and__, other)
         new_self, new_other = self._prepare_inter_op(other)
         return super(Series, new_self).__and__(new_other)
+
+    def __rand__(self, other):
+        if isinstance(other, (list, np.ndarray, pandas.Series)):
+            return self._default_to_pandas(pandas.Series.__rand__, other)
+        new_self, new_other = self._prepare_inter_op(other)
+        return super(Series, new_self).__rand__(new_other)
 
     def __array__(self, dtype=None):
         return super(Series, self).__array__(dtype).flatten()
@@ -168,12 +176,6 @@ class Series(BasePandasDataset):
         if key not in self.keys():
             raise KeyError(key)
         self.drop(labels=key, inplace=True)
-
-    def __div__(self, right):
-        return self.div(right)
-
-    def __rdiv__(self, left):
-        return self.rdiv(left)
 
     def __divmod__(self, right):
         return self.divmod(right)
@@ -217,8 +219,28 @@ class Series(BasePandasDataset):
         return self.rmul(left)
 
     def __or__(self, other):
+        if isinstance(other, (list, np.ndarray, pandas.Series)):
+            return self._default_to_pandas(pandas.Series.__or__, other)
         new_self, new_other = self._prepare_inter_op(other)
         return super(Series, new_self).__or__(new_other)
+
+    def __ror__(self, other):
+        if isinstance(other, (list, np.ndarray, pandas.Series)):
+            return self._default_to_pandas(pandas.Series.__ror__, other)
+        new_self, new_other = self._prepare_inter_op(other)
+        return super(Series, new_self).__ror__(new_other)
+
+    def __xor__(self, other):
+        if isinstance(other, (list, np.ndarray, pandas.Series)):
+            return self._default_to_pandas(pandas.Series.__xor__, other)
+        new_self, new_other = self._prepare_inter_op(other)
+        return super(Series, new_self).__xor__(new_other)
+
+    def __rxor__(self, other):
+        if isinstance(other, (list, np.ndarray, pandas.Series)):
+            return self._default_to_pandas(pandas.Series.__rxor__, other)
+        new_self, new_other = self._prepare_inter_op(other)
+        return super(Series, new_self).__rxor__(new_other)
 
     def __pow__(self, right):
         return self.pow(right)
@@ -290,10 +312,6 @@ class Series(BasePandasDataset):
     @property
     def values(self):
         return super(Series, self).to_numpy().flatten()
-
-    def __xor__(self, other):
-        new_self, new_other = self._prepare_inter_op(other)
-        return super(Series, new_self).__xor__(new_other)
 
     def add(self, other, level=None, fill_value=None, axis=0):
         new_self, new_other = self._prepare_inter_op(other)
@@ -887,6 +905,11 @@ class Series(BasePandasDataset):
                     axis=axis, type=type(self)
                 )
             )
+
+    def shift(self, periods=1, freq=None, axis=0, fill_value=None):
+        return super(type(self), self).shift(
+            periods=periods, freq=freq, axis=axis, fill_value=fill_value
+        )
 
     def unstack(self, level=-1, fill_value=None):
         from .dataframe import DataFrame
