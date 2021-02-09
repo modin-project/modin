@@ -441,3 +441,49 @@ class TimeFillna:
             execute(self.df)
         else:
             execute(self.df.fillna(**kw))
+
+
+class BaseTimeValueCounts:
+    subset_params = {
+        "all": lambda shape: shape[1],
+        "half": lambda shape: shape[1] // 2,
+    }
+
+    def setup(self, shape, subset="all"):
+        try:
+            subset = self.subset_params[subset]
+        except KeyError:
+            raise KeyError(
+                f"Invalid value for 'subset={subset}'. Allowed: {list(self.subset_params.keys())}"
+            )
+        ncols = subset(shape)
+        self.df, _ = generate_dataframe(
+            ASV_USE_IMPL,
+            "int",
+            *shape,
+            RAND_LOW,
+            RAND_HIGH,
+            groupby_ncols=ncols,
+            count_groups=GROUPBY_NGROUPS[ASV_DATASET_SIZE],
+        )
+        self.subset = self.df.columns[:ncols].tolist()
+
+
+class TimeValueCountsFrame(BaseTimeValueCounts):
+    param_names = ["shape", "subset"]
+    params = [UNARY_OP_DATA_SIZE[ASV_DATASET_SIZE], ["all", "half"]]
+
+    def time_value_counts(self, *args, **kwargs):
+        execute(self.df.value_counts(subset=self.subset))
+
+
+class TimeValueCountsSeries(BaseTimeValueCounts):
+    param_names = ["shape", "bins"]
+    params = [UNARY_OP_DATA_SIZE[ASV_DATASET_SIZE], [None, 3]]
+
+    def setup(self, shape, bins):
+        super().setup(shape=shape)
+        self.df = self.df.iloc[:, 0]
+
+    def time_value_counts(self, shape, bins):
+        execute(self.df.value_counts(bins=bins))
