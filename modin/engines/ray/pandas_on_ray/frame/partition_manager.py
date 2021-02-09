@@ -68,7 +68,7 @@ def progress_bar_wrapper(f):
                 ipy_str = str(type(get_ipython()))
                 if "zmqshell" not in ipy_str:
                     t.join()
-            except:
+            except Exception:
                 pass
         return result_parts
 

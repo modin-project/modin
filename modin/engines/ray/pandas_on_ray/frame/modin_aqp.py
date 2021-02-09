@@ -13,7 +13,6 @@
 
 import ray
 import os
-import sys
 import time
 import threading
 import warnings
