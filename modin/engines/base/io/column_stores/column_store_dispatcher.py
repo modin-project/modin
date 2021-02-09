@@ -71,6 +71,22 @@ class ColumnStoreDispatcher(FileDispatcher):
         ).T
 
     @classmethod
+    def build_partition(cls, partition_ids, row_lengths, column_widths):
+        return np.array(
+            [
+                [
+                    cls.frame_partition_cls(
+                        partition_ids[i][j],
+                        length=row_lengths[i],
+                        width=column_widths[j],
+                    )
+                    for j in range(len(partition_ids[i]))
+                ]
+                for i in range(len(partition_ids))
+            ]
+        )
+
+    @classmethod
     def build_index(cls, partition_ids):
         """
         Compute index and its split sizes of resulting Modin DataFrame.

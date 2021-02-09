@@ -75,6 +75,22 @@ class TextFileDispatcher(FileDispatcher):
         return filepath_or_buffer
 
     @classmethod
+    def build_partition(cls, partition_ids, row_lengths, column_widths):
+        return np.array(
+            [
+                [
+                    cls.frame_partition_cls(
+                        partition_ids[i][j],
+                        length=row_lengths[i],
+                        width=column_widths[j],
+                    )
+                    for j in range(len(partition_ids[i]))
+                ]
+                for i in range(len(partition_ids))
+            ]
+        )
+
+    @classmethod
     def pathlib_or_pypath(cls, filepath_or_buffer):
         """
         Check if `filepath_or_buffer` is instance of `py.path.local` or `pathlib.Path`.
