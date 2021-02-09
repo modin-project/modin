@@ -1243,6 +1243,8 @@ def test___setitem__(data):
 
     df_equals(modin_df, pandas_df)
 
+
+def test___setitem__partitions_aligning():
     # from issue #2390
     modin_df = pd.DataFrame({"a": [1, 2, 3]})
     pandas_df = pandas.DataFrame({"a": [1, 2, 3]})
@@ -1259,12 +1261,15 @@ def test___setitem__(data):
     # Setting new column
     pd_df["b"] = pandas.Series(np.arange(4))
     md_df["b"] = pd.Series(np.arange(4))
-
     df_equals(md_df, pd_df)
+
     # Setting existing column
     pd_df["b"] = pandas.Series(np.arange(4))
     md_df["b"] = pd.Series(np.arange(4))
+    df_equals(md_df, pd_df)
 
+    pd_df["a"] = pandas.Series(np.arange(4))
+    md_df["a"] = pd.Series(np.arange(4))
     df_equals(md_df, pd_df)
 
 
