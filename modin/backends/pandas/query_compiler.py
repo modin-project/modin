@@ -665,9 +665,9 @@ class PandasQueryCompiler(BaseQueryCompiler):
             return pandas.DataFrame.max(df, **kwargs)
 
         def reduce_func(df, **kwargs):
-            if "numeric_only" in kwargs.keys() and kwargs["numeric_only"]:
+            if kwargs.get("numeric_only", False):
                 kwargs = kwargs.copy()
-                kwargs["numeric_only"] = not kwargs["numeric_only"]
+                kwargs["numeric_only"] = False
             return pandas.DataFrame.max(df, **kwargs)
 
         return MapReduceFunction.register(map_func, reduce_func)(
@@ -679,9 +679,9 @@ class PandasQueryCompiler(BaseQueryCompiler):
             return pandas.DataFrame.min(df, **kwargs)
 
         def reduce_func(df, **kwargs):
-            if "numeric_only" in kwargs.keys() and kwargs["numeric_only"]:
+            if kwargs.get("numeric_only", False):
                 kwargs = kwargs.copy()
-                kwargs["numeric_only"] = not kwargs["numeric_only"]
+                kwargs["numeric_only"] = False
             return pandas.DataFrame.min(df, **kwargs)
 
         return MapReduceFunction.register(map_func, reduce_func)(

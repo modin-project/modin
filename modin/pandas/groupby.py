@@ -902,7 +902,7 @@ class DataFrameGroupBy(object):
 
         Parameters
         ----------
-        f: callable,
+        f: callable
             The function to apply to each group.
         overwrite_groupby_kwargs: dict (optional),
             GroupBy kwargs to overwrite.
