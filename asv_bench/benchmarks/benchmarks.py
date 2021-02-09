@@ -490,14 +490,21 @@ class TimeValueCountsSeries(BaseTimeValueCounts):
 
 
 class TimeAstype:
-    param_names = ["shape", "dtype"]
+    param_names = ["shape", "dtype", "astype_ncolumns"]
     params = [
         UNARY_OP_DATA_SIZE[ASV_DATASET_SIZE],
         ["float64", "category"],
+        ["one", "all"],
     ]
 
-    def setup(self, shape, dtype):
+    def setup(self, shape, dtype, astype_ncolumns):
         self.df = generate_dataframe(ASV_USE_IMPL, "int", *shape, RAND_LOW, RAND_HIGH)
+        if astype_ncolumns == "all":
+            self.astype_arg = dtype
+        elif astype_ncolumns == "one":
+            self.astype_arg = {"col1": dtype}
+        else:
+            raise ValueError("astype_ncolumns: {astype_ncolumns} isn't supported")
 
-    def time_astype(self, shape, dtype):
-        execute(self.df.astype(dtype))
+    def time_astype(self, shape, dtype, astype_ncolumns):
+        execute(self.df.astype(self.astype_arg))
