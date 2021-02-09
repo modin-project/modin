@@ -234,7 +234,7 @@ class ExperimentalPandasOnRayIO(PandasOnRayIO):
 
         The filenames is determined as follows:
         - if `*` in the filename then it will be replaced by the increasing sequence 0, 1, 2, …
-        - if ``*` is not the filename, then by default it is assumed that it is between
+        - if `*` is not the filename, then by default it is assumed that it is between
             file' basename and extensions.
 
         Example #1: 4 partitions and input filename="partition.pkl.gz", then filenames will be:
