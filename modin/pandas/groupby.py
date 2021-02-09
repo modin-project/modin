@@ -622,9 +622,18 @@ class DataFrameGroupBy(object):
         return self._default_to_pandas(lambda df: df.corr(**kwargs))
 
     def fillna(self, **kwargs):
-        result = self._apply_agg_function(
-            lambda df: df.fillna(**kwargs), overwrite_groupby_kwargs={"as_index": True}
+        new_groupby_kwargs = self._kwargs.copy()
+        new_groupby_kwargs["as_index"] = True
+        work_object = type(self)(
+            df=self._df,
+            by=self._by,
+            axis=self._axis,
+            idx_name=self._idx_name,
+            drop=self._drop,
+            squeeze=self._squeeze,
+            **new_groupby_kwargs,
         )
+        result = work_object._apply_agg_function(lambda df: df.fillna(**kwargs))
         # pandas does not name the index on fillna
         result._query_compiler.set_index_name(None)
         return result
@@ -894,7 +903,7 @@ class DataFrameGroupBy(object):
             return result.squeeze()
         return result
 
-    def _apply_agg_function(self, f, overwrite_groupby_kwargs=None, *args, **kwargs):
+    def _apply_agg_function(self, f, *args, **kwargs):
         """
         Perform aggregation and combine stages based on a given function.
 
@@ -904,8 +913,6 @@ class DataFrameGroupBy(object):
         ----------
         f: callable
             The function to apply to each group.
-        overwrite_groupby_kwargs: dict (optional),
-            GroupBy kwargs to overwrite.
 
         Returns
         -------
@@ -914,9 +921,7 @@ class DataFrameGroupBy(object):
         assert callable(f) or isinstance(
             f, dict
         ), "'{0}' object is not callable and not a dict".format(type(f))
-        groupby_kwargs = self._kwargs.copy()
-        if overwrite_groupby_kwargs is not None:
-            groupby_kwargs.update(overwrite_groupby_kwargs)
+
         new_manager = self._query_compiler.groupby_agg(
             by=self._by,
             is_multi_by=self._is_multi_by,
@@ -924,7 +929,7 @@ class DataFrameGroupBy(object):
             agg_func=f,
             agg_args=args,
             agg_kwargs=kwargs,
-            groupby_kwargs=groupby_kwargs,
+            groupby_kwargs=self._kwargs,
             drop=self._drop,
         )
         if self._idx_name is not None and self._as_index:
