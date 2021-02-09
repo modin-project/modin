@@ -64,6 +64,8 @@ matplotlib.use("Agg")
         ("pct_change", None),
         ("__getstate__", None),
         ("to_xarray", None),
+        ("flags", None),
+        ("set_flags", lambda df: {"allows_duplicate_labels": False}),
     ],
 )
 def test_ops_defaulting_to_pandas(op, make_args):
@@ -73,7 +75,11 @@ def test_ops_defaulting_to_pandas(op, make_args):
         if make_args is not None:
             operation(**make_args(modin_df))
         else:
-            operation()
+            try:
+                operation()
+            # `except` for non callable attributes
+            except TypeError:
+                pass
 
 
 def test_style():

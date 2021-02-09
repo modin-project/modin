@@ -2116,7 +2116,10 @@ class BasePandasDataset(object):
 
     @property
     def flags(self):
-        return self._default_to_pandas(pandas.DataFrame.flags)
+        def flags(df):
+            return df.flags
+
+        return self._default_to_pandas(flags)
 
     def shift(self, periods=1, freq=None, axis=0, fill_value=no_default):
         if periods == 0:
