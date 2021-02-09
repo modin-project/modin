@@ -1810,7 +1810,7 @@ class BasePandasFrame(object):
                 or others_lengths[i] != base_lengths
             )
 
-        # perform repartitioning and reindexing for `other` frames if needed
+        # perform repartitioning and reindexing for `other_frames` if needed
         reindexed_other_list = [None] * len(other_frames)
         for i in range(len(other_frames)):
             if do_repartition_others[i]:
@@ -1819,7 +1819,7 @@ class BasePandasFrame(object):
                     i
                 ]._frame_mgr_cls.map_axis_partitions(
                     axis,
-                    other[i]._partitions,
+                    other_frames[i]._partitions,
                     make_reindexer(do_repartition_others[i], base_frame_idx + 1 + i),
                     lengths=base_lengths,
                 )
