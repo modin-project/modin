@@ -3,7 +3,7 @@ channels:
   - intel/label/modin
   - conda-forge
 dependencies:
-  - pandas==1.2.1
+  - pandas==1.2.2
   - pyarrow==1.0.0
   - numpy>=1.16.5,<1.20  # pandas gh-39513
   - pip
