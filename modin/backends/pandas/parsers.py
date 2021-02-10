@@ -308,6 +308,10 @@ class PandasPickleExperimentalParser(PandasParser):
         num_splits = 1
 
         df = pandas.read_pickle(filepath, **kwargs)
+        assert isinstance(
+            df, pandas.DataFrame
+        ), f"Pickled obj type: [{type(df)}] in [{filepath}]; works only with pandas.DataFrame"
+
         length = len(df)
         width = len(df.columns)
 
@@ -527,7 +531,7 @@ class PandasExcelParser(PandasParser):
             has_index_names=is_list_like(header) and len(header) > 1,
             skiprows=skiprows,
             usecols=usecols,
-            **kwargs
+            **kwargs,
         )
         # In excel if you create a row with only a border (no values), this parser will
         # interpret that as a row of NaN values. pandas discards these values, so we
