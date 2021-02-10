@@ -2692,7 +2692,7 @@ class BasePandasDataset(object):
 
     def to_pickle(
         self,
-        filepath_or_buffer: FilePathOrBuffer,
+        path: FilePathOrBuffer,
         compression: CompressionOptions = "infer",
         protocol: int = pkl.HIGHEST_PROTOCOL,
         storage_options: StorageOptions = None,
@@ -2701,7 +2701,7 @@ class BasePandasDataset(object):
 
         to_pickle(
             self,
-            filepath_or_buffer=filepath_or_buffer,
+            path,
             compression=compression,
             protocol=protocol,
             storage_options=storage_options,
