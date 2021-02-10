@@ -545,7 +545,7 @@ class _LocIndexer(_LocationIndexerBase):
                 )
             ):
                 result.index = result.index.droplevel(list(range(len(col_loc))))
-            elif all(
+            elif not isinstance(row_loc, slice) and all(
                 not isinstance(row_loc[i], slice)
                 and row_loc[i] in result.index.levels[i]
                 for i in range(len(row_loc))

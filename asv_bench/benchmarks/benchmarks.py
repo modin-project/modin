@@ -489,6 +489,65 @@ class TimeValueCountsSeries(BaseTimeValueCounts):
         execute(self.df.value_counts(bins=bins))
 
 
+class TimeIndexing:
+    param_names = ["shape", "indexer_type"]
+    params = [
+        UNARY_OP_DATA_SIZE[ASV_DATASET_SIZE],
+        [
+            "scalar",
+            "bool",
+            "slice",
+            "list",
+            "function",
+        ],
+    ]
+
+    def setup(self, shape, indexer_type):
+        self.df = generate_dataframe(ASV_USE_IMPL, "int", *shape, RAND_LOW, RAND_HIGH)
+        if indexer_type == "bool":
+            self.indexer = [False, True] * (shape[0] // 2)
+        elif indexer_type == "scalar":
+            self.indexer = shape[0] // 2
+        elif indexer_type == "slice":
+            self.indexer = slice(0, shape[0], 2)
+        elif indexer_type == "list":
+            self.indexer = [x for x in range(shape[0])]
+        elif indexer_type == "function":
+            self.indexer = lambda df: df.index[::-2]
+
+    def time_iloc(self, shape, indexer_type):
+        execute(self.df.iloc[self.indexer])
+
+    def time_loc(self, shape, indexer_type):
+        execute(self.df.loc[self.indexer])
+
+
+class TimeMultiIndexing:
+    param_names = ["shape"]
+    params = [UNARY_OP_DATA_SIZE[ASV_DATASET_SIZE]]
+
+    def setup(self, shape):
+        df = generate_dataframe(ASV_USE_IMPL, "int", *shape, RAND_LOW, RAND_HIGH)
+
+        index = pd.MultiIndex.from_product([df.index[: shape[0] // 2], ["bar", "foo"]])
+        columns = pd.MultiIndex.from_product(
+            [df.columns[: shape[1] // 2], ["buz", "fuz"]]
+        )
+
+        df.index = index
+        df.columns = columns
+
+        self.df = df.sort_index(axis=1)
+
+    def time_multiindex_loc(self, shape):
+        execute(
+            self.df.loc[
+                self.df.index[2] : self.df.index[-2],
+                self.df.columns[2] : self.df.columns[-2],
+            ]
+        )
+
+
 class TimeAstype:
     param_names = ["shape", "dtype", "astype_ncolumns"]
     params = [
