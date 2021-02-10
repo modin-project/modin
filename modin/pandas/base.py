@@ -33,7 +33,9 @@ from pandas.core.indexing import convert_to_index_sliceable
 from pandas.util._validators import validate_bool_kwarg, validate_percentile
 from pandas._libs.lib import no_default
 from pandas._typing import (
+    CompressionOptions,
     IndexKeyFunc,
+    FilePathOrBuffer,
     StorageOptions,
     TimedeltaConvertibleTypes,
     TimestampConvertibleTypes,
@@ -2690,18 +2692,16 @@ class BasePandasDataset(object):
 
     def to_pickle(
         self,
-        path,
-        compression="infer",
-        protocol=pkl.HIGHEST_PROTOCOL,
+        filepath_or_buffer: FilePathOrBuffer,
+        compression: CompressionOptions = "infer",
+        protocol: int = pkl.HIGHEST_PROTOCOL,
         storage_options: StorageOptions = None,
     ):  # pragma: no cover
-        new_query_compiler = self._query_compiler
+        from modin.pandas.io import to_pickle
 
-        from modin.data_management.factories.dispatcher import EngineDispatcher
-
-        EngineDispatcher.to_pickle(
-            new_query_compiler,
-            path=path,
+        to_pickle(
+            self,
+            filepath_or_buffer=filepath_or_buffer,
             compression=compression,
             protocol=protocol,
             storage_options=storage_options,

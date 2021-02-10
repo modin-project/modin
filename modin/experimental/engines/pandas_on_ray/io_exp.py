@@ -239,13 +239,19 @@ class ExperimentalPandasOnRayIO(PandasOnRayIO):
         Example #1: 4 partitions and input filename="partition*.pkl.gz", then filenames will be:
         `partition0.pkl.gz`, `partition1.pkl.gz`, `partition2.pkl.gz`, `partition3.pkl.gz`.
         """
-        if "*" not in kwargs["path"]:
+        if (
+            not isinstance(kwargs["filepath_or_buffer"], str)
+            and "*" not in kwargs["filepath_or_buffer"]
+            or not isinstance(qc, PandasQueryCompiler)
+        ):
             warnings.warn("Defaulting to Modin core implementation")
-            return PandasOnRayIO.to_pickle(**kwargs)
+            return PandasOnRayIO.to_pickle(qc, **kwargs)
 
         def func(df, **kw):
             idx = str(kw["partition_idx"])
-            kwargs["path"] = kwargs["path"].replace("*", idx)
+            kwargs["filepath_or_buffer"] = kwargs["filepath_or_buffer"].replace(
+                "*", idx
+            )
             df.to_pickle(**kwargs)
             return pandas.DataFrame()
 
