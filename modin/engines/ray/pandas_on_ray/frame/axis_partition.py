@@ -21,16 +21,28 @@ from ray.services import get_node_ip_address
 
 
 class PandasOnRayFrameAxisPartition(PandasFrameAxisPartition):
-    def __init__(self, list_of_blocks, bind_ip=False):
+    def __init__(self, list_of_blocks, get_ip=False):
         # Unwrap from BaseFramePartition object for ease of use
         for obj in list_of_blocks:
             obj.drain_call_queue()
         self.list_of_blocks = [obj.oid for obj in list_of_blocks]
-        if bind_ip:
-            self.list_of_ips = [obj.ip for obj in list_of_blocks]
+        if get_ip:
+            self.list_of_ips = [obj.ip() for obj in list_of_blocks]
 
     partition_type = PandasOnRayFramePartition
     instance_type = ray.ObjectRef
+
+    def apply_blockwise(self, rt_axis_part, apply_func, other_name):
+        def map_func(df, other):
+            return apply_func(df, **{other_name: other})
+
+        partitions = []
+        for i, block in enumerate(self.list_of_blocks):
+            partitions += deploy_ray_func._remote(
+                args=(map_func, block, rt_axis_part.list_of_blocks[i]),
+                num_returns=4,
+            )
+        return self._wrap_partitions(partitions)
 
     @classmethod
     def deploy_axis_func(

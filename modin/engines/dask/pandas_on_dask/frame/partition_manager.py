@@ -20,35 +20,8 @@ from .axis_partition import (
 )
 from .partition import PandasOnDaskFramePartition
 from modin.error_message import ErrorMessage
-import pandas
 
 from distributed.client import _get_global_client
-from distributed.utils import get_ip
-import cloudpickle as pkl
-
-
-def deploy_func(df, apply_func, call_queue_df, call_queues_other, *others):
-    if call_queue_df is not None and len(call_queue_df) > 0:
-        for call, kwargs in call_queue_df:
-            if isinstance(call, bytes):
-                call = pkl.loads(call)
-            if isinstance(kwargs, bytes):
-                kwargs = pkl.loads(kwargs)
-            df = call(df, **kwargs)
-    new_others = np.empty(shape=len(others), dtype=object)
-    for i, call_queue_other in enumerate(call_queues_other):
-        other = others[i]
-        if call_queue_other is not None and len(call_queue_other) > 0:
-            for call, kwargs in call_queue_other:
-                if isinstance(call, bytes):
-                    call = pkl.loads(call)
-                if isinstance(kwargs, bytes):
-                    kwargs = pkl.loads(kwargs)
-                other = call(other, **kwargs)
-        new_others[i] = other
-    if isinstance(apply_func, bytes):
-        apply_func = pkl.loads(apply_func)
-    return apply_func(df, new_others), get_ip()
 
 
 class DaskFrameManager(BaseFrameManager):
@@ -63,7 +36,6 @@ class DaskFrameManager(BaseFrameManager):
     def get_indices(cls, axis, partitions, index_func):
         """
         This gets the internal indices stored in the partitions.
-
         Parameters
         ----------
             axis : 0 or 1
@@ -72,12 +44,10 @@ class DaskFrameManager(BaseFrameManager):
                 The array of partitions from which need to extract the labels.
             index_func : callable
                 The function to be used to extract the function.
-
         Returns
         -------
         Index
             A Pandas Index object.
-
         Notes
         -----
         These are the global indices of the object. This is mostly useful
@@ -105,44 +75,12 @@ class DaskFrameManager(BaseFrameManager):
 
     @classmethod
     def broadcast_apply(cls, axis, apply_func, left, right, other_name="r"):
-        def mapper(df, others):
-            other = pandas.concat(others, axis=axis ^ 1)
-            return apply_func(df, **{other_name: other})
-
-        client = _get_global_client()
-        futures = np.array(
+        lt_axis_parts = cls.axis_partition(left, axis)
+        rt_axis_part = cls.axis_partition(right, axis)[0]
+        result = np.array(
             [
-                [
-                    client.submit(
-                        deploy_func,
-                        part.future,
-                        mapper,
-                        part.call_queue,
-                        [obj[col_idx].call_queue for obj in right]
-                        if axis
-                        else [obj.call_queue for obj in right[row_idx]],
-                        *(
-                            [obj[col_idx].future for obj in right]
-                            if axis
-                            else [obj.future for obj in right[row_idx]]
-                        ),
-                        pure=False,
-                    )
-                    for col_idx, part in enumerate(left[row_idx])
-                ]
-                for row_idx in range(len(left))
+                lt_axis_part.apply_blockwise(rt_axis_part, apply_func, other_name)
+                for lt_axis_part in lt_axis_parts
             ]
         )
-        new_partitions = np.empty(
-            (futures.shape[0], futures.shape[1]),
-            dtype=PandasOnDaskFramePartition,
-        )
-        for i in range(len(futures.shape[0])):
-            for j in range(len(futures.shape[1])):
-                future = [
-                    client.submit(lambda l: l[k], futures[i][j]) for k in range(2)
-                ]
-                new_partitions[i][j] = PandasOnDaskFramePartition(
-                    future[0], ip=future[1]
-                )
-        return new_partitions
+        return result if axis else result.T

@@ -128,7 +128,6 @@ nature, you get a fast DataFrame at 1MB and 1TB+.
    using_modin
    out_of_core
    modin_xgboost
-   partition_ips
 
 .. toctree::
    :caption: Examples
@@ -157,6 +156,7 @@ nature, you get a fast DataFrame at 1MB and 1TB+.
 
    contributing
    developer/architecture
+   developer/pandas/partition_api
 
 .. toctree::
    :caption: Engines, Backends, and APIs

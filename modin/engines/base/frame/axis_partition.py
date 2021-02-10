@@ -95,14 +95,14 @@ class BaseFrameAxisPartition(ABC):  # pragma: no cover
     def _wrap_partitions(self, partitions):
         return [self.partition_type(obj) for obj in partitions]
 
-    def coalesce(self, bind_ip=False):
+    def coalesce(self, get_ip=False):
         """
         Coalesce the axis partitions into a single partition.
 
         Parameters
         ----------
-        bind_ip : boolean, default False
-            Whether to bind node ip address to a single partition or not.
+        get_ip : boolean, default False
+            Whether to get node ip address to a single partition or not.
 
         Returns
         -------
@@ -110,9 +110,9 @@ class BaseFrameAxisPartition(ABC):  # pragma: no cover
             An axis partition containing only a single coalesced partition.
         """
         coalesced = self.apply(lambda x: x, num_splits=1, maintain_partitioning=False)
-        return type(self)(coalesced, bind_ip=bind_ip)
+        return type(self)(coalesced, get_ip=get_ip)
 
-    def unwrap(self, squeeze=False, bind_ip=False):
+    def unwrap(self, squeeze=False, get_ip=False):
         """
         Unwrap partitions from axis partition.
 
@@ -120,8 +120,8 @@ class BaseFrameAxisPartition(ABC):  # pragma: no cover
         ----------
         squeeze : boolean, default False
             The flag used to unwrap only one partition.
-        bind_ip : boolean, default False
-            Whether to bind node ip address to each partition or not.
+        get_ip : boolean, default False
+            Whether to get node ip address to each partition or not.
 
         Returns
         -------
@@ -130,17 +130,17 @@ class BaseFrameAxisPartition(ABC):  # pragma: no cover
 
         Notes
         -----
-        In case bind_ip=True, list containing tuples of Ray.ObjectRef/Dask.Future
-        to node ip addresses and unwrapped partitions, respectively, is returned
+        In case get_ip=True, list containing tuples of node ip addresses and
+        Ray.ObjectRef/Dask.Future to unwrapped partitions, respectively, is returned
         if Ray/Dask is used as an engine.
         """
         if squeeze and len(self.list_of_blocks) == 1:
-            if bind_ip:
+            if get_ip:
                 return self.list_of_ips[0], self.list_of_blocks[0]
             else:
                 return self.list_of_blocks[0]
         else:
-            if bind_ip:
+            if get_ip:
                 return list(zip(self.list_of_ips, self.list_of_blocks))
             else:
                 return self.list_of_blocks

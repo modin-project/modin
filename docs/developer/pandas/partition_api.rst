@@ -1,22 +1,24 @@
-Partition IPs in Modin (experimental)
-=====================================
+Pandas Partition API in Modin
+=============================
 
-If you are working with Modin DataFrame and would like to unwrap its remote partitions
-for your needs  (pass them to another function that will be processed on a concrete node of the cluster,
-for instance), you can use IPs of the remote partitions. In that case you can pass the partitions
+If you are working with Modin DataFrame, you can unwrap its remote partitions for your needs
+(pass them to another function that will be processed on a concrete node of the cluster,
+for instance) and get IPs of the remote partitions as well. In that case you can pass the partitions
 having needed IPs to your function. It can help with minimazing of data movement between nodes. However,
 it is worth noting that for Modin on ``Ray`` engine with ``pandas`` backend IPs of the remote partitions may not match
 actual locations if the partitions are lower than 100 kB. Ray saves such objects (<= 100 kB, by default) in in-process store
-of the calling process. We can't get IPs for such objects while maintaining good performance. So, you should keep in mind this
+of the calling process (please, refer to `Ray documentation`_ for more information). We can't get IPs for such objects while maintaining good performance. So, you should keep in mind this
 for unwrapping of the remote partitions with their IPs. Several options are provided to handle the case in
 ``How to handle objects that are lower 100 kB`` section. Wherein, there is no such issue for Modin on ``Dask`` engine
-with ``pandas`` backend because ``Dask`` saves any objects in the worker process that processes a function.
+with ``pandas`` backend because ``Dask`` saves any objects in the worker process that processes a function
+(please, refer to `Dask documentation`_ for more information). In addition to unwrapping of the remote partitions we also
+provide API to constuct Modin DataFrame from the partitions.
 Please let us know what you think!
 
-Install Modin Partition IPs
----------------------------
+Install Modin Pandas Partition API
+----------------------------------
 
-Modin now comes with all the dependencies for partitions IPs functionality by default! See
+Modin now comes with all the dependencies for pandas partition API functionality by default! See
 the :doc:`installation page </installation>` for more information on installing Modin.
 
 How to handle objects that are lower than 100 kB
@@ -36,8 +38,19 @@ When specifying ``nbytes`` equal to 0, all the objects will be saved to shared-m
 
 Note that when specifying the threshold the performance of some Modin operations may change.
 
-Running an example with Partition IPs
--------------------------------------
+API
+---
+
+It is currently supported the following API:
+
+.. automodule:: modin.distributed.dataframe.pandas
+  :members: unwrap_partitions
+
+.. automodule:: modin.distributed.dataframe.pandas
+  :members: from_partitions
+
+Running an example with pandas partition API
+--------------------------------------------
 
 Before you run this, please make sure you follow the instructions listed above.
 
@@ -51,3 +64,7 @@ Before you run this, please make sure you follow the instructions listed above.
   # Also, you can create Modin DataFrame from remote partitions including their IPs
   new_df = from_partitions(partitions, 0)
   print(new_df)
+
+
+.. _`Ray documentation`: https://docs.ray.io/en/master/index.html#
+.. _`Dask documentation`: https://distributed.dask.org/en/latest/index.html

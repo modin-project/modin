@@ -17,9 +17,9 @@ from modin.backends.pandas.query_compiler import PandasQueryCompiler
 from modin.pandas.dataframe import DataFrame
 
 
-def unwrap_partitions(api_layer_object, axis=None, bind_ip=False):
+def unwrap_partitions(api_layer_object, axis=None, get_ip=False):
     """
-    Unwrap partitions of the `api_layer_object`.
+    Unwrap partitions of the ``api_layer_object``.
 
     Parameters
     ----------
@@ -27,20 +27,20 @@ def unwrap_partitions(api_layer_object, axis=None, bind_ip=False):
         The API layer object.
     axis : None, 0 or 1. Default is None
         The axis to unwrap partitions for (0 - row partitions, 1 - column partitions).
-        If axis is None, all the partitions of the API layer object are unwrapped.
-    bind_ip : boolean. Default is False
-        Whether to bind node ip address to each partition or not.
+        If ``axis=None``, all the partitions of the API layer object are unwrapped.
+    get_ip : boolean. Default is False
+        Whether to get node ip address to each partition or not.
 
     Returns
     -------
     list
-        A list of Ray.ObjectRef/Dask.Future to partitions of the `api_layer_object`
+        A list of Ray.ObjectRef/Dask.Future to partitions of the ``api_layer_object``
         if Ray/Dask is used as an engine.
 
     Notes
     -----
-    In case bind_ip=True, a list containing tuples of Ray.ObjectRef/Dask.Future to node ip addresses
-    and partitions of the `api_layer_object`, respectively, is returned if Ray/Dask is used as an engine.
+    In case ``get_ip=True``, a list containing tuples of node ip addresses and Ray.ObjectRef/Dask.Future to
+    partitions of the ``api_layer_object``, respectively, is returned if Ray/Dask is used as an engine.
     """
     if not hasattr(api_layer_object, "_query_compiler"):
         raise ValueError(
@@ -50,9 +50,9 @@ def unwrap_partitions(api_layer_object, axis=None, bind_ip=False):
     if axis is None:
 
         def _unwrap_partitions(oid):
-            if bind_ip:
+            if get_ip:
                 return [
-                    [(partition.ip, getattr(partition, oid)) for partition in row]
+                    [(partition.ip(), getattr(partition, oid)) for partition in row]
                     for row in api_layer_object._query_compiler._modin_frame._partitions
                 ]
             else:
@@ -78,7 +78,7 @@ def unwrap_partitions(api_layer_object, axis=None, bind_ip=False):
             )
         )
         return [
-            part.coalesce(bind_ip=bind_ip).unwrap(squeeze=True, bind_ip=bind_ip)
+            part.coalesce(get_ip=get_ip).unwrap(squeeze=True, get_ip=get_ip)
             for part in partitions
         ]
 
@@ -90,15 +90,16 @@ def from_partitions(partitions, axis):
     Parameters
     ----------
     partitions : list
-        List of Ray.ObjectRef/Dask.Future referencing partitions depending on the engine used.
-        Or list of tuples of Ray.ObjectRef/Dask.Future referencing ip addresses of partitions
-        and partitions themselves depending on the engine used.
+        List of Ray.ObjectRef/Dask.Future to partitions depending on the engine used.
+        Or list of tuples of node ip addresses and Ray.ObjectRef/Dask.Future to partitions
+        depending on the engine used.
     axis : None, 0 or 1
-        The `axis` parameter is used to identify what are the partitions passed.
+        The ``axis`` parameter is used to identify what are the partitions passed.
         You have to set:
-        - `axis` to 0 if you want to create DataFrame from row partitions.
-        - `axis` to 1 if you want to create DataFrame from column partitions.
-        - `axis` to None if you want to create DataFrame from 2D list of partitions.
+
+        * ``axis=0`` if you want to create DataFrame from row partitions
+        * ``axis=1`` if you want to create DataFrame from column partitions
+        * ``axis=None`` if you want to create DataFrame from 2D list of partitions
 
     Returns
     -------

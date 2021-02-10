@@ -20,33 +20,8 @@ from .axis_partition import (
 )
 from .partition import PandasOnRayFramePartition
 from modin.error_message import ErrorMessage
-import pandas
 
 import ray
-from ray.services import get_node_ip_address
-
-
-@ray.remote(num_returns=2)
-def func(df, apply_func, call_queue_df, call_queues_other, *others):
-    if call_queue_df is not None and len(call_queue_df) > 0:
-        for call, kwargs in call_queue_df:
-            if isinstance(call, ray.ObjectRef):
-                call = ray.get(call)
-            if isinstance(kwargs, ray.ObjectRef):
-                kwargs = ray.get(kwargs)
-            df = call(df, **kwargs)
-    new_others = np.empty(shape=len(others), dtype=object)
-    for i, call_queue_other in enumerate(call_queues_other):
-        other = others[i]
-        if call_queue_other is not None and len(call_queue_other) > 0:
-            for call, kwargs in call_queue_other:
-                if isinstance(call, ray.ObjectRef):
-                    call = ray.get(call)
-                if isinstance(kwargs, ray.ObjectRef):
-                    kwargs = ray.get(kwargs)
-                other = call(other, **kwargs)
-        new_others[i] = other
-    return apply_func(df, new_others), get_node_ip_address()
 
 
 class PandasOnRayFrameManager(RayFrameManager):
@@ -61,7 +36,6 @@ class PandasOnRayFrameManager(RayFrameManager):
     def get_indices(cls, axis, partitions, index_func=None):
         """
         This gets the internal indices stored in the partitions.
-
         Parameters
         ----------
             axis : 0 or 1
@@ -70,12 +44,10 @@ class PandasOnRayFrameManager(RayFrameManager):
                 The array of partitions from which need to extract the labels.
             index_func : callable
                 The function to be used to extract the function.
-
         Returns
         -------
         Index
             A Pandas Index object.
-
         Notes
         -----
         These are the global indices of the object. This is mostly useful
@@ -102,35 +74,12 @@ class PandasOnRayFrameManager(RayFrameManager):
 
     @classmethod
     def broadcast_apply(cls, axis, apply_func, left, right, other_name="r"):
-        def mapper(df, others):
-            other = pandas.concat(others, axis=axis ^ 1)
-            return apply_func(df, **{other_name: other})
-
-        mapper = ray.put(mapper)
-        object_refs = np.array(
+        lt_axis_parts = cls.axis_partition(left, axis)
+        rt_axis_part = cls.axis_partition(right, axis)[0]
+        result = np.array(
             [
-                [
-                    func.remote(
-                        part.oid,
-                        mapper,
-                        part.call_queue,
-                        [obj[col_idx].call_queue for obj in right]
-                        if axis
-                        else [obj.call_queue for obj in right[row_idx]],
-                        *(
-                            [obj[col_idx].oid for obj in right]
-                            if axis
-                            else [obj.oid for obj in right[row_idx]]
-                        ),
-                    )
-                    for col_idx, part in enumerate(left[row_idx])
-                ]
-                for row_idx in range(len(left))
+                lt_axis_part.apply_blockwise(rt_axis_part, apply_func, other_name)
+                for lt_axis_part in lt_axis_parts
             ]
         )
-        new_partitions = np.array(
-            [[PandasOnRayFramePartition(part[0], ip=part[1])] for part in row]
-            for row in object_refs
-        )
-
-        return new_partitions
+        return result if axis else result.T

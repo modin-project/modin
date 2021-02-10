@@ -32,7 +32,7 @@ class PandasOnRayFramePartition(BaseFramePartition):
         self.call_queue = call_queue
         self._length_cache = length
         self._width_cache = width
-        self.ip = ip
+        self._ip_cache = ip
 
     def get(self):
         """Gets the object out of the plasma store.
@@ -79,13 +79,17 @@ class PandasOnRayFramePartition(BaseFramePartition):
             self.oid,
             self._length_cache,
             self._width_cache,
-            self.ip,
+            self._ip_cache,
         ) = deploy_ray_func.remote(call_queue, oid)
         self.call_queue = []
 
     def __copy__(self):
         return PandasOnRayFramePartition(
-            self.oid, self._length_cache, self._width_cache, call_queue=self.call_queue
+            self.oid,
+            length=self._length_cache,
+            width=self._width_cache,
+            ip=self._ip_cache,
+            call_queue=self.call_queue,
         )
 
     def to_pandas(self):
@@ -188,6 +192,19 @@ class PandasOnRayFramePartition(BaseFramePartition):
             except RayTaskError as e:
                 handle_ray_task_error(e)
         return self._width_cache
+
+    def ip(self):
+        if self._ip_cache is None:
+            if len(self.call_queue):
+                self.drain_call_queue()
+            else:
+                self._ip_cache = self.apply(lambda df: df)._ip_cache
+        if isinstance(self._ip_cache, ray.ObjectID):
+            try:
+                self._ip_cache = ray.get(self._ip_cache)
+            except RayTaskError as e:
+                handle_ray_task_error(e)
+        return self._ip_cache
 
     @classmethod
     def length_extraction_fn(cls):
