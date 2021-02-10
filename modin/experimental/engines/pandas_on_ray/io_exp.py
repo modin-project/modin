@@ -230,32 +230,22 @@ class ExperimentalPandasOnRayIO(PandasOnRayIO):
     @classmethod
     def to_pickle(cls, qc, **kwargs):
         """
-        In experimental mode, all partitions are written to their own separate file.
+        When `*` in the filename all partitions are written to their own separate file.
 
         The filenames is determined as follows:
         - if `*` in the filename then it will be replaced by the increasing sequence 0, 1, 2, …
-        - if `*` is not the filename, then by default it is assumed that it is between
-            file' basename and extensions.
+        - if `*` is not the filename, then will be used default implementation.
 
-        Example #1: 4 partitions and input filename="partition.pkl.gz", then filenames will be:
+        Example #1: 4 partitions and input filename="partition*.pkl.gz", then filenames will be:
         `partition0.pkl.gz`, `partition1.pkl.gz`, `partition2.pkl.gz`, `partition3.pkl.gz`.
-
-        Example #2: 4 partitions and input filename="partition.pkl*", then filenames will be:
-        `partition.pkl0`, `partition.pkl1`, `partition.pkl2`, `partition.pkl3`.
         """
+        if "*" not in kwargs["path"]:
+            warnings.warn("Defaulting to Modin core implementation")
+            return PandasOnRayIO.to_pickle(**kwargs)
 
         def func(df, **kw):
-            path = kwargs["path"]
             idx = str(kw["partition_idx"])
-            if "*" in path:
-                new_path = path.replace("*", idx)
-            else:
-                split_path = path.split(".")
-                # update file basename
-                split_path[0] = split_path[0] + idx
-                new_path = ".".join(split_path)
-            kwargs["path"] = new_path
-
+            kwargs["path"] = kwargs["path"].replace("*", idx)
             df.to_pickle(**kwargs)
             return pandas.DataFrame()
 
