@@ -520,3 +520,29 @@ class TimeIndexing:
 
     def time_loc(self, shape, indexer_type):
         execute(self.df.loc[self.indexer])
+
+
+class TimeMultiIndexing:
+    param_names = ["shape"]
+    params = [UNARY_OP_DATA_SIZE[ASV_DATASET_SIZE]]
+
+    def setup(self, shape):
+        df = generate_dataframe(ASV_USE_IMPL, "int", *shape, RAND_LOW, RAND_HIGH)
+
+        index = pd.MultiIndex.from_product([df.index[: shape[0] // 2], ["bar", "foo"]])
+        columns = pd.MultiIndex.from_product(
+            [df.columns[: shape[1] // 2], ["buz", "fuz"]]
+        )
+
+        df.index = index
+        df.columns = columns
+
+        self.df = df.sort_index(axis=1)
+
+    def time_multiindex_loc(self, shape):
+        execute(
+            self.df.loc[
+                self.df.index[2] : self.df.index[-2],
+                self.df.columns[2] : self.df.columns[-2],
+            ]
+        )
