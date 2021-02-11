@@ -1272,6 +1272,39 @@ class TestBinaryOp:
         run_and_compare(mul1, data=self.data)
         run_and_compare(mul2, data=self.data)
 
+    def test_mod_cst(self):
+        def mod(lib, df):
+            return df % 2
+
+        run_and_compare(mod, data=self.data)
+
+    def test_mod_list(self):
+        def mod(lib, df):
+            return df % [2, 3, 4, 5]
+
+        run_and_compare(mod, data=self.data)
+
+    @pytest.mark.parametrize("fill_value", fill_values)
+    def test_mod_method_columns(self, fill_value):
+        def mod1(lib, df, fill_value):
+            return df["a"].mod(df["b"], fill_value=fill_value)
+
+        def mod2(lib, df, fill_value):
+            return df[["a", "c"]].mod(df[["b", "a"]], fill_value=fill_value)
+
+        run_and_compare(mod1, data=self.data, fill_value=fill_value)
+        run_and_compare(mod2, data=self.data, fill_value=fill_value)
+
+    def test_mod_columns(self):
+        def mod1(lib, df):
+            return df["a"] % df["b"]
+
+        def mod2(lib, df):
+            return df[["a", "c"]] % df[["b", "a"]]
+
+        run_and_compare(mod1, data=self.data)
+        run_and_compare(mod2, data=self.data)
+
     def test_truediv_cst(self):
         def truediv(lib, df):
             return df / 2

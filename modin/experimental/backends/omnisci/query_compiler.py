@@ -454,6 +454,9 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
     def mul(self, other, **kwargs):
         return self._bin_op(other, "mul", **kwargs)
 
+    def mod(self, other, **kwargs):
+        return self._bin_op(other, "mod", **kwargs)
+
     def floordiv(self, other, **kwargs):
         return self._bin_op(other, "floordiv", **kwargs)
 
