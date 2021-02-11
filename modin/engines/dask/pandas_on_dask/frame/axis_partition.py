@@ -32,8 +32,9 @@ class PandasOnDaskFrameAxisPartition(PandasFrameAxisPartition):
     partition_type = PandasOnDaskFramePartition
     instance_type = Future
 
-    def apply_blockwise(self, rt_axis_part, apply_func, other_name):
-        def map_func(df, other):
+    def broadcast_apply(self, rt_axis_parts, axis, apply_func, other_name):
+        def map_func(df, others):
+            other = pandas.concat(others, axis=axis ^ 1)
             return apply_func(df, **{other_name: other})
 
         client = get_client()
@@ -42,7 +43,9 @@ class PandasOnDaskFrameAxisPartition(PandasFrameAxisPartition):
                 deploy_dask_func,
                 map_func,
                 block,
-                rt_axis_part.list_of_blocks[i],
+                rt_axis_parts[i].list_of_blocks
+                if axis
+                else rt_axis_parts.list_of_blocks,
                 pure=False,
             )
             for i, block in enumerate(self.list_of_blocks)

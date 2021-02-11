@@ -74,12 +74,16 @@ class PandasOnRayFrameManager(RayFrameManager):
 
     @classmethod
     def broadcast_apply(cls, axis, apply_func, left, right, other_name="r"):
-        lt_axis_parts = cls.axis_partition(left, axis)
-        rt_axis_part = cls.axis_partition(right, axis)[0]
-        result = np.array(
+        lt_axis_parts = cls.axis_partition(left, 1)
+        rt_axis_parts = cls.axis_partition(right, axis ^ 1)
+        return np.array(
             [
-                lt_axis_part.apply_blockwise(rt_axis_part, apply_func, other_name)
-                for lt_axis_part in lt_axis_parts
+                lt_axis_part.broadcast_apply(
+                    rt_axis_parts if axis else rt_axis_parts[i],
+                    axis,
+                    apply_func,
+                    other_name,
+                )
+                for i, lt_axis_part in enumerate(lt_axis_parts)
             ]
         )
-        return result if axis else result.T
