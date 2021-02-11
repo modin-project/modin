@@ -2864,6 +2864,22 @@ class BasePandasDataset(object):
         )
         return self.set_axis(labels=new_labels, axis=axis, inplace=not copy)
 
+    def value_counts(
+        self, subset=None, normalize=False, sort=True, ascending=False, dropna=True
+    ):
+        from .series import Series
+
+        if subset is None:
+            subset = self._query_compiler.columns.tolist()
+        new_qc = self._query_compiler.value_counts(
+            subset=subset,
+            normalize=normalize,
+            sort=sort,
+            ascending=ascending,
+            dropna=dropna,
+        )
+        return Series(query_compiler=new_qc)
+
     def var(
         self, axis=None, skipna=None, level=None, ddof=1, numeric_only=None, **kwargs
     ):

@@ -1986,14 +1986,25 @@ class Series(BasePandasDataset):
         """
         Return a Series containing counts of unique values.
         """
-        return self.__constructor__(
-            query_compiler=self._query_compiler.value_counts(
+        if bins is not None:
+            # Potentially we could implement `cut` function from Pandas API, which
+            # bins values into intervals, and then we can just count them as regular values.
+            # TODO: new_self = Series(pd.cut(self, bins, include_lowest=True), dtype="interval")
+            return self._default_to_pandas(
+                pandas.Series.value_counts,
                 normalize=normalize,
                 sort=sort,
                 ascending=ascending,
                 bins=bins,
                 dropna=dropna,
             )
+
+        return super(Series, self).value_counts(
+            subset=None,
+            normalize=normalize,
+            sort=sort,
+            ascending=ascending,
+            dropna=dropna,
         )
 
     def view(self, dtype=None):  # noqa: PR01, RT01, D200

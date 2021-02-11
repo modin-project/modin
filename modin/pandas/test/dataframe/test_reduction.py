@@ -33,6 +33,7 @@ from modin.pandas.test.utils import (
     create_test_dfs,
     generate_multiindex,
     test_data_diff_dtype,
+    sort_index_for_equal_values,
 )
 from modin.config import NPartitions
 
@@ -361,3 +362,30 @@ def test_reduction_specific(fn, numeric_only, axis):
         *create_test_dfs(test_data_diff_dtype),
         lambda df: getattr(df, fn)(numeric_only=numeric_only, axis=axis),
     )
+
+
+@pytest.mark.parametrize("sort", [True, False])
+@pytest.mark.parametrize("subset_len", [1, 2])
+def test_value_counts(subset_len, sort):
+    data = test_data_values[0]
+    md_df, pd_df = create_test_dfs(data)
+    subset = [pd_df.columns[i * ((-1) ** i)] for i in range(subset_len)]
+
+    md_res = md_df.value_counts(subset=subset, sort=sort)
+    pd_res = pd_df.value_counts(subset=subset, sort=sort)
+
+    if subset_len == 1:
+        # 'pandas.DataFrame.value_counts' always returns frames with MultiIndex,
+        # even when 'subset_len == 1' it returns MultiIndex with 'nlevels == 1'.
+        # This behavior is tricky to mimic, so Modin 'value_counts' returns frame
+        # with non-multi index in that case. That's why we flatten indices here.
+        assert md_res.index.nlevels == pd_res.index.nlevels == 1
+        for df in [md_res, pd_res]:
+            df.index = df.index.get_level_values(0)
+
+    if sort:
+        # We sort indices for the result because of:
+        # https://github.com/modin-project/modin/issues/1650
+        md_res, pd_res = map(sort_index_for_equal_values, [md_res, pd_res])
+
+    df_equals(md_res, pd_res)

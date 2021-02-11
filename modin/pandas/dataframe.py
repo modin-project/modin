@@ -2341,11 +2341,7 @@ class DataFrame(BasePandasDataset):
         ascending: bool = False,
         dropna: bool = True,
     ):  # noqa: PR01, RT01, D200
-        """
-        Return a ``Series`` containing counts of unique rows in the ``DataFrame``.
-        """
-        return self._default_to_pandas(
-            "value_counts",
+        return super().value_counts(
             subset=subset,
             normalize=normalize,
             sort=sort,

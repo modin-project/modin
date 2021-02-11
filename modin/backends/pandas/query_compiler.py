@@ -766,11 +766,38 @@ class PandasQueryCompiler(BaseQueryCompiler):
             reduce_fn,
         )(self, axis=axis, **kwargs)
 
-    def value_counts(self, **kwargs):
-        def value_counts(df):
-            return df.squeeze(axis=1).value_counts(**kwargs).to_frame()
+    def value_counts(self, subset, normalize, sort, ascending, dropna):
+        """
+        Return a QueryCompiler of Series containing counts of unique values.
 
-        return self.default_to_pandas(value_counts)
+        Returns
+        -------
+        PandasQueryCompiler
+        """
+
+        def map_fn(grp):
+            return grp.size()
+
+        def reduce_fn(grp):
+            result = grp.sum().squeeze()
+            if normalize:
+                result = result / result.sum()
+            if sort:
+                result = result.sort_values(ascending=ascending)
+            return result.to_frame("__reduced__")
+
+        subset = self.getitem_column_array(subset)
+        res = GroupbyReduceFunction.register(map_fn, reduce_fn)(
+            # HACK: the same as in groupby.size() implementation, we're passing
+            # only the first column of the frame we're grouping on, so '.size()'
+            # will be applied only to the first partition.
+            self.getitem_column_array(key=[0], numeric=True),
+            by=subset,
+            groupby_args={"sort": not sort, "dropna": dropna},
+            numeric_only=False,
+            method="size",
+        )
+        return res
 
     # END MapReduce operations
 
