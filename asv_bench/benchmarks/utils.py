@@ -209,3 +209,7 @@ def random_booleans(number):
 def execute(df):
     "Make sure the calculations are done."
     return df.shape, df.dtypes
+
+
+def get_array_id(array):
+    return "_".join([str(element) for element in array])
