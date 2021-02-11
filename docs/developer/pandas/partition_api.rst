@@ -1,9 +1,9 @@
 Pandas Partition API in Modin
 =============================
 
-If you are working with Modin DataFrame, you can unwrap its remote partitions for your needs
-(pass them to another function that will be processed on a concrete node of the cluster,
-for instance) and get IPs of the remote partitions as well. In that case you can pass the partitions
+If you are working with a Modin Dataframe, you can unwrap its remote partitions
+to get the raw future object compatible with the execution engine (e.g. ``ray.ObjectRef`` for Ray).
+You can use this API to get the IPs of the nodes that hold these objects as well. In that case you can pass the partitions
 having needed IPs to your function. It can help with minimazing of data movement between nodes. However,
 it is worth noting that for Modin on ``Ray`` engine with ``pandas`` backend IPs of the remote partitions may not match
 actual locations if the partitions are lower than 100 kB. Ray saves such objects (<= 100 kB, by default) in in-process store

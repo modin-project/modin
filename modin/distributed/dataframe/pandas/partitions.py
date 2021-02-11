@@ -39,7 +39,7 @@ def unwrap_partitions(api_layer_object, axis=None, get_ip=False):
 
     Notes
     -----
-    In case ``get_ip=True``, a list containing tuples of node ip addresses and Ray.ObjectRef/Dask.Future to
+    If ``get_ip=True``, a list containing tuples of node ip addresses and Ray.ObjectRef/Dask.Future to
     partitions of the ``api_layer_object``, respectively, is returned if Ray/Dask is used as an engine.
     """
     if not hasattr(api_layer_object, "_query_compiler"):
