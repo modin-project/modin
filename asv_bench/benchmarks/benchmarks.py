@@ -567,3 +567,16 @@ class TimeAstype:
 
     def time_astype(self, shape, dtype, astype_ncolumns):
         execute(self.df.astype(self.astype_arg))
+
+
+class TimeDescribe:
+    param_names = ["shape"]
+    params = [
+        UNARY_OP_DATA_SIZE[ASV_DATASET_SIZE],
+    ]
+
+    def setup(self, shape):
+        self.df = generate_dataframe(ASV_USE_IMPL, "int", *shape, RAND_LOW, RAND_HIGH)
+
+    def time_describe(self, shape):
+        execute(self.df.describe())
