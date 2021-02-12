@@ -249,7 +249,6 @@ def deploy_ray_func(call_queue, partition):  # pragma: no cover
     # we absolutely have to.
     except ValueError:
         result = func(partition.copy(), **kwargs)
-
     return (
         result,
         len(result) if hasattr(result, "__len__") else 0,

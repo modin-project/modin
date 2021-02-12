@@ -20,6 +20,7 @@ from .axis_partition import (
 )
 from .partition import PandasOnDaskFramePartition
 from modin.error_message import ErrorMessage
+import pandas
 
 from distributed.client import _get_global_client
 
@@ -36,6 +37,7 @@ class DaskFrameManager(BaseFrameManager):
     def get_indices(cls, axis, partitions, index_func):
         """
         This gets the internal indices stored in the partitions.
+
         Parameters
         ----------
             axis : 0 or 1
@@ -44,10 +46,12 @@ class DaskFrameManager(BaseFrameManager):
                 The array of partitions from which need to extract the labels.
             index_func : callable
                 The function to be used to extract the function.
+
         Returns
         -------
         Index
             A Pandas Index object.
+
         Notes
         -----
         These are the global indices of the object. This is mostly useful
@@ -75,16 +79,24 @@ class DaskFrameManager(BaseFrameManager):
 
     @classmethod
     def broadcast_apply(cls, axis, apply_func, left, right, other_name="r"):
-        lt_axis_parts = cls.axis_partition(left, 1)
+        def map_func(df, others):
+            other = pandas.concat(others, axis=axis ^ 1)
+            return apply_func(df, **{other_name: other})
+
         rt_axis_parts = cls.axis_partition(right, axis ^ 1)
         return np.array(
             [
-                lt_axis_part.broadcast_apply(
-                    rt_axis_parts if axis else rt_axis_parts[i],
-                    axis,
-                    apply_func,
-                    other_name,
-                )
-                for i, lt_axis_part in enumerate(lt_axis_parts)
+                [
+                    part.apply(
+                        map_func,
+                        **{
+                            "others": rt_axis_parts[col_idx].list_of_blocks
+                            if axis
+                            else rt_axis_parts[row_idx].list_of_blocks
+                        },
+                    )
+                    for col_idx, part in enumerate(left[row_idx])
+                ]
+                for row_idx in range(len(left))
             ]
         )

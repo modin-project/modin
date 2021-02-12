@@ -39,8 +39,9 @@ def unwrap_partitions(api_layer_object, axis=None, get_ip=False):
 
     Notes
     -----
-    If ``get_ip=True``, a list containing tuples of node ip addresses and Ray.ObjectRef/Dask.Future to
-    partitions of the ``api_layer_object``, respectively, is returned if Ray/Dask is used as an engine.
+    If ``get_ip=True``, a list of tuples of node ip addresses and Ray.ObjectRef/Dask.Future to
+    partitions of the ``api_layer_object``, respectively, is returned if Ray/Dask is used as an engine
+    (i.e. [(str, Ray.ObjectRef/Dask.Future), ...]).
     """
     if not hasattr(api_layer_object, "_query_compiler"):
         raise ValueError(
@@ -92,7 +93,7 @@ def from_partitions(partitions, axis):
     partitions : list
         List of Ray.ObjectRef/Dask.Future to partitions depending on the engine used.
         Or list of tuples of node ip addresses and Ray.ObjectRef/Dask.Future to partitions
-        depending on the engine used.
+        depending on the engine used (i.e. [(str, Ray.ObjectRef/Dask.Future), ...]).
     axis : None, 0 or 1
         The ``axis`` parameter is used to identify what are the partitions passed.
         You have to set:

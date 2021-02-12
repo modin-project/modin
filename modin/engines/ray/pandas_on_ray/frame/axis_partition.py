@@ -32,25 +32,6 @@ class PandasOnRayFrameAxisPartition(PandasFrameAxisPartition):
     partition_type = PandasOnRayFramePartition
     instance_type = ray.ObjectRef
 
-    def broadcast_apply(self, rt_axis_parts, axis, apply_func, other_name):
-        def map_func(df, *others):
-            other = pandas.concat(others, axis=axis ^ 1)
-            return apply_func(df, **{other_name: other})
-
-        partitions = []
-        for i, block in enumerate(self.list_of_blocks):
-            partitions += deploy_ray_func._remote(
-                args=(map_func, block)
-                + tuple(
-                    rt_axis_parts[i].list_of_blocks
-                    if axis
-                    else rt_axis_parts.list_of_blocks
-                ),
-                num_returns=4,
-            )
-
-        return self._wrap_partitions(partitions)
-
     @classmethod
     def deploy_axis_func(
         cls, axis, func, num_splits, kwargs, maintain_partitioning, *partitions

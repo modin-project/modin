@@ -32,31 +32,6 @@ class PandasOnDaskFrameAxisPartition(PandasFrameAxisPartition):
     partition_type = PandasOnDaskFramePartition
     instance_type = Future
 
-    def broadcast_apply(self, rt_axis_parts, axis, apply_func, other_name):
-        def map_func(df, others):
-            other = pandas.concat(others, axis=axis ^ 1)
-            return apply_func(df, **{other_name: other})
-
-        client = get_client()
-        results = [
-            client.submit(
-                deploy_dask_func,
-                map_func,
-                block,
-                rt_axis_parts[i].list_of_blocks
-                if axis
-                else rt_axis_parts.list_of_blocks,
-                pure=False,
-            )
-            for i, block in enumerate(self.list_of_blocks)
-        ]
-        partitions = [
-            client.submit(lambda l: l[j], results[i], pure=False)
-            for i in range(len(results))
-            for j in range(4)
-        ]
-        return self._wrap_partitions(partitions)
-
     @classmethod
     def deploy_axis_func(
         cls, axis, func, num_splits, kwargs, maintain_partitioning, *partitions

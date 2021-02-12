@@ -17,7 +17,7 @@ from modin.data_management.utils import length_fn_pandas, width_fn_pandas
 from modin.engines.base.frame.partition import BaseFramePartition
 
 from distributed.client import get_client
-from distributed.client import Future
+from distributed import Future
 from distributed.utils import get_ip
 import cloudpickle as pkl
 

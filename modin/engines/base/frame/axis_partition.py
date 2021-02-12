@@ -130,9 +130,9 @@ class BaseFrameAxisPartition(ABC):  # pragma: no cover
 
         Notes
         -----
-        In case get_ip=True, list containing tuples of node ip addresses and
+        If `get_ip=True`, list of tuples of node ip addresses and
         Ray.ObjectRef/Dask.Future to unwrapped partitions, respectively, is returned
-        if Ray/Dask is used as an engine.
+        if Ray/Dask is used as an engine (i.e. [(str, Ray.ObjectRef/Dask.Future), ...]).
         """
         if squeeze and len(self.list_of_blocks) == 1:
             if get_ip:
