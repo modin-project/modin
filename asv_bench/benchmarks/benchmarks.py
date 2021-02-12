@@ -580,3 +580,22 @@ class TimeDescribe:
 
     def time_describe(self, shape):
         execute(self.df.describe())
+
+
+class TimeProperties:
+    param_names = ["shape"]
+    params = [
+        UNARY_OP_DATA_SIZE[ASV_DATASET_SIZE],
+    ]
+
+    def setup(self, shape):
+        self.df = generate_dataframe(ASV_USE_IMPL, "int", *shape, RAND_LOW, RAND_HIGH)
+
+    def time_shape(self, shape):
+        return self.df.shape
+
+    def time_columns(self, shape):
+        return self.df.columns
+
+    def time_index(self, shape):
+        return self.df.index
