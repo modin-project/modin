@@ -14,6 +14,7 @@
 import pandas
 
 from modin.engines.base.io import BaseIO
+from ray.util.queue import Queue
 
 
 class RayIO(BaseIO):
@@ -42,5 +43,63 @@ class RayIO(BaseIO):
             return pandas.DataFrame()
 
         result = qc._modin_frame._apply_full_axis(1, func, new_index=[], new_columns=[])
+        # blocking operation
+        result.to_pandas()
+
+    @staticmethod
+    def _to_csv_check_support(kwargs):
+        path_or_buf = kwargs["path_or_buf"]
+        compression = kwargs["compression"]
+        if not isinstance(path_or_buf, str):
+            return False
+
+        if compression is None or not compression == "infer":
+            return False
+
+        if any((path_or_buf.endswith(ext) for ext in [".gz", ".bz2", ".zip", ".xz"])):
+            return False
+
+        return True
+
+    @classmethod
+    def to_csv(cls, qc, **kwargs):
+        if not cls._to_csv_check_support(kwargs):
+            return BaseIO.to_csv(qc, **kwargs)
+
+        queue = Queue(maxsize=1)
+
+        def func(df, **kw):
+            if kw["partition_idx"] != 0:
+                if "w" in kwargs["mode"]:
+                    kwargs["mode"] = kwargs["mode"].replace("w", "a")
+                kwargs["header"] = False
+
+            path_or_buf = kwargs["path_or_buf"]
+            kwargs["path_or_buf"] = None
+
+            content = df.to_csv(**kwargs)
+
+            while True:
+                get_value = queue.get(block=True)
+                if get_value == kw["partition_idx"]:
+                    break
+                queue.put(get_value)
+
+            with open(path_or_buf, mode=kwargs["mode"]) as _f:
+                _f.write(content)
+
+            queue.put(get_value + 1)
+
+            return pandas.DataFrame()
+
+        queue.put(0)
+        result = qc._modin_frame.broadcast_apply_full_axis(
+            1,
+            func,
+            other=None,
+            new_index=[],
+            new_columns=[],
+            enumerate_partitions=True,
+        )
         # blocking operation
         result.to_pandas()

@@ -25,7 +25,6 @@ from modin.engines.ray.task_wrapper import RayTask
 from modin.config import NPartitions
 
 import ray
-from ray.util.queue import Queue
 
 
 @ray.remote
@@ -172,45 +171,6 @@ class ExperimentalPandasOnRayIO(PandasOnRayIO):
         return cls.query_compiler_cls(
             cls.frame_cls(np.array(partition_ids), new_index, cols_names)
         )
-
-    @classmethod
-    def to_csv(cls, qc, **kwargs):
-        queue = Queue(maxsize=1)
-
-        def func(df, **kw):
-            if kw["partition_idx"] != 0:
-                if "w" in kwargs["mode"]:
-                    kwargs["mode"] = kwargs["mode"].replace("w", "a")
-                kwargs["header"] = False
-
-            if isinstance(kwargs["path_or_buf"], str):
-                path_or_buf = kwargs["path_or_buf"]
-                kwargs["path_or_buf"] = None
-
-            content = df.to_csv(**kwargs)
-
-            while True:
-                get_value = queue.get(block=True)
-                if get_value == kw["partition_idx"]:
-                    break
-                queue.put(get_value)
-
-            with open(path_or_buf, mode=kwargs["mode"]) as _f:
-                _f.write(content)
-            queue.put(get_value + 1)
-
-            return pandas.DataFrame()
-
-        queue.put(0)
-        result = qc._modin_frame.broadcast_apply_full_axis(
-            1,
-            func,
-            other=None,
-            new_index=[],
-            new_columns=[],
-            enumerate_partitions=True,
-        )
-        result.to_pandas()
 
 
 @ray.remote
