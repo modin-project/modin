@@ -43,6 +43,9 @@ class BaseReadCsv:
 
         return test_filenames
 
+    def setup(self, test_filenames, shape, *args, **kwargs):
+        self.data_id = get_array_id(shape)
+
 
 class TimeReadCsvSkiprows(BaseReadCsv):
     param_names = ["shape", "skiprows"]
@@ -58,7 +61,5 @@ class TimeReadCsvSkiprows(BaseReadCsv):
 
     def time_skiprows(self, test_filenames, shape, skiprows):
         execute(
-            IMPL[ASV_USE_IMPL].read_csv(
-                test_filenames[get_array_id(shape)], skiprows=skiprows
-            )
+            IMPL[ASV_USE_IMPL].read_csv(test_filenames[self.data_id], skiprows=skiprows)
         )
