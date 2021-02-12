@@ -53,6 +53,9 @@ class RayIO(BaseIO):
         if not isinstance(path_or_buf, str):
             return False
 
+        if "r" in kwargs["mode"] and "+" in kwargs["mode"]:
+            return False
+
         if compression is None or not compression == "infer":
             return False
 
@@ -66,6 +69,8 @@ class RayIO(BaseIO):
         if not cls._to_csv_check_support(kwargs):
             return BaseIO.to_csv(qc, **kwargs)
 
+        # The partition id will be added to the queue, for which the moment
+        # of writing to the file has come
         queue = Queue(maxsize=1)
 
         def func(df, **kw):

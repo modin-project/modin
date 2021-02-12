@@ -950,6 +950,23 @@ class TestCsv:
             **kwargs,
         )
 
+    @pytest.mark.parametrize("header", [False, True])
+    @pytest.mark.parametrize("mode", ["w", "wb+"])
+    def test_to_csv(self, header, mode):
+        df = generate_dataframe()
+
+        unique_filename = get_unique_filename()
+        df.to_csv(unique_filename, header=header, mode=mode)
+
+        try:
+            kwargs = {"index_col": 0}
+            if not header:
+                kwargs["names"] = df.columns
+            read_df = pd.read_csv(unique_filename, **kwargs)
+            df_equals(df, read_df)
+        finally:
+            os.remove(unique_filename)
+
     def test_dataframe_to_csv(self, request):
         if request.config.getoption("--simulate-cloud").lower() != "off":
             pytest.skip(
