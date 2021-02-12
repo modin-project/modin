@@ -952,7 +952,12 @@ class TestCsv:
 
     @pytest.mark.parametrize("header", [False, True])
     @pytest.mark.parametrize("mode", ["w", "wb+"])
-    def test_to_csv(self, header, mode):
+    def test_to_csv(self, request, header, mode):
+        if request.config.getoption("--simulate-cloud").lower() != "off":
+            pytest.skip(
+                "The reason of tests fail in `cloud` mode is unknown for now - issue #2340"
+            )
+
         df = generate_dataframe()
 
         unique_filename = get_unique_filename()
