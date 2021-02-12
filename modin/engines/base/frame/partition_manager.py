@@ -269,7 +269,6 @@ class BaseFrameManager(ABC):
         apply_indices=None,
         enumerate_partitions=False,
         lengths=None,
-        queue=None,
     ):
         """
         Broadcast the right partitions to left and apply a function along full axis.
@@ -325,7 +324,6 @@ class BaseFrameManager(ABC):
             [
                 left_partitions[i].apply(
                     preprocessed_map_func,
-                    queue=queue,
                     **kw,
                     **({"partition_idx": idx} if enumerate_partitions else {}),
                 )

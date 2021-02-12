@@ -177,7 +177,7 @@ class ExperimentalPandasOnRayIO(PandasOnRayIO):
     def to_csv(cls, qc, **kwargs):
         queue = Queue(maxsize=1)
 
-        def func(df, queue, **kw):
+        def func(df, **kw):
             if kw["partition_idx"] != 0:
                 if "w" in kwargs["mode"]:
                     kwargs["mode"] = kwargs["mode"].replace("w", "a")
@@ -209,7 +209,6 @@ class ExperimentalPandasOnRayIO(PandasOnRayIO):
             new_index=[],
             new_columns=[],
             enumerate_partitions=True,
-            queue=queue,
         )
         result.to_pandas()
 
