@@ -49,9 +49,11 @@ API
 It is currently supported the following API:
 
 .. automodule:: modin.distributed.dataframe.pandas
+  :noindex:
   :members: unwrap_partitions
 
 .. automodule:: modin.distributed.dataframe.pandas
+  :noindex:
   :members: from_partitions
 
 Running an example with pandas partition API
@@ -63,11 +65,13 @@ Before you run this, please make sure you follow the instructions listed above.
 
   import modin.pandas as pd
   from modin.distributed.dataframe.pandas import unwrap_partitions, from_partitions
-  df = pd.read_csv("/path/to/your/file")
-  partitions = unwrap_partitions(df, axis=0, bind_ip=True)
+  import numpy as np
+  data = np.random.randint(0, 100, size=(2 ** 10, 2 ** 8))
+  df = pd.DataFrame(data)
+  partitions = unwrap_partitions(df, axis=0, get_ip=True)
   print(partitions)
   # Also, you can create Modin DataFrame from remote partitions including their IPs
-  new_df = from_partitions(partitions, 0)
+  new_df = from_partitions(partitions, axis=0)
   print(new_df)
 
 
