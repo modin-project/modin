@@ -596,9 +596,8 @@ class BaseFrameManager(ABC):
 
             pbar = tqdm_notebook(
                 total=round(update_count),
-                desc="Building DataFrame",
+                desc="Distributing Dataframe",
                 bar_format=bar_format,
-                leave=False,
             )
         else:
             pbar = None

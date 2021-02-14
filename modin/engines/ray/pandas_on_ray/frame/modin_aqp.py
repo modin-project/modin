@@ -58,7 +58,6 @@ def call_progress_bar(result_parts, line_no):
             total=len(futures),
             desc="Estimated completion of line " + str(line_no),
             bar_format=bar_format,
-            leave=False,
         )
     bar_lock.release()
 
