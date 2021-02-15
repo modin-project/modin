@@ -17,10 +17,8 @@
 # define `MODIN_ASV_USE_IMPL` env var to choose library for using in performance
 # measurements
 
-import os
 import modin.pandas as pd
 import numpy as np
-import pandas
 
 from .utils import (
     generate_dataframe,
@@ -29,70 +27,14 @@ from .utils import (
     random_string,
     random_columns,
     random_booleans,
+    ASV_USE_IMPL,
+    ASV_DATASET_SIZE,
+    BINARY_OP_DATA_SIZE,
+    UNARY_OP_DATA_SIZE,
+    GROUPBY_NGROUPS,
+    IMPL,
+    execute,
 )
-
-try:
-    from modin.config import NPartitions
-
-    NPARTITIONS = NPartitions.get()
-except ImportError:
-    NPARTITIONS = pd.DEFAULT_NPARTITIONS
-
-try:
-    from modin.config import TestDatasetSize, AsvImplementation
-
-    ASV_USE_IMPL = AsvImplementation.get()
-    ASV_DATASET_SIZE = TestDatasetSize.get() or "Small"
-except ImportError:
-    # The same benchmarking code can be run for different versions of Modin, so in
-    # case of an error importing important variables, we'll just use predefined values
-    ASV_USE_IMPL = os.environ.get("MODIN_ASV_USE_IMPL", "modin")
-    ASV_DATASET_SIZE = os.environ.get("MODIN_TEST_DATASET_SIZE", "Small")
-
-assert ASV_USE_IMPL in ("modin", "pandas")
-
-BINARY_OP_DATA_SIZE = {
-    "Big": [
-        ((5000, 5000), (5000, 5000)),
-        # the case extremely inefficient
-        # ((20, 500_000), (10, 1_000_000)),
-        ((500_000, 20), (1_000_000, 10)),
-    ],
-    "Small": [
-        ((250, 250), (250, 250)),
-        ((20, 10_000), (10, 25_000)),
-        ((10_000, 20), (25_000, 10)),
-    ],
-}
-
-UNARY_OP_DATA_SIZE = {
-    "Big": [
-        (5000, 5000),
-        # the case extremely inefficient
-        # (10, 1_000_000),
-        (1_000_000, 10),
-    ],
-    "Small": [
-        (250, 250),
-        (10, 10_000),
-        (10_000, 10),
-    ],
-}
-
-GROUPBY_NGROUPS = {
-    "Big": 100,
-    "Small": 5,
-}
-
-IMPL = {
-    "modin": pd,
-    "pandas": pandas,
-}
-
-
-def execute(df):
-    "Make sure the calculations are done."
-    return df.shape, df.dtypes
 
 
 class BaseTimeGroupBy:
