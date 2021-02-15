@@ -180,13 +180,13 @@ def inter_df_math_helper_one_side(modin_series, pandas_series, op):
         pass
 
 
-def create_test_series(vals, sort=False):
+def create_test_series(vals, sort=False, **kwargs):
     if isinstance(vals, dict):
-        modin_series = pd.Series(vals[next(iter(vals.keys()))])
-        pandas_series = pandas.Series(vals[next(iter(vals.keys()))])
+        modin_series = pd.Series(vals[next(iter(vals.keys()))], **kwargs)
+        pandas_series = pandas.Series(vals[next(iter(vals.keys()))], **kwargs)
     else:
-        modin_series = pd.Series(vals)
-        pandas_series = pandas.Series(vals)
+        modin_series = pd.Series(vals, **kwargs)
+        pandas_series = pandas.Series(vals, **kwargs)
     if sort:
         modin_series = modin_series.sort_values().reset_index(drop=True)
         pandas_series = pandas_series.sort_values().reset_index(drop=True)
@@ -524,6 +524,22 @@ def test___setitem__(data):
         modin_series[key] = 0
         pandas_series[key] = 0
         df_equals(modin_series, pandas_series)
+
+
+@pytest.mark.parametrize(
+    "key",
+    [
+        pytest.param(slice(1, 3), id="numeric_slice"),
+        pytest.param(slice("a", "c"), id="index_based_slice"),
+        pytest.param(["a", "c", "e"], id="list_of_labels"),
+        pytest.param([True, False, True, False, True], id="boolean_mask"),
+    ],
+)
+def test___setitem___non_hashable(key):
+    md_sr, pd_sr = create_test_series([1, 2, 3, 4, 5], index=["a", "b", "c", "d", "e"])
+    md_sr[key] = 10
+    pd_sr[key] = 10
+    df_equals(md_sr, pd_sr)
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)

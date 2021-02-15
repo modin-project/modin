@@ -285,11 +285,16 @@ class Series(BasePandasDataset):
         )
 
     def __setitem__(self, key, value):
-        if key not in self.keys():
-            raise KeyError(key)
-        self._create_or_update_from_compiler(
-            self._query_compiler.setitem(1, key, value), inplace=True
-        )
+        if isinstance(key, slice) and (
+            isinstance(key.start, int) or isinstance(key.stop, int)
+        ):
+            # There could be two type of slices:
+            #   - Location based slice (1:5)
+            #   - Labels based slice ("a":"e")
+            # For location based slice we're going to `iloc`, since `loc` can't manage it.
+            self.iloc[key] = value
+        else:
+            self.loc[key] = value
 
     def __sub__(self, right):
         return self.sub(right)
