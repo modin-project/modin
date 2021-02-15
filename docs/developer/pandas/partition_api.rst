@@ -1,11 +1,44 @@
-Pandas Partition API in Modin
-=============================
+Partition API in Modin
+======================
 
-If you are working with a Modin Dataframe, you can unwrap its remote partitions
+When you are working with a Modin Dataframe, you can unwrap its remote partitions
 to get the raw future objects compatible with the execution engine (e.g. ``ray.ObjectRef`` for Ray).
-You can use this API to get the IPs of the nodes that hold these objects as well. In that case you can pass the partitions
-having needed IPs to your function. It can help with minimazing of data movement between nodes. In addition to
-unwrapping of the remote partitions we also provide API to construct Modin DataFrame from them.
+In addition to unwrapping of the remote partitions we also provide API to construct Modin DataFrame from them.
+
+API
+---
+
+It is currently supported the following API:
+
+.. automodule:: modin.distributed.dataframe.pandas
+  :noindex:
+  :members: unwrap_partitions
+
+.. automodule:: modin.distributed.dataframe.pandas
+  :noindex:
+  :members: from_partitions
+
+Running an example with Partition API
+-------------------------------------
+
+.. code-block:: python
+
+  import modin.pandas as pd
+  from modin.distributed.dataframe.pandas import unwrap_partitions, from_partitions
+  import numpy as np
+  data = np.random.randint(0, 100, size=(2 ** 10, 2 ** 8))
+  df = pd.DataFrame(data)
+  partitions = unwrap_partitions(df, axis=0)
+  print(partitions)
+  # Also, you can create Modin DataFrame from remote partitions
+  new_df = from_partitions(partitions, axis=0)
+  print(new_df)
+
+Partition IPs Usage
+-------------------
+
+Also, you can use the mentioned above API to get the IPs of the nodes that hold the partitions (``get_ip=True``).
+In that case you can pass the partitions having needed IPs to your function. It can help with minimazing of data movement between nodes.
 
 Ray engine
 ----------
@@ -19,12 +52,6 @@ Dask engine
 -----------
 There is no mentioned above issue for Modin on ``Dask`` engine with ``pandas`` backend because ``Dask`` saves any objects
 in the worker process that processes a function (please, refer to `Dask documentation`_ for more information).
-
-Install Modin Pandas Partition API
-----------------------------------
-
-Modin now comes with all the dependencies for pandas partition API functionality by default! See
-the :doc:`installation page </installation>` for more information on installing Modin.
 
 How to handle Ray objects that are lower than 100 kB
 ----------------------------------------------------
@@ -42,37 +69,6 @@ When specifying ``nbytes`` equal to 0, all the objects will be saved to shared-m
 * You can also start Ray as follows: ``ray start --head --system-config='{"max_direct_call_object_size":<nbytes>}'``.
 
 Note that when specifying the threshold the performance of some Modin operations may change.
-
-API
----
-
-It is currently supported the following API:
-
-.. automodule:: modin.distributed.dataframe.pandas
-  :noindex:
-  :members: unwrap_partitions
-
-.. automodule:: modin.distributed.dataframe.pandas
-  :noindex:
-  :members: from_partitions
-
-Running an example with pandas partition API
---------------------------------------------
-
-Before you run this, please make sure you follow the instructions listed above.
-
-.. code-block:: python
-
-  import modin.pandas as pd
-  from modin.distributed.dataframe.pandas import unwrap_partitions, from_partitions
-  import numpy as np
-  data = np.random.randint(0, 100, size=(2 ** 10, 2 ** 8))
-  df = pd.DataFrame(data)
-  partitions = unwrap_partitions(df, axis=0, get_ip=True)
-  print(partitions)
-  # Also, you can create Modin DataFrame from remote partitions including their IPs
-  new_df = from_partitions(partitions, axis=0)
-  print(new_df)
 
 
 .. _`Ray documentation`: https://docs.ray.io/en/master/index.html#
