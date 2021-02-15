@@ -11,6 +11,7 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
+import io
 import pandas
 
 from modin.engines.base.io import BaseIO
@@ -53,6 +54,7 @@ class RayIO(BaseIO):
         if not isinstance(path_or_buf, str):
             return False
 
+        # case when the pointer is placed at the beginning of the file.
         if "r" in kwargs["mode"] and "+" in kwargs["mode"]:
             return False
 
@@ -80,9 +82,13 @@ class RayIO(BaseIO):
                 kwargs["header"] = False
 
             path_or_buf = kwargs["path_or_buf"]
-            kwargs["path_or_buf"] = None
+            if "b" in kwargs["mode"]:
+                kwargs["path_or_buf"] = io.BytesIO()
+            else:
+                kwargs["path_or_buf"] = io.StringIO()
 
-            content = df.to_csv(**kwargs)
+            df.to_csv(**kwargs)
+            content = kwargs["path_or_buf"].getvalue()
 
             while True:
                 get_value = queue.get(block=True)
