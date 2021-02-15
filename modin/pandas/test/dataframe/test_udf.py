@@ -42,6 +42,18 @@ NPartitions.put(4)
 matplotlib.use("Agg")
 
 
+def test_agg_dict():
+    md_df, pd_df = create_test_dfs(test_data_values[0])
+    agg_dict = {pd_df.columns[0]: "sum", pd_df.columns[-1]: ("sum", "count")}
+    eval_general(md_df, pd_df, lambda df: df.agg(agg_dict), raising_exceptions=True)
+
+    agg_dict = {
+        "new_col1": (pd_df.columns[0], "sum"),
+        "new_col2": (pd_df.columns[-1], "count"),
+    }
+    eval_general(md_df, pd_df, lambda df: df.agg(**agg_dict), raising_exceptions=True)
+
+
 @pytest.mark.parametrize("axis", [0, 1])
 @pytest.mark.parametrize(
     "func",
