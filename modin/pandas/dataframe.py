@@ -1396,6 +1396,35 @@ class DataFrame(BasePandasDataset):
         new_query_compiler = self._query_compiler.query(expr, **kwargs)
         return self._create_or_update_from_compiler(new_query_compiler, inplace)
 
+    def reindex(
+        self,
+        labels=None,
+        index=None,
+        columns=None,
+        axis=None,
+        method=None,
+        copy=True,
+        level=None,
+        fill_value=np.nan,
+        limit=None,
+        tolerance=None,
+    ):
+        axis = self._get_axis_number(axis)
+        if axis == 0 and labels is not None:
+            index = labels
+        elif labels is not None:
+            columns = labels
+        return super(DataFrame, self).reindex(
+            index=index,
+            columns=columns,
+            method=method,
+            copy=copy,
+            level=level,
+            fill_value=fill_value,
+            limit=limit,
+            tolerance=tolerance,
+        )
+
     def rename(
         self,
         mapper=None,
