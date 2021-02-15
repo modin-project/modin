@@ -197,7 +197,7 @@ ACW000116041980TAVG -340  k -500  k  -35  k  524  k 1071  k 1534  k 1655  k 1502
         f.write(fwf_data)
 
 
-def eval_to_file(modin_obj, pandas_obj, fn, extension, **fn_kwargs):
+def eval_to_file(modin_obj, pandas_obj, fn, extension, compare=None, **fn_kwargs):
     """Helper function to test `to_<extension>` methods.
 
     Args:
@@ -213,7 +213,12 @@ def eval_to_file(modin_obj, pandas_obj, fn, extension, **fn_kwargs):
         getattr(modin_obj, fn)(unique_filename_modin, **fn_kwargs)
         getattr(pandas_obj, fn)(unique_filename_pandas, **fn_kwargs)
 
-        assert assert_files_eq(unique_filename_modin, unique_filename_pandas)
+        if compare:
+            new_modin_df = pd.read_csv(unique_filename_modin)
+            new_pandas_df = pandas.read_csv(unique_filename_pandas)
+            df_equals(new_modin_df, new_pandas_df)
+        else:
+            assert assert_files_eq(unique_filename_modin, unique_filename_pandas)
     finally:
         teardown_test_files([unique_filename_modin, unique_filename_pandas])
 
@@ -980,7 +985,11 @@ class TestCsv:
         pandas_df = pandas.read_csv(pytest.csvs_names["test_read_csv_regular"])
         modin_df = pd.DataFrame(pandas_df)
         eval_to_file(
-            modin_obj=modin_df, pandas_obj=pandas_df, fn="to_csv", extension="csv"
+            modin_obj=modin_df,
+            pandas_obj=pandas_df,
+            fn="to_csv",
+            extension="csv",
+            compare="read_csv",
         )
 
     def test_series_to_csv(self, request):
@@ -993,7 +1002,11 @@ class TestCsv:
         ).squeeze()
         modin_s = pd.Series(pandas_s)
         eval_to_file(
-            modin_obj=modin_s, pandas_obj=pandas_s, fn="to_csv", extension="csv"
+            modin_obj=modin_s,
+            pandas_obj=pandas_s,
+            fn="to_csv",
+            extension="csv",
+            compare="read_csv",
         )
 
     def test_read_csv_within_decorator(self):
