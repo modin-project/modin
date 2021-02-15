@@ -82,7 +82,8 @@ class RayIO(BaseIO):
                 kwargs["header"] = False
 
             path_or_buf = kwargs["path_or_buf"]
-            if "b" in kwargs["mode"]:
+            is_binary = "b" in kwargs["mode"]
+            if is_binary:
                 kwargs["path_or_buf"] = io.BytesIO()
             else:
                 kwargs["path_or_buf"] = io.StringIO()
@@ -96,7 +97,11 @@ class RayIO(BaseIO):
                     break
                 queue.put(get_value)
 
-            with open(path_or_buf, mode=kwargs["mode"]) as _f:
+            open_kwargs = {"mode": kwargs["mode"]}
+            if not is_binary:
+                open_kwargs["newline"] = ""
+
+            with open(path_or_buf, **open_kwargs) as _f:
                 _f.write(content)
 
             queue.put(get_value + 1)

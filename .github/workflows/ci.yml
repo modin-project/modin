@@ -548,12 +548,6 @@ jobs:
       - shell: bash -l {0}
         run: python -m pytest modin/pandas/test/test_io.py
         if: matrix.part == 3
-      - name: Publish test IO artifact
-        uses: actions/upload-artifact@master
-        with:
-          name: IO-problem-files
-          path: modin/pandas/test/io_tests_data/
-        if: matrix.part == 3 && failure()
       - shell: bash -l {0}
         run: choco install codecov
       - shell: bash -l {0}

@@ -209,12 +209,13 @@ def eval_to_file(modin_obj, pandas_obj, fn, extension, **fn_kwargs):
     unique_filename_modin = get_unique_filename(extension=extension)
     unique_filename_pandas = get_unique_filename(extension=extension)
 
-    getattr(modin_obj, fn)(unique_filename_modin, **fn_kwargs)
-    getattr(pandas_obj, fn)(unique_filename_pandas, **fn_kwargs)
+    try:
+        getattr(modin_obj, fn)(unique_filename_modin, **fn_kwargs)
+        getattr(pandas_obj, fn)(unique_filename_pandas, **fn_kwargs)
 
-    assert assert_files_eq(unique_filename_modin, unique_filename_pandas)
-
-    teardown_test_files([unique_filename_modin, unique_filename_pandas])
+        assert assert_files_eq(unique_filename_modin, unique_filename_pandas)
+    finally:
+        teardown_test_files([unique_filename_modin, unique_filename_pandas])
 
 
 @pytest.mark.usefixtures("TestReadCSVFixture")
