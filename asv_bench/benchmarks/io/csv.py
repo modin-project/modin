@@ -23,7 +23,7 @@ from ..utils import (
     UNARY_OP_DATA_SIZE,
     IMPL,
     execute,
-    get_array_id,
+    get_shape_id,
 )
 
 # ray init
@@ -36,15 +36,15 @@ class BaseReadCsv:
     def setup_cache(self, test_filename="io_test_file"):
         test_filenames = {}
         for shape in UNARY_OP_DATA_SIZE[ASV_DATASET_SIZE]:
-            data_id = get_array_id(shape)
-            test_filenames[data_id] = f"{test_filename}_{data_id}.csv"
+            shape_id = get_shape_id(shape)
+            test_filenames[shape_id] = f"{test_filename}_{shape_id}.csv"
             df = generate_dataframe("pandas", "str_int", *shape, RAND_LOW, RAND_HIGH)
-            df.to_csv(test_filenames[data_id], index=False)
+            df.to_csv(test_filenames[shape_id], index=False)
 
         return test_filenames
 
     def setup(self, test_filenames, shape, *args, **kwargs):
-        self.data_id = get_array_id(shape)
+        self.shape_id = get_shape_id(shape)
 
 
 class TimeReadCsvSkiprows(BaseReadCsv):
@@ -61,5 +61,7 @@ class TimeReadCsvSkiprows(BaseReadCsv):
 
     def time_skiprows(self, test_filenames, shape, skiprows):
         execute(
-            IMPL[ASV_USE_IMPL].read_csv(test_filenames[self.data_id], skiprows=skiprows)
+            IMPL[ASV_USE_IMPL].read_csv(
+                test_filenames[self.shape_id], skiprows=skiprows
+            )
         )

@@ -211,5 +211,5 @@ def execute(df):
     return df.shape, df.dtypes
 
 
-def get_array_id(array):
+def get_shape_id(array):
     return "_".join([str(element) for element in array])
