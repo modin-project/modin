@@ -517,22 +517,22 @@ class BasePandasDataset(object):
 
     agg = aggregate
 
-    def _aggregate(self, arg, *args, **kwargs):
+    def _aggregate(self, func, *args, **kwargs):
         _axis = kwargs.pop("_axis", 0)
         kwargs.pop("_level", None)
 
-        if isinstance(arg, str):
+        if isinstance(func, str):
             kwargs.pop("is_transform", None)
-            return self._string_function(arg, *args, **kwargs)
+            return self._string_function(func, *args, **kwargs)
 
         # Dictionaries have complex behavior because they can be renamed here.
-        elif isinstance(arg, dict):
-            return self._default_to_pandas("agg", arg, *args, **kwargs)
-        elif is_list_like(arg) or callable(arg):
+        elif func is None or isinstance(func, dict):
+            return self._default_to_pandas("agg", func, *args, **kwargs)
+        elif is_list_like(func) or callable(func):
             kwargs.pop("is_transform", None)
-            return self.apply(arg, axis=_axis, args=args, **kwargs)
+            return self.apply(func, axis=_axis, args=args, **kwargs)
         else:
-            raise TypeError("type {} is not callable".format(type(arg)))
+            raise TypeError("type {} is not callable".format(type(func)))
 
     def _string_function(self, func, *args, **kwargs):
         assert isinstance(func, str)
