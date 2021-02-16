@@ -2008,6 +2008,9 @@ class DataFrame(BasePandasDataset):
         object.__setattr__(self, key, value)
 
     def __setitem__(self, key, value):
+        if isinstance(key, slice):
+            return self._setitem_slice(key, value)
+
         if hashable(key) and key not in self.columns:
             if isinstance(value, Series) and len(self.columns) == 0:
                 self._query_compiler = value._query_compiler.copy()
@@ -2038,8 +2041,7 @@ class DataFrame(BasePandasDataset):
             self.insert(loc=len(self.columns), column=key, value=value)
             return
 
-        if not isinstance(key, str):
-
+        if not hashable(key):
             if isinstance(key, DataFrame) or isinstance(key, np.ndarray):
                 if isinstance(key, np.ndarray):
                     if key.shape != self.shape:
@@ -2047,7 +2049,7 @@ class DataFrame(BasePandasDataset):
                     key = DataFrame(key, columns=self.columns)
                 return self.mask(key, value, inplace=True)
 
-            def setitem_without_string_columns(df):
+            def setitem_unhashable_key(df):
                 # Arrow makes memory-mapped objects immutable, so copy will allow them
                 # to be mutable again.
                 df = df.copy(True)
@@ -2055,7 +2057,7 @@ class DataFrame(BasePandasDataset):
                 return df
 
             return self._update_inplace(
-                self._default_to_pandas(setitem_without_string_columns)._query_compiler
+                self._default_to_pandas(setitem_unhashable_key)._query_compiler
             )
         if is_list_like(value):
             if isinstance(value, (pandas.DataFrame, DataFrame)):

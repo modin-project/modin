@@ -1215,19 +1215,16 @@ def test___setitem__(data):
         df_equals(modin_df, pandas_df)
         assert isinstance(modin_df["new_col"][0], type(pandas_df["new_col"][0]))
 
+    modin_df[1:5] = 10
+    pandas_df[1:5] = 10
+    df_equals(modin_df, pandas_df)
+
     # Transpose test
     modin_df = pd.DataFrame(data).T
     pandas_df = pandas.DataFrame(data).T
 
-    # We default to pandas on non-string column names
-    if not all(isinstance(c, str) for c in modin_df.columns):
-        with pytest.warns(UserWarning):
-            modin_df[modin_df.columns[0]] = 0
-    else:
-        modin_df[modin_df.columns[0]] = 0
-
+    modin_df[modin_df.columns[0]] = 0
     pandas_df[pandas_df.columns[0]] = 0
-
     df_equals(modin_df, pandas_df)
 
     modin_df.columns = [str(i) for i in modin_df.columns]
@@ -1240,7 +1237,10 @@ def test___setitem__(data):
 
     modin_df[modin_df.columns[0]][modin_df.index[0]] = 12345
     pandas_df[pandas_df.columns[0]][pandas_df.index[0]] = 12345
+    df_equals(modin_df, pandas_df)
 
+    modin_df[1:5] = 10
+    pandas_df[1:5] = 10
     df_equals(modin_df, pandas_df)
 
 

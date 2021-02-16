@@ -529,14 +529,31 @@ def test___setitem__(data):
 @pytest.mark.parametrize(
     "key",
     [
-        pytest.param(slice(1, 3), id="numeric_slice"),
-        pytest.param(slice("a", "c"), id="index_based_slice"),
-        pytest.param(["a", "c", "e"], id="list_of_labels"),
-        pytest.param([True, False, True, False, True], id="boolean_mask"),
+        pytest.param(lambda idx: slice(1, 3), id="location_based_slice"),
+        pytest.param(lambda idx: slice(idx[1], idx[-1]), id="index_based_slice"),
+        pytest.param(lambda idx: [idx[0], idx[2], idx[-1]], id="list_of_labels"),
+        pytest.param(
+            lambda idx: [True if i % 2 else False for i in range(len(idx))],
+            id="boolean_mask",
+        ),
     ],
 )
-def test___setitem___non_hashable(key):
-    md_sr, pd_sr = create_test_series([1, 2, 3, 4, 5], index=["a", "b", "c", "d", "e"])
+@pytest.mark.parametrize(
+    "index",
+    [
+        pytest.param(
+            lambda idx_len: [chr(x) for x in range(ord("a"), ord("a") + idx_len)],
+            id="str_index",
+        ),
+        pytest.param(lambda idx_len: list(range(1, idx_len + 1)), id="int_index"),
+    ],
+)
+def test___setitem___non_hashable(key, index):
+    data = np.arange(5)
+    index = index(len(data))
+    key = key(index)
+    md_sr, pd_sr = create_test_series(data, index=index)
+
     md_sr[key] = 10
     pd_sr[key] = 10
     df_equals(md_sr, pd_sr)

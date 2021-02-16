@@ -285,14 +285,8 @@ class Series(BasePandasDataset):
         )
 
     def __setitem__(self, key, value):
-        if isinstance(key, slice) and (
-            isinstance(key.start, int) or isinstance(key.stop, int)
-        ):
-            # There could be two type of slices:
-            #   - Location based slice (1:5)
-            #   - Labels based slice ("a":"e")
-            # For location based slice we're going to `iloc`, since `loc` can't manage it.
-            self.iloc[key] = value
+        if isinstance(key, slice):
+            self._setitem_slice(key, value)
         else:
             self.loc[key] = value
 
