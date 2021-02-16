@@ -39,20 +39,8 @@ DATASET_SIZE_DICT = {
     "Big": (2 ** 7, 2 ** 12),
 }
 
-# dataset sizes for IO operations
-DATASET_SIZE_DICT_IO = {
-    "Small": 64,
-    "Normal": 2000,
-    "Big": 20000,
-}
-
 # Size of test dataframes
 NCOLS, NROWS = DATASET_SIZE_DICT.get(TestDatasetSize.get(), DATASET_SIZE_DICT["Normal"])
-
-# Number of rows for IO test files
-NROWS_IO = DATASET_SIZE_DICT_IO.get(
-    TestDatasetSize.get(), DATASET_SIZE_DICT_IO["Small"]
-)
 
 # Range for values for test data
 RAND_LOW = 0
@@ -1091,7 +1079,7 @@ def dummy_decorator():
 def _make_csv_file(filenames):
     def _csv_file_maker(
         filename,
-        row_size=NROWS_IO,
+        row_size=NROWS,
         force=True,
         delimiter=",",
         encoding=None,
@@ -1159,9 +1147,6 @@ def _make_csv_file(filenames):
                 if compression != "infer"
                 else filename
             )
-            # create test data dir if it is not exists yet
-            if not os.path.exists(IO_OPS_DATA_DIR):
-                os.mkdir(IO_OPS_DATA_DIR)
             df.to_csv(
                 filename,
                 sep=delimiter,

@@ -279,7 +279,6 @@ class TestCsv:
             pytest.skip(
                 "The reason of tests fail in `cloud` mode is unknown for now - issue #2340"
             )
-
         eval_io(
             fn_name="read_csv",
             # read_csv kwargs
@@ -1001,11 +1000,14 @@ class TestCsv:
         unique_filename = get_unique_filename()
         make_csv_file(filename=unique_filename)
 
-        with open(unique_filename, mode=read_mode) as buffer:
-            df_pandas = pandas.read_csv(buffer)
-            buffer.seek(0)
-            df_modin = pd.read_csv(buffer)
-            df_equals(df_modin, df_pandas)
+        try:
+            with open(unique_filename, mode=read_mode) as buffer:
+                df_pandas = pandas.read_csv(buffer)
+                buffer.seek(0)
+                df_modin = pd.read_csv(buffer)
+                df_equals(df_modin, df_pandas)
+        finally:
+            teardown_test_files([unique_filename])
 
 
 class TestTable:
@@ -1716,14 +1718,17 @@ class TestFwf:
     def test_read_fwf_file_handle(self, request, read_mode):
         if request.config.getoption("--simulate-cloud").lower() != "off":
             pytest.skip("Cannot pickle file handles. See comments in PR #2625")
-        unique_filename = get_unique_filename("txt")
-        setup_fwf_file(filename=unique_filename)
+        unique_filename = get_unique_filename(extension="txt")
+        try:
+            setup_fwf_file(filename=unique_filename)
 
-        with open(unique_filename, mode=read_mode) as buffer:
-            df_pandas = pandas.read_fwf(buffer)
-            buffer.seek(0)
-            df_modin = pd.read_fwf(buffer)
-            df_equals(df_modin, df_pandas)
+            with open(unique_filename, mode=read_mode) as buffer:
+                df_pandas = pandas.read_fwf(buffer)
+                buffer.seek(0)
+                df_modin = pd.read_fwf(buffer)
+                df_equals(df_modin, df_pandas)
+        finally:
+            teardown_test_files([unique_filename])
 
 
 class TestGbq:

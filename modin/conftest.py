@@ -33,7 +33,12 @@ from modin.pandas.test.utils import (
     get_unique_filename,
     teardown_test_files,
     NROWS,
+    IO_OPS_DATA_DIR,
 )
+
+# create test data dir if it is not exists yet
+if not os.path.exists(IO_OPS_DATA_DIR):
+    os.mkdir(IO_OPS_DATA_DIR)
 
 
 def pytest_addoption(parser):
