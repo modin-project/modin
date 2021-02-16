@@ -19,7 +19,15 @@ from modin.utils import try_cast_to_pandas, hashable
 
 class GroupbyReduceFunction(MapReduceFunction):
     @classmethod
-    def call(cls, map_func, reduce_func, *call_args, **call_kwds):
+    def call(cls, map_func, reduce_func=None, **call_kwds):
+        if isinstance(map_func, str):
+
+            def build_fn(name):
+                return lambda df, *args, **kwargs: getattr(df, name)(*args, **kwargs)
+
+            map_func, reduce_func = map(build_fn, groupby_reduce_functions[map_func])
+        if reduce_func is None:
+            reduce_func = map_func
         assert not (
             isinstance(map_func, dict) ^ isinstance(reduce_func, dict)
         ) and not (
@@ -63,7 +71,7 @@ class GroupbyReduceFunction(MapReduceFunction):
         result = apply_func(
             df.groupby(by=by_part, axis=axis, **groupby_args), **map_args
         )
-        return result
+        return pandas.DataFrame(result)
 
     @classmethod
     def reduce(
@@ -102,7 +110,7 @@ class GroupbyReduceFunction(MapReduceFunction):
             insert_levels = partition_idx == 0 and (drop or method == "size")
             result.reset_index(drop=not insert_levels, inplace=True)
 
-        return result
+        return pandas.DataFrame(result)
 
     @classmethod
     def caller(
@@ -232,36 +240,12 @@ class GroupbyReduceFunction(MapReduceFunction):
 
 
 groupby_reduce_functions = {
-    "all": (
-        lambda df, *args, **kwargs: df.all(*args, **kwargs),
-        lambda df, *args, **kwargs: df.all(*args, **kwargs),
-    ),
-    "any": (
-        lambda df, *args, **kwargs: df.any(*args, **kwargs),
-        lambda df, *args, **kwargs: df.any(*args, **kwargs),
-    ),
-    "count": (
-        lambda df, *args, **kwargs: df.count(*args, **kwargs),
-        lambda df, *args, **kwargs: df.sum(*args, **kwargs),
-    ),
-    "max": (
-        lambda df, *args, **kwargs: df.max(*args, **kwargs),
-        lambda df, *args, **kwargs: df.max(*args, **kwargs),
-    ),
-    "min": (
-        lambda df, *args, **kwargs: df.min(*args, **kwargs),
-        lambda df, *args, **kwargs: df.min(*args, **kwargs),
-    ),
-    "prod": (
-        lambda df, *args, **kwargs: df.prod(*args, **kwargs),
-        lambda df, *args, **kwargs: df.prod(*args, **kwargs),
-    ),
-    "size": (
-        lambda df, *args, **kwargs: pandas.DataFrame(df.size(*args, **kwargs)),
-        lambda df, *args, **kwargs: df.sum(*args, **kwargs),
-    ),
-    "sum": (
-        lambda df, *args, **kwargs: df.sum(*args, **kwargs),
-        lambda df, *args, **kwargs: df.sum(*args, **kwargs),
-    ),
+    "all": ("all", "all"),
+    "any": ("any", "any"),
+    "count": ("count", "sum"),
+    "max": ("max", "max"),
+    "min": ("min", "min"),
+    "prod": ("prod", "prod"),
+    "size": ("size", "sum"),
+    "sum": ("sum", "sum"),
 }
