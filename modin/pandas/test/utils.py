@@ -648,6 +648,7 @@ def eval_general(
     check_exception_type=True,
     raising_exceptions=None,
     check_kwargs_callable=True,
+    md_extra_kwargs=None,
     **kwargs,
 ):
     if raising_exceptions:
@@ -689,6 +690,10 @@ def eval_general(
         md_kwargs[key] = md_value
         pd_kwargs[key] = pd_value
 
+        if md_extra_kwargs:
+            assert isinstance(md_extra_kwargs, dict)
+            md_kwargs.update(md_extra_kwargs)
+
     values = execute_callable(
         operation, md_kwargs=md_kwargs, pd_kwargs=pd_kwargs, inplace=__inplace__
     )
@@ -704,6 +709,7 @@ def eval_io(
     raising_exceptions=io_ops_bad_exc,
     check_kwargs_callable=True,
     modin_warning=None,
+    md_extra_kwargs=None,
     *args,
     **kwargs,
 ):
@@ -726,7 +732,10 @@ def eval_io(
         Exceptions that should be raised even if they are raised
         both by Pandas and Modin (check evaluated only if
         `check_exception_type` passed as `True`).
-    modin_warning: Warning that should be raised by Modin.
+    modin_warning: obj
+        Warning that should be raised by Modin.
+    md_extra_kwargs: dict
+        Modin operation specific kwargs.
     """
 
     def applyier(module, *args, **kwargs):
@@ -743,6 +752,7 @@ def eval_io(
             check_exception_type=check_exception_type,
             raising_exceptions=raising_exceptions,
             check_kwargs_callable=check_kwargs_callable,
+            md_extra_kwargs=md_extra_kwargs,
             *args,
             **kwargs,
         )
