@@ -41,6 +41,7 @@ from .utils import (
     create_test_dfs,
     COMP_TO_EXT,
     teardown_test_files,
+    generate_dataframe,
 )
 
 from modin.config import Engine, Backend, IsExperimental
