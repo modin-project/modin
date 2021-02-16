@@ -31,11 +31,12 @@ class GPUManager(object):
             result = func(df1, **kwargs)
         else:
             result = func(df1, df2, **kwargs)
-        return self.store_new_df(result)
+        return result
 
     def apply(self, first, other, func, **kwargs):
         df1 = self.cudf_dataframe_dict[first]
         if not isinstance(other, int):
+            assert(isinstance(other, ray.ObjectRef))
             df2 = ray.get(other)
         else:
             df2 = self.cudf_dataframe_dict[other]
