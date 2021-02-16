@@ -20,7 +20,6 @@ from modin.config import TestDatasetSize
 from modin.utils import to_pandas
 from modin.pandas.utils import from_arrow
 import pyarrow as pa
-import pyarrow.parquet as pq
 import os
 import shutil
 import sqlalchemy as sa
@@ -34,16 +33,14 @@ from .utils import (
     json_short_bytes,
     json_long_string,
     json_long_bytes,
-    random_state,
     eval_io,
     get_unique_filename,
-    get_random_string,
-    insert_lines_to_csv,
-    IO_OPS_DATA_DIR,
     io_ops_bad_exc,
     eval_io_from_str,
     dummy_decorator,
     create_test_dfs,
+    COMP_TO_EXT,
+    teardown_test_files,
 )
 
 from modin.config import Engine, Backend, IsExperimental
@@ -65,9 +62,6 @@ DATASET_SIZE_DICT = {
 # Number of rows in the test file
 NROWS = DATASET_SIZE_DICT.get(TestDatasetSize.get(), DATASET_SIZE_DICT["Small"])
 
-# Files compression to extension mapping
-COMP_TO_EXT = {"gzip": "gz", "bz2": "bz2", "xz": "xz", "zip": "zip"}
-
 TEST_DATA = {
     "col1": [0, 1, 2, 3],
     "col2": [4, 5, 6, 7],
@@ -75,66 +69,6 @@ TEST_DATA = {
     "col4": [12, 13, 14, 15],
     "col5": [0, 0, 0, 0],
 }
-
-if not os.path.exists(IO_OPS_DATA_DIR):
-    os.mkdir(IO_OPS_DATA_DIR)
-
-
-@pytest.fixture
-def make_parquet_file():
-    """Pytest fixture factory that makes a parquet file/dir for testing.
-
-    Yields:
-        Function that generates a parquet file/dir
-    """
-    filenames = []
-
-    def _make_parquet_file(
-        filename,
-        row_size=NROWS,
-        force=True,
-        directory=False,
-        partitioned_columns=[],
-    ):
-        """Helper function to generate parquet files/directories.
-
-        Args:
-            filename: The name of test file, that should be created.
-            row_size: Number of rows for the dataframe.
-            force: Create a new file/directory even if one already exists.
-            directory: Create a partitioned directory using pyarrow.
-            partitioned_columns: Create a partitioned directory using pandas.
-            Will be ignored if directory=True.
-        """
-        df = pandas.DataFrame(
-            {"col1": np.arange(row_size), "col2": np.arange(row_size)}
-        )
-        if os.path.exists(filename) and not force:
-            pass
-        elif directory:
-            if os.path.exists(filename):
-                shutil.rmtree(filename)
-            else:
-                os.mkdir(filename)
-            table = pa.Table.from_pandas(df)
-            pq.write_to_dataset(table, root_path=filename)
-        elif len(partitioned_columns) > 0:
-            df.to_parquet(filename, partition_cols=partitioned_columns)
-        else:
-            df.to_parquet(filename)
-
-        filenames.append(filename)
-
-    # Return function that generates csv files
-    yield _make_parquet_file
-
-    # Delete parquet file that was created
-    for path in filenames:
-        if os.path.exists(path):
-            if os.path.isdir(path):
-                shutil.rmtree(path)
-            else:
-                os.remove(path)
 
 
 def assert_files_eq(path1, path2):
@@ -146,195 +80,6 @@ def assert_files_eq(path1, path2):
             return True
         else:
             return False
-
-
-def teardown_test_file(test_path):
-    if os.path.exists(test_path):
-        # PermissionError can occure because of issue #2533
-        try:
-            os.remove(test_path)
-        except PermissionError:
-            pass
-
-
-def teardown_test_files(test_paths: list):
-    for path in test_paths:
-        teardown_test_file(path)
-
-
-def _make_csv_file(filenames):
-    def _csv_file_maker(
-        filename,
-        row_size=NROWS,
-        force=True,
-        delimiter=",",
-        encoding=None,
-        compression="infer",
-        additional_col_values=None,
-        remove_randomness=False,
-        add_blank_lines=False,
-        add_bad_lines=False,
-        add_nan_lines=False,
-        thousands_separator=None,
-        decimal_separator=None,
-        comment_col_char=None,
-        quoting=csv.QUOTE_MINIMAL,
-        quotechar='"',
-        doublequote=True,
-        escapechar=None,
-        line_terminator=None,
-    ):
-        if os.path.exists(filename) and not force:
-            pass
-        else:
-            dates = pandas.date_range("2000", freq="h", periods=row_size)
-            data = {
-                "col1": np.arange(row_size) * 10,
-                "col2": [str(x.date()) for x in dates],
-                "col3": np.arange(row_size) * 10,
-                "col4": [str(x.time()) for x in dates],
-                "col5": [get_random_string() for _ in range(row_size)],
-                "col6": random_state.uniform(low=0.0, high=10000.0, size=row_size),
-            }
-
-            if additional_col_values is not None:
-                assert isinstance(additional_col_values, (list, tuple))
-                data.update(
-                    {
-                        "col7": random_state.choice(
-                            additional_col_values, size=row_size
-                        ),
-                    }
-                )
-            df = pandas.DataFrame(data)
-            if remove_randomness:
-                df = df[["col1", "col2", "col3", "col4"]]
-            if add_nan_lines:
-                for i in range(0, row_size, row_size // (row_size // 10)):
-                    df.loc[i] = pandas.Series()
-            if comment_col_char:
-                char = comment_col_char if isinstance(comment_col_char, str) else "#"
-                df.insert(
-                    loc=0,
-                    column="col_with_comments",
-                    value=[char if (x + 2) == 0 else x for x in range(row_size)],
-                )
-
-            if thousands_separator:
-                for col_id in ["col1", "col3"]:
-                    df[col_id] = df[col_id].apply(
-                        lambda x: f"{x:,d}".replace(",", thousands_separator)
-                    )
-                df["col6"] = df["col6"].apply(
-                    lambda x: f"{x:,f}".replace(",", thousands_separator)
-                )
-            filename = (
-                f"{filename}.{COMP_TO_EXT[compression]}"
-                if compression != "infer"
-                else filename
-            )
-            df.to_csv(
-                filename,
-                sep=delimiter,
-                encoding=encoding,
-                compression=compression,
-                index=False,
-                decimal=decimal_separator if decimal_separator else ".",
-                line_terminator=line_terminator,
-                quoting=quoting,
-                quotechar=quotechar,
-                doublequote=doublequote,
-                escapechar=escapechar,
-            )
-            csv_reader_writer_params = {
-                "delimiter": delimiter,
-                "doublequote": doublequote,
-                "escapechar": escapechar,
-                "lineterminator": line_terminator if line_terminator else os.linesep,
-                "quotechar": quotechar,
-                "quoting": quoting,
-            }
-            if add_blank_lines:
-                insert_lines_to_csv(
-                    csv_name=filename,
-                    lines_positions=[
-                        x for x in range(5, row_size, row_size // (row_size // 10))
-                    ],
-                    lines_type="blank",
-                    encoding=encoding,
-                    **csv_reader_writer_params,
-                )
-            if add_bad_lines:
-                insert_lines_to_csv(
-                    csv_name=filename,
-                    lines_positions=[
-                        x for x in range(6, row_size, row_size // (row_size // 10))
-                    ],
-                    lines_type="bad",
-                    encoding=encoding,
-                    **csv_reader_writer_params,
-                )
-            filenames.append(filename)
-            return df
-
-    return _csv_file_maker
-
-
-@pytest.fixture
-def make_csv_file():
-    """Pytest fixture factory that makes temp csv files for testing.
-    Yields:
-        Function that generates csv files
-    """
-    filenames = []
-
-    yield _make_csv_file(filenames)
-
-    # Delete csv files that were created
-    teardown_test_files(filenames)
-
-
-@pytest.fixture(scope="class")
-def TestReadCSVFixture():
-    filenames = []
-    files_ids = [
-        "test_read_csv_regular",
-        "test_read_csv_blank_lines",
-        "test_read_csv_yes_no",
-        "test_read_csv_nans",
-        "test_read_csv_bad_lines",
-    ]
-    # each xdist worker spawned in separate process with separate namespace and dataset
-    pytest.csvs_names = {file_id: get_unique_filename() for file_id in files_ids}
-    # test_read_csv_col_handling, test_read_csv_parsing
-    _make_csv_file(filenames)(
-        filename=pytest.csvs_names["test_read_csv_regular"],
-    )
-    # test_read_csv_parsing
-    _make_csv_file(filenames)(
-        filename=pytest.csvs_names["test_read_csv_yes_no"],
-        additional_col_values=["Yes", "true", "No", "false"],
-    )
-    # test_read_csv_col_handling
-    _make_csv_file(filenames)(
-        filename=pytest.csvs_names["test_read_csv_blank_lines"],
-        add_blank_lines=True,
-    )
-    # test_read_csv_nans_handling
-    _make_csv_file(filenames)(
-        filename=pytest.csvs_names["test_read_csv_nans"],
-        add_blank_lines=True,
-        additional_col_values=["<NA>", "N/A", "NA", "NULL", "custom_nan", "73"],
-    )
-    # test_read_csv_error_handling
-    _make_csv_file(filenames)(
-        filename=pytest.csvs_names["test_read_csv_bad_lines"],
-        add_bad_lines=True,
-    )
-
-    yield
-    # Delete csv files that were created
-    teardown_test_files(filenames)
 
 
 def setup_json_file(filename, row_size=NROWS, force=True):
@@ -420,41 +165,6 @@ def setup_pickle_file(filename, row_size=NROWS, force=True):
             {"col1": np.arange(row_size), "col2": np.arange(row_size)}
         )
         df.to_pickle(filename)
-
-
-@pytest.fixture
-def make_sql_connection():
-    """Sets up sql connections and takes them down after the caller is done.
-
-    Yields:
-        Factory that generates sql connection objects
-    """
-    filenames = []
-
-    def _sql_connection(filename, table=""):
-        # Remove file if exists
-        if os.path.exists(filename):
-            os.remove(filename)
-        filenames.append(filename)
-        # Create connection and, if needed, table
-        conn = "sqlite:///{}".format(filename)
-        if table:
-            df = pandas.DataFrame(
-                {
-                    "col1": [0, 1, 2, 3, 4, 5, 6],
-                    "col2": [7, 8, 9, 10, 11, 12, 13],
-                    "col3": [14, 15, 16, 17, 18, 19, 20],
-                    "col4": [21, 22, 23, 24, 25, 26, 27],
-                    "col5": [0, 0, 0, 0, 0, 0, 0],
-                }
-            )
-            df.to_sql(table, conn)
-        return conn
-
-    yield _sql_connection
-
-    # Teardown the fixture
-    teardown_test_files(filenames)
 
 
 def setup_fwf_file(filename, force=True, fwf_data=None):
@@ -569,7 +279,6 @@ class TestCsv:
             pytest.skip(
                 "The reason of tests fail in `cloud` mode is unknown for now - issue #2340"
             )
-
         eval_io(
             fn_name="read_csv",
             # read_csv kwargs
@@ -1291,11 +1000,14 @@ class TestCsv:
         unique_filename = get_unique_filename()
         make_csv_file(filename=unique_filename)
 
-        with open(unique_filename, mode=read_mode) as buffer:
-            df_pandas = pandas.read_csv(buffer)
-            buffer.seek(0)
-            df_modin = pd.read_csv(buffer)
-            df_equals(df_modin, df_pandas)
+        try:
+            with open(unique_filename, mode=read_mode) as buffer:
+                df_pandas = pandas.read_csv(buffer)
+                buffer.seek(0)
+                df_modin = pd.read_csv(buffer)
+                df_equals(df_modin, df_pandas)
+        finally:
+            teardown_test_files([unique_filename])
 
 
 class TestTable:
@@ -2006,14 +1718,17 @@ class TestFwf:
     def test_read_fwf_file_handle(self, request, read_mode):
         if request.config.getoption("--simulate-cloud").lower() != "off":
             pytest.skip("Cannot pickle file handles. See comments in PR #2625")
-        unique_filename = get_unique_filename("txt")
-        setup_fwf_file(filename=unique_filename)
+        unique_filename = get_unique_filename(extension="txt")
+        try:
+            setup_fwf_file(filename=unique_filename)
 
-        with open(unique_filename, mode=read_mode) as buffer:
-            df_pandas = pandas.read_fwf(buffer)
-            buffer.seek(0)
-            df_modin = pd.read_fwf(buffer)
-            df_equals(df_modin, df_pandas)
+            with open(unique_filename, mode=read_mode) as buffer:
+                df_pandas = pandas.read_fwf(buffer)
+                buffer.seek(0)
+                df_modin = pd.read_fwf(buffer)
+                df_equals(df_modin, df_pandas)
+        finally:
+            teardown_test_files([unique_filename])
 
 
 class TestGbq:

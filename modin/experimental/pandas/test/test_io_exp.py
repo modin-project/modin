@@ -15,14 +15,7 @@ import pandas
 import pytest
 import modin.experimental.pandas as pd
 from modin.config import Engine
-from modin.pandas.test.test_io import (  # noqa: F401
-    df_equals,
-    eval_io,
-    make_sql_connection,
-    _make_csv_file,
-    teardown_test_files,
-)
-from modin.pandas.test.utils import get_unique_filename
+from modin.pandas.test.utils import df_equals
 
 
 @pytest.mark.skipif(
@@ -67,22 +60,6 @@ def test_from_sql_defaults(make_sql_connection):  # noqa: F811
 
     df_equals(modin_df_from_query, pandas_df)
     df_equals(modin_df_from_table, pandas_df)
-
-
-@pytest.fixture(scope="class")
-def TestReadGlobCSVFixture():
-    filenames = []
-
-    base_name = get_unique_filename(extension="")
-    pytest.glob_path = "{}_*.csv".format(base_name)
-    pytest.files = ["{}_{}.csv".format(base_name, i) for i in range(11)]
-    for fname in pytest.files:
-        # Glob does not guarantee ordering so we have to remove the randomness in the generated csvs.
-        _make_csv_file(filenames)(fname, row_size=11, remove_randomness=True)
-
-    yield
-
-    teardown_test_files(filenames)
 
 
 @pytest.mark.usefixtures("TestReadGlobCSVFixture")
