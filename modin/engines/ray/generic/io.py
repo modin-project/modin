@@ -58,6 +58,16 @@ class RayIO(BaseIO):
         if "r" in kwargs["mode"] and "+" in kwargs["mode"]:
             return False
 
+        # encodings with BOM don't support;
+        # instead of one mark in result bytes we will have them by the number of partitions
+        # so we should fallback in pandas for `utf-16`, `utf-32` with all aliases, in instance
+        # (`utf_32_be`, `utf_16_le` and so on)
+        if kwargs["encoding"] is not None:
+            encoding = kwargs["encoding"].lower()
+            if "u" in encoding or "utf" in encoding:
+                if "16" in encoding or "32" in encoding:
+                    return False
+
         if compression is None or not compression == "infer":
             return False
 
