@@ -1422,7 +1422,13 @@ class TestDateTime:
         "a": [1, 1, 2, 2],
         "b": [11, 21, 12, 11],
         "c": pandas.to_datetime(
-            ["20190902", "20180913", "20190921", "20180903"], format="%Y%m%d"
+            [
+                "20190902 00:01:13.000100",
+                "20180913 00:01:13.050010",
+                "20190921 00:01:13.111111",
+                "20180903 00:01:13.000999",
+            ],
+            format="%Y%m%d %H:%M:%S",
         ),
     }
 
@@ -1437,6 +1443,132 @@ class TestDateTime:
             return df["c"].dt.month
 
         run_and_compare(dt_month, data=self.datetime_data)
+
+    def test_dt_week(self):
+        def dt_week(df, **kwargs):
+            return df["c"].dt.week
+
+        run_and_compare(dt_week, data=self.datetime_data)
+
+    def test_dt_weekofyear(self):
+        def dt_weekofyear(df, **kwargs):
+            return df["c"].dt.weekofyear
+
+        run_and_compare(dt_weekofyear, data=self.datetime_data)
+
+    def test_dt_day(self):
+        def dt_day(df, **kwargs):
+            return df["c"].dt.day
+
+        run_and_compare(dt_day, data=self.datetime_data)
+
+    def test_dt_hour(self):
+        def dt_hour(df, **kwargs):
+            return df["c"].dt.hour
+
+        run_and_compare(dt_hour, data=self.datetime_data)
+
+    def test_dt_minute(self):
+        def dt_minute(df, **kwargs):
+            return df["c"].dt.minute
+
+        run_and_compare(dt_minute, data=self.datetime_data)
+
+    def test_dt_second(self):
+        def dt_second(df, **kwargs):
+            return df["c"].dt.second
+
+        run_and_compare(dt_second, data=self.datetime_data)
+
+    def test_dt_microsecond(self):
+        def dt_microsecond(df, **kwargs):
+            return df["c"].dt.microsecond
+
+        run_and_compare(dt_microsecond, data=self.datetime_data)
+
+    def test_dt_nanosecond(self):
+        def dt_nanosecond(df, **kwargs):
+            return df["c"].dt.nanosecond
+
+        run_and_compare(dt_nanosecond, data=self.datetime_data)
+
+    def test_dt_quarter(self):
+        def dt_quarter(df, **kwargs):
+            return df["c"].dt.quarter
+
+        run_and_compare(dt_quarter, data=self.datetime_data)
+
+    def test_dt_dayofweek(self):
+        def dt_dayofweek(df, **kwargs):
+            return df["c"].dt.dayofweek
+
+        run_and_compare(dt_dayofweek, data=self.datetime_data)
+
+    def test_dt_weekday(self):
+        def dt_weekday(df, **kwargs):
+            return df["c"].dt.weekday
+
+        run_and_compare(dt_weekday, data=self.datetime_data)
+
+    def test_dt_dayofyear(self):
+        def dt_dayofyear(df, **kwargs):
+            return df["c"].dt.dayofyear
+
+        run_and_compare(dt_dayofyear, data=self.datetime_data)
+
+    def test_dt_daysinmonth(self):
+        def dt_daysinmonth(df, **kwargs):
+            return df["c"].dt.daysinmonth
+
+        run_and_compare(dt_daysinmonth, data=self.datetime_data)
+
+    def test_dt_days_in_month(self):
+        def dt_days_in_month(df, **kwargs):
+            return df["c"].dt.days_in_month
+
+        run_and_compare(dt_days_in_month, data=self.datetime_data)
+
+    def test_dt_is_leap_year(self):
+        def dt_is_leap_year(df, **kwargs):
+            return df["c"].dt.is_leap_year
+
+        run_and_compare(dt_is_leap_year, data=self.datetime_data)
+
+    def test_dt_is_month_end(self):
+        def dt_is_month_end(df, **kwargs):
+            return df["c"].dt.is_month_end
+
+        run_and_compare(dt_is_month_end, data=self.datetime_data)
+
+    def test_dt_is_month_start(self):
+        def dt_is_month_start(df, **kwargs):
+            return df["c"].dt.is_month_start
+
+        run_and_compare(dt_is_month_start, data=self.datetime_data)
+
+    def test_dt_is_quarter_end(self):
+        def dt_is_quarter_end(df, **kwargs):
+            return df["c"].dt.is_quarter_end
+
+        run_and_compare(dt_is_quarter_end, data=self.datetime_data)
+
+    def test_dt_is_quarter_start(self):
+        def dt_is_quarter_start(df, **kwargs):
+            return df["c"].dt.is_quarter_start
+
+        run_and_compare(dt_is_quarter_start, data=self.datetime_data)
+
+    def test_dt_is_year_end(self):
+        def dt_is_year_end(df, **kwargs):
+            return df["c"].dt.is_year_end
+
+        run_and_compare(dt_is_year_end, data=self.datetime_data)
+
+    def test_dt_is_year_start(self):
+        def dt_is_year_start(df, **kwargs):
+            return df["c"].dt.is_year_start
+
+        run_and_compare(dt_is_year_start, data=self.datetime_data)
 
 
 class TestCategory:

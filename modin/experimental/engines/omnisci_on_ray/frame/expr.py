@@ -308,8 +308,16 @@ def build_if_then_else(cond, then_val, else_val, res_type):
 
 
 def build_dt_expr(dt_operation, col_expr):
-    operation = LiteralExpr(dt_operation)
+    operation = (
+        LiteralExpr(dt_operation) if dt_operation != "dow" else LiteralExpr("isodow")
+    )
 
     res = OpExpr("PG_EXTRACT", [operation, col_expr], get_dtype(int))
+    if dt_operation == "dow":
+        res = res.sub(LiteralExpr(1))
+    if dt_operation == "microsecond":
+        res = res.mod(LiteralExpr(1000000))
+    if dt_operation == "nanosecond":
+        res = res.mod(LiteralExpr(1000))
 
     return res

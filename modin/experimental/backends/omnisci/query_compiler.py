@@ -429,6 +429,279 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
             self._modin_frame.dt_extract("month"), self._shape_hint
         )
 
+    def dt_week(self):
+        """
+        Extract week from Datetime info
+
+        Returns
+        -------
+            DFAlgQueryCompiler
+                A new query compiler.
+        """
+        return self.__constructor__(
+            self._modin_frame.dt_extract("week"), self._shape_hint
+        )
+
+    def dt_weekofyear(self):
+        """
+        Extract week from Datetime info
+
+        Returns
+        -------
+            DFAlgQueryCompiler
+                A new query compiler.
+        """
+        return self.__constructor__(
+            self._modin_frame.dt_extract("week"), self._shape_hint
+        )
+
+    def dt_day(self):
+        """
+        Extract day from Datetime info
+
+        Returns
+        -------
+            DFAlgQueryCompiler
+                A new query compiler.
+        """
+        return self.__constructor__(
+            self._modin_frame.dt_extract("day"), self._shape_hint
+        )
+
+    def dt_hour(self):
+        """
+        Extract hour from Datetime info
+
+        Returns
+        -------
+            DFAlgQueryCompiler
+                A new query compiler.
+        """
+        return self.__constructor__(
+            self._modin_frame.dt_extract("hour"), self._shape_hint
+        )
+
+    def dt_minute(self):
+        """
+        Extract minute from Datetime info
+
+        Returns
+        -------
+            DFAlgQueryCompiler
+                A new query compiler.
+        """
+        return self.__constructor__(
+            self._modin_frame.dt_extract("minute"), self._shape_hint
+        )
+
+    def dt_second(self):
+        """
+        Extract second from Datetime info
+
+        Returns
+        -------
+            DFAlgQueryCompiler
+                A new query compiler.
+        """
+        return self.__constructor__(
+            self._modin_frame.dt_extract("second"), self._shape_hint
+        )
+
+    def dt_microsecond(self):
+        """
+        Extract microsecond from Datetime info
+
+        Returns
+        -------
+            DFAlgQueryCompiler
+                A new query compiler.
+        """
+        return self.__constructor__(
+            self._modin_frame.dt_extract("microsecond"), self._shape_hint
+        )
+
+    def dt_nanosecond(self):
+        """
+        Extract nanosecond from Datetime info
+
+        Returns
+        -------
+            DFAlgQueryCompiler
+                A new query compiler.
+        """
+        return self.__constructor__(
+            self._modin_frame.dt_extract("nanosecond"), self._shape_hint
+        )
+
+    def dt_quarter(self):
+        """
+        Extract quarter from Datetime info
+
+        Returns
+        -------
+            DFAlgQueryCompiler
+                A new query compiler.
+        """
+        return self.__constructor__(
+            self._modin_frame.dt_extract("quarter"), self._shape_hint
+        )
+
+    def dt_dayofweek(self):
+        """
+        Extract day of week from Datetime info
+
+        Returns
+        -------
+            DFAlgQueryCompiler
+                A new query compiler.
+        """
+        return self.__constructor__(
+            self._modin_frame.dt_extract("dow"), self._shape_hint
+        )
+
+    def dt_weekday(self):
+        """
+        Extract day of week from Datetime info
+
+        Returns
+        -------
+            DFAlgQueryCompiler
+                A new query compiler.
+        """
+        return self.__constructor__(
+            self._modin_frame.dt_extract("dow"), self._shape_hint
+        )
+
+    def dt_dayofyear(self):
+        """
+        Extract day of year from Datetime info
+
+        Returns
+        -------
+            DFAlgQueryCompiler
+                A new query compiler.
+        """
+        return self.__constructor__(
+            self._modin_frame.dt_extract("doy"), self._shape_hint
+        )
+
+    def dt_daysinmonth(self):
+        """
+        Extract number of days in this month from Datetime info
+
+        Returns
+        -------
+            DFAlgQueryCompiler
+                A new query compiler.
+        """
+        return self.__constructor__(
+            self._modin_frame.dt_extract("daysinmonth"), self._shape_hint
+        )
+
+    def dt_days_in_month(self):
+        """
+        Extract number of days in this month from Datetime info
+
+        Returns
+        -------
+            DFAlgQueryCompiler
+                A new query compiler.
+        """
+        return self.__constructor__(
+            self._modin_frame.dt_extract("daysinmonth"), self._shape_hint
+        )
+
+    def dt_is_leap_year(self):
+        """
+        Extract is leap year or not from Datetime info
+
+        Returns
+        -------
+            DFAlgQueryCompiler
+                A new query compiler.
+        """
+        return self.__constructor__(
+            self._modin_frame.dt_extract("isleapyear"), self._shape_hint
+        )
+
+    def dt_is_month_end(self):
+        """
+        Extract is end of month or not from Datetime info
+
+        Returns
+        -------
+            DFAlgQueryCompiler
+                A new query compiler.
+        """
+        return self.__constructor__(
+            self._modin_frame.dt_extract("ismonthend"), self._shape_hint
+        )
+
+    def dt_is_month_start(self):
+        """
+        Extract is start of month or not from Datetime info
+
+        Returns
+        -------
+            DFAlgQueryCompiler
+                A new query compiler.
+        """
+        return self.__constructor__(
+            self._modin_frame.dt_extract("ismonthstart"), self._shape_hint
+        )
+
+    def dt_is_quarter_end(self):
+        """
+        Extract is end of quarter or not from Datetime info
+
+        Returns
+        -------
+            DFAlgQueryCompiler
+                A new query compiler.
+        """
+        return self.__constructor__(
+            self._modin_frame.dt_extract("isquarterend"), self._shape_hint
+        )
+
+    def dt_is_quarter_start(self):
+        """
+        Extract is start of quarter or not from Datetime info
+
+        Returns
+        -------
+            DFAlgQueryCompiler
+                A new query compiler.
+        """
+        return self.__constructor__(
+            self._modin_frame.dt_extract("isquarterstart"), self._shape_hint
+        )
+
+    def dt_is_year_end(self):
+        """
+        Extract is end of year or not from Datetime info
+
+        Returns
+        -------
+            DFAlgQueryCompiler
+                A new query compiler.
+        """
+        return self.__constructor__(
+            self._modin_frame.dt_extract("isyearend"), self._shape_hint
+        )
+
+    def dt_is_year_start(self):
+        """
+        Extract is start of year or not from Datetime info
+
+        Returns
+        -------
+            DFAlgQueryCompiler
+                A new query compiler.
+        """
+        return self.__constructor__(
+            self._modin_frame.dt_extract("isyearstart"), self._shape_hint
+        )
+
     def _bin_op(self, other, op_name, **kwargs):
         level = kwargs.get("level", None)
         if level is not None:
