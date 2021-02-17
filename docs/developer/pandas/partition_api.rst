@@ -2,24 +2,26 @@ Partition API in Modin
 ======================
 
 When you are working with a Modin Dataframe, you can unwrap its remote partitions
-to get the raw future objects compatible with the execution engine (e.g. ``ray.ObjectRef`` for Ray).
-In addition to unwrapping of the remote partitions we also provide API to construct Modin DataFrame from them.
+to get the raw futures objects compatible with the execution engine (e.g. ``ray.ObjectRef`` for Ray).
+In addition to unwrapping of the remote partitions we also provide an API to construct
+a ``modin.pandas.DataFrame`` from raw futures objects.
 
-API
----
-
-It is currently supported the following API:
+unwrap_partitions
+-----------------
 
 .. automodule:: modin.distributed.dataframe.pandas
   :noindex:
   :members: unwrap_partitions
 
+from_partitions
+---------------
+
 .. automodule:: modin.distributed.dataframe.pandas
   :noindex:
   :members: from_partitions
 
-Running an example with Partition API
--------------------------------------
+Example
+-------
 
 .. code-block:: python
 
@@ -37,7 +39,7 @@ Running an example with Partition API
 Partition IPs Usage
 -------------------
 
-Also, you can use the mentioned above API to get the IPs of the nodes that hold the partitions (``get_ip=True``).
+You can use the mentioned above APIs to get the IPs of the nodes that hold the partitions (``get_ip=True``).
 In that case you can pass the partitions having needed IPs to your function. It can help with minimazing of data movement between nodes.
 
 Ray engine
