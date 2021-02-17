@@ -11,7 +11,7 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-from modin.engines.base.frame.data import BasePandasFrame
+from modin.engines.base.frame.dataframe import BasePandasFrame
 from modin.experimental.backends.omnisci.query_compiler import DFAlgQueryCompiler
 from .partition_manager import OmnisciOnRayFrameManager
 

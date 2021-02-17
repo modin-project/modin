@@ -14,7 +14,7 @@
 import pandas
 
 from .partition_manager import PandasOnRayFrameManager
-from modin.engines.base.frame.data import BasePandasFrame
+from modin.engines.base.frame.dataframe import BasePandasFrame
 from modin.backends.pandas.parsers import find_common_type_cat as find_common_type
 
 import ray
