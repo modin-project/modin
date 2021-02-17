@@ -12,10 +12,13 @@
 # governing permissions and limitations under the License.
 
 from modin.engines.base.io.file_dispatcher import FileDispatcher
+from modin.data_management.utils import compute_chunksize
 import numpy as np
 import warnings
 import io
 import os
+from typing import Union, Sequence, Optional
+import pandas
 
 from modin.config import NPartitions
 
@@ -157,16 +160,12 @@ class TextFileDispatcher(FileDispatcher):
         if num_partitions is None:
             num_partitions = NPartitions.get()
 
+        rows_skipper = cls.rows_skipper_builder(f, quotechar, is_quoting=is_quoting)
         result = []
+
         file_size = cls.file_size(f)
 
-        if skiprows:
-            outside_quotes, read_rows = cls._read_rows(
-                f,
-                nrows=skiprows,
-                quotechar=quotechar,
-                is_quoting=is_quoting,
-            )
+        rows_skipper(skiprows)
 
         start = f.tell()
 
@@ -258,3 +257,126 @@ class TextFileDispatcher(FileDispatcher):
             rows_read += 1
 
         return outside_quotes, rows_read
+
+    # _read helper functions
+    @classmethod
+    def rows_skipper_builder(cls, f, quotechar, is_quoting):
+        def skipper(n):
+            if n == 0 or n is None:
+                return 0
+            else:
+                return cls._read_rows(
+                    f,
+                    quotechar=quotechar,
+                    is_quoting=is_quoting,
+                    nrows=n,
+                )[1]
+
+        return skipper
+
+    @classmethod
+    def _define_header_size(
+        cls,
+        header: Union[int, Sequence[int], str, None] = "infer",
+        names: Optional[Sequence] = None,
+    ):
+        """
+        Defines the number of rows that are used by header.
+        Parameters
+        ----------
+        header: int, list of int or str ("infer")
+                Original header parameter of read_csv function.
+        names:  array
+                Original names parameter of read_csv function.
+        Returns
+        -------
+        header_size:
+                The number of rows that are used by header.
+        """
+        header_size = 0
+        if header == "infer" and names is None:
+            header_size += 1
+        elif isinstance(header, int):
+            header_size += header + 1
+        elif hasattr(header, "__iter__") and not isinstance(header, str):
+            header_size += max(header) + 1
+
+        return header_size
+
+    @classmethod
+    def _define_metadata(
+        cls,
+        df: pandas.DataFrame,
+        num_splits: int,
+        column_names: Sequence,
+    ):
+        """
+        Define partitioning metadata.
+        ----------
+        df:
+            The DataFrame to split.
+        num_splits:
+            The maximum number of splits to separate the DataFrame into.
+        column_names:
+            column names of df.
+
+        Returns
+        -------
+        column_widths:
+                Column width to use during new frame creation (number of
+                columns for each partition).
+        num_splits:
+                Updated `num_splits` parameter.
+        """
+        column_chunksize = compute_chunksize(df, num_splits, axis=1)
+
+        if column_chunksize > len(column_names):
+            column_widths = [len(column_names)]
+            # This prevents us from unnecessarily serializing a bunch of empty
+            # objects.
+            num_splits = 1
+        else:
+            column_widths = [
+                column_chunksize
+                if len(column_names) > (column_chunksize * (i + 1))
+                else 0
+                if len(column_names) < (column_chunksize * i)
+                else len(column_names) - (column_chunksize * i)
+                for i in range(num_splits)
+            ]
+
+        return column_widths, num_splits
+
+    @classmethod
+    def _launch_tasks(cls, splits: Sequence, **partition_kwargs):
+        """
+        Launch tasks to read partitions.
+        ----------
+        splits:
+            list of tuples with partitions data, which defines
+            parser task (start/end read bytes and etc.)
+        partition_kwargs:
+            kwargs that should be passed to the parser function.
+
+        Returns
+        -------
+        partition_ids:
+                array with references to the partitions data.
+        index_ids:
+                array with references to the partitions index objects.
+        dtypes_ids:
+                array with references to the partitions dtypes objects.
+        """
+        partition_ids = []
+        index_ids = []
+        dtypes_ids = []
+        for start, end in splits:
+            partition_kwargs.update({"start": start, "end": end})
+            partition_id = cls.deploy(
+                cls.parse, partition_kwargs.get("num_splits") + 2, partition_kwargs
+            )
+            partition_ids.append(partition_id[:-2])
+            index_ids.append(partition_id[-2])
+            dtypes_ids.append(partition_id[-1])
+
+        return partition_ids, index_ids, dtypes_ids
