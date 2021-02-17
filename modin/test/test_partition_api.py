@@ -60,7 +60,7 @@ def test_unwrap_partitions(axis):
             )
         )
         expected_axis_partitions = [
-            axis_partition.coalesce().unwrap(squeeze=True)
+            axis_partition.force_materialization().unwrap(squeeze=True)
             for axis_partition in expected_axis_partitions
         ]
         actual_axis_partitions = unwrap_partitions(df, axis=axis)

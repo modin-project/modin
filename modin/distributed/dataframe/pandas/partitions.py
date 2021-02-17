@@ -79,9 +79,58 @@ def unwrap_partitions(api_layer_object, axis=None, get_ip=False):
             )
         )
         return [
-            part.coalesce(get_ip=get_ip).unwrap(squeeze=True, get_ip=get_ip)
+            part.force_materialization(get_ip=get_ip).unwrap(
+                squeeze=True, get_ip=get_ip
+            )
             for part in partitions
         ]
+
+
+def map_partitions_to_ips(partitions, axis):
+    """
+    Map partitions to node ip addresses that hold them.
+
+    Parameters
+    ----------
+    partitions : list
+        List of tuples of node ip addresses and Ray.ObjectRef/Dask.Future to partitions
+        depending on the engine used (i.e. [(str, Ray.ObjectRef/Dask.Future), ...]).
+
+    axis : None, 0 or 1
+        The ``axis`` parameter is used to identify what are the partitions passed.
+        You have to set:
+
+        * ``axis=0`` if row partitions are passed
+        * ``axis=1`` if column partitions are passed
+        * ``axis=None`` if 2D list of partitions is passed
+
+    Returns
+    -------
+    dict
+        A dict of node ip addresses and lists of partitions which the latters are held on
+        (i.e. {'str': [Ray.ObjectRef/Dask.Future, ...], ...}).
+    """
+    if axis is None:
+        mapped_partitions = {partitions[0][0][0]: []}
+        for row in partitions:
+            for ip, partition in row:
+                if ip in mapped_partitions.keys():
+                    mapped_partitions[ip].append(partition)
+                else:
+                    mapped_partitions.update({ip: [partition]})
+        return mapped_partitions
+    elif axis == 0 or axis == 1:
+        mapped_partitions = {partitions[0][0]: []}
+        for ip, partition in partitions:
+            if ip in mapped_partitions.keys():
+                mapped_partitions[ip].append(partition)
+            else:
+                mapped_partitions.update({ip: [partition]})
+        return mapped_partitions
+    else:
+        raise ValueError(
+            f"Got unacceptable value of axis {axis}. Possible values are {0}, {1} or {None}."
+        )
 
 
 def from_partitions(partitions, axis):

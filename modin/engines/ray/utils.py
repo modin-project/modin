@@ -22,7 +22,6 @@ from modin.config import (
     Memory,
     RayPlasmaDir,
     IsOutOfCore,
-    RayPartitionThreshold,
 )
 
 
@@ -147,11 +146,6 @@ def initialize_ray(
                     object_store_memory = None
             else:
                 object_store_memory = int(object_store_memory)
-            partition_threshold = RayPartitionThreshold.get()
-            if partition_threshold is not None:
-                partition_threshold = {
-                    "max_direct_call_object_size": partition_threshold,
-                }
             ray.init(
                 num_cpus=CpuCount.get(),
                 include_dashboard=False,
@@ -163,7 +157,6 @@ def initialize_ray(
                 logging_level=100,
                 _memory=object_store_memory,
                 _lru_evict=True,
-                _system_config=partition_threshold,
             )
         _move_stdlib_ahead_of_site_packages()
         ray.worker.global_worker.run_function_on_all_workers(

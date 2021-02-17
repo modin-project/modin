@@ -95,9 +95,9 @@ class BaseFrameAxisPartition(ABC):  # pragma: no cover
     def _wrap_partitions(self, partitions):
         return [self.partition_type(obj) for obj in partitions]
 
-    def coalesce(self, get_ip=False):
+    def force_materialization(self, get_ip=False):
         """
-        Coalesce the axis partitions into a single partition.
+        Materialize axis partitions into a single partition.
 
         Parameters
         ----------
@@ -107,10 +107,12 @@ class BaseFrameAxisPartition(ABC):  # pragma: no cover
         Returns
         -------
         BaseFrameAxisPartition
-            An axis partition containing only a single coalesced partition.
+            An axis partition containing only a single materialized partition.
         """
-        coalesced = self.apply(lambda x: x, num_splits=1, maintain_partitioning=False)
-        return type(self)(coalesced, get_ip=get_ip)
+        materialized = self.apply(
+            lambda x: x, num_splits=1, maintain_partitioning=False
+        )
+        return type(self)(materialized, get_ip=get_ip)
 
     def unwrap(self, squeeze=False, get_ip=False):
         """
