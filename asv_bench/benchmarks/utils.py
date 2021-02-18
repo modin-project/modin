@@ -72,8 +72,8 @@ UNARY_OP_DATA_SIZE = {
 }
 
 GROUPBY_NGROUPS = {
-    "Big": 100,
-    "Small": 5,
+    "Big": [100, lambda nrows: min(nrows // 2, 5000)],
+    "Small": [5],
 }
 
 IMPL = {
