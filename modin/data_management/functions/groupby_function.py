@@ -20,6 +20,27 @@ from modin.utils import try_cast_to_pandas, hashable
 class GroupbyReduceFunction(MapReduceFunction):
     @classmethod
     def call(cls, map_func, reduce_func=None, **call_kwds):
+        """
+        Build GroupbyReduce function.
+
+        Parameters
+        ----------
+        map_func: str, callable or dict,
+            If 'str' this parameter will be treated as a function name to register,
+            so 'map_func' and 'reduce_func' will be grabbed from 'groupby_reduce_functions'.
+            If dict or callable then this will be treated as a function to apply to each group
+            at the map phase.
+        reduce_func: callable or dict (optional),
+            A function to apply to each group at the reduce phase. If not specified
+            will be set the same as 'map_func'.
+        **call_kwds: kwargs,
+            Kwargs that will be passed to the returned function.
+
+        Returns
+        -------
+        Callable,
+            Function that executes GroupBy aggregation with MapReduce algorithm.
+        """
         if isinstance(map_func, str):
 
             def build_fn(name):
@@ -56,6 +77,8 @@ class GroupbyReduceFunction(MapReduceFunction):
         groupby_args["as_index"] = True
         groupby_args["observed"] = True
         if other is not None:
+            # Other is a broadcasted partition that represents 'by' columns
+            # Concatenate it with 'df' to group on its columns names
             other = other.squeeze(axis=axis ^ 1)
             if isinstance(other, pandas.DataFrame):
                 df = pandas.concat(
@@ -71,6 +94,7 @@ class GroupbyReduceFunction(MapReduceFunction):
         result = apply_func(
             df.groupby(by=by_part, axis=axis, **groupby_args), **map_args
         )
+        # Result could not always be a frame, so wrapping it into DataFrame
         return pandas.DataFrame(result)
 
     @classmethod
@@ -109,7 +133,7 @@ class GroupbyReduceFunction(MapReduceFunction):
         if not as_index:
             insert_levels = partition_idx == 0 and (drop or method == "size")
             result.reset_index(drop=not insert_levels, inplace=True)
-
+        # Result could not always be a frame, so wrapping it into DataFrame
         return pandas.DataFrame(result)
 
     @classmethod
@@ -239,6 +263,7 @@ class GroupbyReduceFunction(MapReduceFunction):
         return _map, _reduce
 
 
+# This dict is a map for function names and their equivalents in MapReduce
 groupby_reduce_functions = {
     "all": ("all", "all"),
     "any": ("any", "any"),
