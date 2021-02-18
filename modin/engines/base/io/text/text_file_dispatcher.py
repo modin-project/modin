@@ -17,7 +17,8 @@ import warnings
 import io
 import os
 
-from modin.config import NPartitions
+from modin.pandas import GPU_MANAGERS
+from modin.config import NPartitions, Backend
 
 
 class TextFileDispatcher(FileDispatcher):
@@ -40,14 +41,17 @@ class TextFileDispatcher(FileDispatcher):
 
     @classmethod
     def build_partition(cls, partition_ids, row_lengths, column_widths):
+        if Backend.get() == 'Cudf':
+            def create_partition(i, j):
+                return cls.frame_partition_cls(GPU_MANAGERS[i], partition_ids[i][j], length=row_lengths[i], width=column_widths[j])
+        else:
+            def create_partition(i, j):
+                return cls.frame_partition_cls(partition_ids[i][j], length=row_lengths[i], width=column_widths[j])
+
         return np.array(
             [
                 [
-                    cls.frame_partition_cls(
-                        partition_ids[i][j],
-                        length=row_lengths[i],
-                        width=column_widths[j],
-                    )
+                    create_partition(i, j)
                     for j in range(len(partition_ids[i]))
                 ]
                 for i in range(len(partition_ids))

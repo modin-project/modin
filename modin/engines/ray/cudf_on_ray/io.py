@@ -12,15 +12,16 @@
 # governing permissions and limitations under the License.
 
 from modin.engines.base.io import BaseIO
-
+from modin.engines.base.io import CSVDispatcher
 from modin.backends.cudf.query_compiler import cuDFQueryCompiler
-from modin.engines.cudf_on_ray.frame.data import cuDFOnRayFrame
-from modin.engines.cudf_on_ray.frame.partition_manager import cuDFOnRayFrameManager
-from modin.engines.cudf_on_ray.frame.partition import cuDFOnRayFramePartition
-from .readers.cuDFCSVReader import cuDFCSVReader
+from modin.engines.ray.cudf_on_ray.frame.data import cuDFOnRayFrame
+from modin.engines.ray.cudf_on_ray.frame.partition_manager import cuDFOnRayFrameManager
+from modin.engines.ray.cudf_on_ray.frame.partition import cuDFOnRayFramePartition
+
 
 from modin.engines.ray.task_wrapper import RayTask
 from modin.backends.cudf.parser import cuDFCSVParser
+
 
 class cuDFOnRayIO(BaseIO):
 
@@ -34,4 +35,4 @@ class cuDFOnRayIO(BaseIO):
         frame_partition_mgr_cls=cuDFOnRayFrameManager,
     )
 
-    read_csv = type("", (RayTask, cuDFCSVParser, cuDFCSVReader), build_args).read
+    read_csv = type("", (RayTask, cuDFCSVParser, CSVDispatcher), build_args).read

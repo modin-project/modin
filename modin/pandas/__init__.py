@@ -100,6 +100,9 @@ _NOINIT_ENGINES = {
     "Python",
 }  # engines that don't require initialization, useful for unit tests
 
+# Set this to have a global view of the gpu managers.
+GPU_MANAGERS = []
+
 
 def _update_engine(publisher: Parameter):
     global dask_client
@@ -115,11 +118,9 @@ def _update_engine(publisher: Parameter):
             os.environ["OMP_NUM_THREADS"] = str(multiprocessing.cpu_count())
         if _is_first_update.get("Ray", True):
             initialize_ray()
-        if Backend.get() == "cudf":
-            num_gpus = ray.cluster_resources()["GPU"]
-            from modin.engines.ray.cudf_on_ray.partition_manager import GPU_MANAGERS
-            from modin.engines.ray.cudf_on_ray.gpu_managers import GPUManager
-            for i in range(int(num_gpus)):
+        if Backend.get() == "Cudf":
+            from modin.engines.ray.cudf_on_ray.frame.gpu_manager import GPUManager
+            for i in range(GpuCount.get()):
                 GPU_MANAGERS.append(GPUManager.remote(i))
     elif publisher.get() == "Dask":
         if _is_first_update.get("Dask", True):

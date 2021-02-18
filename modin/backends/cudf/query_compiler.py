@@ -33,13 +33,13 @@ from modin.data_management.functions import (
     ReductionFunction,
     BinaryFunction,
     GroupbyReduceFunction,
-    JoinFunction,
 )
 from pandas.core.dtypes.common import (
     is_list_like,
     is_numeric_dtype,
 )
-from modin.pandas.utils import try_cast_to_pandas
+
+#from modin.pandas.utils import try_cast_to_pandas
 
 def _str_map(func_name):
     """
@@ -310,8 +310,8 @@ class cuDFQueryCompiler(PandasQueryCompiler):
             return result.reset_index(drop=not drop)
 
 
-    def merge(self, right, **kwargs):
-        return JoinFunction.register(cudf.DataFrame.merge)(self, right=right, **kwargs)
+    # def merge(self, right, **kwargs):
+    #     return JoinFunction.register(cudf.DataFrame.merge)(self, right=right, **kwargs)
 
     # TODO(lepl3): Hacky solution meanwhile we decide whether or not to implement
     # from scratch pivot or cudf release pivot_table.
@@ -867,8 +867,8 @@ class cuDFQueryCompiler(PandasQueryCompiler):
     def apply(self, func, axis, *args, **kwargs):
         # if any of args contain modin object, we should
         # convert it to pandas
-        args = try_cast_to_pandas(args)
-        kwargs = try_cast_to_pandas(kwargs)
+        # args = try_cast_to_pandas(args)
+        # kwargs = try_cast_to_pandas(kwargs)
         # we have to build the apply function directly because cudf does not have support for
         # apply
         func = _build_apply_func(func, axis, *args, **kwargs)
@@ -1044,8 +1044,8 @@ class cuDFQueryCompiler(PandasQueryCompiler):
     def diff(self, *args, **kwargs):
         return self.default_to_pandas(pandas.DataFrame.diff, *args, **kwargs)
 
-    def __del__(self):
-        self.free()
+    # def __del__(self):
+    #     self.free()
 
     def free(self):
         self._modin_frame.free()
