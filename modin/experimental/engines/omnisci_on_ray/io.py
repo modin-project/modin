@@ -186,7 +186,7 @@ class OmnisciOnRayIO(RayIO):
                 null_values=None,
                 true_values=None,
                 false_values=None,
-                # timestamp fields should be handled as strigs if parse_dates
+                # timestamp fields should be handled as strings if parse_dates
                 # didn't passed explicitly as an array or a dict
                 timestamp_parsers=[""] if isinstance(parse_dates, bool) else None,
                 strings_can_be_null=None,
