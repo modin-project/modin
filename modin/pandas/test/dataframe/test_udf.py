@@ -34,11 +34,24 @@ from modin.pandas.test.utils import (
     udf_func_keys,
     test_data,
 )
+from modin.config import NPartitions
 
-pd.DEFAULT_NPARTITIONS = 4
+NPartitions.put(4)
 
 # Force matplotlib to not use any Xwindows backend.
 matplotlib.use("Agg")
+
+
+def test_agg_dict():
+    md_df, pd_df = create_test_dfs(test_data_values[0])
+    agg_dict = {pd_df.columns[0]: "sum", pd_df.columns[-1]: ("sum", "count")}
+    eval_general(md_df, pd_df, lambda df: df.agg(agg_dict), raising_exceptions=True)
+
+    agg_dict = {
+        "new_col1": (pd_df.columns[0], "sum"),
+        "new_col2": (pd_df.columns[-1], "count"),
+    }
+    eval_general(md_df, pd_df, lambda df: df.agg(**agg_dict), raising_exceptions=True)
 
 
 @pytest.mark.parametrize("axis", [0, 1])
@@ -49,16 +62,10 @@ matplotlib.use("Agg")
 )
 @pytest.mark.parametrize("op", ["agg", "apply"])
 def test_agg_apply(axis, func, op):
-    # AssertionError may be arisen in case of
-    # mismathing of index/columns in Modin and pandas.
-    # See details in pandas issue 36189.
-    try:
-        eval_general(
-            *create_test_dfs(test_data["float_nan_data"]),
-            lambda df: getattr(df, op)(func, axis),
-        )
-    except AssertionError:
-        pass
+    eval_general(
+        *create_test_dfs(test_data["float_nan_data"]),
+        lambda df: getattr(df, op)(func, axis),
+    )
 
 
 @pytest.mark.parametrize("axis", ["rows", "columns"])
@@ -69,16 +76,10 @@ def test_agg_apply(axis, func, op):
 )
 @pytest.mark.parametrize("op", ["agg", "apply"])
 def test_agg_apply_axis_names(axis, func, op):
-    # AssertionError may be arisen in case of
-    # mismathing of index/columns in Modin and pandas.
-    # See details in pandas issue 36189.
-    try:
-        eval_general(
-            *create_test_dfs(test_data["int_data"]),
-            lambda df: getattr(df, op)(func, axis),
-        )
-    except AssertionError:
-        pass
+    eval_general(
+        *create_test_dfs(test_data["int_data"]),
+        lambda df: getattr(df, op)(func, axis),
+    )
 
 
 def test_aggregate_alias():

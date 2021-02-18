@@ -35,7 +35,7 @@ class BaseIO(object):
         return cls.query_compiler_cls.from_arrow(at, cls.frame_cls)
 
     @classmethod
-    def read_parquet(cls, path, engine, columns, **kwargs):
+    def read_parquet(cls, path, engine, columns, use_nullable_dtypes, **kwargs):
         """Load a parquet object from the file path, returning a Modin DataFrame.
            Modin only supports pyarrow engine for now.
 
@@ -51,7 +51,9 @@ class BaseIO(object):
             https://arrow.apache.org/docs/python/parquet.html
         """
         ErrorMessage.default_to_pandas("`read_parquet`")
-        return cls.from_pandas(pandas.read_parquet(path, engine, columns, **kwargs))
+        return cls.from_pandas(
+            pandas.read_parquet(path, engine, columns, use_nullable_dtypes, **kwargs)
+        )
 
     @classmethod
     def read_csv(
@@ -105,6 +107,7 @@ class BaseIO(object):
         low_memory=True,
         memory_map=False,
         float_precision=None,
+        storage_options=None,
     ):
         kwargs = {
             "filepath_or_buffer": filepath_or_buffer,
@@ -156,6 +159,7 @@ class BaseIO(object):
             "low_memory": low_memory,
             "memory_map": memory_map,
             "float_precision": float_precision,
+            "storage_options": storage_options,
         }
         ErrorMessage.default_to_pandas("`read_csv`")
         return cls._read(**kwargs)
@@ -199,6 +203,7 @@ class BaseIO(object):
         chunksize=None,
         compression="infer",
         nrows: Optional[int] = None,
+        storage_options=None,
     ):
         ErrorMessage.default_to_pandas("`read_json`")
         kwargs = {
@@ -217,6 +222,7 @@ class BaseIO(object):
             "chunksize": chunksize,
             "compression": compression,
             "nrows": nrows,
+            "storage_options": storage_options,
         }
         return cls.from_pandas(pandas.read_json(**kwargs))
 
@@ -407,10 +413,15 @@ class BaseIO(object):
         )
 
     @classmethod
-    def read_feather(cls, path, columns=None, use_threads=True):
+    def read_feather(cls, path, columns=None, use_threads=True, storage_options=None):
         ErrorMessage.default_to_pandas("`read_feather`")
         return cls.from_pandas(
-            pandas.read_feather(path, columns=columns, use_threads=use_threads)
+            pandas.read_feather(
+                path,
+                columns=columns,
+                use_threads=use_threads,
+                storage_options=storage_options,
+            )
         )
 
     @classmethod
@@ -426,6 +437,7 @@ class BaseIO(object):
         order_categoricals=True,
         chunksize=None,
         iterator=False,
+        storage_options=None,
     ):
         ErrorMessage.default_to_pandas("`read_stata`")
         kwargs = {
@@ -439,6 +451,7 @@ class BaseIO(object):
             "order_categoricals": order_categoricals,
             "chunksize": chunksize,
             "iterator": iterator,
+            "storage_options": storage_options,
         }
         return cls.from_pandas(pandas.read_stata(**kwargs))
 
@@ -465,10 +478,14 @@ class BaseIO(object):
         )
 
     @classmethod
-    def read_pickle(cls, filepath_or_buffer, compression="infer"):
+    def read_pickle(cls, filepath_or_buffer, compression="infer", storage_options=None):
         ErrorMessage.default_to_pandas("`read_pickle`")
         return cls.from_pandas(
-            pandas.read_pickle(filepath_or_buffer, compression=compression)
+            pandas.read_pickle(
+                filepath_or_buffer,
+                compression=compression,
+                storage_options=storage_options,
+            )
         )
 
     @classmethod

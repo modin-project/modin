@@ -21,10 +21,8 @@ default to pandas.
 +---------------------------+---------------------------------+----------------------------------------------------+
 | `pd.unique`_              | Y                               |                                                    |
 +---------------------------+---------------------------------+----------------------------------------------------+
-| ``pd.value_counts``       | Y                               | The indices of resulting object will be in         |
-|                           |                                 | descending (ascending, if ascending=True) order for|
-|                           |                                 | equal values.                                      |
-|                           |                                 | In pandas indices are located in random order.     |
+| ``pd.value_counts``       | Y                               | The indices order of resulting object may differ   |
+|                           |                                 | from pandas.                                       |
 +---------------------------+---------------------------------+----------------------------------------------------+
 | `pd.cut`_                 | D                               |                                                    |
 +---------------------------+---------------------------------+----------------------------------------------------+

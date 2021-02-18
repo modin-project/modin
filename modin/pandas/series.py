@@ -36,11 +36,13 @@ import sys
 from typing import Union, Optional
 import warnings
 
-from modin.utils import _inherit_docstrings, to_pandas
+from modin.utils import _inherit_docstrings, to_pandas, Engine
 from modin.config import IsExperimental
 from .base import BasePandasDataset, _ATTRS_NO_LOOKUP
 from .iterator import PartitionIterator
 from .utils import from_pandas, is_scalar
+from .accessor import CachedAccessor, SparseAccessor
+from . import _update_engine
 
 
 @_inherit_docstrings(pandas.Series, excluded=[pandas.Series.__init__])
@@ -76,6 +78,7 @@ class Series(BasePandasDataset):
         query_compiler: query_compiler
             A query compiler object to create the Series from.
         """
+        Engine.subscribe(_update_engine)
         if isinstance(data, type(self)):
             query_compiler = data._query_compiler.copy()
             if index is not None:
@@ -139,8 +142,16 @@ class Series(BasePandasDataset):
         return self.add(left)
 
     def __and__(self, other):
+        if isinstance(other, (list, np.ndarray, pandas.Series)):
+            return self._default_to_pandas(pandas.Series.__and__, other)
         new_self, new_other = self._prepare_inter_op(other)
         return super(Series, new_self).__and__(new_other)
+
+    def __rand__(self, other):
+        if isinstance(other, (list, np.ndarray, pandas.Series)):
+            return self._default_to_pandas(pandas.Series.__rand__, other)
+        new_self, new_other = self._prepare_inter_op(other)
+        return super(Series, new_self).__rand__(new_other)
 
     def __array__(self, dtype=None):
         return super(Series, self).__array__(dtype).flatten()
@@ -165,12 +176,6 @@ class Series(BasePandasDataset):
         if key not in self.keys():
             raise KeyError(key)
         self.drop(labels=key, inplace=True)
-
-    def __div__(self, right):
-        return self.div(right)
-
-    def __rdiv__(self, left):
-        return self.rdiv(left)
 
     def __divmod__(self, right):
         return self.divmod(right)
@@ -214,8 +219,28 @@ class Series(BasePandasDataset):
         return self.rmul(left)
 
     def __or__(self, other):
+        if isinstance(other, (list, np.ndarray, pandas.Series)):
+            return self._default_to_pandas(pandas.Series.__or__, other)
         new_self, new_other = self._prepare_inter_op(other)
         return super(Series, new_self).__or__(new_other)
+
+    def __ror__(self, other):
+        if isinstance(other, (list, np.ndarray, pandas.Series)):
+            return self._default_to_pandas(pandas.Series.__ror__, other)
+        new_self, new_other = self._prepare_inter_op(other)
+        return super(Series, new_self).__ror__(new_other)
+
+    def __xor__(self, other):
+        if isinstance(other, (list, np.ndarray, pandas.Series)):
+            return self._default_to_pandas(pandas.Series.__xor__, other)
+        new_self, new_other = self._prepare_inter_op(other)
+        return super(Series, new_self).__xor__(new_other)
+
+    def __rxor__(self, other):
+        if isinstance(other, (list, np.ndarray, pandas.Series)):
+            return self._default_to_pandas(pandas.Series.__rxor__, other)
+        new_self, new_other = self._prepare_inter_op(other)
+        return super(Series, new_self).__rxor__(new_other)
 
     def __pow__(self, right):
         return self.pow(right)
@@ -260,11 +285,10 @@ class Series(BasePandasDataset):
         )
 
     def __setitem__(self, key, value):
-        if key not in self.keys():
-            raise KeyError(key)
-        self._create_or_update_from_compiler(
-            self._query_compiler.setitem(1, key, value), inplace=True
-        )
+        if isinstance(key, slice):
+            self._setitem_slice(key, value)
+        else:
+            self.loc[key] = value
 
     def __sub__(self, right):
         return self.sub(right)
@@ -287,10 +311,6 @@ class Series(BasePandasDataset):
     @property
     def values(self):
         return super(Series, self).to_numpy().flatten()
-
-    def __xor__(self, other):
-        new_self, new_other = self._prepare_inter_op(other)
-        return super(Series, new_self).__xor__(new_other)
 
     def add(self, other, level=None, fill_value=None, axis=0):
         new_self, new_other = self._prepare_inter_op(other)
@@ -479,13 +499,21 @@ class Series(BasePandasDataset):
         keep_shape: bool = False,
         keep_equal: bool = False,
     ):
-        return self._default_to_pandas(
-            pandas.Series.compare,
-            other=other,
+        if not isinstance(other, Series):
+            raise TypeError(f"Cannot compare Series to {type(other)}")
+        result = self.to_frame().compare(
+            other.to_frame(),
             align_axis=align_axis,
             keep_shape=keep_shape,
             keep_equal=keep_equal,
         )
+        if align_axis == "columns" or align_axis == 1:
+            # Pandas.DataFrame.Compare returns a dataframe with a multidimensional index object as the
+            # columns so we have to change column object back.
+            result.columns = pandas.Index(["self", "other"])
+        else:
+            result = result.squeeze().rename(None)
+        return result
 
     def corr(self, other, method="pearson", min_periods=None):
         if method == "pearson":
@@ -817,30 +845,6 @@ class Series(BasePandasDataset):
             )
         )
 
-    def median(self, axis=None, skipna=None, level=None, numeric_only=None, **kwargs):
-        axis = self._get_axis_number(axis)
-        if numeric_only is not None and not numeric_only:
-            self._validate_dtypes(numeric_only=True)
-        if level is not None:
-            return self.__constructor__(
-                query_compiler=self._query_compiler.median(
-                    axis=axis,
-                    skipna=skipna,
-                    level=level,
-                    numeric_only=numeric_only,
-                    **kwargs,
-                )
-            )
-        return self._reduce_dimension(
-            self._query_compiler.median(
-                axis=axis,
-                skipna=skipna,
-                level=level,
-                numeric_only=numeric_only,
-                **kwargs,
-            )
-        )
-
     def memory_usage(self, index=True, deep=False):
         if index:
             result = self._reduce_dimension(
@@ -877,34 +881,6 @@ class Series(BasePandasDataset):
     def nsmallest(self, n=5, keep="first"):
         return Series(query_compiler=self._query_compiler.nsmallest(n=n, keep=keep))
 
-    def sem(
-        self, axis=None, skipna=None, level=None, ddof=1, numeric_only=None, **kwargs
-    ):
-        axis = self._get_axis_number(axis)
-        if numeric_only is not None and not numeric_only:
-            self._validate_dtypes(numeric_only=True)
-        if level is not None:
-            return self.__constructor__(
-                query_compiler=self._query_compiler.sem(
-                    axis=axis,
-                    skipna=skipna,
-                    level=level,
-                    ddof=ddof,
-                    numeric_only=numeric_only,
-                    **kwargs,
-                )
-            )
-        return self._reduce_dimension(
-            self._query_compiler.sem(
-                axis=axis,
-                skipna=skipna,
-                level=level,
-                ddof=ddof,
-                numeric_only=numeric_only,
-                **kwargs,
-            )
-        )
-
     def slice_shift(self, periods=1, axis=0):
         if periods == 0:
             return self.copy()
@@ -929,6 +905,11 @@ class Series(BasePandasDataset):
                 )
             )
 
+    def shift(self, periods=1, freq=None, axis=0, fill_value=None):
+        return super(type(self), self).shift(
+            periods=periods, freq=freq, axis=axis, fill_value=fill_value
+        )
+
     def unstack(self, level=-1, fill_value=None):
         from .dataframe import DataFrame
 
@@ -937,58 +918,6 @@ class Series(BasePandasDataset):
         )
 
         return result.droplevel(0, axis=1) if result.columns.nlevels > 1 else result
-
-    def skew(self, axis=None, skipna=None, level=None, numeric_only=None, **kwargs):
-        axis = self._get_axis_number(axis)
-        if numeric_only is not None and not numeric_only:
-            self._validate_dtypes(numeric_only=True)
-        if level is not None:
-            return self.__constructor__(
-                query_compiler=self._query_compiler.skew(
-                    axis=axis,
-                    skipna=skipna,
-                    level=level,
-                    numeric_only=numeric_only,
-                    **kwargs,
-                )
-            )
-        return self._reduce_dimension(
-            self._query_compiler.skew(
-                axis=axis,
-                skipna=skipna,
-                level=level,
-                numeric_only=numeric_only,
-                **kwargs,
-            )
-        )
-
-    def std(
-        self, axis=None, skipna=None, level=None, ddof=1, numeric_only=None, **kwargs
-    ):
-        axis = self._get_axis_number(axis)
-        if numeric_only is not None and not numeric_only:
-            self._validate_dtypes(numeric_only=True)
-        if level is not None:
-            return self.__constructor__(
-                query_compiler=self._query_compiler.std(
-                    axis=axis,
-                    skipna=skipna,
-                    level=level,
-                    ddof=ddof,
-                    numeric_only=numeric_only,
-                    **kwargs,
-                )
-            )
-        return self._reduce_dimension(
-            self._query_compiler.std(
-                axis=axis,
-                skipna=skipna,
-                level=level,
-                ddof=ddof,
-                numeric_only=numeric_only,
-                **kwargs,
-            )
-        )
 
     @property
     def plot(
@@ -1036,22 +965,21 @@ class Series(BasePandasDataset):
         **kwargs,
     ):
         axis = self._get_axis_number(axis)
+        if level is not None:
+            return self._default_to_pandas(
+                "prod",
+                axis=axis,
+                skipna=skipna,
+                level=level,
+                numeric_only=numeric_only,
+                min_count=min_count,
+                **kwargs,
+            )
         new_index = self.columns if axis else self.index
         if min_count > len(new_index):
             return np.nan
 
         data = self._validate_dtypes_sum_prod_mean(axis, numeric_only, ignore_axis=True)
-        if level is not None:
-            return data.__constructor__(
-                query_compiler=data._query_compiler.prod_min_count(
-                    axis=axis,
-                    skipna=skipna,
-                    level=level,
-                    numeric_only=numeric_only,
-                    min_count=min_count,
-                    **kwargs,
-                )
-            )
         if min_count > 1:
             return data._reduce_dimension(
                 data._query_compiler.prod_min_count(
@@ -1291,9 +1219,7 @@ class Series(BasePandasDataset):
             result._query_compiler, inplace=inplace
         )
 
-    @property
-    def sparse(self):
-        return self._default_to_pandas(pandas.Series.sparse)
+    sparse = CachedAccessor("sparse", SparseAccessor)
 
     def squeeze(self, axis=None):
         if axis is not None:
@@ -1322,6 +1248,17 @@ class Series(BasePandasDataset):
         **kwargs,
     ):
         axis = self._get_axis_number(axis)
+        if level is not None:
+            return self._default_to_pandas(
+                "sum",
+                axis=axis,
+                skipna=skipna,
+                level=level,
+                numeric_only=numeric_only,
+                min_count=min_count,
+                **kwargs,
+            )
+
         new_index = self.columns if axis else self.index
         if min_count > len(new_index):
             return np.nan
@@ -1329,17 +1266,6 @@ class Series(BasePandasDataset):
         data = self._validate_dtypes_sum_prod_mean(
             axis, numeric_only, ignore_axis=False
         )
-        if level is not None:
-            return data.__constructor__(
-                query_compiler=data._query_compiler.sum_min_count(
-                    axis=axis,
-                    skipna=skipna,
-                    level=level,
-                    numeric_only=numeric_only,
-                    min_count=min_count,
-                    **kwargs,
-                )
-            )
         if min_count > 1:
             return data._reduce_dimension(
                 data._query_compiler.sum_min_count(
@@ -1450,7 +1376,9 @@ class Series(BasePandasDataset):
         )
 
     def unique(self):
-        return self._query_compiler.unique().to_numpy().squeeze()
+        return self.__constructor__(
+            query_compiler=self._query_compiler.unique()
+        ).to_numpy()
 
     def update(self, other):
         if not isinstance(other, Series):
@@ -1468,34 +1396,6 @@ class Series(BasePandasDataset):
                 ascending=ascending,
                 bins=bins,
                 dropna=dropna,
-            )
-        )
-
-    def var(
-        self, axis=None, skipna=None, level=None, ddof=1, numeric_only=None, **kwargs
-    ):
-        axis = self._get_axis_number(axis)
-        if numeric_only is not None and not numeric_only:
-            self._validate_dtypes(numeric_only=True)
-        if level is not None:
-            return self.__constructor__(
-                query_compiler=self._query_compiler.var(
-                    axis=axis,
-                    skipna=skipna,
-                    level=level,
-                    ddof=ddof,
-                    numeric_only=numeric_only,
-                    **kwargs,
-                )
-            )
-        return self._reduce_dimension(
-            self._query_compiler.var(
-                axis=axis,
-                skipna=skipna,
-                level=level,
-                ddof=ddof,
-                numeric_only=numeric_only,
-                **kwargs,
             )
         )
 
@@ -1576,7 +1476,7 @@ class Series(BasePandasDataset):
 
     @property
     def is_monotonic(self):
-        return self._reduce_dimension(self._query_compiler.is_monotonic())
+        return self._reduce_dimension(self._query_compiler.is_monotonic_increasing())
 
     is_monotonic_increasing = is_monotonic
 
@@ -1689,6 +1589,11 @@ class Series(BasePandasDataset):
     def _validate_dtypes(self, numeric_only=False):
         pass
 
+    def _get_numeric_data(self, axis: int):
+        # `numeric_only` parameter does not supported by Series, so this method
+        # doesn't do anything
+        return self
+
     def _update_inplace(self, new_query_compiler):
         """
         Implement [METHOD_NAME].
@@ -1764,9 +1669,11 @@ class Series(BasePandasDataset):
         """
         if isinstance(other, Series):
             new_self = self.copy()
-            new_self.name = "__reduced__"
             new_other = other.copy()
-            new_other.name = "__reduced__"
+            if self.name == other.name:
+                new_self.name = new_other.name = self.name
+            else:
+                new_self.name = new_other.name = "__reduced__"
         else:
             new_self = self
             new_other = other

@@ -24,8 +24,9 @@ from modin.pandas.test.utils import (
     test_data,
     create_test_dfs,
 )
+from modin.config import NPartitions
 
-pd.DEFAULT_NPARTITIONS = 4
+NPartitions.put(4)
 
 # Force matplotlib to not use any Xwindows backend.
 matplotlib.use("Agg")
@@ -115,8 +116,6 @@ def test_math_functions_level(op):
         ("sub", "subtract"),
         ("add", "__add__"),
         ("radd", "__radd__"),
-        ("div", "__div__"),
-        ("rdiv", "__rdiv__"),
         ("truediv", "__truediv__"),
         ("rtruediv", "__rtruediv__"),
         ("floordiv", "__floordiv__"),
@@ -135,27 +134,13 @@ def test_math_alias(math_op, alias):
     assert getattr(pd.DataFrame, math_op) == getattr(pd.DataFrame, alias)
 
 
-@pytest.mark.parametrize("other", ["as_left", 4, 4.0])
+@pytest.mark.parametrize("other", ["as_left", 4, 4.0, "a"])
 @pytest.mark.parametrize("op", ["eq", "ge", "gt", "le", "lt", "ne"])
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_comparison(data, op, other):
     eval_general(
         *create_test_dfs(data),
         lambda df: getattr(df, op)(df if other == "as_left" else other),
-    )
-
-
-@pytest.mark.xfail_backends(
-    ["BaseOnPython"],
-    reason="Test is failing because of mismathing of thrown exceptions. See pandas issue #36377",
-)
-@pytest.mark.parametrize("other", ["a"])
-@pytest.mark.parametrize("op", ["ge", "gt", "le", "lt", "eq", "ne"])
-@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-def test_comparison_except(data, op, other):
-    eval_general(
-        *create_test_dfs(data),
-        lambda df: getattr(df, op)(other),
     )
 
 
@@ -197,3 +182,62 @@ def test_equals():
         df_equals(modin_df3, modin_df2)
 
     assert modin_df1.equals(modin_df2._query_compiler.to_pandas())
+
+
+@pytest.mark.parametrize("is_more_other_partitions", [True, False])
+@pytest.mark.parametrize(
+    "op_type", ["df_ser", "df_df", "ser_ser_same_name", "ser_ser_different_name"]
+)
+@pytest.mark.parametrize(
+    "is_idx_aligned", [True, False], ids=["idx_aligned", "idx_not_aligned"]
+)
+def test_mismatched_row_partitions(is_idx_aligned, op_type, is_more_other_partitions):
+    data = [0, 1, 2, 3, 4, 5]
+    modin_df1, pandas_df1 = create_test_dfs({"a": data, "b": data})
+    modin_df, pandas_df = modin_df1.loc[:2], pandas_df1.loc[:2]
+
+    modin_df2 = modin_df.append(modin_df)
+    pandas_df2 = pandas_df.append(pandas_df)
+    if is_more_other_partitions:
+        modin_df2, modin_df1 = modin_df1, modin_df2
+        pandas_df2, pandas_df1 = pandas_df1, pandas_df2
+
+    if is_idx_aligned:
+        if is_more_other_partitions:
+            modin_df1.index = pandas_df1.index = pandas_df2.index
+        else:
+            modin_df2.index = pandas_df2.index = pandas_df1.index
+
+    # Pandas don't support this case because result will contain duplicate values by col axis.
+    if op_type == "df_ser" and not is_idx_aligned and is_more_other_partitions:
+        eval_general(
+            modin_df2,
+            pandas_df2,
+            lambda df: df / modin_df1.a
+            if isinstance(df, pd.DataFrame)
+            else df / pandas_df1.a,
+        )
+        return
+
+    if op_type == "df_ser":
+        modin_res = modin_df2 / modin_df1.a
+        pandas_res = pandas_df2 / pandas_df1.a
+    elif op_type == "df_df":
+        modin_res = modin_df2 / modin_df1
+        pandas_res = pandas_df2 / pandas_df1
+    elif op_type == "ser_ser_same_name":
+        modin_res = modin_df2.a / modin_df1.a
+        pandas_res = pandas_df2.a / pandas_df1.a
+    elif op_type == "ser_ser_different_name":
+        modin_res = modin_df2.a / modin_df1.b
+        pandas_res = pandas_df2.a / pandas_df1.b
+    df_equals(modin_res, pandas_res)
+
+
+def test_duplicate_indexes():
+    data = [0, 1, 2, 3, 4, 5]
+    modin_df1, pandas_df1 = create_test_dfs(
+        {"a": data, "b": data}, index=[0, 1, 2, 0, 1, 2]
+    )
+    modin_df2, pandas_df2 = create_test_dfs({"a": data, "b": data})
+    df_equals(modin_df1 / modin_df2, pandas_df1 / pandas_df2)

@@ -1,6 +1,14 @@
-FROM modin-project/modin-base
+# Create images from this container like this (in modin repo root):
+#
+# git rev-parse HEAD > ci/teamcity/git-rev
+#
+# tar cf ci/teamcity/modin.tar .
+#
+# docker build --build-arg ENVIRONMENT=environment-dev.yml -t modin-project/teamcity-ci:${BUILD_NUMBER} -f ci/teamcity/Dockerfile.teamcity-ci ci/teamcity
 
-ARG ENVIRONMENT=environment.yml
+FROM rayproject/ray:1.0.1
+
+ARG ENVIRONMENT=environment-dev.yml
 
 ADD modin.tar /modin
 ADD git-rev /modin/git-rev
@@ -10,13 +18,21 @@ WORKDIR /modin
 # Make RUN commands use `bash --login`:
 SHELL ["/bin/bash", "--login", "-c"]
 
-RUN conda env create -f ${ENVIRONMENT}
-
-# Initialize conda in bash config fiiles:
+# Initialize conda in bash config files:
 RUN conda init bash
-ENV PATH /opt/conda/envs/modin/bin:$PATH
+ENV PATH /root/anaconda3/envs/modin/bin:$PATH
+
+RUN conda update python -y
+RUN conda env create -f ${ENVIRONMENT}
+RUN conda install curl PyGithub
 
 # Activate the environment, and make sure it's activated:
+# The following line also removed conda initialization from
+# ~/.bashrc so conda starts complaining that it should be
+# initialized for bash. But it is necessary to do it because
+# activation is not always executed when "docker exec" is used
+# and then conda initialization overwrites PATH with its base
+# environment where python doesn't have any packages installed.
 RUN echo "conda activate modin" > ~/.bashrc
 RUN echo "Make sure environment is activated"
-RUN conda list
+RUN conda list -n modin

@@ -38,8 +38,9 @@ from modin.pandas.test.utils import (
     test_data_diff_dtype,
     modin_df_almost_equals_pandas,
 )
+from modin.config import NPartitions
 
-pd.DEFAULT_NPARTITIONS = 4
+NPartitions.put(4)
 
 # Force matplotlib to not use any Xwindows backend.
 matplotlib.use("Agg")
@@ -63,6 +64,8 @@ matplotlib.use("Agg")
         ("pct_change", None),
         ("__getstate__", None),
         ("to_xarray", None),
+        ("flags", None),
+        ("set_flags", lambda df: {"allows_duplicate_labels": False}),
     ],
 )
 def test_ops_defaulting_to_pandas(op, make_args):
@@ -72,7 +75,11 @@ def test_ops_defaulting_to_pandas(op, make_args):
         if make_args is not None:
             operation(**make_args(modin_df))
         else:
-            operation()
+            try:
+                operation()
+            # `except` for non callable attributes
+            except TypeError:
+                pass
 
 
 def test_style():
@@ -1151,6 +1158,13 @@ def test___bool__(data):
     eval_general(*create_test_dfs(data), lambda df: df.__bool__())
 
 
-@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-def test_hasattr_sparse(data):
-    eval_general(*create_test_dfs(data), lambda df: hasattr(df, "sparse"))
+@pytest.mark.parametrize(
+    "is_sparse_data", [True, False], ids=["is_sparse", "is_not_sparse"]
+)
+def test_hasattr_sparse(is_sparse_data):
+    modin_df, pandas_df = (
+        create_test_dfs(pandas.arrays.SparseArray(test_data["float_nan_data"].values()))
+        if is_sparse_data
+        else create_test_dfs(test_data["float_nan_data"])
+    )
+    eval_general(modin_df, pandas_df, lambda df: hasattr(df, "sparse"))

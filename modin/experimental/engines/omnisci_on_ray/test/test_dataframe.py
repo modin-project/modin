@@ -32,6 +32,7 @@ from modin.pandas.test.utils import (
     test_data_keys,
     generate_multiindex,
     eval_general,
+    eval_io,
 )
 
 
@@ -54,10 +55,17 @@ def run_and_compare(
     **kwargs
 ):
     def run_modin(
-        fn, data, data2, force_lazy, force_arrow_execute, allow_subqueries, **kwargs
+        fn,
+        data,
+        data2,
+        force_lazy,
+        force_arrow_execute,
+        allow_subqueries,
+        constructor_kwargs,
+        **kwargs
     ):
-        kwargs["df1"] = pd.DataFrame(data)
-        kwargs["df2"] = pd.DataFrame(data2)
+        kwargs["df1"] = pd.DataFrame(data, **constructor_kwargs)
+        kwargs["df2"] = pd.DataFrame(data2, **constructor_kwargs)
         kwargs["df"] = kwargs["df1"]
 
         if force_lazy:
@@ -76,9 +84,10 @@ def run_and_compare(
 
         return exp_res
 
+    constructor_kwargs = kwargs.pop("constructor_kwargs", {})
     try:
-        kwargs["df1"] = pandas.DataFrame(data)
-        kwargs["df2"] = pandas.DataFrame(data2)
+        kwargs["df1"] = pandas.DataFrame(data, **constructor_kwargs)
+        kwargs["df2"] = pandas.DataFrame(data2, **constructor_kwargs)
         kwargs["df"] = kwargs["df1"]
         ref_res = fn(lib=pandas, **kwargs)
     except Exception as e:
@@ -90,6 +99,7 @@ def run_and_compare(
                 force_lazy=force_lazy,
                 force_arrow_execute=force_arrow_execute,
                 allow_subqueries=allow_subqueries,
+                constructor_kwargs=constructor_kwargs,
                 **kwargs
             )
             _ = exp_res.index
@@ -101,11 +111,13 @@ def run_and_compare(
             force_lazy=force_lazy,
             force_arrow_execute=force_arrow_execute,
             allow_subqueries=allow_subqueries,
+            constructor_kwargs=constructor_kwargs,
             **kwargs
         )
         df_equals(ref_res, exp_res)
 
 
+@pytest.mark.usefixtures("TestReadCSVFixture")
 class TestCSV:
     root = os.path.abspath(__file__ + "/.." * 6)  # root of modin repo
 
@@ -292,6 +304,30 @@ class TestCSV:
 
         df_equals(modin_df, pandas_df)
 
+    # Datetime Handling tests
+    @pytest.mark.parametrize("engine", [None, "arrow"])
+    @pytest.mark.parametrize(
+        "parse_dates",
+        [
+            True,
+            False,
+            ["col2"],
+        ],
+    )
+    def test_read_csv_datetime(
+        self,
+        engine,
+        parse_dates,
+    ):
+
+        eval_io(
+            fn_name="read_csv",
+            md_extra_kwargs={"engine": engine},
+            # read_csv kwargs
+            filepath_or_buffer=pytest.csvs_names["test_read_csv_regular"],
+            parse_dates=parse_dates,
+        )
+
 
 class TestMasks:
     data = {
@@ -392,6 +428,30 @@ class TestMultiIndex:
 
         eval_general(pd, pandas, applier)
 
+    def test_set_index_name(self):
+        index = pandas.Index.__new__(pandas.Index, data=[i for i in range(24)])
+
+        pandas_df = pandas.DataFrame(self.data, index=index)
+        pandas_df.index.name = "new_name"
+        modin_df = pd.DataFrame(self.data, index=index)
+        modin_df._query_compiler.set_index_name("new_name")
+
+        df_equals(pandas_df, modin_df)
+
+    def test_set_index_names(self):
+        index = pandas.MultiIndex.from_tuples(
+            [(i, j, k) for i in range(2) for j in range(3) for k in range(4)]
+        )
+
+        pandas_df = pandas.DataFrame(self.data, index=index)
+        pandas_df.index.names = ["new_name1", "new_name2", "new_name3"]
+        modin_df = pd.DataFrame(self.data, index=index)
+        modin_df._query_compiler.set_index_names(
+            ["new_name1", "new_name2", "new_name3"]
+        )
+
+        df_equals(pandas_df, modin_df)
+
 
 class TestFillna:
     data = {"a": [1, 1, None], "b": [None, None, 2], "c": [3, None, None]}
@@ -452,8 +512,11 @@ class TestConcat:
 
         run_and_compare(concat, data=self.data)
 
-    def test_setitem(self):
+    def test_setitem_lazy(self):
         def applier(df, **kwargs):
+            df = df + 1
+            df["a"] = df["a"] + 1
+            df["e"] = df["a"] + 1
             df["new_int8"] = np.int8(10)
             df["new_int16"] = np.int16(10)
             df["new_int32"] = np.int32(10)
@@ -465,16 +528,32 @@ class TestConcat:
 
         run_and_compare(applier, data=self.data)
 
-    def test_insert(self):
-        def applier(df, **kwargs):
-            df.insert(0, "new_int", 10)
-            df.insert(0, "new_float", 5.5)
-            df.insert(0, "new_list_like", np.arange(len(df)))
-            df.insert(0, "qc_column", df["new_int"])
+    def test_setitem_default(self):
+        def applier(df, lib, **kwargs):
+            df = df + 1
+            df["a"] = np.arange(3)
+            df["b"] = lib.Series(np.arange(3))
             return df
 
-        # setting `force_lazy=False`, because we're expecting to fallback
-        # to pandas in that case, which is not supported in lazy mode
+        run_and_compare(applier, data=self.data, force_lazy=False)
+
+    def test_insert_lazy(self):
+        def applier(df, **kwargs):
+            df = df + 1
+            df.insert(2, "new_int", 10)
+            df.insert(1, "new_float", 5.5)
+            df.insert(0, "new_a", df["a"] + 1)
+            return df
+
+        run_and_compare(applier, data=self.data)
+
+    def test_insert_default(self):
+        def applier(df, lib, **kwargs):
+            df = df + 1
+            df.insert(1, "new_range", np.arange(3))
+            df.insert(1, "new_series", lib.Series(np.arange(3)))
+            return df
+
         run_and_compare(applier, data=self.data, force_lazy=False)
 
     def test_concat_many(self):
@@ -547,6 +626,17 @@ class TestGroupby:
 
         run_and_compare(groupby_count, data=self.data, cols=cols, as_index=as_index)
 
+    @pytest.mark.xfail(
+        reason="Currently mean() passes a lambda into backend which cannot be executed on omnisci backend"
+    )
+    @pytest.mark.parametrize("cols", cols_value)
+    @pytest.mark.parametrize("as_index", bool_arg_values)
+    def test_groupby_mean(self, cols, as_index):
+        def groupby_mean(df, cols, as_index, **kwargs):
+            return df.groupby(cols, as_index=as_index).mean()
+
+        run_and_compare(groupby_mean, data=self.data, cols=cols, as_index=as_index)
+
     @pytest.mark.parametrize("cols", cols_value)
     @pytest.mark.parametrize("as_index", bool_arg_values)
     def test_groupby_proj_sum(self, cols, as_index):
@@ -568,6 +658,26 @@ class TestGroupby:
             return df.groupby("a").agg({"b": "size"})
 
         run_and_compare(groupby, data=self.data)
+
+    @pytest.mark.xfail(
+        reason="Function specified as a string should be passed into backend API, but currently it is transformed into a lambda"
+    )
+    @pytest.mark.parametrize("cols", cols_value)
+    @pytest.mark.parametrize("as_index", bool_arg_values)
+    def test_groupby_agg_mean(self, cols, as_index):
+        def groupby_mean(df, cols, as_index, **kwargs):
+            return df.groupby(cols, as_index=as_index).agg("mean")
+
+        run_and_compare(groupby_mean, data=self.data, cols=cols, as_index=as_index)
+
+    def test_groupby_lazy_multiindex(self):
+        index = generate_multiindex(len(self.data["a"]))
+
+        def groupby(df, *args, **kwargs):
+            df = df + 1
+            return df.groupby("a").agg({"b": "size"})
+
+        run_and_compare(groupby, data=self.data, constructor_kwargs={"index": index})
 
     taxi_data = {
         "a": [1, 1, 2, 2],
@@ -842,6 +952,46 @@ class TestGroupby:
             return df.groupby("a").agg({"b": "min", "c": ["min", "max", "sum", "skew"]})
 
         run_and_compare(groupby, data=self.data)
+
+
+class TestAgg:
+    data = {
+        "a": [1, 2, None, None, 1, None],
+        "b": [10, 20, None, 20, 10, None],
+        "c": [None, 200, None, 400, 500, 600],
+        "d": [11, 22, 33, 22, 33, 22],
+    }
+
+    @pytest.mark.parametrize("agg", ["max", "min", "sum", "mean"])
+    @pytest.mark.parametrize("skipna", bool_arg_values)
+    def test_simple_agg(self, agg, skipna):
+        def apply(df, agg, skipna, **kwargs):
+            return getattr(df, agg)(skipna=skipna)
+
+        run_and_compare(apply, data=self.data, agg=agg, skipna=skipna, force_lazy=False)
+
+    def test_count_agg(self):
+        def apply(df, **kwargs):
+            return df.count()
+
+        run_and_compare(apply, data=self.data, force_lazy=False)
+
+    @pytest.mark.parametrize("cols", ["a", "d"])
+    @pytest.mark.parametrize("dropna", [True, False])
+    @pytest.mark.parametrize("sort", [True])
+    @pytest.mark.parametrize("ascending", [True, False])
+    def test_value_counts(self, cols, dropna, sort, ascending):
+        def value_counts(df, cols, dropna, sort, ascending, **kwargs):
+            return df[cols].value_counts(dropna=dropna, sort=sort, ascending=ascending)
+
+        run_and_compare(
+            value_counts,
+            data=self.data,
+            cols=cols,
+            dropna=dropna,
+            sort=sort,
+            ascending=ascending,
+        )
 
 
 class TestMerge:
@@ -1147,6 +1297,39 @@ class TestBinaryOp:
 
         run_and_compare(mul1, data=self.data)
         run_and_compare(mul2, data=self.data)
+
+    def test_mod_cst(self):
+        def mod(lib, df):
+            return df % 2
+
+        run_and_compare(mod, data=self.data)
+
+    def test_mod_list(self):
+        def mod(lib, df):
+            return df % [2, 3, 4, 5]
+
+        run_and_compare(mod, data=self.data)
+
+    @pytest.mark.parametrize("fill_value", fill_values)
+    def test_mod_method_columns(self, fill_value):
+        def mod1(lib, df, fill_value):
+            return df["a"].mod(df["b"], fill_value=fill_value)
+
+        def mod2(lib, df, fill_value):
+            return df[["a", "c"]].mod(df[["b", "a"]], fill_value=fill_value)
+
+        run_and_compare(mod1, data=self.data, fill_value=fill_value)
+        run_and_compare(mod2, data=self.data, fill_value=fill_value)
+
+    def test_mod_columns(self):
+        def mod1(lib, df):
+            return df["a"] % df["b"]
+
+        def mod2(lib, df):
+            return df[["a", "c"]] % df[["b", "a"]]
+
+        run_and_compare(mod1, data=self.data)
+        run_and_compare(mod2, data=self.data)
 
     def test_truediv_cst(self):
         def truediv(lib, df):

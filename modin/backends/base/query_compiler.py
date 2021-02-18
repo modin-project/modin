@@ -23,15 +23,18 @@ from modin.data_management.functions.default_methods import (
     CatDefault,
     GroupByDefault,
 )
+from modin.error_message import ErrorMessage
 
 from pandas.core.dtypes.common import is_scalar
 import pandas.core.resample
 import pandas
 import numpy as np
+from typing import List, Hashable
 
 
 def _get_axis(axis):
     def axis_getter(self):
+        ErrorMessage.default_to_pandas(f"DataFrame.get_axis({axis})")
         return self.to_pandas().axes[axis]
 
     return axis_getter
@@ -56,7 +59,8 @@ class BaseQueryCompiler(abc.ABC):
 
     @abc.abstractmethod
     def default_to_pandas(self, pandas_op, *args, **kwargs):
-        """Default to pandas behavior.
+        """
+        Default to pandas behavior.
 
         Parameters
         ----------
@@ -134,10 +138,9 @@ class BaseQueryCompiler(abc.ABC):
             else:
                 if isinstance(other, (list, np.ndarray)) and len(other) == 1:
                     other = other[0]
-                how = kwargs.pop("join", None)
                 ignore_index = kwargs.pop("ignore_index", None)
-                kwargs["how"] = how
-                result = df.join(other, **kwargs)
+                kwargs["how"] = kwargs.pop("join", None)
+                result = df.join(other, rsuffix="r_", **kwargs)
             if ignore_index:
                 if axis == 0:
                     result = result.reset_index(drop=True)
@@ -482,6 +485,30 @@ class BaseQueryCompiler(abc.ABC):
         """
         return DataFrameDefault.register(pandas.DataFrame.reset_index)(self, **kwargs)
 
+    def set_index_from_columns(
+        self, keys: List[Hashable], drop: bool = True, append: bool = False
+    ):
+        """Create new row labels from a list of columns.
+
+        Parameters
+        ----------
+        keys : list of hashable
+            The list of column names that will become the new index.
+        drop : boolean
+            Whether or not to drop the columns provided in the `keys` argument.
+        append : boolean
+            Whether or not to add the columns in `keys` as new levels appended to the
+            existing index.
+
+        Returns
+        -------
+        PandasQueryCompiler
+            A new QueryCompiler with updated index.
+        """
+        return DataFrameDefault.register(pandas.DataFrame.set_index)(
+            self, keys=keys, drop=drop, append=append
+        )
+
     # END Abstract reindex/reset_index
 
     # Full Reduce operations
@@ -491,14 +518,14 @@ class BaseQueryCompiler(abc.ABC):
     # we will implement a Distributed Series, and this will be returned
     # instead.
 
-    def is_monotonic(self):
+    def is_monotonic_increasing(self):
         """Return boolean if values in the object are monotonic_increasing.
 
         Returns
         -------
             bool
         """
-        return SeriesDefault.register(pandas.Series.is_monotonic)(self)
+        return SeriesDefault.register(pandas.Series.is_monotonic_increasing)(self)
 
     def is_monotonic_decreasing(self):
         """Return boolean if values in the object are monotonic_decreasing.
@@ -1392,26 +1419,33 @@ class BaseQueryCompiler(abc.ABC):
             reduce_args=reduce_args,
             numeric_only=numeric_only,
             drop=drop,
+            method="size",
         )
 
-    def groupby_agg(self, by, axis, agg_func, groupby_args, agg_args, drop=False):
+    def groupby_agg(
+        self,
+        by,
+        is_multi_by,
+        axis,
+        agg_func,
+        agg_args,
+        agg_kwargs,
+        groupby_kwargs,
+        drop=False,
+    ):
+        if isinstance(by, type(self)) and len(by.columns) == 1:
+            by = by.columns[0] if drop else by.to_pandas().squeeze()
+        elif isinstance(by, type(self)):
+            by = list(by.columns)
+
         return GroupByDefault.register(pandas.core.groupby.DataFrameGroupBy.aggregate)(
             self,
             by=by,
+            is_multi_by=is_multi_by,
             axis=axis,
             agg_func=agg_func,
-            groupby_args=groupby_args,
-            agg_args=agg_args,
-            drop=drop,
-        )
-
-    def groupby_dict_agg(self, by, func_dict, groupby_args, agg_args, drop=False):
-        return GroupByDefault.register(pandas.core.groupby.DataFrameGroupBy.aggregate)(
-            self,
-            by=by,
-            func_dict=func_dict,
-            groupby_args=groupby_args,
-            agg_args=agg_args,
+            groupby_args=groupby_kwargs,
+            agg_args=agg_kwargs,
             drop=drop,
         )
 
@@ -1493,6 +1527,21 @@ class BaseQueryCompiler(abc.ABC):
     index = property(_get_axis(0), _set_axis(0))
     columns = property(_get_axis(1), _set_axis(1))
 
+    def get_axis(self, axis):
+        """
+        Return index labels of the specified axis.
+
+        Parameters
+        ----------
+        axis: int,
+            Axis to return labels on.
+
+        Returns
+        -------
+            Index
+        """
+        return self.index if axis == 0 else self.columns
+
     def view(self, index=None, columns=None):
         index = [] if index is None else index
         columns = [] if columns is None else columns
@@ -1501,6 +1550,43 @@ class BaseQueryCompiler(abc.ABC):
             return df.iloc[index, columns]
 
         return DataFrameDefault.register(applyier)(self)
+
+    def insert_item(self, axis, loc, value, how="inner", replace=False):
+        """
+        Insert new column/row defined by `value` at the specified `loc`
+
+        Parameters
+        ----------
+        axis: int, axis to insert along
+        loc: int, position to insert `value`
+        value: BaseQueryCompiler, value to insert
+        how : str,
+            The type of join to join to make.
+        replace: bool (default False),
+            Whether to insert item at `loc` or to replace item at `loc`.
+
+        Returns
+        -------
+            A new BaseQueryCompiler
+        """
+        assert isinstance(value, type(self))
+
+        def mask(idx):
+            if len(idx) == len(self.get_axis(axis)):
+                return self
+            return (
+                self.getitem_column_array(idx, numeric=True)
+                if axis
+                else self.getitem_row_array(idx)
+            )
+
+        if 0 <= loc < len(self.get_axis(axis)):
+            first_mask = mask(list(range(loc)))
+            second_mask_loc = loc + 1 if replace else loc
+            second_mask = mask(list(range(second_mask_loc, len(self.get_axis(axis)))))
+            return first_mask.concat(axis, [value, second_mask], join=how, sort=False)
+        else:
+            return self.concat(axis, [value], join=how, sort=False)
 
     def setitem(self, axis, key, value):
         def setitem(df, axis, key, value):
@@ -1559,6 +1645,64 @@ class BaseQueryCompiler(abc.ABC):
             return isinstance(self.index, pandas.MultiIndex)
         assert axis == 1
         return isinstance(self.columns, pandas.MultiIndex)
+
+    def get_index_name(self, axis=0):
+        """
+        Get index name of specified axis.
+
+        Parameters
+        ----------
+        axis: int (default 0),
+            Axis to return index name on.
+
+        Returns
+        -------
+        hashable
+            Index name, None for MultiIndex.
+        """
+        return self.get_axis(axis).name
+
+    def set_index_name(self, name, axis=0):
+        """
+        Set index name for the specified axis.
+
+        Parameters
+        ----------
+        name: hashable,
+            New index name.
+        axis: int (default 0),
+            Axis to set name along.
+        """
+        self.get_axis(axis).name = name
+
+    def get_index_names(self, axis=0):
+        """
+        Get index names of specified axis.
+
+        Parameters
+        ----------
+        axis: int (default 0),
+            Axis to return index names on.
+
+        Returns
+        -------
+        list
+            Index names.
+        """
+        return self.get_axis(axis).names
+
+    def set_index_names(self, names, axis=0):
+        """
+        Set index names for the specified axis.
+
+        Parameters
+        ----------
+        names: list,
+            New index names.
+        axis: int (default 0),
+            Axis to set names along.
+        """
+        self.get_axis(axis).names = names
 
     # DateTime methods
 
@@ -1765,5 +1909,6 @@ class BaseQueryCompiler(abc.ABC):
     kurt = DataFrameDefault.register(pandas.DataFrame.kurt)
     sum_min_count = DataFrameDefault.register(pandas.DataFrame.sum)
     prod_min_count = DataFrameDefault.register(pandas.DataFrame.prod)
+    compare = DataFrameDefault.register(pandas.DataFrame.compare)
 
     # End of DataFrame methods

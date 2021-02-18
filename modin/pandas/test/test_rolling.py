@@ -17,8 +17,9 @@ import pandas
 import modin.pandas as pd
 
 from .utils import df_equals, test_data_values, test_data_keys
+from modin.config import NPartitions
 
-pd.DEFAULT_NPARTITIONS = 4
+NPartitions.put(4)
 
 
 def create_test_series(vals):
@@ -60,7 +61,6 @@ def test_dataframe(data, window, min_periods, win_type):
         df_equals(modin_rolled.std(ddof=0), pandas_rolled.std(ddof=0))
     # Testing of Rolling class
     else:
-        df_equals(modin_rolled.count(), pandas_rolled.count())
         df_equals(modin_rolled.sum(), pandas_rolled.sum())
         df_equals(modin_rolled.mean(), pandas_rolled.mean())
         df_equals(modin_rolled.median(), pandas_rolled.median())
@@ -77,6 +77,11 @@ def test_dataframe(data, window, min_periods, win_type):
             pandas_rolled.aggregate([np.sum, np.mean]),
         )
         df_equals(modin_rolled.quantile(0.1), pandas_rolled.quantile(0.1))
+        # `Rolling.counts` has a buggy side-effect on other rolling functions described in:
+        # https://github.com/pandas-dev/pandas/issues/39554
+        # So the testing of `.count` should always be the last until this bug
+        # will be fixed in pandas, to avoid this side-effect
+        df_equals(modin_rolled.count(), pandas_rolled.count())
 
 
 @pytest.mark.parametrize("axis", [0, "columns"])
@@ -120,7 +125,6 @@ def test_dataframe_dt_index(axis, on, closed, window):
                 pandas_rolled.corr(pandas_df[pandas_df.columns[0]], True),
             )
     else:
-        df_equals(modin_rolled.count(), pandas_rolled.count())
         df_equals(modin_rolled.skew(), pandas_rolled.skew())
         df_equals(
             modin_rolled.apply(np.sum, raw=True),
@@ -128,6 +132,11 @@ def test_dataframe_dt_index(axis, on, closed, window):
         )
         df_equals(modin_rolled.aggregate(np.sum), pandas_rolled.aggregate(np.sum))
         df_equals(modin_rolled.quantile(0.1), pandas_rolled.quantile(0.1))
+        # `Rolling.counts` has a buggy side-effect on other rolling functions described in:
+        # https://github.com/pandas-dev/pandas/issues/39554
+        # So the testing of `.count` should always be the last until this bug
+        # will be fixed in pandas, to avoid this side-effect
+        df_equals(modin_rolled.count(), pandas_rolled.count())
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
@@ -158,7 +167,6 @@ def test_series(data, window, min_periods, win_type):
         df_equals(modin_rolled.std(ddof=0), pandas_rolled.std(ddof=0))
     # Testing of Rolling class
     else:
-        df_equals(modin_rolled.count(), pandas_rolled.count())
         df_equals(modin_rolled.sum(), pandas_rolled.sum())
         df_equals(modin_rolled.mean(), pandas_rolled.mean())
         df_equals(modin_rolled.median(), pandas_rolled.median())
@@ -186,6 +194,11 @@ def test_series(data, window, min_periods, win_type):
             pandas_rolled.agg([np.sum, np.mean]),
         )
         df_equals(modin_rolled.quantile(0.1), pandas_rolled.quantile(0.1))
+        # `Rolling.counts` has a buggy side-effect on other rolling functions described in:
+        # https://github.com/pandas-dev/pandas/issues/39554
+        # So the testing of `.count` should always be the last until this bug
+        # will be fixed in pandas, to avoid this side-effect
+        df_equals(modin_rolled.count(), pandas_rolled.count())
 
 
 @pytest.mark.parametrize("closed", ["both", "right"])
@@ -196,10 +209,14 @@ def test_series_dt_index(closed):
 
     pandas_rolled = pandas_series.rolling("3s", closed=closed)
     modin_rolled = modin_series.rolling("3s", closed=closed)
-    df_equals(modin_rolled.count(), pandas_rolled.count())
     df_equals(modin_rolled.skew(), pandas_rolled.skew())
     df_equals(
         modin_rolled.apply(np.sum, raw=True), pandas_rolled.apply(np.sum, raw=True)
     )
     df_equals(modin_rolled.aggregate(np.sum), pandas_rolled.aggregate(np.sum))
     df_equals(modin_rolled.quantile(0.1), pandas_rolled.quantile(0.1))
+    # `Rolling.counts` has a buggy side-effect on other rolling functions described in:
+    # https://github.com/pandas-dev/pandas/issues/39554
+    # So the testing of `.count` should always be the last until this bug
+    # will be fixed in pandas, to avoid this side-effect
+    df_equals(modin_rolled.count(), pandas_rolled.count())

@@ -14,7 +14,7 @@
 import abc
 from pandas.core.dtypes.common import (
     is_list_like,
-    _get_dtype,
+    get_dtype,
     is_float_dtype,
     is_integer_dtype,
     is_numeric_dtype,
@@ -30,9 +30,9 @@ def _get_common_dtype(lhs_dtype, rhs_dtype):
     if lhs_dtype == rhs_dtype:
         return lhs_dtype
     if is_float_dtype(lhs_dtype) or is_float_dtype(rhs_dtype):
-        return _get_dtype(float)
+        return get_dtype(float)
     assert is_integer_dtype(lhs_dtype) and is_integer_dtype(rhs_dtype)
-    return _get_dtype(int)
+    return get_dtype(int)
 
 
 _aggs_preserving_numeric_type = {"sum", "min", "max"}
@@ -44,9 +44,9 @@ def _agg_dtype(agg, dtype):
     if agg in _aggs_preserving_numeric_type:
         return dtype
     elif agg in _aggs_with_int_result:
-        return _get_dtype(int)
+        return get_dtype(int)
     elif agg in _aggs_with_float_result:
-        return _get_dtype(float)
+        return get_dtype(float)
     else:
         raise NotImplementedError(f"unsupported aggreagte {agg}")
 
@@ -63,6 +63,7 @@ class BaseExpr(abc.ABC):
         "add": "+",
         "sub": "-",
         "mul": "*",
+        "mod": "MOD",
         "floordiv": "/",
         "truediv": "/",
         "pow": "POWER",
@@ -74,19 +75,19 @@ class BaseExpr(abc.ABC):
         "ne": "<>",
     }
 
-    preserve_dtype_math_ops = {"add", "sub", "mul", "floordiv", "pow"}
+    preserve_dtype_math_ops = {"add", "sub", "mul", "mod", "floordiv", "pow"}
     promote_to_float_math_ops = {"truediv"}
 
     def eq(self, other):
         if not isinstance(other, BaseExpr):
             other = LiteralExpr(other)
-        new_expr = OpExpr("=", [self, other], _get_dtype(bool))
+        new_expr = OpExpr("=", [self, other], get_dtype(bool))
         return new_expr
 
     def le(self, other):
         if not isinstance(other, BaseExpr):
             other = LiteralExpr(other)
-        new_expr = OpExpr("<=", [self, other], _get_dtype(bool))
+        new_expr = OpExpr("<=", [self, other], get_dtype(bool))
         return new_expr
 
     def cast(self, res_type):
@@ -94,7 +95,11 @@ class BaseExpr(abc.ABC):
         return new_expr
 
     def is_null(self):
-        new_expr = OpExpr("IS NULL", [self], _get_dtype(bool))
+        new_expr = OpExpr("IS NULL", [self], get_dtype(bool))
+        return new_expr
+
+    def is_not_null(self):
+        new_expr = OpExpr("IS NOT NULL", [self], get_dtype(bool))
         return new_expr
 
     def bin_op(self, other, op_name):
@@ -107,7 +112,7 @@ class BaseExpr(abc.ABC):
         # True division may require prior cast to float to avoid integer division
         if op_name == "truediv":
             if is_integer_dtype(self._dtype) and is_integer_dtype(other._dtype):
-                other = other.cast(_get_dtype(float))
+                other = other.cast(get_dtype(float))
         res_type = self._get_bin_op_res_type(op_name, self._dtype, other._dtype)
         new_expr = OpExpr(self.binary_operations[op_name], [self, other], res_type)
         # Floor division may require additional FLOOR expr.
@@ -124,6 +129,9 @@ class BaseExpr(abc.ABC):
     def mul(self, other):
         return self.bin_op(other, "mul")
 
+    def mod(self, other):
+        return self.bin_op(other, "mod")
+
     def truediv(self, other):
         return self.bin_op(other, "truediv")
 
@@ -134,12 +142,12 @@ class BaseExpr(abc.ABC):
         return self.bin_op(other, "pow")
 
     def floor(self):
-        return OpExpr("FLOOR", [self], _get_dtype(int))
+        return OpExpr("FLOOR", [self], get_dtype(int))
 
     def _cmp_op(self, other, op_name):
         lhs_dtype_class = self._get_dtype_cmp_class(self._dtype)
         rhs_dtype_class = self._get_dtype_cmp_class(other._dtype)
-        res_dtype = _get_dtype(bool)
+        res_dtype = get_dtype(bool)
         # In OmniSci comparison with NULL always results in NULL,
         # but in Pandas it is True for 'ne' comparison and False
         # for others.
@@ -172,9 +180,9 @@ class BaseExpr(abc.ABC):
         if op_name in self.preserve_dtype_math_ops:
             return _get_common_dtype(lhs_dtype, rhs_dtype)
         elif op_name in self.promote_to_float_math_ops:
-            return _get_dtype(float)
+            return get_dtype(float)
         elif is_cmp_op(op_name):
-            return _get_dtype(bool)
+            return get_dtype(bool)
         else:
             raise NotImplementedError(f"unsupported binary operation {op_name}")
 
@@ -226,9 +234,9 @@ class LiteralExpr(BaseExpr):
         ), f"unsupported literal value {val} of type {type(val)}"
         self.val = val
         if val is None:
-            self._dtype = _get_dtype(float)
+            self._dtype = get_dtype(float)
         else:
-            self._dtype = _get_dtype(type(val))
+            self._dtype = get_dtype(type(val))
 
     def copy(self):
         return LiteralExpr(self.val)
@@ -256,7 +264,8 @@ class AggregateExpr(BaseExpr):
     def __init__(self, agg, op, distinct=False, dtype=None):
         self.agg = agg
         self.operands = [op]
-        self._dtype = dtype if dtype else _agg_dtype(agg, op._dtype)
+        self._dtype = dtype if dtype else _agg_dtype(agg, op._dtype if op else None)
+        assert self._dtype is not None
         self.distinct = distinct
 
     def copy(self):
@@ -289,7 +298,7 @@ def build_row_idx_filter_expr(row_idx, row_col):
     for idx in row_idx:
         exprs.append(row_col.eq(idx))
 
-    res = OpExpr("OR", exprs, _get_dtype(bool))
+    res = OpExpr("OR", exprs, get_dtype(bool))
 
     return res
 
@@ -301,6 +310,6 @@ def build_if_then_else(cond, then_val, else_val, res_type):
 def build_dt_expr(dt_operation, col_expr):
     operation = LiteralExpr(dt_operation)
 
-    res = OpExpr("PG_EXTRACT", [operation, col_expr], _get_dtype(int))
+    res = OpExpr("PG_EXTRACT", [operation, col_expr], get_dtype(int))
 
     return res

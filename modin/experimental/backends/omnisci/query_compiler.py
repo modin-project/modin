@@ -206,10 +206,7 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
         else:
             shape_hint = None
             new_frame = new_frame._set_columns(list(new_frame.columns)[:-1] + ["size"])
-        new_qc = self.__constructor__(new_frame, shape_hint=shape_hint)
-        if groupby_args["squeeze"]:
-            new_qc = new_qc.squeeze()
-        return new_qc
+        return self.__constructor__(new_frame, shape_hint=shape_hint)
 
     def groupby_sum(self, by, axis, groupby_args, map_args, **kwargs):
         """Groupby with sum aggregation.
@@ -234,10 +231,7 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
         new_frame = self._modin_frame.groupby_agg(
             by, axis, "sum", groupby_args, **kwargs
         )
-        new_qc = self.__constructor__(new_frame)
-        if groupby_args["squeeze"]:
-            new_qc = new_qc.squeeze()
-        return new_qc
+        return self.__constructor__(new_frame)
 
     def groupby_count(self, by, axis, groupby_args, map_args, **kwargs):
         """Perform a groupby count.
@@ -266,40 +260,69 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
         new_frame = self._modin_frame.groupby_agg(
             by, axis, "count", groupby_args, **kwargs
         )
-        new_qc = self.__constructor__(new_frame)
-        if groupby_args["squeeze"]:
-            new_qc = new_qc.squeeze()
-        return new_qc
+        return self.__constructor__(new_frame)
 
-    def groupby_dict_agg(self, by, func_dict, groupby_args, agg_args, drop=False):
-        """Apply aggregation functions to a grouped dataframe per-column.
-
-        Parameters
-        ----------
-        by : DFAlgQueryCompiler
-            The column to group by
-        func_dict : dict of str, callable/string
-            The dictionary mapping of column to function
-        groupby_args : dict
-            The dictionary of keyword arguments for the group by.
-        agg_args : dict
-            The dictionary of keyword arguments for the aggregation functions
-        drop : bool
-            Whether or not to drop the column from the data.
-
-        Returns
-        -------
-        DFAlgQueryCompiler
-            The result of the per-column aggregations on the grouped dataframe.
-        """
-        # TODO: handle drop arg
+    def groupby_agg(
+        self,
+        by,
+        is_multi_by,
+        axis,
+        agg_func,
+        agg_args,
+        agg_kwargs,
+        groupby_kwargs,
+        drop=False,
+    ):
+        # TODO: handle `is_multi_by`, `agg_args`, `drop` args
         new_frame = self._modin_frame.groupby_agg(
-            by, 0, func_dict, groupby_args, **agg_args
+            by, axis, agg_func, groupby_kwargs, **agg_kwargs
         )
-        new_qc = self.__constructor__(new_frame)
-        if groupby_args["squeeze"]:
-            new_qc = new_qc.squeeze()
-        return new_qc
+        return self.__constructor__(new_frame)
+
+    def count(self, **kwargs):
+        return self._agg("count", **kwargs)
+
+    def max(self, **kwargs):
+        return self._agg("max", **kwargs)
+
+    def min(self, **kwargs):
+        return self._agg("min", **kwargs)
+
+    def sum(self, **kwargs):
+        return self._agg("sum", **kwargs)
+
+    def mean(self, **kwargs):
+        return self._agg("mean", **kwargs)
+
+    def _agg(self, agg, axis=0, level=None, **kwargs):
+        if level is not None or axis != 0:
+            return getattr(super(), agg)(axis=axis, level=level, **kwargs)
+
+        skipna = kwargs.get("skipna", True)
+        if not skipna:
+            return getattr(super(), agg)(axis=axis, level=level, **kwargs)
+
+        new_frame = self._modin_frame.agg(agg)
+        new_frame = new_frame._set_index(
+            pandas.Index.__new__(pandas.Index, data=["__reduced__"], dtype="O")
+        )
+        return self.__constructor__(new_frame, shape_hint="row")
+
+    def value_counts(self, **kwargs):
+        subset = kwargs.get("subset", None)
+        normalize = kwargs.get("normalize", False)
+        sort = kwargs.get("sort", True)
+        ascending = kwargs.get("ascending", False)
+        bins = kwargs.get("bins", False)
+        dropna = kwargs.get("dropna", True)
+
+        if bins or normalize:
+            return super().value_count(**kwargs)
+
+        new_frame = self._modin_frame.value_counts(
+            columns=subset, dropna=dropna, sort=sort, ascending=ascending
+        )
+        return self.__constructor__(new_frame, shape_hint="column")
 
     def _get_index(self):
         if self._modin_frame._has_unsupported_data:
@@ -431,6 +454,9 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
     def mul(self, other, **kwargs):
         return self._bin_op(other, "mul", **kwargs)
 
+    def mod(self, other, **kwargs):
+        return self._bin_op(other, "mod", **kwargs)
+
     def floordiv(self, other, **kwargs):
         return self._bin_op(other, "floordiv", **kwargs)
 
@@ -494,9 +520,14 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
         if axis == 1 or not isinstance(value, type(self)):
             return super().setitem(axis=axis, key=key, value=value)
 
-        return self._setitem(axis, key, value)
+        try:
+            result = self._setitem(axis, key, value)
+        # OmniSci engine does not yet support cases when `value` is not a subframe of `self`.
+        except NotImplementedError:
+            result = super().setitem(axis=axis, key=key, value=value)
+        return result
 
-    _setitem = PandasQueryCompiler.setitem
+    _setitem = PandasQueryCompiler._setitem
 
     def insert(self, loc, column, value):
         """Insert new column data.
@@ -509,6 +540,15 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
         Returns:
             A new DFAlgQueryCompiler with new data inserted.
         """
+        if isinstance(value, type(self)):
+            value.columns = [column]
+            try:
+                result = self.insert_item(axis=1, loc=loc, value=value)
+            # OmniSci engine does not yet support cases when `value` is not a subframe of `self`.
+            except NotImplementedError:
+                result = super().insert(loc=loc, column=column, value=value)
+            return result
+
         if is_list_like(value):
             return super().insert(loc=loc, column=column, value=value)
 
@@ -595,6 +635,24 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
             return self._modin_frame.has_multiindex()
         assert axis == 1
         return isinstance(self.columns, pandas.MultiIndex)
+
+    def get_index_name(self, axis=0):
+        return self.columns.name if axis else self._modin_frame.get_index_name()
+
+    def set_index_name(self, name, axis=0):
+        if axis == 0:
+            self._modin_frame = self._modin_frame.set_index_name(name)
+        else:
+            self.columns.name = name
+
+    def get_index_names(self, axis=0):
+        return self.columns.names if axis else self._modin_frame.get_index_names()
+
+    def set_index_names(self, names=None, axis=0):
+        if axis == 0:
+            self._modin_frame = self._modin_frame.set_index_names(names)
+        else:
+            self.columns.names = names
 
     def free(self):
         return

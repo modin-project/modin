@@ -15,6 +15,8 @@ from .any_default import AnyDefault
 
 
 class SeriesDefault(AnyDefault):
+    OBJECT_TYPE = "Series"
+
     @classmethod
     def frame_wrapper(cls, df):
         return df.squeeze(axis=1)

@@ -34,8 +34,9 @@ from modin.pandas.test.utils import (
     generate_multiindex,
     eval_general,
 )
+from modin.config import NPartitions
 
-pd.DEFAULT_NPARTITIONS = 4
+NPartitions.put(4)
 
 # Force matplotlib to not use any Xwindows backend.
 matplotlib.use("Agg")
@@ -510,3 +511,43 @@ def test_where():
     pandas_result = pandas_df.where(pandas_df < 2, True)
     modin_result = modin_df.where(modin_df < 2, True)
     assert all((to_pandas(modin_result) == pandas_result).all())
+
+
+@pytest.mark.parametrize("align_axis", ["index", "columns"])
+@pytest.mark.parametrize("keep_shape", [False, True])
+@pytest.mark.parametrize("keep_equal", [False, True])
+def test_compare(align_axis, keep_shape, keep_equal):
+    kwargs = {
+        "align_axis": align_axis,
+        "keep_shape": keep_shape,
+        "keep_equal": keep_equal,
+    }
+    frame_data1 = random_state.randn(100, 10)
+    frame_data2 = random_state.randn(100, 10)
+    pandas_df = pandas.DataFrame(frame_data1, columns=list("abcdefghij"))
+    pandas_df2 = pandas.DataFrame(frame_data2, columns=list("abcdefghij"))
+    modin_df = pd.DataFrame(frame_data1, columns=list("abcdefghij"))
+    modin_df2 = pd.DataFrame(frame_data2, columns=list("abcdefghij"))
+
+    modin_result = modin_df.compare(modin_df2, **kwargs)
+    pandas_result = pandas_df.compare(pandas_df2, **kwargs)
+    assert to_pandas(modin_result).equals(pandas_result)
+
+    modin_result = modin_df2.compare(modin_df, **kwargs)
+    pandas_result = pandas_df2.compare(pandas_df, **kwargs)
+    assert to_pandas(modin_result).equals(pandas_result)
+
+    series_data1 = ["a", "b", "c", "d", "e"]
+    series_data2 = ["a", "a", "c", "b", "e"]
+    pandas_series1 = pandas.Series(series_data1)
+    pandas_series2 = pandas.Series(series_data2)
+    modin_series1 = pd.Series(series_data1)
+    modin_series2 = pd.Series(series_data2)
+
+    modin_result = modin_series1.compare(modin_series2, **kwargs)
+    pandas_result = pandas_series1.compare(pandas_series2, **kwargs)
+    assert to_pandas(modin_result).equals(pandas_result)
+
+    modin_result = modin_series2.compare(modin_series1, **kwargs)
+    pandas_result = pandas_series2.compare(pandas_series1, **kwargs)
+    assert to_pandas(modin_result).equals(pandas_result)

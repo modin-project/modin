@@ -15,9 +15,14 @@ import numpy as np
 import pandas
 import warnings
 
+from modin.backends.pandas.parsers import _split_result_for_readers, PandasCSVGlobParser
+from modin.backends.pandas.query_compiler import PandasQueryCompiler
 from modin.engines.ray.pandas_on_ray.io import PandasOnRayIO
-from modin.backends.pandas.parsers import _split_result_for_readers
+from modin.engines.base.io import CSVGlobDispatcher
+from modin.engines.ray.pandas_on_ray.frame.data import PandasOnRayFrame
 from modin.engines.ray.pandas_on_ray.frame.partition import PandasOnRayFramePartition
+from modin.engines.ray.task_wrapper import RayTask
+from modin.config import NPartitions
 
 import ray
 
@@ -52,6 +57,14 @@ def _read_parquet_columns(path, columns, num_splits, kwargs):  # pragma: no cove
 
 
 class ExperimentalPandasOnRayIO(PandasOnRayIO):
+    build_args = dict(
+        frame_partition_cls=PandasOnRayFramePartition,
+        query_compiler_cls=PandasQueryCompiler,
+        frame_cls=PandasOnRayFrame,
+    )
+    read_csv_glob = type(
+        "", (RayTask, PandasCSVGlobParser, CSVGlobDispatcher), build_args
+    )._read
     read_parquet_remote_task = _read_parquet_columns
 
     @classmethod
@@ -117,7 +130,7 @@ class ExperimentalPandasOnRayIO(PandasOnRayIO):
             )
         #  starts the distributed alternative
         cols_names, query = get_query_info(sql, con, partition_column)
-        num_parts = min(cls.frame_mgr_cls._compute_num_partitions(), max_sessions)
+        num_parts = min(NPartitions.get(), max_sessions)
         num_splits = min(len(cols_names), num_parts)
         diff = (upper_bound - lower_bound) + 1
         min_size = diff // num_parts
@@ -148,7 +161,7 @@ class ExperimentalPandasOnRayIO(PandasOnRayIO):
                     columns,
                     chunksize,
                 ),
-                num_return_vals=num_splits + 1,
+                num_returns=num_splits + 1,
             )
             partition_ids.append(
                 [PandasOnRayFramePartition(obj) for obj in partition_id[:-1]]

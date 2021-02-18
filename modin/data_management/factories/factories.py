@@ -231,6 +231,10 @@ class ExperimentalPandasOnRayFactory(ExperimentalBaseFactory, PandasOnRayFactory
 
         cls.io_cls = ExperimentalPandasOnRayIO
 
+    @classmethod
+    def _read_csv_glob(cls, **kwargs):
+        return cls.io_cls.read_csv_glob(**kwargs)
+
 
 class ExperimentalPandasOnPythonFactory(ExperimentalBaseFactory, PandasOnPythonFactory):
     pass

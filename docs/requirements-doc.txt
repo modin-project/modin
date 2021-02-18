@@ -3,14 +3,13 @@ click
 flatbuffers
 funcsigs
 mock
-numpy
 opencv-python
 pyyaml
 recommonmark
 sphinx
 sphinx-click
 sphinx_rtd_theme
-pandas
-modin[all]
+git+https://github.com/modin-project/modin.git@master#egg=modin[all]
 sphinxcontrib_plantuml
 sphinx-issues
+xgboost

@@ -1,6 +1,6 @@
 <!--
-Thank you for your contribution! 
-Please review the contributing docs: https://modin.readthedocs.io/en/latest/contributing.html
+Thank you for your contribution!
+Please review the contributing docs: https://modin.readthedocs.io/en/latest/CONTRIBUTING.html
 if you have questions about contributing.
 -->
 

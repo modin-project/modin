@@ -45,9 +45,9 @@ def test_top_level_api_equality():
     ]
 
     ignore_modin = [
-        "DEFAULT_NPARTITIONS",
         "iterator",
         "series",
+        "accessor",
         "base",
         "utils",
         "dataframe",

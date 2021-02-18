@@ -16,12 +16,12 @@ from modin.backends.pandas.query_compiler import PandasQueryCompiler
 from modin.engines.dask.pandas_on_dask.frame.data import PandasOnDaskFrame
 from modin.engines.dask.pandas_on_dask.frame.partition import PandasOnDaskFramePartition
 from modin.engines.base.io import (
-    CSVReader,
-    JSONReader,
-    ParquetReader,
-    FeatherReader,
-    SQLReader,
-    ExcelReader,
+    CSVDispatcher,
+    JSONDispatcher,
+    ParquetDispatcher,
+    FeatherDispatcher,
+    SQLDispatcher,
+    ExcelDispatcher,
 )
 from modin.backends.pandas.parsers import (
     PandasCSVParser,
@@ -44,15 +44,17 @@ class PandasOnDaskIO(BaseIO):
         query_compiler_cls=PandasQueryCompiler,
     )
 
-    read_csv = type("", (DaskTask, PandasCSVParser, CSVReader), build_args).read
-    read_json = type("", (DaskTask, PandasJSONParser, JSONReader), build_args).read
+    read_csv = type("", (DaskTask, PandasCSVParser, CSVDispatcher), build_args).read
+    read_json = type("", (DaskTask, PandasJSONParser, JSONDispatcher), build_args).read
     read_parquet = type(
-        "", (DaskTask, PandasParquetParser, ParquetReader), build_args
+        "", (DaskTask, PandasParquetParser, ParquetDispatcher), build_args
     ).read
     # Blocked on pandas-dev/pandas#12236. It is faster to default to pandas.
     # read_hdf = type("", (DaskTask, PandasHDFParser, HDFReader), build_args).read
     read_feather = type(
-        "", (DaskTask, PandasFeatherParser, FeatherReader), build_args
+        "", (DaskTask, PandasFeatherParser, FeatherDispatcher), build_args
     ).read
-    read_sql = type("", (DaskTask, PandasSQLParser, SQLReader), build_args).read
-    read_excel = type("", (DaskTask, PandasExcelParser, ExcelReader), build_args).read
+    read_sql = type("", (DaskTask, PandasSQLParser, SQLDispatcher), build_args).read
+    read_excel = type(
+        "", (DaskTask, PandasExcelParser, ExcelDispatcher), build_args
+    ).read

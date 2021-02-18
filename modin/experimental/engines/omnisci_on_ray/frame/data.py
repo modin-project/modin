@@ -16,7 +16,7 @@ from modin.experimental.backends.omnisci.query_compiler import DFAlgQueryCompile
 from .partition_manager import OmnisciOnRayFrameManager
 
 from pandas.core.index import ensure_index, Index, MultiIndex, RangeIndex
-from pandas.core.dtypes.common import _get_dtype, is_list_like, is_bool_dtype
+from pandas.core.dtypes.common import get_dtype, is_list_like, is_bool_dtype
 from modin.error_message import ErrorMessage
 import pandas as pd
 
@@ -143,7 +143,7 @@ class OmnisciOnRayFrame(BasePandasFrame):
     def id_str(self):
         return f"frame${self.id}"
 
-    def _get_dtype(self, col):
+    def get_dtype(self, col):
         # If we search for an index column type in a MultiIndex then we need to
         # extend index column names to tuples.
         if isinstance(self._dtypes, MultiIndex) and not isinstance(col, tuple):
@@ -152,8 +152,8 @@ class OmnisciOnRayFrame(BasePandasFrame):
 
     def ref(self, col):
         if col == "__rowid__":
-            return InputRefExpr(self, col, _get_dtype(int))
-        return InputRefExpr(self, col, self._get_dtype(col))
+            return InputRefExpr(self, col, get_dtype(int))
+        return InputRefExpr(self, col, self.get_dtype(col))
 
     def mask(
         self,
@@ -234,8 +234,8 @@ class OmnisciOnRayFrame(BasePandasFrame):
                 for obj in by:
                     if isinstance(obj, str):
                         by_cols.append(obj)
-                    elif hasattr(obj, "_query_compiler"):
-                        by_frames.append(obj._query_compiler._modin_frame)
+                    elif hasattr(obj, "_modin_frame"):
+                        by_frames.append(obj._modin_frame)
                     else:
                         raise NotImplementedError("unsupported groupby args")
                 by_cols = Index.__new__(Index, data=by_cols, dtype=self.columns.dtype)
@@ -317,6 +317,84 @@ class OmnisciOnRayFrame(BasePandasFrame):
         )
 
         return new_frame
+
+    def agg(self, agg):
+        assert isinstance(agg, str)
+
+        agg_exprs = OrderedDict()
+        for col in self.columns:
+            agg_exprs[col] = AggregateExpr(agg, self.ref(col))
+
+        return self.__constructor__(
+            columns=self.columns,
+            dtypes=self._dtypes_for_exprs(agg_exprs),
+            op=GroupbyAggNode(self, [], agg_exprs, {"sort": False}),
+            index_cols=None,
+            force_execution_mode=self._force_execution_mode,
+        )
+
+    def value_counts(self, dropna, columns, sort, ascending):
+        by = [col for col in self.columns if columns is None or col in columns]
+
+        if not by:
+            raise ValueError("invalid columns subset is specified")
+
+        base = self
+        if dropna:
+            checks = [base.ref(col).is_not_null() for col in by]
+            condition = (
+                checks[0]
+                if len(checks) == 1
+                else OpExpr("AND", [checks], np.dtype("bool"))
+            )
+            base = self.__constructor__(
+                columns=Index.__new__(Index, data=by, dtype="O"),
+                dtypes=base._dtypes[by],
+                op=FilterNode(base, condition),
+                index_cols=None,
+                force_execution_mode=base._force_execution_mode,
+            )
+
+        agg_exprs = OrderedDict()
+        agg_exprs[""] = AggregateExpr("size", None)
+        dtypes = base._dtypes[by].tolist()
+        dtypes.append(np.dtype("int64"))
+
+        new_columns = Index.__new__(Index, data=[""], dtype="O")
+
+        res = self.__constructor__(
+            columns=new_columns,
+            dtypes=dtypes,
+            op=GroupbyAggNode(base, by, agg_exprs, {"sort": False}),
+            index_cols=by.copy(),
+            force_execution_mode=base._force_execution_mode,
+        )
+
+        if sort or ascending:
+            res = self.__constructor__(
+                columns=res.columns,
+                dtypes=res._dtypes,
+                op=SortNode(res, [""], [ascending], "last"),
+                index_cols=res._index_cols,
+                force_execution_mode=res._force_execution_mode,
+            )
+
+        # If a single column is used then it keeps its name.
+        # TODO: move it to upper levels when index renaming is in place.
+        if len(by) == 1:
+            exprs = OrderedDict()
+            exprs["__index__"] = res.ref(by[0])
+            exprs[by[0]] = res.ref("")
+
+            res = self.__constructor__(
+                columns=Index.__new__(Index, data=by, dtype="O"),
+                dtypes=self._dtypes_for_exprs(exprs),
+                op=TransformNode(res, exprs),
+                index_cols=["__index__"],
+                force_execution_mode=res._force_execution_mode,
+            )
+
+        return res
 
     def fillna(
         self,
@@ -526,7 +604,7 @@ class OmnisciOnRayFrame(BasePandasFrame):
                     assert index_width == 1, "unexpected index width"
                     aligned_index = ["__index__"]
                     exprs["__index__"] = frame.ref("__rowid__")
-                    aligned_index_dtypes = [_get_dtype(int)]
+                    aligned_index_dtypes = [get_dtype(int)]
                     uses_rowid = True
                 aligned_dtypes = aligned_index_dtypes + new_dtypes
             else:
@@ -703,10 +781,10 @@ class OmnisciOnRayFrame(BasePandasFrame):
         col = self.columns[-1]
         exprs = self._index_exprs()
         col_expr = self.ref(col)
-        code_expr = OpExpr("KEY_FOR_STRING", [col_expr], _get_dtype("int32"))
+        code_expr = OpExpr("KEY_FOR_STRING", [col_expr], get_dtype("int32"))
         null_val = LiteralExpr(np.int32(-1))
         exprs[col] = build_if_then_else(
-            col_expr.is_null(), null_val, code_expr, _get_dtype("int32")
+            col_expr.is_null(), null_val, code_expr, get_dtype("int32")
         )
 
         return self.__constructor__(
@@ -1062,7 +1140,38 @@ class OmnisciOnRayFrame(BasePandasFrame):
         return self._index_cache
 
     def _set_index(self, new_index):
-        raise NotImplementedError("OmnisciOnRayFrame._set_index is not yet suported")
+        if not isinstance(new_index, (Index, MultiIndex)):
+            raise NotImplementedError(
+                "OmnisciOnRayFrame._set_index is not yet suported"
+            )
+
+        self._execute()
+
+        assert self._partitions.size == 1
+        obj = self._partitions[0][0].get()
+        if isinstance(obj, pd.DataFrame):
+            raise NotImplementedError(
+                "OmnisciOnRayFrame._set_index is not yet suported"
+            )
+        else:
+            assert isinstance(obj, pyarrow.Table)
+
+            at = obj
+            if self._index_cols:
+                at = at.drop(self._index_cols)
+
+            index_df = pd.DataFrame(data={}, index=new_index.copy())
+            index_df = index_df.reset_index()
+
+            index_at = pyarrow.Table.from_pandas(index_df)
+
+            for i, field in enumerate(at.schema):
+                index_at = index_at.append_column(field, at.column(i))
+
+            index_names = self._mangle_index_names(new_index.names)
+            index_at = index_at.rename_columns(index_names + list(self.columns))
+
+            return self.from_arrow(index_at, index_names, new_index)
 
     def reset_index(self, drop):
         if drop:
@@ -1119,12 +1228,75 @@ class OmnisciOnRayFrame(BasePandasFrame):
         return super(OmnisciOnRayFrame, self)._get_columns()
 
     columns = property(_get_columns)
-    index = property(_get_index, _set_index)
+    index = property(_get_index)
 
     def has_multiindex(self):
         if self._index_cache is not None:
             return isinstance(self._index_cache, MultiIndex)
         return self._index_cols is not None and len(self._index_cols) > 1
+
+    def get_index_name(self):
+        if self._index_cols is None:
+            return None
+        if len(self._index_cols) > 1:
+            return None
+        return self._index_cols[0]
+
+    def set_index_name(self, name):
+        if self.has_multiindex():
+            ErrorMessage.single_warning("Scalar name for MultiIndex is not supported!")
+            return self
+
+        if self._index_cols is None and name is None:
+            return self
+
+        names = self._mangle_index_names([name])
+        exprs = OrderedDict()
+        if self._index_cols is None:
+            exprs[names[0]] = self.ref("__rowid__")
+        else:
+            exprs[names[0]] = self.ref(self._index_cols[0])
+
+        for col in self.columns:
+            exprs[col] = self.ref(col)
+
+        return self.__constructor__(
+            columns=self.columns,
+            dtypes=self._dtypes_for_exprs(exprs),
+            op=TransformNode(self, exprs),
+            index_cols=names,
+            uses_rowid=self._index_cols is None,
+            force_execution_mode=self._force_execution_mode,
+        )
+
+    def get_index_names(self):
+        if self.has_multiindex():
+            return self._index_cols.copy()
+        return [self.get_index_name()]
+
+    def set_index_names(self, names):
+        if not self.has_multiindex():
+            raise ValueError("Can set names for MultiIndex only")
+
+        if len(names) != len(self._index_cols):
+            raise ValueError(
+                f"Unexpected names count: expected {len(self._index_cols)} got {len(names)}"
+            )
+
+        names = self._mangle_index_names(names)
+        exprs = OrderedDict()
+        for old, new in zip(self._index_cols, names):
+            exprs[new] = self.ref(old)
+        for col in self.columns:
+            exprs[col] = self.ref(col)
+
+        return self.__constructor__(
+            columns=self.columns,
+            dtypes=self._dtypes_for_exprs(exprs),
+            op=TransformNode(self, exprs),
+            index_cols=names,
+            force_execution_mode=self._force_execution_mode,
+        )
 
     def to_pandas(self):
         self._execute()
@@ -1196,10 +1368,7 @@ class OmnisciOnRayFrame(BasePandasFrame):
             orig_index_names = df.index.names
             orig_df = df
 
-            index_cols = [
-                f"__index__{i}_{'__None__' if n is None else n}"
-                for i, n in enumerate(df.index.names)
-            ]
+            index_cols = cls._mangle_index_names(df.index.names)
             df.index.names = index_cols
             df = df.reset_index()
 
@@ -1232,7 +1401,14 @@ class OmnisciOnRayFrame(BasePandasFrame):
         )
 
     @classmethod
-    def from_arrow(cls, at):
+    def _mangle_index_names(cls, names):
+        return [
+            f"__index__{i}_{'__None__' if n is None else n}"
+            for i, n in enumerate(names)
+        ]
+
+    @classmethod
+    def from_arrow(cls, at, index_cols=None, index=None):
         (
             new_frame,
             new_lengths,
@@ -1240,11 +1416,18 @@ class OmnisciOnRayFrame(BasePandasFrame):
             unsupported_cols,
         ) = cls._frame_mgr_cls.from_arrow(at, return_dims=True)
 
-        new_columns = pd.Index(data=at.column_names, dtype="O")
-        new_index = pd.RangeIndex(at.num_rows)
+        if index_cols:
+            data_cols = [col for col in at.column_names if col not in index_cols]
+            new_index = index
+        else:
+            data_cols = at.column_names
+            assert index is None
+            new_index = pd.RangeIndex(at.num_rows)
+
+        new_columns = pd.Index(data=data_cols, dtype="O")
         new_dtypes = pd.Series(
             [cls._arrow_type_to_dtype(col.type) for col in at.columns],
-            index=new_columns,
+            index=at.column_names,
         )
 
         if len(unsupported_cols) > 0:
@@ -1260,6 +1443,7 @@ class OmnisciOnRayFrame(BasePandasFrame):
             row_lengths=new_lengths,
             column_widths=new_widths,
             dtypes=new_dtypes,
+            index_cols=index_cols,
             has_unsupported_data=len(unsupported_cols) > 0,
         )
 

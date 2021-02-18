@@ -21,7 +21,7 @@ from numpy.testing import assert_array_equal
 from pandas.core.base import SpecificationError
 import sys
 
-from modin.utils import to_pandas, get_current_backend
+from modin.utils import to_pandas
 from .utils import (
     random_state,
     RAND_LOW,
@@ -67,8 +67,9 @@ from .utils import (
     generate_multiindex,
     test_data_diff_dtype,
 )
+from modin.config import NPartitions
 
-pd.DEFAULT_NPARTITIONS = 4
+NPartitions.put(4)
 
 # Force matplotlib to not use any Xwindows backend.
 matplotlib.use("Agg")
@@ -179,13 +180,13 @@ def inter_df_math_helper_one_side(modin_series, pandas_series, op):
         pass
 
 
-def create_test_series(vals, sort=False):
+def create_test_series(vals, sort=False, **kwargs):
     if isinstance(vals, dict):
-        modin_series = pd.Series(vals[next(iter(vals.keys()))])
-        pandas_series = pandas.Series(vals[next(iter(vals.keys()))])
+        modin_series = pd.Series(vals[next(iter(vals.keys()))], **kwargs)
+        pandas_series = pandas.Series(vals[next(iter(vals.keys()))], **kwargs)
     else:
-        modin_series = pd.Series(vals)
-        pandas_series = pandas.Series(vals)
+        modin_series = pd.Series(vals, **kwargs)
+        pandas_series = pandas.Series(vals, **kwargs)
     if sort:
         modin_series = modin_series.sort_values().reset_index(drop=True)
         pandas_series = pandas_series.sort_values().reset_index(drop=True)
@@ -304,12 +305,6 @@ def test___delitem__(data):
     del modin_series[modin_series.index[0]]
     del pandas_series[pandas_series.index[0]]
     df_equals(modin_series, pandas_series)
-
-
-@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-def test___div__(data):
-    modin_series, pandas_series = create_test_series(data)
-    inter_df_math_helper(modin_series, pandas_series, "__div__")
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
@@ -531,6 +526,39 @@ def test___setitem__(data):
         df_equals(modin_series, pandas_series)
 
 
+@pytest.mark.parametrize(
+    "key",
+    [
+        pytest.param(lambda idx: slice(1, 3), id="location_based_slice"),
+        pytest.param(lambda idx: slice(idx[1], idx[-1]), id="index_based_slice"),
+        pytest.param(lambda idx: [idx[0], idx[2], idx[-1]], id="list_of_labels"),
+        pytest.param(
+            lambda idx: [True if i % 2 else False for i in range(len(idx))],
+            id="boolean_mask",
+        ),
+    ],
+)
+@pytest.mark.parametrize(
+    "index",
+    [
+        pytest.param(
+            lambda idx_len: [chr(x) for x in range(ord("a"), ord("a") + idx_len)],
+            id="str_index",
+        ),
+        pytest.param(lambda idx_len: list(range(1, idx_len + 1)), id="int_index"),
+    ],
+)
+def test___setitem___non_hashable(key, index):
+    data = np.arange(5)
+    index = index(len(data))
+    key = key(index)
+    md_sr, pd_sr = create_test_series(data, index=index)
+
+    md_sr[key] = 10
+    pd_sr[key] = 10
+    df_equals(md_sr, pd_sr)
+
+
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test___sizeof__(data):
     modin_series, pandas_series = create_test_series(data)
@@ -593,16 +621,10 @@ def test_add_suffix(data):
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 @pytest.mark.parametrize("func", agg_func_values, ids=agg_func_keys)
 def test_agg(data, func):
-    # AssertionError may be arisen in case of
-    # mismathing of index/columns in Modin and pandas.
-    # See details in pandas issue 36189.
-    try:
-        eval_general(
-            *create_test_series(data),
-            lambda df: df.agg(func),
-        )
-    except AssertionError:
-        pass
+    eval_general(
+        *create_test_series(data),
+        lambda df: df.agg(func),
+    )
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
@@ -624,16 +646,10 @@ def test_agg_numeric(request, data, func):
         request.node.name, numeric_dfs
     ):
         axis = 0
-        # AssertionError may be arisen in case of
-        # mismathing of index/columns in Modin and pandas.
-        # See details in pandas issue 36189.
-        try:
-            eval_general(
-                *create_test_series(data),
-                lambda df: df.agg(func, axis),
-            )
-        except AssertionError:
-            pass
+        eval_general(
+            *create_test_series(data),
+            lambda df: df.agg(func, axis),
+        )
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
@@ -656,16 +672,10 @@ def test_agg_numeric_except(request, data, func):
 @pytest.mark.parametrize("func", agg_func_values, ids=agg_func_keys)
 def test_aggregate(data, func):
     axis = 0
-    # AssertionError may be arisen in case of
-    # mismathing of index/columns in Modin and pandas.
-    # See details in pandas issue 36189.
-    try:
-        eval_general(
-            *create_test_series(data),
-            lambda df: df.aggregate(func, axis),
-        )
-    except AssertionError:
-        pass
+    eval_general(
+        *create_test_series(data),
+        lambda df: df.aggregate(func, axis),
+    )
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
@@ -688,16 +698,10 @@ def test_aggregate_numeric(request, data, func):
         request.node.name, numeric_dfs
     ):
         axis = 0
-        # AssertionError may be arisen in case of
-        # mismathing of index/columns in Modin and pandas.
-        # See details in pandas issue 36189.
-        try:
-            eval_general(
-                *create_test_series(data),
-                lambda df: df.agg(func, axis),
-            )
-        except AssertionError:
-            pass
+        eval_general(
+            *create_test_series(data),
+            lambda df: df.agg(func, axis),
+        )
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
@@ -823,16 +827,10 @@ def test_append(data):
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 @pytest.mark.parametrize("func", agg_func_values, ids=agg_func_keys)
 def test_apply(data, func):
-    # AssertionError may be arisen in case of
-    # mismathing of index/columns in Modin and pandas.
-    # See details in pandas issue 36189.
-    try:
-        eval_general(
-            *create_test_series(data),
-            lambda df: df.apply(func),
-        )
-    except AssertionError:
-        pass
+    eval_general(
+        *create_test_series(data),
+        lambda df: df.apply(func),
+    )
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
@@ -871,16 +869,10 @@ def test_apply_external_lib():
 @pytest.mark.parametrize("func", agg_func_values, ids=agg_func_keys)
 def test_apply_numeric(request, data, func):
     if name_contains(request.node.name, numeric_dfs):
-        # AssertionError may be arisen in case of
-        # mismathing of index/columns in Modin and pandas.
-        # See details in pandas issue 36189.
-        try:
-            eval_general(
-                *create_test_series(data),
-                lambda df: df.apply(func),
-            )
-        except AssertionError:
-            pass
+        eval_general(
+            *create_test_series(data),
+            lambda df: df.apply(func),
+        )
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
@@ -2491,6 +2483,15 @@ def test_reindex(data):
             pandas_series.reindex(index=[0, 1, 5]),
         )
 
+    # MultiIndex
+    modin_series, pandas_series = create_test_series(data)
+    modin_series.index, pandas_series.index = [
+        generate_multiindex(len(pandas_series))
+    ] * 2
+    pandas_result = pandas_series.reindex(list(reversed(pandas_series.index)))
+    modin_result = modin_series.reindex(list(reversed(modin_series.index)))
+    df_equals(pandas_result, modin_result)
+
 
 def test_reindex_like():
     df1 = pd.DataFrame(
@@ -2903,6 +2904,7 @@ def test_shift(data):
     df_equals(modin_series.shift(fill_value=777), pandas_series.shift(fill_value=777))
     df_equals(modin_series.shift(periods=7), pandas_series.shift(periods=7))
     df_equals(modin_series.shift(periods=-3), pandas_series.shift(periods=-3))
+    eval_general(modin_series, pandas_series, lambda df: df.shift(axis=1))
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
@@ -2949,30 +2951,27 @@ def test_slice_shift(data, index, periods):
 @pytest.mark.parametrize("na_position", ["first", "last"], ids=["first", "last"])
 def test_sort_index(data, ascending, sort_remaining, na_position):
     modin_series, pandas_series = create_test_series(data)
-    df_equals(
-        modin_series.sort_index(
-            ascending=ascending, sort_remaining=sort_remaining, na_position=na_position
-        ),
-        pandas_series.sort_index(
-            ascending=ascending, sort_remaining=sort_remaining, na_position=na_position
+    eval_general(
+        modin_series,
+        pandas_series,
+        lambda df: df.sort_index(
+            ascending=ascending,
+            sort_remaining=sort_remaining,
+            na_position=na_position,
         ),
     )
 
-    modin_series_cp = modin_series.copy()
-    pandas_series_cp = pandas_series.copy()
-    modin_series_cp.sort_index(
-        ascending=ascending,
-        sort_remaining=sort_remaining,
-        na_position=na_position,
-        inplace=True,
+    eval_general(
+        modin_series.copy(),
+        pandas_series.copy(),
+        lambda df: df.sort_index(
+            ascending=ascending,
+            sort_remaining=sort_remaining,
+            na_position=na_position,
+            inplace=True,
+        ),
+        __inplace__=True,
     )
-    pandas_series_cp.sort_index(
-        ascending=ascending,
-        sort_remaining=sort_remaining,
-        na_position=na_position,
-        inplace=True,
-    )
-    df_equals(modin_series_cp, pandas_series_cp)
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
@@ -3219,17 +3218,10 @@ def test_transform(data, func):
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 @pytest.mark.parametrize("func", agg_func_except_values, ids=agg_func_except_keys)
 def test_transform_except(data, func):
-    # 1) SpecificationError is arisen because we treat a Series as a DataFrame.
-    #    See details in pandas issues 36036.
-    # 2) AssertionError is arisen because of mismatching of thrown exceptions
-    #    (SpecificationError in Modin, ValueError in pandas).
-    #    Since we perform `transform` via `apply` then SpecificationError is arisen earlier.
-    #    That's why the exception are mismathed.
-    with pytest.raises((SpecificationError, AssertionError)):
-        eval_general(
-            *create_test_series(data),
-            lambda df: df.transform(func),
-        )
+    eval_general(
+        *create_test_series(data),
+        lambda df: df.transform(func),
+    )
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
@@ -3322,16 +3314,19 @@ def test_unique(data):
     modin_result = modin_series.unique()
     pandas_result = pandas_series.unique()
     assert_array_equal(modin_result, pandas_result)
+    assert modin_result.shape == pandas_result.shape
 
     modin_result = pd.Series([2, 1, 3, 3], name="A").unique()
     pandas_result = pandas.Series([2, 1, 3, 3], name="A").unique()
     assert_array_equal(modin_result, pandas_result)
+    assert modin_result.shape == pandas_result.shape
 
     modin_result = pd.Series([pd.Timestamp("2016-01-01") for _ in range(3)]).unique()
     pandas_result = pandas.Series(
         [pd.Timestamp("2016-01-01") for _ in range(3)]
     ).unique()
     assert_array_equal(modin_result, pandas_result)
+    assert modin_result.shape == pandas_result.shape
 
     modin_result = pd.Series(
         [pd.Timestamp("2016-01-01", tz="US/Eastern") for _ in range(3)]
@@ -3340,10 +3335,12 @@ def test_unique(data):
         [pd.Timestamp("2016-01-01", tz="US/Eastern") for _ in range(3)]
     ).unique()
     assert_array_equal(modin_result, pandas_result)
+    assert modin_result.shape == pandas_result.shape
 
     modin_result = pandas.Series(pd.Categorical(list("baabc"))).unique()
     pandas_result = pd.Series(pd.Categorical(list("baabc"))).unique()
     assert_array_equal(modin_result, pandas_result)
+    assert modin_result.shape == pandas_result.shape
 
     modin_result = pd.Series(
         pd.Categorical(list("baabc"), categories=list("abc"), ordered=True)
@@ -3352,6 +3349,7 @@ def test_unique(data):
         pd.Categorical(list("baabc"), categories=list("abc"), ordered=True)
     ).unique()
     assert_array_equal(modin_result, pandas_result)
+    assert modin_result.shape == pandas_result.shape
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
@@ -3411,35 +3409,50 @@ def test_value_counts(normalize, bins, dropna):
             i += 1
         return type(result)(result, index=new_index)
 
-    # We sort indices for pandas result because of issue #1650
+    # We sort indices for Modin and pandas result because of issue #1650
     modin_series, pandas_series = create_test_series(test_data_values[0])
-    modin_result = modin_series.value_counts(normalize=normalize, ascending=False)
 
-    if get_current_backend() == "BaseOnPython":
-        modin_result = sort_index_for_equal_values(modin_result, ascending=False)
-
+    modin_result = sort_index_for_equal_values(
+        modin_series.value_counts(normalize=normalize, ascending=False), False
+    )
     pandas_result = sort_index_for_equal_values(
         pandas_series.value_counts(normalize=normalize, ascending=False), False
     )
     df_equals(modin_result, pandas_result)
 
-    modin_result = modin_series.value_counts(bins=bins, ascending=False)
-
-    if get_current_backend() == "BaseOnPython":
-        modin_result = sort_index_for_equal_values(modin_result, ascending=False)
-
+    modin_result = sort_index_for_equal_values(
+        modin_series.value_counts(bins=bins, ascending=False), False
+    )
     pandas_result = sort_index_for_equal_values(
         pandas_series.value_counts(bins=bins, ascending=False), False
     )
     df_equals(modin_result, pandas_result)
 
-    modin_result = modin_series.value_counts(dropna=dropna, ascending=True)
-
-    if get_current_backend() == "BaseOnPython":
-        modin_result = sort_index_for_equal_values(modin_result, ascending=True)
-
+    modin_result = sort_index_for_equal_values(
+        modin_series.value_counts(dropna=dropna, ascending=True), True
+    )
     pandas_result = sort_index_for_equal_values(
         pandas_series.value_counts(dropna=dropna, ascending=True), True
+    )
+    df_equals(modin_result, pandas_result)
+
+    # from issue #2365
+    arr = np.random.rand(2 ** 6)
+    arr[::10] = np.nan
+    modin_series, pandas_series = create_test_series(arr)
+    modin_result = sort_index_for_equal_values(
+        modin_series.value_counts(dropna=False, ascending=True), True
+    )
+    pandas_result = sort_index_for_equal_values(
+        pandas_series.value_counts(dropna=False, ascending=True), True
+    )
+    df_equals(modin_result, pandas_result)
+
+    modin_result = sort_index_for_equal_values(
+        modin_series.value_counts(dropna=False, ascending=False), False
+    )
+    pandas_result = sort_index_for_equal_values(
+        pandas_series.value_counts(dropna=False, ascending=False), False
     )
     df_equals(modin_result, pandas_result)
 
@@ -4397,17 +4410,18 @@ def test_encode(data, encoding_type):
         df_equals(modin_result, pandas_result)
 
 
-@pytest.mark.parametrize("data", test_string_data_values, ids=test_string_data_keys)
-def test_hasattr_sparse(data):
-    modin_series, pandas_series = create_test_series(data)
-    try:
-        pandas_result = hasattr(pandas_series, "sparse")
-    except Exception as e:
-        with pytest.raises(type(e)):
-            hasattr(modin_series, "sparse")
-    else:
-        modin_result = hasattr(modin_series, "sparse")
-        assert modin_result == pandas_result
+@pytest.mark.parametrize(
+    "is_sparse_data", [True, False], ids=["is_sparse", "is_not_sparse"]
+)
+def test_hasattr_sparse(is_sparse_data):
+    modin_df, pandas_df = (
+        create_test_series(
+            pandas.arrays.SparseArray(test_data["float_nan_data"].values())
+        )
+        if is_sparse_data
+        else create_test_series(test_data["float_nan_data"])
+    )
+    eval_general(modin_df, pandas_df, lambda df: hasattr(df, "sparse"))
 
 
 @pytest.mark.parametrize(

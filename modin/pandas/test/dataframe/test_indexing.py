@@ -14,7 +14,7 @@
 import pytest
 import numpy as np
 import pandas
-import pandas.util.testing as tm
+from pandas.testing import assert_index_equal
 import matplotlib
 import modin.pandas as pd
 import sys
@@ -34,12 +34,25 @@ from modin.pandas.test.utils import (
     int_arg_keys,
     int_arg_values,
     create_test_dfs,
+    eval_general,
 )
+from modin.config import NPartitions
 
-pd.DEFAULT_NPARTITIONS = 4
+NPartitions.put(4)
 
 # Force matplotlib to not use any Xwindows backend.
 matplotlib.use("Agg")
+
+
+def eval_setitem(md_df, pd_df, value, col=None, loc=None):
+    if loc is not None:
+        col = pd_df.columns[loc]
+
+    value_getter = value if callable(value) else (lambda *args, **kwargs: value)
+
+    eval_general(
+        md_df, pd_df, lambda df: df.__setitem__(col, value_getter(df)), __inplace__=True
+    )
 
 
 @pytest.mark.parametrize(
@@ -387,12 +400,9 @@ def test_loc_multi_index():
     df_equals(modin_df.loc[modin_df.index[:7]], pandas_df.loc[pandas_df.index[:7]])
 
 
-@pytest.mark.parametrize("index", [["row1", "row2", "row3"], ["row1"]])
-@pytest.mark.parametrize("columns", [["col1", "col2"], ["col1"]])
+@pytest.mark.parametrize("index", [["row1", "row2", "row3"]])
+@pytest.mark.parametrize("columns", [["col1", "col2"]])
 def test_loc_assignment(index, columns):
-    if len(index) == 1 and len(columns) == 1:
-        pytest.skip("See Modin issue #2253 for details")
-
     md_df, pd_df = create_test_dfs(index=index, columns=columns)
     for i, ind in enumerate(index):
         for j, col in enumerate(columns):
@@ -400,6 +410,48 @@ def test_loc_assignment(index, columns):
             md_df.loc[ind][col] = value_to_assign
             pd_df.loc[ind][col] = value_to_assign
     df_equals(md_df, pd_df)
+
+
+@pytest.fixture
+def loc_iter_dfs():
+    columns = ["col1", "col2", "col3"]
+    index = ["row1", "row2", "row3"]
+    return create_test_dfs(
+        {col: ([idx] * len(index)) for idx, col in enumerate(columns)},
+        columns=columns,
+        index=index,
+    )
+
+
+@pytest.mark.parametrize("reverse_order", [False, True])
+@pytest.mark.parametrize("axis", [0, 1])
+def test_loc_iter_assignment(loc_iter_dfs, reverse_order, axis):
+    if reverse_order and axis:
+        pytest.xfail(
+            "Due to internal sorting of lookup values assignment order is lost, see GH-#2552"
+        )
+
+    md_df, pd_df = loc_iter_dfs
+
+    select = [slice(None), slice(None)]
+    select[axis] = sorted(pd_df.axes[axis][:-1], reverse=reverse_order)
+    select = tuple(select)
+
+    pd_df.loc[select] = pd_df.loc[select] + pd_df.loc[select]
+    md_df.loc[select] = md_df.loc[select] + md_df.loc[select]
+    df_equals(md_df, pd_df)
+
+
+@pytest.mark.parametrize("reverse_order", [False, True])
+@pytest.mark.parametrize("axis", [0, 1])
+def test_loc_order(loc_iter_dfs, reverse_order, axis):
+    md_df, pd_df = loc_iter_dfs
+
+    select = [slice(None), slice(None)]
+    select[axis] = sorted(pd_df.axes[axis][:-1], reverse=reverse_order)
+    select = tuple(select)
+
+    df_equals(pd_df.loc[select], md_df.loc[select])
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
@@ -452,6 +504,15 @@ def test_iloc_nested_assignment(data):
     modin_df[key2].iloc[0] = None
     pandas_df[key2].iloc[0] = None
     df_equals(modin_df, pandas_df)
+
+
+def test_loc_series():
+    md_df, pd_df = create_test_dfs({"a": [1, 2], "b": [3, 4]})
+
+    pd_df.loc[pd_df["a"] > 1, "b"] = np.log(pd_df["b"])
+    md_df.loc[md_df["a"] > 1, "b"] = np.log(md_df["b"])
+
+    df_equals(pd_df, md_df)
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
@@ -521,13 +582,15 @@ def test_reindex_like():
 
 
 def test_rename_sanity():
-    test_data = pandas.DataFrame(tm.getSeriesData())
-    mapping = {"A": "a", "B": "b", "C": "c", "D": "d"}
+    source_df = pandas.DataFrame(test_data["int_data"])[
+        ["col1", "index", "col3", "col4"]
+    ]
+    mapping = {"col1": "a", "index": "b", "col3": "c", "col4": "d"}
 
-    modin_df = pd.DataFrame(test_data)
-    df_equals(modin_df.rename(columns=mapping), test_data.rename(columns=mapping))
+    modin_df = pd.DataFrame(source_df)
+    df_equals(modin_df.rename(columns=mapping), source_df.rename(columns=mapping))
 
-    renamed2 = test_data.rename(columns=str.lower)
+    renamed2 = source_df.rename(columns=str.lower)
     df_equals(modin_df.rename(columns=str.lower), renamed2)
 
     modin_df = pd.DataFrame(renamed2)
@@ -539,20 +602,20 @@ def test_rename_sanity():
     # gets sorted alphabetical
     df = pandas.DataFrame(data)
     modin_df = pd.DataFrame(data)
-    tm.assert_index_equal(
+    assert_index_equal(
         modin_df.rename(index={"foo": "bar", "bar": "foo"}).index,
         df.rename(index={"foo": "bar", "bar": "foo"}).index,
     )
 
-    tm.assert_index_equal(
+    assert_index_equal(
         modin_df.rename(index=str.upper).index, df.rename(index=str.upper).index
     )
 
     # Using the `mapper` functionality with `axis`
-    tm.assert_index_equal(
+    assert_index_equal(
         modin_df.rename(str.upper, axis=0).index, df.rename(str.upper, axis=0).index
     )
-    tm.assert_index_equal(
+    assert_index_equal(
         modin_df.rename(str.upper, axis=1).columns,
         df.rename(str.upper, axis=1).columns,
     )
@@ -562,18 +625,18 @@ def test_rename_sanity():
         modin_df.rename()
 
     # partial columns
-    renamed = test_data.rename(columns={"C": "foo", "D": "bar"})
-    modin_df = pd.DataFrame(test_data)
-    tm.assert_index_equal(
-        modin_df.rename(columns={"C": "foo", "D": "bar"}).index,
-        test_data.rename(columns={"C": "foo", "D": "bar"}).index,
+    renamed = source_df.rename(columns={"col3": "foo", "col4": "bar"})
+    modin_df = pd.DataFrame(source_df)
+    assert_index_equal(
+        modin_df.rename(columns={"col3": "foo", "col4": "bar"}).index,
+        source_df.rename(columns={"col3": "foo", "col4": "bar"}).index,
     )
 
     # other axis
-    renamed = test_data.T.rename(index={"C": "foo", "D": "bar"})
-    tm.assert_index_equal(
-        test_data.T.rename(index={"C": "foo", "D": "bar"}).index,
-        modin_df.T.rename(index={"C": "foo", "D": "bar"}).index,
+    renamed = source_df.T.rename(index={"col3": "foo", "col4": "bar"})
+    assert_index_equal(
+        source_df.T.rename(index={"col3": "foo", "col4": "bar"}).index,
+        modin_df.T.rename(index={"col3": "foo", "col4": "bar"}).index,
     )
 
     # index with name
@@ -583,7 +646,7 @@ def test_rename_sanity():
 
     renamed = renamer.rename(index={"foo": "bar", "bar": "foo"})
     modin_renamed = modin_df.rename(index={"foo": "bar", "bar": "foo"})
-    tm.assert_index_equal(renamed.index, modin_renamed.index)
+    assert_index_equal(renamed.index, modin_renamed.index)
 
     assert renamed.index.name == modin_renamed.index.name
 
@@ -608,13 +671,13 @@ def test_rename_multiindex():
         index={"foo1": "foo3", "bar2": "bar3"},
         columns={"fizz1": "fizz3", "buzz2": "buzz3"},
     )
-    tm.assert_index_equal(renamed.index, modin_renamed.index)
+    assert_index_equal(renamed.index, modin_renamed.index)
 
     renamed = df.rename(
         index={"foo1": "foo3", "bar2": "bar3"},
         columns={"fizz1": "fizz3", "buzz2": "buzz3"},
     )
-    tm.assert_index_equal(renamed.columns, modin_renamed.columns)
+    assert_index_equal(renamed.columns, modin_renamed.columns)
     assert renamed.index.names == modin_renamed.index.names
     assert renamed.columns.names == modin_renamed.columns.names
 
@@ -626,68 +689,72 @@ def test_rename_multiindex():
     modin_renamed = modin_df.rename(
         columns={"fizz1": "fizz3", "buzz2": "buzz3"}, level=0
     )
-    tm.assert_index_equal(renamed.columns, modin_renamed.columns)
+    assert_index_equal(renamed.columns, modin_renamed.columns)
     renamed = df.rename(columns={"fizz1": "fizz3", "buzz2": "buzz3"}, level="fizz")
     modin_renamed = modin_df.rename(
         columns={"fizz1": "fizz3", "buzz2": "buzz3"}, level="fizz"
     )
-    tm.assert_index_equal(renamed.columns, modin_renamed.columns)
+    assert_index_equal(renamed.columns, modin_renamed.columns)
 
     renamed = df.rename(columns={"fizz1": "fizz3", "buzz2": "buzz3"}, level=1)
     modin_renamed = modin_df.rename(
         columns={"fizz1": "fizz3", "buzz2": "buzz3"}, level=1
     )
-    tm.assert_index_equal(renamed.columns, modin_renamed.columns)
+    assert_index_equal(renamed.columns, modin_renamed.columns)
     renamed = df.rename(columns={"fizz1": "fizz3", "buzz2": "buzz3"}, level="buzz")
     modin_renamed = modin_df.rename(
         columns={"fizz1": "fizz3", "buzz2": "buzz3"}, level="buzz"
     )
-    tm.assert_index_equal(renamed.columns, modin_renamed.columns)
+    assert_index_equal(renamed.columns, modin_renamed.columns)
 
     # function
     func = str.upper
     renamed = df.rename(columns=func, level=0)
     modin_renamed = modin_df.rename(columns=func, level=0)
-    tm.assert_index_equal(renamed.columns, modin_renamed.columns)
+    assert_index_equal(renamed.columns, modin_renamed.columns)
     renamed = df.rename(columns=func, level="fizz")
     modin_renamed = modin_df.rename(columns=func, level="fizz")
-    tm.assert_index_equal(renamed.columns, modin_renamed.columns)
+    assert_index_equal(renamed.columns, modin_renamed.columns)
 
     renamed = df.rename(columns=func, level=1)
     modin_renamed = modin_df.rename(columns=func, level=1)
-    tm.assert_index_equal(renamed.columns, modin_renamed.columns)
+    assert_index_equal(renamed.columns, modin_renamed.columns)
     renamed = df.rename(columns=func, level="buzz")
     modin_renamed = modin_df.rename(columns=func, level="buzz")
-    tm.assert_index_equal(renamed.columns, modin_renamed.columns)
+    assert_index_equal(renamed.columns, modin_renamed.columns)
 
     # index
     renamed = df.rename(index={"foo1": "foo3", "bar2": "bar3"}, level=0)
     modin_renamed = modin_df.rename(index={"foo1": "foo3", "bar2": "bar3"}, level=0)
-    tm.assert_index_equal(modin_renamed.index, renamed.index)
+    assert_index_equal(modin_renamed.index, renamed.index)
 
 
 @pytest.mark.skip(reason="Pandas does not pass this test")
 def test_rename_nocopy():
-    test_data = pandas.DataFrame(tm.getSeriesData())
-    modin_df = pd.DataFrame(test_data)
-    modin_renamed = modin_df.rename(columns={"C": "foo"}, copy=False)
+    source_df = pandas.DataFrame(test_data["int_data"])[
+        ["col1", "index", "col3", "col4"]
+    ]
+    modin_df = pd.DataFrame(source_df)
+    modin_renamed = modin_df.rename(columns={"col3": "foo"}, copy=False)
     modin_renamed["foo"] = 1
-    assert (modin_df["C"] == 1).all()
+    assert (modin_df["col3"] == 1).all()
 
 
 def test_rename_inplace():
-    test_data = pandas.DataFrame(tm.getSeriesData())
-    modin_df = pd.DataFrame(test_data)
+    source_df = pandas.DataFrame(test_data["int_data"])[
+        ["col1", "index", "col3", "col4"]
+    ]
+    modin_df = pd.DataFrame(source_df)
 
     df_equals(
-        modin_df.rename(columns={"C": "foo"}),
-        test_data.rename(columns={"C": "foo"}),
+        modin_df.rename(columns={"col3": "foo"}),
+        source_df.rename(columns={"col3": "foo"}),
     )
 
-    frame = test_data.copy()
+    frame = source_df.copy()
     modin_frame = modin_df.copy()
-    frame.rename(columns={"C": "foo"}, inplace=True)
-    modin_frame.rename(columns={"C": "foo"}, inplace=True)
+    frame.rename(columns={"col3": "foo"}, inplace=True)
+    modin_frame.rename(columns={"col3": "foo"}, inplace=True)
 
     df_equals(modin_frame, frame)
 
@@ -752,7 +819,7 @@ def test_rename_axis():
 
 
 def test_rename_axis_inplace():
-    test_frame = pandas.DataFrame(tm.getSeriesData())
+    test_frame = pandas.DataFrame(test_data["int_data"])
     modin_df = pd.DataFrame(test_frame)
 
     result = test_frame.copy()
@@ -802,6 +869,42 @@ def test_reorder_levels():
         modin_df.reorder_levels(["Letter", "Color", "Number"]),
         pandas_df.reorder_levels(["Letter", "Color", "Number"]),
     )
+
+
+def test_reindex_multiindex():
+    data1, data2 = np.random.randint(1, 20, (5, 5)), np.random.randint(10, 25, 6)
+    index = np.array(["AUD", "BRL", "CAD", "EUR", "INR"])
+    modin_midx = pd.MultiIndex.from_product(
+        [["Bank_1", "Bank_2"], ["AUD", "CAD", "EUR"]], names=["Bank", "Curency"]
+    )
+    pandas_midx = pandas.MultiIndex.from_product(
+        [["Bank_1", "Bank_2"], ["AUD", "CAD", "EUR"]], names=["Bank", "Curency"]
+    )
+    modin_df1, modin_df2 = (
+        pd.DataFrame(data=data1, index=index, columns=index),
+        pd.DataFrame(data2, modin_midx),
+    )
+    pandas_df1, pandas_df2 = (
+        pandas.DataFrame(data=data1, index=index, columns=index),
+        pandas.DataFrame(data2, pandas_midx),
+    )
+    modin_df2.columns, pandas_df2.columns = ["Notional"], ["Notional"]
+    md_midx = pd.MultiIndex.from_product([modin_df2.index.levels[0], modin_df1.index])
+    pd_midx = pandas.MultiIndex.from_product(
+        [pandas_df2.index.levels[0], pandas_df1.index]
+    )
+    # reindex without axis, index, or columns
+    modin_result = modin_df1.reindex(md_midx, fill_value=0)
+    pandas_result = pandas_df1.reindex(pd_midx, fill_value=0)
+    df_equals(modin_result, pandas_result)
+    # reindex with only axis
+    modin_result = modin_df1.reindex(md_midx, fill_value=0, axis=0)
+    pandas_result = pandas_df1.reindex(pd_midx, fill_value=0, axis=0)
+    df_equals(modin_result, pandas_result)
+    # reindex with axis and level
+    modin_result = modin_df1.reindex(md_midx, fill_value=0, axis=0, level=0)
+    pandas_result = pandas_df1.reindex(pd_midx, fill_value=0, axis=0, level=0)
+    df_equals(modin_result, pandas_result)
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
@@ -1072,38 +1175,20 @@ def test___getattr__(request, data):
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test___setitem__(data):
-    modin_df = pd.DataFrame(data)
-    pandas_df = pandas.DataFrame(data)
+    eval_setitem(*create_test_dfs(data), loc=-1, value=1)
+    eval_setitem(
+        *create_test_dfs(data), loc=-1, value=lambda df: type(df)(df[df.columns[0]])
+    )
 
-    modin_df.__setitem__(modin_df.columns[-1], 1)
-    pandas_df.__setitem__(pandas_df.columns[-1], 1)
-    df_equals(modin_df, pandas_df)
+    nrows = len(data[list(data.keys())[0]])
+    arr = np.arange(nrows * 2).reshape(-1, 2)
 
-    modin_df = pd.DataFrame(data)
-    pandas_df = pandas.DataFrame(data)
+    eval_setitem(*create_test_dfs(data), loc=-1, value=arr)
+    eval_setitem(*create_test_dfs(data), col="___NON EXISTENT COLUMN", value=arr)
+    eval_setitem(*create_test_dfs(data), loc=0, value=np.arange(nrows))
 
-    modin_df[modin_df.columns[-1]] = pd.DataFrame(modin_df[modin_df.columns[0]])
-    pandas_df[pandas_df.columns[-1]] = pandas.DataFrame(pandas_df[pandas_df.columns[0]])
-    df_equals(modin_df, pandas_df)
-
-    modin_df = pd.DataFrame(data)
-    pandas_df = pandas.DataFrame(data)
-
-    rows = len(modin_df)
-    arr = np.arange(rows * 2).reshape(-1, 2)
-    modin_df[modin_df.columns[-1]] = arr
-    pandas_df[pandas_df.columns[-1]] = arr
-    df_equals(pandas_df, modin_df)
-
-    with pytest.raises(ValueError, match=r"Wrong number of items passed"):
-        modin_df["___NON EXISTENT COLUMN"] = arr
-
-    modin_df[modin_df.columns[0]] = np.arange(len(modin_df))
-    pandas_df[pandas_df.columns[0]] = np.arange(len(pandas_df))
-    df_equals(modin_df, pandas_df)
-
-    modin_df = pd.DataFrame(columns=modin_df.columns)
-    pandas_df = pandas.DataFrame(columns=pandas_df.columns)
+    modin_df = pd.DataFrame(columns=data.keys())
+    pandas_df = pandas.DataFrame(columns=data.keys())
 
     for col in modin_df.columns:
         modin_df[col] = np.arange(1000)
@@ -1130,19 +1215,16 @@ def test___setitem__(data):
         df_equals(modin_df, pandas_df)
         assert isinstance(modin_df["new_col"][0], type(pandas_df["new_col"][0]))
 
+    modin_df[1:5] = 10
+    pandas_df[1:5] = 10
+    df_equals(modin_df, pandas_df)
+
     # Transpose test
     modin_df = pd.DataFrame(data).T
     pandas_df = pandas.DataFrame(data).T
 
-    # We default to pandas on non-string column names
-    if not all(isinstance(c, str) for c in modin_df.columns):
-        with pytest.warns(UserWarning):
-            modin_df[modin_df.columns[0]] = 0
-    else:
-        modin_df[modin_df.columns[0]] = 0
-
+    modin_df[modin_df.columns[0]] = 0
     pandas_df[pandas_df.columns[0]] = 0
-
     df_equals(modin_df, pandas_df)
 
     modin_df.columns = [str(i) for i in modin_df.columns]
@@ -1155,8 +1237,40 @@ def test___setitem__(data):
 
     modin_df[modin_df.columns[0]][modin_df.index[0]] = 12345
     pandas_df[pandas_df.columns[0]][pandas_df.index[0]] = 12345
-
     df_equals(modin_df, pandas_df)
+
+    modin_df[1:5] = 10
+    pandas_df[1:5] = 10
+    df_equals(modin_df, pandas_df)
+
+
+def test___setitem__partitions_aligning():
+    # from issue #2390
+    modin_df = pd.DataFrame({"a": [1, 2, 3]})
+    pandas_df = pandas.DataFrame({"a": [1, 2, 3]})
+    modin_df["b"] = pd.Series([4, 5, 6, 7, 8])
+    pandas_df["b"] = pandas.Series([4, 5, 6, 7, 8])
+    df_equals(modin_df, pandas_df)
+
+    # from issue #2442
+    data = {"a": [1, 2, 3, 4]}
+    # Index with duplicated timestamp
+    index = pandas.to_datetime(["2020-02-06", "2020-02-06", "2020-02-22", "2020-03-26"])
+
+    md_df, pd_df = create_test_dfs(data, index=index)
+    # Setting new column
+    pd_df["b"] = pandas.Series(np.arange(4))
+    md_df["b"] = pd.Series(np.arange(4))
+    df_equals(md_df, pd_df)
+
+    # Setting existing column
+    pd_df["b"] = pandas.Series(np.arange(4))
+    md_df["b"] = pd.Series(np.arange(4))
+    df_equals(md_df, pd_df)
+
+    pd_df["a"] = pandas.Series(np.arange(4))
+    md_df["a"] = pd.Series(np.arange(4))
+    df_equals(md_df, pd_df)
 
 
 def test___setitem__with_mismatched_partitions():
@@ -1201,19 +1315,16 @@ def test___setitem__mask():
     "data",
     [
         {},
-        pytest.param(
-            {"id": [], "max_speed": [], "health": []},
-            marks=pytest.mark.xfail(
-                reason="Throws an exception because generally assigning Series or other objects of length different from DataFrame does not work right now"
-            ),
-        ),
+        {"id": [], "max_speed": [], "health": []},
+        {"id": [1], "max_speed": [2], "health": [3]},
+        {"id": [4, 40, 400], "max_speed": [111, 222, 333], "health": [33, 22, 11]},
     ],
-    ids=["empty", "empty_columns"],
+    ids=["empty_frame", "empty_cols", "1_length_cols", "2_length_cols"],
 )
 @pytest.mark.parametrize(
     "value",
-    [np.array(["one", "two"]), [11, 22]],
-    ids=["ndarray", "list"],
+    [[11, 22], [11, 22, 33]],
+    ids=["2_length_val", "3_length_val"],
 )
 @pytest.mark.parametrize("convert_to_series", [False, True])
 @pytest.mark.parametrize("new_col_id", [123, "new_col"], ids=["integer", "string"])
@@ -1221,9 +1332,19 @@ def test_setitem_on_empty_df(data, value, convert_to_series, new_col_id):
     pandas_df = pandas.DataFrame(data)
     modin_df = pd.DataFrame(data)
 
-    pandas_df[new_col_id] = pandas.Series(value) if convert_to_series else value
-    modin_df[new_col_id] = pd.Series(value) if convert_to_series else value
-    df_equals(modin_df, pandas_df)
+    def applyier(df):
+        if convert_to_series:
+            converted_value = (
+                pandas.Series(value)
+                if isinstance(df, pandas.DataFrame)
+                else pd.Series(value)
+            )
+        else:
+            converted_value = value
+        df[new_col_id] = converted_value
+        return df
+
+    eval_general(modin_df, pandas_df, applyier)
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
@@ -1253,3 +1374,17 @@ def test_index_order():
             getattr(df_modin, func)(level=0).index,
             getattr(df_pandas, func)(level=0).index,
         )
+
+
+@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+@pytest.mark.parametrize("sortorder", [0, 3, 5])
+def test_multiindex_from_frame(data, sortorder):
+    modin_df, pandas_df = create_test_dfs(data)
+
+    def call_from_frame(df):
+        if type(df).__module__.startswith("pandas"):
+            return pandas.MultiIndex.from_frame(df, sortorder)
+        else:
+            return pd.MultiIndex.from_frame(df, sortorder)
+
+    eval_general(modin_df, pandas_df, call_from_frame, comparator=assert_index_equal)

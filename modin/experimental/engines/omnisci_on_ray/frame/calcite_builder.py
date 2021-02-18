@@ -44,7 +44,7 @@ from .df_algebra import (
 )
 
 from collections import abc
-from pandas.core.dtypes.common import _get_dtype
+from pandas.core.dtypes.common import get_dtype
 
 
 class CalciteBuilder:
@@ -94,7 +94,7 @@ class CalciteBuilder:
 
         def gen_reduce_expr(self):
             count_expr = self._builder._ref(self._arg.modin_frame, self._count_name)
-            count_expr._dtype = _get_dtype(int)
+            count_expr._dtype = get_dtype(int)
             sum_expr = self._builder._ref(self._arg.modin_frame, self._sum_name)
             sum_expr._dtype = self._sum_dtype
             qsum_expr = self._builder._ref(self._arg.modin_frame, self._quad_sum_name)
@@ -161,7 +161,7 @@ class CalciteBuilder:
 
         def gen_reduce_expr(self):
             count_expr = self._builder._ref(self._arg.modin_frame, self._count_name)
-            count_expr._dtype = _get_dtype(int)
+            count_expr._dtype = get_dtype(int)
             sum_expr = self._builder._ref(self._arg.modin_frame, self._sum_name)
             sum_expr._dtype = self._sum_dtype
             qsum_expr = self._builder._ref(self._arg.modin_frame, self._quad_sum_name)
@@ -473,7 +473,7 @@ class CalciteBuilder:
         """ Join, only equal-join supported """
         cmps = [self._ref(left, c).eq(self._ref(right, c)) for c in op.on]
         if len(cmps) > 1:
-            condition = OpExpr("AND", cmps, _get_dtype(bool))
+            condition = OpExpr("AND", cmps, get_dtype(bool))
         else:
             condition = cmps[0]
         node = CalciteJoinNode(

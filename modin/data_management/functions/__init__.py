@@ -11,18 +11,21 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
+from .function import Function
 from .mapfunction import MapFunction
 from .mapreducefunction import MapReduceFunction
 from .reductionfunction import ReductionFunction
 from .foldfunction import FoldFunction
 from .binary_function import BinaryFunction
-from .groupby_function import GroupbyReduceFunction
+from .groupby_function import GroupbyReduceFunction, groupby_reduce_functions
 
 __all__ = [
+    "Function",
     "MapFunction",
     "MapReduceFunction",
     "ReductionFunction",
     "FoldFunction",
     "BinaryFunction",
     "GroupbyReduceFunction",
+    "groupby_reduce_functions",
 ]

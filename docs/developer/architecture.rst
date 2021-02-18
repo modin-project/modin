@@ -234,27 +234,23 @@ Supported Execution Frameworks and Memory Formats
 
 This is the list of execution frameworks and memory formats supported in Modin. If you
 would like to contribute a new execution framework or memory format, please see the
-documentation page on Contributing_.
+documentation page on :doc:`contributing </contributing>`.
 
-- `Pandas on Ray`_
+- :doc:`Pandas on Ray </UsingPandasonRay/index>`
     - Uses the Ray_ execution framework.
     - The compute kernel/in-memory format is a pandas DataFrame.
-- `Pandas on Dask`_
+- :doc:`Pandas on Dask </UsingPandasonDask/index>`
     - Uses the `Dask Futures`_ execution framework.
     - The compute kernel/in-memory format is a pandas DataFrame.
-- `Pyarrow on Ray`_ (experimental)
+- :doc:`Pyarrow on Ray </UsingPyarrowonRay/index>` (experimental)
     - Uses the Ray_ execution framework.
     - The compute kernel/in-memory format is a pyarrow Table.
 
-.. _pandas Dataframe: https://pandas.pydata.org/pandas-docs/version/0.23.4/generated/pandas.DataFrame.html
+.. _pandas Dataframe: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.html
 .. _Arrow tables: https://arrow.apache.org/docs/python/generated/pyarrow.Table.html
 .. _Ray: https://github.com/ray-project/ray
 .. _code: https://github.com/modin-project/modin/blob/master/modin/engines/base/frame/data.py
-.. _Contributing: contributing.html
-.. _Pandas on Ray: UsingPandasonRay/optimizations.html
-.. _Pandas on Dask: UsingPandasonDask/optimizations.html
 .. _Dask Futures: https://docs.dask.org/en/latest/futures.html
 .. _issue: https://github.com/modin-project/modin/issues
 .. _Discourse: https://discuss.modin.org
 .. _task parallel: https://en.wikipedia.org/wiki/Task_parallelism
-.. _Pyarrow on Ray: UsingPyarrowonRay/index.html

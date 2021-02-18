@@ -29,6 +29,8 @@ class Rolling:
 
 
 class RollingDefault(DefaultMethod):
+    OBJECT_TYPE = "Rolling"
+
     @classmethod
     def register(cls, func, **kwargs):
-        return cls.call(Rolling.build_rolling(func), **kwargs)
+        return cls.call(Rolling.build_rolling(func), fn_name=func.__name__, **kwargs)

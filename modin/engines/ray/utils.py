@@ -12,7 +12,6 @@
 # governing permissions and limitations under the License.
 
 import builtins
-import threading
 import os
 import sys
 
@@ -94,12 +93,12 @@ def initialize_ray(
     """
     import ray
 
-    if threading.current_thread().name == "MainThread" or override_is_cluster:
+    if not ray.is_initialized() or override_is_cluster:
         import secrets
 
         cluster = override_is_cluster or IsRayCluster.get()
         redis_address = override_redis_address or RayRedisAddress.get()
-        redis_password = override_redis_password or secrets.token_hex(16)
+        redis_password = override_redis_password or secrets.token_hex(32)
 
         if cluster:
             # We only start ray in a cluster setting for the head node.
@@ -111,6 +110,17 @@ def initialize_ray(
                 logging_level=100,
             )
         else:
+            from modin.error_message import ErrorMessage
+
+            # This string is intentionally formatted this way. We want it indented in
+            # the warning message.
+            ErrorMessage.not_initialized(
+                "Ray",
+                """
+    import ray
+    ray.init()
+""",
+            )
             object_store_memory = Memory.get()
             plasma_directory = RayPlasmaDir.get()
             if IsOutOfCore.get():
@@ -148,7 +158,6 @@ def initialize_ray(
                 _memory=object_store_memory,
                 _lru_evict=True,
             )
-
         _move_stdlib_ahead_of_site_packages()
         ray.worker.global_worker.run_function_on_all_workers(
             _move_stdlib_ahead_of_site_packages

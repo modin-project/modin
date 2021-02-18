@@ -53,7 +53,7 @@ combine = [train_df, test_df]
 "After", train_df.shape, test_df.shape, combine[0].shape, combine[1].shape
 for dataset in combine:
     dataset["Title"] = dataset.Name.str.extract(
-        " ([A-Za-z]+)\.", expand=False
+        r" ([A-Za-z]+)\.", expand=False
     )  # noqa: W605
 pd.crosstab(train_df["Title"], train_df["Sex"])
 for dataset in combine:

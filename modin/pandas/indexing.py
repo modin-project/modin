@@ -60,6 +60,26 @@ def is_slice(x):
     return isinstance(x, slice)
 
 
+def compute_sliced_len(slc, sequence_len):
+    """
+    Compute length of sliced object.
+
+    Parameters
+    ----------
+    slc: slice
+        Slice object
+    sequence_len: int
+        Length of sequence, to which slice will be applied
+
+    Returns
+    -------
+    int
+        Length of object after applying slice object on it.
+    """
+    # This will translate slice to a range, from which we can retrieve length
+    return len(range(*slc.indices(sequence_len)))
+
+
 def is_2d(x):
     """
     Implement [METHOD_NAME].
@@ -293,7 +313,7 @@ class _LocationIndexerBase(object):
             )
         return self.df.__constructor__(query_compiler=qc_view).squeeze(axis=axis)
 
-    def __setitem__(self, row_lookup, col_lookup, item):
+    def __setitem__(self, row_lookup, col_lookup, item, axis=None):
         """
         Implement [METHOD_NAME].
 
@@ -317,15 +337,11 @@ class _LocationIndexerBase(object):
             col_lookup = range(len(self.qc.columns))[col_lookup]
         # This is True when we dealing with assignment of a full column. This case
         # should be handled in a fastpath with `df[col] = item`.
-        if (
-            len(row_lookup) == len(self.qc.index)
-            and len(col_lookup) == 1
-            and hasattr(self.df, "columns")
-        ):
+        if axis == 0:
             self.df[self.df.columns[col_lookup][0]] = item
         # This is True when we are assigning to a full row. We want to reuse the setitem
         # mechanism to operate along only one axis for performance reasons.
-        elif len(col_lookup) == len(self.qc.columns) and len(row_lookup) == 1:
+        elif axis == 1:
             if hasattr(item, "_query_compiler"):
                 item = item._query_compiler
             new_qc = self.qc.setitem(1, self.qc.index[row_lookup[0]], item)
@@ -368,21 +384,25 @@ class _LocationIndexerBase(object):
         """
         # It is valid to pass a DataFrame or Series to __setitem__ that is larger than
         # the target the user is trying to overwrite. This
-        if isinstance(item, (pandas.Series, pandas.DataFrame, DataFrame)):
-            if not all(idx in item.index for idx in row_lookup):
+        if isinstance(item, (pandas.Series, pandas.DataFrame, Series, DataFrame)):
+            # convert indices in lookups to names, as Pandas reindex expects them to be so
+            index_values = self.qc.index[row_lookup]
+            if not all(idx in item.index for idx in index_values):
                 raise ValueError(
                     "Must have equal len keys and value when setting with "
                     "an iterable"
                 )
             if hasattr(item, "columns"):
-                if not all(idx in item.columns for idx in col_lookup):
+                column_values = self.qc.columns[col_lookup]
+                if not all(col in item.columns for col in column_values):
+                    # TODO: think if it is needed to handle cases when columns have duplicate names
                     raise ValueError(
                         "Must have equal len keys and value when setting "
                         "with an iterable"
                     )
-                item = item.reindex(index=row_lookup, columns=col_lookup)
+                item = item.reindex(index=index_values, columns=column_values)
             else:
-                item = item.reindex(index=row_lookup)
+                item = item.reindex(index=index_values)
         try:
             item = np.array(item)
             if np.prod(to_shape) == np.prod(item.shape):
@@ -416,6 +436,57 @@ class _LocationIndexerBase(object):
         """
         new_qc = self.qc.write_items(row_lookup, col_lookup, item)
         self.df._create_or_update_from_compiler(new_qc, inplace=True)
+
+    def _determine_setitem_axis(self, row_lookup, col_lookup, row_scaler, col_scaler):
+        """
+        Determine an axis along which we should do an assignment.
+
+        Parameters
+        ----------
+        row_lookup: slice or list
+            Indexer for rows
+        col_lookup: slice or list
+            Indexer for columns
+        row_scaler: bool
+            Whether indexer for rows was slacar or not
+        col_scaler: bool
+            Whether indexer for columns was slacer or not
+
+        Returns
+        -------
+        int or None
+            None if this will be a both axis assignment, number of axis to assign in other cases.
+
+        Notes
+        -----
+            axis = 0: column assignment df[col] = item
+            axis = 1: row assignment df.loc[row] = item
+            axis = None: assignment along both axes
+        """
+        if self.df.shape == (1, 1):
+            return None if not (row_scaler ^ col_scaler) else 1 if row_scaler else 0
+
+        def get_axis(axis):
+            return self.qc.index if axis == 0 else self.qc.columns
+
+        row_lookup_len, col_lookup_len = [
+            len(lookup)
+            if not isinstance(lookup, slice)
+            else compute_sliced_len(lookup, len(get_axis(i)))
+            for i, lookup in enumerate([row_lookup, col_lookup])
+        ]
+
+        if (
+            row_lookup_len == len(self.qc.index)
+            and col_lookup_len == 1
+            and isinstance(self.df, DataFrame)
+        ):
+            axis = 0
+        elif col_lookup_len == len(self.qc.columns) and row_lookup_len == 1:
+            axis = 1
+        else:
+            axis = None
+        return axis
 
 
 class _LocIndexer(_LocationIndexerBase):
@@ -474,7 +545,7 @@ class _LocIndexer(_LocationIndexerBase):
                 )
             ):
                 result.index = result.index.droplevel(list(range(len(col_loc))))
-            elif all(
+            elif not isinstance(row_loc, slice) and all(
                 not isinstance(row_loc[i], slice)
                 and row_loc[i] in result.index.levels[i]
                 for i in range(len(row_loc))
@@ -487,6 +558,15 @@ class _LocIndexer(_LocationIndexerBase):
             and all(col_loc[i] in result.columns.levels[i] for i in range(len(col_loc)))
         ):
             result.columns = result.columns.droplevel(list(range(len(col_loc))))
+        # This is done for cases where the index passed in has other state, like a
+        # frequency in the case of DateTimeIndex.
+        if (
+            row_lookup is not None
+            and isinstance(col_loc, slice)
+            and col_loc == slice(None)
+            and isinstance(key, pandas.Index)
+        ):
+            result.index = key
         return result
 
     def __setitem__(self, key, item):
@@ -507,7 +587,7 @@ class _LocIndexer(_LocationIndexerBase):
         -------
         What this returns (if anything)
         """
-        row_loc, col_loc, _, __, ___ = _parse_tuple(key)
+        row_loc, col_loc, _, row_scaler, col_scaler = _parse_tuple(key)
         if isinstance(row_loc, list) and len(row_loc) == 1:
             if row_loc[0] not in self.qc.index:
                 index = self.qc.index.insert(len(self.qc.index), row_loc[0])
@@ -525,7 +605,14 @@ class _LocIndexer(_LocationIndexerBase):
             self.qc = self.df._query_compiler
         else:
             row_lookup, col_lookup = self._compute_lookup(row_loc, col_loc)
-            super(_LocIndexer, self).__setitem__(row_lookup, col_lookup, item)
+            super(_LocIndexer, self).__setitem__(
+                row_lookup,
+                col_lookup,
+                item,
+                axis=self._determine_setitem_axis(
+                    row_lookup, col_lookup, row_scaler, col_scaler
+                ),
+            )
 
     def _compute_enlarge_labels(self, locator, base_index):
         """
@@ -663,12 +750,19 @@ class _iLocIndexer(_LocationIndexerBase):
         -------
         What this returns (if anything)
         """
-        row_loc, col_loc, _, __, ___ = _parse_tuple(key)
+        row_loc, col_loc, _, row_scaler, col_scaler = _parse_tuple(key)
         self._check_dtypes(row_loc)
         self._check_dtypes(col_loc)
 
         row_lookup, col_lookup = self._compute_lookup(row_loc, col_loc)
-        super(_iLocIndexer, self).__setitem__(row_lookup, col_lookup, item)
+        super(_iLocIndexer, self).__setitem__(
+            row_lookup,
+            col_lookup,
+            item,
+            axis=self._determine_setitem_axis(
+                row_lookup, col_lookup, row_scaler, col_scaler
+            ),
+        )
 
     def _compute_lookup(self, row_loc, col_loc):
         """

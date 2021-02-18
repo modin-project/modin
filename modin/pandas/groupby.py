@@ -22,13 +22,23 @@ for better maintability. So some codes are ignored in pydocstyle check:
 Manually add documentation for methods which are not presented in pandas.
 """
 
+import numpy as np
 import pandas
 import pandas.core.groupby
 from pandas.core.dtypes.common import is_list_like
+from pandas.core.aggregation import reconstruct_func
 import pandas.core.common as com
+from types import BuiltinFunctionType
+from collections.abc import Iterable
 
 from modin.error_message import ErrorMessage
-from modin.utils import _inherit_docstrings, wrap_udf_function, try_cast_to_pandas
+from modin.utils import (
+    _inherit_docstrings,
+    try_cast_to_pandas,
+    wrap_udf_function,
+    hashable,
+)
+from modin.backends.base.query_compiler import BaseQueryCompiler
 from modin.config import IsExperimental
 from .series import Series
 
@@ -74,8 +84,9 @@ class DataFrameGroupBy(object):
                 not isinstance(by, type(self._query_compiler))
                 and axis == 0
                 and all(
-                    (isinstance(obj, str) and obj in self._query_compiler.columns)
-                    or isinstance(obj, Series)
+                    (hashable(obj) and obj in self._query_compiler.columns)
+                    or isinstance(obj, type(self._query_compiler))
+                    or is_list_like(obj)
                     for obj in self._by
                 )
             )
@@ -87,8 +98,8 @@ class DataFrameGroupBy(object):
             "sort": sort,
             "as_index": as_index,
             "group_keys": group_keys,
-            "squeeze": squeeze,
         }
+        self._squeeze = squeeze
         self._kwargs.update(kwargs)
 
     _index_grouped_cache = None
@@ -110,7 +121,7 @@ class DataFrameGroupBy(object):
             return object.__getattribute__(self, key)
         except AttributeError as e:
             if key in self._columns:
-                return self._default_to_pandas(lambda df: df.__getitem__(key))
+                return self.__getitem__(key)
             raise e
 
     @property
@@ -170,10 +181,57 @@ class DataFrameGroupBy(object):
     def ndim(self):
         return 2  # ndim is always 2 for DataFrames
 
-    def shift(self, periods=1, freq=None, axis=0):
-        return self._default_to_pandas(
-            lambda df: df.shift(periods=periods, freq=freq, axis=axis)
-        )
+    def shift(self, periods=1, freq=None, axis=0, fill_value=None):
+        def _shift(periods, freq, axis, fill_value, is_set_nan_rows=True):
+            from .dataframe import DataFrame
+
+            result = self._df.shift(periods, freq, axis, fill_value)
+
+            if (
+                is_set_nan_rows
+                and isinstance(self._by, BaseQueryCompiler)
+                and (
+                    # Check using `issubset` is effective only in case of MultiIndex
+                    set(self._by.columns).issubset(list(self._df.columns))
+                    if isinstance(self._by.columns, pandas.MultiIndex)
+                    else len(
+                        self._by.columns.unique()
+                        .sort_values()
+                        .difference(self._df.columns.unique().sort_values())
+                    )
+                    == 0
+                )
+                and DataFrame(query_compiler=self._by.isna()).any(axis=None)
+            ):
+                mask_nan_rows = self._df[self._by.columns].isna().any(axis=1)
+                # drop NaN groups
+                result = result.loc[~mask_nan_rows]
+            return result
+
+        if freq is None and axis == 1 and self._axis == 0:
+            result = _shift(periods, freq, axis, fill_value)
+        elif (
+            freq is not None
+            and axis == 0
+            and self._axis == 0
+            and isinstance(self._by, BaseQueryCompiler)
+        ):
+            result = _shift(periods, freq, axis, fill_value, is_set_nan_rows=False)
+            new_idx_lvl_arrays = np.concatenate(
+                [self._df[self._by.columns].values.T, [list(result.index)]]
+            )
+            result.index = pandas.MultiIndex.from_arrays(
+                new_idx_lvl_arrays,
+                names=[col_name for col_name in self._by.columns]
+                + [result._query_compiler.get_index_name()],
+            )
+            result = result.dropna(subset=self._by.columns).sort_index()
+        else:
+            result = self._apply_agg_function(
+                lambda df: df.shift(periods, freq, axis, fill_value)
+            )
+            result._query_compiler.set_index_name(None)
+        return result
 
     def nth(self, n, dropna=None):
         return self._default_to_pandas(lambda df: df.nth(n, dropna=dropna))
@@ -181,7 +239,7 @@ class DataFrameGroupBy(object):
     def cumsum(self, axis=0, *args, **kwargs):
         result = self._apply_agg_function(lambda df: df.cumsum(axis, *args, **kwargs))
         # pandas does not name the index on cumsum
-        result.index.name = None
+        result._query_compiler.set_index_name(None)
         return result
 
     @property
@@ -199,21 +257,22 @@ class DataFrameGroupBy(object):
     def cummax(self, axis=0, **kwargs):
         result = self._apply_agg_function(lambda df: df.cummax(axis, **kwargs))
         # pandas does not name the index on cummax
-        result.index.name = None
+        result._query_compiler.set_index_name(None)
         return result
 
     def apply(self, func, *args, **kwargs):
-        return self._apply_agg_function(
-            # Grouping column in never dropped in groupby.apply, so drop=False
-            lambda df: df.apply(func, *args, **kwargs),
-            drop=False,
-        )
+        if not isinstance(func, BuiltinFunctionType):
+            func = wrap_udf_function(func)
+        return self._apply_agg_function(lambda df: df.apply(func, *args, **kwargs))
 
     @property
     def dtypes(self):
         if self._axis == 1:
             raise ValueError("Cannot call dtypes on groupby with axis=1")
-        return self._apply_agg_function(lambda df: df.dtypes, drop=self._as_index)
+        if not self._as_index:
+            return self.apply(lambda df: df.dtypes)
+        else:
+            return self._apply_agg_function(lambda df: df.dtypes)
 
     def first(self, **kwargs):
         return self._default_to_pandas(lambda df: df.first(**kwargs))
@@ -222,7 +281,7 @@ class DataFrameGroupBy(object):
         return self.bfill(limit)
 
     def __getitem__(self, key):
-        kwargs = self._kwargs.copy()
+        kwargs = {**self._kwargs.copy(), "squeeze": self._squeeze}
         # Most of time indexing DataFrameGroupBy results in another DataFrameGroupBy object unless circumstances are
         # special in which case SeriesGroupBy has to be returned. Such circumstances are when key equals to a single
         # column name and is not a list of column names or list of one column name.
@@ -258,7 +317,7 @@ class DataFrameGroupBy(object):
         if (
             self._is_multi_by
             and isinstance(self._by, list)
-            and not all(isinstance(o, str) for o in self._by)
+            and not all(hashable(o) and o in self._df for o in self._by)
         ):
             raise NotImplementedError(
                 "Column lookups on GroupBy with arbitrary Series in by"
@@ -276,7 +335,7 @@ class DataFrameGroupBy(object):
     def cummin(self, axis=0, **kwargs):
         result = self._apply_agg_function(lambda df: df.cummin(axis=axis, **kwargs))
         # pandas does not name the index on cummin
-        result.index.name = None
+        result._query_compiler.set_index_name(None)
         return result
 
     def bfill(self, limit=None):
@@ -300,54 +359,77 @@ class DataFrameGroupBy(object):
             # This is not implemented in pandas,
             # so we throw a different message
             raise NotImplementedError("axis other than 0 is not supported")
-        if isinstance(func, dict) or func is None:
-            if func is None:
-                func = {}
-            else:
-                if any(i not in self._df.columns for i in func.keys()):
-                    from pandas.core.base import SpecificationError
 
-                    raise SpecificationError("nested renamer is not supported")
-            if isinstance(self._by, type(self._query_compiler)):
-                by = list(self._by.columns)
-            else:
-                by = self._by
-            # We convert to the string version of the function for simplicity.
-            func_dict = {
-                k: v if not callable(v) or v.__name__ not in dir(self) else v.__name__
-                for k, v in func.items()
-            }
-            subset_cols = list(func_dict.keys()) + (
-                list(self._by.columns)
-                if isinstance(self._by, type(self._query_compiler))
-                and all(c in self._df.columns for c in self._by.columns)
-                else []
+        if (
+            callable(func)
+            and isinstance(func, BuiltinFunctionType)
+            and func.__name__ in dir(self)
+        ):
+            func = func.__name__
+
+        relabeling_required = False
+        if isinstance(func, dict) or func is None:
+
+            def try_get_str_func(fn):
+                if not isinstance(fn, str) and isinstance(fn, Iterable):
+                    return [try_get_str_func(f) for f in fn]
+                return fn.__name__ if callable(fn) and fn.__name__ in dir(self) else fn
+
+            relabeling_required, func_dict, new_columns, order = reconstruct_func(
+                func, **kwargs
             )
-            return type(self._df)(
-                query_compiler=self._df[subset_cols]._query_compiler.groupby_dict_agg(
-                    by=by,
-                    func_dict=func_dict,
-                    groupby_args=self._kwargs,
-                    agg_args=kwargs,
-                    drop=self._drop,
-                )
-            )
-        if is_list_like(func):
+            func_dict = {col: try_get_str_func(fn) for col, fn in func_dict.items()}
+
+            if any(i not in self._df.columns for i in func_dict.keys()):
+                from pandas.core.base import SpecificationError
+
+                raise SpecificationError("nested renamer is not supported")
+            if func is None:
+                kwargs = {}
+            func = func_dict
+        elif is_list_like(func):
             return self._default_to_pandas(
                 lambda df, *args, **kwargs: df.aggregate(func, *args, **kwargs),
                 *args,
                 **kwargs,
             )
-        if isinstance(func, str):
-            agg_func = getattr(self, func, None)
+        elif callable(func):
+            return self._apply_agg_function(
+                lambda grp, *args, **kwargs: grp.aggregate(func, *args, **kwargs),
+                *args,
+                **kwargs,
+            )
+        elif isinstance(func, str):
+            # Using "getattr" here masks possible AttributeError which we throw
+            # in __getattr__, so we should call __getattr__ directly instead.
+            agg_func = self.__getattr__(func)
             if callable(agg_func):
                 return agg_func(*args, **kwargs)
-        return self._apply_agg_function(
-            lambda df, *args, **kwargs: df.aggregate(func, *args, **kwargs),
-            drop=self._as_index,
+
+        result = self._apply_agg_function(
+            func,
             *args,
             **kwargs,
         )
+
+        if relabeling_required:
+            if not self._as_index:
+                nby_cols = len(result.columns) - len(new_columns)
+                order = np.concatenate([np.arange(nby_cols), order + nby_cols])
+                by_cols = result.columns[:nby_cols]
+                new_columns = pandas.Index(new_columns)
+                if by_cols.nlevels != new_columns.nlevels:
+                    by_cols = by_cols.remove_unused_levels()
+                    empty_levels = [
+                        i
+                        for i, level in enumerate(by_cols.levels)
+                        if len(level) == 1 and level[0] == ""
+                    ]
+                    by_cols = by_cols.droplevel(empty_levels)
+                new_columns = by_cols.append(new_columns)
+            result = result.iloc[:, order]
+            result.columns = new_columns
+        return result
 
     agg = aggregate
 
@@ -360,7 +442,7 @@ class DataFrameGroupBy(object):
     def rank(self, **kwargs):
         result = self._apply_agg_function(lambda df: df.rank(**kwargs))
         # pandas does not name the index on rank
-        result.index.name = None
+        result._query_compiler.set_index_name(None)
         return result
 
     @property
@@ -400,13 +482,16 @@ class DataFrameGroupBy(object):
             # Series objects in 'by' mean we couldn't handle the case
             # and transform 'by' to a query compiler.
             # In this case we are just defaulting to pandas.
-            if is_list_like(self._by) and any(isinstance(o, Series) for o in self._by):
+            if is_list_like(self._by) and any(
+                isinstance(o, type(self._df._query_compiler)) for o in self._by
+            ):
                 work_object = DataFrameGroupBy(
                     self._df,
                     self._by,
                     self._axis,
                     drop=False,
                     idx_name=None,
+                    squeeze=self._squeeze,
                     **self._kwargs,
                 )
                 result = work_object._wrap_aggregation(
@@ -429,6 +514,7 @@ class DataFrameGroupBy(object):
                 self._axis,
                 drop=False,
                 idx_name=None,
+                squeeze=self._squeeze,
                 **self._kwargs,
             )
             result = work_object._wrap_aggregation(
@@ -455,6 +541,7 @@ class DataFrameGroupBy(object):
                 0,
                 drop=self._drop,
                 idx_name=self._idx_name,
+                squeeze=self._squeeze,
                 **self._kwargs,
             ).size()
 
@@ -514,7 +601,7 @@ class DataFrameGroupBy(object):
     def cumprod(self, axis=0, *args, **kwargs):
         result = self._apply_agg_function(lambda df: df.cumprod(axis, *args, **kwargs))
         # pandas does not name the index on cumprod
-        result.index.name = None
+        result._query_compiler.set_index_name(None)
         return result
 
     def __iter__(self):
@@ -528,16 +615,27 @@ class DataFrameGroupBy(object):
             lambda df: df.transform(func, *args, **kwargs)
         )
         # pandas does not name the index on transform
-        result.index.name = None
+        result._query_compiler.set_index_name(None)
         return result
 
     def corr(self, **kwargs):
         return self._default_to_pandas(lambda df: df.corr(**kwargs))
 
     def fillna(self, **kwargs):
-        result = self._apply_agg_function(lambda df: df.fillna(**kwargs))
+        new_groupby_kwargs = self._kwargs.copy()
+        new_groupby_kwargs["as_index"] = True
+        work_object = type(self)(
+            df=self._df,
+            by=self._by,
+            axis=self._axis,
+            idx_name=self._idx_name,
+            drop=self._drop,
+            squeeze=self._squeeze,
+            **new_groupby_kwargs,
+        )
+        result = work_object._apply_agg_function(lambda df: df.fillna(**kwargs))
         # pandas does not name the index on fillna
-        result.index.name = None
+        result._query_compiler.set_index_name(None)
         return result
 
     def count(self, **kwargs):
@@ -558,7 +656,7 @@ class DataFrameGroupBy(object):
     def cumcount(self, ascending=True):
         result = self._default_to_pandas(lambda df: df.cumcount(ascending=ascending))
         # pandas does not name the index on cumcount
-        result.index.name = None
+        result._query_compiler.set_index_name(None)
         return result
 
     def tail(self, n=5):
@@ -729,12 +827,19 @@ class DataFrameGroupBy(object):
                 # aware.
                 ErrorMessage.catch_bugs_and_request_email(self._axis == 1)
                 ErrorMessage.default_to_pandas("Groupby with multiple columns")
-                if isinstance(by, list) and all(isinstance(o, str) for o in by):
+                if isinstance(by, list) and all(
+                    hashable(o)
+                    and (
+                        o in self._df
+                        or o in self._df._query_compiler.get_index_names(self._axis)
+                    )
+                    for o in by
+                ):
                     pandas_df = self._df._query_compiler.getitem_column_array(
                         by
                     ).to_pandas()
                 else:
-                    by = try_cast_to_pandas(by)
+                    by = try_cast_to_pandas(by, squeeze=True)
                     pandas_df = self._df._to_pandas()
                 self._index_grouped_cache = pandas_df.groupby(by=by).groups
             else:
@@ -777,7 +882,7 @@ class DataFrameGroupBy(object):
         # For aggregations, pandas behavior does this for the result.
         # For other operations it does not, so we wait until there is an aggregation to
         # actually perform this operation.
-        if drop and self._drop and self._as_index:
+        if not self._is_multi_by and drop and self._drop and self._as_index:
             groupby_qc = self._query_compiler.drop(columns=self._by.columns)
         else:
             groupby_qc = self._query_compiler
@@ -794,11 +899,11 @@ class DataFrameGroupBy(object):
                 drop=self._drop,
             )
         )
-        if self._kwargs.get("squeeze", False):
+        if self._squeeze:
             return result.squeeze()
         return result
 
-    def _apply_agg_function(self, f, drop=True, *args, **kwargs):
+    def _apply_agg_function(self, f, *args, **kwargs):
         """
         Perform aggregation and combine stages based on a given function.
 
@@ -806,45 +911,33 @@ class DataFrameGroupBy(object):
 
         Parameters
         ----------
-        f:
+        f: callable
             The function to apply to each group.
 
         Returns
         -------
         A new combined DataFrame with the result of all groups.
         """
-        assert callable(f), "'{0}' object is not callable".format(type(f))
+        assert callable(f) or isinstance(
+            f, dict
+        ), "'{0}' object is not callable and not a dict".format(type(f))
 
-        f = wrap_udf_function(f)
-        if self._is_multi_by:
-            return self._default_to_pandas(f, *args, **kwargs)
-
-        if isinstance(self._by, type(self._query_compiler)):
-            by = self._by.to_pandas().squeeze()
-        else:
-            by = self._by
-
-        # For aggregations, pandas behavior does this for the result.
-        # For other operations it does not, so we wait until there is an aggregation to
-        # actually perform this operation.
-        if self._idx_name is not None and drop and self._drop:
-            groupby_qc = self._query_compiler.drop(columns=[self._idx_name])
-        else:
-            groupby_qc = self._query_compiler
-        new_manager = groupby_qc.groupby_agg(
-            by=by,
+        new_manager = self._query_compiler.groupby_agg(
+            by=self._by,
+            is_multi_by=self._is_multi_by,
             axis=self._axis,
             agg_func=f,
-            groupby_args=self._kwargs,
-            agg_args=kwargs,
+            agg_args=args,
+            agg_kwargs=kwargs,
+            groupby_kwargs=self._kwargs,
             drop=self._drop,
         )
         if self._idx_name is not None and self._as_index:
-            new_manager.index.name = self._idx_name
+            new_manager.set_index_name(self._idx_name)
         result = type(self._df)(query_compiler=new_manager)
-        if result.index.name == "__reduced__":
-            result.index.name = None
-        if self._kwargs.get("squeeze", False):
+        if result._query_compiler.get_index_name() == "__reduced__":
+            result._query_compiler.set_index_name(None)
+        if self._squeeze:
             return result.squeeze()
         return result
 
@@ -873,11 +966,15 @@ class DataFrameGroupBy(object):
         else:
             by = self._by
 
-        by = try_cast_to_pandas(by)
+        by = try_cast_to_pandas(by, squeeze=True)
 
         def groupby_on_multiple_columns(df, *args, **kwargs):
             return f(
-                df.groupby(by=by, axis=self._axis, **self._kwargs), *args, **kwargs
+                df.groupby(
+                    by=by, axis=self._axis, squeeze=self._squeeze, **self._kwargs
+                ),
+                *args,
+                **kwargs,
             )
 
         return self._df._default_to_pandas(groupby_on_multiple_columns, *args, **kwargs)

@@ -23,6 +23,7 @@ class BinaryFunction(Function):
         def caller(query_compiler, other, *args, **kwargs):
             axis = kwargs.get("axis", 0)
             broadcast = kwargs.pop("broadcast", False)
+            join_type = call_kwds.get("join_type", "outer")
             if isinstance(other, type(query_compiler)):
                 if broadcast:
                     assert (
@@ -39,11 +40,11 @@ class BinaryFunction(Function):
                             axis,
                             lambda l, r: func(l, r.squeeze(), *args, **kwargs),
                             other._modin_frame,
+                            join_type=join_type,
                             preserve_labels=call_kwds.get("preserve_labels", False),
                         )
                     )
                 else:
-                    join_type = call_kwds.get("join_type", "outer")
                     return query_compiler.__constructor__(
                         query_compiler._modin_frame._binary_op(
                             lambda x, y: func(x, y, *args, **kwargs),
@@ -53,12 +54,11 @@ class BinaryFunction(Function):
                     )
             else:
                 if isinstance(other, (list, np.ndarray, pandas.Series)):
-                    new_columns = query_compiler.columns
                     new_modin_frame = query_compiler._modin_frame._apply_full_axis(
                         axis,
                         lambda df: func(df, other, *args, **kwargs),
                         new_index=query_compiler.index,
-                        new_columns=new_columns,
+                        new_columns=query_compiler.columns,
                     )
                 else:
                     new_modin_frame = query_compiler._modin_frame._map(

@@ -104,6 +104,10 @@ class EngineDispatcher(object):
         return cls.__engine._read_csv(**kwargs)
 
     @classmethod
+    def read_csv_glob(cls, **kwargs):
+        return cls.__engine._read_csv_glob(**kwargs)
+
+    @classmethod
     def read_json(cls, **kwargs):
         return cls.__engine._read_json(**kwargs)
 

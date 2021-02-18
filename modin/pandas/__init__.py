@@ -13,7 +13,7 @@
 
 import pandas
 
-__pandas_version__ = "1.1.3"
+__pandas_version__ = "1.2.1"
 
 if pandas.__version__ != __pandas_version__:
     import warnings
@@ -43,6 +43,7 @@ from pandas import (
     to_timedelta,
     set_eng_float_format,
     options,
+    Flags,
     set_option,
     NaT,
     PeriodIndex,
@@ -57,6 +58,8 @@ from pandas import (
     Int16Dtype,
     Int32Dtype,
     Int64Dtype,
+    Float32Dtype,
+    Float64Dtype,
     StringDtype,
     BooleanDtype,
     CategoricalDtype,
@@ -83,7 +86,6 @@ from pandas import (
     NamedAgg,
     NA,
 )
-import threading
 import os
 import multiprocessing
 
@@ -91,9 +93,6 @@ from modin.config import Engine, Parameter
 
 # Set this so that Pandas doesn't try to multithread by itself
 os.environ["OMP_NUM_THREADS"] = "1"
-DEFAULT_NPARTITIONS = 4
-num_cpus = 1
-
 
 _is_first_update = {}
 dask_client = None
@@ -103,11 +102,10 @@ _NOINIT_ENGINES = {
 
 
 def _update_engine(publisher: Parameter):
-    global DEFAULT_NPARTITIONS, dask_client, num_cpus
+    global dask_client
     from modin.config import Backend, CpuCount
 
     if publisher.get() == "Ray":
-        import ray
         from modin.engines.ray.utils import initialize_ray
 
         # With OmniSci backend there is only a single worker per node
@@ -117,29 +115,15 @@ def _update_engine(publisher: Parameter):
             os.environ["OMP_NUM_THREADS"] = str(multiprocessing.cpu_count())
         if _is_first_update.get("Ray", True):
             initialize_ray()
-        num_cpus = ray.cluster_resources()["CPU"]
-    elif publisher.get() == "Dask":  # pragma: no cover
-        from distributed.client import get_client
+    elif publisher.get() == "Dask":
+        if _is_first_update.get("Dask", True):
+            from modin.engines.dask.utils import initialize_dask
 
-        if threading.current_thread().name == "MainThread" and _is_first_update.get(
-            "Dask", True
-        ):
-            import warnings
-
-            warnings.warn("The Dask Engine for Modin is experimental.")
-
-            try:
-                dask_client = get_client()
-            except ValueError:
-                from distributed import Client
-
-                dask_client = Client(n_workers=CpuCount.get())
-
+            initialize_dask()
     elif publisher.get() == "Cloudray":
         from modin.experimental.cloud import get_connection
 
         conn = get_connection()
-        remote_ray = conn.modules["ray"]
         if _is_first_update.get("Cloudray", True):
 
             @conn.teleport
@@ -161,8 +145,6 @@ def _update_engine(publisher: Parameter):
             import modin.data_management.factories.dispatcher  # noqa: F401
         else:
             get_connection().modules["modin"].set_backends("Ray", Backend.get())
-
-        num_cpus = remote_ray.cluster_resources()["CPU"]
     elif publisher.get() == "Cloudpython":
         from modin.experimental.cloud import get_connection
 
@@ -172,10 +154,7 @@ def _update_engine(publisher: Parameter):
         raise ImportError("Unrecognized execution engine: {}.".format(publisher.get()))
 
     _is_first_update[publisher.get()] = False
-    DEFAULT_NPARTITIONS = max(4, int(num_cpus))
 
-
-Engine.subscribe(_update_engine)
 
 from .. import __version__
 from .dataframe import DataFrame
@@ -332,7 +311,6 @@ __all__ = [
     "value_counts",
     "datetime",
     "NamedAgg",
-    "DEFAULT_NPARTITIONS",
 ]
 
 del pandas, Engine, Parameter

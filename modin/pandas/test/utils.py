@@ -15,30 +15,39 @@ import pytest
 import numpy as np
 import math
 import pandas
-from pandas.util.testing import (
-    assert_almost_equal,
+from pandas.testing import (
+    assert_series_equal,
     assert_frame_equal,
-    assert_categorical_equal,
+    assert_index_equal,
+    assert_extension_array_equal,
 )
 import modin.pandas as pd
 from modin.utils import to_pandas
-from modin.config import TestDatasetSize
+from modin.config import TestDatasetSize, TrackFileLeaks
 from io import BytesIO
+import os
+from string import ascii_letters
+import csv
+import psutil
+import functools
 
 random_state = np.random.RandomState(seed=42)
 
 DATASET_SIZE_DICT = {
-    "small": (2 ** 2, 2 ** 3),
-    "normal": (2 ** 6, 2 ** 8),
-    "big": (2 ** 7, 2 ** 12),
+    "Small": (2 ** 2, 2 ** 3),
+    "Normal": (2 ** 6, 2 ** 8),
+    "Big": (2 ** 7, 2 ** 12),
 }
 
 # Size of test dataframes
-NCOLS, NROWS = DATASET_SIZE_DICT.get(TestDatasetSize.get(), DATASET_SIZE_DICT["normal"])
+NCOLS, NROWS = DATASET_SIZE_DICT.get(TestDatasetSize.get(), DATASET_SIZE_DICT["Normal"])
 
 # Range for values for test data
 RAND_LOW = 0
 RAND_HIGH = 100
+
+# Directory for storing I/O operations test data
+IO_OPS_DATA_DIR = os.path.join(os.path.dirname(__file__), "io_tests_data")
 
 # Input data and functions for the tests
 # The test data that we will test our code against
@@ -419,11 +428,18 @@ encoding_types = [
     "utf_8_sig",
 ]
 
+# raising of this exceptions can be caused by unexpected behavior
+# of I/O operation test, but can passed by eval_io function since
+# the type of this exceptions are the same
+io_ops_bad_exc = [TypeError, FileNotFoundError]
+
+# Files compression to extension mapping
+COMP_TO_EXT = {"gzip": "gz", "bz2": "bz2", "xz": "xz", "zip": "zip"}
+
 
 def categories_equals(left, right):
     assert (left.ordered and right.ordered) or (not left.ordered and not right.ordered)
-    is_category_ordered = left.ordered
-    assert_categorical_equal(left, right, check_category_order=is_category_ordered)
+    assert_extension_array_equal(left, right)
 
 
 def df_categories_equals(df1, df2):
@@ -439,12 +455,10 @@ def df_categories_equals(df1, df2):
 
     categories_columns = df1.select_dtypes(include="category").columns
     for column in categories_columns:
-        is_category_ordered = df1[column].dtype.ordered
-        assert_categorical_equal(
+        assert_extension_array_equal(
             df1[column].values,
             df2[column].values,
             check_dtype=False,
-            check_category_order=is_category_ordered,
         )
 
 
@@ -458,12 +472,6 @@ def df_equals(df1, df2):
     Returns:
         True if df1 is equal to df2.
     """
-    types_for_almost_equals = (
-        pandas.core.indexes.range.RangeIndex,
-        pandas.core.indexes.base.Index,
-        np.recarray,
-    )
-
     # Gets AttributError if modin's groupby object is not import like this
     from modin.pandas.groupby import DataFrameGroupBy
 
@@ -522,12 +530,10 @@ def df_equals(df1, df2):
             check_categorical=False,
         )
         df_categories_equals(df1, df2)
-    elif isinstance(df1, types_for_almost_equals) and isinstance(
-        df2, types_for_almost_equals
-    ):
-        assert_almost_equal(df1, df2, check_dtype=False)
+    elif isinstance(df1, pandas.Index) and isinstance(df2, pandas.Index):
+        assert_index_equal(df1, df2)
     elif isinstance(df1, pandas.Series) and isinstance(df2, pandas.Series):
-        assert_almost_equal(df1, df2, check_dtype=False, check_series_type=False)
+        assert_series_equal(df1, df2, check_dtype=False, check_series_type=False)
     elif isinstance(df1, groupby_types) and isinstance(df2, groupby_types):
         for g1, g2 in zip(df1, df2):
             assert g1[0] == g2[0]
@@ -543,6 +549,8 @@ def df_equals(df1, df2):
     elif isinstance(df1, pandas.core.arrays.numpy_.PandasArray):
         assert isinstance(df2, pandas.core.arrays.numpy_.PandasArray)
         assert df1 == df2
+    elif isinstance(df1, np.recarray) and isinstance(df2, np.recarray):
+        np.testing.assert_array_equal(df1, df2)
     else:
         if df1 != df2:
             np.testing.assert_almost_equal(df1, df2)
@@ -638,8 +646,15 @@ def eval_general(
     comparator=df_equals,
     __inplace__=False,
     check_exception_type=True,
+    raising_exceptions=None,
+    check_kwargs_callable=True,
+    md_extra_kwargs=None,
     **kwargs,
 ):
+    if raising_exceptions:
+        assert (
+            check_exception_type
+        ), "if raising_exceptions is not None or False, check_exception_type should be True"
     md_kwargs, pd_kwargs = {}, {}
 
     def execute_callable(fn, inplace=False, md_kwargs={}, pd_kwargs={}):
@@ -653,12 +668,16 @@ def eval_general(
                 repr(fn(modin_df, **md_kwargs))
             if check_exception_type:
                 assert isinstance(md_e.value, type(pd_e))
+                if raising_exceptions:
+                    assert not isinstance(
+                        md_e.value, tuple(raising_exceptions)
+                    ), f"not acceptable exception type: {md_e.value}"
         else:
             md_result = fn(modin_df, **md_kwargs)
             return (md_result, pd_result) if not __inplace__ else (modin_df, pandas_df)
 
     for key, value in kwargs.items():
-        if callable(value):
+        if check_kwargs_callable and callable(value):
             values = execute_callable(value)
             # that means, that callable raised an exception
             if values is None:
@@ -671,6 +690,10 @@ def eval_general(
         md_kwargs[key] = md_value
         pd_kwargs[key] = pd_value
 
+        if md_extra_kwargs:
+            assert isinstance(md_extra_kwargs, dict)
+            md_kwargs.update(md_extra_kwargs)
+
     values = execute_callable(
         operation, md_kwargs=md_kwargs, pd_kwargs=pd_kwargs, inplace=__inplace__
     )
@@ -678,8 +701,103 @@ def eval_general(
         comparator(*values)
 
 
+def eval_io(
+    fn_name,
+    comparator=df_equals,
+    cast_to_str=False,
+    check_exception_type=True,
+    raising_exceptions=io_ops_bad_exc,
+    check_kwargs_callable=True,
+    modin_warning=None,
+    md_extra_kwargs=None,
+    *args,
+    **kwargs,
+):
+    """Evaluate I/O operation outputs equality check.
+
+    Parameters
+    ----------
+    fn_name: str
+        I/O operation name ("read_csv" for example).
+    comparator: obj
+        Function to perform comparison.
+    cast_to_str: bool
+        There could be some missmatches in dtypes, so we're
+        casting the whole frame to `str` before comparison.
+        See issue #1931 for details.
+    check_exception_type: bool
+        Check or not exception types in the case of operation fail
+        (compare exceptions types raised by Pandas and Modin).
+    raising_exceptions: Exception or list of Exceptions
+        Exceptions that should be raised even if they are raised
+        both by Pandas and Modin (check evaluated only if
+        `check_exception_type` passed as `True`).
+    modin_warning: obj
+        Warning that should be raised by Modin.
+    md_extra_kwargs: dict
+        Modin operation specific kwargs.
+    """
+
+    def applyier(module, *args, **kwargs):
+        result = getattr(module, fn_name)(*args, **kwargs)
+        if cast_to_str:
+            result = result.astype(str)
+        return result
+
+    def call_eval_general():
+        eval_general(
+            pd,
+            pandas,
+            applyier,
+            check_exception_type=check_exception_type,
+            raising_exceptions=raising_exceptions,
+            check_kwargs_callable=check_kwargs_callable,
+            md_extra_kwargs=md_extra_kwargs,
+            *args,
+            **kwargs,
+        )
+
+    if modin_warning:
+        with pytest.warns(modin_warning):
+            call_eval_general()
+    else:
+        call_eval_general()
+
+
+def eval_io_from_str(csv_str: str, unique_filename: str, **kwargs):
+    """Evaluate I/O operation outputs equality check by using `csv_str`
+    data passed as python str (csv test file will be created from `csv_str`).
+
+    Parameters
+    ----------
+    csv_str: str
+        Test data for storing to csv file.
+    unique_filename: str
+        csv file name.
+    """
+    try:
+        with open(unique_filename, "w") as f:
+            f.write(csv_str)
+
+        eval_io(
+            filepath_or_buffer=unique_filename,
+            fn_name="read_csv",
+            **kwargs,
+        )
+
+    finally:
+        if os.path.exists(unique_filename):
+            try:
+                os.remove(unique_filename)
+            except PermissionError:
+                pass
+
+
 def create_test_dfs(*args, **kwargs):
-    return pd.DataFrame(*args, **kwargs), pandas.DataFrame(*args, **kwargs)
+    post_fn = kwargs.pop("post_fn", lambda df: df)
+    return map(
+        post_fn, [pd.DataFrame(*args, **kwargs), pandas.DataFrame(*args, **kwargs)]
+    )
 
 
 def generate_dfs():
@@ -779,3 +897,322 @@ def generate_none_dfs():
         }
     )
     return df, df2
+
+
+def get_unique_filename(
+    test_name: str = "test",
+    kwargs: dict = {},
+    extension: str = "csv",
+    data_dir: str = IO_OPS_DATA_DIR,
+    suffix: str = "",
+    debug_mode=False,
+):
+    """Returns unique file name with specified parameters.
+
+    Parameters
+    ----------
+    test_name: str
+        name of the test for which the unique file name is needed.
+    kwargs: list of ints
+        Unique combiantion of test parameters for creation of unique name.
+    extension: str
+        Extension of unique file.
+    data_dir: str
+        Data directory where test files will be created.
+    suffix: str
+        String to append to the resulted name.
+    debug_mode: bool
+        Get unique filename containing kwargs values.
+        Otherwise kwargs values will be replaced with hash equivalent.
+
+    Returns
+    -------
+        Unique file name.
+    """
+    suffix_part = f"_{suffix}" if suffix else ""
+    extension_part = f".{extension}" if extension else ""
+    if debug_mode:
+        # shortcut if kwargs parameter are not provided
+        if len(kwargs) == 0 and extension == "csv" and suffix == "":
+            return os.path.join(data_dir, (test_name + suffix_part + f".{extension}"))
+
+        assert "." not in extension, "please provide pure extension name without '.'"
+        prohibited_chars = ['"', "\n"]
+        non_prohibited_char = "np_char"
+        char_counter = 0
+        kwargs_name = dict(kwargs)
+        for key, value in kwargs_name.items():
+            for char in prohibited_chars:
+                if isinstance(value, str) and char in value or callable(value):
+                    kwargs_name[key] = non_prohibited_char + str(char_counter)
+                    char_counter += 1
+        parameters_values = "_".join(
+            [
+                str(value)
+                if not isinstance(value, (list, tuple))
+                else "_".join([str(x) for x in value])
+                for value in kwargs_name.values()
+            ]
+        )
+        return os.path.join(
+            data_dir, test_name + parameters_values + suffix_part + extension_part
+        )
+    else:
+        import uuid
+
+        return os.path.join(data_dir, uuid.uuid1().hex + suffix_part + extension_part)
+
+
+def get_random_string():
+    random_string = "".join(
+        random_state.choice([x for x in ascii_letters], size=10).tolist()
+    )
+    return random_string
+
+
+def insert_lines_to_csv(
+    csv_name: str,
+    lines_positions: list,
+    lines_type: str = "blank",
+    encoding: str = None,
+    **csv_reader_writer_params,
+):
+    """Insert lines to ".csv" file.
+
+    Parameters
+    ----------
+    csv_name: str
+        ".csv" file that should be modified.
+    lines_positions: list of ints
+        Lines postions that sghould be modified (serial number
+        of line - begins from 0, ends in <rows_number> - 1).
+    lines_type: str
+        Lines types that should be inserted to ".csv" file. Possible types:
+        "blank" - empty line without any delimiters/separators,
+        "bad" - lines with len(lines_data) > cols_number
+    encoding: str
+        Encoding type that should be used during file reading and writing.
+    """
+    cols_number = len(pandas.read_csv(csv_name, nrows=1).columns)
+    if lines_type == "blank":
+        lines_data = []
+    elif lines_type == "bad":
+        cols_number = len(pandas.read_csv(csv_name, nrows=1).columns)
+        lines_data = [x for x in range(cols_number + 1)]
+    else:
+        raise ValueError(
+            f"acceptable values for  parameter are ['blank', 'bad'], actually passed {lines_type}"
+        )
+    lines = []
+    dialect = "excel"
+    with open(csv_name, "r", encoding=encoding, newline="") as read_file:
+        try:
+            dialect = csv.Sniffer().sniff(read_file.read())
+            read_file.seek(0)
+        except Exception:
+            dialect = None
+
+        reader = csv.reader(
+            read_file,
+            dialect=dialect if dialect is not None else "excel",
+            **csv_reader_writer_params,
+        )
+        counter = 0
+        for row in reader:
+            if counter in lines_positions:
+                lines.append(lines_data)
+            else:
+                lines.append(row)
+            counter += 1
+    with open(csv_name, "w", encoding=encoding, newline="") as write_file:
+        writer = csv.writer(
+            write_file,
+            dialect=dialect if dialect is not None else "excel",
+            **csv_reader_writer_params,
+        )
+        writer.writerows(lines)
+
+
+def _get_open_files():
+    """
+    psutil open_files() can return a lot of extra information that we can allow to
+    be different, like file position; for simplicity we care about path and fd only.
+    """
+    return sorted((info.path, info.fd) for info in psutil.Process().open_files())
+
+
+def check_file_leaks(func):
+    """
+    A decorator that ensures that no *newly* opened file handles are left
+    after decorated function is finished.
+    """
+    if not TrackFileLeaks.get():
+        return func
+
+    @functools.wraps(func)
+    def check(*a, **kw):
+        fstart = _get_open_files()
+        try:
+            return func(*a, **kw)
+        finally:
+            leaks = []
+            for item in _get_open_files():
+                try:
+                    fstart.remove(item)
+                except ValueError:
+                    # ignore files in /proc/, as they have nothing to do with
+                    # modin reading any data (and this is what we care about)
+                    if not item[0].startswith("/proc/"):
+                        leaks.append(item)
+            assert (
+                not leaks
+            ), f"Unexpected open handles left for: {', '.join(item[0] for item in leaks)}"
+
+    return check
+
+
+def dummy_decorator():
+    """A problematic decorator that does not use `functools.wraps`. This introduces unwanted local variables for
+    inspect.currentframe. This decorator is used in test_io to test `read_csv` and `read_table`
+    """
+
+    def wrapper(method):
+        def wrapped_function(self, *args, **kwargs):
+            result = method(self, *args, **kwargs)
+            return result
+
+        return wrapped_function
+
+    return wrapper
+
+
+def _make_csv_file(filenames):
+    def _csv_file_maker(
+        filename,
+        row_size=NROWS,
+        force=True,
+        delimiter=",",
+        encoding=None,
+        compression="infer",
+        additional_col_values=None,
+        remove_randomness=False,
+        add_blank_lines=False,
+        add_bad_lines=False,
+        add_nan_lines=False,
+        thousands_separator=None,
+        decimal_separator=None,
+        comment_col_char=None,
+        quoting=csv.QUOTE_MINIMAL,
+        quotechar='"',
+        doublequote=True,
+        escapechar=None,
+        line_terminator=None,
+    ):
+        if os.path.exists(filename) and not force:
+            pass
+        else:
+            dates = pandas.date_range("2000", freq="h", periods=row_size)
+            data = {
+                "col1": np.arange(row_size) * 10,
+                "col2": [str(x.date()) for x in dates],
+                "col3": np.arange(row_size) * 10,
+                "col4": [str(x.time()) for x in dates],
+                "col5": [get_random_string() for _ in range(row_size)],
+                "col6": random_state.uniform(low=0.0, high=10000.0, size=row_size),
+            }
+
+            if additional_col_values is not None:
+                assert isinstance(additional_col_values, (list, tuple))
+                data.update(
+                    {
+                        "col7": random_state.choice(
+                            additional_col_values, size=row_size
+                        ),
+                    }
+                )
+            df = pandas.DataFrame(data)
+            if remove_randomness:
+                df = df[["col1", "col2", "col3", "col4"]]
+            if add_nan_lines:
+                for i in range(0, row_size, row_size // (row_size // 10)):
+                    df.loc[i] = pandas.Series()
+            if comment_col_char:
+                char = comment_col_char if isinstance(comment_col_char, str) else "#"
+                df.insert(
+                    loc=0,
+                    column="col_with_comments",
+                    value=[char if (x + 2) == 0 else x for x in range(row_size)],
+                )
+
+            if thousands_separator:
+                for col_id in ["col1", "col3"]:
+                    df[col_id] = df[col_id].apply(
+                        lambda x: f"{x:,d}".replace(",", thousands_separator)
+                    )
+                df["col6"] = df["col6"].apply(
+                    lambda x: f"{x:,f}".replace(",", thousands_separator)
+                )
+            filename = (
+                f"{filename}.{COMP_TO_EXT[compression]}"
+                if compression != "infer"
+                else filename
+            )
+            df.to_csv(
+                filename,
+                sep=delimiter,
+                encoding=encoding,
+                compression=compression,
+                index=False,
+                decimal=decimal_separator if decimal_separator else ".",
+                line_terminator=line_terminator,
+                quoting=quoting,
+                quotechar=quotechar,
+                doublequote=doublequote,
+                escapechar=escapechar,
+            )
+            csv_reader_writer_params = {
+                "delimiter": delimiter,
+                "doublequote": doublequote,
+                "escapechar": escapechar,
+                "lineterminator": line_terminator if line_terminator else os.linesep,
+                "quotechar": quotechar,
+                "quoting": quoting,
+            }
+            if add_blank_lines:
+                insert_lines_to_csv(
+                    csv_name=filename,
+                    lines_positions=[
+                        x for x in range(5, row_size, row_size // (row_size // 10))
+                    ],
+                    lines_type="blank",
+                    encoding=encoding,
+                    **csv_reader_writer_params,
+                )
+            if add_bad_lines:
+                insert_lines_to_csv(
+                    csv_name=filename,
+                    lines_positions=[
+                        x for x in range(6, row_size, row_size // (row_size // 10))
+                    ],
+                    lines_type="bad",
+                    encoding=encoding,
+                    **csv_reader_writer_params,
+                )
+            filenames.append(filename)
+            return df
+
+    return _csv_file_maker
+
+
+def teardown_test_file(test_path):
+    if os.path.exists(test_path):
+        # PermissionError can occure because of issue #2533
+        try:
+            os.remove(test_path)
+        except PermissionError:
+            pass
+
+
+def teardown_test_files(test_paths: list):
+    for path in test_paths:
+        teardown_test_file(path)

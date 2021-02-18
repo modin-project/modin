@@ -15,7 +15,7 @@ if sys.platform.startswith("linux"):
         "(cd ../.. && git archive -o ci/teamcity/modin.tar $(cat ci/teamcity/git-rev))"
     )
     base_image = "ray-project/deploy"
-    requirements = "requirements.txt"
+    requirements = "requirements-dev.txt"
     execute_command(
         "docker build -f Dockerfile.modin-base --build-arg BASE_IMAGE={} -t modin-project/modin-base .".format(
             base_image

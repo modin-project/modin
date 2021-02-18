@@ -11,7 +11,7 @@ The second column is a flag for whether or not there is an implementation in Mod
 the method in the left column. ``Y`` stands for yes, ``N`` stands for no, ``P`` stands
 for partial (meaning some parameters may not be supported yet), and ``D`` stands for
 default to pandas. To learn more about the implementations that default to pandas, see
-the related section on `Defaulting to pandas`_.
+the related section on :doc:`Defaulting to pandas </supported_apis/index>`.
 
 +-----------------------------+---------------------------------+----------------------------------------------------+
 | Series method               | Modin Implementation? (Y/N/P/D) | Notes for Current implementation                   |
@@ -90,7 +90,7 @@ the related section on `Defaulting to pandas`_.
 +-----------------------------+---------------------------------+----------------------------------------------------+
 | ``combine_first``           | Y                               |                                                    |
 +-----------------------------+---------------------------------+----------------------------------------------------+
-| ``compare``                 | D                               |                                                    |
+| ``compare``                 | Y                               |                                                    |
 +-----------------------------+---------------------------------+----------------------------------------------------+
 | ``compress``                | D                               |                                                    |
 +-----------------------------+---------------------------------+----------------------------------------------------+
@@ -474,10 +474,8 @@ the related section on `Defaulting to pandas`_.
 +-----------------------------+---------------------------------+----------------------------------------------------+
 | ``valid``                   | D                               |                                                    |
 +-----------------------------+---------------------------------+----------------------------------------------------+
-| ``value_counts``            | Y                               | The indices of resulting object will be in         |
-|                             |                                 | descending (ascending, if ascending=True) order for|
-|                             |                                 | equal values.                                      |
-|                             |                                 | In pandas indices are located in random order.     |
+| ``value_counts``            | Y                               | The indices order of resulting object may differ   |
+|                             |                                 | from pandas.                                       |
 +-----------------------------+---------------------------------+----------------------------------------------------+
 | ``values``                  | Y                               |                                                    |
 +-----------------------------+---------------------------------+----------------------------------------------------+
@@ -489,4 +487,3 @@ the related section on `Defaulting to pandas`_.
 +-----------------------------+---------------------------------+----------------------------------------------------+
 
 .. _`GitHub repository`: https://github.com/modin-project/modin/issues
-.. _`Defaulting to pandas`: index.html

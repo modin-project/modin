@@ -15,18 +15,21 @@ import numpy as np
 import pandas
 from pandas.core.common import is_bool_indexer
 from pandas.core.indexing import check_bool_indexer
+from pandas.core.indexes.api import ensure_index_from_sequences
 from pandas.core.dtypes.common import (
     is_list_like,
     is_numeric_dtype,
     is_datetime_or_timedelta_dtype,
-    is_scalar,
 )
 from pandas.core.base import DataError
+from collections.abc import Iterable, Container
+from typing import List, Hashable
 import warnings
+
 
 from modin.backends.base.query_compiler import BaseQueryCompiler
 from modin.error_message import ErrorMessage
-from modin.utils import try_cast_to_pandas, wrap_udf_function
+from modin.utils import try_cast_to_pandas, wrap_udf_function, hashable
 from modin.data_management.functions import (
     FoldFunction,
     MapFunction,
@@ -34,6 +37,7 @@ from modin.data_management.functions import (
     ReductionFunction,
     BinaryFunction,
     GroupbyReduceFunction,
+    groupby_reduce_functions,
 )
 
 
@@ -158,7 +162,8 @@ class PandasQueryCompiler(BaseQueryCompiler):
         self._modin_frame = modin_frame
 
     def default_to_pandas(self, pandas_op, *args, **kwargs):
-        """Default to pandas behavior.
+        """
+        Default to pandas behavior.
 
         Parameters
         ----------
@@ -174,11 +179,12 @@ class PandasQueryCompiler(BaseQueryCompiler):
         PandasQueryCompiler
             The result of the `pandas_op`, converted back to PandasQueryCompiler
 
-        Note
-        ----
+        Notes
+        -----
         This operation takes a distributed object and converts it directly to pandas.
         """
-        ErrorMessage.default_to_pandas(str(pandas_op))
+        op_name = getattr(pandas_op, "__name__", str(pandas_op))
+        ErrorMessage.default_to_pandas(op_name)
         args = (a.to_pandas() if isinstance(a, type(self)) else a for a in args)
         kwargs = {
             k: v.to_pandas if isinstance(v, type(self)) else v
@@ -529,18 +535,60 @@ class PandasQueryCompiler(BaseQueryCompiler):
         if level is not None or self.has_multiindex():
             return self.default_to_pandas(pandas.DataFrame.reset_index, **kwargs)
         if not drop:
-            new_column_name = (
-                self.index.name
-                if self.index.name is not None
-                else "index"
-                if "index" not in self.columns
-                else "level_0"
-            )
-            new_self = self.insert(0, new_column_name, self.index)
-        else:
-            new_self = self.copy()
+            return self.__constructor__(self._modin_frame.from_labels())
+        new_self = self.copy()
         new_self.index = pandas.RangeIndex(len(new_self.index))
         return new_self
+
+    def set_index_from_columns(
+        self, keys: List[Hashable], drop: bool = True, append: bool = False
+    ):
+        """Create new row labels from a list of columns.
+
+        Parameters
+        ----------
+        keys : list of hashable
+            The list of column names that will become the new index.
+        drop : boolean
+            Whether or not to drop the columns provided in the `keys` argument
+        append : boolean
+            Whether or not to add the columns in `keys` as new levels appended to the
+            existing index.
+
+        Returns
+        -------
+        PandasQueryCompiler
+            A new QueryCompiler with updated index.
+        """
+        new_modin_frame = self._modin_frame.to_labels(keys)
+        if append:
+            arrays = []
+            # Appending keeps the original order of the index levels, then appends the
+            # new index objects.
+            names = list(self.index.names)
+            if isinstance(self.index, pandas.MultiIndex):
+                for i in range(self.index.nlevels):
+                    arrays.append(self.index._get_level_values(i))
+            else:
+                arrays.append(self.index)
+
+            # Add the names in the correct order.
+            names.extend(new_modin_frame.index.names)
+            if isinstance(new_modin_frame.index, pandas.MultiIndex):
+                for i in range(new_modin_frame.index.nlevels):
+                    arrays.append(new_modin_frame.index._get_level_values(i))
+            else:
+                arrays.append(new_modin_frame.index)
+            new_modin_frame.index = ensure_index_from_sequences(arrays, names)
+        if not drop:
+            # The algebraic operator for this operation always drops the column, but we
+            # can copy the data in this object and just use the index from the result of
+            # the query compiler call.
+            result = self._modin_frame.copy()
+            result.index = new_modin_frame.index
+        else:
+            result = new_modin_frame
+        return self.__constructor__(result)
 
     # END Reindex/reset_index
 
@@ -589,46 +637,21 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
     # MapReduce operations
 
-    def _is_monotonic(self, func_type=None):
-        funcs = {
-            "increasing": lambda df: df.is_monotonic_increasing,
-            "decreasing": lambda df: df.is_monotonic_decreasing,
-        }
-
-        monotonic_fn = funcs.get(func_type, funcs["increasing"])
-
-        def is_monotonic_map(df):
-            df = df.squeeze(axis=1)
-            return [monotonic_fn(df), df.iloc[0], df.iloc[len(df) - 1]]
-
-        def is_monotonic_reduce(df):
-            df = df.squeeze(axis=1)
-
-            common_case = df[0].all()
-            left_edges = df[1]
-            right_edges = df[2]
-
-            edges_list = []
-            for i in range(len(left_edges)):
-                edges_list.extend([left_edges.iloc[i], right_edges.iloc[i]])
-
-            edge_case = monotonic_fn(pandas.Series(edges_list))
-            return [common_case and edge_case]
-
-        return MapReduceFunction.register(
-            is_monotonic_map, is_monotonic_reduce, axis=0
-        )(self)
-
     def is_monotonic_decreasing(self):
-        return self._is_monotonic(func_type="decreasing")
+        def is_monotonic_decreasing(df):
+            return pandas.DataFrame([df.squeeze(axis=1).is_monotonic_decreasing])
 
-    is_monotonic = _is_monotonic
+        return self.default_to_pandas(is_monotonic_decreasing)
+
+    def is_monotonic_increasing(self):
+        def is_monotonic_increasing(df):
+            return pandas.DataFrame([df.squeeze(axis=1).is_monotonic_increasing])
+
+        return self.default_to_pandas(is_monotonic_increasing)
 
     count = MapReduceFunction.register(pandas.DataFrame.count, pandas.DataFrame.sum)
-    max = MapReduceFunction.register(pandas.DataFrame.max, pandas.DataFrame.max)
-    min = MapReduceFunction.register(pandas.DataFrame.min, pandas.DataFrame.min)
-    sum = MapReduceFunction.register(pandas.DataFrame.sum, pandas.DataFrame.sum)
-    prod = MapReduceFunction.register(pandas.DataFrame.prod, pandas.DataFrame.prod)
+    sum = MapReduceFunction.register(pandas.DataFrame.sum)
+    prod = MapReduceFunction.register(pandas.DataFrame.prod)
     any = MapReduceFunction.register(pandas.DataFrame.any, pandas.DataFrame.any)
     all = MapReduceFunction.register(pandas.DataFrame.all, pandas.DataFrame.all)
     memory_usage = MapReduceFunction.register(
@@ -636,18 +659,69 @@ class PandasQueryCompiler(BaseQueryCompiler):
         lambda x, *args, **kwargs: pandas.DataFrame.sum(x),
         axis=0,
     )
-    mean = MapReduceFunction.register(
-        lambda df, **kwargs: df.apply(
-            lambda x: (x.sum(skipna=kwargs.get("skipna", True)), x.count()),
-            axis=kwargs.get("axis", 0),
-            result_type="reduce",
-        ).set_axis(df.axes[kwargs.get("axis", 0) ^ 1], axis=0),
-        lambda df, **kwargs: df.apply(
-            lambda x: x.apply(lambda d: d[0]).sum(skipna=kwargs.get("skipna", True))
-            / x.apply(lambda d: d[1]).sum(skipna=kwargs.get("skipna", True)),
-            axis=kwargs.get("axis", 0),
-        ).set_axis(df.axes[kwargs.get("axis", 0) ^ 1], axis=0),
-    )
+
+    def max(self, axis, **kwargs):
+        def map_func(df, **kwargs):
+            return pandas.DataFrame.max(df, **kwargs)
+
+        def reduce_func(df, **kwargs):
+            if kwargs.get("numeric_only", False):
+                kwargs = kwargs.copy()
+                kwargs["numeric_only"] = False
+            return pandas.DataFrame.max(df, **kwargs)
+
+        return MapReduceFunction.register(map_func, reduce_func)(
+            self, axis=axis, **kwargs
+        )
+
+    def min(self, axis, **kwargs):
+        def map_func(df, **kwargs):
+            return pandas.DataFrame.min(df, **kwargs)
+
+        def reduce_func(df, **kwargs):
+            if kwargs.get("numeric_only", False):
+                kwargs = kwargs.copy()
+                kwargs["numeric_only"] = False
+            return pandas.DataFrame.min(df, **kwargs)
+
+        return MapReduceFunction.register(map_func, reduce_func)(
+            self, axis=axis, **kwargs
+        )
+
+    def mean(self, axis, **kwargs):
+        if kwargs.get("level") is not None:
+            return self.default_to_pandas(pandas.DataFrame.mean, axis=axis, **kwargs)
+
+        skipna = kwargs.get("skipna", True)
+
+        # TODO-FIX: this function may work incorrectly with user-defined "numeric" values.
+        # Since `count(numeric_only=True)` discards all unknown "numeric" types, we can get incorrect
+        # divisor inside the reduce function.
+        def map_fn(df, **kwargs):
+            result = pandas.DataFrame(
+                {
+                    "sum": df.sum(axis=axis, skipna=skipna),
+                    "count": df.count(axis=axis, numeric_only=True),
+                }
+            )
+            return result if axis else result.T
+
+        def reduce_fn(df, **kwargs):
+            sum_cols = df["sum"] if axis else df.loc["sum"]
+            count_cols = df["count"] if axis else df.loc["count"]
+
+            if not isinstance(sum_cols, pandas.Series):
+                # If we got `NaN` as the result of the sum in any axis partition,
+                # then we must consider the whole sum as `NaN`, so setting `skipna=False`
+                sum_cols = sum_cols.sum(axis=axis, skipna=False)
+                count_cols = count_cols.sum(axis=axis, skipna=False)
+            return sum_cols / count_cols
+
+        return MapReduceFunction.register(
+            map_fn,
+            reduce_fn,
+            preserve_index=(kwargs.get("numeric_only") is not None),
+        )(self, axis=axis, **kwargs)
 
     def value_counts(self, **kwargs):
         """
@@ -657,91 +731,11 @@ class PandasQueryCompiler(BaseQueryCompiler):
         -------
         PandasQueryCompiler
         """
-        if kwargs.get("bins", None) is not None:
-            new_modin_frame = self._modin_frame._apply_full_axis(
-                0, lambda df: df.squeeze(axis=1).value_counts(**kwargs)
-            )
-            return self.__constructor__(new_modin_frame)
 
-        def map_func(df, *args, **kwargs):
-            return df.squeeze(axis=1).value_counts(**kwargs)
+        def value_counts(df):
+            return df.squeeze(axis=1).value_counts(**kwargs).to_frame()
 
-        def reduce_func(df, *args, **kwargs):
-            normalize = kwargs.get("normalize", False)
-            sort = kwargs.get("sort", True)
-            ascending = kwargs.get("ascending", False)
-            dropna = kwargs.get("dropna", True)
-
-            try:
-                result = df.squeeze(axis=1).groupby(df.index, sort=False).sum()
-            # This will happen with Arrow buffer read-only errors. We don't want to copy
-            # all the time, so this will try to fast-path the code first.
-            except (ValueError):
-                result = df.copy().squeeze(axis=1).groupby(df.index, sort=False).sum()
-
-            if not dropna and np.nan in df.index:
-                result = result.append(
-                    pandas.Series(
-                        [df.squeeze(axis=1).loc[[np.nan]].sum()], index=[np.nan]
-                    )
-                )
-            if normalize:
-                result = result / df.squeeze(axis=1).sum()
-
-            result = result.sort_values(ascending=ascending) if sort else result
-
-            # We want to sort both values and indices of the result object.
-            # This function will sort indices for equal values.
-            def sort_index_for_equal_values(result, ascending):
-                """
-                Sort indices for equal values of result object.
-
-                Parameters
-                ----------
-                result : pandas.Series or pandas.DataFrame with one column
-                    The object whose indices for equal values is needed to sort.
-                ascending : boolean
-                    Sort in ascending (if it is True) or descending (if it is False) order.
-
-                Returns
-                -------
-                pandas.DataFrame
-                    A new DataFrame with sorted indices.
-                """
-                is_range = False
-                is_end = False
-                i = 0
-                new_index = np.empty(len(result), dtype=type(result.index))
-                while i < len(result):
-                    j = i
-                    if i < len(result) - 1:
-                        while result[result.index[i]] == result[result.index[i + 1]]:
-                            i += 1
-                            if is_range is False:
-                                is_range = True
-                            if i == len(result) - 1:
-                                is_end = True
-                                break
-                    if is_range:
-                        k = j
-                        for val in sorted(
-                            result.index[j : i + 1], reverse=not ascending
-                        ):
-                            new_index[k] = val
-                            k += 1
-                        if is_end:
-                            break
-                        is_range = False
-                    else:
-                        new_index[j] = result.index[j]
-                    i += 1
-                return pandas.DataFrame(result, index=new_index)
-
-            return sort_index_for_equal_values(result, ascending)
-
-        return MapReduceFunction.register(map_func, reduce_func, preserve_index=False)(
-            self, **kwargs
-        )
+        return self.default_to_pandas(value_counts)
 
     # END MapReduce operations
 
@@ -1337,83 +1331,13 @@ class PandasQueryCompiler(BaseQueryCompiler):
         PandasQueryCompiler
         """
 
-        def map_func(part, *args, **kwargs):
+        def searchsorted(df):
+            result = df.squeeze(axis=1).searchsorted(**kwargs)
+            if not is_list_like(result):
+                result = [result]
+            return pandas.DataFrame(result)
 
-            elements_number = len(part.index)
-            assert elements_number > 0, "Wrong mapping behaviour of MapReduce"
-
-            # unify value type
-            value = kwargs.pop("value")
-            value = np.array([value]) if is_scalar(value) else value
-
-            if elements_number == 1:
-                part = part[part.columns[0]]
-            else:
-                part = part.squeeze()
-
-            part_index_start = part.index.start
-            part_index_stop = part.index.stop
-
-            result = part.searchsorted(value=value, *args, **kwargs)
-
-            processed_results = {}
-            value_number = 0
-            for value_result in result:
-                value_result += part_index_start
-
-                if value_result > part_index_start and value_result < part_index_stop:
-                    processed_results[f"value{value_number}"] = {
-                        "relative_location": "current_partition",
-                        "index": value_result,
-                    }
-                elif value_result <= part_index_start:
-                    processed_results[f"value{value_number}"] = {
-                        "relative_location": "previoius_partitions",
-                        "index": part_index_start,
-                    }
-                else:
-                    processed_results[f"value{value_number}"] = {
-                        "relative_location": "next_partitions",
-                        "index": part_index_stop,
-                    }
-
-                value_number += 1
-
-            return pandas.DataFrame(processed_results)
-
-        def reduce_func(map_results, *args, **kwargs):
-            def get_value_index(value_result):
-                value_result_grouped = value_result.groupby(level=0)
-                rel_location = value_result_grouped.get_group("relative_location")
-                ind = value_result_grouped.get_group("index")
-                # executes if result is inside of the mapped part
-                if "current_partition" in rel_location.values:
-                    assert (
-                        rel_location[rel_location == "current_partition"].count() == 1
-                    ), "Each value should have single result"
-                    return ind[rel_location.values == "current_partition"]
-                # executes if result is between mapped parts
-                elif rel_location.nunique(dropna=False) > 1:
-                    return ind[rel_location.values == "previoius_partitions"][0]
-                # executes if result is outside of the mapped part
-                else:
-                    if "next_partitions" in rel_location.values:
-                        return ind[-1]
-                    else:
-                        return ind[0]
-
-            map_results_parsed = map_results.apply(
-                lambda ser: get_value_index(ser)
-            ).squeeze()
-
-            if isinstance(map_results_parsed, pandas.Series):
-                map_results_parsed = map_results_parsed.to_list()
-
-            return pandas.Series(map_results_parsed)
-
-        return MapReduceFunction.register(map_func, reduce_func, preserve_index=False)(
-            self, **kwargs
-        )
+        return self.default_to_pandas(searchsorted)
 
     # Dt map partitions operations
 
@@ -1443,12 +1367,19 @@ class PandasQueryCompiler(BaseQueryCompiler):
     dt_is_leap_year = MapFunction.register(_dt_prop_map("is_leap_year"))
     dt_daysinmonth = MapFunction.register(_dt_prop_map("daysinmonth"))
     dt_days_in_month = MapFunction.register(_dt_prop_map("days_in_month"))
-    dt_tz = MapReduceFunction.register(
-        _dt_prop_map("tz"), lambda df: pandas.DataFrame(df.iloc[0]), axis=0
-    )
-    dt_freq = MapReduceFunction.register(
-        _dt_prop_map("freq"), lambda df: pandas.DataFrame(df.iloc[0]), axis=0
-    )
+
+    def dt_tz(self):
+        def datetime_tz(df):
+            return pandas.DataFrame([df.squeeze(axis=1).dt.tz])
+
+        return self.default_to_pandas(datetime_tz)
+
+    def dt_freq(self):
+        def datetime_freq(df):
+            return pandas.DataFrame([df.squeeze(axis=1).dt.freq])
+
+        return self.default_to_pandas(datetime_freq)
+
     dt_to_period = MapFunction.register(_dt_func_map("to_period"))
     dt_to_pydatetime = MapFunction.register(_dt_func_map("to_pydatetime"))
     dt_tz_localize = MapFunction.register(_dt_func_map("tz_localize"))
@@ -1559,6 +1490,20 @@ class PandasQueryCompiler(BaseQueryCompiler):
             .astype(self.dtypes)
             .describe(**kwargs)
         )
+        new_index = empty_df.index
+
+        # Note: `describe` convert timestamp type to object type
+        # which results in the loss of two values in index: `first` and `last`
+        # for empty DataFrame.
+        datetime_is_numeric = kwargs.get("datetime_is_numeric") or False
+        if not any(map(is_numeric_dtype, empty_df.dtypes)) and not datetime_is_numeric:
+            for col_name in empty_df.dtypes.index:
+                # if previosly type of `col_name` was datetime or timedelta
+                if is_datetime_or_timedelta_dtype(self.dtypes[col_name]):
+                    new_index = pandas.Index(
+                        empty_df.index.to_list() + ["first"] + ["last"]
+                    )
+                    break
 
         def describe_builder(df, internal_indices=[]):
             return df.iloc[:, internal_indices].describe(**kwargs)
@@ -1568,7 +1513,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 0,
                 describe_builder,
                 empty_df.columns,
-                new_index=empty_df.index,
+                new_index=new_index,
                 new_columns=empty_df.columns,
             )
         )
@@ -2151,7 +2096,9 @@ class PandasQueryCompiler(BaseQueryCompiler):
         Returns:
              A new QueryCompiler
         """
+        return self._setitem(axis=axis, key=key, value=value, how=None)
 
+    def _setitem(self, axis, key, value, how="inner"):
         def setitem_builder(df, internal_indices=[]):
             df = df.copy()
             if len(internal_indices) == 1:
@@ -2168,55 +2115,13 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
         if isinstance(value, type(self)):
             value.columns = [key]
-            if axis == 0:
-                idx = self.columns.get_indexer_for([key])[0]
-                if 0 < idx < len(self.columns) - 1:
-                    first_mask = self._modin_frame.mask(
-                        col_numeric_idx=list(range(idx))
-                    )
-                    second_mask = self._modin_frame.mask(
-                        col_numeric_idx=list(range(idx + 1, len(self.columns)))
-                    )
-                    return self.__constructor__(
-                        first_mask._concat(
-                            1, [value._modin_frame, second_mask], "inner", False
-                        )
-                    )
-                else:
-                    mask = self.drop(columns=[key])._modin_frame
-                    if idx == 0:
-                        return self.__constructor__(
-                            value._modin_frame._concat(1, [mask], "inner", False)
-                        )
-                    else:
-                        return self.__constructor__(
-                            mask._concat(1, [value._modin_frame], "inner", False)
-                        )
-            else:
+            if axis == 1:
                 value = value.transpose()
-                idx = self.index.get_indexer_for([key])[0]
-                if 0 < idx < len(self.index) - 1:
-                    first_mask = self._modin_frame.mask(
-                        row_numeric_idx=list(range(idx))
-                    )
-                    second_mask = self._modin_frame.mask(
-                        row_numeric_idx=list(range(idx + 1, len(self.index)))
-                    )
-                    return self.__constructor__(
-                        first_mask._concat(
-                            0, [value._modin_frame, second_mask], "inner", False
-                        )
-                    )
-                else:
-                    mask = self.drop(index=[key])._modin_frame
-                    if idx == 0:
-                        return self.__constructor__(
-                            value._modin_frame._concat(0, [mask], "inner", False)
-                        )
-                    else:
-                        return self.__constructor__(
-                            mask._concat(0, [value._modin_frame], "inner", False)
-                        )
+            idx = self.get_axis(axis ^ 1).get_indexer_for([key])[0]
+            return self.insert_item(axis ^ 1, idx, value, how, replace=True)
+
+        # TODO: rework by passing list-like values to `_apply_select_indices`
+        # as an item to distribute
         if is_list_like(value):
             new_modin_frame = self._modin_frame._apply_full_axis_select_indices(
                 axis,
@@ -2300,14 +2205,13 @@ class PandasQueryCompiler(BaseQueryCompiler):
         Returns:
             A new PandasQueryCompiler with new data inserted.
         """
+
+        if isinstance(value, type(self)):
+            value.columns = [column]
+            return self.insert_item(axis=1, loc=loc, value=value, how=None)
+
         if is_list_like(value):
-            # TODO make work with another querycompiler object as `value`.
-            # This will require aligning the indices with a `reindex` and ensuring that
-            # the data is partitioned identically.
-            if isinstance(value, pandas.Series):
-                value = value.reindex(self.index)
-            else:
-                value = list(value)
+            value = list(value)
         else:
             value = [value] * len(self.index)
 
@@ -2316,6 +2220,8 @@ class PandasQueryCompiler(BaseQueryCompiler):
             df.insert(internal_idx, column, value)
             return df
 
+        # TODO: rework by passing list-like values to `_apply_select_indices`
+        # as an item to distribute
         new_modin_frame = self._modin_frame._apply_full_axis_select_indices(
             0,
             insert,
@@ -2457,92 +2363,275 @@ class PandasQueryCompiler(BaseQueryCompiler):
     # nature. They require certain data to exist on the same partition, and
     # after the shuffle, there should be only a local map required.
 
-    groupby_count = GroupbyReduceFunction.register(
-        lambda df, **kwargs: df.count(**kwargs), lambda df, **kwargs: df.sum(**kwargs)
-    )
-    groupby_any = GroupbyReduceFunction.register(
-        lambda df, **kwargs: df.any(**kwargs), lambda df, **kwargs: df.any(**kwargs)
-    )
-    groupby_min = GroupbyReduceFunction.register(
-        lambda df, **kwargs: df.min(**kwargs), lambda df, **kwargs: df.min(**kwargs)
-    )
-    groupby_prod = GroupbyReduceFunction.register(
-        lambda df, **kwargs: df.prod(**kwargs), lambda df, **kwargs: df.prod(**kwargs)
-    )
-    groupby_max = GroupbyReduceFunction.register(
-        lambda df, **kwargs: df.max(**kwargs), lambda df, **kwargs: df.max(**kwargs)
-    )
-    groupby_all = GroupbyReduceFunction.register(
-        lambda df, **kwargs: df.all(**kwargs), lambda df, **kwargs: df.all(**kwargs)
-    )
-    groupby_sum = GroupbyReduceFunction.register(
-        lambda df, **kwargs: df.sum(**kwargs), lambda df, **kwargs: df.sum(**kwargs)
-    )
-    groupby_size = GroupbyReduceFunction.register(
-        lambda df, **kwargs: pandas.DataFrame(df.size()),
-        lambda df, **kwargs: df.sum(),
-        method="size",
-    )
+    groupby_all = GroupbyReduceFunction.register("all")
+    groupby_any = GroupbyReduceFunction.register("any")
+    groupby_count = GroupbyReduceFunction.register("count")
+    groupby_max = GroupbyReduceFunction.register("max")
+    groupby_min = GroupbyReduceFunction.register("min")
+    groupby_prod = GroupbyReduceFunction.register("prod")
+    groupby_size = GroupbyReduceFunction.register("size", method="size")
+    groupby_sum = GroupbyReduceFunction.register("sum")
 
-    def groupby_dict_agg(self, by, func_dict, groupby_args, agg_args, drop=False):
-        """Apply aggregation functions to a grouped dataframe per-column.
+    def _groupby_dict_reduce(
+        self, by, axis, agg_func, agg_args, agg_kwargs, groupby_kwargs, drop=False
+    ):
+        map_dict = {}
+        reduce_dict = {}
+        rename_columns = any(
+            not isinstance(fn, str) and isinstance(fn, Iterable)
+            for fn in agg_func.values()
+        )
+        for col, col_funcs in agg_func.items():
+            if not rename_columns:
+                map_dict[col], reduce_dict[col] = groupby_reduce_functions[col_funcs]
+                continue
 
-        Parameters
-        ----------
-        by : PandasQueryCompiler
-            The column to group by
-        func_dict : dict of str, callable/string
-            The dictionary mapping of column to function
-        groupby_args : dict
-            The dictionary of keyword arguments for the group by.
-        agg_args : dict
-            The dictionary of keyword arguments for the aggregation functions
-        drop : bool
-            Whether or not to drop the column from the data.
+            if isinstance(col_funcs, str):
+                col_funcs = [col_funcs]
 
-        Returns
-        -------
-        PandasQueryCompiler
-            The result of the per-column aggregations on the grouped dataframe.
-        """
-        return self.default_to_pandas(
-            lambda df: df.groupby(by=by, **groupby_args).agg(func_dict, **agg_args)
+            map_fns = []
+            for i, fn in enumerate(col_funcs):
+                if not isinstance(fn, str) and isinstance(fn, Iterable):
+                    new_col_name, func = fn
+                elif isinstance(fn, str):
+                    new_col_name, func = fn, fn
+                else:
+                    raise TypeError
+
+                map_fns.append((new_col_name, groupby_reduce_functions[func][0]))
+                reduced_col_name = (
+                    (*col, new_col_name)
+                    if isinstance(col, tuple)
+                    else (col, new_col_name)
+                )
+                reduce_dict[reduced_col_name] = groupby_reduce_functions[func][1]
+            map_dict[col] = map_fns
+        return GroupbyReduceFunction.register(map_dict, reduce_dict)(
+            query_compiler=self,
+            by=by,
+            axis=axis,
+            groupby_args=groupby_kwargs,
+            map_args=agg_kwargs,
+            reduce_args=agg_kwargs,
+            numeric_only=False,
+            drop=drop,
         )
 
-    def groupby_agg(self, by, axis, agg_func, groupby_args, agg_args, drop=False):
-        # since we're going to modify `groupby_args` dict in a `groupby_agg_builder`,
+    def groupby_agg(
+        self,
+        by,
+        is_multi_by,
+        axis,
+        agg_func,
+        agg_args,
+        agg_kwargs,
+        groupby_kwargs,
+        drop=False,
+    ):
+        def is_reduce_fn(fn, deep_level=0):
+            if not isinstance(fn, str) and isinstance(fn, Container):
+                # `deep_level` parameter specifies the number of nested containers that was met:
+                # - if it's 0, then we're outside of container, `fn` could be either function name
+                #   or container of function names/renamers.
+                # - if it's 1, then we're inside container of function names/renamers. `fn` must be
+                #   either function name or renamer (renamer is some container which length == 2,
+                #   the first element is the new column name and the second is the function name).
+                assert deep_level == 0 or (
+                    deep_level > 0 and len(fn) == 2
+                ), f"Got the renamer with incorrect length, expected 2 got {len(fn)}."
+                return (
+                    all(is_reduce_fn(f, deep_level + 1) for f in fn)
+                    if deep_level == 0
+                    else is_reduce_fn(fn[1], deep_level + 1)
+                )
+            return isinstance(fn, str) and fn in groupby_reduce_functions
+
+        if isinstance(agg_func, dict) and all(
+            is_reduce_fn(x) for x in agg_func.values()
+        ):
+            return self._groupby_dict_reduce(
+                by, axis, agg_func, agg_args, agg_kwargs, groupby_kwargs, drop
+            )
+
+        if callable(agg_func):
+            agg_func = wrap_udf_function(agg_func)
+
+        # since we're going to modify `groupby_kwargs` dict in a `groupby_agg_builder`,
         # we want to copy it to not propagate these changes into source dict, in case
         # of unsuccessful end of function
-        groupby_args = groupby_args.copy()
+        groupby_kwargs = groupby_kwargs.copy()
 
-        as_index = groupby_args.get("as_index", True)
+        as_index = groupby_kwargs.get("as_index", True)
+        if isinstance(by, type(self)):
+            # `drop` parameter indicates whether or not 'by' data came
+            # from the `self` frame:
+            # True: 'by' data came from the `self`
+            # False: external 'by' data
+            if drop:
+                internal_by = by.columns
+                by = [by]
+            else:
+                internal_by = []
+                by = [by]
+        else:
+            if not isinstance(by, list):
+                by = [by]
+            internal_by = [o for o in by if hashable(o) and o in self.columns]
+            internal_qc = (
+                [self.getitem_column_array(internal_by)] if len(internal_by) else []
+            )
 
-        def groupby_agg_builder(df):
+            by = internal_qc + by[len(internal_by) :]
+
+        broadcastable_by = [o._modin_frame for o in by if isinstance(o, type(self))]
+        not_broadcastable_by = [o for o in by if not isinstance(o, type(self))]
+
+        def groupby_agg_builder(df, by=None, drop=False, partition_idx=None):
             # Set `as_index` to True to track the metadata of the grouping object
             # It is used to make sure that between phases we are constructing the
             # right index and placing columns in the correct order.
-            groupby_args["as_index"] = True
+            groupby_kwargs["as_index"] = True
 
-            def compute_groupby(df):
-                grouped_df = df.groupby(by=by, axis=axis, **groupby_args)
+            internal_by_cols = pandas.Index([])
+            missmatched_cols = pandas.Index([])
+            if by is not None:
+                internal_by_df = by[internal_by]
+
+                if isinstance(internal_by_df, pandas.Series):
+                    internal_by_df = internal_by_df.to_frame()
+
+                missmatched_cols = internal_by_df.columns.difference(df.columns)
+                df = pandas.concat(
+                    [df, internal_by_df[missmatched_cols]],
+                    axis=1,
+                    copy=False,
+                )
+                internal_by_cols = internal_by_df.columns
+
+                external_by = by.columns.difference(internal_by)
+                external_by_df = by[external_by].squeeze(axis=1)
+
+                if isinstance(external_by_df, pandas.DataFrame):
+                    external_by_cols = [o for _, o in external_by_df.iteritems()]
+                else:
+                    external_by_cols = [external_by_df]
+
+                by = internal_by_cols.tolist() + external_by_cols
+
+            else:
+                by = []
+
+            by += not_broadcastable_by
+
+            def compute_groupby(df, drop=False, partition_idx=0):
+                grouped_df = df.groupby(by=by, axis=axis, **groupby_kwargs)
                 try:
-                    result = agg_func(grouped_df, **agg_args)
+                    if isinstance(agg_func, dict):
+                        # Filter our keys that don't exist in this partition. This happens when some columns
+                        # from this original dataframe didn't end up in every partition.
+                        partition_dict = {
+                            k: v for k, v in agg_func.items() if k in df.columns
+                        }
+                        result = grouped_df.agg(partition_dict)
+                    else:
+                        result = agg_func(grouped_df, **agg_kwargs)
                 # This happens when the partition is filled with non-numeric data and a
                 # numeric operation is done. We need to build the index here to avoid
                 # issues with extracting the index.
                 except (DataError, TypeError):
                     result = pandas.DataFrame(index=grouped_df.size().index)
+                if isinstance(result, pandas.Series):
+                    result = result.to_frame(
+                        result.name if result.name is not None else "__reduced__"
+                    )
+
+                result_cols = result.columns
+                result.drop(columns=missmatched_cols, inplace=True, errors="ignore")
+
+                if not as_index:
+                    keep_index_levels = len(by) > 1 and any(
+                        isinstance(x, pandas.CategoricalDtype)
+                        for x in df[internal_by_cols].dtypes
+                    )
+
+                    if internal_by_cols.nlevels != result_cols.nlevels:
+                        cols_to_insert = (
+                            pandas.Index([])
+                            if keep_index_levels
+                            else internal_by_cols.copy()
+                        )
+                    else:
+                        cols_to_insert = (
+                            internal_by_cols.intersection(result_cols)
+                            if keep_index_levels
+                            else internal_by_cols.difference(result_cols)
+                        )
+
+                    if keep_index_levels:
+                        result.drop(
+                            columns=cols_to_insert, inplace=True, errors="ignore"
+                        )
+
+                    drop = True
+                    if partition_idx == 0:
+                        drop = False
+                        if not keep_index_levels:
+                            lvls_to_drop = [
+                                i
+                                for i, name in enumerate(result.index.names)
+                                if name not in cols_to_insert
+                            ]
+                            if len(lvls_to_drop) == result.index.nlevels:
+                                drop = True
+                            else:
+                                result.index = result.index.droplevel(lvls_to_drop)
+
+                    if (
+                        not isinstance(result.index, pandas.MultiIndex)
+                        and result.index.name is None
+                    ):
+                        drop = True
+
+                    result.reset_index(drop=drop, inplace=True)
+
+                new_index_names = [
+                    None
+                    if isinstance(name, str) and name.startswith("__reduced__")
+                    else name
+                    for name in result.index.names
+                ]
+
+                cols_to_drop = (
+                    result.columns[result.columns.str.match(r"__reduced__.*", na=False)]
+                    if hasattr(result.columns, "str")
+                    else []
+                )
+
+                result.index.names = new_index_names
+
+                # Not dropping columns if result is Series
+                if len(result.columns) > 1:
+                    result.drop(columns=cols_to_drop, inplace=True)
+
                 return result
 
             try:
-                return compute_groupby(df)
+                return compute_groupby(df, drop, partition_idx)
             # This will happen with Arrow buffer read-only errors. We don't want to copy
             # all the time, so this will try to fast-path the code first.
             except (ValueError, KeyError):
-                return compute_groupby(df.copy())
+                return compute_groupby(df.copy(), drop, partition_idx)
 
-        new_modin_frame = self._modin_frame._apply_full_axis(
-            axis, lambda df: groupby_agg_builder(df)
+        apply_indices = list(agg_func.keys()) if isinstance(agg_func, dict) else None
+
+        new_modin_frame = self._modin_frame.broadcast_apply_full_axis(
+            axis=axis,
+            func=lambda df, by=None, partition_idx=None: groupby_agg_builder(
+                df, by, drop, partition_idx
+            ),
+            other=broadcastable_by,
+            apply_indices=apply_indices,
+            enumerate_partitions=True,
         )
         result = self.__constructor__(new_modin_frame)
 
@@ -2552,21 +2641,16 @@ class PandasQueryCompiler(BaseQueryCompiler):
             # determening type of raised exception by applying `aggfunc`
             # to empty DataFrame
             try:
-                agg_func(
+                pandas.DataFrame(index=[1], columns=[1]).agg(agg_func) if isinstance(
+                    agg_func, dict
+                ) else agg_func(
                     pandas.DataFrame(index=[1], columns=[1]).groupby(level=0),
-                    **agg_args,
+                    **agg_kwargs,
                 )
             except Exception as e:
                 raise type(e)("No numeric types to aggregate.")
 
-        # Reset `as_index` because it was edited inplace.
-        groupby_args["as_index"] = as_index
-        if as_index:
-            return result
-        else:
-            if result.index.name is None or result.index.name in result.columns:
-                drop = False
-            return result.reset_index(drop=not drop)
+        return result
 
     # END Manual Partitioning methods
 
@@ -2863,21 +2947,11 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
     # END Cat operations
 
-    def has_multiindex(self, axis=0):
-        """
-        Check if specified axis is indexed by MultiIndex.
-
-        Parameters
-        ----------
-        axis : 0 or 1, default 0
-            The axis to check (0 - index, 1 - columns).
-
-        Returns
-        -------
-        bool
-            True if index at specified axis is MultiIndex and False otherwise.
-        """
-        if axis == 0:
-            return isinstance(self.index, pandas.MultiIndex)
-        assert axis == 1
-        return isinstance(self.columns, pandas.MultiIndex)
+    def compare(self, other, **kwargs):
+        return self.__constructor__(
+            self._modin_frame.broadcast_apply_full_axis(
+                0,
+                lambda l, r: pandas.DataFrame.compare(l, r, **kwargs),
+                other._modin_frame,
+            )
+        )

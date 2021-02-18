@@ -12,11 +12,12 @@
 # governing permissions and limitations under the License.
 
 import os
+import sys
 from textwrap import dedent
 import warnings
 from packaging import version
 
-from .pubsub import Parameter, _TYPE_PARAMS
+from .pubsub import Parameter, _TYPE_PARAMS, ExactStr
 
 
 class EnvironmentVariable(Parameter, type=str, abstract=True):
@@ -112,7 +113,7 @@ class IsRayCluster(EnvironmentVariable, type=bool):
     varname = "MODIN_RAY_CLUSTER"
 
 
-class RayRedisAddress(EnvironmentVariable, type=str):
+class RayRedisAddress(EnvironmentVariable, type=ExactStr):
     """
     What Redis address to connect to when running in Ray cluster
     """
@@ -142,7 +143,19 @@ class Memory(EnvironmentVariable, type=int):
     varname = "MODIN_MEMORY"
 
 
-class RayPlasmaDir(EnvironmentVariable, type=str):
+class NPartitions(EnvironmentVariable, type=int):
+    """
+    How many partitions to use by default
+    """
+
+    varname = "MODIN_NPARTITIONS"
+
+    @classmethod
+    def _get_default(cls):
+        return CpuCount.get()
+
+
+class RayPlasmaDir(EnvironmentVariable, type=ExactStr):
     """
     Path to Plasma storage for Ray
     """
@@ -158,7 +171,7 @@ class IsOutOfCore(EnvironmentVariable, type=bool):
     varname = "MODIN_OUT_OF_CORE"
 
 
-class SocksProxy(EnvironmentVariable, type=str):
+class SocksProxy(EnvironmentVariable, type=ExactStr):
     """
     SOCKS proxy address if it is needed for SSH to work
     """
@@ -196,6 +209,7 @@ class DoUseCalcite(EnvironmentVariable, type=bool):
     """
 
     varname = "MODIN_USE_CALCITE"
+    default = True
 
 
 class TestDatasetSize(EnvironmentVariable, type=str):
@@ -204,7 +218,30 @@ class TestDatasetSize(EnvironmentVariable, type=str):
     """
 
     varname = "MODIN_TEST_DATASET_SIZE"
-    choices = ("small", "normal", "big")
+    choices = ("Small", "Normal", "Big")
+
+
+class TrackFileLeaks(EnvironmentVariable, type=bool):
+    """
+    Whether to track for open file handles leakage during testing
+    """
+
+    varname = "MODIN_TEST_TRACK_FILE_LEAKS"
+    # Turn off tracking on Windows by default because
+    # psutil's open_files() can be extremely slow on Windows (up to adding a few hours).
+    # see https://github.com/giampaolo/psutil/pull/597
+    default = sys.platform != "win32"
+
+
+class AsvImplementation(EnvironmentVariable, type=ExactStr):
+    """
+    Allows to select a library that we will use for testing performance.
+    """
+
+    varname = "MODIN_ASV_USE_IMPL"
+    choices = ("modin", "pandas")
+
+    default = "modin"
 
 
 def _check_vars():
@@ -219,7 +256,7 @@ def _check_vars():
         and issubclass(obj, EnvironmentVariable)
         and not obj.is_abstract
     }
-    found_names = {name for name in os.environ.keys() if name.startswith("MODIN_")}
+    found_names = {name for name in os.environ if name.startswith("MODIN_")}
     unknown = found_names - valid_names
     if unknown:
         warnings.warn(

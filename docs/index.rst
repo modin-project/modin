@@ -127,6 +127,20 @@ nature, you get a fast DataFrame at 1MB and 1TB+.
 
    using_modin
    out_of_core
+   modin_xgboost
+
+.. toctree::
+   :caption: Examples
+
+   examples/index
+
+.. toctree::
+   :caption: How is Modin different from ...?
+
+   comparisons/index
+   comparisons/pandas
+   comparisons/dask
+   comparisons/spark
 
 .. toctree::
    :caption: Supported APIs
@@ -140,7 +154,7 @@ nature, you get a fast DataFrame at 1MB and 1TB+.
 .. toctree::
    :caption: Developer Documentation
 
-   developer/contributing
+   contributing
    developer/architecture
 
 .. toctree::
@@ -152,17 +166,11 @@ nature, you get a fast DataFrame at 1MB and 1TB+.
    UsingSQLonRay/index
 
 .. toctree::
-   :caption: Contributing to Modin
-
-   contributing
-   architecture
-
-.. toctree::
    :caption: Help
 
    troubleshooting
    contact
 
-.. _Dataframe: https://pandas.pydata.org/pandas-docs/version/0.23.4/generated/pandas.DataFrame.html
+.. _Dataframe: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.html
 .. _Ray: https://github.com/ray-project/ray/
 .. _Dask: https://dask.org/

@@ -20,7 +20,7 @@ from pandas.core.dtypes.concat import union_categoricals
 from pandas.io.common import infer_compression
 import warnings
 
-from modin.engines.base.io import FileReader
+from modin.engines.base.io import FileDispatcher
 from modin.data_management.utils import split_result_of_axis_func_pandas
 from modin.error_message import ErrorMessage
 
@@ -99,7 +99,9 @@ class PandasCSVParser(PandasParser):
         index_col = kwargs.get("index_col", None)
         if start is not None and end is not None:
             # pop "compression" from kwargs because bio is uncompressed
-            bio = FileReader.file_open(fname, "rb", kwargs.pop("compression", "infer"))
+            bio = FileDispatcher.file_open(
+                fname, "rb", kwargs.pop("compression", "infer")
+            )
             if kwargs.get("encoding", None) is not None:
                 header = b"" + bio.readline()
             else:
@@ -122,6 +124,52 @@ class PandasCSVParser(PandasParser):
         ]
 
 
+class PandasCSVGlobParser(PandasCSVParser):
+    @staticmethod
+    def parse(chunks, **kwargs):
+        warnings.filterwarnings("ignore")
+        num_splits = kwargs.pop("num_splits", None)
+        index_col = kwargs.get("index_col", None)
+
+        pandas_dfs = []
+        for fname, start, end in chunks:
+            if start is not None and end is not None:
+                # pop "compression" from kwargs because bio is uncompressed
+                bio = FileDispatcher.file_open(
+                    fname, "rb", kwargs.pop("compression", "infer")
+                )
+                if kwargs.get("encoding", None) is not None:
+                    header = b"" + bio.readline()
+                else:
+                    header = b""
+                bio.seek(start)
+                to_read = header + bio.read(end - start)
+                bio.close()
+                pandas_dfs.append(pandas.read_csv(BytesIO(to_read), **kwargs))
+            else:
+                # This only happens when we are reading with only one worker (Default)
+                return pandas.read_csv(fname, **kwargs)
+
+        # Combine read in data.
+        if len(pandas_dfs) > 1:
+            pandas_df = pandas.concat(pandas_dfs)
+        elif len(pandas_dfs) > 0:
+            pandas_df = pandas_dfs[0]
+        else:
+            pandas_df = pandas.DataFrame()
+
+        # Set internal index.
+        if index_col is not None:
+            index = pandas_df.index
+        else:
+            # The lengths will become the RangeIndex
+            index = len(pandas_df)
+        return _split_result_for_readers(1, num_splits, pandas_df) + [
+            index,
+            pandas_df.dtypes,
+        ]
+
+
 class PandasFWFParser(PandasParser):
     @staticmethod
     def parse(fname, **kwargs):
@@ -131,7 +179,9 @@ class PandasFWFParser(PandasParser):
         index_col = kwargs.get("index_col", None)
         if start is not None and end is not None:
             # pop "compression" from kwargs because bio is uncompressed
-            bio = FileReader.file_open(fname, "rb", kwargs.pop("compression", "infer"))
+            bio = FileDispatcher.file_open(
+                fname, "rb", kwargs.pop("compression", "infer")
+            )
             if kwargs.get("encoding", None) is not None:
                 header = b"" + bio.readline()
             else:
@@ -203,8 +253,8 @@ class PandasExcelParser(PandasParser):
         from openpyxl.worksheet.worksheet import Worksheet
         from pandas.core.dtypes.common import is_list_like
         from pandas.io.excel._util import (
-            _fill_mi_header,
-            _maybe_convert_usecols,
+            fill_mi_header,
+            maybe_convert_usecols,
         )
         from pandas.io.parsers import TextParser
         import re
@@ -221,7 +271,7 @@ class PandasExcelParser(PandasParser):
         ws = Worksheet(wb)
         # Read the raw data
         with ZipFile(fname) as z:
-            with z.open("xl/worksheets/{}.xml".format(sheet_name.lower())) as file:
+            with z.open("xl/worksheets/{}.xml".format(sheet_name)) as file:
                 file.seek(start)
                 bytes_data = file.read(end - start)
 
@@ -244,21 +294,21 @@ class PandasExcelParser(PandasParser):
             """
             b = match.group(0)
             return re.sub(
-                b"\d+",  # noqa: W605
+                br"\d+",
                 lambda c: str(int(c.group(0).decode("utf-8")) - _skiprows).encode(
                     "utf-8"
                 ),
                 b,
             )
 
-        bytes_data = re.sub(b'r="[A-Z]*\d+"', update_row_nums, bytes_data)  # noqa: W605
+        bytes_data = re.sub(br'r="[A-Z]*\d+"', update_row_nums, bytes_data)
         bytesio = BytesIO(excel_header + bytes_data + footer)
         # Use openpyxl to read/parse sheet data
         reader = WorksheetReader(ws, bytesio, ex.shared_strings, False)
         # Attach cells to worksheet object
         reader.bind_cells()
         data = PandasExcelParser.get_sheet_data(ws, kwargs.pop("convert_float", True))
-        usecols = _maybe_convert_usecols(kwargs.pop("usecols", None))
+        usecols = maybe_convert_usecols(kwargs.pop("usecols", None))
         header = kwargs.pop("header", 0)
         index_col = kwargs.pop("index_col", None)
         # skiprows is handled externally
@@ -271,7 +321,7 @@ class PandasExcelParser(PandasParser):
             control_row = [True] * len(data[0])
 
             for row in header:
-                data[row], control_row = _fill_mi_header(data[row], control_row)
+                data[row], control_row = fill_mi_header(data[row], control_row)
         # Handle MultiIndex for row Index if necessary
         if is_list_like(index_col):
             # Forward fill values for MultiIndex index.
@@ -289,7 +339,6 @@ class PandasExcelParser(PandasParser):
                             data[row][col] = last
                         else:
                             last = data[row][col]
-
         parser = TextParser(
             data,
             header=header,
@@ -302,7 +351,7 @@ class PandasExcelParser(PandasParser):
         # In excel if you create a row with only a border (no values), this parser will
         # interpret that as a row of NaN values. Pandas discards these values, so we
         # also must discard these values.
-        pandas_df = parser.read().dropna(how="all")
+        pandas_df = parser.read()
         # Since we know the number of rows that occur before this partition, we can
         # correctly assign the index in cases of RangeIndex. If it is not a RangeIndex,
         # the index is already correct because it came from the data.
@@ -331,7 +380,9 @@ class PandasJSONParser(PandasParser):
         end = kwargs.pop("end", None)
         if start is not None and end is not None:
             # pop "compression" from kwargs because bio is uncompressed
-            bio = FileReader.file_open(fname, "rb", kwargs.pop("compression", "infer"))
+            bio = FileDispatcher.file_open(
+                fname, "rb", kwargs.pop("compression", "infer")
+            )
             bio.seek(start)
             to_read = b"" + bio.read(end - start)
             bio.close()
@@ -355,6 +406,17 @@ class PandasParquetParser(PandasParser):
     def parse(fname, **kwargs):
         num_splits = kwargs.pop("num_splits", None)
         columns = kwargs.get("columns", None)
+        if fname.startswith("s3://"):
+            from botocore.exceptions import NoCredentialsError
+            import s3fs
+
+            try:
+                fs = s3fs.S3FileSystem()
+                fname = fs.open(fname)
+            except NoCredentialsError:
+                fs = s3fs.S3FileSystem(anon=True)
+                fname = fs.open(fname)
+
         if num_splits is None:
             return pandas.read_parquet(fname, **kwargs)
         kwargs["use_pandas_metadata"] = True

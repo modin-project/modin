@@ -19,10 +19,10 @@ from modin.experimental.engines.pyarrow_on_ray.frame.partition import (
 )
 from modin.backends.pyarrow.parsers import PyarrowCSVParser
 from modin.engines.ray.task_wrapper import RayTask
-from modin.engines.base.io import CSVReader
+from modin.engines.base.io import CSVDispatcher
 
 
-class PyarrowOnRayCSVReader(RayTask, PyarrowCSVParser, CSVReader):
+class PyarrowOnRayCSVDispatcher(RayTask, PyarrowCSVParser, CSVDispatcher):
     frame_cls = PyarrowOnRayFrame
     frame_partition_cls = PyarrowOnRayFramePartition
     query_compiler_cls = PyarrowQueryCompiler
@@ -32,7 +32,7 @@ class PyarrowOnRayIO(RayIO):
     frame_cls = PyarrowOnRayFrame
     frame_partition_cls = PyarrowOnRayFramePartition
     query_compiler_cls = PyarrowQueryCompiler
-    csv_reader = PyarrowOnRayCSVReader
+    csv_reader = PyarrowOnRayCSVDispatcher
 
     read_parquet_remote_task = None
     read_hdf_remote_task = None

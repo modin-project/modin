@@ -25,7 +25,7 @@ class OmnisciOnRayFrameAxisPartition(PandasFrameAxisPartition):
         self.list_of_blocks = [obj.oid for obj in list_of_blocks]
 
     partition_type = OmnisciOnRayFramePartition
-    instance_type = ray.ObjectID
+    instance_type = ray.ObjectRef
 
 
 class OmnisciOnRayFrameColumnPartition(OmnisciOnRayFrameAxisPartition):

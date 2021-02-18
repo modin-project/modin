@@ -11,24 +11,18 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-NOT_IMPLEMENTED_MESSAGE = "Must be implemented in child class"
+from abc import ABC
 
 
-class BaseFramePartition(object):  # pragma: no cover
-    """This abstract class holds the data and metadata for a single partition.
-    The methods required for implementing this abstract class are listed in
-    the section immediately following this.
+class BaseFramePartition(ABC):  # pragma: no cover
+    """An abstract class that holds the data and metadata for a single partition.
 
-    The API exposed by the children of this object is used in
-    `BaseFrameManager`.
+    The public API exposed by the children of this object is used in `BaseFrameManager`.
 
     Note: These objects are treated as immutable by `BaseFrameManager`
     subclasses. There is no logic for updating inplace.
     """
 
-    # Abstract methods and fields. These must be implemented in order to
-    # properly subclass this object. There are also some abstract classmethods
-    # to implement.
     def get(self):
         """Return the object wrapped by this one to the original format.
 
@@ -36,10 +30,11 @@ class BaseFramePartition(object):  # pragma: no cover
             E.g. if you assign `x = BaseFramePartition.put(1)`, `x.get()` should
             always return 1.
 
-        Returns:
+        Returns
+        -------
             The object that was `put`.
         """
-        raise NotImplementedError(NOT_IMPLEMENTED_MESSAGE)
+        pass
 
     def apply(self, func, **kwargs):
         """Apply some callable function to the data in this partition.
@@ -48,25 +43,38 @@ class BaseFramePartition(object):  # pragma: no cover
             an important part of many implementations. As of right now, they
             are not serialized.
 
-        Args:
-            func: The lambda to apply (may already be correctly formatted)
+        Args
+        ----
+        func : callable
+            The function to apply.
 
-        Returns:
+        Returns
+        -------
              A new `BaseFramePartition` containing the object that has had `func`
              applied to it.
         """
-        raise NotImplementedError(NOT_IMPLEMENTED_MESSAGE)
+        pass
 
     def add_to_apply_calls(self, func, **kwargs):
         """Add the function to the apply function call stack.
 
-        This function will be executed when apply is called. It will be executed
+        Note: This function will be executed when apply is called. It will be executed
         in the order inserted; apply's func operates the last and return
+
+        Args
+        ----
+        func : callable
+            The function to apply.
+
+        Returns
+        -------
+            A new `BaseFramePartition` with the function added to the call queue.
         """
-        raise NotImplementedError(NOT_IMPLEMENTED_MESSAGE)
+        pass
 
     def drain_call_queue(self):
         """Execute all functionality stored in the call queue."""
+        pass
 
     def to_pandas(self):
         """Convert the object stored in this partition to a Pandas DataFrame.
@@ -74,10 +82,11 @@ class BaseFramePartition(object):  # pragma: no cover
         Note: If the underlying object is a Pandas DataFrame, this will likely
             only need to call `get`
 
-        Returns:
+        Returns
+        -------
             A Pandas DataFrame.
         """
-        raise NotImplementedError(NOT_IMPLEMENTED_MESSAGE)
+        pass
 
     def to_numpy(self, **kwargs):
         """Convert the object stored in this partition to a NumPy array.
@@ -85,10 +94,11 @@ class BaseFramePartition(object):  # pragma: no cover
         Note: If the underlying object is a Pandas DataFrame, this will return
             a 2D NumPy array.
 
-        Returns:
+        Returns
+        -------
             A NumPy array.
         """
-        raise NotImplementedError(NOT_IMPLEMENTED_MESSAGE)
+        pass
 
     def mask(self, row_indices, col_indices):
         """Lazily create a mask that extracts the indices provided.
@@ -97,22 +107,26 @@ class BaseFramePartition(object):  # pragma: no cover
             row_indices: The indices for the rows to extract.
             col_indices: The indices for the columns to extract.
 
-        Returns:
+        Returns
+        -------
             A `BaseFramePartition` object.
         """
-        raise NotImplementedError(NOT_IMPLEMENTED_MESSAGE)
+        pass
 
     @classmethod
     def put(cls, obj):
-        """A factory classmethod to format a given object.
+        """Format a given object.
 
-        Args:
-            obj: An object.
+        Parameters
+        ----------
+        obj: object
+            An object.
 
-        Returns:
+        Returns
+        -------
             A `BaseFramePartition` object.
         """
-        raise NotImplementedError(NOT_IMPLEMENTED_MESSAGE)
+        pass
 
     @classmethod
     def preprocess_func(cls, func):
@@ -123,36 +137,42 @@ class BaseFramePartition(object):  # pragma: no cover
             deploy a preprocessed function to multiple `BaseFramePartition`
             objects.
 
-        Args:
-            func: The function to preprocess.
+        Args
+        ----
+        func : callable
+            The function to preprocess.
 
-        Returns:
+        Returns
+        -------
             An object that can be accepted by `apply`.
         """
-        raise NotImplementedError(NOT_IMPLEMENTED_MESSAGE)
+        pass
 
     @classmethod
     def length_extraction_fn(cls):
-        """The function to compute the length of the object in this partition.
+        """Compute the length of the object in this partition.
 
-        Returns:
+        Returns
+        -------
             A callable function.
         """
-        raise NotImplementedError(NOT_IMPLEMENTED_MESSAGE)
+        pass
 
     @classmethod
     def width_extraction_fn(cls):
-        """The function to compute the width of the object in this partition.
+        """Compute the width of the object in this partition.
 
-        Returns:
+        Returns
+        -------
             A callable function.
         """
-        raise NotImplementedError(NOT_IMPLEMENTED_MESSAGE)
+        pass
 
     _length_cache = None
     _width_cache = None
 
     def length(self):
+        """Return the length of partition."""
         if self._length_cache is None:
             cls = type(self)
             func = cls.length_extraction_fn()
@@ -161,6 +181,7 @@ class BaseFramePartition(object):  # pragma: no cover
         return self._length_cache
 
     def width(self):
+        """Return the width of partition."""
         if self._width_cache is None:
             cls = type(self)
             func = cls.width_extraction_fn()
@@ -170,9 +191,10 @@ class BaseFramePartition(object):  # pragma: no cover
 
     @classmethod
     def empty(cls):
-        """Create an empty partition
+        """Create an empty partition.
 
-        Returns;
+        Returns
+        -------
             An empty partition
         """
-        raise NotImplementedError(NOT_IMPLEMENTED_MESSAGE)
+        pass
