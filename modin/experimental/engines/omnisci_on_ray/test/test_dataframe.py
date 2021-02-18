@@ -32,6 +32,7 @@ from modin.pandas.test.utils import (
     test_data_keys,
     generate_multiindex,
     eval_general,
+    eval_io,
 )
 
 
@@ -116,6 +117,7 @@ def run_and_compare(
         df_equals(ref_res, exp_res)
 
 
+@pytest.mark.usefixtures("TestReadCSVFixture")
 class TestCSV:
     root = os.path.abspath(__file__ + "/.." * 6)  # root of modin repo
 
@@ -301,6 +303,30 @@ class TestCSV:
         modin_df["a"] = modin_df["a"] + modin_df["b"]
 
         df_equals(modin_df, pandas_df)
+
+    # Datetime Handling tests
+    @pytest.mark.parametrize("engine", [None, "arrow"])
+    @pytest.mark.parametrize(
+        "parse_dates",
+        [
+            True,
+            False,
+            ["col2"],
+        ],
+    )
+    def test_read_csv_datetime(
+        self,
+        engine,
+        parse_dates,
+    ):
+
+        eval_io(
+            fn_name="read_csv",
+            md_extra_kwargs={"engine": engine},
+            # read_csv kwargs
+            filepath_or_buffer=pytest.csvs_names["test_read_csv_regular"],
+            parse_dates=parse_dates,
+        )
 
 
 class TestMasks:
