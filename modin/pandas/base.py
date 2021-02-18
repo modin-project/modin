@@ -2708,7 +2708,21 @@ class BasePandasDataset(object):
         else:
             return self._getitem(key)
 
-    def _getitem_slice(self, key):
+    def _setitem_slice(self, key: slice, value):
+        """
+        Set rows specified by 'key' slice with 'value'.
+
+        Parameters
+        ----------
+        key: location or index based slice,
+            Key that points rows to modify.
+        value: any,
+            Value to assing to the rows.
+        """
+        indexer = convert_to_index_sliceable(pandas.DataFrame(index=self.index), key)
+        self.iloc[indexer] = value
+
+    def _getitem_slice(self, key: slice):
         if key.start is None and key.stop is None:
             return self.copy()
         return self.iloc[key]
