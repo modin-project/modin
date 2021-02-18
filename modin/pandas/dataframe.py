@@ -1342,14 +1342,10 @@ class DataFrame(BasePandasDataset):
     ):
         axis = self._get_axis_number(axis)
         if level is not None:
-            return self._default_to_pandas(
-                "prod",
-                axis=axis,
-                skipna=skipna,
-                level=level,
-                numeric_only=numeric_only,
-                min_count=min_count,
-                **kwargs,
+            if not self._query_compiler.has_multiindex(axis=axis) and level != 0 and level != self.index.name:
+                raise ValueError("level > 0 or level < -1 only valid with MultiIndex")
+            return self.groupby(level=level, axis=axis).prod(
+                skipna=skipna, min_count=min_count
             )
 
         axis_to_apply = self.columns if axis else self.index
@@ -1696,15 +1692,12 @@ class DataFrame(BasePandasDataset):
         data = self._validate_dtypes_sum_prod_mean(
             axis, numeric_only, ignore_axis=False
         )
+        # operations across level are
         if level is not None:
-            return self._default_to_pandas(
-                "sum",
-                axis=axis,
-                skipna=skipna,
-                level=level,
-                numeric_only=numeric_only,
-                min_count=min_count,
-                **kwargs,
+            if not self._query_compiler.has_multiindex(axis=axis) and level != 0 and level != self.index.name:
+                raise ValueError("level > 0 or level < -1 only valid with MultiIndex")
+            return self.groupby(level=level, axis=axis).sum(
+                numeric_only=numeric_only, min_count=min_count
             )
         if min_count > 1:
             return data._reduce_dimension(
