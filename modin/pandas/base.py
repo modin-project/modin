@@ -585,7 +585,11 @@ class BasePandasDataset(object):
                     raise NotImplementedError(
                         "Option bool_only is not implemented with option level."
                     )
-                if not self._query_compiler.has_multiindex(axis=axis) and level != 0 and level != self.index.name:
+                if (
+                    not self._query_compiler.has_multiindex(axis=axis)
+                    and level != 0
+                    and level != self.index.name
+                ):
                     raise ValueError(
                         "level > 0 or level < -1 only valid with MultiIndex"
                     )
@@ -636,7 +640,11 @@ class BasePandasDataset(object):
                     raise NotImplementedError(
                         "Option bool_only is not implemented with option level."
                     )
-                if not self._query_compiler.has_multiindex(axis=axis) and level != 0 and level != self.index.name:
+                if (
+                    not self._query_compiler.has_multiindex(axis=axis)
+                    and level != 0
+                    and level != self.index.name
+                ):
                     raise ValueError(
                         "level > 0 or level < -1 only valid with MultiIndex"
                     )
@@ -1373,7 +1381,11 @@ class BasePandasDataset(object):
         axis = self._get_axis_number(axis)
 
         if level is not None:
-            if not self._query_compiler.has_multiindex(axis=axis) and level != 0 and level != self.index.name:
+            if (
+                not self._query_compiler.has_multiindex(axis=axis)
+                and level != 0
+                and level != self.index.name
+            ):
                 raise ValueError("level > 0 or level < -1 only valid with MultiIndex")
             return self.groupby(level=level, axis=axis).mad()
 
