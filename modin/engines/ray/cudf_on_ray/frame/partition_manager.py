@@ -51,13 +51,14 @@ class cuDFOnRayFrameManager(object):
 
     @classmethod
     def _compute_num_row_partitions(cls):
-        from modin.pandas import DEFAULT_NUM_ROW_PARTITIONS
-        return DEFAULT_NUM_ROW_PARTITIONS
+        from modin.config import NPartitions
+        return NPartitions.get()
 
     @classmethod
     def _compute_num_col_partitions(cls):
-        from modin.pandas import DEFAULT_NUM_COL_PARTITIONS
-        return DEFAULT_NUM_COL_PARTITIONS
+        # How are column partition defined?
+        from modin.config import NPartitions
+        return NPartitions.get()
 
     @classmethod
     def preprocess_func(cls, map_func):

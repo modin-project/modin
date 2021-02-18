@@ -19,6 +19,7 @@ from modin.config import (
     IsRayCluster,
     RayRedisAddress,
     CpuCount,
+    GpuCount,
     Memory,
     RayPlasmaDir,
     IsOutOfCore,
@@ -148,6 +149,7 @@ def initialize_ray(
                 object_store_memory = int(object_store_memory)
             ray.init(
                 num_cpus=CpuCount.get(),
+                num_gpus=GpuCount.get(),
                 include_dashboard=False,
                 ignore_reinit_error=True,
                 _plasma_directory=plasma_directory,

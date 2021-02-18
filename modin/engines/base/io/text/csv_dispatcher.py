@@ -18,7 +18,7 @@ import pandas
 import csv
 import sys
 
-from modin.config import NPartitions
+from modin.config import NPartitions, Backend
 
 
 class CSVDispatcher(TextFileDispatcher):
@@ -167,8 +167,13 @@ class CSVDispatcher(TextFileDispatcher):
                 quotechar=quotechar,
                 is_quoting=is_quoting,
             )
+ 
+            gpu_manager = 0
             for start, end in splits:
                 args.update({"start": start, "end": end})
+                if Backend.get() == 'Cudf':
+                    args.update({"gpu": gpu_manager})
+                    gpu_manager += 1
                 partition_id = cls.deploy(cls.parse, num_splits + 2, args)
                 partition_ids.append(partition_id[:-2])
                 index_ids.append(partition_id[-2])
@@ -222,9 +227,8 @@ class CSVDispatcher(TextFileDispatcher):
             row_lengths,
             column_widths,
             dtypes=dtypes,
-        )
+        )        
         new_query_compiler = cls.query_compiler_cls(new_frame)
-
         if skipfooter:
             new_query_compiler = new_query_compiler.drop(
                 new_query_compiler.index[-skipfooter:]
@@ -233,4 +237,5 @@ class CSVDispatcher(TextFileDispatcher):
             return new_query_compiler[new_query_compiler.columns[0]]
         if index_col is None:
             new_query_compiler._modin_frame._apply_index_objs(axis=0)
+
         return new_query_compiler
