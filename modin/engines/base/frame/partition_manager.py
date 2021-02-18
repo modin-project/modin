@@ -301,7 +301,7 @@ class BaseFrameManager(ABC):
         elif lengths:
             num_splits = len(lengths)
         else:
-            num_splits = NPartitions.get()
+            num_splits = 1  # NPartitions.get()
         preprocessed_map_func = cls.preprocess_func(apply_func)
         left_partitions = cls.axis_partition(left, axis)
         right_partitions = None if right is None else cls.axis_partition(right, axis)
