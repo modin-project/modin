@@ -143,7 +143,10 @@ class BasePandasFrame(object):
 
         # For now we will use a pandas Series for the dtypes.
         if len(self.columns) > 0:
-            dtypes = self._map_reduce(0, lambda df: df.dtypes, dtype_builder)
+            reduce_parts = self._frame_mgr_cls.map_axis_partitions(
+                0, self._partitions, lambda df: df.dtypes
+            )
+            dtypes = pandas.concat([x.to_pandas() for x in reduce_parts[0]])
         else:
             dtypes = pandas.Series([])
         # reset name to None because we use "__reduced__" internally
@@ -1147,10 +1150,13 @@ class BasePandasFrame(object):
         else:
             reduce_func = self._build_mapreduce_func(axis, reduce_func)
 
+        map_parts = self._frame_mgr_cls.map_partitions(self._partitions, map_func)
         reduce_parts = self._frame_mgr_cls.map_axis_partitions(
-            0, self._partitions, lambda df: df.dtypes
+            axis, map_parts, reduce_func
         )
-        return pandas.concat([x.to_pandas() for x in reduce_parts[0]])
+        return self._compute_map_reduce_metadata(
+            axis, reduce_parts, preserve_index=preserve_index
+        )
 
     def _map(self, func, dtypes=None, validate_index=False, validate_columns=False):
         """Perform a function that maps across the entire dataset.
