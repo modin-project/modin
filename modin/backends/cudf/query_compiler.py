@@ -12,22 +12,16 @@
 # governing permissions and limitations under the License.
 
 from modin.backends.pandas.query_compiler import PandasQueryCompiler
-from modin.backends.pandas.query_compiler import (
-    _get_axis,
-    _set_axis,
-    copy_df_for_func,
-)
+from modin.backends.pandas.query_compiler import _get_axis, _set_axis
 
 import cudf
 import numpy as np
 import pandas
-import ray
 import cupy as cp
 
 from modin.error_message import ErrorMessage
 from pandas.core.base import DataError
 from modin.data_management.functions import (
-    FoldFunction,
     MapFunction,
     MapReduceFunction,
     ReductionFunction,
@@ -36,10 +30,10 @@ from modin.data_management.functions import (
 )
 from pandas.core.dtypes.common import (
     is_list_like,
-    is_numeric_dtype,
 )
 
-#from modin.pandas.utils import try_cast_to_pandas
+# from modin.pandas.utils import try_cast_to_pandas
+
 
 def _str_map(func_name):
     """
@@ -55,11 +49,15 @@ def _str_map(func_name):
     -----
     This applies callable methods of `Series.str`.
     """
+
     def str_op_builder(df, *args, **kwargs):
-        str_s = df.iloc[:, 0].str #TODO(apolakof): Find out how to change to squeeze.
-        return getattr(cudf.core.column.string.StringMethods, func_name)(str_s, *args, **kwargs)
+        str_s = df.iloc[:, 0].str  # TODO(apolakof): Find out how to change to squeeze.
+        return getattr(cudf.core.column.string.StringMethods, func_name)(
+            str_s, *args, **kwargs
+        )
 
     return str_op_builder
+
 
 def _dt_prop_map(property_name):
     """
@@ -80,7 +78,7 @@ def _dt_prop_map(property_name):
     """
 
     def dt_op_builder(df, *args, **kwargs):
-        prop_val = getattr(df.iloc[:,0].dt, property_name)
+        prop_val = getattr(df.iloc[:, 0].dt, property_name)
         if isinstance(prop_val, cudf.Series):
             return prop_val.to_frame()
         elif isinstance(prop_val, cudf.DataFrame):
@@ -110,36 +108,40 @@ def _dt_func_map(func_name):
     """
 
     def dt_op_builder(df, *args, **kwargs):
-        dt_s = df.iloc[:,0].dt
-        return cudf.DataFrame(
-            getattr(cudf.Series.dt, func_name)(dt_s, *args, **kwargs)
-        )
+        dt_s = df.iloc[:, 0].dt
+        return cudf.DataFrame(getattr(cudf.Series.dt, func_name)(dt_s, *args, **kwargs))
 
     return dt_op_builder
+
 
 # Use cupy streams for parallelism because cupy does not have support for DataFrame.apply.
 # https://github.com/rapidsai/cudf/issues/925
 def _build_apply_func(func, axis=0, reduce_func=None, *args, **kwargs):
+    pass
+    """
     if not reduce_func:
         reduce_func = lambda l: cudf.DataFrame(l)
     if axis == 0:
+
         def apply_wrapper(df):
             ncols = len(df.columns)
             res = []
             map_streams = []
             stop_events = []
             for i in range(ncols):
-                map_streams.append(cupy.cuda.stream.Stream())
+                map_streams.append(cp.cuda.stream.Stream())
             cupy_arr = df.values
             for i in range(ncols):
                 stream = map_streams[i]
                 with stream:
-                    cupy_chunk = func(df.iloc[:,i], *args, **kwargs)
+                    cupy_chunk = func(df.iloc[:, i], *args, **kwargs)
                     res.append(cupy_chunk)
                 stop_event = stream.record()
                 stop_events.append(stop_event)
             return reduce_func(res)
+
     else:
+
         def apply_wrapper(df):
             nrows = len(df.index)
             N = 1000
@@ -148,19 +150,21 @@ def _build_apply_func(func, axis=0, reduce_func=None, *args, **kwargs):
             stop_events = []
             for i in range(N):
                 map_streams.append(cp.cuda.stream.Stream())
-            chunk_size = nrows//N
+            chunk_size = nrows // N
             for i in range(N):
                 stream = map_streams[i]
                 with stream:
-                    cudf_series = df.iloc[i*chunk_size:(i+1)*chunk_size]
+                    cudf_series = df.iloc[i * chunk_size : (i + 1) * chunk_size]
                     res.append(func(cudf_series, *args, **kwargs))
                 stop_event = stream.record()
                 stop_events.append(stop_event)
             return reduce_func(res)
+
     return apply_wrapper
+    """
+
 
 class cuDFQueryCompiler(PandasQueryCompiler):
-
     def __init__(self, modin_frame):
         self._modin_frame = modin_frame
 
@@ -183,7 +187,9 @@ class cuDFQueryCompiler(PandasQueryCompiler):
         if columns is not None:
             # The unique here is to avoid duplicating columns with the same name
             columns = np.sort(
-                self.columns.get_indexer_for(self.columns[~self.columns.isin(columns)].unique())
+                self.columns.get_indexer_for(
+                    self.columns[~self.columns.isin(columns)].unique()
+                )
             )
         new_modin_frame = self._modin_frame.mask(
             row_numeric_idx=index, col_numeric_idx=columns
@@ -210,7 +216,7 @@ class cuDFQueryCompiler(PandasQueryCompiler):
         result = pandas_op(self.to_pandas(), *args, **kwargs)
         if isinstance(result, pandas.Series):
             result = result.to_frame()
-        print(f"result={result}, frame={self.to_pandas()}") # DEBUG
+        print(f"result={result}, frame={self.to_pandas()}")  # DEBUG
         if isinstance(result, pandas.DataFrame):
             return self.from_pandas(result, type(self._modin_frame))
         else:
@@ -253,7 +259,7 @@ class cuDFQueryCompiler(PandasQueryCompiler):
         # we want to copy it to not propagate these changes into source dict, in case
         # of unsuccessful end of function
         groupby_args = groupby_args.copy()
-        groupby_args.pop("squeeze", None) # Not supported by CuDF
+        groupby_args.pop("squeeze", None)  # Not supported by CuDF
 
         as_index = groupby_args.get("as_index", True)
 
@@ -294,8 +300,7 @@ class cuDFQueryCompiler(PandasQueryCompiler):
             # to empty DataFrame
             try:
                 agg_func(
-                    cudf.DataFrame(index=[1], columns=[1]).groupby(level=0),
-                    **agg_args
+                    cudf.DataFrame(index=[1], columns=[1]).groupby(level=0), **agg_args
                 )
             except Exception as e:
                 raise type(e)("No numeric types to aggregate.")
@@ -308,7 +313,6 @@ class cuDFQueryCompiler(PandasQueryCompiler):
             if result.index.name is None or result.index.name in result.columns:
                 drop = False
             return result.reset_index(drop=not drop)
-
 
     # def merge(self, right, **kwargs):
     #     return JoinFunction.register(cudf.DataFrame.merge)(self, right=right, **kwargs)
@@ -330,39 +334,44 @@ class cuDFQueryCompiler(PandasQueryCompiler):
         by = [index] + columns
         by = self.getitem_column_array(by)
         groupby_args = {
-            'level': None,
-            'sort': True,
-            'as_index': True,
-            'group_keys': True,
-            'squeeze': False}
+            "level": None,
+            "sort": True,
+            "as_index": True,
+            "group_keys": True,
+            "squeeze": False,
+        }
         map_args = {}
         reduce_args = {}
         if isinstance(aggfunc, list):
             raise NotImplementedError("Multiple aggfunc are not yet suppoted")
-        
+
         try:
             groupby_func = getattr(self, f"groupby_{aggfunc}")
         except AttributeError:
-            raise NotImplementedError(f"{aggfunc}: Not implemented for MODIN-GPU pivot_table") 
+            raise NotImplementedError(
+                f"{aggfunc}: Not implemented for MODIN-GPU pivot_table"
+            )
 
         temp_qc = groupby_func(
-            by = by,
-            axis = 0,
-            groupby_args = groupby_args,
-            map_args = map_args,
+            by=by,
+            axis=0,
+            groupby_args=groupby_args,
+            map_args=map_args,
             reduce_args=reduce_args,
             numeric_only=False,
             drop=True,
         )
 
-        #TODO(lepl3): Avoid bringing data to CPU.
+        # TODO(lepl3): Avoid bringing data to CPU.
         if isinstance(values, str):
             values = [values]
         pandas_tmp = temp_qc.getitem_column_array(values).to_pandas()
-        return self.from_pandas(pandas_tmp.unstack([*range(1, len(columns)+1)]), type(self._modin_frame))
+        return self.from_pandas(
+            pandas_tmp.unstack([*range(1, len(columns) + 1)]), type(self._modin_frame)
+        )
 
     # THIS WILL COME WITH CUDF 0.16.0
-    # def unstack(self, level=-1, fill_value=None)      
+    # def unstack(self, level=-1, fill_value=None)
     #     return MapFunction.register(cudf.DataFrame.unstack, dtypes='copy')
     # End
 
@@ -375,18 +384,16 @@ class cuDFQueryCompiler(PandasQueryCompiler):
     def to_numpy(self):
         arr = self._modin_frame.to_numpy()
         # TODO (kvu35): change index accordingly
-        #ErrorMessage.catch_bugs_and_request_email(
+        # ErrorMessage.catch_bugs_and_request_email(
         #    len(arr) != len(self.index) or len(arr[0]) != len(self.columns)
-        #)
+        # )
         return arr
 
     def invert(self, **kwargs):
         return MapFunction.register(cudf.DataFrame.__invert__)(self)
 
     def eq(self, other, **kwargs):
-        return BinaryFunction.register(cudf.DataFrame.__eq__)(
-            self, other=other
-        )
+        return BinaryFunction.register(cudf.DataFrame.__eq__)(self, other=other)
 
     def floordiv(self, other, **kwargs):
         return BinaryFunction.register(cudf.DataFrame.floordiv)(self, other=other)
@@ -439,36 +446,24 @@ class cuDFQueryCompiler(PandasQueryCompiler):
     def truediv(self, other, **kwargs):
         return BinaryFunction.register(cudf.DataFrame.truediv)(self, other=other)
 
-# TODO(lepl3): Investigate how cudf handles bool operator in differnt axis
+    # TODO(lepl3): Investigate how cudf handles bool operator in differnt axis
     def __and__(self, other, **kwargs):
-        return BinaryFunction.register(cudf.DataFrame.__and__)(
-            self, other=other
-        )
+        return BinaryFunction.register(cudf.DataFrame.__and__)(self, other=other)
 
     def __or__(self, other, **kwargs):
-        return BinaryFunction.register(cudf.DataFrame.__or__)(
-            self, other=other
-        )
+        return BinaryFunction.register(cudf.DataFrame.__or__)(self, other=other)
 
     def __rand__(self, other, **kwargs):
-        return BinaryFunction.register(cudf.DataFrame.__rand__)(
-            self, other=other
-        )
+        return BinaryFunction.register(cudf.DataFrame.__rand__)(self, other=other)
 
     def __ror__(self, other, **kwargs):
-        return BinaryFunction.register(cudf.DataFrame.__ror__)(
-            self, other=other
-        )
+        return BinaryFunction.register(cudf.DataFrame.__ror__)(self, other=other)
 
     def __rxor__(self, other, **kwargs):
-        return BinaryFunction.register(cudf.DataFrame.__rxor__)(
-            self, other=other
-        )
+        return BinaryFunction.register(cudf.DataFrame.__rxor__)(self, other=other)
 
     def __xor__(self, other, **kwargs):
-        return BinaryFunction.register(cudf.DataFrame.__xor__)(
-            self, other=other
-        )
+        return BinaryFunction.register(cudf.DataFrame.__xor__)(self, other=other)
 
     # FIXME: Hacky solution to the boolean indexing problem, only works with row partitions
     def bool_indexor(self, other, keepna=True):
@@ -480,10 +475,11 @@ class cuDFQueryCompiler(PandasQueryCompiler):
         kwargs.pop("axis")
         kwargs.pop("level")
         if other is np.nan:
-            other  = None
+            other = None
         # This will be a Series of scalars to be applied based on the condition
         # dataframe.
         if isinstance(cond, type(self)) and len(self.columns) == 1:
+
             def where_builder_series(df, cond):
                 # Convert both to series since where will only work with two series anyways
                 df = df[df.columns[0]]
@@ -520,14 +516,14 @@ class cuDFQueryCompiler(PandasQueryCompiler):
         # Note possible to do this all in one map reduce by creating a large dataframe with multiple
         # columns in it and concatinating
         def map_func(x):
-            x = x.iloc[:,0]
-            return cudf.DataFrame(
-                {"N" : [x.count()], "sum" : [x.sum()]}
-            )
+            x = x.iloc[:, 0]
+            return cudf.DataFrame({"N": [x.count()], "sum": [x.sum()]})
+
         def reduce_func(x):
             N = x["N"].sum()
             sum_of_x = x["sum"].sum()
-            return cudf.Series([sum_of_x/N], name="mean")
+            return cudf.Series([sum_of_x / N], name="mean")
+
         new_modin_frame = self._modin_frame._map_reduce(
             0,
             map_func,
@@ -539,7 +535,7 @@ class cuDFQueryCompiler(PandasQueryCompiler):
         unit = kwargs["unit"]
         return MapFunction.register(
             lambda df: cudf.to_datetime(
-                df if len(df.columns) > 1 else df.iloc[:,0], **kwargs
+                df if len(df.columns) > 1 else df.iloc[:, 0], **kwargs
             ),
             # FIXME (kvu35): for some reason dtypes is just returning the default
             # dtype even though the backend dataframes are casted to the write dtype
@@ -594,10 +590,12 @@ class cuDFQueryCompiler(PandasQueryCompiler):
     dt_month_name = MapFunction.register(_dt_func_map("month_name"))
     dt_day_name = MapFunction.register(_dt_func_map("day_name"))
     dt_to_pytimedelta = MapFunction.register(_dt_func_map("to_pytimedelta"))
+
     # cudf timedelta does not support total_seconds so here we convert to a pandas timedelta
     def dt_total_seconds(self):
         df = self.to_pandas().squeeze()
         return self.from_pandas(df.dt.total_seconds().to_frame(), self._modin_frame)
+
     dt_seconds = MapFunction.register(_dt_prop_map("seconds"))
     dt_days = MapFunction.register(_dt_prop_map("days"))
     dt_microseconds = MapFunction.register(_dt_prop_map("microseconds"))
@@ -618,38 +616,41 @@ class cuDFQueryCompiler(PandasQueryCompiler):
     def unique(self, **kwargs):
         def unique_wrapper(df, **kwargs):
             if isinstance(df, cudf.DataFrame):
-                df = df.iloc[:,0]
+                df = df.iloc[:, 0]
             # cudf doesn't currently support cuda string arrays, so we must deserialize and
             # serialize the data using regular python lists
             if df.dtype == object:
                 return cudf.DataFrame(list(df.unique().to_array()), dtype=object)
             else:
                 return cudf.DataFrame(df.unique())
+
         new_modin_frame = self._modin_frame._map_reduce(0, unique_wrapper)
         return self.__constructor__(new_modin_frame)
 
     def astype(self, col_dtypes, **kwargs):
-        return self.__constructor__(
-            self._modin_frame.astype(col_dtypes, **kwargs)
-        )
+        return self.__constructor__(self._modin_frame.astype(col_dtypes, **kwargs))
 
     def nunique(self, **kwargs):
-        return ReductionFunction.register(lambda x : cudf.Series([len(x)]))(self.unique())
+        return ReductionFunction.register(lambda x: cudf.Series([len(x)]))(
+            self.unique()
+        )
 
     def std(self, **kwargs):
         # Note possible to do this all in one map reduce by creating a large dataframe with multiple
         # columns in it and concatinating
         def map_func(x):
-            x = x.iloc[:,0]
+            x = x.iloc[:, 0]
             return cudf.DataFrame(
-                {"N" : [x.count()], "sum_of_X2" : [(x**2).sum()], "sum" : [x.sum()]}
+                {"N": [x.count()], "sum_of_X2": [(x ** 2).sum()], "sum": [x.sum()]}
             )
+
         def reduce_func(x):
             N = x["N"].sum()
             sum_of_X2 = x["sum_of_X2"].sum()
-            X2_of_sum = x["sum"].sum()**2
-            V = (sum_of_X2 - X2_of_sum/N)/(N-1)
+            X2_of_sum = x["sum"].sum() ** 2
+            V = (sum_of_X2 - X2_of_sum / N) / (N - 1)
             return cudf.Series([np.sqrt(V)], name="std")
+
         new_modin_frame = self._modin_frame._map_reduce(
             0,
             map_func,
@@ -664,16 +665,18 @@ class cuDFQueryCompiler(PandasQueryCompiler):
         # Note possible to do this all in one map reduce by creating a large dataframe with multiple
         # columns in it and concatinating
         def map_func(x):
-            x = x.iloc[:,0]
+            x = x.iloc[:, 0]
             return cudf.DataFrame(
-                {"N" : [x.count()], "sum_of_X2" : [(x**2).sum()], "sum" : [x.sum()]}
+                {"N": [x.count()], "sum_of_X2": [(x ** 2).sum()], "sum": [x.sum()]}
             )
+
         def reduce_func(x):
             N = x["N"].sum()
             sum_of_X2 = x["sum_of_X2"].sum()
-            X2_of_sum = x["sum"].sum()**2
-            V = (sum_of_X2 - X2_of_sum/N)/(N-1)
+            X2_of_sum = x["sum"].sum() ** 2
+            V = (sum_of_X2 - X2_of_sum / N) / (N - 1)
             return cudf.Series([V], name="var")
+
         new_modin_frame = self._modin_frame._map_reduce(
             0,
             map_func,
@@ -758,11 +761,15 @@ class cuDFQueryCompiler(PandasQueryCompiler):
                     new_qc = self.drop(columns=[key])
                     if idx == 0:
                         return self.__constructor__(
-                            value._modin_frame._concat(1, [new_qc._modin_frame], "inner", False)
+                            value._modin_frame._concat(
+                                1, [new_qc._modin_frame], "inner", False
+                            )
                         )
                     else:
                         return self.__constructor__(
-                            new_qc._modin_frame._concat(1, [value._modin_frame], "inner", False)
+                            new_qc._modin_frame._concat(
+                                1, [value._modin_frame], "inner", False
+                            )
                         )
             else:
                 value = value.transpose()
@@ -783,11 +790,15 @@ class cuDFQueryCompiler(PandasQueryCompiler):
                     new_qc = self.drop(index=[key])
                     if idx == 0:
                         return self.__constructor__(
-                            value._modin_frame._concat(0, [new_qc._modin_frame], "inner", False)
+                            value._modin_frame._concat(
+                                0, [new_qc._modin_frame], "inner", False
+                            )
                         )
                     else:
                         return self.__constructor__(
-                            new_qc._modin_frame._concat(0, [value._modin_frame], "inner", False)
+                            new_qc._modin_frame._concat(
+                                0, [value._modin_frame], "inner", False
+                            )
                         )
         if is_list_like(value):
             new_modin_frame = self._modin_frame._apply_full_axis_select_indices(
@@ -838,7 +849,7 @@ class cuDFQueryCompiler(PandasQueryCompiler):
         kwargs["by"] = by
         new_modin_frame = self._modin_frame._apply_full_axis(
             0,
-            lambda df : df.sort_values(**kwargs),
+            lambda df: df.sort_values(**kwargs),
             dtypes="copy",
             new_columns=self.columns,
         )
@@ -851,7 +862,7 @@ class cuDFQueryCompiler(PandasQueryCompiler):
         kwargs["by"] = by
         new_modin_frame = self._modin_frame._apply_full_axis(
             1,
-            lambda df : df.sort_values(**kwargs).to_frame(),
+            lambda df: df.sort_values(**kwargs).to_frame(),
             dtypes="copy",
             new_columns=self.columns,
         )
@@ -859,7 +870,9 @@ class cuDFQueryCompiler(PandasQueryCompiler):
 
     def reset_index(self, **kwargs):
         new_modin_frame = self._modin_frame._map(
-            lambda x : x.reset_index(**kwargs), dtypes=None, validate_columns=True,
+            lambda x: x.reset_index(**kwargs),
+            dtypes=None,
+            validate_columns=True,
         )
         new_modin_frame.index = pandas.RangeIndex(len(self.index))
         return self.__constructor__(new_modin_frame)
@@ -885,9 +898,7 @@ class cuDFQueryCompiler(PandasQueryCompiler):
 
     def _apply_text_func_elementwise(self, func, axis, *args, **kwargs):
         assert isinstance(func, str)
-        new_modin_frame = self._modin_frame._apply_full_axis(
-            axis, func
-        )
+        new_modin_frame = self._modin_frame._apply_full_axis(axis, func)
         return self.__constructor__(new_modin_frame)
 
     def _callable_func(self, func, axis, *args, **kwargs):
@@ -938,18 +949,21 @@ class cuDFQueryCompiler(PandasQueryCompiler):
         # TODO (kvu35): Add other unsupported dtypes into the if statement
         # CuDF does not have support for apply operations with columns that are string or
         # categorical, so we have to default to pandas.
-        if self.dtypes.isin([np.dtype('O')]).any():
+        if self.dtypes.isin([np.dtype("O")]).any():
             return self.default_to_pandas(lambda df: df.applymap(func))
+
         def applymap_wrapper(df):
             for col in df.columns:
                 df[col] = df[col].applymap(func, out_dtype)
             return df
+
         return MapFunction.register(applymap_wrapper)(self)
 
     # Perform the duplicated api.
     def duplicated(self):
-        fused_frame = self._modin_frame._apply_full_axis(1, lambda x : x)
-        uniques = self._modin_frame._apply_full_axis(1, lambda x : x.drop_duplicates())
+        fused_frame = self._modin_frame._apply_full_axis(1, lambda x: x)
+        uniques = self._modin_frame._apply_full_axis(1, lambda x: x.drop_duplicates())
+
         def make_boolean_indexor(df, upstream_df):
             if not upstream_df:
                 n_upstream_vals = 0
@@ -969,13 +983,14 @@ class cuDFQueryCompiler(PandasQueryCompiler):
             indexor = cp.zeros(original_len, dtype=bool)
             indexor[indicies_of_uniques] = True
             return cudf.Series(indexor).to_frame()
+
         bool_indexor = fused_frame.trickle_down(make_boolean_indexor, uniques)
         return self.__constructor__(bool_indexor)
 
     def hash_values(self):
         new_modin_frame = self._modin_frame._apply_full_axis(
             1,
-            lambda x : cudf.Series(x.hash_columns()),
+            lambda x: cudf.Series(x.hash_columns()),
             dtypes="copy",
         )
         return self.__constructor__(new_modin_frame)
@@ -993,12 +1008,12 @@ class cuDFQueryCompiler(PandasQueryCompiler):
         """
         if kwargs.get("bins", None) is not None:
             new_modin_frame = self._modin_frame._apply_full_axis(
-                0, lambda df: df.iloc[:,0].value_counts(**kwargs)
+                0, lambda df: df.iloc[:, 0].value_counts(**kwargs)
             )
             return self.__constructor__(new_modin_frame)
 
         def map_func(df, *args, **kwargs):
-            return df.iloc[:,0].value_counts(**kwargs).to_frame()
+            return df.iloc[:, 0].value_counts(**kwargs).to_frame()
 
         def reduce_func(df, *args, **kwargs):
             normalize = kwargs.get("normalize", False)
@@ -1019,16 +1034,17 @@ class cuDFQueryCompiler(PandasQueryCompiler):
             except (ValueError):
                 result = df.copy().groupby(by=df.index, sort=False, dropna=dropna).sum()
 
-            result = result.iloc[:,0]
+            result = result.iloc[:, 0]
             if normalize:
                 result = result / result.sum()
 
             result = result.sort_values(ascending=ascending) if sort else result
             # TODO (kvu35): Figure out why PandasOnRayQueryCompiler sort the dataframe here
             return result
-        return MapReduceFunction.register(map_func, reduce_func, axis=0, preserve_index=False)(
-            self, **kwargs
-        )
+
+        return MapReduceFunction.register(
+            map_func, reduce_func, axis=0, preserve_index=False
+        )(self, **kwargs)
 
     def _resample_func(
         self, resample_args, func_name, new_columns=None, df_op=None, *args, **kwargs

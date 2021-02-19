@@ -35,7 +35,6 @@ class FileDispatcher:
             import cudf as pd
         else:
             raise NotImplementedError("FIXME")
-        
 
         if hasattr(query_compiler, "dtypes") and any(
             isinstance(t, pd.CategoricalDtype) for t in query_compiler.dtypes

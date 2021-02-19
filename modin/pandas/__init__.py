@@ -120,6 +120,7 @@ def _update_engine(publisher: Parameter):
             initialize_ray()
         if Backend.get() == "Cudf":
             from modin.engines.ray.cudf_on_ray.frame.gpu_manager import GPUManager
+
             for i in range(GpuCount.get()):
                 GPU_MANAGERS.append(GPUManager.remote(i))
     elif publisher.get() == "Dask":
