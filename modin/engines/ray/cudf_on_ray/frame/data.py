@@ -67,7 +67,7 @@ class cuDFOnRayFrame(BasePandasFrame):
                         cols=self.columns[
                             slice(cum_col_widths[j], cum_col_widths[j + 1])
                         ],
-                        axis=axis
+                        axis=axis,
                     )
                     for j in range(len(self._partitions[i]))
                 ]
@@ -82,7 +82,7 @@ class cuDFOnRayFrame(BasePandasFrame):
                         self._partitions[i][j].get_gpu_manager(),
                         keys[i][j],
                         self._partitions[i][j]._length_cache,
-                        self._partitions[i][j]._width_cache
+                        self._partitions[i][j]._width_cache,
                     )
                     for j in range(len(keys[i]))
                 ]
@@ -308,7 +308,6 @@ class cuDFOnRayFrame(BasePandasFrame):
     #             or len(row_internal_indices) > 0
     #         ]
     #     )
-
 
     #     num_rows,num_cols = new_partitions.shape[:-1]
     #     keys = list(new_partitions[:,:,0].flatten())
@@ -1708,7 +1707,6 @@ class cuDFOnRayFrame(BasePandasFrame):
     #     if self.index.equals(right_frame.index):
     #         new_frame = self._frame_mgr_cls.binary_operation(1, self._partitions, lambda l, r: op(l, r), right_frame._partitions)
     #         return self.__constructor__(new_frame, self.index, self.columns, None, None)
-
 
     #     ## TODO(lepl3): Find an optimal method to join different shape
     #     left_parts, right_parts, joined_index = self._copartition(
