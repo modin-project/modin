@@ -94,7 +94,7 @@ class ExperimentalPandasOnRayIO(PandasOnRayIO):
     read_csv_glob = type(
         "", (RayTask, PandasCSVGlobParser, CSVGlobDispatcher), build_args
     )._read
-    read_pickle = type(
+    read_pickle_distributed = type(
         "",
         (RayTask, PandasPickleExperimentalParser, PickleExperimentalDispatcher),
         build_args,
@@ -228,7 +228,7 @@ class ExperimentalPandasOnRayIO(PandasOnRayIO):
         return new_query_compiler
 
     @classmethod
-    def to_pickle(cls, qc, **kwargs):
+    def to_pickle_distributed(cls, qc, **kwargs):
         """
         When `*` in the filename all partitions are written to their own separate file.
 
