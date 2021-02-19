@@ -16,6 +16,7 @@ import pandas
 
 from modin.engines.base.io import BaseIO
 from ray.util.queue import Queue
+from ray import wait
 
 
 class RayIO(BaseIO):
@@ -53,11 +54,9 @@ class RayIO(BaseIO):
         compression = kwargs["compression"]
         if not isinstance(path_or_buf, str):
             return False
-
         # case when the pointer is placed at the beginning of the file.
         if "r" in kwargs["mode"] and "+" in kwargs["mode"]:
             return False
-
         # encodings with BOM don't support;
         # instead of one mark in result bytes we will have them by the number of partitions
         # so we should fallback in pandas for `utf-16`, `utf-32` with all aliases, in instance
@@ -67,13 +66,10 @@ class RayIO(BaseIO):
             if "u" in encoding or "utf" in encoding:
                 if "16" in encoding or "32" in encoding:
                     return False
-
         if compression is None or not compression == "infer":
             return False
-
         if any((path_or_buf.endswith(ext) for ext in [".gz", ".bz2", ".zip", ".xz"])):
             return False
-
         return True
 
     @classmethod
@@ -87,45 +83,60 @@ class RayIO(BaseIO):
 
         def func(df, **kw):
             if kw["partition_idx"] != 0:
+                # we need to create a new file only for first recording
+                # all the rest should be recorded in appending mode
                 if "w" in kwargs["mode"]:
                     kwargs["mode"] = kwargs["mode"].replace("w", "a")
+                # It is enough to write the header for the first partition
                 kwargs["header"] = False
 
+            # for parallelization purposes, each partition is written to an intermediate buffer
             path_or_buf = kwargs["path_or_buf"]
             is_binary = "b" in kwargs["mode"]
             if is_binary:
                 kwargs["path_or_buf"] = io.BytesIO()
             else:
                 kwargs["path_or_buf"] = io.StringIO()
-
             df.to_csv(**kwargs)
             content = kwargs["path_or_buf"].getvalue()
 
+            # each process waits for its turn to write to a file;
+            # in case of violation of the order of receiving messages from the queue,
+            # the message is placed back
             while True:
                 get_value = queue.get(block=True)
                 if get_value == kw["partition_idx"]:
                     break
                 queue.put(get_value)
 
+            # preparing to write data from the buffer to a file
             open_kwargs = {"mode": kwargs["mode"]}
             if not is_binary:
+                # in the buffer, newline symbols have already been translated
+                # for the current operating system;
+                # in the process of writing the buffer to the file,
+                # newline symbols must be left unchanged
                 open_kwargs["newline"] = ""
-
             with open(path_or_buf, **open_kwargs) as _f:
                 _f.write(content)
-
+            # signal that the next process can start writing to the file
             queue.put(get_value + 1)
 
-            return pandas.DataFrame()
+            # used for synchronization purposes
+            return 0
 
+        # signaling that the partition with id==0 can be written to the file
         queue.put(0)
-        result = qc._modin_frame.broadcast_apply_full_axis(
-            1,
-            func,
-            other=None,
-            new_index=[],
-            new_columns=[],
+        result = qc._modin_frame._frame_mgr_cls.map_axis_partitions(
+            axis=1,
+            partitions=qc._modin_frame._partitions,
+            map_func=func,
+            keep_partitioning=True,
+            lengths=None,
             enumerate_partitions=True,
         )
-        # blocking operation
-        result.to_pandas()
+
+        # pending completion
+        for rows in result:
+            for partition in rows:
+                wait([partition.oid])
