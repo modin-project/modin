@@ -653,3 +653,33 @@ class ExperimentalOmnisciOnNativeFactory(BaseFactory):
 @doc(_doc_factory_class, execution_name="experimental remote OmnisciOnNative")
 class ExperimentalOmnisciOnCloudnativeFactory(ExperimentalRemoteFactory):
     wrapped_factory = ExperimentalOmnisciOnNativeFactory
+
+
+@doc(_doc_factory_class, backend_name="experimental PandasOnScaleout")
+class ExperimentalPandasOnScaleoutFactory(BaseFactory):
+    @classmethod
+    @doc(
+        _doc_factory_prepare_method,
+        io_module_name="experimental ``PandasOnScaleoutIO``",
+    )
+    def prepare(cls):
+        from modin.experimental.core.execution.scaleout.implementations.pandas_on_scaleout.io import (
+            PandasOnScaleoutIO,
+        )
+
+        cls.io_cls = PandasOnScaleoutIO
+
+
+@doc(_doc_factory_class, backend_name="experimental PyarrowOnScaleout")
+class ExperimentalPyarrowOnScaleoutFactory(BaseFactory):
+    @classmethod
+    @doc(
+        _doc_factory_prepare_method,
+        io_module_name="experimental ``PyarrowOnScaleoutIO``",
+    )
+    def prepare(cls):
+        from modin.experimental.core.execution.scaleout.implementations.pyarrow_on_scaleout.io import (
+            PyarrowOnScaleoutIO,
+        )
+
+        cls.io_cls = PyarrowOnScaleoutIO

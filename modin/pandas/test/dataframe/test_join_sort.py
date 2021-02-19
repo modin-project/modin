@@ -406,21 +406,36 @@ def test_sort_multiindex(sort_remaining):
         pytest.param(
             "multiindex_level0",
             marks=pytest.mark.xfail_executions(
-                ["PandasOnPython", "PandasOnRay", "PandasOnDask"],
+                [
+                    "PandasOnPython",
+                    "PandasOnRay",
+                    "PandasOnDask",
+                    "ExperimentalPandasOnScaleout",
+                ],
                 reason="multiindex levels do not work",
             ),
         ),
         pytest.param(
             "multiindex_level1,multiindex_level0",
             marks=pytest.mark.xfail_executions(
-                ["PandasOnPython", "PandasOnRay", "PandasOnDask"],
+                [
+                    "PandasOnPython",
+                    "PandasOnRay",
+                    "PandasOnDask",
+                    "ExperimentalPandasOnScaleout",
+                ],
                 reason="multiindex levels do not work",
             ),
         ),
         pytest.param(
             "multiindex_level0,last,first,multiindex_level1",
             marks=pytest.mark.xfail_executions(
-                ["PandasOnPython", "PandasOnRay", "PandasOnDask"],
+                [
+                    "PandasOnPython",
+                    "PandasOnRay",
+                    "PandasOnDask",
+                    "ExperimentalPandasOnScaleout",
+                ],
                 reason="multiindex levels do not work",
             ),
         ),

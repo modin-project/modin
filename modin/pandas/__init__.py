@@ -136,6 +136,11 @@ def _update_engine(publisher: Parameter):
             from modin.core.execution.dask.common.utils import initialize_dask
 
             initialize_dask()
+    elif publisher.get() == "Scaleout":
+        if _is_first_update.get("Scaleout", True):
+            import scaleout
+
+            scaleout.init()
     elif publisher.get() == "Cloudray":
         from modin.experimental.cloud import get_connection
 

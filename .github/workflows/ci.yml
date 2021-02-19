@@ -486,6 +486,74 @@ jobs:
       - run: pytest modin/test/exchange/dataframe_protocol/pandas/test_protocol.py
       - uses: codecov/codecov-action@v2
 
+  test-all:
+    needs: [lint-commit, lint-flake8, lint-black, test-api, test-headers]
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash -l {0}
+    strategy:
+      matrix:
+        python-version: ["3.7", "3.8"]
+        scaleout-backend: ["Ray", "Dask", "MultiProcessing", "Python"]
+    env:
+      MODIN_ENGINE: "Scaleout"
+      SCALEOUT_BACKEND: ${{matrix.scaleout-backend}}
+    name: test-ubuntu (engine Scaleout ${{matrix.scaleout-backend}}, python ${{matrix.python-version}})
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 2
+      - uses: conda-incubator/setup-miniconda@v2
+        with:
+          activate-environment: modin
+          environment-file: environment-dev.yml
+          python-version: ${{matrix.python-version}}
+          channel-priority: strict
+          use-only-tar-bz2: true # IMPORTANT: This needs to be set for caching to work properly!
+      - name: Conda environment
+        run: |
+          conda info
+          conda list
+      - name: Install HDF5
+        run: sudo apt update && sudo apt install -y libhdf5-dev
+      - run: MODIN_BENCHMARK_MODE=True pytest modin/pandas/test/internals/test_benchmark_mode.py
+      - run: pytest -n 2 modin/experimental/xgboost/test/test_default.py
+      - run: pytest -n 2 modin/experimental/xgboost/test/test_xgboost.py
+        if: matrix.scaleout-backend == 'Ray'
+      - run: pytest -n 2 modin/pandas/test/dataframe/test_binary.py
+      - run: pytest -n 2 modin/pandas/test/dataframe/test_default.py
+      - run: pytest -n 2 modin/pandas/test/dataframe/test_indexing.py
+      - run: pytest -n 2 modin/pandas/test/dataframe/test_iter.py
+      - run: pytest -n 2 modin/pandas/test/dataframe/test_join_sort.py
+      - run: pytest -n 2 modin/pandas/test/dataframe/test_map_metadata.py
+      - run: pytest -n 2 modin/pandas/test/dataframe/test_reduction.py
+      - run: pytest -n 2 modin/pandas/test/dataframe/test_udf.py
+      - run: pytest -n 2 modin/pandas/test/dataframe/test_window.py
+      - run: pytest -n 2 modin/pandas/test/dataframe/test_pickle.py
+      - run: python -m pytest -n 2 modin/pandas/test/test_series.py
+      - run: python -m pytest -n 2 modin/pandas/test/test_rolling.py
+      - run: python -m pytest -n 2 modin/pandas/test/test_concat.py
+        if: matrix.scaleout-backend == 'Python'
+      - run: python -m pytest modin/pandas/test/test_concat.py # Ray and Dask versions fails with -n 2
+        if: matrix.scaleout-backend != 'Python'
+      - run: python -m pytest -n 2 modin/pandas/test/test_groupby.py
+      - run: python -m pytest -n 2 modin/pandas/test/test_reshape.py
+      - run: python -m pytest -n 2 modin/pandas/test/test_general.py
+      - run: python -m pytest modin/pandas/test/test_io.py --verbose
+      - run: python -m pytest modin/experimental/pandas/test/test_io_exp.py
+      - run: pip install "dfsql>=0.4.2" && pytest modin/experimental/sql/test/test_sql.py
+      - run: |
+          curl -o codecov https://codecov.io/bash
+          VERSION=$(grep -o 'VERSION=\"[0-9\.]*\"' codecov | cut -d'"' -f2);
+          curl -o SHA512SUM "https://raw.githubusercontent.com/codecov/codecov-bash/${VERSION}/SHA512SUM"
+          if sha512sum -c --ignore-missing --status SHA512SUM; then
+              bash ./codecov
+          else
+              echo 'CORRUPTED CODECOV SCRIPT!!!'
+              exit 10
+          fi
+
   test-experimental:
     needs: [lint-flake8, lint-black, test-api, test-headers]
     runs-on: ubuntu-latest
