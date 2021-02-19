@@ -58,6 +58,7 @@ class GPUManager(object):
         result = func(df1, df2, **kwargs)
         return self.store_new_df(result)
 
+    # test commit
     def reduce(self, first, others, func, axis=0, **kwargs):
         join_func = cudf.DataFrame.join if not axis else lambda x, y: cudf.concat([x,y])
         if not isinstance(others[0], int):
