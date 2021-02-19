@@ -559,6 +559,7 @@ class TimeProperties:
         return self.df.index
 
     def time_dtypes(self, shape):
-        # trigger _compute_dtypes func
-        self.df._query_compiler._modin_frame._dtypes = None
+        if ASV_USE_IMPL == "modin":
+            # trigger _compute_dtypes func
+            self.df._query_compiler._modin_frame._dtypes = None
         return self.df.dtypes
