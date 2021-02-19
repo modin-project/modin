@@ -33,6 +33,6 @@ dependencies:
   - cloudpickle==1.4.1
   - boto3
   - asv
-  - ray-core >=1.0.0
+  - ray-core >=1.2.0
   - pip:
       - xgboost >=1.3
