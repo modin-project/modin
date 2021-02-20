@@ -506,6 +506,17 @@ class TimeMultiIndexing:
         )
 
 
+class TimeResetIndex:
+    param_names = ["shape", "drop"]
+    params = [UNARY_OP_DATA_SIZE[ASV_DATASET_SIZE], [False, True]]
+
+    def setup(self, shape, drop):
+        self.df = generate_dataframe(ASV_USE_IMPL, "int", *shape, RAND_LOW, RAND_HIGH)
+
+    def time_reset_index(self, shape, drop):
+        execute(self.df.reset_index(drop=drop))
+
+
 class TimeAstype:
     param_names = ["shape", "dtype", "astype_ncolumns"]
     params = [
