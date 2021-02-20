@@ -53,9 +53,9 @@ class TimeReadCsvSkiprows(BaseReadCsv):
         UNARY_OP_DATA_SIZE[ASV_DATASET_SIZE],
         [
             None,
-            "half_rows",
-            "sequence",
-            "sequence_step2",
+            "lambda_even_rows",
+            "range_uniform",
+            "range_step2",
         ],
     ]
 
@@ -64,11 +64,11 @@ class TimeReadCsvSkiprows(BaseReadCsv):
 
         if skiprows:
             skiprows_dict = {
-                "half_rows": lambda x: x % 2,
-                "sequence": np.arange(
+                "lambda_even_rows": lambda x: x % 2,
+                "range_uniform": np.arange(
                     1, UNARY_OP_DATA_SIZE[ASV_DATASET_SIZE][0][0] // 10
                 ),
-                "sequence_step2": np.arange(
+                "range_step2": np.arange(
                     1, UNARY_OP_DATA_SIZE[ASV_DATASET_SIZE][0][0], 2
                 ),
             }
