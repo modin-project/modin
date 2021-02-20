@@ -39,8 +39,8 @@ from .utils import (
 
 class BaseTimeGroupBy:
     def setup(self, shape, ngroups=5, groupby_ncols=1):
-        if callable(ngroups):
-            ngroups = ngroups(shape[0])
+        if isinstance(ngroups, str) and ngroups == "huge_amount_groups":
+            ngroups = min(shape[0] // 2, 5000)
         self.df, self.groupby_columns = generate_dataframe(
             ASV_USE_IMPL,
             "int",

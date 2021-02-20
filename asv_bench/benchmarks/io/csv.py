@@ -53,15 +53,32 @@ class TimeReadCsvSkiprows(BaseReadCsv):
         UNARY_OP_DATA_SIZE[ASV_DATASET_SIZE],
         [
             None,
-            lambda x: x % 2,
-            np.arange(1, UNARY_OP_DATA_SIZE[ASV_DATASET_SIZE][0][0] // 10),
-            np.arange(1, UNARY_OP_DATA_SIZE[ASV_DATASET_SIZE][0][0], 2),
+            "half_rows",
+            "sequence",
+            "sequence_step2",
         ],
     ]
+
+    def setup(self, test_filenames, shape, skiprows):
+        super().setup(test_filenames, shape, skiprows)
+
+        if skiprows:
+            skiprows_dict = {
+                "half_rows": lambda x: x % 2,
+                "sequence": np.arange(
+                    1, UNARY_OP_DATA_SIZE[ASV_DATASET_SIZE][0][0] // 10
+                ),
+                "sequence_step2": np.arange(
+                    1, UNARY_OP_DATA_SIZE[ASV_DATASET_SIZE][0][0], 2
+                ),
+            }
+            self.skiprows = skiprows_dict[skiprows]
+        else:
+            self.skiprows = None
 
     def time_skiprows(self, test_filenames, shape, skiprows):
         execute(
             IMPL[ASV_USE_IMPL].read_csv(
-                test_filenames[self.shape_id], skiprows=skiprows
+                test_filenames[self.shape_id], skiprows=self.skiprows
             )
         )
