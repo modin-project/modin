@@ -119,7 +119,7 @@ class GPUManager(object):
                 instead of three.
             func : func
                 A function that we will use/apply on the two other params (first, other).
-            axis : ?
+            axis : ? (what type)
                 An axis corresponding to a particular row/column of the dataFrame.
             **kwargs: dict
                 An iterable object that corresponds to a dict, if i'm not mistaken.  
