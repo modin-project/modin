@@ -351,7 +351,7 @@ class PandasExcelParser(PandasParser):
         # In excel if you create a row with only a border (no values), this parser will
         # interpret that as a row of NaN values. Pandas discards these values, so we
         # also must discard these values.
-        pandas_df = parser.read()
+        pandas_df = parser.read().dropna(how="all")
         # Since we know the number of rows that occur before this partition, we can
         # correctly assign the index in cases of RangeIndex. If it is not a RangeIndex,
         # the index is already correct because it came from the data.
