@@ -24,7 +24,10 @@ bar_lock = threading.Lock()
 def call_progress_bar(result_parts, line_no):
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
-        from tqdm.autonotebook import tqdm as tqdm_notebook
+        try:
+            from tqdm.autonotebook import tqdm as tqdm_notebook
+        except ImportError:
+            raise ImportError("Please pip install tqdm to use the progress bar")
         from IPython import get_ipython
 
     try:

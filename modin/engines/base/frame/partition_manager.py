@@ -580,9 +580,6 @@ class BaseFrameManager(ABC):
         num_splits = NPartitions.get()
         put_func = cls._partition_class.put
         row_chunksize, col_chunksize = compute_chunksize(df, num_splits)
-        rows = max(1, round(len(df) / row_chunksize))
-        cols = max(1, round(len(df.columns) / col_chunksize))
-        update_count = rows * cols
 
         bar_format = (
             "{l_bar}{bar}{r_bar}"
@@ -592,8 +589,14 @@ class BaseFrameManager(ABC):
         if ProgressBar.get():
             with warnings.catch_warnings():
                 warnings.simplefilter("ignore")
-                from tqdm.autonotebook import tqdm as tqdm_notebook
+                try:
+                    from tqdm.autonotebook import tqdm as tqdm_notebook
+                except ImportError:
+                    raise ImportError("Please pip install tqdm to use the progress bar")
 
+            rows = max(1, round(len(df) / row_chunksize))
+            cols = max(1, round(len(df.columns) / col_chunksize))
+            update_count = rows * cols
             pbar = tqdm_notebook(
                 total=round(update_count),
                 desc="Distributing Dataframe",
