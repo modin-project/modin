@@ -29,19 +29,22 @@ class FileDispatcher:
         query_compiler = cls._read(*args, **kwargs)
         # TODO (devin-petersohn): Make this section more general for non-pandas kernel
         # implementations.
-        if Backend.get() != "Pandas":
+        if Backend.get() == "Pandas" or Backend.get() != "Cudf":
+            import pandas as pd
+        elif Backend.get() == "Cudf":
+            import cudf as pd
+        else:
             raise NotImplementedError("FIXME")
-        import pandas
 
         if hasattr(query_compiler, "dtypes") and any(
-            isinstance(t, pandas.CategoricalDtype) for t in query_compiler.dtypes
+            isinstance(t, pd.CategoricalDtype) for t in query_compiler.dtypes
         ):
             dtypes = query_compiler.dtypes
             return query_compiler.astype(
                 {
                     t: dtypes[t]
                     for t in dtypes.index
-                    if isinstance(dtypes[t], pandas.CategoricalDtype)
+                    if isinstance(dtypes[t], pd.CategoricalDtype)
                 }
             )
         return query_compiler

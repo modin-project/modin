@@ -14,7 +14,6 @@
 import ray
 import cudf
 import pandas
-from .partition import cuDFOnRayFramePartition
 
 
 @ray.remote(num_gpus=1)
@@ -24,6 +23,7 @@ class GPUManager(object):
         self.cudf_dataframe_dict = {}
         self.gpu_id = gpu_id
 
+    ## TODO(#45): Merge apply and apply_non_persistent
     def apply_non_persistent(self, first, other, func, **kwargs):
         df1 = self.cudf_dataframe_dict[first]
         df2 = self.cudf_dataframe_dict[other] if other else None
@@ -35,8 +35,11 @@ class GPUManager(object):
 
     def apply(self, first, other, func, **kwargs):
         df1 = self.cudf_dataframe_dict[first]
+        if not other:
+            result = func(df1, **kwargs)
+            return self.store_new_df(result)
         if not isinstance(other, int):
-            assert(isinstance(other, ray.ObjectRef))
+            assert isinstance(other, ray.ObjectRef)
             df2 = ray.get(other)
         else:
             df2 = self.cudf_dataframe_dict[other]
@@ -44,14 +47,16 @@ class GPUManager(object):
         return self.store_new_df(result)
 
     def reduce(self, first, others, func, axis=0, **kwargs):
-        join_func = cudf.DataFrame.join if not axis else lambda x, y: cudf.concat([x,y])
+        join_func = (
+            cudf.DataFrame.join if not axis else lambda x, y: cudf.concat([x, y])
+        )
         if not isinstance(others[0], int):
             other_dfs = ray.get(others)
         else:
             other_dfs = [self.cudf_dataframe_dict[i] for i in others]
         df1 = self.cudf_dataframe_dict[first]
-        df2 = oids[0] if len(oids) >= 1 else None
-        for i in range(1, len(oids)):
+        df2 = others[0] if len(others) >= 1 else None
+        for i in range(1, len(others)):
             df2 = join_func(df2, other_dfs[i])
         result = func(df1, df2, **kwargs)
         return self.store_new_df(result)

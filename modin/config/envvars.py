@@ -94,7 +94,7 @@ class Backend(EnvironmentVariable, type=str):
 
     varname = "MODIN_BACKEND"
     default = "Pandas"
-    choices = ("Pandas", "OmniSci", "Pyarrow", "cuDF")
+    choices = ("Pandas", "OmniSci", "Pyarrow", "Cudf")
 
 
 class IsExperimental(EnvironmentVariable, type=bool):
@@ -160,7 +160,7 @@ class NPartitions(EnvironmentVariable, type=int):
 
     @classmethod
     def _get_default(cls):
-        if Backend.get() == "cuDF":
+        if Backend.get() == "Cudf":
             return GpuCount.get()
         else:
             return CpuCount.get()
