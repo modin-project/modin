@@ -41,6 +41,7 @@ from .utils import (
     create_test_dfs,
     COMP_TO_EXT,
     teardown_test_files,
+    generate_dataframe,
 )
 
 from modin.config import Engine, Backend, IsExperimental
@@ -948,6 +949,26 @@ class TestCsv:
             # read_csv kwargs
             filepath_or_buffer="modin/pandas/test/data/issue_2074.csv",
             **kwargs,
+        )
+
+    @pytest.mark.parametrize("header", [False, True])
+    @pytest.mark.parametrize("mode", ["w", "wb+"])
+    def test_to_csv(self, request, header, mode):
+        if request.config.getoption("--simulate-cloud").lower() != "off":
+            pytest.skip(
+                "The reason of tests fail in `cloud` mode is unknown for now - issue #2340"
+            )
+
+        pandas_df = generate_dataframe()
+        modin_df = pd.DataFrame(pandas_df)
+
+        eval_to_file(
+            modin_obj=modin_df,
+            pandas_obj=pandas_df,
+            fn="to_csv",
+            extension="csv",
+            header=header,
+            mode=mode,
         )
 
     def test_dataframe_to_csv(self, request):

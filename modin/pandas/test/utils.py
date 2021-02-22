@@ -1086,6 +1086,27 @@ def dummy_decorator():
     return wrapper
 
 
+def generate_dataframe(row_size=NROWS, additional_col_values=None):
+    dates = pandas.date_range("2000", freq="h", periods=row_size)
+    data = {
+        "col1": np.arange(row_size) * 10,
+        "col2": [str(x.date()) for x in dates],
+        "col3": np.arange(row_size) * 10,
+        "col4": [str(x.time()) for x in dates],
+        "col5": [get_random_string() for _ in range(row_size)],
+        "col6": random_state.uniform(low=0.0, high=10000.0, size=row_size),
+    }
+
+    if additional_col_values is not None:
+        assert isinstance(additional_col_values, (list, tuple))
+        data.update(
+            {
+                "col7": random_state.choice(additional_col_values, size=row_size),
+            }
+        )
+    return pandas.DataFrame(data)
+
+
 def _make_csv_file(filenames):
     def _csv_file_maker(
         filename,
@@ -1111,26 +1132,7 @@ def _make_csv_file(filenames):
         if os.path.exists(filename) and not force:
             pass
         else:
-            dates = pandas.date_range("2000", freq="h", periods=row_size)
-            data = {
-                "col1": np.arange(row_size) * 10,
-                "col2": [str(x.date()) for x in dates],
-                "col3": np.arange(row_size) * 10,
-                "col4": [str(x.time()) for x in dates],
-                "col5": [get_random_string() for _ in range(row_size)],
-                "col6": random_state.uniform(low=0.0, high=10000.0, size=row_size),
-            }
-
-            if additional_col_values is not None:
-                assert isinstance(additional_col_values, (list, tuple))
-                data.update(
-                    {
-                        "col7": random_state.choice(
-                            additional_col_values, size=row_size
-                        ),
-                    }
-                )
-            df = pandas.DataFrame(data)
+            df = generate_dataframe(row_size, additional_col_values)
             if remove_randomness:
                 df = df[["col1", "col2", "col3", "col4"]]
             if add_nan_lines:
