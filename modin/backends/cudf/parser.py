@@ -20,7 +20,12 @@ from pandas.core.dtypes.concat import union_categoricals
 from pandas.io.common import infer_compression
 import warnings
 
+<<<<<<< HEAD
 from modin.engines.base.io import FileReader
+=======
+from modin.pandas import GPU_MANAGERS
+from modin.engines.base.io import FileDispatcher
+>>>>>>> modin-gpu-baseline
 from modin.data_management.utils import split_result_of_axis_func_pandas
 from modin.error_message import ErrorMessage
 
@@ -56,6 +61,10 @@ def find_common_type_cat(types):
     else:
         return find_common_type(types)
 
+<<<<<<< HEAD
+=======
+
+>>>>>>> modin-gpu-baseline
 class cuDFParser(object):
     @classmethod
     def get_dtypes(cls, dtypes_ids):
@@ -72,8 +81,15 @@ class cuDFParser(object):
         pandas_frame = cls.parse(fname, **kwargs)
         if isinstance(pandas_frame, pandas.io.parsers.TextFileReader):
             pd_read = pandas_frame.read
+<<<<<<< HEAD
             pandas_frame.read = lambda *args, **kwargs: cls.query_compiler_cls.from_pandas(
                 pd_read(*args, **kwargs), cls.frame_cls
+=======
+            pandas_frame.read = (
+                lambda *args, **kwargs: cls.query_compiler_cls.from_pandas(
+                    pd_read(*args, **kwargs), cls.frame_cls
+                )
+>>>>>>> modin-gpu-baseline
             )
             return pandas_frame
         elif isinstance(pandas_frame, (OrderedDict, dict)):
@@ -94,13 +110,23 @@ class cuDFCSVParser(cuDFParser):
         start = kwargs.pop("start", None)
         end = kwargs.pop("end", None)
         index_col = kwargs.get("index_col", None)
+<<<<<<< HEAD
         assigned_gpus = kwargs.pop("assigned_gpus", None)
+=======
+        gpu_selected = kwargs.pop("gpu", 0)
+>>>>>>> modin-gpu-baseline
 
         if start is not None and end is not None:
             put_func = cls.frame_partition_cls.put
 
             # pop "compression" from kwargs because bio is uncompressed
+<<<<<<< HEAD
             bio = FileReader.file_open(fname, "rb", kwargs.pop("compression", "infer"))
+=======
+            bio = FileDispatcher.file_open(
+                fname, "rb", kwargs.pop("compression", "infer")
+            )
+>>>>>>> modin-gpu-baseline
             if kwargs.get("encoding", None) is not None:
                 header = b"" + bio.readline()
             else:
@@ -112,14 +138,28 @@ class cuDFCSVParser(cuDFParser):
         else:
             # This only happens when we are reading with only one worker (Default)
             pandas_df = pandas.read_csv(fname, **kwargs)
+<<<<<<< HEAD
             num_splits = 1 # force num_splits to be 1 here because we don't want it partitioning
+=======
+            num_splits = (
+                1  # force num_splits to be 1 here because we don't want it partitioning
+            )
+>>>>>>> modin-gpu-baseline
         if index_col is not None:
             index = pandas_df.index
         else:
             index = len(pandas_df)
         partition_dfs = _split_result_for_readers(1, num_splits, pandas_df)
+<<<<<<< HEAD
         keys = [
                 put_func(gpu_manager, partition_df)
                 for gpu_manager, partition_df in zip(assigned_gpus, partition_dfs)
         ]
         return keys + [index, pandas_df.dtypes]
+=======
+        key = [
+            put_func(GPU_MANAGERS[gpu_selected], partition_df)
+            for partition_df in partition_dfs
+        ]
+        return key + [index, pandas_df.dtypes]
+>>>>>>> modin-gpu-baseline

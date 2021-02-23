@@ -26,7 +26,8 @@ class GPUManager(object):
         self.key = 0
         self.cudf_dataframe_dict = {}  # holds cudf DataFrames or cudf Series.
         self.gpu_id = gpu_id
-
+   
+    ## TODO(#45): Merge apply and apply_non_persistent
     def apply_non_persistent(self, first, other, func, **kwargs):
         """ 
         Given two keys, apply a function using the values associated with the keys as params.
@@ -55,6 +56,7 @@ class GPUManager(object):
         else:
             result = func(df1, df2, **kwargs)
         return result
+        
 
     def apply(self, first, other, func, **kwargs):
         """ 
@@ -82,14 +84,16 @@ class GPUManager(object):
                 the new key of the new dataFrame stored in cudf_dataframe_dict.
         """
         df1 = self.cudf_dataframe_dict[first]
+        if not other:
+            result = func(df1, **kwargs)
+            return self.store_new_df(result)
         if not isinstance(other, int):
-            assert(isinstance(other, ray.ObjectRef))
+            assert isinstance(other, ray.ObjectRef)
             df2 = ray.get(other)
         else:
             df2 = self.cudf_dataframe_dict[other]
         result = func(df1, df2, **kwargs)
         return self.store_new_df(result)
-
 
     # reduce
     # we join via cudf.DataFrame join if the axis isn't real/doesn't exist,
@@ -128,14 +132,16 @@ class GPUManager(object):
             self.store_new_df(result) : int
                 the new key of the new dataFrame stored in cudf_dataframe_dict.
         """
-        join_func = cudf.DataFrame.join if not axis else lambda x, y: cudf.concat([x,y])
+        join_func = (
+            cudf.DataFrame.join if not axis else lambda x, y: cudf.concat([x, y])
+        )
         if not isinstance(others[0], int):
             other_dfs = ray.get(others)
         else:
             other_dfs = [self.cudf_dataframe_dict[i] for i in others]
         df1 = self.cudf_dataframe_dict[first]
-        df2 = oids[0] if len(oids) >= 1 else None
-        for i in range(1, len(oids)):
+        df2 = others[0] if len(others) >= 1 else None
+        for i in range(1, len(others)):
             df2 = join_func(df2, other_dfs[i])
         result = func(df1, df2, **kwargs)
         return self.store_new_df(result)
@@ -163,7 +169,6 @@ class GPUManager(object):
         self.key += 1
         self.cudf_dataframe_dict[self.key] = df
         return self.key
-
     
     def free(self, key):
         """

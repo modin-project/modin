@@ -13,26 +13,19 @@
 
 import numpy as np
 import pandas
-import cudf
 
 from modin.error_message import ErrorMessage
-from modin.data_management.utils import compute_chunksize
 
 from pandas.api.types import union_categoricals
-
-import numpy as np
 
 from .axis_partition import (
     cuDFOnRayFrameColumnPartition,
     cuDFOnRayFrameRowPartition,
 )
 from .partition import cuDFOnRayFramePartition
-from modin.error_message import ErrorMessage
 
 import ray
 
-
-GPU_MANAGERS = []
 
 @ray.remote(num_cpus=1, num_gpus=0.5)
 def func(df, other, apply_func):
@@ -51,13 +44,16 @@ class cuDFOnRayFrameManager(object):
 
     @classmethod
     def _compute_num_row_partitions(cls):
-        from modin.pandas import DEFAULT_NUM_ROW_PARTITIONS
-        return DEFAULT_NUM_ROW_PARTITIONS
+        from modin.config import NPartitions
+
+        return NPartitions.get()
 
     @classmethod
     def _compute_num_col_partitions(cls):
-        from modin.pandas import DEFAULT_NUM_COL_PARTITIONS
-        return DEFAULT_NUM_COL_PARTITIONS
+        # How are column partition defined?
+        from modin.config import NPartitions
+
+        return NPartitions.get()
 
     @classmethod
     def preprocess_func(cls, map_func):
@@ -72,15 +68,17 @@ class cuDFOnRayFrameManager(object):
         ErrorMessage.catch_bugs_and_request_email(not callable(index_func))
         func = cls.preprocess_func(index_func)
         if axis == 0:
-            new_idx = [
-                idx.apply_result_not_dataframe(func)
-                for idx in partitions.T[0]
-            ] if len(partitions.T) else []
+            new_idx = (
+                [idx.apply_result_not_dataframe(func) for idx in partitions.T[0]]
+                if len(partitions.T)
+                else []
+            )
         else:
-            new_idx = [
-                idx.apply_result_not_dataframe(func)
-                for idx in partitions[0]
-            ] if len(partitions) else []
+            new_idx = (
+                [idx.apply_result_not_dataframe(func) for idx in partitions[0]]
+                if len(partitions)
+                else []
+            )
 
         new_idx = ray.get(new_idx)
         returned_idx = new_idx[0].append(new_idx[1:]) if len(new_idx) else new_idx
@@ -89,12 +87,7 @@ class cuDFOnRayFrameManager(object):
     # FIXME (kvu35): Enable work load balancing
     @classmethod
     def map_axis_partitions(
-        cls,
-        axis,
-        partitions,
-        map_func,
-        keep_partitioning=True,
-        persistent=False
+        cls, axis, partitions, map_func, keep_partitioning=True, persistent=False
     ):
         # if keep_partitioning:
         #     num_splits = len(partitions) if axis == 0 else len(partitions.T)
@@ -159,8 +152,8 @@ class cuDFOnRayFrameManager(object):
             num_rows = cls._compute_num_row_partitions()
             row_size = len(df.index)
             col_size = len(df.columns)
-            col_chunksize = int(np.ceil(col_size/num_cols))
-            row_chunksize = int(np.ceil(row_size/num_rows))
+            col_chunksize = int(np.ceil(col_size / num_cols))
+            row_chunksize = int(np.ceil(row_size / num_rows))
         else:
             # For empty dataframes, we just need a single partition that is placed in any GPU
             row_size = max(1, len(df.index))
@@ -176,7 +169,7 @@ class cuDFOnRayFrameManager(object):
                 keys.append(
                     put_func(
                         gpu_managers[gpu_idx],
-                        df.iloc[i: i + row_chunksize, j: j + col_chunksize]
+                        df.iloc[i : i + row_chunksize, j : j + col_chunksize],
                     )
                 )
                 gpu_idx = gpu_idx + 1
@@ -206,17 +199,19 @@ class cuDFOnRayFrameManager(object):
 
     @classmethod
     def to_pandas(cls, partitions):
-        pandas_partitions = [[ray.get(partition.to_pandas()) for partition in row] for row in partitions]
+        pandas_partitions = [
+            [ray.get(partition.to_pandas()) for partition in row] for row in partitions
+        ]
         if all(
-                isinstance(partition, pandas.Series)
-                for row in pandas_partitions
-                for partition in row
+            isinstance(partition, pandas.Series)
+            for row in pandas_partitions
+            for partition in row
         ):
             axis = 0
         elif all(
-                isinstance(partition, pandas.DataFrame)
-                for row in pandas_partitions
-                for partition in row
+            isinstance(partition, pandas.DataFrame)
+            for row in pandas_partitions
+            for partition in row
         ):
             axis = 1
         else:
@@ -242,8 +237,7 @@ class cuDFOnRayFrameManager(object):
         ]
 
         parts = [
-            [put_func(part) for part in row_of_parts]
-            for row_of_parts in cudf_parts
+            [put_func(part) for part in row_of_parts] for row_of_parts in cudf_parts
         ]
 
         return parts
@@ -258,13 +252,16 @@ class cuDFOnRayFrameManager(object):
         Returns:
             A new BaseFrameManager object, the type of object that called this.
         """
+        # TOOD(kvu35): This is never used.
         preprocessed_map_func = cls.preprocess_func(map_func)
         keys_and_gpus = np.array(
             [
                 [
                     [
-                        part.get_gpu_manager().apply.remote(part.key, map_func),
-                        part.get_gpu_manager()
+                        part.get_gpu_manager().apply.remote(
+                            part.key, preprocessed_map_func
+                        ),
+                        part.get_gpu_manager(),
                     ]
                     for part in row_of_parts
                 ]
@@ -272,16 +269,15 @@ class cuDFOnRayFrameManager(object):
             ]
         )
         num_rows, num_cols = keys_and_gpus.shape[:-1]
-        keys = ray.get(list(keys_and_gpus[:,:,0].flatten()))
-        gpu_managers = keys_and_gpus[:,:,1].flatten()
-        return np.array([
-            [cuDFOnRayFramePartition(gpu_manager, key)]
-            for gpu_manager, key in zip(gpu_managers, keys)
-        ], dtype=object).reshape(num_rows, num_cols)
-
-    @classmethod
-    def preprocess_func(cls, map_func):
-        return cls._partition_class.preprocess_func(map_func)
+        keys = ray.get(list(keys_and_gpus[:, :, 0].flatten()))
+        gpu_managers = keys_and_gpus[:, :, 1].flatten()
+        return np.array(
+            [
+                [cuDFOnRayFramePartition(gpu_manager, key)]
+                for gpu_manager, key in zip(gpu_managers, keys)
+            ],
+            dtype=object,
+        ).reshape(num_rows, num_cols)
 
     # END Abstract Methods
 
@@ -369,25 +365,11 @@ class cuDFOnRayFrameManager(object):
 
     @classmethod
     def to_numpy(cls, partitions):
-        oids = np.array(
-            [
-                [
-                    block.to_numpy()
-                    for block in row
-                ]
-                for row in partitions
-            ]
-        )
+        oids = np.array([[block.to_numpy() for block in row] for row in partitions])
         num_rows, num_cols = oids.shape
         blocks = ray.get(list(oids.flatten()))
         return np.block(
-            [
-                [
-                    blocks[i * j + j]
-                    for j in range(num_cols)
-                ]
-                for i in range(num_rows)
-            ]
+            [[blocks[i * j + j] for j in range(num_cols)] for i in range(num_rows)]
         )
 
     @classmethod
@@ -423,11 +405,9 @@ class cuDFOnRayFrameManager(object):
                 for obj in partitions
             ]
         )
-        keys = list(keys_and_gpus[:,0].flatten())
-        gpus = list(keys_and_gpus[:,1].flatten())
-        return [
-            cls._partition_class(gpu, key) for gpu, key in zip(gpus, keys)
-        ]
+        keys = list(keys_and_gpus[:, 0].flatten())
+        gpus = list(keys_and_gpus[:, 1].flatten())
+        return [cls._partition_class(gpu, key) for gpu, key in zip(gpus, keys)]
 
     @classmethod
     def apply_func_to_select_indices(
@@ -706,18 +686,21 @@ class cuDFOnRayFrameManager(object):
             result_gpu_manager = left.get_gpu_manager()
             if result_gpu_manager == right.get_gpu_manager():
                 result_key = result_gpu_manager.apply_with_two_keys.remote(
-                        left.get_key(),
-                        right.get_key(),
-                        func)
+                    left.get_key(), right.get_key(), func
+                )
                 return result_gpu_manager, result_key
             else:
-                raise Exception("The underlying partition on this df not in the same device")
-
+                raise Exception(
+                    "The underlying partition on this df not in the same device"
+                )
 
         result = [
-            perfom_binary_function(left_flat[i], right_flat[i], func) for i in range(len(left_flat))
+            perfom_binary_function(left_flat[i], right_flat[i], func)
+            for i in range(len(left_flat))
         ]
-        result = np.array([*map(lambda x: [cuDFOnRayFramePartition(x[0], ray.get(x[1]))], result)])
+        result = np.array(
+            [*map(lambda x: [cuDFOnRayFramePartition(x[0], ray.get(x[1]))], result)]
+        )
         return result
 
     @classmethod
@@ -744,8 +727,8 @@ class cuDFOnRayFrameManager(object):
             A new cuDFOnRayFramePartition object, the type of object that called this.
         """
         ## MUST BE ROW PARTITION OR BROADCAST DATA
-        #TODO(lepl3): Implement other join functions
-        #TODO(lepl3): Load Balancing
+        # TODO(lepl3): Implement other join functions
+        # TODO(lepl3): Load Balancing
         func = cls.preprocess_func(func)
         left_flatten = left.flatten()
         right_flatten = right.flatten()
@@ -759,17 +742,22 @@ class cuDFOnRayFrameManager(object):
                     right_ids.append(right_partitition.get_key())
                 else:
                     right_ids.append(right_partitition.get_object_id())
-            new_partitions.append([left_gpu_manager, left_gpu_manager.brute_force_merge.remote(left_key, right_ids, func)])
-        results = np.array([cuDFOnRayFramePartition(x[0], ray.get(x[1])) for x in new_partitions]).reshape(left.shape)
+            new_partitions.append(
+                [
+                    left_gpu_manager,
+                    left_gpu_manager.brute_force_merge.remote(
+                        left_key, right_ids, func
+                    ),
+                ]
+            )
+        results = np.array(
+            [cuDFOnRayFramePartition(x[0], ray.get(x[1])) for x in new_partitions]
+        ).reshape(left.shape)
         return results
 
     @classmethod
     def column_partitions(cls, partitions):
         return [cls._column_partitions_class(col) for col in partitions.T]
-
-    @classmethod
-    def row_partitions(cls, partitions):
-        return [cls._row_partition_class(row) for row in partitions]
 
     @classmethod
     def copy(cls, partitions):
@@ -789,14 +777,15 @@ class cuDFOnRayFrameManager(object):
         cudf_dataframe_object_ids = [
             up[0].get_object_id() for up in upstream_partitions
         ]
-        oids = [cudf_dataframe_object_ids[:i] for i in range(len(cudf_dataframe_object_ids))]
+        oids = [
+            cudf_dataframe_object_ids[:i] for i in range(len(cudf_dataframe_object_ids))
+        ]
         keys = [
             gpu.apply_with_key_oid_list.remote(key, oids[i], func, join_type="concat")
             for i, (gpu, key) in enumerate(zip(gpu_managers, keys))
         ]
         keys = ray.get(keys)
         new_partitions = [
-            cls._partition_class(gpu, key)
-            for gpu, key in zip(gpu_managers, keys)
+            cls._partition_class(gpu, key) for gpu, key in zip(gpu_managers, keys)
         ]
         return new_partitions

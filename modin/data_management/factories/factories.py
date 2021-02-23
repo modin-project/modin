@@ -155,6 +155,17 @@ class BaseFactory(object):
         return cls.io_cls.to_pickle(*args, **kwargs)
 
 
+class CudfOnRayFactory(BaseFactory):
+    @classmethod
+    def prepare(cls):
+        """
+        Fills in .io_cls class attribute lazily
+        """
+        from modin.engines.ray.cudf_on_ray.io import cuDFOnRayIO
+
+        cls.io_cls = cuDFOnRayIO
+
+
 class PandasOnRayFactory(BaseFactory):
     @classmethod
     def prepare(cls):
