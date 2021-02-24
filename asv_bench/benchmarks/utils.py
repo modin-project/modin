@@ -82,6 +82,15 @@ IMPL = {
 }
 
 
+def translator_groupby_ngroups(groupby_ngroups, shape):
+    if ASV_DATASET_SIZE == "Big":
+        if groupby_ngroups == "huge_amount_groups":
+            return min(shape[0] // 2, 5000)
+        return groupby_ngroups
+    else:
+        return groupby_ngroups
+
+
 class weakdict(dict):
     __slots__ = ("__weakref__",)
 
