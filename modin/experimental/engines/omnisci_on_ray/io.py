@@ -175,7 +175,7 @@ class OmnisciOnRayIO(RayIO):
                     "Specified a delimiter and delim_whitespace=True; you can only specify one."
                 )
 
-            usecols_md = cls._define_usecols(mykwargs)
+            usecols_md = cls._prepare_pyarrow_usecols(mykwargs)
 
             po = ParseOptions(
                 delimiter="\\s+" if delim_whitespace else delimiter,
@@ -236,7 +236,7 @@ class OmnisciOnRayIO(RayIO):
             return pa.from_numpy_dtype(tname)
 
     @classmethod
-    def _define_usecols(cls, read_csv_kwargs):
+    def _prepare_pyarrow_usecols(cls, read_csv_kwargs):
         """
         Define `usecols` parameter in the way pyarrow can process it.
         ----------
@@ -245,7 +245,7 @@ class OmnisciOnRayIO(RayIO):
 
         Returns
         -------
-        usecols_md:
+        usecols_md: list
                 Redefined `usecols` parameter.
         """
         usecols = read_csv_kwargs.get("usecols", None)
@@ -275,7 +275,7 @@ class OmnisciOnRayIO(RayIO):
             elif usecols_names_dtypes == "integer":
                 # columns should be sorted because pandas doesn't preserve columns order
                 usecols_md = sorted(usecols_md)
-                if len(column_names) < max(usecols_md):
+                if len(column_names) < usecols_md[-1]:
                     raise NotImplementedError(
                         "max usecols value is higher than the number of columns"
                     )
@@ -284,5 +284,7 @@ class OmnisciOnRayIO(RayIO):
                 usecols_md = [
                     col_name for col_name in column_names if usecols_md(col_name)
                 ]
+            else:
+                raise NotImplementedError("unsupported `usecols` parameter")
 
         return usecols_md
