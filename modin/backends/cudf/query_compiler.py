@@ -12,7 +12,6 @@
 # governing permissions and limitations under the License.
 
 from modin.backends.pandas.query_compiler import PandasQueryCompiler
-from modin.backends.pandas.query_compiler import _get_axis, _set_axis
 
 import cudf
 import numpy as np
@@ -20,13 +19,11 @@ import pandas
 import cupy as cp
 
 from modin.error_message import ErrorMessage
-from pandas.core.base import DataError
 from modin.data_management.functions import (
     MapFunction,
     MapReduceFunction,
     ReductionFunction,
     BinaryFunction,
-    GroupbyReduceFunction,
 )
 from pandas.core.dtypes.common import (
     is_list_like,
@@ -165,19 +162,6 @@ def _build_apply_func(func, axis=0, reduce_func=None, *args, **kwargs):
 
 
 class cuDFQueryCompiler(PandasQueryCompiler):
-    def __init__(self, modin_frame):
-        self._modin_frame = modin_frame
-
-    index = property(_get_axis(0), _set_axis(0))
-    columns = property(_get_axis(1), _set_axis(1))
-
-    def getitem_column_array(self, key, numeric=False):
-        if numeric:
-            new_modin_frame = self._modin_frame.mask(col_numeric_idx=key)
-        else:
-            new_modin_frame = self._modin_frame.mask(col_indices=key)
-        return self.__constructor__(new_modin_frame)
-
     def drop(self, index=None, columns=None):
         if index is not None:
             # The unique here is to avoid duplicating rows with the same name
@@ -195,15 +179,6 @@ class cuDFQueryCompiler(PandasQueryCompiler):
             row_numeric_idx=index, col_numeric_idx=columns
         )
         return self.__constructor__(new_modin_frame)
-
-    @classmethod
-    def from_pandas(cls, df, data_cls):
-        return cls(data_cls.from_pandas(df))
-
-    @property
-    def dtypes(self):
-        # TODO (kvu35): does not support full axis dtyping
-        return self._modin_frame.dtypes
 
     def default_to_pandas(self, pandas_op, *args, **kwargs):
         ErrorMessage.default_to_pandas(str(pandas_op))
@@ -226,93 +201,6 @@ class cuDFQueryCompiler(PandasQueryCompiler):
     # These methods require some sort of manual partitioning due to their
     # nature. They require certain data to exist on the same partition, and
     # after the shuffle, there should be only a local map required.
-
-    groupby_count = GroupbyReduceFunction.register(
-        lambda df, **kwargs: df.count(**kwargs), lambda df, **kwargs: df.sum(**kwargs)
-    )
-    groupby_any = GroupbyReduceFunction.register(
-        lambda df, **kwargs: df.any(**kwargs), lambda df, **kwargs: df.any(**kwargs)
-    )
-    groupby_min = GroupbyReduceFunction.register(
-        lambda df, **kwargs: df.min(**kwargs), lambda df, **kwargs: df.min(**kwargs)
-    )
-    groupby_prod = GroupbyReduceFunction.register(
-        lambda df, **kwargs: df.prod(**kwargs), lambda df, **kwargs: df.prod(**kwargs)
-    )
-    groupby_max = GroupbyReduceFunction.register(
-        lambda df, **kwargs: df.max(**kwargs), lambda df, **kwargs: df.max(**kwargs)
-    )
-    groupby_all = GroupbyReduceFunction.register(
-        lambda df, **kwargs: df.all(**kwargs), lambda df, **kwargs: df.all(**kwargs)
-    )
-    groupby_sum = GroupbyReduceFunction.register(
-        lambda df, **kwargs: df.sum(**kwargs), lambda df, **kwargs: df.sum(**kwargs)
-    )
-    groupby_size = GroupbyReduceFunction.register(
-        lambda df, **kwargs: df.size().to_frame(),
-        lambda df, **kwargs: df.sum(),
-        method="size",
-    )
-
-    def groupby_agg(self, by, axis, agg_func, groupby_args, agg_args, drop=False):
-        # since we're going to modify `groupby_args` dict in a `groupby_agg_builder`,
-        # we want to copy it to not propagate these changes into source dict, in case
-        # of unsuccessful end of function
-        groupby_args = groupby_args.copy()
-        groupby_args.pop("squeeze", None)  # Not supported by CuDF
-
-        as_index = groupby_args.get("as_index", True)
-
-        def groupby_agg_builder(df):
-            # Set `as_index` to True to track the metadata of the grouping object
-            # It is used to make sure that between phases we are constructing the
-            # right index and placing columns in the correct order.
-            groupby_args["as_index"] = True
-
-            def compute_groupby(df):
-                grouped_df = df.groupby(by=by, axis=axis, **groupby_args)
-                try:
-                    result = agg_func(grouped_df, **agg_args)
-                # This happens when the partition is filled with non-numeric data and a
-                # numeric operation is done. We need to build the index here to avoid
-                # issues with extracting the index.
-                except (DataError, TypeError):
-                    result = cudf.DataFrame(index=grouped_df.size().index)
-                return result
-
-            try:
-                temp = compute_groupby(df)
-                return temp
-            # This will happen with Arrow buffer read-only errors. We don't want to copy
-            # all the time, so this will try to fast-path the code first.
-            except (ValueError, KeyError):
-                return compute_groupby(df.copy())
-
-        new_modin_frame = self._modin_frame._apply_full_axis(
-            axis, lambda df: groupby_agg_builder(df)
-        )
-        result = self.__constructor__(new_modin_frame)
-
-        # that means that exception in `compute_groupby` was raised
-        # in every partition, so we also should raise it
-        if len(result.columns) == 0 and len(self.columns) != 0:
-            # determening type of raised exception by applying `aggfunc`
-            # to empty DataFrame
-            try:
-                agg_func(
-                    cudf.DataFrame(index=[1], columns=[1]).groupby(level=0), **agg_args
-                )
-            except Exception as e:
-                raise type(e)("No numeric types to aggregate.")
-
-        # Reset `as_index` because it was edited inplace.
-        groupby_args["as_index"] = as_index
-        if as_index:
-            return result
-        else:
-            if result.index.name is None or result.index.name in result.columns:
-                drop = False
-            return result.reset_index(drop=not drop)
 
     # def merge(self, right, **kwargs):
     #     return JoinFunction.register(cudf.DataFrame.merge)(self, right=right, **kwargs)
@@ -375,101 +263,34 @@ class cuDFQueryCompiler(PandasQueryCompiler):
     #     return MapFunction.register(cudf.DataFrame.unstack, dtypes='copy')
     # End
 
-    def isna(self):
-        return self.__constructor__(self._modin_frame.isna())
-
-    def copy(self):
-        return self.__constructor__(self._modin_frame.copy())
-
-    def to_numpy(self):
-        arr = self._modin_frame.to_numpy()
-        # TODO (kvu35): change index accordingly
-        # ErrorMessage.catch_bugs_and_request_email(
-        #    len(arr) != len(self.index) or len(arr[0]) != len(self.columns)
-        # )
-        return arr
-
-    def invert(self, **kwargs):
-        return MapFunction.register(cudf.DataFrame.__invert__)(self)
-
-    def eq(self, other, **kwargs):
-        return BinaryFunction.register(cudf.DataFrame.__eq__)(self, other=other)
-
-    def floordiv(self, other, **kwargs):
-        return BinaryFunction.register(cudf.DataFrame.floordiv)(self, other=other)
-
-    def ge(self, other, **kwargs):
-        return BinaryFunction.register(cudf.DataFrame.__ge__)(self, other=other)
-
-    def gt(self, other, **kwargs):
-        return BinaryFunction.register(cudf.DataFrame.__gt__)(self, other=other)
-
-    def le(self, other, **kwargs):
-        return BinaryFunction.register(cudf.DataFrame.__le__)(self, other=other)
-
-    def lt(self, other, **kwargs):
-        return BinaryFunction.register(cudf.DataFrame.__lt__)(self, other=other)
-
-    def add(self, other, **kwargs):
-        return BinaryFunction.register(cudf.DataFrame.add)(self, other=other)
-
-    def mod(self, other, **kwargs):
-        return BinaryFunction.register(cudf.DataFrame.mod)(self, other=other)
-
-    def mul(self, other, **kwargs):
-        return BinaryFunction.register(cudf.DataFrame.mul)(self, other=other)
-
-    def ne(self, other, **kwargs):
-        return BinaryFunction.register(cudf.DataFrame.__ne__)(self, other=other)
-
-    def pow(self, other, **kwargs):
-        return BinaryFunction.register(cudf.DataFrame.rpow)(self, other=other)
-
-    def rfloordiv(self, other, **kwargs):
-        return BinaryFunction.register(cudf.DataFrame.rfloordiv)(self, other=other)
-
-    def rmod(self, other, **kwargs):
-        return BinaryFunction.register(cudf.DataFrame.rmod)(self, other=other)
-
-    def rpow(self, other, **kwargs):
-        return BinaryFunction.register(cudf.DataFrame.rpow)(self, other=other)
-
-    def rsub(self, other, **kwargs):
-        return BinaryFunction.register(cudf.DataFrame.rsub)(self, other=other)
-
-    def rtruediv(self, other, **kwargs):
-        return BinaryFunction.register(cudf.DataFrame.rtruediv)(self, other=other)
-
-    def sub(self, other, **kwargs):
-        return BinaryFunction.register(cudf.DataFrame.sub)(self, other=other)
-
-    def truediv(self, other, **kwargs):
-        return BinaryFunction.register(cudf.DataFrame.truediv)(self, other=other)
-
+    invert = MapFunction.register(cudf.DataFrame.__invert__)
+    eq = BinaryFunction.register(cudf.DataFrame.__eq__)
+    floordiv = BinaryFunction.register(cudf.DataFrame.floordiv)
+    ge = BinaryFunction.register(cudf.DataFrame.__ge__)
+    gt = BinaryFunction.register(cudf.DataFrame.__gt__)
+    le = BinaryFunction.register(cudf.DataFrame.__le__)
+    lt = BinaryFunction.register(cudf.DataFrame.__lt__)
+    add = BinaryFunction.register(cudf.DataFrame.add)
+    mod = BinaryFunction.register(cudf.DataFrame.mod)
+    mul = BinaryFunction.register(cudf.DataFrame.mul)
+    ne = BinaryFunction.register(cudf.DataFrame.__ne__)
+    pow = BinaryFunction.register(cudf.DataFrame.rpow)
+    rfloordiv = BinaryFunction.register(cudf.DataFrame.rfloordiv)
+    rmod = BinaryFunction.register(cudf.DataFrame.rmod)
+    rpow = BinaryFunction.register(cudf.DataFrame.rpow)
+    rsub = BinaryFunction.register(cudf.DataFrame.rsub)
+    rtruediv = BinaryFunction.register(cudf.DataFrame.rtruediv)
+    sub = BinaryFunction.register(cudf.DataFrame.sub)
+    truediv = BinaryFunction.register(cudf.DataFrame.truediv)
     # TODO(lepl3): Investigate how cudf handles bool operator in differnt axis
-    def __and__(self, other, **kwargs):
-        return BinaryFunction.register(cudf.DataFrame.__and__)(self, other=other)
+    __and__ = BinaryFunction.register(cudf.DataFrame.__and__)
+    __or__ = BinaryFunction.register(cudf.DataFrame.__or__)
+    __rand__ = BinaryFunction.register(cudf.DataFrame.__rand__)
+    __ror__ = BinaryFunction.register(cudf.DataFrame.__ror__)
+    __rxor__ = BinaryFunction.register(cudf.DataFrame.__rxor__)
+    __xor__ = BinaryFunction.register(cudf.DataFrame.__xor__)
 
-    def __or__(self, other, **kwargs):
-        return BinaryFunction.register(cudf.DataFrame.__or__)(self, other=other)
-
-    def __rand__(self, other, **kwargs):
-        return BinaryFunction.register(cudf.DataFrame.__rand__)(self, other=other)
-
-    def __ror__(self, other, **kwargs):
-        return BinaryFunction.register(cudf.DataFrame.__ror__)(self, other=other)
-
-    def __rxor__(self, other, **kwargs):
-        return BinaryFunction.register(cudf.DataFrame.__rxor__)(self, other=other)
-
-    def __xor__(self, other, **kwargs):
-        return BinaryFunction.register(cudf.DataFrame.__xor__)(self, other=other)
-
-    # FIXME: Hacky solution to the boolean indexing problem, only works with row partitions
-    def bool_indexor(self, other, keepna=True):
-        new_modin_frame = self._modin_frame.bool_indexor(other._modin_frame)
-        return self.__constructor__(new_modin_frame)
-
+    # TODO(kvu35): Figure out why PandasQueryCompiler requires two passes
     def where(self, cond, other, **kwargs):
         # CuDF does not support these arguments
         kwargs.pop("axis")
@@ -627,9 +448,6 @@ class cuDFQueryCompiler(PandasQueryCompiler):
         new_modin_frame = self._modin_frame._map_reduce(0, unique_wrapper)
         return self.__constructor__(new_modin_frame)
 
-    def astype(self, col_dtypes, **kwargs):
-        return self.__constructor__(self._modin_frame.astype(col_dtypes, **kwargs))
-
     def nunique(self, **kwargs):
         return ReductionFunction.register(lambda x: cudf.Series([len(x)]))(
             self.unique()
@@ -718,129 +536,11 @@ class cuDFQueryCompiler(PandasQueryCompiler):
     def quantile_for_list_of_values(self, **kwargs):
         pass
 
-    def getitem_row_array(self, key):
-        return self.__constructor__(self._modin_frame.mask(row_numeric_idx=key))
-
     # Indexing
     def view(self, index=None, columns=None):
         return self.__constructor__(
             self._modin_frame.mask(row_numeric_idx=index, col_numeric_idx=columns)
         )
-
-    def setitem(self, axis, key, value):
-        def setitem_builder(df, internal_indices=[]):
-            if len(internal_indices) == 1:
-                if axis == 0:
-                    df[df.columns[internal_indices[0]]] = value
-                else:
-                    df.iloc[internal_indices[0]] = value
-            else:
-                if axis == 0:
-                    df[df.columns[internal_indices]] = value
-                else:
-                    df.iloc[internal_indices] = value
-            return df
-
-        if isinstance(value, type(self)):
-            value.columns = [key]
-            if axis == 0:
-                idx = self.columns.get_indexer_for([key])[0]
-                if 0 < idx < len(self.columns) - 1:
-                    first_mask = self._modin_frame.mask(
-                        col_numeric_idx=list(range(idx))
-                    )
-                    second_mask = self._modin_frame.mask(
-                        col_numeric_idx=list(range(idx + 1, len(self.columns)))
-                    )
-                    return self.__constructor__(
-                        first_mask._concat(
-                            1, [value._modin_frame, second_mask], "inner", False
-                        )
-                    )
-                else:
-                    new_qc = self.drop(columns=[key])
-                    if idx == 0:
-                        return self.__constructor__(
-                            value._modin_frame._concat(
-                                1, [new_qc._modin_frame], "inner", False
-                            )
-                        )
-                    else:
-                        return self.__constructor__(
-                            new_qc._modin_frame._concat(
-                                1, [value._modin_frame], "inner", False
-                            )
-                        )
-            else:
-                value = value.transpose()
-                idx = self.index.get_indexer_for([key])[0]
-                if 0 < idx < len(self.index) - 1:
-                    first_mask = self._modin_frame.mask(
-                        row_numeric_idx=list(range(idx))
-                    )
-                    second_mask = self._modin_frame.mask(
-                        row_numeric_idx=list(range(idx + 1, len(self.index)))
-                    )
-                    return self.__constructor__(
-                        first_mask._concat(
-                            0, [value._modin_frame, second_mask], "inner", False
-                        )
-                    )
-                else:
-                    new_qc = self.drop(index=[key])
-                    if idx == 0:
-                        return self.__constructor__(
-                            value._modin_frame._concat(
-                                0, [new_qc._modin_frame], "inner", False
-                            )
-                        )
-                    else:
-                        return self.__constructor__(
-                            new_qc._modin_frame._concat(
-                                0, [value._modin_frame], "inner", False
-                            )
-                        )
-        if is_list_like(value):
-            new_modin_frame = self._modin_frame._apply_full_axis_select_indices(
-                axis,
-                setitem_builder,
-                [key],
-                new_index=self.index,
-                new_columns=self.columns,
-                keep_remaining=True,
-            )
-        else:
-            new_modin_frame = self._modin_frame._apply_select_indices(
-                axis,
-                setitem_builder,
-                [key],
-                new_index=self.index,
-                new_columns=self.columns,
-                keep_remaining=True,
-            )
-        return self.__constructor__(new_modin_frame)
-
-    def concat(self, axis, other, **kwargs):
-        if not isinstance(other, list):
-            other = [other]
-        assert all(
-            isinstance(o, type(self)) for o in other
-        ), "Different Manager objects are being used. This is not allowed"
-        sort = kwargs.get("sort", None)
-        if sort is None:
-            sort = False
-        join = kwargs.get("join", "outer")
-        ignore_index = kwargs.get("ignore_index", False)
-        other_modin_frame = [o._modin_frame for o in other]
-        new_modin_frame = self._modin_frame._concat(axis, other_modin_frame, join, sort)
-        result = self.__constructor__(new_modin_frame)
-        if ignore_index:
-            if axis == 0:
-                return result.reset_index(drop=True)
-            else:
-                result.columns = pandas.RangeIndex(len(result.columns))
-                return result
-        return result
 
     def sort_rows_by_column_values(self, by, ascending=True, **kwargs):
         kwargs.pop("inplace", None)
@@ -1062,6 +762,3 @@ class cuDFQueryCompiler(PandasQueryCompiler):
 
     # def __del__(self):
     #     self.free()
-
-    def free(self):
-        self._modin_frame.free()

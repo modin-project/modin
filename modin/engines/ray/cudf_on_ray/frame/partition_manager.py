@@ -29,6 +29,7 @@ import ray
 
 GPU_MANAGERS = []
 
+
 @ray.remote(num_cpus=1, num_gpus=0.5)
 def func(df, other, apply_func):
     return apply_func(ray.get(df.get.remote()), ray.get(other.get.remote()))
