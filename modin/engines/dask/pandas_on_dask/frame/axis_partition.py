@@ -27,7 +27,7 @@ class PandasOnDaskFrameAxisPartition(PandasFrameAxisPartition):
             obj.drain_call_queue()
         self.list_of_blocks = [obj.future for obj in list_of_blocks]
         if get_ip:
-            self.list_of_ips = [obj.ip() for obj in list_of_blocks]
+            self.list_of_ips = [obj._ip_cache for obj in list_of_blocks]
 
     partition_type = PandasOnDaskFramePartition
     instance_type = Future

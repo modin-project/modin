@@ -12,6 +12,8 @@
 # governing permissions and limitations under the License.
 
 import numpy as np
+import ray
+from distributed.client import _get_global_client
 
 from modin.backends.pandas.query_compiler import PandasQueryCompiler
 from modin.pandas.dataframe import DataFrame
@@ -27,7 +29,7 @@ def unwrap_partitions(api_layer_object, axis=None, get_ip=False):
         The API layer object.
     axis : None, 0 or 1. Default is None
         The axis to unwrap partitions for (0 - row partitions, 1 - column partitions).
-        If ``axis=None``, all the partitions of the API layer object are unwrapped.
+        If ``axis is None``, the partitions are unwrapped as they are currently stored.
     get_ip : boolean. Default is False
         Whether to get node ip address to each partition or not.
 
@@ -48,6 +50,15 @@ def unwrap_partitions(api_layer_object, axis=None, get_ip=False):
             f"Only API Layer objects may be passed in here, got {type(api_layer_object)} instead."
         )
 
+    engine = type(
+        api_layer_object._query_compiler._modin_frame._partitions[0][0]
+    ).__name__
+    if engine not in (
+        "PandasOnRayFramePartition",
+        "PandasOnDaskFramePartition",
+    ):
+        raise ValueError(f"Do not know how to unwrap '{engine}' underlying partitions")
+
     if axis is None:
 
         def _unwrap_partitions(oid):
@@ -62,28 +73,31 @@ def unwrap_partitions(api_layer_object, axis=None, get_ip=False):
                     for row in api_layer_object._query_compiler._modin_frame._partitions
                 ]
 
-        actual_engine = type(
-            api_layer_object._query_compiler._modin_frame._partitions[0][0]
-        ).__name__
-        if actual_engine in ("PandasOnRayFramePartition",):
+        if engine in ("PandasOnRayFramePartition",):
             return _unwrap_partitions("oid")
-        elif actual_engine in ("PandasOnDaskFramePartition",):
+        elif engine in ("PandasOnDaskFramePartition",):
             return _unwrap_partitions("future")
-        raise ValueError(
-            f"Do not know how to unwrap '{actual_engine}' underlying partitions"
-        )
     else:
         partitions = (
             api_layer_object._query_compiler._modin_frame._frame_mgr_cls.axis_partition(
                 api_layer_object._query_compiler._modin_frame._partitions, axis ^ 1
             )
         )
-        return [
+        partitions = [
             part.force_materialization(get_ip=get_ip).unwrap(
                 squeeze=True, get_ip=get_ip
             )
             for part in partitions
         ]
+        if get_ip:
+            if engine in ("PandasOnRayFramePartition",):
+                ips = ray.get([part[0] for part in partitions])
+            elif engine in ("PandasOnDaskFramePartition",):
+                client = _get_global_client()
+                ips = client.gather([part[0] for part in partitions])
+            return list(zip(ips, (part[1] for part in partitions)))
+        else:
+            return partitions
 
 
 def map_partitions_to_ips(partitions, axis):
@@ -102,7 +116,7 @@ def map_partitions_to_ips(partitions, axis):
 
         * ``axis=0`` if row partitions are passed
         * ``axis=1`` if column partitions are passed
-        * ``axis=None`` if 2D list of partitions is passed
+        * ``axis is None`` if 2D list of partitions is passed
 
     Returns
     -------
