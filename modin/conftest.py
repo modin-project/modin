@@ -155,13 +155,13 @@ def enforce_config():
             self.__check_var(name)
             del orig_env[name]
 
-        def pop(self, name):
+        def pop(self, name, default=object()):
             self.__check_var(name)
-            return orig_env.pop(name)
+            return orig_env.pop(name, default)
 
-        def get(self, name, defvalue=None):
+        def get(self, name, default=None):
             self.__check_var(name)
-            return orig_env.get(name, defvalue)
+            return orig_env.get(name, default)
 
         def __contains__(self, name):
             self.__check_var(name)
