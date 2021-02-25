@@ -65,3 +65,65 @@ class TimeReadCsvSkiprows(BaseReadCsv):
                 test_filenames[self.shape_id], skiprows=skiprows
             )
         )
+
+
+class TimeReadCsvGeneral(BaseReadCsv):
+    _dtypes_params = ["Int64", "Int64_Timestamp"]
+    _timestamp_column = "col2"
+
+    param_names = ["shape", "names", "dtype"]
+    params = [
+        UNARY_OP_DATA_SIZE[ASV_DATASET_SIZE],
+        ["array-like"],
+        _dtypes_params,
+    ]
+
+    def _get_file_id(self, shape, dtype):
+        return get_shape_id(shape) + dtype
+
+    def _add_timestamp_column(self, df):
+        df = df.copy()
+        df.loc[:, self._timestamp_column] = IMPL["pandas"].date_range(
+            "2000",
+            periods=df.shape[0],
+            freq="ms",
+        )
+        return df
+
+    def setup_cache(self, test_filename="io_test_file_csv_general"):
+        test_filenames = {}
+        for shape in UNARY_OP_DATA_SIZE[ASV_DATASET_SIZE]:
+            for dtype in self._dtypes_params:
+                df = generate_dataframe("pandas", "int", *shape, RAND_LOW, RAND_HIGH)
+                if dtype == "Int64_Timestamp":
+                    df = self._add_timestamp_column(df)
+
+                file_id = self._get_file_id(shape, dtype)
+                test_filenames[file_id] = (
+                    f"{test_filename}_{file_id}.csv",
+                    df.columns.to_list(),
+                    df.dtypes.to_dict(),
+                )
+                df.to_csv(test_filenames[file_id][0], index=False)
+        return test_filenames
+
+    def setup(self, test_filenames, shape, names, dtype):
+        file_id = self._get_file_id(shape, dtype)
+        self.filename, self.names, self.dtype = test_filenames[file_id]
+
+        self.parse_dates = None
+        if dtype == "Int64_Timestamp":
+            self.dtype = self.dtype.copy()
+            del self.dtype[self._timestamp_column]
+            self.parse_dates = [self._timestamp_column]
+
+    def time_read_csv_general(self, test_filenames, shape, names, dtype):
+        execute(
+            IMPL[ASV_USE_IMPL].read_csv(
+                self.filename,
+                names=self.names,
+                header=0,
+                dtype=self.dtype,
+                parse_dates=self.parse_dates,
+            )
+        )
