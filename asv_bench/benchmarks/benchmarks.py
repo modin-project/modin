@@ -507,14 +507,21 @@ class TimeMultiIndexing:
 
 
 class TimeResetIndex:
-    param_names = ["shape", "drop"]
-    params = [UNARY_OP_DATA_SIZE[ASV_DATASET_SIZE], [False, True]]
+    param_names = ["shape", "drop", "level"]
+    params = [UNARY_OP_DATA_SIZE[ASV_DATASET_SIZE], [False, True], [None, "level_1"]]
 
-    def setup(self, shape, drop):
+    def setup(self, shape, drop, level):
         self.df = generate_dataframe(ASV_USE_IMPL, "int", *shape, RAND_LOW, RAND_HIGH)
 
-    def time_reset_index(self, shape, drop):
-        execute(self.df.reset_index(drop=drop))
+        if level:
+            index = pd.MultiIndex.from_product(
+                [self.df.index[: shape[0] // 2], ["bar", "foo"]],
+                names=["level_1", "level_2"],
+            )
+            self.df.index = index
+
+    def time_reset_index(self, shape, drop, level):
+        execute(self.df.reset_index(drop=drop, level=level))
 
 
 class TimeAstype:
