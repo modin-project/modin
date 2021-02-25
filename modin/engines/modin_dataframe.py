@@ -11,7 +11,7 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-from abc import ABC
+from abc import ABC, abstractmethod
 from typing import List, Hashable, Optional, Callable, Union
 
 
@@ -26,6 +26,7 @@ class ModinDataframe(ABC):
 
     """
 
+    @abstractmethod
     def mask(
         self,
         row_indices: Optional[List[Hashable]] = None,
@@ -54,6 +55,7 @@ class ModinDataframe(ABC):
         """
         pass
 
+    @abstractmethod
     def filter_by_types(self, types: List[Hashable]) -> "ModinDataframe":
         """Allows the user to specify a type or set of types by which to filter the columns.
 
@@ -69,10 +71,11 @@ class ModinDataframe(ABC):
         """
         pass
 
+    @abstractmethod
     def map(
         self,
-        axis: Union[int, None],
         function: Callable,
+        axis: Optional[int] = None,
         result_schema: Optional[List[Hashable]] = None,
     ) -> "ModinDataframe":
         """Applies a user-defined function row- wise (or column-wise if axis=1).
@@ -87,10 +90,10 @@ class ModinDataframe(ABC):
 
         Parameters
         ----------
-            axis: int or None
-                The axis to map over.
             function: callable
                 The function to map across the dataframe.
+            axis: int or None
+                The axis to map over.
             result_schema: list of dtypes
                 List of data types that represent the types of the output dataframe.
 
@@ -101,6 +104,7 @@ class ModinDataframe(ABC):
         """
         pass
 
+    @abstractmethod
     def filter(self, axis: int, condition: Callable) -> "ModinDataframe":
         """Filter data based on the function provided along the specified axis.
 
@@ -119,6 +123,7 @@ class ModinDataframe(ABC):
         """
         pass
 
+    @abstractmethod
     def explode(
         self,
         axis: int,
@@ -151,6 +156,7 @@ class ModinDataframe(ABC):
         """
         pass
 
+    @abstractmethod
     def window(
         self,
         axis: int,
@@ -186,6 +192,7 @@ class ModinDataframe(ABC):
         """
         pass
 
+    @abstractmethod
     def window_reduction(
         self,
         axis: int,
@@ -221,6 +228,7 @@ class ModinDataframe(ABC):
         """
         pass
 
+    @abstractmethod
     def groupby(
         self,
         axis: int,
@@ -263,6 +271,7 @@ class ModinDataframe(ABC):
         """
         pass
 
+    @abstractmethod
     def reduction(
         self,
         axis: int,
@@ -298,6 +307,7 @@ class ModinDataframe(ABC):
         """
         pass
 
+    @abstractmethod
     def infer_types(self, columns_list: List[str]) -> "ModinDataframe":
         """Determines the compatible type shared by all values in the specified columns,
         and converts all values to that type.
@@ -314,6 +324,7 @@ class ModinDataframe(ABC):
         """
         pass
 
+    @abstractmethod
     def join(
         self, axis: int, condition: Callable, other: "ModinDataframe", join_type: str
     ) -> "ModinDataframe":
@@ -347,6 +358,7 @@ class ModinDataframe(ABC):
         """
         pass
 
+    @abstractmethod
     def concat(
         self, axis: int, others: Union["ModinDataframe", List["ModinDataframe"]]
     ) -> "ModinDataframe":
@@ -372,6 +384,7 @@ class ModinDataframe(ABC):
         """
         pass
 
+    @abstractmethod
     def transpose(self) -> "ModinDataframe":
         """Swaps the row and column axes.
 
@@ -388,6 +401,7 @@ class ModinDataframe(ABC):
         """
         pass
 
+    @abstractmethod
     def to_labels(self, column_labels: Union[str, List[str]]) -> "ModinDataframe":
         """Replaces the row labels with one or more columns of data. When multiple column
         labels are specified, a heirarchical set of labels is created, ordered by the ordering
@@ -405,6 +419,7 @@ class ModinDataframe(ABC):
         """
         pass
 
+    @abstractmethod
     def from_labels(self) -> "ModinDataframe":
         """Moves the row labels into the data at position 0, and sets the row labels
         to the positional notation. In the case that the dataframe has hierarchical labels, all label
@@ -418,6 +433,7 @@ class ModinDataframe(ABC):
         """
         pass
 
+    @abstractmethod
     def sort_by(
         self, axis: int, columns: Union[str, List[str]], ascending: bool = True
     ) -> "ModinDataframe":

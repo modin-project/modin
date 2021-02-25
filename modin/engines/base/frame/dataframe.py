@@ -18,12 +18,13 @@ from pandas.core.indexes.api import ensure_index, Index, RangeIndex
 from pandas.core.dtypes.common import is_numeric_dtype
 from typing import List, Hashable
 
+from modin.engines.modin_dataframe import ModinDataframe
 from modin.backends.pandas.query_compiler import PandasQueryCompiler
 from modin.error_message import ErrorMessage
 from modin.backends.pandas.parsers import find_common_type_cat as find_common_type
 
 
-class BasePandasFrame(object):
+class BasePandasFrame(ModinDataframe, object):
     """An abstract class that represents the Parent class for any Pandas DataFrame class.
 
     This class is intended to simplify the way that operations are performed
@@ -368,24 +369,24 @@ class BasePandasFrame(object):
     def mask(
         self,
         row_indices=None,
-        row_numeric_idx=None,
+        row_positions=None,
         col_indices=None,
-        col_numeric_idx=None,
+        col_positions=None,
     ):
         """Lazily select columns or rows from given indices.
 
-        Note: If both row_indices and row_numeric_idx are set, row_indices will be used.
-            The same rule applied to col_indices and col_numeric_idx.
+        Note: If both row_indices and row_positions are set, row_indices will be used.
+            The same rule applied to col_indices and col_positions.
 
         Parameters
         ----------
         row_indices : list of hashable
             The row labels to extract.
-        row_numeric_idx : list of int
+        row_positions : list of int
             The row indices to extract.
         col_indices : list of hashable
             The column labels to extract.
-        col_numeric_idx : list of int
+        col_positions : list of int
             The column indices to extract.
 
         Returns
@@ -393,26 +394,26 @@ class BasePandasFrame(object):
         BasePandasFrame
              A new BasePandasFrame from the mask provided.
         """
-        if isinstance(row_numeric_idx, slice) and (
-            row_numeric_idx == slice(None) or row_numeric_idx == slice(0, None)
+        if isinstance(row_positions, slice) and (
+            row_positions == slice(None) or row_positions == slice(0, None)
         ):
-            row_numeric_idx = None
-        if isinstance(col_numeric_idx, slice) and (
-            col_numeric_idx == slice(None) or col_numeric_idx == slice(0, None)
+            row_positions = None
+        if isinstance(col_positions, slice) and (
+            col_positions == slice(None) or col_positions == slice(0, None)
         ):
-            col_numeric_idx = None
+            col_positions = None
         if (
             row_indices is None
-            and row_numeric_idx is None
+            and row_positions is None
             and col_indices is None
-            and col_numeric_idx is None
+            and col_positions is None
         ):
             return self.copy()
         if row_indices is not None:
-            row_numeric_idx = self.index.get_indexer_for(row_indices)
-        if row_numeric_idx is not None:
-            row_partitions_list = self._get_dict_of_block_index(0, row_numeric_idx)
-            if isinstance(row_numeric_idx, slice):
+            row_positions = self.index.get_indexer_for(row_indices)
+        if row_positions is not None:
+            row_partitions_list = self._get_dict_of_block_index(0, row_positions)
+            if isinstance(row_positions, slice):
                 # Row lengths for slice are calculated as the length of the slice
                 # on the partition. Often this will be the same length as the current
                 # length, but sometimes it is different, thus the extra calculation.
@@ -421,10 +422,10 @@ class BasePandasFrame(object):
                     for p, idx in row_partitions_list.items()
                 ]
                 # Use the slice to calculate the new row index
-                new_index = self.index[row_numeric_idx]
+                new_index = self.index[row_positions]
             else:
                 new_row_lengths = [len(idx) for _, idx in row_partitions_list.items()]
-                new_index = self.index[sorted(row_numeric_idx)]
+                new_index = self.index[sorted(row_positions)]
         else:
             row_partitions_list = {
                 i: slice(None) for i in range(len(self._row_lengths))
@@ -433,10 +434,10 @@ class BasePandasFrame(object):
             new_index = self.index
 
         if col_indices is not None:
-            col_numeric_idx = self.columns.get_indexer_for(col_indices)
-        if col_numeric_idx is not None:
-            col_partitions_list = self._get_dict_of_block_index(1, col_numeric_idx)
-            if isinstance(col_numeric_idx, slice):
+            col_positions = self.columns.get_indexer_for(col_indices)
+        if col_positions is not None:
+            col_partitions_list = self._get_dict_of_block_index(1, col_positions)
+            if isinstance(col_positions, slice):
                 # Column widths for slice are calculated as the length of the slice
                 # on the partition. Often this will be the same length as the current
                 # length, but sometimes it is different, thus the extra calculation.
@@ -445,25 +446,25 @@ class BasePandasFrame(object):
                     for p, idx in col_partitions_list.items()
                 ]
                 # Use the slice to calculate the new columns
-                new_columns = self.columns[col_numeric_idx]
+                new_columns = self.columns[col_positions]
                 assert sum(new_col_widths) == len(
                     new_columns
                 ), "{} != {}.\n{}\n{}\n{}".format(
                     sum(new_col_widths),
                     len(new_columns),
-                    col_numeric_idx,
+                    col_positions,
                     self._column_widths,
                     col_partitions_list,
                 )
                 if self._dtypes is not None:
-                    new_dtypes = self.dtypes[col_numeric_idx]
+                    new_dtypes = self.dtypes[col_positions]
                 else:
                     new_dtypes = None
             else:
                 new_col_widths = [len(idx) for _, idx in col_partitions_list.items()]
-                new_columns = self.columns[sorted(col_numeric_idx)]
+                new_columns = self.columns[sorted(col_positions)]
                 if self._dtypes is not None:
-                    new_dtypes = self.dtypes.iloc[sorted(col_numeric_idx)]
+                    new_dtypes = self.dtypes.iloc[sorted(col_positions)]
                 else:
                     new_dtypes = None
         else:
@@ -502,15 +503,15 @@ class BasePandasFrame(object):
         # Check if monotonically increasing, return if it is. Fast track code path for
         # common case to keep it fast.
         if (
-            row_numeric_idx is None
-            or isinstance(row_numeric_idx, slice)
-            or len(row_numeric_idx) == 1
-            or np.all(row_numeric_idx[1:] >= row_numeric_idx[:-1])
+            row_positions is None
+            or isinstance(row_positions, slice)
+            or len(row_positions) == 1
+            or np.all(row_positions[1:] >= row_positions[:-1])
         ) and (
-            col_numeric_idx is None
-            or isinstance(col_numeric_idx, slice)
-            or len(col_numeric_idx) == 1
-            or np.all(col_numeric_idx[1:] >= col_numeric_idx[:-1])
+            col_positions is None
+            or isinstance(col_positions, slice)
+            or len(col_positions) == 1
+            or np.all(col_positions[1:] >= col_positions[:-1])
         ):
             return intermediate
         # The new labels are often smaller than the old labels, so we can't reuse the
@@ -519,22 +520,22 @@ class BasePandasFrame(object):
         # We create a dictionary mapping the position of the numeric index with respect
         # to all others, then recreate that order by mapping the new order values from
         # the old. This information is sent to `reorder_labels`.
-        if row_numeric_idx is not None:
+        if row_positions is not None:
             row_order_mapping = dict(
-                zip(sorted(row_numeric_idx), range(len(row_numeric_idx)))
+                zip(sorted(row_positions), range(len(row_positions)))
             )
-            new_row_order = [row_order_mapping[idx] for idx in row_numeric_idx]
+            new_row_order = [row_order_mapping[idx] for idx in row_positions]
         else:
             new_row_order = None
-        if col_numeric_idx is not None:
+        if col_positions is not None:
             col_order_mapping = dict(
-                zip(sorted(col_numeric_idx), range(len(col_numeric_idx)))
+                zip(sorted(col_positions), range(len(col_positions)))
             )
-            new_col_order = [col_order_mapping[idx] for idx in col_numeric_idx]
+            new_col_order = [col_order_mapping[idx] for idx in col_positions]
         else:
             new_col_order = None
         return intermediate.reorder_labels(
-            row_numeric_idx=new_row_order, col_numeric_idx=new_col_order
+            row_positions=new_row_order, col_positions=new_col_order
         )
 
     def from_labels(self) -> "BasePandasFrame":
@@ -621,15 +622,15 @@ class BasePandasFrame(object):
         result.index = new_labels
         return result
 
-    def reorder_labels(self, row_numeric_idx=None, col_numeric_idx=None):
+    def reorder_labels(self, row_positions=None, col_positions=None):
         """Reorder the column and or rows in this DataFrame.
 
         Parameters
         ----------
-        row_numeric_idx : list of int, optional
+        row_positions : list of int, optional
             The ordered list of new row orders such that each position within the list
             indicates the new position.
-        col_numeric_idx : list of int, optional
+        col_positions : list of int, optional
             The ordered list of new column orders such that each position within the
             list indicates the new position.
 
@@ -638,19 +639,19 @@ class BasePandasFrame(object):
         BasePandasFrame
             A new BasePandasFrame with reordered columns and/or rows.
         """
-        if row_numeric_idx is not None:
+        if row_positions is not None:
             ordered_rows = self._frame_mgr_cls.map_axis_partitions(
-                0, self._partitions, lambda df: df.iloc[row_numeric_idx]
+                0, self._partitions, lambda df: df.iloc[row_positions]
             )
-            row_idx = self.index[row_numeric_idx]
+            row_idx = self.index[row_positions]
         else:
             ordered_rows = self._partitions
             row_idx = self.index
-        if col_numeric_idx is not None:
+        if col_positions is not None:
             ordered_cols = self._frame_mgr_cls.map_axis_partitions(
-                1, ordered_rows, lambda df: df.iloc[:, col_numeric_idx]
+                1, ordered_rows, lambda df: df.iloc[:, col_positions]
             )
-            col_idx = self.columns[col_numeric_idx]
+            col_idx = self.columns[col_positions]
         else:
             ordered_cols = ordered_rows
             col_idx = self.columns
@@ -696,16 +697,17 @@ class BasePandasFrame(object):
         dtypes.index = column_names
         return dtypes
 
-    def astype(self, col_dtypes):
-        """Convert the columns dtypes to given dtypes.
+    def _build_astype_func(self, col_dtypes):
+        """Build function to map over partitions to convert the columns dtypes to given dtypes.
 
-        Args:
+        Parameters
+        ----------
             col_dtypes: Dictionary of {col: dtype,...} where col is the column
                 name and dtype is a numpy dtype.
-
+        
         Returns
         -------
-            dataframe with updated dtypes.
+            New dtypes for the dataframe and function astype_builder to map over partitions to convert columns dtypes to given dtypes.
         """
         columns = col_dtypes.keys()
         # Create Series for the updated dtypes
@@ -735,6 +737,20 @@ class BasePandasFrame(object):
 
         def astype_builder(df):
             return df.astype({k: v for k, v in col_dtypes.items() if k in df})
+        
+        return new_dtypes, astype_builder
+    def astype(self, col_dtypes):
+        """Convert the columns dtypes to given dtypes.
+
+        Args:
+            col_dtypes: Dictionary of {col: dtype,...} where col is the column
+                name and dtype is a numpy dtype.
+
+        Returns
+        -------
+            dataframe with updated dtypes.
+        """
+        new_dtypes, astype_builder = self._build_astype_func(col_dtypes)
 
         new_frame = self._frame_mgr_cls.map_partitions(self._partitions, astype_builder)
         return self.__constructor__(
@@ -1157,6 +1173,76 @@ class BasePandasFrame(object):
             axis, reduce_parts, preserve_index=preserve_index
         )
 
+    def map(self, function, axis=None, result_schema=None):
+        """Applies a user-defined function row- wise (or column-wise if axis=1).
+
+        Notes
+        -----
+            This does not change the number of rows.
+
+            The user-defined function may increase the number of columns (rows if axis=1),
+                but it should not remove or drop columns and each invocation of the function
+                must generate the same number of new columns.
+
+        Parameters
+        ----------
+            function: callable
+                The function to map across the dataframe.
+            axis: int or None
+                The axis to map over.
+            result_schema: list of dtypes
+                List of data types that represent the types of the output dataframe.
+
+        Returns
+        -------
+        BasePandasFrame
+             A new BasePandasFrame with the map applied.
+        """
+        # TODO: If no result_schema is specified, should the new frame inherit the dtypes
+        # of the current, or have it be unspecified?
+        new_dtypes = None
+        fn = function
+        if result_schema is not None:
+            #TODO: For now, assume that result_schema is a list of dtypes of the same length
+            # as self.columns. Perhaps we should change result_schema to be a dictionary?
+            # Ultimately, the representation of result_schema depends on the typing system
+            # we plan to implement.
+            col_dtypes = {self.columns[i]: result_schema[i] for i in range(len(result_schema))}
+            new_dtypes, astype_builder = self._build_astype_func(col_dtypes)
+            fn = lambda df: astype_builder(function(df))
+
+        if axis is None:
+            new_partitions = self._frame_mgr_cls.map_partitions(self._partitions, fn)
+        else:
+            # Wrap function so it doesn't error because of unexpected kwargs.
+            fn_with_kwargs = lambda df, **kwargs: fn(df)
+            # Keep current partitioning to replicate behavior of _map
+            # TODO: Should we allow a repartition here?
+            new_partitions = self._frame_mgr_cls.map_axis_partitions(axis, self._partitions, fn_with_kwargs, keep_partitioning=True)
+        
+        #TODO: Given that map can add new rows/columns, I validate both the index and the columns
+        # Perhaps we shouldn't?
+        new_axes = [
+            self._compute_axis_labels(axis, new_partitions)
+            for axis in range(2)
+        ]
+
+        new_lengths = [
+            self._axes_lengths[axis]
+            if len(new_axes[axis]) == len(self.axes[axis])
+            else None
+            for axis in [0, 1]
+        ]
+
+        return self.__constructor__(
+            new_partitions,
+            *new_axes,
+            *new_lengths,
+            dtypes=new_dtypes,
+        )
+            
+        
+
     def _map(self, func, dtypes=None, validate_index=False, validate_columns=False):
         """Perform a function that maps across the entire dataset.
 
@@ -1232,7 +1318,7 @@ class BasePandasFrame(object):
             self._column_widths,
         )
 
-    def filter_full_axis(self, axis, func):
+    def filter(self, axis, func):
         """Filter data based on the function provided along an entire axis.
 
         Parameters
@@ -1264,6 +1350,24 @@ class BasePandasFrame(object):
             *new_lengths,
             self.dtypes if axis == 0 else None,
         )
+    
+    # Kept for backwards compatibility.
+    filter_full_axis = filter
+
+    def filter_by_types(self, types):
+        """Allows the user to specify a type or set of types by which to filter the columns.
+
+        Parameters
+        ----------
+        types: list of hashables
+            The types to filter columns by.
+
+        Returns
+        -------
+        BasePandasFrame
+             A new BasePandasFrame from the filter provided.
+        """
+        return self.mask(col_positions=[i for i in range(len(self.columns)) if self.dtypes[i] in types])
 
     def _apply_full_axis(
         self,

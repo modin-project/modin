@@ -1863,7 +1863,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             return df.query(expr, inplace=False, **kwargs)
 
         return self.__constructor__(
-            self._modin_frame.filter_full_axis(1, query_builder)
+            self._modin_frame.filter(1, query_builder)
         )
 
     def rank(self, **kwargs):
@@ -2154,7 +2154,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         """
 
         return self.__constructor__(
-            self._modin_frame.filter_full_axis(
+            self._modin_frame.filter(
                 kwargs.get("axis", 0) ^ 1,
                 lambda df: pandas.DataFrame.dropna(df, **kwargs),
             )
