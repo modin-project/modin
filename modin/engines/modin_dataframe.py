@@ -12,6 +12,7 @@
 # governing permissions and limitations under the License.
 
 from abc import ABC
+from typing import List, Hashable, Optional, Callable, Union
 
 
 class ModinDataframe(ABC):
@@ -26,8 +27,12 @@ class ModinDataframe(ABC):
     """
 
     def mask(
-        self, row_indices=None, row_positions=None, col_indices=None, col_positions=None
-    ):
+        self,
+        row_indices: Optional[List[Hashable]] = None,
+        row_positions: Optional[List[int]] = None,
+        col_indices: Optional[List[Hashable]] = None,
+        col_positions: Optional[List[int]] = None,
+    ) -> "ModinDataframe":
         """Allows users to perform selection and projection on the row and column number (positional notation),
         in addition to the row and column labels (named notation)
 
@@ -49,12 +54,12 @@ class ModinDataframe(ABC):
         """
         pass
 
-    def filter_by_types(self, types):
+    def filter_by_types(self, types: List[Hashable]) -> "ModinDataframe":
         """Allows the user to specify a type or set of types by which to filter the columns.
 
         Parameters
         ----------
-        types: hashable or list of hashables
+        types: list of hashables
             The types to filter columns by.
 
         Returns
@@ -64,7 +69,12 @@ class ModinDataframe(ABC):
         """
         pass
 
-    def map(self, axis, function, result_schema=None):
+    def map(
+        self,
+        axis: Union[int, None],
+        function: Callable,
+        result_schema: Optional[List[Hashable]] = None,
+    ) -> "ModinDataframe":
         """Applies a user-defined function row- wise (or column-wise if axis=1).
 
         Notes
@@ -77,7 +87,7 @@ class ModinDataframe(ABC):
 
         Parameters
         ----------
-            axis: int
+            axis: int or None
                 The axis to map over.
             function: callable
                 The function to map across the dataframe.
@@ -91,7 +101,7 @@ class ModinDataframe(ABC):
         """
         pass
 
-    def filter(self, axis, condition):
+    def filter(self, axis: int, condition: Callable) -> "ModinDataframe":
         """Filter data based on the function provided along the specified axis.
 
         Parameters
@@ -109,7 +119,12 @@ class ModinDataframe(ABC):
         """
         pass
 
-    def explode(self, axis, function, result_schema=None):
+    def explode(
+        self,
+        axis: int,
+        function: Callable,
+        result_schema: Optional[List[Hashable]] = None,
+    ) -> "ModinDataframe":
         """Explode data based on the function provided along the specified axis.
 
         Notes
@@ -136,7 +151,13 @@ class ModinDataframe(ABC):
         """
         pass
 
-    def window(self, axis, function, window_size, result_schema=None):
+    def window(
+        self,
+        axis: int,
+        function: Callable,
+        window_size: int,
+        result_schema: Optional[List[Hashable]] = None,
+    ) -> "ModinDataframe":
         """Applies a user-defined function over a sliding window along the specified axis.
 
         Notes
@@ -165,7 +186,13 @@ class ModinDataframe(ABC):
         """
         pass
 
-    def window_reduction(self, axis, reduction_fn, window_size, result_schema=None):
+    def window_reduction(
+        self,
+        axis: int,
+        reduction_fn: Callable,
+        window_size: int,
+        result_schema: Optional[List[Hashable]] = None,
+    ) -> "ModinDataframe":
         """Applies a sliding window operator that acts as a GROUPBY on each window,
         which reduces down to a single row (column) per window.
 
@@ -194,7 +221,13 @@ class ModinDataframe(ABC):
         """
         pass
 
-    def groupby(self, axis, by, operator, result_schema=None):
+    def groupby(
+        self,
+        axis: int,
+        by: Union[str, List[str]],
+        operator: Callable,
+        result_schema: Optional[List[Hashable]] = None,
+    ) -> "ModinDataframe":
         """Generates groups based on values in the input column(s) and performs
         the specified operation (e.g. aggregation or backfill) on the groups.
 
@@ -230,7 +263,13 @@ class ModinDataframe(ABC):
         """
         pass
 
-    def reduction(self, axis, function, tree_reduce=False, result_schema=None):
+    def reduction(
+        self,
+        axis: int,
+        function: Callable,
+        tree_reduce: bool = False,
+        result_schema: Optional[List[Hashable]] = None,
+    ) -> "ModinDataframe":
         """Performs a user-defined per-column aggregation, where each column reduces
         down to a single value.
 
@@ -259,7 +298,7 @@ class ModinDataframe(ABC):
         """
         pass
 
-    def infer_types(self, columns_list):
+    def infer_types(self, columns_list: List[str]) -> "ModinDataframe":
         """Determines the compatible type shared by all values in the specified columns,
         and converts all values to that type.
 
@@ -275,7 +314,9 @@ class ModinDataframe(ABC):
         """
         pass
 
-    def join(self, axis, condition, other, join_type):
+    def join(
+        self, axis: int, condition: Callable, other: "ModinDataframe", join_type: str
+    ) -> "ModinDataframe":
         """Joins this dataframe with the other.
 
         Notes
@@ -306,7 +347,9 @@ class ModinDataframe(ABC):
         """
         pass
 
-    def concat(self, axis, others):
+    def concat(
+        self, axis: int, others: Union["ModinDataframe", List["ModinDataframe"]]
+    ) -> "ModinDataframe":
         """Appends the rows of identical column labels from multiple dataframes.
 
         Notes
@@ -329,7 +372,7 @@ class ModinDataframe(ABC):
         """
         pass
 
-    def transpose(self):
+    def transpose(self) -> "ModinDataframe":
         """Swaps the row and column axes.
 
         Notes
@@ -338,8 +381,6 @@ class ModinDataframe(ABC):
                 logically immediately, the physical swap does not occur until absolutely necessary,
                 which helps motivate the axis argument to the other operators in this algebra.
 
-            This operation explicitly manipulates dataframe metadata.
-
         Returns
         -------
         ModinDataframe
@@ -347,14 +388,10 @@ class ModinDataframe(ABC):
         """
         pass
 
-    def to_labels(self, column_labels):
+    def to_labels(self, column_labels: Union[str, List[str]]) -> "ModinDataframe":
         """Replaces the row labels with one or more columns of data. When multiple column
         labels are specified, a heirarchical set of labels is created, ordered by the ordering
         of labels in the input.
-
-        Notes
-        -----
-            This operation explicitly manipulates dataframe metadata.
 
         Parameters
         ----------
@@ -368,15 +405,11 @@ class ModinDataframe(ABC):
         """
         pass
 
-    def from_labels(self):
+    def from_labels(self) -> "ModinDataframe":
         """Moves the row labels into the data at position 0, and sets the row labels
         to the positional notation. In the case that the dataframe has hierarchical labels, all label
         “levels” are inserted into the dataframe in the order they occur in the labels, with the outermost
         being in position 0.
-
-        Notes
-        -----
-            This operation explicitly manipulates dataframe metadata.
 
         Returns
         -------
@@ -385,7 +418,9 @@ class ModinDataframe(ABC):
         """
         pass
 
-    def sort_by(self, axis, columns, ascending=True):
+    def sort_by(
+        self, axis: int, columns: Union[str, List[str]], ascending: bool = True
+    ) -> "ModinDataframe":
         """Logically reorders the dataframe’s rows (columns if axis=1) by the lexicographical
         order of the data in a column or set of columns.
 
