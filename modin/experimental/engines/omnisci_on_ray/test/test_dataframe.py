@@ -32,6 +32,7 @@ from modin.pandas.test.utils import (
     test_data_keys,
     generate_multiindex,
     eval_general,
+    eval_io,
 )
 
 
@@ -116,6 +117,7 @@ def run_and_compare(
         df_equals(ref_res, exp_res)
 
 
+@pytest.mark.usefixtures("TestReadCSVFixture")
 class TestCSV:
     root = os.path.abspath(__file__ + "/.." * 6)  # root of modin repo
 
@@ -301,6 +303,30 @@ class TestCSV:
         modin_df["a"] = modin_df["a"] + modin_df["b"]
 
         df_equals(modin_df, pandas_df)
+
+    # Datetime Handling tests
+    @pytest.mark.parametrize("engine", [None, "arrow"])
+    @pytest.mark.parametrize(
+        "parse_dates",
+        [
+            True,
+            False,
+            ["col2"],
+        ],
+    )
+    def test_read_csv_datetime(
+        self,
+        engine,
+        parse_dates,
+    ):
+
+        eval_io(
+            fn_name="read_csv",
+            md_extra_kwargs={"engine": engine},
+            # read_csv kwargs
+            filepath_or_buffer=pytest.csvs_names["test_read_csv_regular"],
+            parse_dates=parse_dates,
+        )
 
 
 class TestMasks:
@@ -1271,6 +1297,39 @@ class TestBinaryOp:
 
         run_and_compare(mul1, data=self.data)
         run_and_compare(mul2, data=self.data)
+
+    def test_mod_cst(self):
+        def mod(lib, df):
+            return df % 2
+
+        run_and_compare(mod, data=self.data)
+
+    def test_mod_list(self):
+        def mod(lib, df):
+            return df % [2, 3, 4, 5]
+
+        run_and_compare(mod, data=self.data)
+
+    @pytest.mark.parametrize("fill_value", fill_values)
+    def test_mod_method_columns(self, fill_value):
+        def mod1(lib, df, fill_value):
+            return df["a"].mod(df["b"], fill_value=fill_value)
+
+        def mod2(lib, df, fill_value):
+            return df[["a", "c"]].mod(df[["b", "a"]], fill_value=fill_value)
+
+        run_and_compare(mod1, data=self.data, fill_value=fill_value)
+        run_and_compare(mod2, data=self.data, fill_value=fill_value)
+
+    def test_mod_columns(self):
+        def mod1(lib, df):
+            return df["a"] % df["b"]
+
+        def mod2(lib, df):
+            return df[["a", "c"]] % df[["b", "a"]]
+
+        run_and_compare(mod1, data=self.data)
+        run_and_compare(mod2, data=self.data)
 
     def test_truediv_cst(self):
         def truediv(lib, df):

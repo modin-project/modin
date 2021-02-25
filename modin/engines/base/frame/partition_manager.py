@@ -14,12 +14,14 @@
 from abc import ABC
 import numpy as np
 import pandas
+import warnings
 
 from modin.error_message import ErrorMessage
 from modin.data_management.utils import compute_chunksize
-from modin.config import NPartitions
+from modin.config import NPartitions, ProgressBar
 
 from pandas.api.types import union_categoricals
+import os
 
 
 class BaseFrameManager(ABC):
@@ -569,16 +571,53 @@ class BaseFrameManager(ABC):
     @classmethod
     def from_pandas(cls, df, return_dims=False):
         """Return the partitions from Pandas DataFrame."""
+
+        def update_bar(pbar, f):
+            if ProgressBar.get():
+                pbar.update(1)
+            return f
+
         num_splits = NPartitions.get()
         put_func = cls._partition_class.put
         row_chunksize, col_chunksize = compute_chunksize(df, num_splits)
+
+        bar_format = (
+            "{l_bar}{bar}{r_bar}"
+            if os.environ.get("DEBUG_PROGRESS_BAR", "False") == "True"
+            else "{desc}: {percentage:3.0f}%{bar} Elapsed time: {elapsed}, estimated remaining time: {remaining}"
+        )
+        if ProgressBar.get():
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore")
+                try:
+                    from tqdm.autonotebook import tqdm as tqdm_notebook
+                except ImportError:
+                    raise ImportError("Please pip install tqdm to use the progress bar")
+
+            rows = max(1, round(len(df) / row_chunksize))
+            cols = max(1, round(len(df.columns) / col_chunksize))
+            update_count = rows * cols
+            pbar = tqdm_notebook(
+                total=round(update_count),
+                desc="Distributing Dataframe",
+                bar_format=bar_format,
+            )
+        else:
+            pbar = None
         parts = [
             [
-                put_func(df.iloc[i : i + row_chunksize, j : j + col_chunksize].copy())
+                update_bar(
+                    pbar,
+                    put_func(
+                        df.iloc[i : i + row_chunksize, j : j + col_chunksize].copy()
+                    ),
+                )
                 for j in range(0, len(df.columns), col_chunksize)
             ]
             for i in range(0, len(df), row_chunksize)
         ]
+        if ProgressBar.get():
+            pbar.close()
         if not return_dims:
             return np.array(parts)
         else:

@@ -285,11 +285,10 @@ class Series(BasePandasDataset):
         )
 
     def __setitem__(self, key, value):
-        if key not in self.keys():
-            raise KeyError(key)
-        self._create_or_update_from_compiler(
-            self._query_compiler.setitem(1, key, value), inplace=True
-        )
+        if isinstance(key, slice):
+            self._setitem_slice(key, value)
+        else:
+            self.loc[key] = value
 
     def __sub__(self, right):
         return self.sub(right)

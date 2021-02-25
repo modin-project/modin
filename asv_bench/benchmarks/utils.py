@@ -11,6 +11,7 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
+import os
 import logging
 import modin.pandas as pd
 import pandas
@@ -20,6 +21,65 @@ import uuid
 RAND_LOW = 0
 RAND_HIGH = 100
 random_state = np.random.RandomState(seed=42)
+
+
+try:
+    from modin.config import NPartitions
+
+    NPARTITIONS = NPartitions.get()
+except ImportError:
+    NPARTITIONS = pd.DEFAULT_NPARTITIONS
+
+try:
+    from modin.config import TestDatasetSize, AsvImplementation
+
+    ASV_USE_IMPL = AsvImplementation.get()
+    ASV_DATASET_SIZE = TestDatasetSize.get() or "Small"
+except ImportError:
+    # The same benchmarking code can be run for different versions of Modin, so in
+    # case of an error importing important variables, we'll just use predefined values
+    ASV_USE_IMPL = os.environ.get("MODIN_ASV_USE_IMPL", "modin")
+    ASV_DATASET_SIZE = os.environ.get("MODIN_TEST_DATASET_SIZE", "Small")
+
+assert ASV_USE_IMPL in ("modin", "pandas")
+
+BINARY_OP_DATA_SIZE = {
+    "Big": [
+        ((5000, 5000), (5000, 5000)),
+        # the case extremely inefficient
+        # ((20, 500_000), (10, 1_000_000)),
+        ((500_000, 20), (1_000_000, 10)),
+    ],
+    "Small": [
+        ((250, 250), (250, 250)),
+        ((20, 10_000), (10, 25_000)),
+        ((10_000, 20), (25_000, 10)),
+    ],
+}
+
+UNARY_OP_DATA_SIZE = {
+    "Big": [
+        (5000, 5000),
+        # the case extremely inefficient
+        # (10, 1_000_000),
+        (1_000_000, 10),
+    ],
+    "Small": [
+        (250, 250),
+        (10, 10_000),
+        (10_000, 10),
+    ],
+}
+
+GROUPBY_NGROUPS = {
+    "Big": [100, lambda nrows: min(nrows // 2, 5000)],
+    "Small": [5],
+}
+
+IMPL = {
+    "modin": pd,
+    "pandas": pandas,
+}
 
 
 class weakdict(dict):
@@ -144,3 +204,12 @@ def random_columns(df_columns, columns_number):
 
 def random_booleans(number):
     return list(random_state.choice([True, False], size=number))
+
+
+def execute(df):
+    "Make sure the calculations are done."
+    return df.shape, df.dtypes
+
+
+def get_shape_id(array):
+    return "_".join([str(element) for element in array])

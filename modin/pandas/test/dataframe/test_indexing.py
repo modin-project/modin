@@ -1215,19 +1215,16 @@ def test___setitem__(data):
         df_equals(modin_df, pandas_df)
         assert isinstance(modin_df["new_col"][0], type(pandas_df["new_col"][0]))
 
+    modin_df[1:5] = 10
+    pandas_df[1:5] = 10
+    df_equals(modin_df, pandas_df)
+
     # Transpose test
     modin_df = pd.DataFrame(data).T
     pandas_df = pandas.DataFrame(data).T
 
-    # We default to pandas on non-string column names
-    if not all(isinstance(c, str) for c in modin_df.columns):
-        with pytest.warns(UserWarning):
-            modin_df[modin_df.columns[0]] = 0
-    else:
-        modin_df[modin_df.columns[0]] = 0
-
+    modin_df[modin_df.columns[0]] = 0
     pandas_df[pandas_df.columns[0]] = 0
-
     df_equals(modin_df, pandas_df)
 
     modin_df.columns = [str(i) for i in modin_df.columns]
@@ -1240,7 +1237,10 @@ def test___setitem__(data):
 
     modin_df[modin_df.columns[0]][modin_df.index[0]] = 12345
     pandas_df[pandas_df.columns[0]][pandas_df.index[0]] = 12345
+    df_equals(modin_df, pandas_df)
 
+    modin_df[1:5] = 10
+    pandas_df[1:5] = 10
     df_equals(modin_df, pandas_df)
 
 
@@ -1315,19 +1315,16 @@ def test___setitem__mask():
     "data",
     [
         {},
-        pytest.param(
-            {"id": [], "max_speed": [], "health": []},
-            marks=pytest.mark.xfail(
-                reason="Throws an exception because generally assigning Series or other objects of length different from DataFrame does not work right now"
-            ),
-        ),
+        {"id": [], "max_speed": [], "health": []},
+        {"id": [1], "max_speed": [2], "health": [3]},
+        {"id": [4, 40, 400], "max_speed": [111, 222, 333], "health": [33, 22, 11]},
     ],
-    ids=["empty", "empty_columns"],
+    ids=["empty_frame", "empty_cols", "1_length_cols", "2_length_cols"],
 )
 @pytest.mark.parametrize(
     "value",
-    [np.array(["one", "two"]), [11, 22]],
-    ids=["ndarray", "list"],
+    [[11, 22], [11, 22, 33]],
+    ids=["2_length_val", "3_length_val"],
 )
 @pytest.mark.parametrize("convert_to_series", [False, True])
 @pytest.mark.parametrize("new_col_id", [123, "new_col"], ids=["integer", "string"])
@@ -1335,9 +1332,19 @@ def test_setitem_on_empty_df(data, value, convert_to_series, new_col_id):
     pandas_df = pandas.DataFrame(data)
     modin_df = pd.DataFrame(data)
 
-    pandas_df[new_col_id] = pandas.Series(value) if convert_to_series else value
-    modin_df[new_col_id] = pd.Series(value) if convert_to_series else value
-    df_equals(modin_df, pandas_df)
+    def applyier(df):
+        if convert_to_series:
+            converted_value = (
+                pandas.Series(value)
+                if isinstance(df, pandas.DataFrame)
+                else pd.Series(value)
+            )
+        else:
+            converted_value = value
+        df[new_col_id] = converted_value
+        return df
+
+    eval_general(modin_df, pandas_df, applyier)
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)

@@ -2363,16 +2363,14 @@ class PandasQueryCompiler(BaseQueryCompiler):
     # nature. They require certain data to exist on the same partition, and
     # after the shuffle, there should be only a local map required.
 
-    groupby_count = GroupbyReduceFunction.register(*groupby_reduce_functions["count"])
-    groupby_any = GroupbyReduceFunction.register(*groupby_reduce_functions["any"])
-    groupby_min = GroupbyReduceFunction.register(*groupby_reduce_functions["min"])
-    groupby_prod = GroupbyReduceFunction.register(*groupby_reduce_functions["prod"])
-    groupby_max = GroupbyReduceFunction.register(*groupby_reduce_functions["max"])
-    groupby_all = GroupbyReduceFunction.register(*groupby_reduce_functions["all"])
-    groupby_sum = GroupbyReduceFunction.register(*groupby_reduce_functions["sum"])
-    groupby_size = GroupbyReduceFunction.register(
-        *groupby_reduce_functions["size"], method="size"
-    )
+    groupby_all = GroupbyReduceFunction.register("all")
+    groupby_any = GroupbyReduceFunction.register("any")
+    groupby_count = GroupbyReduceFunction.register("count")
+    groupby_max = GroupbyReduceFunction.register("max")
+    groupby_min = GroupbyReduceFunction.register("min")
+    groupby_prod = GroupbyReduceFunction.register("prod")
+    groupby_size = GroupbyReduceFunction.register("size", method="size")
+    groupby_sum = GroupbyReduceFunction.register("sum")
 
     def _groupby_dict_reduce(
         self, by, axis, agg_func, agg_args, agg_kwargs, groupby_kwargs, drop=False

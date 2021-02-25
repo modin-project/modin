@@ -116,7 +116,7 @@ def map_partitions_to_ips(partitions, axis):
 
         * ``axis=0`` if row partitions are passed
         * ``axis=1`` if column partitions are passed
-        * ``axis is None`` if 2D list of partitions is passed
+        * ``axis=None`` if 2D list of partitions is passed
 
     Returns
     -------

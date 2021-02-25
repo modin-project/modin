@@ -433,6 +433,9 @@ encoding_types = [
 # the type of this exceptions are the same
 io_ops_bad_exc = [TypeError, FileNotFoundError]
 
+# Files compression to extension mapping
+COMP_TO_EXT = {"gzip": "gz", "bz2": "bz2", "xz": "xz", "zip": "zip"}
+
 
 def categories_equals(left, right):
     assert (left.ordered and right.ordered) or (not left.ordered and not right.ordered)
@@ -645,6 +648,7 @@ def eval_general(
     check_exception_type=True,
     raising_exceptions=None,
     check_kwargs_callable=True,
+    md_extra_kwargs=None,
     **kwargs,
 ):
     if raising_exceptions:
@@ -686,6 +690,10 @@ def eval_general(
         md_kwargs[key] = md_value
         pd_kwargs[key] = pd_value
 
+        if md_extra_kwargs:
+            assert isinstance(md_extra_kwargs, dict)
+            md_kwargs.update(md_extra_kwargs)
+
     values = execute_callable(
         operation, md_kwargs=md_kwargs, pd_kwargs=pd_kwargs, inplace=__inplace__
     )
@@ -701,6 +709,7 @@ def eval_io(
     raising_exceptions=io_ops_bad_exc,
     check_kwargs_callable=True,
     modin_warning=None,
+    md_extra_kwargs=None,
     *args,
     **kwargs,
 ):
@@ -723,7 +732,10 @@ def eval_io(
         Exceptions that should be raised even if they are raised
         both by Pandas and Modin (check evaluated only if
         `check_exception_type` passed as `True`).
-    modin_warning: Warning that should be raised by Modin.
+    modin_warning: obj
+        Warning that should be raised by Modin.
+    md_extra_kwargs: dict
+        Modin operation specific kwargs.
     """
 
     def applyier(module, *args, **kwargs):
@@ -740,6 +752,7 @@ def eval_io(
             check_exception_type=check_exception_type,
             raising_exceptions=raising_exceptions,
             check_kwargs_callable=check_kwargs_callable,
+            md_extra_kwargs=md_extra_kwargs,
             *args,
             **kwargs,
         )
@@ -1071,3 +1084,137 @@ def dummy_decorator():
         return wrapped_function
 
     return wrapper
+
+
+def generate_dataframe(row_size=NROWS, additional_col_values=None):
+    dates = pandas.date_range("2000", freq="h", periods=row_size)
+    data = {
+        "col1": np.arange(row_size) * 10,
+        "col2": [str(x.date()) for x in dates],
+        "col3": np.arange(row_size) * 10,
+        "col4": [str(x.time()) for x in dates],
+        "col5": [get_random_string() for _ in range(row_size)],
+        "col6": random_state.uniform(low=0.0, high=10000.0, size=row_size),
+    }
+
+    if additional_col_values is not None:
+        assert isinstance(additional_col_values, (list, tuple))
+        data.update(
+            {
+                "col7": random_state.choice(additional_col_values, size=row_size),
+            }
+        )
+    return pandas.DataFrame(data)
+
+
+def _make_csv_file(filenames):
+    def _csv_file_maker(
+        filename,
+        row_size=NROWS,
+        force=True,
+        delimiter=",",
+        encoding=None,
+        compression="infer",
+        additional_col_values=None,
+        remove_randomness=False,
+        add_blank_lines=False,
+        add_bad_lines=False,
+        add_nan_lines=False,
+        thousands_separator=None,
+        decimal_separator=None,
+        comment_col_char=None,
+        quoting=csv.QUOTE_MINIMAL,
+        quotechar='"',
+        doublequote=True,
+        escapechar=None,
+        line_terminator=None,
+    ):
+        if os.path.exists(filename) and not force:
+            pass
+        else:
+            df = generate_dataframe(row_size, additional_col_values)
+            if remove_randomness:
+                df = df[["col1", "col2", "col3", "col4"]]
+            if add_nan_lines:
+                for i in range(0, row_size, row_size // (row_size // 10)):
+                    df.loc[i] = pandas.Series()
+            if comment_col_char:
+                char = comment_col_char if isinstance(comment_col_char, str) else "#"
+                df.insert(
+                    loc=0,
+                    column="col_with_comments",
+                    value=[char if (x + 2) == 0 else x for x in range(row_size)],
+                )
+
+            if thousands_separator:
+                for col_id in ["col1", "col3"]:
+                    df[col_id] = df[col_id].apply(
+                        lambda x: f"{x:,d}".replace(",", thousands_separator)
+                    )
+                df["col6"] = df["col6"].apply(
+                    lambda x: f"{x:,f}".replace(",", thousands_separator)
+                )
+            filename = (
+                f"{filename}.{COMP_TO_EXT[compression]}"
+                if compression != "infer"
+                else filename
+            )
+            df.to_csv(
+                filename,
+                sep=delimiter,
+                encoding=encoding,
+                compression=compression,
+                index=False,
+                decimal=decimal_separator if decimal_separator else ".",
+                line_terminator=line_terminator,
+                quoting=quoting,
+                quotechar=quotechar,
+                doublequote=doublequote,
+                escapechar=escapechar,
+            )
+            csv_reader_writer_params = {
+                "delimiter": delimiter,
+                "doublequote": doublequote,
+                "escapechar": escapechar,
+                "lineterminator": line_terminator if line_terminator else os.linesep,
+                "quotechar": quotechar,
+                "quoting": quoting,
+            }
+            if add_blank_lines:
+                insert_lines_to_csv(
+                    csv_name=filename,
+                    lines_positions=[
+                        x for x in range(5, row_size, row_size // (row_size // 10))
+                    ],
+                    lines_type="blank",
+                    encoding=encoding,
+                    **csv_reader_writer_params,
+                )
+            if add_bad_lines:
+                insert_lines_to_csv(
+                    csv_name=filename,
+                    lines_positions=[
+                        x for x in range(6, row_size, row_size // (row_size // 10))
+                    ],
+                    lines_type="bad",
+                    encoding=encoding,
+                    **csv_reader_writer_params,
+                )
+            filenames.append(filename)
+            return df
+
+    return _csv_file_maker
+
+
+def teardown_test_file(test_path):
+    if os.path.exists(test_path):
+        # PermissionError can occure because of issue #2533
+        try:
+            os.remove(test_path)
+        except PermissionError:
+            pass
+
+
+def teardown_test_files(test_paths: list):
+    for path in test_paths:
+        teardown_test_file(path)

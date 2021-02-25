@@ -63,6 +63,7 @@ class BaseExpr(abc.ABC):
         "add": "+",
         "sub": "-",
         "mul": "*",
+        "mod": "MOD",
         "floordiv": "/",
         "truediv": "/",
         "pow": "POWER",
@@ -74,7 +75,7 @@ class BaseExpr(abc.ABC):
         "ne": "<>",
     }
 
-    preserve_dtype_math_ops = {"add", "sub", "mul", "floordiv", "pow"}
+    preserve_dtype_math_ops = {"add", "sub", "mul", "mod", "floordiv", "pow"}
     promote_to_float_math_ops = {"truediv"}
 
     def eq(self, other):
@@ -127,6 +128,9 @@ class BaseExpr(abc.ABC):
 
     def mul(self, other):
         return self.bin_op(other, "mul")
+
+    def mod(self, other):
+        return self.bin_op(other, "mod")
 
     def truediv(self, other):
         return self.bin_op(other, "truediv")

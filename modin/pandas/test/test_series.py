@@ -180,13 +180,13 @@ def inter_df_math_helper_one_side(modin_series, pandas_series, op):
         pass
 
 
-def create_test_series(vals, sort=False):
+def create_test_series(vals, sort=False, **kwargs):
     if isinstance(vals, dict):
-        modin_series = pd.Series(vals[next(iter(vals.keys()))])
-        pandas_series = pandas.Series(vals[next(iter(vals.keys()))])
+        modin_series = pd.Series(vals[next(iter(vals.keys()))], **kwargs)
+        pandas_series = pandas.Series(vals[next(iter(vals.keys()))], **kwargs)
     else:
-        modin_series = pd.Series(vals)
-        pandas_series = pandas.Series(vals)
+        modin_series = pd.Series(vals, **kwargs)
+        pandas_series = pandas.Series(vals, **kwargs)
     if sort:
         modin_series = modin_series.sort_values().reset_index(drop=True)
         pandas_series = pandas_series.sort_values().reset_index(drop=True)
@@ -524,6 +524,39 @@ def test___setitem__(data):
         modin_series[key] = 0
         pandas_series[key] = 0
         df_equals(modin_series, pandas_series)
+
+
+@pytest.mark.parametrize(
+    "key",
+    [
+        pytest.param(lambda idx: slice(1, 3), id="location_based_slice"),
+        pytest.param(lambda idx: slice(idx[1], idx[-1]), id="index_based_slice"),
+        pytest.param(lambda idx: [idx[0], idx[2], idx[-1]], id="list_of_labels"),
+        pytest.param(
+            lambda idx: [True if i % 2 else False for i in range(len(idx))],
+            id="boolean_mask",
+        ),
+    ],
+)
+@pytest.mark.parametrize(
+    "index",
+    [
+        pytest.param(
+            lambda idx_len: [chr(x) for x in range(ord("a"), ord("a") + idx_len)],
+            id="str_index",
+        ),
+        pytest.param(lambda idx_len: list(range(1, idx_len + 1)), id="int_index"),
+    ],
+)
+def test___setitem___non_hashable(key, index):
+    data = np.arange(5)
+    index = index(len(data))
+    key = key(index)
+    md_sr, pd_sr = create_test_series(data, index=index)
+
+    md_sr[key] = 10
+    pd_sr[key] = 10
+    df_equals(md_sr, pd_sr)
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
@@ -2449,6 +2482,15 @@ def test_reindex(data):
             modin_series.reindex(index=[0, 1, 5]),
             pandas_series.reindex(index=[0, 1, 5]),
         )
+
+    # MultiIndex
+    modin_series, pandas_series = create_test_series(data)
+    modin_series.index, pandas_series.index = [
+        generate_multiindex(len(pandas_series))
+    ] * 2
+    pandas_result = pandas_series.reindex(list(reversed(pandas_series.index)))
+    modin_result = modin_series.reindex(list(reversed(modin_series.index)))
+    df_equals(pandas_result, modin_result)
 
 
 def test_reindex_like():

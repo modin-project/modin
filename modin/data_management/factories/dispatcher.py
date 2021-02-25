@@ -175,6 +175,10 @@ class EngineDispatcher(object):
     def to_pickle(cls, *args, **kwargs):
         return cls.__engine._to_pickle(*args, **kwargs)
 
+    @classmethod
+    def to_csv(cls, *args, **kwargs):
+        return cls.__engine._to_csv(*args, **kwargs)
+
 
 Engine.subscribe(EngineDispatcher._update_engine)
 Backend.subscribe(EngineDispatcher._update_engine)

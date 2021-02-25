@@ -517,22 +517,22 @@ class BasePandasDataset(object):
 
     agg = aggregate
 
-    def _aggregate(self, arg, *args, **kwargs):
+    def _aggregate(self, func, *args, **kwargs):
         _axis = kwargs.pop("_axis", 0)
         kwargs.pop("_level", None)
 
-        if isinstance(arg, str):
+        if isinstance(func, str):
             kwargs.pop("is_transform", None)
-            return self._string_function(arg, *args, **kwargs)
+            return self._string_function(func, *args, **kwargs)
 
         # Dictionaries have complex behavior because they can be renamed here.
-        elif isinstance(arg, dict):
-            return self._default_to_pandas("agg", arg, *args, **kwargs)
-        elif is_list_like(arg) or callable(arg):
+        elif func is None or isinstance(func, dict):
+            return self._default_to_pandas("agg", func, *args, **kwargs)
+        elif is_list_like(func) or callable(func):
             kwargs.pop("is_transform", None)
-            return self.apply(arg, axis=_axis, args=args, **kwargs)
+            return self.apply(func, axis=_axis, args=args, **kwargs)
         else:
-            raise TypeError("type {} is not callable".format(type(arg)))
+            raise TypeError("type {} is not callable".format(type(func)))
 
     def _string_function(self, func, *args, **kwargs):
         assert isinstance(func, str)
@@ -1686,65 +1686,28 @@ class BasePandasDataset(object):
 
     def reindex(
         self,
-        labels=None,
         index=None,
         columns=None,
-        axis=None,
-        method=None,
         copy=True,
-        level=None,
-        fill_value=np.nan,
-        limit=None,
-        tolerance=None,
+        **kwargs,
     ):
-        axis = self._get_axis_number(axis)
-        if (columns is not None and self._query_compiler.has_multiindex(axis=1)) or (
-            index is not None and self._query_compiler.has_multiindex()
-        ):
-            return self._default_to_pandas(
-                "reindex",
-                labels=labels,
-                index=index,
-                columns=columns,
-                method=method,
-                copy=copy,
-                level=level,
-                fill_value=fill_value,
-                limit=limit,
-                tolerance=tolerance,
-            )
         if (
-            level is not None
-            or (axis == 1 and self._query_compiler.has_multiindex(axis=1))
-            or (axis == 0 and self._query_compiler.has_multiindex())
+            kwargs.get("level") is not None
+            or (index is not None and self._query_compiler.has_multiindex())
+            or (columns is not None and self._query_compiler.has_multiindex(axis=1))
         ):
-            return self._default_to_pandas(
-                "reindex",
-                labels=labels,
-                level=level,
-                method=method,
-                copy=copy,
-                axis=axis,
-                fill_value=fill_value,
-                limit=limit,
-                tolerance=tolerance,
-            )
-        if axis == 0 and labels is not None:
-            index = labels
-        elif labels is not None:
-            columns = labels
+            if index is not None:
+                kwargs["index"] = index
+            if columns is not None:
+                kwargs["columns"] = columns
+            return self._default_to_pandas("reindex", copy=copy, **kwargs)
         new_query_compiler = None
         if index is not None:
             if not isinstance(index, pandas.Index):
                 index = pandas.Index(index)
             if not index.equals(self.index):
                 new_query_compiler = self._query_compiler.reindex(
-                    axis=0,
-                    labels=index,
-                    method=method,
-                    fill_value=fill_value,
-                    limit=limit,
-                    tolerance=tolerance,
+                    axis=0, labels=index, **kwargs
                 )
         if new_query_compiler is None:
             new_query_compiler = self._query_compiler
@@ -1754,12 +1717,7 @@ class BasePandasDataset(object):
                 columns = pandas.Index(columns)
             if not columns.equals(self.columns):
                 final_query_compiler = new_query_compiler.reindex(
-                    axis=1,
-                    labels=columns,
-                    method=method,
-                    fill_value=fill_value,
-                    limit=limit,
-                    tolerance=tolerance,
+                    axis=1, labels=columns, **kwargs
                 )
         if final_query_compiler is None:
             final_query_compiler = new_query_compiler
@@ -2363,7 +2321,11 @@ class BasePandasDataset(object):
             "errors": errors,
             "storage_options": storage_options,
         }
-        return self._default_to_pandas("to_csv", **kwargs)
+        new_query_compiler = self._query_compiler
+
+        from modin.data_management.factories.dispatcher import EngineDispatcher
+
+        return EngineDispatcher.to_csv(new_query_compiler, **kwargs)
 
     def to_dict(self, orient="dict", into=dict):  # pragma: no cover
         return self._default_to_pandas("to_dict", orient=orient, into=into)
@@ -2750,7 +2712,21 @@ class BasePandasDataset(object):
         else:
             return self._getitem(key)
 
-    def _getitem_slice(self, key):
+    def _setitem_slice(self, key: slice, value):
+        """
+        Set rows specified by 'key' slice with 'value'.
+
+        Parameters
+        ----------
+        key: location or index based slice,
+            Key that points rows to modify.
+        value: any,
+            Value to assing to the rows.
+        """
+        indexer = convert_to_index_sliceable(pandas.DataFrame(index=self.index), key)
+        self.iloc[indexer] = value
+
+    def _getitem_slice(self, key: slice):
         if key.start is None and key.stop is None:
             return self.copy()
         return self.iloc[key]
