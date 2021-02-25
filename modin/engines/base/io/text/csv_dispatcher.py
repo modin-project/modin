@@ -13,7 +13,6 @@
 
 from modin.engines.base.io.text.text_file_dispatcher import TextFileDispatcher
 from modin.data_management.utils import compute_chunksize
-from pandas.io.parsers import _validate_usecols_arg
 import pandas
 import csv
 import sys
@@ -90,14 +89,6 @@ class CSVDispatcher(TextFileDispatcher):
         column_names = empty_pd_df.columns
         skipfooter = kwargs.get("skipfooter", None)
         skiprows = kwargs.pop("skiprows", None)
-        usecols_md = _validate_usecols_arg(usecols)
-        if usecols is not None and usecols_md[1] != "integer":
-            del kwargs["usecols"]
-            all_cols = pandas.read_csv(
-                cls.file_open(filepath_or_buffer, "rb"),
-                **dict(kwargs, nrows=0, skipfooter=0),
-            ).columns
-            usecols = all_cols.get_indexer_for(list(usecols_md[0]))
         parse_dates = kwargs.pop("parse_dates", False)
         partition_kwargs = dict(
             kwargs,
@@ -106,7 +97,6 @@ class CSVDispatcher(TextFileDispatcher):
             skipfooter=0,
             skiprows=None,
             parse_dates=parse_dates,
-            usecols=usecols,
         )
         encoding = kwargs.get("encoding", None)
         quotechar = kwargs.get("quotechar", '"').encode(
