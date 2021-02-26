@@ -430,6 +430,26 @@ class BaseFrameManager(ABC):
         )
 
     @classmethod
+    def tree_reduce(cls, axis, partitions, reduce_func):
+        """Apply `reduce_func` to reduce all partitions to a single
+        Series.
+
+        Parameters
+        ----------
+        axis: int
+            The axis over which to apply.
+        reduce_func: callable
+           The function to apply.
+
+        Returns
+        -------
+        NumPy array
+            An array of new partitions for a Modin Frame.
+        """
+        new_partitions = cls.map_partitions(partitions, reduce_func)
+        return cls.map_axis_partitions(axis, new_partitions, reduce_func)
+
+    @classmethod
     def simple_shuffle(cls, axis, partitions, map_func, lengths):
         """
         Shuffle data using `lengths` via `map_func`.

@@ -704,7 +704,7 @@ class BasePandasFrame(ModinDataframe, object):
         ----------
             col_dtypes: Dictionary of {col: dtype,...} where col is the column
                 name and dtype is a numpy dtype.
-        
+
         Returns
         -------
             New dtypes for the dataframe and function astype_builder to map over partitions to convert columns dtypes to given dtypes.
@@ -737,8 +737,9 @@ class BasePandasFrame(ModinDataframe, object):
 
         def astype_builder(df):
             return df.astype({k: v for k, v in col_dtypes.items() if k in df})
-        
+
         return new_dtypes, astype_builder
+
     def astype(self, col_dtypes):
         """Convert the columns dtypes to given dtypes.
 
@@ -1173,6 +1174,65 @@ class BasePandasFrame(ModinDataframe, object):
             axis, reduce_parts, preserve_index=preserve_index
         )
 
+    def reduction(self, axis, function, tree_reduce=False, result_schema=None):
+        """Performs a user-defined per-column aggregation, where each column reduces
+        down to a single value.
+
+        Notes
+        -----
+            The user-defined function must reduce to a single value.
+
+        Parameters
+        ----------
+            axis: int
+                The axis to perform the reduction over.
+            function: callable
+                The reduction function to apply to each column.
+            tree_reduce: boolean
+                Flag to signal to the compiler that the function
+                can be applied using a tree reduction (e.g. max or sum).
+                Set this flag to False for functions that need to look at
+                the entire column at once to perform their reduction (e.g. median).
+            result_schema: list of dtypes
+                List of data types that represent the types of the output dataframe.
+
+        Returns
+        -------
+        BasePandasFrame
+            A new BasePandasFrame with the same columns as the previous, with only a single row.
+        """
+        # TODO: Given that the result of the reduction functions will be a single row/column
+        # and that in the tree_reduce case, it's not clear that its ok to cast to the new dtype
+        # before the tree reduce finishes, this function isn't wrapped in a call to astype, and
+        # instead, astype will be called at the end. The overhead shouldn't be too high.
+        if not tree_reduce:
+            new_df = self._fold_reduce(axis, function)
+        else:
+            # TODO: Could call _map_reduce with identity for map_fn, or just copy
+            # part of the code, but that won't take advantage of the tree_reduce
+            # arg. Should we tree reduce on a granularity finer than partitions?
+            def fn(df, **kwargs):
+                return function(df)
+
+            new_partitions = self._frame_mgr_cls.tree_reduce(axis, self._partitions, fn)
+            new_axes = [
+                self._compute_axis_labels(axis, new_partitions) for axis in range(2)
+            ]
+
+            new_lengths = [
+                self._axes_lengths[axis]
+                if len(new_axes[axis]) == len(self.axes[axis])
+                else None
+                for axis in [0, 1]
+            ]
+            new_df = self.__constructor__(
+                new_partitions,
+                *new_axes,
+                *new_lengths,
+            )
+
+        return new_df if result_schema is None else new_df.astype(result_schema)
+
     def map(self, function, axis=None, result_schema=None):
         """Applies a user-defined function row- wise (or column-wise if axis=1).
 
@@ -1203,28 +1263,35 @@ class BasePandasFrame(ModinDataframe, object):
         new_dtypes = None
         fn = function
         if result_schema is not None:
-            #TODO: For now, assume that result_schema is a list of dtypes of the same length
+            # TODO: For now, assume that result_schema is a list of dtypes of the same length
             # as self.columns. Perhaps we should change result_schema to be a dictionary?
             # Ultimately, the representation of result_schema depends on the typing system
             # we plan to implement.
-            col_dtypes = {self.columns[i]: result_schema[i] for i in range(len(result_schema))}
+            col_dtypes = {
+                self.columns[i]: result_schema[i] for i in range(len(result_schema))
+            }
             new_dtypes, astype_builder = self._build_astype_func(col_dtypes)
-            fn = lambda df: astype_builder(function(df))
+
+            def fn(df):
+                return astype_builder(function(df))
 
         if axis is None:
             new_partitions = self._frame_mgr_cls.map_partitions(self._partitions, fn)
         else:
             # Wrap function so it doesn't error because of unexpected kwargs.
-            fn_with_kwargs = lambda df, **kwargs: fn(df)
+            def fn_with_kwargs(df, **kwargs):
+                return fn(df)
+
             # Keep current partitioning to replicate behavior of _map
             # TODO: Should we allow a repartition here?
-            new_partitions = self._frame_mgr_cls.map_axis_partitions(axis, self._partitions, fn_with_kwargs, keep_partitioning=True)
-        
-        #TODO: Given that map can add new rows/columns, I validate both the index and the columns
+            new_partitions = self._frame_mgr_cls.map_axis_partitions(
+                axis, self._partitions, fn_with_kwargs, keep_partitioning=True
+            )
+
+        # TODO: Given that map can add new rows/columns, I validate both the index and the columns
         # Perhaps we shouldn't?
         new_axes = [
-            self._compute_axis_labels(axis, new_partitions)
-            for axis in range(2)
+            self._compute_axis_labels(axis, new_partitions) for axis in range(2)
         ]
 
         new_lengths = [
@@ -1240,8 +1307,6 @@ class BasePandasFrame(ModinDataframe, object):
             *new_lengths,
             dtypes=new_dtypes,
         )
-            
-        
 
     def _map(self, func, dtypes=None, validate_index=False, validate_columns=False):
         """Perform a function that maps across the entire dataset.
@@ -1350,7 +1415,7 @@ class BasePandasFrame(ModinDataframe, object):
             *new_lengths,
             self.dtypes if axis == 0 else None,
         )
-    
+
     # Kept for backwards compatibility.
     filter_full_axis = filter
 
@@ -1367,7 +1432,11 @@ class BasePandasFrame(ModinDataframe, object):
         BasePandasFrame
              A new BasePandasFrame from the filter provided.
         """
-        return self.mask(col_positions=[i for i in range(len(self.columns)) if self.dtypes[i] in types])
+        return self.mask(
+            col_positions=[
+                i for i in range(len(self.columns)) if self.dtypes[i] in types
+            ]
+        )
 
     def _apply_full_axis(
         self,
@@ -2117,6 +2186,41 @@ class BasePandasFrame(ModinDataframe, object):
         ]
 
         return self.__constructor__(new_partitions, *new_axes)
+
+    def groupby(self, axis, by, operator, result_schema=None):
+        """Generates groups based on values in the input column(s) and performs
+        the specified operation (e.g. aggregation or backfill) on the groups.
+
+        Notes
+        -----
+            No communication between groups is allowed in this algebra implementation.
+
+            The number of rows (columns if axis=1) returned by the user-defined function
+                passed to the groupby may be at most the number of rows in the group, and
+                may be as small as a single row.
+
+            Unlike the pandas API, an intermediate “GROUP BY” object is not present in this
+                algebra implementation.
+
+        Parameters
+        ----------
+            axis: int
+                The axis to apply the grouping over.
+            by: string or list of strings
+                One or more column labels to use for grouping.
+            operator: callable
+                The operation to carry out on each of the groups. The operator is another
+                algebraic operator with its own user-defined function parameter, depending
+                on the output desired by the user.
+            result_schema: list of dtypes
+                List of data types that represent the types of the output dataframe.
+
+        Returns
+        -------
+        BasePandasFrame
+            A new BasePandasFrame containing the groupings specified, with the operator
+                applied to each group.
+        """
 
     @classmethod
     def from_pandas(cls, df):

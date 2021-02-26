@@ -1862,9 +1862,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         def query_builder(df, **kwargs):
             return df.query(expr, inplace=False, **kwargs)
 
-        return self.__constructor__(
-            self._modin_frame.filter(1, query_builder)
-        )
+        return self.__constructor__(self._modin_frame.filter(1, query_builder))
 
     def rank(self, **kwargs):
         """Computes numerical rank along axis. Equal values are set to the average.
