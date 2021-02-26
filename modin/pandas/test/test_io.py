@@ -1174,6 +1174,28 @@ class TestParquet:
         modin_df_s3 = pd.read_parquet(dataset_url)
         df_equals(pandas_df, modin_df_s3)
 
+    def test_read_parquet_without_metadata(self):
+        """Test that Modin can read parquet files not written by pandas."""
+        from pyarrow import csv
+        from pyarrow import parquet
+
+        parquet_fname = get_unique_filename(extension="parquet")
+        csv_fname = get_unique_filename(extension="parquet")
+        pandas_df = pandas.DataFrame(
+            {
+                "idx": np.random.randint(0, 100_000, size=2000),
+                "A": np.random.randint(0, 10, size=2000),
+                "B": ["a", "b"] * 1000,
+                "C": ["c"] * 2000,
+            }
+        )
+        pandas_df.to_csv(csv_fname, index=False)
+        # read into pyarrow table and write it to a parquet file
+        t = csv.read_csv(csv_fname)
+        parquet.write_table(t, parquet_fname)
+
+        df_equals(pd.read_parquet(parquet_fname), pandas.read_parquet(parquet_fname))
+
     def test_to_parquet(self):
         modin_df, pandas_df = create_test_dfs(TEST_DATA)
         eval_to_file(

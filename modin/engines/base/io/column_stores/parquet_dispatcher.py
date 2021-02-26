@@ -108,7 +108,7 @@ class ParquetDispatcher(ColumnStoreDispatcher):
                 meta = ParquetFile(path).metadata
                 column_names = meta.schema.names
 
-            if meta is not None:
+            if meta is not None and meta.metadtata is not None:
                 pandas_metadata = meta.metadata.get(b"pandas", None)
                 if pandas_metadata is not None:
                     import json
