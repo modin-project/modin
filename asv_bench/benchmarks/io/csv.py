@@ -67,7 +67,7 @@ class TimeReadCsvSkiprows(BaseReadCsv):
         )
 
 
-class TimeReadCsvGeneral:
+class TimeReadCsvNamesDtype:
     _dtypes_params = ["Int64", "Int64_Timestamp"]
     _timestamp_columns = ["col1", "col2"]
 
@@ -81,7 +81,7 @@ class TimeReadCsvGeneral:
     def _get_file_id(self, shape, dtype):
         return get_shape_id(shape) + dtype
 
-    def _add_timestamp_column(self, df):
+    def _add_timestamp_columns(self, df):
         df = df.copy()
         date_column = IMPL["pandas"].date_range(
             "2000",
@@ -92,7 +92,7 @@ class TimeReadCsvGeneral:
             df[col] = date_column
         return df
 
-    def setup_cache(self, test_filename="io_test_file_csv_general"):
+    def setup_cache(self, test_filename="io_test_file_csv_names_dtype"):
         # filenames with a metadata of saved dataframes
         cache = {}
         for shape in UNARY_OP_DATA_SIZE[ASV_DATASET_SIZE]:
@@ -122,7 +122,7 @@ class TimeReadCsvGeneral:
                 del self.dtype[col]
             self.parse_dates = self._timestamp_columns
 
-    def time_read_csv_general(self, cache, shape, names, dtype):
+    def time_read_csv_names_dtype(self, cache, shape, names, dtype):
         execute(
             IMPL[ASV_USE_IMPL].read_csv(
                 self.filename,
