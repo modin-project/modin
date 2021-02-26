@@ -67,9 +67,9 @@ class TimeReadCsvSkiprows(BaseReadCsv):
         )
 
 
-class TimeReadCsvGeneral(BaseReadCsv):
+class TimeReadCsvGeneral:
     _dtypes_params = ["Int64", "Int64_Timestamp"]
-    _timestamp_column = "col2"
+    _timestamp_columns = ["col1", "col2"]
 
     param_names = ["shape", "names", "dtype"]
     params = [
@@ -83,41 +83,46 @@ class TimeReadCsvGeneral(BaseReadCsv):
 
     def _add_timestamp_column(self, df):
         df = df.copy()
-        df.loc[:, self._timestamp_column] = IMPL["pandas"].date_range(
+        date_column = IMPL["pandas"].date_range(
             "2000",
             periods=df.shape[0],
             freq="ms",
         )
+        for col in self._timestamp_columns:
+            df[col] = date_column
         return df
 
     def setup_cache(self, test_filename="io_test_file_csv_general"):
-        test_filenames = {}
+        # filenames with a metadata of saved dataframes
+        cache = {}
         for shape in UNARY_OP_DATA_SIZE[ASV_DATASET_SIZE]:
             for dtype in self._dtypes_params:
                 df = generate_dataframe("pandas", "int", *shape, RAND_LOW, RAND_HIGH)
                 if dtype == "Int64_Timestamp":
-                    df = self._add_timestamp_column(df)
+                    df = self._add_timestamp_columns(df)
 
                 file_id = self._get_file_id(shape, dtype)
-                test_filenames[file_id] = (
+                cache[file_id] = (
                     f"{test_filename}_{file_id}.csv",
                     df.columns.to_list(),
                     df.dtypes.to_dict(),
                 )
-                df.to_csv(test_filenames[file_id][0], index=False)
-        return test_filenames
+                df.to_csv(cache[file_id][0], index=False)
+        return cache
 
-    def setup(self, test_filenames, shape, names, dtype):
+    def setup(self, cache, shape, names, dtype):
         file_id = self._get_file_id(shape, dtype)
-        self.filename, self.names, self.dtype = test_filenames[file_id]
+        self.filename, self.names, self.dtype = cache[file_id]
 
         self.parse_dates = None
         if dtype == "Int64_Timestamp":
+            # cached version of dtype should not change
             self.dtype = self.dtype.copy()
-            del self.dtype[self._timestamp_column]
-            self.parse_dates = [self._timestamp_column]
+            for col in self._timestamp_columns:
+                del self.dtype[col]
+            self.parse_dates = self._timestamp_columns
 
-    def time_read_csv_general(self, test_filenames, shape, names, dtype):
+    def time_read_csv_general(self, cache, shape, names, dtype):
         execute(
             IMPL[ASV_USE_IMPL].read_csv(
                 self.filename,
