@@ -292,6 +292,13 @@ class TestCsv:
             skip_blank_lines=skip_blank_lines,
         )
 
+    @pytest.mark.parametrize("usecols", [lambda col_name: col_name in ["a", "b", "e"]])
+    def test_from_csv_with_callable_usecols(self, usecols):
+        fname = "modin/pandas/test/data/test_usecols.csv"
+        pandas_df = pandas.read_csv(fname, usecols=usecols)
+        modin_df = pd.read_csv(fname, usecols=usecols)
+        df_equals(modin_df, pandas_df)
+
     # General Parsing Configuration
     @pytest.mark.parametrize("dtype", [None, True])
     @pytest.mark.parametrize("engine", [None, "python", "c"])
