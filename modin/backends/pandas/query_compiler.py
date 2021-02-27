@@ -1438,7 +1438,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         # `squeeze` will convert it to a scalar.
         first_result = (
             self.__constructor__(
-                self._modin_frame._fold_reduce(0, first_valid_index_builder)
+                self._modin_frame._reduce_full_axis(0, first_valid_index_builder)
             )
             .min(axis=1)
             .to_pandas()
@@ -1463,7 +1463,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         # `squeeze` will convert it to a scalar.
         first_result = (
             self.__constructor__(
-                self._modin_frame._fold_reduce(0, last_valid_index_builder)
+                self._modin_frame._reduce_full_axis(0, last_valid_index_builder)
             )
             .max(axis=1)
             .to_pandas()
@@ -2829,7 +2829,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
     # Indexing
     def view(self, index=None, columns=None):
         return self.__constructor__(
-            self._modin_frame.mask(row_numeric_idx=index, col_numeric_idx=columns)
+            self._modin_frame.mask(row_positions=index, col_positions=columns)
         )
 
     def write_items(self, row_numeric_index, col_numeric_index, broadcasted_items):

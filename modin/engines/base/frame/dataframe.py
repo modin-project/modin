@@ -24,7 +24,7 @@ from modin.error_message import ErrorMessage
 from modin.backends.pandas.parsers import find_common_type_cat as find_common_type
 
 
-class BasePandasFrame(ModinDataframe, object):
+class BasePandasFrame(ModinDataframe):
     """An abstract class that represents the Parent class for any Pandas DataFrame class.
 
     This class is intended to simplify the way that operations are performed
@@ -78,6 +78,7 @@ class BasePandasFrame(ModinDataframe, object):
                     sum(column_widths), len(self._columns_cache)
                 ),
             )
+        # TODO: If dtypes is not None, should we do a type check here?
         self._column_widths_cache = column_widths
         self._dtypes = dtypes
         self._filter_empties()
@@ -147,6 +148,7 @@ class BasePandasFrame(ModinDataframe, object):
         # For now we will use a pandas Series for the dtypes.
         if len(self.columns) > 0:
             dtypes = self._map_reduce(0, map_func, reduce_func).to_pandas().iloc[0]
+            dtypes.index = self.columns
         else:
             dtypes = pandas.Series([])
         # reset name to None because we use "__reduced__" internally
@@ -368,23 +370,23 @@ class BasePandasFrame(ModinDataframe, object):
 
     def mask(
         self,
-        row_indices=None,
+        row_labels=None,
         row_positions=None,
-        col_indices=None,
+        col_labels=None,
         col_positions=None,
     ):
         """Lazily select columns or rows from given indices.
 
-        Note: If both row_indices and row_positions are set, row_indices will be used.
-            The same rule applied to col_indices and col_positions.
+        Note: If both row_labels and row_positions are set, row_labels will be used.
+            The same rule applied to col_labels and col_positions.
 
         Parameters
         ----------
-        row_indices : list of hashable
+        row_labels : list of hashable
             The row labels to extract.
         row_positions : list of int
             The row indices to extract.
-        col_indices : list of hashable
+        col_labels : list of hashable
             The column labels to extract.
         col_positions : list of int
             The column indices to extract.
@@ -403,14 +405,14 @@ class BasePandasFrame(ModinDataframe, object):
         ):
             col_positions = None
         if (
-            row_indices is None
+            row_labels is None
             and row_positions is None
-            and col_indices is None
+            and col_labels is None
             and col_positions is None
         ):
             return self.copy()
-        if row_indices is not None:
-            row_positions = self.index.get_indexer_for(row_indices)
+        if row_labels is not None:
+            row_positions = self.index.get_indexer_for(row_labels)
         if row_positions is not None:
             row_partitions_list = self._get_dict_of_block_index(0, row_positions)
             if isinstance(row_positions, slice):
@@ -433,8 +435,8 @@ class BasePandasFrame(ModinDataframe, object):
             new_row_lengths = self._row_lengths
             new_index = self.index
 
-        if col_indices is not None:
-            col_positions = self.columns.get_indexer_for(col_indices)
+        if col_labels is not None:
+            col_positions = self.columns.get_indexer_for(col_labels)
         if col_positions is not None:
             col_partitions_list = self._get_dict_of_block_index(1, col_positions)
             if isinstance(col_positions, slice):
@@ -519,7 +521,7 @@ class BasePandasFrame(ModinDataframe, object):
         # to reorder here based on the expected order from within the data.
         # We create a dictionary mapping the position of the numeric index with respect
         # to all others, then recreate that order by mapping the new order values from
-        # the old. This information is sent to `reorder_labels`.
+        # the old. This information is sent to `_reorder_labels`.
         if row_positions is not None:
             row_order_mapping = dict(
                 zip(sorted(row_positions), range(len(row_positions)))
@@ -534,7 +536,7 @@ class BasePandasFrame(ModinDataframe, object):
             new_col_order = [col_order_mapping[idx] for idx in col_positions]
         else:
             new_col_order = None
-        return intermediate.reorder_labels(
+        return intermediate._reorder_labels(
             row_positions=new_row_order, col_positions=new_col_order
         )
 
@@ -622,7 +624,7 @@ class BasePandasFrame(ModinDataframe, object):
         result.index = new_labels
         return result
 
-    def reorder_labels(self, row_positions=None, col_positions=None):
+    def _reorder_labels(self, row_positions=None, col_positions=None):
         """Reorder the column and or rows in this DataFrame.
 
         Parameters
@@ -697,7 +699,17 @@ class BasePandasFrame(ModinDataframe, object):
         dtypes.index = column_names
         return dtypes
 
-    def _build_astype_func(self, col_dtypes):
+    def astype(self, col_dtypes):
+        """Convert the columns dtypes to given dtypes.
+
+        Args:
+            col_dtypes: Dictionary of {col: dtype,...} where col is the column
+                name and dtype is a numpy dtype.
+
+        Returns
+        -------
+            dataframe with updated dtypes.
+        """
         """Build function to map over partitions to convert the columns dtypes to given dtypes.
 
         Parameters
@@ -737,21 +749,6 @@ class BasePandasFrame(ModinDataframe, object):
 
         def astype_builder(df):
             return df.astype({k: v for k, v in col_dtypes.items() if k in df})
-
-        return new_dtypes, astype_builder
-
-    def astype(self, col_dtypes):
-        """Convert the columns dtypes to given dtypes.
-
-        Args:
-            col_dtypes: Dictionary of {col: dtype,...} where col is the column
-                name and dtype is a numpy dtype.
-
-        Returns
-        -------
-            dataframe with updated dtypes.
-        """
-        new_dtypes, astype_builder = self._build_astype_func(col_dtypes)
 
         new_frame = self._frame_mgr_cls.map_partitions(self._partitions, astype_builder)
         return self.__constructor__(
@@ -1112,7 +1109,7 @@ class BasePandasFrame(ModinDataframe, object):
         result._apply_index_objs(axis)
         return result
 
-    def _fold_reduce(self, axis, func, preserve_index=True):
+    def _reduce_full_axis(self, axis, func, preserve_index=True):
         """
         Apply function that reduce Manager to series but require knowledge of full axis.
 
@@ -1138,6 +1135,9 @@ class BasePandasFrame(ModinDataframe, object):
             axis, new_parts, preserve_index=preserve_index
         )
 
+    # TODO: I'm not sure that it makes sense to rename this to tree_reduce - as
+    # other places use map_reduce as a map_reduce - and map_reduce is a more broad
+    # form of tree_reduce (or a lateral version of reduction).
     def _map_reduce(self, axis, map_func, reduce_func=None, preserve_index=True):
         """
         Apply function that will reduce the data to a Pandas Series.
@@ -1206,32 +1206,19 @@ class BasePandasFrame(ModinDataframe, object):
         # before the tree reduce finishes, this function isn't wrapped in a call to astype, and
         # instead, astype will be called at the end. The overhead shouldn't be too high.
         if not tree_reduce:
-            new_df = self._fold_reduce(axis, function)
+            new_df = self._reduce_full_axis(axis, function)
         else:
-            # TODO: Could call _map_reduce with identity for map_fn, or just copy
-            # part of the code, but that won't take advantage of the tree_reduce
-            # arg. Should we tree reduce on a granularity finer than partitions?
-            def fn(df, **kwargs):
-                return function(df)
+            new_df = self._map_reduce(axis, function)
 
-            new_partitions = self._frame_mgr_cls.tree_reduce(axis, self._partitions, fn)
-            new_axes = [
-                self._compute_axis_labels(axis, new_partitions) for axis in range(2)
-            ]
+        if result_schema is not None:
+            if new_df.dtypes != pandas.Series(result_schema):
+                raise TypeError(
+                    "Resultant schema:\n{}\nDoes not match expected result schema:\n{}".format(
+                        new_df.dtypes, pandas.Series(result_schema)
+                    )
+                )
 
-            new_lengths = [
-                self._axes_lengths[axis]
-                if len(new_axes[axis]) == len(self.axes[axis])
-                else None
-                for axis in [0, 1]
-            ]
-            new_df = self.__constructor__(
-                new_partitions,
-                *new_axes,
-                *new_lengths,
-            )
-
-        return new_df if result_schema is None else new_df.astype(result_schema)
+        return new_df
 
     def map(self, function, axis=None, result_schema=None):
         """Applies a user-defined function row- wise (or column-wise if axis=1).
@@ -1267,13 +1254,27 @@ class BasePandasFrame(ModinDataframe, object):
             # as self.columns. Perhaps we should change result_schema to be a dictionary?
             # Ultimately, the representation of result_schema depends on the typing system
             # we plan to implement.
-            col_dtypes = {
-                self.columns[i]: result_schema[i] for i in range(len(result_schema))
-            }
-            new_dtypes, astype_builder = self._build_astype_func(col_dtypes)
+            new_dtypes = pandas.Series(result_schema)
 
             def fn(df):
-                return astype_builder(function(df))
+                new_df = function(df)
+                new_df.dtypes.index = new_df.columns
+                # TODO: Assumes result_schema is exhaustive - but perhaps this isn't a valid assumption.
+                # This could go hand in hand with AnyType/Unspecified - perhaps only type check on specified
+                # columns, and others have unspecified types. Since self.dtypes for the new values is not None
+                # those column's types won't be specified till an explicit call to infer_types or an astype call
+                # (by mapping a coercion function)
+                if not (
+                    all(new_df.dtypes.isin(new_dtypes))
+                    and new_dtypes[new_df.columns] == new_df.dtypes
+                ):
+                    raise TypeError(
+                        "Resultant schema:\n{}\nDoes not match expected result schema:\n{}".format(
+                            new_df.dtypes, new_dtypes
+                        )
+                    )
+
+                return new_df
 
         if axis is None:
             new_partitions = self._frame_mgr_cls.map_partitions(self._partitions, fn)
@@ -2221,6 +2222,190 @@ class BasePandasFrame(ModinDataframe, object):
             A new BasePandasFrame containing the groupings specified, with the operator
                 applied to each group.
         """
+        raise NotImplementedError("Need to implement groupby")
+
+    def explode(self, axis, function, result_schema=None) -> "ModinDataframe":
+        """Explode data based on the function provided along the specified axis.
+
+        Notes
+        -----
+            Only one axis can be expanded at a time.
+
+            The user-defined function may increase the number of rows (columns if axis=1),
+                    but it should not remove or drop rows.
+
+        Parameters
+        ----------
+            axis: int
+                The axis to expand over.
+            function: callable
+                The function to use to expand the data. This function should accept one
+                row/column, and return multiple.
+            result_schema: list of dtypes
+                List of data types that represent the types of the output dataframe.
+
+        Returns
+        -------
+        ModinDataframe
+            A new ModinDataframe with the specified axis expanded.
+        """
+        raise NotImplementedError("Need to implement explode")
+
+    def window(
+        self, axis, function, window_size, result_schema=None
+    ) -> "ModinDataframe":
+        """Applies a user-defined function over a sliding window along the specified axis.
+
+        Notes
+        -----
+            The shapes of the output and input dataframes must match. The user-defined function
+                recieves window_size arguments and must return the same number of outputs.
+
+            The user-defined function may only access values in the same column (row if axis=1).
+
+        Parameters
+        ----------
+            axis: int
+                The axis to slide over.
+            function: callable
+                The sliding window function to apply over the data.
+            window_size: int
+                The number of row/columns to pass to the function.
+                (The size of the sliding window).
+            result_schema: list of dtypes
+                List of data types that represent the types of the output dataframe.
+
+        Returns
+        -------
+        ModinDataframe
+            A new ModinDataframe with the function applied over windows of the specified axis.
+        """
+        raise NotImplementedError("Need to implement window")
+
+    def window_reduction(
+        self,
+        axis,
+        reduction_fn,
+        window_size,
+        result_schema=None,
+    ) -> "ModinDataframe":
+        """Applies a sliding window operator that acts as a GROUPBY on each window,
+        which reduces down to a single row (column) per window.
+
+        Notes
+        -----
+            The user-defined reduction function must reduce each window’s column
+                (row if axis=1) down to a single value.
+
+        Parameters
+        ----------
+            axis: int
+                The axis to slide over.
+            reduction_fn: callable
+                The reduction function to apply over the data.
+            window_size: int
+                The number of row/columns to pass to the function.
+                (The size of the sliding window).
+            result_schema: list of dtypes
+                List of data types that represent the types of the output dataframe.
+
+        Returns
+        -------
+        ModinDataframe
+            A new ModinDataframe with the reduction function applied over windows of the specified
+                axis.
+        """
+        raise NotImplementedError("Need to implement window_reduction")
+
+    def infer_types(self, columns_list: List[str]) -> "ModinDataframe":
+        """Determines the compatible type shared by all values in the specified columns,
+        and converts all values to that type.
+
+        Parameters
+        ----------
+            columns_list: list of strings
+                List of column labels to infer and induce types over.
+
+        Returns
+        -------
+        ModinDataframe
+            A new ModinDataframe with the inferred schema.
+        """
+        pass
+
+    def join(self, axis, condition, other, join_type) -> "ModinDataframe":
+        """Joins this dataframe with the other.
+
+        Notes
+        -----
+            During the join, this dataframe is considered the left, while the other is
+                treated as the right.
+
+            Only inner joins, left outer, right outer, and full outer joins are currently supported.
+                Support for other join types (e.g. natural join) may be implemented in the future.
+
+        Parameters
+        ----------
+            axis: int
+                The axis to perform the join on.
+            condition: callable
+                Function that determines which rows should be joined. The condition can be a
+                simple equality, e.g. "left.col1 == right.col1" or can be arbitrarily complex.
+            other: ModinDataframe
+                The other data to join with, i.e. the right dataframe.
+            join_type: string
+                The type of join to perform.
+
+        Returns
+        -------
+        ModinDataframe
+            A new ModinDataframe that is the result of applying the specified join over the two
+            dataframes.
+        """
+        raise NotImplementedError("Need to implement join")
+
+    def concat(self, axis, others) -> "ModinDataframe":
+        """Appends the rows of identical column labels from multiple dataframes.
+
+        Notes
+        -----
+            The concat operator incurs fixed overheads, and so this algebra places no
+                limit to the number of dataframes that may be concatenated in this way.
+
+        Parameters
+        ----------
+            axis: int
+                The axis on which to perform the concatenation.
+            others: ModinDataframe or list of ModinDataframes
+                The other ModinDataframe(s) to concatenate.
+
+        Returns
+        -------
+        ModinDataframe
+            A new ModinDataframe that is the result of concatenating the dataframes over the
+            specified axis.
+        """
+        raise NotImplementedError("Need to implement concat")
+
+    def sort_by(self, axis, columns, ascending=True) -> "ModinDataframe":
+        """Logically reorders the dataframe’s rows (columns if axis=1) by the lexicographical
+        order of the data in a column or set of columns.
+
+        Parameters
+        ----------
+            axis: int
+                The axis to perform the sort over.
+            columns: string or list of strings
+                Column label(s) to use to determine lexicographical ordering.
+            ascending: boolean
+                Whether to sort in ascending or descending order.
+
+        Returns
+        -------
+        ModinDataframe
+            A new ModinDataframe sorted into lexicographical order by the specified column(s).
+        """
+        raise NotImplementedError("Need to implement sort_by")
 
     @classmethod
     def from_pandas(cls, df):

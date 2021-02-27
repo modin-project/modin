@@ -29,9 +29,9 @@ class ModinDataframe(ABC):
     @abstractmethod
     def mask(
         self,
-        row_indices: Optional[List[Hashable]] = None,
+        row_labels: Optional[List[Hashable]] = None,
         row_positions: Optional[List[int]] = None,
-        col_indices: Optional[List[Hashable]] = None,
+        col_labels: Optional[List[Hashable]] = None,
         col_positions: Optional[List[int]] = None,
     ) -> "ModinDataframe":
         """Allows users to perform selection and projection on the row and column number (positional notation),
@@ -39,11 +39,11 @@ class ModinDataframe(ABC):
 
         Parameters
         ----------
-        row_indices : list of hashable
+        row_labels : list of hashable
             The row labels to extract.
         row_positions : list of int
             The row indices to extract.
-        col_indices : list of hashable
+        col_labels : list of hashable
             The column labels to extract.
         col_positions : list of int
             The column indices to extract.
