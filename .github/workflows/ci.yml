@@ -285,6 +285,9 @@ jobs:
           conda list
       - name: Install HDF5
         run: sudo apt update && sudo apt install -y libhdf5-dev
+      - name: Print Env
+        shell: bash -l {0}
+        run: env
       - shell: bash -l {0}
         run: pytest modin/experimental/engines/omnisci_on_ray/test/test_dataframe.py
       - name: Publish test-omnisci artefacts
