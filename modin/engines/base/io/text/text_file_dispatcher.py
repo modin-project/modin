@@ -17,10 +17,12 @@ import numpy as np
 import warnings
 import io
 import os
-from typing import Union, Sequence, Optional
+from typing import Union, Sequence, Optional, Tuple
 import pandas
 
 from modin.config import NPartitions
+
+ColumnNamesTypes = Tuple[Union[pandas.Index, pandas.MultiIndex, pandas.Int64Index]]
 
 
 class TextFileDispatcher(FileDispatcher):
@@ -279,7 +281,7 @@ class TextFileDispatcher(FileDispatcher):
         cls,
         header: Union[int, Sequence[int], str, None] = "infer",
         names: Optional[Sequence] = None,
-    ):
+    ) -> int:
         """
         Defines the number of rows that are used by header.
         Parameters
@@ -290,7 +292,7 @@ class TextFileDispatcher(FileDispatcher):
                 Original names parameter of read_csv function.
         Returns
         -------
-        header_size:
+        header_size: int
                 The number of rows that are used by header.
         """
         header_size = 0
@@ -308,51 +310,54 @@ class TextFileDispatcher(FileDispatcher):
         cls,
         df: pandas.DataFrame,
         num_splits: int,
-        column_names: Sequence,
-    ):
+        column_names: ColumnNamesTypes,
+    ) -> Tuple[list, int]:
         """
         Define partitioning metadata.
         ----------
-        df:
+        df: pandas.DataFrame
             The DataFrame to split.
-        num_splits:
+        num_splits: int
             The maximum number of splits to separate the DataFrame into.
-        column_names:
+        column_names: ColumnNamesTypes
             column names of df.
 
         Returns
         -------
-        column_widths:
+        column_widths: list
                 Column width to use during new frame creation (number of
                 columns for each partition).
-        num_splits:
+        num_splits: int
                 Updated `num_splits` parameter.
         """
         column_chunksize = compute_chunksize(df, num_splits, axis=1)
-
         if column_chunksize > len(column_names):
             column_widths = [len(column_names)]
             # This prevents us from unnecessarily serializing a bunch of empty
             # objects.
             num_splits = 1
         else:
-            column_widths = [
-                column_chunksize
-                if len(column_names) > (column_chunksize * (i + 1))
-                else 0
-                if len(column_names) < (column_chunksize * i)
-                else len(column_names) - (column_chunksize * i)
-                for i in range(num_splits)
-            ]
+            # split columns into chunks with maximal size column_chunksize, for example
+            # if num_splits == 4, len(column_names) == 80 and column_chunksize == 32,
+            # column_widths will be [32, 32, 16, 0]
+            column_widths = []
+            for i in range(num_splits):
+                if len(column_names) > (column_chunksize * i):
+                    if len(column_names) > (column_chunksize * (i + 1)):
+                        column_widths.append(column_chunksize)
+                    else:
+                        column_widths.append(len(column_names) - (column_chunksize * i))
+                else:
+                    column_widths.append(0)
 
         return column_widths, num_splits
 
     @classmethod
-    def _launch_tasks(cls, splits: Sequence, **partition_kwargs):
+    def _launch_tasks(cls, splits: list, **partition_kwargs) -> Tuple[list, list, list]:
         """
         Launch tasks to read partitions.
         ----------
-        splits:
+        splits: list
             list of tuples with partitions data, which defines
             parser task (start/end read bytes and etc.)
         partition_kwargs:
@@ -360,11 +365,11 @@ class TextFileDispatcher(FileDispatcher):
 
         Returns
         -------
-        partition_ids:
+        partition_ids: list
                 array with references to the partitions data.
-        index_ids:
+        index_ids: list
                 array with references to the partitions index objects.
-        dtypes_ids:
+        dtypes_ids: list
                 array with references to the partitions dtypes objects.
         """
         partition_ids = []

@@ -11,12 +11,22 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-from modin.engines.base.io.text.text_file_dispatcher import TextFileDispatcher
+from modin.engines.base.io.text.text_file_dispatcher import (
+    TextFileDispatcher,
+    ColumnNamesTypes,
+)
 import pandas
-from csv import QUOTE_NONE
+from csv import QUOTE_NONE, Dialect
 import sys
+from typing import Union, Sequence, Callable, Dict, Tuple
+from pandas._typing import FilePathOrBuffer
 
 from modin.config import NPartitions
+
+ReadCsvKwargsType = Dict[
+    str, Union[str, int, bool, dict, object, Sequence, Callable, Dialect, None]
+]
+IndexColType = Union[int, str, bool, Sequence[int], Sequence[str], None]
 
 
 class CSVDispatcher(TextFileDispatcher):
@@ -141,17 +151,20 @@ class CSVDispatcher(TextFileDispatcher):
     # _read helper functions
     @classmethod
     def _read_csv_check_support(
-        cls, filepath_or_buffer, read_csv_kwargs, compression_infered
-    ):
+        cls,
+        filepath_or_buffer: FilePathOrBuffer,
+        read_csv_kwargs: ReadCsvKwargsType,
+        compression_infered: str,
+    ) -> bool:
         """
         Check whatever or not passed parameters are supported by current modin.read_csv
         implementation.
         ----------
-        filepath_or_buffer:
+        filepath_or_buffer: str, path object or file-like object
                 `filepath_or_buffer` parameter of read_csv function.
-        read_csv_kwargs:
+        read_csv_kwargs: ReadCsvKwargsType
                 Parameters of read_csv function.
-        compression_infered:
+        compression_infered: str
                 Infered `compression` parameter of read_csv function.
 
         Returns
@@ -185,24 +198,29 @@ class CSVDispatcher(TextFileDispatcher):
         return True
 
     @classmethod
-    def _define_index(cls, index_ids, index_col, index_name):
+    def _define_index(
+        cls,
+        index_ids: list,
+        index_col: IndexColType,
+        index_name: str,
+    ) -> Tuple[IndexColType, list]:
         """
         Compute the index based on a sum of the lengths of each partition
         (by default) or based on the column(s) that were requested.
         ----------
-        index_ids:
+        index_ids: list
                 Array with references to the partitions index objects.
-        index_col:
+        index_col: IndexColType
                 index_col parameter of read_csv function.
-        index_name:
+        index_name: str
                 Name that should be assigned to the index if `index_col`
                 is not provided.
 
         Returns
         -------
-        new_index:
+        new_index: IndexColType
                 Index that should be passed to the new_frame constructor.
-        row_lengths:
+        row_lengths: list
                 Partitions rows lengths.
         """
         if index_col is None:
@@ -217,22 +235,27 @@ class CSVDispatcher(TextFileDispatcher):
         return new_index, row_lengths
 
     @classmethod
-    def _define_column_names(cls, column_names, parse_dates, column_widths):
+    def _define_column_names(
+        cls,
+        column_names: ColumnNamesTypes,
+        parse_dates: Union[bool, dict, Sequence],
+        column_widths: list,
+    ) -> Tuple[ColumnNamesTypes, list]:
         """
         Redefine columns names in accordance to the parse_dates parameter.
         ----------
-        column_names:
+        column_names: ColumnNamesTypes
                 Array with columns names.
-        parse_dates:
+        parse_dates: array, bool or dict
                 `parse_dates` parameter of read_csv function.
-        column_widths:
+        column_widths: list
                 Number of columns in each partition.
 
         Returns
         -------
-        column_names:
+        column_names: ColumnNamesTypes
                 Array with redefined columns names.
-        column_widths:
+        column_widths: list
                 Updated `column_widths` parameter.
         """
         # If parse_dates is present, the column names that we have might not be
@@ -259,32 +282,32 @@ class CSVDispatcher(TextFileDispatcher):
     @classmethod
     def _get_new_qc(
         cls,
-        partition_ids,
-        index_ids,
-        dtypes_ids,
-        index_col_md,
-        index_name,
-        column_widths,
-        column_names,
+        partition_ids: list,
+        index_ids: list,
+        dtypes_ids: list,
+        index_col_md: IndexColType,
+        index_name: str,
+        column_widths: list,
+        column_names: ColumnNamesTypes,
         **kwargs,
     ):
         """
         Get new query compiler from data received from workers.
         ----------
-        partition_ids:
+        partition_ids: list
                 array with references to the partitions data.
-        index_ids:
+        index_ids: list
                 array with references to the partitions index objects.
-        dtypes_ids:
+        dtypes_ids: list
                 array with references to the partitions dtypes objects.
-        index_col_md:
+        index_col_md: IndexColType
                 `index_col` parameter passed to the workers.
-        index_name:
+        index_name: str
                 Name that should be assigned to the index if `index_col`
                 is not provided.
-        column_widths:
+        column_widths: list
                 Number of columns in each partition.
-        column_names:
+        column_names: ColumnNamesTypes
                 Array with columns names.
 
         Returns
