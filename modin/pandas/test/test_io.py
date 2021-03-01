@@ -1205,6 +1205,21 @@ class TestParquet:
             extension="parquet",
         )
 
+    def test_read_parquet_2462(self):
+        test_df = pd.DataFrame(
+            {
+                "col1": [["ad_1", "ad_2"], ["ad_3"]],
+            }
+        )
+
+        with tempfile.TemporaryDirectory() as directory:
+            path = f"{directory}/data"
+            os.makedirs(path)
+            test_df.to_parquet(path + "/part-00000.parquet")
+            read_df = pd.read_parquet(path)
+
+            df_equals(test_df, read_df)
+
 
 class TestJson:
     @pytest.mark.parametrize("lines", [False, True])
