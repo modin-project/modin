@@ -1350,7 +1350,7 @@ class DataFrame(BasePandasDataset):
             ):
                 raise ValueError("level > 0 or level < -1 only valid with MultiIndex")
             return self.groupby(level=level, axis=axis, sort=False).prod(
-                skipna=skipna, min_count=min_count
+                numeric_only=numeric_only, min_count=min_count
             )
 
         axis_to_apply = self.columns if axis else self.index
