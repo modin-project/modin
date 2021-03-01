@@ -542,14 +542,19 @@ class PandasQueryCompiler(BaseQueryCompiler):
                     # expensive.
                     new_index = self.index.droplevel(level)
                     # These are the index levels that will remain after the reset_index
-                    keep_levels = [i for i in range(len(self.index.names)) if i not in level]
+                    keep_levels = [
+                        i for i in range(len(self.index.names)) if i not in level
+                    ]
                     new_copy = self.copy()
                     # Change the index to have only the levels that will be inserted
                     # into the data. We will replace the old levels later.
                     new_copy.index = self.index.droplevel(keep_levels)
                     new_copy.index.names = [
-                        "level_{}".format(i) if new_copy.index.names[i] is None else new_copy.index.names[i]
-                        for i in range(len(new_copy.index.names))]
+                        "level_{}".format(i)
+                        if new_copy.index.names[i] is None
+                        else new_copy.index.names[i]
+                        for i in range(len(new_copy.index.names))
+                    ]
                     new_modin_frame = new_copy._modin_frame.from_labels()
                     # Replace the levels that will remain as a part of the index.
                     new_modin_frame.index = new_index
