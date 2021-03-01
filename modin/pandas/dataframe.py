@@ -1344,11 +1344,12 @@ class DataFrame(BasePandasDataset):
         if level is not None:
             if (
                 not self._query_compiler.has_multiindex(axis=axis)
-                and level != 0
+                and level > 0
+                or level < -1
                 and level != self.index.name
             ):
                 raise ValueError("level > 0 or level < -1 only valid with MultiIndex")
-            return self.groupby(level=level, axis=axis).prod(
+            return self.groupby(level=level, axis=axis, sort=False).prod(
                 skipna=skipna, min_count=min_count
             )
 
@@ -1700,11 +1701,12 @@ class DataFrame(BasePandasDataset):
         if level is not None:
             if (
                 not self._query_compiler.has_multiindex(axis=axis)
-                and level != 0
+                and level > 0
+                or level < -1
                 and level != self.index.name
             ):
                 raise ValueError("level > 0 or level < -1 only valid with MultiIndex")
-            return self.groupby(level=level, axis=axis).sum(
+            return self.groupby(level=level, axis=axis, sort=False).sum(
                 numeric_only=numeric_only, min_count=min_count
             )
         if min_count > 1:

@@ -593,7 +593,7 @@ class BasePandasDataset(object):
                     raise ValueError(
                         "level > 0 or level < -1 only valid with MultiIndex"
                     )
-                return self.groupby(level=level, axis=axis).all(**kwargs)
+                return self.groupby(level=level, axis=axis, sort=False).all(**kwargs)
             return self._reduce_dimension(
                 self._query_compiler.all(
                     axis=axis, bool_only=bool_only, skipna=skipna, level=level, **kwargs
@@ -648,7 +648,7 @@ class BasePandasDataset(object):
                     raise ValueError(
                         "level > 0 or level < -1 only valid with MultiIndex"
                     )
-                return self.groupby(level=level, axis=axis).any(**kwargs)
+                return self.groupby(level=level, axis=axis, sort=False).any(**kwargs)
             return self._reduce_dimension(
                 self._query_compiler.any(
                     axis=axis, bool_only=bool_only, skipna=skipna, level=level, **kwargs
@@ -870,7 +870,7 @@ class BasePandasDataset(object):
         if level is not None:
             if not frame._query_compiler.has_multiindex(axis=axis):
                 raise TypeError("Can only count levels on hierarchical columns.")
-            return self.groupby(level=level, axis=axis).count(numeric_only=numeric_only)
+            return frame.groupby(level=level, axis=axis, sort=True).count()
         return frame._reduce_dimension(
             frame._query_compiler.count(
                 axis=axis, level=level, numeric_only=numeric_only
@@ -1383,11 +1383,12 @@ class BasePandasDataset(object):
         if level is not None:
             if (
                 not self._query_compiler.has_multiindex(axis=axis)
-                and level != 0
+                and level > 0
+                or level < -1
                 and level != self.index.name
             ):
                 raise ValueError("level > 0 or level < -1 only valid with MultiIndex")
-            return self.groupby(level=level, axis=axis).mad()
+            return self.groupby(level=level, axis=axis, sort=False).mad()
 
         return self._reduce_dimension(
             self._query_compiler.mad(axis=axis, skipna=skipna, level=level)
