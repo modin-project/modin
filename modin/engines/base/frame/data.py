@@ -546,30 +546,45 @@ class BasePandasFrame(object):
             A new BasePandasFrame.
         """
         new_row_labels = pandas.RangeIndex(len(self.index))
+
+        def generate_new_index(level_names):
+            return (
+                pandas.MultiIndex.from_arrays(
+                    # Set level names on the 1st columns level. This is how reset_index works
+                    # when col_level is not specified.
+                    [level_names]
+                    # Fill up empty level names with empty string. This is how reset_index works
+                    # when col_fill is not specified.
+                    + [[""] * len(level_names)] * (self.columns.nlevels - 1),
+                    names=self.columns.names,
+                )
+                if self.columns.nlevels > 1
+                else pandas.Index(level_names)
+            )
+
         # Column labels are different for multilevel index.
-        if len(self.index.names) > 1:
+        if self.index.nlevels > 1:
             # We will also use the `new_column_names` in the calculation of the internal metadata, so this is a
             # lightweight way of ensuring the metadata matches.
-            new_column_names = pandas.Index(
-                [
-                    self.index.names[i]
-                    if self.index.names[i] is not None
-                    else "level_{}".format(i)
-                    for i in range(len(self.index.names))
-                ]
-            )
+            level_names = [
+                self.index.names[i]
+                if self.index.names[i] is not None
+                else "level_{}".format(i)
+                for i in range(self.index.nlevels)
+            ]
+            new_column_names = generate_new_index(level_names)
             new_columns = new_column_names.append(self.columns)
         else:
             # See note above about usage of `new_column_names`.
-            new_column_names = pandas.Index(
-                [
-                    self.index.names[0]
-                    if self.index.names[0] is not None
-                    else "index"
-                    if "index" not in self.columns
-                    else "level_{}".format(0)
-                ]
-            )
+            level_names = [
+                self.index.names[0]
+                if self.index.names[0] is not None
+                else "index"
+                if "index" not in self.columns
+                else "level_{}".format(0)
+            ]
+
+            new_column_names = generate_new_index(level_names)
             new_columns = new_column_names.append(self.columns)
 
         def from_labels_executor(df, **kwargs):
@@ -585,7 +600,7 @@ class BasePandasFrame(object):
             keep_remaining=True,
         )
         new_column_widths = [
-            len(self.index.names) + self._column_widths[0]
+            self.index.nlevels + self._column_widths[0]
         ] + self._column_widths[1:]
         result = self.__constructor__(
             new_parts,
