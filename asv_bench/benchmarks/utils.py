@@ -72,7 +72,7 @@ UNARY_OP_DATA_SIZE = {
 }
 
 GROUPBY_NGROUPS = {
-    "Big": [100, lambda nrows: min(nrows // 2, 5000)],
+    "Big": [100, "huge_amount_groups"],
     "Small": [5],
 }
 
@@ -80,6 +80,15 @@ IMPL = {
     "modin": pd,
     "pandas": pandas,
 }
+
+
+def translator_groupby_ngroups(groupby_ngroups, shape):
+    if ASV_DATASET_SIZE == "Big":
+        if groupby_ngroups == "huge_amount_groups":
+            return min(shape[0] // 2, 5000)
+        return groupby_ngroups
+    else:
+        return groupby_ngroups
 
 
 class weakdict(dict):

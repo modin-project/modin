@@ -34,13 +34,13 @@ from .utils import (
     GROUPBY_NGROUPS,
     IMPL,
     execute,
+    translator_groupby_ngroups,
 )
 
 
 class BaseTimeGroupBy:
     def setup(self, shape, ngroups=5, groupby_ncols=1):
-        if callable(ngroups):
-            ngroups = ngroups(shape[0])
+        ngroups = translator_groupby_ngroups(ngroups, shape)
         self.df, self.groupby_columns = generate_dataframe(
             ASV_USE_IMPL,
             "int",
@@ -407,6 +407,7 @@ class BaseTimeValueCounts:
                 f"Invalid value for 'subset={subset}'. Allowed: {list(self.subset_params.keys())}"
             )
         ncols = subset(shape)
+        ngroups = translator_groupby_ngroups(ngroups, shape)
         self.df, _ = generate_dataframe(
             ASV_USE_IMPL,
             "int",
@@ -504,6 +505,24 @@ class TimeMultiIndexing:
                 self.df.columns[2] : self.df.columns[-2],
             ]
         )
+
+
+class TimeResetIndex:
+    param_names = ["shape", "drop", "level"]
+    params = [UNARY_OP_DATA_SIZE[ASV_DATASET_SIZE], [False, True], [None, "level_1"]]
+
+    def setup(self, shape, drop, level):
+        self.df = generate_dataframe(ASV_USE_IMPL, "int", *shape, RAND_LOW, RAND_HIGH)
+
+        if level:
+            index = pd.MultiIndex.from_product(
+                [self.df.index[: shape[0] // 2], ["bar", "foo"]],
+                names=["level_1", "level_2"],
+            )
+            self.df.index = index
+
+    def time_reset_index(self, shape, drop, level):
+        execute(self.df.reset_index(drop=drop, level=level))
 
 
 class TimeAstype:
