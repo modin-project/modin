@@ -128,13 +128,13 @@ class BaseFrameAxisPartition(ABC):  # pragma: no cover
         Returns
         -------
         list
-            List of partitions from axis partition.
+            A list of partitions from axis partition.
 
         Notes
         -----
-        If `get_ip=True`, list of tuples of node ip addresses and
-        Ray.ObjectRef/Dask.Future to unwrapped partitions, respectively, is returned
-        if Ray/Dask is used as an engine (i.e. [(str, Ray.ObjectRef/Dask.Future), ...]).
+        If `get_ip=True`, a list of tuples of Ray.ObjectRef/Dask.Future to node ip addresses and
+        unwrapped partitions, respectively, is returned if Ray/Dask is used as an engine
+        (i.e. [(Ray.ObjectRef/Dask.Future, Ray.ObjectRef/Dask.Future), ...]).
         """
         if squeeze and len(self.list_of_blocks) == 1:
             if get_ip:

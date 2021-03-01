@@ -12,8 +12,6 @@
 # governing permissions and limitations under the License.
 
 import numpy as np
-import ray
-from distributed.client import _get_global_client
 
 from modin.backends.pandas.query_compiler import PandasQueryCompiler
 from modin.pandas.dataframe import DataFrame
@@ -41,30 +39,24 @@ def unwrap_partitions(api_layer_object, axis=None, get_ip=False):
 
     Notes
     -----
-    If ``get_ip=True``, a list of tuples of node ip addresses and Ray.ObjectRef/Dask.Future to
+    If ``get_ip=True``, a list of tuples of Ray.ObjectRef/Dask.Future to node ip addresses and
     partitions of the ``api_layer_object``, respectively, is returned if Ray/Dask is used as an engine
-    (i.e. [(str, Ray.ObjectRef/Dask.Future), ...]).
+    (i.e. ``[(Ray.ObjectRef/Dask.Future, Ray.ObjectRef/Dask.Future), ...]``).
     """
     if not hasattr(api_layer_object, "_query_compiler"):
         raise ValueError(
             f"Only API Layer objects may be passed in here, got {type(api_layer_object)} instead."
         )
 
-    engine = type(
-        api_layer_object._query_compiler._modin_frame._partitions[0][0]
-    ).__name__
-    if engine not in (
-        "PandasOnRayFramePartition",
-        "PandasOnDaskFramePartition",
-    ):
-        raise ValueError(f"Do not know how to unwrap '{engine}' underlying partitions")
-
     if axis is None:
 
         def _unwrap_partitions(oid):
             if get_ip:
                 return [
-                    [(partition.ip(), getattr(partition, oid)) for partition in row]
+                    [
+                        (partition._ip_cache, getattr(partition, oid))
+                        for partition in row
+                    ]
                     for row in api_layer_object._query_compiler._modin_frame._partitions
                 ]
             else:
@@ -73,78 +65,28 @@ def unwrap_partitions(api_layer_object, axis=None, get_ip=False):
                     for row in api_layer_object._query_compiler._modin_frame._partitions
                 ]
 
-        if engine in ("PandasOnRayFramePartition",):
+        actual_engine = type(
+            api_layer_object._query_compiler._modin_frame._partitions[0][0]
+        ).__name__
+        if actual_engine in ("PandasOnRayFramePartition",):
             return _unwrap_partitions("oid")
-        elif engine in ("PandasOnDaskFramePartition",):
+        elif actual_engine in ("PandasOnDaskFramePartition",):
             return _unwrap_partitions("future")
+        raise ValueError(
+            f"Do not know how to unwrap '{actual_engine}' underlying partitions"
+        )
     else:
         partitions = (
             api_layer_object._query_compiler._modin_frame._frame_mgr_cls.axis_partition(
                 api_layer_object._query_compiler._modin_frame._partitions, axis ^ 1
             )
         )
-        partitions = [
+        return [
             part.force_materialization(get_ip=get_ip).unwrap(
                 squeeze=True, get_ip=get_ip
             )
             for part in partitions
         ]
-        if get_ip:
-            if engine in ("PandasOnRayFramePartition",):
-                ips = ray.get([part[0] for part in partitions])
-            elif engine in ("PandasOnDaskFramePartition",):
-                client = _get_global_client()
-                ips = client.gather([part[0] for part in partitions])
-            return list(zip(ips, (part[1] for part in partitions)))
-        else:
-            return partitions
-
-
-def map_partitions_to_ips(partitions, axis):
-    """
-    Map partitions to node ip addresses that hold them.
-
-    Parameters
-    ----------
-    partitions : list
-        List of tuples of node ip addresses and Ray.ObjectRef/Dask.Future to partitions
-        depending on the engine used (i.e. [(str, Ray.ObjectRef/Dask.Future), ...]).
-
-    axis : None, 0 or 1
-        The ``axis`` parameter is used to identify what are the partitions passed.
-        You have to set:
-
-        * ``axis=0`` if row partitions are passed
-        * ``axis=1`` if column partitions are passed
-        * ``axis=None`` if 2D list of partitions is passed
-
-    Returns
-    -------
-    dict
-        A dict of node ip addresses and lists of partitions which the latters are held on
-        (i.e. {'str': [Ray.ObjectRef/Dask.Future, ...], ...}).
-    """
-    if axis is None:
-        mapped_partitions = {partitions[0][0][0]: []}
-        for row in partitions:
-            for ip, partition in row:
-                if ip in mapped_partitions.keys():
-                    mapped_partitions[ip].append(partition)
-                else:
-                    mapped_partitions.update({ip: [partition]})
-        return mapped_partitions
-    elif axis == 0 or axis == 1:
-        mapped_partitions = {partitions[0][0]: []}
-        for ip, partition in partitions:
-            if ip in mapped_partitions.keys():
-                mapped_partitions[ip].append(partition)
-            else:
-                mapped_partitions.update({ip: [partition]})
-        return mapped_partitions
-    else:
-        raise ValueError(
-            f"Got unacceptable value of axis {axis}. Possible values are {0}, {1} or {None}."
-        )
 
 
 def from_partitions(partitions, axis):
@@ -154,9 +96,9 @@ def from_partitions(partitions, axis):
     Parameters
     ----------
     partitions : list
-        List of Ray.ObjectRef/Dask.Future to partitions depending on the engine used.
-        Or list of tuples of node ip addresses and Ray.ObjectRef/Dask.Future to partitions
-        depending on the engine used (i.e. [(str, Ray.ObjectRef/Dask.Future), ...]).
+        A list of Ray.ObjectRef/Dask.Future to partitions depending on the engine used.
+        Or a list of tuples of Ray.ObjectRef/Dask.Future to node ip addresses and partitions
+        depending on the engine used (i.e. ``[(Ray.ObjectRef/Dask.Future, Ray.ObjectRef/Dask.Future), ...]``).
     axis : None, 0 or 1
         The ``axis`` parameter is used to identify what are the partitions passed.
         You have to set:
