@@ -48,21 +48,31 @@ class BaseReadCsv:
 
 
 class TimeReadCsvSkiprows(BaseReadCsv):
+    skiprows_mapping = {
+        "lambda_even_rows": lambda x: x % 2,
+        "range_uniform": np.arange(1, UNARY_OP_DATA_SIZE[ASV_DATASET_SIZE][0][0] // 10),
+        "range_step2": np.arange(1, UNARY_OP_DATA_SIZE[ASV_DATASET_SIZE][0][0], 2),
+    }
+
     param_names = ["shape", "skiprows"]
     params = [
         UNARY_OP_DATA_SIZE[ASV_DATASET_SIZE],
         [
             None,
-            lambda x: x % 2,
-            np.arange(1, UNARY_OP_DATA_SIZE[ASV_DATASET_SIZE][0][0] // 10),
-            np.arange(1, UNARY_OP_DATA_SIZE[ASV_DATASET_SIZE][0][0], 2),
+            "lambda_even_rows",
+            "range_uniform",
+            "range_step2",
         ],
     ]
+
+    def setup(self, test_filenames, shape, skiprows):
+        super().setup(test_filenames, shape, skiprows)
+        self.skiprows = self.skiprows_mapping[skiprows] if skiprows else None
 
     def time_skiprows(self, test_filenames, shape, skiprows):
         execute(
             IMPL[ASV_USE_IMPL].read_csv(
-                test_filenames[self.shape_id], skiprows=skiprows
+                test_filenames[self.shape_id], skiprows=self.skiprows
             )
         )
 

@@ -34,13 +34,13 @@ from .utils import (
     GROUPBY_NGROUPS,
     IMPL,
     execute,
+    translator_groupby_ngroups,
 )
 
 
 class BaseTimeGroupBy:
     def setup(self, shape, ngroups=5, groupby_ncols=1):
-        if callable(ngroups):
-            ngroups = ngroups(shape[0])
+        ngroups = translator_groupby_ngroups(ngroups, shape)
         self.df, self.groupby_columns = generate_dataframe(
             ASV_USE_IMPL,
             "int",
@@ -407,6 +407,7 @@ class BaseTimeValueCounts:
                 f"Invalid value for 'subset={subset}'. Allowed: {list(self.subset_params.keys())}"
             )
         ncols = subset(shape)
+        ngroups = translator_groupby_ngroups(ngroups, shape)
         self.df, _ = generate_dataframe(
             ASV_USE_IMPL,
             "int",
