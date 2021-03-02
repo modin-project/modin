@@ -17,7 +17,6 @@ import modin.pandas as pd
 import pandas
 import numpy as np
 import uuid
-from ray import wait
 
 RAND_LOW = 0
 RAND_HIGH = 100
@@ -219,10 +218,7 @@ def random_booleans(number):
 def execute(df):
     "Make sure the calculations are done."
     if ASV_USE_IMPL == "modin":
-        result = df._query_compiler._modin_frame._partitions
-        for rows in result:
-            for partition in rows:
-                wait([partition.oid])
+        df._query_compiler._modin_frame.wait_computations()
     elif ASV_USE_IMPL == "pandas":
         return
     else:
