@@ -118,7 +118,7 @@ class ParquetDispatcher(ColumnStoreDispatcher):
                     # We use these to filter out from the columns in the metadata since
                     # the pyarrow storage has no concept of row labels/index.
                     # This ensures that our metadata lines up with the partitions without
-                    # extra communication steps once we `have done all the remote
+                    # extra communication steps once we have done all the remote
                     # computation.
                     index_columns = json.loads(pandas_metadata.decode("utf8")).get(
                         "index_columns", []
