@@ -2008,7 +2008,8 @@ def test_last():
     df_equals(modin_series.last("20D"), pandas_series.last("20D"))
 
 
-def test_index_order():
+@pytest.mark.parametrize("func", ["all", "any", "mad", "count"])
+def test_index_order(func):
     # see #1708 and #1869 for details
     s_modin, s_pandas = create_test_series(test_data["float_nan_data"])
     rows_number = len(s_modin.index)
@@ -2019,11 +2020,10 @@ def test_index_order():
     s_modin.index = index
     s_pandas.index = index
 
-    for func in ["all", "any", "mad", "count"]:
-        df_equals(
-            getattr(s_modin, func)(level=0).index,
-            getattr(s_pandas, func)(level=0).index,
-        )
+    df_equals(
+        getattr(s_modin, func)(level=0).index,
+        getattr(s_pandas, func)(level=0).index,
+    )
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)

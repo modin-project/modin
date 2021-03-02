@@ -966,14 +966,15 @@ class Series(BasePandasDataset):
     ):
         axis = self._get_axis_number(axis)
         if level is not None:
-            return self._default_to_pandas(
-                "prod",
-                axis=axis,
-                skipna=skipna,
-                level=level,
-                numeric_only=numeric_only,
-                min_count=min_count,
-                **kwargs,
+            if (
+                not self._query_compiler.has_multiindex(axis=axis)
+                and level > 0
+                or level < -1
+                and level != self.index.name
+            ):
+                raise ValueError("level > 0 or level < -1 only valid with MultiIndex")
+            return self.groupby(level=level, axis=axis, sort=False).prod(
+                numeric_only=numeric_only, min_count=min_count, **kwargs
             )
         new_index = self.columns if axis else self.index
         if min_count > len(new_index):
@@ -1249,14 +1250,15 @@ class Series(BasePandasDataset):
     ):
         axis = self._get_axis_number(axis)
         if level is not None:
-            return self._default_to_pandas(
-                "sum",
-                axis=axis,
-                skipna=skipna,
-                level=level,
-                numeric_only=numeric_only,
-                min_count=min_count,
-                **kwargs,
+            if (
+                not self._query_compiler.has_multiindex(axis=axis)
+                and level > 0
+                or level < -1
+                and level != self.index.name
+            ):
+                raise ValueError("level > 0 or level < -1 only valid with MultiIndex")
+            return self.groupby(level=level, axis=axis, sort=False).sum(
+                numeric_only=numeric_only, min_count=min_count, **kwargs
             )
 
         new_index = self.columns if axis else self.index
