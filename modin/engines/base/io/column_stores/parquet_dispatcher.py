@@ -80,14 +80,14 @@ class ParquetDispatcher(ColumnStoreDispatcher):
                 # Path of the sample file that we will read to get the remaining columns
                 pd = ParquetDataset(path)
                 meta = pd.metadata
-                column_names = pd.schema.names
+                column_names = pd.schema.to_arrow_schema().names
             elif isinstance(path, str) and path.startswith("hdfs://"):
                 import fsspec.core
 
                 fs, path = fsspec.core.url_to_fs(path)
                 pd = ParquetDataset(path, filesystem=fs)
                 meta = pd.metadata
-                column_names = pd.schema.names
+                column_names = pd.schema.to_arrow_schema().names
             elif isinstance(path, s3fs.S3File) or (
                 isinstance(path, str) and path.startswith("s3://")
             ):
@@ -103,10 +103,10 @@ class ParquetDispatcher(ColumnStoreDispatcher):
                     fs = s3fs.S3FileSystem(anon=True)
                     pd = ParquetDataset(path, filesystem=fs)
                 meta = pd.metadata
-                column_names = pd.schema.names
+                column_names = pd.schema.to_arrow_schema().names
             else:
                 meta = ParquetFile(path).metadata
-                column_names = meta.schema.names
+                column_names = meta.schema.to_arrow_schema().names
 
             if meta is not None and meta.metadata is not None:
                 pandas_metadata = meta.metadata.get(b"pandas", None)
