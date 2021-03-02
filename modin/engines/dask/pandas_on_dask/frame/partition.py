@@ -19,6 +19,7 @@ from modin.data_management.utils import length_fn_pandas, width_fn_pandas
 from distributed.client import get_client
 from distributed.utils import get_ip
 import cloudpickle as pkl
+from dask.distributed import wait
 
 
 def apply_list_of_funcs(funcs, df):
@@ -98,6 +99,10 @@ class PandasOnDaskFramePartition(BaseFramePartition):
         self.future = new_partition.future
         self.ip = new_partition.ip
         self.call_queue = []
+
+    def wait(self):
+        self.drain_call_queue()
+        wait(self.future)
 
     def mask(self, row_indices, col_indices):
         new_obj = self.add_to_apply_calls(

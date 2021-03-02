@@ -83,6 +83,13 @@ class PandasOnRayFramePartition(BaseFramePartition):
         ) = deploy_ray_func.remote(call_queue, oid)
         self.call_queue = []
 
+    def wait(self):
+        self.drain_call_queue()
+        try:
+            ray.wait([self.oid])
+        except RayTaskError as e:
+            handle_ray_task_error(e)
+
     def __copy__(self):
         return PandasOnRayFramePartition(
             self.oid, self._length_cache, self._width_cache, call_queue=self.call_queue

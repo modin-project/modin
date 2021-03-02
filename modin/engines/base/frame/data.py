@@ -2102,6 +2102,10 @@ class BasePandasFrame(object):
 
         return df
 
+    def wait_computations(self):
+        """Wait for computation results."""
+        self._frame_mgr_cls.wait_computations(self._partitions)
+
     def to_numpy(self, **kwargs):
         """
         Convert a Modin DataFrame to a 2D NumPy array.
