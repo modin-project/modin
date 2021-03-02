@@ -149,7 +149,7 @@ class GroupbyReduceFunction(MapReduceFunction):
         **kwargs,
     ):
         if groupby_args.get("level", None) is None and (
-            not (isinstance(by, (type(query_compiler)) or hashable(by)))
+            not (isinstance(by, (type(query_compiler))) or hashable(by))
             or isinstance(by, pandas.Grouper)
         ):
             by = try_cast_to_pandas(by, squeeze=True)

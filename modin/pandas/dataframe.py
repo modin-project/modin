@@ -1697,7 +1697,6 @@ class DataFrame(BasePandasDataset):
         data = self._validate_dtypes_sum_prod_mean(
             axis, numeric_only, ignore_axis=False
         )
-        # operations across level are
         if level is not None:
             if (
                 not self._query_compiler.has_multiindex(axis=axis)
