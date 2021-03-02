@@ -87,6 +87,9 @@ class PandasOnPythonFramePartition(BaseFramePartition):
             return
         self.apply(lambda x: x)
 
+    def wait(self):
+        self.drain_call_queue()
+
     def mask(self, row_indices=None, col_indices=None):
         new_obj = self.add_to_apply_calls(
             lambda df: pandas.DataFrame(df.iloc[row_indices, col_indices])

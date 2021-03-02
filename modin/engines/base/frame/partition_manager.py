@@ -556,6 +556,13 @@ class BaseFrameManager(ABC):
             return cls.concatenate(df_rows)
 
     @classmethod
+    def wait_computations(cls, partitions):
+        """Wait for computation results."""
+        for row in partitions:
+            for partition in row:
+                partition.wait()
+
+    @classmethod
     def to_numpy(cls, partitions, **kwargs):
         """
         Convert this object into a NumPy array from the partitions.
