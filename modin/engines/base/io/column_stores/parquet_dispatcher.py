@@ -107,17 +107,22 @@ class ParquetDispatcher(ColumnStoreDispatcher):
             else:
                 meta = ParquetFile(path).metadata
                 column_names = meta.schema.names
-            if meta is not None:
-                # This is how we convert the metadata from pyarrow to a python
-                # dictionary, from which we then get the index columns.
-                # We use these to filter out from the columns in the metadata since
-                # the pyarrow storage has no concept of row labels/index.
-                # This ensures that our metadata lines up with the partitions without
-                # extra communication steps once we `have done all the remote
-                # computation.
-                index_columns = eval(
-                    meta.metadata[b"pandas"].replace(b"null", b"None")
-                ).get("index_columns", [])
-                column_names = [c for c in column_names if c not in index_columns]
+
+            if meta is not None and meta.metadata is not None:
+                pandas_metadata = meta.metadata.get(b"pandas", None)
+                if pandas_metadata is not None:
+                    import json
+
+                    # This is how we convert the metadata from pyarrow to a python
+                    # dictionary, from which we then get the index columns.
+                    # We use these to filter out from the columns in the metadata since
+                    # the pyarrow storage has no concept of row labels/index.
+                    # This ensures that our metadata lines up with the partitions without
+                    # extra communication steps once we have done all the remote
+                    # computation.
+                    index_columns = json.loads(pandas_metadata.decode("utf8")).get(
+                        "index_columns", []
+                    )
+                    column_names = [c for c in column_names if c not in index_columns]
             columns = [name for name in column_names if not PQ_INDEX_REGEX.match(name)]
         return cls.build_query_compiler(path, columns, **kwargs)
