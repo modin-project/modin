@@ -14,6 +14,7 @@
 from .. import pandas as pd
 from modin_spreadsheet import show_grid, SpreadsheetWidget
 
+
 def from_dataframe(
     dataframe,
     show_toolbar=None,
