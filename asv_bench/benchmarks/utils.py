@@ -17,6 +17,7 @@ import modin.pandas as pd
 import pandas
 import numpy as np
 import uuid
+from ray import wait
 
 RAND_LOW = 0
 RAND_HIGH = 100
@@ -217,7 +218,15 @@ def random_booleans(number):
 
 def execute(df):
     "Make sure the calculations are done."
-    return df.shape, df.dtypes
+    if ASV_USE_IMPL == "modin":
+        result = df._query_compiler._modin_frame._partitions
+        for rows in result:
+            for partition in rows:
+                wait([partition.oid])
+    elif ASV_USE_IMPL == "pandas":
+        return
+    else:
+        raise ValueError(f"wrong value of {ASV_USE_IMPL}")
 
 
 def get_shape_id(array):
