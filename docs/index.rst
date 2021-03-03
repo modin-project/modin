@@ -9,11 +9,8 @@
 
     <p align="center"><b>To use Modin, replace the pandas import:</b></p>
 
-.. code-block:: python
-
-  # import pandas as pd
-  import modin.pandas as pd
-
+.. figure:: img/Modin_Pandas_Import.gif
+   :align: center   
 
 Scale your pandas workflow by changing a single line of code
 """"""""""""""""""""""""""""""""""""""""""""""""""""""""""""
