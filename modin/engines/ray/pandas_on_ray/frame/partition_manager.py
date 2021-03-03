@@ -75,6 +75,29 @@ def progress_bar_wrapper(f):
     return magic
 
 
+@ray.remote
+def func(df, apply_func, call_queue_df=None, call_queues_other=None, *others):
+    if call_queue_df is not None and len(call_queue_df) > 0:
+        for call, kwargs in call_queue_df:
+            if isinstance(call, ray.ObjectRef):
+                call = ray.get(call)
+            if isinstance(kwargs, ray.ObjectRef):
+                kwargs = ray.get(kwargs)
+            df = call(df, **kwargs)
+    new_others = np.empty(shape=len(others), dtype=object)
+    for i, call_queue_other in enumerate(call_queues_other):
+        other = others[i]
+        if call_queue_other is not None and len(call_queue_other) > 0:
+            for call, kwargs in call_queue_other:
+                if isinstance(call, ray.ObjectRef):
+                    call = ray.get(call)
+                if isinstance(kwargs, ray.ObjectRef):
+                    kwargs = ray.get(kwargs)
+                other = call(other, **kwargs)
+        new_others[i] = other
+    return apply_func(df, new_others)
+
+
 class PandasOnRayFrameManager(RayFrameManager):
     """This method implements the interface in `BaseFrameManager`."""
 
@@ -128,27 +151,35 @@ class PandasOnRayFrameManager(RayFrameManager):
 
     @classmethod
     def broadcast_apply(cls, axis, apply_func, left, right, other_name="r"):
-        def map_func(df, others):
-            other = pandas.concat(ray.get(others), axis=axis ^ 1)
+        def mapper(df, others):
+            other = pandas.concat(others, axis=axis ^ 1)
             return apply_func(df, **{other_name: other})
 
-        rt_axis_parts = cls.axis_partition(right, axis ^ 1)
-        return np.array(
+        mapper = ray.put(mapper)
+        new_partitions = np.array(
             [
                 [
-                    part.apply(
-                        map_func,
-                        **{
-                            "others": rt_axis_parts[col_idx].list_of_blocks
+                    PandasOnRayFramePartition(
+                        func.remote(
+                            part.oid,
+                            mapper,
+                            part.call_queue,
+                            [obj[col_idx].call_queue for obj in right]
                             if axis
-                            else rt_axis_parts[row_idx].list_of_blocks
-                        },
+                            else [obj.call_queue for obj in right[row_idx]],
+                            *(
+                                [obj[col_idx].oid for obj in right]
+                                if axis
+                                else [obj.oid for obj in right[row_idx]]
+                            ),
+                        )
                     )
                     for col_idx, part in enumerate(left[row_idx])
                 ]
                 for row_idx in range(len(left))
             ]
         )
+        return new_partitions
 
     @classmethod
     @progress_bar_wrapper

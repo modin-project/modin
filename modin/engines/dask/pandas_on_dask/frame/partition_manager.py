@@ -23,6 +23,31 @@ from modin.error_message import ErrorMessage
 import pandas
 
 from distributed.client import _get_global_client
+import cloudpickle as pkl
+
+
+def deploy_func(df, apply_func, call_queue_df=None, call_queues_other=None, *others):
+    if call_queue_df is not None and len(call_queue_df) > 0:
+        for call, kwargs in call_queue_df:
+            if isinstance(call, bytes):
+                call = pkl.loads(call)
+            if isinstance(kwargs, bytes):
+                kwargs = pkl.loads(kwargs)
+            df = call(df, **kwargs)
+    new_others = np.empty(shape=len(others), dtype=object)
+    for i, call_queue_other in enumerate(call_queues_other):
+        other = others[i]
+        if call_queue_other is not None and len(call_queue_other) > 0:
+            for call, kwargs in call_queue_other:
+                if isinstance(call, bytes):
+                    call = pkl.loads(call)
+                if isinstance(kwargs, bytes):
+                    kwargs = pkl.loads(kwargs)
+                other = call(other, **kwargs)
+        new_others[i] = other
+    if isinstance(apply_func, bytes):
+        apply_func = pkl.loads(apply_func)
+    return apply_func(df, new_others)
 
 
 class DaskFrameManager(BaseFrameManager):
@@ -79,21 +104,30 @@ class DaskFrameManager(BaseFrameManager):
 
     @classmethod
     def broadcast_apply(cls, axis, apply_func, left, right, other_name="r"):
-        def map_func(df, others):
+        def mapper(df, others):
             other = pandas.concat(others, axis=axis ^ 1)
             return apply_func(df, **{other_name: other})
 
-        rt_axis_parts = cls.axis_partition(right, axis ^ 1)
+        client = _get_global_client()
         return np.array(
             [
                 [
-                    part.apply(
-                        map_func,
-                        **{
-                            "others": rt_axis_parts[col_idx].list_of_blocks
+                    PandasOnDaskFramePartition(
+                        client.submit(
+                            deploy_func,
+                            part.future,
+                            mapper,
+                            part.call_queue,
+                            [obj[col_idx].call_queue for obj in right]
                             if axis
-                            else rt_axis_parts[row_idx].list_of_blocks
-                        },
+                            else [obj.call_queue for obj in right[row_idx]],
+                            *(
+                                [obj[col_idx].future for obj in right]
+                                if axis
+                                else [obj.future for obj in right[row_idx]]
+                            ),
+                            pure=False,
+                        )
                     )
                     for col_idx, part in enumerate(left[row_idx])
                 ]
