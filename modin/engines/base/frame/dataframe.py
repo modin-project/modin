@@ -613,13 +613,13 @@ class BasePandasFrame(ModinDataframe):
         -------
             A new BasePandasFrame that has the updated labels.
         """
-        extracted_columns = self.mask(col_indices=column_list).to_pandas()
+        extracted_columns = self.mask(col_labels=column_list).to_pandas()
         if len(column_list) == 1:
             new_labels = pandas.Index(extracted_columns.squeeze(axis=1))
         else:
             new_labels = pandas.MultiIndex.from_frame(extracted_columns)
         result = self.mask(
-            col_indices=[i for i in self.columns if i not in column_list]
+            col_labels=[i for i in self.columns if i not in column_list]
         )
         result.index = new_labels
         return result

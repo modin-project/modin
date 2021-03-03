@@ -2068,9 +2068,9 @@ class PandasQueryCompiler(BaseQueryCompiler):
         """
         # Convert to list for type checking
         if numeric:
-            new_modin_frame = self._modin_frame.mask(col_numeric_idx=key)
+            new_modin_frame = self._modin_frame.mask(col_positions=key)
         else:
-            new_modin_frame = self._modin_frame.mask(col_indices=key)
+            new_modin_frame = self._modin_frame.mask(col_labels=key)
         return self.__constructor__(new_modin_frame)
 
     def getitem_row_array(self, key):
@@ -2082,7 +2082,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         Returns:
             A new QueryCompiler.
         """
-        return self.__constructor__(self._modin_frame.mask(row_numeric_idx=key))
+        return self.__constructor__(self._modin_frame.mask(row_positions=key))
 
     def setitem(self, axis, key, value):
         """Set the column defined by `key` to the `value` provided.
@@ -2181,7 +2181,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 )
             )
         new_modin_frame = self._modin_frame.mask(
-            row_numeric_idx=index, col_numeric_idx=columns
+            row_positions=index, col_positions=columns
         )
         return self.__constructor__(new_modin_frame)
 
@@ -2810,7 +2810,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             untouched_frame = None
         else:
             new_modin_frame = self._modin_frame.mask(
-                col_indices=columns
+                col_labels=columns
             )._apply_full_axis(
                 0, lambda df: pandas.get_dummies(df, **kwargs), new_index=self.index
             )
