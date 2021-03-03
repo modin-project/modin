@@ -957,6 +957,18 @@ def test_reset_index(data):
             [0, 0, 0, 0],
             marks=pytest.mark.skipif(not extra_test_parameters, reason="extra"),
         ),
+        pytest.param(
+            ["level_name_1"],
+            marks=pytest.mark.skipif(not extra_test_parameters, reason="extra"),
+        ),
+        pytest.param(
+            ["level_name_2", "level_name_1"],
+            marks=pytest.mark.skipif(not extra_test_parameters, reason="extra"),
+        ),
+        pytest.param(
+            [2, "level_name_0"],
+            marks=pytest.mark.skipif(not extra_test_parameters, reason="extra"),
+        ),
     ],
 )
 @pytest.mark.parametrize("col_level", ["no_col_level", 0, 1, 2])
@@ -1043,6 +1055,14 @@ def test_reset_index_with_multi_index_no_drop(
     modin_df = pd.DataFrame(data, index=index, columns=columns)
     pandas_df = pandas.DataFrame(data, index=index, columns=columns)
 
+    if isinstance(level, list):
+        level = [
+            index.names[int(x[len("level_name_") :])]
+            if isinstance(x, str) and x.startswith("level_name_")
+            else x
+            for x in level
+        ]
+
     kwargs = {"drop": drop}
     if level != "no_level":
         kwargs["level"] = level
@@ -1082,6 +1102,18 @@ def test_reset_index_with_multi_index_no_drop(
         ),
         pytest.param(
             [0, 0, 0, 0],
+            marks=pytest.mark.skipif(not extra_test_parameters, reason="extra"),
+        ),
+        pytest.param(
+            ["level_name_1"],
+            marks=pytest.mark.skipif(not extra_test_parameters, reason="extra"),
+        ),
+        pytest.param(
+            ["level_name_2", "level_name_1"],
+            marks=pytest.mark.skipif(not extra_test_parameters, reason="extra"),
+        ),
+        pytest.param(
+            [2, "level_name_0"],
             marks=pytest.mark.skipif(not extra_test_parameters, reason="extra"),
         ),
     ],
