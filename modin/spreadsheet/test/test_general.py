@@ -16,6 +16,7 @@ import pytest
 import modin.pandas as pd
 import modin.spreadsheet as mss
 import numpy as np
+from modin_spreadsheet import SpreadsheetWidget
 
 
 def get_test_data():
@@ -35,9 +36,10 @@ def test_from_dataframe():
     pandas_df = pandas.DataFrame(data)
 
     modin_result = mss.from_dataframe(modin_df)
+    assert isinstance(modin_result, SpreadsheetWidget)
 
     with pytest.raises(TypeError):
-        pandas_result = mss.from_dataframe(pandas_df)
+        mss.from_dataframe(pandas_df)
 
 
 def test_to_dataframe():
@@ -51,4 +53,4 @@ def test_to_dataframe():
     assert modin_result.equals(modin_df)
 
     with pytest.raises(TypeError):
-        pandas_result = mss.from_dataframe(pandas_df)
+        mss.from_dataframe(pandas_df)
