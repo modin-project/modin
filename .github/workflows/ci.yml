@@ -286,6 +286,8 @@ jobs:
       - name: Install HDF5
         run: sudo apt update && sudo apt install -y libhdf5-dev
       - shell: bash -l {0}
+        run: pytest modin/pandas/test/internals/test_internals.py
+      - shell: bash -l {0}
         run: pytest modin/experimental/engines/omnisci_on_ray/test/test_dataframe.py
       - shell: bash -l {0}
         run: bash <(curl -s https://codecov.io/bash)
@@ -370,6 +372,8 @@ jobs:
           conda list
       - name: Install HDF5
         run: sudo apt update && sudo apt install -y libhdf5-dev
+      - shell: bash -l {0}
+        run: pytest modin/pandas/test/internals/test_internals.py
       - shell: bash -l {0}
         run: pytest modin/experimental/xgboost/test/test_default.py
       - shell: bash -l {0}
