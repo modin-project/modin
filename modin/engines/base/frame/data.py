@@ -566,7 +566,7 @@ class BasePandasFrame(object):
                     names=self.columns.names,
                 )
                 if self.columns.nlevels > 1
-                else pandas.Index(level_names)
+                else pandas.Index(level_names, tupleize_cols=False)
             )
 
         # Column labels are different for multilevel index.
