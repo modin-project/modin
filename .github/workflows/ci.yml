@@ -582,3 +582,33 @@ jobs:
       - run: sudo apt update && sudo apt install -y libhdf5-dev
       - shell: bash -l {0}
         run: python -m pytest modin/pandas/test/test_io.py::TestCsv
+
+  test-spreadsheet:
+    needs: [ lint-commit, lint-flake8, lint-black, test-api, test-headers ]
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: [ "3.6", "3.7", "3.8" ]
+        engine: ["ray", "dask"]
+    env:
+      MODIN_BACKEND: ${{matrix.engine}}
+      MODIN_EXPERIMENTAL: "True"
+    name: test (spreadsheet, python ${{matrix.python-version}})
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 1
+      - uses: conda-incubator/setup-miniconda@v2
+        with:
+          activate-environment: modin
+          environment-file: environment-dev.yml
+          python-version: ${{matrix.python-version}}
+          channel-priority: strict
+          use-only-tar-bz2: true # IMPORTANT: This needs to be set for caching to work properly!
+      - name: Conda environment
+        shell: bash -l {0}
+        run: |
+          conda info
+          conda list
+      - shell: bash -l {0}
+        run: python -m pytest modin/spreadsheet/test/test_general.py
