@@ -1175,8 +1175,7 @@ class BasePandasFrame(ModinDataframe):
         )
 
     def reduction(self, axis, function, tree_reduce=False, result_schema=None):
-        """Performs a user-defined per-column aggregation, where each column reduces
-        down to a single value.
+        """Perform a user-defined per-column aggregation, where each column reduces down to a single value.
 
         Notes
         -----
@@ -1221,7 +1220,7 @@ class BasePandasFrame(ModinDataframe):
         return new_df
 
     def map(self, function, axis=None, result_schema=None):
-        """Applies a user-defined function row- wise (or column-wise if axis=1).
+        """Apply a user-defined function row- wise (or column-wise if axis=1).
 
         Notes
         -----
@@ -1421,7 +1420,7 @@ class BasePandasFrame(ModinDataframe):
     filter_full_axis = filter
 
     def filter_by_types(self, types):
-        """Allows the user to specify a type or set of types by which to filter the columns.
+        """Allow the user to specify a type or set of types by which to filter the columns.
 
         Parameters
         ----------
@@ -2189,8 +2188,7 @@ class BasePandasFrame(ModinDataframe):
         return self.__constructor__(new_partitions, *new_axes)
 
     def groupby(self, axis, by, operator, result_schema=None):
-        """Generates groups based on values in the input column(s) and performs
-        the specified operation (e.g. aggregation or backfill) on the groups.
+        """Generate groups based on values in the input column(s) and perform the specified operation on each.
 
         Notes
         -----
@@ -2222,7 +2220,7 @@ class BasePandasFrame(ModinDataframe):
             A new BasePandasFrame containing the groupings specified, with the operator
                 applied to each group.
         """
-        raise NotImplementedError("Need to implement groupby")
+        pass
 
     def explode(self, axis, function, result_schema=None) -> "ModinDataframe":
         """Explode data based on the function provided along the specified axis.
@@ -2249,12 +2247,12 @@ class BasePandasFrame(ModinDataframe):
         ModinDataframe
             A new ModinDataframe with the specified axis expanded.
         """
-        raise NotImplementedError("Need to implement explode")
+        pass
 
     def window(
         self, axis, function, window_size, result_schema=None
     ) -> "ModinDataframe":
-        """Applies a user-defined function over a sliding window along the specified axis.
+        """Apply a user-defined function over a sliding window along the specified axis.
 
         Notes
         -----
@@ -2280,7 +2278,7 @@ class BasePandasFrame(ModinDataframe):
         ModinDataframe
             A new ModinDataframe with the function applied over windows of the specified axis.
         """
-        raise NotImplementedError("Need to implement window")
+        pass
 
     def window_reduction(
         self,
@@ -2289,8 +2287,7 @@ class BasePandasFrame(ModinDataframe):
         window_size,
         result_schema=None,
     ) -> "ModinDataframe":
-        """Applies a sliding window operator that acts as a GROUPBY on each window,
-        which reduces down to a single row (column) per window.
+        """Apply a sliding window operator that acts as a GROUPBY on each window, and reduces down to a single row (column) per window.
 
         Notes
         -----
@@ -2315,11 +2312,10 @@ class BasePandasFrame(ModinDataframe):
             A new ModinDataframe with the reduction function applied over windows of the specified
                 axis.
         """
-        raise NotImplementedError("Need to implement window_reduction")
+        pass
 
     def infer_types(self, columns_list: List[str]) -> "ModinDataframe":
-        """Determines the compatible type shared by all values in the specified columns,
-        and converts all values to that type.
+        """Determine the compatible type shared by all values in the specified columns, and coerce them to that type.
 
         Parameters
         ----------
@@ -2334,7 +2330,7 @@ class BasePandasFrame(ModinDataframe):
         pass
 
     def join(self, axis, condition, other, join_type) -> "ModinDataframe":
-        """Joins this dataframe with the other.
+        """Join this dataframe with the other.
 
         Notes
         -----
@@ -2362,10 +2358,10 @@ class BasePandasFrame(ModinDataframe):
             A new ModinDataframe that is the result of applying the specified join over the two
             dataframes.
         """
-        raise NotImplementedError("Need to implement join")
+        pass
 
     def concat(self, axis, others) -> "ModinDataframe":
-        """Appends the rows of identical column labels from multiple dataframes.
+        """Append the rows of identical column labels from multiple dataframes.
 
         Notes
         -----
@@ -2385,11 +2381,10 @@ class BasePandasFrame(ModinDataframe):
             A new ModinDataframe that is the result of concatenating the dataframes over the
             specified axis.
         """
-        raise NotImplementedError("Need to implement concat")
+        pass
 
     def sort_by(self, axis, columns, ascending=True) -> "ModinDataframe":
-        """Logically reorders the dataframe’s rows (columns if axis=1) by the lexicographical
-        order of the data in a column or set of columns.
+        """Logically reorder rows (columns if axis=1) lexicographically by the data in a column or set of columns.
 
         Parameters
         ----------
@@ -2405,7 +2400,7 @@ class BasePandasFrame(ModinDataframe):
         ModinDataframe
             A new ModinDataframe sorted into lexicographical order by the specified column(s).
         """
-        raise NotImplementedError("Need to implement sort_by")
+        pass
 
     @classmethod
     def from_pandas(cls, df):

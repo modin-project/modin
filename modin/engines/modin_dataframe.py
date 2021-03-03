@@ -34,7 +34,9 @@ class ModinDataframe(ABC):
         col_labels: Optional[List[Hashable]] = None,
         col_positions: Optional[List[int]] = None,
     ) -> "ModinDataframe":
-        """Allows users to perform selection and projection on the row and column number (positional notation),
+        """Mask rows and columns in the dataframe.
+
+        Allow users to perform selection and projection on the row and column number (positional notation),
         in addition to the row and column labels (named notation)
 
         Parameters
@@ -57,7 +59,7 @@ class ModinDataframe(ABC):
 
     @abstractmethod
     def filter_by_types(self, types: List[Hashable]) -> "ModinDataframe":
-        """Allows the user to specify a type or set of types by which to filter the columns.
+        """Allow the user to specify a type or set of types by which to filter the columns.
 
         Parameters
         ----------
@@ -78,7 +80,7 @@ class ModinDataframe(ABC):
         axis: Optional[int] = None,
         result_schema: Optional[List[Hashable]] = None,
     ) -> "ModinDataframe":
-        """Applies a user-defined function row- wise (or column-wise if axis=1).
+        """Apply a user-defined function row- wise (or column-wise if axis=1).
 
         Notes
         -----
@@ -164,7 +166,7 @@ class ModinDataframe(ABC):
         window_size: int,
         result_schema: Optional[List[Hashable]] = None,
     ) -> "ModinDataframe":
-        """Applies a user-defined function over a sliding window along the specified axis.
+        """Apply a user-defined function over a sliding window along the specified axis.
 
         Notes
         -----
@@ -200,8 +202,7 @@ class ModinDataframe(ABC):
         window_size: int,
         result_schema: Optional[List[Hashable]] = None,
     ) -> "ModinDataframe":
-        """Applies a sliding window operator that acts as a GROUPBY on each window,
-        which reduces down to a single row (column) per window.
+        """Apply a sliding window operator that acts as a GROUPBY on each window, reducing each window to a single row (column).
 
         Notes
         -----
@@ -236,8 +237,7 @@ class ModinDataframe(ABC):
         operator: Callable,
         result_schema: Optional[List[Hashable]] = None,
     ) -> "ModinDataframe":
-        """Generates groups based on values in the input column(s) and performs
-        the specified operation (e.g. aggregation or backfill) on the groups.
+        """Generate groups based on values in the input column(s) and perform the specified operation on each.
 
         Notes
         -----
@@ -279,8 +279,7 @@ class ModinDataframe(ABC):
         tree_reduce: bool = False,
         result_schema: Optional[List[Hashable]] = None,
     ) -> "ModinDataframe":
-        """Performs a user-defined per-column aggregation, where each column reduces
-        down to a single value.
+        """Perform a user-defined per-column aggregation, where each column reduces down to a single value.
 
         Notes
         -----
@@ -309,8 +308,7 @@ class ModinDataframe(ABC):
 
     @abstractmethod
     def infer_types(self, columns_list: List[str]) -> "ModinDataframe":
-        """Determines the compatible type shared by all values in the specified columns,
-        and converts all values to that type.
+        """Determine the compatible type shared by all values in the specified columns, and coerce them to that type.
 
         Parameters
         ----------
@@ -328,7 +326,7 @@ class ModinDataframe(ABC):
     def join(
         self, axis: int, condition: Callable, other: "ModinDataframe", join_type: str
     ) -> "ModinDataframe":
-        """Joins this dataframe with the other.
+        """Join this dataframe with the other.
 
         Notes
         -----
@@ -362,7 +360,7 @@ class ModinDataframe(ABC):
     def concat(
         self, axis: int, others: Union["ModinDataframe", List["ModinDataframe"]]
     ) -> "ModinDataframe":
-        """Appends the rows of identical column labels from multiple dataframes.
+        """Append the rows of identical column labels from multiple dataframes.
 
         Notes
         -----
@@ -386,7 +384,7 @@ class ModinDataframe(ABC):
 
     @abstractmethod
     def transpose(self) -> "ModinDataframe":
-        """Swaps the row and column axes.
+        """Swap the row and column axes.
 
         Notes
         -----
@@ -403,9 +401,12 @@ class ModinDataframe(ABC):
 
     @abstractmethod
     def to_labels(self, column_labels: Union[str, List[str]]) -> "ModinDataframe":
-        """Replaces the row labels with one or more columns of data. When multiple column
-        labels are specified, a heirarchical set of labels is created, ordered by the ordering
-        of labels in the input.
+        """Replace the row labels with one or more columns of data.
+
+        Notes
+        -----
+            When multiple column labels are specified, a heirarchical set of labels is created, ordered by the ordering
+                of labels in the input.
 
         Parameters
         ----------
@@ -421,10 +422,12 @@ class ModinDataframe(ABC):
 
     @abstractmethod
     def from_labels(self) -> "ModinDataframe":
-        """Moves the row labels into the data at position 0, and sets the row labels
-        to the positional notation. In the case that the dataframe has hierarchical labels, all label
-        “levels” are inserted into the dataframe in the order they occur in the labels, with the outermost
-        being in position 0.
+        """Move the row labels into the data at position 0, and sets the row labels to the positional notation.
+
+        Notes
+        -----
+            In the case that the dataframe has hierarchical labels, all label "levels” are inserted into the dataframe
+                in the order they occur in the labels, with the outermost being in position 0.
 
         Returns
         -------
@@ -437,8 +440,7 @@ class ModinDataframe(ABC):
     def sort_by(
         self, axis: int, columns: Union[str, List[str]], ascending: bool = True
     ) -> "ModinDataframe":
-        """Logically reorders the dataframe’s rows (columns if axis=1) by the lexicographical
-        order of the data in a column or set of columns.
+        """Logically reorder rows (columns if axis=1) lexicographically by the data in a column or set of columns.
 
         Parameters
         ----------
