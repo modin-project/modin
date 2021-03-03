@@ -558,9 +558,7 @@ class BaseFrameManager(ABC):
     @classmethod
     def wait_computations(cls, partitions):
         """Wait for computation results."""
-        for row in partitions:
-            for partition in row:
-                partition.wait()
+        map(lambda partition: partition.wait(), partitions)
 
     @classmethod
     def to_numpy(cls, partitions, **kwargs):
