@@ -592,8 +592,7 @@ jobs:
         engine: ["ray", "dask"]
     env:
       MODIN_BACKEND: ${{matrix.engine}}
-      MODIN_EXPERIMENTAL: "True"
-    name: test (spreadsheet, python ${{matrix.python-version}})
+    name: test-spreadsheet (engine ${{matrix.engine}}, python ${{matrix.python-version}})
     steps:
       - uses: actions/checkout@v2
         with:
