@@ -618,9 +618,7 @@ class BasePandasFrame(ModinDataframe):
             new_labels = pandas.Index(extracted_columns.squeeze(axis=1))
         else:
             new_labels = pandas.MultiIndex.from_frame(extracted_columns)
-        result = self.mask(
-            col_labels=[i for i in self.columns if i not in column_list]
-        )
+        result = self.mask(col_labels=[i for i in self.columns if i not in column_list])
         result.index = new_labels
         return result
 
