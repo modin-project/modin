@@ -541,7 +541,11 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 # We handle this by separately computing the index. We could just
                 # put the labels into the data and pull them back out, but that is
                 # expensive.
-                new_index = self.index.droplevel(uniq_sorted_level)
+                new_index = (
+                    self.index.droplevel(uniq_sorted_level)
+                    if len(level) < self.index.nlevels
+                    else pandas.RangeIndex(len(self.index))
+                )
         else:
             uniq_sorted_level = list(range(self.index.nlevels))
 
