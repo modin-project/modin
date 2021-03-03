@@ -572,7 +572,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 new_modin_frame = self._modin_frame.from_labels()
             if isinstance(new_modin_frame.columns, pandas.MultiIndex):
                 # Fix col_level and col_fill in generated column names because from_labels works with assumption
-                # that col_level and col_fill are not specified and doesn't expand tuples in index names.
+                # that col_level and col_fill are not specified but it expands tuples in level names.
                 col_level = kwargs.get("col_level", 0)
                 col_fill = kwargs.get("col_fill", "")
                 if col_level != 0 or col_fill != "":
