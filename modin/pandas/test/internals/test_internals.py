@@ -12,7 +12,7 @@
 # governing permissions and limitations under the License.
 
 import modin.pandas as pd
-from .utils import test_data_values
+from modin.pandas.test.utils import test_data_values
 
 
 def test_wait_computations():
