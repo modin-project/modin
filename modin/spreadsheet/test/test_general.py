@@ -53,4 +53,6 @@ def test_to_dataframe():
     assert modin_result.equals(modin_df)
 
     with pytest.raises(TypeError):
-        mss.from_dataframe(pandas_df)
+        mss.to_dataframe("Not a SpreadsheetWidget")
+    with pytest.raises(TypeError):
+        mss.to_dataframe(pandas_df)
