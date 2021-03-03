@@ -115,7 +115,20 @@ class OmnisciOnRayFrameManager(RayFrameManager):
             if len(unsupported_cols) > 0:
                 return None, unsupported_cols
 
+            def cast_categories_to_str(obj):
+                cols = [
+                    name
+                    for name, col in obj.dtypes.items()
+                    if isinstance(col, pandas.CategoricalDtype)
+                ]
+                if len(cols):
+                    # Extremely inefficient
+                    obj = obj.astype({col: "str" for col in cols})
+                    obj = obj.astype({col: "category" for col in cols})
+                return obj
+
             try:
+                obj = cast_categories_to_str(obj)
                 at = pyarrow.Table.from_pandas(obj)
             except pyarrow.lib.ArrowTypeError as e:
                 regex = r"Conversion failed for column ([^\W]*)"

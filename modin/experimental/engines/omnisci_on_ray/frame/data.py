@@ -1408,6 +1408,15 @@ class OmnisciOnRayFrame(BasePandasFrame):
         ]
 
     @classmethod
+    def _extract_dtype_from_arrow_col(cls, col):
+        if isinstance(col.type, pyarrow.DictionaryType):
+            # `pa.DictionaryType` can't be casted to pandas dtype as any other type,
+            # because it doesn't keep information about keys/values (so no info about categories),
+            # that's why we're converting the whole column to pandas to get categories.
+            return col.to_pandas().dtype
+        return super()._arrow_type_to_dtype(col.type)
+
+    @classmethod
     def from_arrow(cls, at, index_cols=None, index=None):
         (
             new_frame,
@@ -1426,7 +1435,7 @@ class OmnisciOnRayFrame(BasePandasFrame):
 
         new_columns = pd.Index(data=data_cols, dtype="O")
         new_dtypes = pd.Series(
-            [cls._arrow_type_to_dtype(col.type) for col in at.columns],
+            [cls._extract_dtype_from_arrow_col(col) for col in at.columns],
             index=at.column_names,
         )
 

@@ -84,22 +84,22 @@ class OmnisciServer:
         new_schema = schema
         need_cast = False
         new_cols = {}
-        for i, field in enumerate(schema):
-            if pa.types.is_dictionary(field.type):
-                # Conversion for dictionary of null type to string is not supported
-                # in Arrow. Build new column for this case for now.
-                if pa.types.is_null(field.type.value_type):
-                    mask_vals = np.full(table.num_rows, True, dtype=bool)
-                    mask = pa.array(mask_vals)
-                    new_col_data = np.empty(table.num_rows, dtype=str)
-                    new_col = pa.array(new_col_data, pa.string(), mask)
-                    new_cols[i] = new_col
-                else:
-                    need_cast = True
-                new_field = pa.field(
-                    field.name, pa.string(), field.nullable, field.metadata
-                )
-                new_schema = new_schema.set(i, new_field)
+        # for i, field in enumerate(schema):
+        #     if pa.types.is_dictionary(field.type):
+        #         # Conversion for dictionary of null type to string is not supported
+        #         # in Arrow. Build new column for this case for now.
+        #         if pa.types.is_null(field.type.value_type):
+        #             mask_vals = np.full(table.num_rows, True, dtype=bool)
+        #             mask = pa.array(mask_vals)
+        #             new_col_data = np.empty(table.num_rows, dtype=str)
+        #             new_col = pa.array(new_col_data, pa.string(), mask)
+        #             new_cols[i] = new_col
+        #         else:
+        #             need_cast = True
+        #         new_field = pa.field(
+        #             field.name, pa.string(), field.nullable, field.metadata
+        #         )
+        #         new_schema = new_schema.set(i, new_field)
 
         for i, col in new_cols.items():
             table = table.set_column(i, new_schema[i], col)
