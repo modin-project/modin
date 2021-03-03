@@ -549,13 +549,20 @@ class BasePandasFrame(object):
 
         def generate_new_index(level_names):
             return (
-                pandas.MultiIndex.from_arrays(
+                pandas.MultiIndex.from_tuples(
                     # Set level names on the 1st columns level. This is how reset_index works
                     # when col_level is not specified.
-                    [level_names]
                     # Fill up empty level names with empty string. This is how reset_index works
                     # when col_fill is not specified.
-                    + [[""] * len(level_names)] * (self.columns.nlevels - 1),
+                    # Expand tuples in level names.
+                    [
+                        tuple(
+                            list(level) + [""] * (self.columns.nlevels - len(level))
+                            if isinstance(level, tuple)
+                            else [level] + [""] * (self.columns.nlevels - 1)
+                        )
+                        for level in level_names
+                    ],
                     names=self.columns.names,
                 )
                 if self.columns.nlevels > 1
