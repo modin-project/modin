@@ -54,7 +54,6 @@ def train(
     *args,
     evals=(),
     nthread: Optional[int] = cpu_count(),
-    evenly_data_distribution: Optional[bool] = True,
     **kwargs,
 ):
     """
@@ -69,13 +68,8 @@ def train(
     evals: list of pairs (ModinDMatrix, string)
         List of validation sets for which metrics will evaluated during training.
         Validation metrics will help us track the performance of the model.
-    nthread : int
-        Number of threads for using in each node. By default it is equal to
-        number of threads on master node.
-    evenly_data_distribution : boolean, default True
-        Whether make evenly distribution of partitions between nodes or not.
-        In case `False` minimal datatransfer between nodes will be provided
-        but the data may not be evenly distributed.
+    nthread : int. Default is number of threads on master node
+        Number of threads for using in each node.
     \\*\\*kwargs :
         Other parameters are the same as `xgboost.train` except for
         `evals_result`, which is returned as part of function return value
@@ -100,9 +94,7 @@ def train(
     else:
         raise ValueError("Current version supports only Ray engine.")
 
-    result = _train(
-        dtrain, nthread, evenly_data_distribution, params, *args, evals=evals, **kwargs
-    )
+    result = _train(dtrain, nthread, params, *args, evals=evals, **kwargs)
     LOGGER.info("Training finished")
     return result
 
@@ -111,7 +103,6 @@ def predict(
     model,
     data: ModinDMatrix,
     nthread: Optional[int] = cpu_count(),
-    evenly_data_distribution: Optional[bool] = True,
     **kwargs,
 ):
     """
@@ -119,22 +110,17 @@ def predict(
 
     Parameters
     ----------
-    model : A Booster or a dictionary returned by `modin.experimental.xgboost.train`.
+    model : A Booster or a dictionary returned by `modin.experimental.xgboost.train`
         The trained model.
-    data : ModinDMatrix.
+    data : ModinDMatrix
         Input data used for prediction.
-    nthread : int
-        Number of threads for using in each node. By default it is equal to
-        number of threads on master node.
-    evenly_data_distribution : boolean, default True
-        Whether make evenly distribution of partitions between nodes or not.
-        In case `False` minimal datatransfer between nodes will be provided
-        but the data may not be evenly distributed.
+    nthread : int. Default is number of threads on master node
+        Number of threads for using in each node.
 
     Returns
     -------
-    numpy.array
-        Array with prediction results.
+    modin.pandas.DataFrame
+        Modin DataFrame with prediction results.
     """
     LOGGER.info("Prediction started")
 
@@ -151,7 +137,7 @@ def predict(
         raise TypeError(
             f"Expected types for `model` xgb.Booster or dict, but presented type is {type(model)}"
         )
-    result = _predict(booster, data, nthread, evenly_data_distribution, **kwargs)
+    result = _predict(booster, data, nthread, **kwargs)
     LOGGER.info("Prediction finished")
 
     return result
