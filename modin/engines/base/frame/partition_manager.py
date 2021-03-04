@@ -558,7 +558,10 @@ class BaseFrameManager(ABC):
     @classmethod
     def wait_computations(cls, partitions):
         """Wait for computation results."""
-        map(lambda partition: partition.wait(), partitions)
+        # need to go through all the values of the map iterator
+        # since `wait` does not return anything, we need to explicitly add
+        # the return `True` value from the lambda
+        all(map(lambda partition: partition.wait() or True, partitions.flatten()))
 
     @classmethod
     def to_numpy(cls, partitions, **kwargs):
