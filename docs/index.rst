@@ -153,6 +153,7 @@ nature, you get a fast DataFrame at 1MB and 1TB+.
 
    contributing
    developer/architecture
+   developer/pandas/partition_api
 
 .. toctree::
    :caption: Engines, Backends, and APIs
