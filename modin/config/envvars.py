@@ -261,6 +261,15 @@ class ProgressBar(EnvironmentVariable, type=bool):
         cls.put(False)
 
 
+class BenchmarkMode(EnvironmentVariable, type=bool):
+    """
+    Whether or not to perform computations syncronous.
+    """
+
+    varname = "MODIN_BENCHMARK_MODE"
+    default = False
+
+
 def _check_vars():
     """
     Look out for any environment variables that start with "MODIN_" prefix
