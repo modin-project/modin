@@ -22,7 +22,7 @@ Dask DataFrame has row-based partitioning, similar to Spark. This can be seen in
 
 ### Modin
 
-Modin is more of a column-store, which we inherited from modern database systems. We laterally partition the columns for scalability (many systems, such as Google BigTable already did this), so we can scale in both directions and have finer grained partitioning. This is explained at a high level in [Modin's documentation](https://modin.readthedocs.io/en/latest/architecture.html). Because we have this finer grained control over the partitioning, we can support a number of operations that are very challenging in MapReduce systems (e.g. transpose, median, quantile).
+Modin is more of a column-store, which we inherited from modern database systems. We laterally partition the columns for scalability (many systems, such as Google BigTable already did this), so we can scale in both directions and have finer grained partitioning. This is explained at a high level in [Modin's documentation](https://modin.readthedocs.io/en/latest/developer/architecture.html). Because we have this finer grained control over the partitioning, we can support a number of operations that are very challenging in MapReduce systems (e.g. transpose, median, quantile).
 
 ## Modin aims
 
