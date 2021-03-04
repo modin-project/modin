@@ -21,7 +21,6 @@ from typing import List, Hashable
 from modin.backends.pandas.query_compiler import PandasQueryCompiler
 from modin.error_message import ErrorMessage
 from modin.backends.pandas.parsers import find_common_type_cat as find_common_type
-from modin.config import BenchmarkMode
 
 
 class BasePandasFrame(object):
@@ -81,9 +80,6 @@ class BasePandasFrame(object):
         self._column_widths_cache = column_widths
         self._dtypes = dtypes
         self._filter_empties()
-
-        if BenchmarkMode.get():
-            self.wait_computations()
 
     @property
     def _row_lengths(self):
@@ -2105,33 +2101,6 @@ class BasePandasFrame(object):
             df.columns = self.columns
 
         return df
-
-    def wait_computations(self):
-        """
-        Wait for computation results.
-
-        Use this function when you need to wait for the end of computations in low level.
-        """
-        self._frame_mgr_cls.wait_computations(self._partitions)
-
-    def wait_func_result(self, func):
-        """
-        Synchronize performing a function.
-
-        Parameters
-        ----------
-        func: callable
-            A function that should perform one of high level APIs in syncronous mode.
-
-        Note: `func` should return modin DataFrame.
-        """
-
-        def sync_computations(*args, **kwargs):
-            res = func(*args, **kwargs)
-            res._query_compiler._modin_frame.wait_computations()
-            return res
-
-        return sync_computations
 
     def to_numpy(self, **kwargs):
         """

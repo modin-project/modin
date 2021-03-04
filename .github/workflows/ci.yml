@@ -286,7 +286,7 @@ jobs:
       - name: Install HDF5
         run: sudo apt update && sudo apt install -y libhdf5-dev
       - shell: bash -l {0}
-        run: pytest modin/pandas/test/internals/test_benchmark_mode.py
+        run: MODIN_BENCHMARK_MODE=True pytest modin/pandas/test/internals/test_benchmark_mode.py
       - shell: bash -l {0}
         run: pytest modin/experimental/engines/omnisci_on_ray/test/test_dataframe.py
       - shell: bash -l {0}
@@ -373,7 +373,7 @@ jobs:
       - name: Install HDF5
         run: sudo apt update && sudo apt install -y libhdf5-dev
       - shell: bash -l {0}
-        run: pytest modin/pandas/test/internals/test_benchmark_mode.py
+        run: MODIN_BENCHMARK_MODE=True pytest modin/pandas/test/internals/test_benchmark_mode.py
       - shell: bash -l {0}
         run: pytest modin/experimental/xgboost/test/test_default.py
       - shell: bash -l {0}

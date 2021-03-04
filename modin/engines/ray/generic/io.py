@@ -16,6 +16,7 @@ import pandas
 
 from modin.engines.base.io import BaseIO
 from ray.util.queue import Queue
+from ray import wait
 
 
 class RayIO(BaseIO):
@@ -136,4 +137,6 @@ class RayIO(BaseIO):
         )
 
         # pending completion
-        qc._modin_frame._frame_mgr_cls.wait_computations(result)
+        for rows in result:
+            for partition in rows:
+                wait([partition.oid])

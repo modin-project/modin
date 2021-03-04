@@ -18,10 +18,42 @@ import warnings
 
 from modin.error_message import ErrorMessage
 from modin.data_management.utils import compute_chunksize
-from modin.config import NPartitions, ProgressBar
+from modin.config import NPartitions, ProgressBar, BenchmarkMode
 
 from pandas.api.types import union_categoricals
 import os
+
+
+def wait_computations_if_benchmark_mode(func):
+    """
+    Synchronize performing a function in benchmark mode.
+
+    Parameters
+    ----------
+    func: callable
+        A function that should be performed in syncronous mode.
+
+    Note
+    ----
+        `func` should return numpy array with partitions.
+    """
+    if BenchmarkMode.get():
+
+        def wait(*args, **kwargs):
+            """Wait for computation results."""
+            result = func(*args, **kwargs)
+            if isinstance(result, tuple):
+                partitions = result[0]
+            else:
+                partitions = result
+            # need to go through all the values of the map iterator
+            # since `wait` does not return anything, we need to explicitly add
+            # the return `True` value from the lambda
+            all(map(lambda partition: partition.wait() or True, partitions.flatten()))
+            return result
+
+        return wait
+    return func
 
 
 class BaseFrameManager(ABC):
@@ -144,6 +176,7 @@ class BaseFrameManager(ABC):
         )
 
     @classmethod
+    @wait_computations_if_benchmark_mode
     def broadcast_apply_select_indices(
         cls,
         axis,
@@ -214,6 +247,7 @@ class BaseFrameManager(ABC):
         return new_partitions
 
     @classmethod
+    @wait_computations_if_benchmark_mode
     def broadcast_apply(cls, axis, apply_func, left, right, other_name="r"):
         """Broadcast the right partitions to left and apply a function.
 
@@ -261,6 +295,7 @@ class BaseFrameManager(ABC):
         return new_partitions
 
     @classmethod
+    @wait_computations_if_benchmark_mode
     def broadcast_axis_partitions(
         cls,
         axis,
@@ -338,6 +373,7 @@ class BaseFrameManager(ABC):
         return result_blocks.T if not axis else result_blocks
 
     @classmethod
+    @wait_computations_if_benchmark_mode
     def map_partitions(cls, partitions, map_func):
         """Apply `map_func` to every partition.
 
@@ -359,6 +395,7 @@ class BaseFrameManager(ABC):
         )
 
     @classmethod
+    @wait_computations_if_benchmark_mode
     def lazy_map_partitions(cls, partitions, map_func):
         """
         Apply `map_func` to every partition lazily.
@@ -430,6 +467,7 @@ class BaseFrameManager(ABC):
         )
 
     @classmethod
+    @wait_computations_if_benchmark_mode
     def simple_shuffle(cls, axis, partitions, map_func, lengths):
         """
         Shuffle data using `lengths` via `map_func`.
@@ -556,14 +594,6 @@ class BaseFrameManager(ABC):
             return cls.concatenate(df_rows)
 
     @classmethod
-    def wait_computations(cls, partitions):
-        """Wait for computation results."""
-        # need to go through all the values of the map iterator
-        # since `wait` does not return anything, we need to explicitly add
-        # the return `True` value from the lambda
-        all(map(lambda partition: partition.wait() or True, partitions.flatten()))
-
-    @classmethod
     def to_numpy(cls, partitions, **kwargs):
         """
         Convert this object into a NumPy array from the partitions.
@@ -577,6 +607,7 @@ class BaseFrameManager(ABC):
         )
 
     @classmethod
+    @wait_computations_if_benchmark_mode
     def from_pandas(cls, df, return_dims=False):
         """Return the partitions from Pandas DataFrame."""
 
@@ -709,6 +740,7 @@ class BaseFrameManager(ABC):
         return [obj.apply(preprocessed_func, **kwargs) for obj in partitions]
 
     @classmethod
+    @wait_computations_if_benchmark_mode
     def apply_func_to_select_indices(
         cls, axis, partitions, func, indices, keep_remaining=False
     ):
@@ -811,6 +843,7 @@ class BaseFrameManager(ABC):
         return result.T if not axis else result
 
     @classmethod
+    @wait_computations_if_benchmark_mode
     def apply_func_to_select_indices_along_full_axis(
         cls, axis, partitions, func, indices, keep_remaining=False
     ):
@@ -920,6 +953,7 @@ class BaseFrameManager(ABC):
         return result.T if not axis else result
 
     @classmethod
+    @wait_computations_if_benchmark_mode
     def apply_func_to_indices_both_axis(
         cls,
         partitions,
@@ -966,6 +1000,7 @@ class BaseFrameManager(ABC):
         return partition_copy
 
     @classmethod
+    @wait_computations_if_benchmark_mode
     def binary_operation(cls, axis, left, func, right):
         """
         Apply a function that requires two BasePandasFrame objects.
