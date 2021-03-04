@@ -19,7 +19,6 @@ from multiprocessing import cpu_count
 import xgboost as xgb
 
 from modin.config import Engine
-from .utils import DistributionType
 
 LOGGER = logging.getLogger("[modin.xgboost]")
 
@@ -55,7 +54,6 @@ def train(
     *args,
     evals=(),
     nthread: Optional[int] = cpu_count(),
-    distribution_type: Optional[DistributionType] = DistributionType.MIXED,
     **kwargs,
 ):
     """
@@ -72,8 +70,6 @@ def train(
         Validation metrics will help us track the performance of the model.
     nthread : int. Default is number of threads on master node
         Number of threads for using in each node.
-    distribution_type : DistributionType. Default is DistributionType.MIXED
-        Data distribution type to be applied.
     \\*\\*kwargs :
         Other parameters are the same as `xgboost.train` except for
         `evals_result`, which is returned as part of function return value
@@ -98,9 +94,7 @@ def train(
     else:
         raise ValueError("Current version supports only Ray engine.")
 
-    result = _train(
-        dtrain, nthread, distribution_type, params, *args, evals=evals, **kwargs
-    )
+    result = _train(dtrain, nthread, params, *args, evals=evals, **kwargs)
     LOGGER.info("Training finished")
     return result
 
@@ -109,7 +103,6 @@ def predict(
     model,
     data: ModinDMatrix,
     nthread: Optional[int] = cpu_count(),
-    distribution_type: Optional[DistributionType] = DistributionType.MIXED,
     **kwargs,
 ):
     """
@@ -123,8 +116,6 @@ def predict(
         Input data used for prediction.
     nthread : int. Default is number of threads on master node
         Number of threads for using in each node.
-    distribution_type : DistributionType. Default is DistributionType.MIXED
-        Data distribution type to be applied.
 
     Returns
     -------
@@ -146,7 +137,7 @@ def predict(
         raise TypeError(
             f"Expected types for `model` xgb.Booster or dict, but presented type is {type(model)}"
         )
-    result = _predict(booster, data, nthread, distribution_type, **kwargs)
+    result = _predict(booster, data, nthread, **kwargs)
     LOGGER.info("Prediction finished")
 
     return result

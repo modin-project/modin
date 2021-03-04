@@ -24,7 +24,7 @@ from ray.services import get_node_ip_address
 import pandas
 
 from modin.distributed.dataframe.pandas import unwrap_partitions, from_partitions
-from .utils import RabitContext, RabitContextManager, DistributionType
+from .utils import RabitContext, RabitContextManager
 
 LOGGER = logging.getLogger("[modin.xgboost]")
 
@@ -130,7 +130,6 @@ def _split_data_across_actors(
     actors: Dict,
     set_func,
     X_parts,
-    distribution_type,
     y_parts=None,
 ):
     """
@@ -144,8 +143,6 @@ def _split_data_across_actors(
         The function for setting data in actor.
     X_parts : list
         Row partitions of X data.
-    distribution_type : DistributionType
-        Data distribution type to be applied.
     y_parts : list. Default is None
         Row partitions of y data.
 
@@ -157,14 +154,12 @@ def _split_data_across_actors(
     X_parts_by_actors = _assign_row_partitions_to_actors(
         actors,
         X_parts,
-        distribution_type,
     )
 
     if y_parts is not None:
         y_parts_by_actors = _assign_row_partitions_to_actors(
             actors,
             y_parts,
-            distribution_type,
             data_for_aligning=X_parts_by_actors,
         )
 
@@ -184,7 +179,6 @@ def _split_data_across_actors(
 def _assign_row_partitions_to_actors(
     actors: Dict,
     row_partitions,
-    distribution_type,
     data_for_aligning=None,
 ):
     """
@@ -196,8 +190,6 @@ def _assign_row_partitions_to_actors(
         Dictionary of used actors.
     row_partitions : list
         Row partitions of data to assign.
-    distribution_type : DistributionType
-        Data distribution type to be applied.
     data_for_aligning : dict. Default is None
         Data according to the order of which should be
         distributed row_partitions. Used to align y with X.
@@ -208,223 +200,89 @@ def _assign_row_partitions_to_actors(
         Dictionary of assigned to actors partitions
         as {ip: (partitions, order)}.
     """
-    row_partitions_by_actors = {ip: ([], []) for ip in actors}
-    if distribution_type is DistributionType.EVENLY:
-        _assign_partitions_evenly(
-            actors,
-            row_partitions,
-            False,
-            row_partitions_by_actors,
+    if data_for_aligning is None:
+        partitions_ips = [ray.get(row_part[0]) for row_part in row_partitions]
+
+        partitions_distribution = {ip: partitions_ips.count(ip) for ip in actors}
+
+        parts_distribution_sorted = dict()
+
+        num_actors = len(actors)
+        parts_per_actor = (
+            len(row_partitions) // num_actors
+            if len(row_partitions) % num_actors < num_actors // 2 + 1
+            else len(row_partitions) // num_actors + 1
         )
-    else:
-        if data_for_aligning is None:
-            if distribution_type is DistributionType.MIXED:
-                row_partitions_by_actors = _assign_partitions_mixed(
-                    actors, row_partitions
-                )
-            elif distribution_type is DistributionType.LOCALLY:
-                _assign_partitions_locally(
-                    actors, row_partitions, row_partitions_by_actors
-                )
-            else:
-                raise ValueError("Incorrect distribution type.")
-        else:
-            for ip, (_, order_of_indexes) in data_for_aligning.items():
-                row_partitions_by_actors[ip][1].extend(order_of_indexes)
-                for row_idx in order_of_indexes:
-                    row_partitions_by_actors[ip][0].append(row_partitions[row_idx][1])
+        parts_per_last_actor = len(row_partitions) - parts_per_actor * (num_actors - 1)
 
-    return row_partitions_by_actors
-
-
-def _assign_partitions_mixed(actors: Dict, row_partitions):
-    """
-    Assign row_partitions to actors using DistributionType.MIXED.
-
-    Parameters
-    ----------
-    actors : dict
-        Dictionary of used actors.
-    row_partitions : list
-        Row partitions of data to assign.
-
-    Returns
-    -------
-    dict
-        Dictionary of assigned to actors partitions
-        as {ip: (partitions, order)}.
-    """
-    partitions_ips = [ray.get(row_part[0]) for row_part in row_partitions]
-
-    partitions_distribution = {ip: partitions_ips.count(ip) for ip in actors}
-
-    parts_distribution_sorted = dict()
-
-    num_actors = len(actors)
-    parts_per_actor = (
-        len(row_partitions) // num_actors
-        if len(row_partitions) % num_actors < num_actors // 2 + 1
-        else len(row_partitions) // num_actors + 1
-    )
-    parts_per_last_actor = len(row_partitions) - parts_per_actor * (num_actors - 1)
-
-    for idx, (ip, _) in enumerate(
-        sorted(partitions_distribution.items(), key=lambda item: item[1], reverse=True)
-    ):
-        if idx == num_actors - 1:
-            parts_per_actor = parts_per_last_actor
-
-        parts_distribution_sorted[ip] = parts_per_actor
-
-    row_partitions_by_actors = OrderedDict()
-    for ip in parts_distribution_sorted:
-        row_partitions_by_actors[ip] = ([], [])
-
-    # Get initial distribution
-    for i, row_part in enumerate(row_partitions):
-        row_partitions_by_actors[partitions_ips[i]][0].append(row_part[1])
-        row_partitions_by_actors[partitions_ips[i]][1].append(i)
-
-    # Iterating over all actors except last
-    for idx, ip in enumerate(list(row_partitions_by_actors)[:-1]):
-        if len(row_partitions_by_actors[ip][0]) == parts_distribution_sorted[ip]:
-            continue
-        else:
-            num_extra_parts = (
-                len(row_partitions_by_actors[ip][0]) - parts_distribution_sorted[ip]
+        for idx, (ip, _) in enumerate(
+            sorted(
+                partitions_distribution.items(), key=lambda item: item[1], reverse=True
             )
-            extra_parts = (
-                row_partitions_by_actors[ip][0][:num_extra_parts],
-                row_partitions_by_actors[ip][1][:num_extra_parts],
-            )
+        ):
+            if idx == num_actors - 1:
+                parts_per_actor = parts_per_last_actor
 
-            sliced_parts = (
-                row_partitions_by_actors[ip][0][num_extra_parts:],
-                row_partitions_by_actors[ip][1][num_extra_parts:],
-            )
+            parts_distribution_sorted[ip] = parts_per_actor
 
-            # Save only slice for original partitions
-            row_partitions_by_actors[ip] = sliced_parts
+        row_partitions_by_actors = OrderedDict()
+        for ip in parts_distribution_sorted:
+            row_partitions_by_actors[ip] = ([], [])
 
-            # Move extra partitions to the next actor
-            row_partitions_by_actors[list(row_partitions_by_actors)[idx + 1]][0].extend(
-                extra_parts[0]
-            )
-            row_partitions_by_actors[list(row_partitions_by_actors)[idx + 1]][1].extend(
-                extra_parts[1]
-            )
-
-    # Check correctness of distribution
-    for ip, (parts, _) in row_partitions_by_actors.items():
-        assert (
-            len(parts) == parts_distribution_sorted[ip]
-        ), f"Distribution of partitions is incorrect. {ip} contains {len(parts)} but {parts_distribution_sorted[ip]} expected."
-
-    return dict(row_partitions_by_actors)
-
-
-def _assign_partitions_locally(
-    actors: Dict, row_partitions, row_partitions_by_actors: Dict
-):
-    """
-    Assign row_partitions to actors using DistributionType.LOCALLY.
-
-    Parameters
-    ----------
-    actors : dict
-        Dictionary of used actors.
-    row_partitions : list
-        Row partitions of data to assign.
-    row_partitions_by_actors : dict
-        Dictionary of assigned to actors partitions
-        as {ip: (partitions, order)}. Output parameter.
-    """
-    actors_ips = list(actors.keys())
-    partitions_ips = [ray.get(row_part[0]) for row_part in row_partitions]
-    unique_partitions_ips = set(partitions_ips)
-    empty_actor_ips = []
-    for ip in actors_ips:
-        if ip not in unique_partitions_ips:
-            empty_actor_ips.append(ip)
-
-    # In case portion of nodes without data is less than 10%,
-    # no data redistribution between nodes will be performed.
-    if len(empty_actor_ips) / len(actors_ips) < 0.1:
-        import warnings
-
-        for ip in empty_actor_ips:
-            actors[ip].exit_actor.remote()
-            actors.pop(ip)
-            row_partitions_by_actors.pop(ip)
-            warnings.warn(f"Node {ip} isn't used as it doesn't contain any data.")
+        # Get initial distribution
         for i, row_part in enumerate(row_partitions):
             row_partitions_by_actors[partitions_ips[i]][0].append(row_part[1])
             row_partitions_by_actors[partitions_ips[i]][1].append(i)
+
+        # Iterating over all actors except last
+        for idx, ip in enumerate(list(row_partitions_by_actors)[:-1]):
+            if len(row_partitions_by_actors[ip][0]) == parts_distribution_sorted[ip]:
+                continue
+            else:
+                num_extra_parts = (
+                    len(row_partitions_by_actors[ip][0]) - parts_distribution_sorted[ip]
+                )
+                extra_parts = (
+                    row_partitions_by_actors[ip][0][:num_extra_parts],
+                    row_partitions_by_actors[ip][1][:num_extra_parts],
+                )
+
+                sliced_parts = (
+                    row_partitions_by_actors[ip][0][num_extra_parts:],
+                    row_partitions_by_actors[ip][1][num_extra_parts:],
+                )
+
+                # Save only slice for original partitions
+                row_partitions_by_actors[ip] = sliced_parts
+
+                # Move extra partitions to the next actor
+                row_partitions_by_actors[list(row_partitions_by_actors)[idx + 1]][
+                    0
+                ].extend(extra_parts[0])
+                row_partitions_by_actors[list(row_partitions_by_actors)[idx + 1]][
+                    1
+                ].extend(extra_parts[1])
+
+        # Check correctness of distribution
+        for ip, (parts, _) in row_partitions_by_actors.items():
+            assert (
+                len(parts) == parts_distribution_sorted[ip]
+            ), f"Distribution of partitions is incorrect. {ip} contains {len(parts)} but {parts_distribution_sorted[ip]} expected."
+
     else:
-        _assign_partitions_evenly(
-            actors,
-            row_partitions,
-            True,
-            row_partitions_by_actors,
-        )
+        row_partitions_by_actors = {ip: ([], []) for ip in actors}
 
+        for ip, (_, order_of_indexes) in data_for_aligning.items():
+            row_partitions_by_actors[ip][1].extend(order_of_indexes)
+            for row_idx in order_of_indexes:
+                row_partitions_by_actors[ip][0].append(row_partitions[row_idx])
 
-def _assign_partitions_evenly(
-    actors: Dict,
-    row_partitions,
-    is_partitions_have_ip,
-    row_partitions_by_actors: Dict,
-):
-    """
-    Assign row_partitions to actors using DistributionType.EVENLY.
-
-    Parameters
-    ----------
-    actors : dict
-        Dictionary of used actors.
-    row_partitions : list
-        Row partitions of data to assign.
-    is_partitions_have_ip : boolean
-        Whether each value of row_partitions is (ip, partition).
-    row_partitions_by_actors : dict
-        Dictionary of assigned to actors partitions
-        as {ip: (partitions, order)}. Output parameter.
-    """
-    num_actors = len(actors)
-    row_parts_last_idx = (
-        len(row_partitions) // num_actors
-        if len(row_partitions) % num_actors < num_actors // 2 + 1
-        else len(row_partitions) // num_actors + 1
-    )
-
-    start_idx = 0
-    for idx, (ip, actor) in enumerate(actors.items()):
-        if is_partitions_have_ip:
-            last_idx = (
-                (start_idx + row_parts_last_idx)
-                if idx < len(actors) - 1
-                else len(row_partitions)
-            )
-            row_partitions_by_actors[ip][1].extend(list(range(start_idx, last_idx)))
-            for idx in range(start_idx, last_idx):
-                row_partitions_by_actors[ip][0].append(row_partitions[idx][1])
-        else:
-            idx_slice = (
-                slice(start_idx, start_idx + row_parts_last_idx)
-                if idx < len(actors) - 1
-                else slice(start_idx, len(row_partitions))
-            )
-            row_partitions_by_actors[ip][0].extend(row_partitions[idx_slice])
-            row_partitions_by_actors[ip][1].extend(
-                list(range(idx_slice.start, idx_slice.stop))
-            )
-        start_idx += row_parts_last_idx
+    return dict(row_partitions_by_actors)
 
 
 def _train(
     dtrain,
     nthread,
-    distribution_type,
     params: Dict,
     *args,
     evals=(),
@@ -435,13 +293,8 @@ def _train(
     X, y = dtrain
     assert len(X) == len(y)
 
-    bind_ip = (
-        distribution_type == DistributionType.MIXED
-        or distribution_type == DistributionType.LOCALLY
-    )
-
-    X_row_parts = unwrap_partitions(X, axis=0, bind_ip=bind_ip)
-    y_row_parts = unwrap_partitions(y, axis=0, bind_ip=bind_ip)
+    X_row_parts = unwrap_partitions(X, axis=0, get_ip=True)
+    y_row_parts = unwrap_partitions(y, axis=0)
     assert len(X_row_parts) == len(y_row_parts), "Unaligned train data"
 
     # Create remote actors
@@ -465,10 +318,8 @@ def _train(
                 lambda actor, *X_y: actor.add_eval_data.remote(
                     *X_y, eval_method=eval_method
                 ),
-                evenly_data_distribution=evenly_data_distribution,
-                unwrap_partitions(eval_X, axis=0, bind_ip=bind_ip),
-                distribution_type,
-                y_parts=unwrap_partitions(eval_y, axis=0, bind_ip=bind_ip),
+                unwrap_partitions(eval_X, axis=0, get_ip=True),
+                y_parts=unwrap_partitions(eval_y, axis=0),
             )
 
     # Split data across workers
@@ -478,7 +329,6 @@ def _train(
             *X_y, add_as_eval_method=add_as_eval_method
         ),
         X_row_parts,
-        distribution_type,
         y_parts=y_row_parts,
     )
     LOGGER.info(f"Data preparation time: {time.time() - s} s")
@@ -504,18 +354,12 @@ def _predict(
     booster,
     data,
     nthread: Optional[int] = cpu_count(),
-    distribution_type: Optional[DistributionType] = DistributionType.MIXED,
     **kwargs,
 ):
     s = time.time()
 
     X, _ = data
-
-    bind_ip = (
-        distribution_type == DistributionType.MIXED
-        or distribution_type == DistributionType.LOCALLY
-    )
-    X_row_parts = unwrap_partitions(X, axis=0, bind_ip=bind_ip)
+    X_row_parts = unwrap_partitions(X, axis=0, get_ip=True)
 
     # Create remote actors
     actors = create_actors(nthread=nthread)
@@ -529,7 +373,6 @@ def _predict(
         actors,
         lambda actor, *X: actor.set_predict_data.remote(*X),
         X_row_parts,
-        distribution_type,
     )
 
     LOGGER.info(f"Data preparation time: {time.time() - s} s")
@@ -549,15 +392,12 @@ def _predict(
         for ip, actor in actors.items()
     ]
 
-    if bind_ip:
-        results_to_sort = list()
-        for ip, part_res in zip(actors, predictions):
-            results_to_sort.extend(list(zip(part_res, order_of_parts[ip])))
+    results_to_sort = list()
+    for ip, part_res in zip(actors, predictions):
+        results_to_sort.extend(list(zip(part_res, order_of_parts[ip])))
 
-        results = sorted(results_to_sort, key=lambda l: l[1])
-        results = [part_res for part_res, _ in results]
-    else:
-        results = [part for part_res in predictions for part in part_res]
+    results = sorted(results_to_sort, key=lambda l: l[1])
+    results = [part_res for part_res, _ in results]
 
     result = from_partitions(results, 0).reset_index(drop=True)
     LOGGER.info(f"Prediction time: {time.time() - s} s")

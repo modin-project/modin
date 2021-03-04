@@ -13,7 +13,6 @@
 
 import logging
 import xgboost as xgb
-from enum import Enum
 
 LOGGER = logging.getLogger("[modin.xgboost]")
 
@@ -50,23 +49,3 @@ class RabitContext:
     def __exit__(self, *args):
         xgb.rabit.finalize()
         LOGGER.info("-------------- rabit finished ------------------")
-
-
-class DistributionType(Enum):
-    """
-    Enum for different modes of distribution the data.
-
-    ``DistributionType.MIXED``  will distribute the data
-    evenly between nodes on the cluster with minimal datatransfer.
-
-    ``DistributionType.EVENLY`` will distribute the data
-    evenly between nodes on the cluster.
-
-    ``DistributionType.LOCALLY`` won't change the initial
-    distribution of the data between nodes. It doesn't
-    guarantee evenly nodes utilization.
-    """
-
-    MIXED = 0
-    EVENLY = 1
-    LOCALLY = 2

@@ -102,15 +102,10 @@ def from_partitions(partitions, axis):
     axis : None, 0 or 1
         The ``axis`` parameter is used to identify what are the partitions passed.
         You have to set:
-        - `axis` to 0 if you want to create DataFrame from row partitions.
-        - `axis` to 1 if you want to create DataFrame from column partitions.
-        - `axis` to None if you want to create DataFrame from 2D list of partitions.
-    index : list-like (optional)
-        The index of the result. We may know this in advance,
-        and if not provided it must be computed.
-    columns : list-like (optional)
-        The columns of the result. We may know this in
-        advance, and if not provided it must be computed.
+
+        * ``axis=0`` if you want to create DataFrame from row partitions
+        * ``axis=1`` if you want to create DataFrame from column partitions
+        * ``axis=None`` if you want to create DataFrame from 2D list of partitions
 
     Returns
     -------
