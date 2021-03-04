@@ -547,42 +547,17 @@ class BasePandasFrame(object):
         """
         new_row_labels = pandas.RangeIndex(len(self.index))
 
-        def generate_new_index(level_names):
-            return (
-                pandas.MultiIndex.from_tuples(
-                    # Set level names on the 1st columns level. This is how reset_index works
-                    # when col_level is not specified.
-                    # Fill up empty level names with empty string. This is how reset_index works
-                    # when col_fill is not specified.
-                    # Expand tuples in level names.
-                    [
-                        tuple(
-                            list(level) + [""] * (self.columns.nlevels - len(level))
-                            if isinstance(level, tuple)
-                            else [level] + [""] * (self.columns.nlevels - 1)
-                        )
-                        for level in level_names
-                    ],
-                    names=self.columns.names,
-                )
-                if self.columns.nlevels > 1
-                else pandas.Index(level_names, tupleize_cols=False)
-            )
-
         # Column labels are different for multilevel index.
+        # We will also use the `new_column_names` in the calculation of the internal metadata, so this is a
+        # lightweight way of ensuring the metadata matches.
         if self.index.nlevels > 1:
-            # We will also use the `new_column_names` in the calculation of the internal metadata, so this is a
-            # lightweight way of ensuring the metadata matches.
             level_names = [
                 self.index.names[i]
                 if self.index.names[i] is not None
                 else "level_{}".format(i)
                 for i in range(self.index.nlevels)
             ]
-            new_column_names = generate_new_index(level_names)
-            new_columns = new_column_names.append(self.columns)
         else:
-            # See note above about usage of `new_column_names`.
             level_names = [
                 self.index.names[0]
                 if self.index.names[0] is not None
@@ -591,8 +566,26 @@ class BasePandasFrame(object):
                 else "level_{}".format(0)
             ]
 
-            new_column_names = generate_new_index(level_names)
-            new_columns = new_column_names.append(self.columns)
+        if self.columns.nlevels > 1:
+            new_column_names = pandas.MultiIndex.from_tuples(
+                # Set level names on the 1st columns level. This is how reset_index works
+                # when col_level is not specified.
+                # Fill up empty level names with empty string. This is how reset_index works
+                # when col_fill is not specified.
+                # Expand tuples in level names.
+                [
+                    tuple(
+                        list(level) + [""] * (self.columns.nlevels - len(level))
+                        if isinstance(level, tuple)
+                        else [level] + [""] * (self.columns.nlevels - 1)
+                    )
+                    for level in level_names
+                ],
+                names=self.columns.names,
+            )
+        else:
+            new_column_names = pandas.Index(level_names, tupleize_cols=False)
+        new_columns = new_column_names.append(self.columns)
 
         def from_labels_executor(df, **kwargs):
             # Setting the names here ensures that external and internal metadata always match.
