@@ -67,7 +67,7 @@ from .utils import (
     test_data_categorical_keys,
     generate_multiindex,
     test_data_diff_dtype,
-    sort_index_for_equal_values,
+    df_equals_with_non_stable_indices,
 )
 from modin.config import NPartitions
 
@@ -3391,51 +3391,35 @@ def test_update(data, other_data):
 @pytest.mark.parametrize("normalize, bins, dropna", [(True, 3, False)])
 def test_value_counts(normalize, bins, dropna):
     # We sort indices for Modin and pandas result because of issue #1650
-    modin_series, pandas_series = create_test_series(test_data_values[0])
-
-    modin_result = sort_index_for_equal_values(
-        modin_series.value_counts(normalize=normalize, ascending=False), False
+    eval_general(
+        *create_test_series(test_data_values[0]),
+        lambda df: df.value_counts(normalize=normalize, ascending=False),
+        comparator=df_equals_with_non_stable_indices,
     )
-    pandas_result = sort_index_for_equal_values(
-        pandas_series.value_counts(normalize=normalize, ascending=False), False
+    eval_general(
+        *create_test_series(test_data_values[0]),
+        lambda df: df.value_counts(bins=bins, ascending=False),
+        comparator=df_equals_with_non_stable_indices,
     )
-    df_equals(modin_result, pandas_result)
-
-    modin_result = sort_index_for_equal_values(
-        modin_series.value_counts(bins=bins, ascending=False), False
+    eval_general(
+        *create_test_series(test_data_values[0]),
+        lambda df: df.value_counts(dropna=dropna, ascending=True),
+        comparator=df_equals_with_non_stable_indices,
     )
-    pandas_result = sort_index_for_equal_values(
-        pandas_series.value_counts(bins=bins, ascending=False), False
-    )
-    df_equals(modin_result, pandas_result)
-
-    modin_result = sort_index_for_equal_values(
-        modin_series.value_counts(dropna=dropna, ascending=True), True
-    )
-    pandas_result = sort_index_for_equal_values(
-        pandas_series.value_counts(dropna=dropna, ascending=True), True
-    )
-    df_equals(modin_result, pandas_result)
 
     # from issue #2365
     arr = np.random.rand(2 ** 6)
     arr[::10] = np.nan
-    modin_series, pandas_series = create_test_series(arr)
-    modin_result = sort_index_for_equal_values(
-        modin_series.value_counts(dropna=False, ascending=True), True
+    eval_general(
+        *create_test_series(arr),
+        lambda df: df.value_counts(dropna=False, ascending=True),
+        comparator=df_equals_with_non_stable_indices,
     )
-    pandas_result = sort_index_for_equal_values(
-        pandas_series.value_counts(dropna=False, ascending=True), True
+    eval_general(
+        *create_test_series(arr),
+        lambda df: df.value_counts(dropna=False, ascending=False),
+        comparator=df_equals_with_non_stable_indices,
     )
-    df_equals(modin_result, pandas_result)
-
-    modin_result = sort_index_for_equal_values(
-        modin_series.value_counts(dropna=False, ascending=False), False
-    )
-    pandas_result = sort_index_for_equal_values(
-        pandas_series.value_counts(dropna=False, ascending=False), False
-    )
-    df_equals(modin_result, pandas_result)
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)

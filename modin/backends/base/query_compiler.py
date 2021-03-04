@@ -1293,27 +1293,6 @@ class BaseQueryCompiler(abc.ABC):
 
     # END Abstract map partitions operations
 
-    def value_counts(self, subset, normalize, sort, ascending, dropna):
-        def agg_func(grp):
-            counted = grp.size()
-            if normalize:
-                counted = counted / counted.sum()
-            if sort:
-                counted.sort_values(ascending=ascending, inplace=True)
-            return counted
-
-        subset = self.getitem_column_array(subset)
-        return self.groupby_agg(
-            by=subset,
-            is_multi_by=len(self.columns) > 1,
-            axis=0,
-            agg_func=agg_func,
-            agg_args=[],
-            agg_kwargs={},
-            groupby_kwargs={"sort": not sort, "dropna": dropna},
-            drop=False,
-        )
-
     @doc_utils.add_refer_to("DataFrame.stack")
     def stack(self, level, dropna):
         """

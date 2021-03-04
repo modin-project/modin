@@ -33,7 +33,7 @@ from modin.pandas.test.utils import (
     create_test_dfs,
     generate_multiindex,
     test_data_diff_dtype,
-    sort_index_for_equal_values,
+    df_equals_with_non_stable_indices,
 )
 from modin.config import NPartitions
 
@@ -377,7 +377,7 @@ def test_value_counts(subset_len, sort):
     if subset_len == 1:
         # 'pandas.DataFrame.value_counts' always returns frames with MultiIndex,
         # even when 'subset_len == 1' it returns MultiIndex with 'nlevels == 1'.
-        # This behavior is tricky to mimic, so Modin 'value_counts' returns frame
+        # This behavior is expensive to mimic, so Modin 'value_counts' returns frame
         # with non-multi index in that case. That's why we flatten indices here.
         assert md_res.index.nlevels == pd_res.index.nlevels == 1
         for df in [md_res, pd_res]:
@@ -386,6 +386,6 @@ def test_value_counts(subset_len, sort):
     if sort:
         # We sort indices for the result because of:
         # https://github.com/modin-project/modin/issues/1650
-        md_res, pd_res = map(sort_index_for_equal_values, [md_res, pd_res])
-
-    df_equals(md_res, pd_res)
+        df_equals_with_non_stable_indices(md_res, pd_res)
+    else:
+        df_equals(md_res, pd_res)

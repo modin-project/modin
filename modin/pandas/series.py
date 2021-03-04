@@ -1998,14 +1998,16 @@ class Series(BasePandasDataset):
                 bins=bins,
                 dropna=dropna,
             )
-
-        return super(Series, self).value_counts(
-            subset=None,
+        counted_values = super(Series, self).value_counts(
+            subset=self,
             normalize=normalize,
             sort=sort,
             ascending=ascending,
             dropna=dropna,
         )
+        # Pandas sets output index names to None because the Series name already contains it
+        counted_values._query_compiler.set_index_name(None)
+        return counted_values
 
     def view(self, dtype=None):  # noqa: PR01, RT01, D200
         """

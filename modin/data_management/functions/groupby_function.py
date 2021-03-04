@@ -196,8 +196,7 @@ class GroupbyReduceFunction(MapReduceFunction):
             df.drop(columns=by_part, errors="ignore", inplace=True)
 
         groupby_args = groupby_args.copy()
-        method = kwargs.get("method", None)
-        as_index = groupby_args.get("as_index", True)
+        as_index = groupby_args["as_index"]
 
         # Set `as_index` to True to track the metadata of the grouping object
         groupby_args["as_index"] = True
@@ -220,10 +219,12 @@ class GroupbyReduceFunction(MapReduceFunction):
         cls,
         query_compiler,
         by,
+        axis,
+        groupby_args,
+        map_args,
         map_func,
-        axis=0,
-        groupby_args=None,
-        map_args=None,
+        reduce_func,
+        reduce_args,
         numeric_only=True,
         drop=False,
         method=None,
@@ -266,10 +267,6 @@ class GroupbyReduceFunction(MapReduceFunction):
         The same type as `query_compiler`
             QueryCompiler which carries the result of GroupBy aggregation.
         """
-        if groupby_args is None:
-            groupby_args = {}
-        if map_args is None:
-            map_args = {}
         if groupby_args.get("level", None) is None and (
             not (isinstance(by, (type(query_compiler))) or hashable(by))
             or isinstance(by, pandas.Grouper)
@@ -389,15 +386,6 @@ class GroupbyReduceFunction(MapReduceFunction):
         Tuple of callable
             Tuple of map and reduce functions with bound arguments.
         """
-        reduce_func=None,
-        reduce_args=None,
-        drop=False,
-        **kwargs,
-    ):
-        if reduce_func is None:
-            reduce_func = map_func
-        if reduce_args is None:
-            reduce_args = map_args
         # if by is a query compiler, then it will be broadcasted explicit via
         # groupby_reduce method of the modin frame and so we don't want secondary
         # implicit broadcastion via passing it as an function argument.

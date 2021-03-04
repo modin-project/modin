@@ -39,7 +39,7 @@ from pandas._typing import (
     TimestampConvertibleTypes,
 )
 import re
-from typing import Optional, Union
+from typing import Optional, Union, Sequence, Hashable
 import warnings
 import pickle as pkl
 
@@ -2865,20 +2865,21 @@ class BasePandasDataset(object):
         return self.set_axis(labels=new_labels, axis=axis, inplace=not copy)
 
     def value_counts(
-        self, subset=None, normalize=False, sort=True, ascending=False, dropna=True
+        self,
+        subset: Sequence[Hashable] = None,
+        normalize: bool = False,
+        sort: bool = True,
+        ascending: bool = False,
+        dropna: bool = True,
     ):
-        from .series import Series
-
         if subset is None:
-            subset = self._query_compiler.columns.tolist()
-        new_qc = self._query_compiler.value_counts(
-            subset=subset,
-            normalize=normalize,
-            sort=sort,
-            ascending=ascending,
-            dropna=dropna,
-        )
-        return Series(query_compiler=new_qc)
+            subset = self._query_compiler.columns
+        counted_values = self.groupby(by=subset, sort=not sort, dropna=dropna).size()
+        if sort:
+            counted_values.sort_values(ascending=ascending, inplace=True)
+        if normalize:
+            counted_values = counted_values / counted_values.sum()
+        return counted_values
 
     def var(
         self, axis=None, skipna=None, level=None, ddof=1, numeric_only=None, **kwargs
