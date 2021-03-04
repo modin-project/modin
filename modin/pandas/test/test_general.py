@@ -18,7 +18,12 @@ import numpy as np
 from numpy.testing import assert_array_equal
 from modin.utils import get_current_backend, to_pandas
 
-from .utils import test_data_values, test_data_keys, df_equals
+from .utils import (
+    test_data_values,
+    test_data_keys,
+    df_equals,
+    sort_index_for_equal_values,
+)
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
@@ -590,34 +595,6 @@ def test_unique():
 
 @pytest.mark.parametrize("normalize, bins, dropna", [(True, 3, False)])
 def test_value_counts(normalize, bins, dropna):
-    def sort_index_for_equal_values(result, ascending):
-        is_range = False
-        is_end = False
-        i = 0
-        new_index = np.empty(len(result), dtype=type(result.index))
-        while i < len(result):
-            j = i
-            if i < len(result) - 1:
-                while result[result.index[i]] == result[result.index[i + 1]]:
-                    i += 1
-                    if is_range is False:
-                        is_range = True
-                    if i == len(result) - 1:
-                        is_end = True
-                        break
-            if is_range:
-                k = j
-                for val in sorted(result.index[j : i + 1], reverse=not ascending):
-                    new_index[k] = val
-                    k += 1
-                if is_end:
-                    break
-                is_range = False
-            else:
-                new_index[j] = result.index[j]
-            i += 1
-        return type(result)(result, index=new_index)
-
     # We sort indices for Modin and pandas result because of issue #1650
     values = np.array([3, 1, 2, 3, 4, np.nan])
     modin_result = sort_index_for_equal_values(
