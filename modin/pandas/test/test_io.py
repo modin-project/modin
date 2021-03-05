@@ -16,13 +16,21 @@ import numpy as np
 import pandas
 from pandas.errors import ParserWarning
 from collections import OrderedDict
-from modin.config import TestDatasetSize
+from modin.config import TestDatasetSize, Backend
 from modin.utils import to_pandas
 from modin.pandas.utils import from_arrow
 import pyarrow as pa
 import os
 import shutil
-import sqlalchemy as sa
+
+try:
+    import sqlalchemy as sa
+except ImportError:
+    # `read_csv` tests can be executed with OmniSci backend,
+    # but OmniSci environment file doesn't contain `sqlalchemy`
+    # dependency
+    if Backend.get() != "Omnisci":
+        raise
 import csv
 import tempfile
 
@@ -253,7 +261,7 @@ class TestCsv:
 
     # Column and Index Locations and Names tests
     @pytest.mark.skipif(
-        Engine.get() != "Python",
+        Engine.get() != "Python" and Backend.get() != "Omnisci",
         reason="many parameters combiantions fails: issue #2312, #2307",
     )
     @pytest.mark.parametrize("header", ["infer", None, 0])
@@ -364,8 +372,24 @@ class TestCsv:
         nrows,
         names,
     ):
-        if false_values or true_values and Engine.get() != "Python":
+        xfail_case_1 = (
+            (false_values or true_values)
+            and Engine.get() != "Python"
+            and Backend.get() != "Omnisci"
+        )
+        xfail_case_2 = (
+            Backend.get() == "Omnisci"
+            and isinstance(skiprows, int)
+            and names is None
+            and skipfooter == 0
+            and nrows is None
+            and not true_values
+            and not false_values
+        )
+        if xfail_case_1:
             pytest.xfail("modin and pandas dataframes differs - issue #2446")
+        if xfail_case_2:
+            pytest.xfail("read_csv fails because of duplicated columns names")
         if request.config.getoption("--simulate-cloud").lower() != "off":
             pytest.xfail(
                 reason="The reason of tests fail in `cloud` mode is unknown for now - issue #2340"
@@ -437,6 +461,10 @@ class TestCsv:
         )
 
     def test_read_csv_mangle_dupe_cols(self):
+        if Backend.get() == "Omnisci":
+            pytest.xfail(
+                "processing of duplicated columns in OmniSci backend is not supported yet"
+            )
         unique_filename = get_unique_filename()
         str_non_unique_cols = "col,col,col,col\n5, 6, 7, 8\n9, 10, 11, 12\n"
         eval_io_from_str(str_non_unique_cols, unique_filename, mangle_dupe_cols=True)
@@ -490,6 +518,11 @@ class TestCsv:
         if request.config.getoption("--simulate-cloud").lower() != "off":
             pytest.xfail(
                 reason="The reason of tests fail in `cloud` mode is unknown for now - issue #2340"
+            )
+
+        if Backend.get() == "Omnisci" and not isinstance(parse_dates, bool):
+            pytest.xfail(
+                "In some cases read_csv with `parse_dates` with OmniSci backend outputs incorrect result"
             )
 
         raising_exceptions = io_ops_bad_exc  # default value
@@ -863,7 +896,10 @@ class TestCsv:
     @pytest.mark.parametrize("names", [list("XYZ"), None])
     @pytest.mark.parametrize("skiprows", [1, 2, 3, 4, None])
     def test_read_csv_skiprows_names(self, names, skiprows):
-
+        if Backend.get() == "Omnisci" and names is None and skiprows in [1, None]:
+            pytest.xfail(
+                "processing of duplicated columns in OmniSci backend is not supported yet"
+            )
         eval_io(
             fn_name="read_csv",
             # read_csv kwargs
@@ -907,13 +943,21 @@ class TestCsv:
     @pytest.mark.parametrize("nrows", [21, 5, None])
     @pytest.mark.parametrize("skiprows", [4, 1, 500, None])
     def test_read_csv_newlines_in_quotes(self, nrows, skiprows):
+        if (
+            Backend.get() == "Omnisci"
+            and skiprows not in [0, 1, None]
+            and nrows is None
+        ):
+            pytest.xfail(
+                "read_csv with OmniSci backend incorrectly handles multilines if skiprows is present - issue-#2904"
+            )
         eval_io(
             fn_name="read_csv",
             # read_csv kwargs
             filepath_or_buffer="modin/pandas/test/data/newlines.csv",
             nrows=nrows,
             skiprows=skiprows,
-            cast_to_str=True,
+            cast_to_str=Backend.get() != "Omnisci",
         )
 
     def test_read_csv_sep_none(self, request):
@@ -961,6 +1005,21 @@ class TestCsv:
             **kwargs,
         )
 
+    def test_read_csv_wrong_path(self):
+
+        raising_exceptions = [e for e in io_ops_bad_exc if e != FileNotFoundError]
+
+        eval_io(
+            fn_name="read_csv",
+            raising_exceptions=raising_exceptions,
+            # read_csv kwargs
+            filepath_or_buffer="/some/wrong/path.csv",
+        )
+
+    @pytest.mark.skipif(
+        Backend.get() == "Omnisci",
+        reason="to_csv is not implemented with OmniSci backend yet",
+    )
     @pytest.mark.parametrize("header", [False, True])
     @pytest.mark.parametrize("mode", ["w", "wb+"])
     def test_to_csv(self, request, header, mode):
@@ -981,6 +1040,10 @@ class TestCsv:
             mode=mode,
         )
 
+    @pytest.mark.skipif(
+        Backend.get() == "Omnisci",
+        reason="to_csv is not implemented with OmniSci backend yet",
+    )
     def test_dataframe_to_csv(self, request):
         if request.config.getoption("--simulate-cloud").lower() != "off":
             pytest.xfail(
@@ -992,6 +1055,10 @@ class TestCsv:
             modin_obj=modin_df, pandas_obj=pandas_df, fn="to_csv", extension="csv"
         )
 
+    @pytest.mark.skipif(
+        Backend.get() == "Omnisci",
+        reason="to_csv is not implemented with OmniSci backend yet",
+    )
     def test_series_to_csv(self, request):
         if request.config.getoption("--simulate-cloud").lower() != "off":
             pytest.xfail(
