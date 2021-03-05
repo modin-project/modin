@@ -1,6 +1,6 @@
 name: modin_on_omnisci
 channels:
-  - intel/label/modintest
+  - intel/label/modin
   - conda-forge
 dependencies:
   - pandas==1.2.3

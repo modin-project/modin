@@ -274,7 +274,7 @@ jobs:
         uses: conda-incubator/setup-miniconda@v2
         with:
           activate-environment: modin_on_omnisci
-          python-version: 3.7
+          python-version: 3.7.8
           environment-file: requirements/env_omnisci.yml
           channel-priority: strict
           use-only-tar-bz2: true # IMPORTANT: This needs to be set for caching to work properly!
@@ -285,17 +285,8 @@ jobs:
           conda list
       - name: Install HDF5
         run: sudo apt update && sudo apt install -y libhdf5-dev
-      - name: Print Env
-        shell: bash -l {0}
-        run: env
       - shell: bash -l {0}
         run: pytest modin/experimental/engines/omnisci_on_ray/test/test_dataframe.py
-      - name: Publish test-omnisci artefacts
-        uses: actions/upload-artifact@master
-        with:
-          name: Calcite used by omnisci
-          path: /usr/share/miniconda/envs/modin_on_omnisci/bin/calcite-1.0-SNAPSHOT-jar-with-dependencies.jar
-        if: failure()
       - shell: bash -l {0}
         run: bash <(curl -s https://codecov.io/bash)
 
