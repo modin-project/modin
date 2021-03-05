@@ -260,6 +260,12 @@ class ProgressBar(EnvironmentVariable, type=bool):
     def disable(cls):
         cls.put(False)
 
+    @classmethod
+    def put(cls, value):
+        if value and BenchmarkMode.get():
+            raise ValueError("ProgressBar isn't compatible with BenchmarkMode")
+        super().put(value)
+
 
 class BenchmarkMode(EnvironmentVariable, type=bool):
     """
@@ -268,6 +274,12 @@ class BenchmarkMode(EnvironmentVariable, type=bool):
 
     varname = "MODIN_BENCHMARK_MODE"
     default = False
+
+    @classmethod
+    def put(cls, value):
+        if value and ProgressBar.get():
+            raise ValueError("BenchmarkMode isn't compatible with ProgressBar")
+        super().put(value)
 
 
 def _check_vars():
