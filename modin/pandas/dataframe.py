@@ -2416,6 +2416,17 @@ class DataFrame(BasePandasDataset):
         else:
             return self._getitem_column(key)
 
+    # persistance support
+    @classmethod
+    def _inflate(cls, query_compiler):
+        """
+        Creates the object from previously-serialized representation
+        """
+        return cls(query_compiler=query_compiler)
+
+    def __reduce__(self):
+        return self._inflate, (self._query_compiler,)
+
 
 if IsExperimental.get():
     from modin.experimental.cloud.meta_magic import make_wrapped_class
