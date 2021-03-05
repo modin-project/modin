@@ -112,7 +112,7 @@ jobs:
         uses: conda-incubator/setup-miniconda@v2
         with:
           activate-environment: modin_on_omnisci
-          python-version: 3.7.8
+          python-version: 3.7
           environment-file: requirements/env_omnisci.yml
           channel-priority: strict
           use-only-tar-bz2: true # IMPORTANT: This needs to be set for caching to work properly!
