@@ -282,6 +282,18 @@ class BenchmarkMode(EnvironmentVariable, type=bool):
         super().put(value)
 
 
+class PersistentPickle(EnvironmentVariable, type=bool):
+    """
+    When set to off, it allows faster serialization which is only
+    valid in current run (i.e. useless for saving to disk).
+    When set to on, Modin objects could be saved to disk and loaded
+    but serialization/deserialization could take more time.
+    """
+
+    varname = "MODIN_PERSISTENT_PICKLE"
+    default = False
+
+
 def _check_vars():
     """
     Look out for any environment variables that start with "MODIN_" prefix
