@@ -2425,6 +2425,7 @@ class DataFrame(BasePandasDataset):
         return cls(query_compiler=query_compiler)
 
     def __reduce__(self):
+        self._query_compiler._modin_frame._materialize()
         return self._inflate, (self._query_compiler,)
 
 

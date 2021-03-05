@@ -2134,3 +2134,10 @@ class BasePandasFrame(object):
             self._row_lengths,
             dtypes=new_dtypes,
         )
+
+    def _materialize(self):
+        """
+        Perform all deferred calls, so that the dataframe
+        is made independent of history of queries that were used to build it.
+        """
+        [part.drain_call_queue() for row in self._partitions for part in row]

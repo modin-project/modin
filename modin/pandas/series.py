@@ -1734,6 +1734,14 @@ class Series(BasePandasDataset):
             return self._reduce_dimension(result)
         return self.__constructor__(query_compiler=result)
 
+    @classmethod
+    def _inflate(cls, query_compiler, name):
+        return cls(query_compiler=query_compiler, name=name)
+
+    def __reduce__(self):
+        self._query_compiler._modin_frame._materialize()
+        return self._inflate, (self._query_compiler, self.name)
+
 
 if IsExperimental.get():
     from modin.experimental.cloud.meta_magic import make_wrapped_class
