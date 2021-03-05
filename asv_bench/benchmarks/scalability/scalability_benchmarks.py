@@ -60,4 +60,5 @@ class TimeToPandas:
         self.data = generate_dataframe("modin", "int", *shape, RAND_LOW, RAND_HIGH)
 
     def time_to_pandas(self, shape, cpus):
-        execute(to_pandas(self.data))
+        # to_pandas is already synchronous
+        to_pandas(self.data)
