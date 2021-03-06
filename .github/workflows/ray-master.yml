@@ -1,0 +1,50 @@
+name: ray-master
+on: pull_request
+jobs:
+  test-ray-master:
+    runs-on: ubuntu-latest
+    container: rayproject/ray:nightly
+    name: test-internals
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 1
+      - run: pip install -r requirements/requirements-no-engine.txt
+      - name: Install HDF5
+        run: sudo apt update && sudo apt install -y libhdf5-dev
+      - shell: bash -l {0}
+        run: pytest modin/experimental/xgboost/test/test_default.py
+      - shell: bash -l {0}
+        run: pytest modin/pandas/test/dataframe/test_binary.py
+      - shell: bash -l {0}
+        run: pytest modin/pandas/test/dataframe/test_default.py
+      - shell: bash -l {0}
+        run: pytest modin/pandas/test/dataframe/test_indexing.py
+      - shell: bash -l {0}
+        run: pytest modin/pandas/test/dataframe/test_iter.py
+      - shell: bash -l {0}
+        run: pytest modin/pandas/test/dataframe/test_join_sort.py
+      - shell: bash -l {0}
+        run: pytest modin/pandas/test/dataframe/test_map_metadata.py
+      - shell: bash -l {0}
+        run: pytest modin/pandas/test/dataframe/test_reduction.py
+      - shell: bash -l {0}
+        run: pytest modin/pandas/test/dataframe/test_udf.py
+      - shell: bash -l {0}
+        run: pytest modin/pandas/test/dataframe/test_window.py
+      - shell: bash -l {0}
+        run: python -m pytest modin/pandas/test/test_series.py
+      - shell: bash -l {0}
+        run: python -m pytest modin/pandas/test/test_rolling.py
+      - shell: bash -l {0}
+        run: python -m pytest modin/pandas/test/test_concat.py
+      - shell: bash -l {0}
+        run: python -m pytest modin/pandas/test/test_groupby.py
+      - shell: bash -l {0}
+        run: python -m pytest modin/pandas/test/test_reshape.py
+      - shell: bash -l {0}
+        run: python -m pytest modin/pandas/test/test_general.py
+      - shell: bash -l {0}
+        run: python -m pytest modin/pandas/test/test_io.py
+      - shell: bash -l {0}
+        run: python -m pytest modin/experimental/pandas/test/test_io_exp.py
