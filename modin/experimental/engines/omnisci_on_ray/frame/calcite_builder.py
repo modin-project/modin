@@ -380,14 +380,14 @@ class CalciteBuilder:
         self._push(CalciteScanNode(op.modin_frame))
 
     def _process_mask(self, op):
-        if op.row_indices is not None:
+        if op.row_labels is not None:
             raise NotImplementedError("row indices masking is not yet supported")
 
         frame = op.input[0]
 
         # select rows by rowid
         rowid_col = self._ref(frame, "__rowid__")
-        condition = build_row_idx_filter_expr(op.row_numeric_idx, rowid_col)
+        condition = build_row_idx_filter_expr(op.row_positions, rowid_col)
         self._push(CalciteFilterNode(condition))
 
         # mask is currently always applied over scan, it means

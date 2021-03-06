@@ -100,14 +100,14 @@ class PandasOnDaskFramePartition(BaseFramePartition):
         self._ip_cache = new_partition._ip_cache
         self.call_queue = []
 
-    def mask(self, row_indices, col_indices):
+    def mask(self, row_labels, col_labels):
         new_obj = self.add_to_apply_calls(
-            lambda df: pandas.DataFrame(df.iloc[row_indices, col_indices])
+            lambda df: pandas.DataFrame(df.iloc[row_labels, col_labels])
         )
-        if not isinstance(row_indices, slice):
-            new_obj._length_cache = len(row_indices)
-        if not isinstance(col_indices, slice):
-            new_obj._width_cache = len(col_indices)
+        if not isinstance(row_labels, slice):
+            new_obj._length_cache = len(row_labels)
+        if not isinstance(col_labels, slice):
+            new_obj._width_cache = len(col_labels)
         return new_obj
 
     def __copy__(self):

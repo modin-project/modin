@@ -1546,8 +1546,8 @@ class BasePandasFrame(ModinDataframe):
         axis,
         func,
         apply_indices=None,
-        row_indices=None,
-        col_indices=None,
+        row_labels=None,
+        col_labels=None,
         new_index=None,
         new_columns=None,
         keep_remaining=False,
@@ -1561,10 +1561,10 @@ class BasePandasFrame(ModinDataframe):
             func: The function to apply
             apply_indices: (optional) The labels to apply over. Must be given if axis is
                 provided.
-            row_indices: (optional) The row indices to apply over. Must be provided with
-                `col_indices` to apply over both axes.
-            col_indices: (optional) The column indices to apply over. Must be provided
-                with `row_indices` to apply over both axes.
+            row_labels: (optional) The row indices to apply over. Must be provided with
+                `col_labels` to apply over both axes.
+            col_labels: (optional) The column indices to apply over. Must be provided
+                with `row_labels` to apply over both axes.
             new_index: (optional) The index of the result. We may know this in advance,
                 and if not provided it must be computed.
             new_columns: (optional) The columns of the result. We may know this in
@@ -1614,11 +1614,11 @@ class BasePandasFrame(ModinDataframe):
         else:
             # We are apply over both axes here, so make sure we have all the right
             # variables set.
-            assert row_indices is not None and col_indices is not None
+            assert row_labels is not None and col_labels is not None
             assert keep_remaining
             assert item_to_distribute is not None
-            row_partitions_list = self._get_dict_of_block_index(0, row_indices).items()
-            col_partitions_list = self._get_dict_of_block_index(1, col_indices).items()
+            row_partitions_list = self._get_dict_of_block_index(0, row_labels).items()
+            col_partitions_list = self._get_dict_of_block_index(1, col_labels).items()
             new_partitions = self._frame_mgr_cls.apply_func_to_indices_both_axis(
                 self._partitions,
                 func,

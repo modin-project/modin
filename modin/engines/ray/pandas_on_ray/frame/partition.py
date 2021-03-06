@@ -112,31 +112,31 @@ class PandasOnRayFramePartition(BaseFramePartition):
         """
         return self.apply(lambda df, **kwargs: df.to_numpy(**kwargs)).get()
 
-    def mask(self, row_indices, col_indices):
+    def mask(self, row_labels, col_labels):
         if (
-            (isinstance(row_indices, slice) and row_indices == slice(None))
+            (isinstance(row_labels, slice) and row_labels == slice(None))
             or (
-                not isinstance(row_indices, slice)
+                not isinstance(row_labels, slice)
                 and self._length_cache is not None
-                and len(row_indices) == self._length_cache
+                and len(row_labels) == self._length_cache
             )
         ) and (
-            (isinstance(col_indices, slice) and col_indices == slice(None))
+            (isinstance(col_labels, slice) and col_labels == slice(None))
             or (
-                not isinstance(col_indices, slice)
+                not isinstance(col_labels, slice)
                 and self._width_cache is not None
-                and len(col_indices) == self._width_cache
+                and len(col_labels) == self._width_cache
             )
         ):
             return self.__copy__()
 
         new_obj = self.add_to_apply_calls(
-            lambda df: pandas.DataFrame(df.iloc[row_indices, col_indices])
+            lambda df: pandas.DataFrame(df.iloc[row_labels, col_labels])
         )
-        if not isinstance(row_indices, slice):
-            new_obj._length_cache = len(row_indices)
-        if not isinstance(col_indices, slice):
-            new_obj._width_cache = len(col_indices)
+        if not isinstance(row_labels, slice):
+            new_obj._length_cache = len(row_labels)
+        if not isinstance(col_labels, slice):
+            new_obj._width_cache = len(col_labels)
         return new_obj
 
     @classmethod

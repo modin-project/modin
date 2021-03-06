@@ -100,12 +100,12 @@ class BaseFramePartition(ABC):  # pragma: no cover
         """
         pass
 
-    def mask(self, row_indices, col_indices):
+    def mask(self, row_labels, col_labels):
         """Lazily create a mask that extracts the indices provided.
 
         Args:
-            row_indices: The indices for the rows to extract.
-            col_indices: The indices for the columns to extract.
+            row_labels: The indices for the rows to extract.
+            col_labels: The indices for the columns to extract.
 
         Returns
         -------

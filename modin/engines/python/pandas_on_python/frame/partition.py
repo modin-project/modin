@@ -87,14 +87,14 @@ class PandasOnPythonFramePartition(BaseFramePartition):
             return
         self.apply(lambda x: x)
 
-    def mask(self, row_indices=None, col_indices=None):
+    def mask(self, row_labels=None, col_labels=None):
         new_obj = self.add_to_apply_calls(
-            lambda df: pandas.DataFrame(df.iloc[row_indices, col_indices])
+            lambda df: pandas.DataFrame(df.iloc[row_labels, col_labels])
         )
-        if not isinstance(row_indices, slice):
-            new_obj._length_cache = len(row_indices)
-        if not isinstance(col_indices, slice):
-            new_obj._width_cache = len(col_indices)
+        if not isinstance(row_labels, slice):
+            new_obj._length_cache = len(row_labels)
+        if not isinstance(col_labels, slice):
+            new_obj._width_cache = len(col_labels)
         return new_obj
 
     def to_pandas(self):

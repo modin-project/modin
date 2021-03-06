@@ -123,25 +123,25 @@ class MaskNode(DFAlgNode):
     def __init__(
         self,
         base,
-        row_indices=None,
-        row_numeric_idx=None,
+        row_labels=None,
+        row_positions=None,
     ):
         self.input = [base]
-        self.row_indices = row_indices
-        self.row_numeric_idx = row_numeric_idx
+        self.row_labels = row_labels
+        self.row_positions = row_positions
 
     def copy(self):
         return MaskNode(
             self.input[0],
-            self.row_indices,
-            self.row_numeric_idx,
+            self.row_labels,
+            self.row_positions,
         )
 
     def _prints(self, prefix):
         return (
             f"{prefix}MaskNode:\n"
-            f"{prefix}  row_indices: {self.row_indices}\n"
-            f"{prefix}  row_numeric_idx: {self.row_numeric_idx}\n"
+            f"{prefix}  row_labels: {self.row_labels}\n"
+            f"{prefix}  row_positions: {self.row_positions}\n"
             + self._prints_input(prefix + "  ")
         )
 

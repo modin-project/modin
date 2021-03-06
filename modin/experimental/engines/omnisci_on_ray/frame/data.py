@@ -157,18 +157,18 @@ class OmnisciOnRayFrame(BasePandasFrame):
 
     def mask(
         self,
-        row_indices=None,
-        row_numeric_idx=None,
-        col_indices=None,
-        col_numeric_idx=None,
+        row_labels=None,
+        row_positions=None,
+        col_labels=None,
+        col_positions=None,
     ):
         base = self
 
-        if col_indices is not None or col_numeric_idx is not None:
-            if col_indices is not None:
-                new_columns = col_indices
-            elif col_numeric_idx is not None:
-                new_columns = base.columns[col_numeric_idx]
+        if col_labels is not None or col_positions is not None:
+            if col_labels is not None:
+                new_columns = col_labels
+            elif col_positions is not None:
+                new_columns = base.columns[col_positions]
             exprs = self._index_exprs()
             for col in new_columns:
                 exprs[col] = base.ref(col)
@@ -181,11 +181,11 @@ class OmnisciOnRayFrame(BasePandasFrame):
                 force_execution_mode=self._force_execution_mode,
             )
 
-        if row_indices is not None or row_numeric_idx is not None:
+        if row_labels is not None or row_positions is not None:
             op = MaskNode(
                 base,
-                row_indices=row_indices,
-                row_numeric_idx=row_numeric_idx,
+                row_labels=row_labels,
+                row_positions=row_positions,
             )
             return self.__constructor__(
                 columns=base.columns,
@@ -239,7 +239,7 @@ class OmnisciOnRayFrame(BasePandasFrame):
                     else:
                         raise NotImplementedError("unsupported groupby args")
                 by_cols = Index.__new__(Index, data=by_cols, dtype=self.columns.dtype)
-                by_frame = self.mask(col_indices=by_cols)
+                by_frame = self.mask(col_labels=by_cols)
                 if by_frames:
                     by_frame = by_frame._concat(
                         axis=1, other_modin_frames=by_frames, ignore_index=True
@@ -1033,7 +1033,7 @@ class OmnisciOnRayFrame(BasePandasFrame):
             return self._has_arrow_table()
         elif isinstance(self._op, MaskNode):
             return (
-                self._op.row_indices is None and self._op.input[0]._can_execute_arrow()
+                self._op.row_labels is None and self._op.input[0]._can_execute_arrow()
             )
         elif isinstance(self._op, TransformNode):
             return self._op.is_drop() and self._op.input[0]._can_execute_arrow()
@@ -1050,7 +1050,7 @@ class OmnisciOnRayFrame(BasePandasFrame):
                 assert self._partitions.size == 1
                 return self._partitions[0][0].get()
         elif isinstance(self._op, MaskNode):
-            return self._op.input[0]._arrow_row_slice(self._op.row_numeric_idx)
+            return self._op.input[0]._arrow_row_slice(self._op.row_positions)
         elif isinstance(self._op, TransformNode):
             return self._op.input[0]._arrow_col_slice(set(self._op.exprs.keys()))
         elif isinstance(self._op, UnionNode):
@@ -1064,30 +1064,28 @@ class OmnisciOnRayFrame(BasePandasFrame):
             [f"F_{col}" for col in self._table_cols if col not in new_columns]
         )
 
-    def _arrow_row_slice(self, row_numeric_idx):
+    def _arrow_row_slice(self, row_positions):
         table = self._execute_arrow()
-        if isinstance(row_numeric_idx, slice):
-            start = 0 if row_numeric_idx.start is None else row_numeric_idx.start
+        if isinstance(row_positions, slice):
+            start = 0 if row_positions.start is None else row_positions.start
             if start < 0:
                 start = table.num_rows - start
-            end = (
-                table.num_rows if row_numeric_idx.stop is None else row_numeric_idx.stop
-            )
+            end = table.num_rows if row_positions.stop is None else row_positions.stop
             if end < 0:
                 end = table.num_rows - end
-            if row_numeric_idx.step is None or row_numeric_idx.step == 1:
+            if row_positions.step is None or row_positions.step == 1:
                 length = 0 if start >= end else end - start
                 return table.slice(start, length)
             else:
                 parts = []
-                for i in range(start, end, row_numeric_idx.step):
+                for i in range(start, end, row_positions.step):
                     parts.append(table.slice(i, 1))
                 return pyarrow.concat_tables(parts)
 
         start = None
         end = None
         parts = []
-        for idx in row_numeric_idx:
+        for idx in row_positions:
             if start is None:
                 start = idx
                 end = idx
