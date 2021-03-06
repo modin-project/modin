@@ -2094,9 +2094,6 @@ class DataFrame(BasePandasDataset):
     def __round__(self, decimals=0):
         return self._default_to_pandas(pandas.DataFrame.__round__, decimals=decimals)
 
-    def __setstate__(self, state):
-        return self._default_to_pandas(pandas.DataFrame.__setstate__, state)
-
     def __delitem__(self, key):
         if key not in self:
             raise KeyError(key)
@@ -2421,16 +2418,14 @@ class DataFrame(BasePandasDataset):
     def _inflate_light(cls, query_compiler):
         """
         Re-creates the object from previously-serialized lightweight representation.
+
         The method is used for faster but not disk-storable persistence.
         """
         return cls(query_compiler=query_compiler)
 
     @classmethod
     def _inflate_full(cls, pandas_df):
-        """
-        Re-creates the object from previously-serialized disk-storable
-        representation.
-        """
+        """Re-creates the object from previously-serialized disk-storable representation."""
         return cls(data=from_pandas(pandas_df))
 
     def __reduce__(self):

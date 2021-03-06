@@ -2137,7 +2137,9 @@ class BasePandasFrame(object):
 
     def _materialize(self):
         """
-        Perform all deferred calls, so that the dataframe
-        is made independent of history of queries that were used to build it.
+        Perform all deferred calls on partitions.
+        
+        This makes the dataframe independent of history of queries
+        that were used to build it.
         """
         [part.drain_call_queue() for row in self._partitions for part in row]
