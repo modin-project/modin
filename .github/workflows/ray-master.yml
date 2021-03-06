@@ -1,10 +1,10 @@
-name: ray-master
+name: ray-nightly
 on: pull_request
 jobs:
   test-ray-master:
     runs-on: ubuntu-latest
     container: rayproject/ray:nightly
-    name: test-internals
+    name: test-dataframe-ray-master
     steps:
       - uses: actions/checkout@v2
         with:
