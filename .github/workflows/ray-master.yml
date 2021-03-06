@@ -6,6 +6,7 @@ jobs:
     container: rayproject/ray:nightly
     name: test-dataframe-ray-master
     steps:
+      - run: sudo su -
       - uses: actions/checkout@v2
         with:
           fetch-depth: 1
