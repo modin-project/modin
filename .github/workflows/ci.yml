@@ -243,6 +243,8 @@ jobs:
       - shell: bash -l {0}
         run: pytest modin/pandas/test/dataframe/test_window.py --backend=${{ matrix.backend }}
       - shell: bash -l {0}
+        run: pytest modin/pandas/test/dataframe/test_pickle.py --backend=${{ matrix.backend }}
+      - shell: bash -l {0}
         run: python -m pytest modin/pandas/test/test_series.py --backend=${{ matrix.backend }}
       - shell: bash -l {0}
         run: python -m pytest modin/pandas/test/test_rolling.py --backend=${{ matrix.backend }}
@@ -395,6 +397,8 @@ jobs:
       - shell: bash -l {0}
         run: pytest modin/pandas/test/dataframe/test_window.py
       - shell: bash -l {0}
+        run: pytest modin/pandas/test/dataframe/test_pickle.py
+      - shell: bash -l {0}
         run: python -m pytest modin/pandas/test/test_series.py
       - shell: bash -l {0}
         run: python -m pytest modin/pandas/test/test_rolling.py
@@ -530,6 +534,9 @@ jobs:
         if: matrix.part == 'DataFrame'
       - shell: bash -l {0}
         run: pytest modin/pandas/test/dataframe/test_window.py
+        if: matrix.part == 'DataFrame'
+      - shell: bash -l {0}
+        run: pytest modin/pandas/test/dataframe/test_pickle.py
         if: matrix.part == 'DataFrame'
       - shell: bash -l {0}
         run: python -m pytest modin/pandas/test/test_series.py
