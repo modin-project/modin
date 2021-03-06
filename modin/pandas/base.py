@@ -89,7 +89,7 @@ _DEFAULT_BEHAVIOUR = {
     # for persistance support;
     # see DataFrame methods docstrings for more
     "_inflate_light",
-    "_inflate_full"
+    "_inflate_full",
     "__reduce__",
 } | _ATTRS_NO_LOOKUP
 
@@ -2752,9 +2752,6 @@ class BasePandasDataset(object):
         if key.start is None and key.stop is None:
             return self.copy()
         return self.iloc[key]
-
-    def __getstate__(self):
-        return self._default_to_pandas("__getstate__")
 
     def __gt__(self, right):
         return self.gt(right)
