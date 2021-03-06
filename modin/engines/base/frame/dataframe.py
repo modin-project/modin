@@ -25,6 +25,8 @@ from modin.backends.pandas.parsers import find_common_type_cat as find_common_ty
 
 
 class DimensionError(Exception):
+    """Exception raised if there is a shape mismatch."""
+
     pass
 
 

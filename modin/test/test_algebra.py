@@ -18,7 +18,6 @@ import pandas
 import numpy as np
 
 import pytest
-from modin.config import NPartitions
 
 
 class TestMap:
@@ -187,15 +186,15 @@ class TestFilterByTypes:
         df_equals(new_df, modin_df)
 
 
-class TestFilter:
-    def test_filter(self):
-        values = np.random.rand(2 ** 10, 2 ** 8)
-        modin_frame = (
-            pd.DataFrame(values).add_prefix("col")._query_compiler._modin_frame
-        )
-        new_df = modin_frame.filter_by_types([values.dtype]).to_pandas()
-        # TODO[Todd]:
-        # Filtering where all is true - returns the same value
-        # Filtering where none is true - returns nothing
-        # Try proper filters
-        # Try filtering axiswise
+# class TestFilter:
+#     def test_filter(self):
+#         values = np.random.rand(2 ** 10, 2 ** 8)
+#         modin_frame = (
+#             pd.DataFrame(values).add_prefix("col")._query_compiler._modin_frame
+#         )
+#         new_df = modin_frame.filter_by_types([values.dtype]).to_pandas()
+# TODO[Todd]:
+# Filtering where all is true - returns the same value
+# Filtering where none is true - returns nothing
+# Try proper filters
+# Try filtering axiswise
