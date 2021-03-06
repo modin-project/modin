@@ -86,8 +86,10 @@ _DEFAULT_BEHAVIOUR = {
     "__len__",
     "_create_or_update_from_compiler",
     "_update_inplace",
-    # for persistance
-    "_inflate",
+    # for persistance support;
+    # see DataFrame methods docstrings for more
+    "_inflate_light",
+    "_inflate_full"
     "__reduce__",
 } | _ATTRS_NO_LOOKUP
 

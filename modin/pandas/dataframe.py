@@ -44,7 +44,7 @@ import warnings
 
 from modin.error_message import ErrorMessage
 from modin.utils import _inherit_docstrings, to_pandas, hashable
-from modin.config import Engine, IsExperimental
+from modin.config import Engine, IsExperimental, PersistentPickle
 from .utils import (
     from_pandas,
     from_non_pandas,
@@ -2418,15 +2418,26 @@ class DataFrame(BasePandasDataset):
 
     # persistance support
     @classmethod
-    def _inflate(cls, query_compiler):
+    def _inflate_light(cls, query_compiler):
         """
-        Creates the object from previously-serialized representation
+        Re-creates the object from previously-serialized lightweight representation.
+        The method is used for faster but not disk-storable persistence.
         """
         return cls(query_compiler=query_compiler)
 
+    @classmethod
+    def _inflate_full(cls, pandas_df):
+        """
+        Re-creates the object from previously-serialized disk-storable
+        representation.
+        """
+        return cls(data=from_pandas(pandas_df))
+
     def __reduce__(self):
         self._query_compiler._modin_frame._materialize()
-        return self._inflate, (self._query_compiler,)
+        if PersistentPickle.get():
+            return self._inflate_full, (self._to_pandas(),)
+        return self._inflate_light, (self._query_compiler,)
 
 
 if IsExperimental.get():

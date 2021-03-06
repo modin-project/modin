@@ -13,6 +13,7 @@
 
 import pytest
 import pickle
+import numpy as np
 
 import modin.pandas as pd
 from modin.config import PersistentPickle
@@ -22,7 +23,7 @@ from modin.pandas.test.utils import df_equals
 
 @pytest.fixture
 def modin_df():
-    return pd.DataFrame({"col1": [1, 2, 3], "col2": [3, 4, 5]})
+    return pd.DataFrame({"col1": np.arange(1000), "col2": np.arange(2000, 3000)})
 
 
 @pytest.fixture
@@ -48,4 +49,6 @@ def test_column_pickle(modin_column, modin_df, persistent):
     other = pickle.loads(dmp)
     df_equals(modin_column.to_frame(), other.to_frame())
 
-    assert len(dmp) < len(pickle.dumps(modin_df))
+    # make sure we don't pickle the whole frame if doing persistent storage
+    if persistent:
+        assert len(dmp) < len(pickle.dumps(modin_df))

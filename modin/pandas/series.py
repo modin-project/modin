@@ -37,7 +37,7 @@ from typing import Union, Optional
 import warnings
 
 from modin.utils import _inherit_docstrings, to_pandas, Engine
-from modin.config import IsExperimental
+from modin.config import IsExperimental, PersistentPickle
 from .base import BasePandasDataset, _ATTRS_NO_LOOKUP
 from .iterator import PartitionIterator
 from .utils import from_pandas, is_scalar
@@ -1735,12 +1735,18 @@ class Series(BasePandasDataset):
         return self.__constructor__(query_compiler=result)
 
     @classmethod
-    def _inflate(cls, query_compiler, name):
+    def _inflate_light(cls, query_compiler, name):
         return cls(query_compiler=query_compiler, name=name)
+
+    @classmethod
+    def _inflate_full(cls, pandas_series):
+        return cls(data=pandas_series)
 
     def __reduce__(self):
         self._query_compiler._modin_frame._materialize()
-        return self._inflate, (self._query_compiler, self.name)
+        if PersistentPickle.get():
+            return self._inflate_full, (self._to_pandas(),)
+        return self._inflate_light, (self._query_compiler, self.name)
 
 
 if IsExperimental.get():
