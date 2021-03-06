@@ -6,10 +6,10 @@ jobs:
     container: rayproject/ray:nightly
     name: test-dataframe-ray-master
     steps:
-      - run: sudo -i
       - uses: actions/checkout@v2
         with:
           fetch-depth: 1
+          clean: false
       - run: pip install -r requirements/requirements-no-engine.txt
       - name: Install HDF5
         run: sudo apt update && sudo apt install -y libhdf5-dev
