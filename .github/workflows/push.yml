@@ -332,3 +332,27 @@ jobs:
           conda list
       - shell: bash -l {0}
         run: python -m pytest modin/spreadsheet/test/test_general.py
+  
+  test-algebra:
+    needs: [lint-commit, lint-flake8, lint-black, test-api, test-headers]
+    runs-on: ubuntu-latest
+    name: test-algebra
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 1
+      - uses: conda-incubator/setup-miniconda@v2
+        with:
+          activate-environment: modin
+          environment-file: environment-dev.yml
+          python-version: 3.7
+          channel-priority: strict
+          use-only-tar-bz2: true # IMPORTANT: This needs to be set for caching to work properly!
+      - name: Conda environment
+        shell: bash -l {0}
+        run: |
+          conda info
+          conda list
+      - name: Algebra tests
+        shell: bash -l {0}
+        run: python -m pytest modin/test/test_algebra.py

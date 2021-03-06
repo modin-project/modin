@@ -24,6 +24,10 @@ from modin.error_message import ErrorMessage
 from modin.backends.pandas.parsers import find_common_type_cat as find_common_type
 
 
+class DimensionError(Exception):
+    pass
+
+
 class BasePandasFrame(ModinDataframe):
     """An abstract class that represents the Parent class for any Pandas DataFrame class.
 
@@ -1251,6 +1255,9 @@ class BasePandasFrame(ModinDataframe):
             # as self.columns. Perhaps we should change result_schema to be a dictionary?
             # Ultimately, the representation of result_schema depends on the typing system
             # we plan to implement.
+
+            # Should we wrap these dtypes in a call to np.dtype? If not, passing np.int64 to result schema
+            # will fail while np.dtype(np.int64) will not, but if we do, both succeed.
             new_dtypes = pandas.Series(result_schema)
 
             def fn(df):
@@ -1262,8 +1269,8 @@ class BasePandasFrame(ModinDataframe):
                 # those column's types won't be specified till an explicit call to infer_types or an astype call
                 # (by mapping a coercion function)
                 if not (
-                    all(new_df.dtypes.isin(new_dtypes))
-                    and new_dtypes[new_df.columns] == new_df.dtypes
+                    all(new_df.dtypes.isin(new_dtypes).values)
+                    and all((new_dtypes[new_df.columns] == new_df.dtypes).values)
                 ):
                     raise TypeError(
                         "Resultant schema:\n{}\nDoes not match expected result schema:\n{}".format(
@@ -1292,17 +1299,18 @@ class BasePandasFrame(ModinDataframe):
             self._compute_axis_labels(axis, new_partitions) for axis in range(2)
         ]
 
-        new_lengths = [
-            self._axes_lengths[axis]
-            if len(new_axes[axis]) == len(self.axes[axis])
-            else None
-            for axis in [0, 1]
-        ]
+        for axis in [0, 1]:
+            if len(new_axes[axis]) != len(self.axes[axis]):
+                raise DimensionError(
+                    "Map operator should not change shape; however, axis {} has changed from length {} to {}.".format(
+                        axis, len(new_axes[axis]), len(self.axes[axis])
+                    )
+                )
 
         return self.__constructor__(
             new_partitions,
-            *new_axes,
-            *new_lengths,
+            *self.axes,
+            *self._axes_lengths,
             dtypes=new_dtypes,
         )
 
@@ -1413,9 +1421,6 @@ class BasePandasFrame(ModinDataframe):
             *new_lengths,
             self.dtypes if axis == 0 else None,
         )
-
-    # Kept for backwards compatibility.
-    filter_full_axis = filter
 
     def filter_by_types(self, types):
         """Allow the user to specify a type or set of types by which to filter the columns.
