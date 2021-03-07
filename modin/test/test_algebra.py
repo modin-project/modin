@@ -186,13 +186,19 @@ class TestFilterByTypes:
         df_equals(new_df, modin_df)
 
 
-# class TestFilter:
-#     def test_filter(self):
-#         values = np.random.rand(2 ** 10, 2 ** 8)
-#         modin_frame = (
-#             pd.DataFrame(values).add_prefix("col")._query_compiler._modin_frame
-#         )
-#         new_df = modin_frame.filter_by_types([values.dtype]).to_pandas()
+class TestFilter:
+    def test_filter(self):
+        values = np.random.rand(2 ** 10, 2 ** 8)
+        modin_frame = (
+            pd.DataFrame(values).add_prefix("col")._query_compiler._modin_frame
+        )
+        
+        new_df = modin_frame.filter_by_types([values.dtype]).to_pandas()
+        filtered_df = new_df.filter(0, lambda x: True)
+        df_equals(new_df, filtered_df)
+        null_df = new_df.filter(0, lambda x: False)
+        df_equals(None, null_df)
+    
 # TODO[Todd]:
 # Filtering where all is true - returns the same value
 # Filtering where none is true - returns nothing
