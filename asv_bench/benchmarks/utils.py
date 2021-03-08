@@ -221,15 +221,20 @@ def execute(df):
     "Make sure the calculations are done."
     if ASV_USE_IMPL == "modin":
         partitions = df._query_compiler._modin_frame._partitions
-        map(lambda partition: partition.drain_call_queue(), partitions)
+        all(
+            map(
+                lambda partition: partition.drain_call_queue() or True,
+                partitions.flatten(),
+            )
+        )
         if ASV_USE_ENGINE == "Ray":
             from ray import wait
 
-            map(lambda partition: wait(partition.oid), partitions)
+            all(map(lambda partition: wait([partition.oid]), partitions.flatten()))
         elif ASV_USE_ENGINE == "Dask":
             from dask.distributed import wait
 
-            map(lambda partition: wait(partition.future), partitions)
+            all(map(lambda partition: wait(partition.future), partitions.flatten()))
         elif ASV_USE_ENGINE == "Python":
             pass
 
