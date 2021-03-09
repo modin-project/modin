@@ -2429,7 +2429,7 @@ class DataFrame(BasePandasDataset):
         return cls(data=from_pandas(pandas_df))
 
     def __reduce__(self):
-        self._query_compiler._modin_frame._materialize()
+        self._query_compiler.finalize()
         if PersistentPickle.get():
             return self._inflate_full, (self._to_pandas(),)
         return self._inflate_light, (self._query_compiler,)
