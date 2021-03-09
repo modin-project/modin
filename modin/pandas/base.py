@@ -64,6 +64,35 @@ sentinel = object()
 # special purposes, like serving remote context
 _ATTRS_NO_LOOKUP = {"____id_pack__", "__name__"}
 
+_DEFAULT_BEHAVIOUR = {
+    "__init__",
+    "__class__",
+    "_get_index",
+    "_set_index",
+    "empty",
+    "index",
+    "columns",
+    "name",
+    "dtypes",
+    "dtype",
+    "_get_name",
+    "_set_name",
+    "_default_to_pandas",
+    "_query_compiler",
+    "_to_pandas",
+    "_build_repr_df",
+    "_reduce_dimension",
+    "__repr__",
+    "__len__",
+    "_create_or_update_from_compiler",
+    "_update_inplace",
+    # for persistance support;
+    # see DataFrame methods docstrings for more
+    "_inflate_light",
+    "_inflate_full",
+    "__reduce__",
+} | _ATTRS_NO_LOOKUP
+
 
 class BasePandasDataset(object):
     """
@@ -2724,9 +2753,6 @@ class BasePandasDataset(object):
             return self.copy()
         return self.iloc[key]
 
-    def __getstate__(self):
-        return self._default_to_pandas("__getstate__")
-
     def __gt__(self, right):
         return self.gt(right)
 
@@ -2795,30 +2821,7 @@ class BasePandasDataset(object):
         return self.to_numpy()
 
     def __getattribute__(self, item):
-        default_behaviors = {
-            "__init__",
-            "__class__",
-            "_get_index",
-            "_set_index",
-            "empty",
-            "index",
-            "columns",
-            "name",
-            "dtypes",
-            "dtype",
-            "_get_name",
-            "_set_name",
-            "_default_to_pandas",
-            "_query_compiler",
-            "_to_pandas",
-            "_build_repr_df",
-            "_reduce_dimension",
-            "__repr__",
-            "__len__",
-            "_create_or_update_from_compiler",
-            "_update_inplace",
-        } | _ATTRS_NO_LOOKUP
-        if item not in default_behaviors and not self._query_compiler.lazy_execution:
+        if item not in _DEFAULT_BEHAVIOUR and not self._query_compiler.lazy_execution:
             method = object.__getattribute__(self, item)
             is_callable = callable(method)
             # We default to pandas on empty DataFrames. This avoids a large amount of

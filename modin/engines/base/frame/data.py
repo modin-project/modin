@@ -2134,3 +2134,12 @@ class BasePandasFrame(object):
             self._row_lengths,
             dtypes=new_dtypes,
         )
+
+    def finalize(self):
+        """
+        Perform all deferred calls on partitions.
+
+        This makes the Frame independent of history of queries
+        that were used to build it.
+        """
+        [part.drain_call_queue() for row in self._partitions for part in row]

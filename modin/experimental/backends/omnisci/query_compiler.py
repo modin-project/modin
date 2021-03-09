@@ -88,6 +88,10 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
         self._modin_frame = frame
         self._shape_hint = shape_hint
 
+    def finalize():
+        # TODO: implement this for OmniSci backend
+        raise NotImplementedError()
+
     def to_pandas(self):
         return self._modin_frame.to_pandas()
 

@@ -201,6 +201,9 @@ class PandasQueryCompiler(BaseQueryCompiler):
         else:
             return result
 
+    def finalize(self):
+        self._modin_frame.finalize()
+
     def to_pandas(self):
         return self._modin_frame.to_pandas()
 
