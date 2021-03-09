@@ -181,11 +181,6 @@ class GroupbyReduceFunction(MapReduceFunction):
             **kwargs,
         )
 
-        if kwargs.get("method", None) == "size":
-            # In case of 'size' it's enough to apply 'groupby' only
-            # to a single one partition.
-            qc = qc.getitem_column_array(key=[0], numeric=True)
-
         broadcastable_by = getattr(by, "_modin_frame", None)
         apply_indices = list(map_func.keys()) if isinstance(map_func, dict) else None
         new_modin_frame = qc._modin_frame.groupby_reduce(
