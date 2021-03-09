@@ -19,7 +19,36 @@ from modin.utils import try_cast_to_pandas, hashable
 
 class GroupbyReduceFunction(MapReduceFunction):
     @classmethod
-    def call(cls, map_func, reduce_func, *call_args, **call_kwds):
+    def call(cls, map_func, reduce_func=None, **call_kwds):
+        """
+        Build GroupbyReduce function.
+
+        Parameters
+        ----------
+        map_func: str, callable or dict,
+            If 'str' this parameter will be treated as a function name to register,
+            so 'map_func' and 'reduce_func' will be grabbed from 'groupby_reduce_functions'.
+            If dict or callable then this will be treated as a function to apply to each group
+            at the map phase.
+        reduce_func: callable or dict (optional),
+            A function to apply to each group at the reduce phase. If not specified
+            will be set the same as 'map_func'.
+        **call_kwds: kwargs,
+            Kwargs that will be passed to the returned function.
+
+        Returns
+        -------
+        Callable,
+            Function that executes GroupBy aggregation with MapReduce algorithm.
+        """
+        if isinstance(map_func, str):
+
+            def build_fn(name):
+                return lambda df, *args, **kwargs: getattr(df, name)(*args, **kwargs)
+
+            map_func, reduce_func = map(build_fn, groupby_reduce_functions[map_func])
+        if reduce_func is None:
+            reduce_func = map_func
         assert not (
             isinstance(map_func, dict) ^ isinstance(reduce_func, dict)
         ) and not (
@@ -48,6 +77,8 @@ class GroupbyReduceFunction(MapReduceFunction):
         groupby_args["as_index"] = True
         groupby_args["observed"] = True
         if other is not None:
+            # Other is a broadcasted partition that represents 'by' columns
+            # Concatenate it with 'df' to group on its columns names
             other = other.squeeze(axis=axis ^ 1)
             if isinstance(other, pandas.DataFrame):
                 df = pandas.concat(
@@ -63,7 +94,8 @@ class GroupbyReduceFunction(MapReduceFunction):
         result = apply_func(
             df.groupby(by=by_part, axis=axis, **groupby_args), **map_args
         )
-        return result
+        # Result could not always be a frame, so wrapping it into DataFrame
+        return pandas.DataFrame(result)
 
     @classmethod
     def reduce(
@@ -101,8 +133,8 @@ class GroupbyReduceFunction(MapReduceFunction):
         if not as_index:
             insert_levels = partition_idx == 0 and (drop or method == "size")
             result.reset_index(drop=not insert_levels, inplace=True)
-
-        return result
+        # Result could not always be a frame, so wrapping it into DataFrame
+        return pandas.DataFrame(result)
 
     @classmethod
     def caller(
@@ -116,8 +148,9 @@ class GroupbyReduceFunction(MapReduceFunction):
         numeric_only=True,
         **kwargs,
     ):
-        if not (isinstance(by, (type(query_compiler)) or hashable(by))) or isinstance(
-            by, pandas.Grouper
+        if groupby_args.get("level", None) is None and (
+            not (isinstance(by, (type(query_compiler))) or hashable(by))
+            or isinstance(by, pandas.Grouper)
         ):
             by = try_cast_to_pandas(by, squeeze=True)
             default_func = (
@@ -231,37 +264,14 @@ class GroupbyReduceFunction(MapReduceFunction):
         return _map, _reduce
 
 
+# This dict is a map for function names and their equivalents in MapReduce
 groupby_reduce_functions = {
-    "all": (
-        lambda df, *args, **kwargs: df.all(*args, **kwargs),
-        lambda df, *args, **kwargs: df.all(*args, **kwargs),
-    ),
-    "any": (
-        lambda df, *args, **kwargs: df.any(*args, **kwargs),
-        lambda df, *args, **kwargs: df.any(*args, **kwargs),
-    ),
-    "count": (
-        lambda df, *args, **kwargs: df.count(*args, **kwargs),
-        lambda df, *args, **kwargs: df.sum(*args, **kwargs),
-    ),
-    "max": (
-        lambda df, *args, **kwargs: df.max(*args, **kwargs),
-        lambda df, *args, **kwargs: df.max(*args, **kwargs),
-    ),
-    "min": (
-        lambda df, *args, **kwargs: df.min(*args, **kwargs),
-        lambda df, *args, **kwargs: df.min(*args, **kwargs),
-    ),
-    "prod": (
-        lambda df, *args, **kwargs: df.prod(*args, **kwargs),
-        lambda df, *args, **kwargs: df.prod(*args, **kwargs),
-    ),
-    "size": (
-        lambda df, *args, **kwargs: pandas.DataFrame(df.size(*args, **kwargs)),
-        lambda df, *args, **kwargs: df.sum(*args, **kwargs),
-    ),
-    "sum": (
-        lambda df, *args, **kwargs: df.sum(*args, **kwargs),
-        lambda df, *args, **kwargs: df.sum(*args, **kwargs),
-    ),
+    "all": ("all", "all"),
+    "any": ("any", "any"),
+    "count": ("count", "sum"),
+    "max": ("max", "max"),
+    "min": ("min", "min"),
+    "prod": ("prod", "prod"),
+    "size": ("size", "sum"),
+    "sum": ("sum", "sum"),
 }

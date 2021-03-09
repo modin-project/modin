@@ -183,23 +183,6 @@ class BasePandasDataset(object):
             sib._query_compiler = new_query_compiler
         old_query_compiler.free()
 
-    def _handle_level_agg(self, axis, level, op, sort=False, **kwargs):
-        """
-        Help to perform error checking for aggregation functions with a level parameter.
-
-        TODO: add types.
-
-        Parameters
-        ----------
-        axis:
-            The axis to apply the operation on
-        level:
-            The level of the axis to apply the operation on
-        op:
-            String representation of the operation to be performed on the level
-        """
-        return getattr(self.groupby(level=level, axis=axis, sort=sort), op)(**kwargs)
-
     def _validate_other(
         self,
         other,
@@ -602,9 +585,15 @@ class BasePandasDataset(object):
                     raise NotImplementedError(
                         "Option bool_only is not implemented with option level."
                     )
-                return self._handle_level_agg(
-                    axis, level, "all", skipna=skipna, **kwargs
-                )
+                if (
+                    not self._query_compiler.has_multiindex(axis=axis)
+                    and level != 0
+                    and level != self.index.name
+                ):
+                    raise ValueError(
+                        "level > 0 or level < -1 only valid with MultiIndex"
+                    )
+                return self.groupby(level=level, axis=axis, sort=False).all(**kwargs)
             return self._reduce_dimension(
                 self._query_compiler.all(
                     axis=axis, bool_only=bool_only, skipna=skipna, level=level, **kwargs
@@ -615,9 +604,7 @@ class BasePandasDataset(object):
                 raise ValueError("Axis must be 0 or 1 (got {})".format(axis))
             # Reduce to a scalar if axis is None.
             if level is not None:
-                return self._handle_level_agg(
-                    axis, level, "all", skipna=skipna, **kwargs
-                )
+                raise ValueError("Must specify 'axis' when aggregating by level")
             else:
                 result = self._reduce_dimension(
                     self._query_compiler.all(
@@ -653,9 +640,15 @@ class BasePandasDataset(object):
                     raise NotImplementedError(
                         "Option bool_only is not implemented with option level."
                     )
-                return self._handle_level_agg(
-                    axis, level, "any", skipna=skipna, **kwargs
-                )
+                if (
+                    not self._query_compiler.has_multiindex(axis=axis)
+                    and level != 0
+                    and level != self.index.name
+                ):
+                    raise ValueError(
+                        "level > 0 or level < -1 only valid with MultiIndex"
+                    )
+                return self.groupby(level=level, axis=axis, sort=False).any(**kwargs)
             return self._reduce_dimension(
                 self._query_compiler.any(
                     axis=axis, bool_only=bool_only, skipna=skipna, level=level, **kwargs
@@ -666,9 +659,7 @@ class BasePandasDataset(object):
                 raise ValueError("Axis must be 0 or 1 (got {})".format(axis))
             # Reduce to a scalar if axis is None.
             if level is not None:
-                return self._handle_level_agg(
-                    axis, level, "any", skipna=skipna, **kwargs
-                )
+                raise ValueError("Must specify 'axis' when aggregating by level")
             else:
                 result = self._reduce_dimension(
                     self._query_compiler.any(
@@ -878,11 +869,8 @@ class BasePandasDataset(object):
 
         if level is not None:
             if not frame._query_compiler.has_multiindex(axis=axis):
-                # error thrown by pandas
                 raise TypeError("Can only count levels on hierarchical columns.")
-
-            return self._handle_level_agg(axis=axis, level=level, op="count", sort=True)
-
+            return frame.groupby(level=level, axis=axis, sort=True).count()
         return frame._reduce_dimension(
             frame._query_compiler.count(
                 axis=axis, level=level, numeric_only=numeric_only
@@ -1393,9 +1381,14 @@ class BasePandasDataset(object):
         axis = self._get_axis_number(axis)
 
         if level is not None:
-            return self._handle_level_agg(
-                axis=axis, level=level, skipna=skipna, op="mad"
-            )
+            if (
+                not self._query_compiler.has_multiindex(axis=axis)
+                and level > 0
+                or level < -1
+                and level != self.index.name
+            ):
+                raise ValueError("level > 0 or level < -1 only valid with MultiIndex")
+            return self.groupby(level=level, axis=axis, sort=False).mad()
 
         return self._reduce_dimension(
             self._query_compiler.mad(axis=axis, skipna=skipna, level=level)
@@ -2321,7 +2314,11 @@ class BasePandasDataset(object):
             "errors": errors,
             "storage_options": storage_options,
         }
-        return self._default_to_pandas("to_csv", **kwargs)
+        new_query_compiler = self._query_compiler
+
+        from modin.data_management.factories.dispatcher import EngineDispatcher
+
+        return EngineDispatcher.to_csv(new_query_compiler, **kwargs)
 
     def to_dict(self, orient="dict", into=dict):  # pragma: no cover
         return self._default_to_pandas("to_dict", orient=orient, into=into)
@@ -2708,7 +2705,21 @@ class BasePandasDataset(object):
         else:
             return self._getitem(key)
 
-    def _getitem_slice(self, key):
+    def _setitem_slice(self, key: slice, value):
+        """
+        Set rows specified by 'key' slice with 'value'.
+
+        Parameters
+        ----------
+        key: location or index based slice,
+            Key that points rows to modify.
+        value: any,
+            Value to assing to the rows.
+        """
+        indexer = convert_to_index_sliceable(pandas.DataFrame(index=self.index), key)
+        self.iloc[indexer] = value
+
+    def _getitem_slice(self, key: slice):
         if key.start is None and key.stop is None:
             return self.copy()
         return self.iloc[key]

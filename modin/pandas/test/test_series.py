@@ -66,6 +66,7 @@ from .utils import (
     test_data_categorical_keys,
     generate_multiindex,
     test_data_diff_dtype,
+    sort_index_for_equal_values,
 )
 from modin.config import NPartitions
 
@@ -529,14 +530,31 @@ def test___setitem__(data):
 @pytest.mark.parametrize(
     "key",
     [
-        pytest.param(slice(1, 3), id="numeric_slice"),
-        pytest.param(slice("a", "c"), id="index_based_slice"),
-        pytest.param(["a", "c", "e"], id="list_of_labels"),
-        pytest.param([True, False, True, False, True], id="boolean_mask"),
+        pytest.param(lambda idx: slice(1, 3), id="location_based_slice"),
+        pytest.param(lambda idx: slice(idx[1], idx[-1]), id="index_based_slice"),
+        pytest.param(lambda idx: [idx[0], idx[2], idx[-1]], id="list_of_labels"),
+        pytest.param(
+            lambda idx: [True if i % 2 else False for i in range(len(idx))],
+            id="boolean_mask",
+        ),
     ],
 )
-def test___setitem___non_hashable(key):
-    md_sr, pd_sr = create_test_series([1, 2, 3, 4, 5], index=["a", "b", "c", "d", "e"])
+@pytest.mark.parametrize(
+    "index",
+    [
+        pytest.param(
+            lambda idx_len: [chr(x) for x in range(ord("a"), ord("a") + idx_len)],
+            id="str_index",
+        ),
+        pytest.param(lambda idx_len: list(range(1, idx_len + 1)), id="int_index"),
+    ],
+)
+def test___setitem___non_hashable(key, index):
+    data = np.arange(5)
+    index = index(len(data))
+    key = key(index)
+    md_sr, pd_sr = create_test_series(data, index=index)
+
     md_sr[key] = 10
     pd_sr[key] = 10
     df_equals(md_sr, pd_sr)
@@ -1991,7 +2009,8 @@ def test_last():
     df_equals(modin_series.last("20D"), pandas_series.last("20D"))
 
 
-def test_index_order():
+@pytest.mark.parametrize("func", ["all", "any", "mad", "count"])
+def test_index_order(func):
     # see #1708 and #1869 for details
     s_modin, s_pandas = create_test_series(test_data["float_nan_data"])
     rows_number = len(s_modin.index)
@@ -2002,11 +2021,10 @@ def test_index_order():
     s_modin.index = index
     s_pandas.index = index
 
-    for func in ["all", "any", "mad", "count"]:
-        df_equals(
-            getattr(s_modin, func)(level=0).index,
-            getattr(s_pandas, func)(level=0).index,
-        )
+    df_equals(
+        getattr(s_modin, func)(level=0).index,
+        getattr(s_pandas, func)(level=0).index,
+    )
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
@@ -3364,34 +3382,6 @@ def test_update(data, other_data):
 
 @pytest.mark.parametrize("normalize, bins, dropna", [(True, 3, False)])
 def test_value_counts(normalize, bins, dropna):
-    def sort_index_for_equal_values(result, ascending):
-        is_range = False
-        is_end = False
-        i = 0
-        new_index = np.empty(len(result), dtype=type(result.index))
-        while i < len(result):
-            j = i
-            if i < len(result) - 1:
-                while result[result.index[i]] == result[result.index[i + 1]]:
-                    i += 1
-                    if is_range is False:
-                        is_range = True
-                    if i == len(result) - 1:
-                        is_end = True
-                        break
-            if is_range:
-                k = j
-                for val in sorted(result.index[j : i + 1], reverse=not ascending):
-                    new_index[k] = val
-                    k += 1
-                if is_end:
-                    break
-                is_range = False
-            else:
-                new_index[j] = result.index[j]
-            i += 1
-        return type(result)(result, index=new_index)
-
     # We sort indices for Modin and pandas result because of issue #1650
     modin_series, pandas_series = create_test_series(test_data_values[0])
 

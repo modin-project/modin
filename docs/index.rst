@@ -9,11 +9,8 @@
 
     <p align="center"><b>To use Modin, replace the pandas import:</b></p>
 
-.. code-block:: python
-
-  # import pandas as pd
-  import modin.pandas as pd
-
+.. figure:: img/Modin_Pandas_Import.gif
+   :align: center   
 
 Scale your pandas workflow by changing a single line of code
 """"""""""""""""""""""""""""""""""""""""""""""""""""""""""""
@@ -156,6 +153,7 @@ nature, you get a fast DataFrame at 1MB and 1TB+.
 
    contributing
    developer/architecture
+   developer/pandas/partition_api
 
 .. toctree::
    :caption: Engines, Backends, and APIs

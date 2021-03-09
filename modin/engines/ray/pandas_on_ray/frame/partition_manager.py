@@ -11,18 +11,68 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
+import inspect
 import numpy as np
+import threading
 
+from modin.config import ProgressBar
 from modin.engines.ray.generic.frame.partition_manager import RayFrameManager
 from .axis_partition import (
     PandasOnRayFrameColumnPartition,
     PandasOnRayFrameRowPartition,
 )
 from .partition import PandasOnRayFramePartition
+from .modin_aqp import call_progress_bar
 from modin.error_message import ErrorMessage
 import pandas
 
 import ray
+
+
+def progress_bar_wrapper(f):
+    """Wraps computation function inside a progress bar. Spawns another thread
+        which displays a progress bar showing estimated completion time.
+
+    Args:
+        f: The name of the function to be wrapped.
+
+    Returns:
+        A new BaseFrameManager object, the type of object that called this.
+    """
+    from functools import wraps
+
+    @wraps(f)
+    def magic(*args, **kwargs):
+        result_parts = f(*args, **kwargs)
+        if ProgressBar.get():
+            current_frame = inspect.currentframe()
+            function_name = None
+            while function_name != "<module>":
+                (
+                    filename,
+                    line_number,
+                    function_name,
+                    lines,
+                    index,
+                ) = inspect.getframeinfo(current_frame)
+                current_frame = current_frame.f_back
+            t = threading.Thread(
+                target=call_progress_bar,
+                args=(result_parts, line_number),
+            )
+            t.start()
+            # We need to know whether or not we are in a jupyter notebook
+            from IPython import get_ipython
+
+            try:
+                ipy_str = str(type(get_ipython()))
+                if "zmqshell" not in ipy_str:
+                    t.join()
+            except Exception:
+                pass
+        return result_parts
+
+    return magic
 
 
 @ray.remote
@@ -129,5 +179,83 @@ class PandasOnRayFrameManager(RayFrameManager):
                 for row_idx in range(len(left))
             ]
         )
-
         return new_partitions
+
+    @classmethod
+    @progress_bar_wrapper
+    def map_partitions(cls, partitions, map_func):
+        return super(PandasOnRayFrameManager, cls).map_partitions(partitions, map_func)
+
+    @classmethod
+    @progress_bar_wrapper
+    def lazy_map_partitions(cls, partitions, map_func):
+        return super(PandasOnRayFrameManager, cls).lazy_map_partitions(
+            partitions, map_func
+        )
+
+    @classmethod
+    @progress_bar_wrapper
+    def map_axis_partitions(
+        cls,
+        axis,
+        partitions,
+        map_func,
+        keep_partitioning=False,
+        lengths=None,
+        enumerate_partitions=False,
+    ):
+        return super(PandasOnRayFrameManager, cls).map_axis_partitions(
+            axis, partitions, map_func, keep_partitioning, lengths, enumerate_partitions
+        )
+
+    @classmethod
+    @progress_bar_wrapper
+    def _apply_func_to_list_of_partitions(cls, func, partitions, **kwargs):
+        return super(PandasOnRayFrameManager, cls)._apply_func_to_list_of_partitions(
+            func, partitions, **kwargs
+        )
+
+    @classmethod
+    @progress_bar_wrapper
+    def apply_func_to_select_indices(
+        cls, axis, partitions, func, indices, keep_remaining=False
+    ):
+        return super(PandasOnRayFrameManager, cls).apply_func_to_select_indices(
+            axis, partitions, func, indices, keep_remaining=keep_remaining
+        )
+
+    @classmethod
+    @progress_bar_wrapper
+    def apply_func_to_select_indices_along_full_axis(
+        cls, axis, partitions, func, indices, keep_remaining=False
+    ):
+        return super(
+            PandasOnRayFrameManager, cls
+        ).apply_func_to_select_indices_along_full_axis(
+            axis, partitions, func, indices, keep_remaining
+        )
+
+    @classmethod
+    @progress_bar_wrapper
+    def apply_func_to_indices_both_axis(
+        cls,
+        partitions,
+        func,
+        row_partitions_list,
+        col_partitions_list,
+        item_to_distribute=None,
+    ):
+        return super(PandasOnRayFrameManager, cls).apply_func_to_indices_both_axis(
+            partitions,
+            func,
+            row_partitions_list,
+            col_partitions_list,
+            item_to_distribute,
+        )
+
+    @classmethod
+    @progress_bar_wrapper
+    def binary_operation(cls, axis, left, func, right):
+        return super(PandasOnRayFrameManager, cls).binary_operation(
+            axis, left, func, right
+        )

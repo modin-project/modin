@@ -633,3 +633,11 @@ class BaseIO(object):
             return pandas.to_pickle(
                 obj, path, compression=compression, protocol=protocol
             )
+
+    @classmethod
+    def to_csv(cls, obj, **kwargs):
+        ErrorMessage.default_to_pandas("`to_csv`")
+        if isinstance(obj, BaseQueryCompiler):
+            obj = obj.to_pandas()
+
+        return obj.to_csv(**kwargs)

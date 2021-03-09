@@ -19,6 +19,9 @@ from modin.error_message import ErrorMessage
 from pyarrow.csv import read_csv, ParseOptions, ConvertOptions, ReadOptions
 import pyarrow as pa
 
+import pandas
+from pandas.io.parsers import _validate_usecols_arg
+
 
 class OmnisciOnRayIO(RayIO):
 
@@ -172,6 +175,8 @@ class OmnisciOnRayIO(RayIO):
                     "Specified a delimiter and delim_whitespace=True; you can only specify one."
                 )
 
+            usecols_md = cls._prepare_pyarrow_usecols(mykwargs)
+
             po = ParseOptions(
                 delimiter="\\s+" if delim_whitespace else delimiter,
                 quote_char=quotechar,
@@ -186,8 +191,11 @@ class OmnisciOnRayIO(RayIO):
                 null_values=None,
                 true_values=None,
                 false_values=None,
+                # timestamp fields should be handled as strings if parse_dates
+                # didn't passed explicitly as an array or a dict
+                timestamp_parsers=[""] if isinstance(parse_dates, bool) else None,
                 strings_can_be_null=None,
-                include_columns=None,
+                include_columns=usecols_md,
                 include_missing_columns=None,
                 auto_dict_encode=None,
                 auto_dict_max_cardinality=None,
@@ -226,3 +234,57 @@ class OmnisciOnRayIO(RayIO):
             return pa.string()
         else:
             return pa.from_numpy_dtype(tname)
+
+    @classmethod
+    def _prepare_pyarrow_usecols(cls, read_csv_kwargs):
+        """
+        Define `usecols` parameter in the way pyarrow can process it.
+        ----------
+        read_csv_kwargs:
+                read_csv function parameters.
+
+        Returns
+        -------
+        usecols_md: list
+                Redefined `usecols` parameter.
+        """
+        usecols = read_csv_kwargs.get("usecols", None)
+        engine = read_csv_kwargs.get("engine", None)
+        usecols_md, usecols_names_dtypes = _validate_usecols_arg(usecols)
+        if usecols_md:
+            empty_pd_df = pandas.read_csv(
+                **dict(
+                    read_csv_kwargs,
+                    nrows=0,
+                    skipfooter=0,
+                    usecols=None,
+                    engine=None if engine == "arrow" else engine,
+                )
+            )
+            column_names = empty_pd_df.columns
+            if usecols_names_dtypes == "string":
+                if usecols_md.issubset(set(column_names)):
+                    # columns should be sorted because pandas doesn't preserve columns order
+                    usecols_md = [
+                        col_name for col_name in column_names if col_name in usecols_md
+                    ]
+                else:
+                    raise NotImplementedError(
+                        "values passed in the `usecols` parameter don't match columns names"
+                    )
+            elif usecols_names_dtypes == "integer":
+                # columns should be sorted because pandas doesn't preserve columns order
+                usecols_md = sorted(usecols_md)
+                if len(column_names) < usecols_md[-1]:
+                    raise NotImplementedError(
+                        "max usecols value is higher than the number of columns"
+                    )
+                usecols_md = [column_names[i] for i in usecols_md]
+            elif callable(usecols_md):
+                usecols_md = [
+                    col_name for col_name in column_names if usecols_md(col_name)
+                ]
+            else:
+                raise NotImplementedError("unsupported `usecols` parameter")
+
+        return usecols_md

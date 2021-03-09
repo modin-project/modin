@@ -274,7 +274,7 @@ jobs:
         uses: conda-incubator/setup-miniconda@v2
         with:
           activate-environment: modin_on_omnisci
-          python-version: 3.7.8
+          python-version: 3.7
           environment-file: requirements/env_omnisci.yml
           channel-priority: strict
           use-only-tar-bz2: true # IMPORTANT: This needs to be set for caching to work properly!
@@ -285,6 +285,8 @@ jobs:
           conda list
       - name: Install HDF5
         run: sudo apt update && sudo apt install -y libhdf5-dev
+      - shell: bash -l {0}
+        run: MODIN_BENCHMARK_MODE=True pytest modin/pandas/test/internals/test_benchmark_mode.py
       - shell: bash -l {0}
         run: pytest modin/experimental/engines/omnisci_on_ray/test/test_dataframe.py
       - shell: bash -l {0}
@@ -370,6 +372,8 @@ jobs:
           conda list
       - name: Install HDF5
         run: sudo apt update && sudo apt install -y libhdf5-dev
+      - shell: bash -l {0}
+        run: MODIN_BENCHMARK_MODE=True pytest modin/pandas/test/internals/test_benchmark_mode.py
       - shell: bash -l {0}
         run: pytest modin/experimental/xgboost/test/test_default.py
       - shell: bash -l {0}
@@ -582,3 +586,32 @@ jobs:
       - run: sudo apt update && sudo apt install -y libhdf5-dev
       - shell: bash -l {0}
         run: python -m pytest modin/pandas/test/test_io.py::TestCsv
+
+  test-spreadsheet:
+    needs: [ lint-commit, lint-flake8, lint-black, test-api, test-headers ]
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: [ "3.7", "3.8" ]
+        engine: ["ray", "dask"]
+    env:
+      MODIN_ENGINE: ${{matrix.engine}}
+    name: test-spreadsheet (engine ${{matrix.engine}}, python ${{matrix.python-version}})
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 1
+      - uses: conda-incubator/setup-miniconda@v2
+        with:
+          activate-environment: modin
+          environment-file: environment-dev.yml
+          python-version: ${{matrix.python-version}}
+          channel-priority: strict
+          use-only-tar-bz2: true # IMPORTANT: This needs to be set for caching to work properly!
+      - name: Conda environment
+        shell: bash -l {0}
+        run: |
+          conda info
+          conda list
+      - shell: bash -l {0}
+        run: python -m pytest modin/spreadsheet/test/test_general.py

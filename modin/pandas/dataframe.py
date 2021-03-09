@@ -1342,14 +1342,15 @@ class DataFrame(BasePandasDataset):
     ):
         axis = self._get_axis_number(axis)
         if level is not None:
-            return self._default_to_pandas(
-                "prod",
-                axis=axis,
-                skipna=skipna,
-                level=level,
-                numeric_only=numeric_only,
-                min_count=min_count,
-                **kwargs,
+            if (
+                not self._query_compiler.has_multiindex(axis=axis)
+                and level > 0
+                or level < -1
+                and level != self.index.name
+            ):
+                raise ValueError("level > 0 or level < -1 only valid with MultiIndex")
+            return self.groupby(level=level, axis=axis, sort=False).prod(
+                numeric_only=numeric_only, min_count=min_count
             )
 
         axis_to_apply = self.columns if axis else self.index
@@ -1697,14 +1698,15 @@ class DataFrame(BasePandasDataset):
             axis, numeric_only, ignore_axis=False
         )
         if level is not None:
-            return self._default_to_pandas(
-                "sum",
-                axis=axis,
-                skipna=skipna,
-                level=level,
-                numeric_only=numeric_only,
-                min_count=min_count,
-                **kwargs,
+            if (
+                not self._query_compiler.has_multiindex(axis=axis)
+                and level > 0
+                or level < -1
+                and level != self.index.name
+            ):
+                raise ValueError("level > 0 or level < -1 only valid with MultiIndex")
+            return self.groupby(level=level, axis=axis, sort=False).sum(
+                numeric_only=numeric_only, min_count=min_count
             )
         if min_count > 1:
             return data._reduce_dimension(
@@ -2008,6 +2010,9 @@ class DataFrame(BasePandasDataset):
         object.__setattr__(self, key, value)
 
     def __setitem__(self, key, value):
+        if isinstance(key, slice):
+            return self._setitem_slice(key, value)
+
         if hashable(key) and key not in self.columns:
             if isinstance(value, Series) and len(self.columns) == 0:
                 self._query_compiler = value._query_compiler.copy()
@@ -2038,8 +2043,7 @@ class DataFrame(BasePandasDataset):
             self.insert(loc=len(self.columns), column=key, value=value)
             return
 
-        if not isinstance(key, str):
-
+        if not hashable(key):
             if isinstance(key, DataFrame) or isinstance(key, np.ndarray):
                 if isinstance(key, np.ndarray):
                     if key.shape != self.shape:
@@ -2047,7 +2051,7 @@ class DataFrame(BasePandasDataset):
                     key = DataFrame(key, columns=self.columns)
                 return self.mask(key, value, inplace=True)
 
-            def setitem_without_string_columns(df):
+            def setitem_unhashable_key(df):
                 # Arrow makes memory-mapped objects immutable, so copy will allow them
                 # to be mutable again.
                 df = df.copy(True)
@@ -2055,7 +2059,7 @@ class DataFrame(BasePandasDataset):
                 return df
 
             return self._update_inplace(
-                self._default_to_pandas(setitem_without_string_columns)._query_compiler
+                self._default_to_pandas(setitem_unhashable_key)._query_compiler
             )
         if is_list_like(value):
             if isinstance(value, (pandas.DataFrame, DataFrame)):

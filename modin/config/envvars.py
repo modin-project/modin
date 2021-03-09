@@ -244,6 +244,44 @@ class AsvImplementation(EnvironmentVariable, type=ExactStr):
     default = "modin"
 
 
+class ProgressBar(EnvironmentVariable, type=bool):
+    """
+    Whether or not to show the progress bar
+    """
+
+    varname = "MODIN_PROGRESS_BAR"
+    default = False
+
+    @classmethod
+    def enable(cls):
+        cls.put(True)
+
+    @classmethod
+    def disable(cls):
+        cls.put(False)
+
+    @classmethod
+    def put(cls, value):
+        if value and BenchmarkMode.get():
+            raise ValueError("ProgressBar isn't compatible with BenchmarkMode")
+        super().put(value)
+
+
+class BenchmarkMode(EnvironmentVariable, type=bool):
+    """
+    Whether or not to perform computations syncronous.
+    """
+
+    varname = "MODIN_BENCHMARK_MODE"
+    default = False
+
+    @classmethod
+    def put(cls, value):
+        if value and ProgressBar.get():
+            raise ValueError("BenchmarkMode isn't compatible with ProgressBar")
+        super().put(value)
+
+
 def _check_vars():
     """
     Look out for any environment variables that start with "MODIN_" prefix

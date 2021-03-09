@@ -31,15 +31,17 @@ except ImportError:
     NPARTITIONS = pd.DEFAULT_NPARTITIONS
 
 try:
-    from modin.config import TestDatasetSize, AsvImplementation
+    from modin.config import TestDatasetSize, AsvImplementation, Engine
 
     ASV_USE_IMPL = AsvImplementation.get()
     ASV_DATASET_SIZE = TestDatasetSize.get() or "Small"
+    ASV_USE_ENGINE = Engine.get()
 except ImportError:
     # The same benchmarking code can be run for different versions of Modin, so in
     # case of an error importing important variables, we'll just use predefined values
     ASV_USE_IMPL = os.environ.get("MODIN_ASV_USE_IMPL", "modin")
     ASV_DATASET_SIZE = os.environ.get("MODIN_TEST_DATASET_SIZE", "Small")
+    ASV_USE_ENGINE = os.environ.get("MODIN_ENGINE", "Ray")
 
 assert ASV_USE_IMPL in ("modin", "pandas")
 
@@ -72,14 +74,23 @@ UNARY_OP_DATA_SIZE = {
 }
 
 GROUPBY_NGROUPS = {
-    "Big": 100,
-    "Small": 5,
+    "Big": [100, "huge_amount_groups"],
+    "Small": [5],
 }
 
 IMPL = {
     "modin": pd,
     "pandas": pandas,
 }
+
+
+def translator_groupby_ngroups(groupby_ngroups, shape):
+    if ASV_DATASET_SIZE == "Big":
+        if groupby_ngroups == "huge_amount_groups":
+            return min(shape[0] // 2, 5000)
+        return groupby_ngroups
+    else:
+        return groupby_ngroups
 
 
 class weakdict(dict):
@@ -208,7 +219,29 @@ def random_booleans(number):
 
 def execute(df):
     "Make sure the calculations are done."
-    return df.shape, df.dtypes
+    if ASV_USE_IMPL == "modin":
+        partitions = df._query_compiler._modin_frame._partitions
+        all(
+            map(
+                lambda partition: partition.drain_call_queue() or True,
+                partitions.flatten(),
+            )
+        )
+        if ASV_USE_ENGINE == "Ray":
+            from ray import wait
+
+            all(map(lambda partition: wait([partition.oid]), partitions.flatten()))
+        elif ASV_USE_ENGINE == "Dask":
+            from dask.distributed import wait
+
+            all(map(lambda partition: wait(partition.future), partitions.flatten()))
+        elif ASV_USE_ENGINE == "Python":
+            pass
+
+    elif ASV_USE_IMPL == "pandas":
+        pass
+    else:
+        raise ValueError(f"wrong value of {ASV_USE_IMPL}")
 
 
 def get_shape_id(array):

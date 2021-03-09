@@ -34,11 +34,13 @@ from .utils import (
     GROUPBY_NGROUPS,
     IMPL,
     execute,
+    translator_groupby_ngroups,
 )
 
 
 class BaseTimeGroupBy:
-    def setup(self, shape, groupby_ncols=1):
+    def setup(self, shape, ngroups=5, groupby_ncols=1):
+        ngroups = translator_groupby_ngroups(ngroups, shape)
         self.df, self.groupby_columns = generate_dataframe(
             ASV_USE_IMPL,
             "int",
@@ -46,60 +48,66 @@ class BaseTimeGroupBy:
             RAND_LOW,
             RAND_HIGH,
             groupby_ncols,
-            count_groups=GROUPBY_NGROUPS[ASV_DATASET_SIZE],
+            count_groups=ngroups,
         )
 
 
 class TimeGroupByMultiColumn(BaseTimeGroupBy):
-    param_names = ["shape", "groupby_ncols"]
+    param_names = ["shape", "ngroups", "groupby_ncols"]
     params = [
         UNARY_OP_DATA_SIZE[ASV_DATASET_SIZE],
+        GROUPBY_NGROUPS[ASV_DATASET_SIZE],
         [6],
     ]
 
-    def time_groupby_agg_quan(self, shape, groupby_ncols):
+    def time_groupby_agg_quan(self, *args, **kwargs):
         execute(self.df.groupby(by=self.groupby_columns).agg("quantile"))
 
-    def time_groupby_agg_mean(self, shape, groupby_ncols):
+    def time_groupby_agg_mean(self, *args, **kwargs):
         execute(self.df.groupby(by=self.groupby_columns).apply(lambda df: df.mean()))
 
 
 class TimeGroupByDefaultAggregations(BaseTimeGroupBy):
-    param_names = ["shape"]
+    param_names = ["shape", "ngroups"]
     params = [
         UNARY_OP_DATA_SIZE[ASV_DATASET_SIZE],
+        GROUPBY_NGROUPS[ASV_DATASET_SIZE],
     ]
 
-    def time_groupby_count(self, shape):
+    def time_groupby_count(self, *args, **kwargs):
         execute(self.df.groupby(by=self.groupby_columns).count())
 
-    def time_groupby_size(self, shape):
+    def time_groupby_size(self, *args, **kwargs):
         execute(self.df.groupby(by=self.groupby_columns).size())
 
-    def time_groupby_sum(self, shape):
+    def time_groupby_sum(self, *args, **kwargs):
         execute(self.df.groupby(by=self.groupby_columns).sum())
 
-    def time_groupby_mean(self, shape):
+    def time_groupby_mean(self, *args, **kwargs):
         execute(self.df.groupby(by=self.groupby_columns).mean())
 
 
 class TimeGroupByDictionaryAggregation(BaseTimeGroupBy):
-    param_names = ["shape", "operation_type"]
-    params = [UNARY_OP_DATA_SIZE[ASV_DATASET_SIZE], ["reduction", "aggregation"]]
+    param_names = ["shape", "ngroups", "operation_type"]
+    params = [
+        UNARY_OP_DATA_SIZE[ASV_DATASET_SIZE],
+        GROUPBY_NGROUPS[ASV_DATASET_SIZE],
+        ["reduction", "aggregation"],
+    ]
     operations = {
         "reduction": ["sum", "count", "prod"],
         "aggregation": ["quantile", "std", "median"],
     }
 
-    def setup(self, shape, operation_type):
-        super().setup(shape)
+    def setup(self, shape, ngroups, operation_type):
+        super().setup(shape, ngroups)
         self.cols_to_agg = self.df.columns[1:4]
         operations = self.operations[operation_type]
         self.agg_dict = {
             c: operations[i % len(operations)] for i, c in enumerate(self.cols_to_agg)
         }
 
-    def time_groupby_dict_agg(self, shape, operation_type):
+    def time_groupby_dict_agg(self, *args, **kwargs):
         execute(self.df.groupby(by=self.groupby_columns).agg(self.agg_dict))
 
 
@@ -391,7 +399,7 @@ class BaseTimeValueCounts:
         "half": lambda shape: shape[1] // 2,
     }
 
-    def setup(self, shape, subset="all"):
+    def setup(self, shape, ngroups=5, subset="all"):
         try:
             subset = self.subset_params[subset]
         except KeyError:
@@ -399,6 +407,7 @@ class BaseTimeValueCounts:
                 f"Invalid value for 'subset={subset}'. Allowed: {list(self.subset_params.keys())}"
             )
         ncols = subset(shape)
+        ngroups = translator_groupby_ngroups(ngroups, shape)
         self.df, _ = generate_dataframe(
             ASV_USE_IMPL,
             "int",
@@ -406,28 +415,36 @@ class BaseTimeValueCounts:
             RAND_LOW,
             RAND_HIGH,
             groupby_ncols=ncols,
-            count_groups=GROUPBY_NGROUPS[ASV_DATASET_SIZE],
+            count_groups=ngroups,
         )
         self.subset = self.df.columns[:ncols].tolist()
 
 
 class TimeValueCountsFrame(BaseTimeValueCounts):
-    param_names = ["shape", "subset"]
-    params = [UNARY_OP_DATA_SIZE[ASV_DATASET_SIZE], ["all", "half"]]
+    param_names = ["shape", "ngroups", "subset"]
+    params = [
+        UNARY_OP_DATA_SIZE[ASV_DATASET_SIZE],
+        GROUPBY_NGROUPS[ASV_DATASET_SIZE],
+        ["all", "half"],
+    ]
 
     def time_value_counts(self, *args, **kwargs):
         execute(self.df.value_counts(subset=self.subset))
 
 
 class TimeValueCountsSeries(BaseTimeValueCounts):
-    param_names = ["shape", "bins"]
-    params = [UNARY_OP_DATA_SIZE[ASV_DATASET_SIZE], [None, 3]]
+    param_names = ["shape", "ngroups", "bins"]
+    params = [
+        UNARY_OP_DATA_SIZE[ASV_DATASET_SIZE],
+        GROUPBY_NGROUPS[ASV_DATASET_SIZE],
+        [None, 3],
+    ]
 
-    def setup(self, shape, bins):
-        super().setup(shape=shape)
+    def setup(self, shape, ngroups, bins):
+        super().setup(ngroups=ngroups, shape=shape)
         self.df = self.df.iloc[:, 0]
 
-    def time_value_counts(self, shape, bins):
+    def time_value_counts(self, shape, ngroups, bins):
         execute(self.df.value_counts(bins=bins))
 
 
@@ -488,6 +505,24 @@ class TimeMultiIndexing:
                 self.df.columns[2] : self.df.columns[-2],
             ]
         )
+
+
+class TimeResetIndex:
+    param_names = ["shape", "drop", "level"]
+    params = [UNARY_OP_DATA_SIZE[ASV_DATASET_SIZE], [False, True], [None, "level_1"]]
+
+    def setup(self, shape, drop, level):
+        self.df = generate_dataframe(ASV_USE_IMPL, "int", *shape, RAND_LOW, RAND_HIGH)
+
+        if level:
+            index = pd.MultiIndex.from_product(
+                [self.df.index[: shape[0] // 2], ["bar", "foo"]],
+                names=["level_1", "level_2"],
+            )
+            self.df.index = index
+
+    def time_reset_index(self, shape, drop, level):
+        execute(self.df.reset_index(drop=drop, level=level))
 
 
 class TimeAstype:

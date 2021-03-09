@@ -648,6 +648,7 @@ def eval_general(
     check_exception_type=True,
     raising_exceptions=None,
     check_kwargs_callable=True,
+    md_extra_kwargs=None,
     **kwargs,
 ):
     if raising_exceptions:
@@ -689,6 +690,10 @@ def eval_general(
         md_kwargs[key] = md_value
         pd_kwargs[key] = pd_value
 
+        if md_extra_kwargs:
+            assert isinstance(md_extra_kwargs, dict)
+            md_kwargs.update(md_extra_kwargs)
+
     values = execute_callable(
         operation, md_kwargs=md_kwargs, pd_kwargs=pd_kwargs, inplace=__inplace__
     )
@@ -704,6 +709,7 @@ def eval_io(
     raising_exceptions=io_ops_bad_exc,
     check_kwargs_callable=True,
     modin_warning=None,
+    md_extra_kwargs=None,
     *args,
     **kwargs,
 ):
@@ -726,7 +732,10 @@ def eval_io(
         Exceptions that should be raised even if they are raised
         both by Pandas and Modin (check evaluated only if
         `check_exception_type` passed as `True`).
-    modin_warning: Warning that should be raised by Modin.
+    modin_warning: obj
+        Warning that should be raised by Modin.
+    md_extra_kwargs: dict
+        Modin operation specific kwargs.
     """
 
     def applyier(module, *args, **kwargs):
@@ -743,6 +752,7 @@ def eval_io(
             check_exception_type=check_exception_type,
             raising_exceptions=raising_exceptions,
             check_kwargs_callable=check_kwargs_callable,
+            md_extra_kwargs=md_extra_kwargs,
             *args,
             **kwargs,
         )
@@ -1076,6 +1086,27 @@ def dummy_decorator():
     return wrapper
 
 
+def generate_dataframe(row_size=NROWS, additional_col_values=None):
+    dates = pandas.date_range("2000", freq="h", periods=row_size)
+    data = {
+        "col1": np.arange(row_size) * 10,
+        "col2": [str(x.date()) for x in dates],
+        "col3": np.arange(row_size) * 10,
+        "col4": [str(x.time()) for x in dates],
+        "col5": [get_random_string() for _ in range(row_size)],
+        "col6": random_state.uniform(low=0.0, high=10000.0, size=row_size),
+    }
+
+    if additional_col_values is not None:
+        assert isinstance(additional_col_values, (list, tuple))
+        data.update(
+            {
+                "col7": random_state.choice(additional_col_values, size=row_size),
+            }
+        )
+    return pandas.DataFrame(data)
+
+
 def _make_csv_file(filenames):
     def _csv_file_maker(
         filename,
@@ -1101,26 +1132,7 @@ def _make_csv_file(filenames):
         if os.path.exists(filename) and not force:
             pass
         else:
-            dates = pandas.date_range("2000", freq="h", periods=row_size)
-            data = {
-                "col1": np.arange(row_size) * 10,
-                "col2": [str(x.date()) for x in dates],
-                "col3": np.arange(row_size) * 10,
-                "col4": [str(x.time()) for x in dates],
-                "col5": [get_random_string() for _ in range(row_size)],
-                "col6": random_state.uniform(low=0.0, high=10000.0, size=row_size),
-            }
-
-            if additional_col_values is not None:
-                assert isinstance(additional_col_values, (list, tuple))
-                data.update(
-                    {
-                        "col7": random_state.choice(
-                            additional_col_values, size=row_size
-                        ),
-                    }
-                )
-            df = pandas.DataFrame(data)
+            df = generate_dataframe(row_size, additional_col_values)
             if remove_randomness:
                 df = df[["col1", "col2", "col3", "col4"]]
             if add_nan_lines:
@@ -1206,3 +1218,20 @@ def teardown_test_file(test_path):
 def teardown_test_files(test_paths: list):
     for path in test_paths:
         teardown_test_file(path)
+
+
+def sort_index_for_equal_values(series, ascending=False):
+    if series.index.dtype == np.float64:
+        # HACK: workaround for pandas bug:
+        # https://github.com/pandas-dev/pandas/issues/34455
+        series.index = series.index.astype("str")
+    res = series.groupby(series, sort=False).apply(
+        lambda df: df.sort_index(ascending=ascending)
+    )
+    if res.index.nlevels > series.index.nlevels:
+        # Sometimes GroupBy adds an extra level with 'by' to the result index.
+        # GroupBy is very inconsistent about when it's doing this, so that's
+        # why this clumsy if-statement is used.
+        res.index = res.index.droplevel(0)
+    res.name = series.name
+    return res

@@ -154,6 +154,10 @@ class BaseFactory(object):
     def _to_pickle(cls, *args, **kwargs):
         return cls.io_cls.to_pickle(*args, **kwargs)
 
+    @classmethod
+    def _to_csv(cls, *args, **kwargs):
+        return cls.io_cls.to_csv(*args, **kwargs)
+
 
 class PandasOnRayFactory(BaseFactory):
     @classmethod

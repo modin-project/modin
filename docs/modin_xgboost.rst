@@ -125,22 +125,6 @@ All processing will be in a `single node` mode.
   prediction = xgb.predict(model, dtest)
 
 
-Modes of a data distribution
-----------------------------
-
-Modin XGBoost provides two approaches for an internal data ditribution which could be
-switched by `evenly_data_distribution` parameter of ``train/predict`` functions:
-
-* ``evenly_data_distribution = True``: in this case the input data of ``train/predict``
-  functions will be distributed evenly between nodes in a cluster to ensure evenly utilization of nodes (default behavior).
-
-* ``evenly_data_distribution = False`` :  in this case partitions of input data of ``train/predict``
-  functions will not transfer between nodes in cluster in case empty nodes is <10%,
-  if portion of empty nodes is ≥10% evenly data distribution will be applied.
-  This method provides minimal data transfers between nodes but doesn't guarantee effective utilization of nodes.
-  Most effective in case when all cluster nodes are occupied by data.
-
-
 .. _Dataframe: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.html
 .. _`starting ray`: https://docs.ray.io/en/master/starting-ray.html
 .. _`the Iris Dataset`: https://scikit-learn.org/stable/auto_examples/datasets/plot_iris_dataset.html
