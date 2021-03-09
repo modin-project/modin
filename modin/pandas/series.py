@@ -1734,6 +1734,7 @@ class Series(BasePandasDataset):
             return self._reduce_dimension(result)
         return self.__constructor__(query_compiler=result)
 
+    # Persistance support methods - BEGIN
     @classmethod
     def _inflate_light(cls, query_compiler, name):
         return cls(query_compiler=query_compiler, name=name)
@@ -1747,6 +1748,8 @@ class Series(BasePandasDataset):
         if PersistentPickle.get():
             return self._inflate_full, (self._to_pandas(),)
         return self._inflate_light, (self._query_compiler, self.name)
+
+    # Persistance support methods - END
 
 
 if IsExperimental.get():

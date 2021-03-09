@@ -2413,7 +2413,7 @@ class DataFrame(BasePandasDataset):
         else:
             return self._getitem_column(key)
 
-    # persistance support
+    # Persistance support methods - BEGIN
     @classmethod
     def _inflate_light(cls, query_compiler):
         """
@@ -2433,6 +2433,8 @@ class DataFrame(BasePandasDataset):
         if PersistentPickle.get():
             return self._inflate_full, (self._to_pandas(),)
         return self._inflate_light, (self._query_compiler,)
+
+    # Persistance support methods - END
 
 
 if IsExperimental.get():
