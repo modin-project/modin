@@ -185,6 +185,9 @@ class TestQC(BaseQueryCompiler):
     def __init__(self, modin_frame):
         self._modin_frame = modin_frame
 
+    def finalize(self):
+        self._modin_frame.finalize()
+
     @classmethod
     def from_pandas(cls, df, data_cls):
         return cls(data_cls.from_pandas(df))
