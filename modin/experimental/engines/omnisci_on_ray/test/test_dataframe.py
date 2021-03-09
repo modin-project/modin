@@ -358,6 +358,14 @@ class TestCSV:
             usecols=usecols,
         )
 
+    def test_read_csv_category(self):
+        eval_io(
+            fn_name="read_csv",
+            # read_csv kwargs
+            filepath_or_buffer=pytest.csvs_names["test_read_csv_regular"],
+            dtype={"col1": "category"},
+        )
+
 
 class TestMasks:
     data = {

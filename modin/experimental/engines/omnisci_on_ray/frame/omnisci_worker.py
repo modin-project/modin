@@ -16,7 +16,6 @@ import sys
 import os
 
 import pyarrow as pa
-import numpy as np
 
 prev = sys.getdlopenflags()
 sys.setdlopenflags(1 | 256)  # RTLD_LAZY+RTLD_GLOBAL
@@ -75,37 +74,6 @@ class OmnisciServer:
     @classmethod
     def put_arrow_to_omnisci(cls, table, name=None):
         name = cls._genName(name)
-
-        # Currently OmniSci doesn't support Arrow table import with
-        # dictionary columns. Here we cast dictionaries until support
-        # is in place.
-        # https://github.com/modin-project/modin/issues/1738
-        schema = table.schema
-        new_schema = schema
-        need_cast = False
-        new_cols = {}
-        # for i, field in enumerate(schema):
-        #     if pa.types.is_dictionary(field.type):
-        #         # Conversion for dictionary of null type to string is not supported
-        #         # in Arrow. Build new column for this case for now.
-        #         if pa.types.is_null(field.type.value_type):
-        #             mask_vals = np.full(table.num_rows, True, dtype=bool)
-        #             mask = pa.array(mask_vals)
-        #             new_col_data = np.empty(table.num_rows, dtype=str)
-        #             new_col = pa.array(new_col_data, pa.string(), mask)
-        #             new_cols[i] = new_col
-        #         else:
-        #             need_cast = True
-        #         new_field = pa.field(
-        #             field.name, pa.string(), field.nullable, field.metadata
-        #         )
-        #         new_schema = new_schema.set(i, new_field)
-
-        for i, col in new_cols.items():
-            table = table.set_column(i, new_schema[i], col)
-
-        if need_cast:
-            table = table.cast(new_schema)
 
         fragment_size = OmnisciFragmentSize.get()
         if fragment_size is None:

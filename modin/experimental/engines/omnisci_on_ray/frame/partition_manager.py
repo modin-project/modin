@@ -105,8 +105,12 @@ class OmnisciOnRayFrameManager(RayFrameManager):
         if isinstance(obj, (pandas.Series, pandas.DataFrame)):
             # picking first rows from cols with `dtype="object"` to check its actual type,
             # in case of homogen columns that saves us unnecessary convertion to arrow table
-            cols = [name for name, col in obj.dtypes.items() if col == "object"]
-            type_samples = obj.iloc[0][cols]
+            cols = [
+                i
+                for i, (_, col) in enumerate(obj.dtypes.items())
+                if col in ["object", pandas.CategoricalDtype]
+            ]
+            type_samples = obj.iloc[0, cols]
 
             unsupported_cols = [
                 name for name, col in type_samples.items() if not isinstance(col, str)
@@ -115,20 +119,7 @@ class OmnisciOnRayFrameManager(RayFrameManager):
             if len(unsupported_cols) > 0:
                 return None, unsupported_cols
 
-            def cast_categories_to_str(obj):
-                cols = [
-                    name
-                    for name, col in obj.dtypes.items()
-                    if isinstance(col, pandas.CategoricalDtype)
-                ]
-                if len(cols):
-                    # Extremely inefficient
-                    obj = obj.astype({col: "str" for col in cols})
-                    obj = obj.astype({col: "category" for col in cols})
-                return obj
-
             try:
-                obj = cast_categories_to_str(obj)
                 at = pyarrow.Table.from_pandas(obj)
             except pyarrow.lib.ArrowTypeError as e:
                 regex = r"Conversion failed for column ([^\W]*)"
