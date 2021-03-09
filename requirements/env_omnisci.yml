@@ -5,6 +5,7 @@ channels:
 dependencies:
   - pandas==1.2.3
   - pyarrow==2.0.0
+  - libthrift<0.14.1  # ref: modin gh-2840
   - numpy>=1.16.5
   - pip
   - pytest>=6.0.1
