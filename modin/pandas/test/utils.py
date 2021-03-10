@@ -671,7 +671,11 @@ def eval_general(
                 # repr to force materialization
                 repr(fn(modin_df, **md_kwargs))
             if check_exception_type:
-                assert isinstance(md_e.value, type(pd_e))
+                assert isinstance(
+                    md_e.value, type(pd_e)
+                ), "Got Modin Exception type {}, but pandas Exception type {}".format(
+                    type(md_e.value), type(pd_e)
+                )
                 if raising_exceptions:
                     assert not isinstance(
                         md_e.value, tuple(raising_exceptions)

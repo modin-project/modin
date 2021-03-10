@@ -14,7 +14,6 @@
 import pytest
 import numpy as np
 import pandas
-import os
 import matplotlib
 import modin.pandas as pd
 
@@ -265,24 +264,7 @@ def test_min_max_mean(data, axis, skipna, numeric_only, is_transposed, method):
     )
 
 
-@pytest.mark.skipif(
-    os.name == "nt",
-    reason="Windows has a memory issue for large numbers on this test",
-)
-@pytest.mark.parametrize(
-    "method",
-    [
-        "prod",
-        pytest.param(
-            "product",
-            marks=pytest.mark.skipif(
-                pandas.DataFrame.product == pandas.DataFrame.prod
-                and pd.DataFrame.product == pd.DataFrame.prod,
-                reason="That method was already tested.",
-            ),
-        ),
-    ],
-)
+@pytest.mark.parametrize("method", ["prod", "product"])
 @pytest.mark.parametrize("is_transposed", [False, True])
 @pytest.mark.parametrize(
     "skipna", bool_arg_values, ids=arg_keys("skipna", bool_arg_keys)
