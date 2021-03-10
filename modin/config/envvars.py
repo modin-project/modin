@@ -145,10 +145,20 @@ class Memory(EnvironmentVariable, type=int):
 
 class NPartitions(EnvironmentVariable, type=int):
     """
-    How many partitions to use by default
+    How many partitions to use for a Modin DataFrame (along each axis)
     """
 
     varname = "MODIN_NPARTITIONS"
+    _is_put = False
+
+    @classmethod
+    def put(cls, value):
+        cls._is_put = True
+        return super().put(value)
+
+    @classmethod
+    def is_put(cls):
+        return cls._is_put
 
     @classmethod
     def _get_default(cls):

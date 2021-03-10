@@ -166,5 +166,6 @@ def initialize_ray(
 
         ray.worker.global_worker.run_function_on_all_workers(_import_pandas)
 
-    num_cpus = int(ray.cluster_resources()["CPU"])
-    NPartitions.put(num_cpus)
+    if not NPartitions.is_put():
+        num_cpus = int(ray.cluster_resources()["CPU"])
+        NPartitions.put(num_cpus)
