@@ -1000,6 +1000,25 @@ class Series(BasePandasDataset):
             pandas.Series.factorize, sort=sort, na_sentinel=na_sentinel
         )
 
+    def fillna(
+        self,
+        value=None,
+        method=None,
+        axis=None,
+        inplace=False,
+        limit=None,
+        downcast=None,
+    ):  # noqa: PR01, RT01, D200
+        """
+        Fill NaNs inside of a Series object.
+        """
+        if isinstance(value, BasePandasDataset) and not isinstance(value, Series):
+            raise TypeError(
+                '"value" parameter must be a scalar or dict, but '
+                'you passed a "{0}"'.format(type(value).__name__)
+            )
+        return super(Series, self).fillna(value, method, axis, inplace, limit, downcast)
+
     def floordiv(
         self, other, level=None, fill_value=None, axis=0
     ):  # noqa: PR01, RT01, D200
