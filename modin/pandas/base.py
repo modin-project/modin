@@ -1259,18 +1259,6 @@ class BasePandasDataset(object):
         limit=None,
         downcast=None,
     ):
-        # TODO implement value passed as DataFrame/Series
-        if isinstance(value, BasePandasDataset):
-            new_query_compiler = self._default_to_pandas(
-                "fillna",
-                value=value,
-                method=method,
-                axis=axis,
-                inplace=False,
-                limit=limit,
-                downcast=downcast,
-            )._query_compiler
-            return self._create_or_update_from_compiler(new_query_compiler, inplace)
         inplace = validate_bool_kwarg(inplace, "inplace")
         axis = self._get_axis_number(axis)
         if isinstance(value, (list, tuple)):
@@ -1293,6 +1281,9 @@ class BasePandasDataset(object):
                 raise ValueError("Limit must be an integer")
             elif limit <= 0:
                 raise ValueError("Limit must be greater than 0")
+
+        if isinstance(value, BasePandasDataset):
+            value = value._query_compiler
 
         new_query_compiler = self._query_compiler.fillna(
             value=value,
