@@ -1912,7 +1912,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         full_axis = method is not None or limit is not None
         if isinstance(value, BaseQueryCompiler):
             def fillna_builder(df, value, **kwargs):
-                return df.fillna(value, **kwargs)
+                return df.fillna(value.squeeze(axis=1), **kwargs)
 
             new_modin_frame = self._modin_frame.broadcast_apply_full_axis(
                 0, fillna_builder, value._modin_frame)
