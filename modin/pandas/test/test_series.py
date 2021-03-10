@@ -1721,6 +1721,26 @@ def test_fillna(data):
     df_equals(modin_series.fillna(method="ffill"), pandas_series.fillna(method="ffill"))
     df_equals(modin_series.fillna(0, limit=1), pandas_series.fillna(0, limit=1))
 
+    series_data = pandas_series.tolist()
+    count = 0
+    for i, v in enumerate(series_data):
+        if np.isnan(v):
+            series_data[i] = count
+            count += 1
+    modin_replace_series, pandas_replace_series = create_test_series(series_data)
+    df_equals(
+        modin_series.fillna(modin_replace_series),
+        pandas_series.fillna(pandas_replace_series),
+    )
+    df_equals(
+        modin_series.fillna(
+            modin_replace_series, limit=count // 2 if count // 2 > 0 else 1
+        ),
+        pandas_series.fillna(
+            pandas_replace_series, limit=count // 2 if count // 2 > 0 else 1
+        ),
+    )
+
 
 @pytest.mark.xfail(reason="Using pandas Series.")
 def test_filter():
