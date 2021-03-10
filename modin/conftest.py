@@ -54,6 +54,11 @@ def pytest_addoption(parser):
         default=None,
         help="specifies backend to run tests on",
     )
+    parser.addoption(
+        "--extra-test-parameters",
+        action="store_true",
+        help="activate extra test parameter combinations",
+    )
 
 
 class Patcher:
@@ -219,6 +224,11 @@ def set_base_backend(name=BASE_BACKEND_NAME):
 
 
 def pytest_configure(config):
+    if config.option.extra_test_parameters is not None:
+        import modin.pandas.test.utils as utils
+
+        utils.extra_test_parameters = config.option.extra_test_parameters
+
     backend = config.option.backend
 
     if backend is None:

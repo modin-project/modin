@@ -1869,7 +1869,10 @@ class BasePandasDataset(object):
             raise ValueError("cannot insert level_0, already exists")
         else:
             new_query_compiler = self._query_compiler.reset_index(
-                drop=drop, level=level
+                drop=drop,
+                level=level,
+                col_level=col_level,
+                col_fill=col_fill,
             )
         return self._create_or_update_from_compiler(new_query_compiler, inplace)
 
