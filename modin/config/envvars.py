@@ -123,7 +123,7 @@ class RayRedisAddress(EnvironmentVariable, type=ExactStr):
 
 class CpuCount(EnvironmentVariable, type=int):
     """
-    How may CPU cores to utilize across the whole distribution
+    How many CPU cores to use when initialization of the Modin engine.
     """
 
     varname = "MODIN_CPUS"
