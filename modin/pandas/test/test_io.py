@@ -1279,7 +1279,6 @@ class TestJson:
 
 
 class TestExcel:
-    @pytest.mark.xfail(reason="read_excel is broken for now, see #1733 for details")
     @check_file_leaks
     def test_read_excel(self):
         unique_filename = get_unique_filename(extension="xlsx")
