@@ -71,6 +71,7 @@ _DEFAULT_BEHAVIOUR = {
     "_get_index",
     "_set_index",
     "_pandas_class",
+    "_get_axis_number",
     "empty",
     "index",
     "columns",
@@ -458,29 +459,10 @@ class BasePandasDataset(object):
             except TypeError:
                 return result
 
-    def _get_axis_number(self, axis):
-        """
-        Implement [METHOD_NAME].
-
-        TODO: Add more details for this docstring template.
-
-        Parameters
-        ----------
-        What arguments does this function have.
-        [
-        PARAMETER_NAME: PARAMETERS TYPES
-            Description.
-        ]
-
-        Returns
-        -------
-        What this returns (if anything)
-        """
-        return (
-            getattr(self._pandas_class)()._get_axis_number(axis)
-            if axis is not None
-            else 0
-        )
+    @classmethod
+    def _get_axis_number(cls, axis):
+        """Convert axis name or number to axis number."""
+        return cls._pandas_class._get_axis_number(axis) if axis is not None else 0
 
     def __constructor__(self, *args, **kwargs):
         """Construct DataFrame or Series object depending on self type."""
