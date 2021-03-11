@@ -21,12 +21,12 @@ import ray
 from ray.worker import RayTaskError
 from ray.services import get_node_ip_address
 from packaging import version
+
 ObjectIDType = ray.ObjectRef
-if version.parse(ray.__version__) >= version.parse('1.2.0'):
+if version.parse(ray.__version__) >= version.parse("1.2.0"):
     from ray.util.client.common import ClientObjectRef
+
     ObjectIDType = (ray.ObjectRef, ClientObjectRef)
-
-
 
 
 class PandasOnRayFramePartition(BaseFramePartition):
