@@ -812,7 +812,6 @@ class PandasQueryCompiler(BaseQueryCompiler):
         return MapReduceFunction.register(
             map_fn,
             reduce_fn,
-            preserve_index=(kwargs.get("numeric_only") is not None),
         )(self, axis=axis, **kwargs)
 
     def value_counts(self, **kwargs):
