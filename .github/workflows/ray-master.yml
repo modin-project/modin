@@ -1,14 +1,20 @@
 name: ray-nightly
 on: pull_request
 jobs:
-  test-ray-master:
+  configure:
     runs-on: ubuntu-latest
-    env:
-      RUNNER_ALLOW_RUNASROOT: 1
-    container: rayproject/ray:nightly
-    name: test-dataframe-ray-master
+    outputs:
+      uid_gid: ${{ steps.get-user.outputs.uid_gid }}
     steps:
-      - run: sudo -i
+      - id: get-user
+        run: echo "::set-output name=uid_gid::$(id -u):$(id -g)"
+  test-ray-master:
+    needs: configure
+    runs-on: ubuntu-latest
+    container:
+      image: rayproject/ray:nightly
+      options: --user ${{ needs.configure.outputs.uid_gid }}
+    steps:
       - uses: actions/checkout@v2
         with:
           fetch-depth: 1
