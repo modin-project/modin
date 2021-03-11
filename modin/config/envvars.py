@@ -149,16 +149,17 @@ class NPartitions(EnvironmentVariable, type=int):
     """
 
     varname = "MODIN_NPARTITIONS"
-    _is_put = False
+    # This flag is used to detect whether NPartitions is default value or not
+    _is_default = True
 
     @classmethod
     def put(cls, value):
-        cls._is_put = True
+        cls._is_default = False
         return super().put(value)
 
     @classmethod
-    def is_put(cls):
-        return cls._is_put
+    def is_default(cls):
+        return cls._is_default
 
     @classmethod
     def _get_default(cls):
