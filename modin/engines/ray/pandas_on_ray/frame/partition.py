@@ -20,11 +20,12 @@ from modin.engines.ray.utils import handle_ray_task_error
 import ray
 from ray.worker import RayTaskError
 from ray.services import get_node_ip_address
+from ray.util.client.common import ClientObjectRef
 
 
 class PandasOnRayFramePartition(BaseFramePartition):
     def __init__(self, object_id, length=None, width=None, ip=None, call_queue=None):
-        assert type(object_id) is ray.ObjectRef
+        assert isinstance(object_id, (ray.ObjectRef, ClientObjectRef))
 
         self.oid = object_id
         if call_queue is None:
@@ -178,7 +179,7 @@ class PandasOnRayFramePartition(BaseFramePartition):
                 self._length_cache, self._width_cache = get_index_and_columns.remote(
                     self.oid
                 )
-        if isinstance(self._length_cache, ray.ObjectRef):
+        if isinstance(self._length_cache, (ray.ObjectRef, ClientObjectRef)):
             try:
                 self._length_cache = ray.get(self._length_cache)
             except RayTaskError as e:
@@ -193,7 +194,7 @@ class PandasOnRayFramePartition(BaseFramePartition):
                 self._length_cache, self._width_cache = get_index_and_columns.remote(
                     self.oid
                 )
-        if isinstance(self._width_cache, ray.ObjectRef):
+        if isinstance(self._width_cache, (ray.ObjectRef, ClientObjectRef)):
             try:
                 self._width_cache = ray.get(self._width_cache)
             except RayTaskError as e:
@@ -206,7 +207,7 @@ class PandasOnRayFramePartition(BaseFramePartition):
                 self.drain_call_queue()
             else:
                 self._ip_cache = self.apply(lambda df: df)._ip_cache
-        if isinstance(self._ip_cache, ray.ObjectID):
+        if isinstance(self._ip_cache, (ray.ObjectID, ClientObjectRef)):
             try:
                 self._ip_cache = ray.get(self._ip_cache)
             except RayTaskError as e:
@@ -234,7 +235,7 @@ def get_index_and_columns(df):
 @ray.remote(num_returns=4)
 def deploy_ray_func(call_queue, partition):  # pragma: no cover
     def deserialize(obj):
-        if isinstance(obj, ray.ObjectRef):
+        if isinstance(obj, (ray.ObjectRef, ClientObjectRef)):
             return ray.get(obj)
         return obj
 
