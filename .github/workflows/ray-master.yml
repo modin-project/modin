@@ -3,13 +3,14 @@ on: pull_request
 jobs:
   test-ray-master:
     runs-on: ubuntu-latest
-    container: rayproject/ray:nightly
+    container:
+      image: rayproject/ray:nightly
+      options: --user 1000
     name: test-dataframe-ray-master
     steps:
       - uses: actions/checkout@v2
         with:
           fetch-depth: 1
-          clean: false
       - run: pip install -r requirements/requirements-no-engine.txt
       - name: Install HDF5
         run: sudo apt update && sudo apt install -y libhdf5-dev
