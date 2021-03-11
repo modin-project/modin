@@ -22,32 +22,25 @@ XGBoost Train and Predict
 -------------------------
 
 Distributed XGBoost functionality is placed in ``modin.experimental.xgboost`` module.
-``modin.experimental.xgboost`` provides a xgboost-like API for ``train`` and ``predict`` functions.
+``modin.experimental.xgboost`` provides a drop-in replacement API for ``train`` and ``Booster.predict`` xgboost functions.
 
 .. automodule:: modin.experimental.xgboost
   :members: train
 
-``train`` has all arguments of the ``xgboost.train`` function except for ``evals_result``
-parameter which is returned as part of function return value instead of argument.
-
-.. automodule:: modin.experimental.xgboost
-  :noindex:
+.. autoclass:: modin.experimental.xgboost.Booster
   :members: predict
-
-``predict`` is similar to ``xgboost.Booster.predict`` with an additional argument,
-``model``.
 
 
 ModinDMatrix
 ------------
 
-Data is passed to ``modin.experimental.xgboost`` functions via a ``ModinDMatrix`` object.
+Data is passed to ``modin.experimental.xgboost`` functions via a Modin ``DMatrix`` object.
 
 .. automodule:: modin.experimental.xgboost
   :noindex:
-  :members: ModinDMatrix
+  :members: DMatrix
 
-Currently, the ``ModinDMatrix`` supports ``modin.pandas.DataFrame`` only as an input.
+Currently, the Modin ``DMatrix`` supports ``modin.pandas.DataFrame`` only as an input.
 
 
 A Single Node / Cluster setup
@@ -95,9 +88,9 @@ All processing will be in a `single node` mode.
   X = pd.DataFrame(iris.data)
   y = pd.DataFrame(iris.target)
   
-  # Create ModinDMatrix
-  dtrain = xgb.ModinDMatrix(X, y)
-  dtest = xgb.ModinDMatrix(X, y)
+  # Create DMatrix
+  dtrain = xgb.DMatrix(X, y)
+  dtest = xgb.DMatrix(X, y)
   
   # Set training parameters
   xgb_params = {
@@ -109,20 +102,27 @@ All processing will be in a `single node` mode.
   }
   steps = 20
   
+  # Create dict for evaluation results
+  evals_result = dict()
+  
   # Run training
   model = xgb.train(
       xgb_params,
       dtrain,
       steps,
-      evals=[(dtrain, "train")]
+      evals=[(dtrain, "train")],
+      evals_result=evals_result
   )
   
-  # Save for some usage
-  evals_result = model["history"]
-  booster = model["booster"]
+  # Print evaluation results
+  print(f'Evals results:\n{evals_result}')
   
   # Predict results
-  prediction = xgb.predict(model, dtest)
+  prediction = model.predict(dtest)
+  
+  # Print prediction results
+  print(f'Prediction results:\n{prediction}')
+
 
 
 .. _Dataframe: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.html
