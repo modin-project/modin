@@ -132,6 +132,16 @@ def test_count_level(data, axis, level):
     )
 
 
+@pytest.mark.parametrize("data", test_data)
+def test_count_dtypes(data, axis, level):
+    modin_df, pandas_df = pd.DataFrame(data), pandas.DataFrame(data)
+
+    eval_general(
+        modin_df,
+        pandas_df,
+        lambda df: df.isna().count(axis=axis, level=level),
+    )
+
 @pytest.mark.parametrize("percentiles", [None, 0.10, 0.11, 0.44, 0.78, 0.99])
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_describe(data, percentiles):
