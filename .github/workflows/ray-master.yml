@@ -18,6 +18,7 @@ jobs:
       - uses: actions/checkout@v2
         with:
           fetch-depth: 1
+      - run: sudo -i
       - run: sudo apt-get -y install gcc
       - run: pip install -r requirements/requirements-no-engine.txt
       - name: Install HDF5
