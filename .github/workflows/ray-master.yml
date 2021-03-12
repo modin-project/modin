@@ -1,19 +1,11 @@
 name: ray-nightly
 on: pull_request
 jobs:
-  configure:
-    runs-on: ubuntu-latest
-    outputs:
-      uid_gid: ${{ steps.get-user.outputs.uid_gid }}
-    steps:
-      - id: get-user
-        run: echo "::set-output name=uid_gid::$(id -u):$(id -g)"
   test-ray-master:
-    needs: configure
     runs-on: ubuntu-latest
     container:
       image: rayproject/ray:nightly
-      options: --user ${{ needs.configure.outputs.uid_gid }} --privileged
+      options: --workdir /__w/_temp/modin/modin
     steps:
       - uses: actions/checkout@v2
         with:
