@@ -1844,7 +1844,7 @@ class TestStata:
 
 
 class TestFeather:
-    @pytest.mark.skipif(
+    @pytest.mark.xfail(
         Engine.get() != "Python",
         reason="Excluded because of the issue #2845",
     )
