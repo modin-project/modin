@@ -22,6 +22,7 @@ from modin.config import (
     Memory,
     RayPlasmaDir,
     IsOutOfCore,
+    NPartitions,
 )
 
 
@@ -164,3 +165,6 @@ def initialize_ray(
         )
 
         ray.worker.global_worker.run_function_on_all_workers(_import_pandas)
+
+    num_cpus = int(ray.cluster_resources()["CPU"])
+    NPartitions.put_if_default(num_cpus)
