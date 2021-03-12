@@ -23,16 +23,6 @@ RUN apt-get update --yes \
     && apt-get clean -y \
     && rm -rf /var/lib/apt/lists/*
 
-ENV USER modin
-ENV UID 1000
-ENV HOME /home/$USER
-
-RUN adduser --disabled-password \
-    --gecos "Non-root user" \
-    --uid $UID \
-    --home $HOME \
-    $USER
-
 ENV CONDA_DIR ${HOME}/miniconda
 
 SHELL ["/bin/bash", "--login", "-c"]
