@@ -1314,10 +1314,9 @@ class Series(BasePandasDataset):
     def to_frame(self, name=None):
         from .dataframe import DataFrame
 
-        self_cp = self.copy()
         if name is not None:
-            self_cp.name = name
-        return DataFrame(self_cp)
+            name = [name]
+        return DataFrame(self, columns=name)
 
     def to_list(self):
         return self._default_to_pandas(pandas.Series.to_list)

@@ -1020,8 +1020,8 @@ class SeriesGroupBy(DataFrameGroupBy):
             not isinstance(df, Series),
             f"SeriesGroupBy is supposed to obtain only Series objects, got: {type(df)}",
         )
-        super(SeriesGroupBy, self).__init__(df.to_frame(), *args, **kwargs)
-        self._name = df.name or "__reduced__"
+        self._name = df.name if df.name is not None else "__reduced__"
+        super(SeriesGroupBy, self).__init__(df.to_frame(self._name), *args, **kwargs)
 
     _NO_RENAME_METHODS = ["ngroup"]
 
