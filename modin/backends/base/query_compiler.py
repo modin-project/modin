@@ -932,9 +932,17 @@ class BaseQueryCompiler(abc.ABC):
         """
 
         def fillna(df, value, **kwargs):
-            if isinstance(df, pandas.DataFrame):
+            if (
+                isinstance(df, pandas.DataFrame)
+                and len(df.columns) == 1
+                and "__reduced__" in df.columns
+            ):
                 df = df.squeeze(axis=1)
-            if isinstance(value, pandas.DataFrame):
+            if (
+                isinstance(value, pandas.DataFrame)
+                and len(value.columns) == 1
+                and "__reduced__" in value.columns
+            ):
                 value = value.squeeze(axis=1)
             return df.fillna(value, **kwargs)
 
