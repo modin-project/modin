@@ -1911,13 +1911,26 @@ class PandasQueryCompiler(BaseQueryCompiler):
         limit = kwargs.get("limit", None)
         full_axis = method is not None or limit is not None
         if isinstance(value, BaseQueryCompiler):
-            def fillna_builder(df, value, **kwargs):
-                return df.fillna(value.squeeze(axis=1), **kwargs)
+            if self.is_series_like():
 
-            new_modin_frame = self._modin_frame.broadcast_apply_full_axis(
-                0, fillna_builder, value._modin_frame)
+                def fillna_builder(series, value, **kwargs):
+                    return series.fillna(value, **kwargs)
+
+                new_modin_frame = self._modin_frame._binary_op(
+                    fillna_builder, value._modin_frame, join_type="left"
+                )
+            else:
+
+                def fillna_builder(df, value, **kwargs):
+                    # Behavior is different for DataFrame and Series type of "value" argument, so we have to squeeze
+                    # to make sure that Series object have a Series type.
+                    return df.fillna(value.squeeze(axis=1), **kwargs)
+
+                new_modin_frame = self._modin_frame.broadcast_apply_full_axis(
+                    0, fillna_builder, value._modin_frame
+                )
+
             return self.__constructor__(new_modin_frame)
-
         elif isinstance(value, dict):
             kwargs.pop("value")
 
