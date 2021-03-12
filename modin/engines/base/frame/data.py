@@ -973,7 +973,7 @@ class BasePandasFrame(object):
                 return left_index.join(right_index, how=how, sort=sort)
 
         # define condition for joining indexes
-        all_indices_equal = all(indexes[0].equals(index) for index in [indexes[1:]])
+        all_indices_equal = all(indexes[0].equals(index) for index in indexes[1:])
         do_join_index = how is not None and not all_indices_equal
 
         # define condition for joining indexes with getting indexers
@@ -1783,8 +1783,6 @@ class BasePandasFrame(object):
             return self._partitions, [o._partitions for o in other], joined_index
 
         base_frame_idx = non_empty_frames_idx[0]
-        base_frame = frames[base_frame_idx]
-
         other_frames = frames[base_frame_idx + 1 :]
 
         # Picking first non-empty frame
