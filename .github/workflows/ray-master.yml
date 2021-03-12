@@ -1,20 +1,27 @@
 name: ray-nightly
 on: pull_request
 jobs:
+  configure:
+    runs-on: ubuntu-latest
+    outputs:
+      uid_gid: ${{ steps.get-user.outputs.uid_gid }}
+    steps:
+      - id: get-user
+        run: echo "::set-output name=uid_gid::$(id -u):$(id -g)"
   test-ray-master:
+    needs: configure
     runs-on: ubuntu-latest
     container:
       image: rayproject/ray:nightly
+      options: --user ${{ needs.configure.outputs.uid_gid }} --privileged
     steps:
-      - run: rm -rf ~/tmp_dir && mkdir ~/tmp_dir && cd ~/tmp_dir
-      - name: Init repository
-        uses: actions/checkout@v2
+      - uses: actions/checkout@v2
         with:
           fetch-depth: 1
-      - run: sudo apt update && sudo apt install -y build-essential
+      - run: apt update && apt install -y build-essential
       - run: pip install -r requirements/requirements-no-engine.txt
       - name: Install HDF5
-        run:  sudo apt install -y libhdf5-dev
+        run: apt install -y libhdf5-dev
       - shell: bash -l {0}
         run: pytest modin/experimental/xgboost/test/test_default.py
       - shell: bash -l {0}
