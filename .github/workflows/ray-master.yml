@@ -3,29 +3,21 @@ on: pull_request
 jobs:
   configure:
     runs-on: ubuntu-latest
-    outputs:
-      uid_gid: ${{ steps.get-user.outputs.uid_gid }}
     steps:
-      - id: get-user
-        run: echo "::set-output name=uid_gid::$(id -u):$(id -g)"
+      - run: chmod +rwx ${PWD}
   test-ray-master:
     needs: configure
     runs-on: ubuntu-latest
-    env:
-      PATH: "$PATH:~/lib"
-      LD_LIBRARY_PATH: "~/lib:/lib:/usr/lib"
     container:
       image: rayproject/ray:nightly
-      options: --user ${{ needs.configure.outputs.uid_gid }}
     steps:
       - uses: actions/checkout@v2
         with:
           fetch-depth: 1
-      - run: mkdir ~/lib
-      - run: apt-get -y install gcc
+      - run: sudo apt-get -y install gcc
       - run: pip install -r requirements/requirements-no-engine.txt
       - name: Install HDF5
-        run: apt update && apt install -y libhdf5-dev
+        run: sudo apt update && sudo apt install -y libhdf5-dev
       - shell: bash -l {0}
         run: pytest modin/experimental/xgboost/test/test_default.py
       - shell: bash -l {0}
