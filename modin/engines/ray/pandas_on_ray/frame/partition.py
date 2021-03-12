@@ -213,7 +213,7 @@ class PandasOnRayFramePartition(BaseFramePartition):
                 self.drain_call_queue()
             else:
                 self._ip_cache = self.apply(lambda df: df)._ip_cache
-        if isinstance(self._ip_cache, (ray.ObjectID, ClientObjectRef)):
+        if isinstance(self._ip_cache, ObjectIDType):
             try:
                 self._ip_cache = ray.get(self._ip_cache)
             except RayTaskError as e:
