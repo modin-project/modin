@@ -930,7 +930,15 @@ class BaseQueryCompiler(abc.ABC):
         Returns:
             A new QueryCompiler with null values filled.
         """
-        return DataFrameDefault.register(pandas.DataFrame.fillna)(self, **kwargs)
+
+        def fillna(df, value, **kwargs):
+            if isinstance(df, pandas.DataFrame):
+                df = df.squeeze(axis=1)
+            if isinstance(value, pandas.DataFrame):
+                value = value.squeeze(axis=1)
+            return df.fillna(value, **kwargs)
+
+        return DataFrameDefault.register(fillna)(self, **kwargs)
 
     def query(self, expr, **kwargs):
         """Query columns of the QueryCompiler with a boolean expression.
