@@ -3,14 +3,20 @@ on: pull_request
 jobs:
   configure:
     runs-on: ubuntu-latest
+    outputs:
+      work_dir: ${{ steps.get-dir.outputs.work_dir }}
     steps:
       - name: Init repository
         uses: actions/checkout@v2
         with:
           fetch-depth: 1
+      - id: get-dir
+        run: echo "::set-output name=work_dir::$(echo $GITHUB_WORKSPACE)"
   test-ray-master:
     needs: configure
     runs-on: ubuntu-latest
+    env:
+      GITHUB_WORKSPACE: ${{ needs.configure.outputs.work_dir }}
     container:
       image: rayproject/ray:nightly
     steps:
