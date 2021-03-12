@@ -1056,12 +1056,17 @@ class BasePandasFrame(object):
                 # axis=1 does not have this requirement because the index already will
                 # line up with the index of the data based on how pandas creates a
                 # DataFrame from a Series.
-                return pandas.DataFrame(series_result).T
-            return pandas.DataFrame(series_result)
+                result = pandas.DataFrame(series_result).T
+                result.index = ["__reduced__"]
+            else:
+                result = pandas.DataFrame(series_result)
+                if isinstance(series_result, pandas.Series):
+                    result.columns = ["__reduced__"]
+            return result
 
         return _map_reduce_func
 
-    def _compute_map_reduce_metadata(self, axis, new_parts, preserve_index=True):
+    def _compute_map_reduce_metadata(self, axis, new_parts):
         """
         Compute the metadata for the result of reduce function.
 
@@ -1071,8 +1076,6 @@ class BasePandasFrame(object):
             The axis on which reduce function was applied
         new_parts: numpy 2D array
             Partitions with the result of applied function
-        preserve_index: boolean
-            The flag to preserve labels for the reduced axis.
 
         Returns
         -------
@@ -1082,32 +1085,21 @@ class BasePandasFrame(object):
         new_axes, new_axes_lengths = [0, 0], [0, 0]
 
         new_axes[axis] = ["__reduced__"]
-        if preserve_index:
-            new_axes[axis ^ 1] = self.axes[axis ^ 1]
-        else:
-            new_axes[axis ^ 1] = self._compute_axis_labels(axis ^ 1, new_parts)
+        new_axes[axis ^ 1] = self.axes[axis ^ 1]
 
         new_axes_lengths[axis] = [1]
         new_axes_lengths[axis ^ 1] = self._axes_lengths[axis ^ 1]
 
-        if axis == 0 or self._dtypes is None:
-            new_dtypes = self._dtypes
-        elif preserve_index:
-            new_dtypes = pandas.Series(
-                [find_common_type(self.dtypes.values)], index=new_axes[axis]
-            )
-        else:
-            new_dtypes = None
+        new_dtypes = None
         result = self.__constructor__(
             new_parts,
             *new_axes,
             *new_axes_lengths,
             new_dtypes,
         )
-        result._apply_index_objs(axis)
         return result
 
-    def _fold_reduce(self, axis, func, preserve_index=True):
+    def _fold_reduce(self, axis, func):
         """
         Apply function that reduce Manager to series but require knowledge of full axis.
 
@@ -1129,11 +1121,9 @@ class BasePandasFrame(object):
         new_parts = self._frame_mgr_cls.map_axis_partitions(
             axis, self._partitions, func
         )
-        return self._compute_map_reduce_metadata(
-            axis, new_parts, preserve_index=preserve_index
-        )
+        return self._compute_map_reduce_metadata(axis, new_parts)
 
-    def _map_reduce(self, axis, map_func, reduce_func=None, preserve_index=True):
+    def _map_reduce(self, axis, map_func, reduce_func=None):
         """
         Apply function that will reduce the data to a Pandas Series.
 
@@ -1146,9 +1136,6 @@ class BasePandasFrame(object):
             reduce_func : callable
                 Callable function to reduce the dataframe.
                 If none, then apply map_func twice. Default is None.
-            preserve_index : boolean
-                The flag to preserve index for default behavior
-                map and reduce operations. Default is True.
 
         Returns
         -------
@@ -1165,9 +1152,7 @@ class BasePandasFrame(object):
         reduce_parts = self._frame_mgr_cls.map_axis_partitions(
             axis, map_parts, reduce_func
         )
-        return self._compute_map_reduce_metadata(
-            axis, reduce_parts, preserve_index=preserve_index
-        )
+        return self._compute_map_reduce_metadata(axis, reduce_parts)
 
     def _map(self, func, dtypes=None, validate_index=False, validate_columns=False):
         """Perform a function that maps across the entire dataset.
