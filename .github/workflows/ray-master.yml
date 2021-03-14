@@ -5,7 +5,7 @@ jobs:
     runs-on: ubuntu-latest
     container:
       image: rayproject/ray:nightly
-      options: --workdir /__w/_temp/modin/modin
+      options: -v "/home/runner/work/_temp/modin":"/__w/modin/modin"
     steps:
       - uses: actions/checkout@v2
         with:
