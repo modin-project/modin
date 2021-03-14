@@ -1,19 +1,37 @@
 name: ray-nightly
 on: pull_request
 jobs:
-  test-ray-master:
+  configure-host:
+    runs-on: ubuntu-latest
+    outputs:
+      uid_gid: ${{ steps.get-user.outputs.uid_gid }}
+    steps:
+      - id: get-user
+        run: echo "::set-output name=uid_gid::$(id -u):$(id -g)"
+  configure-container:
     runs-on: ubuntu-latest
     container:
       image: rayproject/ray:nightly
-      options: -v "/home/runner/work/_temp/modin":"/__w/modin/modin"
+    outputs:
+      gid: ${{ steps.get-gid.outputs.gid }}
+    steps:
+      - id: get-gid
+        run: echo "::set-output name=gid::$(id -G | awk  '{print $2}')"
+  test-ray-master:
+    needs: [configure-host, configure-container]
+    runs-on: ubuntu-latest
+    container:
+      image: rayproject/ray:nightly
+      options: --user ${{ needs.configure-host.outputs.uid_gid }} --group-add ${{ needs.configure-container.outputs.gid }} -v /etc/passwd:/etc/passwd
     steps:
       - uses: actions/checkout@v2
         with:
           fetch-depth: 1
-      - run: apt update && apt install -y build-essential
+      - run: id
+      - run: sudo apt update && sudo apt install -y build-essential
       - run: pip install -r requirements/requirements-no-engine.txt
       - name: Install HDF5
-        run: apt install -y libhdf5-dev
+        run: sudo apt install -y libhdf5-dev
       - shell: bash -l {0}
         run: pytest modin/experimental/xgboost/test/test_default.py
       - shell: bash -l {0}
