@@ -282,6 +282,9 @@ class OmnisciOnRayFrame(BasePandasFrame):
         new_columns = []
         index_cols = None
 
+        if groupby_args["dropna"]:
+            base = base.dropna(subset=groupby_cols, how="any")
+
         if groupby_args["as_index"]:
             index_cols = groupby_cols.copy()
         else:
@@ -450,6 +453,32 @@ class OmnisciOnRayFrame(BasePandasFrame):
         )
 
         return new_frame
+
+    def dropna(self, subset, how="any"):
+        how_to_merge = {
+            "any": "AND",
+            "all": "OR",
+        }
+
+        # If index columns are not presented in the frame, then we have to create them
+        # based on "rowid". This is needed because 'dropna' preserves index.
+        if self._index_cols is None:
+            base = self._materialize_rowid()
+
+        checks = [base.ref(col).is_not_null() for col in subset]
+        condition = (
+            checks[0]
+            if len(checks) == 1
+            else OpExpr(how_to_merge[how], checks, np.dtype("bool"))
+        )
+        result = base.__constructor__(
+            columns=base.columns,
+            dtypes=base._dtypes,
+            op=FilterNode(base, condition),
+            index_cols=base._index_cols,
+            force_execution_mode=base._force_execution_mode,
+        )
+        return result
 
     def dt_extract(self, obj):
         exprs = self._index_exprs()

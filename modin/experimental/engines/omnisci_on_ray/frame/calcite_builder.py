@@ -312,6 +312,24 @@ class CalciteBuilder:
         self._to_calcite(op)
         return self.res
 
+    def _maybe_add_projection(self, op):
+        """
+        Applies projection of the frame columns for table scan if it was not done before.
+
+        Note
+        ----
+        Some operations should not be applied directly to the table scan because it
+        contains virtual "rowid" column, projection discards this column, so it will not
+        propagate to the result.
+        """
+        if not isinstance(self._input_node(0), CalciteProjectionNode):
+            frame = op.input[0]
+            proj = CalciteProjectionNode(
+                frame._table_cols, [self._ref(frame, col) for col in frame._table_cols]
+            )
+            self._push(proj)
+            self._input_ctx().replace_input_node(frame, proj, frame._table_cols)
+
     def _input_ctx(self):
         return self._input_ctx_stack[-1]
 
@@ -520,16 +538,9 @@ class CalciteBuilder:
         self._push(CalciteUnionNode(self._input_ids(), True))
 
     def _process_sort(self, op):
+        self._maybe_add_projection(op)
+
         frame = op.input[0]
-
-        # Sort should be applied to projections.
-        if not isinstance(self._input_node(0), CalciteProjectionNode):
-            proj = CalciteProjectionNode(
-                frame._table_cols, [self._ref(frame, col) for col in frame._table_cols]
-            )
-            self._push(proj)
-            self._input_ctx().replace_input_node(frame, proj, frame._table_cols)
-
         nulls = op.na_position.upper()
         collations = []
         for col, asc in zip(op.columns, op.ascending):
@@ -540,5 +551,7 @@ class CalciteBuilder:
         self._push(CalciteSortNode(collations))
 
     def _process_filter(self, op):
+        self._maybe_add_projection(op)
+
         condition = self._translate(op.condition)
         self._push(CalciteFilterNode(condition))
