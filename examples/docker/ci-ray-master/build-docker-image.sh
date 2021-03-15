@@ -18,7 +18,7 @@ pushd $script_dir
 modin_root=$(readlink -f ../../../)
 cp $modin_root/modin ./modin -r
 cp $modin_root/requirements/requirements-no-engine.yml ./requirements-no-engine.yml
-docker build -f ci-ray-master.dockerfile -t ray_master_image:nightly .
+docker build -f ci-ray-master.dockerfile -t ray_master_image:latest .
 rm -rf ./modin
 rm -f ./requirements-no-engine.yml
 popd

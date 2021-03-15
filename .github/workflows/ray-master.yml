@@ -1,4 +1,4 @@
-name: ray-nightly
+name: ray-latest
 on: pull_request
 jobs:
   test-ray-master:
@@ -10,42 +10,42 @@ jobs:
       - shell: bash -l {0}
         run: bash examples/docker/ci-ray-master/build-docker-image.sh
       - shell: bash -l {0}
-        run: docker create --name ray_nightly_container ray_master_image:nightly bash -c "tail -f /dev/null"
+        run: docker create --name ray_container ray_master_image:latest bash -c "tail -f /dev/null"
       - shell: bash -l {0}
-        run: docker start ray_nightly_container
+        run: docker start ray_container
       - shell: bash -l {0}
-        run: docker exec ray_nightly_container pytest modin/experimental/xgboost/test/test_default.py
+        run: docker exec ray_container pytest modin/experimental/xgboost/test/test_default.py
       - shell: bash -l {0}
-        run: docker exec ray_nightly_container pytest modin/pandas/test/dataframe/test_binary.py
+        run: docker exec ray_container pytest modin/pandas/test/dataframe/test_binary.py
       - shell: bash -l {0}
-        run: docker exec ray_nightly_container pytest modin/pandas/test/dataframe/test_default.py
+        run: docker exec ray_container pytest modin/pandas/test/dataframe/test_default.py
       - shell: bash -l {0}
-        run: docker exec ray_nightly_container pytest modin/pandas/test/dataframe/test_indexing.py
+        run: docker exec ray_container pytest modin/pandas/test/dataframe/test_indexing.py
       - shell: bash -l {0}
-        run: docker exec ray_nightly_container pytest modin/pandas/test/dataframe/test_iter.py
+        run: docker exec ray_container pytest modin/pandas/test/dataframe/test_iter.py
       - shell: bash -l {0}
-        run: docker exec ray_nightly_container pytest modin/pandas/test/dataframe/test_join_sort.py
+        run: docker exec ray_container pytest modin/pandas/test/dataframe/test_join_sort.py
       - shell: bash -l {0}
-        run: docker exec ray_nightly_container pytest modin/pandas/test/dataframe/test_map_metadata.py
+        run: docker exec ray_container pytest modin/pandas/test/dataframe/test_map_metadata.py
       - shell: bash -l {0}
-        run: docker exec ray_nightly_container pytest modin/pandas/test/dataframe/test_reduction.py
+        run: docker exec ray_container pytest modin/pandas/test/dataframe/test_reduction.py
       - shell: bash -l {0}
-        run: docker exec ray_nightly_container pytest modin/pandas/test/dataframe/test_udf.py
+        run: docker exec ray_container pytest modin/pandas/test/dataframe/test_udf.py
       - shell: bash -l {0}
-        run: docker exec ray_nightly_container pytest modin/pandas/test/dataframe/test_window.py
+        run: docker exec ray_container pytest modin/pandas/test/dataframe/test_window.py
       - shell: bash -l {0}
-        run: docker exec ray_nightly_container python -m pytest modin/pandas/test/test_series.py
+        run: docker exec ray_container python -m pytest modin/pandas/test/test_series.py
       - shell: bash -l {0}
-        run: docker exec ray_nightly_container python -m pytest modin/pandas/test/test_rolling.py
+        run: docker exec ray_container python -m pytest modin/pandas/test/test_rolling.py
       - shell: bash -l {0}
-        run: docker exec ray_nightly_container python -m pytest modin/pandas/test/test_concat.py
+        run: docker exec ray_container python -m pytest modin/pandas/test/test_concat.py
       - shell: bash -l {0}
-        run: docker exec ray_nightly_container python -m pytest modin/pandas/test/test_groupby.py
+        run: docker exec ray_container python -m pytest modin/pandas/test/test_groupby.py
       - shell: bash -l {0}
-        run: docker exec ray_nightly_container python -m pytest modin/pandas/test/test_reshape.py
+        run: docker exec ray_container python -m pytest modin/pandas/test/test_reshape.py
       - shell: bash -l {0}
-        run: docker exec ray_nightly_container python -m pytest modin/pandas/test/test_general.py
+        run: docker exec ray_container python -m pytest modin/pandas/test/test_general.py
       - shell: bash -l {0}
-        run: docker exec ray_nightly_container python -m pytest modin/pandas/test/test_io.py
+        run: docker exec ray_container python -m pytest modin/pandas/test/test_io.py
       - shell: bash -l {0}
-        run: docker exec ray_nightly_container python -m pytest modin/experimental/pandas/test/test_io_exp.py
+        run: docker exec ray_container python -m pytest modin/experimental/pandas/test/test_io_exp.py
