@@ -4,34 +4,22 @@ jobs:
   configure-host:
     runs-on: ubuntu-latest
     outputs:
-      uid_gid: ${{ steps.get-user.outputs.uid_gid }}
+      uname: ${{ steps.get-user.outputs.uname }}
     steps:
       - id: get-user
-        run: echo "::set-output name=uid_gid::$(id -u):$(id -g)"
-  configure-container:
-    runs-on: ubuntu-latest
-    container:
-      image: rayproject/ray:nightly
-    outputs:
-      gid: ${{ steps.get-gid.outputs.gid }}
-    steps:
-      - id: get-gid
-        run: echo "::set-output name=gid::$(id -G | awk  '{print $2}')"
+        run: echo "::set-output name=uname::$(id -un)"
   test-ray-master:
-    needs: [configure-host, configure-container]
+    needs: configure-host
     runs-on: ubuntu-latest
     container:
       image: rayproject/ray:nightly
-      options: --user ${{ needs.configure-host.outputs.uid_gid }} --group-add ${{ needs.configure-container.outputs.gid }} -v /etc/passwd:/etc/passwd
     steps:
+      - run: sudo apt update && sudo apt install -y build-essential libhdf5-dev
+      - run: sudo -u ${{ needs.configure-host.outputs.uname }} -s
       - uses: actions/checkout@v2
         with:
           fetch-depth: 1
-      - run: id
-      - run: sudo apt update && sudo apt install -y build-essential
       - run: pip install -r requirements/requirements-no-engine.txt
-      - name: Install HDF5
-        run: sudo apt install -y libhdf5-dev
       - shell: bash -l {0}
         run: pytest modin/experimental/xgboost/test/test_default.py
       - shell: bash -l {0}
