@@ -15,8 +15,10 @@
 
 script_dir="`dirname \"$0\"`"
 pushd $script_dir
-modin_path=$(readlink -f ../../../modin)
-cp $modin_path ./modin -r
+modin_root=$(readlink -f ../../../)
+cp $modin_root/modin ./modin -r
+cp $modin_root/requirements/requirements-no-engine.yml ./requirements-no-engine.yml
 docker build -f ci-ray-master.dockerfile -t ray_master_image:nightly .
 rm -rf ./modin
+rm -f ./requirements-no-engine.yml
 popd
