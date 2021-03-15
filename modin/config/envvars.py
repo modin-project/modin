@@ -154,8 +154,8 @@ class NPartitions(EnvironmentVariable, type=int):
 
     @classmethod
     def put(cls, value):
+        super().put(value)
         cls._is_default = False
-        return super().put(value)
 
     @classmethod
     def put_if_default(cls, value):
