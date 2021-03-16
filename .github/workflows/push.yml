@@ -276,6 +276,7 @@ jobs:
         run: python -m pytest modin/pandas/test/test_general.py
         if: matrix.part == 3
       - shell: bash -l {0}
+        timeout-minutes: 20
         run: python -m pytest modin/pandas/test/test_io.py
         if: matrix.part == 3
       - shell: bash -l {0}
