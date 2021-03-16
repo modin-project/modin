@@ -8,44 +8,26 @@ jobs:
         with:
           fetch-depth: 1
       - shell: bash -l {0}
-        run: bash examples/docker/ci-ray-docker/build-docker-image.sh
-      - shell: bash -l {0}
-        run: docker create --name ray_container ray_docker_image:1.1.0 bash -c "tail -f /dev/null"
-      - shell: bash -l {0}
-        run: docker start ray_container
-      - shell: bash -l {0}
-        run: docker exec ray_container pytest modin/experimental/xgboost/test/test_default.py
-      - shell: bash -l {0}
-        run: docker exec ray_container pytest modin/pandas/test/dataframe/test_binary.py
-      - shell: bash -l {0}
-        run: docker exec ray_container pytest modin/pandas/test/dataframe/test_default.py
-      - shell: bash -l {0}
-        run: docker exec ray_container pytest modin/pandas/test/dataframe/test_indexing.py
-      - shell: bash -l {0}
-        run: docker exec ray_container pytest modin/pandas/test/dataframe/test_iter.py
-      - shell: bash -l {0}
-        run: docker exec ray_container pytest modin/pandas/test/dataframe/test_join_sort.py
-      - shell: bash -l {0}
-        run: docker exec ray_container pytest modin/pandas/test/dataframe/test_map_metadata.py
-      - shell: bash -l {0}
-        run: docker exec ray_container pytest modin/pandas/test/dataframe/test_reduction.py
-      - shell: bash -l {0}
-        run: docker exec ray_container pytest modin/pandas/test/dataframe/test_udf.py
-      - shell: bash -l {0}
-        run: docker exec ray_container pytest modin/pandas/test/dataframe/test_window.py
-      - shell: bash -l {0}
-        run: docker exec ray_container python -m pytest modin/pandas/test/test_series.py
-      - shell: bash -l {0}
-        run: docker exec ray_container python -m pytest modin/pandas/test/test_rolling.py
-      - shell: bash -l {0}
-        run: docker exec ray_container python -m pytest modin/pandas/test/test_concat.py
-      - shell: bash -l {0}
-        run: docker exec ray_container python -m pytest modin/pandas/test/test_groupby.py
-      - shell: bash -l {0}
-        run: docker exec ray_container python -m pytest modin/pandas/test/test_reshape.py
-      - shell: bash -l {0}
-        run: docker exec ray_container python -m pytest modin/pandas/test/test_general.py
-      - shell: bash -l {0}
-        run: docker exec ray_container python -m pytest modin/pandas/test/test_io.py
-      - shell: bash -l {0}
-        run: docker exec ray_container python -m pytest modin/experimental/pandas/test/test_io_exp.py
+        run: docker build -f examples/docker/ci-ray-docker/ci-ray-docker.dockerfile -t ray_docker_image:1.1.0 .
+      - uses: addnab/docker-run-action@v2
+        with:
+          image: ray_docker_image:1.1.0
+          run: |
+            pytest modin/experimental/xgboost/test/test_default.py
+            pytest modin/pandas/test/dataframe/test_binary.py
+            pytest modin/pandas/test/dataframe/test_default.py
+            pytest modin/pandas/test/dataframe/test_indexing.py
+            pytest modin/pandas/test/dataframe/test_iter.py
+            pytest modin/pandas/test/dataframe/test_join_sort.py
+            pytest modin/pandas/test/dataframe/test_map_metadata.py
+            pytest modin/pandas/test/dataframe/test_reduction.py
+            pytest modin/pandas/test/dataframe/test_udf.py
+            pytest modin/pandas/test/dataframe/test_window.py
+            pytest modin/pandas/test/test_series.py
+            pytest modin/pandas/test/test_rolling.py
+            pytest modin/pandas/test/test_concat.py
+            pytest modin/pandas/test/test_groupby.py
+            pytest modin/pandas/test/test_reshape.py
+            pytest modin/pandas/test/test_general.py
+            pytest modin/pandas/test/test_io.py
+            pytest modin/experimental/pandas/test/test_io_exp.py

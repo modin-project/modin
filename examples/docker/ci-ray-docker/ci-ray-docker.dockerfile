@@ -14,7 +14,7 @@
 FROM rayproject/ray:1.1.0
 WORKDIR /home/ray
 COPY ./modin ./modin
-COPY requirements-no-engine.yml ./requirements-no-engine.yml
+COPY requirements/requirements-no-engine.yml ./requirements-no-engine.yml
 RUN sudo chown ray:users ./modin -R && sudo chown ray:users ./requirements-no-engine.yml
 RUN sudo apt-get update --yes \
     && sudo apt-get install -y libhdf5-dev
