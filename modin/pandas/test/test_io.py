@@ -459,21 +459,7 @@ class TestCsv:
 
     # Datetime Handling tests
     @pytest.mark.parametrize(
-        "parse_dates",
-        [
-            True,
-            False,
-            ["col2"],
-            ["col2", "col4"],
-            [1, 3],
-            pytest.param(
-                {"foo": ["col2", "col4"]},
-                marks=pytest.mark.xfail(
-                    Engine.get() != "Python",
-                    reason="Exception: Internal Error - issue #2073",
-                ),
-            ),
-        ],
+        "parse_dates", [True, False, ["col2"], ["col2", "col4"], [1, 3]]
     )
     @pytest.mark.parametrize("infer_datetime_format", [True, False])
     @pytest.mark.parametrize("keep_date_col", [True, False])
