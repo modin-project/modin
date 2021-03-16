@@ -8,7 +8,7 @@ jobs:
         with:
           fetch-depth: 1
       - shell: bash -l {0}
-        run: docker build -f examples/docker/ci-ray-docker/ci-ray-docker.dockerfile -t ray_docker_image:1.1.0 .
+        run: docker build -f .github/workflows/ray-docker.dockerfile -t ray_docker_image:1.1.0 .
       - uses: addnab/docker-run-action@v2
         with:
           image: ray_docker_image:1.1.0
