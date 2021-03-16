@@ -1663,5 +1663,33 @@ class TestBadData:
         )
 
 
+class TestDropna:
+    data = {
+        "col1": [1, 2, None, 2, 1],
+        "col2": [None, 3, None, 2, 1],
+        "col3": [2, 3, 4, None, 5],
+        "col4": [1, 2, 3, 4, 5],
+    }
+
+    @pytest.mark.parametrize("subset", [None, ["col1", "col2"]])
+    @pytest.mark.parametrize("how", ["all", "any"])
+    def test_dropna(self, subset, how):
+        def applier(df, *args, **kwargs):
+            return df.dropna(subset=subset, how=how)
+
+        run_and_compare(applier, data=self.data)
+
+    @pytest.mark.parametrize("by", ["col1", ["col1", "col2"], ["col1", "col4"]])
+    @pytest.mark.parametrize("dropna", [True, False])
+    def test_dropna_groupby(self, by, dropna):
+        def applier(df, *args, **kwargs):
+            # OmniSci backend preserves NaNs at the result of groupby,
+            # so replacing NaNs with '0' to match with Pandas.
+            # https://github.com/modin-project/modin/issues/2878
+            return df.groupby(by=by, dropna=dropna).sum().fillna(0)
+
+        run_and_compare(applier, data=self.data)
+
+
 if __name__ == "__main__":
     pytest.main(["-v", __file__])

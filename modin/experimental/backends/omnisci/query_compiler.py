@@ -413,6 +413,22 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
             )
         )
 
+    def dropna(self, axis=0, how="any", thresh=None, subset=None):
+        """Returns a new QueryCompiler with null values dropped along given axis.
+
+        Return:
+            a new QueryCompiler
+        """
+        if thresh is not None or axis != 0:
+            return super().dropna(axis=axis, how=how, thresh=thresh, subset=subset)
+
+        if subset is None:
+            subset = self.columns
+        return self.__constructor__(
+            self._modin_frame.dropna(subset=subset, how=how),
+            shape_hint=self._shape_hint,
+        )
+
     def dt_year(self):
         """Extract year from Datetime info
 
