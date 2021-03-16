@@ -616,7 +616,7 @@ class BasePandasDataset(object):
                     )
                 if (
                     not self._query_compiler.has_multiindex(axis=axis)
-                    and level != 0
+                    and (level > 0 or level < -1)
                     and level != self.index.name
                 ):
                     raise ValueError(
@@ -671,7 +671,7 @@ class BasePandasDataset(object):
                     )
                 if (
                     not self._query_compiler.has_multiindex(axis=axis)
-                    and level != 0
+                    and (level > 0 or level < -1)
                     and level != self.index.name
                 ):
                     raise ValueError(
