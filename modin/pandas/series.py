@@ -822,6 +822,14 @@ class Series(BasePandasDataset):
     def keys(self):
         return self.index
 
+    def kurt(self, axis=None, skipna=None, level=None, numeric_only=None, **kwargs):
+        axis = self._get_axis_number(axis)
+        if numeric_only is True:
+            raise NotImplementedError("Series.kurt does not implement numeric_only.")
+        return super(Series, self).kurt(axis, skipna, level, numeric_only, **kwargs)
+
+    kurtosis = kurt
+
     def le(self, other, level=None, fill_value=None, axis=0):
         new_self, new_other = self._prepare_inter_op(other)
         return super(Series, new_self).le(new_other, level=level, axis=axis)
