@@ -3059,19 +3059,7 @@ def test_subtract(data):
 @pytest.mark.parametrize(
     "skipna", bool_arg_values, ids=arg_keys("skipna", bool_arg_keys)
 )
-@pytest.mark.parametrize(
-    "numeric_only",
-    [
-        None,
-        False,
-        pytest.param(
-            True,
-            marks=pytest.mark.xfail(
-                reason="numeric_only not implemented for pandas.Series"
-            ),
-        ),
-    ],
-)
+@pytest.mark.parametrize("numeric_only", [None, False, True])
 @pytest.mark.parametrize(
     "min_count", int_arg_values, ids=arg_keys("min_count", int_arg_keys)
 )
