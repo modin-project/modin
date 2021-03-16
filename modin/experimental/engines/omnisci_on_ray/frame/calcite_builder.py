@@ -312,23 +312,16 @@ class CalciteBuilder:
         self._to_calcite(op)
         return self.res
 
-    def _maybe_add_projection(self, op):
+    def _add_projection(self, frame):
         """
-        Applies projection of the frame columns for table scan if it was not done before.
-
-        Note
-        ----
-        Some operations should not be applied directly to the table scan because it
-        contains virtual "rowid" column, projection discards this column, so it will not
-        propagate to the result.
+        Applies projection of the frame columns for table scan and discards
+        virtual "rowid" column.
         """
-        if not isinstance(self._input_node(0), CalciteProjectionNode):
-            frame = op.input[0]
-            proj = CalciteProjectionNode(
-                frame._table_cols, [self._ref(frame, col) for col in frame._table_cols]
-            )
-            self._push(proj)
-            self._input_ctx().replace_input_node(frame, proj, frame._table_cols)
+        proj = CalciteProjectionNode(
+            frame._table_cols, [self._ref(frame, col) for col in frame._table_cols]
+        )
+        self._push(proj)
+        return proj
 
     def _input_ctx(self):
         return self._input_ctx_stack[-1]
@@ -410,9 +403,7 @@ class CalciteBuilder:
 
         # mask is currently always applied over scan, it means
         # we need additional projection to remove rowid column
-        fields = frame._table_cols
-        exprs = [self._ref(frame, col) for col in frame._table_cols]
-        self._push(CalciteProjectionNode(fields, exprs))
+        self._add_projection(frame)
 
     def _process_groupby(self, op):
         frame = op.input[0]
@@ -538,9 +529,11 @@ class CalciteBuilder:
         self._push(CalciteUnionNode(self._input_ids(), True))
 
     def _process_sort(self, op):
-        self._maybe_add_projection(op)
-
         frame = op.input[0]
+        if not isinstance(self._input_node(0), CalciteProjectionNode):
+            proj = self._add_projection(frame)
+            self._input_ctx().replace_input_node(frame, proj, frame._table_cols)
+
         nulls = op.na_position.upper()
         collations = []
         for col, asc in zip(op.columns, op.ascending):
@@ -551,7 +544,10 @@ class CalciteBuilder:
         self._push(CalciteSortNode(collations))
 
     def _process_filter(self, op):
-        self._maybe_add_projection(op)
-
         condition = self._translate(op.condition)
         self._push(CalciteFilterNode(condition))
+
+        if isinstance(self._input_node(0), CalciteScanNode):
+            # if filter was applied over scan, then we need additional
+            # projection to remove rowid column
+            self._add_projection(op.input[0])
