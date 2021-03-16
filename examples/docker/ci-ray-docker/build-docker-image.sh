@@ -1,3 +1,5 @@
+#!/bin/bash -e
+
 # Licensed to Modin Development Team under one or more contributor license agreements.
 # See the NOTICE file distributed with this work for additional information regarding
 # copyright ownership.  The Modin Development Team licenses this file to you under the
@@ -11,13 +13,12 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-FROM rayproject/ray:latest
-WORKDIR /home/ray
-COPY ./modin ./modin
-COPY requirements-no-engine.yml ./requirements-no-engine.yml
-RUN sudo chown ray:users ./modin -R && sudo chown ray:users ./requirements-no-engine.yml
-RUN sudo apt-get update --yes \
-    && sudo apt-get install -y libhdf5-dev
-RUN conda env update -f requirements-no-engine.yml --name base
-
-CMD ["/bin/bash"]
+script_dir="`dirname \"$0\"`"
+pushd $script_dir
+modin_root=$(readlink -f ../../../)
+cp $modin_root/modin ./modin -r
+cp $modin_root/requirements/requirements-no-engine.yml ./requirements-no-engine.yml
+docker build -f ci-ray-docker.dockerfile -t ray_docker_image:1.1.0 .
+rm -rf ./modin
+rm -f ./requirements-no-engine.yml
+popd

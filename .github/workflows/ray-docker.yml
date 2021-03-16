@@ -1,16 +1,16 @@
-name: ray-latest
+name: ray-docker
 on: pull_request
 jobs:
-  test-ray-master:
+  test-ray-docker:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
         with:
           fetch-depth: 1
       - shell: bash -l {0}
-        run: bash examples/docker/ci-ray-master/build-docker-image.sh
+        run: bash examples/docker/ci-ray-docker/build-docker-image.sh
       - shell: bash -l {0}
-        run: docker create --name ray_container ray_master_image:latest bash -c "tail -f /dev/null"
+        run: docker create --name ray_container ray_docker_image:1.1.0 bash -c "tail -f /dev/null"
       - shell: bash -l {0}
         run: docker start ray_container
       - shell: bash -l {0}
