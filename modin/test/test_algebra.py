@@ -192,13 +192,21 @@ class TestFilter:
         modin_frame = (
             pd.DataFrame(values).add_prefix("col")._query_compiler._modin_frame
         )
-        
-        new_df = modin_frame.filter_by_types([values.dtype]).to_pandas()
-        filtered_df = new_df.filter(0, lambda x: True)
-        df_equals(new_df, filtered_df)
-        null_df = new_df.filter(0, lambda x: False)
-        df_equals(None, null_df)
-    
+        filtered_df = modin_frame.filter(0, lambda df: df)
+        df_equals(modin_frame.to_pandas(), filtered_df)
+
+        filtered_df = modin_frame.filter(1, lambda df: df)
+        df_equals(modin_frame.to_pandas(), filtered_df)
+
+        null_df = modin_frame.filter(
+            1, lambda df: df.drop(columns=df.columns)
+        ).to_pandas()
+        df_is_empty(null_df)
+
+        null_df = modin_frame.filter(0, lambda df: df.drop(index=df.index)).to_pandas()
+        df_is_empty(null_df)
+
+
 # TODO[Todd]:
 # Filtering where all is true - returns the same value
 # Filtering where none is true - returns nothing

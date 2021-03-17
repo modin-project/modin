@@ -1406,6 +1406,11 @@ class BasePandasFrame(ModinDataframe):
         -------
             A new dataframe.
         """
+        # change to 'if' and raise ValueError
+        assert (
+            axis == 0 or axis == 1
+        ), "Axis argument to filter operator must be 0 (rows) or 1 (columns)"
+
         new_partitions = self._frame_mgr_cls.map_axis_partitions(
             axis, self._partitions, func, keep_partitioning=True
         )
