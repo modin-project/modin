@@ -74,7 +74,7 @@ class PandasOnRayFramePartition(PandasFramePartition):
             self.drain_call_queue()
         return ray.get(self.oid)
 
-    def apply(self, func, **kwargs):
+    def apply(self, func, *args, **kwargs):
         """
         Apply a function to the object wrapped by this partition.
 
@@ -82,7 +82,9 @@ class PandasOnRayFramePartition(PandasFramePartition):
         ----------
         func : callable or ray.ObjectRef
             A function to apply.
-        **kwargs
+        *args : iterable
+            Additional positional arguments to be passed in `func`.
+        **kwargs : dict
             Additional keyword arguments to be passed in `func`.
 
         Returns
@@ -96,11 +98,15 @@ class PandasOnRayFramePartition(PandasFramePartition):
         handle it correctly either way. The keyword arguments are sent as a dictionary.
         """
         oid = self.oid
-        call_queue = self.call_queue + [(func, kwargs)]
-        result, length, width, ip = deploy_ray_func.remote(call_queue, oid)
+        call_queue = self.call_queue + [(func, args, kwargs)]
+        if len(call_queue) > 1:
+            result, length, width, ip = apply_list_of_funcs.remote(oid, call_queue)
+        else:
+            func, args, kwargs = call_queue[0]
+            result, length, width, ip = apply_func.remote(oid, func, *args, **kwargs)
         return PandasOnRayFramePartition(result, length, width, ip)
 
-    def add_to_apply_calls(self, func, **kwargs):
+    def add_to_apply_calls(self, func, *args, **kwargs):
         """
         Add a function to the call queue.
 
@@ -108,6 +114,8 @@ class PandasOnRayFramePartition(PandasFramePartition):
         ----------
         func : callable or ray.ObjectRef
             Function to be added to the call queue.
+        *args : iterable
+            Additional positional arguments to be passed in `func`.
         **kwargs : dict
             Additional keyword arguments to be passed in `func`.
 
@@ -122,7 +130,7 @@ class PandasOnRayFramePartition(PandasFramePartition):
         handle it correctly either way. The keyword arguments are sent as a dictionary.
         """
         return PandasOnRayFramePartition(
-            self.oid, call_queue=self.call_queue + [(func, kwargs)]
+            self.oid, call_queue=self.call_queue + [(func, args, kwargs)]
         )
 
     def drain_call_queue(self):
@@ -131,12 +139,21 @@ class PandasOnRayFramePartition(PandasFramePartition):
             return
         oid = self.oid
         call_queue = self.call_queue
-        (
-            self.oid,
-            self._length_cache,
-            self._width_cache,
-            self._ip_cache,
-        ) = deploy_ray_func.remote(call_queue, oid)
+        if len(call_queue) > 1:
+            (
+                self.oid,
+                self._length_cache,
+                self._width_cache,
+                self._ip_cache,
+            ) = apply_list_of_funcs.remote(oid, call_queue)
+        else:
+            func, args, kwargs = call_queue[0]
+            (
+                self.oid,
+                self._length_cache,
+                self._width_cache,
+                self._ip_cache,
+            ) = apply_func.remote(oid, func, *args, **kwargs)
         self.call_queue = []
 
     def wait(self):
@@ -369,16 +386,58 @@ def get_index_and_columns(df):
 
 
 @ray.remote(num_returns=4)
-def deploy_ray_func(call_queue, partition):  # pragma: no cover
+def apply_func(partition, func, *args, **kwargs):  # pragma: no cover
+    """
+    Execute a function on the partition in a worker process.
+
+    Parameters
+    ----------
+    partition : pandas.DataFrame
+        A pandas DataFrame the function needs to be executed on.
+    func : callable
+        Function that needs to be executed on the partition.
+    *args : iterable
+        Additional positional arguments to be passed in `func`.
+    **kwargs : dict
+        Additional keyword arguments to be passed in `func`.
+
+    Returns
+    -------
+    pandas.DataFrame
+        The resulting pandas DataFrame.
+    int
+        The number of rows of the resulting pandas DataFrame.
+    int
+        The number of columns of the resulting pandas DataFrame.
+    str
+        The node IP address of the worker process.
+    """
+    try:
+        result = func(partition, *args, **kwargs)
+    # Sometimes Arrow forces us to make a copy of an object before we operate on it. We
+    # don't want the error to propagate to the user, and we want to avoid copying unless
+    # we absolutely have to.
+    except ValueError:
+        result = func(partition.copy(), *args, **kwargs)
+    return (
+        result,
+        len(result) if hasattr(result, "__len__") else 0,
+        len(result.columns) if hasattr(result, "columns") else 0,
+        get_node_ip_address(),
+    )
+
+
+@ray.remote(num_returns=4)
+def apply_list_of_funcs(partition, funcs):  # pragma: no cover
     """
     Execute all operations stored in the call queue on the partition in a worker process.
 
     Parameters
     ----------
-    call_queue : list
-        A call queue that needs to be executed on the partition.
     partition : pandas.DataFrame
         A pandas DataFrame the call queue needs to be executed on.
+    funcs : list
+        A call queue that needs to be executed on the partition.
 
     Returns
     -------
@@ -395,26 +454,36 @@ def deploy_ray_func(call_queue, partition):  # pragma: no cover
     def deserialize(obj):
         if isinstance(obj, ObjectIDType):
             return ray.get(obj)
-        return obj
+        elif isinstance(obj, tuple) and any(isinstance(o, ObjectIDType) for o in obj):
+            return ray.get(list(obj))
+        elif isinstance(obj, dict) and any(
+            isinstance(obj[o], ObjectIDType) for o in obj
+        ):
+            return ray.get(list(obj.values()))
+        else:
+            return obj
 
-    if len(call_queue) > 1:
-        for func, kwargs in call_queue[:-1]:
+    if len(funcs) > 1:
+        for func, args, kwargs in funcs[:-1]:
             func = deserialize(func)
+            args = deserialize(args)
             kwargs = deserialize(kwargs)
             try:
-                partition = func(partition, **kwargs)
+                partition = func(partition, *args, **kwargs)
             except ValueError:
-                partition = func(partition.copy(), **kwargs)
-    func, kwargs = call_queue[-1]
+                partition = func(partition.copy(), *args, **kwargs)
+    func, args, kwargs = funcs[-1]
     func = deserialize(func)
+    args = deserialize(args)
     kwargs = deserialize(kwargs)
+
     try:
-        result = func(partition, **kwargs)
+        result = func(partition, *args, **kwargs)
     # Sometimes Arrow forces us to make a copy of an object before we operate on it. We
     # don't want the error to propagate to the user, and we want to avoid copying unless
     # we absolutely have to.
     except ValueError:
-        result = func(partition.copy(), **kwargs)
+        result = func(partition.copy(), *args, **kwargs)
     return (
         result,
         len(result) if hasattr(result, "__len__") else 0,
