@@ -1964,19 +1964,7 @@ def test_kurtosis(axis, skipna):
 
 
 @pytest.mark.parametrize("axis", ["rows", "columns"])
-@pytest.mark.parametrize(
-    "numeric_only",
-    [
-        pytest.param(
-            True,
-            marks=pytest.mark.xfail(
-                reason="Modin - DID NOT RAISE <class 'NotImplementedError'>"
-            ),
-        ),
-        False,
-        None,
-    ],
-)
+@pytest.mark.parametrize("numeric_only", [True, False, None])
 def test_kurtosis_numeric_only(axis, numeric_only):
     eval_general(
         *create_test_series(test_data_diff_dtype),
