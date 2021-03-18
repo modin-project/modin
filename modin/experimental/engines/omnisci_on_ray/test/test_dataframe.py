@@ -1679,6 +1679,23 @@ class TestDropna:
 
         run_and_compare(applier, data=self.data)
 
+    def test_dropna_multiindex(self):
+        index = generate_multiindex(len(self.data["col1"]))
+
+        md_df = pd.DataFrame(self.data, index=index)
+        pd_df = pandas.DataFrame(self.data, index=index)
+
+        md_res = md_df.dropna()._to_pandas()
+        pd_res = pd_df.dropna()
+
+        # HACK: all strings in OmniSci considered to be categories, that breaks
+        # checks for equality with pandas, this line discards category dtype
+        md_res.index = pandas.MultiIndex.from_tuples(
+            md_res.index.values, names=md_res.index.names
+        )
+
+        df_equals(md_res, pd_res)
+
     @pytest.mark.skip("Dropna logic for GroupBy is disabled for now")
     @pytest.mark.parametrize("by", ["col1", ["col1", "col2"], ["col1", "col4"]])
     @pytest.mark.parametrize("dropna", [True, False])

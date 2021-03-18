@@ -466,6 +466,8 @@ class OmnisciOnRayFrame(BasePandasFrame):
         # based on "rowid". This is needed because 'dropna' preserves index.
         if self._index_cols is None:
             base = self._materialize_rowid()
+        else:
+            base = self
 
         checks = [base.ref(col).is_not_null() for col in subset]
         condition = (
