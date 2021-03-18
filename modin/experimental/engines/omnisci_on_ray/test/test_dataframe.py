@@ -1679,6 +1679,7 @@ class TestDropna:
 
         run_and_compare(applier, data=self.data)
 
+    @pytest.mark.skip("Dropna logic for GroupBy is disabled for now")
     @pytest.mark.parametrize("by", ["col1", ["col1", "col2"], ["col1", "col4"]])
     @pytest.mark.parametrize("dropna", [True, False])
     def test_dropna_groupby(self, by, dropna):

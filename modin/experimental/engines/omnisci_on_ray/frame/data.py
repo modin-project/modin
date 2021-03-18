@@ -282,8 +282,10 @@ class OmnisciOnRayFrame(BasePandasFrame):
         new_columns = []
         index_cols = None
 
-        if groupby_args["dropna"]:
-            base = base.dropna(subset=groupby_cols, how="any")
+        # TODO: check performance changes after enabling 'dropna' and decide
+        # is it worth it or not.
+        # if groupby_args["dropna"]:
+        #     base = base.dropna(subset=groupby_cols, how="any")
 
         if groupby_args["as_index"]:
             index_cols = groupby_cols.copy()
