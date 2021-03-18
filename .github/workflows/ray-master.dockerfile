@@ -11,7 +11,7 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-FROM rayproject/ray:1.1.0
+FROM rayproject/ray:nightly
 WORKDIR /home/ray
 COPY ./modin ./modin
 COPY requirements/requirements-no-engine.yml ./requirements-no-engine.yml

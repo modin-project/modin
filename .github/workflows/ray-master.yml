@@ -1,17 +1,17 @@
-name: ray-docker
+name: ray-master
 on: pull_request
 jobs:
-  test-ray-docker:
+  test-ray-master:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
         with:
           fetch-depth: 1
       - shell: bash -l {0}
-        run: docker build -f .github/workflows/ray-docker.dockerfile -t ray_docker_image:1.1.0 .
+        run: docker build -f .github/workflows/ray-master.dockerfile -t ray_docker_image:nightly .
       - uses: addnab/docker-run-action@v2
         with:
-          image: ray_docker_image:1.1.0
+          image: ray_docker_image:nightly
           run: |
             pytest modin/experimental/xgboost/test/test_default.py
             pytest modin/pandas/test/dataframe/test_binary.py
