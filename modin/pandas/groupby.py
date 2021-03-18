@@ -480,65 +480,9 @@ class DataFrameGroupBy(object):
         )
 
     def size(self):
-        if self._axis == 0:
-            # Series objects in 'by' mean we couldn't handle the case
-            # and transform 'by' to a query compiler.
-            # In this case we are just defaulting to pandas.
-            if is_list_like(self._by) and any(
-                isinstance(o, type(self._df._query_compiler)) for o in self._by
-            ):
-                work_object = DataFrameGroupBy(
-                    self._df,
-                    self._by,
-                    self._axis,
-                    drop=False,
-                    idx_name=None,
-                    squeeze=self._squeeze,
-                    **self._kwargs,
-                )
-                result = work_object._wrap_aggregation(
-                    type(work_object._query_compiler).groupby_size,
-                    lambda df: df.size(),
-                    numeric_only=False,
-                )
-                result = result.__constructor__(
-                    query_compiler=result._query_compiler
-                ).squeeze(axis=1)
-                if isinstance(result, Series):
-                    # Pandas does not name size() output for Series
-                    result.name = None
-                return result
-            work_object = SeriesGroupBy(
-                self._df[self._df.columns[0]]
-                if self._kwargs.get("as_index")
-                else self._df[self._df.columns[0]].to_frame(),
-                self._by,
-                self._axis,
-                drop=False,
-                idx_name=None,
-                squeeze=self._squeeze,
-                **self._kwargs,
-            )
-            result = work_object._wrap_aggregation(
-                type(work_object._query_compiler).groupby_size,
-                lambda df: df.size(),
-                numeric_only=False,
-            ).squeeze(axis=1)
-            result = result.__constructor__(query_compiler=result._query_compiler)
-            if not self._kwargs.get("as_index") and not isinstance(result, Series):
-                result = result.rename(columns={0: "size"})
-                result = (
-                    result.rename(columns={"__reduced__": "index"})
-                    if "__reduced__" in result.columns
-                    else result
-                )
-            else:
-                # Pandas does not name size() output for Series
-                result.name = None
-            return result.fillna(0)
-        else:
+        if self._axis == 1:
             return DataFrameGroupBy(
-                self._df.T,
+                self._df.T.iloc[:, [0]],
                 self._by,
                 0,
                 drop=self._drop,
@@ -546,6 +490,34 @@ class DataFrameGroupBy(object):
                 squeeze=self._squeeze,
                 **self._kwargs,
             ).size()
+        work_object = type(self)(
+            self._df,
+            self._by,
+            self._axis,
+            drop=False,
+            idx_name=None,
+            squeeze=self._squeeze,
+            **self._kwargs,
+        )
+        result = work_object._wrap_aggregation(
+            type(work_object._query_compiler).groupby_size,
+            lambda df: df.size(),
+            numeric_only=False,
+        )
+        if not isinstance(result, Series):
+            result = result.squeeze(axis=1)
+        if not self._kwargs.get("as_index") and not isinstance(result, Series):
+            result = result.rename(columns={0: "size"})
+            result = (
+                result.rename(columns={"__reduced__": "index"})
+                if "__reduced__" in result.columns
+                else result
+            )
+        elif isinstance(self._df, Series):
+            result.name = self._df.name
+        else:
+            result.name = None
+        return result.fillna(0)
 
     def sum(self, **kwargs):
         return self._wrap_aggregation(
@@ -1013,40 +985,6 @@ class DataFrameGroupBy(object):
     ],
 )
 class SeriesGroupBy(DataFrameGroupBy):
-    def __init__(self, df, *args, **kwargs):
-        if not isinstance(df, Series):
-            df = df.squeeze(axis=1)
-        ErrorMessage.catch_bugs_and_request_email(
-            not isinstance(df, Series),
-            f"SeriesGroupBy is supposed to obtain only Series objects, got: {type(df)}",
-        )
-        self._name = df.name if df.name is not None else "__reduced__"
-        super(SeriesGroupBy, self).__init__(df.to_frame(self._name), *args, **kwargs)
-
-    _NO_RENAME_METHODS = ["ngroup"]
-
-    def _build_series_wrapper(self, func):
-        def name_setter(*args, **kwargs):
-            if kwargs.get("axis", 0) == 1:
-                raise ValueError("No axis named 1 for object type Series")
-            result = func(*args, **kwargs)
-            if hasattr(result, "_query_compiler"):
-                if not isinstance(result, Series):
-                    result = result.squeeze(axis=1)
-                result.name = (
-                    self._name if func.__name__ not in self._NO_RENAME_METHODS else None
-                )
-            return result
-
-        name_setter.__name__ = func.__name__
-        return name_setter
-
-    def __getattribute__(self, key):
-        attr = object.__getattribute__(self, key)
-        if not key.startswith("_") and callable(attr):
-            return self._build_series_wrapper(attr)
-        return attr
-
     @property
     def ndim(self):
         return 1  # ndim is always 1 for Series
@@ -1078,8 +1016,7 @@ class SeriesGroupBy(DataFrameGroupBy):
                     Series(
                         query_compiler=self._query_compiler.getitem_row_array(
                             self._index.get_indexer_for(self._index_grouped[k].unique())
-                        ),
-                        name=self._name,
+                        )
                     ),
                 )
                 for k in (sorted(group_ids) if self._sort else group_ids)
@@ -1091,8 +1028,7 @@ class SeriesGroupBy(DataFrameGroupBy):
                     Series(
                         query_compiler=self._query_compiler.getitem_column_array(
                             self._index_grouped[k].unique()
-                        ),
-                        name=self._name,
+                        )
                     ),
                 )
                 for k in (sorted(group_ids) if self._sort else group_ids)

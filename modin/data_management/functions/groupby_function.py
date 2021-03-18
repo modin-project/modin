@@ -153,11 +153,7 @@ class GroupbyReduceFunction(MapReduceFunction):
             or isinstance(by, pandas.Grouper)
         ):
             by = try_cast_to_pandas(by, squeeze=True)
-            default_func = (
-                (lambda grp: grp.agg(map_func))
-                if isinstance(map_func, dict)
-                else map_func
-            )
+            default_func = cls.restore_default_function(map_func, **kwargs)
             return query_compiler.default_to_pandas(
                 lambda df: default_func(
                     df.groupby(by=by, axis=axis, **groupby_args), **map_args
@@ -198,6 +194,14 @@ class GroupbyReduceFunction(MapReduceFunction):
             return agg_func
         partition_dict = {k: v for k, v in agg_func.items() if k in df.columns}
         return lambda grp: grp.agg(partition_dict)
+
+    @staticmethod
+    def restore_default_function(agg_func, method=None, **kwargs):
+        if method == "size":
+            return lambda grp: grp.size()
+        return (
+            (lambda grp: grp.agg(agg_func)) if isinstance(agg_func, dict) else agg_func
+        )
 
     @classmethod
     def build_map_reduce_functions(

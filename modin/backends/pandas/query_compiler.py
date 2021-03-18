@@ -2460,11 +2460,40 @@ class PandasQueryCompiler(BaseQueryCompiler):
     groupby_max = GroupbyReduceFunction.register("max")
     groupby_min = GroupbyReduceFunction.register("min")
     groupby_prod = GroupbyReduceFunction.register("prod")
-    groupby_size = GroupbyReduceFunction.register("size", method="size")
     groupby_sum = GroupbyReduceFunction.register("sum")
 
+    def groupby_size(
+        self, by, axis, groupby_args, map_args, reduce_args, numeric_only, drop
+    ):
+        result = self._groupby_dict_reduce(
+            by=by,
+            axis=axis,
+            agg_func={self.columns[0]: [("__size_col__", "size")]},
+            agg_args=[],
+            agg_kwargs={},
+            groupby_kwargs=groupby_args,
+            drop=drop,
+            method="size",
+        )
+        if groupby_args.get("as_index", True):
+            result.columns = ["__reduced__"]
+        elif isinstance(result.columns, pandas.MultiIndex):
+            # Dropping one extra-level which was added because of renaming aggregation
+            result.columns = (
+                result.columns[:-1].droplevel(-1).append(pandas.Index(["size"]))
+            )
+        return result
+
     def _groupby_dict_reduce(
-        self, by, axis, agg_func, agg_args, agg_kwargs, groupby_kwargs, drop=False
+        self,
+        by,
+        axis,
+        agg_func,
+        agg_args,
+        agg_kwargs,
+        groupby_kwargs,
+        drop=False,
+        **kwargs,
     ):
         map_dict = {}
         reduce_dict = {}
@@ -2497,7 +2526,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 )
                 reduce_dict[reduced_col_name] = groupby_reduce_functions[func][1]
             map_dict[col] = map_fns
-        return GroupbyReduceFunction.register(map_dict, reduce_dict)(
+        return GroupbyReduceFunction.register(map_dict, reduce_dict, **kwargs)(
             query_compiler=self,
             by=by,
             axis=axis,
