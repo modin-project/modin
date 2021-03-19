@@ -11,26 +11,46 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
+from typing import Callable
 from .function import Function
 
 
 class MapReduceFunction(Function):
     @classmethod
-    def call(cls, map_function, reduce_function, **call_kwds):
-        def caller(query_compiler, *args, **kwargs):
-            axis = call_kwds.get("axis", kwargs.get("axis"))
+    def register(
+        cls, map_func: Callable, reduce_func: Callable = None, *reg_args, **reg_kwargs
+    ):
+        """
+        Build MapReduce function.
+
+        Parameters
+        ----------
+        map_func: callable
+            source map function
+        reduce_func: callable
+            source reduce function
+        *reg_args: args,
+            Args that will be used for building.
+        **reg_kwargs: kwargs,
+            Kwargs that will be used for building.
+
+        Returns
+        -------
+        callable
+            map_reduce function
+        """
+
+        if reduce_func is None:
+            reduce_func = map_func
+
+        def map_reduce(query_compiler, *args, **kwargs):
+            axis = reg_kwargs.get("axis", kwargs.get("axis"))
             return query_compiler.__constructor__(
                 query_compiler._modin_frame._map_reduce(
                     cls.validate_axis(axis),
-                    lambda x: map_function(x, *args, **kwargs),
-                    lambda y: reduce_function(y, *args, **kwargs),
+                    lambda x: map_func(x, *args, **kwargs),
+                    lambda y: reduce_func(y, *args, **kwargs),
                 )
             )
 
-        return caller
-
-    @classmethod
-    def register(cls, map_function, reduce_function=None, **kwargs):
-        if reduce_function is None:
-            reduce_function = map_function
-        return cls.call(map_function, reduce_function, **kwargs)
+        return map_reduce

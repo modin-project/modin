@@ -11,6 +11,7 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
+from typing import Callable, Optional, Union
 import pandas
 
 from .mapreducefunction import MapReduceFunction
@@ -19,7 +20,13 @@ from modin.utils import try_cast_to_pandas, hashable
 
 class GroupbyReduceFunction(MapReduceFunction):
     @classmethod
-    def call(cls, map_func, reduce_func=None, **call_kwds):
+    def register(
+        cls,
+        map_func: Union[str, dict, Callable],
+        reduce_func: Optional[Union[dict, Callable]] = None,
+        *reg_args,
+        **reg_kwargs,
+    ):
         """
         Build GroupbyReduce function.
 
@@ -33,7 +40,9 @@ class GroupbyReduceFunction(MapReduceFunction):
         reduce_func: callable or dict (optional),
             A function to apply to each group at the reduce phase. If not specified
             will be set the same as 'map_func'.
-        **call_kwds: kwargs,
+        *reg_args: args,
+            Args that will be passed to the returned function.
+        **reg_kwargs: kwargs,
             Kwargs that will be passed to the returned function.
 
         Returns
@@ -55,8 +64,13 @@ class GroupbyReduceFunction(MapReduceFunction):
             callable(map_func) ^ callable(reduce_func)
         ), "Map and reduce functions must be either both dict or both callable."
 
-        return lambda *args, **kwargs: cls.caller(
-            *args, map_func=map_func, reduce_func=reduce_func, **kwargs, **call_kwds
+        return lambda *args, **kwargs: cls.groupby_reduce_function(
+            *args,
+            *reg_args,
+            map_func=map_func,
+            reduce_func=reduce_func,
+            **kwargs,
+            **reg_kwargs,
         )
 
     @classmethod
@@ -137,7 +151,7 @@ class GroupbyReduceFunction(MapReduceFunction):
         return pandas.DataFrame(result)
 
     @classmethod
-    def caller(
+    def groupby_reduce_function(
         cls,
         query_compiler,
         by,

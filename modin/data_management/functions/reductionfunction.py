@@ -11,19 +11,40 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
+from typing import Callable
 from .function import Function
 
 
 class ReductionFunction(Function):
     @classmethod
-    def call(cls, reduction_function, **call_kwds):
-        def caller(query_compiler, *args, **kwargs):
-            axis = call_kwds.get("axis", kwargs.get("axis"))
+    def register(cls, func: Callable, *reg_args, **reg_kwargs):
+        """
+        Build Reduction function that perform across each partition.
+
+        It's used if `func` reduces the dimension of partitions in contrast to `MapFunction`.
+
+        Parameters
+        ----------
+        func: callable
+            source function
+        *reg_args: args,
+            Args that will be used for building.
+        **reg_kwargs: kwargs,
+            Kwargs that will be used for building.
+
+        Returns
+        -------
+        callable
+            reduce function
+        """
+
+        def reduction_function(query_compiler, *args, **kwargs):
+            axis = reg_kwargs.get("axis", kwargs.get("axis"))
             return query_compiler.__constructor__(
                 query_compiler._modin_frame._fold_reduce(
                     cls.validate_axis(axis),
-                    lambda x: reduction_function(x, *args, **kwargs),
+                    lambda x: func(x, *args, **kwargs),
                 )
             )
 
-        return caller
+        return reduction_function
