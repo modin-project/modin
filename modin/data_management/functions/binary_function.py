@@ -11,6 +11,7 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
+from typing import Callable
 import numpy as np
 import pandas
 
@@ -19,11 +20,32 @@ from .function import Function
 
 class BinaryFunction(Function):
     @classmethod
-    def call(cls, func, *call_args, **call_kwds):
-        def caller(query_compiler, other, *args, **kwargs):
+    def register(cls, func: Callable, *reg_args, **reg_kwargs):
+        """
+        Build binary function that perform across the entire dataset.
+
+        Depending on the type of the second operand, created function can be
+        performed across entire axes or each partitions.
+
+        Parameters
+        ----------
+        func: callable
+            source binary function
+        *reg_args: args,
+            Args that will be used for building.
+        **reg_kwargs: kwargs,
+            Kwargs that will be used for building.
+
+        Returns
+        -------
+        callable
+            parallel binary function
+        """
+
+        def binary_function(query_compiler, other, *args, **kwargs):
             axis = kwargs.get("axis", 0)
             broadcast = kwargs.pop("broadcast", False)
-            join_type = call_kwds.get("join_type", "outer")
+            join_type = reg_kwargs.get("join_type", "outer")
             if isinstance(other, type(query_compiler)):
                 if broadcast:
                     assert (
@@ -41,7 +63,7 @@ class BinaryFunction(Function):
                             lambda l, r: func(l, r.squeeze(), *args, **kwargs),
                             other._modin_frame,
                             join_type=join_type,
-                            preserve_labels=call_kwds.get("preserve_labels", False),
+                            preserve_labels=reg_kwargs.get("preserve_labels", False),
                         )
                     )
                 else:
@@ -66,4 +88,4 @@ class BinaryFunction(Function):
                     )
                 return query_compiler.__constructor__(new_modin_frame)
 
-        return caller
+        return binary_function
