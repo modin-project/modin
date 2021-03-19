@@ -166,13 +166,12 @@ def initialize_ray(
                 "_memory": object_store_memory,
                 "_lru_evict": True,
             }
-            try:
-                ray.init(**ray_init_kwargs)
-            except DeprecationWarning:
-                # setting of `_lru_evict` parameter raises DeprecationWarning
-                # since ray 2.0.0
+            from packaging import version
+
+            # setting of `_lru_evict` parameter raises DeprecationWarning since ray 2.0.0
+            if version.parse(ray.__version__) >= version.parse("2.0.0"):
                 ray_init_kwargs.pop("_lru_evict")
-                ray.init(**ray_init_kwargs)
+            ray.init(**ray_init_kwargs)
 
         _move_stdlib_ahead_of_site_packages()
         ray.worker.global_worker.run_function_on_all_workers(
