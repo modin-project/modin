@@ -28,6 +28,7 @@ dependencies:
   - pytest-benchmark
   - pytest-cov>=2.10.1
   - pytest-xdist>=2.1.0
+  - packaging
   - coverage<5.0
   - pygithub==1.53
   - rpyc==4.1.5
