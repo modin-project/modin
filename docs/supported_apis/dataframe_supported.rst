@@ -481,6 +481,7 @@ default to pandas.
 .. _`clip_upper`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.clip_upper.html#pandas.DataFrame.clip_upper
 .. _`combine`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.combine.html#pandas.DataFrame.combine
 .. _`combine_first`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.combine_first.html#pandas.DataFrame.combine_first
+.. _`compare`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.compare.html#pandas.DataFrame.compare
 .. _`compound`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.compound.html#pandas.DataFrame.compound
 .. _`copy`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.copy.html#pandas.DataFrame.copy
 .. _`corr`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.corr.html#pandas.DataFrame.corr
@@ -662,6 +663,7 @@ default to pandas.
 .. _`tz_localize`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.tz_localize.html#pandas.DataFrame.tz_localize
 .. _`unstack`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.unstack.html#pandas.DataFrame.unstack
 .. _`update`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.update.html#pandas.DataFrame.update
+.. _`value_counts`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.value_counts.html#pandas.DataFrame.value_counts
 .. _`values`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.values.html#pandas.DataFrame.values
 .. _`var`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.var.html#pandas.DataFrame.var
 .. _`where`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.where.html#pandas.DataFrame.where
