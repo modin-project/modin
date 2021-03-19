@@ -168,8 +168,8 @@ def initialize_ray(
             }
             from packaging import version
 
-            # setting of `_lru_evict` parameter raises DeprecationWarning since ray 2.0.0
-            if version.parse(ray.__version__) >= version.parse("2.0.0"):
+            # setting of `_lru_evict` parameter raises DeprecationWarning since ray 2.0.0.dev0
+            if version.parse(ray.__version__) >= version.parse("2.0.0.dev0"):
                 ray_init_kwargs.pop("_lru_evict")
             ray.init(**ray_init_kwargs)
 
