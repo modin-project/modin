@@ -967,10 +967,8 @@ class DataFrame(BasePandasDataset):
             if loc < 0:
                 raise ValueError("unbounded slice")
             if isinstance(value, Series):
-                value = value._query_compiler
-            new_query_compiler = self._query_compiler.insert(loc, column, value)
-
-        self._update_inplace(new_query_compiler=new_query_compiler)
+                new_frame = pandas.concat(self.to_pandas().iloc[:, :loc], pandas.DataFrame({column: value}), self.to_pandas().iloc[:, loc], axis=1)
+        self._update_inplace(new_query_compiler=new_frame.from_pandas()._query_compiler)
 
     def interpolate(
         self,
