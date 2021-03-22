@@ -22,10 +22,10 @@ class DefaultMethod(Function):
     OBJECT_TYPE = "DataFrame"
 
     @classmethod
-    def call(cls, func, **call_kwds):
-        obj = call_kwds.get("obj_type", pandas.DataFrame)
-        force_inplace = call_kwds.get("inplace")
-        fn_name = call_kwds.get("fn_name", getattr(func, "__name__", str(func)))
+    def register(cls, func, *reg_args, **reg_kwargs):
+        obj = reg_kwargs.get("obj_type", pandas.DataFrame)
+        force_inplace = reg_kwargs.get("inplace")
+        fn_name = reg_kwargs.get("fn_name", getattr(func, "__name__", str(func)))
 
         if isinstance(func, str):
             fn = getattr(obj, func)
@@ -61,10 +61,6 @@ class DefaultMethod(Function):
             return result if not inplace else df
 
         return cls.build_wrapper(applyier, fn_name)
-
-    @classmethod
-    def register(cls, func, **kwargs):
-        return cls.call(func, **kwargs)
 
     @classmethod
     def build_wrapper(cls, fn, fn_name):
