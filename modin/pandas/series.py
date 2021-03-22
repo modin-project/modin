@@ -47,6 +47,8 @@ from . import _update_engine
 
 @_inherit_docstrings(pandas.Series, excluded=[pandas.Series.__init__])
 class Series(BasePandasDataset):
+    _pandas_class = pandas.Series
+
     def __init__(
         self,
         data=None,

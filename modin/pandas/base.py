@@ -37,6 +37,7 @@ from pandas.core.dtypes.common import (
 )
 import pandas.core.window.rolling
 import pandas.core.resample
+import pandas.core.generic
 from pandas.core.indexing import convert_to_index_sliceable
 from pandas.util._validators import validate_bool_kwarg, validate_percentile
 from pandas._libs.lib import no_default
@@ -69,6 +70,8 @@ _DEFAULT_BEHAVIOUR = {
     "__class__",
     "_get_index",
     "_set_index",
+    "_pandas_class",
+    "_get_axis_number",
     "empty",
     "index",
     "columns",
@@ -102,6 +105,10 @@ class BasePandasDataset(object):
     are the same, we use this object to define the general behavior of those objects
     and then use those objects to define the output type.
     """
+
+    # Pandas class that we pretend to be; usually it has the same name as our class
+    # but lives in "pandas" namespace.
+    _pandas_class = pandas.core.generic.NDFrame
 
     # Siblings are other objects that share the same query compiler. We use this list
     # to update inplace when there is a shallow copy.
@@ -348,7 +355,7 @@ class BasePandasDataset(object):
             # Broadcast is an internally used argument
             kwargs.pop("broadcast", None)
             return self._default_to_pandas(
-                getattr(getattr(pandas, type(self).__name__), op), other, **kwargs
+                getattr(self._pandas_class, op), other, **kwargs
             )
         other = self._validate_other(other, axis, numeric_or_object_only=True)
         exclude_list = [
@@ -403,9 +410,7 @@ class BasePandasDataset(object):
             # it is a DataFrame, Series, etc.) as a pandas object. The outer `getattr`
             # will get the operation (`op`) from the pandas version of the class and run
             # it on the object after we have converted it to pandas.
-            result = getattr(getattr(pandas, type(self).__name__), op)(
-                pandas_obj, *args, **kwargs
-            )
+            result = getattr(self._pandas_class, op)(pandas_obj, *args, **kwargs)
         else:
             ErrorMessage.catch_bugs_and_request_email(
                 failure_condition=True,
@@ -454,29 +459,21 @@ class BasePandasDataset(object):
             except TypeError:
                 return result
 
-    def _get_axis_number(self, axis):
+    @classmethod
+    def _get_axis_number(cls, axis):
         """
-        Implement [METHOD_NAME].
-
-        TODO: Add more details for this docstring template.
+        Convert axis name or number to axis index.
 
         Parameters
         ----------
-        What arguments does this function have.
-        [
-        PARAMETER_NAME: PARAMETERS TYPES
-            Description.
-        ]
+        axis: int, str
+            Axis name ('index' or 'columns') or number to be converted to axis index.
 
         Returns
         -------
-        What this returns (if anything)
+        Axis index in the array of axes stored in the dataframe.
         """
-        return (
-            getattr(pandas, type(self).__name__)()._get_axis_number(axis)
-            if axis is not None
-            else 0
-        )
+        return cls._pandas_class._get_axis_number(axis) if axis is not None else 0
 
     def __constructor__(self, *args, **kwargs):
         """Construct DataFrame or Series object depending on self type."""
@@ -2730,7 +2727,7 @@ class BasePandasDataset(object):
             and (not hasattr(self, "columns") or key not in self.columns)
         ):
             indexer = convert_to_index_sliceable(
-                getattr(pandas, "DataFrame")(index=self.index), key
+                pandas.DataFrame(index=self.index), key
             )
         if indexer is not None:
             return self._getitem_slice(indexer)
@@ -2824,19 +2821,18 @@ class BasePandasDataset(object):
         return self.to_numpy()
 
     def __getattribute__(self, item):
+        attr = super().__getattribute__(item)
         if item not in _DEFAULT_BEHAVIOUR and not self._query_compiler.lazy_execution:
-            method = object.__getattribute__(self, item)
-            is_callable = callable(method)
             # We default to pandas on empty DataFrames. This avoids a large amount of
             # pain in underlying implementation and returns a result immediately rather
             # than dealing with the edge cases that empty DataFrames have.
-            if is_callable and self.empty:
+            if callable(attr) and self.empty and hasattr(self._pandas_class, item):
 
                 def default_handler(*args, **kwargs):
                     return self._default_to_pandas(item, *args, **kwargs)
 
                 return default_handler
-        return object.__getattribute__(self, item)
+        return attr
 
 
 if IsExperimental.get():
