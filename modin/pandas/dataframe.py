@@ -369,12 +369,14 @@ class DataFrame(BasePandasDataset):
         elif hashable(by) and not isinstance(by, pandas.Grouper):
             drop = by in self.columns
             idx_name = by
-            if self._query_compiler.has_multiindex(
-                axis=axis
-            ) and by in self._query_compiler.get_index_names(axis):
+            if (
+                self._query_compiler.has_multiindex(axis=axis)
+                and by in self._query_compiler.get_index_names(axis)
+                and by is not None
+            ):
                 # In this case we pass the string value of the name through to the
                 # partitions. This is more efficient than broadcasting the values.
-                pass
+                level, by = by, None
             elif level is None:
                 by = self.__getitem__(by)._query_compiler
         elif isinstance(by, Series):

@@ -37,10 +37,12 @@ from modin.utils import (
     try_cast_to_pandas,
     wrap_udf_function,
     hashable,
+    wrap_into_list,
 )
 from modin.backends.base.query_compiler import BaseQueryCompiler
 from modin.config import IsExperimental
 from .series import Series
+from .utils import is_label
 
 
 @_inherit_docstrings(
@@ -815,12 +817,30 @@ class DataFrameGroupBy(object):
         What this returns (if anything)
         """
         if self._index_grouped_cache is None:
-            if hasattr(self._by, "columns") and len(self._by.columns) > 1:
-                by = list(self._by.columns)
-                is_multi_by = True
+            # Splitting level-by and column-by since we serialize them in a different ways
+            by = None
+            level = []
+            if self._level is not None:
+                level = self._level
+                if not isinstance(level, list):
+                    level = [level]
+            elif isinstance(self._by, list):
+                by = []
+                for o in self._by:
+                    if hashable(o) and o in self._query_compiler.get_index_names(
+                        self._axis
+                    ):
+                        level.append(o)
+                    else:
+                        by.append(o)
             else:
                 by = self._by
-                is_multi_by = self._is_multi_by
+
+            is_multi_by = self._is_multi_by or (by is not None and len(level) > 0)
+
+            if hasattr(self._by, "columns") and is_multi_by:
+                by = list(self._by.columns)
+
             if is_multi_by:
                 # Because we are doing a collect (to_pandas) here and then groupby, we
                 # end up using pandas implementation. Add the warning so the user is
@@ -828,12 +848,7 @@ class DataFrameGroupBy(object):
                 ErrorMessage.catch_bugs_and_request_email(self._axis == 1)
                 ErrorMessage.default_to_pandas("Groupby with multiple columns")
                 if isinstance(by, list) and all(
-                    hashable(o)
-                    and (
-                        o in self._df
-                        or o in self._df._query_compiler.get_index_names(self._axis)
-                    )
-                    for o in by
+                    is_label(self._df, o, self._axis) for o in by
                 ):
                     pandas_df = self._df._query_compiler.getitem_column_array(
                         by
@@ -841,10 +856,21 @@ class DataFrameGroupBy(object):
                 else:
                     by = try_cast_to_pandas(by, squeeze=True)
                     pandas_df = self._df._to_pandas()
+                by = wrap_into_list(by, level)
                 self._index_grouped_cache = pandas_df.groupby(by=by).groups
             else:
                 if isinstance(self._by, type(self._query_compiler)):
                     by = self._by.to_pandas().squeeze().values
+                elif self._by is None:
+                    index = self._query_compiler.get_axis(self._axis)
+                    levels_to_drop = [
+                        i
+                        for i, name in enumerate(index.names)
+                        if name not in level and i not in level
+                    ]
+                    by = index.droplevel(levels_to_drop)
+                    if isinstance(by, pandas.MultiIndex):
+                        by = by.reorder_levels(level)
                 else:
                     by = self._by
                 if self._axis == 0:
