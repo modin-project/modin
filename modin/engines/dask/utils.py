@@ -35,4 +35,4 @@ def initialize_dask():
         client = Client(n_workers=CpuCount.get())
 
     num_cpus = len(client.ncores())
-    NPartitions.put_if_default(num_cpus)
+    NPartitions._put(num_cpus)
