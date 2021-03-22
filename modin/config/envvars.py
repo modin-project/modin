@@ -149,13 +149,6 @@ class NPartitions(EnvironmentVariable, type=int):
     """
 
     varname = "MODIN_NPARTITIONS"
-    # This flag is used to detect whether NPartitions is default value or not
-    _is_default = True
-
-    @classmethod
-    def put(cls, value):
-        super().put(value)
-        cls._is_default = False
 
     @classmethod
     def _put(cls, value):
@@ -167,27 +160,15 @@ class NPartitions(EnvironmentVariable, type=int):
         This method is used to set NPartitions from cluster resources internally
         and should not be called by a user.
         """
-        if cls._is_default and not cls._is_set_from_config():
+        if cls.way_of_set is None:
+            # Dummy call to initialize `way_of_set` flag
+            _ = cls.get()
+        if cls.way_of_set == 0:
             cls.put(value)
 
     @classmethod
     def _get_default(cls):
-        cls._is_default = True
         return CpuCount.get()
-
-    @classmethod
-    def _is_set_from_config(cls):
-        """
-        Whether NPartitions is set from config or not
-        """
-        try:
-            raw = cls._get_raw_from_config()
-        except KeyError:
-            return False
-        else:
-            if not _TYPE_PARAMS[cls.type].verify(raw):
-                raise ValueError(f"Unsupported raw value: {raw}")
-            return True
 
 
 class RayPlasmaDir(EnvironmentVariable, type=ExactStr):

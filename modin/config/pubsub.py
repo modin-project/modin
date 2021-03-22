@@ -74,6 +74,9 @@ class Parameter(object):
     type = str
     default = None
     is_abstract = True
+    # This flag is used to detect a way of setting value for an entity.
+    # 0 - default value, 1 - value from config source, 2 - value set by a user.
+    way_of_set = None
 
     @classmethod
     def _get_raw_from_config(cls) -> str:
@@ -118,15 +121,18 @@ class Parameter(object):
                 raw = cls._get_raw_from_config()
             except KeyError:
                 cls._value = cls._get_default()
+                cls.way_of_set = 0
             else:
                 if not _TYPE_PARAMS[cls.type].verify(raw):
                     raise ValueError(f"Unsupported raw value: {raw}")
                 cls._value = _TYPE_PARAMS[cls.type].decode(raw)
+                cls.way_of_set = 1
         return cls._value
 
     @classmethod
     def put(cls, value):
         cls._check_callbacks(cls._put_nocallback(value))
+        cls.way_of_set = 2
 
     @classmethod
     def once(cls, onvalue, callback):
