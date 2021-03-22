@@ -163,7 +163,7 @@ class NPartitions(EnvironmentVariable, type=int):
         if cls.way_of_set is None:
             # Dummy call to initialize `way_of_set` flag
             _ = cls.get()
-        if cls.way_of_set == 0:
+        if cls.way_of_set == cls.WAYS_OF_SET["default"]:
             cls.put(value)
 
     @classmethod
