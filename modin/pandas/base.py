@@ -461,7 +461,18 @@ class BasePandasDataset(object):
 
     @classmethod
     def _get_axis_number(cls, axis):
-        """Convert axis name or number to axis number."""
+        """
+        Convert axis name or number to axis index.
+
+        Parameters
+        ----------
+        axis: int, str
+            Axis name ('index' or 'columns') or number to be converted to axis index.
+
+        Returns
+        -------
+        Axis index in the array of axes stored in the dataframe.
+        """
         return cls._pandas_class._get_axis_number(axis) if axis is not None else 0
 
     def __constructor__(self, *args, **kwargs):
