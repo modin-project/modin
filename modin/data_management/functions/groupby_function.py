@@ -34,7 +34,7 @@ class GroupbyReduceFunction(MapReduceFunction):
         ----------
         map_func: str, callable or dict,
             If 'str' this parameter will be treated as a function name to register,
-            so 'map_func' and 'reduce_func' will be grabbed from 'groupby_reduce_functions'.
+            so 'map_func' and 'reduce_func' will be grabbed from 'GROUPBY_REDUCE_FUNCTIONS'.
             If dict or callable then this will be treated as a function to apply to each group
             at the map phase.
         reduce_func: callable or dict (optional),
@@ -55,7 +55,7 @@ class GroupbyReduceFunction(MapReduceFunction):
             def build_fn(name):
                 return lambda df, *args, **kwargs: getattr(df, name)(*args, **kwargs)
 
-            map_func, reduce_func = map(build_fn, groupby_reduce_functions[map_func])
+            map_func, reduce_func = map(build_fn, GROUPBY_REDUCE_FUNCTIONS[map_func])
         if reduce_func is None:
             reduce_func = map_func
         assert not (
@@ -279,7 +279,7 @@ class GroupbyReduceFunction(MapReduceFunction):
 
 
 # This dict is a map for function names and their equivalents in MapReduce
-groupby_reduce_functions = {
+GROUPBY_REDUCE_FUNCTIONS = {
     "all": ("all", "all"),
     "any": ("any", "any"),
     "count": ("count", "sum"),

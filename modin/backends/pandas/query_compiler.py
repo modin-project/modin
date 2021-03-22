@@ -37,7 +37,7 @@ from modin.data_management.functions import (
     ReductionFunction,
     BinaryFunction,
     GroupbyReduceFunction,
-    groupby_reduce_functions,
+    GROUPBY_REDUCE_FUNCTIONS,
 )
 
 
@@ -2474,7 +2474,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         )
         for col, col_funcs in agg_func.items():
             if not rename_columns:
-                map_dict[col], reduce_dict[col] = groupby_reduce_functions[col_funcs]
+                map_dict[col], reduce_dict[col] = GROUPBY_REDUCE_FUNCTIONS[col_funcs]
                 continue
 
             if isinstance(col_funcs, str):
@@ -2489,13 +2489,13 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 else:
                     raise TypeError
 
-                map_fns.append((new_col_name, groupby_reduce_functions[func][0]))
+                map_fns.append((new_col_name, GROUPBY_REDUCE_FUNCTIONS[func][0]))
                 reduced_col_name = (
                     (*col, new_col_name)
                     if isinstance(col, tuple)
                     else (col, new_col_name)
                 )
-                reduce_dict[reduced_col_name] = groupby_reduce_functions[func][1]
+                reduce_dict[reduced_col_name] = GROUPBY_REDUCE_FUNCTIONS[func][1]
             map_dict[col] = map_fns
         return GroupbyReduceFunction.register(map_dict, reduce_dict)(
             query_compiler=self,
@@ -2535,7 +2535,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
                     if deep_level == 0
                     else is_reduce_fn(fn[1], deep_level + 1)
                 )
-            return isinstance(fn, str) and fn in groupby_reduce_functions
+            return isinstance(fn, str) and fn in GROUPBY_REDUCE_FUNCTIONS
 
         if isinstance(agg_func, dict) and all(
             is_reduce_fn(x) for x in agg_func.values()
