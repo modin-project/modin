@@ -19,9 +19,9 @@ class ReductionFunction(Function):
     @classmethod
     def register(cls, func: Callable, *reg_args, **reg_kwargs):
         """
-        Build Reduction function that perform across each partition.
+        Build Reduction function that perform across rows/columns.
 
-        It's used if `func` reduces the dimension of partitions in contrast to `MapFunction`.
+        It's used if `func` reduces the dimension of partitions in contrast to `FoldFunction`.
 
         Parameters
         ----------
@@ -35,7 +35,7 @@ class ReductionFunction(Function):
         Returns
         -------
         callable
-            reduce function
+            Reduction function
         """
 
         def reduction_function(query_compiler, *args, **kwargs):

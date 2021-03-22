@@ -37,7 +37,7 @@ class MapReduceFunction(Function):
         Returns
         -------
         callable
-            map_reduce function
+            MapReduce function
         """
 
         if reduce_func is None:
