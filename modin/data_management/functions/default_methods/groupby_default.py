@@ -161,5 +161,7 @@ class GroupByDefault(DefaultMethod):
     OBJECT_TYPE = "GroupBy"
 
     @classmethod
-    def register(cls, func, **kwargs):
-        return cls.call(GroupBy.build_groupby(func), fn_name=func.__name__, **kwargs)
+    def register(cls, func, *args, **kwargs):
+        return super().register(
+            GroupBy.build_groupby(func), *args, fn_name=func.__name__, **kwargs
+        )

@@ -18,7 +18,7 @@ import pandas
 
 class DataFrameDefault(DefaultMethod):
     @classmethod
-    def register(cls, func, obj_type=None, **kwargs):
+    def register(cls, func, *args, obj_type=None, **kwargs):
         if obj_type is None:
             obj_type = pandas.DataFrame
-        return cls.call(func, obj_type=obj_type, **kwargs)
+        return super().register(func, *args, obj_type=obj_type, **kwargs)
