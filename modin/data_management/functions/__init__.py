@@ -11,6 +11,15 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
+"""
+The function module contains an interface used to create a public pandas-like API.
+
+This interface is written in a general way, therefore, if the function being implemented
+requires details when processing parameters (for example, fallback to pandas case) or an
+additional level of processing the created frame, then `Function.register` call is no
+longer enough and the usual function creation is required (via `def`).
+"""
+
 from .function import Function
 from .mapfunction import MapFunction
 from .mapreducefunction import MapReduceFunction

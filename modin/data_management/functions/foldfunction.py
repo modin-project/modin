@@ -19,7 +19,7 @@ class FoldFunction(Function):
     @classmethod
     def register(cls, func: Callable, *reg_args, **reg_kwargs):
         """
-        Build FoldFunction that perform across an entire axis.
+        Build Fold function that perform across rows/columns.
 
         Parameters
         ----------
@@ -33,7 +33,7 @@ class FoldFunction(Function):
         Returns
         -------
         callable
-            Foldfunction
+            Fold function
         """
 
         def fold_function(query_compiler, *args, **kwargs):

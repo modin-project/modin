@@ -33,7 +33,7 @@ class MapFunction(Function):
         Returns
         -------
         callable
-            map function
+            Map function
         """
 
         def map_function(query_compiler, *args, **kwargs):
