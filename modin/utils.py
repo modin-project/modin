@@ -133,10 +133,12 @@ def wrap_into_list(*args, skipna=True):
     """
     Creates a list of passed values, if some value is a list it appends its values
     to the result one by one instead inserting the whole list object.
+
     Parameters
     ----------
     skipna: boolean,
         Whether or not to skip nan or None values.
+
     Returns
     -------
     List of passed values.

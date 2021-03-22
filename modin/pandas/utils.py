@@ -144,6 +144,7 @@ def from_modin_frame_to_mi(df, sortorder=None, names=None):
 def is_label(obj, label, axis=0):
     """
     Check whether or not 'obj' contain column or index level with name 'label'.
+
     Parameters
     ----------
     obj: DataFrame, Series or QueryCompiler
@@ -152,6 +153,7 @@ def is_label(obj, label, axis=0):
         Label name to check.
     axis: int,
         Axis to search name along.
+
     Returns
     -------
     Boolean
