@@ -135,6 +135,7 @@ def simulate_cloud(request):
         with Patcher(
             get_connection(),
             (pandas._testing, "assert_class_equal"),
+            (pandas._testing, "assert_series_equal"),
             (cyx_testing, "assert_almost_equal"),
         ):
             yield

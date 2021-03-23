@@ -1,5 +1,5 @@
 pandas==1.2.4
-numpy>=1.16.5,<1.20  # pandas gh-39513
+numpy>=1.16.5
 pyarrow>=1.0.0
 dask[complete]>=2.12.0,<=2.19.0
 distributed>=2.12.0,<=2.19.0
