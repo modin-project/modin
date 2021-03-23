@@ -113,36 +113,7 @@ def test_apply_type_error(func):
 @pytest.mark.parametrize("axis", [0, 1])
 @pytest.mark.parametrize("level", [None, -1, 0, 1])
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-@pytest.mark.parametrize(
-    "func",
-    [
-        "kurt",
-        pytest.param(
-            "count",
-            marks=pytest.mark.xfail(
-                reason="count method handle level parameter incorrectly"
-            ),
-        ),
-        pytest.param(
-            "sum",
-            marks=pytest.mark.xfail(
-                reason="sum method handle level parameter incorrectly"
-            ),
-        ),
-        pytest.param(
-            "mean",
-            marks=pytest.mark.xfail(
-                reason="mean method handle level parameter incorrectly"
-            ),
-        ),
-        pytest.param(
-            "all",
-            marks=pytest.mark.xfail(
-                reason="all method handle level parameter incorrectly"
-            ),
-        ),
-    ],
-)
+@pytest.mark.parametrize("func", ["kurt", "count", "sum", "mean", "all", "any"])
 def test_apply_text_func_with_level(level, data, func, axis):
     func_kwargs = {"level": level, "axis": axis}
     rows_number = len(next(iter(data.values())))  # length of the first data column

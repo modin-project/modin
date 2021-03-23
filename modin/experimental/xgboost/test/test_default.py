@@ -16,15 +16,15 @@ import pytest
 from modin.config import Engine
 
 import modin.experimental.xgboost as xgb
+import modin.pandas as pd
 
 
 @pytest.mark.skipif(
     Engine.get() == "Ray",
     reason="This test doesn't make sense on Ray backend.",
 )
-@pytest.mark.parametrize("func", ["train", "predict"])
-def test_backend(func):
+def test_backend():
     try:
-        getattr(xgb, func)({}, xgb.ModinDMatrix(None, None))
+        xgb.train({}, xgb.DMatrix(pd.DataFrame([0]), pd.DataFrame([0])))
     except ValueError:
         pass

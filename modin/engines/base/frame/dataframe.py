@@ -1117,7 +1117,7 @@ class BasePandasFrame(ModinDataframe):
         )
         return result
 
-    def _reduce_full_axis(self, axis, func, preserve_index=True):
+    def _reduce_full_axis(self, axis, func):
         """
         Apply function that reduce Manager to series but require knowledge of full axis.
 
@@ -1127,8 +1127,6 @@ class BasePandasFrame(ModinDataframe):
                 The axis to apply the function to (0 - index, 1 - columns).
             func : callable
                 The function to reduce the Manager by. This function takes in a Manager.
-            preserve_index : boolean
-                The flag to preserve labels for the reduced axis.
 
         Returns
         -------

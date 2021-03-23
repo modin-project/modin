@@ -1964,19 +1964,7 @@ def test_kurtosis(axis, skipna):
 
 
 @pytest.mark.parametrize("axis", ["rows", "columns"])
-@pytest.mark.parametrize(
-    "numeric_only",
-    [
-        pytest.param(
-            True,
-            marks=pytest.mark.xfail(
-                reason="Modin - DID NOT RAISE <class 'NotImplementedError'>"
-            ),
-        ),
-        False,
-        None,
-    ],
-)
+@pytest.mark.parametrize("numeric_only", [True, False, None])
 def test_kurtosis_numeric_only(axis, numeric_only):
     eval_general(
         *create_test_series(test_data_diff_dtype),
@@ -3059,19 +3047,7 @@ def test_subtract(data):
 @pytest.mark.parametrize(
     "skipna", bool_arg_values, ids=arg_keys("skipna", bool_arg_keys)
 )
-@pytest.mark.parametrize(
-    "numeric_only",
-    [
-        None,
-        False,
-        pytest.param(
-            True,
-            marks=pytest.mark.xfail(
-                reason="numeric_only not implemented for pandas.Series"
-            ),
-        ),
-    ],
-)
+@pytest.mark.parametrize("numeric_only", [None, False, True])
 @pytest.mark.parametrize(
     "min_count", int_arg_values, ids=arg_keys("min_count", int_arg_keys)
 )

@@ -353,7 +353,16 @@ class TestCsv:
     @pytest.mark.parametrize("skiprows", [2, lambda x: x % 2])
     @pytest.mark.parametrize("skipfooter", [0, 10])
     @pytest.mark.parametrize("nrows", [35, None])
-    @pytest.mark.parametrize("names", [["c1", "c2", "c3", "c4"], None])
+    @pytest.mark.parametrize(
+        "names",
+        [
+            pytest.param(
+                ["c1", "c2", "c3", "c4"],
+                marks=pytest.mark.xfail(reason="Excluded because of the issue #2845"),
+            ),
+            None,
+        ],
+    )
     def test_read_csv_parsing_2(
         self,
         request,
@@ -450,21 +459,7 @@ class TestCsv:
 
     # Datetime Handling tests
     @pytest.mark.parametrize(
-        "parse_dates",
-        [
-            True,
-            False,
-            ["col2"],
-            ["col2", "col4"],
-            [1, 3],
-            pytest.param(
-                {"foo": ["col2", "col4"]},
-                marks=pytest.mark.xfail(
-                    Engine.get() != "Python",
-                    reason="Exception: Internal Error - issue #2073",
-                ),
-            ),
-        ],
+        "parse_dates", [True, False, ["col2"], ["col2", "col4"], [1, 3]]
     )
     @pytest.mark.parametrize("infer_datetime_format", [True, False])
     @pytest.mark.parametrize("keep_date_col", [True, False])
@@ -1279,7 +1274,6 @@ class TestJson:
 
 
 class TestExcel:
-    @pytest.mark.xfail(reason="read_excel is broken for now, see #1733 for details")
     @check_file_leaks
     def test_read_excel(self):
         unique_filename = get_unique_filename(extension="xlsx")
@@ -1836,6 +1830,10 @@ class TestStata:
 
 
 class TestFeather:
+    @pytest.mark.xfail(
+        Engine.get() != "Python",
+        reason="Excluded because of the issue #2845",
+    )
     def test_read_feather(self):
         unique_filename = get_unique_filename(extension="feather")
         try:

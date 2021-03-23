@@ -10,20 +10,3 @@
 # the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
-
-from .function import Function
-
-
-class ReductionFunction(Function):
-    @classmethod
-    def call(cls, reduction_function, **call_kwds):
-        def caller(query_compiler, *args, **kwargs):
-            axis = call_kwds.get("axis", kwargs.get("axis"))
-            return query_compiler.__constructor__(
-                query_compiler._modin_frame._reduce_full_axis(
-                    cls.validate_axis(axis),
-                    lambda x: reduction_function(x, *args, **kwargs),
-                )
-            )
-
-        return caller

@@ -141,6 +141,14 @@ def make_wrapped_class(local_cls: type, rpyc_wrapper_name: str):
         """
         Define a __new__() with a __class__ that is closure-bound, needed for super() to work
         """
+        # update '__class__' magic closure value - used by super()
+        for attr in __class__.__dict__.values():
+            if not callable(attr):
+                continue
+            cells = getattr(attr, "__closure__", None) or ()
+            for cell in cells:
+                if cell.cell_contents is local_cls:
+                    cell.cell_contents = __class__
 
         def __new__(cls, *a, **kw):
             if cls is result and cls.__real_cls__ is not result:
