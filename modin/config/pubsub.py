@@ -76,7 +76,11 @@ class Parameter(object):
     is_abstract = True
     # This flag is used to detect a way of setting value for an entity.
     way_of_set = None
-    WAYS_OF_SET = {"default": 0, "from_config": 1, "from_user": 2}
+    # This dictionary contains information on a way of setting value for an entity.
+    # "default" - the value is taken from `_get_default`
+    # "envvar" - the value set by envionment variable
+    # "put" - the value set by `put`
+    WAYS_OF_SET = {"default": 0, "envvar": 1, "put": 2}
 
     @classmethod
     def _get_raw_from_config(cls) -> str:
@@ -126,13 +130,13 @@ class Parameter(object):
                 if not _TYPE_PARAMS[cls.type].verify(raw):
                     raise ValueError(f"Unsupported raw value: {raw}")
                 cls._value = _TYPE_PARAMS[cls.type].decode(raw)
-                cls.way_of_set = cls.WAYS_OF_SET["from_config"]
+                cls.way_of_set = cls.WAYS_OF_SET["envvar"]
         return cls._value
 
     @classmethod
     def put(cls, value):
         cls._check_callbacks(cls._put_nocallback(value))
-        cls.way_of_set = cls.WAYS_OF_SET["from_user"]
+        cls.way_of_set = cls.WAYS_OF_SET["put"]
 
     @classmethod
     def once(cls, onvalue, callback):
