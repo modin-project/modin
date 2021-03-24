@@ -99,6 +99,7 @@ class RayIO(BaseIO):
                 kwargs["path_or_buf"] = io.StringIO()
             df.to_csv(**kwargs)
             content = kwargs["path_or_buf"].getvalue()
+            kwargs["path_or_buf"].close()
 
             # each process waits for its turn to write to a file;
             # in case of violation of the order of receiving messages from the queue,
@@ -110,15 +111,19 @@ class RayIO(BaseIO):
                 queue.put(get_value)
 
             # preparing to write data from the buffer to a file
-            open_kwargs = {"mode": kwargs["mode"]}
-            if not is_binary:
-                # in the buffer, newline symbols have already been translated
-                # for the current operating system;
-                # in the process of writing the buffer to the file,
-                # newline symbols must be left unchanged
-                open_kwargs["newline"] = ""
-            with open(path_or_buf, **open_kwargs) as _f:
-                _f.write(content)
+            with pandas.io.common.get_handle(
+                path_or_buf,
+                # in case when using URL in implicit text mode
+                # pandas try to open `path_or_buf` in binary mode
+                kwargs["mode"] if is_binary else kwargs["mode"] + "t",
+                encoding=kwargs["encoding"],
+                errors=kwargs["errors"],
+                compression=kwargs["compression"],
+                storage_options=kwargs["storage_options"],
+                is_text=False,
+            ) as handles:
+                handles.handle.write(content)
+
             # signal that the next process can start writing to the file
             queue.put(get_value + 1)
 
