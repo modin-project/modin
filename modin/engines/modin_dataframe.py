@@ -96,7 +96,7 @@ class ModinDataframe(ABC):
                 The function to map across the dataframe.
             axis: int or None
                 The axis to map over.
-            result_schema: dictionary of dtypes
+            result_schema: dictionary
                 Mapping from column labels to data types that represents the types of the output dataframe.
 
         Returns
@@ -148,7 +148,7 @@ class ModinDataframe(ABC):
             function: callable
                 The function to use to expand the data. This function should accept one
                 row/column, and return multiple.
-            result_schema: dictionary of dtypes
+            result_schema: dictionary
                 Mapping from column labels to data types that represents the types of the output dataframe.
 
         Returns
@@ -182,7 +182,7 @@ class ModinDataframe(ABC):
             window_size: int
                 The number of row/columns to pass to the function.
                 (The size of the sliding window).
-            result_schema: dictionary of dtypes
+            result_schema: dictionary
                 Mapping from column labels to data types that represents the types of the output dataframe.
 
         Returns
@@ -224,7 +224,7 @@ class ModinDataframe(ABC):
                 The operation to carry out on each of the groups. The operator is another
                 algebraic operator with its own user-defined function parameter, depending
                 on the output desired by the user.
-            result_schema: dictionary of dtypes
+            result_schema: dictionary
                 Mapping from column labels to data types that represents the types of the output dataframe.
 
         Returns
@@ -254,7 +254,7 @@ class ModinDataframe(ABC):
                 The axis to perform the reduce over.
             function: callable
                 The reduce function to apply to each column.
-            result_schema: dictionary of dtypes
+            result_schema: dictionary
                 Mapping from column labels to data types that represents the types of the output dataframe.
 
         Returns
@@ -285,7 +285,7 @@ class ModinDataframe(ABC):
                 The axis to perform the tree reduce over.
             function: callable
                 The tree reduce function to apply to each column.
-            result_schema: dictionary of dtypes
+            result_schema: dictionary
                 Mapping from column labels to data types that represents the types of the output dataframe.
 
         Returns
@@ -422,6 +422,35 @@ class ModinDataframe(ABC):
         -------
         ModinDataframe
             A new ModinDataframe with the row labels moved into the data.
+        """
+        pass
+
+    @abstractmethod
+    def rename(
+        self,
+        new_row_labels: Optional[Dict[Hashable, Hashable]] = None,
+        new_col_labels: Optional[Dict[Hashable, Hashable]] = None,
+        level: Optional[Union[int, List[int]]] = None,
+    ) -> "ModinDataframe":
+        """Replace the row and column labels with the specified new labels.
+
+        Notes
+        -----
+            If level is not specified, the default behavior is to replace row labels in all levels.
+
+        Parameters
+        ----------
+            new_row_labels: dictionary
+                Mapping from old row labels to new labels
+            new_col_labels: dictionary
+                Mapping from old col labels to new labels
+            level: int or list of ints
+                Level(s) whose row labels to replace
+
+        Returns
+        -------
+        ModinDataframe
+            A new ModinDataframe with the new row and column labels.
         """
         pass
 

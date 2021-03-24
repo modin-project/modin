@@ -2393,6 +2393,31 @@ class BasePandasFrame(ModinDataframe):
         """
         pass
 
+    def rename(
+        self, new_row_labels=None, new_col_labels=None, level=None
+    ) -> "ModinDataframe":
+        """Replace the row and column labels with the specified new labels.
+
+        Notes
+        -----
+            If level is not specified, the default behavior is to replace row labels in all levels.
+
+        Parameters
+        ----------
+            new_row_labels: dictionary
+                Mapping from old row labels to new labels
+            new_col_labels: dictionary
+                Mapping from old col labels to new labels
+            level: int or list of ints
+                Level(s) whose row labels to replace
+
+        Returns
+        -------
+        ModinDataframe
+            A new ModinDataframe with the new row and column labels.
+        """
+        pass
+
     def sort_by(self, axis, columns, ascending=True) -> "ModinDataframe":
         """Logically reorder rows (columns if axis=1) lexicographically by the data in a column or set of columns.
 
