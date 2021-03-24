@@ -17,7 +17,7 @@ from textwrap import dedent
 import warnings
 from packaging import version
 
-from .pubsub import Parameter, _TYPE_PARAMS, ExactStr
+from .pubsub import Parameter, _TYPE_PARAMS, ExactStr, ValueSource
 
 
 class EnvironmentVariable(Parameter, type=str, abstract=True):
@@ -160,10 +160,7 @@ class NPartitions(EnvironmentVariable, type=int):
         This method is used to set NPartitions from cluster resources internally
         and should not be called by a user.
         """
-        if cls.way_of_set is None:
-            # Dummy call to initialize `way_of_set` flag
-            _ = cls.get()
-        if cls.way_of_set == cls.WAYS_OF_SET["default"]:
+        if cls.get_value_source() == ValueSource.DEFAULT:
             cls.put(value)
 
     @classmethod
