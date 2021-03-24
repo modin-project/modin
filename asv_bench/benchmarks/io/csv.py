@@ -24,19 +24,14 @@ from ..utils import (
     IMPL,
     execute,
     get_shape_id,
+    prepare_io_data,
 )
 
 
 class BaseReadCsv:
     # test data file can de created only once
     def setup_cache(self, test_filename="io_test_file"):
-        test_filenames = {}
-        for shape in UNARY_OP_DATA_SIZE[ASV_DATASET_SIZE]:
-            shape_id = get_shape_id(shape)
-            test_filenames[shape_id] = f"{test_filename}_{shape_id}.csv"
-            df = generate_dataframe("pandas", "str_int", *shape, RAND_LOW, RAND_HIGH)
-            df.to_csv(test_filenames[shape_id], index=False)
-
+        test_filenames = prepare_io_data(test_filename, "str_int")
         return test_filenames
 
     def setup(self, test_filenames, shape, *args, **kwargs):
@@ -72,6 +67,27 @@ class TimeReadCsvSkiprows(BaseReadCsv):
         execute(
             IMPL[ASV_USE_IMPL].read_csv(
                 test_filenames[self.shape_id], skiprows=self.skiprows
+            )
+        )
+
+
+class TimeReadCsvTrueFalseValues(BaseReadCsv):
+    param_names = ["shape"]
+    params = [
+        UNARY_OP_DATA_SIZE[ASV_DATASET_SIZE],
+    ]
+
+    # test data file can de created only once
+    def setup_cache(self, test_filename="io_test_file"):
+        test_filenames = prepare_io_data(test_filename, "true_false_int")
+        return test_filenames
+
+    def time_true_false_values(self, test_filenames, shape):
+        execute(
+            IMPL[ASV_USE_IMPL].read_csv(
+                test_filenames[self.shape_id],
+                true_values=["Yes", "true"],
+                false_values=["No", "false"],
             )
         )
 

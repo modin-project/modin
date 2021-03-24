@@ -217,6 +217,43 @@ def gen_str_int_data(nrows: int, ncols: int, rand_low: int, rand_high: int) -> d
     return data
 
 
+def gen_true_false_data(nrows, ncols, true_false_values):
+    cache_key = ("true_false", nrows, ncols, "_".join(true_false_values))
+    if cache_key in data_cache:
+        return data_cache[cache_key]
+
+    logging.info(
+        "Generating true_false data {} rows and {} columns with values {}".format(
+            nrows, ncols, true_false_values
+        )
+    )
+    data = {
+        "tf_col{}".format(i): random_state.choice(true_false_values, size=(nrows))
+        for i in range(ncols)
+    }
+    data_cache[cache_key] = weakdict(data)
+    return data
+
+
+def gen_true_false_int_data(nrows, ncols, rand_low, rand_high):
+    cache_key = ("true_false_int", nrows, ncols, rand_low, rand_high)
+    if cache_key in data_cache:
+        return data_cache[cache_key]
+
+    logging.info(
+        "Generating true_false_int data {} rows and {} columns [{}-{}]".format(
+            nrows, ncols, rand_low, rand_high
+        )
+    )
+    data = gen_int_data(nrows // 2, ncols // 2, rand_low, rand_high).copy()
+    data_true_false = gen_true_false_data(
+        nrows - nrows // 2, ncols - ncols // 2, ["Yes", "true", "No", "false"]
+    ).copy()
+    data.update(data_true_false)
+    data_cache[cache_key] = weakdict(data)
+    return data
+
+
 def gen_data(
     data_type: str,
     nrows: int,
@@ -254,6 +291,8 @@ def gen_data(
         return gen_int_data(nrows, ncols, rand_low, rand_high)
     elif data_type == "str_int":
         return gen_str_int_data(nrows, ncols, rand_low, rand_high)
+    elif data_type == "true_false_int":
+        return gen_true_false_int_data(nrows, ncols, rand_low, rand_high)
     else:
         assert False
 
@@ -447,3 +486,14 @@ def get_shape_id(shape: tuple) -> str:
     str
     """
     return "_".join([str(element) for element in shape])
+
+
+def prepare_io_data(test_filename, data_type):
+    test_filenames = {}
+    for shape in UNARY_OP_DATA_SIZE[ASV_DATASET_SIZE]:
+        shape_id = get_shape_id(shape)
+        test_filenames[shape_id] = f"{test_filename}_{shape_id}.csv"
+        df = generate_dataframe("pandas", data_type, *shape, RAND_LOW, RAND_HIGH)
+        df.to_csv(test_filenames[shape_id], index=False)
+
+    return test_filenames
