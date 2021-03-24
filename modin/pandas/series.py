@@ -1017,7 +1017,16 @@ class Series(BasePandasDataset):
                 '"value" parameter must be a scalar or dict, but '
                 'you passed a "{0}"'.format(type(value).__name__)
             )
-        return super(Series, self).fillna(value, method, axis, inplace, limit, downcast)
+        return super(Series, self)._fillna(
+            True,
+            isinstance(value, Series),
+            value,
+            method,
+            axis,
+            inplace,
+            limit,
+            downcast,
+        )
 
     def floordiv(
         self, other, level=None, fill_value=None, axis=0

@@ -831,6 +831,26 @@ class DataFrame(BasePandasDataset):
                 query_compiler=new_query_compiler
             )
 
+    def fillna(
+        self,
+        value=None,
+        method=None,
+        axis=None,
+        inplace=False,
+        limit=None,
+        downcast=None,
+    ):
+        return super(DataFrame, self)._fillna(
+            False,
+            isinstance(value, Series),
+            value,
+            method,
+            axis,
+            inplace,
+            limit,
+            downcast,
+        )
+
     def floordiv(
         self, other, axis="columns", level=None, fill_value=None
     ):  # noqa: PR01, RT01, D200

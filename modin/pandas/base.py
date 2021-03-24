@@ -1250,8 +1250,10 @@ class BasePandasDataset(object):
 
     pad = ffill
 
-    def fillna(
+    def _fillna(
         self,
+        squeeze_self,
+        squeeze_value,
         value=None,
         method=None,
         axis=None,
@@ -1286,6 +1288,8 @@ class BasePandasDataset(object):
             value = value._query_compiler
 
         new_query_compiler = self._query_compiler.fillna(
+            squeeze_self=squeeze_self,
+            squeeze_value=squeeze_value,
             value=value,
             method=method,
             axis=axis,

@@ -1905,6 +1905,8 @@ class PandasQueryCompiler(BaseQueryCompiler):
         return self.__constructor__(new_modin_frame).dropna(axis=axis, how="all")
 
     def fillna(self, **kwargs):
+        squeeze_self = kwargs.pop("squeeze_self", False)
+        squeeze_value = kwargs.pop("squeeze_value", False)
         axis = kwargs.get("axis", 0)
         value = kwargs.get("value")
         method = kwargs.get("method", None)
@@ -1912,7 +1914,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         full_axis = method is not None or limit is not None
         if isinstance(value, BaseQueryCompiler):
             kwargs.pop("value")
-            if self.is_series_like():
+            if squeeze_self:
                 if full_axis:
                     value = value.to_pandas().squeeze(axis=1)
 
@@ -1934,7 +1936,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
                     )
             else:
 
-                if value.is_series_like():
+                if squeeze_value:
                     value = value.to_pandas().squeeze(axis=1)
 
                     def fillna_builder(df):

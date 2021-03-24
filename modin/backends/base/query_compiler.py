@@ -931,18 +931,13 @@ class BaseQueryCompiler(abc.ABC):
             A new QueryCompiler with null values filled.
         """
 
+        squeeze_self = kwargs.pop("squeeze_self", False)
+        squeeze_value = kwargs.pop("squeeze_value", False)
+
         def fillna(df, value, **kwargs):
-            if (
-                isinstance(df, pandas.DataFrame)
-                and len(df.columns) == 1
-                and "__reduced__" in df.columns
-            ):
+            if squeeze_self:
                 df = df.squeeze(axis=1)
-            if (
-                isinstance(value, pandas.DataFrame)
-                and len(value.columns) == 1
-                and "__reduced__" in value.columns
-            ):
+            if squeeze_value:
                 value = value.squeeze(axis=1)
             return df.fillna(value, **kwargs)
 
