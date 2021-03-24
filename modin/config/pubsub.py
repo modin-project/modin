@@ -68,12 +68,12 @@ _UNSET = object()
 class ValueSource:
     """Describes the method of getting the value for a parameter."""
 
+    # got from default, i.e. neither user nor configuration source had the value
+    DEFAULT = 0
     # set by user
     SET_BY_USER = 1
     # got from parameter configuration source, like environment variable
     GOT_FROM_CFG_SOURCE = 2
-    # got from default, i.e. neither user nor configuration source had the value
-    DEFAULT = 0
 
 
 class Parameter(object):
@@ -85,13 +85,7 @@ class Parameter(object):
     type = str
     default = None
     is_abstract = True
-    # This flag is used to detect a way of setting value for an entity.
     _value_source = None
-    # This dictionary contains information on a way of setting value for an entity.
-    # "default" - the value is taken from `_get_default`
-    # "envvar" - the value set by envionment variable
-    # "put" - the value set by `put`
-    WAYS_OF_SET = {"default": 0, "envvar": 1, "put": 2}
 
     @classmethod
     def _get_raw_from_config(cls) -> str:
