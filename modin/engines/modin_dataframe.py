@@ -12,7 +12,7 @@
 # governing permissions and limitations under the License.
 
 from abc import ABC, abstractmethod
-from typing import List, Hashable, Optional, Callable, Union
+from typing import List, Hashable, Optional, Callable, Union, Dict
 
 
 class ModinDataframe(ABC):
@@ -78,7 +78,7 @@ class ModinDataframe(ABC):
         self,
         function: Callable,
         axis: Optional[int] = None,
-        result_schema: Optional[List[Hashable]] = None,
+        result_schema: Optional[Dict[Hashable, type]] = None,
     ) -> "ModinDataframe":
         """Apply a user-defined function row- wise (or column-wise if axis=1).
 
@@ -96,8 +96,8 @@ class ModinDataframe(ABC):
                 The function to map across the dataframe.
             axis: int or None
                 The axis to map over.
-            result_schema: list of dtypes
-                List of data types that represent the types of the output dataframe.
+            result_schema: dictionary of dtypes
+                Mapping from column labels to data types that represents the types of the output dataframe.
 
         Returns
         -------
@@ -130,7 +130,7 @@ class ModinDataframe(ABC):
         self,
         axis: int,
         function: Callable,
-        result_schema: Optional[List[Hashable]] = None,
+        result_schema: Optional[Dict[Hashable, type]] = None,
     ) -> "ModinDataframe":
         """Explode data based on the function provided along the specified axis.
 
@@ -148,8 +148,8 @@ class ModinDataframe(ABC):
             function: callable
                 The function to use to expand the data. This function should accept one
                 row/column, and return multiple.
-            result_schema: list of dtypes
-                List of data types that represent the types of the output dataframe.
+            result_schema: dictionary of dtypes
+                Mapping from column labels to data types that represents the types of the output dataframe.
 
         Returns
         -------
@@ -162,69 +162,33 @@ class ModinDataframe(ABC):
     def window(
         self,
         axis: int,
-        function: Callable,
+        reduce_fn: Callable,
         window_size: int,
-        result_schema: Optional[List[Hashable]] = None,
-    ) -> "ModinDataframe":
-        """Apply a user-defined function over a sliding window along the specified axis.
-
-        Notes
-        -----
-            The shapes of the output and input dataframes must match. The user-defined function
-                recieves window_size arguments and must return the same number of outputs.
-
-            The user-defined function may only access values in the same column (row if axis=1).
-
-        Parameters
-        ----------
-            axis: int
-                The axis to slide over.
-            function: callable
-                The sliding window function to apply over the data.
-            window_size: int
-                The number of row/columns to pass to the function.
-                (The size of the sliding window).
-            result_schema: list of dtypes
-                List of data types that represent the types of the output dataframe.
-
-        Returns
-        -------
-        ModinDataframe
-            A new ModinDataframe with the function applied over windows of the specified axis.
-        """
-        pass
-
-    @abstractmethod
-    def window_reduction(
-        self,
-        axis: int,
-        reduction_fn: Callable,
-        window_size: int,
-        result_schema: Optional[List[Hashable]] = None,
+        result_schema: Optional[Dict[Hashable, type]] = None,
     ) -> "ModinDataframe":
         """Apply a sliding window operator that acts as a GROUPBY on each window, reducing each window to a single row (column).
 
         Notes
         -----
-            The user-defined reduction function must reduce each window’s column
+            The user-defined reduce function must reduce each window’s column
                 (row if axis=1) down to a single value.
 
         Parameters
         ----------
             axis: int
                 The axis to slide over.
-            reduction_fn: callable
-                The reduction function to apply over the data.
+            reduce_fn: callable
+                The reduce function to apply over the data.
             window_size: int
                 The number of row/columns to pass to the function.
                 (The size of the sliding window).
-            result_schema: list of dtypes
-                List of data types that represent the types of the output dataframe.
+            result_schema: dictionary of dtypes
+                Mapping from column labels to data types that represents the types of the output dataframe.
 
         Returns
         -------
         ModinDataframe
-            A new ModinDataframe with the reduction function applied over windows of the specified
+            A new ModinDataframe with the reduce function applied over windows of the specified
                 axis.
         """
         pass
@@ -235,7 +199,7 @@ class ModinDataframe(ABC):
         axis: int,
         by: Union[str, List[str]],
         operator: Callable,
-        result_schema: Optional[List[Hashable]] = None,
+        result_schema: Optional[Dict[Hashable, type]] = None,
     ) -> "ModinDataframe":
         """Generate groups based on values in the input column(s) and perform the specified operation on each.
 
@@ -260,8 +224,8 @@ class ModinDataframe(ABC):
                 The operation to carry out on each of the groups. The operator is another
                 algebraic operator with its own user-defined function parameter, depending
                 on the output desired by the user.
-            result_schema: list of dtypes
-                List of data types that represent the types of the output dataframe.
+            result_schema: dictionary of dtypes
+                Mapping from column labels to data types that represents the types of the output dataframe.
 
         Returns
         -------
@@ -272,12 +236,11 @@ class ModinDataframe(ABC):
         pass
 
     @abstractmethod
-    def reduction(
+    def reduce(
         self,
         axis: int,
         function: Callable,
-        tree_reduce: bool = False,
-        result_schema: Optional[List[Hashable]] = None,
+        result_schema: Optional[Dict[Hashable, type]] = None,
     ) -> "ModinDataframe":
         """Perform a user-defined per-column aggregation, where each column reduces down to a single value.
 
@@ -288,16 +251,42 @@ class ModinDataframe(ABC):
         Parameters
         ----------
             axis: int
-                The axis to perform the reduction over.
+                The axis to perform the reduce over.
             function: callable
-                The reduction function to apply to each column.
-            tree_reduce: boolean
-                Flag to signal to the compiler that the function
-                can be applied using a tree reduction (e.g. max or sum).
-                Set this flag to False for functions that need to look at
-                the entire column at once to perform their reduction (e.g. median).
-            result_schema: list of dtypes
-                List of data types that represent the types of the output dataframe.
+                The reduce function to apply to each column.
+            result_schema: dictionary of dtypes
+                Mapping from column labels to data types that represents the types of the output dataframe.
+
+        Returns
+        -------
+        ModinDataframe
+            A new ModinDataframe with the same columns as the previous, with only a single row.
+        """
+        pass
+
+    @abstractmethod
+    def tree_reduce(
+        self,
+        axis: int,
+        function: Callable,
+        result_schema: Optional[Dict[Hashable, type]] = None,
+    ) -> "ModinDataframe":
+        """Perform a user-defined per-column aggregation, where each column reduces down to a single value using a tree-reduce computation pattern.
+
+        Notes
+        -----
+            The user-defined function must reduce to a single value.
+
+            If the user-defined function requires access to the entire column, please use reduce instead.
+
+        Parameters
+        ----------
+            axis: int
+                The axis to perform the tree reduce over.
+            function: callable
+                The tree reduce function to apply to each column.
+            result_schema: dictionary of dtypes
+                Mapping from column labels to data types that represents the types of the output dataframe.
 
         Returns
         -------

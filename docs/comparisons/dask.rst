@@ -59,7 +59,7 @@ Dask DataFrame
 Dask DataFrame uses row-based partitioning, similar to Spark. This can be seen in their
 `documentation`_. They also have a custom index object for indexing into the object,
 which is not pandas compatible. Dask DataFrame seems to treat operations on the
-DataFrame as MapReduce operations, which is a good paradigm for the subset of the pandas
+DataFrame as TreeReduce operations, which is a good paradigm for the subset of the pandas
 API they have chosen to implement, but makes certain operations impossible. Dask
 Dataframe is also lazy and places a lot of partitioning responsibility on the user.
 
@@ -69,7 +69,7 @@ Modin
 Modin's partition is much more flexible, so the system can scale in both directions and
 have finer grained partitioning. This is explained at a high level in `Modin's
 documentation`_. Because we have this finer grained control over the partitioning, we
-can support a number of operations that are very challenging in MapReduce systems (e.g.
+can support a number of operations that are very challenging in TreeReduce systems (e.g.
 transpose, median, quantile). This flexibility in partitioning also gives Modin
 tremendous power to implement efficient straggler mitigation and improvements in
 utilization over the entire cluster.

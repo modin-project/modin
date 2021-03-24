@@ -14,15 +14,15 @@
 from .function import Function
 
 
-class ReductionFunction(Function):
+class ReduceFunction(Function):
     @classmethod
-    def call(cls, reduction_function, **call_kwds):
+    def call(cls, reduce_function, **call_kwds):
         def caller(query_compiler, *args, **kwargs):
             axis = call_kwds.get("axis", kwargs.get("axis"))
             return query_compiler.__constructor__(
                 query_compiler._modin_frame._reduce_full_axis(
                     cls.validate_axis(axis),
-                    lambda x: reduction_function(x, *args, **kwargs),
+                    lambda x: reduce_function(x, *args, **kwargs),
                 )
             )
 

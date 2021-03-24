@@ -92,10 +92,10 @@ class TimeGroupByDictionaryAggregation(BaseTimeGroupBy):
     params = [
         UNARY_OP_DATA_SIZE[ASV_DATASET_SIZE],
         GROUPBY_NGROUPS[ASV_DATASET_SIZE],
-        ["reduction", "aggregation"],
+        ["reduce", "aggregation"],
     ]
     operations = {
-        "reduction": ["sum", "count", "prod"],
+        "reduce": ["sum", "count", "prod"],
         "aggregation": ["quantile", "std", "median"],
     }
 

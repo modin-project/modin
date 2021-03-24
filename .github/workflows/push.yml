@@ -76,7 +76,7 @@ jobs:
       - shell: bash -l {0}
         run: pytest modin/pandas/test/dataframe/test_map_metadata.py --backend=${{ matrix.backend }}
       - shell: bash -l {0}
-        run: pytest modin/pandas/test/dataframe/test_reduction.py --backend=${{ matrix.backend }}
+        run: pytest modin/pandas/test/dataframe/test_reduce.py --backend=${{ matrix.backend }}
       - shell: bash -l {0}
         run: pytest modin/pandas/test/dataframe/test_udf.py --backend=${{ matrix.backend }}
       - shell: bash -l {0}
@@ -173,7 +173,7 @@ jobs:
       - shell: bash -l {0}
         run: pytest modin/pandas/test/dataframe/test_map_metadata.py
       - shell: bash -l {0}
-        run: pytest modin/pandas/test/dataframe/test_reduction.py
+        run: pytest modin/pandas/test/dataframe/test_reduce.py
       - shell: bash -l {0}
         run: pytest modin/pandas/test/dataframe/test_udf.py
       - shell: bash -l {0}
@@ -246,7 +246,7 @@ jobs:
         run: pytest modin/pandas/test/dataframe/test_map_metadata.py
         if: matrix.part == 'DataFrame'
       - shell: bash -l {0}
-        run: pytest modin/pandas/test/dataframe/test_reduction.py
+        run: pytest modin/pandas/test/dataframe/test_reduce.py
         if: matrix.part == 'DataFrame'
       - shell: bash -l {0}
         run: pytest modin/pandas/test/dataframe/test_udf.py

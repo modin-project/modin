@@ -33,8 +33,8 @@ from modin.utils import try_cast_to_pandas, wrap_udf_function, hashable
 from modin.data_management.functions import (
     FoldFunction,
     MapFunction,
-    MapReduceFunction,
-    ReductionFunction,
+    TreeReduceFunction,
+    ReduceFunction,
     BinaryFunction,
     GroupbyReduceFunction,
     groupby_reduce_functions,
@@ -727,7 +727,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
     # END Transpose
 
-    # MapReduce operations
+    # TreeReduce operations
 
     def is_monotonic_decreasing(self):
         def is_monotonic_decreasing(df):
@@ -741,12 +741,12 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
         return self.default_to_pandas(is_monotonic_increasing)
 
-    count = MapReduceFunction.register(pandas.DataFrame.count, pandas.DataFrame.sum)
-    sum = MapReduceFunction.register(pandas.DataFrame.sum)
-    prod = MapReduceFunction.register(pandas.DataFrame.prod)
-    any = MapReduceFunction.register(pandas.DataFrame.any, pandas.DataFrame.any)
-    all = MapReduceFunction.register(pandas.DataFrame.all, pandas.DataFrame.all)
-    memory_usage = MapReduceFunction.register(
+    count = TreeReduceFunction.register(pandas.DataFrame.count, pandas.DataFrame.sum)
+    sum = TreeReduceFunction.register(pandas.DataFrame.sum)
+    prod = TreeReduceFunction.register(pandas.DataFrame.prod)
+    any = TreeReduceFunction.register(pandas.DataFrame.any, pandas.DataFrame.any)
+    all = TreeReduceFunction.register(pandas.DataFrame.all, pandas.DataFrame.all)
+    memory_usage = TreeReduceFunction.register(
         pandas.DataFrame.memory_usage,
         lambda x, *args, **kwargs: pandas.DataFrame.sum(x),
         axis=0,
@@ -762,7 +762,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 kwargs["numeric_only"] = False
             return pandas.DataFrame.max(df, **kwargs)
 
-        return MapReduceFunction.register(map_func, reduce_func)(
+        return TreeReduceFunction.register(map_func, reduce_func)(
             self, axis=axis, **kwargs
         )
 
@@ -776,7 +776,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 kwargs["numeric_only"] = False
             return pandas.DataFrame.min(df, **kwargs)
 
-        return MapReduceFunction.register(map_func, reduce_func)(
+        return TreeReduceFunction.register(map_func, reduce_func)(
             self, axis=axis, **kwargs
         )
 
@@ -809,7 +809,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 count_cols = count_cols.sum(axis=axis, skipna=False)
             return sum_cols / count_cols
 
-        return MapReduceFunction.register(
+        return TreeReduceFunction.register(
             map_fn,
             reduce_fn,
         )(self, axis=axis, **kwargs)
@@ -828,30 +828,30 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
         return self.default_to_pandas(value_counts)
 
-    # END MapReduce operations
+    # END TreeReduce operations
 
-    # Reduction operations
-    idxmax = ReductionFunction.register(pandas.DataFrame.idxmax)
-    idxmin = ReductionFunction.register(pandas.DataFrame.idxmin)
-    median = ReductionFunction.register(pandas.DataFrame.median)
-    nunique = ReductionFunction.register(pandas.DataFrame.nunique)
-    skew = ReductionFunction.register(pandas.DataFrame.skew)
-    kurt = ReductionFunction.register(pandas.DataFrame.kurt)
-    sem = ReductionFunction.register(pandas.DataFrame.sem)
-    std = ReductionFunction.register(pandas.DataFrame.std)
-    var = ReductionFunction.register(pandas.DataFrame.var)
-    sum_min_count = ReductionFunction.register(pandas.DataFrame.sum)
-    prod_min_count = ReductionFunction.register(pandas.DataFrame.prod)
-    quantile_for_single_value = ReductionFunction.register(pandas.DataFrame.quantile)
-    mad = ReductionFunction.register(pandas.DataFrame.mad)
-    to_datetime = ReductionFunction.register(
+    # Reduce operations
+    idxmax = ReduceFunction.register(pandas.DataFrame.idxmax)
+    idxmin = ReduceFunction.register(pandas.DataFrame.idxmin)
+    median = ReduceFunction.register(pandas.DataFrame.median)
+    nunique = ReduceFunction.register(pandas.DataFrame.nunique)
+    skew = ReduceFunction.register(pandas.DataFrame.skew)
+    kurt = ReduceFunction.register(pandas.DataFrame.kurt)
+    sem = ReduceFunction.register(pandas.DataFrame.sem)
+    std = ReduceFunction.register(pandas.DataFrame.std)
+    var = ReduceFunction.register(pandas.DataFrame.var)
+    sum_min_count = ReduceFunction.register(pandas.DataFrame.sum)
+    prod_min_count = ReduceFunction.register(pandas.DataFrame.prod)
+    quantile_for_single_value = ReduceFunction.register(pandas.DataFrame.quantile)
+    mad = ReduceFunction.register(pandas.DataFrame.mad)
+    to_datetime = ReduceFunction.register(
         lambda df, *args, **kwargs: pandas.to_datetime(
             df.squeeze(axis=1), *args, **kwargs
         ),
         axis=1,
     )
 
-    # END Reduction operations
+    # END Reduce operations
 
     def _resample_func(
         self, resample_args, func_name, new_columns=None, df_op=None, *args, **kwargs

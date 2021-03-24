@@ -374,7 +374,7 @@ def test_sum_single_column(data):
 @pytest.mark.parametrize(
     "numeric_only", bool_arg_values, ids=arg_keys("numeric_only", bool_arg_keys)
 )
-def test_reduction_specific(fn, numeric_only, axis):
+def test_reduce_specific(fn, numeric_only, axis):
     eval_general(
         *create_test_dfs(test_data_diff_dtype),
         lambda df: getattr(df, fn)(numeric_only=numeric_only, axis=axis),

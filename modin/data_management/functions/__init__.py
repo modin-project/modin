@@ -13,8 +13,8 @@
 
 from .function import Function
 from .mapfunction import MapFunction
-from .mapreducefunction import MapReduceFunction
-from .reductionfunction import ReductionFunction
+from .treereducefunction import TreeReduceFunction
+from .reducefunction import ReduceFunction
 from .foldfunction import FoldFunction
 from .binary_function import BinaryFunction
 from .groupby_function import GroupbyReduceFunction, groupby_reduce_functions
@@ -22,8 +22,8 @@ from .groupby_function import GroupbyReduceFunction, groupby_reduce_functions
 __all__ = [
     "Function",
     "MapFunction",
-    "MapReduceFunction",
-    "ReductionFunction",
+    "TreeReduceFunction",
+    "ReduceFunction",
     "FoldFunction",
     "BinaryFunction",
     "GroupbyReduceFunction",
