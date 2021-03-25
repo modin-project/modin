@@ -1919,7 +1919,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
                     value = value.to_pandas().squeeze(axis=1)
 
                     def fillna_builder(series):
-                        # Limit parameter works only on Series type, so we have to squeeze both objects to get
+                        # `limit` parameter works only on `Series` type, so we have to squeeze both objects to get
                         # correct behavior.
                         return series.squeeze(axis=1).fillna(value=value, **kwargs)
 
@@ -1929,6 +1929,10 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 else:
 
                     def fillna_builder(series, value):
+                        # Both arguments for this function are 1-column `DataFrames` which denote `Series` type.
+                        # Because they are both of the same type, it is not necessary to convert either of them into
+                        # `Series` by squeezing since `fillna` works perfectly in the same way on 1-column `DataFrame`
+                        # objects (when `limit` parameter is absent) as it works on two `Series`.
                         return series.fillna(value, **kwargs)
 
                     new_modin_frame = self._modin_frame._binary_op(
@@ -1947,8 +1951,8 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 else:
 
                     def fillna_builder(df, r):
-                        # Behavior is different for DataFrame and Series type of "value" argument, so we have to squeeze
-                        # to make sure that Series object have a Series type.
+                        # Behavior is different for `DataFrame` and `Series` type of `value` argument, so we have to squeeze
+                        # to make sure that `Series` object have a `Series` type.
                         return df.fillna(r.squeeze(axis=1), **kwargs)
 
                     new_modin_frame = self._modin_frame.broadcast_apply(
