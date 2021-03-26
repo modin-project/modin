@@ -1,11 +1,12 @@
 name: modin_on_omnisci
 channels:
-  - intel/label/modin
+  - intel/label/modintest
   - conda-forge
 dependencies:
-  - pandas==1.2.2
-  - pyarrow==1.0.0
-  - numpy>=1.16.5,<1.20  # pandas gh-39513
+  - pandas==1.2.3
+  - pyarrow==2.0.0
+  - libthrift<0.14.1  # ref: modin gh-2840
+  - numpy>=1.16.5
   - pip
   - pytest>=6.0.1
   - pytest-cov>=2.10.1

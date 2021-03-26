@@ -31,6 +31,10 @@ import csv
 import psutil
 import functools
 
+# Flag activated on command line with "--extra-test-parameters" option.
+# Used in some tests to perform additional parameter combinations.
+extra_test_parameters = False
+
 random_state = np.random.RandomState(seed=42)
 
 DATASET_SIZE_DICT = {
@@ -1218,3 +1222,20 @@ def teardown_test_file(test_path):
 def teardown_test_files(test_paths: list):
     for path in test_paths:
         teardown_test_file(path)
+
+
+def sort_index_for_equal_values(series, ascending=False):
+    if series.index.dtype == np.float64:
+        # HACK: workaround for pandas bug:
+        # https://github.com/pandas-dev/pandas/issues/34455
+        series.index = series.index.astype("str")
+    res = series.groupby(series, sort=False).apply(
+        lambda df: df.sort_index(ascending=ascending)
+    )
+    if res.index.nlevels > series.index.nlevels:
+        # Sometimes GroupBy adds an extra level with 'by' to the result index.
+        # GroupBy is very inconsistent about when it's doing this, so that's
+        # why this clumsy if-statement is used.
+        res.index = res.index.droplevel(0)
+    res.name = series.name
+    return res

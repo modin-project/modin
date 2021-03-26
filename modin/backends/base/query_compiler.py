@@ -159,6 +159,11 @@ class BaseQueryCompiler(abc.ABC):
         # TODO create a way to clean up this object.
         pass
 
+    @abc.abstractmethod
+    def finalize(self):
+        """Finalize constructing the dataframe calling all deferred functions which were used to build it."""
+        pass
+
     # END Data Management Methods
 
     # To/From Pandas

@@ -23,6 +23,7 @@ def test_base_abstract_methods():
     allowed_abstract_methods = [
         "__init__",
         "free",
+        "finalize",
         "to_pandas",
         "from_pandas",
         "from_arrow",

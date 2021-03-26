@@ -546,31 +546,43 @@ class BasePandasFrame(object):
             A new BasePandasFrame.
         """
         new_row_labels = pandas.RangeIndex(len(self.index))
-        # Column labels are different for multilevel index.
-        if len(self.index.names) > 1:
-            # We will also use the `new_column_names` in the calculation of the internal metadata, so this is a
-            # lightweight way of ensuring the metadata matches.
-            new_column_names = pandas.Index(
-                [
-                    self.index.names[i]
-                    if self.index.names[i] is not None
-                    else "level_{}".format(i)
-                    for i in range(len(self.index.names))
-                ]
-            )
-            new_columns = new_column_names.append(self.columns)
+
+        if self.index.nlevels > 1:
+            level_names = [
+                self.index.names[i]
+                if self.index.names[i] is not None
+                else "level_{}".format(i)
+                for i in range(self.index.nlevels)
+            ]
         else:
-            # See note above about usage of `new_column_names`.
-            new_column_names = pandas.Index(
+            level_names = [
+                self.index.names[0]
+                if self.index.names[0] is not None
+                else "index"
+                if "index" not in self.columns
+                else "level_{}".format(0)
+            ]
+
+        # We will also use the `new_column_names` in the calculation of the internal metadata, so this is a
+        # lightweight way of ensuring the metadata matches.
+        if self.columns.nlevels > 1:
+            # Column labels are different for multilevel index.
+            new_column_names = pandas.MultiIndex.from_tuples(
+                # Set level names on the 1st columns level and fill up empty level names with empty string.
+                # Expand tuples in level names. This is how reset_index works when col_level col_fill are not specified.
                 [
-                    self.index.names[0]
-                    if self.index.names[0] is not None
-                    else "index"
-                    if "index" not in self.columns
-                    else "level_{}".format(0)
-                ]
+                    tuple(
+                        list(level) + [""] * (self.columns.nlevels - len(level))
+                        if isinstance(level, tuple)
+                        else [level] + [""] * (self.columns.nlevels - 1)
+                    )
+                    for level in level_names
+                ],
+                names=self.columns.names,
             )
-            new_columns = new_column_names.append(self.columns)
+        else:
+            new_column_names = pandas.Index(level_names, tupleize_cols=False)
+        new_columns = new_column_names.append(self.columns)
 
         def from_labels_executor(df, **kwargs):
             # Setting the names here ensures that external and internal metadata always match.
@@ -585,7 +597,7 @@ class BasePandasFrame(object):
             keep_remaining=True,
         )
         new_column_widths = [
-            len(self.index.names) + self._column_widths[0]
+            self.index.nlevels + self._column_widths[0]
         ] + self._column_widths[1:]
         result = self.__constructor__(
             new_parts,
@@ -961,7 +973,7 @@ class BasePandasFrame(object):
                 return left_index.join(right_index, how=how, sort=sort)
 
         # define condition for joining indexes
-        all_indices_equal = all(indexes[0].equals(index) for index in [indexes[1:]])
+        all_indices_equal = all(indexes[0].equals(index) for index in indexes[1:])
         do_join_index = how is not None and not all_indices_equal
 
         # define condition for joining indexes with getting indexers
@@ -1044,12 +1056,17 @@ class BasePandasFrame(object):
                 # axis=1 does not have this requirement because the index already will
                 # line up with the index of the data based on how pandas creates a
                 # DataFrame from a Series.
-                return pandas.DataFrame(series_result).T
-            return pandas.DataFrame(series_result)
+                result = pandas.DataFrame(series_result).T
+                result.index = ["__reduced__"]
+            else:
+                result = pandas.DataFrame(series_result)
+                if isinstance(series_result, pandas.Series):
+                    result.columns = ["__reduced__"]
+            return result
 
         return _map_reduce_func
 
-    def _compute_map_reduce_metadata(self, axis, new_parts, preserve_index=True):
+    def _compute_map_reduce_metadata(self, axis, new_parts):
         """
         Compute the metadata for the result of reduce function.
 
@@ -1059,8 +1076,6 @@ class BasePandasFrame(object):
             The axis on which reduce function was applied
         new_parts: numpy 2D array
             Partitions with the result of applied function
-        preserve_index: boolean
-            The flag to preserve labels for the reduced axis.
 
         Returns
         -------
@@ -1070,32 +1085,21 @@ class BasePandasFrame(object):
         new_axes, new_axes_lengths = [0, 0], [0, 0]
 
         new_axes[axis] = ["__reduced__"]
-        if preserve_index:
-            new_axes[axis ^ 1] = self.axes[axis ^ 1]
-        else:
-            new_axes[axis ^ 1] = self._compute_axis_labels(axis ^ 1, new_parts)
+        new_axes[axis ^ 1] = self.axes[axis ^ 1]
 
         new_axes_lengths[axis] = [1]
         new_axes_lengths[axis ^ 1] = self._axes_lengths[axis ^ 1]
 
-        if axis == 0 or self._dtypes is None:
-            new_dtypes = self._dtypes
-        elif preserve_index:
-            new_dtypes = pandas.Series(
-                [find_common_type(self.dtypes.values)], index=new_axes[axis]
-            )
-        else:
-            new_dtypes = None
+        new_dtypes = None
         result = self.__constructor__(
             new_parts,
             *new_axes,
             *new_axes_lengths,
             new_dtypes,
         )
-        result._apply_index_objs(axis)
         return result
 
-    def _fold_reduce(self, axis, func, preserve_index=True):
+    def _fold_reduce(self, axis, func):
         """
         Apply function that reduce Manager to series but require knowledge of full axis.
 
@@ -1117,11 +1121,9 @@ class BasePandasFrame(object):
         new_parts = self._frame_mgr_cls.map_axis_partitions(
             axis, self._partitions, func
         )
-        return self._compute_map_reduce_metadata(
-            axis, new_parts, preserve_index=preserve_index
-        )
+        return self._compute_map_reduce_metadata(axis, new_parts)
 
-    def _map_reduce(self, axis, map_func, reduce_func=None, preserve_index=True):
+    def _map_reduce(self, axis, map_func, reduce_func=None):
         """
         Apply function that will reduce the data to a Pandas Series.
 
@@ -1134,9 +1136,6 @@ class BasePandasFrame(object):
             reduce_func : callable
                 Callable function to reduce the dataframe.
                 If none, then apply map_func twice. Default is None.
-            preserve_index : boolean
-                The flag to preserve index for default behavior
-                map and reduce operations. Default is True.
 
         Returns
         -------
@@ -1153,9 +1152,7 @@ class BasePandasFrame(object):
         reduce_parts = self._frame_mgr_cls.map_axis_partitions(
             axis, map_parts, reduce_func
         )
-        return self._compute_map_reduce_metadata(
-            axis, reduce_parts, preserve_index=preserve_index
-        )
+        return self._compute_map_reduce_metadata(axis, reduce_parts)
 
     def _map(self, func, dtypes=None, validate_index=False, validate_columns=False):
         """Perform a function that maps across the entire dataset.
@@ -1771,8 +1768,6 @@ class BasePandasFrame(object):
             return self._partitions, [o._partitions for o in other], joined_index
 
         base_frame_idx = non_empty_frames_idx[0]
-        base_frame = frames[base_frame_idx]
-
         other_frames = frames[base_frame_idx + 1 :]
 
         # Picking first non-empty frame
@@ -2134,3 +2129,12 @@ class BasePandasFrame(object):
             self._row_lengths,
             dtypes=new_dtypes,
         )
+
+    def finalize(self):
+        """
+        Perform all deferred calls on partitions.
+
+        This makes the Frame independent of history of queries
+        that were used to build it.
+        """
+        [part.drain_call_queue() for row in self._partitions for part in row]

@@ -44,7 +44,7 @@ import warnings
 
 from modin.error_message import ErrorMessage
 from modin.utils import _inherit_docstrings, to_pandas, hashable
-from modin.config import Engine, IsExperimental
+from modin.config import Engine, IsExperimental, PersistentPickle
 from .utils import (
     from_pandas,
     from_non_pandas,
@@ -59,6 +59,8 @@ from .accessor import CachedAccessor, SparseFrameAccessor
 
 @_inherit_docstrings(pandas.DataFrame, excluded=[pandas.DataFrame.__init__])
 class DataFrame(BasePandasDataset):
+    _pandas_class = pandas.DataFrame
+
     def __init__(
         self,
         data=None,
@@ -2094,9 +2096,6 @@ class DataFrame(BasePandasDataset):
     def __round__(self, decimals=0):
         return self._default_to_pandas(pandas.DataFrame.__round__, decimals=decimals)
 
-    def __setstate__(self, state):
-        return self._default_to_pandas(pandas.DataFrame.__setstate__, state)
-
     def __delitem__(self, key):
         if key not in self:
             raise KeyError(key)
@@ -2415,6 +2414,29 @@ class DataFrame(BasePandasDataset):
             # return self._getitem_multilevel(key)
         else:
             return self._getitem_column(key)
+
+    # Persistance support methods - BEGIN
+    @classmethod
+    def _inflate_light(cls, query_compiler):
+        """
+        Re-creates the object from previously-serialized lightweight representation.
+
+        The method is used for faster but not disk-storable persistence.
+        """
+        return cls(query_compiler=query_compiler)
+
+    @classmethod
+    def _inflate_full(cls, pandas_df):
+        """Re-creates the object from previously-serialized disk-storable representation."""
+        return cls(data=from_pandas(pandas_df))
+
+    def __reduce__(self):
+        self._query_compiler.finalize()
+        if PersistentPickle.get():
+            return self._inflate_full, (self._to_pandas(),)
+        return self._inflate_light, (self._query_compiler,)
+
+    # Persistance support methods - END
 
 
 if IsExperimental.get():
