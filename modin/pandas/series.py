@@ -1014,7 +1014,7 @@ class Series(BasePandasDataset):
         """
         if isinstance(value, BasePandasDataset) and not isinstance(value, Series):
             raise TypeError(
-                '"value" parameter must be a scalar or dict, but '
+                '"value" parameter must be a scalar, dict or Series, but '
                 'you passed a "{0}"'.format(type(value).__name__)
             )
         return super(Series, self)._fillna(
