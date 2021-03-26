@@ -400,7 +400,9 @@ class TimeFillna:
         elif value_type == "dict":
             self.value = {k: k * 1.23 for k in range(shape[0])}
         elif value_type == "Series":
-            self.value = pd.Series({k: k * 1.23 for k in range(shape[0])})
+            self.value = pd.Series(
+                [k * 1.23 for k in range(shape[0])], index=pd.RangeIndex(shape[0])
+            )
         elif value_type == "DataFrame":
             if self_type == "Series":
                 raise NotImplementedError
@@ -408,7 +410,9 @@ class TimeFillna:
                 {
                     k: [i + j * 1.23 for j in range(shape[0])]
                     for i, k in enumerate(columns)
-                }
+                },
+                index=pd.RangeIndex(shape[0]),
+                columns=columns,
             )
         else:
             assert False
