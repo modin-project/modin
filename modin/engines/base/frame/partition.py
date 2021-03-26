@@ -76,6 +76,10 @@ class BaseFramePartition(ABC):  # pragma: no cover
         """Execute all functionality stored in the call queue."""
         pass
 
+    def wait(self):
+        """Wait for partition' computations result."""
+        pass
+
     def to_pandas(self):
         """Convert the object stored in this partition to a Pandas DataFrame.
 

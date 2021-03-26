@@ -13,12 +13,14 @@
 
 import pandas
 
-from modin.engines.base.frame.partition import BaseFramePartition
 from modin.data_management.utils import length_fn_pandas, width_fn_pandas
+from modin.engines.base.frame.partition import BaseFramePartition
 
 from distributed.client import get_client
+from distributed import Future
 from distributed.utils import get_ip
 import cloudpickle as pkl
+from dask.distributed import wait
 
 
 def apply_list_of_funcs(funcs, df):
@@ -48,7 +50,7 @@ class PandasOnDaskFramePartition(BaseFramePartition):
         self.call_queue = call_queue
         self._length_cache = length
         self._width_cache = width
-        self.ip = ip
+        self._ip_cache = ip
 
     def get(self):
         """Flushes the call_queue and returns the data.
@@ -96,8 +98,12 @@ class PandasOnDaskFramePartition(BaseFramePartition):
             return
         new_partition = self.apply(lambda x: x)
         self.future = new_partition.future
-        self.ip = new_partition.ip
+        self._ip_cache = new_partition._ip_cache
         self.call_queue = []
+
+    def wait(self):
+        self.drain_call_queue()
+        wait(self.future)
 
     def mask(self, row_indices, col_indices):
         new_obj = self.add_to_apply_calls(
@@ -111,7 +117,11 @@ class PandasOnDaskFramePartition(BaseFramePartition):
 
     def __copy__(self):
         return PandasOnDaskFramePartition(
-            self.future, self._length_cache, self._width_cache
+            self.future,
+            length=self._length_cache,
+            width=self._width_cache,
+            ip=self._ip_cache,
+            call_queue=self.call_queue,
         )
 
     def to_pandas(self):
@@ -192,16 +202,23 @@ class PandasOnDaskFramePartition(BaseFramePartition):
     def length(self):
         if self._length_cache is None:
             self._length_cache = self.apply(lambda df: len(df)).future
-        if isinstance(self._length_cache, type(self.future)):
+        if isinstance(self._length_cache, Future):
             self._length_cache = self._length_cache.result()
         return self._length_cache
 
     def width(self):
         if self._width_cache is None:
             self._width_cache = self.apply(lambda df: len(df.columns)).future
-        if isinstance(self._width_cache, type(self.future)):
+        if isinstance(self._width_cache, Future):
             self._width_cache = self._width_cache.result()
         return self._width_cache
+
+    def ip(self):
+        if self._ip_cache is None:
+            self._ip_cache = self.apply(lambda df: df)._ip_cache
+        if isinstance(self._ip_cache, Future):
+            self._ip_cache = self._ip_cache.result()
+        return self._ip_cache
 
     @classmethod
     def empty(cls):

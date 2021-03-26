@@ -1,0 +1,4 @@
+s3fs
+ray==1.1.0
+git+https://github.com/modin-project/modin
+modin-spreadsheet

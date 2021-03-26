@@ -11,7 +11,7 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-from modin.config import CpuCount
+from modin.config import CpuCount, NPartitions
 from modin.error_message import ErrorMessage
 
 
@@ -19,7 +19,7 @@ def initialize_dask():
     from distributed.client import get_client
 
     try:
-        get_client()
+        client = get_client()
     except ValueError:
         from distributed import Client
 
@@ -32,4 +32,7 @@ def initialize_dask():
     client = Client()
 """,
         )
-        Client(n_workers=CpuCount.get())
+        client = Client(n_workers=CpuCount.get())
+
+    num_cpus = len(client.ncores())
+    NPartitions.put_if_default(num_cpus)

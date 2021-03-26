@@ -62,7 +62,6 @@ matplotlib.use("Agg")
         ("lookup", lambda df: {"row_labels": [0], "col_labels": ["int_col"]}),
         ("mask", lambda df: {"cond": df != 0}),
         ("pct_change", None),
-        ("__getstate__", None),
         ("to_xarray", None),
         ("flags", None),
         ("set_flags", lambda df: {"allows_duplicate_labels": False}),
@@ -86,15 +85,6 @@ def test_style():
     data = test_data_values[0]
     with pytest.warns(UserWarning):
         pd.DataFrame(data).style
-
-
-def test___setstate__():
-    data = test_data_values[0]
-    with pytest.warns(UserWarning):
-        try:
-            pd.DataFrame(data).__setstate__(None)
-        except TypeError:
-            pass
 
 
 def test_to_timestamp():

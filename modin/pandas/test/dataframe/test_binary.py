@@ -241,3 +241,4 @@ def test_duplicate_indexes():
     )
     modin_df2, pandas_df2 = create_test_dfs({"a": data, "b": data})
     df_equals(modin_df1 / modin_df2, pandas_df1 / pandas_df2)
+    df_equals(modin_df1 / modin_df1, pandas_df1 / pandas_df1)

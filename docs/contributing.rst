@@ -168,7 +168,8 @@ The entire test suite is automatically run for each pull request.
 Performance measurement
 -----------------------
 
-We use Asv_ tool for performance tracking of various Modin functionality.
+We use Asv_ tool for performance tracking of various Modin functionality. The results
+can be viewed here: `Asv dashboard`_.
 
 Here are some scenarios in which Asv can be used:
 
@@ -211,12 +212,6 @@ Some details about using Modin on Ray with Asv:
   a large overhead, since for each process redis server and other necessary binaries
   from ray initialization are started and destroyed.
 
-Some details for maintenance:
-
-* ``modin/asv_bench/asv.conf.json`` contains the modin dependencies, with which testing takes place.
-
-We need to keep them up to date according to the dependencies in ``setup.py``.
-
 
 Building documentation
 ----------------------
@@ -256,3 +251,4 @@ More docs on this coming soon...
 .. _Github Actions: https://github.com/features/actions
 .. _Asv: https://github.com/airspeed-velocity/asv#airspeed-velocity
 .. _developer mailing list: https://groups.google.com/forum/#!forum/modin-dev
+.. _Asv dashboard: https://modin.org/modin-bench/#/

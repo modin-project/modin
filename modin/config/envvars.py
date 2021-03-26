@@ -123,7 +123,7 @@ class RayRedisAddress(EnvironmentVariable, type=ExactStr):
 
 class CpuCount(EnvironmentVariable, type=int):
     """
-    How may CPU cores to utilize across the whole distribution
+    How many CPU cores to use when initialization of the Modin engine.
     """
 
     varname = "MODIN_CPUS"
@@ -145,13 +145,34 @@ class Memory(EnvironmentVariable, type=int):
 
 class NPartitions(EnvironmentVariable, type=int):
     """
-    How many partitions to use by default
+    How many partitions to use for a Modin DataFrame (along each axis)
     """
 
     varname = "MODIN_NPARTITIONS"
+    # This flag is used to detect whether NPartitions is default value or not
+    _is_default = False
+
+    @classmethod
+    def put(cls, value):
+        super().put(value)
+        cls._is_default = False
+
+    @classmethod
+    def put_if_default(cls, value):
+        """
+        Put specific value if NPartitions wasn't set by a user yet
+
+        Notes
+        -----
+        This method is used to set NPartitions from cluster resources internally
+        and should not be called by a user.
+        """
+        if cls._is_default:
+            cls.put(value)
 
     @classmethod
     def _get_default(cls):
+        cls._is_default = True
         return CpuCount.get()
 
 
@@ -259,6 +280,39 @@ class ProgressBar(EnvironmentVariable, type=bool):
     @classmethod
     def disable(cls):
         cls.put(False)
+
+    @classmethod
+    def put(cls, value):
+        if value and BenchmarkMode.get():
+            raise ValueError("ProgressBar isn't compatible with BenchmarkMode")
+        super().put(value)
+
+
+class BenchmarkMode(EnvironmentVariable, type=bool):
+    """
+    Whether or not to perform computations syncronous.
+    """
+
+    varname = "MODIN_BENCHMARK_MODE"
+    default = False
+
+    @classmethod
+    def put(cls, value):
+        if value and ProgressBar.get():
+            raise ValueError("BenchmarkMode isn't compatible with ProgressBar")
+        super().put(value)
+
+
+class PersistentPickle(EnvironmentVariable, type=bool):
+    """
+    When set to off, it allows faster serialization which is only
+    valid in current run (i.e. useless for saving to disk).
+    When set to on, Modin objects could be saved to disk and loaded
+    but serialization/deserialization could take more time.
+    """
+
+    varname = "MODIN_PERSISTENT_PICKLE"
+    default = False
 
 
 def _check_vars():

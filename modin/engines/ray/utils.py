@@ -22,6 +22,7 @@ from modin.config import (
     Memory,
     RayPlasmaDir,
     IsOutOfCore,
+    NPartitions,
 )
 
 
@@ -132,15 +133,21 @@ def initialize_ray(
                 # want to overwrite that value if we have.
                 if object_store_memory is None:
                     # Round down to the nearest Gigabyte.
-                    mem_bytes = ray.utils.get_system_memory() // 10 ** 9 * 10 ** 9
+                    try:
+                        system_memory = ray._private.utils.get_system_memory()
+                    except AttributeError:  # Compatibility with Ray <= 1.2
+                        system_memory = ray.utils.get_system_memory()
+                    mem_bytes = system_memory // 10 ** 9 * 10 ** 9
                     # Default to 8x memory for out of core
                     object_store_memory = 8 * mem_bytes
             # In case anything failed above, we can still improve the memory for Modin.
             if object_store_memory is None:
                 # Round down to the nearest Gigabyte.
-                object_store_memory = int(
-                    0.6 * ray.utils.get_system_memory() // 10 ** 9 * 10 ** 9
-                )
+                try:
+                    system_memory = ray._private.utils.get_system_memory()
+                except AttributeError:  # Compatibility with Ray <= 1.2
+                    system_memory = ray.utils.get_system_memory()
+                object_store_memory = int(0.6 * system_memory // 10 ** 9 * 10 ** 9)
                 # If the memory pool is smaller than 2GB, just use the default in ray.
                 if object_store_memory == 0:
                     object_store_memory = None
@@ -164,3 +171,6 @@ def initialize_ray(
         )
 
         ray.worker.global_worker.run_function_on_all_workers(_import_pandas)
+
+    num_cpus = int(ray.cluster_resources()["CPU"])
+    NPartitions.put_if_default(num_cpus)
