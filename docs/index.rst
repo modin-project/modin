@@ -123,7 +123,7 @@ nature, you get a fast DataFrame at 1MB and 1TB+.
    installation
 
 .. toctree::
-   :caption: Using Modin
+   :caption: Getting Started
 
    using_modin
    out_of_core
@@ -138,6 +138,7 @@ nature, you get a fast DataFrame at 1MB and 1TB+.
    :caption: How is Modin different from ...?
 
    comparisons/index
+   comparisons/upcoming_features
    comparisons/pandas
    comparisons/dask
    comparisons/spark
