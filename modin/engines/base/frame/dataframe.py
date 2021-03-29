@@ -2408,15 +2408,49 @@ class BasePandasFrame(ModinDataframe):
                 Mapping from old row labels to new labels
             new_col_labels: dictionary
                 Mapping from old col labels to new labels
-            level: int or list of ints
-                Level(s) whose row labels to replace
+            level: int
+                Level whose row labels to replace
 
         Returns
         -------
         ModinDataframe
             A new ModinDataframe with the new row and column labels.
         """
-        pass
+        new_index = self.index.copy()
+
+        def swap_labels(label_dict):
+            return lambda label: label_dict.get(label, label)
+
+        def swap_labels_levels(index_tuple):
+            return tuple(new_row_labels.get(label, label) for label in index_tuple)
+
+        if new_row_labels:
+            swap_row_labels = swap_labels(new_row_labels)
+            if isinstance(self.index, pandas.MultiIndex):
+                if level is None:
+                    new_index = new_index.map(swap_labels_levels)
+                else:
+                    new_index.set_levels(
+                        new_index.levels[level].map(swap_row_labels), level
+                    )
+            else:
+                new_index = new_index.map(swap_row_labels)
+        new_cols = self.columns.copy()
+        if new_col_labels:
+            new_cols = new_cols.map(swap_labels(new_col_labels))
+
+        def map_fn(df):
+            return df.rename(index=new_row_labels, columns=new_col_labels, level=level)
+
+        new_parts = self._frame_mgr_cls.map_partitions(self._partitions, map_fn)
+        return self.__constructor__(
+            new_parts,
+            new_index,
+            new_cols,
+            self._row_lengths,
+            self._column_widths,
+            self._dtypes,
+        )
 
     def sort_by(self, axis, columns, ascending=True) -> "ModinDataframe":
         """Logically reorder rows (columns if axis=1) lexicographically by the data in a column or set of columns.
