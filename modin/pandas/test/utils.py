@@ -31,6 +31,10 @@ import csv
 import psutil
 import functools
 
+# Flag activated on command line with "--extra-test-parameters" option.
+# Used in some tests to perform additional parameter combinations.
+extra_test_parameters = False
+
 random_state = np.random.RandomState(seed=42)
 
 DATASET_SIZE_DICT = {

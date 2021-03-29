@@ -14,25 +14,16 @@
 from .function import Function
 
 
-class MapReduceFunction(Function):
+class ReduceFunction(Function):
     @classmethod
-    def call(cls, map_function, reduce_function, **call_kwds):
+    def call(cls, reduce_function, **call_kwds):
         def caller(query_compiler, *args, **kwargs):
-            preserve_index = call_kwds.pop("preserve_index", True)
             axis = call_kwds.get("axis", kwargs.get("axis"))
             return query_compiler.__constructor__(
-                query_compiler._modin_frame._map_reduce(
+                query_compiler._modin_frame._reduce_full_axis(
                     cls.validate_axis(axis),
-                    lambda x: map_function(x, *args, **kwargs),
-                    lambda y: reduce_function(y, *args, **kwargs),
-                    preserve_index=preserve_index,
+                    lambda x: reduce_function(x, *args, **kwargs),
                 )
             )
 
         return caller
-
-    @classmethod
-    def register(cls, map_function, reduce_function=None, **kwargs):
-        if reduce_function is None:
-            reduce_function = map_function
-        return cls.call(map_function, reduce_function, **kwargs)

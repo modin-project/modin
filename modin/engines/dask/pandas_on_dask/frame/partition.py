@@ -20,6 +20,7 @@ from distributed.client import get_client
 from distributed import Future
 from distributed.utils import get_ip
 import cloudpickle as pkl
+from dask.distributed import wait
 
 
 def apply_list_of_funcs(funcs, df):
@@ -99,6 +100,10 @@ class PandasOnDaskFramePartition(BaseFramePartition):
         self.future = new_partition.future
         self._ip_cache = new_partition._ip_cache
         self.call_queue = []
+
+    def wait(self):
+        self.drain_call_queue()
+        wait(self.future)
 
     def mask(self, row_labels, col_labels):
         new_obj = self.add_to_apply_calls(

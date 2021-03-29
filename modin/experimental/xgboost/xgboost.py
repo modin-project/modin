@@ -19,11 +19,12 @@ from multiprocessing import cpu_count
 import xgboost as xgb
 
 from modin.config import Engine
+import modin.pandas as pd
 
 LOGGER = logging.getLogger("[modin.xgboost]")
 
 
-class ModinDMatrix(xgb.DMatrix):
+class DMatrix(xgb.DMatrix):
     """
     DMatrix holding on references to DataFrame.
 
@@ -36,10 +37,17 @@ class ModinDMatrix(xgb.DMatrix):
 
     Notes
     -----
-    Currently ModinDMatrix supports only `data` and `label` parameters.
+    Currently DMatrix supports only `data` and `label` parameters.
     """
 
     def __init__(self, data, label):
+        assert isinstance(
+            data, pd.DataFrame
+        ), f"Type of `data` is {type(data)}, but expected {pd.DataFrame}."
+        assert isinstance(
+            label, (pd.DataFrame, pd.Series)
+        ), f"Type of `data` is {type(label)}, but expected {pd.DataFrame} or {pd.Series}."
+
         self.data = data
         self.label = label
 
@@ -48,12 +56,73 @@ class ModinDMatrix(xgb.DMatrix):
         yield self.label
 
 
+class Booster(xgb.Booster):
+    """
+    A Modin Booster of XGBoost.
+
+    Booster is the model of xgboost, that contains low level routines for
+    training, prediction and evaluation.
+
+    Parameters
+    ----------
+    params : dict. Default is None
+        Parameters for boosters.
+    cache : list
+        List of cache items.
+    model_file : string/os.PathLike/Booster/bytearray
+        Path to the model file if it's string or PathLike.
+    """
+
+    def __init__(self, params=None, cache=(), model_file=None):
+        super(Booster, self).__init__(params=params, cache=cache, model_file=model_file)
+
+    def predict(
+        self,
+        data: DMatrix,
+        nthread: Optional[int] = cpu_count(),
+        **kwargs,
+    ):
+        """
+        Run prediction with a trained booster.
+
+        Parameters
+        ----------
+        data : DMatrix
+            Input data used for prediction.
+        nthread : int. Default is number of threads on master node
+            Number of threads for using in each node.
+        \\*\\*kwargs :
+            Other parameters are the same as `xgboost.Booster.predict`.
+
+        Returns
+        -------
+        ``modin.pandas.DataFrame``
+            Modin DataFrame with prediction results.
+        """
+        LOGGER.info("Prediction started")
+
+        if Engine.get() == "Ray":
+            from .xgboost_ray import _predict
+        else:
+            raise ValueError("Current version supports only Ray engine.")
+
+        assert isinstance(
+            data, DMatrix
+        ), f"Type of `data` is {type(data)}, but expected {DMatrix}."
+
+        result = _predict(self.copy(), data, nthread, **kwargs)
+        LOGGER.info("Prediction finished")
+
+        return result
+
+
 def train(
     params: Dict,
-    dtrain: ModinDMatrix,
+    dtrain: DMatrix,
     *args,
     evals=(),
     nthread: Optional[int] = cpu_count(),
+    evals_result: Optional[Dict] = None,
     **kwargs,
 ):
     """
@@ -63,29 +132,22 @@ def train(
     ----------
     params : dict
         Booster params.
-    dtrain : ModinDMatrix
+    dtrain : DMatrix
         Data to be trained against.
-    evals: list of pairs (ModinDMatrix, string)
+    evals: list of pairs (DMatrix, string)
         List of validation sets for which metrics will evaluated during training.
         Validation metrics will help us track the performance of the model.
     nthread : int. Default is number of threads on master node
         Number of threads for using in each node.
+    evals_result : dict. Default is None
+        Dict to store evaluation results in.
     \\*\\*kwargs :
-        Other parameters are the same as `xgboost.train` except for
-        `evals_result`, which is returned as part of function return value
-        instead of argument.
+        Other parameters are the same as `xgboost.train`.
 
     Returns
     -------
-    dict
-        A dictionary containing trained booster and evaluation history.
-        `history` field is the same as `eval_result` from `xgboost.train`.
-
-        .. code-block:: python
-
-            {'booster': xgboost.Booster,
-             'history': {'train': {'logloss': ['0.48253', '0.35953']},
-                         'eval': {'logloss': ['0.480385', '0.357756']}}}
+    ``modin.experimental.xgboost.Booster``
+        A trained booster.
     """
     LOGGER.info("Training started")
 
@@ -94,50 +156,12 @@ def train(
     else:
         raise ValueError("Current version supports only Ray engine.")
 
+    assert isinstance(
+        dtrain, DMatrix
+    ), f"Type of `dtrain` is {type(dtrain)}, but expected {DMatrix}."
     result = _train(dtrain, nthread, params, *args, evals=evals, **kwargs)
+    if isinstance(evals_result, dict):
+        evals_result.update(result["history"])
+
     LOGGER.info("Training finished")
-    return result
-
-
-def predict(
-    model,
-    data: ModinDMatrix,
-    nthread: Optional[int] = cpu_count(),
-    **kwargs,
-):
-    """
-    Run prediction with a trained booster.
-
-    Parameters
-    ----------
-    model : A Booster or a dictionary returned by `modin.experimental.xgboost.train`
-        The trained model.
-    data : ModinDMatrix
-        Input data used for prediction.
-    nthread : int. Default is number of threads on master node
-        Number of threads for using in each node.
-
-    Returns
-    -------
-    modin.pandas.DataFrame
-        Modin DataFrame with prediction results.
-    """
-    LOGGER.info("Prediction started")
-
-    if Engine.get() == "Ray":
-        from .xgboost_ray import _predict
-    else:
-        raise ValueError("Current version supports only Ray engine.")
-
-    if isinstance(model, xgb.Booster):
-        booster = model
-    elif isinstance(model, dict):
-        booster = model["booster"]
-    else:
-        raise TypeError(
-            f"Expected types for `model` xgb.Booster or dict, but presented type is {type(model)}"
-        )
-    result = _predict(booster, data, nthread, **kwargs)
-    LOGGER.info("Prediction finished")
-
-    return result
+    return Booster(model_file=result["booster"])

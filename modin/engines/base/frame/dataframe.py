@@ -30,6 +30,36 @@ class DimensionError(Exception):
     pass
 
 
+def _check_dtypes(new_df, result_schema):
+    """Check whether the input dataframe conforms to the expected schema.
+
+    Parameters
+    ----------
+        new_df: DataFrame
+            DataFrame whose schema to check.
+        result_schema: dictionary of dtypes
+            Mapping from column labels to data types that represents the types of the output dataframe.
+
+    Raises
+    ------
+        TypeError: If schema of new_df does not match schema expressed by result_schema.
+    """
+    # Should we wrap these dtypes in a call to np.dtype? If not, passing np.int64 to result schema
+    # will fail while np.dtype(np.int64) will not, but if we do, both succeed.
+    # Assumes result_schema is a superset of the columns in new_df
+    new_dtypes = pandas.Series(result_schema)
+    if not (
+        all(new_df.dtypes.isin(new_dtypes).values)
+        and all((new_dtypes[new_df.columns] == new_df.dtypes).values)
+    ):
+        raise TypeError(
+            "Resultant schema:\n{}\nDoes not match expected result schema:\n{}".format(
+                new_df.dtypes, new_dtypes
+            )
+        )
+    return new_df
+
+
 class BasePandasFrame(ModinDataframe):
     """An abstract class that represents the Parent class for any Pandas DataFrame class.
 
@@ -139,7 +169,7 @@ class BasePandasFrame(ModinDataframe):
         return self._dtypes
 
     def _compute_dtypes(self):
-        """Compute the dtypes via MapReduce.
+        """Compute the dtypes via TreeReduce.
 
         Returns
         -------
@@ -149,11 +179,11 @@ class BasePandasFrame(ModinDataframe):
         def dtype_builder(df):
             return df.apply(lambda col: find_common_type(col.values), axis=0)
 
-        map_func = self._build_mapreduce_func(0, lambda df: df.dtypes)
-        reduce_func = self._build_mapreduce_func(0, dtype_builder)
+        map_func = self._build_treereduce_func(0, lambda df: df.dtypes)
+        reduce_func = self._build_treereduce_func(0, dtype_builder)
         # For now we will use a pandas Series for the dtypes.
         if len(self.columns) > 0:
-            dtypes = self._map_reduce(0, map_func, reduce_func).to_pandas().iloc[0]
+            dtypes = self._tree_reduce(0, map_func, reduce_func).to_pandas().iloc[0]
             dtypes.index = self.columns
         else:
             dtypes = pandas.Series([])
@@ -555,31 +585,43 @@ class BasePandasFrame(ModinDataframe):
             A new BasePandasFrame.
         """
         new_row_labels = pandas.RangeIndex(len(self.index))
-        # Column labels are different for multilevel index.
-        if len(self.index.names) > 1:
-            # We will also use the `new_column_names` in the calculation of the internal metadata, so this is a
-            # lightweight way of ensuring the metadata matches.
-            new_column_names = pandas.Index(
-                [
-                    self.index.names[i]
-                    if self.index.names[i] is not None
-                    else "level_{}".format(i)
-                    for i in range(len(self.index.names))
-                ]
-            )
-            new_columns = new_column_names.append(self.columns)
+
+        if self.index.nlevels > 1:
+            level_names = [
+                self.index.names[i]
+                if self.index.names[i] is not None
+                else "level_{}".format(i)
+                for i in range(self.index.nlevels)
+            ]
         else:
-            # See note above about usage of `new_column_names`.
-            new_column_names = pandas.Index(
+            level_names = [
+                self.index.names[0]
+                if self.index.names[0] is not None
+                else "index"
+                if "index" not in self.columns
+                else "level_{}".format(0)
+            ]
+
+        # We will also use the `new_column_names` in the calculation of the internal metadata, so this is a
+        # lightweight way of ensuring the metadata matches.
+        if self.columns.nlevels > 1:
+            # Column labels are different for multilevel index.
+            new_column_names = pandas.MultiIndex.from_tuples(
+                # Set level names on the 1st columns level and fill up empty level names with empty string.
+                # Expand tuples in level names. This is how reset_index works when col_level col_fill are not specified.
                 [
-                    self.index.names[0]
-                    if self.index.names[0] is not None
-                    else "index"
-                    if "index" not in self.columns
-                    else "level_{}".format(0)
-                ]
+                    tuple(
+                        list(level) + [""] * (self.columns.nlevels - len(level))
+                        if isinstance(level, tuple)
+                        else [level] + [""] * (self.columns.nlevels - 1)
+                    )
+                    for level in level_names
+                ],
+                names=self.columns.names,
             )
-            new_columns = new_column_names.append(self.columns)
+        else:
+            new_column_names = pandas.Index(level_names, tupleize_cols=False)
+        new_columns = new_column_names.append(self.columns)
 
         def from_labels_executor(df, **kwargs):
             # Setting the names here ensures that external and internal metadata always match.
@@ -594,7 +636,7 @@ class BasePandasFrame(ModinDataframe):
             keep_remaining=True,
         )
         new_column_widths = [
-            len(self.index.names) + self._column_widths[0]
+            self.index.nlevels + self._column_widths[0]
         ] + self._column_widths[1:]
         result = self.__constructor__(
             new_parts,
@@ -979,7 +1021,7 @@ class BasePandasFrame(ModinDataframe):
                 return left_index.join(right_index, how=how, sort=sort)
 
         # define condition for joining indexes
-        all_indices_equal = all(indexes[0].equals(index) for index in [indexes[1:]])
+        all_indices_equal = all(indexes[0].equals(index) for index in indexes[1:])
         do_join_index = how is not None and not all_indices_equal
 
         # define condition for joining indexes with getting indexers
@@ -1033,10 +1075,10 @@ class BasePandasFrame(ModinDataframe):
     # These methods are for building the correct answer in a modular way.
     # Please be careful when changing these!
 
-    def _build_mapreduce_func(self, axis, func):
-        """Properly formats a MapReduce result so that the partitioning is correct.
+    def _build_treereduce_func(self, axis, func):
+        """Properly formats a TreeReduce result so that the partitioning is correct.
 
-        Note: This should be used for any MapReduce style operation that results in a
+        Note: This should be used for any TreeReduce style operation that results in a
             reduced data dimensionality (dataframe -> series).
 
         Parameters
@@ -1051,23 +1093,28 @@ class BasePandasFrame(ModinDataframe):
             A function to be shipped to the partitions to be executed.
         """
 
-        def _map_reduce_func(df, *args, **kwargs):
+        def _tree_reduce_func(df, *args, **kwargs):
             series_result = func(df, *args, **kwargs)
             if axis == 0 and isinstance(series_result, pandas.Series):
                 # In the case of axis=0, we need to keep the shape of the data
-                # consistent with what we have done. In the case of a reduction, the
+                # consistent with what we have done. In the case of a reduce, the
                 # data for axis=0 should be a single value for each column. By
                 # transposing the data after we convert to a DataFrame, we ensure that
                 # the columns of the result line up with the columns from the data.
                 # axis=1 does not have this requirement because the index already will
                 # line up with the index of the data based on how pandas creates a
                 # DataFrame from a Series.
-                return pandas.DataFrame(series_result).T
-            return pandas.DataFrame(series_result)
+                result = pandas.DataFrame(series_result).T
+                result.index = ["__reduced__"]
+            else:
+                result = pandas.DataFrame(series_result)
+                if isinstance(series_result, pandas.Series):
+                    result.columns = ["__reduced__"]
+            return result
 
-        return _map_reduce_func
+        return _tree_reduce_func
 
-    def _compute_map_reduce_metadata(self, axis, new_parts, preserve_index=True):
+    def _compute_tree_reduce_metadata(self, axis, new_parts):
         """
         Compute the metadata for the result of reduce function.
 
@@ -1077,8 +1124,6 @@ class BasePandasFrame(ModinDataframe):
             The axis on which reduce function was applied
         new_parts: numpy 2D array
             Partitions with the result of applied function
-        preserve_index: boolean
-            The flag to preserve labels for the reduced axis.
 
         Returns
         -------
@@ -1088,32 +1133,21 @@ class BasePandasFrame(ModinDataframe):
         new_axes, new_axes_lengths = [0, 0], [0, 0]
 
         new_axes[axis] = ["__reduced__"]
-        if preserve_index:
-            new_axes[axis ^ 1] = self.axes[axis ^ 1]
-        else:
-            new_axes[axis ^ 1] = self._compute_axis_labels(axis ^ 1, new_parts)
+        new_axes[axis ^ 1] = self.axes[axis ^ 1]
 
         new_axes_lengths[axis] = [1]
         new_axes_lengths[axis ^ 1] = self._axes_lengths[axis ^ 1]
 
-        if axis == 0 or self._dtypes is None:
-            new_dtypes = self._dtypes
-        elif preserve_index:
-            new_dtypes = pandas.Series(
-                [find_common_type(self.dtypes.values)], index=new_axes[axis]
-            )
-        else:
-            new_dtypes = None
+        new_dtypes = None
         result = self.__constructor__(
             new_parts,
             *new_axes,
             *new_axes_lengths,
             new_dtypes,
         )
-        result._apply_index_objs(axis)
         return result
 
-    def _reduce_full_axis(self, axis, func, preserve_index=True):
+    def _reduce_full_axis(self, axis, func, result_schema=None):
         """
         Apply function that reduce Manager to series but require knowledge of full axis.
 
@@ -1123,26 +1157,25 @@ class BasePandasFrame(ModinDataframe):
                 The axis to apply the function to (0 - index, 1 - columns).
             func : callable
                 The function to reduce the Manager by. This function takes in a Manager.
-            preserve_index : boolean
-                The flag to preserve labels for the reduced axis.
+            result_schema: dictionary of dtypes
+                Mapping from column labels to data types that represents the types of the output dataframe.
 
         Returns
         -------
         BasePandasFrame
             Pandas series containing the reduced data.
         """
-        func = self._build_mapreduce_func(axis, func)
+        func = self._build_treereduce_func(axis, func)
         new_parts = self._frame_mgr_cls.map_axis_partitions(
             axis, self._partitions, func
         )
-        return self._compute_map_reduce_metadata(
-            axis, new_parts, preserve_index=preserve_index
-        )
+        if result_schema:
+            new_parts = self._frame_mgr_cls.lazy_map_partitions(
+                new_parts, lambda df: _check_dtypes(df, result_schema)
+            )
+        return self._compute_tree_reduce_metadata(axis, new_parts)
 
-    # TODO: I'm not sure that it makes sense to rename this to tree_reduce - as
-    # other places use map_reduce as a map_reduce - and map_reduce is a more broad
-    # form of tree_reduce (or a lateral version of reduction).
-    def _map_reduce(self, axis, map_func, reduce_func=None, preserve_index=True):
+    def _tree_reduce(self, axis, map_func, reduce_func=None, result_schema=None):
         """
         Apply function that will reduce the data to a Pandas Series.
 
@@ -1155,30 +1188,31 @@ class BasePandasFrame(ModinDataframe):
             reduce_func : callable
                 Callable function to reduce the dataframe.
                 If none, then apply map_func twice. Default is None.
-            preserve_index : boolean
-                The flag to preserve index for default behavior
-                map and reduce operations. Default is True.
+            result_schema: dictionary of dtypes
+                Mapping from column labels to data types that represents the types of the output dataframe.
 
         Returns
         -------
         BasePandasFrame
             A new dataframe.
         """
-        map_func = self._build_mapreduce_func(axis, map_func)
+        map_func = self._build_treereduce_func(axis, map_func)
         if reduce_func is None:
             reduce_func = map_func
         else:
-            reduce_func = self._build_mapreduce_func(axis, reduce_func)
+            reduce_func = self._build_treereduce_func(axis, reduce_func)
 
         map_parts = self._frame_mgr_cls.map_partitions(self._partitions, map_func)
         reduce_parts = self._frame_mgr_cls.map_axis_partitions(
             axis, map_parts, reduce_func
         )
-        return self._compute_map_reduce_metadata(
-            axis, reduce_parts, preserve_index=preserve_index
-        )
+        if result_schema:
+            reduce_parts = self._frame_mgr_cls.lazy_map_partitions(
+                reduce_parts, lambda df: _check_dtypes(df, result_schema)
+            )
+        return self._compute_tree_reduce_metadata(axis, reduce_parts)
 
-    def reduction(self, axis, function, tree_reduce=False, result_schema=None):
+    def reduce(self, axis, function, result_schema=None):
         """Perform a user-defined per-column aggregation, where each column reduces down to a single value.
 
         Notes
@@ -1188,38 +1222,55 @@ class BasePandasFrame(ModinDataframe):
         Parameters
         ----------
             axis: int
-                The axis to perform the reduction over.
+                The axis to perform the reduce over.
             function: callable
-                The reduction function to apply to each column.
-            tree_reduce: boolean
-                Flag to signal to the compiler that the function
-                can be applied using a tree reduction (e.g. max or sum).
-                Set this flag to False for functions that need to look at
-                the entire column at once to perform their reduction (e.g. median).
-            result_schema: list of dtypes
-                List of data types that represent the types of the output dataframe.
+                The reduce function to apply to each column.
+            result_schema: dictionary of dtypes
+                Mapping from column labels to data types that represents the types of the output dataframe.
 
         Returns
         -------
         BasePandasFrame
             A new BasePandasFrame with the same columns as the previous, with only a single row.
         """
-        # TODO: Given that the result of the reduction functions will be a single row/column
+        # TODO: Or should we materialize dtypes on the ModinFrame at the very end instead? (Like we used to do in tree_reduce)
+        # So instead of wrapping function and calling _check_dtypes on the partition, we call it on the output of
+        # self._reduce_full_axis.
+        # And if we do keep it this way, should we have some way to pass through dtypes for when result_schema is
+        # specified, that can potentially save computation later?
+
+        new_df = self._reduce_full_axis(axis, function, result_schema)
+
+        return new_df
+
+    def tree_reduce(self, axis, function, result_schema=None):
+        """Perform a user-defined per-column aggregation, where each column reduces down to a single value using a tree-reduce computation pattern.
+
+        Notes
+        -----
+            The user-defined function must reduce to a single value.
+
+            If the user-defined function requires access to the entire column, please use reduce instead.
+
+        Parameters
+        ----------
+            axis: int
+                The axis to perform the tree reduce over.
+            function: callable
+                The tree reduce function to apply to each column.
+            result_schema: dictionary of dtypes
+                Mapping from column labels to data types that represents the types of the output dataframe.
+
+        Returns
+        -------
+        BasePandasFrame
+            A new BasePandasFrame with the same columns as the previous, with only a single row.
+        """
+        # TODO: Given that the result of the reduce functions will be a single row/column
         # and that in the tree_reduce case, it's not clear that its ok to cast to the new dtype
         # before the tree reduce finishes, this function isn't wrapped in a call to astype, and
         # instead, astype will be called at the end. The overhead shouldn't be too high.
-        if not tree_reduce:
-            new_df = self._reduce_full_axis(axis, function)
-        else:
-            new_df = self._map_reduce(axis, function)
-
-        if result_schema is not None:
-            if new_df.dtypes != pandas.Series(result_schema):
-                raise TypeError(
-                    "Resultant schema:\n{}\nDoes not match expected result schema:\n{}".format(
-                        new_df.dtypes, pandas.Series(result_schema)
-                    )
-                )
+        new_df = self._tree_reduce(axis, function, result_schema=result_schema)
 
         return new_df
 
@@ -1240,8 +1291,8 @@ class BasePandasFrame(ModinDataframe):
                 The function to map across the dataframe.
             axis: int or None
                 The axis to map over.
-            result_schema: list of dtypes
-                List of data types that represent the types of the output dataframe.
+            result_schema: dictionary of dtypes
+                Mapping from column labels to data types that represents the types of the output dataframe.
 
         Returns
         -------
@@ -1250,37 +1301,33 @@ class BasePandasFrame(ModinDataframe):
         """
         # TODO: If no result_schema is specified, should the new frame inherit the dtypes
         # of the current, or have it be unspecified?
-        new_dtypes = None
-        fn = function
-        if result_schema is not None:
-            # TODO: For now, assume that result_schema is a list of dtypes of the same length
-            # as self.columns. Perhaps we should change result_schema to be a dictionary?
-            # Ultimately, the representation of result_schema depends on the typing system
-            # we plan to implement.
+        new_dtypes = pandas.Series(result_schema) if result_schema is not None else None
 
-            # Should we wrap these dtypes in a call to np.dtype? If not, passing np.int64 to result schema
-            # will fail while np.dtype(np.int64) will not, but if we do, both succeed.
-            new_dtypes = pandas.Series(result_schema)
-
-            def fn(df):
-                new_df = function(df)
-                new_df.dtypes.index = new_df.columns
-                # TODO: Assumes result_schema is exhaustive - but perhaps this isn't a valid assumption.
-                # This could go hand in hand with AnyType/Unspecified - perhaps only type check on specified
-                # columns, and others have unspecified types. Since self.dtypes for the new values is not None
-                # those column's types won't be specified till an explicit call to infer_types or an astype call
-                # (by mapping a coercion function)
-                if not (
-                    all(new_df.dtypes.isin(new_dtypes).values)
-                    and all((new_dtypes[new_df.columns] == new_df.dtypes).values)
-                ):
-                    raise TypeError(
-                        "Resultant schema:\n{}\nDoes not match expected result schema:\n{}".format(
-                            new_df.dtypes, new_dtypes
-                        )
+        def fn(df):
+            old_shape = df.shape
+            new_df = function(df)
+            if new_df.shape != old_shape:
+                # TODO: should it be Partition shape? Or maybe Decomposed DF to mimic paper?
+                raise DimensionError(
+                    "Map operator should not change shape; however, DataFrame shape has changed from {} to {}.".format(
+                        old_shape, new_df.shape
                     )
+                )
+            if result_schema is not None:
+                new_df.dtypes.index = new_df.columns
+                _check_dtypes(new_df, new_dtypes)
+            return new_df
 
-                return new_df
+        # TODO: For now, assume that result_schema is a list of dtypes of the same length
+        # as self.columns. Perhaps we should change result_schema to be a dictionary?
+        # Ultimately, the representation of result_schema depends on the typing system
+        # we plan to implement.
+
+        # TODO: Assumes result_schema is exhaustive - but perhaps this isn't a valid assumption.
+        # This could go hand in hand with AnyType/Unspecified - perhaps only type check on specified
+        # columns, and others have unspecified types. Since self.dtypes for the new values is not None
+        # those column's types won't be specified till an explicit call to infer_types or an astype call
+        # (by mapping a coercion function)
 
         if axis is None:
             new_partitions = self._frame_mgr_cls.map_partitions(self._partitions, fn)
@@ -1294,20 +1341,6 @@ class BasePandasFrame(ModinDataframe):
             new_partitions = self._frame_mgr_cls.map_axis_partitions(
                 axis, self._partitions, fn_with_kwargs, keep_partitioning=True
             )
-
-        # TODO: Given that map can add new rows/columns, I validate both the index and the columns
-        # Perhaps we shouldn't?
-        new_axes = [
-            self._compute_axis_labels(axis, new_partitions) for axis in range(2)
-        ]
-
-        for axis in [0, 1]:
-            if len(new_axes[axis]) != len(self.axes[axis]):
-                raise DimensionError(
-                    "Map operator should not change shape; however, axis {} has changed from length {} to {}.".format(
-                        axis, len(new_axes[axis]), len(self.axes[axis])
-                    )
-                )
 
         return self.__constructor__(
             new_partitions,
@@ -1871,7 +1904,7 @@ class BasePandasFrame(ModinDataframe):
             axis=axis,
             left=self._partitions,
             right=other,
-            apply_func=self._build_mapreduce_func(axis, func),
+            apply_func=self._build_treereduce_func(axis, func),
             apply_indices=apply_indices,
             enumerate_partitions=enumerate_partitions,
             keep_partitioning=True,
@@ -1954,8 +1987,6 @@ class BasePandasFrame(ModinDataframe):
             return self._partitions, [o._partitions for o in other], joined_index
 
         base_frame_idx = non_empty_frames_idx[0]
-        base_frame = frames[base_frame_idx]
-
         other_frames = frames[base_frame_idx + 1 :]
 
         # Picking first non-empty frame
@@ -2221,8 +2252,8 @@ class BasePandasFrame(ModinDataframe):
                 The operation to carry out on each of the groups. The operator is another
                 algebraic operator with its own user-defined function parameter, depending
                 on the output desired by the user.
-            result_schema: list of dtypes
-                List of data types that represent the types of the output dataframe.
+            result_schema: dictionary of dtypes
+                Mapping from column labels to data types that represents the types of the output dataframe.
 
         Returns
         -------
@@ -2249,8 +2280,8 @@ class BasePandasFrame(ModinDataframe):
             function: callable
                 The function to use to expand the data. This function should accept one
                 row/column, and return multiple.
-            result_schema: list of dtypes
-                List of data types that represent the types of the output dataframe.
+            result_schema: dictionary of dtypes
+                Mapping from column labels to data types that represents the types of the output dataframe.
 
         Returns
         -------
@@ -2260,40 +2291,9 @@ class BasePandasFrame(ModinDataframe):
         pass
 
     def window(
-        self, axis, function, window_size, result_schema=None
-    ) -> "ModinDataframe":
-        """Apply a user-defined function over a sliding window along the specified axis.
-
-        Notes
-        -----
-            The shapes of the output and input dataframes must match. The user-defined function
-                recieves window_size arguments and must return the same number of outputs.
-
-            The user-defined function may only access values in the same column (row if axis=1).
-
-        Parameters
-        ----------
-            axis: int
-                The axis to slide over.
-            function: callable
-                The sliding window function to apply over the data.
-            window_size: int
-                The number of row/columns to pass to the function.
-                (The size of the sliding window).
-            result_schema: list of dtypes
-                List of data types that represent the types of the output dataframe.
-
-        Returns
-        -------
-        ModinDataframe
-            A new ModinDataframe with the function applied over windows of the specified axis.
-        """
-        pass
-
-    def window_reduction(
         self,
         axis,
-        reduction_fn,
+        reduce_fn,
         window_size,
         result_schema=None,
     ) -> "ModinDataframe":
@@ -2301,25 +2301,25 @@ class BasePandasFrame(ModinDataframe):
 
         Notes
         -----
-            The user-defined reduction function must reduce each window’s column
+            The user-defined reduce function must reduce each window’s column
                 (row if axis=1) down to a single value.
 
         Parameters
         ----------
             axis: int
                 The axis to slide over.
-            reduction_fn: callable
-                The reduction function to apply over the data.
+            reduce_fn: callable
+                The reduce function to apply over the data.
             window_size: int
                 The number of row/columns to pass to the function.
                 (The size of the sliding window).
-            result_schema: list of dtypes
-                List of data types that represent the types of the output dataframe.
+            result_schema: dictionary of dtypes
+                Mapping from column labels to data types that represents the types of the output dataframe.
 
         Returns
         -------
         ModinDataframe
-            A new ModinDataframe with the reduction function applied over windows of the specified
+            A new ModinDataframe with the reduce function applied over windows of the specified
                 axis.
         """
         pass
@@ -2390,6 +2390,31 @@ class BasePandasFrame(ModinDataframe):
         ModinDataframe
             A new ModinDataframe that is the result of concatenating the dataframes over the
             specified axis.
+        """
+        pass
+
+    def rename(
+        self, new_row_labels=None, new_col_labels=None, level=None
+    ) -> "ModinDataframe":
+        """Replace the row and column labels with the specified new labels.
+
+        Notes
+        -----
+            If level is not specified, the default behavior is to replace row labels in all levels.
+
+        Parameters
+        ----------
+            new_row_labels: dictionary
+                Mapping from old row labels to new labels
+            new_col_labels: dictionary
+                Mapping from old col labels to new labels
+            level: int or list of ints
+                Level(s) whose row labels to replace
+
+        Returns
+        -------
+        ModinDataframe
+            A new ModinDataframe with the new row and column labels.
         """
         pass
 
@@ -2532,3 +2557,12 @@ class BasePandasFrame(ModinDataframe):
             self._row_lengths,
             dtypes=new_dtypes,
         )
+
+    def finalize(self):
+        """
+        Perform all deferred calls on partitions.
+
+        This makes the Frame independent of history of queries
+        that were used to build it.
+        """
+        [part.drain_call_queue() for row in self._partitions for part in row]

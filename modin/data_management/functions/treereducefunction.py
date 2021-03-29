@@ -12,20 +12,25 @@
 # governing permissions and limitations under the License.
 
 from .function import Function
-from .mapfunction import MapFunction
-from .treereducefunction import TreeReduceFunction
-from .reducefunction import ReduceFunction
-from .foldfunction import FoldFunction
-from .binary_function import BinaryFunction
-from .groupby_function import GroupbyReduceFunction, groupby_reduce_functions
 
-__all__ = [
-    "Function",
-    "MapFunction",
-    "TreeReduceFunction",
-    "ReduceFunction",
-    "FoldFunction",
-    "BinaryFunction",
-    "GroupbyReduceFunction",
-    "groupby_reduce_functions",
-]
+
+class TreeReduceFunction(Function):
+    @classmethod
+    def call(cls, map_function, reduce_function, **call_kwds):
+        def caller(query_compiler, *args, **kwargs):
+            axis = call_kwds.get("axis", kwargs.get("axis"))
+            return query_compiler.__constructor__(
+                query_compiler._modin_frame._tree_reduce(
+                    cls.validate_axis(axis),
+                    lambda x: map_function(x, *args, **kwargs),
+                    lambda y: reduce_function(y, *args, **kwargs),
+                )
+            )
+
+        return caller
+
+    @classmethod
+    def register(cls, map_function, reduce_function=None, **kwargs):
+        if reduce_function is None:
+            reduce_function = map_function
+        return cls.call(map_function, reduce_function, **kwargs)

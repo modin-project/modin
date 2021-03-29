@@ -230,38 +230,6 @@ def test___repr__():
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-def test_reset_index_with_multi_index(data):
-    modin_df = pd.DataFrame(data)
-    pandas_df = pandas.DataFrame(data)
-
-    if len(modin_df.columns) > len(pandas_df.columns):
-        col0 = modin_df.columns[0]
-        col1 = modin_df.columns[1]
-        modin_cols = modin_df.groupby([col0, col1]).count().reset_index().columns
-        pandas_cols = pandas_df.groupby([col0, col1]).count().reset_index().columns
-
-        assert modin_cols.equals(pandas_cols)
-
-
-def test_reset_index_with_named_index():
-    modin_df = pd.DataFrame(test_data_values[0])
-    pandas_df = pandas.DataFrame(test_data_values[0])
-
-    modin_df.index.name = pandas_df.index.name = "NAME_OF_INDEX"
-    df_equals(modin_df, pandas_df)
-    df_equals(modin_df.reset_index(drop=False), pandas_df.reset_index(drop=False))
-
-    modin_df.reset_index(drop=True, inplace=True)
-    pandas_df.reset_index(drop=True, inplace=True)
-    df_equals(modin_df, pandas_df)
-
-    modin_df = pd.DataFrame(test_data_values[0])
-    pandas_df = pandas.DataFrame(test_data_values[0])
-    modin_df.index.name = pandas_df.index.name = "NEW_NAME"
-    df_equals(modin_df.reset_index(drop=False), pandas_df.reset_index(drop=False))
-
-
-@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_inplace_series_ops(data):
     pandas_df = pandas.DataFrame(data)
     modin_df = pd.DataFrame(data)

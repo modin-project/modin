@@ -13,11 +13,11 @@
 
 import pandas
 
-from .mapreducefunction import MapReduceFunction
+from .treereducefunction import TreeReduceFunction
 from modin.utils import try_cast_to_pandas, hashable
 
 
-class GroupbyReduceFunction(MapReduceFunction):
+class GroupbyReduceFunction(TreeReduceFunction):
     @classmethod
     def call(cls, map_func, reduce_func=None, **call_kwds):
         """
@@ -39,7 +39,7 @@ class GroupbyReduceFunction(MapReduceFunction):
         Returns
         -------
         Callable,
-            Function that executes GroupBy aggregation with MapReduce algorithm.
+            Function that executes GroupBy aggregation with TreeReduce algorithm.
         """
         if isinstance(map_func, str):
 
@@ -172,7 +172,7 @@ class GroupbyReduceFunction(MapReduceFunction):
         else:
             qc = query_compiler
 
-        map_fn, reduce_fn = cls.build_map_reduce_functions(
+        map_fn, reduce_fn = cls.build_tree_reduce_functions(
             by=by,
             axis=axis,
             groupby_args=groupby_args,
@@ -200,7 +200,7 @@ class GroupbyReduceFunction(MapReduceFunction):
         return lambda grp: grp.agg(partition_dict)
 
     @classmethod
-    def build_map_reduce_functions(
+    def build_tree_reduce_functions(
         cls,
         by,
         axis,
@@ -264,7 +264,7 @@ class GroupbyReduceFunction(MapReduceFunction):
         return _map, _reduce
 
 
-# This dict is a map for function names and their equivalents in MapReduce
+# This dict is a map for function names and their equivalents in TreeReduce
 groupby_reduce_functions = {
     "all": ("all", "all"),
     "any": ("any", "any"),

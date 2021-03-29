@@ -72,13 +72,13 @@ class CSVDispatcher(TextFileDispatcher):
         # Now we need to define parameters, which are common for all partitions. These
         # parameters can be `sniffed` from empty dataframes created further
         if names is None:
-            # For the sake of the empty df, we assume no `index_col` to get the correct
+            # When reading the one row df, we assume no `index_col` to get the correct
             # column names before we build the index. Because we pass `names` in, this
             # step has to happen without removing the `index_col` otherwise it will not
             # be assigned correctly
             names = pandas.read_csv(
                 filepath_or_buffer,
-                **dict(kwargs, usecols=None, nrows=0, skipfooter=0, index_col=None),
+                **dict(kwargs, usecols=None, nrows=1, skipfooter=0, index_col=None),
             ).columns
         elif index_col is None and not kwargs.get("usecols", None):
             # When names is set to some list that is smaller than the number of columns
@@ -91,11 +91,11 @@ class CSVDispatcher(TextFileDispatcher):
                 index_col = list(range(num_cols - len(names)))
                 if len(index_col) == 1:
                     index_col = index_col[0]
-        empty_pd_df = pandas.read_csv(
+        pd_df_metadata = pandas.read_csv(
             filepath_or_buffer,
-            **dict(kwargs, nrows=0, skipfooter=0, index_col=index_col),
+            **dict(kwargs, nrows=1, skipfooter=0, index_col=index_col),
         )
-        column_names = empty_pd_df.columns
+        column_names = pd_df_metadata.columns
 
         # Max number of partitions available
         num_partitions = NPartitions.get()
@@ -103,7 +103,7 @@ class CSVDispatcher(TextFileDispatcher):
         num_splits = min(len(column_names), num_partitions)
         # Metadata definition
         column_widths, num_splits = cls._define_metadata(
-            empty_pd_df, num_splits, column_names
+            pd_df_metadata, num_splits, column_names
         )
 
         # kwargs that will be passed to the workers
@@ -139,7 +139,7 @@ class CSVDispatcher(TextFileDispatcher):
             index_ids=index_ids,
             dtypes_ids=dtypes_ids,
             index_col_md=index_col,
-            index_name=empty_pd_df.index.name,
+            index_name=pd_df_metadata.index.name,
             column_widths=column_widths,
             column_names=column_names,
             squeeze=kwargs.get("squeeze", False),
@@ -235,51 +235,6 @@ class CSVDispatcher(TextFileDispatcher):
         return new_index, row_lengths
 
     @classmethod
-    def _define_column_names(
-        cls,
-        column_names: ColumnNamesTypes,
-        parse_dates: Union[bool, dict, Sequence],
-        column_widths: list,
-    ) -> Tuple[ColumnNamesTypes, list]:
-        """
-        Redefine columns names in accordance to the parse_dates parameter.
-        ----------
-        column_names: ColumnNamesTypes
-                Array with columns names.
-        parse_dates: array, bool or dict
-                `parse_dates` parameter of read_csv function.
-        column_widths: list
-                Number of columns in each partition.
-
-        Returns
-        -------
-        column_names: ColumnNamesTypes
-                Array with redefined columns names.
-        column_widths: list
-                Updated `column_widths` parameter.
-        """
-        # If parse_dates is present, the column names that we have might not be
-        # the same length as the returned column names. If we do need to modify
-        # the column names, we remove the old names from the column names and
-        # insert the new one at the front of the Index.
-        if parse_dates is not None:
-            # We have to recompute the column widths if `parse_dates` is set because
-            # we are not guaranteed to have the correct information regarding how many
-            # columns are on each partition.
-            column_widths = None
-            # Check if is list of lists
-            if isinstance(parse_dates, list) and isinstance(parse_dates[0], list):
-                for group in parse_dates:
-                    new_col_name = "_".join(group)
-                    column_names = column_names.drop(group).insert(0, new_col_name)
-            # Check if it is a dictionary
-            elif isinstance(parse_dates, dict):
-                for new_col_name, group in parse_dates.items():
-                    column_names = column_names.drop(group).insert(0, new_col_name)
-
-        return column_names, column_widths
-
-    @classmethod
     def _get_new_qc(
         cls,
         partition_ids: list,
@@ -323,9 +278,6 @@ class CSVDispatcher(TextFileDispatcher):
         dtypes = cls.get_dtypes(dtypes_ids) if len(dtypes_ids) > 0 else None
         # Compose modin partitions from `partition_ids`
         partition_ids = cls.build_partition(partition_ids, row_lengths, column_widths)
-        column_names, column_widths = cls._define_column_names(
-            column_names, kwargs.get("parse_dates", False), column_widths
-        )
 
         # Set the index for the dtypes to the column names
         if isinstance(dtypes, pandas.Series):

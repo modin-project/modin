@@ -11,21 +11,13 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-from .function import Function
+# test BenchmarkMode == True
+
+import modin.pandas as pd
+from modin.pandas.test.utils import test_data_values
+from modin.config import BenchmarkMode
 
 
-class ReductionFunction(Function):
-    @classmethod
-    def call(cls, reduction_function, **call_kwds):
-        def caller(query_compiler, *args, **kwargs):
-            preserve_index = call_kwds.pop("preserve_index", True)
-            axis = call_kwds.get("axis", kwargs.get("axis"))
-            return query_compiler.__constructor__(
-                query_compiler._modin_frame._reduce_full_axis(
-                    cls.validate_axis(axis),
-                    lambda x: reduction_function(x, *args, **kwargs),
-                    preserve_index=preserve_index,
-                )
-            )
-
-        return caller
+def test_syncronous_mode():
+    assert BenchmarkMode.get()
+    pd.DataFrame(test_data_values[0]).mean()

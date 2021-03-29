@@ -88,6 +88,10 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
         self._modin_frame = frame
         self._shape_hint = shape_hint
 
+    def finalize():
+        # TODO: implement this for OmniSci backend
+        raise NotImplementedError()
+
     def to_pandas(self):
         return self._modin_frame.to_pandas()
 
@@ -407,6 +411,22 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
             self._modin_frame.mask(
                 row_labels=index, col_labels=self.columns.drop(columns)
             )
+        )
+
+    def dropna(self, axis=0, how="any", thresh=None, subset=None):
+        """Returns a new QueryCompiler with null values dropped along given axis.
+
+        Return:
+            a new QueryCompiler
+        """
+        if thresh is not None or axis != 0:
+            return super().dropna(axis=axis, how=how, thresh=thresh, subset=subset)
+
+        if subset is None:
+            subset = self.columns
+        return self.__constructor__(
+            self._modin_frame.dropna(subset=subset, how=how),
+            shape_hint=self._shape_hint,
         )
 
     def dt_year(self):

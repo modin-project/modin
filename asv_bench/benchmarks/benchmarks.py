@@ -92,10 +92,10 @@ class TimeGroupByDictionaryAggregation(BaseTimeGroupBy):
     params = [
         UNARY_OP_DATA_SIZE[ASV_DATASET_SIZE],
         GROUPBY_NGROUPS[ASV_DATASET_SIZE],
-        ["reduction", "aggregation"],
+        ["reduce", "aggregation"],
     ]
     operations = {
-        "reduction": ["sum", "count", "prod"],
+        "reduce": ["sum", "count", "prod"],
         "aggregation": ["quantile", "std", "median"],
     }
 
@@ -394,30 +394,17 @@ class TimeFillna:
 
 
 class BaseTimeValueCounts:
-    subset_params = {
-        "all": lambda shape: shape[1],
-        "half": lambda shape: shape[1] // 2,
-    }
-
-    def setup(self, shape, ngroups=5, subset="all"):
-        try:
-            subset = self.subset_params[subset]
-        except KeyError:
-            raise KeyError(
-                f"Invalid value for 'subset={subset}'. Allowed: {list(self.subset_params.keys())}"
-            )
-        ncols = subset(shape)
+    def setup(self, shape, ngroups=5, subset=1):
         ngroups = translator_groupby_ngroups(ngroups, shape)
-        self.df, _ = generate_dataframe(
+        self.df, self.subset = generate_dataframe(
             ASV_USE_IMPL,
             "int",
             *shape,
             RAND_LOW,
             RAND_HIGH,
-            groupby_ncols=ncols,
+            groupby_ncols=subset,
             count_groups=ngroups,
         )
-        self.subset = self.df.columns[:ncols].tolist()
 
 
 class TimeValueCountsFrame(BaseTimeValueCounts):
@@ -425,7 +412,7 @@ class TimeValueCountsFrame(BaseTimeValueCounts):
     params = [
         UNARY_OP_DATA_SIZE[ASV_DATASET_SIZE],
         GROUPBY_NGROUPS[ASV_DATASET_SIZE],
-        ["all", "half"],
+        [2, 10],
     ]
 
     def time_value_counts(self, *args, **kwargs):
@@ -442,7 +429,7 @@ class TimeValueCountsSeries(BaseTimeValueCounts):
 
     def setup(self, shape, ngroups, bins):
         super().setup(ngroups=ngroups, shape=shape)
-        self.df = self.df.iloc[:, 0]
+        self.df = self.df[self.subset[0]]
 
     def time_value_counts(self, shape, ngroups, bins):
         execute(self.df.value_counts(bins=bins))

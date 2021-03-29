@@ -92,7 +92,7 @@ class TestMap:
             pd.DataFrame(values).add_prefix("col")._query_compiler._modin_frame
         )
         modin_arr = modin_frame.map(sub, axis=None).to_numpy()
-        assert np.array_equal(modin_arr, values - 1)
+        np.testing.assert_equal(modin_arr, values - 1)
 
     def test_map_result_schema(self):
         values = np.random.rand(2 ** 10, 2 ** 8)
@@ -107,7 +107,7 @@ class TestMap:
         modin_arr = modin_frame.map(
             sub, axis=None, result_schema=result_schema
         ).to_numpy()
-        assert np.array_equal(modin_arr, values - 1)
+        np.testing.assert_equal(modin_arr, values - 1)
 
         def to_int(df):
             return df.astype(np.int64)
@@ -117,12 +117,12 @@ class TestMap:
             pd.DataFrame(values).add_prefix("col")._query_compiler._modin_frame
         )
         with pytest.raises(TypeError):
-            modin_frame.map(to_int, result_schema=result_schema)
+            modin_frame.map(to_int, result_schema=result_schema).to_numpy()
         result_schema = {n: np.dtype(np.int64) for n in modin_frame.columns}
         modin_arr = modin_frame.map(
             to_int, axis=None, result_schema=result_schema
         ).to_numpy()
-        assert np.array_equal(modin_arr, values.astype(np.int64))
+        np.testing.assert_equal(modin_arr, values.astype(np.int64))
 
     def test_map_shape(self):
         values = np.random.rand(2 ** 10, 2 ** 8)
@@ -135,25 +135,25 @@ class TestMap:
             pd.DataFrame(values).add_prefix("col")._query_compiler._modin_frame
         )
         with pytest.raises(DimensionError):
-            modin_frame.map(add_col, axis=None)
+            modin_frame.map(add_col, axis=None).to_numpy()
 
         def add_row(df):
             return df.append(df)
 
         with pytest.raises(DimensionError):
-            modin_frame.map(add_row, axis=None)
+            modin_frame.map(add_row, axis=None).to_numpy()
 
         def del_col(df):
             return df.drop(columns=[df.columns[0]])
 
         with pytest.raises(DimensionError):
-            modin_frame.map(del_col, axis=None)
+            modin_frame.map(del_col, axis=None).to_numpy()
 
         def del_row(df):
             return df.drop(df.index[0])
 
         with pytest.raises(DimensionError):
-            modin_frame.map(del_row, axis=None)
+            modin_frame.map(del_row, axis=None).to_numpy()
 
 
 class TestFilterByTypes:
@@ -192,14 +192,15 @@ class TestFilterByTypes:
 class TestFilter:
     def test_filter(self):
         values = np.random.rand(2 ** 10, 2 ** 8)
+        pandas_df = pandas.DataFrame(values).add_prefix("col")
         modin_frame = (
             pd.DataFrame(values).add_prefix("col")._query_compiler._modin_frame
         )
         filtered_df = modin_frame.filter(0, lambda df: df)
-        df_equals(modin_frame.to_pandas(), filtered_df)
+        df_equals(modin_frame.to_pandas(), filtered_df.to_pandas())
 
         filtered_df = modin_frame.filter(1, lambda df: df)
-        df_equals(modin_frame.to_pandas(), filtered_df)
+        df_equals(modin_frame.to_pandas(), filtered_df.to_pandas())
 
         null_df = modin_frame.filter(
             1, lambda df: df.drop(columns=df.columns)
@@ -209,6 +210,7 @@ class TestFilter:
         null_df = modin_frame.filter(0, lambda df: df.drop(index=df.index)).to_pandas()
         df_is_empty(null_df)
 
+<<<<<<< HEAD
 class TestMask:
     def test_mask_full(self):
         values = np.random.rand(2 ** 10, 2 ** 8)
@@ -278,6 +280,19 @@ class TestMask:
         
 
 
+=======
+        even_row_df = modin_frame.filter(
+            1, lambda df: df[df.index % 2 == 0]
+        ).to_pandas()
+        df_equals(even_row_df, pandas_df[pandas_df.index % 2 == 0])
+
+        drop_cols = [c for c in pandas_df.columns if int(c[3:]) % 2 != 0]
+        odd_col_df = modin_frame.filter(
+            0,
+            lambda df: df.drop(columns=[c for c in df.columns if int(c[3:]) % 2 == 1]),
+        ).to_pandas()
+        df_equals(odd_col_df, pandas_df.drop(columns=drop_cols))
+>>>>>>> f3748dbafc60e37063b16d2048097d4d4f10ef37
 
 
 # TODO[Todd]:
@@ -285,6 +300,7 @@ class TestMask:
 # Filtering where none is true - returns nothing
 # Try proper filters
 # Try filtering axiswise
+<<<<<<< HEAD
 # Add Mask Test 
 # Mask: specify either: row_labels OR row_positions, col_labels OR col_positions 
 # outputs a new dataframe
@@ -297,3 +313,122 @@ class TestMask:
 # df.loc[,:0] takes first column; df.loc[0, 0]
 # df.loc[1].iloc[0]
 
+=======
+
+
+class TestReduce:
+    def test_reduce_axes(self):
+        values = np.random.rand(2 ** 10, 2 ** 8)
+        modin_frame = (
+            pd.DataFrame(values).add_prefix("col")._query_compiler._modin_frame
+        )
+        pandas_df = pandas.DataFrame(values).add_prefix("col")
+        with pytest.raises(Exception):
+            modin_frame.reduce(0, lambda x: x).to_pandas()
+        with pytest.raises(Exception):
+            modin_frame.reduce(1, lambda x: x).to_pandas()
+        arr = modin_frame.reduce(0, lambda x: x.mean()).to_numpy().flatten()
+        np.testing.assert_equal(arr, pandas_df.apply(lambda x: x.mean()).values)
+        arr = modin_frame.reduce(1, lambda x: x.mean(axis=1)).to_numpy().flatten()
+        np.testing.assert_array_almost_equal(
+            arr, pandas_df.apply(lambda x: x.mean(), axis=1).values, decimal=12
+        )
+
+    def test_reduce_result_schema(self):
+        values = np.random.rand(2 ** 10, 2 ** 8)
+        modin_frame = (
+            pd.DataFrame(values).add_prefix("col")._query_compiler._modin_frame
+        )
+        result_schema = {n: values.dtype for n in modin_frame.columns}
+        int_result_schema = {n: np.dtype(np.int64) for n in modin_frame.columns}
+        pandas_df = pandas.DataFrame(values).add_prefix("col")
+        arr = (
+            modin_frame.reduce(0, lambda x: x.sum(), result_schema=result_schema)
+            .to_numpy()
+            .flatten()
+        )
+        np.testing.assert_equal(arr, pandas_df.apply(lambda x: x.sum()).values)
+        arr = (
+            modin_frame.reduce(
+                0, lambda x: x.sum().astype(np.int64), result_schema=int_result_schema
+            )
+            .to_numpy()
+            .flatten()
+        )
+        np.testing.assert_equal(
+            arr, pandas_df.apply(lambda x: x.sum().astype(np.int64)).values
+        )
+        arr = (
+            modin_frame.reduce(
+                1,
+                lambda x: x.sum(axis=1),
+                result_schema={"__reduced__": np.dtype(np.float64)},
+            )
+            .to_numpy()
+            .flatten()
+        )
+        np.testing.assert_equal(arr, pandas_df.apply(sum, axis=1).values)
+        arr = (
+            modin_frame.reduce(
+                1,
+                lambda x: x.sum(axis=1).astype(np.int64),
+                result_schema={"__reduced__": np.dtype(np.int64)},
+            )
+            .to_numpy()
+            .flatten()
+        )
+        np.testing.assert_equal(
+            arr, pandas_df.apply(lambda x: x.sum().astype(np.int64), axis=1).values
+        )
+        with pytest.raises(TypeError):
+            modin_frame.reduce(0, np.sum, result_schema=int_result_schema).to_numpy()
+        with pytest.raises(TypeError):
+            modin_frame.reduce(
+                0, lambda x: x.sum().astype(np.int64), result_schema=result_schema
+            ).to_numpy()
+        with pytest.raises(TypeError):
+            modin_frame.reduce(
+                1,
+                lambda x: x.sum(axis=1).astype(np.int64),
+                result_schema={"__reduced__": np.dtype(np.float64)},
+            ).to_numpy()
+        with pytest.raises(TypeError):
+            modin_frame.reduce(
+                1,
+                lambda x: x.sum(axis=1),
+                result_schema={"__reduced__": np.dtype(np.int64)},
+            ).to_numpy()
+
+
+class TestTreeReduce:
+    def test_tree_reduce(self):
+        values = np.random.rand(2 ** 10, 2 ** 8)
+        modin_frame = (
+            pd.DataFrame(values).add_prefix("col")._query_compiler._modin_frame
+        )
+        pandas_df = pandas.DataFrame(values).add_prefix("col")
+        arr = modin_frame.reduce(0, lambda x: x.sum()).to_numpy().flatten()
+        np.testing.assert_equal(arr, pandas_df.apply(lambda x: x.sum()).values)
+        arr_tree = modin_frame.tree_reduce(0, lambda x: x.sum()).to_numpy().flatten()
+        np.testing.assert_equal(arr, arr_tree)
+        arr = modin_frame.reduce(1, lambda x: x.sum(axis=1)).to_numpy().flatten()
+        np.testing.assert_array_almost_equal(
+            arr, pandas_df.apply(lambda x: x.sum(), axis=1).values, decimal=12
+        )
+        arr_tree = (
+            modin_frame.tree_reduce(1, lambda x: x.sum(axis=1)).to_numpy().flatten()
+        )
+        np.testing.assert_array_almost_equal(arr, arr_tree, decimal=12)
+        arr = modin_frame.reduce(0, lambda x: x.median()).to_numpy().flatten()
+        np.testing.assert_equal(arr, pandas_df.apply(lambda x: x.median()).values)
+        arr_tree = modin_frame.tree_reduce(0, lambda x: x.median()).to_numpy().flatten()
+        assert not np.array_equal(arr, arr_tree)
+        arr = modin_frame.reduce(1, lambda x: x.median(axis=1)).to_numpy().flatten()
+        np.testing.assert_equal(
+            arr, pandas_df.apply(lambda x: x.median(), axis=1).values
+        )
+        arr_tree = (
+            modin_frame.tree_reduce(1, lambda x: x.median(axis=1)).to_numpy().flatten()
+        )
+        assert not np.array_equal(arr, arr_tree)
+>>>>>>> f3748dbafc60e37063b16d2048097d4d4f10ef37

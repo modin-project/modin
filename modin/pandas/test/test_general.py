@@ -711,3 +711,13 @@ def test_default_to_pandas_warning_message(func, regex):
 
     with pytest.warns(UserWarning, match=regex):
         func(df)
+
+
+def test_empty_dataframe():
+    df = pd.DataFrame(columns=["a", "b"])
+    df[(df.a == 1) & (df.b == 2)]
+
+
+def test_empty_series():
+    s = pd.Series([])
+    pd.to_numeric(s)
