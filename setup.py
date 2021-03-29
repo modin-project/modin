@@ -41,8 +41,12 @@ dask_deps = ["dask>=2.12.0,<=2.19.0", "distributed>=2.12.0,<=2.19.0"]
 ray_deps = ["ray>=1.0.0,<1.2.0", "pyarrow==1.0"]
 remote_deps = ["rpyc==4.1.5", "cloudpickle==1.4.1", "boto3==1.4.8"]
 spreadsheet_deps = ["modin-spreadsheet>=0.1.0"]
-
+sql_deps = ["dfsql>=0.2.6"]
 all_deps = dask_deps + ray_deps + remote_deps + spreadsheet_deps
+
+# dfsql does not support Windows yet
+if os.name != 'nt':
+    all_deps += sql_deps
 
 setup(
     name="modin",
@@ -63,6 +67,7 @@ setup(
         "ray": ray_deps,
         "remote": remote_deps,
         "spreadsheet": spreadsheet_deps,
+        "sql": sql_deps,
         "all": all_deps,
     },
     python_requires=">=3.7.1",

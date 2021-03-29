@@ -415,6 +415,8 @@ jobs:
       - shell: bash -l {0}
         run: python -m pytest modin/experimental/pandas/test/test_io_exp.py
       - shell: bash -l {0}
+        run: pip install dfsql && pytest modin/experimental/sql/test/test_sql.py
+      - shell: bash -l {0}
         run: bash <(curl -s https://codecov.io/bash)
 
   test-experimental:
