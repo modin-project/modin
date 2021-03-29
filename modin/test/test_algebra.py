@@ -286,7 +286,7 @@ class TestMask:
             .to_labels(["index"])
         )
         pandas_frame = modin_frame.to_pandas()
-        row_labels = (pandas_frame.index.values.tolist(),)
+        row_labels = pandas_frame.index.values.tolist()
 
         for row_index, row in enumerate(row_labels):
             df_equals(
@@ -329,7 +329,7 @@ class TestMask:
             .to_labels(["index"])
         )
         pandas_frame = modin_frame.to_pandas()
-        (column_labels,) = pandas_frame.columns.values.tolist()
+        column_labels = pandas_frame.columns.values.tolist()
 
         for col_index, column in enumerate(column_labels):
             df_equals(
