@@ -189,7 +189,6 @@ class TestFilterByTypes:
 class TestFilter:
     def test_filter(self):
         values = np.random.rand(2 ** 10, 2 ** 8)
-        pandas_df = pandas.DataFrame(values).add_prefix("col")
         modin_frame = (
             pd.DataFrame(values).add_prefix("col")._query_compiler._modin_frame
         )
@@ -287,10 +286,7 @@ class TestMask:
             .to_labels(["index"])
         )
         pandas_frame = modin_frame.to_pandas()
-        column_labels, row_labels = (
-            pandas_frame.columns.values.tolist(),
-            pandas_frame.index.values.tolist(),
-        )
+        row_labels = (pandas_frame.index.values.tolist(),)
 
         for row_index, row in enumerate(row_labels):
             df_equals(
@@ -333,10 +329,7 @@ class TestMask:
             .to_labels(["index"])
         )
         pandas_frame = modin_frame.to_pandas()
-        column_labels, row_labels = (
-            pandas_frame.columns.values.tolist(),
-            pandas_frame.index.values.tolist(),
-        )
+        (column_labels,) = pandas_frame.columns.values.tolist()
 
         for col_index, column in enumerate(column_labels):
             df_equals(
