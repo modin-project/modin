@@ -65,6 +65,17 @@ _TYPE_PARAMS = {
 _UNSET = object()
 
 
+class ValueSource:
+    """Describes the method of getting the value for a parameter."""
+
+    # got from default, i.e. neither user nor configuration source had the value
+    DEFAULT = 0
+    # set by user
+    SET_BY_USER = 1
+    # got from parameter configuration source, like environment variable
+    GOT_FROM_CFG_SOURCE = 2
+
+
 class Parameter(object):
     """
     Base class describing interface for configuration entities
@@ -74,6 +85,7 @@ class Parameter(object):
     type = str
     default = None
     is_abstract = True
+    _value_source = None
 
     @classmethod
     def _get_raw_from_config(cls) -> str:
@@ -111,6 +123,13 @@ class Parameter(object):
         return cls.default
 
     @classmethod
+    def get_value_source(cls):
+        if cls._value_source is None:
+            # dummy call to .get() to initialize the value
+            cls.get()
+        return cls._value_source
+
+    @classmethod
     def get(cls):
         if cls._value is _UNSET:
             # get the value from env
@@ -118,15 +137,18 @@ class Parameter(object):
                 raw = cls._get_raw_from_config()
             except KeyError:
                 cls._value = cls._get_default()
+                cls._value_source = ValueSource.DEFAULT
             else:
                 if not _TYPE_PARAMS[cls.type].verify(raw):
                     raise ValueError(f"Unsupported raw value: {raw}")
                 cls._value = _TYPE_PARAMS[cls.type].decode(raw)
+                cls._value_source = ValueSource.GOT_FROM_CFG_SOURCE
         return cls._value
 
     @classmethod
     def put(cls, value):
         cls._check_callbacks(cls._put_nocallback(value))
+        cls._value_source = ValueSource.SET_BY_USER
 
     @classmethod
     def once(cls, onvalue, callback):
