@@ -14,11 +14,11 @@
 
 import logging
 from typing import Dict, Optional
-from multiprocessing import cpu_count
 
 import xgboost as xgb
 
 from modin.config import Engine
+from modin.distributed.dataframe.pandas import unwrap_partitions
 import modin.pandas as pd
 
 LOGGER = logging.getLogger("[modin.xgboost]")
@@ -48,8 +48,8 @@ class DMatrix(xgb.DMatrix):
             label, (pd.DataFrame, pd.Series)
         ), f"Type of `data` is {type(label)}, but expected {pd.DataFrame} or {pd.Series}."
 
-        self.data = data
-        self.label = label
+        self.data = unwrap_partitions(data, axis=0, get_ip=True)
+        self.label = unwrap_partitions(label, axis=0)
 
     def __iter__(self):
         yield self.data
@@ -79,7 +79,7 @@ class Booster(xgb.Booster):
     def predict(
         self,
         data: DMatrix,
-        nthread: Optional[int] = cpu_count(),
+        num_actors: Optional[int] = None,
         **kwargs,
     ):
         """
@@ -89,8 +89,9 @@ class Booster(xgb.Booster):
         ----------
         data : DMatrix
             Input data used for prediction.
-        nthread : int. Default is number of threads on master node
-            Number of threads for using in each node.
+        num_actors : int. Default is None
+            Number of actors for prediction. If it's None, this value will be
+            computed automatically.
         \\*\\*kwargs :
             Other parameters are the same as `xgboost.Booster.predict`.
 
@@ -110,7 +111,7 @@ class Booster(xgb.Booster):
             data, DMatrix
         ), f"Type of `data` is {type(data)}, but expected {DMatrix}."
 
-        result = _predict(self.copy(), data, nthread, **kwargs)
+        result = _predict(self.copy(), data, num_actors, **kwargs)
         LOGGER.info("Prediction finished")
 
         return result
@@ -121,7 +122,7 @@ def train(
     dtrain: DMatrix,
     *args,
     evals=(),
-    nthread: Optional[int] = cpu_count(),
+    num_actors: Optional[int] = None,
     evals_result: Optional[Dict] = None,
     **kwargs,
 ):
@@ -137,8 +138,9 @@ def train(
     evals: list of pairs (DMatrix, string)
         List of validation sets for which metrics will evaluated during training.
         Validation metrics will help us track the performance of the model.
-    nthread : int. Default is number of threads on master node
-        Number of threads for using in each node.
+    num_actors : int. Default is None
+        Number of actors for training. If it's None, this value will be
+        computed automatically.
     evals_result : dict. Default is None
         Dict to store evaluation results in.
     \\*\\*kwargs :
@@ -159,7 +161,7 @@ def train(
     assert isinstance(
         dtrain, DMatrix
     ), f"Type of `dtrain` is {type(dtrain)}, but expected {DMatrix}."
-    result = _train(dtrain, nthread, params, *args, evals=evals, **kwargs)
+    result = _train(dtrain, num_actors, params, *args, evals=evals, **kwargs)
     if isinstance(evals_result, dict):
         evals_result.update(result["history"])
 
