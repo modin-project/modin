@@ -1,3 +1,6 @@
+Test Algebra.py 
+
+
 # Licensed to Modin Development Team under one or more contributor license agreements.
 # See the NOTICE file distributed with this work for additional information regarding
 # copyright ownership.  The Modin Development Team licenses this file to you under the
@@ -206,9 +209,91 @@ class TestFilter:
         null_df = modin_frame.filter(0, lambda df: df.drop(index=df.index)).to_pandas()
         df_is_empty(null_df)
 
+class TestMask:
+    def test_mask_full(self):
+        values = np.random.rand(2 ** 10, 2 ** 8)
+        def convert_row(df):
+            df['index'] = 'row' + df['index'].astype(str)
+            return df
+        modin_frame = (
+            pd.DataFrame(values).add_prefix("col")._query_compiler._modin_frame.from_labels().map(convert_row, axis=1).to_labels(['index'])
+        )
+        # modin_frame = modin_frame.from_labels().map(convert_row, axis=1).to_labels(['index'])
+        pandas_frame = modin_frame.to_pandas()
+        column_labels, row_labels = pandas_frame.columns.values.tolist(), pandas_frame.index.values.tolist()
+        df_equals(pandas_frame, modin_frame.mask(col_labels=column_labels, row_labels=row_labels).to_pandas())
+
+    def test_invalid_mask(self):
+        # TODO: add label/index checks to mask
+        pass
+
+    def test_mask_values(self):
+        values = np.random.rand(2 ** 10, 2 ** 8)
+        def convert_row(df):
+            df['index'] = 'row' + df['index'].astype(str)
+            return df
+        modin_frame = (
+            pd.DataFrame(values).add_prefix("col")._query_compiler._modin_frame.from_labels().map(convert_row, axis=1).to_labels(['index'])
+        )
+        pandas_frame = modin_frame.to_pandas()
+        column_labels, row_labels = pandas_frame.columns.values.tolist(), pandas_frame.index.values.tolist()
+
+        # test entire rows and columns
+        for row_index, row in enumerate(row_labels):
+            df_equals(pandas_frame.loc[[row],:], modin_frame.mask(row_labels=[row]).to_pandas())
+            df_equals(pandas_frame.iloc[[row_index],:], modin_frame.mask(row_positions=[row_index]).to_pandas())
+        for col_index, column in enumerate(column_labels):
+            df_equals(pandas_frame.loc[:,[column]], modin_frame.mask(col_labels=[column]).to_pandas())
+            df_equals(pandas_frame.iloc[:, [col_index]], modin_frame.mask(col_positions=[col_index]).to_pandas())
+
+        # test invididual cells
+        for row_index, row in enumerate(row_labels):
+            for col_index, column in enumerate(column_labels):
+                df_equals(pandas_frame.loc[[row],[column]], modin_frame.mask(col_labels=[column], row_labels=[row]).to_pandas())
+                df_equals(pandas_frame.iloc[[row_index], [col_index]], modin_frame.mask(col_positions=[col_index], row_positions=[row_index]))
+
+        # test slices
+        for row_index_start, row_start in enumerate(row_labels):
+            for row_index_end in range(row_index_start, len(row_labels)):
+                row_end = row_labels[row_index_end]
+                df_equals(pandas_frame.loc[row_start:row_end, :], modin_frame.mask(row_labels=row_labels[row_index_start:row_index_end+1]).to_pandas())
+                df_equals(pandas_frame.iloc[row_index_start:row_index_end, :], modin_frame.mask(row_positions=list(range(row_index_start, row_index_end))).to_pandas())
+        
+        for col_index_start, col_start in enumerate(column_labels):
+            for col_index_end in range(col_index_start, len(column_labels)):
+                col_end = column_labels[col_index_end]
+                df_equals(pandas_frame.loc[:, col_start:col_end], modin_frame.mask(col_labels=column_labels[col_index_start, col_index_end+1]).to_pandas())
+                df_equals(pandas_frame.iloc[:, col_index_start:col_index_end], modin_frame.mask(col_positions=list(range(col_index_start, col_index_end))).to_pandas())
+
+        
+
+
+
+
+        
+    
+
+
+
+        
+
+
+
 
 # TODO[Todd]:
 # Filtering where all is true - returns the same value
 # Filtering where none is true - returns nothing
 # Try proper filters
 # Try filtering axiswise
+# Add Mask Test 
+# Mask: specify either: row_labels OR row_positions, col_labels OR col_positions 
+# outputs a new dataframe
+# CONVERT TO ROWS
+# def f(df):
+#     df['index'] = 'row' + df['index'].astype(str)
+#     return df
+# p.from_labels().map(f, axis=1).to_labels(['index'])
+# df.loc and df.iloc
+# df.loc[,:0] takes first column; df.loc[0, 0]
+# df.loc[1].iloc[0]
+
