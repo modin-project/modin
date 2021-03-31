@@ -24,6 +24,7 @@ import modin.pandas as pd
 import pandas
 import numpy as np
 import uuid
+from typing import Union
 
 RAND_LOW = 0
 RAND_HIGH = 100
@@ -97,7 +98,19 @@ IMPL = {
 }
 
 
-def translator_groupby_ngroups(groupby_ngroups, shape):
+def translator_groupby_ngroups(groupby_ngroups: Union[str, int], shape: tuple) -> int:
+    """
+    Translate a string representation of the number of groups, into a number.
+
+    Parameters
+    ----------
+    groupby_ngroups:
+    shape: tuple
+
+    Return
+    ------
+    int
+    """
     if ASV_DATASET_SIZE == "big":
         if groupby_ngroups == "huge_amount_groups":
             return min(shape[0] // 2, 5000)
@@ -114,7 +127,26 @@ data_cache = dict()
 dataframes_cache = dict()
 
 
-def gen_int_data(nrows, ncols, rand_low, rand_high):
+def gen_int_data(nrows: int, ncols: int, rand_low: int, rand_high: int) -> dict:
+    """
+    Generate int data with caching.
+
+    Parameters
+    ----------
+    nrows: int
+        number of rows
+    ncols: int
+        number of columns
+    rand_low: int
+        low bound for random generator
+    rand_high:int
+        high bound for random generator
+
+    Return
+    ------
+    dict
+        ncols number of keys, storing numpy.array of nrows length
+    """
     cache_key = ("int", nrows, ncols, rand_low, rand_high)
     if cache_key in data_cache:
         return data_cache[cache_key]
@@ -132,7 +164,27 @@ def gen_int_data(nrows, ncols, rand_low, rand_high):
     return data
 
 
-def gen_str_int_data(nrows, ncols, rand_low, rand_high):
+def gen_str_int_data(nrows: int, ncols: int, rand_low: int, rand_high: int) -> dict:
+    """
+    Generate int data and string data with caching.
+
+    Parameters
+    ----------
+    nrows: int
+        number of rows
+    ncols: int
+        number of columns
+    rand_low: int
+        low bound for random generator
+    rand_high:int
+        high bound for random generator
+
+    Return
+    ------
+    dict
+        ncols+1 number of keys, storing numpy.array of nrows length
+        one column with string values
+    """
     cache_key = ("str_int", nrows, ncols, rand_low, rand_high)
     if cache_key in data_cache:
         return data_cache[cache_key]
@@ -150,7 +202,31 @@ def gen_str_int_data(nrows, ncols, rand_low, rand_high):
     return data
 
 
-def gen_data(data_type, nrows, ncols, rand_low, rand_high):
+def gen_data(
+    data_type: str, nrows: int, ncols: int, rand_low: int, rand_high: int
+) -> dict:
+    """
+    Generate data with caching.
+
+    Parameters
+    ----------
+    data_type: str
+        type of data generation
+    nrows: int
+        number of rows
+    ncols: int
+        number of columns
+    rand_low: int
+        low bound for random generator
+    rand_high:int
+        high bound for random generator
+
+    Return
+    ------
+    dict
+        ncols+1 number of keys, storing numpy.array of nrows length
+        one column with string values
+    """
     if data_type == "int":
         return gen_int_data(nrows, ncols, rand_low, rand_high)
     elif data_type == "str_int":
@@ -218,20 +294,57 @@ def generate_dataframe(
     return df
 
 
-def random_string():
-    return str(uuid.uuid1())
+def random_string() -> str:
+    """
+    Create 36 character random strings using functionality from `uuid` module.
+
+    Return
+    ------
+    str
+    """
+    return str(uuid.uuid4())
 
 
-def random_columns(df_columns, columns_number):
+def random_columns(df_columns: list, columns_number: int) -> list:
+    """
+    Create list of random columns from a given sequence.
+
+    Parameters
+    ----------
+    df_columns: list
+    columns_number: int
+
+    Return
+    ------
+    list
+    """
     return list(random_state.choice(df_columns, size=columns_number))
 
 
-def random_booleans(number):
+def random_booleans(number: int) -> list:
+    """
+    Create random list of booleans with `number` elements.
+
+    Parameters
+    ----------
+    number: int
+        count of booleans in result list
+
+    Return
+    ------
+    list
+    """
     return list(random_state.choice([True, False], size=number))
 
 
-def execute(df):
-    "Make sure the calculations are done."
+def execute(df: Union[pd.DataFrame, pandas.DataFrame]):
+    """
+    Make sure the calculations are done.
+
+    Parameters
+    ----------
+    df: modin.DataFrame of pandas.Datarame
+    """
     if ASV_USE_IMPL == "modin":
         partitions = df._query_compiler._modin_frame._partitions
         all(
@@ -255,5 +368,16 @@ def execute(df):
         pass
 
 
-def get_shape_id(array):
-    return "_".join([str(element) for element in array])
+def get_shape_id(shape: tuple) -> str:
+    """
+    Join shape numbers into a string with `_` delimiters.
+
+    Parameters
+    ----------
+    shape: tuple
+
+    Return
+    ------
+    str
+    """
+    return "_".join([str(element) for element in shape])
