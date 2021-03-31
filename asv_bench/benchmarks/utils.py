@@ -11,6 +11,13 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
+"""
+This module contains the functionality that is used when benchmarking modin commits.
+In the case of using utilities from the main modin code, there is a chance that when
+benchmarking old commits, the utilities changed, which in turn can unexpectedly affect
+the performance results.
+"""
+
 import os
 import logging
 import modin.pandas as pd

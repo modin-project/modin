@@ -11,6 +11,8 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
+"""General modin benchmarks"""
+
 # define `MODIN_CPUS` env var to control the number of partitions
 # it should be defined before modin.pandas import (in case of using os.environ)
 
