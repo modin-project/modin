@@ -63,10 +63,25 @@ the hash in the corresponding result files.
   The implementation can be found in `test-asv-benchmarks` job of [ci.yml](https://github.com/modin-project/modin/blob/master/.github/workflows/ci.yml)
 
 2 step: running benchmarks with saving the results in [modin-bench@master](https://github.com/modin-project/modin-bench).
-  The launch takes place on its own server, the description of which can be found in the dashboard.
-  Run command: `asv run HASHFILE:hashfile.txt --show-stderr --machine xeon-e5 --launch-method=spawn`.
-  In the file `hashfile.txt` is the last commit from the master branch.
-  The implementation is in the internal teamcity configuration.
+  The launch takes place on our own server by using teamcity configuration.
+  The description of the server can be found in the dashboard.
+  This step starts as scheduled (now every half hour), subject to the presence of new commits in the modin master branch.
+  Command to run benchmarks: `asv run HASHFILE:hashfile.txt --show-stderr --machine xeon-e5 --launch-method=spawn`.
+  In the file `hashfile.txt` is the last modin commit hash.
+  Writing to a `modin-bench@master` triggers 3 step of the pipeline.
 
 3 step: converting the results to html representation, which is saved in [modin-bench@gh-pages](https://github.com/modin-project/modin-bench)
   The implementation can be found in `deploy-gh-pages` job of [push.yml](https://github.com/modin-project/modin-bench/blob/master/.github/workflows/push.yml)
+
+Basic actions for 2 step:
+* install packages to proper installation ray dependencies via pip:
+  * gcc
+  * python3-dev
+* setup environment variable:
+  * export MODIN_TEST_DATASET=Big
+  * export MODIN_CPUS=44
+* setup git client
+* prepare json file with machine description
+* copy old result to folder where new result wiil be appeared
+  (the solution of conflicts will be undertaken by ASV itself instead of git)
+* push performance result to modin-bench repository
