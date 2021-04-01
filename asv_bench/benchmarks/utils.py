@@ -15,7 +15,7 @@
 This module contains the functionality that is used when benchmarking modin commits.
 In the case of using utilities from the main modin code, there is a chance that when
 benchmarking old commits, the utilities changed, which in turn can unexpectedly affect
-the performance results.
+the performance results, hence some utility functions are duplicated here.
 """
 
 import os
@@ -296,7 +296,7 @@ def generate_dataframe(
 
 def random_string() -> str:
     """
-    Create 36 character random strings using functionality from `uuid` module.
+    Create 36-character random strings.
 
     Return
     ------
@@ -307,7 +307,7 @@ def random_string() -> str:
 
 def random_columns(df_columns: list, columns_number: int) -> list:
     """
-    Create list of random columns from a given sequence.
+    Pick sublist of random columns from a given sequence.
 
     Parameters
     ----------
@@ -339,7 +339,7 @@ def random_booleans(number: int) -> list:
 
 def execute(df: Union[pd.DataFrame, pandas.DataFrame]):
     """
-    Make sure the calculations are done.
+    Make sure the calculations are finished.
 
     Parameters
     ----------
