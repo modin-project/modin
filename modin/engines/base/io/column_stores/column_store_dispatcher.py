@@ -11,6 +11,11 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
+"""This module houses `ColumnStoreDispatcher` class, that is used for
+reading columnwise storing files formats.
+
+"""
+
 import numpy as np
 import pandas
 
@@ -22,6 +27,25 @@ from modin.config import NPartitions
 class ColumnStoreDispatcher(FileDispatcher):
     @classmethod
     def call_deploy(cls, fname, col_partitions, **kwargs):
+        """Deploy remote tasks to the workers with passed parameters.
+
+        Parameters
+        ----------
+        fname: str, path object or file-like object
+            Name of the file to read.
+        col_partitions: list
+            List of arrays with columns names that should be read
+            by each partition.
+
+        kwargs:
+            Parameters of read_* function.
+
+        Returns
+        -------
+        np.array:
+            Array with references to the deploy result for each partition.
+
+        """
         return np.array(
             [
                 cls.deploy(
@@ -40,6 +64,26 @@ class ColumnStoreDispatcher(FileDispatcher):
 
     @classmethod
     def build_partition(cls, partition_ids, row_lengths, column_widths):
+        """Build array with partitions of `cls.frame_partition_cls` class
+        from data ids passed as `partition_ids` and partitions metadata
+        passed as `row_lengths` and `column_widths`.
+
+        Parameters
+        ----------
+        partition_ids: list
+                array with references to the partitions data.
+        row_lengths: list
+                Partitions rows lengths.
+        column_widths: list
+                Number of columns in each partition.
+
+        Returns
+        -------
+        np.array:
+            array with shape equals to the shape of `partition_ids` and
+            filed with partitions objects.
+
+        """
         return np.array(
             [
                 [
@@ -56,6 +100,22 @@ class ColumnStoreDispatcher(FileDispatcher):
 
     @classmethod
     def build_index(cls, partition_ids):
+        """Compute index and it's splits sizes of resulted modin.DataFrame by using
+        of the first partition index.
+
+        Parameters
+        ----------
+        partition_ids: list
+            array with references to the partitions data.
+
+        Returns
+        -------
+        index: pandas.Index
+            Index of resulted modin.DataFrame.
+        row_lengths: list
+            List with lengths of index chunks.
+
+        """
         num_partitions = NPartitions.get()
         index_len = cls.materialize(partition_ids[-2][0])
         if isinstance(index_len, int):
@@ -79,6 +139,22 @@ class ColumnStoreDispatcher(FileDispatcher):
 
     @classmethod
     def build_columns(cls, columns):
+        """Split columns into chunks, that should be read be workers.
+
+        Parameters
+        ----------
+        columns: list
+            List of columns that should be read from file.
+
+        Returns
+        -------
+        col_partitions: list
+            List of lists with columns for reading by workers.
+        column_widths: list
+            List with lengths of `col_partitions` subarrays
+            (number of columns that should be read by workers).
+
+        """
         num_partitions = NPartitions.get()
         column_splits = (
             len(columns) // num_partitions
@@ -94,15 +170,50 @@ class ColumnStoreDispatcher(FileDispatcher):
 
     @classmethod
     def build_dtypes(cls, partition_ids, columns):
-        # Compute dtypes concatenating the results from each of the columns splits
-        # determined above. This creates a pandas Series that contains a dtype for every
-        # column.
+        """Compute dtypes concatenating the results from each of the columns splits
+        produced in partitions. This creates a pandas Series that contains a dtype for every
+        column.
+
+        Parameters
+        ----------
+        partition_ids: list
+            array with references to the partitions data.
+        columns: list
+            List of columns that should be read from file.
+
+        Returns
+        -------
+        dtypes: pandas.Series
+            Series with dtypes for columns.
+
+        """
         dtypes = pandas.concat(cls.materialize(list(partition_ids)), axis=0)
         dtypes.index = columns
         return dtypes
 
     @classmethod
     def build_query_compiler(cls, path, columns, **kwargs):
+        """Build query compiler from deployed tasks outputs according to `path`
+        and `columns` parameters.
+
+        Parameters
+        ----------
+        path: str, path object or file-like object
+            Path to the file to read.
+        columns: list
+            List of columns that should be read from file.
+        kwargs: dict
+            Parameters of read_* function.
+
+        Returns
+        -------
+        new_query_compiler:
+            Query compiler with imported data for further processing.
+
+        """
+        import pdb
+
+        pdb.set_trace()
         col_partitions, column_widths = cls.build_columns(columns)
         partition_ids = cls.call_deploy(path, col_partitions, **kwargs)
         index, row_lens = cls.build_index(partition_ids)

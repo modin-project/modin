@@ -11,6 +11,11 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
+"""This module houses `TextFileDispatcher` class, that is used for
+reading text formats files.
+
+"""
+
 from modin.engines.base.io.file_dispatcher import FileDispatcher
 from modin.data_management.utils import compute_chunksize
 import numpy as np
@@ -26,11 +31,27 @@ ColumnNamesTypes = Tuple[Union[pandas.Index, pandas.MultiIndex, pandas.Int64Inde
 
 
 class TextFileDispatcher(FileDispatcher):
+    """Class handles utils for reading text formats files. Inherits some util
+    functions for processing files from `FileDispatcher` class.
+
+    """
+
     @classmethod
     def get_path_or_buffer(cls, filepath_or_buffer):
         """Given a buffer, try and extract the filepath from it so that we can
         use it without having to fall back to Pandas and share file objects between
         workers. Given a filepath, return it immediately.
+
+        Parameters
+        ----------
+        filepath_or_buffer: str, path object or file-like object
+            `filepath_or_buffer` parameter of read_csv function.
+
+        Returns
+        -------
+        str or path object:
+            verified `filepath_or_buffer` parameter.
+
         """
         if isinstance(filepath_or_buffer, (io.BufferedReader, io.TextIOWrapper)):
             buffer_filepath = filepath_or_buffer.name
@@ -45,6 +66,26 @@ class TextFileDispatcher(FileDispatcher):
 
     @classmethod
     def build_partition(cls, partition_ids, row_lengths, column_widths):
+        """Build array with partitions of `cls.frame_partition_cls` class
+        from data ids passed as `partition_ids` and partitions metadata
+        passed as `row_lengths` and `column_widths`.
+
+        Parameters
+        ----------
+        partition_ids: list
+                array with references to the partitions data.
+        row_lengths: list
+                Partitions rows lengths.
+        column_widths: list
+                Number of columns in each partition.
+
+        Returns
+        -------
+        np.array:
+            array with shape equals to the shape of `partition_ids` and
+            filed with partitions objects.
+
+        """
         return np.array(
             [
                 [
@@ -61,6 +102,21 @@ class TextFileDispatcher(FileDispatcher):
 
     @classmethod
     def pathlib_or_pypath(cls, filepath_or_buffer):
+        """Checks if `filepath_or_buffer` is instance of `py.path.local`
+        or `pathlib.Path`.
+
+        Parameters
+        ----------
+        filepath_or_buffer: str, path object or file-like object
+            `filepath_or_buffer` parameter of read_csv function.
+
+        Returns
+        -------
+        bool:
+            Wheather or not `filepath_or_buffer` is instance of  `py.path.local`
+            or `pathlib.Path`.
+
+        """
         try:
             import py
 
@@ -85,8 +141,7 @@ class TextFileDispatcher(FileDispatcher):
         quotechar: bytes = b'"',
         is_quoting: bool = True,
     ):
-        """
-        Moves the file offset at the specified amount of bytes.
+        """Moves the file offset at the specified amount of bytes.
 
         Parameters
         ----------
@@ -100,9 +155,10 @@ class TextFileDispatcher(FileDispatcher):
 
         Returns
         -------
-        bool
+        bool:
             If file pointer reached the end of the file, but did not find
             closing quote returns `False`. `True` in any other case.
+
         """
 
         if is_quoting:
@@ -136,8 +192,7 @@ class TextFileDispatcher(FileDispatcher):
         quotechar: bytes = b'"',
         is_quoting: bool = True,
     ):
-        """
-        Compute chunk sizes in bytes for every partition.
+        """Compute chunk sizes in bytes for every partition.
 
         Parameters
         ----------
@@ -156,8 +211,10 @@ class TextFileDispatcher(FileDispatcher):
 
         Returns
         -------
-        An array, where each element of array is a tuple of two ints:
-        beginning and the end offsets of the current chunk.
+        list:
+            An array, where each element of array is a tuple of two ints:
+            beginning and the end offsets of the current chunk.
+
         """
         if num_partitions is None:
             num_partitions = NPartitions.get()
@@ -219,8 +276,7 @@ class TextFileDispatcher(FileDispatcher):
         is_quoting: bool = True,
         outside_quotes: bool = True,
     ):
-        """
-        Move the file offset at the specified amount of rows.
+        """Move the file offset at the specified amount of rows.
 
         Parameters
         ----------
@@ -236,10 +292,12 @@ class TextFileDispatcher(FileDispatcher):
 
         Returns
         -------
-        tuple of bool and int,
-            bool: If file pointer reached the end of the file, but did not find
-                closing quote returns `False`. `True` in any other case.
-            int: Number of rows that was read.
+        bool:
+            If file pointer reached the end of the file, but did not find closing quote
+            returns `False`. `True` in any other case.
+        int:
+            Number of rows that was read.
+
         """
         if nrows is not None and nrows <= 0:
             return True, 0
@@ -282,18 +340,20 @@ class TextFileDispatcher(FileDispatcher):
         header: Union[int, Sequence[int], str, None] = "infer",
         names: Optional[Sequence] = None,
     ) -> int:
-        """
-        Defines the number of rows that are used by header.
+        """Defines the number of rows that are used by header.
+
         Parameters
         ----------
         header: int, list of int or str ("infer")
-                Original header parameter of read_csv function.
+            Original header parameter of read_csv function.
         names:  array
-                Original names parameter of read_csv function.
+            Original names parameter of read_csv function.
+
         Returns
         -------
         header_size: int
-                The number of rows that are used by header.
+            The number of rows that are used by header.
+
         """
         header_size = 0
         if header == "infer" and names is None:
@@ -312,8 +372,9 @@ class TextFileDispatcher(FileDispatcher):
         num_splits: int,
         column_names: ColumnNamesTypes,
     ) -> Tuple[list, int]:
-        """
-        Define partitioning metadata.
+        """Define partitioning metadata.
+
+        Parameters
         ----------
         df: pandas.DataFrame
             The DataFrame to split.
@@ -329,6 +390,7 @@ class TextFileDispatcher(FileDispatcher):
                 columns for each partition).
         num_splits: int
                 Updated `num_splits` parameter.
+
         """
         column_chunksize = compute_chunksize(df, num_splits, axis=1)
         if column_chunksize > len(column_names):
@@ -354,8 +416,8 @@ class TextFileDispatcher(FileDispatcher):
 
     @classmethod
     def _launch_tasks(cls, splits: list, **partition_kwargs) -> Tuple[list, list, list]:
-        """
-        Launch tasks to read partitions.
+        """Launch tasks to read partitions.
+
         ----------
         splits: list
             list of tuples with partitions data, which defines
@@ -366,11 +428,12 @@ class TextFileDispatcher(FileDispatcher):
         Returns
         -------
         partition_ids: list
-                array with references to the partitions data.
+            array with references to the partitions data.
         index_ids: list
-                array with references to the partitions index objects.
+            array with references to the partitions index objects.
         dtypes_ids: list
-                array with references to the partitions dtypes objects.
+            array with references to the partitions dtypes objects.
+
         """
         partition_ids = []
         index_ids = []

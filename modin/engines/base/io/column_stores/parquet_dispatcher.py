@@ -11,6 +11,11 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
+"""This module houses `ParquetDispatcher` class, that is used for
+reading `.parquet` files.
+
+"""
+
 import os
 
 from modin.engines.base.io.column_stores.column_store_dispatcher import (
@@ -22,17 +27,15 @@ from modin.error_message import ErrorMessage
 class ParquetDispatcher(ColumnStoreDispatcher):
     @classmethod
     def _read(cls, path, engine, columns, **kwargs):
-        """Load a parquet object from the file path, returning a Modin DataFrame.
-
-        Modin only supports pyarrow engine for now.
+        """Load a parquet object from the file path, returning a query compiler.
 
         Parameters
         ----------
-        path: str
+        path: str, path object or file-like object
             The filepath of the parquet file in local filesystem or hdfs.
-        engine: 'pyarrow'
-            Parquet library to use
-        columns: list or None
+        engine: str
+            Parquet library to use (only 'pyarrow' supported for now),
+        columns: list
             If not None, only these columns will be read from the file.
         kwargs: dict
             Keyword arguments.
@@ -46,6 +49,7 @@ class ParquetDispatcher(ColumnStoreDispatcher):
         -----
         ParquetFile API is used. Please refer to the documentation here
         https://arrow.apache.org/docs/python/parquet.html
+
         """
         from pyarrow.parquet import ParquetFile, ParquetDataset
         from modin.pandas.io import PQ_INDEX_REGEX

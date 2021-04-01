@@ -11,6 +11,11 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
+"""This module houses `JSONDispatcher` class, that is used for
+reading `.json` files.
+
+"""
+
 from modin.engines.base.io.text.text_file_dispatcher import TextFileDispatcher
 from modin.data_management.utils import compute_chunksize
 from io import BytesIO
@@ -22,8 +27,30 @@ from modin.config import NPartitions
 
 
 class JSONDispatcher(TextFileDispatcher):
+    """Class handles utils for reading `.json` files. Inherits some common for text
+    files util functions from `TextFileDispatcher` class.
+
+    """
+
     @classmethod
     def _read(cls, path_or_buf, **kwargs):
+        """Read data from `path_or_buf` according to the passed read_json `kwargs`
+        parameters. This function performs parameters preprocessing, data file splitting,
+        tasks launching and results postprocessing.
+
+        Parameters
+        ----------
+        path_or_buf: str, path object or file-like object
+            `path_or_buf` parameter of read_json function.
+        kwargs: dict
+            Parameters of read_json function.
+
+        Returns
+        -------
+        new_query_compiler:
+            Query compiler with imported data for further processing.
+
+        """
         path_or_buf = cls.get_path_or_buffer(path_or_buf)
         if isinstance(path_or_buf, str):
             if not cls.file_exists(path_or_buf):

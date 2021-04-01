@@ -11,6 +11,11 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
+"""This module houses `FeatherDispatcher` class, that is used for
+reading `.feather` files.
+
+"""
+
 from modin.engines.base.io.column_stores.column_store_dispatcher import (
     ColumnStoreDispatcher,
 )
@@ -28,6 +33,20 @@ class FeatherDispatcher(ColumnStoreDispatcher):
                 Multi threading is set to False by default
             columns: Not supported by pandas api, but can be passed here
                      to read only specific columns
+
+        Parameters
+        ----------
+        path: str or file-like object
+            The filepath of the feather file (local files are supported for now,
+            multi threading is set to False by default).
+        columns: array
+            Columns to read from file. If not provided, all columns are read.
+        kwargs: dict
+            `read_feather` function kwargs.
+
+        Returns
+        -------
+            Query compiler with imported data for further processing.
 
         Notes:
             pyarrow feather is used. Please refer to the documentation here

@@ -11,6 +11,11 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
+"""This module houses `FileDispatcher` class, that is used for
+reading data from different kinds of files.
+
+"""
+
 import os
 import re
 from modin.config import Backend
@@ -20,12 +25,24 @@ NOT_IMPLEMENTED_MESSAGE = "Implement in children classes!"
 
 
 class FileDispatcher:
+    """Class handles util functions for reading data from different kinds of files."""
+
     frame_cls = None
     frame_partition_cls = None
     query_compiler_cls = None
 
     @classmethod
     def read(cls, *args, **kwargs):
+        """High-level function that calls specific for defined backend, engine and
+        dispatcher class `_read` function with passed parameters and performs some
+        postprocessing work on the resulted query_compiler object.
+
+        Returns
+        -------
+        query_compiler:
+            Query compiler with imported data for further processing.
+
+        """
         query_compiler = cls._read(*args, **kwargs)
         # TODO (devin-petersohn): Make this section more general for non-pandas kernel
         # implementations.
@@ -51,10 +68,30 @@ class FileDispatcher:
 
     @classmethod
     def _read(cls, *args, **kwargs):
+        """Function that performs reading the data from file, should be implemented
+        in the children class.
+
+        """
         raise NotImplementedError(NOT_IMPLEMENTED_MESSAGE)
 
     @classmethod
     def get_path(cls, file_path):
+        """Handles `file_path` in accordance to it's type: if `file_path`
+        is a S3 bucket, parameter will be returned as it is, otherwise
+        absolute path will be returned.
+
+        Parameters
+        ----------
+        file_path: str
+            String that represents the path to the file (pathes to S3 buckets
+            are also acceptable).
+
+        Returns
+        -------
+        str:
+            Updated or verified `file_path` parameter.
+
+        """
         if S3_ADDRESS_REGEX.search(file_path):
             return file_path
         else:
@@ -62,6 +99,26 @@ class FileDispatcher:
 
     @classmethod
     def file_open(cls, file_path, mode="rb", compression="infer"):
+        """Get the file handle from `file_path` according to `file_path` type
+        (wheather it's a S3 bucket or not), `compression` and `mode`
+        parameters.
+
+        Parameters
+        ----------
+        file_path: str
+            String that represents the path to the file (pathes to S3 buckets
+            are also acceptable).
+        mode: str
+            String, which defines which mode file should be open.
+        compression: str
+            File compression name (acceptable values are "gzip", "bz2", "xz" and "zip").
+
+        Returns
+        -------
+        file-like:
+            file-like object of the `file_path`.
+
+        """
         if isinstance(file_path, str):
             match = S3_ADDRESS_REGEX.search(file_path)
             if match is not None:
@@ -113,6 +170,20 @@ class FileDispatcher:
 
     @classmethod
     def file_size(cls, f):
+        """Get the size of file associated with file handle `f` by
+        checking the file last byte number.
+
+        Parameters
+        ----------
+        f: file-like object
+            File-like object, that should be used for size getting.
+
+        Returns
+        -------
+        int:
+            File size in bytes.
+
+        """
         cur_pos = f.tell()
         f.seek(0, os.SEEK_END)
         size = f.tell()
@@ -121,6 +192,20 @@ class FileDispatcher:
 
     @classmethod
     def file_exists(cls, file_path):
+        """Checks if `file_path` exists.
+
+        Parameters
+        ----------
+        file_path: str
+            String that represents the path to the file (pathes to S3 buckets
+            are also acceptable).
+
+        Returns
+        -------
+        bool:
+            Wheather file exists or not.
+
+        """
         if isinstance(file_path, str):
             match = S3_ADDRESS_REGEX.search(file_path)
             if match is not None:
@@ -141,11 +226,23 @@ class FileDispatcher:
 
     @classmethod
     def deploy(cls, func, args, num_returns):
+        """Function for remote task deploying, should be implemented
+        in the task class (for example `RayTask`).
+
+        """
         raise NotImplementedError(NOT_IMPLEMENTED_MESSAGE)
 
     def parse(self, func, args, num_returns):
+        """Function for files parsing on the workers processes, should be
+        implemented in the parser class (for example `PandasCSVParser`).
+
+        """
         raise NotImplementedError(NOT_IMPLEMENTED_MESSAGE)
 
     @classmethod
     def materialize(cls, obj_id):
+        """Function for getting results from worker, should be implemented
+        in the task class (for example `RayTask`).
+
+        """
         raise NotImplementedError(NOT_IMPLEMENTED_MESSAGE)

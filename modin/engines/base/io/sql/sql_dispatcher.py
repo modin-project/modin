@@ -11,6 +11,11 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
+"""This module houses `SQLDispatcher` class, that is used for
+reading SQL queries or database tables.
+
+"""
+
 import math
 import numpy as np
 import pandas
@@ -25,13 +30,21 @@ class SQLDispatcher(FileDispatcher):
     def _read(cls, sql, con, index_col=None, **kwargs):
         """Reads a SQL query or database table into a DataFrame.
 
-        Args:
-            sql: string or SQLAlchemy Selectable (select or text object) SQL query to be
-                executed or a table name.
-            con: SQLAlchemy connectable (engine/connection) or database string URI or
-                DBAPI2 connection (fallback mode)
-            index_col: Column(s) to set as index(MultiIndex).
-            kwargs: Pass into pandas.read_sql function.
+        Parameters
+        ----------
+        sql: string or SQLAlchemy Selectable (select or text object)
+            SQL query to be executed or a table name.
+        con: SQLAlchemy connectable, str, or sqlite3 connection
+            Connection object to database.
+        index_col: str or list of str
+            Column(s) to set as index(MultiIndex).
+        kwargs: dict
+            Pass into pandas.read_sql function.
+
+        Returns
+        -------
+            Query compiler with imported data for further processing.
+
         """
         try:
             import psycopg2 as pg

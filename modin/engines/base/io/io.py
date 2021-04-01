@@ -11,51 +11,74 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
+"""This module houses `BaseIO` class, that contains basic utils
+and default implementation of IO functions.
+
+"""
+
 import pandas
 from collections import OrderedDict
 from modin.error_message import ErrorMessage
 from modin.backends.base.query_compiler import BaseQueryCompiler
 from typing import Optional
+from modin.utils import _inherit_docstrings
 
 
 class BaseIO(object):
+    """Class for basic utils and default implementation of IO functions."""
+
     query_compiler_cls: BaseQueryCompiler = None
     frame_cls = None
 
     @classmethod
     def from_non_pandas(cls, *args, **kwargs):
+        """Improve non-pandas object to an advanced and superior Modin DataFrame."""
         return None
 
     @classmethod
     def from_pandas(cls, df):
+        """Improve simple Pandas DataFrame to an advanced and superior Modin DataFrame.
+
+        Parameters
+        ----------
+        df: pandas.DataFrame
+            The pandas DataFrame to convert from.
+
+        Returns
+        -------
+        BaseQueryCompiler:
+            QueryCompiler containing data from the Pandas DataFrame.
+
+        """
         return cls.query_compiler_cls.from_pandas(df, cls.frame_cls)
 
     @classmethod
     def from_arrow(cls, at):
+        """Improve simple Arrow Table to an advanced and superior Modin DataFrame.
+
+        Parameters
+        ----------
+        at: Arrow Table
+            The Arrow Table to convert from.
+
+        Returns
+        -------
+        BaseQueryCompiler:
+            QueryCompiler containing data from the Arrow Table.
+
+        """
         return cls.query_compiler_cls.from_arrow(at, cls.frame_cls)
 
     @classmethod
+    @_inherit_docstrings(pandas.read_parquet)
     def read_parquet(cls, path, engine, columns, use_nullable_dtypes, **kwargs):
-        """Load a parquet object from the file path, returning a Modin DataFrame.
-           Modin only supports pyarrow engine for now.
-
-        Args:
-            path: The filepath of the parquet file.
-                  We only support local files for now.
-            engine: Modin only supports pyarrow reader.
-                    This argument doesn't do anything for now.
-            kwargs: Pass into parquet's read_pandas function.
-
-        Notes:
-            ParquetFile API is used. Please refer to the documentation here
-            https://arrow.apache.org/docs/python/parquet.html
-        """
         ErrorMessage.default_to_pandas("`read_parquet`")
         return cls.from_pandas(
             pandas.read_parquet(path, engine, columns, use_nullable_dtypes, **kwargs)
         )
 
     @classmethod
+    @_inherit_docstrings(pandas.read_csv)
     def read_csv(
         cls,
         filepath_or_buffer,
@@ -166,12 +189,18 @@ class BaseIO(object):
 
     @classmethod
     def _read(cls, **kwargs):
-        """Read csv file from local disk.
-        Args:
-            filepath_or_buffer:
-                  The filepath of the csv file.
-                  We only support local files for now.
-            kwargs: Keyword arguments in pandas.read_csv
+        """Read csv file into query compiler.
+
+        Parameters
+        ----------
+        kwargs:
+            `read_csv` function kwargs including `filepath_or_buffer` parameter.
+
+        Returns
+        -------
+        BaseQueryCompiler:
+            QueryCompiler with read data.
+
         """
         pd_obj = pandas.read_csv(**kwargs)
         if isinstance(pd_obj, pandas.DataFrame):
@@ -186,6 +215,7 @@ class BaseIO(object):
         return pd_obj
 
     @classmethod
+    @_inherit_docstrings(pandas.read_json)
     def read_json(
         cls,
         path_or_buf=None,
@@ -227,6 +257,7 @@ class BaseIO(object):
         return cls.from_pandas(pandas.read_json(**kwargs))
 
     @classmethod
+    @_inherit_docstrings(pandas.read_gbq)
     def read_gbq(
         cls,
         query: str,
@@ -267,6 +298,7 @@ class BaseIO(object):
         )
 
     @classmethod
+    @_inherit_docstrings(pandas.read_html)
     def read_html(
         cls,
         io,
@@ -306,11 +338,13 @@ class BaseIO(object):
         return cls.from_pandas(pandas.read_html(**kwargs)[0])
 
     @classmethod
+    @_inherit_docstrings(pandas.read_clipboard)
     def read_clipboard(cls, sep=r"\s+", **kwargs):  # pragma: no cover
         ErrorMessage.default_to_pandas("`read_clipboard`")
         return cls.from_pandas(pandas.read_clipboard(sep=sep, **kwargs))
 
     @classmethod
+    @_inherit_docstrings(pandas.read_excel)
     def read_excel(
         cls,
         io,
@@ -381,6 +415,7 @@ class BaseIO(object):
             return cls.from_pandas(intermediate)
 
     @classmethod
+    @_inherit_docstrings(pandas.read_hdf)
     def read_hdf(
         cls,
         path_or_buf,
@@ -413,6 +448,7 @@ class BaseIO(object):
         )
 
     @classmethod
+    @_inherit_docstrings(pandas.read_feather)
     def read_feather(cls, path, columns=None, use_threads=True, storage_options=None):
         ErrorMessage.default_to_pandas("`read_feather`")
         return cls.from_pandas(
@@ -425,6 +461,7 @@ class BaseIO(object):
         )
 
     @classmethod
+    @_inherit_docstrings(pandas.read_stata)
     def read_stata(
         cls,
         filepath_or_buffer,
@@ -456,6 +493,7 @@ class BaseIO(object):
         return cls.from_pandas(pandas.read_stata(**kwargs))
 
     @classmethod
+    @_inherit_docstrings(pandas.read_sas)
     def read_sas(
         cls,
         filepath_or_buffer,
@@ -478,6 +516,7 @@ class BaseIO(object):
         )
 
     @classmethod
+    @_inherit_docstrings(pandas.read_pickle)
     def read_pickle(cls, filepath_or_buffer, compression="infer", storage_options=None):
         ErrorMessage.default_to_pandas("`read_pickle`")
         return cls.from_pandas(
@@ -489,6 +528,7 @@ class BaseIO(object):
         )
 
     @classmethod
+    @_inherit_docstrings(pandas.read_sql)
     def read_sql(
         cls,
         sql,
@@ -515,6 +555,7 @@ class BaseIO(object):
         )
 
     @classmethod
+    @_inherit_docstrings(pandas.read_fwf)
     def read_fwf(
         cls, filepath_or_buffer, colspecs="infer", widths=None, infer_nrows=100, **kwds
     ):
@@ -538,6 +579,7 @@ class BaseIO(object):
         return pd_obj
 
     @classmethod
+    @_inherit_docstrings(pandas.read_sql_table)
     def read_sql_table(
         cls,
         table_name,
@@ -564,6 +606,7 @@ class BaseIO(object):
         )
 
     @classmethod
+    @_inherit_docstrings(pandas.read_sql_query)
     def read_sql_query(
         cls,
         sql,
@@ -588,11 +631,13 @@ class BaseIO(object):
         )
 
     @classmethod
+    @_inherit_docstrings(pandas.read_spss)
     def read_spss(cls, path, usecols, convert_categoricals):
         ErrorMessage.default_to_pandas("`read_spss`")
         return cls.from_pandas(pandas.read_spss(path, usecols, convert_categoricals))
 
     @classmethod
+    @_inherit_docstrings(pandas.DataFrame.to_sql)
     def to_sql(
         cls,
         qc,
@@ -621,6 +666,7 @@ class BaseIO(object):
         )
 
     @classmethod
+    @_inherit_docstrings(pandas.to_pickle)
     def to_pickle(cls, obj, path, compression="infer", protocol=4):
         if protocol == 4:
             protocol = -1
@@ -635,6 +681,7 @@ class BaseIO(object):
             )
 
     @classmethod
+    @_inherit_docstrings(pandas.DataFrame.to_csv)
     def to_csv(cls, obj, **kwargs):
         ErrorMessage.default_to_pandas("`to_csv`")
         if isinstance(obj, BaseQueryCompiler):

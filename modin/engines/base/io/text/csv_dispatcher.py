@@ -11,6 +11,11 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
+"""This module houses `CSVDispatcher` class, that is used for
+reading `.csv` files.
+
+"""
+
 from modin.engines.base.io.text.text_file_dispatcher import (
     TextFileDispatcher,
     ColumnNamesTypes,
@@ -30,8 +35,30 @@ IndexColType = Union[int, str, bool, Sequence[int], Sequence[str], None]
 
 
 class CSVDispatcher(TextFileDispatcher):
+    """Class handles utils for reading `.csv` files. Inherits some common for text
+    files util functions from `TextFileDispatcher` class.
+
+    """
+
     @classmethod
     def _read(cls, filepath_or_buffer, **kwargs):
+        """Read data from `filepath_or_buffer` according to the passed read_csv `kwargs`
+        parameters. This function performs parameters preprocessing, data file splitting,
+        tasks launching and results postprocessing.
+
+        Parameters
+        ----------
+        filepath_or_buffer: str, path object or file-like object
+            `filepath_or_buffer` parameter of read_csv function.
+        kwargs: ReadCsvKwargsType
+            Parameters of read_csv function.
+
+        Returns
+        -------
+        new_query_compiler:
+            Query compiler with imported data for further processing.
+
+        """
         filepath_or_buffer_md = (
             cls.get_path(filepath_or_buffer)
             if isinstance(filepath_or_buffer, str)
@@ -156,21 +183,23 @@ class CSVDispatcher(TextFileDispatcher):
         read_csv_kwargs: ReadCsvKwargsType,
         compression_infered: str,
     ) -> bool:
-        """
-        Check whatever or not passed parameters are supported by current modin.read_csv
-        implementation.
+        """Check wheather or not passed parameters are supported by
+        current modin.read_csv implementation.
+
+        Parameters
         ----------
         filepath_or_buffer: str, path object or file-like object
-                `filepath_or_buffer` parameter of read_csv function.
+            `filepath_or_buffer` parameter of read_csv function.
         read_csv_kwargs: ReadCsvKwargsType
-                Parameters of read_csv function.
+            Parameters of read_csv function.
         compression_infered: str
-                Infered `compression` parameter of read_csv function.
+            Infered `compression` parameter of read_csv function.
 
         Returns
         -------
         bool:
-            Whatever passed parameters are supported or not.
+            Whether passed parameters are supported or not.
+
         """
         if isinstance(filepath_or_buffer, str):
             if not cls.file_exists(filepath_or_buffer):
@@ -204,24 +233,26 @@ class CSVDispatcher(TextFileDispatcher):
         index_col: IndexColType,
         index_name: str,
     ) -> Tuple[IndexColType, list]:
-        """
-        Compute the index based on a sum of the lengths of each partition
+        """Compute the index based on a sum of the lengths of each partition
         (by default) or based on the column(s) that were requested.
+
+        Parameters
         ----------
         index_ids: list
-                Array with references to the partitions index objects.
+            Array with references to the partitions index objects.
         index_col: IndexColType
-                index_col parameter of read_csv function.
+            index_col parameter of read_csv function.
         index_name: str
-                Name that should be assigned to the index if `index_col`
-                is not provided.
+            Name that should be assigned to the index if `index_col`
+            is not provided.
 
         Returns
         -------
         new_index: IndexColType
-                Index that should be passed to the new_frame constructor.
+            Index that should be passed to the new_frame constructor.
         row_lengths: list
-                Partitions rows lengths.
+            Partitions rows lengths.
+
         """
         if index_col is None:
             row_lengths = cls.materialize(index_ids)
@@ -246,29 +277,31 @@ class CSVDispatcher(TextFileDispatcher):
         column_names: ColumnNamesTypes,
         **kwargs,
     ):
-        """
-        Get new query compiler from data received from workers.
+        """Get new query compiler from data received from workers.
+
+        Parameters
         ----------
         partition_ids: list
-                array with references to the partitions data.
+            array with references to the partitions data.
         index_ids: list
-                array with references to the partitions index objects.
+            array with references to the partitions index objects.
         dtypes_ids: list
-                array with references to the partitions dtypes objects.
+            array with references to the partitions dtypes objects.
         index_col_md: IndexColType
-                `index_col` parameter passed to the workers.
+            `index_col` parameter passed to the workers.
         index_name: str
-                Name that should be assigned to the index if `index_col`
-                is not provided.
+            Name that should be assigned to the index if `index_col`
+            is not provided.
         column_widths: list
-                Number of columns in each partition.
+            Number of columns in each partition.
         column_names: ColumnNamesTypes
-                Array with columns names.
+            Array with columns names.
 
         Returns
         -------
         new_query_compiler:
-                New query compiler, created from `new_frame`.
+            New query compiler, created from `new_frame`.
+
         """
         new_index, row_lengths = cls._define_index(index_ids, index_col_md, index_name)
         # Compute dtypes by getting collecting and combining all of the partitions. The

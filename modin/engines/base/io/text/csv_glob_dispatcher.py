@@ -11,6 +11,11 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
+"""This module houses `CSVGlobDispatcher` class, that is used for
+reading multiple `.csv` files simultaneously.
+
+"""
+
 from contextlib import ExitStack
 import csv
 import glob
@@ -29,8 +34,30 @@ from modin.engines.base.io.text.csv_dispatcher import CSVDispatcher
 
 
 class CSVGlobDispatcher(CSVDispatcher):
+    """Handles utils for reading multiple `.csv` files simultaneously. Inherits some common
+    for `.csv` files util functions from `CSVDispatcher` class.
+
+    """
+
     @classmethod
     def _read(cls, filepath_or_buffer, **kwargs):
+        """Read data from multiple `.csv` files passed with `filepath_or_buffer` simultaneously
+        according to the passed read_csv `kwargs` parameters. This function performs parameters
+        preprocessing, data file splitting, tasks launching and results postprocessing.
+
+        Parameters
+        ----------
+        filepath_or_buffer: str, path object or file-like object
+            `filepath_or_buffer` parameter of read_csv function.
+        kwargs: dict
+            Parameters of read_csv function.
+
+        Returns
+        -------
+        new_query_compiler:
+            Query compiler with imported data for further processing.
+
+        """
         # Ensures that the file is a string file path. Otherwise, default to pandas.
         filepath_or_buffer = cls.get_path_or_buffer(filepath_or_buffer)
         if isinstance(filepath_or_buffer, str):
@@ -262,8 +289,7 @@ class CSVGlobDispatcher(CSVDispatcher):
 
     @classmethod
     def file_exists(cls, file_path: str) -> bool:
-        """
-        Checks if the file_path is valid.
+        """Checks if the file_path is valid.
 
         Parameters
         ----------
@@ -272,8 +298,9 @@ class CSVGlobDispatcher(CSVDispatcher):
 
         Returns
         -------
-        bool
-            True if the glob path is valid.
+        bool:
+            True if the path is valid.
+
         """
         if isinstance(file_path, str):
             match = S3_ADDRESS_REGEX.search(file_path)
@@ -305,7 +332,7 @@ class CSVGlobDispatcher(CSVDispatcher):
 
         Returns
         -------
-        list
+        list:
             List of strings of absolute file paths.
         """
         if S3_ADDRESS_REGEX.search(file_path):
@@ -345,8 +372,7 @@ class CSVGlobDispatcher(CSVDispatcher):
         quotechar: bytes = b'"',
         is_quoting: bool = True,
     ) -> List[List[Tuple[str, int, int]]]:
-        """
-        Compute chunk sizes in bytes for every partition.
+        """Compute chunk sizes in bytes for every partition.
 
         Parameters
         ----------
@@ -374,7 +400,7 @@ class CSVGlobDispatcher(CSVDispatcher):
 
         Returns
         -------
-        list
+        list:
             List, where each element of the list is a list of tuples. The inner lists
             of tuples contains the data file name of the chunk, chunk start offset, and chunk end offsets for its corresponding file.
         """
