@@ -11,6 +11,12 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
+"""Module contains class BasePandasFrame.
+
+BasePandasFrame is a parent abstract class for any dataframe class
+for Pandas backend.
+
+"""
 from collections import OrderedDict
 import numpy as np
 import pandas
@@ -24,9 +30,26 @@ from modin.backends.pandas.parsers import find_common_type_cat as find_common_ty
 
 
 class BasePandasFrame(object):
-    """An abstract class that represents the Parent class for any Pandas DataFrame class.
+    """An abstract class that represents the parent class for any Pandas backend dataframe class.
 
-    This class is intended to simplify the way that operations are performed
+    This class provides interfaces to run operations on dataframe partitions.
+
+    Parameters
+    ----------
+    partitions : numpy array
+        A 2D numpy array of partitions.
+    index : sequence
+        The index for the dataframe. Converts to a pandas.Index.
+    columns : sequence
+        The columns object for the dataframe. Converts to a pandas.Index.
+    row_lengths : list, optional. Default is None
+        The length of each partition in the rows. The "height" of
+        each of the block partitions. Is computed if not provided.
+    column_widths : list, optional. Default is None
+        The width of each partition in the columns. The "width" of
+        each of the block partitions. Is computed if not provided.
+    dtypes : pandas.Series, optional. Default is None
+        The data types for the dataframe columns.
     """
 
     _frame_mgr_cls = None
@@ -46,19 +69,6 @@ class BasePandasFrame(object):
         column_widths=None,
         dtypes=None,
     ):
-        """Initialize a dataframe.
-
-        Parameters
-        ----------
-            partitions : A 2D NumPy array of partitions. Must contain partition objects.
-            index : The index object for the dataframe. Converts to a pandas.Index.
-            columns : The columns object for the dataframe. Converts to a pandas.Index.
-            row_lengths : (optional) The lengths of each partition in the rows. The
-                "height" of each of the block partitions. Is computed if not provided.
-            column_widths : (optional) The width of each partition in the columns. The
-                "width" of each of the block partitions. Is computed if not provided.
-            dtypes : (optional) The data types for the dataframe.
-        """
         self._partitions = partitions
         self._index_cache = ensure_index(index)
         self._columns_cache = ensure_index(columns)
@@ -83,11 +93,12 @@ class BasePandasFrame(object):
 
     @property
     def _row_lengths(self):
-        """Compute the row lengths if they are not cached.
+        """Compute the row partitions lengths if they are not cached.
 
         Returns
         -------
-            A list of row lengths.
+        list
+            A list of row partitions lengths.
         """
         if self._row_lengths_cache is None:
             if len(self._partitions.T) > 0:
@@ -100,11 +111,12 @@ class BasePandasFrame(object):
 
     @property
     def _column_widths(self):
-        """Compute the column widths if they are not cached.
+        """Compute the column partitions widths if they are not cached.
 
         Returns
         -------
-            A list of column widths.
+        list
+            A list of column partitions widths.
         """
         if self._column_widths_cache is None:
             if len(self._partitions) > 0:
@@ -115,7 +127,13 @@ class BasePandasFrame(object):
 
     @property
     def _axes_lengths(self):
-        """Row lengths, column widths that can be accessed with an `axis` integer."""
+        """Get a pair of row partitions lengths and column partitions widths.
+
+        Returns
+        -------
+        list
+            The pair of row partitions lengths and column partitions widths.
+        """
         return [self._row_lengths, self._column_widths]
 
     @property
@@ -124,6 +142,7 @@ class BasePandasFrame(object):
 
         Returns
         -------
+        pandas.Series
             A pandas Series containing the data types for this dataframe.
         """
         if self._dtypes is None:
@@ -131,11 +150,12 @@ class BasePandasFrame(object):
         return self._dtypes
 
     def _compute_dtypes(self):
-        """Compute the dtypes via MapReduce.
+        """Compute the data types via MapReduce pattern.
 
         Returns
         -------
-            The data types of this dataframe.
+        pandas.Series
+            A pandas Series containing the data types for this dataframe.
         """
 
         def dtype_builder(df):
@@ -156,7 +176,7 @@ class BasePandasFrame(object):
     _columns_cache = None
 
     def _validate_set_axis(self, new_labels, old_labels):
-        """Validate the index or columns replacement against the old labels.
+        """Validate the possibility of replacement old labels on the new labels.
 
         Parameters
         ----------
@@ -167,6 +187,7 @@ class BasePandasFrame(object):
 
         Returns
         -------
+        list-like
             The validated labels.
         """
         new_labels = ensure_index(new_labels)
@@ -184,7 +205,8 @@ class BasePandasFrame(object):
 
         Returns
         -------
-            A pandas.Index object containing the row labels.
+        pandas.Index
+            A index object containing the row labels.
         """
         return self._index_cache
 
@@ -193,7 +215,8 @@ class BasePandasFrame(object):
 
         Returns
         -------
-            A pandas.Index object containing the column labels.
+        pandas.Index
+            A index object containing the column labels.
         """
         return self._columns_cache
 
@@ -203,7 +226,7 @@ class BasePandasFrame(object):
         Parameters
         ----------
         new_index: list-like
-            The replacement row labels.
+            The new row labels.
         """
         if self._index_cache is None:
             self._index_cache = ensure_index(new_index)
@@ -218,7 +241,7 @@ class BasePandasFrame(object):
         Parameters
         ----------
         new_columns: list-like
-           The replacement column labels.
+           The new column labels.
         """
         if self._columns_cache is None:
             self._columns_cache = ensure_index(new_columns)
@@ -234,20 +257,19 @@ class BasePandasFrame(object):
 
     @property
     def axes(self):
-        """Index, columns that can be accessed with an `axis` integer."""
+        """Get index and columns that can be accessed with an `axis` integer."""
         return [self.index, self.columns]
 
     def _compute_axis_labels(self, axis: int, partitions=None):
-        """
-        Compute the labels for specific `axis`.
+        """Compute the labels for specific `axis`.
 
         Parameters
         ----------
-        axis: int
-            Axis to compute labels along
-        partitions: numpy 2D array (optional)
-            Partitions from which labels will be grabbed,
-            if no specified, partitions will be considered as `self._partitions`
+        axis : int
+            Axis to compute labels along.
+        partitions : numpy array, optional. Default is None
+            A 2D numpy array of partitions from which labels will be grabbed.
+            If no specified, partitions will be considered as `self._partitions`
 
         Returns
         -------
@@ -261,7 +283,7 @@ class BasePandasFrame(object):
         )
 
     def _filter_empties(self):
-        """Remove empty partitions to avoid triggering excess computation."""
+        """Remove empty partitions from `self._partitions`."""
         if len(self.axes[0]) == 0 or len(self.axes[1]) == 0:
             # This is the case for an empty frame. We don't want to completely remove
             # all metadata and partitions so for the moment, we won't prune if the frame
@@ -283,15 +305,15 @@ class BasePandasFrame(object):
         self._row_lengths_cache = [r for r in self._row_lengths if r != 0]
 
     def _apply_index_objs(self, axis=None):
-        """Lazily applies the index object (Index or Columns) to the partitions.
+        """Apply the index object for specific `axis` to the `self._partitions`.
 
-        Args:
-            axis: The axis to apply to, None applies to both axes.
+        Adds to call-queue of each partition from `self._partitions` function `set_axis`
+        to apply new axis.
 
-        Returns
-        -------
-            A new 2D array of partitions that have the index assignment added to the
-            call queue.
+        Parameters
+        ----------
+        axis : int, optional. Default is None
+            The axis to apply to. If it's None applies to both axes.
         """
         self._filter_empties()
         if axis is None or axis == 0:
@@ -374,25 +396,28 @@ class BasePandasFrame(object):
     ):
         """Lazily select columns or rows from given indices.
 
-        Note: If both row_indices and row_numeric_idx are set, row_indices will be used.
-            The same rule applied to col_indices and col_numeric_idx.
-
         Parameters
         ----------
-        row_indices : list of hashable
+        row_indices : list of hashable, optional. Default is None
             The row labels to extract.
-        row_numeric_idx : list of int
+        row_numeric_idx : list of int, optional. Default is None
             The row indices to extract.
-        col_indices : list of hashable
+        col_indices : list of hashable, optional. Default is None
             The column labels to extract.
-        col_numeric_idx : list of int
+        col_numeric_idx : list of int, optional. Default is None
             The column indices to extract.
 
         Returns
         -------
         BasePandasFrame
              A new BasePandasFrame from the mask provided.
+
+        Notes
+        -----
+        If both `row_indices` and `row_numeric_idx` are set, `row_indices` will be used.
+        The same rule applied to `col_indices` and `col_numeric_idx`.
         """
+        # Check on all possible ranges
         if isinstance(row_numeric_idx, slice) and (
             row_numeric_idx == slice(None) or row_numeric_idx == slice(0, None)
         ):
@@ -408,9 +433,12 @@ class BasePandasFrame(object):
             and col_numeric_idx is None
         ):
             return self.copy()
+        # Get numpy array of positions of values from `row_indices`
         if row_indices is not None:
             row_numeric_idx = self.index.get_indexer_for(row_indices)
         if row_numeric_idx is not None:
+            # Get dict of row_parts as {row_index: row_internal_indices}
+            # TODO: Rename `row_partitions_list`->`row_partitions_dict`
             row_partitions_list = self._get_dict_of_block_index(0, row_numeric_idx)
             if isinstance(row_numeric_idx, slice):
                 # Row lengths for slice are calculated as the length of the slice
@@ -432,9 +460,11 @@ class BasePandasFrame(object):
             new_row_lengths = self._row_lengths
             new_index = self.index
 
+        # Get numpy array of positions of values from `col_indices`
         if col_indices is not None:
             col_numeric_idx = self.columns.get_indexer_for(col_indices)
         if col_numeric_idx is not None:
+            # Get dict of col_parts as {col_index: col_internal_indices}
             col_partitions_list = self._get_dict_of_block_index(1, col_numeric_idx)
             if isinstance(col_numeric_idx, slice):
                 # Column widths for slice are calculated as the length of the slice
@@ -540,10 +570,13 @@ class BasePandasFrame(object):
     def from_labels(self) -> "BasePandasFrame":
         """Convert the row labels to a column of data, inserted at the first position.
 
+        Gives result by similar way as `pandas.DataFrame.reset_index`. Each level
+        of `self.index` will be added as separate column of data.
+
         Returns
         -------
         BasePandasFrame
-            A new BasePandasFrame.
+            A BasePandasFrame with new columns from index labels.
         """
         new_row_labels = pandas.RangeIndex(len(self.index))
 
@@ -638,10 +671,10 @@ class BasePandasFrame(object):
 
         Parameters
         ----------
-        row_numeric_idx : list of int, optional
+        row_numeric_idx : list of int, optional. Default is None
             The ordered list of new row orders such that each position within the list
             indicates the new position.
-        col_numeric_idx : list of int, optional
+        col_numeric_idx : list of int, optional. Default is None
             The ordered list of new column orders such that each position within the
             list indicates the new position.
 
@@ -673,6 +706,7 @@ class BasePandasFrame(object):
 
         Returns
         -------
+        BasePandasFrame
             A copied version of this object.
         """
         return self.__constructor__(
@@ -688,9 +722,12 @@ class BasePandasFrame(object):
     def combine_dtypes(cls, list_of_dtypes, column_names):
         """Describe how data types should be combined when they do not match.
 
-        Args:
-            list_of_dtypes: A list of pandas Series with the data types.
-            column_names: The names of the columns that the data types map to.
+        Parameters
+        ----------
+            list_of_dtypes : list
+                A list of pandas Series with the data types.
+            column_names : list
+                The names of the columns that the data types map to.
 
         Returns
         -------
