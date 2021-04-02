@@ -22,8 +22,8 @@
   asv preview
   ```
 
-For more consistent results, you may need to use the following parameters whose
-[description is in](https://asv.readthedocs.io/en/stable/benchmarks.html?highlight=sample_time#timing-benchmarks):
+For more consistent results, you may need to use the following parameters which
+description is in [ASV docs](https://asv.readthedocs.io/en/stable/benchmarks.html?highlight=sample_time#timing-benchmarks):
 
 * `-a sample_time=1`
 * `-a warmup_time=1`
@@ -75,7 +75,7 @@ Step 2: running benchmarks with saving the results in [modin-bench@master](https
 Step 3: converting the results to html representation, which is saved in [modin-bench@gh-pages](https://github.com/modin-project/modin-bench)
   The implementation can be found in `deploy-gh-pages` job of [push.yml](https://github.com/modin-project/modin-bench/blob/master/.github/workflows/push.yml)
 
-Basic actions for 2 step:
+Basic actions for step 2:
 * setup environment variable:
   * export MODIN_TEST_DATASET=Big
   * export MODIN_CPUS=44

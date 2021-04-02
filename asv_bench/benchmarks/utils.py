@@ -291,7 +291,7 @@ def generate_dataframe(
     Return
     ------
     modin.DataFrame or pandas.DataFrame [and list of groupby columns names if
-        columns for groupby were be generated]
+        columns for groupby were generated]
     """
     assert not (
         (groupby_ncols is None) ^ (count_groups is None)
@@ -343,7 +343,7 @@ def generate_dataframe(
 
 def random_string() -> str:
     """
-    Create 36-character random strings.
+    Create a 36-character random string.
 
     Return
     ------
