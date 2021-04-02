@@ -82,7 +82,7 @@ Basic actions for step 2:
 * setup git client
 * prepare json file with machine description
   * This file should be placed in the user's home directory.
-  * Automatically ASV does not always correctly create the file with the description of the machine.
+  * ASV does not always automatically create the file with the description of the machine correctly (e.g. due to being run in a container).
   It is recommended to create a file using [asv machine](https://asv.readthedocs.io/en/stable/commands.html?highlight=machine%20description#asv-machine) command, and manually check the result.
   [Example](https://github.com/modin-project/modin-bench/blob/master/results/xeon-e5/machine.json)
 * copy old result to folder where new result will appear
