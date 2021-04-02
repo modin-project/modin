@@ -1500,27 +1500,27 @@ class BasePandasFrame(object):
     def broadcast_apply(
         self, axis, func, other, join_type="left", preserve_labels=True, dtypes=None
     ):
-        """
-        Broadcast partitions of other dataframe partitions and apply a function.
+        """Broadcast axis partitions of `other` to partitions of `self` and apply a function.
 
         Parameters
         ----------
-            axis: int,
-                The axis to broadcast over.
-            func: callable,
-                The function to apply.
-            other: BasePandasFrame
-                The Modin DataFrame to broadcast.
-            join_type: str (optional)
-                The type of join to apply.
-            preserve_labels: boolean (optional)
-                Whether or not to keep labels from this Modin DataFrame.
-            dtypes: "copy" or None (optional)
-                 Whether to keep old dtypes or infer new dtypes from data.
+            axis : 0 or 1,
+                Axis to broadcast over.
+            func : callable
+                Function to apply.
+            other : BasePandasFrame
+                Modin DataFrame to broadcast.
+            join_type : str, optional
+                Type of join to apply.
+            preserve_labels : bool, optional
+                Whether keep labels from `self` Modin DataFrame or not.
+            dtypes : "copy" or None, optional
+                Whether keep old dtypes or infer new dtypes from data.
 
         Returns
         -------
-            BasePandasFrame
+        BasePandasFrame
+            New Modin DataFrame.
         """
         # Only sort the indices if they do not match
         left_parts, right_parts, joined_index = self._copartition(
@@ -1545,22 +1545,29 @@ class BasePandasFrame(object):
         )
 
     def _prepare_frame_to_broadcast(self, axis, indices, broadcast_all):
-        """
-        Compute the indices to broadcast `self` with considering of `indices`.
+        """Compute the indices to broadcast `self` considering `indices`.
 
         Parameters
         ----------
-            axis : int,
-                axis to broadcast along
-            indices : dict,
+            axis : 0 or 1
+                Axis to broadcast along.
+            indices : dict
                 Dict of indices and internal indices of partitions where `self` must
-                be broadcasted
-            broadcast_all : bool,
-                Whether broadcast the whole axis of `self` frame or just a subset of it
+                be broadcasted.
+            broadcast_all : bool
+                Whether broadcast the whole axis of `self` frame or just a subset of it.
 
         Returns
         -------
-            Dictianary with indices of partitions to broadcast
+        dict
+            Dictianary with indices of partitions to broadcast.
+
+        Notes
+        -----
+        New dictianary of indices of `self` partitions means that
+        you want to broadcast it at specified another partition named `other`, for example.
+        Dictionary {key: {key1: [0, 1], key2: [5]}} means, that in `other`[key] you want to
+        broadcast [self[key1], self[key2]] partitions and internal indices for `self` must be [[0, 1], [5]]
         """
         if broadcast_all:
 
@@ -1595,34 +1602,36 @@ class BasePandasFrame(object):
         new_index=None,
         new_columns=None,
     ):
-        """
-        Apply `func` to select indices at specified axis and broadcasts partitions of `other` frame.
+        """Apply a function to select indices at specified axis and broadcast partitions of `other` Modin DataFrame.
 
         Parameters
         ----------
-            axis : int,
-                Axis to apply function along
-            func : callable,
-                Function to apply
-            other : BasePandasFrame,
-                Partitions of which should be broadcasted
-            apply_indices : list,
-                List of labels to apply (if `numeric_indices` are not specified)
-            numeric_indices : list,
-                Numeric indices to apply (if `apply_indices` are not specified)
-            keep_remaining : Whether or not to drop the data that is not computed over.
-            broadcast_all : Whether broadcast the whole axis of right frame to every
+            axis : 0 or 1
+                Axis to apply function along.
+            func : callable
+                Function to apply.
+            other : BasePandasFrame
+                Partitions of which should be broadcasted.
+            apply_indices : list
+                List of labels to apply (if `numeric_indices` are not specified).
+            numeric_indices : list
+                Numeric indices to apply (if `apply_indices` are not specified).
+            keep_remaining : bool
+                Whether drop the data that is not computed over or not.
+            broadcast_all : bool
+                Whether broadcast the whole axis of right frame to every
                 partition or just a subset of it.
-            new_index : Index, (optional)
-                The index of the result. We may know this in advance,
-                and if not provided it must be computed
-            new_columns : Index, (optional)
-                The columns of the result. We may know this in advance,
+            new_index : pandas.Index, optional
+                Index of the result. We may know this in advance,
+                and if not provided it must be computed.
+            new_columns : pandas.Index, optional
+                Columns of the result. We may know this in advance,
                 and if not provided it must be computed.
 
         Returns
         -------
-            BasePandasFrame
+        BasePandasFrame
+            New Modin DataFrame.
         """
         assert (
             apply_indices is not None or numeric_indices is not None
@@ -1678,34 +1687,36 @@ class BasePandasFrame(object):
         enumerate_partitions=False,
         dtypes=None,
     ):
-        """Broadcast partitions of other dataframe partitions and apply a function along full axis.
+        """Broadcast partitions of `other` Modin DataFrame and apply a function along full axis.
 
         Parameters
         ----------
             axis : 0 or 1
-                The axis to apply over (0 - rows, 1 - columns).
+                Axis to apply over (0 - rows, 1 - columns).
             func : callable
-                The function to apply.
-            other : others Modin frames to broadcast
-            new_index : list-like (optional)
-                The index of the result. We may know this in advance,
+                Function to apply.
+            other : BasePandasFrame or list
+                Modin DataFrame(s) to broadcast.
+            new_index : list-like, optional
+                Index of the result. We may know this in advance,
                 and if not provided it must be computed.
-            new_columns : list-like (optional)
-                The columns of the result. We may know this in
+            new_columns : list-like, optional
+                Columns of the result. We may know this in
                 advance, and if not provided it must be computed.
-            apply_indices : list-like (optional),
+            apply_indices : list-like, optional
                 Indices of `axis ^ 1` to apply function over.
-            enumerate_partitions : bool (optional, default False),
-                Whether or not to pass partition index into applied `func`.
+            enumerate_partitions : bool, optional. Default is False
+                Whether pass partition index into applied `func` or not.
                 Note that `func` must be able to obtain `partition_idx` kwarg.
-            dtypes : list-like (optional)
-                The data types of the result. This is an optimization
+            dtypes : list-like, optional
+                Data types of the result. This is an optimization
                 because there are functions that always result in a particular data
                 type, and allows us to avoid (re)computing it.
 
         Returns
         -------
-             A new Modin DataFrame
+        BasePandasFrame
+            New Modin DataFrame.
         """
         if other is not None:
             if not isinstance(other, list):
@@ -1754,31 +1765,30 @@ class BasePandasFrame(object):
         return result
 
     def _copartition(self, axis, other, how, sort, force_repartition=False):
-        """
-        Copartition two dataframes.
+        """Copartition two Modin DataFrames.
 
         Perform aligning of partitions, index and partition blocks.
 
         Parameters
         ----------
         axis : 0 or 1
-            The axis to copartition along (0 - rows, 1 - columns).
+            Axis to copartition along (0 - rows, 1 - columns).
         other : BasePandasFrame
-            The other dataframes(s) to copartition against.
+            Other Modin DataFrame(s) to copartition against.
         how : str
             How to manage joining the index object ("left", "right", etc.)
-        sort : boolean
-            Whether or not to sort the joined index.
+        sort : bool
+            Whether sort the joined index or not.
         force_repartition : bool, default False
-            Whether or not to force the repartitioning. By default,
+            Whether force the repartitioning or not. By default,
             this method will skip repartitioning if it is possible. This is because
             reindexing is extremely inefficient. Because this method is used to
             `join` or `append`, it is vital that the internal indices match.
 
         Returns
         -------
-        Tuple
-            A tuple (left data, right data list, joined index).
+        tuple
+            Tuple of (left data, right data list, joined index).
         """
         if isinstance(other, type(self)):
             other = [other]
@@ -1865,25 +1875,24 @@ class BasePandasFrame(object):
         return reindexed_frames[0], reindexed_frames[1:], joined_index
 
     def _simple_shuffle(self, axis, other):
-        """
-        Shuffle other rows or columns to match partitioning of self.
-
-        Notes
-        -----
-        This should only be called when `other.axes[axis]` and `self.axes[axis]`
-            are identical.
+        """Shuffle `other` rows or columns to match partitioning of `self`.
 
         Parameters
         ----------
-            axis: 0 or 1
-                The axis to shuffle over
-            other: BasePandasFrame
-                The BasePandasFrame to match to self object's partitioning
+            axis : 0 or 1
+                Axis to shuffle over.
+            other : BasePandasFrame
+                Modin DataFrame to match to `self` partitioning.
 
         Returns
         -------
         BasePandasFrame
             Shuffled version of `other`.
+
+        Notes
+        -----
+        This should only be called when `other.axes[axis]` and `self.axes[axis]`
+        are identical.
         """
         assert self.axes[axis].equals(
             other.axes[axis]
@@ -1897,22 +1906,21 @@ class BasePandasFrame(object):
         )
 
     def _binary_op(self, op, right_frame, join_type="outer"):
-        """
-        Perform an operation that requires joining with another dataframe.
+        """Perform an operation that requires joining with another Modin DataFrame.
 
         Parameters
         ----------
             op : callable
-                The function to apply after the join.
+                Function to apply after the join.
             right_frame : BasePandasFrame
-                The dataframe to join with.
-            join_type : str (optional)
-                The type of join to apply.
+                Modin DataFrame to join with.
+            join_type : str, optional
+                Type of join to apply.
 
         Returns
         -------
         BasePandasFrame
-            A new dataframe.
+            New Modin DataFrame.
         """
         left_parts, right_parts, joined_index = self._copartition(
             0, right_frame, join_type, sort=True
@@ -1926,22 +1934,23 @@ class BasePandasFrame(object):
         return self.__constructor__(new_frame, joined_index, new_columns, None, None)
 
     def _concat(self, axis, others, how, sort):
-        """Concatenate this dataframe with one or more others.
+        """Concatenate `self` with one or more others Modin DataFrame.
 
         Parameters
         ----------
-            axis: int
-                The axis to concatenate over.
-            others: List of dataframes
-                The list of dataframes to concatenate with.
-            how: str
-                The type of join to use for the axis.
-            sort: boolean
-                Whether or not to sort the result.
+            axis : 0 or 1
+                Axis to concatenate over.
+            others : list
+                List of Modin DataFrames to concatenate with.
+            how : str
+                Type of join to use for the axis.
+            sort : bool
+                Whether sort the result or not.
 
         Returns
         -------
-            A new dataframe.
+        BasePandasFrame
+            New Modin DataFrame.
         """
         # Fast path for equivalent columns and partitioning
         if (
@@ -2001,30 +2010,31 @@ class BasePandasFrame(object):
         new_columns=None,
         apply_indices=None,
     ):
-        """Groupby another dataframe and aggregate the result.
+        """Groupby another Modin DataFrame dataframe and aggregate the result.
 
         Parameters
         ----------
-            axis: int,
-                The axis to groupby and aggregate over.
-            by: ModinFrame (optional),
-                The dataframe to group by.
-            map_func: callable,
-                The map component of the aggregation.
-            reduce_func: callable,
-                The reduce component of the aggregation.
-            new_index: Index (optional),
-                The index of the result. We may know this in advance,
+            axis : 0 or 1
+                Axis to groupby and aggregate over.
+            by : BasePandasFrame or None
+                A Modin DataFrame to group by.
+            map_func : callable
+                Map component of the aggregation.
+            reduce_func : callable
+                Reduce component of the aggregation.
+            new_index : pandas.Index, optional
+                Index of the result. We may know this in advance,
                 and if not provided it must be computed.
-            new_columns: Index (optional),
-                The columns of the result. We may know this in advance,
+            new_columns : pandas.Index, optional
+                Columns of the result. We may know this in advance,
                 and if not provided it must be computed.
-            apply_indices : list-like (optional),
+            apply_indices : list-like, optional
                 Indices of `axis ^ 1` to apply groupby over.
 
         Returns
         -------
-             A new dataframe.
+        BasePandasFrame
+            New Modin DataFrame.
         """
         by_parts = by if by is None else by._partitions
 
@@ -2048,15 +2058,17 @@ class BasePandasFrame(object):
 
     @classmethod
     def from_pandas(cls, df):
-        """Improve simple Pandas DataFrame to an advanced and superior Modin DataFrame.
+        """Create a Modin DataFrame from a pandas DataFrame.
 
         Parameters
         ----------
-            df: Pandas DataFrame object.
+            df : pandas.DataFrame
+                pandas DataFrame.
 
         Returns
         -------
-            A new dataframe.
+        BasePandasFrame
+            New Modin DataFrame.
         """
         new_index = df.index
         new_columns = df.columns
@@ -2073,17 +2085,17 @@ class BasePandasFrame(object):
 
     @classmethod
     def from_arrow(cls, at):
-        """Improve simple Arrow Table to an advanced and superior Modin DataFrame.
+        """Create a Modin DataFrame from an Arrow Table.
 
         Parameters
         ----------
             at : Arrow Table
-                The Arrow Table to convert from.
+                Arrow Table.
 
         Returns
         -------
         BasePandasFrame
-            A new dataframe.
+            New Modin DataFrame.
         """
         new_frame, new_lengths, new_widths = cls._frame_mgr_cls.from_arrow(
             at, return_dims=True
@@ -2105,17 +2117,30 @@ class BasePandasFrame(object):
 
     @classmethod
     def _arrow_type_to_dtype(cls, arrow_type):
+        """Convert an arrow data type to a pandas data type.
+
+        Parameters
+        ----------
+            arrow_type : arrow dtype
+                Arrow data type to be converted to a pandas data type.
+
+        Returns
+        -------
+        Any dtype compatible with pandas.
+            pandas data type.
+        """
         res = arrow_type.to_pandas_dtype()
         if not isinstance(res, (np.dtype, str)):
             return np.dtype(res)
         return res
 
     def to_pandas(self):
-        """Convert a Modin DataFrame to Pandas DataFrame.
+        """Convert this Modin DataFrame to a pandas DataFrame.
 
         Returns
         -------
-            Pandas DataFrame.
+        pandas.DataFrame
+            pandas DataFrame.
         """
         df = self._frame_mgr_cls.to_pandas(self._partitions)
         if df.empty:
@@ -2135,21 +2160,25 @@ class BasePandasFrame(object):
         return df
 
     def to_numpy(self, **kwargs):
-        """
-        Convert a Modin DataFrame to a 2D NumPy array.
+        """Convert this Modin DataFrame to a NumPy array.
 
         Returns
         -------
+        np.ndarray
             NumPy array.
         """
         return self._frame_mgr_cls.to_numpy(self._partitions, **kwargs)
 
     def transpose(self):
-        """Transpose the index and columns of this dataframe.
+        """Transpose the index and columns of this Modin DataFrame.
+
+        Reflect this Modin DataFrame over its main diagonal
+        by writing rows as columns and vice-versa.
 
         Returns
         -------
-            A new dataframe.
+        BasePandasFrame
+            New Modin DataFrame.
         """
         new_partitions = self._frame_mgr_cls.lazy_map_partitions(
             self._partitions, lambda df: df.T
@@ -2168,10 +2197,9 @@ class BasePandasFrame(object):
         )
 
     def finalize(self):
-        """
-        Perform all deferred calls on partitions.
+        """Perform all deferred calls on partitions.
 
-        This makes the Frame independent of history of queries
+        This makes `self` Modin DataFrame independent of a history of queries
         that were used to build it.
         """
         [part.drain_call_queue() for row in self._partitions for part in row]
