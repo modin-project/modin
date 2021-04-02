@@ -81,6 +81,10 @@ Basic actions for step 2:
   * export MODIN_CPUS=44
 * setup git client
 * prepare json file with machine description
+  * This file should be placed in the user's home directory.
+  * Automatically ASV does not always correctly create the file with the description of the machine.
+  It is recommended to create a file using [asv machine](https://asv.readthedocs.io/en/stable/commands.html?highlight=machine%20description#asv-machine) command, and manually check the result.
+  [Example](https://github.com/modin-project/modin-bench/blob/master/results/xeon-e5/machine.json)
 * copy old result to folder where new result will appear
   (conflict resolution will be performed by ASV itself instead of git)
 * push performance result to modin-bench repository
