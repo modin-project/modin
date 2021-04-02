@@ -211,9 +211,6 @@ class ColumnStoreDispatcher(FileDispatcher):
             Query compiler with imported data for further processing.
 
         """
-        import pdb
-
-        pdb.set_trace()
         col_partitions, column_widths = cls.build_columns(columns)
         partition_ids = cls.call_deploy(path, col_partitions, **kwargs)
         index, row_lens = cls.build_index(partition_ids)
