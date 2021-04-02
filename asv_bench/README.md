@@ -22,7 +22,8 @@
   asv preview
   ```
 
-For more consistent results, you may need to use the following parameters:
+For more consistent results, you may need to use the following parameters whose
+[description is in](https://asv.readthedocs.io/en/stable/benchmarks.html?highlight=sample_time#timing-benchmarks):
 
 * `-a sample_time=1`
 * `-a warmup_time=1`
@@ -63,8 +64,9 @@ Step 1: checking benchmarks for validity, runs in PRs CI.
   The implementation can be found in `test-asv-benchmarks` job of [ci.yml](https://github.com/modin-project/modin/blob/master/.github/workflows/ci.yml)
 
 Step 2: running benchmarks with saving the results in [modin-bench@master](https://github.com/modin-project/modin-bench).
-  The launch takes place on our own server using specific TeamCity configuration.
-  The description of the server can be found in the dashboard.
+  The launch takes place on internal server using specific TeamCity configuration.
+  The description of the server can be found in the ["Benchmark list"](https://modin.org/modin-bench/#summarylist?sort=0&dir=asc) tab,
+  on the left when you hover the mouse over the machine name. 
   This step starts as scheduled (now every half hour), subject to the presence of new commits in the Modin `master` branch.
   Command to run benchmarks: `asv run HASHFILE:hashfile.txt --show-stderr --machine xeon-e5 --launch-method=spawn`.
   In the file `hashfile.txt` is the last modin commit hash.
@@ -74,9 +76,6 @@ Step 3: converting the results to html representation, which is saved in [modin-
   The implementation can be found in `deploy-gh-pages` job of [push.yml](https://github.com/modin-project/modin-bench/blob/master/.github/workflows/push.yml)
 
 Basic actions for 2 step:
-* install packages to proper installation ray dependencies via pip:
-  * gcc
-  * python3-dev
 * setup environment variable:
   * export MODIN_TEST_DATASET=Big
   * export MODIN_CPUS=44

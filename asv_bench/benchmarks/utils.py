@@ -24,7 +24,7 @@ import modin.pandas as pd
 import pandas
 import numpy as np
 import uuid
-from typing import Union
+from typing import Optional, Union
 
 RAND_LOW = 0
 RAND_HIGH = 100
@@ -104,7 +104,8 @@ def translator_groupby_ngroups(groupby_ngroups: Union[str, int], shape: tuple) -
 
     Parameters
     ----------
-    groupby_ngroups:
+    groupby_ngroups: str or int
+        number of groups that will be used in `groupby` operation
     shape: tuple
 
     Return
@@ -130,6 +131,10 @@ dataframes_cache = dict()
 def gen_int_data(nrows: int, ncols: int, rand_low: int, rand_high: int) -> dict:
     """
     Generate int data with caching.
+
+    The generated data are saved in the dictionary and on a subsequent call,
+    if the keys match, saved data will be returned. Therefore, we need
+    to carefully monitor the changing of saved data and make its copy if needed.
 
     Parameters
     ----------
@@ -167,6 +172,10 @@ def gen_int_data(nrows: int, ncols: int, rand_low: int, rand_high: int) -> dict:
 def gen_str_int_data(nrows: int, ncols: int, rand_low: int, rand_high: int) -> dict:
     """
     Generate int data and string data with caching.
+
+    The generated data are saved in the dictionary and on a subsequent call,
+    if the keys match, saved data will be returned. Therefore, we need
+    to carefully monitor the changing of saved data and make its copy if needed.
 
     Parameters
     ----------
@@ -208,6 +217,10 @@ def gen_data(
     """
     Generate data with caching.
 
+    The generated data are saved in the dictionary and on a subsequent call,
+    if the keys match, saved data will be returned. Therefore, we need
+    to carefully monitor the changing of saved data and make its copy if needed.
+
     Parameters
     ----------
     data_type: str
@@ -236,33 +249,67 @@ def gen_data(
 
 
 def generate_dataframe(
-    impl,
-    data_type,
-    nrows,
-    ncols,
-    rand_low,
-    rand_high,
-    groupby_ncols=None,
-    count_groups=None,
-):
+    impl: str,
+    data_type: str,
+    nrows: int,
+    ncols: int,
+    rand_low: int,
+    rand_high: int,
+    groupby_ncols: Optional[int] = None,
+    count_groups: Optional[int] = None,
+) -> Union[pd.DataFrame, pandas.DataFrame]:
+    """
+    Generate DataFrame with caching.
+
+    The generated dataframes are saved in the dictionary and on a subsequent call,
+    if the keys match, one of the saved dataframes will be returned. Therefore, we need
+    to carefully monitor that operations that change the dataframe work with its copy.
+
+    Parameters
+    ----------
+    impl: str
+        implementation used to create the dataframe;
+        supported implemetations: {"modin", "pandas"}
+    data_type: str
+        type of data generation;
+        supported types: {"int", "str_int"}
+    nrows: int
+        number of rows
+    ncols: int
+        number of columns
+    rand_low: int
+        low bound for random generator
+    rand_high: int
+        high bound for random generator
+    groupby_ncols: int or None
+        number of columns for which `groupby` will be called in the future;
+        to get more stable performance results, we need to have the same number of values
+        in each group every benchmarking time
+    count_groups: int or None
+        count of groups in groupby columns
+
+    Return
+    ------
+    modin.DataFrame or pandas.DataFrame [and list of groupby columns names if
+        columns for groupby were be generated]
+    """
     assert not (
         (groupby_ncols is None) ^ (count_groups is None)
     ), "You must either specify both parameters 'groupby_ncols' and 'count_groups' or none of them."
 
     if groupby_ncols and count_groups:
         ncols -= groupby_ncols
-        cache_key = (
-            impl,
-            data_type,
-            nrows,
-            ncols,
-            rand_low,
-            rand_high,
-            groupby_ncols,
-            count_groups,
-        )
-    else:
-        cache_key = (impl, data_type, nrows, ncols, rand_low, rand_high)
+
+    cache_key = (
+        impl,
+        data_type,
+        nrows,
+        ncols,
+        rand_low,
+        rand_high,
+        groupby_ncols,
+        count_groups,
+    )
 
     if cache_key in dataframes_cache:
         return dataframes_cache[cache_key]
@@ -312,7 +359,9 @@ def random_columns(df_columns: list, columns_number: int) -> list:
     Parameters
     ----------
     df_columns: list
+        columns to choose from
     columns_number: int
+        how many columns to pick
 
     Return
     ------
