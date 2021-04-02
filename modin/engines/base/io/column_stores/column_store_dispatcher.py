@@ -43,7 +43,7 @@ class ColumnStoreDispatcher(FileDispatcher):
         Returns
         -------
         np.array:
-            Array with references to the deploy result for each partition.
+            Array with references to the task deploy result for each partition.
 
         """
         return np.array(

@@ -145,7 +145,8 @@ class TextFileDispatcher(FileDispatcher):
 
         Parameters
         ----------
-        f: file object
+        f: file-like object
+            file handle that should be used for offset movement.
         offset_size: int
             Number of bytes to read and ignore.
         quotechar: bytes, default b'"'
@@ -280,7 +281,8 @@ class TextFileDispatcher(FileDispatcher):
 
         Parameters
         ----------
-        f: file object
+        f: file-like object
+            file handle that should be used for offset movement.
         nrows: int
             Number of rows to read.
         quotechar: bytes, default b'"'
@@ -321,6 +323,25 @@ class TextFileDispatcher(FileDispatcher):
     # _read helper functions
     @classmethod
     def rows_skipper_builder(cls, f, quotechar, is_quoting):
+        """Build object for skipping passed number of lines according
+        to defined `f`, `quotechar` and `is_quoting` parameters.
+
+        Parameters
+        ----------
+        f: file-like object
+            file handle that should be used for offset movement.
+        quotechar: bytes, default b'"'
+            Indicate quote in a file.
+        is_quoting: bool, default True
+            Whether or not to consider quotes.
+
+        Returns
+        -------
+        object:
+            skipper object.
+
+        """
+
         def skipper(n):
             if n == 0 or n is None:
                 return 0

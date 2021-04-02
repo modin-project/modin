@@ -27,13 +27,6 @@ class FeatherDispatcher(ColumnStoreDispatcher):
         """Read data from the file path, returning a Modin DataFrame.
            Modin only supports pyarrow engine for now.
 
-        Args:
-            path: The filepath of the feather file.
-                  We only support local files for now.
-                Multi threading is set to False by default
-            columns: Not supported by pandas api, but can be passed here
-                     to read only specific columns
-
         Parameters
         ----------
         path: str or file-like object
