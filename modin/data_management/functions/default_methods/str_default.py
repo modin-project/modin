@@ -15,6 +15,9 @@ from .series_default import SeriesDefault
 
 
 class StrDefault(SeriesDefault):
+    """Build default-to-pandas methods which is executed under `str` accessor"""
+
     @classmethod
     def frame_wrapper(cls, df):
+        """Access `str` accessor of the passed frame"""
         return df.squeeze(axis=1).str

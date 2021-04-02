@@ -12,7 +12,7 @@
 # governing permissions and limitations under the License.
 
 """
-The function module contains an interface used to create a public pandas-like API.
+Function module provides template for a query compiler methods for a set of common operations.
 
 This interface is written in a general way, therefore, if the function being implemented
 requires details when processing parameters (for example, fallback to pandas case) or an

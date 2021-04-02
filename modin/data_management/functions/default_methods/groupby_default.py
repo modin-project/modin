@@ -26,6 +26,21 @@ class GroupBy:
 
     @classmethod
     def validate_by(cls, by):
+        """
+        Cast all DataFrames in `by` parameter to Series or list of Series in case
+        of multi-column frame.
+
+        Parameters
+        ----------
+        by: DateFrame, Series, index label or list of such,
+            `by` parameter.
+
+        Returns
+        -------
+        Series, index label or list of such,
+            By parameter with all DataFrames casted to Series.
+        """
+
         def try_cast_series(df):
             if isinstance(df, pandas.DataFrame):
                 df = df.squeeze(axis=1)
@@ -44,16 +59,48 @@ class GroupBy:
         return by
 
     @classmethod
-    def inplace_applyier_builder(cls, key, func=None):
-        inplace_args = [] if func is None else [func]
+    def inplace_applyier_builder(cls, key, *args, **kwargs):
+        """
+        Bind arguments to the GroupBy aggregation function.
+
+        Parameters
+        ----------
+        key: callable,
+            Aggregation function.
+        *args: args,
+            Arguments that will be passed to the `key` aggregation function.
+        **kwargs: kwargs,
+            Arguments that will be passed to the `key` aggregation function.
+
+        Returns
+        -------
+        callable,
+            Function that executes aggregation under GroupBy object.
+        """
 
         def inplace_applyier(grp, **func_kwargs):
-            return key(grp, *inplace_args, **func_kwargs)
+            return key(grp, *args, **kwargs, **func_kwargs)
 
         return inplace_applyier
 
     @classmethod
-    def get_func(cls, grp, key, **kwargs):
+    def get_func(cls, key, **kwargs):
+        """
+        Extract aggregation function from groupby arguments.
+
+        Parameters
+        ----------
+        key: callable or str,
+            Default aggregation function. If aggregation function is not specified
+            via groupby arguments, then `key` function is used.
+        **kwargs:
+            GroupBy arguments that may contain aggregation function.
+
+        Returns
+        -------
+        callable,
+            Aggregation function.
+        """
         if "agg_func" in kwargs:
             return kwargs["agg_func"]
         elif "func_dict" in kwargs:
@@ -63,6 +110,21 @@ class GroupBy:
 
     @classmethod
     def build_aggregate_method(cls, key):
+        """
+        Build function for QueryCompiler.groupby_agg that may be executed as default-to-pandas.
+
+        Parameters
+        ----------
+        key: callable or str,
+            Default aggregation function. If aggregation function is not specified
+            via groupby arguments, then `key` function is used.
+
+        Returns
+        -------
+        callable,
+            Function that executes groupby aggregation.
+        """
+
         def fn(
             df,
             by,
@@ -76,7 +138,7 @@ class GroupBy:
             by = cls.validate_by(by)
 
             grp = df.groupby(by, axis=axis, **groupby_args)
-            agg_func = cls.get_func(grp, key, **kwargs)
+            agg_func = cls.get_func(key, **kwargs)
             result = (
                 grp.agg(agg_func, **agg_args)
                 if isinstance(agg_func, dict)
@@ -89,6 +151,21 @@ class GroupBy:
 
     @classmethod
     def build_groupby_reduce_method(cls, agg_func):
+        """
+        Build function for QueryCompiler.groupby_* that may be executed as default-to-pandas.
+
+        Parameters
+        ----------
+        agg_func: callable or str,
+            Default aggregation function. If aggregation function is not specified
+            via groupby arguments, then `agg_func` function is used.
+
+        Returns
+        -------
+        callable,
+            Function that executes groupby aggregation.
+        """
+
         def fn(
             df,
             by,
@@ -148,10 +225,26 @@ class GroupBy:
 
     @classmethod
     def is_aggregate(cls, key):
+        """Check whether `key` is an alias for pandas.GroupBy.aggregation method"""
         return key in cls.agg_aliases
 
     @classmethod
     def build_groupby(cls, func):
+        """
+        Build function that groups DataFrame and applies aggregation
+        function to the every group.
+
+        Parameters
+        ----------
+        func: callable or str,
+            Default aggregation function. If aggregation function is not specified
+            via groupby arguments, then `func` function is used.
+
+        Returns
+        -------
+        callable,
+            GroupBy function.
+        """
         if cls.is_aggregate(func):
             return cls.build_aggregate_method(func)
         return cls.build_groupby_reduce_method(func)
@@ -161,7 +254,20 @@ class GroupByDefault(DefaultMethod):
     OBJECT_TYPE = "GroupBy"
 
     @classmethod
-    def register(cls, func, *args, **kwargs):
-        return super().register(
-            GroupBy.build_groupby(func), *args, fn_name=func.__name__, **kwargs
-        )
+    def register(cls, func):
+        """
+        Build default-to-pandas function that groups casted to pandas DataFrame
+        and applies aggregation function to the every group.
+
+        Parameters
+        ----------
+        func: callable or str,
+            Default aggregation function. If aggregation function is not specified
+            via groupby arguments, then `func` function is used.
+
+        Returns
+        -------
+        callable,
+            Default to pandas function that applies aggregation to GroupBy object.
+        """
+        return super().register(GroupBy.build_groupby(func), fn_name=func.__name__)

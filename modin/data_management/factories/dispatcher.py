@@ -21,6 +21,11 @@ class FactoryNotFoundError(AttributeError):
 
 
 class StubIoEngine(object):
+    """
+    An IO-Engine that does nothing more than raise NotImplementedError when any method is called.
+    Used for testing purposes.
+    """
+
     def __init__(self, factory_name=""):
         self.factory_name = factory_name or "Unknown"
 

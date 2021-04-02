@@ -24,7 +24,7 @@ class MapFunction(Function):
         Parameters
         ----------
         func: callable
-            source function
+            Function that will be applied the each partition.
         *reg_args: args,
             Args that will be passed to the returned function.
         **reg_kwargs: kwargs,

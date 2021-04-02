@@ -20,32 +20,48 @@ from .function import Function
 
 class BinaryFunction(Function):
     @classmethod
-    def register(cls, func: Callable, *reg_args, **reg_kwargs):
+    def register(cls, func: Callable, join_type="outer", preserve_labels=False):
         """
-        Build binary function that perform across the entire dataset.
-
-        Depending on the type of the second operand, created function can be
-        performed across entire axes or each partitions.
+        Build template binary function, which can be used as a method for a binary op
+        in a query compiler.
 
         Parameters
         ----------
-        func: callable
-            source binary function
-        *reg_args: args,
-            Args that will be used for building.
-        **reg_kwargs: kwargs,
-            Kwargs that will be used for building.
+        func: callable,
+            Binary function to execute. Have to be able to obtain at least two arguments.
+        join_type: str, (default 'outer')
+            Type of join that will be used if indices of operands are not aligned.
+        preserve_labels: bool, (default False)
+            Whether or not to force keep the indeces of the right frame if the join occured.
 
         Returns
         -------
-        callable
-            parallel binary function
+        QueryCompiler method that can be used as a binary operation.
         """
 
-        def binary_function(query_compiler, other, *args, **kwargs):
+        def binary_function(query_compiler, other, *args, broadcast=False, **kwargs):
+            """
+            Applies binary `func` along passed operands.
+
+            Parameters
+            ----------
+            query_compiler: QueryCompiler
+                Left operand of `func`.
+            other: QueryCompiler, list-like object or scalar
+                Right operand of `func`.
+            broadcast: bool, (default False)
+                If `other` is a one-column query compiler, indicates whether it is a Series or not.
+                Frames and Series have to be processed differently, however we can't distinguish them
+                at the query compiler level, so this parameter is a hint that passed from a high level API.
+            *args: args
+            **kwargs: kwargs, passed to `func`.
+
+            Returns
+            -------
+            QueryCompiler,
+                Result of `func(query_compiler, other)`.
+            """
             axis = kwargs.get("axis", 0)
-            broadcast = kwargs.pop("broadcast", False)
-            join_type = reg_kwargs.get("join_type", "outer")
             if isinstance(other, type(query_compiler)):
                 if broadcast:
                     assert (
@@ -63,7 +79,7 @@ class BinaryFunction(Function):
                             lambda l, r: func(l, r.squeeze(), *args, **kwargs),
                             other._modin_frame,
                             join_type=join_type,
-                            preserve_labels=reg_kwargs.get("preserve_labels", False),
+                            preserve_labels=preserve_labels,
                         )
                     )
                 else:

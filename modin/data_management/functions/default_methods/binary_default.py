@@ -18,8 +18,26 @@ from pandas.core.dtypes.common import is_list_like
 
 
 class BinaryDefault(AnyDefault):
+    """Build default-to-pandas methods which executes binary functions"""
+
     @classmethod
     def build_default_to_pandas(cls, fn, fn_name):
+        """
+        Build function that do fallback to pandas for passed binary `fn`.
+
+        Parameters
+        ----------
+        fn: callable,
+            Binary function to apply to the defaulted frame and other operand.
+        fn_name: str,
+            Function name which will be shown in default-to-pandas warning message.
+
+        Returns
+        -------
+        Callable,
+            Method that does fallback to pandas and applies `fn` to the pandas frame.
+        """
+
         def bin_ops_wrapper(df, other, *args, **kwargs):
             squeeze_other = kwargs.pop("broadcast", False) or kwargs.pop(
                 "squeeze_other", False

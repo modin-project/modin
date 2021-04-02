@@ -28,7 +28,7 @@ class GroupbyReduceFunction(MapReduceFunction):
         **reg_kwargs,
     ):
         """
-        Build GroupbyReduce function.
+        Build template groupby function, which  MapReduce
 
         Parameters
         ----------
@@ -38,7 +38,7 @@ class GroupbyReduceFunction(MapReduceFunction):
             If dict or callable then this will be treated as a function to apply to each group
             at the map phase.
         reduce_func: callable or dict (optional),
-            A function to apply to each group at the reduce phase. If not specified
+            Function to apply to each group at the reduce phase. If not specified
             will be set the same as 'map_func'.
         *reg_args: args,
             Args that will be passed to the returned function.
@@ -49,6 +49,16 @@ class GroupbyReduceFunction(MapReduceFunction):
         -------
         Callable,
             Function that executes GroupBy aggregation with MapReduce algorithm.
+
+        Notes
+        -----
+        Method obtains QueryCompiler
+          0  1
+        a
+        b
+        -------
+        a
+        a
         """
         if isinstance(map_func, str):
 
@@ -83,8 +93,35 @@ class GroupbyReduceFunction(MapReduceFunction):
         groupby_args=None,
         map_func=None,
         map_args=None,
-        drop=False,
     ):
+        """
+        Executes Map phase of GroupbyReduce:
+        Groups DataFrame and applies map function to each group. Groups will be
+        preserved in the results index for the following reduce phase.
+
+        Parameters
+        ----------
+        df: pandas.DataFrame,
+            Serialized frame to group.
+        other: pandas.DataFrame (optional),
+            Serialized frame, whose columns used to determine the groups.
+            If not specified, `by` parameter is used.
+        axis: int, (default 0)
+            Axis to group and execute function along.
+        by: level index name or list of such labels
+            Index levels, that is used to determine groups.
+        groupby_args: dict,
+            Dictionary which carries arguments for pandas.DataFrame.groupby
+        map_func: callable,
+            Function to apply to each group.
+        map_args: dict,
+            Arguments which will be passed to `map_func`.
+
+        Returns
+        -------
+        pandas.DataFrame
+            GroupBy result for one particular partition.
+        """
         # Set `as_index` to True to track the metadata of the grouping object
         # It is used to make sure that between phases we are constructing the
         # right index and placing columns in the correct order.
@@ -121,8 +158,36 @@ class GroupbyReduceFunction(MapReduceFunction):
         reduce_func=None,
         reduce_args=None,
         drop=False,
-        **kwargs,
+        method=None,
     ):
+        """
+        Executes Reduce phase of GroupbyReduce:
+        Combines groups from the Map phase and applies reduce function to each group.
+
+        Parameters
+        ----------
+        df: pandas.DataFrame,
+            Serialized frame which contain groups to combine.
+        partition_idx: int,
+            Internal index of column partition to which this function is applied.
+        axis: int, (default 0)
+            Axis to group and execute function along.
+        groupby_args: dict,
+            Dictionary which carries arguments for pandas.DataFrame.groupby
+        reduce_func: callable,
+            Function to apply to each group.
+        reduce_args: dict,
+            Arguments which will be passed to `reduce_func`.
+        drop: bool, (default False)
+            Indicates whether or not by-data came from the same frame?
+        method: str, (optional)
+            Name of the groupby function. This is a hint to do special casing.
+
+        Returns
+        -------
+        pandas.DataFrame
+            GroupBy result.
+        """
         # Wrapping names into an Index should be unnecessary, however
         # there is a bug in pandas with intersection that forces us to do so:
         # https://github.com/pandas-dev/pandas/issues/39699
@@ -131,7 +196,6 @@ class GroupbyReduceFunction(MapReduceFunction):
             df.drop(columns=by_part, errors="ignore", inplace=True)
 
         groupby_args = groupby_args.copy()
-        method = kwargs.get("method", None)
         as_index = groupby_args["as_index"]
 
         # Set `as_index` to True to track the metadata of the grouping object
@@ -162,6 +226,32 @@ class GroupbyReduceFunction(MapReduceFunction):
         numeric_only=True,
         **kwargs,
     ):
+        """
+        Builds Map and Reduce function that processes GroupBy and executes them.
+
+        query_compiler: QueryCompiler,
+            frame to group
+        by: QueryCompiler, column or index label, Grouper or list of such
+            determine groups
+        axis: int,
+            axis to group and apply function
+        groupby_args: dict,
+            Dictionary which carries arguments for pandas.DataFrame.groupby
+        map_args: dict,
+            Arguments which will be passed to `map_func`.
+        map_func: callable,
+            Function to apply to each group at the Map phase.
+        numeric_only: bool (default True),
+            Whether or not to drop non-numeric columns before executing GroupBy.
+        **kwargs: kwargs,
+            Additional parameters to build Map and Reduce functions.
+
+        Returns
+        -------
+        QueryCompiler
+            QueryCompiler which carries the result of GroupBy aggregation.
+        """
+        # Currently we're defaulting to pandas if
         if groupby_args.get("level", None) is None and (
             not (isinstance(by, (type(query_compiler))) or hashable(by))
             or isinstance(by, pandas.Grouper)
@@ -196,6 +286,9 @@ class GroupbyReduceFunction(MapReduceFunction):
             **kwargs,
         )
 
+        # If `by` is a ModinFrame, then its partitions will be broadcasted to every
+        # `self` partition in a way, determined by engine (modin_frame.groupby_reduce)
+        # Otherwise `by` was already binded to the Map function in `build_map_reduce_functions`.
         broadcastable_by = getattr(by, "_modin_frame", None)
         apply_indices = list(map_func.keys()) if isinstance(map_func, dict) else None
         new_modin_frame = qc._modin_frame.groupby_reduce(
@@ -209,6 +302,22 @@ class GroupbyReduceFunction(MapReduceFunction):
 
     @staticmethod
     def try_filter_dict(agg_func, df):
+        """
+        If it's dictionary aggregation filters aggregation dictionary for keys which
+        this particular partition contains, otherwise do nothing with passed function.
+
+        Parameters
+        ----------
+        agg_func: callable or dict,
+            GroupBy function.
+        df: pandas.DataFrame,
+            Serialized partition which contains available columns.
+
+        Returns
+        -------
+        Callable
+            Function that can be safely applied to each group.
+        """
         if not isinstance(agg_func, dict):
             return agg_func
         partition_dict = {k: v for k, v in agg_func.items() if k in df.columns}
@@ -227,6 +336,14 @@ class GroupbyReduceFunction(MapReduceFunction):
         drop,
         **kwargs,
     ):
+        """
+        Binds appropriate arguments to map and reduce functions.
+
+        Returns
+        -------
+        Tuple of callable
+            Tuple of map and reduce function with binded arguments.
+        """
         # if by is a query compiler, then it will be broadcasted explicit via
         # groupby_reduce method of the modin frame and so we don't want secondary
         # implicit broadcastion via passing it as an function argument.

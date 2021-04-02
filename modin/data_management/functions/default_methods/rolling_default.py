@@ -17,6 +17,11 @@ from .default import DefaultMethod
 class Rolling:
     @classmethod
     def build_rolling(cls, func):
+        """
+        Build function that provides a rolling window in a casted to pandas frame
+        and executes `func` on it.
+        """
+
         def fn(df, rolling_args, *args, **kwargs):
             roller = df.rolling(*rolling_args)
 
@@ -32,7 +37,19 @@ class RollingDefault(DefaultMethod):
     OBJECT_TYPE = "Rolling"
 
     @classmethod
-    def register(cls, func, *args, **kwargs):
-        return super().register(
-            Rolling.build_rolling(func), *args, fn_name=func.__name__, **kwargs
-        )
+    def register(cls, func):
+        """
+        Build default to pandas function that provides a rolling window and executes
+        `func` on it.
+
+        Parameters
+        ----------
+        func: callable,
+            Function to execute on a rolling window.
+
+        Returns
+        -------
+        Callable,
+            Method that does fallback to pandas and applies rolling function.
+        """
+        return super().register(Rolling.build_rolling(func), fn_name=func.__name__)

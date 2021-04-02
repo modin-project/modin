@@ -12,13 +12,17 @@
 # governing permissions and limitations under the License.
 
 from .default import DefaultMethod
+from modin.utils import _inherit_docstrings
 
 import pandas
 
 
+@_inherit_docstrings(DefaultMethod, exclude=[DefaultMethod])
 class DataFrameDefault(DefaultMethod):
+    """Build default-to-pandas methods which is executed under DataFrame"""
+
     @classmethod
-    def register(cls, func, *args, obj_type=None, **kwargs):
-        if obj_type is None:
-            obj_type = pandas.DataFrame
-        return super().register(func, *args, obj_type=obj_type, **kwargs)
+    def register(cls, func, obj_type=pandas.DataFrame, inplace=False, fn_name=None):
+        return super().register(
+            func, obj_type=obj_type, inplace=inplace, fn_name=fn_name
+        )

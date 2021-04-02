@@ -17,30 +17,28 @@ from .function import Function
 
 class FoldFunction(Function):
     @classmethod
-    def register(cls, func: Callable, *reg_args, **reg_kwargs):
+    def register(cls, func: Callable, axis=None):
         """
         Build Fold function that perform across rows/columns.
 
         Parameters
         ----------
-        func: callable
-            source function
-        *reg_args: args,
-            Args that will be used for building.
-        **reg_kwargs: kwargs,
-            Kwargs that will be used for building.
+        func: callable,
+            Function to apply across rows/columns.
+        axis: int (optional),
+            Specifies axis to apply function along.
 
         Returns
         -------
         callable
-            Fold function
+            Fold function.
         """
 
         def fold_function(query_compiler, *args, **kwargs):
-            axis = reg_kwargs.get("axis", kwargs.get("axis"))
+            _axis = axis if axis is not None else kwargs.get("axis")
             return query_compiler.__constructor__(
                 query_compiler._modin_frame._fold(
-                    cls.validate_axis(axis),
+                    cls.validate_axis(_axis),
                     lambda x: func(x, *args, **kwargs),
                 )
             )

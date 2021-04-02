@@ -15,6 +15,9 @@ from .series_default import SeriesDefault
 
 
 class CatDefault(SeriesDefault):
+    """Build default-to-pandas methods which is executed under category accessor"""
+
     @classmethod
     def frame_wrapper(cls, df):
+        """Access category accessor of the passed frame"""
         return df.squeeze(axis=1).cat

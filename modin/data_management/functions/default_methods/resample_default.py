@@ -17,6 +17,23 @@ from .default import DefaultMethod
 class Resampler:
     @classmethod
     def build_resample(cls, func, squeeze_self):
+        """
+        Build function that resamples time-series data and executes
+        aggregation `func` on it.
+
+        Parameters
+        ----------
+        func: callable,
+            Aggregation function to execute under resampled frame.
+        squeeze_self: bool,
+            Whether or not to squeeze frame before resampling.
+
+        Returns
+        -------
+        callable,
+            Function that applies aggregation to resampled time-series data.
+        """
+
         def fn(df, resample_args, *args, **kwargs):
             if squeeze_self:
                 df = df.squeeze(axis=1)
@@ -34,10 +51,24 @@ class ResampleDefault(DefaultMethod):
     OBJECT_TYPE = "Resampler"
 
     @classmethod
-    def register(cls, func, *args, squeeze_self=False, **kwargs):
+    def register(cls, func, squeeze_self=False):
+        """
+        Build default to pandas function that resamples time-series data in a casted
+        to pandas frame and executes aggregation `func` on it.
+
+        Parameters
+        ----------
+        func: callable,
+            Aggregation function to execute under resampled frame.
+        squeeze_self: bool,
+            Whether or not to squeeze frame before resampling.
+
+        Returns
+        -------
+        callable,
+            Default to pandas function that applies aggregation to resampled time-series data.
+        """
         return super().register(
             Resampler.build_resample(func, squeeze_self),
-            *args,
             fn_name=func.__name__,
-            **kwargs
         )
