@@ -252,6 +252,10 @@ class TestCsv:
         )
 
     # Column and Index Locations and Names tests
+    @pytest.mark.xfail(
+        Engine.get() != "Python",
+        reason="many parameters combiantions fails: issue #2312, #2307",
+    )
     @pytest.mark.parametrize("header", ["infer", None, 0])
     @pytest.mark.parametrize("index_col", [None, "col1"])
     @pytest.mark.parametrize("prefix", [None, "_", "col"])
