@@ -193,7 +193,7 @@ class CSVDispatcher(TextFileDispatcher):
         read_csv_kwargs: ReadCsvKwargsType
             Parameters of read_csv function.
         compression_infered: str
-            Infered `compression` parameter of read_csv function.
+            Inferred `compression` parameter of read_csv function.
 
         Returns
         -------
