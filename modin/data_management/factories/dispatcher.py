@@ -54,18 +54,21 @@ class StubFactory(factories.BaseFactory):
 
 class EngineDispatcher(object):
     """
-    This is the 'ingestion' point which knows where to route the work
+    This class is responsible for keeping selected engine up-to-date and dispatching
+    calls of IO-functions to its actual engine-specific implementations.
     """
 
     __engine: factories.BaseFactory = None
 
     @classmethod
     def get_engine(cls) -> factories.BaseFactory:
+        """Get current execution engine"""
         # mostly for testing
         return cls.__engine
 
     @classmethod
     def _update_engine(cls, _):
+        """Update and prepare engine with a new one specified via Modin config"""
         factory_name = get_current_backend() + "Factory"
         try:
             cls.__engine = getattr(factories, factory_name)
@@ -90,98 +93,122 @@ class EngineDispatcher(object):
 
     @classmethod
     def from_pandas(cls, df):
+        """Build query compiler from Pandas DataFrame"""
         return cls.__engine._from_pandas(df)
 
     @classmethod
     def from_arrow(cls, at):
+        """Build query compiler from Arrow Table"""
         return cls.__engine._from_arrow(at)
 
     @classmethod
     def from_non_pandas(cls, *args, **kwargs):
+        """Build query compiler from a non-pandas object (dict, list, np.array etc...)"""
         return cls.__engine._from_non_pandas(*args, **kwargs)
 
     @classmethod
     def read_parquet(cls, **kwargs):
+        """Build query compiler from a Parquet file"""
         return cls.__engine._read_parquet(**kwargs)
 
     @classmethod
     def read_csv(cls, **kwargs):
+        """Build query compiler from a CSV file"""
         return cls.__engine._read_csv(**kwargs)
 
     @classmethod
     def read_csv_glob(cls, **kwargs):
+        """Build query compiler from CSV files"""
         return cls.__engine._read_csv_glob(**kwargs)
 
     @classmethod
     def read_json(cls, **kwargs):
+        """Build query compiler from a JSON file"""
         return cls.__engine._read_json(**kwargs)
 
     @classmethod
     def read_gbq(cls, **kwargs):
+        """Build query compiler from a Google BigQuery"""
         return cls.__engine._read_gbq(**kwargs)
 
     @classmethod
     def read_html(cls, **kwargs):
+        """Build query compiler from a HTML document"""
         return cls.__engine._read_html(**kwargs)
 
     @classmethod
     def read_clipboard(cls, **kwargs):  # pragma: no cover
+        """Build query compiler from clipboard"""
         return cls.__engine._read_clipboard(**kwargs)
 
     @classmethod
     def read_excel(cls, **kwargs):
+        """Build query compiler from an Excel file"""
         return cls.__engine._read_excel(**kwargs)
 
     @classmethod
     def read_hdf(cls, **kwargs):
+        """Build query compiler from a HDFStore"""
         return cls.__engine._read_hdf(**kwargs)
 
     @classmethod
     def read_feather(cls, **kwargs):
+        """Build query compiler from a feather-format object"""
         return cls.__engine._read_feather(**kwargs)
 
     @classmethod
     def read_stata(cls, **kwargs):
+        """Build query compiler from a Stata file"""
         return cls.__engine._read_stata(**kwargs)
 
     @classmethod
     def read_sas(cls, **kwargs):  # pragma: no cover
+        """Build query compiler from a SAS files"""
         return cls.__engine._read_sas(**kwargs)
 
     @classmethod
     def read_pickle(cls, **kwargs):
+        """Build query compiler from a pickled Modin DataFrame"""
         return cls.__engine._read_pickle(**kwargs)
 
     @classmethod
     def read_sql(cls, **kwargs):
+        """Build query compiler from a SQL query or database table"""
         return cls.__engine._read_sql(**kwargs)
 
     @classmethod
     def read_fwf(cls, **kwargs):
+        """Build query compiler from a table of fixed-width formatted lines"""
         return cls.__engine._read_fwf(**kwargs)
 
     @classmethod
     def read_sql_table(cls, **kwargs):
+        """Build query compiler from a SQL database table"""
         return cls.__engine._read_sql_table(**kwargs)
 
     @classmethod
     def read_sql_query(cls, **kwargs):
+        """Build query compiler from a SQL query"""
         return cls.__engine._read_sql_query(**kwargs)
 
     @classmethod
     def read_spss(cls, **kwargs):
+        """Build query compiler from a SPSS file"""
         return cls.__engine._read_spss(**kwargs)
 
     @classmethod
     def to_sql(cls, *args, **kwargs):
+        """Write Modin DataFrame content to a SQL database"""
         return cls.__engine._to_sql(*args, **kwargs)
 
     @classmethod
     def to_pickle(cls, *args, **kwargs):
+        """Pickle Modin DataFrame object"""
         return cls.__engine._to_pickle(*args, **kwargs)
 
     @classmethod
     def to_csv(cls, *args, **kwargs):
+        """Write Modin DataFrame content to a CSV file"""
         return cls.__engine._to_csv(*args, **kwargs)
 
 

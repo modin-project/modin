@@ -17,7 +17,7 @@ from modin.utils import _inherit_docstrings
 import pandas
 
 
-@_inherit_docstrings(DefaultMethod, exclude=[DefaultMethod])
+@_inherit_docstrings(DefaultMethod, excluded=[DefaultMethod])
 class DataFrameDefault(DefaultMethod):
     """Build default-to-pandas methods which is executed under DataFrame"""
 

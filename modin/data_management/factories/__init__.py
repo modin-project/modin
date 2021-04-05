@@ -11,10 +11,16 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
+"""
+Factories module is responsible for IO communication between selected engine
+and high-level API.
+"""
+
 from . import factories
 
 
 def _get_remote_engines():
+    """Yield engines of all of the experemental remote factories"""
     for name in dir(factories):
         obj = getattr(factories, name)
         if isinstance(obj, type) and issubclass(

@@ -32,7 +32,7 @@ class ObjTypeDeterminer:
         return func
 
 
-@_inherit_docstrings(DefaultMethod, exclude=[DefaultMethod])
+@_inherit_docstrings(DefaultMethod, excluded=[DefaultMethod])
 class AnyDefault(DefaultMethod):
     """Build default-to-pandas methods which can be executed under any type of object"""
 

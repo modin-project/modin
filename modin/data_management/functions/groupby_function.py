@@ -334,7 +334,7 @@ class GroupbyReduceFunction(MapReduceFunction):
         reduce_func,
         reduce_args,
         drop,
-        **kwargs,
+        method=None,
     ):
         """
         Binds appropriate arguments to map and reduce functions.
@@ -360,7 +360,6 @@ class GroupbyReduceFunction(MapReduceFunction):
                     groupby_args=groupby_args.copy(),
                     map_func=map_func,
                     map_args=map_args,
-                    drop=drop,
                     **kwargs,
                 )
 
@@ -372,7 +371,7 @@ class GroupbyReduceFunction(MapReduceFunction):
                 result = wrapper(df.copy(), other if other is None else other.copy())
             return result
 
-        def _reduce(df, **call_kwargs):
+        def _reduce(df, **kwargs):
             def wrapper(df):
                 return cls.reduce(
                     df,
@@ -381,8 +380,8 @@ class GroupbyReduceFunction(MapReduceFunction):
                     reduce_func=reduce_func,
                     reduce_args=reduce_args,
                     drop=drop,
+                    method=method,
                     **kwargs,
-                    **call_kwargs,
                 )
 
             try:

@@ -83,9 +83,7 @@ class DefaultMethod(Function):
                     result.name = "__reduced__"
                 result = result.to_frame()
 
-            method_scoped_inplace = kwargs.get("inplace", False)
-            if inplace is not None:
-                method_scoped_inplace = inplace
+            method_scoped_inplace = inplace or kwargs.get("inplace", False)
             return result if not method_scoped_inplace else df
 
         return cls.build_default_to_pandas(applyier, fn_name)
