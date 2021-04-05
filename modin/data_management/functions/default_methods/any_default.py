@@ -18,7 +18,7 @@ from modin.utils import _inherit_docstrings
 class ObjTypeDeterminer:
     """
     This class provides an instances which forwards all of the `__getattribute__` calls
-    to an object under which `key` function is going to be applied.
+    to an object under which `key` function is applied.
     """
 
     def __getattr__(self, key):

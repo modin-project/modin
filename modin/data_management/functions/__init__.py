@@ -13,11 +13,6 @@
 
 """
 Function module provides template for a query compiler methods for a set of common operations.
-
-This interface is written in a general way, therefore, if the function being implemented
-requires details when processing parameters (for example, fallback to pandas case) or an
-additional level of processing the created frame, then `Function.register` call is no
-longer enough and the usual function creation is required (via `def`).
 """
 
 from .function import Function

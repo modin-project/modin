@@ -33,7 +33,7 @@ class GroupBy:
         Parameters
         ----------
         by: DateFrame, Series, index label or list of such,
-            `by` parameter.
+            Object which indicates groups for GroupBy.
 
         Returns
         -------
@@ -100,6 +100,14 @@ class GroupBy:
         -------
         callable,
             Aggregation function.
+
+        Notes
+        -----
+        There is two ways of how groupby aggregation can be invoked:
+            1. Explicitly with query compiler method: `qc.groupby_sum()`.
+            2. By passing aggregation function as an argument: `qc.groupby_agg("sum")`.
+        Both is going to produce the same result, however in a first case actual aggregation
+        function can be extracted from a method name, but for the second - only from the method arguments.
         """
         if "agg_func" in kwargs:
             return kwargs["agg_func"]
@@ -111,7 +119,7 @@ class GroupBy:
     @classmethod
     def build_aggregate_method(cls, key):
         """
-        Build function for QueryCompiler.groupby_agg that may be executed as default-to-pandas.
+        Build function for QueryCompiler.groupby_agg that can be executed as default-to-pandas.
 
         Parameters
         ----------
@@ -152,7 +160,7 @@ class GroupBy:
     @classmethod
     def build_groupby_reduce_method(cls, agg_func):
         """
-        Build function for QueryCompiler.groupby_* that may be executed as default-to-pandas.
+        Build function for QueryCompiler.groupby_* that can be executed as default-to-pandas.
 
         Parameters
         ----------

@@ -28,7 +28,7 @@ class BinaryDefault(AnyDefault):
         Parameters
         ----------
         fn: callable,
-            Binary function to apply to the defaulted frame and other operand.
+            Binary function to apply to the casted to pandas frame and other operand.
         fn_name: str,
             Function name which will be shown in default-to-pandas warning message.
 

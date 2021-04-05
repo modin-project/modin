@@ -49,16 +49,6 @@ class GroupbyReduceFunction(MapReduceFunction):
         -------
         Callable,
             Function that executes GroupBy aggregation with MapReduce algorithm.
-
-        Notes
-        -----
-        Method obtains QueryCompiler
-          0  1
-        a
-        b
-        -------
-        a
-        a
         """
         if isinstance(map_func, str):
 
@@ -179,9 +169,9 @@ class GroupbyReduceFunction(MapReduceFunction):
         reduce_args: dict,
             Arguments which will be passed to `reduce_func`.
         drop: bool, (default False)
-            Indicates whether or not by-data came from the same frame?
+            Indicates whether or not by-data came from the `self` frame.
         method: str, (optional)
-            Name of the groupby function. This is a hint to do special casing.
+            Name of the groupby function. This is a hint to be able to do special casing.
 
         Returns
         -------
@@ -223,35 +213,43 @@ class GroupbyReduceFunction(MapReduceFunction):
         groupby_args,
         map_args,
         map_func,
+        reduce_func,
+        reduce_args,
         numeric_only=True,
-        **kwargs,
+        drop=False,
+        method=None,
     ):
         """
-        Builds Map and Reduce function that processes GroupBy and executes them.
+        Execute GroupBy aggregation with MapReduce approach.
 
         query_compiler: QueryCompiler,
-            frame to group
+            Frame to group.
         by: QueryCompiler, column or index label, Grouper or list of such
-            determine groups
+            Object that determine groups.
         axis: int,
-            axis to group and apply function
+            Axis to group and apply aggregation function along.
         groupby_args: dict,
-            Dictionary which carries arguments for pandas.DataFrame.groupby
+            Dictionary which carries arguments for pandas.DataFrame.groupby.
         map_args: dict,
             Arguments which will be passed to `map_func`.
         map_func: callable,
             Function to apply to each group at the Map phase.
+        reduce_func: callable
+            Function to apply to each group at the Reduce phase.
+        reduce_args: dict,
+            Arguments which will be passed to `reduce_func`.
         numeric_only: bool (default True),
             Whether or not to drop non-numeric columns before executing GroupBy.
-        **kwargs: kwargs,
-            Additional parameters to build Map and Reduce functions.
+        drop: bool, (default False)
+            Indicates whether or not by-data came from the `self` frame.
+        method: str, (optional)
+            Name of the groupby function. This is a hint to be able to do special casing.
 
         Returns
         -------
         QueryCompiler
             QueryCompiler which carries the result of GroupBy aggregation.
         """
-        # Currently we're defaulting to pandas if
         if groupby_args.get("level", None) is None and (
             not (isinstance(by, (type(query_compiler))) or hashable(by))
             or isinstance(by, pandas.Grouper)
@@ -283,11 +281,14 @@ class GroupbyReduceFunction(MapReduceFunction):
             groupby_args=groupby_args,
             map_func=map_func,
             map_args=map_args,
-            **kwargs,
+            reduce_func=reduce_func,
+            reduce_args=reduce_args,
+            drop=drop,
+            method=method,
         )
 
         # If `by` is a ModinFrame, then its partitions will be broadcasted to every
-        # `self` partition in a way, determined by engine (modin_frame.groupby_reduce)
+        # `self` partition in a way determined by engine (modin_frame.groupby_reduce)
         # Otherwise `by` was already binded to the Map function in `build_map_reduce_functions`.
         broadcastable_by = getattr(by, "_modin_frame", None)
         apply_indices = list(map_func.keys()) if isinstance(map_func, dict) else None

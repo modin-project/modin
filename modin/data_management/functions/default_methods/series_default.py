@@ -21,5 +21,5 @@ class SeriesDefault(AnyDefault):
 
     @classmethod
     def frame_wrapper(cls, df):
-        """Squeeze passed DataFrame to be abble to process Series-specific functions on it"""
+        """Squeeze passed DataFrame to be able to process Series-specific functions on it"""
         return df.squeeze(axis=1)

@@ -29,7 +29,7 @@ class DefaultMethod(Function):
         Parameters
         ----------
         func: callable or str,
-            Function to apply to the defaulted pandas frame or its property accesed
+            Function to apply to the casted to pandas frame or its property accesed
             by `frame_wrapper`.
         obj_type: object (default pandas.DataFrame),
             If `func` is a string with a function name then `obj_type` provides an
@@ -60,9 +60,9 @@ class DefaultMethod(Function):
 
         def applyier(df, *args, **kwargs):
             """
-            This function is directly applied to the pandas.DataFrame, executes passed
-            function under the frame and processes function result so it be able to create
-            resulted query compiler from it.
+            This function is directly applied to the casted to pandas frame, executes target
+            function under it and processes result so it be possible to create a valid
+            query compiler from it.
             """
             df = cls.frame_wrapper(df)
             result = fn(df, *args, **kwargs)

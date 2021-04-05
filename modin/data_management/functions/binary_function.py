@@ -22,7 +22,7 @@ class BinaryFunction(Function):
     @classmethod
     def register(cls, func: Callable, join_type="outer", preserve_labels=False):
         """
-        Build template binary function, which can be used as a method for a binary op
+        Build template binary function, which can be used as a method for a binary operation
         in a query compiler.
 
         Parameters
@@ -36,12 +36,13 @@ class BinaryFunction(Function):
 
         Returns
         -------
-        QueryCompiler method that can be used as a binary operation.
+        callable,
+            QueryCompiler method that can be used as a binary operation.
         """
 
         def binary_function(query_compiler, other, *args, broadcast=False, **kwargs):
             """
-            Applies binary `func` along passed operands.
+            Apply binary `func` along passed operands.
 
             Parameters
             ----------
@@ -53,13 +54,15 @@ class BinaryFunction(Function):
                 If `other` is a one-column query compiler, indicates whether it is a Series or not.
                 Frames and Series have to be processed differently, however we can't distinguish them
                 at the query compiler level, so this parameter is a hint that passed from a high level API.
-            *args: args
-            **kwargs: kwargs, passed to `func`.
+            *args: args,
+                Arguments that will be passed to `func`.
+            **kwargs: kwargs,
+                Arguments that will be passed to `func`.
 
             Returns
             -------
             QueryCompiler,
-                Result of `func(query_compiler, other)`.
+                Result of binary function.
             """
             axis = kwargs.get("axis", 0)
             if isinstance(other, type(query_compiler)):
