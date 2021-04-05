@@ -359,30 +359,30 @@ jobs:
       - uses: actions/checkout@v2
         with:
           fetch-depth: 1
-      - uses: conda-incubator/setup-miniconda@v2
+      - uses: actions/setup-python@v2
         with:
-          activate-environment: modin
-          environment-file: environment-dev.yml
-          python-version: 3.7
-          channel-priority: strict
-          use-only-tar-bz2: true # IMPORTANT: This needs to be set for caching to work properly!
-      - name: Conda environment
-        shell: bash -l {0}
-        run: |
-          conda info
-          conda list
-
+          python-version: "3.7.x"
+          architecture: "x64"
+      - name: ASV installation
+        run: pip install git+https://github.com/airspeed-velocity/asv.git@ef016e233cb9a0b19d517135104f49e0a3c380e9
       - name: Running benchmarks
-        shell: bash -l {0}
         run: |
-          pip install -e .
+          # ASV correctly creates environments for testing only from the branch
+          # with `master` name
+          git checkout -b master
           cd asv_bench
-          asv check -E existing
+          asv check -v
           git remote add upstream https://github.com/modin-project/modin.git
           git fetch upstream
           if git diff upstream/master --name-only | grep -q "^asv_bench/"; then
               asv machine --yes
-              asv run --quick --show-stderr --python=same --launch-method=spawn | sed "/failed$/ s/^/##[error]/" | tee benchmarks.log
+              asv run --quick --show-stderr --launch-method=spawn \
+                | sed "/failed$/ s/^/##[error]/" | tee benchmarks.log
+              # check omnisci backend
+              MODIN_BACKEND=omnisci MODIN_EXPERIMENTAL=true asv run --quick \
+                --show-stderr --launch-method=spawn --config asv.conf.omnisci.json \
+                -b time_head -b time_iloc -b time_loc -b time_columns -b time_index -b time_shape \
+                | sed "/failed$/ s/^/##[error]/" | tee benchmarks.log
               if grep "failed" benchmarks.log > /dev/null ; then
                   exit 1
               fi
