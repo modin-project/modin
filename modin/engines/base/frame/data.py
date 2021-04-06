@@ -784,7 +784,7 @@ class BasePandasFrame(object):
                     new_dtypes[column] = new_dtype
 
         def astype_builder(df):
-            """Computes new partition frame with dtypes updated."""
+            """Compute new partition frame with dtypes updated."""
             return df.astype({k: v for k, v in col_dtypes.items() if k in df})
 
         new_frame = self._frame_mgr_cls.map_partitions(self._partitions, astype_builder)
@@ -949,7 +949,7 @@ class BasePandasFrame(object):
         cumulative = np.append(bins[:-1].cumsum(), np.iinfo(bins.dtype).max)
 
         def internal(block_idx, global_index):
-            """Transforms global index to internal one for given block (identified by its index)."""
+            """Transform global index to internal one for given block (identified by its index)."""
             return (
                 global_index
                 if not block_idx
@@ -1018,7 +1018,7 @@ class BasePandasFrame(object):
 
         # define helper functions
         def merge(left_index, right_index):
-            """Combines a pair of indices depending on `axis`, `how` and `sort` from outside."""
+            """Combine a pair of indices depending on `axis`, `how` and `sort` from outside."""
             if axis == 1 and how == "outer" and not sort:
                 return left_index.union(right_index, sort=False)
             else:
@@ -1058,7 +1058,7 @@ class BasePandasFrame(object):
             indexers = [index.get_indexer_for(joined_index) for index in indexes]
 
         def make_reindexer(do_reindex: bool, frame_idx: int):
-            """Creates callback that reindexes the dataframe using newly computed index."""
+            """Create callback that reindexes the dataframe using newly computed index."""
             # the order of the frames must match the order of the indexes
             if not do_reindex:
                 return lambda df: df
@@ -1101,7 +1101,7 @@ class BasePandasFrame(object):
         """
 
         def _map_reduce_func(df, *args, **kwargs):
-            """The map-reducer function itself, presenting the resulting pandas.Series as pandas.DataFrame."""
+            """Map-reducer function itself executing `func`, presenting the resulting pandas.Series as pandas.DataFrame."""
             series_result = func(df, *args, **kwargs)
             if axis == 0 and isinstance(series_result, pandas.Series):
                 # In the case of axis=0, we need to keep the shape of the data
@@ -1444,7 +1444,7 @@ class BasePandasFrame(object):
             apply_indices : list-like (optional)
                 The labels to apply over. Must be given if axis is provided.
             row_indices : list-like (optional)
-                The row indices to apply over. Must be provided with 
+                The row indices to apply over. Must be provided with
                 `col_indices` to apply over both axes.
             col_indices : list-like (optional)
                 The column indices to apply over. Must be provided
