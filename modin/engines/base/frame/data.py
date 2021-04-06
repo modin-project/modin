@@ -748,9 +748,10 @@ class BasePandasFrame(object):
     def astype(self, col_dtypes):
         """Convert the columns dtypes to given dtypes.
 
-        Args:
-            col_dtypes: Dictionary of {col: dtype,...} where col is the column
-                name and dtype is a numpy dtype.
+        Parameters
+        ----------
+            col_dtypes : Dictionary of {col: dtype,...}
+                where col is the column name and dtype is a numpy dtype.
 
         Returns
         -------
@@ -783,6 +784,7 @@ class BasePandasFrame(object):
                     new_dtypes[column] = new_dtype
 
         def astype_builder(df):
+            """Computes new partition frame with dtypes updated."""
             return df.astype({k: v for k, v in col_dtypes.items() if k in df})
 
         new_frame = self._frame_mgr_cls.map_partitions(self._partitions, astype_builder)
@@ -799,9 +801,12 @@ class BasePandasFrame(object):
     def add_prefix(self, prefix, axis):
         """Add a prefix to the current row or column labels.
 
-        Args:
-            prefix: The prefix to add.
-            axis: The axis to update.
+        Parameters
+        ----------
+            prefix : str
+                The prefix to add.
+            axis : int
+                The axis to update.
 
         Returns
         -------
@@ -818,9 +823,12 @@ class BasePandasFrame(object):
     def add_suffix(self, suffix, axis):
         """Add a suffix to the current row or column labels.
 
-        Args:
-            suffix: The suffix to add.
-            axis: The axis to update.
+        Parameters
+        ----------
+            suffix : str
+                The suffix to add.
+            axis : int
+                The axis to update.
 
         Returns
         -------
@@ -837,11 +845,16 @@ class BasePandasFrame(object):
     # END Metadata modification methods
 
     def _numeric_columns(self, include_bool=True):
-        """Return the numeric columns of the Manager.
+        """Return the names of numeric columns in the frame.
+
+        Parameters
+        ----------
+            include_bool : bool
+                Whether to consider boolean columns as numeric.
 
         Returns
         -------
-            List of index names.
+            List of column names.
         """
         columns = []
         for col, dtype in zip(self.columns, self.dtypes):
@@ -852,20 +865,20 @@ class BasePandasFrame(object):
         return columns
 
     def _get_dict_of_block_index(self, axis, indices):
-        """Convert indices to a dict of block index to internal index mapping.
+        """Convert indices to an ordered dict mapping partition (or block) index to internal indices in said partition.
 
         Parameters
         ----------
-        axis : (0 - rows, 1 - columns)
-               The axis along which to get the indices
-        indices : list of int, slice
+            axis : int (0 - rows, 1 - columns)
+                The axis along which to get the indices.
+            indices : list of int, slice
                 A list of global indices to convert.
 
         Returns
         -------
-        dictionary mapping int to list of int
-            A mapping from partition to list of internal indices to extract from that
-            partition.
+            ordered dictionary mapping int to list of ints
+                A mapping from partition index to list of internal indices which correspond to `indices` in each
+                partition.
         """
         # Fasttrack slices
         if isinstance(indices, slice):
@@ -908,6 +921,7 @@ class BasePandasFrame(object):
                 else:
                     if last_part - first_part == 1:
                         return OrderedDict(
+                            # FIXME: this dictionary creation feels wrong - it might not maintain the order
                             {
                                 first_part: slice(first_idx[0], None),
                                 last_part: slice(None, last_idx[0]),
@@ -935,6 +949,7 @@ class BasePandasFrame(object):
         cumulative = np.append(bins[:-1].cumsum(), np.iinfo(bins.dtype).max)
 
         def internal(block_idx, global_index):
+            """Transforms global index to internal one for given block (identified by its index)."""
             return (
                 global_index
                 if not block_idx
@@ -977,33 +992,33 @@ class BasePandasFrame(object):
 
     @staticmethod
     def _join_index_objects(axis, indexes, how, sort):
-        """
-        Join the pair of index objects (columns or rows) by a given strategy.
+        """Join the pair of index objects (columns or rows) by a given strategy.
 
-        Unlike Index.join() in Pandas, if axis is 1, the sort is
-        False, and how is "outer", the result will _not_ be sorted.
+        Unlike Index.join() in Pandas, if `axis` is 1, `sort` is False,
+        and `how` is "outer", the result will _not_ be sorted.
 
         Parameters
         ----------
-        axis : 0 or 1
-            The axis index object to join (0 - rows, 1 - columns).
-        indexes : list(Index)
-            The indexes to join on.
-        how : {'left', 'right', 'inner', 'outer', None}
-            The type of join to join to make. If `None` then joined index
-            considered to be the first index in the `indexes` list.
-        sort : boolean
-            Whether or not to sort the joined index
+            axis : int (0 or 1)
+                The axis index object to join (0 - rows, 1 - columns).
+            indexes : list(Index)
+                The indexes to join on.
+            how : {'left', 'right', 'inner', 'outer', None}
+                The type of join to join to make. If `None` then joined index
+                considered to be the first index in the `indexes` list.
+            sort : boolean
+                Whether or not to sort the joined index
 
         Returns
         -------
-        (Index, func)
-            Joined index with make_reindexer func
+            (Index, func)
+                Joined index with make_reindexer func
         """
         assert isinstance(indexes, list)
 
         # define helper functions
         def merge(left_index, right_index):
+            """Combines a pair of indices depending on `axis`, `how` and `sort` from outside."""
             if axis == 1 and how == "outer" and not sort:
                 return left_index.union(right_index, sort=False)
             else:
@@ -1043,6 +1058,7 @@ class BasePandasFrame(object):
             indexers = [index.get_indexer_for(joined_index) for index in indexes]
 
         def make_reindexer(do_reindex: bool, frame_idx: int):
+            """Creates callback that reindexes the dataframe using newly computed index."""
             # the order of the frames must match the order of the indexes
             if not do_reindex:
                 return lambda df: df
@@ -1067,22 +1083,25 @@ class BasePandasFrame(object):
     def _build_mapreduce_func(self, axis, func):
         """Properly formats a MapReduce result so that the partitioning is correct.
 
-        Note: This should be used for any MapReduce style operation that results in a
-            reduced data dimensionality (dataframe -> series).
-
         Parameters
         ----------
-            axis: int
+            axis : int
                 The axis along which to apply the function.
-            func: callable
+            func : callable
                 The function to apply.
 
         Returns
         -------
             A function to be shipped to the partitions to be executed.
+
+        Notes
+        -----
+            This should be used for any MapReduce style operation that results in a
+            reduced data dimensionality (dataframe -> series).
         """
 
         def _map_reduce_func(df, *args, **kwargs):
+            """The map-reducer function itself, presenting the resulting pandas.Series as pandas.DataFrame."""
             series_result = func(df, *args, **kwargs)
             if axis == 0 and isinstance(series_result, pandas.Series):
                 # In the case of axis=0, we need to keep the shape of the data
@@ -1104,20 +1123,19 @@ class BasePandasFrame(object):
         return _map_reduce_func
 
     def _compute_map_reduce_metadata(self, axis, new_parts):
-        """
-        Compute the metadata for the result of reduce function.
+        """Compute the metadata for the result of reduce function.
 
         Parameters
         ----------
-        axis: int,
-            The axis on which reduce function was applied
-        new_parts: numpy 2D array
-            Partitions with the result of applied function
+            axis : int
+                The axis on which reduce function was applied.
+            new_parts : numpy 2D array
+                Partitions with the result of applied function.
 
         Returns
         -------
-        BasePandasFrame
-            Pandas series containing the reduced data.
+            BasePandasFrame
+                Pandas series containing the reduced data.
         """
         new_axes, new_axes_lengths = [0, 0], [0, 0]
 
@@ -1137,12 +1155,11 @@ class BasePandasFrame(object):
         return result
 
     def _fold_reduce(self, axis, func):
-        """
-        Apply function that reduce Manager to series but require knowledge of full axis.
+        """Apply function that reduces Frame Manager to series but requires knowledge of full axis.
 
         Parameters
         ----------
-            axis : 0 or 1
+            axis : int (0 or 1)
                 The axis to apply the function to (0 - index, 1 - columns).
             func : callable
                 The function to reduce the Manager by. This function takes in a Manager.
@@ -1151,8 +1168,8 @@ class BasePandasFrame(object):
 
         Returns
         -------
-        BasePandasFrame
-            Pandas series containing the reduced data.
+            BasePandasFrame
+                Pandas series containing the reduced data.
         """
         func = self._build_mapreduce_func(axis, func)
         new_parts = self._frame_mgr_cls.map_axis_partitions(
@@ -1161,12 +1178,11 @@ class BasePandasFrame(object):
         return self._compute_map_reduce_metadata(axis, new_parts)
 
     def _map_reduce(self, axis, map_func, reduce_func=None):
-        """
-        Apply function that will reduce the data to a Pandas Series.
+        """Apply function that will reduce the data to a Pandas Series.
 
         Parameters
         ----------
-            axis : 0 or 1
+            axis : int (0 or 1)
                 0 for columns and 1 for rows.
             map_func : callable
                 Callable function to map the dataframe.
@@ -1176,8 +1192,8 @@ class BasePandasFrame(object):
 
         Returns
         -------
-        BasePandasFrame
-            A new dataframe.
+            BasePandasFrame
+                A new dataframe.
         """
         map_func = self._build_mapreduce_func(axis, map_func)
         if reduce_func is None:
@@ -1198,10 +1214,10 @@ class BasePandasFrame(object):
         ----------
             func : callable
                 The function to apply.
-            dtypes :
-                (optional) The data types for the result. This is an optimization
+            dtypes : dtypes of the result (optional)
+                The data types for the result. This is an optimization
                 because there are functions that always result in a particular data
-                type, and allows us to avoid (re)computing it.
+                type, and this allows us to avoid (re)computing it.
             validate_index : bool, (default False)
                 Is index validation required after performing `func` on partitions.
 
@@ -1242,8 +1258,6 @@ class BasePandasFrame(object):
     def _fold(self, axis, func):
         """Perform a function across an entire axis.
 
-        Note: The data shape is not changed (length and width of the table).
-
         Parameters
         ----------
             axis: int
@@ -1254,6 +1268,10 @@ class BasePandasFrame(object):
         Returns
         -------
              A new dataframe.
+
+        Notes
+        -----
+            The data shape is not changed (length and width of the table).
         """
         new_partitions = self._frame_mgr_cls.map_axis_partitions(
             axis, self._partitions, func
@@ -1271,15 +1289,15 @@ class BasePandasFrame(object):
 
         Parameters
         ----------
-            axis: int
+            axis : int
                 The axis to filter over.
-            func: callable
+            func : callable
                 The function to use for the filter. This function should filter the
                 data itself.
 
         Returns
         -------
-            A new dataframe.
+            A new filtered dataframe.
         """
         new_partitions = self._frame_mgr_cls.map_axis_partitions(
             axis, self._partitions, func, keep_partitioning=True
@@ -1307,12 +1325,11 @@ class BasePandasFrame(object):
         new_columns=None,
         dtypes=None,
     ):
-        """
-        Perform a function across an entire axis.
+        """Perform a function across an entire axis.
 
         Parameters
         ----------
-            axis : 0 or 1
+            axis : int (0 or 1)
                 The axis to apply over (0 - rows, 1 - columns).
             func : callable
                 The function to apply.
@@ -1329,12 +1346,12 @@ class BasePandasFrame(object):
 
         Returns
         -------
-        BasePandasFrame
-            A new dataframe.
+            BasePandasFrame
+                A new dataframe.
 
         Notes
         -----
-        The data shape may change as a result of the function.
+            The data shape may change as a result of the function.
         """
         return self.broadcast_apply_full_axis(
             axis=axis,
@@ -1420,21 +1437,28 @@ class BasePandasFrame(object):
 
         Parameters
         ----------
-            axis: The axis to apply over.
-            func: The function to apply
-            apply_indices: (optional) The labels to apply over. Must be given if axis is
-                provided.
-            row_indices: (optional) The row indices to apply over. Must be provided with
+            axis : int (0 or 1)
+                The axis to apply over.
+            func : callable
+                The function to apply
+            apply_indices : list-like (optional)
+                The labels to apply over. Must be given if axis is provided.
+            row_indices : list-like (optional)
+                The row indices to apply over. Must be provided with 
                 `col_indices` to apply over both axes.
-            col_indices: (optional) The column indices to apply over. Must be provided
+            col_indices : list-like (optional)
+                The column indices to apply over. Must be provided
                 with `row_indices` to apply over both axes.
-            new_index: (optional) The index of the result. We may know this in advance,
+            new_index : list-like (optional)
+                The index of the result. We may know this in advance,
                 and if not provided it must be computed.
-            new_columns: (optional) The columns of the result. We may know this in
+            new_columns : list-like (optional)
+                The columns of the result. We may know this in
                 advance, and if not provided it must be computed.
-            keep_remaining: Whether or not to drop the data that is not computed over.
-            item_to_distribute: (optional) The item to split up so it can be applied
-                over both axes.
+            keep_remaining : boolean (default to False)
+                Whether or not to drop the data that is not computed over.
+            item_to_distribute : (optional)
+                The item to split up so it can be applied over both axes.
 
         Returns
         -------
@@ -1463,7 +1487,7 @@ class BasePandasFrame(object):
             # This object determines the lengths and widths based on the given
             # parameters and builds a dictionary used in the constructor below. 0 gives
             # the row lengths and 1 gives the column widths. Since the dimension of
-            # `axis` given may have changed, we current just recompute it.
+            # `axis` given may have changed, we currently just recompute it.
             # TODO Determine lengths from current lengths if `keep_remaining=False`
             lengths_objs = {
                 axis: [len(apply_indices)]
@@ -1475,7 +1499,7 @@ class BasePandasFrame(object):
                 new_partitions, new_index, new_columns, lengths_objs[0], lengths_objs[1]
             )
         else:
-            # We are apply over both axes here, so make sure we have all the right
+            # We are applying over both axes here, so make sure we have all the right
             # variables set.
             assert row_indices is not None and col_indices is not None
             assert keep_remaining
