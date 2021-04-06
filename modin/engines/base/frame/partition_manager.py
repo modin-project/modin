@@ -767,7 +767,7 @@ class BaseFrameManager(ABC):
     @classmethod
     def from_arrow(cls, at, return_dims=False):
         """Return the partitions from Apache Arrow (PyArrow).
-        
+
         Parameters
         ----------
         at : Arrow Table
@@ -800,7 +800,7 @@ class BaseFrameManager(ABC):
         -------
         pandas.Index
             A Pandas Index object.
-        
+
         Notes
         -----
         These are the global indices of the object. This is mostly useful
