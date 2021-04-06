@@ -565,21 +565,29 @@ class BaseFrameManager(ABC):
 
     @classmethod
     def concat(cls, axis, left_parts, right_parts):
-        """Concatenate the blocks with another set of blocks.
+        """Concatenate the blocks of partitions with another set of blocks.
 
-        Note: Assumes that the blocks are already the same shape on the
-            dimension being concatenated. A ValueError will be thrown if this
-            condition is not met.
-
-        Args:
-            axis: The axis to concatenate to.
-            right_parts: the other blocks to be concatenated. This is a
-                BaseFrameManager object.
+        Parameters
+        ----------
+        axis : int
+            The axis to concatenate to.
+        left_parts : np.ndarray
+            Numpy array of partitions to concatenate with.
+        right_parts : np.ndarray or list
+            Numpy array of partitions to be concatenated.
 
         Returns
         -------
-            A new BaseFrameManager object, the type of object that called this.
+        np.ndarray
+            A new numpy array with concatenated partitions.
+
+        Notes
+        -----
+        Assumes that the blocks are already the same shape on the
+        dimension being concatenated. A ValueError will be thrown if this
+        condition is not met.
         """
+        # TODO: isinstance
         if type(right_parts) is list:
             # `np.array` with partitions of empty ModinFrame has a shape (0,)
             # but `np.concatenate` can concatenate arrays only if its shapes at
@@ -596,15 +604,16 @@ class BaseFrameManager(ABC):
 
     @classmethod
     def concatenate(cls, dfs):
-        """
-        Concatenate Pandas DataFrames with saving 'category' dtype.
+        """Concatenate Pandas DataFrames with saving 'category' dtype.
 
         Parameters
         ----------
-            dfs: list of DataFrames
+        dfs : list
+            List of Pandas DataFrames to concatenate.
 
         Returns
         -------
+        pandas.DataFrame
             A Pandas DataFrame
         """
         categoricals_columns = set.intersection(
@@ -620,10 +629,16 @@ class BaseFrameManager(ABC):
 
     @classmethod
     def to_pandas(cls, partitions):
-        """Convert this object into a Pandas DataFrame from the partitions.
+        """Convert numpy array of BaseFramePartition to Pandas DataFrame.
+
+        Parameters
+        ----------
+        partitions : np.ndarray
+            Numpy array of BaseFramePartition
 
         Returns
         -------
+        pandas.DataFrame
             A Pandas DataFrame
         """
         retrieved_objects = [[obj.to_pandas() for obj in part] for part in partitions]
@@ -651,11 +666,16 @@ class BaseFrameManager(ABC):
 
     @classmethod
     def to_numpy(cls, partitions, **kwargs):
-        """
-        Convert this object into a NumPy array from the partitions.
+        r"""Convert numpy array of BaseFramePartition to numpy array.
+
+        partitions : np.ndarray
+            Numpy array of BaseFramePartition
+        **kwargs : dict
+            Keyword arguments for BaseFramePartition.to_numpy function.
 
         Returns
         -------
+        np.ndarray
             A NumPy array
         """
         return np.block(
@@ -665,7 +685,21 @@ class BaseFrameManager(ABC):
     @classmethod
     @wait_computations_if_benchmark_mode
     def from_pandas(cls, df, return_dims=False):
-        """Return the partitions from Pandas DataFrame."""
+        """Return the partitions from Pandas DataFrame.
+
+        Parameters
+        ----------
+        df : pandas.DataFrame
+            pandas.DataFrame.
+        return_dims : boolean, optional. Default is False
+            If it's True, return as (np.ndarray, row_lengths, col_widths),
+            else np.ndarray.
+
+        Returns
+        -------
+        np.ndarray or (np.ndarray, row_lengths, col_widths)
+            Numpy array with partitions (with dimensions or not).
+        """
 
         def update_bar(pbar, f):
             if ProgressBar.get():
@@ -732,24 +766,46 @@ class BaseFrameManager(ABC):
 
     @classmethod
     def from_arrow(cls, at, return_dims=False):
-        """Return the partitions from Apache Arrow (PyArrow)."""
+        """Return the partitions from Apache Arrow (PyArrow).
+        
+        Parameters
+        ----------
+        at : Arrow Table
+            Arrow Table
+        return_dims : boolean, optional. Default is False
+            If it's True, return as (np.ndarray, row_lengths, col_widths),
+            else np.ndarray.
+
+        Returns
+        -------
+        np.ndarray or (np.ndarray, row_lengths, col_widths)
+            Numpy array with partitions (with dimensions or not).
+        """
         return cls.from_pandas(at.to_pandas(), return_dims=return_dims)
 
     @classmethod
     def get_indices(cls, axis, partitions, index_func=None):
         """Get the internal indices stored in the partitions.
 
-        Note: These are the global indices of the object. This is mostly useful
-            when you have deleted rows/columns internally, but do not know
-            which ones were deleted.
-
-        Args:
-            axis: This axis to extract the labels. (0 - index, 1 - columns).
-            index_func: The function to be used to extract the function.
+        Parameters
+        ----------
+        axis : 0 or 1
+            Axis to extract the labels over.
+        partitions : np.ndarray
+            Numpy array with BaseFramePartition's
+        index_func : callable, optional. Default is None
+            The function to be used to extract the indices.
 
         Returns
         -------
+        pandas.Index
             A Pandas Index object.
+        
+        Notes
+        -----
+        These are the global indices of the object. This is mostly useful
+        when you have deleted rows/columns internally, but do not know
+        which ones were deleted.
         """
         ErrorMessage.catch_bugs_and_request_email(not callable(index_func))
         func = cls.preprocess_func(index_func)
@@ -772,6 +828,27 @@ class BaseFrameManager(ABC):
     def _apply_func_to_list_of_partitions_broadcast(
         cls, func, partitions, other, **kwargs
     ):
+        r"""Apply a function to a list of remote partitions.
+
+        `other` partitions will be broadcasted to `partitions`
+        and `func` will be applied.
+
+        Parameters
+        ----------
+        func : callable
+            The func to apply.
+        partitions : np.ndarray
+            The partitions to which the `func` will apply.
+        other : np.ndarray
+            The partitions to be broadcasted to `partitions`.
+        **kwargs : dict
+            Keyword arguments for BaseFramePartition.apply function.
+
+        Returns
+        -------
+        list
+            A list of BaseFramePartition objects.
+        """
         preprocessed_func = cls.preprocess_func(func)
         return [
             obj.apply(preprocessed_func, other=[o.get() for o in broadcasted], **kwargs)
@@ -782,15 +859,23 @@ class BaseFrameManager(ABC):
     def _apply_func_to_list_of_partitions(cls, func, partitions, **kwargs):
         """Apply a function to a list of remote partitions.
 
-        Note: The main use for this is to preprocess the func.
-
-        Args:
-            func: The func to apply
-            partitions: The list of partitions
+        Parameters
+        ----------
+        func : callable
+            The func to apply.
+        partitions : np.ndarray
+            The partitions to which the `func` will apply.
+        **kwargs : dict
+            Keyword arguments for BaseFramePartition.apply function.
 
         Returns
         -------
+        list
             A list of BaseFramePartition objects.
+
+        Notes
+        -----
+        The main use for this is to preprocess the func.
         """
         preprocessed_func = cls.preprocess_func(func)
         return [obj.apply(preprocessed_func, **kwargs) for obj in partitions]
@@ -802,21 +887,31 @@ class BaseFrameManager(ABC):
     ):
         """Apply a function to select indices.
 
-        Note: Your internal function must take a kwarg `internal_indices` for
-            this to work correctly. This prevents information leakage of the
-            internal index to the external representation.
-
-        Args:
-            axis: The axis to apply the func over.
-            func: The function to apply to these indices.
-            indices: The indices to apply the function to.
-            keep_remaining: Whether or not to keep the other partitions.
-                Some operations may want to drop the remaining partitions and
-                keep only the results.
+        Parameters
+        ----------
+        axis : 0 or 1
+            Axis to apply the `func` over.
+        partitions : np.ndarray
+            The partitions to which the `func` will apply.
+        func : callable
+            The function to apply to these indices of partitions.
+        indices : dict
+            The indices to apply the function to.
+        keep_remaining : boolean, optional. Default is False
+            Whether or not to keep the other partitions. Some operations
+            may want to drop the remaining partitions and keep
+            only the results.
 
         Returns
         -------
-            A new BaseFrameManager object, the type of object that called this.
+        np.ndarray
+            Numpy array with partitions.
+
+        Notes
+        -----
+        Your internal function must take a kwarg `internal_indices` for
+        this to work correctly. This prevents information leakage of the
+        internal index to the external representation.
         """
         if partitions.size == 0:
             return np.array([[]])
@@ -905,29 +1000,33 @@ class BaseFrameManager(ABC):
     ):
         """Apply a function to a select subset of full columns/rows.
 
-        Note: This should be used when you need to apply a function that relies
-            on some global information for the entire column/row, but only need
-            to apply a function to a subset.
-
-        Important: For your func to operate directly on the indices provided,
-            it must use `internal_indices` as a keyword argument.
-
         Parameters
         ----------
-        axis: int
-            The axis to apply the function over (0 - rows, 1 - columns)
-        func: callable
+        axis : 0 or 1
+            The axis to apply the function over.
+        partitions : np.ndarray
+            The partitions to which the `func` will apply.
+        func : callable
             The function to apply.
-        indices: list-like
+        indices : list-like
             The global indices to apply the func to.
-        keep_remaining: boolean
+        keep_remaining : boolean, optional. Default is False
             Whether or not to keep the other partitions.
             Some operations may want to drop the remaining partitions and
             keep only the results.
 
         Returns
         -------
-            A new BaseFrameManager object, the type of object that called this.
+        np.ndarray
+            Numpy array with partitions.
+
+        Notes
+        -----
+        This should be used when you need to apply a function that relies
+        on some global information for the entire column/row, but only need
+        to apply a function to a subset.
+        For your func to operate directly on the indices provided,
+        it must use `internal_indices` as a keyword argument.
         """
         if partitions.size == 0:
             return np.array([[]])
@@ -1018,12 +1117,31 @@ class BaseFrameManager(ABC):
         col_partitions_list,
         item_to_distribute=None,
     ):
-        """
-        Apply a function to along both axis.
+        """Apply a function to along both axis.
 
-        Important: For your func to operate directly on the indices provided,
-            it must use `row_internal_indices, col_internal_indices` as keyword
-            arguments.
+        Parameters
+        ----------
+        partitions : np.ndarray
+            The partitions to which the `func` will apply.
+        func : callable
+            The function to apply.
+        row_partitions_list : list
+            List of row partitions.
+        col_partitions_list : list
+            List of column partitions.
+        item_to_distribute : optional
+            The item to split up so it can be applied over both axes.
+
+        Returns
+        -------
+        np.ndarray
+            Numpy array with partitions.
+
+        Notes
+        -----
+        For your func to operate directly on the indices provided,
+        it must use `row_internal_indices, col_internal_indices` as keyword
+        arguments.
         """
         partition_copy = partitions.copy()
         row_position_counter = 0
@@ -1058,24 +1176,23 @@ class BaseFrameManager(ABC):
     @classmethod
     @wait_computations_if_benchmark_mode
     def binary_operation(cls, axis, left, func, right):
-        """
-        Apply a function that requires two BasePandasFrame objects.
+        """Apply a function that requires two BasePandasFrame objects.
 
         Parameters
         ----------
-            axis : int
-                The axis to apply the function over (0 - rows, 1 - columns)
-            left : NumPy array
-                The partitions of left Modin Frame
-            func : callable
-                The function to apply
-            right : NumPy array
-                The partitions of right Modin Frame.
+        axis : 0 or 1
+            The axis to apply the function over (0 - rows, 1 - columns).
+        left : np.ndarray
+            The partitions of left BasePandasFrame.
+        func : callable
+            The function to apply.
+        right : NumPy array
+            The partitions of right BasePandasFrame.
 
         Returns
         -------
-        NumPy array
-            A new BasePandasFrame object, the type of object that called this.
+        np.ndarray
+            Numpy array with new partitions.
         """
         if axis:
             left_partitions = cls.row_partitions(left)

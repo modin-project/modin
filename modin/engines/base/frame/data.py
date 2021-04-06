@@ -36,7 +36,7 @@ class BasePandasFrame(object):
 
     Parameters
     ----------
-    partitions : numpy array
+    partitions : np.ndarray
         A 2D numpy array of partitions.
     index : sequence
         The index for the dataframe. Converts to a pandas.Index.
@@ -180,9 +180,9 @@ class BasePandasFrame(object):
 
         Parameters
         ----------
-        new_labels: list-like
+        new_labels : list-like
             The labels to replace with.
-        old_labels: list-like
+        old_labels : list-like
             The labels to replace.
 
         Returns
@@ -225,7 +225,7 @@ class BasePandasFrame(object):
 
         Parameters
         ----------
-        new_index: list-like
+        new_index : list-like
             The new row labels.
         """
         if self._index_cache is None:
@@ -240,7 +240,7 @@ class BasePandasFrame(object):
 
         Parameters
         ----------
-        new_columns: list-like
+        new_columns : list-like
            The new column labels.
         """
         if self._columns_cache is None:
@@ -267,7 +267,7 @@ class BasePandasFrame(object):
         ----------
         axis : int
             Axis to compute labels along.
-        partitions : numpy array, optional. Default is None
+        partitions : np.ndarray, optional. Default is None
             A 2D numpy array of partitions from which labels will be grabbed.
             If no specified, partitions will be considered as `self._partitions`
 
