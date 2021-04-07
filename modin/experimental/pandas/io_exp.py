@@ -14,17 +14,25 @@
 """
 Implement experimental I/O public API.
 
-Here are the functions that, depending on the name, can be added to the general
-functions in `pandas.io.py`, or they can replace them in experimental mode.
+Here are the functions which, depending on the name, are an public API extension
+of `pandas/io.py`, or a replacement for the functions of the same name in `pandas/io.py`.
 
 Examples
 --------
-  - io_exp.read_sql replace pandas.io.read_sql
-  - io_exp.read_csv_glob is added to pandas.io
+  - io_exp.read_sql is a replacement of pandas.io.read_sql therefor can be accessed
+    via several imports:
+        - `from modin.pandas import read_sql`
+        - `from modin.experimental.pandas import read_sql`
+  - io_exp.read_csv_glob is a extension of pandas.io module therefor can be accessed
+    only via following import (this is done so that Modin public API in non-experimental
+    mode is as similar as possible to Pandas public API):
+        - `from modin.experimental.pandas import read_csv_glob`
 
 Notes
 -----
   - to use these functions define `MODIN_EXPERIMENTAL=true`
+  - the functions of this module are only replacements if the parameters and their
+    types are fully matched
 """
 
 import inspect
