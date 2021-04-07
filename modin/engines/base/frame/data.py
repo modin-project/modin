@@ -752,11 +752,12 @@ class BasePandasFrame(object):
 
         Parameters
         ----------
-            col_dtypes : Dictionary of {col: dtype,...}
-                where col is the column name and dtype is a numpy dtype.
+        col_dtypes : dictionary of {col: dtype,...}
+            where col is the column name and dtype is a numpy dtype.
 
         Returns
         -------
+        BaseDataFrame
             dataframe with updated dtypes.
         """
         columns = col_dtypes.keys()
@@ -805,13 +806,14 @@ class BasePandasFrame(object):
 
         Parameters
         ----------
-            prefix : str
-                The prefix to add.
-            axis : int
-                The axis to update.
+        prefix : str
+            The prefix to add.
+        axis : int
+            The axis to update.
 
         Returns
         -------
+        BasePandasFrame
             A new dataframe with the updated labels.
         """
         new_labels = self.axes[axis].map(lambda x: str(prefix) + str(x))
@@ -827,13 +829,14 @@ class BasePandasFrame(object):
 
         Parameters
         ----------
-            suffix : str
-                The suffix to add.
-            axis : int
-                The axis to update.
+        suffix : str
+            The suffix to add.
+        axis : int
+            The axis to update.
 
         Returns
         -------
+        BasePandasFrame
             A new dataframe with the updated labels.
         """
         new_labels = self.axes[axis].map(lambda x: str(x) + str(suffix))
@@ -851,11 +854,12 @@ class BasePandasFrame(object):
 
         Parameters
         ----------
-            include_bool : bool
-                Whether to consider boolean columns as numeric.
+        include_bool : bool
+            Whether to consider boolean columns as numeric.
 
         Returns
         -------
+        list
             List of column names.
         """
         columns = []
@@ -871,16 +875,16 @@ class BasePandasFrame(object):
 
         Parameters
         ----------
-            axis : int (0 - rows, 1 - columns)
-                The axis along which to get the indices.
-            indices : list of int, slice
-                A list of global indices to convert.
+        axis : int (0 - rows, 1 - columns)
+            The axis along which to get the indices.
+        indices : list of int, slice
+            A list of global indices to convert.
 
         Returns
         -------
-            ordered dictionary mapping int to list of ints
-                A mapping from partition index to list of internal indices which correspond to `indices` in each
-                partition.
+        OrderedDict
+            A mapping from partition index to list of internal indices which correspond to `indices` in each
+            partition.
         """
         # Fasttrack slices
         if isinstance(indices, slice):
@@ -1001,20 +1005,20 @@ class BasePandasFrame(object):
 
         Parameters
         ----------
-            axis : int (0 or 1)
-                The axis index object to join (0 - rows, 1 - columns).
-            indexes : list(Index)
-                The indexes to join on.
-            how : {'left', 'right', 'inner', 'outer', None}
-                The type of join to join to make. If `None` then joined index
-                considered to be the first index in the `indexes` list.
-            sort : boolean
-                Whether or not to sort the joined index
+        axis : int (0 or 1)
+            The axis index object to join (0 - rows, 1 - columns).
+        indexes : list(Index)
+            The indexes to join on.
+        how : {'left', 'right', 'inner', 'outer', None}
+            The type of join to join to make. If `None` then joined index
+            considered to be the first index in the `indexes` list.
+        sort : boolean
+            Whether or not to sort the joined index
 
         Returns
         -------
-            (Index, func)
-                Joined index with make_reindexer func
+        (Index, func)
+            Joined index with make_reindexer func
         """
         assert isinstance(indexes, list)
 
@@ -1087,19 +1091,19 @@ class BasePandasFrame(object):
 
         Parameters
         ----------
-            axis : int
-                The axis along which to apply the function.
-            func : callable
-                The function to apply.
+        axis : int
+            The axis along which to apply the function.
+        func : callable
+            The function to apply.
 
         Returns
         -------
-            A function to be shipped to the partitions to be executed.
+        A function to be shipped to the partitions to be executed.
 
         Notes
         -----
-            This should be used for any MapReduce style operation that results in a
-            reduced data dimensionality (dataframe -> series).
+        This should be used for any MapReduce style operation that results in a
+        reduced data dimensionality (dataframe -> series).
         """
 
         def _map_reduce_func(df, *args, **kwargs):
@@ -1129,15 +1133,15 @@ class BasePandasFrame(object):
 
         Parameters
         ----------
-            axis : int
-                The axis on which reduce function was applied.
-            new_parts : numpy 2D array
-                Partitions with the result of applied function.
+        axis : int
+            The axis on which reduce function was applied.
+        new_parts : numpy 2D array
+            Partitions with the result of applied function.
 
         Returns
         -------
-            BasePandasFrame
-                Pandas series containing the reduced data.
+        BasePandasFrame
+            Modin series (1xN frame) containing the reduced data.
         """
         new_axes, new_axes_lengths = [0, 0], [0, 0]
 
@@ -1161,17 +1165,17 @@ class BasePandasFrame(object):
 
         Parameters
         ----------
-            axis : int (0 or 1)
-                The axis to apply the function to (0 - index, 1 - columns).
-            func : callable
-                The function to reduce the Manager by. This function takes in a Manager.
-            preserve_index : boolean
-                The flag to preserve labels for the reduced axis.
+        axis : int (0 or 1)
+            The axis to apply the function to (0 - index, 1 - columns).
+        func : callable
+            The function to reduce the Manager by. This function takes in a Manager.
+        preserve_index : boolean
+            The flag to preserve labels for the reduced axis.
 
         Returns
         -------
-            BasePandasFrame
-                Pandas series containing the reduced data.
+        BasePandasFrame
+            Modin series (1xN frame) containing the reduced data.
         """
         func = self._build_mapreduce_func(axis, func)
         new_parts = self._frame_mgr_cls.map_axis_partitions(
@@ -1184,18 +1188,18 @@ class BasePandasFrame(object):
 
         Parameters
         ----------
-            axis : int (0 or 1)
-                0 for columns and 1 for rows.
-            map_func : callable
-                Callable function to map the dataframe.
-            reduce_func : callable
-                Callable function to reduce the dataframe.
-                If none, then apply map_func twice. Default is None.
+        axis : int (0 or 1)
+            0 for columns and 1 for rows.
+        map_func : callable
+            Callable function to map the dataframe.
+        reduce_func : callable
+            Callable function to reduce the dataframe.
+            If none, then apply map_func twice. Default is None.
 
         Returns
         -------
-            BasePandasFrame
-                A new dataframe.
+        BasePandasFrame
+            A new dataframe.
         """
         map_func = self._build_mapreduce_func(axis, map_func)
         if reduce_func is None:
@@ -1214,18 +1218,20 @@ class BasePandasFrame(object):
 
         Parameters
         ----------
-            func : callable
-                The function to apply.
-            dtypes : dtypes of the result (optional)
-                The data types for the result. This is an optimization
-                because there are functions that always result in a particular data
-                type, and this allows us to avoid (re)computing it.
-            validate_index : bool, (default False)
-                Is index validation required after performing `func` on partitions.
+        func : callable
+            The function to apply.
+        dtypes : dtypes of the result (optional)
+            The data types for the result. This is an optimization
+            because there are functions that always result in a particular data
+            type, and this allows us to avoid (re)computing it.
+        validate_index : bool, (default False)
+            Is index validation required after performing `func` on partitions.
+        validate_columns : bool, (default False)
+            Is column validation required after performing `func` on partitions.
 
         Returns
         -------
-            A new dataframe.
+        A new dataframe.
         """
         new_partitions = self._frame_mgr_cls.map_partitions(self._partitions, func)
         if dtypes == "copy":
@@ -1262,17 +1268,18 @@ class BasePandasFrame(object):
 
         Parameters
         ----------
-            axis: int
-                The axis to apply over.
-            func: callable
-                The function to apply.
+        axis: int
+            The axis to apply over.
+        func: callable
+            The function to apply.
 
         Returns
         -------
-             A new dataframe.
+            A new dataframe.
 
         Notes
         -----
+        BasePandasFrame
             The data shape is not changed (length and width of the table).
         """
         new_partitions = self._frame_mgr_cls.map_axis_partitions(
@@ -1291,14 +1298,15 @@ class BasePandasFrame(object):
 
         Parameters
         ----------
-            axis : int
-                The axis to filter over.
-            func : callable
-                The function to use for the filter. This function should filter the
-                data itself.
+        axis : int
+            The axis to filter over.
+        func : callable
+            The function to use for the filter. This function should filter the
+            data itself.
 
         Returns
         -------
+        BasePandasFrame
             A new filtered dataframe.
         """
         new_partitions = self._frame_mgr_cls.map_axis_partitions(
@@ -1331,29 +1339,29 @@ class BasePandasFrame(object):
 
         Parameters
         ----------
-            axis : int (0 or 1)
-                The axis to apply over (0 - rows, 1 - columns).
-            func : callable
-                The function to apply.
-            new_index : list-like (optional)
-                The index of the result. We may know this in advance,
-                and if not provided it must be computed.
-            new_columns : list-like (optional)
-                The columns of the result. We may know this in
-                advance, and if not provided it must be computed.
-            dtypes : list-like (optional)
-                The data types of the result. This is an optimization
-                because there are functions that always result in a particular data
-                type, and allows us to avoid (re)computing it.
+        axis : int (0 or 1)
+            The axis to apply over (0 - rows, 1 - columns).
+        func : callable
+            The function to apply.
+        new_index : list-like (optional)
+            The index of the result. We may know this in advance,
+            and if not provided it must be computed.
+        new_columns : list-like (optional)
+            The columns of the result. We may know this in
+            advance, and if not provided it must be computed.
+        dtypes : list-like (optional)
+            The data types of the result. This is an optimization
+            because there are functions that always result in a particular data
+            type, and allows us to avoid (re)computing it.
 
         Returns
         -------
-            BasePandasFrame
-                A new dataframe.
+        BasePandasFrame
+            A new dataframe.
 
         Notes
         -----
-            The data shape may change as a result of the function.
+        The data shape may change as a result of the function.
         """
         return self.broadcast_apply_full_axis(
             axis=axis,
@@ -1378,26 +1386,26 @@ class BasePandasFrame(object):
 
         Parameters
         ----------
-            axis: int
-                The axis to apply over.
-            func: callable
-                The function to apply
-            apply_indices: list-like
-                The labels to apply over.
-            numeric_indices: list-like
-                The indices to apply over.
-            new_index: list-like (optional)
-                The index of the result. We may know this in advance,
-                and if not provided it must be computed.
-            new_columns: list-like (optional)
-                The columns of the result. We may know this in
-                advance, and if not provided it must be computed.
-            keep_remaining: boolean
-                Whether or not to drop the data that is not computed over.
+        axis: int
+            The axis to apply over.
+        func: callable
+            The function to apply
+        apply_indices: list-like
+            The labels to apply over.
+        numeric_indices: list-like
+            The indices to apply over.
+        new_index: list-like (optional)
+            The index of the result. We may know this in advance,
+            and if not provided it must be computed.
+        new_columns: list-like (optional)
+            The columns of the result. We may know this in
+            advance, and if not provided it must be computed.
+        keep_remaining: boolean
+            Whether or not to drop the data that is not computed over.
 
         Returns
         -------
-            A new dataframe.
+        A new dataframe.
         """
         assert apply_indices is not None or numeric_indices is not None
         # Convert indices to numeric indices
@@ -1439,32 +1447,32 @@ class BasePandasFrame(object):
 
         Parameters
         ----------
-            axis : int (0 or 1)
-                The axis to apply over.
-            func : callable
-                The function to apply
-            apply_indices : list-like (optional)
-                The labels to apply over. Must be given if axis is provided.
-            row_indices : list-like (optional)
-                The row indices to apply over. Must be provided with
-                `col_indices` to apply over both axes.
-            col_indices : list-like (optional)
-                The column indices to apply over. Must be provided
-                with `row_indices` to apply over both axes.
-            new_index : list-like (optional)
-                The index of the result. We may know this in advance,
-                and if not provided it must be computed.
-            new_columns : list-like (optional)
-                The columns of the result. We may know this in
-                advance, and if not provided it must be computed.
-            keep_remaining : boolean (default to False)
-                Whether or not to drop the data that is not computed over.
-            item_to_distribute : (optional)
-                The item to split up so it can be applied over both axes.
+        axis : int (0 or 1)
+            The axis to apply over.
+        func : callable
+            The function to apply
+        apply_indices : list-like (optional)
+            The labels to apply over. Must be given if axis is provided.
+        row_indices : list-like (optional)
+            The row indices to apply over. Must be provided with
+            `col_indices` to apply over both axes.
+        col_indices : list-like (optional)
+            The column indices to apply over. Must be provided
+            with `row_indices` to apply over both axes.
+        new_index : list-like (optional)
+            The index of the result. We may know this in advance,
+            and if not provided it must be computed.
+        new_columns : list-like (optional)
+            The columns of the result. We may know this in
+            advance, and if not provided it must be computed.
+        keep_remaining : boolean (default to False)
+            Whether or not to drop the data that is not computed over.
+        item_to_distribute : (optional)
+            The item to split up so it can be applied over both axes.
 
         Returns
         -------
-            A new dataframe.
+        A new dataframe.
         """
         # TODO Infer columns and index from `keep_remaining` and `apply_indices`
         if new_index is None:
@@ -1530,18 +1538,18 @@ class BasePandasFrame(object):
 
         Parameters
         ----------
-            axis : 0 or 1,
-                Axis to broadcast over.
-            func : callable
-                Function to apply.
-            other : BasePandasFrame
-                Modin DataFrame to broadcast.
-            join_type : str, optional
-                Type of join to apply.
-            preserve_labels : bool, optional
-                Whether keep labels from `self` Modin DataFrame or not.
-            dtypes : "copy" or None, optional
-                Whether keep old dtypes or infer new dtypes from data.
+        axis : 0 or 1,
+            Axis to broadcast over.
+        func : callable
+            Function to apply.
+        other : BasePandasFrame
+            Modin DataFrame to broadcast.
+        join_type : str, optional
+            Type of join to apply.
+        preserve_labels : bool, optional
+            Whether keep labels from `self` Modin DataFrame or not.
+        dtypes : "copy" or None, optional
+            Whether keep old dtypes or infer new dtypes from data.
 
         Returns
         -------
