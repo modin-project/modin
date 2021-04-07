@@ -246,6 +246,66 @@ documentation page on :doc:`contributing </contributing>`.
     - Uses the Ray_ execution framework.
     - The compute kernel/in-memory format is a pyarrow Table.
 
+Modin Internal Implementation Details
+-------------------------------------
+Modin modules layout is shown below, for more detailed modules description please follow
+attached inside directory tree links.
+
+.. parsed-literal::
+   ├───.github
+   ├───asv_bench
+   ├───ci
+   ├───docker
+   ├───docs
+   ├───examples
+   ├───modin
+   │   ├───backends
+   │   │   ├───base
+   │   │   │   └───query_compiler
+   │   │   ├───pandas
+   │   │   |   ├─── :doc:`parsers </flow/modin/backends/pandas/parsers>`
+   │   │   │   └───query_compiler
+   │   │   └───pyarrow
+   │   │   |   ├───parsers
+   │   │   │   └───query_compiler
+   │   ├───config
+   │   ├───data_management
+   │   │   ├───factories
+   │   │   └───functions
+   │   ├───distributed
+   │   │   └───dataframe
+   │   ├───engines
+   │   │   ├───base
+   │   │   │   ├───frame
+   │   │   │   ├─── :doc:`io </flow/modin/engines/base/io>`
+   │   │   │   └─── :doc:`series </flow/modin/engines/base/series>`
+   │   │   ├───dask
+   │   │   │   └───pandas_on_dask
+   │   │   ├───python
+   │   │   │   └───pandas_on_python
+   │   │   └───ray
+   │   │       ├───generic
+   │   │       └───pandas_on_ray
+   │   ├───experimental
+   │   │   ├───backends
+   │   │   │   └───omnisci
+   │   │   ├───cloud
+   │   │   ├───engines
+   │   │   │   ├───omnisci_on_ray
+   │   │   │   ├───pandas_on_ray
+   │   │   │   └───pyarrow_on_ray
+   │   │   ├───pandas
+   │   │   ├───sklearn
+   │   │   │   └───model_selection
+   │   │   ├───sql
+   │   │   └───xgboost
+   │   ├───pandas
+   │   ├───spreadsheet
+   │   └───sql
+   ├───requirements
+   ├───scripts
+   └───stress_tests
+
 .. _pandas Dataframe: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.html
 .. _Arrow tables: https://arrow.apache.org/docs/python/generated/pyarrow.Table.html
 .. _Ray: https://github.com/ray-project/ray

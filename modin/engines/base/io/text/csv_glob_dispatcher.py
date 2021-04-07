@@ -59,6 +59,7 @@ class CSVGlobDispatcher(CSVDispatcher):
 
         """
         # Ensures that the file is a string file path. Otherwise, default to pandas.
+        import pdb; pdb.set_trace()
         filepath_or_buffer = cls.get_path_or_buffer(filepath_or_buffer)
         if isinstance(filepath_or_buffer, str):
             if not cls.file_exists(filepath_or_buffer):
