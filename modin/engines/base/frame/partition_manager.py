@@ -572,14 +572,14 @@ class BaseFrameManager(ABC):
         axis : int
             The axis to concatenate to.
         left_parts : np.ndarray
-            Numpy array of partitions to concatenate with.
+            NumPy array of partitions to concatenate with.
         right_parts : np.ndarray or list
-            Numpy array of partitions to be concatenated.
+            NumPy array of partitions to be concatenated.
 
         Returns
         -------
         np.ndarray
-            A new numpy array with concatenated partitions.
+            A new NumPy array with concatenated partitions.
 
         Notes
         -----
@@ -604,7 +604,7 @@ class BaseFrameManager(ABC):
 
     @classmethod
     def concatenate(cls, dfs):
-        """Concatenate Pandas DataFrames with saving 'category' dtype.
+        """Concatenate pandas DataFrames with saving 'category' dtype.
 
         Parameters
         ----------
@@ -614,7 +614,7 @@ class BaseFrameManager(ABC):
         Returns
         -------
         pandas.DataFrame
-            A Pandas DataFrame
+            A pandas DataFrame
         """
         categoricals_columns = set.intersection(
             *[set(df.select_dtypes("category").columns.tolist()) for df in dfs]
@@ -634,12 +634,12 @@ class BaseFrameManager(ABC):
         Parameters
         ----------
         partitions : np.ndarray
-            Numpy array of BaseFramePartition
+            NumPy array of BaseFramePartition.
 
         Returns
         -------
         pandas.DataFrame
-            A Pandas DataFrame
+            A pandas DataFrame
         """
         retrieved_objects = [[obj.to_pandas() for obj in part] for part in partitions]
         if all(
@@ -669,14 +669,14 @@ class BaseFrameManager(ABC):
         r"""Convert numpy array of BaseFramePartition to numpy array.
 
         partitions : np.ndarray
-            Numpy array of BaseFramePartition
+            NumPy array of BaseFramePartition.
         **kwargs : dict
             Keyword arguments for BaseFramePartition.to_numpy function.
 
         Returns
         -------
         np.ndarray
-            A NumPy array
+            A NumPy array.
         """
         return np.block(
             [[block.to_numpy(**kwargs) for block in row] for row in partitions]
@@ -685,7 +685,7 @@ class BaseFrameManager(ABC):
     @classmethod
     @wait_computations_if_benchmark_mode
     def from_pandas(cls, df, return_dims=False):
-        """Return the partitions from Pandas DataFrame.
+        """Return the partitions from pandas.DataFrame.
 
         Parameters
         ----------
@@ -698,7 +698,7 @@ class BaseFrameManager(ABC):
         Returns
         -------
         np.ndarray or (np.ndarray, row_lengths, col_widths)
-            Numpy array with partitions (with dimensions or not).
+            A NumPy array with partitions (with dimensions or not).
         """
 
         def update_bar(pbar, f):
@@ -771,7 +771,7 @@ class BaseFrameManager(ABC):
         Parameters
         ----------
         at : Arrow Table
-            Arrow Table
+            Arrow Table.
         return_dims : boolean, optional. Default is False
             If it's True, return as (np.ndarray, row_lengths, col_widths),
             else np.ndarray.
@@ -779,7 +779,7 @@ class BaseFrameManager(ABC):
         Returns
         -------
         np.ndarray or (np.ndarray, row_lengths, col_widths)
-            Numpy array with partitions (with dimensions or not).
+            A NumPy array with partitions (with dimensions or not).
         """
         return cls.from_pandas(at.to_pandas(), return_dims=return_dims)
 
@@ -792,14 +792,14 @@ class BaseFrameManager(ABC):
         axis : 0 or 1
             Axis to extract the labels over.
         partitions : np.ndarray
-            Numpy array with BaseFramePartition's
+            NumPy array with BaseFramePartition's.
         index_func : callable, optional. Default is None
             The function to be used to extract the indices.
 
         Returns
         -------
         pandas.Index
-            A Pandas Index object.
+            A pandas Index object.
 
         Notes
         -----
@@ -905,7 +905,7 @@ class BaseFrameManager(ABC):
         Returns
         -------
         np.ndarray
-            Numpy array with partitions.
+            A NumPy array with partitions.
 
         Notes
         -----
@@ -1018,7 +1018,7 @@ class BaseFrameManager(ABC):
         Returns
         -------
         np.ndarray
-            Numpy array with partitions.
+            A NumPy array with partitions.
 
         Notes
         -----
@@ -1135,7 +1135,7 @@ class BaseFrameManager(ABC):
         Returns
         -------
         np.ndarray
-            Numpy array with partitions.
+            A NumPy array with partitions.
 
         Notes
         -----
@@ -1186,13 +1186,13 @@ class BaseFrameManager(ABC):
             The partitions of left BasePandasFrame.
         func : callable
             The function to apply.
-        right : NumPy array
+        right : np.ndarray
             The partitions of right BasePandasFrame.
 
         Returns
         -------
         np.ndarray
-            Numpy array with new partitions.
+            A NumPy array with new partitions.
         """
         if axis:
             left_partitions = cls.row_partitions(left)

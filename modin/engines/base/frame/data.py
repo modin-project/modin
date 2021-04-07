@@ -37,7 +37,7 @@ class BasePandasFrame(object):
     Parameters
     ----------
     partitions : np.ndarray
-        A 2D numpy array of partitions.
+        A 2D NumPy array of partitions.
     index : sequence
         The index for the dataframe. Converts to a pandas.Index.
     columns : sequence
@@ -206,7 +206,7 @@ class BasePandasFrame(object):
         Returns
         -------
         pandas.Index
-            A index object containing the row labels.
+            An index object containing the row labels.
         """
         return self._index_cache
 
@@ -216,7 +216,7 @@ class BasePandasFrame(object):
         Returns
         -------
         pandas.Index
-            A index object containing the column labels.
+            An index object containing the column labels.
         """
         return self._columns_cache
 
@@ -269,12 +269,12 @@ class BasePandasFrame(object):
             Axis to compute labels along.
         partitions : np.ndarray, optional. Default is None
             A 2D numpy array of partitions from which labels will be grabbed.
-            If no specified, partitions will be considered as `self._partitions`
+            If no specified, partitions will be considered as `self._partitions`.
 
         Returns
         -------
-        Pandas.Index
-            Labels for the specified `axis`
+        pandas.Index
+            Labels for the specified `axis`.
         """
         if partitions is None:
             partitions = self._partitions
@@ -653,6 +653,7 @@ class BasePandasFrame(object):
 
         Returns
         -------
+        BasePandasFrame
             A new BasePandasFrame that has the updated labels.
         """
         extracted_columns = self.mask(col_indices=column_list).to_pandas()
@@ -724,13 +725,14 @@ class BasePandasFrame(object):
 
         Parameters
         ----------
-            list_of_dtypes : list
-                A list of pandas Series with the data types.
-            column_names : list
-                The names of the columns that the data types map to.
+        list_of_dtypes : list
+            A list of pandas Series with the data types.
+        column_names : list
+            The names of the columns that the data types map to.
 
         Returns
         -------
+        pandas.Series
              A pandas Series containing the finalized data types.
         """
         # Compute dtypes by getting collecting and combining all of the partitions. The
