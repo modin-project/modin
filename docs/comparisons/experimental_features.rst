@@ -1,5 +1,5 @@
-Upcoming Features 
-=================
+Experimental Features 
+=====================
 Modin aims to not only optimize Pandas, but also provide a comprehensive, 
 integrated toolkit for data scientists. We are actively developing data science tools 
 such as DataFrame - spreadsheet integration, DataFrame algebra, progress bars, SQL queries
@@ -30,3 +30,11 @@ Dataframe Algebra
 
 SQL on Modin Dataframes
 ------------------------
+
+.. figure:: ../img/modin_sql_example.png
+   :align: center   
+
+Read about Modin Dataframe support for SQL queries in this recent `blog post`_. Check out the `documentation`_ as well!
+
+.. _`blog post`: https://medium.com/riselab/why-every-data-scientist-using-pandas-needs-modin-bringing-sql-to-dataframes-3b216b29a7c0
+.. _`documentation`: /supported_apis/modin_sql.html

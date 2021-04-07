@@ -135,7 +135,7 @@ nature, you get a fast DataFrame at 1MB and 1TB+.
    :caption: How is Modin different from ...?
 
    comparisons/index
-   comparisons/upcoming_features
+   comparisons/experimental_features
    comparisons/pandas
    comparisons/dask
    comparisons/spark
@@ -144,6 +144,7 @@ nature, you get a fast DataFrame at 1MB and 1TB+.
    :caption: Supported APIs
 
    supported_apis/index
+   supported_apis/modin_sql
    supported_apis/dataframe_supported
    supported_apis/series_supported
    supported_apis/utilities_supported
@@ -162,7 +163,6 @@ nature, you get a fast DataFrame at 1MB and 1TB+.
    UsingPandasonRay/index
    UsingPandasonDask/index
    UsingPyarrowonRay/index
-   UsingSQLonRay/index
 
 .. toctree::
    :caption: Help

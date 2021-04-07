@@ -18,10 +18,10 @@ Quickstart
   # import pandas as pd
   import modin.pandas as pd
 
-**That's it.** 
+**That's it. You're ready to use Modin on your previous pandas notebooks.** 
 
-You're ready to use Modin on your previous pandas notebooks. We currently have most 
-of the pandas API implemented and are working toward full functional parity with pandas (as well as even more `tools and features`_ ).
+We currently have most of the pandas API implemented and are working toward 
+full functional parity with pandas (as well as even more `tools and features`_ ).
 
 Using Modin on a Single Node
 ----------------------------
