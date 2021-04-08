@@ -30,7 +30,8 @@ Examples
 
 Notes
 -----
-  - to use these functions define `MODIN_EXPERIMENTAL=true`
+  - to use experimental functions from `modin.pandas` module define
+    `MODIN_EXPERIMENTAL=true`
   - the functions of this module are only replacements if the parameters and their
     types are fully matched
 """
@@ -172,18 +173,19 @@ def _make_parser_func(sep: str) -> Callable:
 
 
 def _read(
-    filepath_or_buffer: Union[str, pathlib.Path, IO[AnyStr], list], **kwargs
+    filepath_or_buffer: Union[str, pathlib.Path, IO[AnyStr]], **kwargs
 ) -> DataFrame:
     """
     General documentation in `pandas.read_csv`.
 
     Experimental features
     ---------------------
-    Simultaneous reading from multiple csv files. Works only for local files.
+    Simultaneous reading from multiple csv files which are defined using glob pattern.
+    Works only for local files.
 
     Parameters
     ----------
-    filepath_or_buffer : str, path object, file-like object or list
+    filepath_or_buffer : str, path object, file-like object
         The filepath of the csv file.
     kwargs : dict
         Keyword arguments in pandas.read_csv

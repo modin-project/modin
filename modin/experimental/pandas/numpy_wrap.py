@@ -11,13 +11,14 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-import sys
-
 """
 This is a module that hides real numpy from future "import numpy" statements
 and replaces it with a wrapping module that serves attributes from either
 local or "remote" numpy depending on active execution context.
 """
+
+import sys
+
 _CAUGHT_NUMPY = "numpy" not in sys.modules
 try:
     import numpy as real_numpy
@@ -50,6 +51,20 @@ else:
         is activated.
         It also registers helpers for pickling local numpy objects in remote context
         and vice versa.
+
+        Attributes
+        ----------
+        __own_attrs__ : set
+            attributes that defined in the class
+        __current_numpy : ModuleType
+            the module to which getting NumPy attributes redirects. For example,
+            NumPy in remote machine.
+        __prev_numpy : ModuleType
+            the previous module that was accessed to get the NumPy attributes
+        __has_to_warn : bool
+            determines the situation when it is necessary to give a warning
+        __reducers : dict
+
         """
 
         __own_attrs__ = set(["__own_attrs__"])
@@ -61,6 +76,7 @@ else:
         __reducers = {}
 
         def __init__(self):
+            """Constructor"""
             self.__own_attrs__ = set(type(self).__dict__.keys())
             Engine.subscribe(self.__update_engine)
 
