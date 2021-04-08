@@ -50,7 +50,7 @@ class BaseFramePartition(ABC):  # pragma: no cover
         ----------
         func : callable
             Function to apply.
-        kwargs
+        kwargs : dict
             Additional keyword arguments to be passed in `func`.
 
         Returns
@@ -73,6 +73,8 @@ class BaseFramePartition(ABC):  # pragma: no cover
         ----------
         func : callable
             Function to be added to the call queue.
+        kwargs : dict
+            Additional keyword arguments to be passed in `func`.
 
         Returns
         -------
@@ -112,6 +114,11 @@ class BaseFramePartition(ABC):  # pragma: no cover
     def to_numpy(self, **kwargs):
         """Convert the object wrapped by this partition to a NumPy array.
 
+        Parameters
+        ----------
+        kwargs : dict
+            Additional keyword arguments to be passed in `to_numpy`.
+
         Returns
         -------
         np.ndarray
@@ -129,10 +136,10 @@ class BaseFramePartition(ABC):  # pragma: no cover
 
         Parameters
         ----------
-            row_indices : list-like
-                The indices for the rows to extract.
-            col_indices : list-like
-                The indices for the columns to extract.
+        row_indices : list-like
+            The indices for the rows to extract.
+        col_indices : list-like
+            The indices for the columns to extract.
 
         Returns
         -------
@@ -147,8 +154,8 @@ class BaseFramePartition(ABC):  # pragma: no cover
 
         Parameters
         ----------
-            obj : Any
-                An object to be put.
+        obj : Any
+            An object to be put.
 
         Returns
         -------
@@ -163,8 +170,8 @@ class BaseFramePartition(ABC):  # pragma: no cover
 
         Parameters
         ----------
-            func : callable
-                Function to preprocess.
+        func : callable
+            Function to preprocess.
 
         Returns
         -------

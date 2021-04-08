@@ -54,21 +54,23 @@ class BaseFrameAxisPartition(ABC):  # pragma: no cover
 
         Parameters
         ----------
-            func : callable
-                The function to apply. This will be preprocessed according to
-                the corresponding `BaseFramePartition` objects.
-            num_splits : int
-                The number of times to split the result object.
-            other_axis_partition : BaseFrameAxisPartition
-                Another `BaseFrameAxisPartition` object to be applied
-                to func. This is for operations that are between two data sets.
-            maintain_partitioning : bool
-                Whether to keep the partitioning in the same
-                orientation as it was previously or not. This is important because we may be
-                operating on an individual axis partition and not touching the rest.
-                In this case, we have to return the partitioning to its previous
-                orientation (the lengths will remain the same). This is ignored between
-                two axis partitions.
+        func : callable
+            The function to apply. This will be preprocessed according to
+            the corresponding `BaseFramePartition` objects.
+        num_splits : int, optional. Default None
+            The number of times to split the result object.
+        other_axis_partition : BaseFrameAxisPartition, optional. Default None
+            Another `BaseFrameAxisPartition` object to be applied
+            to func. This is for operations that are between two data sets.
+        maintain_partitioning : bool, optional. Default True
+            Whether to keep the partitioning in the same
+            orientation as it was previously or not. This is important because we may be
+            operating on an individual axis partition and not touching the rest.
+            In this case, we have to return the partitioning to its previous
+            orientation (the lengths will remain the same). This is ignored between
+            two axis partitions.
+        **kwargs : dict
+            Additional keywords arguments to be passed in `func`.
 
         Returns
         -------
@@ -89,10 +91,12 @@ class BaseFrameAxisPartition(ABC):  # pragma: no cover
 
         Parameters
         ----------
-            func : callable
-                The function to apply before splitting.
-            lengths : list
-                The list of partition lengths to split the result into.
+        func : callable
+            The function to apply before splitting.
+        lengths : list
+            The list of partition lengths to split the result into.
+        **kwargs : dict
+            Additional keywords arguments to be passed in `func`.
 
         Returns
         -------
@@ -110,8 +114,8 @@ class BaseFrameAxisPartition(ABC):  # pragma: no cover
 
         Parameters
         ----------
-            partitions : list
-                List of remotes partition objects to be wrapped with `BaseFramePartition` class.
+        partitions : list
+            List of remotes partition objects to be wrapped with `BaseFramePartition` class.
 
         Returns
         -------
@@ -125,7 +129,7 @@ class BaseFrameAxisPartition(ABC):  # pragma: no cover
 
         Parameters
         ----------
-        get_ip : boolean, default False
+        get_ip : bool, optional. Default False
             Whether to get node ip address to a single partition or not.
 
         Returns
@@ -143,9 +147,9 @@ class BaseFrameAxisPartition(ABC):  # pragma: no cover
 
         Parameters
         ----------
-        squeeze : boolean, default False
+        squeeze : bool, optional. Default False
             Flag used to unwrap only one partition.
-        get_ip : boolean, default False
+        get_ip : bool, optional. Default False
             Whether to get node ip address to each partition or not.
 
         Returns
@@ -198,18 +202,20 @@ class PandasFrameAxisPartition(BaseFrameAxisPartition):
         ----------
         func : callable
             The function to apply.
-        num_splits : int
+        num_splits : int, optional. Default None
             The number of times to split the result object.
-        other_axis_partition : PandasFrameAxisPartition
+        other_axis_partition : PandasFrameAxisPartition, optional. Default None
             Another `PandasFrameAxisPartition` object to be applied
             to func. This is for operations that are between two data sets.
-        maintain_partitioning : bool
+        maintain_partitioning : bool, optional. Default True
             Whether to keep the partitioning in the same
             orientation as it was previously or not. This is important because we may be
             operating on an individual AxisPartition and not touching the rest.
             In this case, we have to return the partitioning to its previous
             orientation (the lengths will remain the same). This is ignored between
             two axis partitions.
+        **kwargs : dict
+            Additional keywords arguments to be passed in `func`.
 
         Returns
         -------
@@ -256,10 +262,12 @@ class PandasFrameAxisPartition(BaseFrameAxisPartition):
 
         Parameters
         ----------
-            func : callable
-                The function to apply before splitting.
-            lengths : list
-                The list of partition lengths to split the result into.
+        func : callable
+            The function to apply before splitting.
+        lengths : list
+            The list of partition lengths to split the result into.
+        **kwargs : dict
+            Additional keywords arguments to be passed in `func`.
 
         Returns
         -------
@@ -282,19 +290,19 @@ class PandasFrameAxisPartition(BaseFrameAxisPartition):
 
         Parameters
         ----------
-            axis : 0 or 1
-                The axis to perform the function along.
-            func : callable
-                The function to perform.
-            num_splits : int
-                The number of splits to return (see `split_result_of_axis_func_pandas`)
-            kwargs
-                A dictionary of keyword arguments.
-            maintain_partitioning : bool
-                If True, keep the old partitioning if possible.
-                If False, create a new partition layout.
-            partitions : tuple
-                All partitions that make up the full axis (row or column).
+        axis : 0 or 1
+            The axis to perform the function along.
+        func : callable
+            The function to perform.
+        num_splits : int
+            The number of splits to return (see `split_result_of_axis_func_pandas`)
+        kwargs : dict
+            Additional keywords arguments to be passed in `func`.
+        maintain_partitioning : bool
+            If True, keep the old partitioning if possible.
+            If False, create a new partition layout.
+        partitions : iterable
+            All partitions that make up the full axis (row or column).
 
         Returns
         -------
@@ -335,21 +343,21 @@ class PandasFrameAxisPartition(BaseFrameAxisPartition):
 
         Parameters
         ----------
-            axis : 0 or 1
-                The axis to perform the function along.
-            func : callable
-                The function to perform.
-            num_splits : int
-                The number of splits to return (see `split_result_of_axis_func_pandas`).
-            len_of_left : int
-                The number of values in `partitions` that belong to the left data set.
-            other_shape : np.ndarray
-                The shape of right frame in terms of partitions, i.e.
-                (other_shape[i-1], other_shape[i]) will indicate slice to restore i-1 axis partition.
-            kwargs : dict
-                A dictionary of keyword arguments.
-            partitions : list
-                All partitions that make up the full axis (row or column) for both data sets.
+        axis : 0 or 1
+            The axis to perform the function along.
+        func : callable
+            The function to perform.
+        num_splits : int
+            The number of splits to return (see `split_result_of_axis_func_pandas`).
+        len_of_left : int
+            The number of values in `partitions` that belong to the left data set.
+        other_shape : np.ndarray
+            The shape of right frame in terms of partitions, i.e.
+            (other_shape[i-1], other_shape[i]) will indicate slice to restore i-1 axis partition.
+        kwargs : dict
+            Additional keywords arguments to be passed in `func`.
+        partitions : iterable
+            All partitions that make up the full axis (row or column) for both data sets.
 
         Returns
         -------

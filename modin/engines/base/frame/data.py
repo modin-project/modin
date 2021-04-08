@@ -1544,11 +1544,11 @@ class BasePandasFrame(object):
             Function to apply.
         other : BasePandasFrame
             Modin DataFrame to broadcast.
-        join_type : str, optional
+        join_type : str, optional. Default "left"
             Type of join to apply.
-        preserve_labels : bool, optional
+        preserve_labels : bool, optional. Default True
             Whether keep labels from `self` Modin DataFrame or not.
-        dtypes : "copy" or None, optional
+        dtypes : "copy" or None, optional. Default None
             Whether keep old dtypes or infer new dtypes from data.
 
         Returns
@@ -1583,13 +1583,13 @@ class BasePandasFrame(object):
 
         Parameters
         ----------
-            axis : 0 or 1
-                Axis to broadcast along.
-            indices : dict
-                Dict of indices and internal indices of partitions where `self` must
-                be broadcasted.
-            broadcast_all : bool
-                Whether broadcast the whole axis of `self` frame or just a subset of it.
+        axis : 0 or 1
+            Axis to broadcast along.
+        indices : dict
+            Dict of indices and internal indices of partitions where `self` must
+            be broadcasted.
+        broadcast_all : bool
+            Whether broadcast the whole axis of `self` frame or just a subset of it.
 
         Returns
         -------
@@ -1640,27 +1640,27 @@ class BasePandasFrame(object):
 
         Parameters
         ----------
-            axis : 0 or 1
-                Axis to apply function along.
-            func : callable
-                Function to apply.
-            other : BasePandasFrame
-                Partitions of which should be broadcasted.
-            apply_indices : list
-                List of labels to apply (if `numeric_indices` are not specified).
-            numeric_indices : list
-                Numeric indices to apply (if `apply_indices` are not specified).
-            keep_remaining : bool
-                Whether drop the data that is not computed over or not.
-            broadcast_all : bool
-                Whether broadcast the whole axis of right frame to every
-                partition or just a subset of it.
-            new_index : pandas.Index, optional
-                Index of the result. We may know this in advance,
-                and if not provided it must be computed.
-            new_columns : pandas.Index, optional
-                Columns of the result. We may know this in advance,
-                and if not provided it must be computed.
+        axis : 0 or 1
+            Axis to apply function along.
+        func : callable
+            Function to apply.
+        other : BasePandasFrame
+            Partitions of which should be broadcasted.
+        apply_indices : list, optional. Default None
+            List of labels to apply (if `numeric_indices` are not specified).
+        numeric_indices : list, optional. Default None
+            Numeric indices to apply (if `apply_indices` are not specified).
+        keep_remaining : bool, optional. Default False
+            Whether drop the data that is not computed over or not.
+        broadcast_all : bool, optional. Default True
+            Whether broadcast the whole axis of right frame to every
+            partition or just a subset of it.
+        new_index : pandas.Index, optional. Default None
+            Index of the result. We may know this in advance,
+            and if not provided it must be computed.
+        new_columns : pandas.Index, optional. Default None
+            Columns of the result. We may know this in advance,
+            and if not provided it must be computed.
 
         Returns
         -------
@@ -1725,27 +1725,27 @@ class BasePandasFrame(object):
 
         Parameters
         ----------
-            axis : 0 or 1
-                Axis to apply over (0 - rows, 1 - columns).
-            func : callable
-                Function to apply.
-            other : BasePandasFrame or list
-                Modin DataFrame(s) to broadcast.
-            new_index : list-like, optional
-                Index of the result. We may know this in advance,
-                and if not provided it must be computed.
-            new_columns : list-like, optional
-                Columns of the result. We may know this in
-                advance, and if not provided it must be computed.
-            apply_indices : list-like, optional
-                Indices of `axis ^ 1` to apply function over.
-            enumerate_partitions : bool, optional. Default is False
-                Whether pass partition index into applied `func` or not.
-                Note that `func` must be able to obtain `partition_idx` kwarg.
-            dtypes : list-like, optional
-                Data types of the result. This is an optimization
-                because there are functions that always result in a particular data
-                type, and allows us to avoid (re)computing it.
+        axis : 0 or 1
+            Axis to apply over (0 - rows, 1 - columns).
+        func : callable
+            Function to apply.
+        other : BasePandasFrame or list
+            Modin DataFrame(s) to broadcast.
+        new_index : list-like, optional. Default None
+            Index of the result. We may know this in advance,
+            and if not provided it must be computed.
+        new_columns : list-like, optional. Default None
+            Columns of the result. We may know this in
+            advance, and if not provided it must be computed.
+        apply_indices : list-like, optional. Default None
+            Indices of `axis ^ 1` to apply function over.
+        enumerate_partitions : bool, optional. Default False
+            Whether pass partition index into applied `func` or not.
+            Note that `func` must be able to obtain `partition_idx` kwarg.
+        dtypes : list-like, optional. Default None
+            Data types of the result. This is an optimization
+            because there are functions that always result in a particular data
+            type, and allows us to avoid (re)computing it.
 
         Returns
         -------
@@ -1813,7 +1813,7 @@ class BasePandasFrame(object):
             How to manage joining the index object ("left", "right", etc.)
         sort : bool
             Whether sort the joined index or not.
-        force_repartition : bool, default False
+        force_repartition : bool, optional. Default False
             Whether force the repartitioning or not. By default,
             this method will skip repartitioning if it is possible. This is because
             reindexing is extremely inefficient. Because this method is used to
@@ -1913,10 +1913,10 @@ class BasePandasFrame(object):
 
         Parameters
         ----------
-            axis : 0 or 1
-                Axis to shuffle over.
-            other : BasePandasFrame
-                Modin DataFrame to match to `self` partitioning.
+        axis : 0 or 1
+            Axis to shuffle over.
+        other : BasePandasFrame
+            Modin DataFrame to match to `self` partitioning.
 
         Returns
         -------
@@ -1944,12 +1944,12 @@ class BasePandasFrame(object):
 
         Parameters
         ----------
-            op : callable
-                Function to apply after the join.
-            right_frame : BasePandasFrame
-                Modin DataFrame to join with.
-            join_type : str, optional
-                Type of join to apply.
+        op : callable
+            Function to apply after the join.
+        right_frame : BasePandasFrame
+            Modin DataFrame to join with.
+        join_type : str, optional. Default "outer"
+            Type of join to apply.
 
         Returns
         -------
@@ -1972,14 +1972,14 @@ class BasePandasFrame(object):
 
         Parameters
         ----------
-            axis : 0 or 1
-                Axis to concatenate over.
-            others : list
-                List of Modin DataFrames to concatenate with.
-            how : str
-                Type of join to use for the axis.
-            sort : bool
-                Whether sort the result or not.
+        axis : 0 or 1
+            Axis to concatenate over.
+        others : list
+            List of Modin DataFrames to concatenate with.
+        how : str
+            Type of join to use for the axis.
+        sort : bool
+            Whether sort the result or not.
 
         Returns
         -------
@@ -2048,22 +2048,22 @@ class BasePandasFrame(object):
 
         Parameters
         ----------
-            axis : 0 or 1
-                Axis to groupby and aggregate over.
-            by : BasePandasFrame or None
-                A Modin DataFrame to group by.
-            map_func : callable
-                Map component of the aggregation.
-            reduce_func : callable
-                Reduce component of the aggregation.
-            new_index : pandas.Index, optional
-                Index of the result. We may know this in advance,
-                and if not provided it must be computed.
-            new_columns : pandas.Index, optional
-                Columns of the result. We may know this in advance,
-                and if not provided it must be computed.
-            apply_indices : list-like, optional
-                Indices of `axis ^ 1` to apply groupby over.
+        axis : 0 or 1
+            Axis to groupby and aggregate over.
+        by : BasePandasFrame or None
+            A Modin DataFrame to group by.
+        map_func : callable
+            Map component of the aggregation.
+        reduce_func : callable
+            Reduce component of the aggregation.
+        new_index : pandas.Index, optional. Default None
+            Index of the result. We may know this in advance,
+            and if not provided it must be computed.
+        new_columns : pandas.Index, optional. Default None
+            Columns of the result. We may know this in advance,
+            and if not provided it must be computed.
+        apply_indices : list-like, optional. Default None
+            Indices of `axis ^ 1` to apply groupby over.
 
         Returns
         -------
@@ -2096,8 +2096,8 @@ class BasePandasFrame(object):
 
         Parameters
         ----------
-            df : pandas.DataFrame
-                pandas DataFrame.
+        df : pandas.DataFrame
+            pandas DataFrame.
 
         Returns
         -------
@@ -2123,8 +2123,8 @@ class BasePandasFrame(object):
 
         Parameters
         ----------
-            at : Arrow Table
-                Arrow Table.
+        at : Arrow Table
+            Arrow Table.
 
         Returns
         -------
@@ -2155,8 +2155,8 @@ class BasePandasFrame(object):
 
         Parameters
         ----------
-            arrow_type : arrow dtype
-                Arrow data type to be converted to a pandas data type.
+        arrow_type : arrow dtype
+            Arrow data type to be converted to a pandas data type.
 
         Returns
         -------
@@ -2195,6 +2195,11 @@ class BasePandasFrame(object):
 
     def to_numpy(self, **kwargs):
         """Convert this Modin DataFrame to a NumPy array.
+
+        Parameters
+        ----------
+        **kwargs : dict
+            Additional keyword arguments to be passed in `to_numpy`.
 
         Returns
         -------
