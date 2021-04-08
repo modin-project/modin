@@ -39,6 +39,11 @@ def wait_computations_if_benchmark_mode(func):
     func : callable
         A function that should be performed in syncronous mode.
 
+    Returns
+    -------
+    callable
+        Wrapped function that executes eagerly (if benchmark mode) or original `func`
+
     Note
     ----
     `func` should return numpy array with partitions.
@@ -87,10 +92,11 @@ class BaseFrameManager(ABC):
 
         Returns
         -------
-        The preprocessed version of the `map_func` provided. Note: This
-        does not require any specific format, only that the
-        `BaseFramePartition.apply` method will recognize it (For the subclass
-        being used).
+        callable
+            The preprocessed version of the `map_func` provided. Note: This
+            does not require any specific format, only that the
+            `BaseFramePartition.apply` method will recognize it (For the subclass
+            being used).
 
         Notes
         -----
@@ -115,7 +121,8 @@ class BaseFrameManager(ABC):
 
         Returns
         -------
-        A list of `BaseFrameAxisPartition` objects.
+        list
+            A list of `BaseFrameAxisPartition` objects.
 
         Notes
         -----
@@ -139,7 +146,8 @@ class BaseFrameManager(ABC):
 
         Returns
         -------
-        A list of `BaseFrameAxisPartition` objects.
+        list
+            A list of `BaseFrameAxisPartition` objects.
 
         Notes
         -----
@@ -163,7 +171,8 @@ class BaseFrameManager(ABC):
 
         Returns
         -------
-        A list of `BaseFrameAxisPartition` objects.
+        list
+            A list of `BaseFrameAxisPartition` objects.
 
         """
         return (
@@ -184,18 +193,19 @@ class BaseFrameManager(ABC):
             Axis to groupby over.
         partitions : numpy 2D array,
             Partitions of the ModinFrame to groupby.
-        by : numpy 2D array (optional),
+        by : numpy 2D array
             Partitions of 'by' to broadcast.
         map_func : callable,
             Map function.
         reduce_func : callable,
             Reduce function.
-        apply_indices : list of ints (optional),
+        apply_indices : list of ints, optional. Default: None
             Indices of `axis ^ 1` to apply function over.
 
         Returns
         -------
-        Partitions with applied groupby.
+        numpy array
+            Partitions with applied groupby.
         """
         if apply_indices is not None:
             partitions = (
@@ -250,7 +260,8 @@ class BaseFrameManager(ABC):
 
         Returns
         -------
-        A new `np.array` of partition objects.
+        numpy array
+            An array of partition objects.
 
         Notes
         -----
@@ -312,7 +323,8 @@ class BaseFrameManager(ABC):
 
         Returns
         -------
-        A new `np.array` of partition objects.
+        numpy array
+            An of partition objects.
 
         Notes
         -----
@@ -374,9 +386,9 @@ class BaseFrameManager(ABC):
         keep_partitioning : boolean (defaults to False)
             The flag to keep partition boundaries for Modin Frame.
             Setting it to True disables shuffling data from one partition to another.
-        apply_indices : list of ints (optional),
+        apply_indices : list of ints, optional. Default: None
             Indices of `axis ^ 1` to apply function over.
-        enumerate_partitions : bool (optional, default False),
+        enumerate_partitions : bool, optional. Default: False
             Whether or not to pass partition index into `apply_func`.
             Note that `apply_func` must be able to accept `partition_idx` kwarg.
         lengths : list of ints (defaults to None)
@@ -384,7 +396,8 @@ class BaseFrameManager(ABC):
 
         Returns
         -------
-        A new `np.array` of partition objects.
+        numpy array
+            An array of partition objects.
         """
         # Since we are already splitting the DataFrame back up after an
         # operation, we will just use this time to compute the number of
@@ -442,7 +455,8 @@ class BaseFrameManager(ABC):
 
         Returns
         -------
-        A new BaseFrameManager object, the type of object that called this.
+        numpy array
+            An array of partitions
         """
         preprocessed_map_func = cls.preprocess_func(map_func)
         return np.array(
@@ -464,7 +478,8 @@ class BaseFrameManager(ABC):
 
         Returns
         -------
-        A new BaseFrameManager object, the type of object that called this.
+        numpy array
+            An array of partitions
         """
         preprocessed_map_func = cls.preprocess_func(map_func)
         return np.array(
@@ -499,7 +514,7 @@ class BaseFrameManager(ABC):
             Setting it to True stops data shuffling between partitions.
         lengths : list of ints (defaults to None)
             List of lengths to shuffle the object.
-        enumerate_partitions : bool (optional, default False),
+        enumerate_partitions : bool, optional. Default: False
             Whether or not to pass partition index into `map_func`.
             Note that `map_func` must be able to accept `partition_idx` kwarg.
 
