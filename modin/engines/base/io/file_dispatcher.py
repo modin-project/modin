@@ -69,7 +69,7 @@ class FileDispatcher:
     @classmethod
     def _read(cls, *args, **kwargs):
         """Function that performs reading the data from file, should be implemented
-        in the children class.
+        in the child class.
 
         """
         raise NotImplementedError(NOT_IMPLEMENTED_MESSAGE)
@@ -77,18 +77,18 @@ class FileDispatcher:
     @classmethod
     def get_path(cls, file_path):
         """Handles `file_path` in accordance to it's type: if `file_path`
-        is a S3 bucket, parameter will be returned as it is, otherwise
+        is an S3 bucket, parameter will be returned as is, otherwise
         absolute path will be returned.
 
         Parameters
         ----------
         file_path: str
-            String that represents the path to the file (pathes to S3 buckets
+            String that represents the path to the file (paths to S3 buckets
             are also acceptable).
 
         Returns
         -------
-        str:
+        str
             Updated or verified `file_path` parameter.
 
         """
@@ -100,13 +100,13 @@ class FileDispatcher:
     @classmethod
     def file_open(cls, file_path, mode="rb", compression="infer"):
         """Get the file handle from `file_path` according to `file_path` type
-        (wheather it's a S3 bucket or not), `compression` and `mode`
+        (special treatment is done for an S3 bucket), `compression` and `mode`
         parameters.
 
         Parameters
         ----------
         file_path: str
-            String that represents the path to the file (pathes to S3 buckets
+            String that represents the path to the file (paths to S3 buckets
             are also acceptable).
         mode: str
             String, which defines which mode file should be open.
@@ -115,7 +115,7 @@ class FileDispatcher:
 
         Returns
         -------
-        file-like:
+        file-like
             file-like object of the `file_path`.
 
         """
@@ -197,13 +197,13 @@ class FileDispatcher:
         Parameters
         ----------
         file_path: str
-            String that represents the path to the file (pathes to S3 buckets
+            String that represents the path to the file (paths to S3 buckets
             are also acceptable).
 
         Returns
         -------
-        bool:
-            Wheather file exists or not.
+        bool
+            Whether file exists or not.
 
         """
         if isinstance(file_path, str):

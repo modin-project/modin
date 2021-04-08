@@ -42,8 +42,8 @@ class CSVDispatcher(TextFileDispatcher):
 
     @classmethod
     def _read(cls, filepath_or_buffer, **kwargs):
-        """Read data from `filepath_or_buffer` according to the passed read_csv `kwargs`
-        parameters. This function performs parameters preprocessing, data file splitting,
+        """Read data from `filepath_or_buffer` according to `kwargs` parameters passed to
+        underlying read_csv. This function performs parameters preprocessing, data file splitting,
         tasks launching and results postprocessing.
 
         Parameters
@@ -183,7 +183,7 @@ class CSVDispatcher(TextFileDispatcher):
         read_csv_kwargs: ReadCsvKwargsType,
         compression_infered: str,
     ) -> bool:
-        """Check wheather or not passed parameters are supported by
+        """Check that passed parameters are supported by
         current modin.read_csv implementation.
 
         Parameters

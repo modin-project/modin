@@ -475,7 +475,7 @@ class BaseIO(object):
     @classmethod
     @Appender(
         _doc_default_io_method.format(
-            summary="Read data from the store into query compiler",
+            summary="Read data from hdf store into query compiler",
             returns=_doc_returns_qc,
         )
     )

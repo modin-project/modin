@@ -81,7 +81,7 @@ class TextFileDispatcher(FileDispatcher):
 
         Returns
         -------
-        np.array:
+        numpy array
             array with shape equals to the shape of `partition_ids` and
             filed with partitions objects.
 
@@ -112,8 +112,8 @@ class TextFileDispatcher(FileDispatcher):
 
         Returns
         -------
-        bool:
-            Wheather or not `filepath_or_buffer` is instance of  `py.path.local`
+        bool
+            Whether or not `filepath_or_buffer` is instance of `py.path.local`
             or `pathlib.Path`.
 
         """
@@ -298,7 +298,7 @@ class TextFileDispatcher(FileDispatcher):
             If file pointer reached the end of the file, but did not find closing quote
             returns `False`. `True` in any other case.
         int:
-            Number of rows that was read.
+            Number of rows that were read.
 
         """
         if nrows is not None and nrows <= 0:

@@ -34,7 +34,7 @@ class ParquetDispatcher(ColumnStoreDispatcher):
         path: str, path object or file-like object
             The filepath of the parquet file in local filesystem or hdfs.
         engine: str
-            Parquet library to use (only 'pyarrow' supported for now),
+            Parquet library to use (only 'pyarrow' is supported for now),
         columns: list
             If not None, only these columns will be read from the file.
         kwargs: dict

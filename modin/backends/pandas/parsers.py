@@ -435,7 +435,7 @@ class PandasExcelParser(PandasParser):
 
             Returns
             -------
-            str:
+            str
                 The updated string with new row numbers.
             """
             b = match.group(0)

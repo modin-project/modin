@@ -32,7 +32,7 @@ class HDFDispatcher(ColumnStoreDispatcher):  # pragma: no cover
 
         Parameters
         ----------
-        path: string, buffer or path object
+        path_or_buf : string, buffer or path object
             Path to the file to open, or an open :class:`pandas.HDFStore` object.
 
         Returns
@@ -56,9 +56,9 @@ class HDFDispatcher(ColumnStoreDispatcher):  # pragma: no cover
 
         Parameters
         ----------
-        path: string, buffer or path object
+        path_or_buf : string, buffer or path object
             Path to the file to open, or an open :class:`pandas.HDFStore` object.
-        kwargs: dict
+        kwargs : dict
             Pass into pandas.read_hdf function.
 
         Returns

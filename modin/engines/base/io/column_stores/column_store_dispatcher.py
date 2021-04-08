@@ -81,7 +81,7 @@ class ColumnStoreDispatcher(FileDispatcher):
         -------
         np.array:
             array with shape equals to the shape of `partition_ids` and
-            filed with partitions objects.
+            filed with partition objects.
 
         """
         return np.array(
@@ -100,8 +100,8 @@ class ColumnStoreDispatcher(FileDispatcher):
 
     @classmethod
     def build_index(cls, partition_ids):
-        """Compute index and it's splits sizes of resulted modin.DataFrame by using
-        of the first partition index.
+        """Compute index and its split sizes of resulting Modin DataFrame by using
+        first partition's index.
 
         Parameters
         ----------
@@ -111,7 +111,7 @@ class ColumnStoreDispatcher(FileDispatcher):
         Returns
         -------
         index: pandas.Index
-            Index of resulted modin.DataFrame.
+            Index of resulting Modin DataFrame.
         row_lengths: list
             List with lengths of index chunks.
 

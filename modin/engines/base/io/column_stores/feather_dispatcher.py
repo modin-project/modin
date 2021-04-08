@@ -30,7 +30,7 @@ class FeatherDispatcher(ColumnStoreDispatcher):
         Parameters
         ----------
         path: str or file-like object
-            The filepath of the feather file (local files are supported for now,
+            The filepath of the feather file (only local files are supported for now,
             multi threading is set to False by default).
         columns: array
             Columns to read from file. If not provided, all columns are read.
