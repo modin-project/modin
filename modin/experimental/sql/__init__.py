@@ -11,24 +11,16 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
+import warnings
 
-import pytest
-from modin.config import Engine
+try:
+    from dfsql import sql_query as query
+    import dfsql.extensions  # noqa: F401
+except ImportError:
+    warnings.warn(
+        "Modin experimental sql interface requires dfsql to be installed."
+        " Run `pip install modin[sql]` to install it."
+    )
+    raise
 
-import modin.experimental.xgboost as xgb
-import modin.pandas as pd
-
-
-@pytest.mark.skipif(
-    Engine.get() == "Ray",
-    reason="This test doesn't make sense on Ray backend.",
-)
-@pytest.mark.skipif(
-    Engine.get() == "Python",
-    reason="This test doesn't make sense on not distributed backend (see issue #2938).",
-)
-def test_backend():
-    try:
-        xgb.train({}, xgb.DMatrix(pd.DataFrame([0]), pd.DataFrame([0])))
-    except ValueError:
-        pass
+__all__ = ["query"]

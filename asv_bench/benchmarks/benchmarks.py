@@ -11,6 +11,8 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
+"""General modin benchmarks"""
+
 # define `MODIN_CPUS` env var to control the number of partitions
 # it should be defined before modin.pandas import (in case of using os.environ)
 
@@ -375,22 +377,56 @@ class TimeHead:
 
 
 class TimeFillna:
-    param_names = ["shape", "limit", "inplace"]
-    params = [UNARY_OP_DATA_SIZE[ASV_DATASET_SIZE], [None, 0.8], [False, True]]
+    param_names = ["self_type", "value_type", "shape", "limit", "inplace"]
+    params = [
+        ["DataFrame", "Series"],
+        ["scalar", "dict", "DataFrame", "Series"],
+        UNARY_OP_DATA_SIZE[ASV_DATASET_SIZE],
+        [None, 0.8],
+        [False, True],
+    ]
 
-    def setup(self, shape, limit, inplace):
+    def setup(self, self_type, value_type, shape, limit, inplace):
         pd = IMPL[ASV_USE_IMPL]
         columns = [f"col{x}" for x in range(shape[1])]
-        self.df = pd.DataFrame(np.nan, index=pd.RangeIndex(shape[0]), columns=columns)
+        if self_type == "DataFrame":
+            self.dataset = pd.DataFrame(
+                np.nan, index=pd.RangeIndex(shape[0]), columns=columns
+            )
+        elif self_type == "Series":
+            self.dataset = pd.Series(np.nan, index=pd.RangeIndex(shape[0]))
+        else:
+            assert False
+        if value_type == "scalar":
+            self.value = 18.19
+        elif value_type == "dict":
+            self.value = {k: k * 1.23 for k in range(shape[0])}
+        elif value_type == "Series":
+            self.value = pd.Series(
+                [k * 1.23 for k in range(shape[0])], index=pd.RangeIndex(shape[0])
+            )
+        elif value_type == "DataFrame":
+            if self_type == "Series":
+                raise NotImplementedError
+            self.value = pd.DataFrame(
+                {
+                    k: [i + j * 1.23 for j in range(shape[0])]
+                    for i, k in enumerate(columns)
+                },
+                index=pd.RangeIndex(shape[0]),
+                columns=columns,
+            )
+        else:
+            assert False
         self.limit = int(limit * shape[0]) if limit else None
 
-    def time_fillna(self, shape, limit, inplace):
-        kw = {"value": 0.0, "limit": self.limit, "inplace": inplace}
+    def time_fillna(self, self_type, value_type, shape, limit, inplace):
+        kw = {"value": self.value, "limit": self.limit, "inplace": inplace}
         if inplace:
-            self.df.fillna(**kw)
-            execute(self.df)
+            self.dataset.fillna(**kw)
+            execute(self.dataset)
         else:
-            execute(self.df.fillna(**kw))
+            execute(self.dataset.fillna(**kw))
 
 
 class BaseTimeValueCounts:

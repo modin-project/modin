@@ -38,9 +38,9 @@ class RabitContextManager:
 class RabitContext:
     """Context to connect a worker to a rabit tracker"""
 
-    def __init__(self, actor_ip, args):
+    def __init__(self, actor_rank, args):
         self.args = args
-        self.args.append(("DMLC_TASK_ID=[modin.xgboost]:" + actor_ip).encode())
+        self.args.append(("DMLC_TASK_ID=[modin.xgboost]:" + str(actor_rank)).encode())
 
     def __enter__(self):
         xgb.rabit.init(self.args)

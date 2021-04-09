@@ -10,25 +10,3 @@
 # the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
-
-
-import pytest
-from modin.config import Engine
-
-import modin.experimental.xgboost as xgb
-import modin.pandas as pd
-
-
-@pytest.mark.skipif(
-    Engine.get() == "Ray",
-    reason="This test doesn't make sense on Ray backend.",
-)
-@pytest.mark.skipif(
-    Engine.get() == "Python",
-    reason="This test doesn't make sense on not distributed backend (see issue #2938).",
-)
-def test_backend():
-    try:
-        xgb.train({}, xgb.DMatrix(pd.DataFrame([0]), pd.DataFrame([0])))
-    except ValueError:
-        pass

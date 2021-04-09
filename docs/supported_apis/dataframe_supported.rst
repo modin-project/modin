@@ -196,11 +196,11 @@ default to pandas.
 +----------------------------+---------------------------+------------------------+----------------------------------------------------+
 | ``items``                  | `items`_                  | Y                      |                                                    |
 +----------------------------+---------------------------+------------------------+----------------------------------------------------+
-| ``iteritems``              | `iteritems`_              | Y                      | Modin does not parallelize iteration in Python     |
+| ``iteritems``              | `iteritems`_              | P                      | Modin does not parallelize iteration in Python     |
 +----------------------------+---------------------------+------------------------+----------------------------------------------------+
-| ``iterrows``               | `iterrows`_               | Y                      | Modin does not parallelize iteration in Python     |
+| ``iterrows``               | `iterrows`_               | P                      | Modin does not parallelize iteration in Python     |
 +----------------------------+---------------------------+------------------------+----------------------------------------------------+
-| ``itertuples``             | `itertuples`_             | Y                      | Modin does not parallelize iteration in Python     |
+| ``itertuples``             | `itertuples`_             | P                      | Modin does not parallelize iteration in Python     |
 +----------------------------+---------------------------+------------------------+----------------------------------------------------+
 | ``join``                   | `join`_                   | P                      | When ``on`` is set to ``right`` or ``outer``       |
 |                            |                           |                        | it defaults to pandas                              |

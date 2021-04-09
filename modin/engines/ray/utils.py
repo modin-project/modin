@@ -153,18 +153,26 @@ def initialize_ray(
                     object_store_memory = None
             else:
                 object_store_memory = int(object_store_memory)
-            ray.init(
-                num_cpus=CpuCount.get(),
-                include_dashboard=False,
-                ignore_reinit_error=True,
-                _plasma_directory=plasma_directory,
-                object_store_memory=object_store_memory,
-                address=redis_address,
-                _redis_password=redis_password,
-                logging_level=100,
-                _memory=object_store_memory,
-                _lru_evict=True,
-            )
+
+            ray_init_kwargs = {
+                "num_cpus": CpuCount.get(),
+                "include_dashboard": False,
+                "ignore_reinit_error": True,
+                "_plasma_directory": plasma_directory,
+                "object_store_memory": object_store_memory,
+                "address": redis_address,
+                "_redis_password": redis_password,
+                "logging_level": 100,
+                "_memory": object_store_memory,
+                "_lru_evict": True,
+            }
+            from packaging import version
+
+            # setting of `_lru_evict` parameter raises DeprecationWarning since ray 2.0.0.dev0
+            if version.parse(ray.__version__) >= version.parse("2.0.0.dev0"):
+                ray_init_kwargs.pop("_lru_evict")
+            ray.init(**ray_init_kwargs)
+
         _move_stdlib_ahead_of_site_packages()
         ray.worker.global_worker.run_function_on_all_workers(
             _move_stdlib_ahead_of_site_packages
@@ -173,4 +181,4 @@ def initialize_ray(
         ray.worker.global_worker.run_function_on_all_workers(_import_pandas)
 
     num_cpus = int(ray.cluster_resources()["CPU"])
-    NPartitions.put_if_default(num_cpus)
+    NPartitions._put(num_cpus)
