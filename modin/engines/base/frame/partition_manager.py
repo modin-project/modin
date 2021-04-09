@@ -580,7 +580,8 @@ class BaseFrameManager(ABC):
 
     @classmethod
     def concat(cls, axis, left_parts, right_parts):
-        """Concatenate the blocks of partitions with another set of blocks.
+        """
+        Concatenate the blocks of partitions with another set of blocks.
 
         Parameters
         ----------
@@ -619,7 +620,8 @@ class BaseFrameManager(ABC):
 
     @classmethod
     def concatenate(cls, dfs):
-        """Concatenate pandas DataFrames with saving 'category' dtype.
+        """
+        Concatenate pandas DataFrames with saving 'category' dtype.
 
         Parameters
         ----------
@@ -644,7 +646,8 @@ class BaseFrameManager(ABC):
 
     @classmethod
     def to_pandas(cls, partitions):
-        """Convert numpy array of BaseFramePartition to Pandas DataFrame.
+        """
+        Convert numpy array of BaseFramePartition to Pandas DataFrame.
 
         Parameters
         ----------
@@ -681,8 +684,11 @@ class BaseFrameManager(ABC):
 
     @classmethod
     def to_numpy(cls, partitions, **kwargs):
-        r"""Convert numpy array of BaseFramePartition to numpy array.
+        """
+        Convert numpy array of BaseFramePartition to numpy array.
 
+        Parameters
+        ----------
         partitions : np.ndarray
             NumPy array of BaseFramePartition.
         **kwargs : dict
@@ -700,13 +706,14 @@ class BaseFrameManager(ABC):
     @classmethod
     @wait_computations_if_benchmark_mode
     def from_pandas(cls, df, return_dims=False):
-        """Return the partitions from pandas.DataFrame.
+        """
+        Return the partitions from pandas.DataFrame.
 
         Parameters
         ----------
         df : pandas.DataFrame
-            pandas.DataFrame.
-        return_dims : boolean, default False
+            A pandas.DataFrame.
+        return_dims : bool, default False
             If it's True, return as (np.ndarray, row_lengths, col_widths),
             else np.ndarray.
 
@@ -781,13 +788,14 @@ class BaseFrameManager(ABC):
 
     @classmethod
     def from_arrow(cls, at, return_dims=False):
-        """Return the partitions from Apache Arrow (PyArrow).
+        """
+        Return the partitions from Apache Arrow (PyArrow).
 
         Parameters
         ----------
         at : Arrow Table
             Arrow Table.
-        return_dims : boolean, default False
+        return_dims : bool, default False
             If it's True, return as (np.ndarray, row_lengths, col_widths),
             else np.ndarray.
 
@@ -800,7 +808,8 @@ class BaseFrameManager(ABC):
 
     @classmethod
     def get_indices(cls, axis, partitions, index_func=None):
-        """Get the internal indices stored in the partitions.
+        """
+        Get the internal indices stored in the partitions.
 
         Parameters
         ----------
@@ -843,7 +852,8 @@ class BaseFrameManager(ABC):
     def _apply_func_to_list_of_partitions_broadcast(
         cls, func, partitions, other, **kwargs
     ):
-        r"""Apply a function to a list of remote partitions.
+        """
+        Apply a function to a list of remote partitions.
 
         `other` partitions will be broadcasted to `partitions`
         and `func` will be applied.
@@ -872,7 +882,8 @@ class BaseFrameManager(ABC):
 
     @classmethod
     def _apply_func_to_list_of_partitions(cls, func, partitions, **kwargs):
-        """Apply a function to a list of remote partitions.
+        """
+        Apply a function to a list of remote partitions.
 
         Parameters
         ----------
@@ -900,7 +911,8 @@ class BaseFrameManager(ABC):
     def apply_func_to_select_indices(
         cls, axis, partitions, func, indices, keep_remaining=False
     ):
-        """Apply a function to select indices.
+        """
+        Apply a function to select indices.
 
         Parameters
         ----------
@@ -912,7 +924,7 @@ class BaseFrameManager(ABC):
             The function to apply to these indices of partitions.
         indices : dict
             The indices to apply the function to.
-        keep_remaining : boolean, default False
+        keep_remaining : bool, default False
             Whether or not to keep the other partitions. Some operations
             may want to drop the remaining partitions and keep
             only the results.
@@ -1013,7 +1025,8 @@ class BaseFrameManager(ABC):
     def apply_func_to_select_indices_along_full_axis(
         cls, axis, partitions, func, indices, keep_remaining=False
     ):
-        """Apply a function to a select subset of full columns/rows.
+        """
+        Apply a function to a select subset of full columns/rows.
 
         Parameters
         ----------
@@ -1025,7 +1038,7 @@ class BaseFrameManager(ABC):
             The function to apply.
         indices : list-like
             The global indices to apply the func to.
-        keep_remaining : boolean, default False
+        keep_remaining : bool, default False
             Whether or not to keep the other partitions.
             Some operations may want to drop the remaining partitions and
             keep only the results.
@@ -1132,7 +1145,8 @@ class BaseFrameManager(ABC):
         col_partitions_list,
         item_to_distribute=None,
     ):
-        """Apply a function to along both axis.
+        """
+        Apply a function to along both axis.
 
         Parameters
         ----------
@@ -1191,7 +1205,8 @@ class BaseFrameManager(ABC):
     @classmethod
     @wait_computations_if_benchmark_mode
     def binary_operation(cls, axis, left, func, right):
-        """Apply a function that requires two BasePandasFrame objects.
+        """
+        Apply a function that requires two BasePandasFrame objects.
 
         Parameters
         ----------

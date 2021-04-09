@@ -93,7 +93,8 @@ class BasePandasFrame(object):
 
     @property
     def _row_lengths(self):
-        """Compute the row partitions lengths if they are not cached.
+        """
+        Compute the row partitions lengths if they are not cached.
 
         Returns
         -------
@@ -111,7 +112,8 @@ class BasePandasFrame(object):
 
     @property
     def _column_widths(self):
-        """Compute the column partitions widths if they are not cached.
+        """
+        Compute the column partitions widths if they are not cached.
 
         Returns
         -------
@@ -127,7 +129,8 @@ class BasePandasFrame(object):
 
     @property
     def _axes_lengths(self):
-        """Get a pair of row partitions lengths and column partitions widths.
+        """
+        Get a pair of row partitions lengths and column partitions widths.
 
         Returns
         -------
@@ -138,7 +141,8 @@ class BasePandasFrame(object):
 
     @property
     def dtypes(self):
-        """Compute the data types if they are not cached.
+        """
+        Compute the data types if they are not cached.
 
         Returns
         -------
@@ -150,7 +154,8 @@ class BasePandasFrame(object):
         return self._dtypes
 
     def _compute_dtypes(self):
-        """Compute the data types via MapReduce pattern.
+        """
+        Compute the data types via MapReduce pattern.
 
         Returns
         -------
@@ -176,7 +181,8 @@ class BasePandasFrame(object):
     _columns_cache = None
 
     def _validate_set_axis(self, new_labels, old_labels):
-        """Validate the possibility of replacement old labels on the new labels.
+        """
+        Validate the possibility of replacement old labels on the new labels.
 
         Parameters
         ----------
@@ -201,7 +207,8 @@ class BasePandasFrame(object):
         return new_labels
 
     def _get_index(self):
-        """Get the index from the cache object.
+        """
+        Get the index from the cache object.
 
         Returns
         -------
@@ -211,7 +218,8 @@ class BasePandasFrame(object):
         return self._index_cache
 
     def _get_columns(self):
-        """Get the columns from the cache object.
+        """
+        Get the columns from the cache object.
 
         Returns
         -------
@@ -221,7 +229,8 @@ class BasePandasFrame(object):
         return self._columns_cache
 
     def _set_index(self, new_index):
-        """Replace the current row labels with new labels.
+        """
+        Replace the current row labels with new labels.
 
         Parameters
         ----------
@@ -236,7 +245,8 @@ class BasePandasFrame(object):
         self._apply_index_objs(axis=0)
 
     def _set_columns(self, new_columns):
-        """Replace the current column labels with new labels.
+        """
+        Replace the current column labels with new labels.
 
         Parameters
         ----------
@@ -261,7 +271,8 @@ class BasePandasFrame(object):
         return [self.index, self.columns]
 
     def _compute_axis_labels(self, axis: int, partitions=None):
-        """Compute the labels for specific `axis`.
+        """
+        Compute the labels for specific `axis`.
 
         Parameters
         ----------
@@ -305,7 +316,8 @@ class BasePandasFrame(object):
         self._row_lengths_cache = [r for r in self._row_lengths if r != 0]
 
     def _apply_index_objs(self, axis=None):
-        """Apply the index object for specific `axis` to the `self._partitions`.
+        """
+        Apply the index object for specific `axis` to the `self._partitions`.
 
         Adds to call-queue of each partition from `self._partitions` function `set_axis`
         to apply new axis.
@@ -394,7 +406,8 @@ class BasePandasFrame(object):
         col_indices=None,
         col_numeric_idx=None,
     ):
-        """Lazily select columns or rows from given indices.
+        """
+        Lazily select columns or rows from given indices.
 
         Parameters
         ----------
@@ -568,7 +581,8 @@ class BasePandasFrame(object):
         )
 
     def from_labels(self) -> "BasePandasFrame":
-        """Convert the row labels to a column of data, inserted at the first position.
+        """
+        Convert the row labels to a column of data, inserted at the first position.
 
         Gives result by similar way as `pandas.DataFrame.reset_index`. Each level
         of `self.index` will be added as separate column of data.
@@ -644,7 +658,8 @@ class BasePandasFrame(object):
         return result
 
     def to_labels(self, column_list: List[Hashable]) -> "BasePandasFrame":
-        """Move one or more columns into the row labels. Previous labels are dropped.
+        """
+        Move one or more columns into the row labels. Previous labels are dropped.
 
         Parameters
         ----------
@@ -668,7 +683,8 @@ class BasePandasFrame(object):
         return result
 
     def reorder_labels(self, row_numeric_idx=None, col_numeric_idx=None):
-        """Reorder the column and or rows in this DataFrame.
+        """
+        Reorder the column and or rows in this DataFrame.
 
         Parameters
         ----------
@@ -703,7 +719,8 @@ class BasePandasFrame(object):
         return self.__constructor__(ordered_cols, row_idx, col_idx)
 
     def copy(self):
-        """Copy this object.
+        """
+        Copy this object.
 
         Returns
         -------
@@ -721,7 +738,8 @@ class BasePandasFrame(object):
 
     @classmethod
     def combine_dtypes(cls, list_of_dtypes, column_names):
-        """Describe how data types should be combined when they do not match.
+        """
+        Describe how data types should be combined when they do not match.
 
         Parameters
         ----------
