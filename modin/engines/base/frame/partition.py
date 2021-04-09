@@ -17,7 +17,8 @@ from abc import ABC
 
 
 class BaseFramePartition(ABC):  # pragma: no cover
-    """An abstract class that holds the data and metadata for a single partition.
+    """
+    An abstract class that holds the data and metadata for a single partition.
 
     The public API exposed by the children of this object is used in `BaseFrameManager`.
 
@@ -28,7 +29,8 @@ class BaseFramePartition(ABC):  # pragma: no cover
     """
 
     def get(self):
-        """Get the object wrapped by this partition.
+        """
+        Get the object wrapped by this partition.
 
         Returns
         -------
@@ -44,13 +46,14 @@ class BaseFramePartition(ABC):  # pragma: no cover
         pass
 
     def apply(self, func, **kwargs):
-        """Apply a function to the object wrapped by this partition.
+        """
+        Apply a function to the object wrapped by this partition.
 
         Parameters
         ----------
         func : callable
             Function to apply.
-        kwargs : dict
+        **kwargs : dict
             Additional keyword arguments to be passed in `func`.
 
         Returns
@@ -67,13 +70,14 @@ class BaseFramePartition(ABC):  # pragma: no cover
         pass
 
     def add_to_apply_calls(self, func, **kwargs):
-        """Add a function to the call queue.
+        """
+        Add a function to the call queue.
 
         Parameters
         ----------
         func : callable
             Function to be added to the call queue.
-        kwargs : dict
+        **kwargs : dict
             Additional keyword arguments to be passed in `func`.
 
         Returns
@@ -97,12 +101,12 @@ class BaseFramePartition(ABC):  # pragma: no cover
         pass
 
     def to_pandas(self):
-        """Convert the object wrapped by this partition to a pandas DataFrame.
+        """
+        Convert the object wrapped by this partition to a pandas DataFrame.
 
         Returns
         -------
         pandas.DataFrame
-            pandas DataFrame.
 
         Notes
         -----
@@ -112,17 +116,17 @@ class BaseFramePartition(ABC):  # pragma: no cover
         pass
 
     def to_numpy(self, **kwargs):
-        """Convert the object wrapped by this partition to a NumPy array.
+        """
+        Convert the object wrapped by this partition to a NumPy array.
 
         Parameters
         ----------
-        kwargs : dict
+        **kwargs : dict
             Additional keyword arguments to be passed in `to_numpy`.
 
         Returns
         -------
         np.ndarray
-            NumPy array.
 
         Notes
         -----
@@ -132,7 +136,8 @@ class BaseFramePartition(ABC):  # pragma: no cover
         pass
 
     def mask(self, row_indices, col_indices):
-        """Lazily create a mask that extracts the indices provided.
+        """
+        Lazily create a mask that extracts the indices provided.
 
         Parameters
         ----------
@@ -150,7 +155,8 @@ class BaseFramePartition(ABC):  # pragma: no cover
 
     @classmethod
     def put(cls, obj):
-        """Put an object into a store and wrap it with partition object.
+        """
+        Put an object into a store and wrap it with partition object.
 
         Parameters
         ----------
@@ -166,7 +172,8 @@ class BaseFramePartition(ABC):  # pragma: no cover
 
     @classmethod
     def preprocess_func(cls, func):
-        """Preprocess a function before an `apply` call.
+        """
+        Preprocess a function before an `apply` call.
 
         Parameters
         ----------
@@ -189,7 +196,8 @@ class BaseFramePartition(ABC):  # pragma: no cover
 
     @classmethod
     def length_extraction_fn(cls):
-        """Return the function that computes the length of the object wrapped by this partition.
+        """
+        Return the function that computes the length of the object wrapped by this partition.
 
         Returns
         -------
@@ -200,7 +208,8 @@ class BaseFramePartition(ABC):  # pragma: no cover
 
     @classmethod
     def width_extraction_fn(cls):
-        """Return the function that computes the width of the object wrapped by this partition.
+        """
+        Return the function that computes the width of the object wrapped by this partition.
 
         Returns
         -------
@@ -232,7 +241,8 @@ class BaseFramePartition(ABC):  # pragma: no cover
 
     @classmethod
     def empty(cls):
-        """Create a new partition that wraps an empty pandas DataFrame.
+        """
+        Create a new partition that wraps an empty pandas DataFrame.
 
         Returns
         -------

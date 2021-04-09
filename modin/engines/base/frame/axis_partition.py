@@ -20,7 +20,8 @@ from modin.data_management.utils import split_result_of_axis_func_pandas
 
 
 class BaseFrameAxisPartition(ABC):  # pragma: no cover
-    """An abstract class that represents the parent class for any axis partition class.
+    """
+    An abstract class that represents the parent class for any axis partition class.
 
     This class is intended to simplify the way that operations are performed.
 
@@ -50,19 +51,20 @@ class BaseFrameAxisPartition(ABC):  # pragma: no cover
         maintain_partitioning=True,
         **kwargs,
     ):
-        """Apply a function to this axis partition along full axis.
+        """
+        Apply a function to this axis partition along full axis.
 
         Parameters
         ----------
         func : callable
             The function to apply. This will be preprocessed according to
             the corresponding `BaseFramePartition` objects.
-        num_splits : int, optional. Default None
+        num_splits : int, default None
             The number of times to split the result object.
-        other_axis_partition : BaseFrameAxisPartition, optional. Default None
+        other_axis_partition : BaseFrameAxisPartition, default None
             Another `BaseFrameAxisPartition` object to be applied
             to func. This is for operations that are between two data sets.
-        maintain_partitioning : bool, optional. Default True
+        maintain_partitioning : bool, default True
             Whether to keep the partitioning in the same
             orientation as it was previously or not. This is important because we may be
             operating on an individual axis partition and not touching the rest.
@@ -87,7 +89,8 @@ class BaseFrameAxisPartition(ABC):  # pragma: no cover
         pass
 
     def shuffle(self, func, lengths, **kwargs):
-        """Shuffle the order of the data in this axis partition based on the `lengths`.
+        """
+        Shuffle the order of the data in this axis partition based on the `lengths`.
 
         Parameters
         ----------
@@ -110,7 +113,8 @@ class BaseFrameAxisPartition(ABC):  # pragma: no cover
     partition_type = None
 
     def _wrap_partitions(self, partitions):
-        """Wrap remote partition objects with `BaseFramePartition` class.
+        """
+        Wrap remote partition objects with `BaseFramePartition` class.
 
         Parameters
         ----------
@@ -125,11 +129,12 @@ class BaseFrameAxisPartition(ABC):  # pragma: no cover
         return [self.partition_type(obj) for obj in partitions]
 
     def force_materialization(self, get_ip=False):
-        """Materialize axis partitions into a single partition.
+        """
+        Materialize axis partitions into a single partition.
 
         Parameters
         ----------
-        get_ip : bool, optional. Default False
+        get_ip : bool, default False
             Whether to get node ip address to a single partition or not.
 
         Returns
@@ -143,13 +148,14 @@ class BaseFrameAxisPartition(ABC):  # pragma: no cover
         return type(self)(materialized, get_ip=get_ip)
 
     def unwrap(self, squeeze=False, get_ip=False):
-        """Unwrap partitions from this axis partition.
+        """
+        Unwrap partitions from this axis partition.
 
         Parameters
         ----------
-        squeeze : bool, optional. Default False
+        squeeze : bool, default False
             Flag used to unwrap only one partition.
-        get_ip : bool, optional. Default False
+        get_ip : bool, default False
             Whether to get node ip address to each partition or not.
 
         Returns
@@ -176,7 +182,8 @@ class BaseFrameAxisPartition(ABC):  # pragma: no cover
 
 
 class PandasFrameAxisPartition(BaseFrameAxisPartition):
-    """An abstract class is created to simplify and consolidate the code for axis partition that run pandas.
+    """
+    An abstract class is created to simplify and consolidate the code for axis partition that run pandas.
 
     Because much of the code is similar, this allows us to reuse this code.
 
@@ -196,18 +203,19 @@ class PandasFrameAxisPartition(BaseFrameAxisPartition):
         maintain_partitioning=True,
         **kwargs,
     ):
-        """Apply a function to this axis partition along full axis.
+        """
+        Apply a function to this axis partition along full axis.
 
         Parameters
         ----------
         func : callable
             The function to apply.
-        num_splits : int, optional. Default None
+        num_splits : int, default None
             The number of times to split the result object.
-        other_axis_partition : PandasFrameAxisPartition, optional. Default None
+        other_axis_partition : PandasFrameAxisPartition, default None
             Another `PandasFrameAxisPartition` object to be applied
             to func. This is for operations that are between two data sets.
-        maintain_partitioning : bool, optional. Default True
+        maintain_partitioning : bool, default True
             Whether to keep the partitioning in the same
             orientation as it was previously or not. This is important because we may be
             operating on an individual AxisPartition and not touching the rest.
@@ -258,7 +266,8 @@ class PandasFrameAxisPartition(BaseFrameAxisPartition):
         return self._wrap_partitions(self.deploy_axis_func(*args))
 
     def shuffle(self, func, lengths, **kwargs):
-        """Shuffle the order of the data in this axis partition based on the `lengths`.
+        """
+        Shuffle the order of the data in this axis partition based on the `lengths`.
 
         Parameters
         ----------
@@ -286,7 +295,8 @@ class PandasFrameAxisPartition(BaseFrameAxisPartition):
     def deploy_axis_func(
         cls, axis, func, num_splits, kwargs, maintain_partitioning, *partitions
     ):
-        """Deploy a function along a full axis.
+        """
+        Deploy a function along a full axis.
 
         Parameters
         ----------
@@ -295,13 +305,13 @@ class PandasFrameAxisPartition(BaseFrameAxisPartition):
         func : callable
             The function to perform.
         num_splits : int
-            The number of splits to return (see `split_result_of_axis_func_pandas`)
+            The number of splits to return (see `split_result_of_axis_func_pandas`).
         kwargs : dict
             Additional keywords arguments to be passed in `func`.
         maintain_partitioning : bool
             If True, keep the old partitioning if possible.
             If False, create a new partition layout.
-        partitions : iterable
+        *partitions : iterable
             All partitions that make up the full axis (row or column).
 
         Returns
@@ -339,7 +349,8 @@ class PandasFrameAxisPartition(BaseFrameAxisPartition):
     def deploy_func_between_two_axis_partitions(
         cls, axis, func, num_splits, len_of_left, other_shape, kwargs, *partitions
     ):
-        """Deploy a function along a full axis between two data sets.
+        """
+        Deploy a function along a full axis between two data sets.
 
         Parameters
         ----------
@@ -356,7 +367,7 @@ class PandasFrameAxisPartition(BaseFrameAxisPartition):
             (other_shape[i-1], other_shape[i]) will indicate slice to restore i-1 axis partition.
         kwargs : dict
             Additional keywords arguments to be passed in `func`.
-        partitions : iterable
+        *partitions : iterable
             All partitions that make up the full axis (row or column) for both data sets.
 
         Returns
