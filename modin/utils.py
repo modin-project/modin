@@ -27,35 +27,56 @@ def _inherit_func_docstring(source_func):
     return decorator
 
 
-def _inherit_docstrings(parent, excluded=[]):
+def _inherit_docstrings(parent, excluded=[], overwrite_existing=False, apilink=None):
     """Creates a decorator which overwrites a decorated class' __doc__
     attribute with parent's __doc__ attribute. Also overwrites __doc__ of
     methods and properties defined in the class with the __doc__ of matching
     methods and properties in parent.
 
-    Args:
-        parent (object): Class from which the decorated class inherits __doc__.
-        excluded (list): List of parent objects from which the class does not
+    Parameters
+    ----------
+        parent : object
+            Class from which the decorated class inherits __doc__.
+        excluded : list
+            List of parent objects from which the class does not
             inherit docstrings.
+        overwrite_existing : bool, default: False
+            Allow overwriting docstrings that already exist in
+            the decorated class
+        apilink : str, default: None
+            If non-empty, insert the link to Pandas API documentation.
+            Could be magic value `'auto'` in which case the link would be auto-generated
+            based on parent class using some heuristics.
 
-    Returns:
-        function: decorator which replaces the decorated class' documentation
-            parent's documentation.
+    Returns
+    -------
+    callable
+        decorator which replaces the decorated class' documentation with parent's documentation
     """
+
+    def _make_doc(pandas_obj):
+        """Makes docstring from a parent, Pandas object.
+
+        Adds API link if required, can generate it in 'auto' mode"""
+        return pandas_obj.__doc__
 
     def decorator(cls):
         if parent not in excluded:
-            cls.__doc__ = parent.__doc__
+            if overwrite_existing or not getattr(cls, "__doc__", ""):
+                cls.__doc__ = _make_doc(parent)
         for attr, obj in cls.__dict__.items():
             parent_obj = getattr(parent, attr, None)
             if parent_obj in excluded or (
                 not callable(parent_obj) and not isinstance(parent_obj, property)
             ):
                 continue
+            if not overwrite_existing and getattr(obj, "__doc__", ""):
+                # do not overwrite existing docstring unless allowed
+                continue
             if callable(obj):
-                obj.__doc__ = parent_obj.__doc__
+                obj.__doc__ = _make_doc(parent_obj)
             elif isinstance(obj, property) and obj.fget is not None:
-                p = property(obj.fget, obj.fset, obj.fdel, parent_obj.__doc__)
+                p = property(obj.fget, obj.fset, obj.fdel, _make_doc(parent_obj))
                 setattr(cls, attr, p)
         return cls
 
