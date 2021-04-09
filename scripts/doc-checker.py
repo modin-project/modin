@@ -43,7 +43,7 @@ def numpydoc_validate(path):
             if err_code not in BASE_ERR_CODE:
                 # filter
                 continue
-            exit_status += 1
+            exit_status = 1
             print(
                 ":".join([import_path, str(results["file_line"]), err_code, err_desc])
             )
@@ -52,37 +52,38 @@ def numpydoc_validate(path):
     with open(path) as fd:
         file_contents = fd.read()
 
-    # static parsing
+    # using static parsing for collecting module, functions, classes and its methods
     module = ast.parse(file_contents)
-
-    print("NUMPYDOC OUTPUT - CAN BE EMPTY")
-    # Validate module
-    validate_object(module_name)
-
-    # Validate functions
-    functions = [node for node in module.body if isinstance(node, ast.FunctionDef)]
-    [
-        validate_object(f"{module_name}.{x.name}")
-        for x in functions
-        if not x.name.startswith("__")
-    ]
-
-    # Validate classes
-    classes = [node for node in module.body if isinstance(node, ast.ClassDef)]
-    [validate_object(f"{module_name}.{x.name}") for x in classes]
-    if classes == []:
-        return
-
-    # Validate class' methods
+    functions = (
+        node
+        for node in module.body
+        if isinstance(node, ast.FunctionDef) and not node.name.startswith("__")
+    )
+    classes = (node for node in module.body if isinstance(node, ast.ClassDef))
     methods = []
     for _class in classes:
-        for method in [
+        for method in (
             f"{module_name}.{_class.name}.{node.name}"
             for node in _class.body
             if isinstance(node, ast.FunctionDef) and not node.name.startswith("__")
-        ]:
+        ):
             methods.append(method)
-    [validate_object(x) for x in methods]
+
+    print(f"NUMPYDOC OUTPUT FOR {path} - CAN BE EMPTY")
+    exit_status = 0
+    # Validate module
+    if validate_object(module_name):
+        exit_status = 1
+    # Validate functions
+    if any(validate_object(f"{module_name}.{x.name}") for x in functions):
+        exit_status = 1
+    # Validate classes
+    if any(validate_object(f"{module_name}.{x.name}") for x in classes):
+        exit_status = 1
+    # Validate class' methods
+    if any(validate_object(x) for x in methods):
+        exit_status = 1
+    return exit_status
 
 
 def pydocstyle_validate(path, add_ignore):
@@ -99,7 +100,7 @@ def pydocstyle_validate(path, add_ignore):
         capture_output=True,
     )
     if result.returncode:
-        print("PYDOCSTYLE OUTPUT\n", result.stdout)
+        print(f"PYDOCSTYLE OUTPUT FOR {path}\n", result.stdout)
     return result.returncode
 
 
@@ -108,10 +109,15 @@ def pydocstyle_validate(path, add_ignore):
 @click.option("--add-ignore", multiple=True, help="Pydocstyle errors")
 @click.option("--use-numpydoc", type=bool, default=True)
 def validate(pathes, add_ignore, use_numpydoc):
+    exit_status = 0
     for path in pathes:
-        pydocstyle_validate(path, add_ignore)
+        if pydocstyle_validate(path, add_ignore):
+            exit_status = 1
         if use_numpydoc:
-            numpydoc_validate(path)
+            if numpydoc_validate(path):
+                exit_status = 1
+    if exit_status:
+        exit(exit_status)
 
 
 if __name__ == "__main__":
