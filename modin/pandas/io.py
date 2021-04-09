@@ -34,7 +34,7 @@ from typing import Union, IO, AnyStr, Sequence, Dict, List, Optional, Any
 
 from modin.error_message import ErrorMessage
 from .dataframe import DataFrame
-from modin.utils import _inherit_func_docstring, _inherit_docstrings, Engine
+from modin.utils import _inherit_docstrings, Engine
 from . import _update_engine
 
 PQ_INDEX_REGEX = re.compile(r"__index_level_\d+__")
@@ -68,7 +68,7 @@ def _read(**kwargs):
     return DataFrame(query_compiler=pd_obj)
 
 
-@_inherit_func_docstring(pandas.read_csv)
+@_inherit_docstrings(pandas.read_csv)
 def read_csv(
     filepath_or_buffer: Union[str, pathlib.Path, IO[AnyStr]],
     sep=lib.no_default,
@@ -134,7 +134,7 @@ def read_csv(
     return _read(**kwargs)
 
 
-@_inherit_func_docstring(pandas.read_table)
+@_inherit_docstrings(pandas.read_table)
 def read_table(
     filepath_or_buffer: Union[str, pathlib.Path, IO[AnyStr]],
     sep=lib.no_default,
@@ -197,7 +197,7 @@ def read_table(
     return _read(**kwargs)
 
 
-@_inherit_func_docstring(pandas.read_parquet)
+@_inherit_docstrings(pandas.read_parquet)
 def read_parquet(
     path,
     engine: str = "auto",
@@ -219,7 +219,7 @@ def read_parquet(
     )
 
 
-@_inherit_func_docstring(pandas.read_json)
+@_inherit_docstrings(pandas.read_json)
 def read_json(
     path_or_buf=None,
     orient=None,
@@ -246,7 +246,7 @@ def read_json(
     return DataFrame(query_compiler=EngineDispatcher.read_json(**kwargs))
 
 
-@_inherit_func_docstring(pandas.read_gbq)
+@_inherit_docstrings(pandas.read_gbq)
 def read_gbq(
     query: str,
     project_id: Optional[str] = None,
@@ -271,7 +271,7 @@ def read_gbq(
     return DataFrame(query_compiler=EngineDispatcher.read_gbq(**kwargs))
 
 
-@_inherit_func_docstring(pandas.read_html)
+@_inherit_docstrings(pandas.read_html)
 def read_html(
     io,
     match=".+",
@@ -297,7 +297,7 @@ def read_html(
     return DataFrame(query_compiler=EngineDispatcher.read_html(**kwargs))
 
 
-@_inherit_func_docstring(pandas.read_clipboard)
+@_inherit_docstrings(pandas.read_clipboard)
 def read_clipboard(sep=r"\s+", **kwargs):  # pragma: no cover
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
     kwargs.update(kwargs.pop("kwargs", {}))
@@ -308,7 +308,7 @@ def read_clipboard(sep=r"\s+", **kwargs):  # pragma: no cover
     return DataFrame(query_compiler=EngineDispatcher.read_clipboard(**kwargs))
 
 
-@_inherit_func_docstring(pandas.read_excel)
+@_inherit_docstrings(pandas.read_excel)
 def read_excel(
     io,
     sheet_name=0,
@@ -352,7 +352,7 @@ def read_excel(
         return DataFrame(query_compiler=intermediate)
 
 
-@_inherit_func_docstring(pandas.read_hdf)
+@_inherit_docstrings(pandas.read_hdf)
 def read_hdf(
     path_or_buf,
     key=None,
@@ -375,7 +375,7 @@ def read_hdf(
     return DataFrame(query_compiler=EngineDispatcher.read_hdf(**kwargs))
 
 
-@_inherit_func_docstring(pandas.read_feather)
+@_inherit_docstrings(pandas.read_feather)
 def read_feather(
     path,
     columns=None,
@@ -390,7 +390,7 @@ def read_feather(
     return DataFrame(query_compiler=EngineDispatcher.read_feather(**kwargs))
 
 
-@_inherit_func_docstring(pandas.read_stata)
+@_inherit_docstrings(pandas.read_stata)
 def read_stata(
     filepath_or_buffer,
     convert_dates=True,
@@ -412,7 +412,7 @@ def read_stata(
     return DataFrame(query_compiler=EngineDispatcher.read_stata(**kwargs))
 
 
-@_inherit_func_docstring(pandas.read_sas)
+@_inherit_docstrings(pandas.read_sas)
 def read_sas(
     filepath_or_buffer,
     format=None,
@@ -429,7 +429,7 @@ def read_sas(
     return DataFrame(query_compiler=EngineDispatcher.read_sas(**kwargs))
 
 
-@_inherit_func_docstring(pandas.read_pickle)
+@_inherit_docstrings(pandas.read_pickle)
 def read_pickle(
     filepath_or_buffer: FilePathOrBuffer,
     compression: Optional[str] = "infer",
@@ -443,7 +443,7 @@ def read_pickle(
     return DataFrame(query_compiler=EngineDispatcher.read_pickle(**kwargs))
 
 
-@_inherit_func_docstring(pandas.read_sql)
+@_inherit_docstrings(pandas.read_sql)
 def read_sql(
     sql,
     con,
@@ -468,7 +468,7 @@ def read_sql(
     return DataFrame(query_compiler=EngineDispatcher.read_sql(**kwargs))
 
 
-@_inherit_func_docstring(pandas.read_fwf)
+@_inherit_docstrings(pandas.read_fwf)
 def read_fwf(
     filepath_or_buffer: Union[str, pathlib.Path, IO[AnyStr]],
     colspecs="infer",
@@ -492,7 +492,7 @@ def read_fwf(
     return DataFrame(query_compiler=pd_obj)
 
 
-@_inherit_func_docstring(pandas.read_sql_table)
+@_inherit_docstrings(pandas.read_sql_table)
 def read_sql_table(
     table_name,
     con,
@@ -511,7 +511,7 @@ def read_sql_table(
     return DataFrame(query_compiler=EngineDispatcher.read_sql_table(**kwargs))
 
 
-@_inherit_func_docstring(pandas.read_sql_query)
+@_inherit_docstrings(pandas.read_sql_query)
 def read_sql_query(
     sql,
     con,
@@ -529,7 +529,7 @@ def read_sql_query(
     return DataFrame(query_compiler=EngineDispatcher.read_sql_query(**kwargs))
 
 
-@_inherit_func_docstring(pandas.read_spss)
+@_inherit_docstrings(pandas.read_spss)
 def read_spss(
     path: Union[str, pathlib.Path],
     usecols: Union[Sequence[str], type(None)] = None,
@@ -543,7 +543,7 @@ def read_spss(
     )
 
 
-@_inherit_func_docstring(pandas.to_pickle)
+@_inherit_docstrings(pandas.to_pickle)
 def to_pickle(
     obj: Any,
     filepath_or_buffer: Union[str, pathlib.Path],
@@ -561,7 +561,7 @@ def to_pickle(
     )
 
 
-@_inherit_func_docstring(pandas.json_normalize)
+@_inherit_docstrings(pandas.json_normalize)
 def json_normalize(
     data: Union[Dict, List[Dict]],
     record_path: Optional[Union[str, List]] = None,
@@ -581,7 +581,7 @@ def json_normalize(
     )
 
 
-@_inherit_func_docstring(pandas.read_orc)
+@_inherit_docstrings(pandas.read_orc)
 def read_orc(
     path: FilePathOrBuffer, columns: Optional[List[str]] = None, **kwargs
 ) -> DataFrame:

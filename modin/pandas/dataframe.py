@@ -2134,14 +2134,6 @@ class DataFrame(BasePandasDataset):
         self._default_to_pandas(attrs)
 
     @property
-    def __doc__(self):  # pragma: no cover
-        def __doc__(df):
-            """Define __name__ attr because properties do not have it."""
-            return df.__doc__
-
-        return self._default_to_pandas(__doc__)
-
-    @property
     def style(self):
         def style(df):
             """Define __name__ attr because properties do not have it."""

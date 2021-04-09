@@ -11,6 +11,8 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
+import types
+
 import pandas
 import numpy as np
 
@@ -22,73 +24,81 @@ if DocstringUrlTestMode.get():
     # a list which contains all generated urls so they could be checked for being valid
     _GENERATED_URLS = []
 
-def _make_doc(source_obj, apilink, is_attribute):
-    """Makes docstring from a source object.
+
+def _replace_doc(
+    source_obj, target_obj, overwrite, apilink, parent_cls=None, attr_name=None
+):
+    """Replaces docstring in `target_obj`, possibly taking from `source_obj` and augmenting.
+
+    Can append the link to Pandas API online documentation.
 
     Parameters
     ----------
     source_obj : object
         Any object from which to take docstring from.
+    target_obj : object
+        The object which docstring to replace
+    overwrite : bool
+        Forces replacing the docstring with the one from `source_obj` even
+        if `target_obj` has its own non-empty docstring
     apilink : str
         If non-empty, insert the link to Pandas API documentation.
         Should be the prefix part in the URL template, e.g. "pandas.DataFrame".
-    is_attribute : bool
-        `True` if `source_obj` is some object's attribute, in which case its URL
-        gets a suffix from `source_obj` name.
-
-    Returns
-    -------
-    str
-        Docstring from `source_obj` with added Pandas API URL link if apilink is non-empty
+    parent_cls : class, optional
+        If `target_obj` is an attribute of a class, `parent_cls` should be that class.
+        This is used for generating the API URL as well as for handling special cases
+        like `target_obj` being a property.
+    attr_name : str, optional
+        Gives the name to `target_obj` if it's an attribute of `parent_cls`.
+        Needed to handle some special cases and in most cases could be determined automatically.
     """
-    doc = source_obj.__doc__
+    source_doc = source_obj.__doc__ or ""
+    target_doc = target_obj.__doc__ or ""
+    doc = source_doc if overwrite or not target_doc else target_doc
 
-    if doc.strip() and apilink:
-        token = f"{apilink}.{source_obj.__name__}" if is_attribute else apilink
+    if parent_cls and not attr_name:
+        if isinstance(target_obj, property):
+            attr_name = target_obj.fget.__name__
+        elif isinstance(target_obj, (staticmethod, classmethod)):
+            attr_name = target_obj.__func__.__name__
+        else:
+            attr_name = target_obj.__name__
+
+    if (
+        source_doc.strip()
+        and apilink
+        and "Pandas API documentation <" not in target_doc
+        and (not (attr_name or "").startswith("_"))
+    ):
+        if attr_name:
+            token = f"{apilink}.{attr_name}"
+        else:
+            token = apilink
         url = PANDAS_API_URL_TEMPLATE.format(token)
         if DocstringUrlTestMode.get():
             _GENERATED_URLS.append(url)
-        doc += f"""
+        doc += f"\n\nSee `Pandas API documentation <{url}>`_ for more."
 
-See `Pandas API documentation <{url}>`_ for more.
-"""
-
-    return doc
-
-
-def _inherit_func_docstring(source_func, apilink=None):
-    """Define `func` docstring from `source_func`.
-
-    Parameters
-    ----------
-    source_func : callable
-        Source function from which to take the docstring
-    apilink : str, optional
-        If non-empty, add link to Pandas API documentation
-
-    Returns
-    -------
-    callable
-        The decorator which adds docstring to target function
-    """
-
-    def decorator(func):
-        func.__doc__ = _make_doc(source_func, apilink, is_attribute=False)
-        return func
-
-    return decorator
+    if parent_cls and isinstance(target_obj, property):
+        setattr(
+            parent_cls,
+            target_obj.fget.__name__,
+            property(target_obj.fget, target_obj.fset, target_obj.fdel, doc),
+        )
+    else:
+        target_obj.__doc__ = doc
 
 
 def _inherit_docstrings(parent, excluded=[], overwrite_existing=False, apilink=None):
-    """Creates a decorator which overwrites a decorated class' __doc__
+    """Creates a decorator which overwrites a decorated object __doc__
     attribute with parent's __doc__ attribute. Also overwrites __doc__ of
-    methods and properties defined in the class with the __doc__ of matching
-    methods and properties in parent.
+    methods and properties defined in the target if it's a class with the __doc__ of
+    matching methods and properties in parent.
 
     Parameters
     ----------
         parent : object
-            Class from which the decorated class inherits __doc__.
+            Parent object from which the decorated object inherits __doc__.
         excluded : list
             List of parent objects from which the class does not
             inherit docstrings.
@@ -102,33 +112,40 @@ def _inherit_docstrings(parent, excluded=[], overwrite_existing=False, apilink=N
     Returns
     -------
     callable
-        decorator which replaces the decorated class' documentation with parent's documentation
+        decorator which replaces the decorated object's documentation with parent's documentation.
     """
 
-    def decorator(cls):
+    def _documentable_obj(obj):
+        """Check if `obj` docstring could be patched."""
+        return callable(obj) or (isinstance(obj, property) and obj.fget)
+
+    def decorator(cls_or_func):
         if parent not in excluded:
-            if overwrite_existing or not getattr(cls, "__doc__", ""):
-                cls.__doc__ = _make_doc(parent, apilink, is_attribute=False)
-        for attr, obj in cls.__dict__.items():
-            parent_obj = getattr(parent, attr, None)
-            if (
-                parent_obj in excluded
-                or (not callable(parent_obj) and not isinstance(parent_obj, property))
-                or not getattr(parent_obj, "__doc__", "")
-                or (not overwrite_existing and getattr(obj, "__doc__", ""))
-            ):
-                continue
-            if callable(obj):
-                obj.__doc__ = _make_doc(parent_obj, apilink, is_attribute=True)
-            elif isinstance(obj, property) and obj.fget is not None:
-                p = property(
-                    obj.fget,
-                    obj.fset,
-                    obj.fdel,
-                    _make_doc(parent_obj, apilink, is_attribute=True),
-                )
-                setattr(cls, attr, p)
-        return cls
+            _replace_doc(parent, cls_or_func, overwrite_existing, apilink)
+
+        if not isinstance(cls_or_func, types.FunctionType):
+            for base in cls_or_func.__bases__:
+                if base is object:
+                    continue
+                for attr, obj in base.__dict__.items():
+                    parent_obj = getattr(parent, attr, None)
+                    if (
+                        parent_obj in excluded
+                        or not _documentable_obj(parent_obj)
+                        or not _documentable_obj(obj)
+                    ):
+                        continue
+
+                    _replace_doc(
+                        parent_obj,
+                        obj,
+                        overwrite_existing,
+                        apilink,
+                        parent_cls=cls_or_func,
+                        attr_name=attr,
+                    )
+
+        return cls_or_func
 
     return decorator
 
