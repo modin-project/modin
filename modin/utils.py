@@ -22,7 +22,7 @@ PANDAS_API_URL_TEMPLATE = f"https://pandas.pydata.org/pandas-docs/version/{panda
 
 if DocstringUrlTestMode.get():
     # a list which contains all generated urls so they could be checked for being valid
-    _GENERATED_URLS = []
+    _GENERATED_URLS = set()
 
 
 def _replace_doc(
@@ -76,7 +76,7 @@ def _replace_doc(
             token = apilink
         url = PANDAS_API_URL_TEMPLATE.format(token)
         if DocstringUrlTestMode.get():
-            _GENERATED_URLS.append(url)
+            _GENERATED_URLS.add(url)
         doc += f"\n\nSee `Pandas API documentation <{url}>`_ for more."
 
     if parent_cls and isinstance(target_obj, property):

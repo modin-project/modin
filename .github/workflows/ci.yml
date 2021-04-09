@@ -94,6 +94,9 @@ jobs:
       - name: Backends Api tests
         shell: bash -l {0}
         run: python -m pytest modin/test/test_backends_api.py
+      - name: Docstring URL validity check
+        shell: bash -l {0}
+        run: MODIN_DOCSTRING_URL_TEST=yes python -m pytest modin/test/test_docstring_urls.py
 
   test-headers:
     runs-on: ubuntu-latest
