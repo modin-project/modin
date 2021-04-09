@@ -71,17 +71,14 @@ def numpydoc_validate(path):
 
     print(f"NUMPYDOC OUTPUT FOR {path} - CAN BE EMPTY")
     exit_status = 0
-    # Validate module
-    if validate_object(module_name):
-        exit_status = 1
-    # Validate functions
-    if any(validate_object(f"{module_name}.{x.name}") for x in functions):
-        exit_status = 1
-    # Validate classes
-    if any(validate_object(f"{module_name}.{x.name}") for x in classes):
-        exit_status = 1
-    # Validate class' methods
-    if any(validate_object(x) for x in methods):
+    # numpydoc docstrings validation
+    # docstrings are taken dynamically
+    if (
+        validate_object(module_name)
+        or any(validate_object(f"{module_name}.{x.name}") for x in functions)
+        or any(validate_object(f"{module_name}.{x.name}") for x in classes)
+        or any(validate_object(x) for x in methods)
+    ):
         exit_status = 1
     return exit_status
 
