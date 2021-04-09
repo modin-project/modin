@@ -295,6 +295,13 @@ class BenchmarkMode(EnvironmentVariable, type=bool):
         super().put(value)
 
 
+class DocstringUrlTestMode(EnvironmentVariable, type=bool):
+    """Controls testing URLs in docstrings."""
+
+    varname = "MODIN_DOCSTRING_URL_TEST"
+    default = False
+
+
 class PersistentPickle(EnvironmentVariable, type=bool):
     """
     When set to off, it allows faster serialization which is only

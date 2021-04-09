@@ -14,14 +14,66 @@
 import pandas
 import numpy as np
 
-from modin.config import Engine, Backend, IsExperimental
+from modin.config import Engine, Backend, IsExperimental, DocstringUrlTestMode
+
+PANDAS_API_URL_TEMPLATE = f"https://pandas.pydata.org/pandas-docs/version/{pandas.__version__}/reference/api/{{}}.html"
+
+if DocstringUrlTestMode.get():
+    # a list which contains all generated urls so they could be checked for being valid
+    _GENERATED_URLS = []
+
+def _make_doc(source_obj, apilink, is_attribute):
+    """Makes docstring from a source object.
+
+    Parameters
+    ----------
+    source_obj : object
+        Any object from which to take docstring from.
+    apilink : str
+        If non-empty, insert the link to Pandas API documentation.
+        Should be the prefix part in the URL template, e.g. "pandas.DataFrame".
+    is_attribute : bool
+        `True` if `source_obj` is some object's attribute, in which case its URL
+        gets a suffix from `source_obj` name.
+
+    Returns
+    -------
+    str
+        Docstring from `source_obj` with added Pandas API URL link if apilink is non-empty
+    """
+    doc = source_obj.__doc__
+
+    if doc.strip() and apilink:
+        token = f"{apilink}.{source_obj.__name__}" if is_attribute else apilink
+        url = PANDAS_API_URL_TEMPLATE.format(token)
+        if DocstringUrlTestMode.get():
+            _GENERATED_URLS.append(url)
+        doc += f"""
+
+See `Pandas API documentation <{url}>`_ for more.
+"""
+
+    return doc
 
 
-def _inherit_func_docstring(source_func):
-    """Define `func` docstring from `source_func`."""
+def _inherit_func_docstring(source_func, apilink=None):
+    """Define `func` docstring from `source_func`.
+
+    Parameters
+    ----------
+    source_func : callable
+        Source function from which to take the docstring
+    apilink : str, optional
+        If non-empty, add link to Pandas API documentation
+
+    Returns
+    -------
+    callable
+        The decorator which adds docstring to target function
+    """
 
     def decorator(func):
-        func.__doc__ = source_func.__doc__
+        func.__doc__ = _make_doc(source_func, apilink, is_attribute=False)
         return func
 
     return decorator
@@ -45,8 +97,7 @@ def _inherit_docstrings(parent, excluded=[], overwrite_existing=False, apilink=N
             the decorated class
         apilink : str, default: None
             If non-empty, insert the link to Pandas API documentation.
-            Could be magic value `'auto'` in which case the link would be auto-generated
-            based on parent class using some heuristics.
+            Should be the prefix part in the URL template, e.g. "pandas.DataFrame".
 
     Returns
     -------
@@ -54,29 +105,28 @@ def _inherit_docstrings(parent, excluded=[], overwrite_existing=False, apilink=N
         decorator which replaces the decorated class' documentation with parent's documentation
     """
 
-    def _make_doc(pandas_obj):
-        """Makes docstring from a parent, Pandas object.
-
-        Adds API link if required, can generate it in 'auto' mode"""
-        return pandas_obj.__doc__
-
     def decorator(cls):
         if parent not in excluded:
             if overwrite_existing or not getattr(cls, "__doc__", ""):
-                cls.__doc__ = _make_doc(parent)
+                cls.__doc__ = _make_doc(parent, apilink, is_attribute=False)
         for attr, obj in cls.__dict__.items():
             parent_obj = getattr(parent, attr, None)
-            if parent_obj in excluded or (
-                not callable(parent_obj) and not isinstance(parent_obj, property)
+            if (
+                parent_obj in excluded
+                or (not callable(parent_obj) and not isinstance(parent_obj, property))
+                or not getattr(parent_obj, "__doc__", "")
+                or (not overwrite_existing and getattr(obj, "__doc__", ""))
             ):
                 continue
-            if not overwrite_existing and getattr(obj, "__doc__", ""):
-                # do not overwrite existing docstring unless allowed
-                continue
             if callable(obj):
-                obj.__doc__ = _make_doc(parent_obj)
+                obj.__doc__ = _make_doc(parent_obj, apilink, is_attribute=True)
             elif isinstance(obj, property) and obj.fget is not None:
-                p = property(obj.fget, obj.fset, obj.fdel, _make_doc(parent_obj))
+                p = property(
+                    obj.fget,
+                    obj.fset,
+                    obj.fdel,
+                    _make_doc(parent_obj, apilink, is_attribute=True),
+                )
                 setattr(cls, attr, p)
         return cls
 

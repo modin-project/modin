@@ -57,7 +57,7 @@ from .groupby import DataFrameGroupBy
 from .accessor import CachedAccessor, SparseFrameAccessor
 
 
-@_inherit_docstrings(pandas.DataFrame, excluded=[pandas.DataFrame.__init__])
+@_inherit_docstrings(pandas.DataFrame, apilink="pandas.DataFrame")
 class DataFrame(BasePandasDataset):
     _pandas_class = pandas.DataFrame
 
