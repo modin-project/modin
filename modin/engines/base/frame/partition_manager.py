@@ -706,7 +706,7 @@ class BaseFrameManager(ABC):
         ----------
         df : pandas.DataFrame
             pandas.DataFrame.
-        return_dims : boolean, optional. Default is False
+        return_dims : boolean, default False
             If it's True, return as (np.ndarray, row_lengths, col_widths),
             else np.ndarray.
 
@@ -787,7 +787,7 @@ class BaseFrameManager(ABC):
         ----------
         at : Arrow Table
             Arrow Table.
-        return_dims : boolean, optional. Default is False
+        return_dims : boolean, default False
             If it's True, return as (np.ndarray, row_lengths, col_widths),
             else np.ndarray.
 
@@ -808,7 +808,7 @@ class BaseFrameManager(ABC):
             Axis to extract the labels over.
         partitions : np.ndarray
             NumPy array with BaseFramePartition's.
-        index_func : callable, optional. Default is None
+        index_func : callable, default None
             The function to be used to extract the indices.
 
         Returns
@@ -912,7 +912,7 @@ class BaseFrameManager(ABC):
             The function to apply to these indices of partitions.
         indices : dict
             The indices to apply the function to.
-        keep_remaining : boolean, optional. Default is False
+        keep_remaining : boolean, default False
             Whether or not to keep the other partitions. Some operations
             may want to drop the remaining partitions and keep
             only the results.
@@ -1025,7 +1025,7 @@ class BaseFrameManager(ABC):
             The function to apply.
         indices : list-like
             The global indices to apply the func to.
-        keep_remaining : boolean, optional. Default is False
+        keep_remaining : boolean, default False
             Whether or not to keep the other partitions.
             Some operations may want to drop the remaining partitions and
             keep only the results.
@@ -1144,7 +1144,7 @@ class BaseFrameManager(ABC):
             List of row partitions.
         col_partitions_list : list
             List of column partitions.
-        item_to_distribute : optional
+        item_to_distribute : item, default None
             The item to split up so it can be applied over both axes.
 
         Returns

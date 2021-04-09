@@ -42,13 +42,13 @@ class BasePandasFrame(object):
         The index for the dataframe. Converts to a pandas.Index.
     columns : sequence
         The columns object for the dataframe. Converts to a pandas.Index.
-    row_lengths : list, optional. Default is None
+    row_lengths : list, default None
         The length of each partition in the rows. The "height" of
         each of the block partitions. Is computed if not provided.
-    column_widths : list, optional. Default is None
+    column_widths : list, default None
         The width of each partition in the columns. The "width" of
         each of the block partitions. Is computed if not provided.
-    dtypes : pandas.Series, optional. Default is None
+    dtypes : pandas.Series, default None
         The data types for the dataframe columns.
     """
 
@@ -267,7 +267,7 @@ class BasePandasFrame(object):
         ----------
         axis : int
             Axis to compute labels along.
-        partitions : np.ndarray, optional. Default is None
+        partitions : np.ndarray, default None
             A 2D numpy array of partitions from which labels will be grabbed.
             If no specified, partitions will be considered as `self._partitions`.
 
@@ -312,7 +312,7 @@ class BasePandasFrame(object):
 
         Parameters
         ----------
-        axis : int, optional. Default is None
+        axis : int, default None
             The axis to apply to. If it's None applies to both axes.
         """
         self._filter_empties()
@@ -398,13 +398,13 @@ class BasePandasFrame(object):
 
         Parameters
         ----------
-        row_indices : list of hashable, optional. Default is None
+        row_indices : list of hashable, default None
             The row labels to extract.
-        row_numeric_idx : list of int, optional. Default is None
+        row_numeric_idx : list of int, default None
             The row indices to extract.
-        col_indices : list of hashable, optional. Default is None
+        col_indices : list of hashable, default None
             The column labels to extract.
-        col_numeric_idx : list of int, optional. Default is None
+        col_numeric_idx : list of int, default None
             The column indices to extract.
 
         Returns
@@ -672,10 +672,10 @@ class BasePandasFrame(object):
 
         Parameters
         ----------
-        row_numeric_idx : list of int, optional. Default is None
+        row_numeric_idx : list of int, default None
             The ordered list of new row orders such that each position within the list
             indicates the new position.
-        col_numeric_idx : list of int, optional. Default is None
+        col_numeric_idx : list of int, default None
             The ordered list of new column orders such that each position within the
             list indicates the new position.
 
