@@ -11,9 +11,10 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-"""This module houses `SQLDispatcher` class, that is used for
-reading SQL queries or database tables.
-
+"""This module houses `SQLDispatcher` class, that contains utils for handling SQL
+ queries or database tables. `SQLDispatcher` inherits util functions for handling files
+ from `FileDispatcher` class and can be used as base class for dipatchers of
+ SQL queries.
 """
 
 import math
@@ -26,25 +27,29 @@ from modin.config import NPartitions
 
 
 class SQLDispatcher(FileDispatcher):
+    """Class handles utils for reading SQL queries or database tables. Inherits
+    some common for files util functions from `FileDispatcher` class.
+    """
+
     @classmethod
     def _read(cls, sql, con, index_col=None, **kwargs):
         """Reads a SQL query or database table into a DataFrame.
 
         Parameters
         ----------
-        sql: string or SQLAlchemy Selectable (select or text object)
+        sql : string or SQLAlchemy Selectable (select or text object)
             SQL query to be executed or a table name.
-        con: SQLAlchemy connectable, str, or sqlite3 connection
+        con : SQLAlchemy connectable, str, or sqlite3 connection
             Connection object to database.
-        index_col: str or list of str
+        index_col : str or list of str, optional
             Column(s) to set as index(MultiIndex).
-        kwargs: dict
-            Pass into pandas.read_sql function.
+        **kwargs : dict
+            Parameters to pass into pandas.read_sql function.
 
         Returns
         -------
+        BaseQueryCompiler
             Query compiler with imported data for further processing.
-
         """
         try:
             import psycopg2 as pg

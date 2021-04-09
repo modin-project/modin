@@ -13,7 +13,6 @@
 
 """This module houses `FWFDispatcher` class, that is used for
 reading of tables with fixed-width formatted lines.
-
 """
 
 from modin.engines.base.io.text.text_file_dispatcher import TextFileDispatcher
@@ -29,27 +28,25 @@ from modin.config import NPartitions
 class FWFDispatcher(TextFileDispatcher):
     """Class handles utils for reading of tables with fixed-width formatted lines.
     Inherits some common for text files util functions from `TextFileDispatcher` class.
-
     """
 
     @classmethod
     def read(cls, filepath_or_buffer, **kwargs):
-        """Read data from `filepath_or_buffer` according to the passed read_fwf `kwargs`
+        """Read data from `filepath_or_buffer` according to the passed `read_fwf` `kwargs`
         parameters. This function performs parameters preprocessing, data file splitting,
         tasks launching and results postprocessing.
 
         Parameters
         ----------
-        filepath_or_buffer: str, path object or file-like object
-            `filepath_or_buffer` parameter of read_fwf function.
-        kwargs: dict
-            Parameters of read_fwf function.
+        filepath_or_buffer : str, path object or file-like object
+            `filepath_or_buffer` parameter of `read_fwf` function.
+        **kwargs : dict
+            Parameters of `read_fwf` function.
 
         Returns
         -------
-        new_query_compiler:
+        new_query_compiler : BaseQueryCompiler
             Query compiler with imported data for further processing.
-
         """
         filepath_or_buffer = cls.get_path_or_buffer(filepath_or_buffer)
         if isinstance(filepath_or_buffer, str):

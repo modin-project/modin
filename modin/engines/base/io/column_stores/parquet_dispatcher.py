@@ -13,7 +13,6 @@
 
 """This module houses `ParquetDispatcher` class, that is used for
 reading `.parquet` files.
-
 """
 
 import os
@@ -25,24 +24,28 @@ from modin.error_message import ErrorMessage
 
 
 class ParquetDispatcher(ColumnStoreDispatcher):
+    """Class handles utils for reading `.parquet`. Inherits some common for
+    columnar store files util functions from `ColumnStoreDispatcher` class.
+    """
+
     @classmethod
     def _read(cls, path, engine, columns, **kwargs):
         """Load a parquet object from the file path, returning a query compiler.
 
         Parameters
         ----------
-        path: str, path object or file-like object
+        path : str, path object or file-like object
             The filepath of the parquet file in local filesystem or hdfs.
-        engine: str
+        engine : str
             Parquet library to use (only 'pyarrow' is supported for now),
-        columns: list
+        columns : list
             If not None, only these columns will be read from the file.
-        kwargs: dict
+        **kwargs : dict
             Keyword arguments.
 
         Returns
         -------
-        PandasQueryCompiler
+        BaseQueryCompiler
             A new Query Compiler.
 
         Notes

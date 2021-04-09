@@ -248,8 +248,9 @@ documentation page on :doc:`contributing </contributing>`.
 
 Modin Implementation Details
 -------------------------------------
-Modin modules layout is shown below, for more detailed modules description please follow
-attached inside directory tree links.
+Modin modules layout is shown below. To get deep into Modin internal implementation 
+details just pick module you are interested in (only some of the modules are covered 
+by documentation for now, the rest will be soon...).
 
 .. parsed-literal::
    ├───.github

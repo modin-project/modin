@@ -13,7 +13,6 @@
 
 """This module houses `HDFDispatcher` class, that is used for
 reading hdf data.
-
 """
 
 import pandas
@@ -25,6 +24,10 @@ from modin.error_message import ErrorMessage
 
 
 class HDFDispatcher(ColumnStoreDispatcher):  # pragma: no cover
+    """Class handles utils for reading hdf data. Inherits some common for
+    columnar store files util functions from `ColumnStoreDispatcher` class.
+    """
+
     @classmethod
     def _validate_hdf_format(cls, path_or_buf):
         """Validate `path_or_buf` by checking datasets number and then return
@@ -37,9 +40,8 @@ class HDFDispatcher(ColumnStoreDispatcher):  # pragma: no cover
 
         Returns
         -------
-        str:
+        str
             `table_type` parameter of store group attribute.
-
         """
         s = pandas.HDFStore(path_or_buf)
         groups = s.groups()
@@ -56,15 +58,15 @@ class HDFDispatcher(ColumnStoreDispatcher):  # pragma: no cover
 
         Parameters
         ----------
-        path_or_buf : string, buffer or path object
+        path_or_buf : str, buffer or path object
             Path to the file to open, or an open :class:`pandas.HDFStore` object.
-        kwargs : dict
+        **kwargs : dict
             Pass into pandas.read_hdf function.
 
         Returns
         -------
+        BaseQueryCompiler
             Query compiler with imported data for further processing.
-
         """
         if cls._validate_hdf_format(path_or_buf=path_or_buf) is None:
             ErrorMessage.default_to_pandas(

@@ -16,10 +16,10 @@ Call from `read_csv` function of `PandasOnRayIO` class is forwarded to the `_rea
 Data File Splitting Mechanism
 '''''''''''''''''''''''''''''
 
-Modin file splitting mechanism differs according to the data format type:
+Modin file splitting mechanism differs depending on the data format type:
 
 * text format type - file is splitted into bytes according user specified needs. In the simplest case, when no row related parameters (such as `nrows` or `skiprows`) are passed, data chunks limits (start and end bytes) are derived by just roughly dividing the file size by the number of partitions (chunks can slightly differ between each other because usually end byte may occurs inside a line and in that case the last byte of the line should be used instead of initial value). In other cases the same splitting into bytes is used, but chunks sizes are defined according to the number of lines that each partition should contain.
-* columnar store type - chunks are composed from equally divided file columns.
+* columnar store type - file is splitted by even distribution of columns that should be read between chunks.
 * SQL type - chunking is obtained by wrapping initial SQL query into query that specifies initial row offset and number of rows in the chunk.
 
 After file splitting is complete, chunks data is passed to the parser functions (`PandasCSVParser.parse` for `read_csv` function with Pandas backend) for further processing on each worker.

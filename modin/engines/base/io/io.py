@@ -11,32 +11,16 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-"""This module houses `BaseIO` class, that contains basic utils
-and default implementation of IO functions.
-
+"""This module houses `BaseIO` class - base class for IO classes, that stores IO
+ functions.
 """
 
 import pandas
-from pandas.util._decorators import Appender
+from pandas.util._decorators import Appender as DocstringAppender
 from collections import OrderedDict
 from modin.error_message import ErrorMessage
 from modin.backends.base.query_compiler import BaseQueryCompiler
 from typing import Optional
-
-_doc_returns_qc = """BaseQueryCompiler:
-    QueryCompiler with read data.
-
-"""
-
-_doc_returns_qc_or_parser = """BaseQueryCompiler or TextParser:
-    QueryCompiler or TextParser with read data.
-
-"""
-
-_doc_returns_excel = """BaseQueryCompiler, dict or OrderedDict:
-    QueryCompiler or OrderedDict/dict with read data.
-
-"""
 
 _doc_default_io_method = """{summary} using Pandas.
 For parameters description please refer to Pandas API.
@@ -45,6 +29,12 @@ Returns
 -------
 {returns}
 """
+
+_doc_returns_qc = """BaseQueryCompiler :
+    QueryCompiler with read data."""
+
+_doc_returns_qc_or_parser = """{BaseQueryCompiler, TextParser} :
+    QueryCompiler or TextParser with read data."""
 
 
 class BaseIO(object):
@@ -55,45 +45,52 @@ class BaseIO(object):
 
     @classmethod
     def from_non_pandas(cls, *args, **kwargs):
-        """Improve non-pandas object to an advanced and superior Modin DataFrame."""
+        """Improve non-pandas object to an advanced Modin query compiler.
+        (Currently returns nothing).
+
+        Parameters
+        ----------
+        *args : iterable
+            Positional arguments to be passed into `func`.
+        **kwargs : dict
+            Keyword arguments to be passed into `func`.
+        """
         return None
 
     @classmethod
     def from_pandas(cls, df):
-        """Improve simple Pandas DataFrame to an advanced and superior Modin DataFrame.
+        """Improve simple Pandas DataFrame to an advanced Modin query compiler.
 
         Parameters
         ----------
-        df: pandas.DataFrame
+        df : pandas.DataFrame
             The pandas DataFrame to convert from.
 
         Returns
         -------
-        BaseQueryCompiler:
+        BaseQueryCompiler
             QueryCompiler containing data from the Pandas DataFrame.
-
         """
         return cls.query_compiler_cls.from_pandas(df, cls.frame_cls)
 
     @classmethod
     def from_arrow(cls, at):
-        """Improve simple Arrow Table to an advanced and superior Modin DataFrame.
+        """Improve simple Arrow Table to an advanced Modin query compiler.
 
         Parameters
         ----------
-        at: Arrow Table
+        at : Arrow Table
             The Arrow Table to convert from.
 
         Returns
         -------
-        BaseQueryCompiler:
+        BaseQueryCompiler
             QueryCompiler containing data from the Arrow Table.
-
         """
         return cls.query_compiler_cls.from_arrow(at, cls.frame_cls)
 
     @classmethod
-    @Appender(
+    @DocstringAppender(
         _doc_default_io_method.format(
             summary="Load a parquet object from the file path, returning a query compiler",
             returns=_doc_returns_qc,
@@ -106,7 +103,7 @@ class BaseIO(object):
         )
 
     @classmethod
-    @Appender(
+    @DocstringAppender(
         _doc_default_io_method.format(
             summary="Read a comma-separated values (CSV) file into query compiler",
             returns=_doc_returns_qc_or_parser,
@@ -226,14 +223,13 @@ class BaseIO(object):
 
         Parameters
         ----------
-        kwargs:
+        **kwargs:
             `read_csv` function kwargs including `filepath_or_buffer` parameter.
 
         Returns
         -------
-        BaseQueryCompiler:
+        BaseQueryCompiler
             QueryCompiler with read data.
-
         """
         pd_obj = pandas.read_csv(**kwargs)
         if isinstance(pd_obj, pandas.DataFrame):
@@ -248,7 +244,7 @@ class BaseIO(object):
         return pd_obj
 
     @classmethod
-    @Appender(
+    @DocstringAppender(
         _doc_default_io_method.format(
             summary="Convert a JSON string to query compiler",
             returns=_doc_returns_qc,
@@ -295,7 +291,7 @@ class BaseIO(object):
         return cls.from_pandas(pandas.read_json(**kwargs))
 
     @classmethod
-    @Appender(
+    @DocstringAppender(
         _doc_default_io_method.format(
             summary="Load data from Google BigQuery into query compiler",
             returns=_doc_returns_qc,
@@ -341,7 +337,7 @@ class BaseIO(object):
         )
 
     @classmethod
-    @Appender(
+    @DocstringAppender(
         _doc_default_io_method.format(
             summary="Read HTML tables into query compiler",
             returns=_doc_returns_qc,
@@ -386,7 +382,7 @@ class BaseIO(object):
         return cls.from_pandas(pandas.read_html(**kwargs)[0])
 
     @classmethod
-    @Appender(
+    @DocstringAppender(
         _doc_default_io_method.format(
             summary="Read text from clipboard into query compiler",
             returns=_doc_returns_qc,
@@ -397,10 +393,11 @@ class BaseIO(object):
         return cls.from_pandas(pandas.read_clipboard(sep=sep, **kwargs))
 
     @classmethod
-    @Appender(
+    @DocstringAppender(
         _doc_default_io_method.format(
             summary="Read an Excel file into query compiler",
-            returns=_doc_returns_excel,
+            returns="BaseQueryCompiler or dict/OrderedDict :\n"
+            "    QueryCompiler or OrderedDict/dict with read data.",
         )
     )
     def read_excel(
@@ -473,7 +470,7 @@ class BaseIO(object):
             return cls.from_pandas(intermediate)
 
     @classmethod
-    @Appender(
+    @DocstringAppender(
         _doc_default_io_method.format(
             summary="Read data from hdf store into query compiler",
             returns=_doc_returns_qc,
@@ -511,7 +508,7 @@ class BaseIO(object):
         )
 
     @classmethod
-    @Appender(
+    @DocstringAppender(
         _doc_default_io_method.format(
             summary="Load a feather-format object from the file path into query compiler",
             returns=_doc_returns_qc,
@@ -529,7 +526,7 @@ class BaseIO(object):
         )
 
     @classmethod
-    @Appender(
+    @DocstringAppender(
         _doc_default_io_method.format(
             summary="Read Stata file into query compiler",
             returns=_doc_returns_qc,
@@ -566,7 +563,7 @@ class BaseIO(object):
         return cls.from_pandas(pandas.read_stata(**kwargs))
 
     @classmethod
-    @Appender(
+    @DocstringAppender(
         _doc_default_io_method.format(
             summary="Read SAS files stored as either XPORT or SAS7BDAT format files\ninto query compiler",
             returns=_doc_returns_qc,
@@ -594,7 +591,7 @@ class BaseIO(object):
         )
 
     @classmethod
-    @Appender(
+    @DocstringAppender(
         _doc_default_io_method.format(
             summary="Load pickled pandas object (or any object) from file into query compiler",
             returns=_doc_returns_qc,
@@ -611,7 +608,7 @@ class BaseIO(object):
         )
 
     @classmethod
-    @Appender(
+    @DocstringAppender(
         _doc_default_io_method.format(
             summary="Read SQL query or database table into query compiler",
             returns=_doc_returns_qc,
@@ -643,7 +640,7 @@ class BaseIO(object):
         )
 
     @classmethod
-    @Appender(
+    @DocstringAppender(
         _doc_default_io_method.format(
             summary="Read a table of fixed-width formatted lines into query compiler",
             returns=_doc_returns_qc_or_parser,
@@ -672,7 +669,7 @@ class BaseIO(object):
         return pd_obj
 
     @classmethod
-    @Appender(
+    @DocstringAppender(
         _doc_default_io_method.format(
             summary="Read SQL database table into query compiler",
             returns=_doc_returns_qc,
@@ -704,7 +701,7 @@ class BaseIO(object):
         )
 
     @classmethod
-    @Appender(
+    @DocstringAppender(
         _doc_default_io_method.format(
             summary="Read SQL query into query compiler",
             returns=_doc_returns_qc,
@@ -734,7 +731,7 @@ class BaseIO(object):
         )
 
     @classmethod
-    @Appender(
+    @DocstringAppender(
         _doc_default_io_method.format(
             summary="Load an SPSS file from the file path, returning a query compiler",
             returns=_doc_returns_qc,
@@ -760,7 +757,6 @@ class BaseIO(object):
     ):
         """Write records stored in a DataFrame to a SQL database using Pandas.
         For parameters description please refer to Pandas API.
-
         """
         ErrorMessage.default_to_pandas("`to_sql`")
         df = qc.to_pandas()
@@ -780,7 +776,6 @@ class BaseIO(object):
     def to_pickle(cls, obj, path, compression="infer", protocol=4):
         """Pickle (serialize) object to file using Pandas.
         For parameters description please refer to Pandas API.
-
         """
         if protocol == 4:
             protocol = -1
@@ -798,7 +793,6 @@ class BaseIO(object):
     def to_csv(cls, obj, **kwargs):
         """Write object to a comma-separated values (CSV) file using Pandas.
         For parameters description please refer to Pandas API.
-
         """
         ErrorMessage.default_to_pandas("`to_csv`")
         if isinstance(obj, BaseQueryCompiler):

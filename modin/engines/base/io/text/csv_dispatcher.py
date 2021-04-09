@@ -13,7 +13,6 @@
 
 """This module houses `CSVDispatcher` class, that is used for
 reading `.csv` files.
-
 """
 
 from modin.engines.base.io.text.text_file_dispatcher import (
@@ -37,27 +36,25 @@ IndexColType = Union[int, str, bool, Sequence[int], Sequence[str], None]
 class CSVDispatcher(TextFileDispatcher):
     """Class handles utils for reading `.csv` files. Inherits some common for text
     files util functions from `TextFileDispatcher` class.
-
     """
 
     @classmethod
     def _read(cls, filepath_or_buffer, **kwargs):
         """Read data from `filepath_or_buffer` according to `kwargs` parameters passed to
-        underlying read_csv. This function performs parameters preprocessing, data file splitting,
+        underlying `read_csv`. This function performs parameters preprocessing, data file splitting,
         tasks launching and results postprocessing.
 
         Parameters
         ----------
-        filepath_or_buffer: str, path object or file-like object
-            `filepath_or_buffer` parameter of read_csv function.
-        kwargs: ReadCsvKwargsType
-            Parameters of read_csv function.
+        filepath_or_buffer : str, path object or file-like object
+            `filepath_or_buffer` parameter of `read_csv` function.
+        **kwargs : ReadCsvKwargsType
+            Parameters of `read_csv` function.
 
         Returns
         -------
-        new_query_compiler:
+        new_query_compiler : BaseQueryCompiler
             Query compiler with imported data for further processing.
-
         """
         filepath_or_buffer_md = (
             cls.get_path(filepath_or_buffer)
@@ -188,18 +185,17 @@ class CSVDispatcher(TextFileDispatcher):
 
         Parameters
         ----------
-        filepath_or_buffer: str, path object or file-like object
+        filepath_or_buffer : str, path object or file-like object
             `filepath_or_buffer` parameter of read_csv function.
-        read_csv_kwargs: ReadCsvKwargsType
+        read_csv_kwargs : ReadCsvKwargsType
             Parameters of read_csv function.
-        compression_infered: str
+        compression_infered : str
             Inferred `compression` parameter of read_csv function.
 
         Returns
         -------
-        bool:
+        bool :
             Whether passed parameters are supported or not.
-
         """
         if isinstance(filepath_or_buffer, str):
             if not cls.file_exists(filepath_or_buffer):
@@ -238,21 +234,20 @@ class CSVDispatcher(TextFileDispatcher):
 
         Parameters
         ----------
-        index_ids: list
+        index_ids : list
             Array with references to the partitions index objects.
-        index_col: IndexColType
+        index_col : IndexColType
             index_col parameter of read_csv function.
-        index_name: str
+        index_name : str
             Name that should be assigned to the index if `index_col`
             is not provided.
 
         Returns
         -------
-        new_index: IndexColType
+        new_index : IndexColType
             Index that should be passed to the new_frame constructor.
-        row_lengths: list
+        row_lengths : list
             Partitions rows lengths.
-
         """
         if index_col is None:
             row_lengths = cls.materialize(index_ids)
@@ -281,27 +276,26 @@ class CSVDispatcher(TextFileDispatcher):
 
         Parameters
         ----------
-        partition_ids: list
+        partition_ids : list
             array with references to the partitions data.
-        index_ids: list
+        index_ids : list
             array with references to the partitions index objects.
-        dtypes_ids: list
+        dtypes_ids : list
             array with references to the partitions dtypes objects.
-        index_col_md: IndexColType
+        index_col_md : IndexColType
             `index_col` parameter passed to the workers.
-        index_name: str
+        index_name : str
             Name that should be assigned to the index if `index_col`
             is not provided.
-        column_widths: list
+        column_widths : list
             Number of columns in each partition.
-        column_names: ColumnNamesTypes
+        column_names : ColumnNamesTypes
             Array with columns names.
 
         Returns
         -------
-        new_query_compiler:
+        new_query_compiler : BaseQueryCompiler
             New query compiler, created from `new_frame`.
-
         """
         new_index, row_lengths = cls._define_index(index_ids, index_col_md, index_name)
         # Compute dtypes by getting collecting and combining all of the partitions. The

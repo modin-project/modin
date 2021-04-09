@@ -11,9 +11,10 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-"""This module houses `ColumnStoreDispatcher` class, that is used for
-reading columnwise storing files formats.
-
+"""This module houses `ColumnStoreDispatcher` class, that contains utils for handling
+ columnar store format files. `ColumnStoreDispatcher` inherits util functions for handling
+ files from `FileDispatcher` class and can be used as base class for dipatchers of
+ specific columnar store formats.
 """
 
 import numpy as np
@@ -25,26 +26,28 @@ from modin.config import NPartitions
 
 
 class ColumnStoreDispatcher(FileDispatcher):
+    """Class handles utils for reading columnar store format files. Inherits
+    some util functions for processing files from `FileDispatcher` class.
+    """
+
     @classmethod
     def call_deploy(cls, fname, col_partitions, **kwargs):
         """Deploy remote tasks to the workers with passed parameters.
 
         Parameters
         ----------
-        fname: str, path object or file-like object
+        fname : str, path object or file-like object
             Name of the file to read.
-        col_partitions: list
+        col_partitions : list
             List of arrays with columns names that should be read
             by each partition.
-
-        kwargs:
-            Parameters of read_* function.
+        **kwargs : dict
+            Parameters of deploying read_* function.
 
         Returns
         -------
-        np.array:
+        np.array
             Array with references to the task deploy result for each partition.
-
         """
         return np.array(
             [
@@ -70,19 +73,18 @@ class ColumnStoreDispatcher(FileDispatcher):
 
         Parameters
         ----------
-        partition_ids: list
-                array with references to the partitions data.
-        row_lengths: list
-                Partitions rows lengths.
-        column_widths: list
-                Number of columns in each partition.
+        partition_ids : list
+            array with references to the partitions data.
+        row_lengths : list
+            Partitions rows lengths.
+        column_widths : list
+            Number of columns in each partition.
 
         Returns
         -------
-        np.array:
+        np.array
             array with shape equals to the shape of `partition_ids` and
             filed with partition objects.
-
         """
         return np.array(
             [
@@ -105,16 +107,15 @@ class ColumnStoreDispatcher(FileDispatcher):
 
         Parameters
         ----------
-        partition_ids: list
+        partition_ids : list
             array with references to the partitions data.
 
         Returns
         -------
-        index: pandas.Index
+        index : pandas.Index
             Index of resulting Modin DataFrame.
-        row_lengths: list
+        row_lengths : list
             List with lengths of index chunks.
-
         """
         num_partitions = NPartitions.get()
         index_len = cls.materialize(partition_ids[-2][0])
@@ -143,17 +144,16 @@ class ColumnStoreDispatcher(FileDispatcher):
 
         Parameters
         ----------
-        columns: list
+        columns : list
             List of columns that should be read from file.
 
         Returns
         -------
-        col_partitions: list
+        col_partitions : list
             List of lists with columns for reading by workers.
-        column_widths: list
+        column_widths : list
             List with lengths of `col_partitions` subarrays
             (number of columns that should be read by workers).
-
         """
         num_partitions = NPartitions.get()
         column_splits = (
@@ -176,16 +176,15 @@ class ColumnStoreDispatcher(FileDispatcher):
 
         Parameters
         ----------
-        partition_ids: list
+        partition_ids : list
             array with references to the partitions data.
-        columns: list
+        columns : list
             List of columns that should be read from file.
 
         Returns
         -------
-        dtypes: pandas.Series
+        dtypes : pandas.Series
             Series with dtypes for columns.
-
         """
         dtypes = pandas.concat(cls.materialize(list(partition_ids)), axis=0)
         dtypes.index = columns
@@ -198,18 +197,17 @@ class ColumnStoreDispatcher(FileDispatcher):
 
         Parameters
         ----------
-        path: str, path object or file-like object
+        path : str, path object or file-like object
             Path to the file to read.
-        columns: list
+        columns : list
             List of columns that should be read from file.
-        kwargs: dict
-            Parameters of read_* function.
+        **kwargs : dict
+            Parameters of deploying read_* function.
 
         Returns
         -------
-        new_query_compiler:
+        new_query_compiler : BaseQueryCompiler
             Query compiler with imported data for further processing.
-
         """
         col_partitions, column_widths = cls.build_columns(columns)
         partition_ids = cls.call_deploy(path, col_partitions, **kwargs)

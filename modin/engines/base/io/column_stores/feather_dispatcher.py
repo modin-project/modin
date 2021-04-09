@@ -13,7 +13,6 @@
 
 """This module houses `FeatherDispatcher` class, that is used for
 reading `.feather` files.
-
 """
 
 from modin.engines.base.io.column_stores.column_store_dispatcher import (
@@ -22,28 +21,34 @@ from modin.engines.base.io.column_stores.column_store_dispatcher import (
 
 
 class FeatherDispatcher(ColumnStoreDispatcher):
+    """Class handles utils for reading `.feather` files. Inherits some common for
+    columnar store files util functions from `ColumnStoreDispatcher` class.
+    """
+
     @classmethod
     def _read(cls, path, columns=None, **kwargs):
         """Read data from the file path, returning a Modin DataFrame.
-           Modin only supports pyarrow engine for now.
 
         Parameters
         ----------
-        path: str or file-like object
-            The filepath of the feather file (only local files are supported for now,
-            multi threading is set to False by default).
-        columns: array
+        path : str or file-like object
+            The filepath of the feather file.
+        columns : array-like, optional
             Columns to read from file. If not provided, all columns are read.
-        kwargs: dict
+        **kwargs : dict
             `read_feather` function kwargs.
 
         Returns
         -------
+        BaseQueryCompiler
             Query compiler with imported data for further processing.
 
-        Notes:
-            pyarrow feather is used. Please refer to the documentation here
-            https://arrow.apache.org/docs/python/api.html#feather-format
+        Notes
+        -----
+        `pyarrow` engine and local files only are supported for now,
+        multi threading is set to False by default.
+        pyarrow feather is used. Please refer to the documentation here
+        https://arrow.apache.org/docs/python/api.html#feather-format
         """
         if columns is None:
             from pyarrow.feather import read_feather

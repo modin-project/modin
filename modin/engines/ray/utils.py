@@ -168,7 +168,6 @@ def initialize_ray(
                 "logging_level": 100,
                 "_memory": object_store_memory,
                 "_lru_evict": True,
-                "log_to_driver": False,
             }
             from packaging import version
 

@@ -11,9 +11,9 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-"""This module houses `FileDispatcher` class, that is used for
-reading data from different kinds of files.
-
+"""This module houses `FileDispatcher` class, that can be used as abstract base class
+ for dispatchers of specific file formats. Also `FileDispatcher` can be used for files
+processing.
 """
 
 import os
@@ -25,7 +25,13 @@ NOT_IMPLEMENTED_MESSAGE = "Implement in children classes!"
 
 
 class FileDispatcher:
-    """Class handles util functions for reading data from different kinds of files."""
+    """Class handles util functions for reading data from different kinds of files.
+
+    Notes
+    -----
+    `deploy`, `parse` and `materialize` are abstract methods and should be
+    implemented in the child classes.
+    """
 
     frame_cls = None
     frame_partition_cls = None
@@ -35,13 +41,19 @@ class FileDispatcher:
     def read(cls, *args, **kwargs):
         """High-level function that calls specific for defined backend, engine and
         dispatcher class `_read` function with passed parameters and performs some
-        postprocessing work on the resulted query_compiler object.
+        postprocessing work on the resulting query_compiler object.
+
+        Parameters
+        ----------
+        *args : iterable
+            Positional arguments to be passed into `_read` function.
+        **kwargs : dict
+            Keywords arguments to be passed into `_read` function.
 
         Returns
         -------
-        query_compiler:
+        query_compiler : BaseQueryCompiler
             Query compiler with imported data for further processing.
-
         """
         query_compiler = cls._read(*args, **kwargs)
         # TODO (devin-petersohn): Make this section more general for non-pandas kernel
@@ -70,7 +82,6 @@ class FileDispatcher:
     def _read(cls, *args, **kwargs):
         """Function that performs reading the data from file, should be implemented
         in the child class.
-
         """
         raise NotImplementedError(NOT_IMPLEMENTED_MESSAGE)
 
@@ -82,7 +93,7 @@ class FileDispatcher:
 
         Parameters
         ----------
-        file_path: str
+        file_path : str
             String that represents the path to the file (paths to S3 buckets
             are also acceptable).
 
@@ -90,7 +101,6 @@ class FileDispatcher:
         -------
         str
             Updated or verified `file_path` parameter.
-
         """
         if S3_ADDRESS_REGEX.search(file_path):
             return file_path
@@ -105,19 +115,18 @@ class FileDispatcher:
 
         Parameters
         ----------
-        file_path: str
+        file_path : str
             String that represents the path to the file (paths to S3 buckets
             are also acceptable).
-        mode: str
+        mode : str, optional. Default "rb"
             String, which defines which mode file should be open.
-        compression: str
+        compression : str, optional. Default "infer"
             File compression name (acceptable values are "gzip", "bz2", "xz" and "zip").
 
         Returns
         -------
         file-like
             file-like object of the `file_path`.
-
         """
         if isinstance(file_path, str):
             match = S3_ADDRESS_REGEX.search(file_path)
@@ -175,14 +184,13 @@ class FileDispatcher:
 
         Parameters
         ----------
-        f: file-like object
-            File-like object, that should be used for size getting.
+        f : file-like object
+            File-like object, that should be used to get file size.
 
         Returns
         -------
-        int:
+        int
             File size in bytes.
-
         """
         cur_pos = f.tell()
         f.seek(0, os.SEEK_END)
@@ -196,7 +204,7 @@ class FileDispatcher:
 
         Parameters
         ----------
-        file_path: str
+        file_path : str
             String that represents the path to the file (paths to S3 buckets
             are also acceptable).
 
@@ -204,7 +212,6 @@ class FileDispatcher:
         -------
         bool
             Whether file exists or not.
-
         """
         if isinstance(file_path, str):
             match = S3_ADDRESS_REGEX.search(file_path)
@@ -227,22 +234,19 @@ class FileDispatcher:
     @classmethod
     def deploy(cls, func, args, num_returns):
         """Function for remote task deploying, should be implemented
-        in the task class (for example `RayTask`).
-
+        in the task class (for example in the `RayTask`).
         """
         raise NotImplementedError(NOT_IMPLEMENTED_MESSAGE)
 
     def parse(self, func, args, num_returns):
         """Function for files parsing on the workers processes, should be
-        implemented in the parser class (for example `PandasCSVParser`).
-
+        implemented in the parser class (for example in the `PandasCSVParser`).
         """
         raise NotImplementedError(NOT_IMPLEMENTED_MESSAGE)
 
     @classmethod
     def materialize(cls, obj_id):
         """Function for getting results from worker, should be implemented
-        in the task class (for example `RayTask`).
-
+        in the task class (for example in the `RayTask`).
         """
         raise NotImplementedError(NOT_IMPLEMENTED_MESSAGE)
