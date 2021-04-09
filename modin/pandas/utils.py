@@ -14,6 +14,7 @@
 """Implement utils for pandas component."""
 
 from pandas import MultiIndex
+from modin.utils import hashable
 
 
 def from_non_pandas(df, index, columns, dtype):
@@ -138,6 +139,29 @@ def from_modin_frame_to_mi(df, sortorder=None, names=None):
         ErrorMessage.default_to_pandas("`MultiIndex.from_frame`")
         df = df._to_pandas()
     return _original_pandas_MultiIndex_from_frame(df, sortorder, names)
+
+
+def is_label(obj, label, axis=0):
+    """
+    Check whether or not 'obj' contain column or index level with name 'label'.
+
+    Parameters
+    ----------
+    obj: DataFrame, Series or QueryCompiler
+        Object to check.
+    label: object,
+        Label name to check.
+    axis: int,
+        Axis to search name along.
+
+    Returns
+    -------
+    Boolean
+    """
+    qc = getattr(obj, "_query_compiler", obj)
+    return hashable(label) and (
+        label in qc.get_axis(axis ^ 1) or label in qc.get_index_names(axis)
+    )
 
 
 _original_pandas_MultiIndex_from_frame = MultiIndex.from_frame

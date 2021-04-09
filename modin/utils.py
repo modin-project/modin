@@ -12,6 +12,8 @@
 # governing permissions and limitations under the License.
 
 import pandas
+import numpy as np
+
 from modin.config import Engine, Backend, IsExperimental
 
 
@@ -125,6 +127,35 @@ def try_cast_to_pandas(obj, squeeze=False):
                 else getattr(pandas.Series, fn_name, obj)
             )
     return obj
+
+
+def wrap_into_list(*args, skipna=True):
+    """
+    Creates a list of passed values, if some value is a list it appends its values
+    to the result one by one instead inserting the whole list object.
+
+    Parameters
+    ----------
+    skipna: boolean,
+        Whether or not to skip nan or None values.
+
+    Returns
+    -------
+    List of passed values.
+    """
+
+    def isnan(o):
+        return o is None or (isinstance(o, float) and np.isnan(o))
+
+    res = []
+    for o in args:
+        if skipna and isnan(o):
+            continue
+        if isinstance(o, list):
+            res.extend(o)
+        else:
+            res.append(o)
+    return res
 
 
 def wrap_udf_function(func):
