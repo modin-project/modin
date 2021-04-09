@@ -45,13 +45,27 @@ jobs:
         with:
           python-version: "3.7.x"
           architecture: "x64"
-      - run: pip install pydocstyle
-      - run: pydocstyle --convention=numpy --add-ignore=D101,D102,D105 modin/pandas/dataframe.py modin/pandas/series.py modin/pandas/groupby.py modin/pandas/base.py
-      - run: pydocstyle --convention=numpy --add-ignore=D101,D103,D105 modin/pandas/io.py
-      - run: pydocstyle --convention=numpy --add-ignore=D101,D102 modin/pandas/series_utils.py
-      - run: pydocstyle --convention=numpy --add-ignore=D103 modin/pandas/general.py
-      - run: pydocstyle --convention=numpy modin/pandas/plotting.py modin/pandas/utils.py modin/pandas/iterator.py modin/pandas/indexing.py
-      - run: pydocstyle --convention=numpy --add-ignore=D100,D104 modin/engines/base/frame
+      - run: pip install pydocstyle numpydoc click
+      - run: |
+          python scripts/doc-checker.py --add-ignore=D101,D102,D105 --use-numpydoc False \
+            modin/pandas/dataframe.py modin/pandas/series.py \
+            modin/pandas/groupby.py modin/pandas/base.py
+      - run: |
+          python scripts/doc-checker.py --add-ignore=D101,D103,D105 --use-numpydoc False \
+            modin/pandas/io.py
+      - run: |
+          python scripts/doc-checker.py --add-ignore=D101,D102 --use-numpydoc False \
+            modin/pandas/series_utils.py
+      - run: |
+          python scripts/doc-checker.py --add-ignore=D103 --use-numpydoc False \
+            modin/pandas/general.py
+      - run: |
+          python scripts/doc-checker.py --use-numpydoc False \
+            modin/pandas/plotting.py modin/pandas/utils.py \
+            modin/pandas/iterator.py modin/pandas/indexing.py
+      - run: |
+          python scripts/doc-checker.py --add-ignore=D100,D104 --use-numpydoc False \
+            modin/engines/base/frame
 
   lint-flake8:
     name: lint (flake8)
