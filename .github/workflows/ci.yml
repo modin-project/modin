@@ -46,6 +46,7 @@ jobs:
           python-version: "3.7.x"
           architecture: "x64"
       - run: pip install pydocstyle numpydoc click
+      - run: pip install -e .
       - run: |
           python scripts/doc-checker.py --add-ignore=D101,D102,D105 --use-numpydoc False \
             modin/pandas/dataframe.py modin/pandas/series.py \
@@ -66,6 +67,9 @@ jobs:
       - run: |
           python scripts/doc-checker.py --add-ignore=D100,D104 --use-numpydoc False \
             modin/engines/base/frame
+      - run: |
+          python scripts/doc-checker.py --add-ignore=D101,D102 asv_bench/benchmarks \
+            asv_bench/benchmarks/io asv_bench/benchmarks/scalability
 
   lint-flake8:
     name: lint (flake8)

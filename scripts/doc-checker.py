@@ -55,7 +55,7 @@ def numpydoc_validate(path):
     # static parsing
     module = ast.parse(file_contents)
 
-    print("NUMPYDOC OUTPUT")
+    print("NUMPYDOC OUTPUT - CAN BE EMPTY")
     # Validate module
     validate_object(module_name)
 
