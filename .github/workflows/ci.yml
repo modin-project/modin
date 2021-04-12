@@ -46,7 +46,6 @@ jobs:
           python-version: "3.7.x"
           architecture: "x64"
       - run: pip install pydocstyle numpydoc click
-      - run: pip install -e .
       - run: |
           python scripts/doc-checker.py --add-ignore=D101,D102,D105 --use-numpydoc False \
             modin/pandas/dataframe.py modin/pandas/series.py \
@@ -83,7 +82,8 @@ jobs:
           python-version: "3.7.x"
           architecture: "x64"
       - run: pip install flake8 flake8-print
-      - run: flake8 --enable=T modin/ asv_bench/benchmarks scripts/
+      - run: flake8 --enable=T modin/ asv_bench/benchmarks
+      - run: flake8 scripts/
 
   test-api:
     runs-on: ubuntu-latest
