@@ -1009,14 +1009,14 @@ class BaseFrameManager(ABC):
 
         Parameters
         ----------
-        axis : int
-            The axis to apply the function over (0 - rows, 1 - columns)
-        left : NumPy array
-            The partitions of left Modin Frame
-        func : callable
-            The function to apply
-        right : NumPy array
-            The partitions of right Modin Frame.
+            axis : int
+                The axis to apply the function over (0 - rows, 1 - columns)
+            left : NumPy array
+                The partitions of left Modin Frame
+            func : callable
+                The function to apply
+            right : NumPy array
+                The partitions of right Modin Frame.
 
         Returns
         -------

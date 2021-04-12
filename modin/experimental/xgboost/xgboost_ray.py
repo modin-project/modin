@@ -30,17 +30,8 @@ from .utils import RabitContext, RabitContextManager
 LOGGER = logging.getLogger("[modin.xgboost]")
 
 
-class ModinXGBoost:
-    """Ray actor-class runs training/prediction on remote workers.
-
-    Parameters
-    ----------
-    rank: int
-        Rank of this actor.
-    nthread : int
-        Number of threads used by xgboost in this actor.
-    """
-
+@ray.remote
+class ModinXGBoostActor:
     def __init__(self, rank, nthread):
         self._evals = []
         self._rank = rank
@@ -122,10 +113,6 @@ class ModinXGBoost:
         LOGGER.info(f"Local prediction time: {time.time() - s} s")
 
         return get_node_ip_address(), predictions
-
-
-# just test
-ModinXGBoostActor = ray.remote(ModinXGBoost)
 
 
 def _get_cluster_cpus():
