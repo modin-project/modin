@@ -28,12 +28,6 @@ from modin.engines.base.io import FileDispatcher
 from modin.data_management.utils import split_result_of_axis_func_pandas
 from modin.error_message import ErrorMessage
 
-
-_doc_pandas_parser_class = """"
-Class for handling {data_type} on the workers
-using Pandas backend, inherits common functions from `PandasParser` class."""
-
-
 _doc_pandas_parser_class = """
 Class for handling {data_type} on the workers using Pandas backend.
 
@@ -116,11 +110,7 @@ def find_common_type_cat(types):
 
 
 class PandasParser(object):
-    """
-    Base class for parser classes with Pandas backend.
-
-    Class contains common for all child classes methods.
-    """
+    """Base class for parser classes with Pandas backend."""
 
     @classmethod
     def get_dtypes(cls, dtypes_ids):
@@ -188,31 +178,9 @@ class PandasParser(object):
 
 @doc(_doc_pandas_parser_class, data_type="CSV files")
 class PandasCSVParser(PandasParser):
-    """
-    Class for handling {data_type} on the workers using Pandas backend.
-
-    Inherits common functions from `PandasParser` class.
-    """
-
     @staticmethod
-    @doc(parameters=_doc_parse_parameters_common)
+    @doc(_doc_parse_func, parameters=_doc_parse_parameters_common)
     def parse(fname, **kwargs):
-        """
-        Parse data on the workers.
-
-        Parameters
-        ----------
-        {parameters}
-        **kwargs : dict
-            Keywords arguments to be used by `parse` function or
-            passed into `read_*` function.
-
-        Returns
-        -------
-        list
-            List with splitted parse results and it's metadata
-            (index, dtypes, etc.).
-        """
         warnings.filterwarnings("ignore")
         num_splits = kwargs.pop("num_splits", None)
         start = kwargs.pop("start", None)

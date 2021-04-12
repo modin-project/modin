@@ -12,10 +12,10 @@
 # governing permissions and limitations under the License.
 
 """
-Module houses `TextFileDispatcher` class, that contains utils for handling text formats files.
+Module houses `TextFileDispatcher` class.
 
-`TextFileDispatcher` inherits util functions for handling files from `FileDispatcher` class
-and can be used as base class for dipatchers of specific text formats.
+`TextFileDispatcher` contains utils for text formats files, inherits util functions for
+files from `FileDispatcher` class and can be used as base class for dipatchers of SQL queries.
 """
 
 from modin.engines.base.io.file_dispatcher import FileDispatcher

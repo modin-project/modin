@@ -14,7 +14,7 @@
 """
 Module houses `BaseIO` class.
 
-`BaseIO` - base class for IO classes, that stores IO functions.
+`BaseIO` is base class for IO classes, that stores IO functions.
 """
 
 import pandas

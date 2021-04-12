@@ -38,7 +38,7 @@ class SQLDispatcher(FileDispatcher):
     @classmethod
     def _read(cls, sql, con, index_col=None, **kwargs):
         """
-        Read a SQL query or database table into a DataFrame.
+        Read a SQL query or database table into a query compiler.
 
         Parameters
         ----------

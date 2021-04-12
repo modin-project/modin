@@ -29,7 +29,7 @@ class FeatherDispatcher(ColumnStoreDispatcher):
     @classmethod
     def _read(cls, path, columns=None, **kwargs):
         """
-        Read data from the file path, returning a Modin DataFrame.
+        Read data from the file path, returning a query compiler.
 
         Parameters
         ----------
