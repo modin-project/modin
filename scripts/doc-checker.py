@@ -3,10 +3,6 @@ Validate docstrings using pydocstyle and numpydoc.
 
 Example usage:
 python scripts/doc-checker.py asv_bench/benchmarks/utils.py modin/pandas
-
-Notes
------
-    * the script can take some paths to files or to directories
 """
 
 import argparse
@@ -166,7 +162,7 @@ def validate(
     add_ignore : List[str]
         pydocstyle error codes which are not verified
     use_numpydoc : bool
-        check docstrings by numpydoc or no
+        determine if numpydoc checks are not needed
 
     Returns
     -------
@@ -221,10 +217,10 @@ def get_args() -> argparse.Namespace:
         help="Pydocstyle error codes; for example: D100,D100,D102",
     )
     parser.add_argument(
-        "--use-numpydoc",
-        type=bool,
-        default=True,
-        help="Check docstrings by numpydoc or no",
+        "--no-use-numpydoc",
+        default=False,
+        action="store_true",
+        help="Determine if numpydoc checks are not needed",
     )
     args = parser.parse_args()
     check_args(args)
@@ -233,7 +229,7 @@ def get_args() -> argparse.Namespace:
 
 if __name__ == "__main__":
     args = get_args()
-    exit_status = validate(args.paths, args.add_ignore, args.use_numpydoc)
+    exit_status = validate(args.paths, args.add_ignore, not args.no_use_numpydoc)
 
     if exit_status:
         print("NOT SUCCESSFUL CHECK")
