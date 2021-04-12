@@ -131,11 +131,17 @@ nature, you get a fast DataFrame at 1MB and 1TB+.
 
    examples/index
 
+.. toctree:: 
+   :caption: Experimental Features
+
+   experimental_features/index
+   experimental_features/modin_sql
+   experimental_features/spreadsheets_api
+   experimental_features/progress_bar
+
 .. toctree::
    :caption: How is Modin different from ...?
 
-   comparisons/index
-   comparisons/experimental_features
    comparisons/pandas
    comparisons/dask
    comparisons/spark
@@ -144,7 +150,6 @@ nature, you get a fast DataFrame at 1MB and 1TB+.
    :caption: Supported APIs
 
    supported_apis/index
-   supported_apis/modin_sql
    supported_apis/dataframe_supported
    supported_apis/series_supported
    supported_apis/utilities_supported
