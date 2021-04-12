@@ -54,30 +54,33 @@ def numpydoc_validate(path):
 
     # using static parsing for collecting module, functions, classes and its methods
     module = ast.parse(file_contents)
-    functions = (
+    functions = [
         node
         for node in module.body
         if isinstance(node, ast.FunctionDef) and not node.name.startswith("__")
-    )
-    classes = (node for node in module.body if isinstance(node, ast.ClassDef))
+    ]
+    classes = [node for node in module.body if isinstance(node, ast.ClassDef)]
     methods = []
     for _class in classes:
-        for method in (
+        for method in [
             f"{module_name}.{_class.name}.{node.name}"
             for node in _class.body
             if isinstance(node, ast.FunctionDef) and not node.name.startswith("__")
-        ):
+        ]:
             methods.append(method)
 
     print(f"NUMPYDOC OUTPUT FOR {path} - CAN BE EMPTY")
     exit_status = 0
     # numpydoc docstrings validation
     # docstrings are taken dynamically
+    f_validates = [validate_object(f"{module_name}.{x.name}") for x in functions]
+    c_validates = [validate_object(f"{module_name}.{x.name}") for x in classes]
+    m_validates = [validate_object(x) for x in methods]
     if (
         validate_object(module_name)
-        or any(validate_object(f"{module_name}.{x.name}") for x in functions)
-        or any(validate_object(f"{module_name}.{x.name}") for x in classes)
-        or any(validate_object(x) for x in methods)
+        or any(f_validates)
+        or any(c_validates)
+        or any(m_validates)
     ):
         exit_status = 1
     return exit_status

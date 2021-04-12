@@ -12,6 +12,7 @@
 # governing permissions and limitations under the License.
 
 from abc import ABC
+from functools import wraps
 import numpy as np
 import pandas
 import warnings
@@ -39,6 +40,7 @@ def wait_computations_if_benchmark_mode(func):
     """
     if BenchmarkMode.get():
 
+        @wraps(func)
         def wait(*args, **kwargs):
             """Wait for computation results."""
             result = func(*args, **kwargs)
@@ -1007,14 +1009,14 @@ class BaseFrameManager(ABC):
 
         Parameters
         ----------
-            axis : int
-                The axis to apply the function over (0 - rows, 1 - columns)
-            left : NumPy array
-                The partitions of left Modin Frame
-            func : callable
-                The function to apply
-            right : NumPy array
-                The partitions of right Modin Frame.
+        axis : int
+            The axis to apply the function over (0 - rows, 1 - columns)
+        left : NumPy array
+            The partitions of left Modin Frame
+        func : callable
+            The function to apply
+        right : NumPy array
+            The partitions of right Modin Frame.
 
         Returns
         -------
