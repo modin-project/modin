@@ -27,8 +27,11 @@ def numpydoc_validate(path):
     # Recursive handle directories
     if os.path.isdir(path):
         for f in os.listdir(path):
-            if f.endswith(".py"):
-                numpydoc_validate(os.path.join(path, f))
+            _path = os.path.join(path, f)
+            if f.endswith(".py") or (
+                os.path.isdir(_path) and not f.endswith("__pycache__")
+            ):
+                numpydoc_validate(_path)
         return
 
     # get importable name
@@ -118,6 +121,7 @@ def validate(pathes, add_ignore, use_numpydoc):
                 exit_status = 1
     if exit_status:
         exit(exit_status)
+    print("SUCCESSFUL CHECK")
 
 
 if __name__ == "__main__":

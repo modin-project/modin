@@ -12,7 +12,8 @@
 # governing permissions and limitations under the License.
 
 """
-This module contains the functionality that is used when benchmarking modin commits.
+The module contains the functionality that is used when benchmarking modin commits.
+
 In the case of using utilities from the main modin code, there is a chance that when
 benchmarking old commits, the utilities changed, which in turn can unexpectedly affect
 the performance results, hence some utility functions are duplicated here.
@@ -104,12 +105,13 @@ def translator_groupby_ngroups(groupby_ngroups: Union[str, int], shape: tuple) -
 
     Parameters
     ----------
-    groupby_ngroups: str or int
+    groupby_ngroups : str or int
         number of groups that will be used in `groupby` operation
-    shape: tuple
+    shape : tuple
+        same as pandas.Dataframe.shape
 
-    Return
-    ------
+    Returns
+    -------
     int
     """
     if ASV_DATASET_SIZE == "big":
@@ -138,19 +140,19 @@ def gen_int_data(nrows: int, ncols: int, rand_low: int, rand_high: int) -> dict:
 
     Parameters
     ----------
-    nrows: int
+    nrows : int
         number of rows
-    ncols: int
+    ncols : int
         number of columns
-    rand_low: int
+    rand_low : int
         low bound for random generator
-    rand_high:int
+    rand_high : int
         high bound for random generator
 
-    Return
-    ------
+    Returns
+    -------
     dict
-        ncols number of keys, storing numpy.array of nrows length
+        Number of keys - `ncols`, each of them store numpy.array of `nrows` length.
     """
     cache_key = ("int", nrows, ncols, rand_low, rand_high)
     if cache_key in data_cache:
@@ -179,20 +181,20 @@ def gen_str_int_data(nrows: int, ncols: int, rand_low: int, rand_high: int) -> d
 
     Parameters
     ----------
-    nrows: int
+    nrows : int
         number of rows
-    ncols: int
+    ncols : int
         number of columns
-    rand_low: int
+    rand_low : int
         low bound for random generator
-    rand_high:int
+    rand_high : int
         high bound for random generator
 
-    Return
-    ------
+    Returns
+    -------
     dict
-        ncols+1 number of keys, storing numpy.array of nrows length
-        one column with string values
+        Number of keys - `ncols`, each of them store numpy.array of `nrows` length.
+        One of the columns with string values.
     """
     cache_key = ("str_int", nrows, ncols, rand_low, rand_high)
     if cache_key in data_cache:
@@ -204,9 +206,8 @@ def gen_str_int_data(nrows: int, ncols: int, rand_low: int, rand_high: int) -> d
         )
     )
     data = gen_int_data(nrows, ncols, rand_low, rand_high).copy()
-    data["gb_col"] = [
-        "str_{}".format(random_state.randint(rand_low, rand_high)) for i in range(nrows)
-    ]
+    # convert values in `col13` column to string type
+    data["col13"] = [f"str_{x}" for x in data["col13"]]
     data_cache[cache_key] = weakdict(data)
     return data
 
@@ -223,22 +224,22 @@ def gen_data(
 
     Parameters
     ----------
-    data_type: str
+    data_type : {"int", "str_int"}
         type of data generation
-    nrows: int
+    nrows : int
         number of rows
-    ncols: int
+    ncols : int
         number of columns
-    rand_low: int
+    rand_low : int
         low bound for random generator
-    rand_high:int
+    rand_high : int
         high bound for random generator
 
-    Return
-    ------
+    Returns
+    -------
     dict
-        ncols+1 number of keys, storing numpy.array of nrows length
-        one column with string values
+        Number of keys - `ncols`, each of them store numpy.array of `nrows` length.
+        When `data_type`=="str_int" some of the columns will be of string type.
     """
     if data_type == "int":
         return gen_int_data(nrows, ncols, rand_low, rand_high)
@@ -267,31 +268,34 @@ def generate_dataframe(
 
     Parameters
     ----------
-    impl: str
+    impl : str
         implementation used to create the dataframe;
         supported implemetations: {"modin", "pandas"}
-    data_type: str
+    data_type : str
         type of data generation;
         supported types: {"int", "str_int"}
-    nrows: int
+    nrows : int
         number of rows
-    ncols: int
+    ncols : int
         number of columns
-    rand_low: int
+    rand_low : int
         low bound for random generator
-    rand_high: int
+    rand_high : int
         high bound for random generator
-    groupby_ncols: int or None
+    groupby_ncols : int or None
         number of columns for which `groupby` will be called in the future;
         to get more stable performance results, we need to have the same number of values
         in each group every benchmarking time
-    count_groups: int or None
+    count_groups : int or None
         count of groups in groupby columns
 
-    Return
-    ------
-    modin.DataFrame or pandas.DataFrame [and list of groupby columns names if
-        columns for groupby were generated]
+    Returns
+    -------
+    modin.DataFrame or pandas.DataFrame [and list]
+
+    Notes
+    -----
+    the list of groupby columns names returns when groupby columns are generated
     """
     assert not (
         (groupby_ncols is None) ^ (count_groups is None)
@@ -345,8 +349,8 @@ def random_string() -> str:
     """
     Create a 36-character random string.
 
-    Return
-    ------
+    Returns
+    -------
     str
     """
     return str(uuid.uuid4())
@@ -358,13 +362,13 @@ def random_columns(df_columns: list, columns_number: int) -> list:
 
     Parameters
     ----------
-    df_columns: list
+    df_columns : list
         columns to choose from
-    columns_number: int
+    columns_number : int
         how many columns to pick
 
-    Return
-    ------
+    Returns
+    -------
     list
     """
     return list(random_state.choice(df_columns, size=columns_number))
@@ -376,11 +380,11 @@ def random_booleans(number: int) -> list:
 
     Parameters
     ----------
-    number: int
+    number : int
         count of booleans in result list
 
-    Return
-    ------
+    Returns
+    -------
     list
     """
     return list(random_state.choice([True, False], size=number))
@@ -392,7 +396,7 @@ def execute(df: Union[pd.DataFrame, pandas.DataFrame]):
 
     Parameters
     ----------
-    df: modin.DataFrame of pandas.Datarame
+    df : modin.DataFrame or pandas.Datarame
     """
     if ASV_USE_IMPL == "modin":
         partitions = df._query_compiler._modin_frame._partitions
@@ -423,10 +427,11 @@ def get_shape_id(shape: tuple) -> str:
 
     Parameters
     ----------
-    shape: tuple
+    shape : tuple
+        same as pandas.Dataframe.shape
 
-    Return
-    ------
+    Returns
+    -------
     str
     """
     return "_".join([str(element) for element in shape])
