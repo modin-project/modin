@@ -4,7 +4,7 @@ python scripts/doc-checker.py asv_bench/benchmarks/utils.py modin/pandas
 
 Notes
 -----
-    * the script can take some pathes to files or to directories
+    * the script can take some paths to files or to directories
 """
 
 import click
@@ -37,50 +37,48 @@ def validate_object(import_path):
 
 
 def numpydoc_validate(path):
-    # Recursive handle directories
-    if os.path.isdir(path):
-        for f in os.listdir(path):
-            _path = os.path.join(path, f)
-            if f.endswith(".py") or (
-                os.path.isdir(_path) and not f.endswith("__pycache__")
-            ):
-                numpydoc_validate(_path)
-        return
-
-    # get importable name
-    module_name = path.replace("/", ".").replace("\\", ".")
-    module_name = module_name.replace(".py", "")
-
-    with open(path) as fd:
-        file_contents = fd.read()
-
-    # using static parsing for collecting module, functions, classes and its methods
-    module = ast.parse(file_contents)
-
-    def is_public_func(node):
-        return isinstance(node, ast.FunctionDef) and (
-            not node.name.startswith("__") or node.name.endswith("__")
-        )
-
-    functions = [node for node in module.body if is_public_func(node)]
-    classes = [node for node in module.body if isinstance(node, ast.ClassDef)]
-    methods = []
-    for _class in classes:
-        for node in _class.body:
-            if is_public_func(node):
-                methods.append(f"{module_name}.{_class.name}.{node.name}")
-
-    print(f"NUMPYDOC OUTPUT FOR {path} - CAN BE EMPTY")
     exit_status = 0
-    # numpydoc docstrings validation
-    # docstrings are taken dynamically
-    to_validate = (
-        [module_name]
-        + [f"{module_name}.{x.name}" for x in (functions + classes)]
-        + methods
-    )
-    if any(list(map(validate_object, to_validate))):
-        exit_status = 1
+    for root, dirs, files in os.walk(path):
+        if "__pycache__" in root:
+            continue
+        for f in files:
+            if not f.endswith(".py"):
+                continue
+
+            current_path = os.path.join(root, f)
+            # get importable name
+            module_name = current_path.replace("/", ".").replace("\\", ".")
+            module_name = module_name.replace(".py", "")
+
+            with open(current_path) as fd:
+                file_contents = fd.read()
+
+            # using static parsing for collecting module, functions, classes and its methods
+            module = ast.parse(file_contents)
+
+            def is_public_func(node):
+                return isinstance(node, ast.FunctionDef) and (
+                    not node.name.startswith("__") or node.name.endswith("__")
+                )
+
+            functions = [node for node in module.body if is_public_func(node)]
+            classes = [node for node in module.body if isinstance(node, ast.ClassDef)]
+            methods = []
+            for _class in classes:
+                for node in _class.body:
+                    if is_public_func(node):
+                        methods.append(f"{module_name}.{_class.name}.{node.name}")
+
+            print(f"NUMPYDOC OUTPUT FOR {current_path} - CAN BE EMPTY")
+            # numpydoc docstrings validation
+            # docstrings are taken dynamically
+            to_validate = (
+                [module_name]
+                + [f"{module_name}.{x.name}" for x in (functions + classes)]
+                + methods
+            )
+            if any(list(map(validate_object, to_validate))):
+                exit_status = 1
     return exit_status
 
 

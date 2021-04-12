@@ -1,7 +1,3 @@
-import modin
-import modin.data_management.functions
-
-
 if __name__ == "__main__":
     import modin.pandas as pd
 
