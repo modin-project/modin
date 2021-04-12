@@ -18,6 +18,13 @@ import ray
 
 
 class OmnisciOnRayFrameAxisPartition(PandasFrameAxisPartition):
+    """
+    Base class for axis partition classes with OmniSci backend and Ray engine.
+
+    Inherits functionality from `PandasFrameAxisPartition` class, that
+    contains all of the implementation for these backend and engine.
+    """
+
     def __init__(self, list_of_blocks):
         # Unwrap from BaseFramePartition object for ease of use
         for obj in list_of_blocks:
@@ -29,18 +36,24 @@ class OmnisciOnRayFrameAxisPartition(PandasFrameAxisPartition):
 
 
 class OmnisciOnRayFrameColumnPartition(OmnisciOnRayFrameAxisPartition):
-    """The column partition implementation for Ray. All of the implementation
-    for this class is in the parent class, and this class defines the axis
-    to perform the computation over.
+    """
+    Column partition class with OmniSci backend and Ray engine.
+
+    Inherits functionality from `OmnisciOnRayFrameAxisPartition` class, that
+    contains all of the implementation for this class, and this class defines
+    the axis to perform the computation over.
     """
 
     axis = 0
 
 
 class OmnisciOnRayFrameRowPartition(OmnisciOnRayFrameAxisPartition):
-    """The row partition implementation for Ray. All of the implementation
-    for this class is in the parent class, and this class defines the axis
-    to perform the computation over.
+    """
+    Row partition class with OmniSci backend and Ray engine.
+
+    Inherits functionality from `OmnisciOnRayFrameAxisPartition` class, that
+    contains all of the implementation for this class, and this class defines
+    the axis to perform the computation over.
     """
 
     axis = 1

@@ -11,6 +11,12 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
+"""
+Module houses `OmnisciOnRayFrameManager` class.
+
+OmnisciOnRayFrameManager is the thing that tracks partitions across the distribution.
+"""
+
 import numpy as np
 
 from modin.engines.ray.generic.frame.partition_manager import RayFrameManager
@@ -30,7 +36,12 @@ import re
 
 
 class OmnisciOnRayFrameManager(RayFrameManager):
-    """This method implements the interface in `BaseFrameManager`."""
+    """
+    Class for managing Modin DataFrame's partitions with OmniSci backend and Ray engine.
+
+    Inherits functionality from `RayFrameManager` and implements specific methods for
+    used backend and engine.
+    """
 
     # This object uses RayRemotePartition objects as the underlying store.
     _partition_class = OmnisciOnRayFramePartition
@@ -94,11 +105,12 @@ class OmnisciOnRayFrameManager(RayFrameManager):
 
         Parameters
         ----------
-            obj : pandas.DataFrame or pyarrow.Table, object to inspect on
-                unsupported column types.
+        obj : pandas.DataFrame or pyarrow.Table
+            object to inspect on unsupported column types.
 
         Returns
         -------
+        tuple
             Tuple of pyarrow.Table representation of `obj` (for future using) and
             a list of unsupported columns.
         """
@@ -142,7 +154,22 @@ class OmnisciOnRayFrameManager(RayFrameManager):
         )
 
     @classmethod
-    def run_exec_plan(cls, plan, index_cols, dtypes, columns):
+    def run_exec_plan(cls, plan, columns):
+        """
+        Run passed execution plan.
+
+        Parameters
+        ----------
+        plan : DFAlgNode
+            Plan to execute.
+        columns : array-like
+            Arrow table columns to use when Calcite is enabled? (TBD)
+
+        Returns
+        -------
+        np.ndarray
+            numpy array with partition containing execution result.
+        """
         # TODO: this plan is supposed to be executed remotely using Ray.
         # For now OmniSci engine support only a single node cluster.
         # Therefore remote execution is not necessary and will be added

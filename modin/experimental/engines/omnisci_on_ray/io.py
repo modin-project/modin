@@ -11,6 +11,13 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
+"""
+Module houses `OmnisciOnRayIO` class.
+
+`OmnisciOnRayIO` is used for storing IO functions implementations with OmniSci backend
+and Ray engine.
+"""
+
 from modin.experimental.backends.omnisci.query_compiler import DFAlgQueryCompiler
 from modin.engines.ray.generic.io import RayIO
 from modin.experimental.engines.omnisci_on_ray.frame.data import OmnisciOnRayFrame
@@ -24,6 +31,11 @@ from pandas.io.parsers import _validate_usecols_arg
 
 
 class OmnisciOnRayIO(RayIO):
+    """
+    Class contains IO functions implementations with OmniSci backend and Ray engine.
+
+    Inherits some common for Ray engine util functions from `RayIO` class.
+    """
 
     frame_cls = OmnisciOnRayFrame
     query_compiler_cls = DFAlgQueryCompiler
@@ -134,6 +146,20 @@ class OmnisciOnRayIO(RayIO):
         float_precision=None,
         storage_options=None,
     ):
+        """
+        Read data from `filepath_or_buffer` according to the passed `kwargs` parameters.
+
+        For parameters description please refer to Pandas API.
+
+        Returns
+        -------
+        BaseQueryCompiler
+            Query compiler with imported data for further processing.
+
+        Notes
+        -----
+        Reading performed by using of `pyarrow` `read_csv` function.
+        """
         items = locals().copy()
         mykwargs = {k: items[k] for k in items if k in cls.arg_keys}
         eng = str(engine).lower().strip()
@@ -225,6 +251,19 @@ class OmnisciOnRayIO(RayIO):
 
     @classmethod
     def _dtype_to_arrow(cls, dtype):
+        """
+        Convert `pandas.read_csv` `dtype` parameter into pyarrow compatible type.
+
+        Parameters
+        ----------
+        dtype: str, pandas extension or numpy dtype
+            Data type for data or columns, `pandas.read_csv` `dtype` parameter.
+
+        Returns
+        -------
+        pa.DataType or pa.DictionaryType
+            pyarrow compatible type.
+        """
         if dtype is None:
             return None
         tname = dtype if isinstance(dtype, str) else dtype.name
@@ -239,14 +278,16 @@ class OmnisciOnRayIO(RayIO):
     def _prepare_pyarrow_usecols(cls, read_csv_kwargs):
         """
         Define `usecols` parameter in the way pyarrow can process it.
+
+        Parameters
         ----------
-        read_csv_kwargs:
-                read_csv function parameters.
+        read_csv_kwargs
+            read_csv function parameters.
 
         Returns
         -------
         usecols_md: list
-                Redefined `usecols` parameter.
+            Redefined `usecols` parameter.
         """
         usecols = read_csv_kwargs.get("usecols", None)
         engine = read_csv_kwargs.get("engine", None)

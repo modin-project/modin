@@ -11,6 +11,12 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
+"""Module houses `OmnisciOnRayFramePartition` class.
+
+`OmnisciOnRayFramePartition` defines interface for partition with OmniSci backend
+and Ray engine.
+"""
+
 import pandas
 
 from modin.engines.base.frame.partition import BaseFramePartition
@@ -20,6 +26,13 @@ import ray
 
 
 class OmnisciOnRayFramePartition(BaseFramePartition):
+    """
+    Class defines interface for single partition with OmniSci backend and Ray engine.
+
+    Inherits some common functions for all partition types from `BaseFramePartition`
+    class.
+    """
+
     def __init__(
         self, object_id=None, frame_id=None, arrow_table=None, length=None, width=None
     ):
@@ -56,6 +69,19 @@ class OmnisciOnRayFramePartition(BaseFramePartition):
 
     @classmethod
     def put_arrow(cls, obj):
+        """
+        Put `pyarrow.Table` into partition.
+
+        Parameters
+        ----------
+        obj : pyarrow.Table
+            A table to be put.
+
+        Returns
+        -------
+        OmnisciOnRayFramePartition
+            New `OmnisciOnRayFramePartition` object.
+        """
         return OmnisciOnRayFramePartition(
             object_id=ray.put(None),
             arrow_table=obj,
