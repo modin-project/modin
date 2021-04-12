@@ -206,8 +206,9 @@ def gen_str_int_data(nrows: int, ncols: int, rand_low: int, rand_high: int) -> d
         )
     )
     data = gen_int_data(nrows, ncols, rand_low, rand_high).copy()
-    # convert values in `col13` column to string type
-    data["col13"] = [f"str_{x}" for x in data["col13"]]
+    # convert values in arbitary column to string type
+    key = list(data.keys())[0]
+    data[key] = [f"str_{x}" for x in data[key]]
     data_cache[cache_key] = weakdict(data)
     return data
 
