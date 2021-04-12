@@ -69,6 +69,7 @@ jobs:
       - run: |
           python scripts/doc-checker.py --add-ignore=D100,D101,D102 asv_bench/benchmarks \
             asv_bench/benchmarks/io asv_bench/benchmarks/scalability
+      - run: python scripts/doc-checker.py scripts/doc-checker.py
 
   lint-flake8:
     name: lint (flake8)

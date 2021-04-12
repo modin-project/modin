@@ -1,4 +1,6 @@
 """
+Validate docstrings using pydocstyle and numpydoc.
+
 Example usage:
 python scripts/doc-checker.py asv_bench/benchmarks/utils.py modin/pandas
 
@@ -13,6 +15,7 @@ import subprocess
 import os
 import ast
 import sys
+from typing import List
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
@@ -26,7 +29,19 @@ NUMPYDOC_BASE_ERR_CODE = {
 
 
 # code snippet from numpydoc
-def validate_object(import_path):
+def validate_object(import_path: str) -> int:
+    """
+    Check docstrings of an entity that can be imported.
+
+    Parameters
+    ----------
+    import_path : str
+        python-like import path
+
+    Returns
+    -------
+    exit_status : int
+    """
     from numpydoc.validate import validate
 
     exit_status = 0
@@ -40,9 +55,26 @@ def validate_object(import_path):
     return exit_status
 
 
-def numpydoc_validate(path):
+def numpydoc_validate(path: pathlib.Path) -> int:
+    """
+    Perform numpydoc checks.
+
+    Parameters
+    ----------
+    path : pathlib.Path
+
+    Returns
+    -------
+    exit_status : int
+    """
     exit_status = 0
-    for root, dirs, files in os.walk(path):
+
+    if path.is_file():
+        walker = ((str(path.parent), [], [path.name]),)
+    else:
+        walker = os.walk(path)
+
+    for root, _, files in walker:
         if "__pycache__" in root:
             continue
         for f in files:
@@ -86,7 +118,20 @@ def numpydoc_validate(path):
     return exit_status
 
 
-def pydocstyle_validate(path, add_ignore):
+def pydocstyle_validate(path: pathlib.Path, add_ignore: List[str]) -> int:
+    """
+    Perform pydocstyle checks.
+
+    Parameters
+    ----------
+    path : pathlib.Path
+    add_ignore : List[int]
+
+    Returns
+    -------
+    int
+        Return code of pydocstyle subprocess.
+    """
     result = subprocess.run(
         [
             "pydocstyle",
@@ -104,7 +149,25 @@ def pydocstyle_validate(path, add_ignore):
     return result.returncode
 
 
-def validate(paths, add_ignore, use_numpydoc):
+def validate(
+    paths: List[pathlib.Path], add_ignore: List[str], use_numpydoc: bool
+) -> int:
+    """
+    Perform pydocstyle and numpydoc checks.
+
+    Parameters
+    ----------
+    paths : List[pathlib.Path]
+        filenames of directories for check
+    add_ignore : List[str]
+        pydocstyle error codes which are not verified
+    use_numpydoc : bool
+        check docstrings by numpydoc or no
+
+    Returns
+    -------
+    exit_status : int
+    """
     exit_status = 0
     for path in paths:
         if pydocstyle_validate(path, add_ignore):
@@ -115,13 +178,28 @@ def validate(paths, add_ignore, use_numpydoc):
     return exit_status
 
 
-def check_args(args):
+def check_args(args: argparse.Namespace):
+    """
+    Check the obtained values for correctness.
+
+    Raises
+    ------
+    ValueError
+        Occurs in case of non-existent files or directories.
+    """
     for path in args.paths:
         if not path.exists():
             raise ValueError(f"{path} is not exist")
 
 
-def get_args():
+def get_args() -> argparse.Namespace:
+    """
+    Get args from cli with validation.
+
+    Returns
+    -------
+    argparse.Namespace
+    """
     parser = argparse.ArgumentParser(
         description="Check docstrings by using pydocstyle and numpydoc"
     )
@@ -134,6 +212,7 @@ def get_args():
     parser.add_argument(
         "--add-ignore",
         nargs="*",
+        default=[],
         help="Pydocstyle error codes; for example: D100,D100,D102",
     )
     parser.add_argument(
