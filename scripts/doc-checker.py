@@ -14,10 +14,7 @@ import pathlib
 import subprocess
 import os
 import ast
-import sys
 from typing import List
-
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 # error codes that pandas test in CI
 # https://numpydoc.readthedocs.io/en/latest/validation.html#built-in-validation-checks
@@ -149,6 +146,13 @@ def pydocstyle_validate(path: pathlib.Path, add_ignore: List[str]) -> int:
     return result.returncode
 
 
+def monkeypatching():
+    """Monkeypatch decorators which incorrectly define __doc__ attribute."""
+    import ray
+
+    ray.remote = lambda *args, **kwargs: args[0]
+
+
 def validate(
     paths: List[pathlib.Path], add_ignore: List[str], use_numpydoc: bool
 ) -> int:
@@ -173,6 +177,7 @@ def validate(
         if pydocstyle_validate(path, add_ignore):
             exit_status = 1
         if use_numpydoc:
+            monkeypatching()
             if numpydoc_validate(path):
                 exit_status = 1
     return exit_status

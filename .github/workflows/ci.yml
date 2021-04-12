@@ -46,6 +46,7 @@ jobs:
           python-version: "3.7.x"
           architecture: "x64"
       - run: pip install pydocstyle numpydoc
+      - run: pip install -e .[all]
       - run: |
           python scripts/doc-checker.py --add-ignore=D101,D102,D105 --use-numpydoc False \
             modin/pandas/dataframe.py modin/pandas/series.py \
