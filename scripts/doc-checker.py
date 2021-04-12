@@ -7,7 +7,8 @@ Notes
     * the script can take some paths to files or to directories
 """
 
-import click
+import argparse
+import pathlib
 import subprocess
 import os
 import ast
@@ -103,10 +104,6 @@ def pydocstyle_validate(path, add_ignore):
     return result.returncode
 
 
-@click.command()
-@click.argument("paths", nargs=-1, required=True, type=click.Path(exists=True))
-@click.option("--add-ignore", multiple=True, help="Pydocstyle errors")
-@click.option("--use-numpydoc", type=bool, default=True)
 def validate(paths, add_ignore, use_numpydoc):
     exit_status = 0
     for path in paths:
@@ -115,10 +112,46 @@ def validate(paths, add_ignore, use_numpydoc):
         if use_numpydoc:
             if numpydoc_validate(path):
                 exit_status = 1
-    if exit_status:
-        exit(exit_status)
-    print("SUCCESSFUL CHECK")
+    return exit_status
+
+
+def check_args(args):
+    for path in args.paths:
+        if not path.exists():
+            raise ValueError(f"{path} is not exist")
+
+
+def get_args():
+    parser = argparse.ArgumentParser(
+        description="Check docstrings by using pydocstyle and numpydoc"
+    )
+    parser.add_argument(
+        "paths",
+        nargs="+",
+        type=pathlib.Path,
+        help="Filenames or directories; in case of direstories perform recursive check",
+    )
+    parser.add_argument(
+        "--add-ignore",
+        nargs="*",
+        help="Pydocstyle error codes; for example: D100,D100,D102",
+    )
+    parser.add_argument(
+        "--use-numpydoc",
+        type=bool,
+        default=True,
+        help="Check docstrings by numpydoc or no",
+    )
+    args = parser.parse_args()
+    check_args(args)
+    return args
 
 
 if __name__ == "__main__":
-    validate()
+    args = get_args()
+    exit_status = validate(args.paths, args.add_ignore, args.use_numpydoc)
+
+    if exit_status:
+        print("NOT SUCCESSFUL CHECK")
+        exit(exit_status)
+    print("SUCCESSFUL CHECK")
