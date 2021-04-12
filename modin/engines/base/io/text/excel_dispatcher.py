@@ -11,9 +11,7 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-"""This module houses `ExcelDispatcher` class, that is used for
-reading excel files.
-"""
+"""Module houses `ExcelDispatcher` class, that is used for reading excel files."""
 
 import pandas
 import re
@@ -28,15 +26,16 @@ EXCEL_READ_BLOCK_SIZE = 4096
 
 
 class ExcelDispatcher(TextFileDispatcher):
-    """Class handles utils for reading excel files. Inherits some common for text
-    files util functions from `TextFileDispatcher` class.
+    """
+    Class handles utils for reading excel files.
+
+    Inherits some common for text files util functions from `TextFileDispatcher` class.
     """
 
     @classmethod
     def _read(cls, io, **kwargs):
-        """Read data from `io` according to the passed `read_excel` `kwargs` parameters.
-        This function performs parameters preprocessing, data file splitting,
-        tasks launching and results postprocessing.
+        """
+        Read data from `io` according to the passed `read_excel` `kwargs` parameters.
 
         Parameters
         ----------

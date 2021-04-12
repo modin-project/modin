@@ -11,10 +11,11 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-"""This module houses `TextFileDispatcher` class, that contains utils for handling text
- formats files. `TextFileDispatcher` inherits util functions for handling files
- from `FileDispatcher` class and can be used as base class for dipatchers of
- specific text formats.
+"""
+Module houses `TextFileDispatcher` class, that contains utils for handling text formats files.
+
+`TextFileDispatcher` inherits util functions for handling files from `FileDispatcher` class
+and can be used as base class for dipatchers of specific text formats.
 """
 
 from modin.engines.base.io.file_dispatcher import FileDispatcher
@@ -32,15 +33,16 @@ ColumnNamesTypes = Tuple[Union[pandas.Index, pandas.MultiIndex, pandas.Int64Inde
 
 
 class TextFileDispatcher(FileDispatcher):
-    """Class handles utils for reading text formats files. Inherits some util
-    functions for processing files from `FileDispatcher` class.
+    """
+    Class handles utils for reading text formats files.
+
+    Inherits some util functions for processing files from `FileDispatcher` class.
     """
 
     @classmethod
     def get_path_or_buffer(cls, filepath_or_buffer):
-        """Given a buffer, try and extract the filepath from it so that we can
-        use it without having to fall back to Pandas and share file objects between
-        workers. Given a filepath, return it immediately.
+        """
+        Get path from `filepath_or_buffer`.
 
         Parameters
         ----------
@@ -51,6 +53,12 @@ class TextFileDispatcher(FileDispatcher):
         -------
         str or path object :
             verified `filepath_or_buffer` parameter.
+
+        Notes
+        -----
+        Given a buffer, try and extract the filepath from it so that we can
+        use it without having to fall back to Pandas and share file objects between
+        workers. Given a filepath, return it immediately.
         """
         if isinstance(filepath_or_buffer, (io.BufferedReader, io.TextIOWrapper)):
             buffer_filepath = filepath_or_buffer.name
@@ -65,9 +73,8 @@ class TextFileDispatcher(FileDispatcher):
 
     @classmethod
     def build_partition(cls, partition_ids, row_lengths, column_widths):
-        """Build array with partitions of `cls.frame_partition_cls` class
-        from data ids passed as `partition_ids` and partitions metadata
-        passed as `row_lengths` and `column_widths`.
+        """
+        Build array with partitions of `cls.frame_partition_cls` class.
 
         Parameters
         ----------
@@ -82,7 +89,8 @@ class TextFileDispatcher(FileDispatcher):
         -------
         numpy array
             array with shape equals to the shape of `partition_ids` and
-            filed with partitions objects."""
+            filed with partitions objects.
+        """
         return np.array(
             [
                 [
@@ -99,8 +107,8 @@ class TextFileDispatcher(FileDispatcher):
 
     @classmethod
     def pathlib_or_pypath(cls, filepath_or_buffer):
-        """Checks if `filepath_or_buffer` is instance of `py.path.local`
-        or `pathlib.Path`.
+        """
+        Check if `filepath_or_buffer` is instance of `py.path.local` or `pathlib.Path`.
 
         Parameters
         ----------
@@ -137,7 +145,8 @@ class TextFileDispatcher(FileDispatcher):
         quotechar: bytes = b'"',
         is_quoting: bool = True,
     ):
-        """Move the file offset at the specified amount of bytes.
+        """
+        Move the file offset at the specified amount of bytes.
 
         Parameters
         ----------
@@ -156,7 +165,6 @@ class TextFileDispatcher(FileDispatcher):
             If file pointer reached the end of the file, but did not find
             closing quote returns `False`. `True` in any other case.
         """
-
         if is_quoting:
             chunk = f.read(offset_size)
             outside_quotes = not chunk.count(quotechar) % 2
@@ -188,7 +196,8 @@ class TextFileDispatcher(FileDispatcher):
         quotechar: bytes = b'"',
         is_quoting: bool = True,
     ):
-        """Compute chunk sizes in bytes for every partition.
+        """
+        Compute chunk sizes in bytes for every partition.
 
         Parameters
         ----------
@@ -271,7 +280,8 @@ class TextFileDispatcher(FileDispatcher):
         is_quoting: bool = True,
         outside_quotes: bool = True,
     ):
-        """Move the file offset at the specified amount of rows.
+        """
+        Move the file offset at the specified amount of rows.
 
         Parameters
         ----------
@@ -293,7 +303,6 @@ class TextFileDispatcher(FileDispatcher):
             returns `False`. `True` in any other case.
         int
             Number of rows that were read.
-
         """
         if nrows is not None and nrows <= 0:
             return True, 0
@@ -317,8 +326,8 @@ class TextFileDispatcher(FileDispatcher):
     # _read helper functions
     @classmethod
     def rows_skipper_builder(cls, f, quotechar, is_quoting):
-        """Build object for skipping passed number of lines according
-        to defined `f`, `quotechar` and `is_quoting` parameters.
+        """
+        Build object for skipping passed number of lines.
 
         Parameters
         ----------
@@ -331,7 +340,7 @@ class TextFileDispatcher(FileDispatcher):
 
         Returns
         -------
-        object:
+        object
             skipper object.
         """
 
@@ -354,18 +363,19 @@ class TextFileDispatcher(FileDispatcher):
         header: Union[int, Sequence[int], str, None] = "infer",
         names: Optional[Sequence] = None,
     ) -> int:
-        """Define the number of rows that are used by header.
+        """
+        Define the number of rows that are used by header.
 
         Parameters
         ----------
-        header: int, list of int or str, optional. Default "infer"
+        header : int, list of int or str, optional. Default "infer"
             Original `header` parameter of `read_csv` function.
-        names:  array-like, optional
+        names :  array-like, optional
             Original names parameter of `read_csv` function.
 
         Returns
         -------
-        header_size: int
+        header_size : int
             The number of rows that are used by header.
         """
         header_size = 0
@@ -385,7 +395,8 @@ class TextFileDispatcher(FileDispatcher):
         num_splits: int,
         column_names: ColumnNamesTypes,
     ) -> Tuple[list, int]:
-        """Define partitioning metadata.
+        """
+        Define partitioning metadata.
 
         Parameters
         ----------
@@ -428,7 +439,8 @@ class TextFileDispatcher(FileDispatcher):
 
     @classmethod
     def _launch_tasks(cls, splits: list, **partition_kwargs) -> Tuple[list, list, list]:
-        """Launch tasks to read partitions.
+        """
+        Launch tasks to read partitions.
 
         Parameters
         ----------

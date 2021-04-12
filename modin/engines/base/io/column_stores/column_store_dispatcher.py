@@ -11,10 +11,12 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-"""This module houses `ColumnStoreDispatcher` class, that contains utils for handling
- columnar store format files. `ColumnStoreDispatcher` inherits util functions for handling
- files from `FileDispatcher` class and can be used as base class for dipatchers of
- specific columnar store formats.
+"""
+Module houses `ColumnStoreDispatcher` class.
+
+`ColumnStoreDispatcher` contains utils for handling columnar store format files,
+inherits util functions for handling files from `FileDispatcher` class and can be
+used as base class for dipatchers of specific columnar store formats.
 """
 
 import numpy as np
@@ -26,13 +28,16 @@ from modin.config import NPartitions
 
 
 class ColumnStoreDispatcher(FileDispatcher):
-    """Class handles utils for reading columnar store format files. Inherits
-    some util functions for processing files from `FileDispatcher` class.
+    """
+    Class handles utils for reading columnar store format files.
+
+    Inherits some util functions for processing files from `FileDispatcher` class.
     """
 
     @classmethod
     def call_deploy(cls, fname, col_partitions, **kwargs):
-        """Deploy remote tasks to the workers with passed parameters.
+        """
+        Deploy remote tasks to the workers with passed parameters.
 
         Parameters
         ----------
@@ -67,9 +72,8 @@ class ColumnStoreDispatcher(FileDispatcher):
 
     @classmethod
     def build_partition(cls, partition_ids, row_lengths, column_widths):
-        """Build array with partitions of `cls.frame_partition_cls` class
-        from data ids passed as `partition_ids` and partitions metadata
-        passed as `row_lengths` and `column_widths`.
+        """
+        Build array with partitions of `cls.frame_partition_cls` class.
 
         Parameters
         ----------
@@ -102,8 +106,8 @@ class ColumnStoreDispatcher(FileDispatcher):
 
     @classmethod
     def build_index(cls, partition_ids):
-        """Compute index and its split sizes of resulting Modin DataFrame by using
-        first partition's index.
+        """
+        Compute index and its split sizes of resulting Modin DataFrame.
 
         Parameters
         ----------
@@ -140,7 +144,8 @@ class ColumnStoreDispatcher(FileDispatcher):
 
     @classmethod
     def build_columns(cls, columns):
-        """Split columns into chunks, that should be read be workers.
+        """
+        Split columns into chunks, that should be read be workers.
 
         Parameters
         ----------
@@ -170,9 +175,8 @@ class ColumnStoreDispatcher(FileDispatcher):
 
     @classmethod
     def build_dtypes(cls, partition_ids, columns):
-        """Compute dtypes concatenating the results from each of the columns splits
-        produced in partitions. This creates a pandas Series that contains a dtype for every
-        column.
+        """
+        Compute common for all partitions `dtypes` for each of the DataFrame column.
 
         Parameters
         ----------
@@ -192,8 +196,8 @@ class ColumnStoreDispatcher(FileDispatcher):
 
     @classmethod
     def build_query_compiler(cls, path, columns, **kwargs):
-        """Build query compiler from deployed tasks outputs according to `path`
-        and `columns` parameters.
+        """
+        Build query compiler from deployed tasks outputs.
 
         Parameters
         ----------

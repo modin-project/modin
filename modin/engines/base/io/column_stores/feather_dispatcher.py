@@ -11,9 +11,7 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-"""This module houses `FeatherDispatcher` class, that is used for
-reading `.feather` files.
-"""
+"""Module houses `FeatherDispatcher` class, that is used for reading `.feather` files."""
 
 from modin.engines.base.io.column_stores.column_store_dispatcher import (
     ColumnStoreDispatcher,
@@ -21,13 +19,17 @@ from modin.engines.base.io.column_stores.column_store_dispatcher import (
 
 
 class FeatherDispatcher(ColumnStoreDispatcher):
-    """Class handles utils for reading `.feather` files. Inherits some common for
-    columnar store files util functions from `ColumnStoreDispatcher` class.
+    """
+    Class handles utils for reading `.feather` files.
+
+    Inherits some common for columnar store files util functions from
+    `ColumnStoreDispatcher` class.
     """
 
     @classmethod
     def _read(cls, path, columns=None, **kwargs):
-        """Read data from the file path, returning a Modin DataFrame.
+        """
+        Read data from the file path, returning a Modin DataFrame.
 
         Parameters
         ----------

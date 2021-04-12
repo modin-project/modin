@@ -11,9 +11,7 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-"""This module houses `CSVDispatcher` class, that is used for
-reading `.csv` files.
-"""
+"""Module houses `CSVDispatcher` class, that is used for reading `.csv` files."""
 
 from modin.engines.base.io.text.text_file_dispatcher import (
     TextFileDispatcher,
@@ -34,15 +32,16 @@ IndexColType = Union[int, str, bool, Sequence[int], Sequence[str], None]
 
 
 class CSVDispatcher(TextFileDispatcher):
-    """Class handles utils for reading `.csv` files. Inherits some common for text
-    files util functions from `TextFileDispatcher` class.
+    """
+    Class handles utils for reading `.csv` files.
+
+    Inherits some common for text files util functions from `TextFileDispatcher` class.
     """
 
     @classmethod
     def _read(cls, filepath_or_buffer, **kwargs):
-        """Read data from `filepath_or_buffer` according to `kwargs` parameters passed to
-        underlying `read_csv`. This function performs parameters preprocessing, data file splitting,
-        tasks launching and results postprocessing.
+        """
+        Read data from `filepath_or_buffer` according to `kwargs` parameters.
 
         Parameters
         ----------
@@ -180,8 +179,8 @@ class CSVDispatcher(TextFileDispatcher):
         read_csv_kwargs: ReadCsvKwargsType,
         compression_infered: str,
     ) -> bool:
-        """Check that passed parameters are supported by
-        current modin.read_csv implementation.
+        """
+        Check if passed parameters are supported by current `read_csv` implementation.
 
         Parameters
         ----------
@@ -229,8 +228,8 @@ class CSVDispatcher(TextFileDispatcher):
         index_col: IndexColType,
         index_name: str,
     ) -> Tuple[IndexColType, list]:
-        """Compute the index based on a sum of the lengths of each partition
-        (by default) or based on the column(s) that were requested.
+        """
+        Compute the resulting DataFrame index and index lengths for each or partitions.
 
         Parameters
         ----------
@@ -272,7 +271,8 @@ class CSVDispatcher(TextFileDispatcher):
         column_names: ColumnNamesTypes,
         **kwargs,
     ):
-        """Get new query compiler from data received from workers.
+        """
+        Get new query compiler from data received from workers.
 
         Parameters
         ----------

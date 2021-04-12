@@ -11,10 +11,12 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-"""This module houses `SQLDispatcher` class, that contains utils for handling SQL
- queries or database tables. `SQLDispatcher` inherits util functions for handling files
- from `FileDispatcher` class and can be used as base class for dipatchers of
- SQL queries.
+"""
+Module houses `SQLDispatcher` class.
+
+`SQLDispatcher` contains utils for handling SQL queries or database tables,
+inherits util functions for handling files from `FileDispatcher` class and can be
+used as base class for dipatchers of SQL queries.
 """
 
 import math
@@ -27,13 +29,16 @@ from modin.config import NPartitions
 
 
 class SQLDispatcher(FileDispatcher):
-    """Class handles utils for reading SQL queries or database tables. Inherits
-    some common for files util functions from `FileDispatcher` class.
+    """
+    Class handles utils for reading SQL queries or database tables.
+
+    Inherits some common for files util functions from `FileDispatcher` class.
     """
 
     @classmethod
     def _read(cls, sql, con, index_col=None, **kwargs):
-        """Reads a SQL query or database table into a DataFrame.
+        """
+        Read a SQL query or database table into a DataFrame.
 
         Parameters
         ----------

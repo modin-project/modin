@@ -11,9 +11,7 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-"""This module houses `FWFDispatcher` class, that is used for
-reading of tables with fixed-width formatted lines.
-"""
+"""Module houses `FWFDispatcher` class, that is used for reading of tables with fixed-width formatted lines."""
 
 from modin.engines.base.io.text.text_file_dispatcher import TextFileDispatcher
 from modin.data_management.utils import compute_chunksize
@@ -26,15 +24,16 @@ from modin.config import NPartitions
 
 
 class FWFDispatcher(TextFileDispatcher):
-    """Class handles utils for reading of tables with fixed-width formatted lines.
+    """
+    Class handles utils for reading of tables with fixed-width formatted lines.
+
     Inherits some common for text files util functions from `TextFileDispatcher` class.
     """
 
     @classmethod
     def read(cls, filepath_or_buffer, **kwargs):
-        """Read data from `filepath_or_buffer` according to the passed `read_fwf` `kwargs`
-        parameters. This function performs parameters preprocessing, data file splitting,
-        tasks launching and results postprocessing.
+        """
+        Read data from `filepath_or_buffer` according to the passed `read_fwf` `kwargs` parameters.
 
         Parameters
         ----------

@@ -11,9 +11,11 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-"""This module houses `FileDispatcher` class, that can be used as abstract base class
- for dispatchers of specific file formats. Also `FileDispatcher` can be used for files
-processing.
+"""
+Module houses `FileDispatcher` class.
+
+`FileDispatcher` can be used as abstract base class for dispatchers of specific file formats or
+for direct files processing.
 """
 
 import os
@@ -25,11 +27,12 @@ NOT_IMPLEMENTED_MESSAGE = "Implement in children classes!"
 
 
 class FileDispatcher:
-    """Class handles util functions for reading data from different kinds of files.
+    """
+    Class handles util functions for reading data from different kinds of files.
 
     Notes
     -----
-    `deploy`, `parse` and `materialize` are abstract methods and should be
+    `_read`, `deploy`, `parse` and `materialize` are abstract methods and should be
     implemented in the child classes.
     """
 
@@ -39,9 +42,8 @@ class FileDispatcher:
 
     @classmethod
     def read(cls, *args, **kwargs):
-        """High-level function that calls specific for defined backend, engine and
-        dispatcher class `_read` function with passed parameters and performs some
-        postprocessing work on the resulting query_compiler object.
+        """
+        Read data according passed `args` and `kwargs`.
 
         Parameters
         ----------
@@ -54,6 +56,12 @@ class FileDispatcher:
         -------
         query_compiler : BaseQueryCompiler
             Query compiler with imported data for further processing.
+
+        Notes
+        -----
+        `read` is high-level function that calls specific for defined backend, engine and
+        dispatcher class `_read` function with passed parameters and performs some
+        postprocessing work on the resulting query_compiler object.
         """
         query_compiler = cls._read(*args, **kwargs)
         # TODO (devin-petersohn): Make this section more general for non-pandas kernel
@@ -80,16 +88,17 @@ class FileDispatcher:
 
     @classmethod
     def _read(cls, *args, **kwargs):
-        """Function that performs reading the data from file, should be implemented
-        in the child class.
+        """
+        Perform reading of the data from file.
+
+        Should be implemented in the child class.
         """
         raise NotImplementedError(NOT_IMPLEMENTED_MESSAGE)
 
     @classmethod
     def get_path(cls, file_path):
-        """Handles `file_path` in accordance to it's type: if `file_path`
-        is an S3 bucket, parameter will be returned as is, otherwise
-        absolute path will be returned.
+        """
+        Process `file_path` in accordance to it's type.
 
         Parameters
         ----------
@@ -101,6 +110,11 @@ class FileDispatcher:
         -------
         str
             Updated or verified `file_path` parameter.
+
+        Notes
+        -----
+        if `file_path` is an S3 bucket, parameter will be returned as is, otherwise
+        absolute path will be returned.
         """
         if S3_ADDRESS_REGEX.search(file_path):
             return file_path
@@ -109,9 +123,8 @@ class FileDispatcher:
 
     @classmethod
     def file_open(cls, file_path, mode="rb", compression="infer"):
-        """Get the file handle from `file_path` according to `file_path` type
-        (special treatment is done for an S3 bucket), `compression` and `mode`
-        parameters.
+        """
+        Get the file handle from `file_path`.
 
         Parameters
         ----------
@@ -179,8 +192,8 @@ class FileDispatcher:
 
     @classmethod
     def file_size(cls, f):
-        """Get the size of file associated with file handle `f` by
-        checking the file last byte number.
+        """
+        Get the size of file associated with file handle `f`.
 
         Parameters
         ----------
@@ -200,7 +213,8 @@ class FileDispatcher:
 
     @classmethod
     def file_exists(cls, file_path):
-        """Checks if `file_path` exists.
+        """
+        Check if `file_path` exists.
 
         Parameters
         ----------
@@ -233,20 +247,26 @@ class FileDispatcher:
 
     @classmethod
     def deploy(cls, func, args, num_returns):
-        """Function for remote task deploying, should be implemented
-        in the task class (for example in the `RayTask`).
+        """
+        Deploy remote task.
+
+        Should be implemented in the task class (for example in the `RayTask`).
         """
         raise NotImplementedError(NOT_IMPLEMENTED_MESSAGE)
 
     def parse(self, func, args, num_returns):
-        """Function for files parsing on the workers processes, should be
-        implemented in the parser class (for example in the `PandasCSVParser`).
+        """
+        Parse file's data in the worker process.
+
+        Should be implemented in the parser class (for example in the `PandasCSVParser`).
         """
         raise NotImplementedError(NOT_IMPLEMENTED_MESSAGE)
 
     @classmethod
     def materialize(cls, obj_id):
-        """Function for getting results from worker, should be implemented
-        in the task class (for example in the `RayTask`).
+        """
+        Get results from worker.
+
+        Should be implemented in the task class (for example in the `RayTask`).
         """
         raise NotImplementedError(NOT_IMPLEMENTED_MESSAGE)

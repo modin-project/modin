@@ -11,9 +11,7 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-"""This module houses `ParquetDispatcher` class, that is used for
-reading `.parquet` files.
-"""
+"""Module houses `ParquetDispatcher` class, that is used for reading `.parquet` files."""
 
 import os
 
@@ -24,13 +22,17 @@ from modin.error_message import ErrorMessage
 
 
 class ParquetDispatcher(ColumnStoreDispatcher):
-    """Class handles utils for reading `.parquet`. Inherits some common for
-    columnar store files util functions from `ColumnStoreDispatcher` class.
+    """
+    Class handles utils for reading `.parquet` files.
+
+    Inherits some common for columnar store files util functions from
+    `ColumnStoreDispatcher` class.
     """
 
     @classmethod
     def _read(cls, path, engine, columns, **kwargs):
-        """Load a parquet object from the file path, returning a query compiler.
+        """
+        Load a parquet object from the file path, returning a query compiler.
 
         Parameters
         ----------
@@ -52,7 +54,6 @@ class ParquetDispatcher(ColumnStoreDispatcher):
         -----
         ParquetFile API is used. Please refer to the documentation here
         https://arrow.apache.org/docs/python/parquet.html
-
         """
         from pyarrow.parquet import ParquetFile, ParquetDataset
         from modin.pandas.io import PQ_INDEX_REGEX
