@@ -87,6 +87,7 @@ class TextFileDispatcher(FileDispatcher):
     ):
         """
         Moves the file offset at the specified amount of bytes.
+
         Parameters
         ----------
         f: file object
@@ -96,6 +97,7 @@ class TextFileDispatcher(FileDispatcher):
             Indicate quote in a file.
         is_quoting: bool, default True
             Whether or not to consider quotes.
+
         Returns
         -------
         bool
@@ -136,6 +138,7 @@ class TextFileDispatcher(FileDispatcher):
     ):
         """
         Compute chunk sizes in bytes for every partition.
+
         Parameters
         ----------
         f: file to be partitioned
@@ -150,6 +153,7 @@ class TextFileDispatcher(FileDispatcher):
             Indicate quote in a file.
         is_quoting: bool, default True
             Whether or not to consider quotes.
+
         Returns
         -------
         An array, where each element of array is a tuple of two ints:
@@ -217,6 +221,7 @@ class TextFileDispatcher(FileDispatcher):
     ):
         """
         Move the file offset at the specified amount of rows.
+
         Parameters
         ----------
         f: file object
@@ -228,6 +233,7 @@ class TextFileDispatcher(FileDispatcher):
             Whether or not to consider quotes.
         outside_quotes: bool, default True
             Whether the file pointer is within quotes or not at the time this function is called.
+
         Returns
         -------
         tuple of bool and int,
@@ -315,6 +321,7 @@ class TextFileDispatcher(FileDispatcher):
             The maximum number of splits to separate the DataFrame into.
         column_names: ColumnNamesTypes
             column names of df.
+
         Returns
         -------
         column_widths: list
@@ -355,6 +362,7 @@ class TextFileDispatcher(FileDispatcher):
             parser task (start/end read bytes and etc.)
         partition_kwargs:
             kwargs that should be passed to the parser function.
+
         Returns
         -------
         partition_ids: list
