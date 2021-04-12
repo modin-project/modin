@@ -11,18 +11,22 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-"""This module houses `BaseIO` class - base class for IO classes, that stores IO
- functions.
+"""
+Module houses `BaseIO` class.
+
+`BaseIO` - base class for IO classes, that stores IO functions.
 """
 
 import pandas
-from pandas.util._decorators import Appender as DocstringAppender
+from pandas.util._decorators import doc
 from collections import OrderedDict
 from modin.error_message import ErrorMessage
 from modin.backends.base.query_compiler import BaseQueryCompiler
 from typing import Optional
 
-_doc_default_io_method = """{summary} using Pandas.
+_doc_default_io_method = """
+{summary} using Pandas.
+
 For parameters description please refer to Pandas API.
 
 Returns
@@ -45,8 +49,8 @@ class BaseIO(object):
 
     @classmethod
     def from_non_pandas(cls, *args, **kwargs):
-        """Improve non-pandas object to an advanced Modin query compiler.
-        (Currently returns nothing).
+        """
+        Improve non-pandas object to an advanced Modin query compiler.
 
         Parameters
         ----------
@@ -54,12 +58,17 @@ class BaseIO(object):
             Positional arguments to be passed into `func`.
         **kwargs : dict
             Keyword arguments to be passed into `func`.
+
+        Notes
+        -----
+        Currently returns nothing.
         """
         return None
 
     @classmethod
     def from_pandas(cls, df):
-        """Improve simple Pandas DataFrame to an advanced Modin query compiler.
+        """
+        Improve simple Pandas DataFrame to an advanced Modin query compiler.
 
         Parameters
         ----------
@@ -75,7 +84,8 @@ class BaseIO(object):
 
     @classmethod
     def from_arrow(cls, at):
-        """Improve simple Arrow Table to an advanced Modin query compiler.
+        """
+        Improve simple Arrow Table to an advanced Modin query compiler.
 
         Parameters
         ----------
@@ -90,11 +100,10 @@ class BaseIO(object):
         return cls.query_compiler_cls.from_arrow(at, cls.frame_cls)
 
     @classmethod
-    @DocstringAppender(
-        _doc_default_io_method.format(
-            summary="Load a parquet object from the file path, returning a query compiler",
-            returns=_doc_returns_qc,
-        )
+    @doc(
+        _doc_default_io_method,
+        summary="Load a parquet object from the file path, returning a query compiler",
+        returns=_doc_returns_qc,
     )
     def read_parquet(cls, path, engine, columns, use_nullable_dtypes, **kwargs):
         ErrorMessage.default_to_pandas("`read_parquet`")
@@ -103,11 +112,10 @@ class BaseIO(object):
         )
 
     @classmethod
-    @DocstringAppender(
-        _doc_default_io_method.format(
-            summary="Read a comma-separated values (CSV) file into query compiler",
-            returns=_doc_returns_qc_or_parser,
-        )
+    @doc(
+        _doc_default_io_method,
+        summary="Read a comma-separated values (CSV) file into query compiler",
+        returns=_doc_returns_qc_or_parser,
     )
     def read_csv(
         cls,
@@ -219,7 +227,8 @@ class BaseIO(object):
 
     @classmethod
     def _read(cls, **kwargs):
-        """Read csv file into query compiler.
+        """
+        Read csv file into query compiler.
 
         Parameters
         ----------
@@ -244,11 +253,10 @@ class BaseIO(object):
         return pd_obj
 
     @classmethod
-    @DocstringAppender(
-        _doc_default_io_method.format(
-            summary="Convert a JSON string to query compiler",
-            returns=_doc_returns_qc,
-        )
+    @doc(
+        _doc_default_io_method,
+        summary="Convert a JSON string to query compiler",
+        returns=_doc_returns_qc,
     )
     def read_json(
         cls,
@@ -291,11 +299,10 @@ class BaseIO(object):
         return cls.from_pandas(pandas.read_json(**kwargs))
 
     @classmethod
-    @DocstringAppender(
-        _doc_default_io_method.format(
-            summary="Load data from Google BigQuery into query compiler",
-            returns=_doc_returns_qc,
-        )
+    @doc(
+        _doc_default_io_method,
+        summary="Load data from Google BigQuery into query compiler",
+        returns=_doc_returns_qc,
     )
     def read_gbq(
         cls,
@@ -337,11 +344,10 @@ class BaseIO(object):
         )
 
     @classmethod
-    @DocstringAppender(
-        _doc_default_io_method.format(
-            summary="Read HTML tables into query compiler",
-            returns=_doc_returns_qc,
-        )
+    @doc(
+        _doc_default_io_method,
+        summary="Read HTML tables into query compiler",
+        returns=_doc_returns_qc,
     )
     def read_html(
         cls,
@@ -382,23 +388,21 @@ class BaseIO(object):
         return cls.from_pandas(pandas.read_html(**kwargs)[0])
 
     @classmethod
-    @DocstringAppender(
-        _doc_default_io_method.format(
-            summary="Read text from clipboard into query compiler",
-            returns=_doc_returns_qc,
-        )
+    @doc(
+        _doc_default_io_method,
+        summary="Read text from clipboard into query compiler",
+        returns=_doc_returns_qc,
     )
     def read_clipboard(cls, sep=r"\s+", **kwargs):  # pragma: no cover
         ErrorMessage.default_to_pandas("`read_clipboard`")
         return cls.from_pandas(pandas.read_clipboard(sep=sep, **kwargs))
 
     @classmethod
-    @DocstringAppender(
-        _doc_default_io_method.format(
-            summary="Read an Excel file into query compiler",
-            returns="BaseQueryCompiler or dict/OrderedDict :\n"
-            "    QueryCompiler or OrderedDict/dict with read data.",
-        )
+    @doc(
+        _doc_default_io_method,
+        summary="Read an Excel file into query compiler",
+        returns="BaseQueryCompiler or dict/OrderedDict :\n"
+        "    QueryCompiler or OrderedDict/dict with read data.",
     )
     def read_excel(
         cls,
@@ -470,11 +474,10 @@ class BaseIO(object):
             return cls.from_pandas(intermediate)
 
     @classmethod
-    @DocstringAppender(
-        _doc_default_io_method.format(
-            summary="Read data from hdf store into query compiler",
-            returns=_doc_returns_qc,
-        )
+    @doc(
+        _doc_default_io_method,
+        summary="Read data from hdf store into query compiler",
+        returns=_doc_returns_qc,
     )
     def read_hdf(
         cls,
@@ -508,11 +511,10 @@ class BaseIO(object):
         )
 
     @classmethod
-    @DocstringAppender(
-        _doc_default_io_method.format(
-            summary="Load a feather-format object from the file path into query compiler",
-            returns=_doc_returns_qc,
-        )
+    @doc(
+        _doc_default_io_method,
+        summary="Load a feather-format object from the file path into query compiler",
+        returns=_doc_returns_qc,
     )
     def read_feather(cls, path, columns=None, use_threads=True, storage_options=None):
         ErrorMessage.default_to_pandas("`read_feather`")
@@ -526,11 +528,10 @@ class BaseIO(object):
         )
 
     @classmethod
-    @DocstringAppender(
-        _doc_default_io_method.format(
-            summary="Read Stata file into query compiler",
-            returns=_doc_returns_qc,
-        )
+    @doc(
+        _doc_default_io_method,
+        summary="Read Stata file into query compiler",
+        returns=_doc_returns_qc,
     )
     def read_stata(
         cls,
@@ -563,11 +564,10 @@ class BaseIO(object):
         return cls.from_pandas(pandas.read_stata(**kwargs))
 
     @classmethod
-    @DocstringAppender(
-        _doc_default_io_method.format(
-            summary="Read SAS files stored as either XPORT or SAS7BDAT format files\ninto query compiler",
-            returns=_doc_returns_qc,
-        )
+    @doc(
+        _doc_default_io_method,
+        summary="Read SAS files stored as either XPORT or SAS7BDAT format files\ninto query compiler",
+        returns=_doc_returns_qc,
     )
     def read_sas(
         cls,
@@ -591,11 +591,10 @@ class BaseIO(object):
         )
 
     @classmethod
-    @DocstringAppender(
-        _doc_default_io_method.format(
-            summary="Load pickled pandas object (or any object) from file into query compiler",
-            returns=_doc_returns_qc,
-        )
+    @doc(
+        _doc_default_io_method,
+        summary="Load pickled pandas object (or any object) from file into query compiler",
+        returns=_doc_returns_qc,
     )
     def read_pickle(cls, filepath_or_buffer, compression="infer", storage_options=None):
         ErrorMessage.default_to_pandas("`read_pickle`")
@@ -608,11 +607,10 @@ class BaseIO(object):
         )
 
     @classmethod
-    @DocstringAppender(
-        _doc_default_io_method.format(
-            summary="Read SQL query or database table into query compiler",
-            returns=_doc_returns_qc,
-        )
+    @doc(
+        _doc_default_io_method,
+        summary="Read SQL query or database table into query compiler",
+        returns=_doc_returns_qc,
     )
     def read_sql(
         cls,
@@ -640,11 +638,10 @@ class BaseIO(object):
         )
 
     @classmethod
-    @DocstringAppender(
-        _doc_default_io_method.format(
-            summary="Read a table of fixed-width formatted lines into query compiler",
-            returns=_doc_returns_qc_or_parser,
-        )
+    @doc(
+        _doc_default_io_method,
+        summary="Read a table of fixed-width formatted lines into query compiler",
+        returns=_doc_returns_qc_or_parser,
     )
     def read_fwf(
         cls, filepath_or_buffer, colspecs="infer", widths=None, infer_nrows=100, **kwds
@@ -669,11 +666,10 @@ class BaseIO(object):
         return pd_obj
 
     @classmethod
-    @DocstringAppender(
-        _doc_default_io_method.format(
-            summary="Read SQL database table into query compiler",
-            returns=_doc_returns_qc,
-        )
+    @doc(
+        _doc_default_io_method,
+        summary="Read SQL database table into query compiler",
+        returns=_doc_returns_qc,
     )
     def read_sql_table(
         cls,
@@ -701,11 +697,10 @@ class BaseIO(object):
         )
 
     @classmethod
-    @DocstringAppender(
-        _doc_default_io_method.format(
-            summary="Read SQL query into query compiler",
-            returns=_doc_returns_qc,
-        )
+    @doc(
+        _doc_default_io_method,
+        summary="Read SQL query into query compiler",
+        returns=_doc_returns_qc,
     )
     def read_sql_query(
         cls,
@@ -731,11 +726,10 @@ class BaseIO(object):
         )
 
     @classmethod
-    @DocstringAppender(
-        _doc_default_io_method.format(
-            summary="Load an SPSS file from the file path, returning a query compiler",
-            returns=_doc_returns_qc,
-        )
+    @doc(
+        _doc_default_io_method,
+        summary="Load an SPSS file from the file path, returning a query compiler",
+        returns=_doc_returns_qc,
     )
     def read_spss(cls, path, usecols, convert_categoricals):
         ErrorMessage.default_to_pandas("`read_spss`")
@@ -755,7 +749,9 @@ class BaseIO(object):
         dtype=None,
         method=None,
     ):
-        """Write records stored in a DataFrame to a SQL database using Pandas.
+        """
+        Write records stored in a DataFrame to a SQL database using Pandas.
+
         For parameters description please refer to Pandas API.
         """
         ErrorMessage.default_to_pandas("`to_sql`")
@@ -774,7 +770,9 @@ class BaseIO(object):
 
     @classmethod
     def to_pickle(cls, obj, path, compression="infer", protocol=4):
-        """Pickle (serialize) object to file using Pandas.
+        """
+        Pickle (serialize) object to file using Pandas.
+
         For parameters description please refer to Pandas API.
         """
         if protocol == 4:
@@ -791,7 +789,9 @@ class BaseIO(object):
 
     @classmethod
     def to_csv(cls, obj, **kwargs):
-        """Write object to a comma-separated values (CSV) file using Pandas.
+        """
+        Write object to a comma-separated values (CSV) file using Pandas.
+
         For parameters description please refer to Pandas API.
         """
         ErrorMessage.default_to_pandas("`to_csv`")
