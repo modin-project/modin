@@ -15,11 +15,11 @@ from .any_default import AnyDefault
 
 
 class SeriesDefault(AnyDefault):
-    """Build default-to-pandas methods which is executed under Series"""
+    """Builder for default-to-pandas methods which is executed under Series."""
 
     OBJECT_TYPE = "Series"
 
     @classmethod
     def frame_wrapper(cls, df):
-        """Squeeze passed DataFrame to be able to process Series-specific functions on it"""
+        """Squeeze passed DataFrame to be able to process Series-specific functions on it."""
         return df.squeeze(axis=1)

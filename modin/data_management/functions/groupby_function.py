@@ -19,6 +19,8 @@ from modin.utils import try_cast_to_pandas, hashable
 
 
 class GroupbyReduceFunction(MapReduceFunction):
+    """Builder class for GroupBy aggregation functions."""
+
     @classmethod
     def register(
         cls,
@@ -28,27 +30,30 @@ class GroupbyReduceFunction(MapReduceFunction):
         **reg_kwargs,
     ):
         """
-        Build template groupby function, which  MapReduce
+        Build template GroupBy aggregation function.
+        
+        Resulted function is applied in parallel via MapReduce algorithm.
 
         Parameters
         ----------
-        map_func: str, callable or dict,
-            If 'str' this parameter will be treated as a function name to register,
-            so 'map_func' and 'reduce_func' will be grabbed from 'GROUPBY_REDUCE_FUNCTIONS'.
+        map_func : str, callable or dict
+            If `str` this parameter will be treated as a function name to register,
+            so `map_func` and `reduce_func` will be grabbed from `GROUPBY_REDUCE_FUNCTIONS`.
             If dict or callable then this will be treated as a function to apply to each group
             at the map phase.
-        reduce_func: callable or dict (optional),
+        reduce_func : callable or dict, optional
             Function to apply to each group at the reduce phase. If not specified
             will be set the same as 'map_func'.
-        *reg_args: args,
+        *reg_args : args
             Args that will be passed to the returned function.
-        **reg_kwargs: kwargs,
+        **reg_kwargs : kwargs
             Kwargs that will be passed to the returned function.
 
         Returns
         -------
-        Callable,
-            Function that executes GroupBy aggregation with MapReduce algorithm.
+        callable
+            Function that takes query compiler and executes GroupBy aggregation
+            with MapReduce algorithm.
         """
         if isinstance(map_func, str):
 
@@ -85,32 +90,33 @@ class GroupbyReduceFunction(MapReduceFunction):
         map_args=None,
     ):
         """
-        Executes Map phase of GroupbyReduce:
+        Execute Map phase of GroupbyReduce.
+
         Groups DataFrame and applies map function to each group. Groups will be
         preserved in the results index for the following reduce phase.
 
         Parameters
         ----------
-        df: pandas.DataFrame,
+        df : pandas.DataFrame
             Serialized frame to group.
-        other: pandas.DataFrame (optional),
+        other : pandas.DataFrame, optional
             Serialized frame, whose columns used to determine the groups.
             If not specified, `by` parameter is used.
-        axis: int, (default 0)
-            Axis to group and execute function along.
-        by: level index name or list of such labels
+        axis : {0: Index, 1: Columns}, default: 0
+            Axis to group and apply aggregation function along.
+        by : level index name or list of such labels
             Index levels, that is used to determine groups.
-        groupby_args: dict,
-            Dictionary which carries arguments for pandas.DataFrame.groupby
-        map_func: callable,
+        groupby_args : dict
+            Dictionary which carries arguments for `pandas.DataFrame.groupby`.
+        map_func : callable
             Function to apply to each group.
-        map_args: dict,
+        map_args : dict
             Arguments which will be passed to `map_func`.
 
         Returns
         -------
         pandas.DataFrame
-            GroupBy result for one particular partition.
+            GroupBy aggregation result for one particular partition.
         """
         # Set `as_index` to True to track the metadata of the grouping object
         # It is used to make sure that between phases we are constructing the
@@ -151,32 +157,33 @@ class GroupbyReduceFunction(MapReduceFunction):
         method=None,
     ):
         """
-        Executes Reduce phase of GroupbyReduce:
+        Execute Reduce phase of GroupbyReduce.
+
         Combines groups from the Map phase and applies reduce function to each group.
 
         Parameters
         ----------
-        df: pandas.DataFrame,
+        df : pandas.DataFrame,
             Serialized frame which contain groups to combine.
-        partition_idx: int,
+        partition_idx : int
             Internal index of column partition to which this function is applied.
-        axis: int, (default 0)
-            Axis to group and execute function along.
-        groupby_args: dict,
-            Dictionary which carries arguments for pandas.DataFrame.groupby
-        reduce_func: callable,
+        axis : {0: Index, 1: Columns}, default: 0
+            Axis to group and apply aggregation function along.
+        groupby_args : dict
+            Dictionary which carries arguments for `pandas.DataFrame.groupby`.
+        reduce_func : callable
             Function to apply to each group.
-        reduce_args: dict,
+        reduce_args : dict
             Arguments which will be passed to `reduce_func`.
-        drop: bool, (default False)
+        drop : bool, default: False
             Indicates whether or not by-data came from the `self` frame.
-        method: str, (optional)
+        method : str, optional
             Name of the groupby function. This is a hint to be able to do special casing.
 
         Returns
         -------
         pandas.DataFrame
-            GroupBy result.
+            GroupBy aggregation result.
         """
         # Wrapping names into an Index should be unnecessary, however
         # there is a bug in pandas with intersection that forces us to do so:
@@ -222,32 +229,34 @@ class GroupbyReduceFunction(MapReduceFunction):
         """
         Execute GroupBy aggregation with MapReduce approach.
 
-        query_compiler: QueryCompiler,
+        Parameters
+        ----------
+        query_compiler : BaseQueryCompiler
             Frame to group.
-        by: QueryCompiler, column or index label, Grouper or list of such
+        by : BaseQueryCompiler, column or index label, Grouper or list of such
             Object that determine groups.
-        axis: int,
+        axis : {0: Index, 1: Columns}
             Axis to group and apply aggregation function along.
-        groupby_args: dict,
+        groupby_args : dict
             Dictionary which carries arguments for pandas.DataFrame.groupby.
-        map_args: dict,
+        map_args : dict
             Arguments which will be passed to `map_func`.
-        map_func: callable,
+        map_func : callable
             Function to apply to each group at the Map phase.
-        reduce_func: callable
+        reduce_func : callable
             Function to apply to each group at the Reduce phase.
-        reduce_args: dict,
+        reduce_args : dict
             Arguments which will be passed to `reduce_func`.
-        numeric_only: bool (default True),
+        numeric_only : bool, default: True
             Whether or not to drop non-numeric columns before executing GroupBy.
-        drop: bool, (default False)
+        drop : bool, default: False
             Indicates whether or not by-data came from the `self` frame.
-        method: str, (optional)
-            Name of the groupby function. This is a hint to be able to do special casing.
+        method : str, optional
+            Name of the GroupBy aggregation function. This is a hint to be able to do special casing.
 
         Returns
         -------
-        QueryCompiler
+        The same type as `query_compiler`
             QueryCompiler which carries the result of GroupBy aggregation.
         """
         if groupby_args.get("level", None) is None and (
@@ -304,20 +313,22 @@ class GroupbyReduceFunction(MapReduceFunction):
     @staticmethod
     def try_filter_dict(agg_func, df):
         """
-        If it's dictionary aggregation filters aggregation dictionary for keys which
+        Build aggregation function to apply to each group at this particular partition.
+
+        If it's dictionary aggregation — filters aggregation dictionary for keys which
         this particular partition contains, otherwise do nothing with passed function.
 
         Parameters
         ----------
-        agg_func: callable or dict,
-            GroupBy function.
-        df: pandas.DataFrame,
+        agg_func : callable or dict
+            Aggregation function.
+        df : pandas.DataFrame
             Serialized partition which contains available columns.
 
         Returns
         -------
         Callable
-            Function that can be safely applied to each group.
+            Aggregation function that can be safely applied to this particular partition.
         """
         if not isinstance(agg_func, dict):
             return agg_func
@@ -338,7 +349,28 @@ class GroupbyReduceFunction(MapReduceFunction):
         method=None,
     ):
         """
-        Binds appropriate arguments to map and reduce functions.
+        Bind appropriate arguments to map and reduce functions.
+
+        Parameters
+        ----------
+        by : BaseQueryCompiler, column or index label, Grouper or list of such
+            Object that determine groups.
+        axis : {0: Index, 1: Columns}
+            Axis to group and apply aggregation function along.
+        groupby_args : dict
+            Dictionary which carries arguments for pandas.DataFrame.groupby.
+        map_func : callable
+            Function to apply to each group at the Map phase.
+        map_args : dict
+            Arguments which will be passed to `map_func`.
+        reduce_func : callable
+            Function to apply to each group at the Reduce phase.
+        reduce_args : dict
+            Arguments which will be passed to `reduce_func`.
+        drop : bool, default: False
+            Indicates whether or not by-data came from the `self` frame.
+        method : str, optional
+            Name of the GroupBy aggregation function. This is a hint to be able to do special casing.
 
         Returns
         -------

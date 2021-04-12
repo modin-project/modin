@@ -19,7 +19,7 @@ import pandas
 
 @_inherit_docstrings(DefaultMethod, excluded=[DefaultMethod])
 class DataFrameDefault(DefaultMethod):
-    """Build default-to-pandas methods which is executed under DataFrame"""
+    """Builder for default-to-pandas methods which is executed under DataFrame."""
 
     @classmethod
     def register(cls, func, obj_type=pandas.DataFrame, inplace=False, fn_name=None):

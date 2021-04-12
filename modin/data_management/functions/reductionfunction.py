@@ -16,6 +16,8 @@ from .function import Function
 
 
 class ReductionFunction(Function):
+    """Builder class for Reduction functions."""
+
     @classmethod
     def register(cls, func: Callable, axis=None):
         """
@@ -25,15 +27,15 @@ class ReductionFunction(Function):
 
         Parameters
         ----------
-        func: callable
-            source function
-        axis: int (optional),
-            Specifies axis to apply function along.
+        func : callable
+            Source function.
+        axis : int, optional
+           Axis to apply function along.
 
         Returns
         -------
         callable
-            Reduction function
+            Function that takes query compiler and executes Reduction function.
         """
 
         def reduction_function(query_compiler, *args, **kwargs):

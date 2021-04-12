@@ -17,6 +17,8 @@ import pandas
 
 
 class GroupBy:
+    """Builder for GroupBy aggregation functions."""
+
     agg_aliases = [
         "agg",
         "dict_agg",
@@ -27,12 +29,14 @@ class GroupBy:
     @classmethod
     def validate_by(cls, by):
         """
+        Build valid `by` parameter for `pandas.DataFrame.groupby`.
+
         Cast all DataFrames in `by` parameter to Series or list of Series in case
         of multi-column frame.
 
         Parameters
         ----------
-        by: DateFrame, Series, index label or list of such,
+        by : DateFrame, Series, index label or list of such,
             Object which indicates groups for GroupBy.
 
         Returns
@@ -65,11 +69,11 @@ class GroupBy:
 
         Parameters
         ----------
-        key: callable,
+        key : callable
             Aggregation function.
-        *args: args,
+        *args : args
             Arguments that will be passed to the `key` aggregation function.
-        **kwargs: kwargs,
+        **kwargs : kwargs
             Arguments that will be passed to the `key` aggregation function.
 
         Returns
@@ -90,10 +94,10 @@ class GroupBy:
 
         Parameters
         ----------
-        key: callable or str,
+        key : callable or str
             Default aggregation function. If aggregation function is not specified
             via groupby arguments, then `key` function is used.
-        **kwargs:
+        **kwargs : kwargs
             GroupBy arguments that may contain aggregation function.
 
         Returns
@@ -119,11 +123,11 @@ class GroupBy:
     @classmethod
     def build_aggregate_method(cls, key):
         """
-        Build function for QueryCompiler.groupby_agg that can be executed as default-to-pandas.
+        Build function for `QueryCompiler.groupby_agg` that can be executed as default-to-pandas.
 
         Parameters
         ----------
-        key: callable or str,
+        key : callable or str
             Default aggregation function. If aggregation function is not specified
             via groupby arguments, then `key` function is used.
 
@@ -160,11 +164,11 @@ class GroupBy:
     @classmethod
     def build_groupby_reduce_method(cls, agg_func):
         """
-        Build function for QueryCompiler.groupby_* that can be executed as default-to-pandas.
+        Build function for `QueryCompiler.groupby_*` that can be executed as default-to-pandas.
 
         Parameters
         ----------
-        agg_func: callable or str,
+        agg_func : callable or str
             Default aggregation function. If aggregation function is not specified
             via groupby arguments, then `agg_func` function is used.
 
@@ -244,14 +248,14 @@ class GroupBy:
 
         Parameters
         ----------
-        func: callable or str,
+        func : callable or str
             Default aggregation function. If aggregation function is not specified
             via groupby arguments, then `func` function is used.
 
         Returns
         -------
         callable,
-            GroupBy function.
+            Function that takes pandas DataFrame and does GroupBy aggregation.
         """
         if cls.is_aggregate(func):
             return cls.build_aggregate_method(func)
@@ -259,23 +263,25 @@ class GroupBy:
 
 
 class GroupByDefault(DefaultMethod):
+    """Builder for default-to-pandas GroupBy aggregation functions."""
+
     OBJECT_TYPE = "GroupBy"
 
     @classmethod
     def register(cls, func):
         """
-        Build default-to-pandas function that groups casted to pandas DataFrame
-        and applies aggregation function to the every group.
+        Build default-to-pandas GroupBy aggregation function.
 
         Parameters
         ----------
-        func: callable or str,
+        func : callable or str
             Default aggregation function. If aggregation function is not specified
             via groupby arguments, then `func` function is used.
 
         Returns
         -------
         callable,
-            Default to pandas function that applies aggregation to GroupBy object.
+            Functiom that takes query compiler and defaults to pandas to do GroupBy
+            aggregation.
         """
         return super().register(GroupBy.build_groupby(func), fn_name=func.__name__)

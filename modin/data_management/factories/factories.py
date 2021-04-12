@@ -12,11 +12,11 @@
 # governing permissions and limitations under the License.
 
 """
-This module contains Factories for all of the supported Modin backends, each
-backend represented with a Factory class.
+Module contains Factories for all of the supported Modin backends.
 
 Factory - is a bridge between calls of IO-function from high-level API and its
-actual implementation in an engine, binded to that factory.
+actual implementation in an engine, binded to that factory. Each backend represented 
+with a Factory class.
 """
 
 import warnings
@@ -26,16 +26,42 @@ import re
 from modin.config import Engine
 from modin.utils import _inherit_func_docstring
 from modin.engines.base.io import BaseIO
+from pandas.util._decorators import Appender
 
 import pandas
 
-types_dictionary = {"pandas": {"category": pandas.CategoricalDtype}}
+_doc_abstract_factory_class = """Abstract {role} factory which allows to override the IO module easily.
 
+This class is responsible for dispatching calls of IO-functions to its
+actual engine-specific implementations.
+"""
+
+_doc_factory_class = """Factory of {engine_name} engine.
+
+This class is responsible for dispatching calls of IO-functions to its
+actual engine-specific implementations.
+"""
+
+_doc_factory_prepare_method = """Initialize Factory.
+
+Fills in `.io_cls` class attribute with {engine_name} engine lazily.
+"""
+
+
+types_dictionary = {"pandas": {"category": pandas.CategoricalDtype}}
 
 class FactoryInfo(typing.NamedTuple):
     """
-    Structure that stores information about factory: its execution engine,
-    partitioning format and whether it's experimental-only.
+    Structure that stores information about factory.
+    
+    Attributes
+    ----------
+    engine : str
+        Name of underlying execution engine.
+    partition : str
+        Name of the partition format.
+    experimental : bool
+        Whether underlying engine is experimental-only.
     """
 
     engine: str
@@ -44,22 +70,18 @@ class FactoryInfo(typing.NamedTuple):
 
 
 class NotRealFactory(Exception):
+    """NotRealFactory exception."""
+
     pass
 
 
+@Appender(_doc_abstract_factory_class.format(role=""))
 class BaseFactory(object):
-    """
-    Abstract factory which allows to override the io module easily.
-
-    This class is responsible for dispatching calls of IO-functions to its
-    actual engine-specific implementations.
-    """
-
     io_cls: BaseIO = None  # The module where the I/O functionality exists.
 
     @classmethod
     def get_info(cls) -> FactoryInfo:
-        """Get information about current factory"""
+        """Get information about current factory."""
         try:
             experimental, partition, engine = re.match(
                 r"^(Experimental)?(.*)On(.*)Factory$", cls.__name__
@@ -71,10 +93,8 @@ class BaseFactory(object):
         )
 
     @classmethod
+    @Appender(_doc_factory_prepare_method.format(engine_name="an underlying"))
     def prepare(cls):
-        """
-        Fills in .io_cls class attribute lazily
-        """
         raise NotImplementedError("Subclasses of BaseFactory must implement prepare")
 
     @classmethod
@@ -181,47 +201,37 @@ class CudfOnRayFactory(BaseFactory):
         cls.io_cls = cuDFOnRayIO
 
 
+@Appender(_doc_factory_class.format(engine_name="`PandasOnRay"))
 class PandasOnRayFactory(BaseFactory):
-    """
-    This class is responsible for dispatching calls of IO-functions to its
-    actual engine-specific implementations.
-    """
-
     @classmethod
+    @Appender(_doc_factory_prepare_method.format(engine_name="``PandasOnRayIO``"))
     def prepare(cls):
-        """
-        Fills in .io_cls class attribute with `PandasOnRayIO` engine lazily
-        """
         from modin.engines.ray.pandas_on_ray.io import PandasOnRayIO
 
         cls.io_cls = PandasOnRayIO
 
 
-@_inherit_func_docstring(PandasOnRayFactory)
+@Appender(_doc_factory_class.format(engine_name="`PandasOnPython"))
 class PandasOnPythonFactory(BaseFactory):
     @classmethod
+    @Appender(_doc_factory_prepare_method.format(engine_name="``PandasOnPythonIO``"))
     def prepare(cls):
-        """
-        Fills in .io_cls class attribute with `PandasOnPythonIO` engine lazily
-        """
         from modin.engines.python.pandas_on_python.io import PandasOnPythonIO
 
         cls.io_cls = PandasOnPythonIO
 
 
-@_inherit_func_docstring(PandasOnRayFactory)
+@Appender(_doc_factory_class.format(engine_name="`PandasOnDask`"))
 class PandasOnDaskFactory(BaseFactory):
     @classmethod
+    @Appender(_doc_factory_prepare_method.format(engine_name="``PandasOnDaskIO``"))
     def prepare(cls):
-        """
-        Fills in .io_cls class attribute with `PandasOnDaskIO` engine lazily
-        """
         from modin.engines.dask.pandas_on_dask.io import PandasOnDaskIO
 
         cls.io_cls = PandasOnDaskIO
 
 
-@_inherit_func_docstring(PandasOnRayFactory)
+@Appender(_doc_abstract_factory_class.format(role="experimental"))
 class ExperimentalBaseFactory(BaseFactory):
     @classmethod
     def _read_sql(cls, **kwargs):
@@ -253,13 +263,11 @@ class ExperimentalBaseFactory(BaseFactory):
         return cls.io_cls.read_sql(**kwargs)
 
 
-@_inherit_func_docstring(PandasOnRayFactory)
+@Appender(_doc_factory_class.format(engine_name="`experimental PandasOnRay`"))
 class ExperimentalPandasOnRayFactory(ExperimentalBaseFactory, PandasOnRayFactory):
     @classmethod
+    @Appender(_doc_factory_prepare_method.format(engine_name="``ExperimentalPandasOnRayIO``"))
     def prepare(cls):
-        """
-        Fills in .io_cls class attribute with experimental `PandasOnRayIO` engine lazily
-        """
         from modin.experimental.engines.pandas_on_ray.io_exp import (
             ExperimentalPandasOnRayIO,
         )
@@ -271,28 +279,27 @@ class ExperimentalPandasOnRayFactory(ExperimentalBaseFactory, PandasOnRayFactory
         return cls.io_cls.read_csv_glob(**kwargs)
 
 
-@_inherit_func_docstring(PandasOnRayFactory)
+@Appender(_doc_factory_class.format(engine_name="experimental `PandasOnPython"))
 class ExperimentalPandasOnPythonFactory(ExperimentalBaseFactory, PandasOnPythonFactory):
     pass
 
 
-@_inherit_func_docstring(PandasOnRayFactory)
+@Appender(_doc_factory_class.format(engine_name="`experimental PyarrowOnRay`"))
 class ExperimentalPyarrowOnRayFactory(BaseFactory):  # pragma: no cover
     @classmethod
+    @Appender(_doc_factory_prepare_method.format(engine_name="experimental ``PyarrowOnRayIO``"))
     def prepare(cls):
-        """
-        Fills in .io_cls class attribute with experimental `PyarrowOnRayIO` engine lazily
-        """
         from modin.experimental.engines.pyarrow_on_ray.io import PyarrowOnRayIO
 
         cls.io_cls = PyarrowOnRayIO
 
 
-@_inherit_func_docstring(PandasOnRayFactory)
+@Appender(_doc_abstract_factory_class.format(role="experimental remote"))
 class ExperimentalRemoteFactory(ExperimentalBaseFactory):
     wrapped_factory = BaseFactory
 
     @classmethod
+    @Appender(_doc_factory_prepare_method.format(engine_name="an underlying remote"))
     def prepare(cls):
         # query_compiler import is needed so remote PandasQueryCompiler
         # has an imported local counterpart;
@@ -336,28 +343,26 @@ class ExperimentalRemoteFactory(ExperimentalBaseFactory):
         cls.io_cls = WrappedIO(get_connection(), cls.wrapped_factory)
 
 
-@_inherit_func_docstring(PandasOnRayFactory)
+@Appender(_doc_factory_class.format(engine_name="`experimental remote PandasOnRay"))
 class ExperimentalPandasOnCloudrayFactory(ExperimentalRemoteFactory):
     wrapped_factory = PandasOnRayFactory
 
 
-@_inherit_func_docstring(PandasOnRayFactory)
+@Appender(_doc_factory_class.format(engine_name="`experimental remote PandasOnPython"))
 class ExperimentalPandasOnCloudpythonFactory(ExperimentalRemoteFactory):
     wrapped_factory = PandasOnPythonFactory
 
 
-@_inherit_func_docstring(PandasOnRayFactory)
+@Appender(_doc_factory_class.format(engine_name="`experimental OmnisciOnRay`"))
 class ExperimentalOmnisciOnRayFactory(BaseFactory):
     @classmethod
+    @Appender(_doc_factory_prepare_method.format(engine_name="experimental ``OmnisciOnRayIO``"))
     def prepare(cls):
-        """
-        Fills in .io_cls class attribute with experimental `OmnisciOnRayIO` engine lazily
-        """
         from modin.experimental.engines.omnisci_on_ray.io import OmnisciOnRayIO
 
         cls.io_cls = OmnisciOnRayIO
 
 
-@_inherit_func_docstring(PandasOnRayFactory)
+@Appender(_doc_factory_class.format(engine_name="`experimental remote OmnisciOnRay`"))
 class ExperimentalOmnisciOnCloudrayFactory(ExperimentalRemoteFactory):
     wrapped_factory = ExperimentalOmnisciOnRayFactory

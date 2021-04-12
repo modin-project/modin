@@ -16,6 +16,8 @@ from .function import Function
 
 
 class MapReduceFunction(Function):
+    """Builder class for MapReduce functions."""
+
     @classmethod
     def register(
         cls,
@@ -28,17 +30,18 @@ class MapReduceFunction(Function):
 
         Parameters
         ----------
-        map_func: callable
-            source map function
-        reduce_func: callable
-            source reduce function
-        axis: int (optional),
+        map_func : callable
+            Source map function.
+        reduce_func : callable
+            Source reduce function.
+        axis : int, optional
             Specifies axis to apply function along.
 
         Returns
         -------
         callable
-            MapReduce function
+            Function that takes query compiler and executes passed functions
+            with MapReduce algorithm.
         """
 
         if reduce_func is None:

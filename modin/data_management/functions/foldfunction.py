@@ -16,6 +16,8 @@ from .function import Function
 
 
 class FoldFunction(Function):
+    """Builder class for FoldReduce functions."""
+
     @classmethod
     def register(cls, func: Callable, axis=None):
         """
@@ -23,15 +25,15 @@ class FoldFunction(Function):
 
         Parameters
         ----------
-        func: callable,
+        func : callable
             Function to apply across rows/columns.
-        axis: int (optional),
+        axis : int, optional
             Specifies axis to apply function along.
 
         Returns
         -------
         callable
-            Fold function.
+            Function that takes query compiler and executes Fold function.
         """
 
         def fold_function(query_compiler, *args, **kwargs):

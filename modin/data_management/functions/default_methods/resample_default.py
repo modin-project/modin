@@ -15,23 +15,25 @@ from .default import DefaultMethod
 
 
 class Resampler:
+    """Builder class for resampled aggregation functions."""
+
     @classmethod
     def build_resample(cls, func, squeeze_self):
         """
-        Build function that resamples time-series data and executes
-        aggregation `func` on it.
+        Build function that resamples time-series data and does aggregation.
 
         Parameters
         ----------
-        func: callable,
+        func : callable
             Aggregation function to execute under resampled frame.
-        squeeze_self: bool,
+        squeeze_self : bool
             Whether or not to squeeze frame before resampling.
 
         Returns
         -------
         callable,
-            Function that applies aggregation to resampled time-series data.
+            Function that takes pandas DataFrame and applies aggregation 
+            to resampled time-series data.
         """
 
         def fn(df, resample_args, *args, **kwargs):
@@ -48,25 +50,27 @@ class Resampler:
 
 
 class ResampleDefault(DefaultMethod):
+    """Builder for default-to-pandas resampled aggregation functions."""
+    
     OBJECT_TYPE = "Resampler"
 
     @classmethod
     def register(cls, func, squeeze_self=False):
         """
-        Build default to pandas function that resamples time-series data in a casted
-        to pandas frame and executes aggregation `func` on it.
+        Build function that do fallback to pandas and aggregate resampled data.
 
         Parameters
         ----------
-        func: callable,
+        func : callable
             Aggregation function to execute under resampled frame.
-        squeeze_self: bool,
+        squeeze_self : bool
             Whether or not to squeeze frame before resampling.
 
         Returns
         -------
-        callable,
-            Default to pandas function that applies aggregation to resampled time-series data.
+        callable
+            Function that takes query compiler and does fallback to pandas to resample
+            time-series data and apply aggregation on it.
         """
         return super().register(
             Resampler.build_resample(func, squeeze_self),

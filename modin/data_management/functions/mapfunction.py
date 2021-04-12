@@ -16,6 +16,8 @@ from .function import Function
 
 
 class MapFunction(Function):
+    """Builder class for Map functions."""
+
     @classmethod
     def register(cls, func: Callable, *reg_args, **reg_kwargs):
         """
@@ -23,17 +25,17 @@ class MapFunction(Function):
 
         Parameters
         ----------
-        func: callable
+        func : callable
             Function that will be applied the each partition.
-        *reg_args: args,
+        *reg_args : args
             Args that will be passed to the returned function.
-        **reg_kwargs: kwargs,
+        **reg_kwargs : kwargs
             Kwargs that will be passed to the returned function.
 
         Returns
         -------
         callable
-            Map function
+            Function that takes query compiler and executes map function.
         """
 
         def map_function(query_compiler, *args, **kwargs):

@@ -15,9 +15,7 @@ from typing import Callable, Optional
 
 
 class Function(object):
-    """
-    Interface for building functions that can execute in parallel across partitions.
-    """
+    """Interface for building functions that can execute in parallel across partitions."""
 
     def __init__(self):
         raise ValueError(
@@ -33,11 +31,11 @@ class Function(object):
 
         Parameters
         ----------
-        func: callable
-            source function
-        *reg_args: args,
+        func : callable
+            Source function.
+        *reg_args : args
             Args that will be used for building.
-        **reg_kwargs: kwargs,
+        **reg_kwargs : kwargs
             Kwargs that will be used for building.
 
         Returns
@@ -48,4 +46,15 @@ class Function(object):
 
     @classmethod
     def validate_axis(cls, axis: Optional[int]) -> int:
+        """
+        Ensure that axis to apply function on, has valid value.
+
+        Parameters
+        ----------
+        axis : {[0, None]: Index, 1: Columns}
+
+        Returns
+        -------
+        int
+        """
         return 0 if axis is None else axis

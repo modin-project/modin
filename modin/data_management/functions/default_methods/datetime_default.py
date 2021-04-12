@@ -15,9 +15,9 @@ from .series_default import SeriesDefault
 
 
 class DateTimeDefault(SeriesDefault):
-    """Build default-to-pandas methods which is executed under datetime accessor"""
+    """Builder for default-to-pandas methods which is executed under datetime accessor."""
 
     @classmethod
     def frame_wrapper(cls, df):
-        """Access datetime accessor of the passed frame"""
+        """Access datetime accessor of the passed frame."""
         return df.squeeze(axis=1).dt

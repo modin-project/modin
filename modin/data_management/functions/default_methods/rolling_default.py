@@ -15,11 +15,22 @@ from .default import DefaultMethod
 
 
 class Rolling:
+    """Builder for aggregation on a rolling window functions."""
+
     @classmethod
     def build_rolling(cls, func):
         """
-        Build function that provides a rolling window in a casted to pandas frame
-        and executes `func` on it.
+        Build function that creates a rolling window executes `func` on it.
+
+        Parameters
+        ----------
+        func : callable
+            Function to execute on a rolling window.
+        
+        Returns
+        -------
+        callable
+            Function that takes pandas DataFrame and applies `func` on a rolling window.
         """
 
         def fn(df, rolling_args, *args, **kwargs):
@@ -34,13 +45,14 @@ class Rolling:
 
 
 class RollingDefault(DefaultMethod):
+    """Builder for default-to-pandas aggregation on a rolling window functions."""
+
     OBJECT_TYPE = "Rolling"
 
     @classmethod
     def register(cls, func):
         """
-        Build default to pandas function that provides a rolling window and executes
-        `func` on it.
+        Build function that do fallback to pandas to apply `func` on a rolling window.
 
         Parameters
         ----------
@@ -49,7 +61,8 @@ class RollingDefault(DefaultMethod):
 
         Returns
         -------
-        Callable,
-            Method that does fallback to pandas and applies rolling function.
+        callable,
+            Functiom that takes query compiler and defaults to pandas to apply aggregation
+            `func` on a rolling window.
         """
         return super().register(Rolling.build_rolling(func), fn_name=func.__name__)

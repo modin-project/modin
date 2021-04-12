@@ -19,49 +19,50 @@ from .function import Function
 
 
 class BinaryFunction(Function):
+    """Builder class for Binary functions."""
+
     @classmethod
     def register(cls, func: Callable, join_type="outer", preserve_labels=False):
         """
-        Build template binary function, which can be used as a method for a binary operation
-        in a query compiler.
+        Build template binary function.
 
         Parameters
         ----------
-        func: callable,
+        func : callable
             Binary function to execute. Have to be able to obtain at least two arguments.
-        join_type: str, (default 'outer')
+        join_type : {'left', 'right', 'outer', 'inner', None}, default: 'outer'
             Type of join that will be used if indices of operands are not aligned.
-        preserve_labels: bool, (default False)
+        preserve_labels : bool, default: False
             Whether or not to force keep the indeces of the right frame if the join occured.
 
         Returns
         -------
-        callable,
-            QueryCompiler method that can be used as a binary operation.
+        callable
+            Function that takes query compiler and executes binary operation.
         """
 
         def binary_function(query_compiler, other, *args, broadcast=False, **kwargs):
             """
-            Apply binary `func` along passed operands.
+            Apply binary `func` to passed operands.
 
             Parameters
             ----------
-            query_compiler: QueryCompiler
+            query_compiler : QueryCompiler
                 Left operand of `func`.
-            other: QueryCompiler, list-like object or scalar
+            other : QueryCompiler, list-like object or scalar
                 Right operand of `func`.
-            broadcast: bool, (default False)
+            broadcast : bool, default: False
                 If `other` is a one-column query compiler, indicates whether it is a Series or not.
                 Frames and Series have to be processed differently, however we can't distinguish them
                 at the query compiler level, so this parameter is a hint that passed from a high level API.
-            *args: args,
+            *args : args,
                 Arguments that will be passed to `func`.
-            **kwargs: kwargs,
+            **kwargs : kwargs,
                 Arguments that will be passed to `func`.
 
             Returns
             -------
-            QueryCompiler,
+            QueryCompiler
                 Result of binary function.
             """
             axis = kwargs.get("axis", 0)

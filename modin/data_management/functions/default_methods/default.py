@@ -19,6 +19,15 @@ import pandas
 
 
 class DefaultMethod(Function):
+    """
+    Builder for default-to-pandas methods.
+    
+    Attributes
+    ----------
+    OBJECT_TYPE : str
+        Object type name that will be shown in default-to-pandas warning message.
+    """
+
     OBJECT_TYPE = "DataFrame"
 
     @classmethod
@@ -28,24 +37,24 @@ class DefaultMethod(Function):
 
         Parameters
         ----------
-        func: callable or str,
+        func : callable or str,
             Function to apply to the casted to pandas frame or its property accesed
             by `frame_wrapper`.
-        obj_type: object (default pandas.DataFrame),
+        obj_type : object, default: pandas.DataFrame
             If `func` is a string with a function name then `obj_type` provides an
             object to search function in.
-        inplace: bool (default False),
+        inplace : bool, default: False
             If True return an object to which `func` was applied, otherwise return
             the result of `func`.
-        fn_name: str (optional),
+        fn_name : str, optional
             Function name which will be shown in default-to-pandas warning message.
             If not specified, name will be deducted from `func`.
 
         Returns
         -------
-        Callable,
-            Method that does fallback to pandas and applies `func` to the pandas frame
-            or its property accesed by `frame_wrapper`.
+        callable
+            Function that takes query compiler, does fallback to pandas and applies `func`
+            to the casted to pandas frame or its property accesed by `frame_wrapper`.
         """
         if fn_name is None:
             fn_name = getattr(func, "__name__", str(func))
@@ -90,7 +99,7 @@ class DefaultMethod(Function):
 
     @classmethod
     def build_property_wrapper(cls, prop):
-        """Build function that access specified property of the frame"""
+        """Build function that access specified property of the frame."""
 
         def property_wrapper(df):
             return prop.fget(df)
@@ -104,14 +113,14 @@ class DefaultMethod(Function):
 
         Parameters
         ----------
-        fn: callable,
+        fn : callable
             Function to apply to the defaulted frame.
-        fn_name: str,
+        fn_name : str
             Function name which will be shown in default-to-pandas warning message.
 
         Returns
         -------
-        Callable,
+        callable
             Method that does fallback to pandas and applies `fn` to the pandas frame.
         """
         fn.__name__ = f"<function {cls.OBJECT_TYPE}.{fn_name}>"

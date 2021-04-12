@@ -11,7 +11,7 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-"""This function module provides template for a query compiler default-to-pandas methods."""
+"""This function module provides templates for a query compiler default-to-pandas methods."""
 
 from .dataframe_default import DataFrameDefault
 from .datetime_default import DateTimeDefault

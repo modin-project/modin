@@ -17,7 +17,9 @@ from modin.utils import _inherit_docstrings
 
 class ObjTypeDeterminer:
     """
-    This class provides an instances which forwards all of the `__getattribute__` calls
+    Class that routes work to the frame.
+
+    Provides an instance which forwards all of the `__getattribute__` calls
     to an object under which `key` function is applied.
     """
 
@@ -34,7 +36,7 @@ class ObjTypeDeterminer:
 
 @_inherit_docstrings(DefaultMethod, excluded=[DefaultMethod])
 class AnyDefault(DefaultMethod):
-    """Build default-to-pandas methods which can be executed under any type of object"""
+    """Builder for default-to-pandas methods which can be executed under any type of object."""
 
     @classmethod
     def register(cls, func, obj_type=None, inplace=False, fn_name=None):

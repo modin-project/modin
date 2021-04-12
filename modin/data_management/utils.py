@@ -11,24 +11,26 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
+"""Contains utility functions for frame partitioning."""
+
 import numpy as np
 import pandas
 
 
 def get_default_chunksize(length, num_splits):
     """
-    Create the most equal chunksize possible based on length and number of splits.
+    Get the most equal chunksize possible based on length and number of splits.
 
     Parameters
     ----------
-    length: int,
+    length : int
         The integer length to split (number of rows/columns).
-    num_splits: int,
+    num_splits : int
         The integer number of splits.
 
     Returns
     -------
-    int,
+    int
         An integer chunksize.
     """
     return (
@@ -37,24 +39,25 @@ def get_default_chunksize(length, num_splits):
 
 
 def compute_chunksize(df, num_splits, default_block_size=32, axis=None):
-    """Compute the number of rows and/or columns to include in each partition.
+    """
+    Compute the number of rows and/or columns to include in each partition.
 
     Parameters
     ----------
-    df: pandas.DataFrame
-        The DataFrame to split.
-    num_splits: int,
-        The maximum number of splits to separate the DataFrame into.
-    default_block_size: int, (default 32)
-        Minimum number of rows/columns (default set to 32x32).
-    axis: int, {0: Index, 1: Columns, None: Both}
-        The axis to split.
+    df : pandas.DataFrame
+        DataFrame to split.
+    num_splits : int
+        Number of splits to separate the DataFrame into.
+    default_block_size : int, default: 32
+        Minimum number of rows/columns in a single split.
+    axis: {0: Index, 1: Columns, None: Both}
+        Axis to split across.
 
     Returns
     -------
     int if axis was specified, tuple of ints otherwise,
         If axis is 1 or 0, returns an integer number of rows/columns to split the
-        DataFrame. If axis is None, return a tuple containing both.
+        DataFrame. If axis is None, returns a tuple containing both.
     """
     if axis == 0 or axis is None:
         row_chunksize = get_default_chunksize(len(df.index), num_splits)
@@ -76,23 +79,24 @@ def compute_chunksize(df, num_splits, default_block_size=32, axis=None):
 
 def split_result_of_axis_func_pandas(axis, num_splits, result, length_list=None):
     """
-    Split the Pandas DataFrame evenly based on the provided number of splits.
+    Split pandas DataFrame evenly based on the provided number of splits.
 
     Parameters
     ----------
-    axis: int {0: Index, 1: Columns}
-        The axis to split across.
-    num_splits: int,
-        The number of even splits to create. Ignored if `lenght_list` is specified.
-    result: pandas.DataFrame,
+    axis : {0: Index, 1: Columns}
+        Axis to split across.
+    num_splits : int
+        Number of splits to separate the DataFrame into.
+        This parameter is ignored if `length_list` is specified.
+    result : pandas.DataFrame
         DataFrame to split.
-    length_list: list of ints (optional)
-        The list of lengths to split this DataFrame into. This is used to
+    length_list : list of ints, optional
+        List of slice lengths to split DataFrame into. This is used to
         return the DataFrame to its original partitioning schema.
 
     Returns
     -------
-    list of pandas.DataFrames,
+    list of pandas.DataFrames
         Splitted frame represented by list of frames.
     """
     if length_list is not None:
@@ -119,12 +123,12 @@ def split_result_of_axis_func_pandas(axis, num_splits, result, length_list=None)
 
 
 def length_fn_pandas(df):
-    """Compute number of rows of passed pandas.DataFrame"""
+    """Compute number of rows of passed pandas.DataFrame."""
     assert isinstance(df, pandas.DataFrame)
     return len(df) if len(df) > 0 else 0
 
 
 def width_fn_pandas(df):
-    """Compute number of columns of passed pandas.DataFrame"""
+    """Compute number of columns of passed pandas.DataFrame."""
     assert isinstance(df, pandas.DataFrame)
     return len(df.columns) if len(df.columns) > 0 else 0
