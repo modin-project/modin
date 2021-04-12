@@ -20,14 +20,15 @@ import modin.utils
 
 assert DocstringUrlTestMode.get(), "Docstring URL test mode has to be enabled"
 
-from modin.pandas import *  # ensure all docstring are generated
+# ensure all docstring are generated
+from modin.pandas import *  # noqa: E402, F403, F401
 
 
 def test_all_urls_exist():
 
     broken = []
 
-    def _test_url(url, broken):
+    def _test_url(url):
         try:
             with urlopen(url):
                 pass
