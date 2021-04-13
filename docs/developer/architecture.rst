@@ -275,6 +275,7 @@ by documentation for now, the rest will be soon...).
    │   │   └───functions
    │   ├───distributed
    │   │   └───dataframe
+   │   │       └───pandas
    │   ├───engines
    │   │   ├───base
    │   │   │   ├───frame
