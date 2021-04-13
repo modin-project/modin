@@ -33,20 +33,20 @@ def validate_object(import_path: str) -> bool:
 
     Returns
     -------
-    is_failed : bool
-        Return False if all checks are successful.
+    is_successfull : bool
+        Return True if all checks are successful.
     """
     from numpydoc.validate import validate
 
-    is_failed = False
+    is_successfull = True
     results = validate(import_path)
     for err_code, err_desc in results["errors"]:
         if err_code not in NUMPYDOC_BASE_ERR_CODE:
             # filter
             continue
-        is_failed = True
+        is_successfull = False
         print(":".join([import_path, str(results["file_line"]), err_code, err_desc]))
-    return is_failed
+    return is_successfull
 
 
 def numpydoc_validate(path: pathlib.Path) -> bool:
@@ -59,10 +59,10 @@ def numpydoc_validate(path: pathlib.Path) -> bool:
 
     Returns
     -------
-    is_failed : bool
-        Return False if all checks are successful.
+    is_successfull : bool
+        Return True if all checks are successful.
     """
-    is_failed = False
+    is_successfull = True
 
     if path.is_file():
         walker = ((str(path.parent), [], [path.name]),)
@@ -109,8 +109,8 @@ def numpydoc_validate(path: pathlib.Path) -> bool:
                 + methods
             )
             if any(list(map(validate_object, to_validate))):
-                is_failed = True
-    return is_failed
+                is_successfull = False
+    return is_successfull
 
 
 def pydocstyle_validate(path: pathlib.Path, add_ignore: List[str]) -> int:
@@ -168,17 +168,17 @@ def validate(
 
     Returns
     -------
-    is_failed : bool
-        Return False if all checks are successful.
+    is_successfull : bool
+        Return True if all checks are successful.
     """
-    is_failed = False
+    is_successfull = True
     for path in paths:
-        if pydocstyle_validate(path, add_ignore):
-            is_failed = True
+        if not pydocstyle_validate(path, add_ignore):
+            is_successfull = False
         if use_numpydoc:
-            if numpydoc_validate(path):
-                is_failed = True
-    return is_failed
+            if not numpydoc_validate(path):
+                is_successfull = False
+    return is_successfull
 
 
 def check_args(args: argparse.Namespace):
@@ -232,9 +232,7 @@ def get_args() -> argparse.Namespace:
 if __name__ == "__main__":
     args = get_args()
     monkeypatching()
-    exit_status = validate(args.paths, args.add_ignore, not args.disable_numpydoc)
-
-    if exit_status:
+    if not validate(args.paths, args.add_ignore, not args.disable_numpydoc):
         print("NOT SUCCESSFUL CHECK")
-        exit(exit_status)
+        exit(1)
     print("SUCCESSFUL CHECK")
