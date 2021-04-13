@@ -497,6 +497,92 @@ class TestReduce:
 
 
 class TestTreeReduce:
+    def test_tree_reduce_axes(self):
+        values = np.random.rand(2 ** 10, 2 ** 8)
+        modin_frame = (
+            pd.DataFrame(values).add_prefix("col")._query_compiler._modin_frame
+        )
+        pandas_df = pandas.DataFrame(values).add_prefix("col")
+        with pytest.raises(Exception):
+            modin_frame.tree_reduce(0, lambda x: x).to_pandas()
+        with pytest.raises(Exception):
+            modin_frame.tree_reduce(1, lambda x: x).to_pandas()
+        arr = modin_frame.tree_reduce(0, lambda x: x.sum()).to_numpy().flatten()
+        np.testing.assert_equal(arr, pandas_df.apply(lambda x: x.sum()).values)
+        arr = modin_frame.tree_reduce(1, lambda x: x.sum(axis=1)).to_numpy().flatten()
+        np.testing.assert_array_almost_equal(
+            arr, pandas_df.apply(lambda x: x.sum(), axis=1).values, decimal=12
+        )
+
+    def test_tree_reduce_result_schema(self):
+        values = np.random.rand(2 ** 10, 2 ** 8)
+        modin_frame = (
+            pd.DataFrame(values).add_prefix("col")._query_compiler._modin_frame
+        )
+        result_schema = {n: values.dtype for n in modin_frame.columns}
+        int_result_schema = {n: np.dtype(np.int64) for n in modin_frame.columns}
+        pandas_df = pandas.DataFrame(values).add_prefix("col")
+        arr = (
+            modin_frame.tree_reduce(0, lambda x: x.sum(), result_schema=result_schema)
+            .to_numpy()
+            .flatten()
+        )
+        np.testing.assert_equal(arr, pandas_df.apply(lambda x: x.sum()).values)
+        arr = (
+            modin_frame.tree_reduce(
+                0, lambda x: x.sum().astype(np.int64), result_schema=int_result_schema
+            )
+            .to_numpy()
+            .flatten()
+        )
+        # Values diverge due to rounding
+        assert not np.array_equal(
+            arr, pandas_df.apply(lambda x: x.sum().astype(np.int64)).values
+        )
+        arr = (
+            modin_frame.tree_reduce(
+                1,
+                lambda x: x.sum(axis=1),
+                result_schema={"__reduced__": np.dtype(np.float64)},
+            )
+            .to_numpy()
+            .flatten()
+        )
+        np.testing.assert_array_almost_equal(arr, pandas_df.apply(sum, axis=1).values)
+        arr = (
+            modin_frame.tree_reduce(
+                1,
+                lambda x: x.sum(axis=1).astype(np.int64),
+                result_schema={"__reduced__": np.dtype(np.int64)},
+            )
+            .to_numpy()
+            .flatten()
+        )
+        # Again, values diverge due to rounding
+        assert not np.array_equal(
+            arr, pandas_df.apply(lambda x: x.sum().astype(np.int64), axis=1).values
+        )
+        with pytest.raises(TypeError):
+            modin_frame.tree_reduce(
+                0, np.sum, result_schema=int_result_schema
+            ).to_numpy()
+        with pytest.raises(TypeError):
+            modin_frame.tree_reduce(
+                0, lambda x: x.sum().astype(np.int64), result_schema=result_schema
+            ).to_numpy()
+        with pytest.raises(TypeError):
+            modin_frame.tree_reduce(
+                1,
+                lambda x: x.sum(axis=1).astype(np.int64),
+                result_schema={"__reduced__": np.dtype(np.float64)},
+            ).to_numpy()
+        with pytest.raises(TypeError):
+            modin_frame.tree_reduce(
+                1,
+                lambda x: x.sum(axis=1),
+                result_schema={"__reduced__": np.dtype(np.int64)},
+            ).to_numpy()
+
     def test_tree_reduce(self):
         values = np.random.rand(2 ** 10, 2 ** 8)
         modin_frame = (
