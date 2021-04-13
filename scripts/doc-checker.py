@@ -82,7 +82,7 @@ def numpydoc_validate(path: pathlib.Path) -> int:
             with open(current_path) as fd:
                 file_contents = fd.read()
 
-            # using static parsing for collecting module, functions, classes and its methods
+            # using static parsing for collecting module, functions, classes and their methods
             module = ast.parse(file_contents)
 
             def is_public_func(node):
@@ -162,7 +162,7 @@ def validate(
     add_ignore : List[str]
         pydocstyle error codes which are not verified
     use_numpydoc : bool
-        determine if numpydoc checks are not needed
+        determine if numpydoc checks are needed
 
     Returns
     -------
@@ -190,7 +190,7 @@ def check_args(args: argparse.Namespace):
     """
     for path in args.paths:
         if not path.exists():
-            raise ValueError(f"{path} is not exist")
+            raise ValueError(f"{path} does not exist")
 
 
 def get_args() -> argparse.Namespace:
