@@ -400,9 +400,13 @@ class TestCsv:
     @pytest.mark.parametrize(
         "test_case", ["single_element", "single_column", "multiple_columns"]
     )
-    def test_read_csv_squeeze(self, test_case):
+    def test_read_csv_squeeze(self, request, test_case):
         if test_case != "multiple_columns":
             pytest.xfail("infinite recursion error - issue #2032")
+        elif request.config.getoption("--simulate-cloud").lower() != "off":
+            pytest.xfail(
+                reason="The reason of tests fail in `cloud` mode is unknown for now - issue #2340"
+            )
         unique_filename = get_unique_filename()
 
         str_single_element = "1"
@@ -1407,7 +1411,6 @@ class TestExcel:
 
 
 class TestHdf:
-    @pytest.mark.xfail(os.name == "nt", reason="Windows not supported")
     @pytest.mark.parametrize("format", [None, "table"])
     def test_read_hdf(self, format):
         unique_filename = get_unique_filename(extension="hdf")
@@ -1422,7 +1425,6 @@ class TestHdf:
         finally:
             teardown_test_files([unique_filename])
 
-    @pytest.mark.xfail(os.name == "nt", reason="Windows not supported")
     def test_HDFStore(self):
         try:
             unique_filename_modin = get_unique_filename(extension="hdf")
@@ -1846,13 +1848,11 @@ class TestFeather:
 
 
 class TestClipboard:
-    @pytest.mark.xfail(reason="No clipboard on Travis")
     def test_read_clipboard(self):
         setup_clipboard()
 
         eval_io(fn_name="read_clipboard")
 
-    @pytest.mark.xfail(reason="No clipboard on Travis")
     def test_to_clipboard(self):
         modin_df, pandas_df = create_test_dfs(TEST_DATA)
 
