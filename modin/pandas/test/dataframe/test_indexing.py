@@ -167,7 +167,6 @@ def test_head(data, n):
     df_equals(modin_result, pandas_result)
 
 
-<<<<<<< HEAD
 @pytest.mark.skip(reason="Defaulting to Pandas")
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_iat(data):
