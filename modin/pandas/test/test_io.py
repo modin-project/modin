@@ -220,7 +220,7 @@ def eval_to_file(modin_obj, pandas_obj, fn, extension, **fn_kwargs):
 
 
 @pytest.mark.usefixtures("TestReadCSVFixture")
-@pytest.mark.xfail(
+@pytest.mark.skipif(
     IsExperimental.get() and Backend.get() == "Pyarrow",
     reason="Segmentation fault; see PR #2347 ffor details",
 )
