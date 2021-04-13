@@ -10,7 +10,7 @@
     <p align="center"><b>To use Modin, replace the pandas import:</b></p>
 
 .. figure:: img/Modin_Pandas_Import.gif
-   :align: center   
+   :align: center
 
 Scale your pandas workflow by changing a single line of code
 """"""""""""""""""""""""""""""""""""""""""""""""""""""""""""
@@ -157,6 +157,10 @@ and lots of other useful information.**
    contributing
    developer/architecture
    developer/pandas/partition_api
+   developer/flow/engines/base/frame/axis_partition
+   developer/flow/engines/base/frame/data
+   developer/flow/engines/base/frame/partition_manager
+   developer/flow/engines/base/frame/partition
 
 .. toctree::
    :caption: Engines, Backends, and APIs
