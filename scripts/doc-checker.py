@@ -11,6 +11,9 @@ import subprocess
 import os
 import ast
 from typing import List
+import sys
+
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 # error codes that pandas test in CI
 # https://numpydoc.readthedocs.io/en/latest/validation.html#built-in-validation-checks
@@ -56,6 +59,7 @@ def numpydoc_validate(path: pathlib.Path) -> bool:
     Parameters
     ----------
     path : pathlib.Path
+        filename or directory path for check
 
     Returns
     -------
@@ -108,7 +112,7 @@ def numpydoc_validate(path: pathlib.Path) -> bool:
                 + [f"{module_name}.{x.name}" for x in (functions + classes)]
                 + methods
             )
-            if any(list(map(validate_object, to_validate))):
+            if not all(list(map(validate_object, to_validate))):
                 is_successfull = False
     return is_successfull
 
@@ -120,12 +124,14 @@ def pydocstyle_validate(path: pathlib.Path, add_ignore: List[str]) -> int:
     Parameters
     ----------
     path : pathlib.Path
+        filename or directory path for check
     add_ignore : List[int]
+        pydocstyle error codes which are not verified
 
     Returns
     -------
-    int
-        Return code of pydocstyle subprocess.
+    bool
+        Return True if all pydocstyle checks are successful.
     """
     result = subprocess.run(
         [
@@ -141,7 +147,7 @@ def pydocstyle_validate(path: pathlib.Path, add_ignore: List[str]) -> int:
     )
     if result.returncode:
         print(f"PYDOCSTYLE OUTPUT FOR {path}\n", result.stdout)
-    return result.returncode
+    return True if result.returncode == 0 else False
 
 
 def monkeypatching():
