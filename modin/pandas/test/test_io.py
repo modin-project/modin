@@ -1848,11 +1848,13 @@ class TestFeather:
 
 
 class TestClipboard:
+    @pytest.mark.skip(reason="No clipboard in CI")
     def test_read_clipboard(self):
         setup_clipboard()
 
         eval_io(fn_name="read_clipboard")
 
+    @pytest.mark.skip(reason="No clipboard in CI")
     def test_to_clipboard(self):
         modin_df, pandas_df = create_test_dfs(TEST_DATA)
 
