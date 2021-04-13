@@ -252,7 +252,7 @@ class TestCsv:
         )
 
     # Column and Index Locations and Names tests
-    @pytest.mark.xfail(
+    @pytest.mark.skipif(
         Engine.get() != "Python",
         reason="many parameters combiantions fails: issue #2312, #2307",
     )
