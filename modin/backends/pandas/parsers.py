@@ -407,7 +407,8 @@ class PandasExcelParser(PandasParser):
                 bytes_data = file.read(end - start)
 
         def update_row_nums(match):
-            """Update the row numbers to start at 1.
+            """
+            Update the row numbers to start at 1.
 
             Parameters
             ----------
@@ -574,8 +575,8 @@ class PandasHDFParser(PandasParser):  # pragma: no cover
     @staticmethod
     @doc(
         _doc_parse_func,
-        parameters="fname : str, path object, pandas.HDFStore or file-like object\n"
-        "    Name of the file, path pandas.HDFStore or file-like object to read.",
+        parameters="""fname : str, path object, pandas.HDFStore or file-like object
+    Name of the file, path pandas.HDFStore or file-like object to read.""",
     )
     def parse(fname, **kwargs):
         kwargs["key"] = kwargs.pop("_key", None)
@@ -592,8 +593,8 @@ class PandasFeatherParser(PandasParser):
     @staticmethod
     @doc(
         _doc_parse_func,
-        parameters="fname : str, path object or file-like object\n"
-        "    Name of the file, path or file-like object to read.",
+        parameters="""fname : str, path object or file-like object
+    Name of the file, path or file-like object to read.""",
     )
     def parse(fname, **kwargs):
         from pyarrow import feather
@@ -611,12 +612,12 @@ class PandasSQLParser(PandasParser):
     @staticmethod
     @doc(
         _doc_parse_func,
-        parameters="sql : string or SQLAlchemy Selectable (select or text object)\n"
-        "    SQL query to be executed or a table name.\n"
-        "con : SQLAlchemy connectable, str, or sqlite3 connection\n"
-        "    Connection object to database.\n"
-        "index_col : str or list of str\n"
-        "    Column(s) to set as index(MultiIndex).",
+        parameters="""sql : str or SQLAlchemy Selectable (select or text object)
+    SQL query to be executed or a table name.
+con : SQLAlchemy connectable, str, or sqlite3 connection
+    Connection object to database.
+index_col : str or list of str
+    Column(s) to set as index(MultiIndex).""",
     )
     def parse(sql, con, index_col, **kwargs):
         num_splits = kwargs.pop("num_splits", None)

@@ -24,6 +24,8 @@ from modin.error_message import ErrorMessage
 from modin.backends.base.query_compiler import BaseQueryCompiler
 from typing import Optional
 
+# TODO (amyskov): replace `For parameters description please refer to Pandas API.` statement with
+# @_inherit_docstrings decorator when #2969 will be merged.
 _doc_default_io_method = """
 {summary} using Pandas.
 
@@ -37,7 +39,7 @@ Returns
 _doc_returns_qc = """BaseQueryCompiler
     QueryCompiler with read data."""
 
-_doc_returns_qc_or_parser = """{BaseQueryCompiler, TextParser}
+_doc_returns_qc_or_parser = """BaseQueryCompiler or TextParser
     QueryCompiler or TextParser with read data."""
 
 
@@ -58,10 +60,6 @@ class BaseIO(object):
             Positional arguments to be passed into `func`.
         **kwargs : dict
             Keyword arguments to be passed into `func`.
-
-        Notes
-        -----
-        Currently returns nothing.
         """
         return None
 
@@ -401,8 +399,8 @@ class BaseIO(object):
     @doc(
         _doc_default_io_method,
         summary="Read an Excel file into query compiler",
-        returns="BaseQueryCompiler or dict/OrderedDict :\n"
-        "    QueryCompiler or OrderedDict/dict with read data.",
+        returns="""BaseQueryCompiler or dict/OrderedDict :
+    QueryCompiler or OrderedDict/dict with read data.""",
     )
     def read_excel(
         cls,

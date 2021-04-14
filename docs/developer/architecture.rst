@@ -247,7 +247,7 @@ documentation page on :doc:`contributing </contributing>`.
     - The compute kernel/in-memory format is a pyarrow Table.
 
 Modin Implementation Details
--------------------------------------
+----------------------------
 Modin modules layout is shown below. To deep dive into Modin internal implementation 
 details just pick module you are interested in (only some of the modules are covered 
 by documentation for now, the rest is coming soon...).
