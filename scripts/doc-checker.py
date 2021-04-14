@@ -18,8 +18,8 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")
 # error codes that pandas test in CI
 # https://numpydoc.readthedocs.io/en/latest/validation.html#built-in-validation-checks
 NUMPYDOC_BASE_ERROR_CODES = {
-    *("GL01", "GL02", "GL03", "GL04", "GL05", "GL06", "GL07", "GL09", "GL10"),
-    *("SS02", "SS04", "SS05", "PR03", "PR04", "PR05", "PR10", "EX04", "RT01"),
+    *("GL01", "GL02", "GL03", "GL05", "GL06", "GL07", "GL09", "GL10"),
+    *("SS02", "SS04", "SS05", "PR03", "PR04", "PR05", "PR10", "RT01"),
     *("RT04", "RT05", "SA02", "SA03"),
 }
 
