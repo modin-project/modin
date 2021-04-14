@@ -42,7 +42,7 @@ class SQLDispatcher(FileDispatcher):
 
         Parameters
         ----------
-        sql : string or SQLAlchemy Selectable (select or text object)
+        sql : str or SQLAlchemy Selectable (select or text object)
             SQL query to be executed or a table name.
         con : SQLAlchemy connectable, str, or sqlite3 connection
             Connection object to database.

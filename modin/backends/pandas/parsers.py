@@ -218,10 +218,10 @@ class PandasCSVGlobParser(PandasCSVParser):
     @staticmethod
     @doc(
         _doc_parse_func,
-        parameters="chunks : list\n"
-        "    List, where each element of the list is a list of tuples. The inner lists\n"
-        "    of tuples contains the data file name of the chunk, chunk start offset, and \n"
-        "    chunk end offsets for its corresponding file.",
+        parameters="""chunks : list
+    List, where each element of the list is a list of tuples. The inner lists
+    of tuples contains the data file name of the chunk, chunk start offset, and
+    chunk end offsets for its corresponding file.""",
     )
     def parse(chunks, **kwargs):
         warnings.filterwarnings("ignore")

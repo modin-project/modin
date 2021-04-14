@@ -56,7 +56,7 @@ class HDFDispatcher(ColumnStoreDispatcher):  # pragma: no cover
     @classmethod
     def _read(cls, path_or_buf, **kwargs):
         """
-        Load a h5 file from the file path or buffer, returning a query compiler.
+        Load an h5 file from the file path or buffer, returning a query compiler.
 
         Parameters
         ----------

@@ -34,10 +34,10 @@ Returns
 {returns}
 """
 
-_doc_returns_qc = """BaseQueryCompiler :
+_doc_returns_qc = """BaseQueryCompiler
     QueryCompiler with read data."""
 
-_doc_returns_qc_or_parser = """{BaseQueryCompiler, TextParser} :
+_doc_returns_qc_or_parser = """{BaseQueryCompiler, TextParser}
     QueryCompiler or TextParser with read data."""
 
 

@@ -42,7 +42,7 @@ class TextFileDispatcher(FileDispatcher):
     @classmethod
     def get_path_or_buffer(cls, filepath_or_buffer):
         """
-        Get path from `filepath_or_buffer`.
+        Extract path from `filepath_or_buffer`.
 
         Parameters
         ----------
@@ -51,7 +51,7 @@ class TextFileDispatcher(FileDispatcher):
 
         Returns
         -------
-        str or path object :
+        str or path object
             verified `filepath_or_buffer` parameter.
 
         Notes

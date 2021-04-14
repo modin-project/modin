@@ -47,7 +47,7 @@ class CSVDispatcher(TextFileDispatcher):
         ----------
         filepath_or_buffer : str, path object or file-like object
             `filepath_or_buffer` parameter of `read_csv` function.
-        **kwargs : ReadCsvKwargsType
+        **kwargs : dict
             Parameters of `read_csv` function.
 
         Returns
@@ -186,14 +186,14 @@ class CSVDispatcher(TextFileDispatcher):
         ----------
         filepath_or_buffer : str, path object or file-like object
             `filepath_or_buffer` parameter of read_csv function.
-        read_csv_kwargs : ReadCsvKwargsType
+        read_csv_kwargs : dict
             Parameters of read_csv function.
         compression_infered : str
             Inferred `compression` parameter of read_csv function.
 
         Returns
         -------
-        bool :
+        bool
             Whether passed parameters are supported or not.
         """
         if isinstance(filepath_or_buffer, str):
