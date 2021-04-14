@@ -673,7 +673,7 @@ def eval_general(
             if check_exception_type:
                 assert isinstance(
                     md_e.value, type(pd_e)
-                ), "Got Modin Exception type {}, but pandas Exception type {}".format(
+                ), "Got Modin Exception type {}, but pandas Exception type {} was expected".format(
                     type(md_e.value), type(pd_e)
                 )
                 if raising_exceptions:
