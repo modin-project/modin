@@ -13,7 +13,8 @@ import ast
 from typing import List
 import sys
 
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+MODIN_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+sys.path.insert(0, MODIN_PATH)
 
 # error codes that pandas test in CI
 # https://numpydoc.readthedocs.io/en/latest/validation.html#built-in-validation-checks
@@ -305,6 +306,13 @@ def check_args(args: argparse.Namespace):
     for path in args.paths:
         if not path.exists():
             raise ValueError(f"{path} does not exist")
+        abs_path = os.path.abspath(path)
+        if not abs_path.startswith(MODIN_PATH):
+            raise ValueError(
+                f"it is forbidden to use this script on files from another "
+                f"repository; script' repo '{MODIN_PATH}', "
+                f"input path '{abs_path}'"
+            )
 
 
 def get_args() -> argparse.Namespace:
