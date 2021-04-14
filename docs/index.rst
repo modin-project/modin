@@ -157,10 +157,7 @@ and lots of other useful information.**
    contributing
    developer/architecture
    developer/pandas/partition_api
-   developer/flow/engines/base/frame/axis_partition
-   developer/flow/engines/base/frame/data
-   developer/flow/engines/base/frame/partition_manager
-   developer/flow/engines/base/frame/partition
+   developer/flow/engines/base/frame/index
 
 .. toctree::
    :caption: Engines, Backends, and APIs
