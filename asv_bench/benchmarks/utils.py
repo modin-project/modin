@@ -283,11 +283,11 @@ def generate_dataframe(
         low bound for random generator
     rand_high : int
         high bound for random generator
-    groupby_ncols : int or None
+    groupby_ncols : int, default None
         number of columns for which `groupby` will be called in the future;
         to get more stable performance results, we need to have the same number of values
         in each group every benchmarking time
-    count_groups : int or None
+    count_groups : int, default: None
         count of groups in groupby columns
 
     Returns

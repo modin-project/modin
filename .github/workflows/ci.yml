@@ -51,9 +51,7 @@ jobs:
           python scripts/doc-checker.py --add-ignore=D101,D102,D105 --disable-numpydoc \
             modin/pandas/dataframe.py modin/pandas/series.py \
             modin/pandas/groupby.py modin/pandas/base.py
-      - run: |
-          python scripts/doc-checker.py --add-ignore=D101,D103,D105 --disable-numpydoc \
-            modin/pandas/io.py
+      - run: python scripts/doc-checker.py modin/pandas/io.py
       - run: |
           python scripts/doc-checker.py --add-ignore=D101,D102 --disable-numpydoc \
             modin/pandas/series_utils.py

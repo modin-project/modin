@@ -18,10 +18,102 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")
 # error codes that pandas test in CI
 # https://numpydoc.readthedocs.io/en/latest/validation.html#built-in-validation-checks
 NUMPYDOC_BASE_ERROR_CODES = {
-    *("GL01", "GL02", "GL03", "GL05", "GL06", "GL07", "GL09", "GL10"),
-    *("SS02", "SS04", "SS05", "PR03", "PR04", "PR05", "PR10", "RT01"),
-    *("RT04", "RT05", "SA02", "SA03"),
+    *("GL01", "GL02", "GL03", "GL05", "GL06", "GL07", "GL08", "GL09", "GL10"),
+    *("SS02", "SS03", "SS04", "SS05", "PR01", "PR02", "PR03", "PR04", "PR05"),
+    *("PR10", "RT01", "RT04", "RT05", "SA02", "SA03"),
 }
+
+""" TEST CUSTOM CHECK
+MODIN_ERROR_CODES = {
+    "TE01": "'{parameter}' description should be '{should}', found - '{found}'"
+}
+
+
+import inspect
+
+
+def get_default_args(func):
+    if not callable(func):
+        return None
+    signature = inspect.signature(func)
+    return {
+        k: v.default
+        for k, v in signature.parameters.items()
+        if v.default is not inspect.Parameter.empty
+    }
+
+
+def validate_modin_error(import_path):
+    from numpydoc.validate import Docstring
+
+    doc = Docstring(import_path)
+    errors = []
+    default_args = get_default_args(doc.obj)
+    if not default_args:
+        return None
+    for parameter in doc.doc_parameters:
+        if parameter in default_args:
+            type_line = doc.doc_parameters[parameter][0]
+            if "default " not in type_line:
+                after = type_line.split("default")[1]
+                found = "default" + after
+                should = "default [VALUE]"
+                errors.append(
+                    (
+                        "TE01",
+                        MODIN_ERROR_CODES["TE01"].format(
+                            parameter=parameter, should=should, found=found
+                        ),
+                    )
+                )
+
+    return errors
+
+
+def update_results(results, modin_errors):
+    raise NotImplementedError
+"""
+
+
+def skip_check_if_noqa(import_path):
+    """
+    Align behavior with pydocstyle.
+
+    Parameters
+    ----------
+    import_path : str
+        python-like import path
+
+    Returns
+    -------
+    bool
+        Return True if 'noqa' found.
+    """
+    import inspect
+    from numpydoc.validate import Docstring
+
+    result = False
+    doc = Docstring(import_path)
+    source = doc.method_source
+
+    noqa_str = None
+    # find last line of obj definition
+    for line in source.split("\n"):
+        if ")" in line and ":" in line.split(")", 1)[1]:
+            noqa_str = line
+            break
+
+    if noqa_str and "noqa" in noqa_str:
+        if (
+            "noqa:" not in noqa_str
+            or ("D102" in noqa_str and inspect.ismethod(doc.obj))
+            or ("D105" in noqa_str and inspect.isfunction(doc.obj))
+            or ("D103" in noqa_str and inspect.isfunction(doc.obj))
+            or ("D101" in noqa_str and inspect.isclass(doc.obj))
+        ):
+            result = True
+
+    return result
 
 
 # code snippet from numpydoc
@@ -43,10 +135,15 @@ def validate_object(import_path: str) -> bool:
 
     is_successfull = True
     results = validate(import_path)
+    # modin_errors = validate_modin_error(import_path)
+    # results = update_results(results, modin_errors)
     for err_code, err_desc in results["errors"]:
         if err_code not in NUMPYDOC_BASE_ERROR_CODES:
             # filter
             continue
+        if err_code == "GL08":
+            if skip_check_if_noqa(import_path):
+                continue
         is_successfull = False
         print(":".join([import_path, str(results["file_line"]), err_code, err_desc]))
     return is_successfull
@@ -151,10 +248,14 @@ def pydocstyle_validate(path: pathlib.Path, add_ignore: List[str]) -> int:
 
 
 def monkeypatching():
-    """Monkeypatch decorators which incorrectly define __doc__ attribute."""
+    """Monkeypatch decorators which change __doc__ attribute."""
     import ray
+    import modin.utils
 
     ray.remote = lambda *args, **kwargs: args[0]
+
+    modin.utils._inherit_docstrings = lambda *args, **kwargs: lambda cls: cls
+    modin.utils._inherit_func_docstring = lambda *args, **kwargs: lambda func: func
 
 
 def validate(
@@ -190,6 +291,11 @@ def validate(
 def check_args(args: argparse.Namespace):
     """
     Check the obtained values for correctness.
+
+    Parameters
+    ----------
+    args : argparse.Namespace
+        parser arguments
 
     Raises
     ------
