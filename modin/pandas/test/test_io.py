@@ -398,12 +398,20 @@ class TestCsv:
         eval_io_from_str(str_initial_spaces, unique_filename, skipinitialspace=True)
 
     @pytest.mark.parametrize(
-        "test_case", ["single_element", "single_column", "multiple_columns"]
+        "test_case",
+        [
+            "single_element",
+            pytest.param(
+                "single_column",
+                marks=pytest.mark.xfail(
+                    reason="infinite recursion error - issue #2032"
+                ),
+            ),
+            "multiple_columns",
+        ],
     )
     def test_read_csv_squeeze(self, request, test_case):
-        if test_case != "multiple_columns":
-            pytest.xfail("infinite recursion error - issue #2032")
-        elif request.config.getoption("--simulate-cloud").lower() != "off":
+        if request.config.getoption("--simulate-cloud").lower() != "off":
             pytest.xfail(
                 reason="The reason of tests fail in `cloud` mode is unknown for now - issue #2340"
             )
