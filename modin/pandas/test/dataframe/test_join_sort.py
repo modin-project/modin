@@ -32,6 +32,7 @@ from modin.pandas.test.utils import (
     generate_multiindex,
     eval_general,
     rotate_decimal_digits,
+    extra_test_parameters,
 )
 from modin.config import NPartitions
 
@@ -376,8 +377,14 @@ def test_sort_multiindex(sort_remaining):
 @pytest.mark.parametrize(
     "by",
     [
-        "first",
-        "first,last",
+        pytest.param(
+            "first",
+            marks=pytest.mark.skipif(not extra_test_parameters, reason="extra"),
+        ),
+        pytest.param(
+            "first,last",
+            marks=pytest.mark.skipif(not extra_test_parameters, reason="extra"),
+        ),
         "first,last,middle",
         pytest.param(
             "multiindex_level0",
@@ -402,7 +409,20 @@ def test_sort_multiindex(sort_remaining):
 @pytest.mark.parametrize(
     "inplace", bool_arg_values, ids=arg_keys("inplace", bool_arg_keys)
 )
-@pytest.mark.parametrize("kind", ["mergesort", "quicksort", "heapsort"])
+@pytest.mark.parametrize(
+    "kind",
+    [
+        pytest.param(
+            "mergesort",
+            marks=pytest.mark.xfail(reason="multiindex levels do not work"),
+        ),
+        "quicksort",
+        pytest.param(
+            "heapsort",
+            marks=pytest.mark.xfail(reason="multiindex levels do not work"),
+        ),
+    ],
+)
 @pytest.mark.parametrize("na_position", ["first", "last"], ids=["first", "last"])
 @pytest.mark.parametrize(
     "ignore_index",
