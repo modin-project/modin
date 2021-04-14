@@ -12,9 +12,9 @@
 # governing permissions and limitations under the License.
 
 """
-The module contains the functionality that is used when benchmarking modin commits.
+The module contains the functionality that is used when benchmarking Modin commits.
 
-In the case of using utilities from the main modin code, there is a chance that when
+In the case of using utilities from the main Modin code, there is a chance that when
 benchmarking old commits, the utilities changed, which in turn can unexpectedly affect
 the performance results, hence some utility functions are duplicated here.
 """
@@ -152,7 +152,7 @@ def gen_int_data(nrows: int, ncols: int, rand_low: int, rand_high: int) -> dict:
     Returns
     -------
     dict
-        Number of keys - `ncols`, each of them store numpy.array of `nrows` length.
+        Number of keys - `ncols`, each of them store np.ndarray of `nrows` length.
     """
     cache_key = ("int", nrows, ncols, rand_low, rand_high)
     if cache_key in data_cache:
@@ -193,7 +193,7 @@ def gen_str_int_data(nrows: int, ncols: int, rand_low: int, rand_high: int) -> d
     Returns
     -------
     dict
-        Number of keys - `ncols`, each of them store numpy.array of `nrows` length.
+        Number of keys - `ncols`, each of them store np.ndarray of `nrows` length.
         One of the columns with string values.
     """
     cache_key = ("str_int", nrows, ncols, rand_low, rand_high)
@@ -239,7 +239,7 @@ def gen_data(
     Returns
     -------
     dict
-        Number of keys - `ncols`, each of them store numpy.array of `nrows` length.
+        Number of keys - `ncols`, each of them store np.ndarray of `nrows` length.
         When `data_type`=="str_int" some of the columns will be of string type.
     """
     if data_type == "int":
@@ -292,7 +292,7 @@ def generate_dataframe(
 
     Returns
     -------
-    modin.DataFrame or pandas.DataFrame [and list]
+    modin.pandas.DataFrame or pandas.DataFrame [and list]
 
     Notes
     -----
@@ -397,7 +397,7 @@ def execute(df: Union[pd.DataFrame, pandas.DataFrame]):
 
     Parameters
     ----------
-    df : modin.DataFrame or pandas.Datarame
+    df : modin.pandas.DataFrame or pandas.Datarame
     """
     if ASV_USE_IMPL == "modin":
         partitions = df._query_compiler._modin_frame._partitions
