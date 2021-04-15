@@ -15,7 +15,7 @@
 Validate docstrings using pydocstyle and numpydoc.
 
 Example usage:
-python scripts/doc-checker.py asv_bench/benchmarks/utils.py modin/pandas
+python scripts/doc_checker.py asv_bench/benchmarks/utils.py modin/pandas
 """
 
 import argparse

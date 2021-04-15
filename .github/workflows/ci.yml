@@ -48,28 +48,28 @@ jobs:
       - run: pip install pydocstyle numpydoc
       - run: pip install -e .[all]
       - run: |
-          python scripts/doc-checker.py --add-ignore=D101,D102,D105 --disable-numpydoc \
+          python scripts/doc_checker.py --add-ignore=D101,D102,D105 --disable-numpydoc \
             modin/pandas/dataframe.py modin/pandas/series.py \
             modin/pandas/groupby.py modin/pandas/base.py
-      - run: python scripts/doc-checker.py modin/pandas/io.py
+      - run: python scripts/doc_checker.py modin/pandas/io.py
       - run: |
-          python scripts/doc-checker.py --add-ignore=D101,D102 --disable-numpydoc \
+          python scripts/doc_checker.py --add-ignore=D101,D102 --disable-numpydoc \
             modin/pandas/series_utils.py
       - run: |
-          python scripts/doc-checker.py --add-ignore=D103 --disable-numpydoc \
+          python scripts/doc_checker.py --add-ignore=D103 --disable-numpydoc \
             modin/pandas/general.py
       - run: |
-          python scripts/doc-checker.py --disable-numpydoc \
+          python scripts/doc_checker.py --disable-numpydoc \
             modin/pandas/plotting.py modin/pandas/utils.py \
             modin/pandas/iterator.py modin/pandas/indexing.py
       - run: |
-          python scripts/doc-checker.py --add-ignore=D100,D104 --disable-numpydoc \
+          python scripts/doc_checker.py --add-ignore=D100,D104 --disable-numpydoc \
             modin/engines/base/frame
       - run: |
-          python scripts/doc-checker.py asv_bench/benchmarks/utils.py \
+          python scripts/doc_checker.py asv_bench/benchmarks/utils.py \
             asv_bench/benchmarks/__init__.py asv_bench/benchmarks/io/__init__.py \
             asv_bench/benchmarks/scalability/__init__.py
-      - run: python scripts/doc-checker.py scripts/doc-checker.py
+      - run: python scripts/doc_checker.py scripts/doc_checker.py
 
   lint-flake8:
     name: lint (flake8)
