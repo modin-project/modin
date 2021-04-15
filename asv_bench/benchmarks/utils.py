@@ -122,7 +122,7 @@ def translator_groupby_ngroups(groupby_ngroups: Union[str, int], shape: tuple) -
         return groupby_ngroups
 
 
-class weakdict(dict):
+class weakdict(dict):  # noqa: D101
     __slots__ = ("__weakref__",)
 
 

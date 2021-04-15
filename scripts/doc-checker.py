@@ -196,11 +196,12 @@ def numpydoc_validate(path: pathlib.Path) -> bool:
 
             functions = [node for node in module.body if is_public_func(node)]
             classes = [node for node in module.body if isinstance(node, ast.ClassDef)]
-            methods = []
-            for _class in classes:
-                for node in _class.body:
-                    if is_public_func(node):
-                        methods.append(f"{module_name}.{_class.name}.{node.name}")
+            methods = [
+                f"{module_name}.{_class.name}.{node.name}"
+                for _class in classes
+                for node in _class.body
+                if is_public_func(node)
+            ]
 
             print(f"NUMPYDOC OUTPUT FOR {current_path} - CAN BE EMPTY")
             # numpydoc docstrings validation
@@ -309,7 +310,7 @@ def check_args(args: argparse.Namespace):
         abs_path = os.path.abspath(path)
         if not abs_path.startswith(MODIN_PATH):
             raise ValueError(
-                f"it is forbidden to use this script on files from another "
+                f"it is unsupported to use this script on files from another "
                 f"repository; script' repo '{MODIN_PATH}', "
                 f"input path '{abs_path}'"
             )
