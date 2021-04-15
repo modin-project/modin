@@ -172,11 +172,15 @@ def get_noqa_checks(doc: Docstring) -> list:
     """
     source = doc.method_source
     noqa_str = None
-    # find last line of obj definition
-    for line in source.split("\n"):
-        if ")" in line and ":" in line.split(")", 1)[1]:
-            noqa_str = line
-            break
+    if not inspect.ismodule(doc.obj):
+        # find last line of obj definition
+        for line in source.split("\n"):
+            if ")" in line and ":" in line.split(")", 1)[1]:
+                noqa_str = line
+                break
+    else:
+        # pydocstyle only check first line; aling with it
+        noqa_str = source.split("\n", 1)[0]
     if "noqa" not in noqa_str:
         return []
 
