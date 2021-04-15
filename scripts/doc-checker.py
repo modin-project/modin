@@ -12,6 +12,8 @@ import os
 import ast
 from typing import List
 import sys
+import inspect
+from numpydoc.validate import Docstring
 
 MODIN_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 sys.path.insert(0, MODIN_PATH)
@@ -24,19 +26,29 @@ NUMPYDOC_BASE_ERROR_CODES = {
     *("PR08", "PR09", "PR10", "RT01", "RT04", "RT05", "SA02", "SA03"),
 }
 
-""" TEST CUSTOM CHECK
 MODIN_ERROR_CODES = {
-    "TE01": "'{parameter}' description should be '{should}', found - '{found}'"
+    "MD01": "'{parameter}' description should be '[type], default: [value]', found - '{found}'"
 }
 
 
-import inspect
+def get_optional_args(doc: Docstring) -> dict:
+    """
+    Get optional parameters for the object for which the docstring is checked.
 
+    Parameters
+    ----------
+    doc : numpydoc.validate.Doctring
+        Docstring handler.
 
-def get_default_args(func):
-    if not callable(func):
+    Returns
+    -------
+    dict
+        Dict with default arguments.
+    """
+    obj = doc.obj
+    if not callable(obj) or inspect.isclass(obj):
         return None
-    signature = inspect.signature(func)
+    signature = inspect.signature(obj)
     return {
         k: v.default
         for k, v in signature.parameters.items()
@@ -44,77 +56,135 @@ def get_default_args(func):
     }
 
 
-def validate_modin_error(import_path):
-    from numpydoc.validate import Docstring
+def validate_modin_error(doc: Docstring) -> list:
+    """
+    Validate custom modin errors.
 
-    doc = Docstring(import_path)
+    Parameters
+    ----------
+    doc : numpydoc.validate.Docstring
+        Docstring handler.
+
+    Returns
+    -------
+    errors :
+        List of tuples with Modin error code and its description.
+    """
+    # case with empty docstring
+    if not doc.doc_parameters:
+        return []
+
+    optional_args = get_optional_args(doc)
+    if not optional_args:
+        return []
+
     errors = []
-    default_args = get_default_args(doc.obj)
-    if not default_args:
-        return None
-    for parameter in doc.doc_parameters:
-        if parameter in default_args:
-            type_line = doc.doc_parameters[parameter][0]
-            if "default " not in type_line:
-                after = type_line.split("default")[1]
-                found = "default" + after
-                should = "default [VALUE]"
-                errors.append(
-                    (
-                        "TE01",
-                        MODIN_ERROR_CODES["TE01"].format(
-                            parameter=parameter, should=should, found=found
-                        ),
-                    )
+    for parameter in optional_args:
+        type_line = doc.doc_parameters[parameter][0]
+        if "default: " not in type_line or "optional" in type_line:
+            errors.append(
+                (
+                    "MD01",
+                    MODIN_ERROR_CODES["MD01"].format(
+                        parameter=parameter,
+                        found=type_line,
+                    ),
                 )
+            )
 
     return errors
 
 
-def update_results(results, modin_errors):
-    raise NotImplementedError
-"""
-
-
-def skip_check_if_noqa(import_path):
+def update_results(results: dict, modin_errors: list):
     """
-    Align behavior with pydocstyle.
+    Add custom modin errors to default numpydoc errors in results.
 
     Parameters
     ----------
-    import_path : str
-        Python-like import path.
+    results : dict
+        Dictionary that numpydoc.validate.validate return.
+    modin_errors : list
+        List of tuples with Modin error code and its description.
+
+    Returns
+    -------
+    dict
+        Updated dict with Modin custom errors.
+    """
+    for error in modin_errors:
+        results["errors"].append(error)
+    return results
+
+
+def skip_check_if_noqa(doc: Docstring, err_code: str, noqa_checks: list) -> bool:
+    """
+    Skip the check that matches `err_code` if `err_code` found in noqa string.
+
+    Parameters
+    ----------
+    doc : numpydoc.validate.Docstring
+        Docstring handler.
+    err_code : str
+        Error code found by numpydoc.
+    noqa_checks : list
+        Found noqa checks.
 
     Returns
     -------
     bool
         Return True if 'noqa' found.
     """
-    import inspect
-    from numpydoc.validate import Docstring
+    if noqa_checks == ["all"]:
+        return True
 
-    result = False
-    doc = Docstring(import_path)
+    if err_code == "GL08":
+        name = doc.name.split(".")[-1]
+        magic = name.startswith("__") and name.endswith("__")
+        if inspect.isclass(doc.obj):
+            err_code = "D101"
+        elif inspect.ismethod(doc.obj):
+            err_code = "D102"
+        elif inspect.isfunction(doc.obj) and not magic:
+            err_code = "D103"
+        elif inspect.isfunction(doc.obj) and magic:
+            err_code = "D105"
+
+    return err_code in noqa_checks
+
+
+def get_noqa_checks(doc: Docstring) -> list:
+    """
+    Get codes after `# noqa`.
+
+    Parameters
+    ----------
+    doc : numpydoc.validate.Docstring
+        Docstring handler.
+
+    Returns
+    -------
+    list
+        List with codes.
+
+    Notes
+    -----
+    If noqa doesn't have any codes - returns ["all"].
+    """
     source = doc.method_source
-
     noqa_str = None
     # find last line of obj definition
     for line in source.split("\n"):
         if ")" in line and ":" in line.split(")", 1)[1]:
             noqa_str = line
             break
+    if "noqa" not in noqa_str:
+        return []
 
-    if noqa_str and "noqa" in noqa_str:
-        if (
-            "noqa:" not in noqa_str
-            or ("D102" in noqa_str and inspect.ismethod(doc.obj))
-            or ("D105" in noqa_str and inspect.isfunction(doc.obj))
-            or ("D103" in noqa_str and inspect.isfunction(doc.obj))
-            or ("D101" in noqa_str and inspect.isclass(doc.obj))
-        ):
-            result = True
-
-    return result
+    if "noqa:" in noqa_str:
+        noqa_checks = noqa_str.split("noqa:")[1].split(",")
+    elif "noqa" in noqa_str:
+        noqa_checks = ["all"]
+    return [check.strip() for check in noqa_checks]
 
 
 # code snippet from numpydoc
@@ -135,16 +205,17 @@ def validate_object(import_path: str) -> bool:
     from numpydoc.validate import validate
 
     is_successfull = True
+    doc = Docstring(import_path)
     results = validate(import_path)
-    # modin_errors = validate_modin_error(import_path)
-    # results = update_results(results, modin_errors)
+    modin_errors = validate_modin_error(doc)
+    results = update_results(results, modin_errors)
+    noqa_checks = get_noqa_checks(doc)
     for err_code, err_desc in results["errors"]:
-        if err_code not in NUMPYDOC_BASE_ERROR_CODES:
-            # filter
+        if (
+            err_code not in NUMPYDOC_BASE_ERROR_CODES
+            and err_code not in MODIN_ERROR_CODES
+        ) or skip_check_if_noqa(doc, err_code, noqa_checks):
             continue
-        if err_code == "GL08":
-            if skip_check_if_noqa(import_path):
-                continue
         is_successfull = False
         print(":".join([import_path, str(results["file_line"]), err_code, err_desc]))
     return is_successfull
