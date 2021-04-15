@@ -57,7 +57,7 @@ class TextFileDispatcher(FileDispatcher):
         Notes
         -----
         Given a buffer, try and extract the filepath from it so that we can
-        use it without having to fall back to Pandas and share file objects between
+        use it without having to fall back to pandas and share file objects between
         workers. Given a filepath, return it immediately.
         """
         if isinstance(filepath_or_buffer, (io.BufferedReader, io.TextIOWrapper)):
@@ -87,7 +87,7 @@ class TextFileDispatcher(FileDispatcher):
 
         Returns
         -------
-        numpy array
+        np.ndarray
             array with shape equals to the shape of `partition_ids` and
             filed with partitions objects.
         """

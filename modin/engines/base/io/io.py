@@ -52,7 +52,7 @@ class BaseIO(object):
     @classmethod
     def from_non_pandas(cls, *args, **kwargs):
         """
-        Improve non-pandas object to an advanced Modin query compiler.
+        Create a Modin `query_compiler` from a non-pandas `object`.
 
         Parameters
         ----------
@@ -66,7 +66,7 @@ class BaseIO(object):
     @classmethod
     def from_pandas(cls, df):
         """
-        Improve simple pandas DataFrame to an advanced Modin query compiler.
+        Create a Modin `query_compiler` from a `pandas.DataFrame`.
 
         Parameters
         ----------
@@ -76,14 +76,14 @@ class BaseIO(object):
         Returns
         -------
         BaseQueryCompiler
-            QueryCompiler containing data from the pandas DataFrame.
+            QueryCompiler containing data from the `pandas.DataFrame`.
         """
         return cls.query_compiler_cls.from_pandas(df, cls.frame_cls)
 
     @classmethod
     def from_arrow(cls, at):
         """
-        Improve simple Arrow Table to an advanced Modin query compiler.
+        Create a Modin `query_compiler` from a `pyarrow.Table`.
 
         Parameters
         ----------

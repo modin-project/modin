@@ -51,7 +51,7 @@ class ColumnStoreDispatcher(FileDispatcher):
 
         Returns
         -------
-        np.array
+        np.ndarray
             Array with references to the task deploy result for each partition.
         """
         return np.array(
@@ -86,7 +86,7 @@ class ColumnStoreDispatcher(FileDispatcher):
 
         Returns
         -------
-        np.array
+        np.ndarray
             array with shape equals to the shape of `partition_ids` and
             filed with partition objects.
         """

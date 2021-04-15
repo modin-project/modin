@@ -91,7 +91,7 @@ def find_common_type_cat(types):
     Returns
     -------
     pandas.core.dtypes.dtypes.ExtensionDtype or
-    numpy.dtype or
+    np.dtype or
     None
         `dtype` that is common for all passed `types`.
     """
@@ -483,7 +483,7 @@ class PandasExcelParser(PandasParser):
             **kwargs
         )
         # In excel if you create a row with only a border (no values), this parser will
-        # interpret that as a row of NaN values. Pandas discards these values, so we
+        # interpret that as a row of NaN values. pandas discards these values, so we
         # also must discard these values.
         pandas_df = parser.read().dropna(how="all")
         # Since we know the number of rows that occur before this partition, we can
