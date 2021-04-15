@@ -58,6 +58,41 @@ def get_optional_args(doc: Docstring) -> dict:
     }
 
 
+def check_optional_args(doc: Docstring) -> list:
+    """
+    Check type description of optional arguments.
+
+    Parameters
+    ----------
+    doc : Docstring
+
+    Returns
+    -------
+    list
+        List of tuples with Modin error code and its description.
+    """
+    if not doc.doc_parameters:
+        return []
+    optional_args = get_optional_args(doc)
+    if not optional_args:
+        return []
+
+    errors = []
+    for parameter in optional_args:
+        type_line = doc.doc_parameters[parameter][0]
+        if "default: " not in type_line or "optional" in type_line:
+            errors.append(
+                (
+                    "MD01",
+                    MODIN_ERROR_CODES["MD01"].format(
+                        parameter=parameter,
+                        found=type_line,
+                    ),
+                )
+            )
+    return errors
+
+
 def check_spelling_words(doc: Docstring) -> list:
     """
     Check spelling of chosen words: "Modin", "pandas", "NumPy" in doc.
@@ -76,6 +111,8 @@ def check_spelling_words(doc: Docstring) -> list:
     -----
     "modin" word is treated as the constant.
     """
+    if not doc.raw_doc:
+        return []
     components = set(["Modin", "pandas", "NumPy"])
     check_words = "|".join(x.lower() for x in components)
 
@@ -122,27 +159,7 @@ def validate_modin_error(doc: Docstring) -> list:
     errors :
         List of tuples with Modin error code and its description.
     """
-    # case with empty docstring
-    if not doc.doc_parameters:
-        return []
-
-    optional_args = get_optional_args(doc)
-    if not optional_args:
-        return []
-
-    errors = []
-    for parameter in optional_args:
-        type_line = doc.doc_parameters[parameter][0]
-        if "default: " not in type_line or "optional" in type_line:
-            errors.append(
-                (
-                    "MD01",
-                    MODIN_ERROR_CODES["MD01"].format(
-                        parameter=parameter,
-                        found=type_line,
-                    ),
-                )
-            )
+    errors = check_optional_args(doc)
     errors += check_spelling_words(doc)
     return errors
 
