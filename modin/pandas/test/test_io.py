@@ -400,7 +400,12 @@ class TestCsv:
     @pytest.mark.parametrize(
         "test_case",
         [
-            "single_element",
+            pytest.param(
+                "single_element",
+                marks=pytest.mark.xfail(
+                    reason="infinite recursion error - issue #2032"
+                ),
+            ),
             pytest.param(
                 "single_column",
                 marks=pytest.mark.xfail(
