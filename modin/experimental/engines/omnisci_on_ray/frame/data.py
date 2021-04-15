@@ -11,6 +11,8 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
+"""Module provides `OmnisciOnRayFrame` class implementing lazy frame."""
+
 from modin.engines.base.frame.data import PandasFrame
 from modin.experimental.backends.omnisci.query_compiler import DFAlgQueryCompiler
 from .partition_manager import OmnisciOnRayFramePartitionManager
@@ -51,6 +53,83 @@ import re
 
 
 class OmnisciOnRayFrame(PandasFrame):
+    """
+    Lazy dataframe based on Arrow table representation and embedded OmniSci engine.
+
+    Currently, materialized dataframe always has a single partition. This partition
+    can hold either Arrow table or pandas dataframe.
+
+    Operations on a dataframe are not instantly executed and build an operations
+    tree instead. When frame's data is accessed this tree is transformed into
+    a query which is executed in OmniSci engine. In case of simple transformations
+    Arrow API can be used instead of OmniSci engine.
+
+    Since frames are used as an input for other frames, all operations produce
+    new frames and are not executed in-place.
+
+    Parameters
+    ----------
+    partitions : np.ndarray, optional
+        Partitions of the frame.
+    index : pandas.Index, optional
+        Index of the frame to be used as an index cache. If None then will be
+        computed on demand.
+    columns : pandas.Index, optional
+        Columns of the frame.
+    row_lengths : np.ndarray, optional
+        Partition lengths. Should be None if lengths are unknown.
+    column_widths : np.ndarray, optional
+        Partition widths. Should be None if widths are unknown.
+    dtypes : pandas.Index, optional
+        Column data types.
+    op : DFAlgNode, optional
+        A tree describing how frame is computed. For materialized frames it
+        is always `FrameNode`.
+    index_cols : list of str, optional
+        A list of columns included into the frame's index. None value means
+        a default index (row id is used as an index).
+    uses_rowid : bool, default: False
+        True for frames which require access to the virtual 'rowid' column
+        for its execution.
+    force_execution_mode : str or None
+        Used by tests to control frame's execution process.
+    has_unsupported_data : bool
+        True for frames holding data not supported by Arrow or OmniSci engine.
+
+    Attributes
+    ----------
+    id : int
+        ID of the frame. Used for debug prints only.
+    _op : DFAlgNode
+        A tree to be used to compute the frame. For materialized frames it is
+        always `FrameNode`.
+    _partitions : numpy.ndarray or None
+        Partitions of the frame. For materialized dataframes it holds a single
+        partition. None for frames requiring execution.
+    _index_cols : list of str or None
+        Names of index columns. None for default index. Index columns have mangled
+        names to handle labels which cannot be directly used as an OmniSci table
+        column name (e.g. non-string labels, SQL keywords etc.).
+    _table_cols : list of str
+        A list of all frame's columns. It includes index columns if any. Index
+        columns are always in the head of the list.
+    _index_cache : pandas.Index or None
+        Materialized index of the frame or None when index is not materialized.
+    _has_unsupported_data : bool
+        True for frames holding data not supported by Arrow or OmniSci engine.
+        Operations on such frames are not allowed and should be defaulted
+        to pandas instead.
+    _dtypes : pandas.Series
+        Column types.
+    _uses_rowid : bool
+        True for frames which require access to the virtual 'rowid' column
+        for its execution.
+    _force_execution_mode : str or None
+        Used by tests to control frame's execution process. Value "lazy"
+        is used to raise RuntimeError if execution is triggered for the frame.
+        Value "arrow" is used to raise RuntimeError execution is triggered
+        and cannot be done using Arrow API (have to use OmniSci for execution).
+    """
 
     _query_compiler_cls = DFAlgQueryCompiler
     _partition_mgr_cls = OmnisciOnRayFramePartitionManager
@@ -134,17 +213,33 @@ class OmnisciOnRayFrame(PandasFrame):
                 ] = self._partition_mgr_cls._partition_class.put_arrow(new_table)
 
         self._uses_rowid = uses_rowid
-        # Tests use forced execution mode to take control over frame
-        # execution process. Supported values:
-        #  "lazy" - RuntimeError is raised if execution is triggered for the frame
-        #  "arrow" - RuntimeError is raised if execution is triggered, but we cannot
-        #  execute it using Arrow API (have to use OmniSci for execution)
         self._force_execution_mode = force_execution_mode
 
     def id_str(self):
+        """
+        Return string identifier of the frame.
+
+        Used for debug dumps.
+
+        Returns
+        -------
+        str
+        """
         return f"frame${self.id}"
 
     def get_dtype(self, col):
+        """
+        Get data type for a column.
+
+        Parameters
+        ----------
+        col : str
+            Column name.
+
+        Returns
+        -------
+        dtype
+        """
         # If we search for an index column type in a MultiIndex then we need to
         # extend index column names to tuples.
         if isinstance(self._dtypes.index, MultiIndex) and not isinstance(col, tuple):
@@ -152,6 +247,18 @@ class OmnisciOnRayFrame(PandasFrame):
         return self._dtypes[col]
 
     def ref(self, col):
+        """
+        Return an expression referencing a frame's column.
+
+        Parameters
+        ----------
+        col : str
+            Column name.
+
+        Returns
+        -------
+        InputRefExpr
+        """
         if col == "__rowid__":
             return InputRefExpr(self, col, get_dtype(int))
         return InputRefExpr(self, col, self.get_dtype(col))
@@ -163,6 +270,25 @@ class OmnisciOnRayFrame(PandasFrame):
         col_indices=None,
         col_numeric_idx=None,
     ):
+        """
+        Mask operation.
+
+        Parameters
+        ----------
+        row_indices : list, optional
+            Indices of rows to select.
+        row_numeric_idx : list of int, optional
+            Numeric indices of rows to select.
+        col_indices : list, optional
+            Indices of columns to select.
+        col_numeric_idx : list of int, optional
+            Numeric indices of columns to select.
+
+        Returns
+        -------
+        OmnisciOnRayFrame
+            The new frame.
+        """
         base = self
 
         if col_indices is not None or col_numeric_idx is not None:
@@ -184,9 +310,7 @@ class OmnisciOnRayFrame(PandasFrame):
 
         if row_indices is not None or row_numeric_idx is not None:
             op = MaskNode(
-                base,
-                row_indices=row_indices,
-                row_numeric_idx=row_numeric_idx,
+                base, row_indices=row_indices, row_numeric_idx=row_numeric_idx
             )
             return self.__constructor__(
                 columns=base.columns,
@@ -199,11 +323,32 @@ class OmnisciOnRayFrame(PandasFrame):
         return base
 
     def _has_arrow_table(self):
+        """
+        Return True for materialized frame with Arrow table.
+
+        Returns
+        -------
+        bool
+        """
         if not isinstance(self._op, FrameNode):
             return False
         return all(p.arrow_table for p in self._partitions.flatten())
 
     def _dtypes_for_cols(self, new_index, new_columns):
+        """
+        Return dtypes index for a specified set of index and data columns.
+
+        Parameters
+        ----------
+        new_index : pandas.Index or list
+            Index columns.
+        new_columns : pandas.Index or list
+            Data Columns.
+
+        Returns
+        -------
+        pandas.Index
+        """
         if new_index is not None:
             if isinstance(self._dtypes, MultiIndex):
                 new_index = [
@@ -222,9 +367,42 @@ class OmnisciOnRayFrame(PandasFrame):
         return res
 
     def _dtypes_for_exprs(self, exprs):
+        """
+        Return dtypes for expressions.
+
+        Parameters
+        ----------
+        exprs : dict
+            Expression to get types for.
+
+        Returns
+        -------
+        list of dtype
+        """
         return [expr._dtype for expr in exprs.values()]
 
     def groupby_agg(self, by, axis, agg, groupby_args, **kwargs):
+        """
+        Groupby with aggregation operation.
+
+        Parameters
+        ----------
+        by : DFAlgQueryCompiler or list-like of str
+            Grouping keys.
+        axis : {0, 1}
+            Only rows groupby is supported, so should be 0.
+        agg : str or dict
+            Aggregates to compute.
+        groupby_args : dict
+            Additional groupby args.
+        **kwargs : dict
+            Keyword args. Currently ignored.
+
+        Returns
+        -------
+        OmnisciOnRayFrame
+            The new frame.
+        """
         # Currently we only expect 'by' to be a projection of the same frame.
         # If 'by' holds a list of columns/series, then we create such projection
         # to re-use code.
@@ -355,6 +533,26 @@ class OmnisciOnRayFrame(PandasFrame):
         )
 
     def value_counts(self, dropna, columns, sort, ascending):
+        """
+        Count unique rows operation.
+
+        Parameters
+        ----------
+        dropna : bool
+            True when rows with NULLs should be ignored.
+        columns : list-like of str or None
+            Columns to use for unique combinations count. Use all
+            columns when None.
+        sort : bool
+            Sort by frequencies.
+        ascending : bool
+            Sort order.
+
+        Returns
+        -------
+        OmnisciOnRayFrame
+            The new frame.
+        """
         by = [col for col in self.columns if columns is None or col in columns]
 
         if not by:
@@ -417,14 +615,29 @@ class OmnisciOnRayFrame(PandasFrame):
 
         return res
 
-    def fillna(
-        self,
-        value=None,
-        method=None,
-        axis=None,
-        limit=None,
-        downcast=None,
-    ):
+    def fillna(self, value=None, method=None, axis=None, limit=None, downcast=None):
+        """
+        Replace NULLs operation.
+
+        Parameters
+        ----------
+        value : dict or scalar, optional
+            A value to replace NULLs with. Can be a dictionary to assign
+            different values to columns.
+        method : None, optional
+            Should be None.
+        axis : {0, 1}, optional
+            Should be 0.
+        limit : None, optional
+            Should be None.
+        downcast : None, optional
+            Should be None.
+
+        Returns
+        -------
+        OmnisciOnRayFrame
+            The new frame.
+        """
         if axis != 0:
             raise NotImplementedError("fillna is supported for axis = 0 only")
 
@@ -473,10 +686,23 @@ class OmnisciOnRayFrame(PandasFrame):
         return new_frame
 
     def dropna(self, subset, how="any"):
-        how_to_merge = {
-            "any": "AND",
-            "all": "OR",
-        }
+        """
+        Drop rows with NULLs.
+
+        Parameters
+        ----------
+        subset : list of str
+            Columns to check.
+        how : {"any", "all"}, default: "any"
+            Determine if row is removed from DataFrame, when we have
+            at least one NULL or all NULLs.
+
+        Returns
+        -------
+        OmnisciOnRayFrame
+            The new frame.
+        """
+        how_to_merge = {"any": "AND", "all": "OR"}
 
         # If index columns are not presented in the frame, then we have to create them
         # based on "rowid". This is needed because 'dropna' preserves index.
@@ -501,6 +727,19 @@ class OmnisciOnRayFrame(PandasFrame):
         return result
 
     def dt_extract(self, obj):
+        """
+        Extract a date or a time unit from a datetime value.
+
+        Parameters
+        ----------
+        obj : str
+            Datetime unit to expract.
+
+        Returns
+        -------
+        OmnisciOnRayFrame
+            The new frame.
+        """
         exprs = self._index_exprs()
         for col in self.columns:
             exprs[col] = build_dt_expr(obj, self.ref(col))
@@ -515,6 +754,21 @@ class OmnisciOnRayFrame(PandasFrame):
         )
 
     def astype(self, col_dtypes, **kwargs):
+        """
+        Cast frame columns to specified types.
+
+        Parameters
+        ----------
+        col_dtypes : dict
+            Maps column names to new data types.
+        **kwargs : dict
+            Keyword args. Not used.
+
+        Returns
+        -------
+        OmnisciOnRayFrame
+            The new frame.
+        """
         columns = col_dtypes.keys()
         new_dtypes = self.dtypes.copy()
         for column in columns:
@@ -556,6 +810,28 @@ class OmnisciOnRayFrame(PandasFrame):
         )
 
     def join(self, other, how="inner", on=None, sort=False, suffixes=("_x", "_y")):
+        """
+        Join operation.
+
+        Parameters
+        ----------
+        other : OmnisciOnRayFrame
+            A frame to join with.
+        how : str, default: "inner"
+            A type of join.
+        on : list of str, optional
+            A list of columns to join on.
+        sort : bool, default: False
+            Sort the result by join keys.
+        suffixes : list-like of str, default: ("_x", "_y")
+            A length-2 sequence of suffixes to add to overlapping column names
+            of left and right operands respectively.
+
+        Returns
+        -------
+        OmnisciOnRayFrame
+            The new frame.
+        """
         assert (
             on is not None
         ), "Merge with unspecified 'on' parameter is not supported in the engine"
@@ -620,6 +896,13 @@ class OmnisciOnRayFrame(PandasFrame):
         return condition
 
     def _index_width(self):
+        """
+        Return a number of columns in the frame's index.
+
+        Returns
+        -------
+        int
+        """
         if self._index_cols is None:
             return 1
         return len(self._index_cols)
@@ -627,6 +910,29 @@ class OmnisciOnRayFrame(PandasFrame):
     def _union_all(
         self, axis, other_modin_frames, join="outer", sort=False, ignore_index=False
     ):
+        """
+        Concatenate frames' rows.
+
+        Parameters
+        ----------
+        axis : {0, 1}
+            Should be 0.
+        other_modin_frames : list of OmnisciOnRayFrame
+            Frames to concat.
+        join : {"outer", "inner"}, default: "outer"
+            How to handle columns with mismatched names.
+            "inner" - drop such columns. "outer" - fill
+            with NULLs.
+        sort : bool, default: False
+            Sort unaligned columns for 'outer' join.
+        ignore_index : bool, default: False
+            Ignore index columns.
+
+        Returns
+        -------
+        OmnisciOnRayFrame
+            The new frame.
+        """
         # determine output columns
         new_cols_map = OrderedDict()
         for col in self.columns:
@@ -785,6 +1091,28 @@ class OmnisciOnRayFrame(PandasFrame):
     def concat(
         self, axis, other_modin_frames, join="outer", sort=False, ignore_index=False
     ):
+        """
+        Concatenate frames along a particular axis.
+
+        Parameters
+        ----------
+        axis : 0 or 1
+            The axis to concatenate along.
+        other_modin_frames : list of OmnisciOnRayFrame
+            Frames to concat.
+        join : {"outer", "inner"}, default: "outer"
+            How to handle mismatched indexes on other axis.
+        sort : bool, default: False
+            Sort non-concatenation axis if it is not already aligned
+            when join is 'outer'.
+        ignore_index : bool, default: False
+            Ignore index along the concatenation axis.
+
+        Returns
+        -------
+        OmnisciOnRayFrame
+            The new frame.
+        """
         if not other_modin_frames:
             return self
 
@@ -824,6 +1152,26 @@ class OmnisciOnRayFrame(PandasFrame):
         return new_frame
 
     def bin_op(self, other, op_name, **kwargs):
+        """
+        Perform binary operation.
+
+        An arithemtic binary operation or a comparison operation to
+        perform on columns.
+
+        Parameters
+        ----------
+        other : scalar, list-like, or OmnisciOnRayFrame
+            The second operand.
+        op_name : str
+            An operation to perform.
+        **kwargs : dict
+            Keyword args.
+
+        Returns
+        -------
+        OmnisciOnRayFrame
+            The new frame.
+        """
         if isinstance(other, (int, float, str)):
             value_expr = LiteralExpr(other)
             exprs = self._index_exprs()
@@ -896,6 +1244,23 @@ class OmnisciOnRayFrame(PandasFrame):
             raise NotImplementedError(f"unsupported operand type: {type(other)}")
 
     def insert(self, loc, column, value):
+        """
+        Insert a constant column.
+
+        Parameters
+        ----------
+        loc : int
+            Inserted column location.
+        column : str
+            Inserted column name.
+        value : scalar
+            Inserted column value.
+
+        Returns
+        -------
+        OmnisciOnRayFrame
+            The new frame.
+        """
         assert column not in self._table_cols
         assert 0 <= loc <= len(self.columns)
 
@@ -919,6 +1284,16 @@ class OmnisciOnRayFrame(PandasFrame):
         )
 
     def cat_codes(self):
+        """
+        Extract codes for a category column.
+
+        The frame should have a single data column.
+
+        Returns
+        -------
+        OmnisciOnRayFrame
+            The new frame.
+        """
         assert len(self.columns) == 1
         assert self._dtypes[-1] == "category"
 
@@ -940,6 +1315,25 @@ class OmnisciOnRayFrame(PandasFrame):
         )
 
     def sort_rows(self, columns, ascending, ignore_index, na_position):
+        """
+        Sort rows of the frame.
+
+        Parameters
+        ----------
+        columns : str or list of str
+            Sorting keys.
+        ascending : bool or list of bool
+            Sort order.
+        ignore_index : bool
+            Drop index columns.
+        na_position : {"first", "last"}
+            NULLs position.
+
+        Returns
+        -------
+        OmnisciOnRayFrame
+            The new frame.
+        """
         if na_position != "first" and na_position != "last":
             raise ValueError(f"Unsupported na_position value '{na_position}'")
 
@@ -1034,6 +1428,19 @@ class OmnisciOnRayFrame(PandasFrame):
             )
 
     def filter(self, key):
+        """
+        Filter rows by a boolean key column.
+
+        Parameters
+        ----------
+        key : OmnisciOnRayFrame
+            A frame with a single bool data column used as a filter.
+
+        Returns
+        -------
+        OmnisciOnRayFrame
+            The new frame.
+        """
         if not isinstance(key, type(self)):
             raise NotImplementedError("Unsupported key type in filter")
 
@@ -1095,6 +1502,17 @@ class OmnisciOnRayFrame(PandasFrame):
         return self
 
     def _materialize_rowid(self):
+        """
+        Materialize virtual 'rowid' column.
+
+        Make a projection with a virtual 'rowid' column materialized
+        as '__index__' column.
+
+        Returns
+        -------
+        OmnisciOnRayFrame
+            The new frame.
+        """
         exprs = OrderedDict()
         exprs["__index__"] = self.ref("__rowid__")
         for col in self._table_cols:
@@ -1109,6 +1527,16 @@ class OmnisciOnRayFrame(PandasFrame):
         )
 
     def _index_exprs(self):
+        """
+        Build index column expressions.
+
+        Build dictionary with references to all index columns
+        mapped to index column names.
+
+        Returns
+        -------
+        dict
+        """
         exprs = OrderedDict()
         if self._index_cols:
             for col in self._index_cols:
@@ -1116,6 +1544,22 @@ class OmnisciOnRayFrame(PandasFrame):
         return exprs
 
     def _find_common_projections_base(self, rhs):
+        """
+        Try to find a common base for projections.
+
+        Check if two frames can be expressed as `TransformNode`
+        operations from the same input frame.
+
+        Parameters
+        ----------
+        rhs : OmnisciOnRayFrame
+            The second frame.
+
+        Returns
+        -------
+        OmnisciOnRayFrame
+            The found common projection base or None.
+        """
         bases = {self}
         while self._is_projection():
             self = self._op.input[0]
@@ -1130,9 +1574,21 @@ class OmnisciOnRayFrame(PandasFrame):
         return None
 
     def _is_projection(self):
+        """
+        Check if frame is a `TranformNode` operation.
+
+        Returns
+        -------
+        bool
+        """
         return isinstance(self._op, TransformNode)
 
     def _execute(self):
+        """
+        Materialize lazy frame.
+
+        After this call frame always has `FrameNode` operation.
+        """
         if isinstance(self._op, FrameNode):
             return
 
@@ -1162,11 +1618,24 @@ class OmnisciOnRayFrame(PandasFrame):
         self._op = FrameNode(self)
 
     def _require_executed_base(self):
+        """
+        Check if materialization of input frames is required.
+
+        Returns
+        -------
+        bool
+        """
         if isinstance(self._op, MaskNode):
             return True
         return self._uses_rowid
 
     def _run_sub_queries(self):
+        """
+        Run sub-queries for materialization.
+
+        Materialize all frames in the execution tree which have to
+        be materialized to materialize this frame.
+        """
         if isinstance(self._op, FrameNode):
             return
 
@@ -1178,6 +1647,16 @@ class OmnisciOnRayFrame(PandasFrame):
                 frame._run_sub_queries()
 
     def _can_execute_arrow(self):
+        """
+        Check for possibility of Arrow execution.
+
+        Check if operation's tree for the frame can be executed using
+        Arrow API instead of OmniSci query.
+
+        Returns
+        -------
+        bool
+        """
         if isinstance(self._op, FrameNode):
             return self._has_arrow_table()
         elif isinstance(self._op, MaskNode):
@@ -1192,6 +1671,14 @@ class OmnisciOnRayFrame(PandasFrame):
             return False
 
     def _execute_arrow(self):
+        """
+        Compute the frame data using Arrow API.
+
+        Returns
+        -------
+        pyarrow.Table
+            The resulting table.
+        """
         if isinstance(self._op, FrameNode):
             if self._partitions.size == 0:
                 return pyarrow.Table()
@@ -1208,12 +1695,38 @@ class OmnisciOnRayFrame(PandasFrame):
             raise RuntimeError(f"Unexpected op ({type(self._op)}) in _execute_arrow")
 
     def _arrow_col_slice(self, new_columns):
+        """
+        Perform column selection on the frame using Arrow API.
+
+        Parameters
+        ----------
+        new_columns : list of str
+            Columns to select.
+
+        Returns
+        -------
+        pyarrow.Table
+            The resulting table.
+        """
         table = self._execute_arrow()
         return table.drop(
             [f"F_{col}" for col in self._table_cols if col not in new_columns]
         )
 
     def _arrow_row_slice(self, row_numeric_idx):
+        """
+        Perform row selection on the frame using Arrow API.
+
+        Parameters
+        ----------
+        row_numeric_idx : list of int
+            Numeric indices of rows to select.
+
+        Returns
+        -------
+        pyarrow.Table
+            The resulting table.
+        """
         table = self._execute_arrow()
 
         if not isinstance(row_numeric_idx, slice) and not is_range_like(
@@ -1240,9 +1753,27 @@ class OmnisciOnRayFrame(PandasFrame):
 
     @classmethod
     def _arrow_concat(cls, frames):
+        """
+        Concat frames' rows using Arrow API.
+
+        Parameters
+        ----------
+        frames : list of OmnisciOnRayFrame
+            Frames to concat.
+
+        Returns
+        -------
+        pyarrow.Table
+            The resulting table.
+        """
         return pyarrow.concat_tables(frame._execute_arrow() for frame in frames)
 
     def _build_index_cache(self):
+        """
+        Materialize index and store it in the cache.
+
+        Can only be called for materialized frames.
+        """
         assert isinstance(self._op, FrameNode)
 
         if self._partitions.size == 0:
@@ -1270,12 +1801,34 @@ class OmnisciOnRayFrame(PandasFrame):
                     self._index_cache = index_df.index
 
     def _get_index(self):
+        """
+        Get the index of the frame in pandas format.
+
+        Materializes the frame if required.
+
+        Returns
+        -------
+        pandas.Index
+        """
         self._execute()
         if self._index_cache is None:
             self._build_index_cache()
         return self._index_cache
 
     def _set_index(self, new_index):
+        """
+        Set new index for the frame.
+
+        Parameters
+        ----------
+        new_index : pandas.Index
+            New index.
+
+        Returns
+        -------
+        OmnisciOnRayFrame
+            The new frame.
+        """
         if not isinstance(new_index, (Index, MultiIndex)):
             raise NotImplementedError(
                 "OmnisciOnRayFrame._set_index is not yet suported"
@@ -1310,6 +1863,20 @@ class OmnisciOnRayFrame(PandasFrame):
             return self.from_arrow(index_at, index_names, new_index)
 
     def reset_index(self, drop):
+        """
+        Set the default index for the frame.
+
+        Parameters
+        ----------
+        drop : bool
+            If True then drop current index columns, otherwise
+            make them data columns.
+
+        Returns
+        -------
+        OmnisciOnRayFrame
+            The new frame.
+        """
         if drop:
             exprs = OrderedDict()
             for c in self.columns:
@@ -1363,6 +1930,19 @@ class OmnisciOnRayFrame(PandasFrame):
         return self.set_index_name(None)
 
     def _set_columns(self, new_columns):
+        """
+        Rename columns.
+
+        Parameters
+        ----------
+        new_columns : list-like of str
+            New column names.
+
+        Returns
+        -------
+        OmnisciOnRayFrame
+            The new frame.
+        """
         exprs = self._index_exprs()
         for old, new in zip(self.columns, new_columns):
             exprs[new] = self.ref(old)
@@ -1375,17 +1955,43 @@ class OmnisciOnRayFrame(PandasFrame):
         )
 
     def _get_columns(self):
+        """
+        Return column labels of the frame.
+
+        Returns
+        -------
+        pandas.Index
+        """
         return super(OmnisciOnRayFrame, self)._get_columns()
 
     columns = property(_get_columns)
     index = property(_get_index)
 
     def has_multiindex(self):
+        """
+        Check for multi-index usage.
+
+        Return True if the frame has a multi-index (index with
+        multiple columns) and False otherwise.
+
+        Returns
+        -------
+        bool
+        """
         if self._index_cache is not None:
             return isinstance(self._index_cache, MultiIndex)
         return self._index_cols is not None and len(self._index_cols) > 1
 
     def get_index_name(self):
+        """
+        Get the name of the index column.
+
+        Returns None for default index and multi-index.
+
+        Returns
+        -------
+        str or None
+        """
         if self._index_cols is None:
             return None
         if len(self._index_cols) > 1:
@@ -1393,6 +1999,21 @@ class OmnisciOnRayFrame(PandasFrame):
         return self._index_cols[0]
 
     def set_index_name(self, name):
+        """
+        Set new name for the index column.
+
+        Sohuldn't be called for frames with multi-index.
+
+        Parameters
+        ----------
+        name : str or None
+            New index name.
+
+        Returns
+        -------
+        OmnisciOnRayFrame
+            The new frame.
+        """
         if self.has_multiindex():
             ErrorMessage.single_warning("Scalar name for MultiIndex is not supported!")
             return self
@@ -1420,11 +2041,31 @@ class OmnisciOnRayFrame(PandasFrame):
         )
 
     def get_index_names(self):
+        """
+        Get index column names.
+
+        Returns
+        -------
+        list of str
+        """
         if self.has_multiindex():
             return self._index_cols.copy()
         return [self.get_index_name()]
 
     def set_index_names(self, names):
+        """
+        Set index labels for frames with multi-index.
+
+        Parameters
+        ----------
+        names : list of str
+            New index labels.
+
+        Returns
+        -------
+        OmnisciOnRayFrame
+            The new frame.
+        """
         if not self.has_multiindex():
             raise ValueError("Can set names for MultiIndex only")
 
@@ -1449,6 +2090,13 @@ class OmnisciOnRayFrame(PandasFrame):
         )
 
     def to_pandas(self):
+        """
+        Transform the frame to pandas format.
+
+        Returns
+        -------
+        pandas.DataFrame
+        """
         self._execute()
 
         if self._force_execution_mode == "lazy":
@@ -1474,11 +2122,37 @@ class OmnisciOnRayFrame(PandasFrame):
         return df
 
     def _index_names(self, cols):
+        """
+        Demangle index column names to index labels.
+
+        Parameters
+        ----------
+        cols : list of str
+            Index column names.
+
+        Returns
+        -------
+        list of str
+            Demangled index names.
+        """
         if len(cols) == 1:
             return self._index_name(cols[0])
         return [self._index_name(n) for n in cols]
 
     def _index_name(self, col):
+        """
+        Demangle index column name into index label.
+
+        Parameters
+        ----------
+        col : str
+            Index column name.
+
+        Returns
+        -------
+        str
+            Demangled index name.
+        """
         if col == "__index__":
             return None
 
@@ -1492,7 +2166,19 @@ class OmnisciOnRayFrame(PandasFrame):
         return col
 
     def _find_index_or_col(self, col):
-        """For given column or index name return a column name"""
+        """
+        Find a column name corresponding to a column or index label.
+
+        Parameters
+        ----------
+        col : str
+            A column or index label.
+
+        Returns
+        -------
+        str
+            A column name corresponding to a label.
+        """
         if col in self.columns:
             return col
 
@@ -1505,6 +2191,19 @@ class OmnisciOnRayFrame(PandasFrame):
 
     @classmethod
     def from_pandas(cls, df):
+        """
+        Build a frame from a `pandas.DataFrame`.
+
+        Parameters
+        ----------
+        df : pandas.DataFrame
+            Source frame.
+
+        Returns
+        -------
+        OmnisciOnRayFrame
+            The new frame.
+        """
         new_index = df.index
         new_columns = df.columns
         # If there is non-trivial index, we put it into columns.
@@ -1552,6 +2251,25 @@ class OmnisciOnRayFrame(PandasFrame):
 
     @classmethod
     def _mangle_index_names(cls, names):
+        """
+        Return mangled index names for index labels.
+
+        Mangled names are used for index columns because index
+        labels cannot always be used as OmniSci table column
+        names. E.e. label can be a non-string value or an
+        unallowed string (empty strings, etc.) for a table column
+        name.
+
+        Parameters
+        ----------
+        names : list of str
+            Index labels.
+
+        Returns
+        -------
+        list of str
+            Mangled names.
+        """
         return [
             f"__index__{i}_{'__None__' if n is None else n}"
             for i, n in enumerate(names)
@@ -1559,6 +2277,25 @@ class OmnisciOnRayFrame(PandasFrame):
 
     @classmethod
     def from_arrow(cls, at, index_cols=None, index=None):
+        """
+        Build a frame from an Arrow table.
+
+        Parameters
+        ----------
+        at : pyarrow.Table
+            Source table.
+        index_cols : list of str, optional
+            List of index columns in the source table which
+            are ignored in tranformation.
+        index : pandas.Index, optional
+            An index to be used by the new frame. Should present
+            if `index_cols` is not None.
+
+        Returns
+        -------
+        OmnisciOnRayFrame
+            The new frame.
+        """
         (
             new_frame,
             new_lengths,
@@ -1599,7 +2336,18 @@ class OmnisciOnRayFrame(PandasFrame):
 
     @classmethod
     def _is_trivial_index(cls, index):
-        """Return true if index is a range [0..N]"""
+        """
+        Check if an index is a trivial index, i.e. a sequence [0..n].
+
+        Parameters
+        ----------
+        index : pandas.Index
+            An index to check.
+
+        Returns
+        -------
+        bool
+        """
         if isinstance(index, pd.RangeIndex):
             return index.start == 0 and index.step == 1
         if not isinstance(index, pd.Int64Index):
