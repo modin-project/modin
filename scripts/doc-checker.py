@@ -9,6 +9,7 @@ import argparse
 import pathlib
 import subprocess
 import os
+import re
 import ast
 from typing import List
 import sys
@@ -27,7 +28,8 @@ NUMPYDOC_BASE_ERROR_CODES = {
 }
 
 MODIN_ERROR_CODES = {
-    "MD01": "'{parameter}' description should be '[type], default: [value]', found - '{found}'"
+    "MD01": "'{parameter}' description should be '[type], default: [value]', found: '{found}'",
+    "MD02": "Spelling error in line: {line}, found: '{word}', reference: '{reference}'",
 }
 
 
@@ -54,6 +56,56 @@ def get_optional_args(doc: Docstring) -> dict:
         for k, v in signature.parameters.items()
         if v.default is not inspect.Parameter.empty
     }
+
+
+def check_spelling_words(doc: Docstring) -> list:
+    """
+    Check spelling of chosen words: "Modin", "pandas", "NumPy" in doc.
+
+    Parameters
+    ----------
+    doc : numpydoc.validate.Docstring
+        Docstring handler.
+
+    Returns
+    -------
+    list
+        List of tuples with Modin error code and its description.
+
+    Notes
+    -----
+    "modin" word is treated as the constant.
+    """
+    components = set(["Modin", "pandas", "NumPy"])
+    check_words = "|".join(x.lower() for x in components)
+
+    # comments work only with re.VERBOSE
+    pattern = f"""
+    (?:\W|^)                # non-capturing group: [^a-zA-Z0-9_] or start
+    ({check_words})         # words to check, example - "modin|pandas|numpy"
+    (?:[^"]\W|$)            # non-capturing group: any symbol except '"'
+                            # and [^a-zA-Z0-9_] or end
+    """  # noqa: W605
+    results = [
+        set(re.findall(pattern, line, re.I | re.VERBOSE)) - components
+        for line in doc.raw_doc.splitlines()
+    ]
+
+    errors = []
+    for line_idx, words_in_line in enumerate(results):
+        for word in words_in_line:
+            reference = [x for x in components if x.lower() == word.lower()][0]
+            errors.append(
+                (
+                    "MD02",
+                    MODIN_ERROR_CODES["MD02"].format(
+                        line=line_idx,
+                        word=word,
+                        reference=reference,
+                    ),
+                )
+            )
+    return errors
 
 
 def validate_modin_error(doc: Docstring) -> list:
@@ -91,7 +143,7 @@ def validate_modin_error(doc: Docstring) -> list:
                     ),
                 )
             )
-
+    errors += check_spelling_words(doc)
     return errors
 
 
