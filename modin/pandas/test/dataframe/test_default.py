@@ -381,20 +381,7 @@ def test_info(verbose, max_cols, memory_usage, null_counts):
 @pytest.mark.parametrize("axis", axis_values, ids=axis_keys)
 @pytest.mark.parametrize("skipna", bool_arg_values, ids=bool_arg_keys)
 @pytest.mark.parametrize("numeric_only", bool_arg_values, ids=bool_arg_keys)
-@pytest.mark.parametrize(
-    "method",
-    [
-        "kurtosis",
-        pytest.param(
-            "kurt",
-            marks=pytest.mark.skipif(
-                pandas.DataFrame.kurt == pandas.DataFrame.kurtosis
-                and pd.DataFrame.kurt == pd.DataFrame.kurtosis,
-                reason="That method was already tested.",
-            ),
-        ),
-    ],
-)
+@pytest.mark.parametrize("method", ["kurtosis", "kurt"])
 def test_kurt_kurtosis(axis, skipna, numeric_only, method):
     data = test_data["float_nan_data"]
 

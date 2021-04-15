@@ -1084,7 +1084,7 @@ def test_array(data):
     eval_general(modin_series, pandas_series, lambda df: df.array)
 
 
-@pytest.mark.skip(reason="Using pandas Series.")
+@pytest.mark.xfail(reason="Using pandas Series.")
 def test_between():
     modin_series = create_test_series()
 
@@ -1480,7 +1480,7 @@ def test_matmul(data):
         )
 
 
-@pytest.mark.skip(reason="Using pandas Series.")
+@pytest.mark.xfail(reason="Using pandas Series.")
 def test_drop():
     modin_series = create_test_series()
 
@@ -1722,7 +1722,7 @@ def test_fillna(data):
     df_equals(modin_series.fillna(0, limit=1), pandas_series.fillna(0, limit=1))
 
 
-@pytest.mark.skip(reason="Using pandas Series.")
+@pytest.mark.xfail(reason="Using pandas Series.")
 def test_filter():
     modin_series = create_test_series()
 
@@ -2217,7 +2217,7 @@ def test_ne(data):
     inter_df_math_helper(modin_series, pandas_series, "ne")
 
 
-@pytest.mark.skip(reason="Using pandas Series.")
+@pytest.mark.xfail(reason="Using pandas Series.")
 def test_nlargest():
     modin_series = create_test_series()
 
@@ -2399,10 +2399,6 @@ def test_ravel(data, order):
     )
 
 
-# TODO: remove xfail mark then #1628 will be fixed
-@pytest.mark.xfail(
-    reason="Modin Series with category dtype is buggy for now. See #1628 for more details."
-)
 @pytest.mark.parametrize(
     "data",
     [
@@ -2699,7 +2695,7 @@ def test_reset_index(data, drop, name, inplace):
     )
 
 
-@pytest.mark.skip(reason="Using pandas Series.")
+@pytest.mark.xfail(reason="Using pandas Series.")
 def test_reshape():
     modin_series = create_test_series()
 
@@ -2780,18 +2776,7 @@ def test_sample(data):
 
 
 @pytest.mark.parametrize("single_value_data", [True, False])
-@pytest.mark.parametrize(
-    "use_multiindex",
-    [
-        pytest.param(
-            True,
-            marks=pytest.mark.xfail(
-                reason="When use_multiindex=True, test is failing."
-            ),
-        ),
-        False,
-    ],
-)
+@pytest.mark.parametrize("use_multiindex", [True, False])
 @pytest.mark.parametrize("sorter", [True, None])
 @pytest.mark.parametrize("values_number", [1, 2, 5])
 @pytest.mark.parametrize("side", ["left", "right"])
@@ -3470,13 +3455,6 @@ def test_where():
     pandas_result = pandas_series.where(pandas_series < 2, True)
     modin_result = modin_series.where(modin_series < 2, True)
     assert all(to_pandas(modin_result) == pandas_result)
-
-
-@pytest.mark.skip("Deprecated in pandas.")
-def test_xs():
-    series = pd.Series([4, 0, "mammal", "cat", "walks"])
-    with pytest.warns(UserWarning):
-        series.xs("mammal")
 
 
 # Test str operations

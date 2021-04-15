@@ -505,9 +505,6 @@ def test_astype_category():
     assert modin_result.dtypes.equals(pandas_result.dtypes)
 
 
-@pytest.mark.xfail(
-    reason="Categorical dataframe created in memory don't work yet and categorical dtype is lost"
-)
 def test_astype_category_large():
     series_length = 10_000
     modin_df = pd.DataFrame(

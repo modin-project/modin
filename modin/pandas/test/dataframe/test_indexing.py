@@ -736,7 +736,7 @@ def test_rename_multiindex():
     assert_index_equal(modin_renamed.index, renamed.index)
 
 
-@pytest.mark.skip(reason="Pandas does not pass this test")
+@pytest.mark.xfail(reason="Pandas does not pass this test")
 def test_rename_nocopy():
     source_df = pandas.DataFrame(test_data["int_data"])[
         ["col1", "index", "col3", "col4"]
