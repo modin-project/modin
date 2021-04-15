@@ -24,12 +24,12 @@ from modin.error_message import ErrorMessage
 from modin.backends.base.query_compiler import BaseQueryCompiler
 from typing import Optional
 
-# TODO (amyskov): replace `For parameters description please refer to Pandas API.` statement with
+# TODO (amyskov): replace `For parameters description please refer to pandas API.` statement with
 # @_inherit_docstrings decorator when #2969 will be merged.
 _doc_default_io_method = """
-{summary} using Pandas.
+{summary} using pandas.
 
-For parameters description please refer to Pandas API.
+For parameters description please refer to pandas API.
 
 Returns
 -------
@@ -66,7 +66,7 @@ class BaseIO(object):
     @classmethod
     def from_pandas(cls, df):
         """
-        Improve simple Pandas DataFrame to an advanced Modin query compiler.
+        Improve simple pandas DataFrame to an advanced Modin query compiler.
 
         Parameters
         ----------
@@ -76,7 +76,7 @@ class BaseIO(object):
         Returns
         -------
         BaseQueryCompiler
-            QueryCompiler containing data from the Pandas DataFrame.
+            QueryCompiler containing data from the pandas DataFrame.
         """
         return cls.query_compiler_cls.from_pandas(df, cls.frame_cls)
 
@@ -748,9 +748,9 @@ class BaseIO(object):
         method=None,
     ):
         """
-        Write records stored in a DataFrame to a SQL database using Pandas.
+        Write records stored in a DataFrame to a SQL database using pandas.
 
-        For parameters description please refer to Pandas API.
+        For parameters description please refer to pandas API.
         """
         ErrorMessage.default_to_pandas("`to_sql`")
         df = qc.to_pandas()
@@ -769,9 +769,9 @@ class BaseIO(object):
     @classmethod
     def to_pickle(cls, obj, path, compression="infer", protocol=4):
         """
-        Pickle (serialize) object to file using Pandas.
+        Pickle (serialize) object to file using pandas.
 
-        For parameters description please refer to Pandas API.
+        For parameters description please refer to pandas API.
         """
         if protocol == 4:
             protocol = -1
@@ -788,9 +788,9 @@ class BaseIO(object):
     @classmethod
     def to_csv(cls, obj, **kwargs):
         """
-        Write object to a comma-separated values (CSV) file using Pandas.
+        Write object to a comma-separated values (CSV) file using pandas.
 
-        For parameters description please refer to Pandas API.
+        For parameters description please refer to pandas API.
         """
         ErrorMessage.default_to_pandas("`to_csv`")
         if isinstance(obj, BaseQueryCompiler):

@@ -6,9 +6,9 @@ IO Module Description
 High-Level Data Import Operation Workflow
 '''''''''''''''''''''''''''''''''''''''''
 
-**Note**: `read_csv` on Pandas backend and Ray engine was taken as an example in this chapter for reader convenience. For other import functions workflow and classes/functions naming convension will be the same.
+**Note**: `read_csv` on pandas backend and Ray engine was taken as an example in this chapter for reader convenience. For other import functions workflow and classes/functions naming convension will be the same.
 
-After user calls high-level `modin.pandas.read_csv` function, call is forwarded to the `EngineDispatcher`, which defines which factory from `modin\data_management\factories\factories` and backend/engine specific IO class should be used (for Ray engine and Pandas backend IO class will be named `PandasOnRayIO`). This class defines Modin frame and query compiler classes and `read_*` functions, which could be based on the following classes: `RayTask` - class for managing remote tasks by concrete distribution engine, `PandasCSVParser` - class for data parsing on the workers by specific backend and `CSVDispatcher` - class for files handling of concrete file format including chunking that is executed on the head node.
+After user calls high-level `modin.pandas.read_csv` function, call is forwarded to the `EngineDispatcher`, which defines which factory from `modin/data_management/factories/factories` and backend/engine specific IO class should be used (for Ray engine and pandas backend IO class will be named `PandasOnRayIO`). This class defines Modin frame and query compiler classes and `read_*` functions, which could be based on the following classes: `RayTask` - class for managing remote tasks by concrete distribution engine, `PandasCSVParser` - class for data parsing on the workers by specific backend and `CSVDispatcher` - class for files handling of concrete file format including chunking that is executed on the head node.
 
 Dispatcher Classes Workflow Overview
 ''''''''''''''''''''''''''''''''''''
@@ -24,7 +24,7 @@ Modin file splitting mechanism differs depending on the data format type:
 * columnar store type - file is splitted by even distribution of columns that should be read between chunks.
 * SQL type - chunking is obtained by wrapping initial SQL query into query that specifies initial row offset and number of rows in the chunk.
 
-After file splitting is complete, chunks data is passed to the parser functions (`PandasCSVParser.parse` for `read_csv` function with Pandas backend) for further processing on each worker.
+After file splitting is complete, chunks data is passed to the parser functions (`PandasCSVParser.parse` for `read_csv` function with pandas backend) for further processing on each worker.
 
 Submodules Description
 ''''''''''''''''''''''

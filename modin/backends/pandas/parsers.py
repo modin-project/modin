@@ -29,7 +29,7 @@ from modin.data_management.utils import split_result_of_axis_func_pandas
 from modin.error_message import ErrorMessage
 
 _doc_pandas_parser_class = """
-Class for handling {data_type} on the workers using Pandas backend.
+Class for handling {data_type} on the workers using pandas backend.
 
 Inherits common functions from `PandasParser` class.
 """
@@ -110,7 +110,7 @@ def find_common_type_cat(types):
 
 
 class PandasParser(object):
-    """Base class for parser classes with Pandas backend."""
+    """Base class for parser classes with pandas backend."""
 
     @classmethod
     def get_dtypes(cls, dtypes_ids):
