@@ -9,8 +9,8 @@ to apply a function if an operation requires access to an entire column or row. 
 into partition API and also can have some preprocessing operations in depend of the partition type
 for performance improving (for example, ``preprocess_func``):
 
-API
----
+Public API
+----------
 
 .. autoclass:: modin.engines.base.frame.partition_manager.BaseFrameManager
   :noindex:
