@@ -12,9 +12,9 @@
 # governing permissions and limitations under the License.
 
 """
-Implement I/O public API as Pandas does.
+Implement I/O public API as pandas does.
 
-Almost all docstrings for public and magic methods should be inherited from Pandas
+Almost all docstrings for public and magic methods should be inherited from pandas
 for better maintability. So some codes are ignored in pydocstyle check:
     - D101: missing docstring in class
     - D103: missing docstring in public function

@@ -130,12 +130,17 @@ def check_spelling_words(doc: Docstring) -> list:
     check_words = "|".join(x.lower() for x in components)
 
     # comments work only with re.VERBOSE
-    pattern = f"""
+    pattern = r"""
     (?:\W|^)                # non-capturing group: [^a-zA-Z0-9_] or start
     ({check_words})         # words to check, example - "modin|pandas|numpy"
-    (?:[^"]\W|$)            # non-capturing group: any symbol except '"'
-                            # and [^a-zA-Z0-9_] or end
-    """  # noqa: W605
+    (?:                     # non-capturing group
+        [^"\.\/\w\\]        # any symbol except: '"', '.', '\' and any from [a-zA-Z0-9_]
+        | [\.]\s            # or '.' and any whitespace
+        | $                 # or end
+    )
+    """.format(
+        check_words=check_words
+    )
     results = [
         set(re.findall(pattern, line, re.I | re.VERBOSE)) - components
         for line in doc.raw_doc.splitlines()
@@ -160,7 +165,7 @@ def check_spelling_words(doc: Docstring) -> list:
 
 def validate_modin_error(doc: Docstring) -> list:
     """
-    Validate custom modin errors.
+    Validate custom Modin errors.
 
     Parameters
     ----------
@@ -179,7 +184,7 @@ def validate_modin_error(doc: Docstring) -> list:
 
 def update_results(results: dict, modin_errors: list):
     """
-    Add custom modin errors to default numpydoc errors in results.
+    Add custom Modin errors to default numpydoc errors in results.
 
     Parameters
     ----------
