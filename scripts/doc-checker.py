@@ -21,7 +21,7 @@ sys.path.insert(0, MODIN_PATH)
 NUMPYDOC_BASE_ERROR_CODES = {
     *("GL01", "GL02", "GL03", "GL05", "GL06", "GL07", "GL08", "GL09", "GL10"),
     *("SS02", "SS03", "SS04", "SS05", "PR01", "PR02", "PR03", "PR04", "PR05"),
-    *("PR10", "RT01", "RT04", "RT05", "SA02", "SA03"),
+    *("PR08", "PR09", "PR10", "RT01", "RT04", "RT05", "SA02", "SA03"),
 }
 
 """ TEST CUSTOM CHECK
@@ -83,7 +83,7 @@ def skip_check_if_noqa(import_path):
     Parameters
     ----------
     import_path : str
-        python-like import path
+        Python-like import path.
 
     Returns
     -------
@@ -125,7 +125,7 @@ def validate_object(import_path: str) -> bool:
     Parameters
     ----------
     import_path : str
-        python-like import path
+        Python-like import path.
 
     Returns
     -------
@@ -157,7 +157,7 @@ def numpydoc_validate(path: pathlib.Path) -> bool:
     Parameters
     ----------
     path : pathlib.Path
-        filename or directory path for check
+        Filename or directory path for check.
 
     Returns
     -------
@@ -223,9 +223,9 @@ def pydocstyle_validate(path: pathlib.Path, add_ignore: List[str]) -> int:
     Parameters
     ----------
     path : pathlib.Path
-        filename or directory path for check
+        Filename or directory path for check.
     add_ignore : List[int]
-        pydocstyle error codes which are not verified
+        `pydocstyle` error codes which are not verified.
 
     Returns
     -------
@@ -269,11 +269,11 @@ def validate(
     Parameters
     ----------
     paths : List[pathlib.Path]
-        filenames of directories for check
+        Filenames of directories for check.
     add_ignore : List[str]
-        pydocstyle error codes which are not verified
+        `pydocstyle` error codes which are not verified.
     use_numpydoc : bool
-        determine if numpydoc checks are needed
+        Determine if numpydoc checks are needed.
 
     Returns
     -------
@@ -297,7 +297,7 @@ def check_args(args: argparse.Namespace):
     Parameters
     ----------
     args : argparse.Namespace
-        parser arguments
+        Parser arguments.
 
     Raises
     ------

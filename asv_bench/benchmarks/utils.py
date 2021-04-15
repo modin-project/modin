@@ -106,9 +106,9 @@ def translator_groupby_ngroups(groupby_ngroups: Union[str, int], shape: tuple) -
     Parameters
     ----------
     groupby_ngroups : str or int
-        number of groups that will be used in `groupby` operation
+        Number of groups that will be used in `groupby` operation.
     shape : tuple
-        same as pandas.Dataframe.shape
+        Same as pandas.Dataframe.shape.
 
     Returns
     -------
@@ -141,13 +141,13 @@ def gen_int_data(nrows: int, ncols: int, rand_low: int, rand_high: int) -> dict:
     Parameters
     ----------
     nrows : int
-        number of rows
+        Number of rows.
     ncols : int
-        number of columns
+        Number of columns.
     rand_low : int
-        low bound for random generator
+        Low bound for random generator.
     rand_high : int
-        high bound for random generator
+        High bound for random generator.
 
     Returns
     -------
@@ -182,13 +182,13 @@ def gen_str_int_data(nrows: int, ncols: int, rand_low: int, rand_high: int) -> d
     Parameters
     ----------
     nrows : int
-        number of rows
+        Number of rows.
     ncols : int
-        number of columns
+        Number of columns.
     rand_low : int
-        low bound for random generator
+        Low bound for random generator.
     rand_high : int
-        high bound for random generator
+        High bound for random generator.
 
     Returns
     -------
@@ -226,15 +226,15 @@ def gen_data(
     Parameters
     ----------
     data_type : {"int", "str_int"}
-        type of data generation
+        Type of data generation.
     nrows : int
-        number of rows
+        Number of rows.
     ncols : int
-        number of columns
+        Number of columns.
     rand_low : int
-        low bound for random generator
+        Low bound for random generator.
     rand_high : int
-        high bound for random generator
+        High bound for random generator.
 
     Returns
     -------
@@ -270,25 +270,25 @@ def generate_dataframe(
     Parameters
     ----------
     impl : str
-        implementation used to create the dataframe;
-        supported implemetations: {"modin", "pandas"}
+        Implementation used to create the dataframe;
+        supported implemetations: {"modin", "pandas"}.
     data_type : str
-        type of data generation;
-        supported types: {"int", "str_int"}
+        Type of data generation;
+        supported types: {"int", "str_int"}.
     nrows : int
-        number of rows
+        Number of rows.
     ncols : int
-        number of columns
+        Number of columns.
     rand_low : int
-        low bound for random generator
+        Low bound for random generator.
     rand_high : int
-        high bound for random generator
+        High bound for random generator.
     groupby_ncols : int, default None
-        number of columns for which `groupby` will be called in the future;
+        Number of columns for which `groupby` will be called in the future;
         to get more stable performance results, we need to have the same number of values
-        in each group every benchmarking time
+        in each group every benchmarking time.
     count_groups : int, default: None
-        count of groups in groupby columns
+        Count of groups in groupby columns.
 
     Returns
     -------
@@ -364,9 +364,9 @@ def random_columns(df_columns: list, columns_number: int) -> list:
     Parameters
     ----------
     df_columns : list
-        columns to choose from
+        Columns to choose from.
     columns_number : int
-        how many columns to pick
+        How many columns to pick.
 
     Returns
     -------
@@ -382,7 +382,7 @@ def random_booleans(number: int) -> list:
     Parameters
     ----------
     number : int
-        count of booleans in result list
+        Count of booleans in result list.
 
     Returns
     -------
@@ -429,7 +429,7 @@ def get_shape_id(shape: tuple) -> str:
     Parameters
     ----------
     shape : tuple
-        same as pandas.Dataframe.shape
+        Same as pandas.Dataframe.shape.
 
     Returns
     -------

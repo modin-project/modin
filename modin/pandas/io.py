@@ -50,7 +50,7 @@ def _read(**kwargs):
     Parameters
     ----------
     **kwargs : dict
-        Keyword arguments in pandas.read_csv
+        Keyword arguments in pandas.read_csv.
 
     Returns
     -------
