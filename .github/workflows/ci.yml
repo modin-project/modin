@@ -45,9 +45,9 @@ jobs:
         with:
           python-version: "3.7.x"
           architecture: "x64"
-      - run: pip install pytest pytest-cov
+      - run: pip install --no-deps -e .
+      - run: pip install pytest pytest-cov pydocstyle numpydoc
       - run: pytest scripts/test
-      - run: pip install pydocstyle numpydoc
       - run: pip install -e .[all]
       - run: |
           python scripts/doc_checker.py --add-ignore=D101,D102,D105 --disable-numpydoc \
