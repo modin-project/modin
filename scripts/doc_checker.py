@@ -52,17 +52,17 @@ def get_optional_args(doc: Docstring) -> dict:
 
     Parameters
     ----------
-    doc : numpydoc.validate.Doctring
+    doc : numpydoc.validate.Docstring
         Docstring handler.
 
     Returns
     -------
     dict
-        Dict with default arguments.
+        Dict with default argument names and its values.
     """
     obj = doc.obj
     if not callable(obj) or inspect.isclass(obj):
-        return None
+        return {}
     signature = inspect.signature(obj)
     return {
         k: v.default
@@ -77,7 +77,7 @@ def check_optional_args(doc: Docstring) -> list:
 
     Parameters
     ----------
-    doc : Docstring
+    doc : numpydoc.validate.Docstring
 
     Returns
     -------
@@ -135,7 +135,8 @@ def check_spelling_words(doc: Docstring) -> list:
     ({check_words})         # words to check, example - "modin|pandas|numpy"
     (?:                     # non-capturing group
         [^"\.\/\w\\]        # any symbol except: '"', '.', '\' and any from [a-zA-Z0-9_]
-        | [\.]\s            # or '.' and any whitespace
+        | \.\s              # or '.' and any whitespace
+        | \.$               # or '.' and end
         | $                 # or end
     )
     """.format(
