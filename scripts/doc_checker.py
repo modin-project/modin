@@ -269,13 +269,13 @@ def get_noqa_checks(doc: Docstring) -> list:
     else:
         # pydocstyle only check first line; aling with it
         noqa_str = source.split("\n", 1)[0]
-    if "noqa" not in noqa_str:
-        return []
 
-    if "noqa:" in noqa_str:
+    if "# noqa:" in noqa_str:
         noqa_checks = noqa_str.split("noqa:")[1].split(",")
-    elif "noqa" in noqa_str:
+    elif "# noqa" in noqa_str:
         noqa_checks = ["all"]
+    else:
+        noqa_checks = []
     return [check.strip() for check in noqa_checks]
 
 
