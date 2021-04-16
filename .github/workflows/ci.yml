@@ -45,7 +45,6 @@ jobs:
         with:
           python-version: "3.7.x"
           architecture: "x64"
-      - run: pip install --no-deps -e .
       - run: pip install pytest pytest-cov pydocstyle numpydoc
       - run: pytest scripts/test
       - run: pip install -e .[all]
