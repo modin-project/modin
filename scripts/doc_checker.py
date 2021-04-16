@@ -27,6 +27,7 @@ import ast
 from typing import List
 import sys
 import inspect
+import shutil
 from numpydoc.validate import Docstring
 
 MODIN_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
@@ -92,6 +93,9 @@ def check_optional_args(doc: Docstring) -> list:
 
     errors = []
     for parameter in optional_args:
+        # case when not all parameters are listed in "Parameters" section
+        if parameter not in doc.doc_parameters:
+            continue
         type_line = doc.doc_parameters[parameter][0]
         if "default: " not in type_line or "optional" in type_line:
             errors.append(
@@ -182,8 +186,7 @@ def validate_modin_error(doc: Docstring, results: dict) -> list:
     """
     errors = check_optional_args(doc)
     errors += check_spelling_words(doc)
-    for error in errors:
-        results["errors"].append(error)
+    results["errors"].extend(errors)
     return results
 
 
@@ -255,6 +258,9 @@ def get_noqa_checks(doc: Docstring) -> list:
     If noqa doesn't have any codes - returns ["all"].
     """
     source = doc.method_source
+    # case when property decorator is used; it hides sources
+    if not source:
+        return []
     noqa_str = None
     if not inspect.ismodule(doc.obj):
         # find last line of obj definition
@@ -390,9 +396,12 @@ def pydocstyle_validate(path: pathlib.Path, add_ignore: List[str]) -> int:
     bool
         Return True if all pydocstyle checks are successful.
     """
+    pydocstyle = "pydocstyle"
+    if not shutil.which(pydocstyle):
+        raise ValueError(f"{pydocstyle} not found in PATH")
     result = subprocess.run(
         [
-            "pydocstyle",
+            pydocstyle,
             "--convention",
             "numpy",
             "--add-ignore",
