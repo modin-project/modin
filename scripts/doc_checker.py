@@ -131,7 +131,7 @@ def check_spelling_words(doc: Docstring) -> list:
 
     # comments work only with re.VERBOSE
     pattern = r"""
-    (?:\W|^)                # non-capturing group: [^a-zA-Z0-9_] or start
+    (?:\W|^)                # non-capturing group of either non-word symbol or line start
     ({check_words})         # words to check, example - "modin|pandas|numpy"
     (?:                     # non-capturing group
         [^"\.\/\w\\]        # any symbol except: '"', '.', '\' and any from [a-zA-Z0-9_]
@@ -271,7 +271,7 @@ def get_noqa_checks(doc: Docstring) -> list:
         noqa_str = source.split("\n", 1)[0]
 
     if "# noqa:" in noqa_str:
-        noqa_checks = noqa_str.split("noqa:")[1].split(",")
+        noqa_checks = noqa_str.split("# noqa:", 1)[1].split(",")
     elif "# noqa" in noqa_str:
         noqa_checks = ["all"]
     else:
