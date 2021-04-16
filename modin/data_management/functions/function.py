@@ -47,14 +47,16 @@ class Function(object):
     @classmethod
     def validate_axis(cls, axis: Optional[int]) -> int:
         """
-        Ensure that axis to apply function on, has valid value.
+        Ensure that axis to apply function on has valid value.
 
         Parameters
         ----------
-        axis : {[0, None]: Index, 1: Columns}
+        axis : int, optional
+            0 or None means apply on index, 1 means apply on columns
 
         Returns
         -------
         int
+            Integer representation of given axis
         """
         return 0 if axis is None else axis

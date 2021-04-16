@@ -56,12 +56,12 @@ class RollingDefault(DefaultMethod):
 
         Parameters
         ----------
-        func: callable,
+        func: callable
             Function to execute on a rolling window.
 
         Returns
         -------
-        callable,
+        callable
             Functiom that takes query compiler and defaults to pandas to apply aggregation
             `func` on a rolling window.
         """

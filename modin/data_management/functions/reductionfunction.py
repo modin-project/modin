@@ -21,7 +21,7 @@ class ReductionFunction(Function):
     @classmethod
     def register(cls, func: Callable, axis=None):
         """
-        Build Reduction function that perform across rows/columns.
+        Build Reduction function that will be performed across rows/columns.
 
         It's used if `func` reduces the dimension of partitions in contrast to `FoldFunction`.
 

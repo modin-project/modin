@@ -147,7 +147,7 @@ class EngineDispatcher(object):
 
     @classmethod
     def read_html(cls, **kwargs):
-        """Build query compiler from a HTML document."""
+        """Build query compiler from an HTML document."""
         return cls.__engine._read_html(**kwargs)
 
     @classmethod
@@ -162,7 +162,7 @@ class EngineDispatcher(object):
 
     @classmethod
     def read_hdf(cls, **kwargs):
-        """Build query compiler from a HDFStore."""
+        """Build query compiler from an HDFStore."""
         return cls.__engine._read_hdf(**kwargs)
 
     @classmethod
@@ -207,7 +207,7 @@ class EngineDispatcher(object):
 
     @classmethod
     def read_spss(cls, **kwargs):
-        """Build query compiler from a SPSS file."""
+        """Build query compiler from an SPSS file."""
         return cls.__engine._read_spss(**kwargs)
 
     @classmethod

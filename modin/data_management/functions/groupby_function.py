@@ -100,7 +100,7 @@ class GroupbyReduceFunction(MapReduceFunction):
         df : pandas.DataFrame
             Serialized frame to group.
         other : pandas.DataFrame, optional
-            Serialized frame, whose columns used to determine the groups.
+            Serialized frame, whose columns are used to determine the groups.
             If not specified, `by` parameter is used.
         axis : {0: Index, 1: Columns}, default: 0
             Axis to group and apply aggregation function along.
@@ -163,7 +163,7 @@ class GroupbyReduceFunction(MapReduceFunction):
 
         Parameters
         ----------
-        df : pandas.DataFrame,
+        df : pandas.DataFrame
             Serialized frame which contain groups to combine.
         partition_idx : int
             Internal index of column partition to which this function is applied.
@@ -298,7 +298,7 @@ class GroupbyReduceFunction(MapReduceFunction):
 
         # If `by` is a ModinFrame, then its partitions will be broadcasted to every
         # `self` partition in a way determined by engine (modin_frame.groupby_reduce)
-        # Otherwise `by` was already binded to the Map function in `build_map_reduce_functions`.
+        # Otherwise `by` was already bound to the Map function in `build_map_reduce_functions`.
         broadcastable_by = getattr(by, "_modin_frame", None)
         apply_indices = list(map_func.keys()) if isinstance(map_func, dict) else None
         new_modin_frame = qc._modin_frame.groupby_reduce(
@@ -375,7 +375,7 @@ class GroupbyReduceFunction(MapReduceFunction):
         Returns
         -------
         Tuple of callable
-            Tuple of map and reduce function with binded arguments.
+            Tuple of map and reduce functions with bound arguments.
         """
         # if by is a query compiler, then it will be broadcasted explicit via
         # groupby_reduce method of the modin frame and so we don't want secondary

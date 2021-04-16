@@ -31,7 +31,7 @@ class Resampler:
 
         Returns
         -------
-        callable,
+        callable
             Function that takes pandas DataFrame and applies aggregation 
             to resampled time-series data.
         """

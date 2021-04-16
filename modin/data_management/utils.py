@@ -24,14 +24,14 @@ def get_default_chunksize(length, num_splits):
     Parameters
     ----------
     length : int
-        The integer length to split (number of rows/columns).
+        The length to split (number of rows/columns).
     num_splits : int
-        The integer number of splits.
+        The number of splits.
 
     Returns
     -------
     int
-        An integer chunksize.
+        Computed chunksize.
     """
     return (
         length // num_splits if length % num_splits == 0 else length // num_splits + 1
@@ -97,7 +97,7 @@ def split_result_of_axis_func_pandas(axis, num_splits, result, length_list=None)
     Returns
     -------
     list of pandas.DataFrames
-        Splitted frame represented by list of frames.
+        Splitted dataframe represented by list of frames.
     """
     if length_list is not None:
         length_list.insert(0, 0)

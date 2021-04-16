@@ -14,8 +14,8 @@
 """
 Module contains Factories for all of the supported Modin backends.
 
-Factory - is a bridge between calls of IO-function from high-level API and its
-actual implementation in an engine, binded to that factory. Each backend represented 
+Factory is a bridge between calls of IO function from high-level API and its
+actual implementation in the engine, bound to that factory. Each backend is represented 
 with a Factory class.
 """
 

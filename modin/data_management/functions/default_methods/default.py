@@ -70,7 +70,7 @@ class DefaultMethod(Function):
         def applyier(df, *args, **kwargs):
             """
             This function is directly applied to the casted to pandas frame, executes target
-            function under it and processes result so it be possible to create a valid
+            function under it and processes result so it is possible to create a valid
             query compiler from it.
             """
             df = cls.frame_wrapper(df)

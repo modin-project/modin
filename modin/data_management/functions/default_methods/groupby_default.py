@@ -36,12 +36,12 @@ class GroupBy:
 
         Parameters
         ----------
-        by : DateFrame, Series, index label or list of such,
+        by : DateFrame, Series, index label or list of such
             Object which indicates groups for GroupBy.
 
         Returns
         -------
-        Series, index label or list of such,
+        Series, index label or list of such
             By parameter with all DataFrames casted to Series.
         """
 
@@ -97,12 +97,12 @@ class GroupBy:
         key : callable or str
             Default aggregation function. If aggregation function is not specified
             via groupby arguments, then `key` function is used.
-        **kwargs : kwargs
+        **kwargs : dict
             GroupBy arguments that may contain aggregation function.
 
         Returns
         -------
-        callable,
+        callable
             Aggregation function.
 
         Notes
@@ -110,8 +110,8 @@ class GroupBy:
         There is two ways of how groupby aggregation can be invoked:
             1. Explicitly with query compiler method: `qc.groupby_sum()`.
             2. By passing aggregation function as an argument: `qc.groupby_agg("sum")`.
-        Both is going to produce the same result, however in a first case actual aggregation
-        function can be extracted from a method name, but for the second - only from the method arguments.
+        Both are going to produce the same result, however in the first case actual aggregation
+        function can be extracted from the method name, while for the second only from the method arguments.
         """
         if "agg_func" in kwargs:
             return kwargs["agg_func"]
@@ -133,7 +133,7 @@ class GroupBy:
 
         Returns
         -------
-        callable,
+        callable
             Function that executes groupby aggregation.
         """
 
@@ -174,7 +174,7 @@ class GroupBy:
 
         Returns
         -------
-        callable,
+        callable
             Function that executes groupby aggregation.
         """
 
@@ -254,7 +254,7 @@ class GroupBy:
 
         Returns
         -------
-        callable,
+        callable
             Function that takes pandas DataFrame and does GroupBy aggregation.
         """
         if cls.is_aggregate(func):
@@ -280,7 +280,7 @@ class GroupByDefault(DefaultMethod):
 
         Returns
         -------
-        callable,
+        callable
             Functiom that takes query compiler and defaults to pandas to do GroupBy
             aggregation.
         """

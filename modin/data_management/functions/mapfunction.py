@@ -21,12 +21,12 @@ class MapFunction(Function):
     @classmethod
     def register(cls, func: Callable, *reg_args, **reg_kwargs):
         """
-        Build Map function that perform across each partition.
+        Build Map function that will be performed across each partition.
 
         Parameters
         ----------
         func : callable
-            Function that will be applied the each partition.
+            Function that will be applied to the each partition.
         *reg_args : args
             Args that will be passed to the returned function.
         **reg_kwargs : kwargs
