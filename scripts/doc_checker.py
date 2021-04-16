@@ -164,7 +164,7 @@ def check_spelling_words(doc: Docstring) -> list:
     return errors
 
 
-def validate_modin_error(doc: Docstring) -> list:
+def validate_modin_error(doc: Docstring, results: dict) -> list:
     """
     Validate custom Modin errors.
 
@@ -172,34 +172,17 @@ def validate_modin_error(doc: Docstring) -> list:
     ----------
     doc : numpydoc.validate.Docstring
         Docstring handler.
-
-    Returns
-    -------
-    errors :
-        List of tuples with Modin error code and its description.
-    """
-    errors = check_optional_args(doc)
-    errors += check_spelling_words(doc)
-    return errors
-
-
-def update_results(results: dict, modin_errors: list):
-    """
-    Add custom Modin errors to default numpydoc errors in results.
-
-    Parameters
-    ----------
     results : dict
         Dictionary that numpydoc.validate.validate return.
-    modin_errors : list
-        List of tuples with Modin error code and its description.
 
     Returns
     -------
     dict
         Updated dict with Modin custom errors.
     """
-    for error in modin_errors:
+    errors = check_optional_args(doc)
+    errors += check_spelling_words(doc)
+    for error in errors:
         results["errors"].append(error)
     return results
 
@@ -299,8 +282,7 @@ def validate_object(import_path: str) -> bool:
     is_successfull = True
     doc = Docstring(import_path)
     results = validate(import_path)
-    modin_errors = validate_modin_error(doc)
-    results = update_results(results, modin_errors)
+    results = validate_modin_error(doc, results)
     noqa_checks = get_noqa_checks(doc)
     for err_code, err_desc in results["errors"]:
         if (
