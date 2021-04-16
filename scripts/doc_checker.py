@@ -397,7 +397,7 @@ def pydocstyle_validate(path: pathlib.Path, add_ignore: List[str]) -> int:
             "numpy",
             "--add-ignore",
             ",".join(add_ignore),
-            path,
+            str(path),
         ],
         text=True,
         capture_output=True,
