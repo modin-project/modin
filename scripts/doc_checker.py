@@ -223,6 +223,10 @@ def skip_check_if_noqa(doc: Docstring, err_code: str, noqa_checks: list) -> bool
     # GL08 - missing docstring in an arbitary object; numpydoc code
     if err_code == "GL08":
         name = doc.name.split(".")[-1]
+        # Numpydoc recommends to add docstrings of __init__ method in class docstring.
+        # So there is no error if docstring missed in __init__
+        if name == "__init__":
+            return True
         magic = name.startswith("__") and name.endswith("__")
         # Codes of missing docstring for different types of objects; pydocstyle codes
         if inspect.isclass(doc.obj):
