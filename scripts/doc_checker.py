@@ -208,16 +208,29 @@ def skip_check_if_noqa(doc: Docstring, err_code: str, noqa_checks: list) -> bool
     if noqa_checks == ["all"]:
         return True
 
+    # Documentation checking is performed by two tools: pydocstyle and numpydoc,
+    # the checks of which are sometimes similar, but have different codes. In the
+    # case when we want to disable one of the checks, we would like not to indicate
+    # the codes of the two tools, because this is a duplication in meaning. To do
+    # this, it is necessary to map the codes of the two tools, which is further
+    # done for check of missing docstrings.
+
+    # GL08 - missing docstring in an arbitary object; numpydoc code
     if err_code == "GL08":
         name = doc.name.split(".")[-1]
         magic = name.startswith("__") and name.endswith("__")
+        # Codes of missing docstring for different types of objects; pydocstyle codes
         if inspect.isclass(doc.obj):
+            # D101 - missing docstring in a class
             err_code = "D101"
         elif inspect.ismethod(doc.obj):
+            # D102 - missing docstring in a method
             err_code = "D102"
         elif inspect.isfunction(doc.obj) and not magic:
+            # D103 - missing docstring in a function
             err_code = "D103"
         elif inspect.isfunction(doc.obj) and magic:
+            # D105 - missing docstring in a magic method
             err_code = "D105"
 
     return err_code in noqa_checks
