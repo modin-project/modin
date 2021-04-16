@@ -66,6 +66,7 @@ Component View
 --------------
 .. toctree::
    ../flow/modin/engines/base/frame/index
+   flow/experimental/index
 
 
 DataFrame Partitioning

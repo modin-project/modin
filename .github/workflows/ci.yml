@@ -68,6 +68,7 @@ jobs:
             modin/engines/base/io/__init__.py \
             modin/engines/base/io/file_dispatcher.py
       - run: python scripts/doc_checker.py modin/utils.py
+      - run: python scripts/doc_checker.py modin/experimental/sklearn
       - run: python scripts/doc_checker.py scripts/doc_checker.py
 
   lint-flake8:

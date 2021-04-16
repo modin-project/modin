@@ -11,6 +11,8 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
+"""Module holds model selection specific functionality."""
+
 from .train_test_split import train_test_split
 
 __all__ = ["train_test_split"]
