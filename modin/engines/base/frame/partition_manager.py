@@ -1146,7 +1146,7 @@ class BaseFrameManager(ABC):
         item_to_distribute=None,
     ):
         """
-        Apply a function to along both axis.
+        Apply a function along both axes.
 
         Parameters
         ----------

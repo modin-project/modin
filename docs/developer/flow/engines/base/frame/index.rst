@@ -2,12 +2,12 @@ Internal DataFrame representation
 =================================
 
 Modin paritions data to scale efficiently.
-To keep track of everything a few key classes are introduced: Frame, Partition, AxisPartiton and FrameManager.
+To keep track of everything a few key classes are introduced: ``Frame``, ``Partition``, ``AxisPartiton`` and ``FrameManager``.
 
-* `Frame` is the class conforming to DataFrame Algebra.
-* `Partition` is an element of a NxM grid which, when combined, represents the `Frame`
-* `AxisPartition` is a joined group of `Parition`-s along either rows or labels column
-* `PartitionManager` is the manager that implements the primitives used for DataFrame Algebra operations over `Partition`-s
+* :doc:`Frame <data>` is the class conforming to DataFrame Algebra.
+* :doc:`Partition <partition>` is an element of a NxM grid which, when combined, represents the ``Frame``
+* :doc:`AxisPartition <axis_partition>` is a joined group of ``Parition``-s along some axis (either rows or labels)
+* :doc:`PartitionManager <partition_manager>` is the manager that implements the primitives used for DataFrame Algebra operations over ``Partition``-s
 
 .. toctree::
     :hidden:
