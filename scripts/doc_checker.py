@@ -97,7 +97,9 @@ def check_optional_args(doc: Docstring) -> list:
         if parameter not in doc.doc_parameters:
             continue
         type_line = doc.doc_parameters[parameter][0]
-        if "default: " not in type_line or "optional" in type_line:
+        has_default = "default: " in type_line
+        has_optional = "optional" in type_line
+        if not (has_default ^ has_optional):
             errors.append(
                 (
                     "MD01",
