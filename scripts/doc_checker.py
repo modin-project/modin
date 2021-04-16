@@ -93,7 +93,8 @@ def check_optional_args(doc: Docstring) -> list:
 
     errors = []
     for parameter in optional_args:
-        # case when not all parameters are listed in "Parameters" section
+        # case when not all parameters are listed in "Parameters" section;
+        # it's handled by numpydoc itself
         if parameter not in doc.doc_parameters:
             continue
         type_line = doc.doc_parameters[parameter][0]
@@ -224,7 +225,7 @@ def skip_check_if_noqa(doc: Docstring, err_code: str, noqa_checks: list) -> bool
     if err_code == "GL08":
         name = doc.name.split(".")[-1]
         # Numpydoc recommends to add docstrings of __init__ method in class docstring.
-        # So there is no error if docstring missed in __init__
+        # So there is no error if docstring is missing in __init__
         if name == "__init__":
             return True
         magic = name.startswith("__") and name.endswith("__")
@@ -266,13 +267,11 @@ def get_noqa_checks(doc: Docstring) -> list:
     source = doc.method_source
     # case when property decorator is used; it hides sources
     if not source and isinstance(doc.obj, property):
-        # readonly property
-        if doc.obj.fset is None and doc.obj.fdel is None:
-            new_doc = Docstring(doc.name)
-            new_doc.obj = doc.obj.fget
-            source = new_doc.method_source
+        new_doc = Docstring(doc.name)
+        new_doc.obj = doc.obj.fget
+        source = new_doc.method_source
         if not source:
-            return source
+            return []
 
     noqa_str = None
     if not inspect.ismodule(doc.obj):
