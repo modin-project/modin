@@ -261,8 +261,15 @@ def get_noqa_checks(doc: Docstring) -> list:
     """
     source = doc.method_source
     # case when property decorator is used; it hides sources
-    if not source:
-        return []
+    if not source and isinstance(doc.obj, property):
+        # readonly property
+        if doc.obj.fset is None and doc.obj.fdel is None:
+            new_doc = Docstring(doc.name)
+            new_doc.obj = doc.obj.fget
+            source = new_doc.method_source
+        if not source:
+            return source
+
     noqa_str = None
     if not inspect.ismodule(doc.obj):
         # find last line of obj definition
