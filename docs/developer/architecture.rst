@@ -105,6 +105,11 @@ for a sqlite API as a proof of concept, but this isn't ready for usage/testing. 
 are also plans to expose the Modin DataFrame API as a reduced API set that encompasses
 the entire pandas/dataframe API.
 
+.. toctree::
+   :caption: Base Pandas Dataset API
+
+   pandas/base
+
 Query Compiler
 """"""""""""""
 
