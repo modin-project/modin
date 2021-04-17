@@ -28,7 +28,12 @@ from typing import List
 import sys
 import inspect
 import shutil
+import logging
 from numpydoc.validate import Docstring
+
+logging.basicConfig(
+    stream=sys.stdout, format="%(levelname)s:%(message)s", level=logging.INFO
+)
 
 MODIN_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 sys.path.insert(0, MODIN_PATH)
@@ -322,7 +327,9 @@ def validate_object(import_path: str) -> bool:
         ) or skip_check_if_noqa(doc, err_code, noqa_checks):
             continue
         is_successfull = False
-        print(":".join([import_path, str(results["file_line"]), err_code, err_desc]))
+        logging.error(
+            ":".join([import_path, str(results["file_line"]), err_code, err_desc])
+        )
     return is_successfull
 
 
@@ -379,7 +386,7 @@ def numpydoc_validate(path: pathlib.Path) -> bool:
                 if is_public_func(node)
             ]
 
-            print(f"NUMPYDOC OUTPUT FOR {current_path} - CAN BE EMPTY")
+            logging.info(f"NUMPYDOC OUTPUT FOR {current_path} - CAN BE EMPTY")
             # numpydoc docstrings validation
             # docstrings are taken dynamically
             to_validate = (
@@ -424,7 +431,8 @@ def pydocstyle_validate(path: pathlib.Path, add_ignore: List[str]) -> int:
         capture_output=True,
     )
     if result.returncode:
-        print(f"PYDOCSTYLE OUTPUT FOR {path}\n", result.stdout)
+        logging.info(f"PYDOCSTYLE OUTPUT FOR {path}")
+        logging.error(result.stdout)
     return True if result.returncode == 0 else False
 
 
@@ -533,6 +541,6 @@ if __name__ == "__main__":
     args = get_args()
     monkeypatching()
     if not validate(args.paths, args.add_ignore, not args.disable_numpydoc):
-        print("NOT SUCCESSFUL CHECK")
+        logging.error("INVALID DOCUMENTATION FOUND")
         exit(1)
-    print("SUCCESSFUL CHECK")
+    logging.info("SUCCESSFUL CHECK")
