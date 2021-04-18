@@ -11,7 +11,7 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-from typing import Callable, Optional
+from typing import Optional
 
 
 class Function(object):
@@ -25,7 +25,7 @@ class Function(object):
         )
 
     @classmethod
-    def register(cls, func: Callable, *reg_args, **reg_kwargs):
+    def call(cls, func, **call_kwds):
         """
         Build function that apply source function across the entire dataset.
 
@@ -33,9 +33,7 @@ class Function(object):
         ----------
         func : callable
             Source function.
-        *reg_args : args
-            Args that will be used for building.
-        **reg_kwargs : kwargs
+        **call_kwds : kwargs
             Kwargs that will be used for building.
 
         Returns
@@ -43,6 +41,25 @@ class Function(object):
         callable
         """
         raise NotImplementedError("Please implement in child class")
+
+    @classmethod
+    # FIXME: `register` is an alias for `call` method. One of them should be removed.
+    def register(cls, func, **kwargs):
+        """
+        Build function that apply source function across the entire dataset.
+
+        Parameters
+        ----------
+        func : callable
+            Source function.
+        **kwargs : kwargs
+            Kwargs that will be passed to the builder function.
+
+        Returns
+        -------
+        callable
+        """
+        return cls.call(func, **kwargs)
 
     @classmethod
     def validate_axis(cls, axis: Optional[int]) -> int:

@@ -11,7 +11,10 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-"""Contain IO dispatcher class."""
+"""Contain IO dispatcher class.
+
+Dispatcher routes the work to excecution engine-specific functions.
+"""
 
 from modin.config import Engine, Backend, IsExperimental
 from modin.data_management.factories import factories
@@ -19,7 +22,11 @@ from modin.utils import get_current_backend
 
 
 class FactoryNotFoundError(AttributeError):
-    """``FactoryNotFound`` exception class."""
+    """
+    ``FactoryNotFound`` exception class.
+
+    Raise when no matching factory could be found.
+    """
 
     pass
 
@@ -38,6 +45,7 @@ class StubIoEngine(object):
 
     def __getattr__(self, name):
         """Return a function that raises NotImplementedError for the `name` method."""
+
         def stub(*args, **kw):
             raise NotImplementedError(
                 f"Method {self.factory_name}.{name} is not implemented"
@@ -182,7 +190,7 @@ class EngineDispatcher(object):
 
     @classmethod
     def read_pickle(cls, **kwargs):
-        """Build query compiler from a pickled Modin DataFrame."""
+        """Build query compiler from a pickled Modin or pandas DataFrame."""
         return cls.__engine._read_pickle(**kwargs)
 
     @classmethod

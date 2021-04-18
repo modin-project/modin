@@ -21,7 +21,7 @@ import pandas
 class DefaultMethod(Function):
     """
     Builder for default-to-pandas methods.
-    
+
     Attributes
     ----------
     OBJECT_TYPE : str
@@ -31,7 +31,7 @@ class DefaultMethod(Function):
     OBJECT_TYPE = "DataFrame"
 
     @classmethod
-    def register(cls, func, obj_type=pandas.DataFrame, inplace=False, fn_name=None):
+    def call(cls, func, obj_type=pandas.DataFrame, inplace=False, fn_name=None):
         """
         Build function that do fallback to default pandas implementation for passed `func`.
 
@@ -39,7 +39,7 @@ class DefaultMethod(Function):
         ----------
         func : callable or str,
             Function to apply to the casted to pandas frame or its property accesed
-            by `frame_wrapper`.
+            by ``cls.frame_wrapper``.
         obj_type : object, default: pandas.DataFrame
             If `func` is a string with a function name then `obj_type` provides an
             object to search function in.
@@ -54,7 +54,7 @@ class DefaultMethod(Function):
         -------
         callable
             Function that takes query compiler, does fallback to pandas and applies `func`
-            to the casted to pandas frame or its property accesed by `frame_wrapper`.
+            to the casted to pandas frame or its property accesed by ``cls.frame_wrapper``.
         """
         if fn_name is None:
             fn_name = getattr(func, "__name__", str(func))
@@ -92,10 +92,63 @@ class DefaultMethod(Function):
                     result.name = "__reduced__"
                 result = result.to_frame()
 
-            method_scoped_inplace = inplace or kwargs.get("inplace", False)
-            return result if not method_scoped_inplace else df
+            inplace_method = kwargs.get("inplace", False) or inplace
+            return result if not inplace_method else df
 
-        return cls.build_default_to_pandas(applyier, fn_name)
+        return cls.build_wrapper(applyier, fn_name)
+
+    @classmethod
+    # FIXME: `register` is an alias for `call` method. One of them should be removed.
+    def register(cls, func, **kwargs):
+        """
+        Build function that do fallback to default pandas implementation for passed `func`.
+
+        Parameters
+        ----------
+        func : callable or str,
+            Function to apply to the casted to pandas frame or its property accesed
+            by ``cls.frame_wrapper``.
+        kwargs : kwargs
+            Additional parameters that will be used for building.
+
+        Returns
+        -------
+        callable
+            Function that takes query compiler, does fallback to pandas and applies `func`
+            to the casted to pandas frame or its property accesed by ``cls.frame_wrapper``.
+        """
+        return cls.call(func, **kwargs)
+
+    @classmethod
+    # FIXME: this method is almost duplicates `cls.build_default_to_pandas`.
+    # This two methods should be merged into a single one.
+    def build_wrapper(cls, fn, fn_name):
+        """
+        Build function that do fallback to pandas for passed `fn`.
+
+        In comparison with ``cls.build_default_to_pandas`` this method also
+        casts function arguments to pandas before doing fallback.
+
+        Parameters
+        ----------
+        fn : callable
+            Function to apply to the defaulted frame.
+        fn_name : str
+            Function name which will be shown in default-to-pandas warning message.
+
+        Returns
+        -------
+        callable
+            Method that does fallback to pandas and applies `fn` to the pandas frame.
+        """
+        wrapper = cls.build_default_to_pandas(fn, fn_name)
+
+        def args_cast(self, *args, **kwargs):
+            args = try_cast_to_pandas(args)
+            kwargs = try_cast_to_pandas(kwargs)
+            return wrapper(self, *args, **kwargs)
+
+        return args_cast
 
     @classmethod
     def build_property_wrapper(cls, prop):
@@ -126,8 +179,6 @@ class DefaultMethod(Function):
         fn.__name__ = f"<function {cls.OBJECT_TYPE}.{fn_name}>"
 
         def wrapper(self, *args, **kwargs):
-            args = try_cast_to_pandas(args)
-            kwargs = try_cast_to_pandas(kwargs)
             return self.default_to_pandas(fn, *args, **kwargs)
 
         return wrapper
@@ -135,12 +186,11 @@ class DefaultMethod(Function):
     @classmethod
     def frame_wrapper(cls, df):
         """
-        Do nothing with passed frame.
+        Extract frame property to apply function on.
 
-        Note
-        ----
         This method is executed under casted to pandas frame right before applying
         a function passed to `register`, which gives an ability to transform frame somehow
-        or access its property, by overriding this method in a child classes.
+        or access its property, by overriding this method in a child classes. This particular
+        method does nothing with passed frame.
         """
         return df

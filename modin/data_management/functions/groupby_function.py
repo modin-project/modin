@@ -11,7 +11,6 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-from typing import Callable, Optional, Union
 import pandas
 
 from .mapreducefunction import MapReduceFunction
@@ -22,31 +21,23 @@ class GroupbyReduceFunction(MapReduceFunction):
     """Builder class for GroupBy aggregation functions."""
 
     @classmethod
-    def register(
-        cls,
-        map_func: Union[str, dict, Callable],
-        reduce_func: Optional[Union[dict, Callable]] = None,
-        *reg_args,
-        **reg_kwargs,
-    ):
+    def call(cls, map_func, reduce_func=None, **call_kwds):
         """
         Build template GroupBy aggregation function.
-        
+
         Resulted function is applied in parallel via MapReduce algorithm.
 
         Parameters
         ----------
         map_func : str, callable or dict
             If `str` this parameter will be treated as a function name to register,
-            so `map_func` and `reduce_func` will be grabbed from `GROUPBY_REDUCE_FUNCTIONS`.
+            so `map_func` and `reduce_func` will be grabbed from `groupby_reduce_functions`.
             If dict or callable then this will be treated as a function to apply to each group
             at the map phase.
         reduce_func : callable or dict, optional
             Function to apply to each group at the reduce phase. If not specified
             will be set the same as 'map_func'.
-        *reg_args : args
-            Args that will be passed to the returned function.
-        **reg_kwargs : kwargs
+        **call_kwds : kwargs
             Kwargs that will be passed to the returned function.
 
         Returns
@@ -60,7 +51,7 @@ class GroupbyReduceFunction(MapReduceFunction):
             def build_fn(name):
                 return lambda df, *args, **kwargs: getattr(df, name)(*args, **kwargs)
 
-            map_func, reduce_func = map(build_fn, GROUPBY_REDUCE_FUNCTIONS[map_func])
+            map_func, reduce_func = map(build_fn, groupby_reduce_functions[map_func])
         if reduce_func is None:
             reduce_func = map_func
         assert not (
@@ -69,13 +60,8 @@ class GroupbyReduceFunction(MapReduceFunction):
             callable(map_func) ^ callable(reduce_func)
         ), "Map and reduce functions must be either both dict or both callable."
 
-        return lambda *args, **kwargs: cls.groupby_reduce_function(
-            *args,
-            *reg_args,
-            map_func=map_func,
-            reduce_func=reduce_func,
-            **kwargs,
-            **reg_kwargs,
+        return lambda *args, **kwargs: cls.caller(
+            *args, map_func=map_func, reduce_func=reduce_func, **kwargs, **call_kwds
         )
 
     @classmethod
@@ -88,6 +74,7 @@ class GroupbyReduceFunction(MapReduceFunction):
         groupby_args=None,
         map_func=None,
         map_args=None,
+        drop=False,
     ):
         """
         Execute Map phase of GroupbyReduce.
@@ -102,8 +89,9 @@ class GroupbyReduceFunction(MapReduceFunction):
         other : pandas.DataFrame, optional
             Serialized frame, whose columns are used to determine the groups.
             If not specified, `by` parameter is used.
-        axis : {0: Index, 1: Columns}, default: 0
-            Axis to group and apply aggregation function along.
+        axis : {0, 1}, default: 0
+            Axis to group and apply aggregation function along. 0 means index axis
+            when 1 means column axis.
         by : level index name or list of such labels
             Index levels, that is used to determine groups.
         groupby_args : dict
@@ -112,6 +100,8 @@ class GroupbyReduceFunction(MapReduceFunction):
             Function to apply to each group.
         map_args : dict
             Arguments which will be passed to `map_func`.
+        drop : bool, default: False
+            Indicates whether or not by-data came from the `self` frame.
 
         Returns
         -------
@@ -167,8 +157,9 @@ class GroupbyReduceFunction(MapReduceFunction):
             Serialized frame which contain groups to combine.
         partition_idx : int
             Internal index of column partition to which this function is applied.
-        axis : {0: Index, 1: Columns}, default: 0
-            Axis to group and apply aggregation function along.
+        axis : {0, 1}, default: 0
+            Axis to group and apply aggregation function along. 0 means index axis
+            when 1 means column axis.
         groupby_args : dict
             Dictionary which carries arguments for `pandas.DataFrame.groupby`.
         reduce_func : callable
@@ -212,7 +203,7 @@ class GroupbyReduceFunction(MapReduceFunction):
         return pandas.DataFrame(result)
 
     @classmethod
-    def groupby_reduce_function(
+    def caller(
         cls,
         query_compiler,
         by,
@@ -235,8 +226,9 @@ class GroupbyReduceFunction(MapReduceFunction):
             Frame to group.
         by : BaseQueryCompiler, column or index label, Grouper or list of such
             Object that determine groups.
-        axis : {0: Index, 1: Columns}
-            Axis to group and apply aggregation function along.
+        axis : {0, 1}, default: 0
+            Axis to group and apply aggregation function along. 0 means index axis
+            when 1 means column axis.
         groupby_args : dict
             Dictionary which carries arguments for pandas.DataFrame.groupby.
         map_args : dict
@@ -393,6 +385,7 @@ class GroupbyReduceFunction(MapReduceFunction):
                     groupby_args=groupby_args.copy(),
                     map_func=map_func,
                     map_args=map_args,
+                    drop=drop,
                     **kwargs,
                 )
 
@@ -404,7 +397,7 @@ class GroupbyReduceFunction(MapReduceFunction):
                 result = wrapper(df.copy(), other if other is None else other.copy())
             return result
 
-        def _reduce(df, **kwargs):
+        def _reduce(df, **call_kwargs):
             def wrapper(df):
                 return cls.reduce(
                     df,
@@ -414,7 +407,7 @@ class GroupbyReduceFunction(MapReduceFunction):
                     reduce_args=reduce_args,
                     drop=drop,
                     method=method,
-                    **kwargs,
+                    **call_kwargs,
                 )
 
             try:
@@ -429,7 +422,7 @@ class GroupbyReduceFunction(MapReduceFunction):
 
 
 # This dict is a map for function names and their equivalents in MapReduce
-GROUPBY_REDUCE_FUNCTIONS = {
+groupby_reduce_functions = {
     "all": ("all", "all"),
     "any": ("any", "any"),
     "count": ("count", "sum"),

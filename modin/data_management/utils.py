@@ -50,8 +50,9 @@ def compute_chunksize(df, num_splits, default_block_size=32, axis=None):
         Number of splits to separate the DataFrame into.
     default_block_size : int, default: 32
         Minimum number of rows/columns in a single split.
-    axis: {0: Index, 1: Columns, None: Both}
-        Axis to split across.
+    axis: {None, 0, 1}
+        Axis to split across. 0 means index axis when 1 means column axis.
+        If None - split across both axes.
 
     Returns
     -------
@@ -83,8 +84,8 @@ def split_result_of_axis_func_pandas(axis, num_splits, result, length_list=None)
 
     Parameters
     ----------
-    axis : {0: Index, 1: Columns}
-        Axis to split across.
+    axis : {0, 1}
+        Axis to split across. 0 means index axis when 1 means column axis.
     num_splits : int
         Number of splits to separate the DataFrame into.
         This parameter is ignored if `length_list` is specified.

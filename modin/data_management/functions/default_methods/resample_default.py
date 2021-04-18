@@ -14,6 +14,8 @@
 from .default import DefaultMethod
 
 
+# FIXME: there is no sence of keeping `Resampler` and `ResampleDefault` logic in a different
+# classes. They should be combined.
 class Resampler:
     """Builder class for resampled aggregation functions."""
 
@@ -32,7 +34,7 @@ class Resampler:
         Returns
         -------
         callable
-            Function that takes pandas DataFrame and applies aggregation 
+            Function that takes pandas DataFrame and applies aggregation
             to resampled time-series data.
         """
 
@@ -51,11 +53,11 @@ class Resampler:
 
 class ResampleDefault(DefaultMethod):
     """Builder for default-to-pandas resampled aggregation functions."""
-    
+
     OBJECT_TYPE = "Resampler"
 
     @classmethod
-    def register(cls, func, squeeze_self=False):
+    def register(cls, func, squeeze_self=False, **kwargs):
         """
         Build function that do fallback to pandas and aggregate resampled data.
 
@@ -65,6 +67,8 @@ class ResampleDefault(DefaultMethod):
             Aggregation function to execute under resampled frame.
         squeeze_self : bool
             Whether or not to squeeze frame before resampling.
+        **kwargs : kwargs
+            Additional arguments that will be passed to function builder.
 
         Returns
         -------
@@ -72,7 +76,8 @@ class ResampleDefault(DefaultMethod):
             Function that takes query compiler and does fallback to pandas to resample
             time-series data and apply aggregation on it.
         """
-        return super().register(
+        return cls.call(
             Resampler.build_resample(func, squeeze_self),
             fn_name=func.__name__,
+            **kwargs
         )

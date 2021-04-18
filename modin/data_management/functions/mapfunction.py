@@ -11,7 +11,6 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-from typing import Callable
 from .function import Function
 
 
@@ -19,17 +18,17 @@ class MapFunction(Function):
     """Builder class for Map functions."""
 
     @classmethod
-    def register(cls, func: Callable, *reg_args, **reg_kwargs):
+    def call(cls, function, *call_args, **call_kwds):
         """
         Build Map function that will be performed across each partition.
 
         Parameters
         ----------
-        func : callable
+        function : callable
             Function that will be applied to the each partition.
-        *reg_args : args
+        *call_args : args
             Args that will be passed to the returned function.
-        **reg_kwargs : kwargs
+        **call_kwds : kwargs
             Kwargs that will be passed to the returned function.
 
         Returns
@@ -38,11 +37,11 @@ class MapFunction(Function):
             Function that takes query compiler and executes map function.
         """
 
-        def map_function(query_compiler, *args, **kwargs):
+        def caller(query_compiler, *args, **kwargs):
             return query_compiler.__constructor__(
                 query_compiler._modin_frame._map(
-                    lambda x: func(x, *args, **kwargs), *reg_args, **reg_kwargs
+                    lambda x: function(x, *args, **kwargs), *call_args, **call_kwds
                 )
             )
 
-        return map_function
+        return caller

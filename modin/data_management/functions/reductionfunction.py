@@ -11,7 +11,6 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-from typing import Callable
 from .function import Function
 
 
@@ -19,7 +18,7 @@ class ReductionFunction(Function):
     """Builder class for Reduction functions."""
 
     @classmethod
-    def register(cls, func: Callable, axis=None):
+    def call(cls, reduction_function, axis=None):
         """
         Build Reduction function that will be performed across rows/columns.
 
@@ -27,7 +26,7 @@ class ReductionFunction(Function):
 
         Parameters
         ----------
-        func : callable
+        reduction_function : callable
             Source function.
         axis : int, optional
            Axis to apply function along.
@@ -38,13 +37,13 @@ class ReductionFunction(Function):
             Function that takes query compiler and executes Reduction function.
         """
 
-        def reduction_function(query_compiler, *args, **kwargs):
+        def caller(query_compiler, *args, **kwargs):
             _axis = axis if axis is not None else kwargs.get("axis")
             return query_compiler.__constructor__(
                 query_compiler._modin_frame._fold_reduce(
                     cls.validate_axis(_axis),
-                    lambda x: func(x, *args, **kwargs),
+                    lambda x: reduction_function(x, *args, **kwargs),
                 )
             )
 
-        return reduction_function
+        return caller

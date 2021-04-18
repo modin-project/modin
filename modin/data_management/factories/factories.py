@@ -15,7 +15,7 @@
 Module contains Factories for all of the supported Modin backends.
 
 Factory is a bridge between calls of IO function from high-level API and its
-actual implementation in the engine, bound to that factory. Each backend is represented 
+actual implementation in the engine, bound to that factory. Each backend is represented
 with a Factory class.
 """
 
@@ -24,9 +24,8 @@ import typing
 import re
 
 from modin.config import Engine
-from modin.utils import _inherit_func_docstring
 from modin.engines.base.io import BaseIO
-from pandas.util._decorators import Appender
+from pandas.util._decorators import doc
 
 import pandas
 
@@ -50,10 +49,11 @@ Fills in `.io_cls` class attribute with {engine_name} engine lazily.
 
 types_dictionary = {"pandas": {"category": pandas.CategoricalDtype}}
 
+
 class FactoryInfo(typing.NamedTuple):
     """
     Structure that stores information about factory.
-    
+
     Attributes
     ----------
     engine : str
@@ -70,18 +70,29 @@ class FactoryInfo(typing.NamedTuple):
 
 
 class NotRealFactory(Exception):
-    """NotRealFactory exception."""
+    """
+    ``NotRealFactory`` exception class.
+
+    Raise when no matching factory could be found.
+    """
 
     pass
 
 
-@Appender(_doc_abstract_factory_class.format(role=""))
+@doc(_doc_abstract_factory_class, role="")
 class BaseFactory(object):
     io_cls: BaseIO = None  # The module where the I/O functionality exists.
 
     @classmethod
     def get_info(cls) -> FactoryInfo:
-        """Get information about current factory."""
+        """
+        Get information about current factory.
+
+        Notes
+        -----
+        It parses factory name, so it must be conformant with how ExecutionEngine
+        class constructs factory names.
+        """
         try:
             experimental, partition, engine = re.match(
                 r"^(Experimental)?(.*)On(.*)Factory$", cls.__name__
@@ -93,7 +104,7 @@ class BaseFactory(object):
         )
 
     @classmethod
-    @Appender(_doc_factory_prepare_method.format(engine_name="an underlying"))
+    @doc(_doc_factory_prepare_method, engine_name="an underlying")
     def prepare(cls):
         raise NotImplementedError("Subclasses of BaseFactory must implement prepare")
 
@@ -190,48 +201,47 @@ class BaseFactory(object):
         return cls.io_cls.to_csv(*args, **kwargs)
 
 
+@doc(_doc_factory_class, engine_name="`cuDFOnRay")
 class CudfOnRayFactory(BaseFactory):
     @classmethod
+    @doc(_doc_factory_prepare_method, engine_name="``cuDFOnRayIO``")
     def prepare(cls):
-        """
-        Fills in .io_cls class attribute lazily
-        """
         from modin.engines.ray.cudf_on_ray.io import cuDFOnRayIO
 
         cls.io_cls = cuDFOnRayIO
 
 
-@Appender(_doc_factory_class.format(engine_name="`PandasOnRay"))
+@doc(_doc_factory_class, engine_name="`PandasOnRay")
 class PandasOnRayFactory(BaseFactory):
     @classmethod
-    @Appender(_doc_factory_prepare_method.format(engine_name="``PandasOnRayIO``"))
+    @doc(_doc_factory_prepare_method, engine_name="``PandasOnRayIO``")
     def prepare(cls):
         from modin.engines.ray.pandas_on_ray.io import PandasOnRayIO
 
         cls.io_cls = PandasOnRayIO
 
 
-@Appender(_doc_factory_class.format(engine_name="`PandasOnPython"))
+@doc(_doc_factory_class, engine_name="`PandasOnPython")
 class PandasOnPythonFactory(BaseFactory):
     @classmethod
-    @Appender(_doc_factory_prepare_method.format(engine_name="``PandasOnPythonIO``"))
+    @doc(_doc_factory_prepare_method, engine_name="``PandasOnPythonIO``")
     def prepare(cls):
         from modin.engines.python.pandas_on_python.io import PandasOnPythonIO
 
         cls.io_cls = PandasOnPythonIO
 
 
-@Appender(_doc_factory_class.format(engine_name="`PandasOnDask`"))
+@doc(_doc_factory_class, engine_name="`PandasOnDask`")
 class PandasOnDaskFactory(BaseFactory):
     @classmethod
-    @Appender(_doc_factory_prepare_method.format(engine_name="``PandasOnDaskIO``"))
+    @doc(_doc_factory_prepare_method, engine_name="``PandasOnDaskIO``")
     def prepare(cls):
         from modin.engines.dask.pandas_on_dask.io import PandasOnDaskIO
 
         cls.io_cls = PandasOnDaskIO
 
 
-@Appender(_doc_abstract_factory_class.format(role="experimental"))
+@doc(_doc_abstract_factory_class, role="experimental")
 class ExperimentalBaseFactory(BaseFactory):
     @classmethod
     def _read_sql(cls, **kwargs):
@@ -263,10 +273,10 @@ class ExperimentalBaseFactory(BaseFactory):
         return cls.io_cls.read_sql(**kwargs)
 
 
-@Appender(_doc_factory_class.format(engine_name="`experimental PandasOnRay`"))
+@doc(_doc_factory_class, engine_name="`experimental PandasOnRay`")
 class ExperimentalPandasOnRayFactory(ExperimentalBaseFactory, PandasOnRayFactory):
     @classmethod
-    @Appender(_doc_factory_prepare_method.format(engine_name="``ExperimentalPandasOnRayIO``"))
+    @doc(_doc_factory_prepare_method, engine_name="``ExperimentalPandasOnRayIO``")
     def prepare(cls):
         from modin.experimental.engines.pandas_on_ray.io_exp import (
             ExperimentalPandasOnRayIO,
@@ -279,27 +289,27 @@ class ExperimentalPandasOnRayFactory(ExperimentalBaseFactory, PandasOnRayFactory
         return cls.io_cls.read_csv_glob(**kwargs)
 
 
-@Appender(_doc_factory_class.format(engine_name="experimental `PandasOnPython"))
+@doc(_doc_factory_class, engine_name="experimental `PandasOnPython")
 class ExperimentalPandasOnPythonFactory(ExperimentalBaseFactory, PandasOnPythonFactory):
     pass
 
 
-@Appender(_doc_factory_class.format(engine_name="`experimental PyarrowOnRay`"))
+@doc(_doc_factory_class, engine_name="`experimental PyarrowOnRay`")
 class ExperimentalPyarrowOnRayFactory(BaseFactory):  # pragma: no cover
     @classmethod
-    @Appender(_doc_factory_prepare_method.format(engine_name="experimental ``PyarrowOnRayIO``"))
+    @doc(_doc_factory_prepare_method, engine_name="experimental ``PyarrowOnRayIO``")
     def prepare(cls):
         from modin.experimental.engines.pyarrow_on_ray.io import PyarrowOnRayIO
 
         cls.io_cls = PyarrowOnRayIO
 
 
-@Appender(_doc_abstract_factory_class.format(role="experimental remote"))
+@doc(_doc_abstract_factory_class, role="experimental remote")
 class ExperimentalRemoteFactory(ExperimentalBaseFactory):
     wrapped_factory = BaseFactory
 
     @classmethod
-    @Appender(_doc_factory_prepare_method.format(engine_name="an underlying remote"))
+    @doc(_doc_factory_prepare_method, engine_name="an underlying remote")
     def prepare(cls):
         # query_compiler import is needed so remote PandasQueryCompiler
         # has an imported local counterpart;
@@ -343,26 +353,26 @@ class ExperimentalRemoteFactory(ExperimentalBaseFactory):
         cls.io_cls = WrappedIO(get_connection(), cls.wrapped_factory)
 
 
-@Appender(_doc_factory_class.format(engine_name="`experimental remote PandasOnRay"))
+@doc(_doc_factory_class, engine_name="`experimental remote PandasOnRay")
 class ExperimentalPandasOnCloudrayFactory(ExperimentalRemoteFactory):
     wrapped_factory = PandasOnRayFactory
 
 
-@Appender(_doc_factory_class.format(engine_name="`experimental remote PandasOnPython"))
+@doc(_doc_factory_class, engine_name="`experimental remote PandasOnPython")
 class ExperimentalPandasOnCloudpythonFactory(ExperimentalRemoteFactory):
     wrapped_factory = PandasOnPythonFactory
 
 
-@Appender(_doc_factory_class.format(engine_name="`experimental OmnisciOnRay`"))
+@doc(_doc_factory_class, engine_name="`experimental OmnisciOnRay`")
 class ExperimentalOmnisciOnRayFactory(BaseFactory):
     @classmethod
-    @Appender(_doc_factory_prepare_method.format(engine_name="experimental ``OmnisciOnRayIO``"))
+    @doc(_doc_factory_prepare_method, engine_name="experimental ``OmnisciOnRayIO``")
     def prepare(cls):
         from modin.experimental.engines.omnisci_on_ray.io import OmnisciOnRayIO
 
         cls.io_cls = OmnisciOnRayIO
 
 
-@Appender(_doc_factory_class.format(engine_name="`experimental remote OmnisciOnRay`"))
+@doc(_doc_factory_class, engine_name="`experimental remote OmnisciOnRay`")
 class ExperimentalOmnisciOnCloudrayFactory(ExperimentalRemoteFactory):
     wrapped_factory = ExperimentalOmnisciOnRayFactory

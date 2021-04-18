@@ -14,19 +14,21 @@
 from .default import DefaultMethod
 
 
+# FIXME: there is no sence of keeping `Rolling` and `RollingDefault` logic in a different
+# classes. They should be combined.
 class Rolling:
     """Builder for aggregation on a rolling window functions."""
 
     @classmethod
     def build_rolling(cls, func):
         """
-        Build function that creates a rolling window executes `func` on it.
+        Build function that creates a rolling window and executes `func` on it.
 
         Parameters
         ----------
         func : callable
             Function to execute on a rolling window.
-        
+
         Returns
         -------
         callable
@@ -50,14 +52,16 @@ class RollingDefault(DefaultMethod):
     OBJECT_TYPE = "Rolling"
 
     @classmethod
-    def register(cls, func):
+    def register(cls, func, **kwargs):
         """
         Build function that do fallback to pandas to apply `func` on a rolling window.
 
         Parameters
         ----------
-        func: callable
+        func : callable
             Function to execute on a rolling window.
+        **kwargs : kwargs
+            Additional arguments that will be passed to function builder.
 
         Returns
         -------
@@ -65,4 +69,4 @@ class RollingDefault(DefaultMethod):
             Functiom that takes query compiler and defaults to pandas to apply aggregation
             `func` on a rolling window.
         """
-        return super().register(Rolling.build_rolling(func), fn_name=func.__name__)
+        return cls.call(Rolling.build_rolling(func), fn_name=func.__name__, **kwargs)

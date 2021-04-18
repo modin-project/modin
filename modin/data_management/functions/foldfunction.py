@@ -12,20 +12,19 @@
 # governing permissions and limitations under the License.
 
 from typing import Callable
-from .function import Function
 
 
 class FoldFunction(Function):
     """Builder class for FoldReduce functions."""
 
     @classmethod
-    def register(cls, func: Callable, axis=None):
+    def call(cls, fold_function, axis=None):
         """
-        Build Fold function that perform across rows/columns.
+        Build Fold function that will be performed across rows/columns.
 
         Parameters
         ----------
-        func : callable
+        fold_function : callable
             Function to apply across rows/columns.
         axis : int, optional
             Specifies axis to apply function along.
@@ -36,13 +35,13 @@ class FoldFunction(Function):
             Function that takes query compiler and executes Fold function.
         """
 
-        def fold_function(query_compiler, *args, **kwargs):
+        def caller(query_compiler, *args, **kwargs):
             _axis = axis if axis is not None else kwargs.get("axis")
             return query_compiler.__constructor__(
                 query_compiler._modin_frame._fold(
                     cls.validate_axis(_axis),
-                    lambda x: func(x, *args, **kwargs),
+                    lambda x: fold_function(x, *args, **kwargs),
                 )
             )
 
-        return fold_function
+        return caller

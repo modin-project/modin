@@ -11,18 +11,37 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
+# FIXME: This whole module is duplicating the logic of `default.py` and should be removed.
+
 from .default import DefaultMethod
-from modin.utils import _inherit_docstrings
+from modin.utils import _inherit_func_docstring
 
 import pandas
 
 
-@_inherit_docstrings(DefaultMethod, excluded=[DefaultMethod])
+@_inherit_func_docstring(DefaultMethod)
 class DataFrameDefault(DefaultMethod):
-    """Builder for default-to-pandas methods which is executed under DataFrame."""
-
     @classmethod
-    def register(cls, func, obj_type=pandas.DataFrame, inplace=False, fn_name=None):
-        return super().register(
-            func, obj_type=obj_type, inplace=inplace, fn_name=fn_name
-        )
+    def register(cls, func, obj_type=None, **kwargs):
+        """
+        Build function that do fallback to default pandas implementation for passed `func`.
+
+        Parameters
+        ----------
+        func : callable or str,
+            Function to apply to the casted to pandas frame.
+        obj_type : object, optional
+            If `func` is a string with a function name then `obj_type` provides an
+            object to search function in. If not specified `pandas.DataFrame` will be used.
+        kwargs : kwargs
+            Additional parameters that will be used for building.
+
+        Returns
+        -------
+        callable
+            Function that takes query compiler, does fallback to pandas and applies `func`
+            to the casted to pandas frame.
+        """
+        if obj_type is None:
+            obj_type = pandas.DataFrame
+        return cls.call(func, obj_type=obj_type, **kwargs)

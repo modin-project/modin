@@ -11,8 +11,9 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
+# FIXME: This whole module is duplicating the logic of `default.py` and should be removed.
+
 from .default import DefaultMethod
-from modin.utils import _inherit_docstrings
 
 
 class ObjTypeDeterminer:
@@ -34,15 +35,31 @@ class ObjTypeDeterminer:
         return func
 
 
-@_inherit_docstrings(DefaultMethod, excluded=[DefaultMethod])
 class AnyDefault(DefaultMethod):
     """Builder for default-to-pandas methods which can be executed under any type of object."""
 
     @classmethod
-    def register(cls, func, obj_type=None, inplace=False, fn_name=None):
+    def register(cls, func, obj_type=None, **kwargs):
+        """
+        Build function that do fallback to default pandas implementation for passed `func`.
+
+        Parameters
+        ----------
+        func : callable or str,
+            Function to apply to the casted to pandas frame.
+        obj_type : object, optional
+            If `func` is a string with a function name then `obj_type` provides an
+            object to search function in. If not specified `ObjTypeDeterminer` will be used.
+        kwargs : kwargs
+            Additional parameters that will be used for building.
+
+        Returns
+        -------
+        callable
+            Function that takes query compiler, does fallback to pandas and applies `func`
+            to the casted to pandas frame.
+        """
         if obj_type is None:
             obj_type = ObjTypeDeterminer()
 
-        return super().register(
-            func, obj_type=obj_type, inplace=inplace, fn_name=fn_name
-        )
+        return cls.call(func, obj_type=obj_type, **kwargs)

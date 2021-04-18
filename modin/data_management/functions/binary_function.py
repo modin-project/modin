@@ -11,7 +11,6 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-from typing import Callable
 import numpy as np
 import pandas
 
@@ -22,7 +21,7 @@ class BinaryFunction(Function):
     """Builder class for Binary functions."""
 
     @classmethod
-    def register(cls, func: Callable, join_type="outer", preserve_labels=False):
+    def call(cls, func, join_type="outer", preserve_labels=False):
         """
         Build template binary function.
 
@@ -33,7 +32,7 @@ class BinaryFunction(Function):
         join_type : {'left', 'right', 'outer', 'inner', None}, default: 'outer'
             Type of join that will be used if indices of operands are not aligned.
         preserve_labels : bool, default: False
-            Whether or not to force keep the indeces of the right frame if the join occured.
+            Whether or not to force keep the axis labels of the right frame if the join occured.
 
         Returns
         -------
@@ -41,7 +40,7 @@ class BinaryFunction(Function):
             Function that takes query compiler and executes binary operation.
         """
 
-        def binary_function(query_compiler, other, *args, broadcast=False, **kwargs):
+        def caller(query_compiler, other, *args, broadcast=False, **kwargs):
             """
             Apply binary `func` to passed operands.
 
@@ -108,4 +107,4 @@ class BinaryFunction(Function):
                     )
                 return query_compiler.__constructor__(new_modin_frame)
 
-        return binary_function
+        return caller

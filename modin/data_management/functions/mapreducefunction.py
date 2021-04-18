@@ -11,7 +11,6 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-from typing import Callable
 from .function import Function
 
 
@@ -19,12 +18,7 @@ class MapReduceFunction(Function):
     """Builder class for MapReduce functions."""
 
     @classmethod
-    def register(
-        cls,
-        map_func: Callable,
-        reduce_func: Callable = None,
-        axis=None,
-    ):
+    def call(cls, map_func, reduce_func, axis=None):
         """
         Build MapReduce function.
 
@@ -47,7 +41,7 @@ class MapReduceFunction(Function):
         if reduce_func is None:
             reduce_func = map_func
 
-        def map_reduce(query_compiler, *args, **kwargs):
+        def caller(query_compiler, *args, **kwargs):
             _axis = axis if axis is not None else kwargs.get("axis")
             return query_compiler.__constructor__(
                 query_compiler._modin_frame._map_reduce(
@@ -57,4 +51,10 @@ class MapReduceFunction(Function):
                 )
             )
 
-        return map_reduce
+        return caller
+
+    @classmethod
+    def register(cls, map_function, reduce_function=None, **kwargs):
+        if reduce_function is None:
+            reduce_function = map_function
+        return cls.call(map_function, reduce_function, **kwargs)
