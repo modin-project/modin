@@ -38,9 +38,6 @@ class MapReduceFunction(Function):
             with MapReduce algorithm.
         """
 
-        if reduce_func is None:
-            reduce_func = map_func
-
         def caller(query_compiler, *args, **kwargs):
             _axis = axis if axis is not None else kwargs.get("axis")
             return query_compiler.__constructor__(
