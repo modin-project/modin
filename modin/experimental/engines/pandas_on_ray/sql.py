@@ -12,7 +12,7 @@
 # governing permissions and limitations under the License.
 
 from collections import OrderedDict
-from sqlalchemy import MetaData, Table, create_engine
+from sqlalchemy import MetaData, Table, create_engine, inspect
 
 
 def is_distributed(partition_column, lower_bound, upper_bound):
@@ -54,7 +54,7 @@ def is_table(engine, sql):
     Returns:
         True for table or False if not
     """
-    if engine.dialect.has_table(engine, sql):
+    if inspect(engine).has_table(sql):
         return True
     return False
 
@@ -132,7 +132,7 @@ def get_query_columns(engine, query):
     con = engine.connect()
     result = con.execute(query).fetchone()
     values = list(result)
-    cols_names = result.keys()
+    cols_names = list(result.keys())
     cols = OrderedDict()
     for i in range(len(cols_names)):
         cols[cols_names[i]] = type(values[i]).__name__

@@ -130,7 +130,7 @@ class ExperimentalPandasOnRayIO(PandasOnRayIO):
             )
         #  starts the distributed alternative
         cols_names, query = get_query_info(sql, con, partition_column)
-        num_parts = min(NPartitions.get(), max_sessions)
+        num_parts = min(NPartitions.get(), max_sessions if max_sessions else 1)
         num_splits = min(len(cols_names), num_parts)
         diff = (upper_bound - lower_bound) + 1
         min_size = diff // num_parts
