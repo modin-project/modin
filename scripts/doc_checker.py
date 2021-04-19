@@ -120,7 +120,9 @@ def check_optional_args(doc: Docstring) -> list:
 
 def check_spelling_words(doc: Docstring) -> list:
     """
-    Check spelling of chosen words: "Modin", "pandas", "NumPy", "Ray", "Dask" in doc.
+    Check spelling of chosen words in doc.
+
+    Words: "Modin", "pandas", "NumPy", "Ray", "Dask", "PyArrow", "OmniSci", "XGBoost".
 
     Parameters
     ----------
@@ -139,7 +141,12 @@ def check_spelling_words(doc: Docstring) -> list:
     """
     if not doc.raw_doc:
         return []
-    components = set(["Modin", "pandas", "NumPy", "Ray", "Dask"])
+    components = set(
+        [
+            *("Modin", "pandas", "NumPy", "Ray", "Dask"),
+            *("PyArrow", "OmniSci", "XGBoost"),
+        ]
+    )
     check_words = "|".join(x.lower() for x in components)
 
     # comments work only with re.VERBOSE
