@@ -443,7 +443,13 @@ def monkeypatching():
     import ray
     import modin.utils
 
-    ray.remote = lambda *args, **kwargs: lambda cls_or_func: cls_or_func
+    def monkeypatch(*args, **kwargs):
+        if len(args) == 1 and len(kwargs) == 0 and callable(args[0]):
+            # This is the case where the decorator is just @ray.remote.
+            return args[0]
+        return lambda cls_or_func: cls_or_func
+
+    ray.remote = monkeypatch
 
     modin.utils._inherit_docstrings = lambda *args, **kwargs: lambda cls: cls
     modin.utils._inherit_func_docstring = lambda *args, **kwargs: lambda func: func
