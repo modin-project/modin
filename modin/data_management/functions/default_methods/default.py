@@ -127,8 +127,8 @@ class DefaultMethod(Function):
         return cls.call(func, **kwargs)
 
     @classmethod
-    # FIXME: this method is almost duplicates `cls.build_default_to_pandas`.
-    # This two methods should be merged into a single one.
+    # FIXME: this method is almost a duplicate of `cls.build_default_to_pandas`.
+    # Those two methods should be merged into a single one.
     def build_wrapper(cls, fn, fn_name):
         """
         Build function that do fallback to pandas for passed `fn`.
@@ -197,7 +197,10 @@ class DefaultMethod(Function):
 
         This method is executed under casted to pandas frame right before applying
         a function passed to `register`, which gives an ability to transform frame somehow
-        or access its property, by overriding this method in a child classes. This particular
-        method does nothing with passed frame.
+        or access its properties, by overriding this method in a child class.
+
+        Notes
+        -----
+        Being a base implementation, this particular method does nothing with passed frame.
         """
         return df
