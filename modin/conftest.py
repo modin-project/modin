@@ -20,6 +20,22 @@ import pyarrow as pa
 import pyarrow.parquet as pq
 import shutil
 
+assert (
+    "modin.utils" not in sys.modules
+), "Do not import modin.utils before patching, or tests could fail"
+import modin.utils
+
+_generated_doc_urls = set()
+
+
+def _saving_make_api_url(token, _make_api_url=modin.utils._make_api_url):
+    url = _make_api_url(token)
+    _generated_doc_urls.add(url)
+    return url
+
+
+modin.utils._make_api_url = _saving_make_api_url
+
 import modin
 import modin.config
 from modin.config import IsExperimental
@@ -426,3 +442,8 @@ def TestReadGlobCSVFixture():
     yield
 
     teardown_test_files(filenames)
+
+
+@pytest.fixture
+def get_generated_doc_urls():
+    return lambda: _generated_doc_urls
