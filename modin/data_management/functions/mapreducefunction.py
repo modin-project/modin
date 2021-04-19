@@ -18,7 +18,8 @@ class MapReduceFunction(Function):
     """Builder class for MapReduce functions."""
 
     @classmethod
-    def call(cls, map_func, reduce_func, axis=None):
+    # FIXME: spread `**call_kwds` into an actual function arguments.
+    def call(cls, map_function, reduce_function, **call_kwds):
         """
         Build MapReduce function.
 
@@ -30,6 +31,9 @@ class MapReduceFunction(Function):
             Source reduce function.
         axis : int, optional
             Specifies axis to apply function along.
+            (If specified, have to be passed via `kwargs`).
+        **call_kwds : kwargs
+            Additional parameters in the glory of compatibility. Does not affect the result.
 
         Returns
         -------
@@ -39,12 +43,12 @@ class MapReduceFunction(Function):
         """
 
         def caller(query_compiler, *args, **kwargs):
-            _axis = axis if axis is not None else kwargs.get("axis")
+            axis = call_kwds.get("axis", kwargs.get("axis"))
             return query_compiler.__constructor__(
                 query_compiler._modin_frame._map_reduce(
-                    cls.validate_axis(_axis),
-                    lambda x: map_func(x, *args, **kwargs),
-                    lambda y: reduce_func(y, *args, **kwargs),
+                    cls.validate_axis(axis),
+                    lambda x: map_function(x, *args, **kwargs),
+                    lambda y: reduce_function(y, *args, **kwargs),
                 )
             )
 

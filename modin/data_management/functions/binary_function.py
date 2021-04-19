@@ -21,7 +21,8 @@ class BinaryFunction(Function):
     """Builder class for Binary functions."""
 
     @classmethod
-    def call(cls, func, join_type="outer", preserve_labels=False):
+    # FIXME: spread `*call_args` and `**call_kwds` into an actual function arguments.
+    def call(cls, func, *call_args, **call_kwds):
         """
         Build template binary function.
 
@@ -33,14 +34,19 @@ class BinaryFunction(Function):
             Type of join that will be used if indices of operands are not aligned.
         preserve_labels : bool, default: False
             Whether or not to force keep the axis labels of the right frame if the join occured.
+            (If specified, have to be passed via `kwargs`).
+        *call_args : args
+            Additional parameters in the glory of compatibility. Does not affect the result.
+        **call_kwds : kwargs
+            Additional parameters in the glory of compatibility. Does not affect the result.
 
         Returns
         -------
         callable
             Function that takes query compiler and executes binary operation.
         """
-
-        def caller(query_compiler, other, *args, broadcast=False, **kwargs):
+        # FIXME: spread `*args` and `**kwargs` into an actual function arguments.
+        def caller(query_compiler, other, *args, **kwargs):
             """
             Apply binary `func` to passed operands.
 
@@ -54,6 +60,7 @@ class BinaryFunction(Function):
                 If `other` is a one-column query compiler, indicates whether it is a Series or not.
                 Frames and Series have to be processed differently, however we can't distinguish them
                 at the query compiler level, so this parameter is a hint that passed from a high level API.
+                (If specified, have to be passed via `kwargs`).
             *args : args,
                 Arguments that will be passed to `func`.
             **kwargs : kwargs,
@@ -65,6 +72,8 @@ class BinaryFunction(Function):
                 Result of binary function.
             """
             axis = kwargs.get("axis", 0)
+            broadcast = kwargs.pop("broadcast", False)
+            join_type = call_kwds.get("join_type", "outer")
             if isinstance(other, type(query_compiler)):
                 if broadcast:
                     assert (
@@ -82,7 +91,7 @@ class BinaryFunction(Function):
                             lambda l, r: func(l, r.squeeze(), *args, **kwargs),
                             other._modin_frame,
                             join_type=join_type,
-                            preserve_labels=preserve_labels,
+                            preserve_labels=call_kwds.get("preserve_labels", False),
                         )
                     )
                 else:
