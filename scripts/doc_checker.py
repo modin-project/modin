@@ -358,14 +358,15 @@ def numpydoc_validate(path: pathlib.Path) -> bool:
     for root, _, files in walker:
         if "__pycache__" in root:
             continue
-        for f in files:
-            if not f.endswith(".py"):
+        for _file in files:
+            if not _file.endswith(".py"):
                 continue
 
-            current_path = os.path.join(root, f)
+            current_path = os.path.join(root, _file)
             # get importable name
             module_name = current_path.replace("/", ".").replace("\\", ".")
-            module_name = module_name.replace(".py", "")
+            # remove ".py"
+            module_name = module_name[:-3]
 
             with open(current_path) as fd:
                 file_contents = fd.read()
