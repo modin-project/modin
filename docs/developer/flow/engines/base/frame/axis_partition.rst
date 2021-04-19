@@ -5,7 +5,7 @@ The class is base for any axis partition class and serves as the last level on w
 operations that were conveyed from the partition manager are being performed on an entire column or row.
 
 The class provides an API that has to be overridden by the child classes in order to manipulate
-on list of block partitions they store.
+on a list of block partitions (making up column or row partition) they store.
 
 The procedures that use this class and its methods assume that they have some global knowledge
 about the entire axis. This may require the implementation to use concatenation or append on the
@@ -27,7 +27,7 @@ PandasFrameAxisPartition
 
 The class is base for any axis partition class of ``pandas`` backend.
 
-Subclasses must implement ``list_of_blocks`` which unwraps data wrapped by the ``BaseFramePartition``
+Subclasses must implement ``list_of_blocks`` which represents data wrapped by the ``BaseFramePartition``
 objects and creates something interpretable as a pandas DataFrame.
 
 See ``modin.engines.ray.pandas_on_ray.axis_partition.PandasOnRayFrameAxisPartition``
