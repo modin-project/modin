@@ -11,6 +11,8 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
+"""Module houses class for tracking partitions with PyArrow backend and Ray engine."""
+
 from modin.engines.ray.generic.frame.partition_manager import RayFrameManager
 from .axis_partition import (
     PyarrowOnRayFrameColumnPartition,
@@ -20,7 +22,12 @@ from .partition import PyarrowOnRayFramePartition
 
 
 class PyarrowOnRayFrameManager(RayFrameManager):
-    """This method implements the interface in `BaseFrameManager`."""
+    """
+    Class for tracking partitions with PyArrow backend and Ray engine.
+
+    Inherits all functionality from `RayFrameManager` and `BaseFrameManager` base
+    classes.
+    """
 
     # This object uses RayRemotePartition objects as the underlying store.
     _partition_class = PyarrowOnRayFramePartition

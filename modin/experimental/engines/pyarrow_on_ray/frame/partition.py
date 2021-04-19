@@ -11,6 +11,8 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
+"""The module defines interface for a partition with PyArrow backend and Ray engine."""
+
 import pandas
 from modin.engines.ray.pandas_on_ray.frame.partition import PandasOnRayFramePartition
 
@@ -18,12 +20,28 @@ import ray
 import pyarrow
 
 
-class PyarrowOnRayFramePartition(PandasOnRayFramePartition):
-    def to_pandas(self):
-        """Convert the object stored in this partition to a Pandas DataFrame.
+class PyarrowOnRayFramePartition(
+    PandasOnRayFramePartition
+):  # noqa: PR01,PR02,PR04,PR10
+    """
+    Class provides partition interface specific for PyArrow backend and Ray engine.
 
-        Returns:
-            A Pandas DataFrame.
+    Inherits functionality from the `PandasOnRayFramePartition` class.
+
+    Parameters
+    ----------
+    TBD.
+    TODO: add parameters after #2944 is merged.
+    """
+
+    def to_pandas(self):
+        """
+        Convert the object stored in this partition to a pandas DataFrame.
+
+        Returns
+        -------
+        dataframe : pandas.DataFrame or pandas.Series
+            Resulting DataFrame or Series.
         """
         dataframe = self.get().to_pandas()
         assert type(dataframe) is pandas.DataFrame or type(dataframe) is pandas.Series
@@ -32,24 +50,51 @@ class PyarrowOnRayFramePartition(PandasOnRayFramePartition):
 
     @classmethod
     def put(cls, obj):
-        """Put an object in the Plasma store and wrap it in this object.
+        """
+        Put an object in the Plasma store and wrap it in this object.
 
-        Args:
-            obj: The object to be put.
+        Parameters
+        ----------
+        obj : object
+            The object to be put.
 
-        Returns:
+        Returns
+        -------
+        PyarrowOnRayFramePartition
             A `RayRemotePartition` object.
         """
         return PyarrowOnRayFramePartition(ray.put(pyarrow.Table.from_pandas(obj)))
 
     @classmethod
     def length_extraction_fn(cls):
+        """
+        Extract the number of rows from the given `pyarrow.Table`.
+
+        Returns
+        -------
+        callable
+        """
         return lambda table: table.num_rows
 
     @classmethod
     def width_extraction_fn(cls):
+        """
+        Extract the number of columns from the given `pyarrow.Table`.
+
+        Returns
+        -------
+        callable
+        """
         return lambda table: table.num_columns - (1 if "index" in table.columns else 0)
 
     @classmethod
     def empty(cls):
+        """
+        Put empty `pandas.DataFrame` in the Plasma store and wrap it in this object.
+
+        Returns
+        -------
+        PyarrowOnRayFramePartition
+            A `RayRemotePartition` object.
+        """
         return cls.put(pandas.DataFrame())

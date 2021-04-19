@@ -11,6 +11,13 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
+"""
+Module houses experimental IO classes and parser functions needed for these classes.
+
+Any function or class can be experimental API if it not only replicating existent
+backend API, but even extending it.
+"""
+
 import numpy as np
 import pandas
 import warnings
@@ -27,22 +34,34 @@ from modin.config import NPartitions
 import ray
 
 
+# Ray functions are not detected by codecov (thus pragma: no cover)
 @ray.remote
 def _read_parquet_columns(path, columns, num_splits, kwargs):  # pragma: no cover
-    """Use a Ray task to read columns from Parquet into a Pandas DataFrame.
+    """
+    Read columns from Parquet file into a `pandas.DataFrame` using Ray task.
 
-    Note: Ray functions are not detected by codecov (thus pragma: no cover)
+    Parameters
+    ----------
+    path : str or List[str]
+        The path of the Parquet file.
+    columns : List[str]
+        The list of column names to read.
+    num_splits : int
+        The number of partitions to split the column into.
+    kwargs : dict
+        Keyward arguments to pass into `pyarrow.parquet.read` function.
 
-    Args:
-        path: The path of the Parquet file.
-        columns: The list of column names to read.
-        num_splits: The number of partitions to split the column into.
+    Returns
+    -------
+    list
+        A list containing the splitted `pandas.DataFrame`-s and the Index as the last
+        element. If there is not `index_col` set, then we just return the length.
+        This is used to determine the total length of the DataFrame to build a
+        default Index.
 
-    Returns:
-            A list containing the split Pandas DataFrames and the Index as the last
-            element. If there is not `index_col` set, then we just return the length.
-            This is used to determine the total length of the DataFrame to build a
-            default Index.
+    Notes
+    -----
+    `pyarrow.parquet.read` is used internally as parse function.
     """
     import pyarrow.parquet as pq
 
@@ -57,6 +76,13 @@ def _read_parquet_columns(path, columns, num_splits, kwargs):  # pragma: no cove
 
 
 class ExperimentalPandasOnRayIO(PandasOnRayIO):
+    """
+    Class for handling experimental IO functionality with pandas backend and Ray engine.
+
+    `ExperimentalPandasOnRayIO` inherits some util functions and not modified IO functions
+    from `PandasOnRayIO` class.
+    """
+
     build_args = dict(
         frame_partition_cls=PandasOnRayFramePartition,
         query_compiler_cls=PandasQueryCompiler,
@@ -83,36 +109,55 @@ class ExperimentalPandasOnRayIO(PandasOnRayIO):
         upper_bound=None,
         max_sessions=None,
     ):
-        """Read SQL query or database table into a DataFrame.
+        """
+        Read SQL query or database table into a DataFrame.
 
-        Args:
-            sql: string or SQLAlchemy Selectable (select or text object) SQL query to be executed or a table name.
-            con: SQLAlchemy connectable (engine/connection) or database string URI or DBAPI2 connection (fallback mode)
-            index_col: Column(s) to set as index(MultiIndex).
-            coerce_float: Attempts to convert values of non-string, non-numeric objects (like decimal.Decimal) to
-                          floating point, useful for SQL result sets.
-            params: List of parameters to pass to execute method. The syntax used
-                    to pass parameters is database driver dependent. Check your
-                    database driver documentation for which of the five syntax styles,
-                    described in PEP 249's paramstyle, is supported.
-            parse_dates:
-                         - List of column names to parse as dates.
-                         - Dict of ``{column_name: format string}`` where format string is
-                           strftime compatible in case of parsing string times, or is one of
-                           (D, s, ns, ms, us) in case of parsing integer timestamps.
-                         - Dict of ``{column_name: arg dict}``, where the arg dict corresponds
-                           to the keyword arguments of :func:`pandas.to_datetime`
-                           Especially useful with databases without native Datetime support,
-                           such as SQLite.
-            columns: List of column names to select from SQL table (only used when reading a table).
-            chunksize: If specified, return an iterator where `chunksize` is the number of rows to include in each chunk.
-            partition_column: column used to share the data between the workers (MUST be a INTEGER column)
-            lower_bound: the minimum value to be requested from the partition_column
-            upper_bound: the maximum value to be requested from the partition_column
-            max_sessions: the maximum number of simultaneous connections allowed to use
+        Parameters
+        ----------
+        sql : str or SQLAlchemy Selectable (select or text object)
+            SQL query to be executed or a table name.
+        con : SQLAlchemy connectable or str
+             Connection to database (sqlite3 connections are not supported).
+        index_col : str or list of str, optional
+            Column(s) to set as index(MultiIndex).
+        coerce_float : bool, default: True
+            Attempts to convert values of non-string, non-numeric objects
+            (like decimal.Decimal) to floating point, useful for SQL result sets.
+        params : list, tuple or dict, optional
+            List of parameters to pass to execute method. The syntax used
+            to pass parameters is database driver dependent. Check your
+            database driver documentation for which of the five syntax styles,
+            described in PEP 249's paramstyle, is supported.
+        parse_dates : list or dict, optional
+            - List of column names to parse as dates.
+            - Dict of `{column_name: format string}` where format string is
+            strftime compatible in case of parsing string times, or is one of
+            (D, s, ns, ms, us) in case of parsing integer timestamps.
+            - Dict of `{column_name: arg dict}`, where the arg dict corresponds
+            to the keyword arguments of :func:`pandas.to_datetime`
+            Especially useful with databases without native Datetime support,
+            such as SQLite.
+        columns : list, optional
+            List of column names to select from SQL table (only used when reading a
+            table).
+        chunksize : int, optional
+            If specified, return an iterator where `chunksize` is the number of rows
+            to include in each chunk.
+        partition_column : str, optional
+            Column name used for data partitioning between the workers
+            (MUST be an INTEGER column).
+        lower_bound : int, optional
+            The minimum value to be requested from the `partition_column`.
+        upper_bound : int, optional
+            The maximum value to be requested from the `partition_column`.
+        max_sessions : int, optional
+            The maximum number of simultaneous connections allowed to use
+            (the desired number of partitions).
 
-        Returns:
-            Pandas Dataframe
+        Returns
+        -------
+        BaseQueryCompiler
+            A new query compiler with imported data for further processing.
         """
         from .sql import is_distributed, get_query_info
 
@@ -175,6 +220,7 @@ class ExperimentalPandasOnRayIO(PandasOnRayIO):
         return new_query_compiler
 
 
+# Ray functions are not detected by codecov (thus pragma: no cover)
 @ray.remote
 def _read_sql_with_offset_pandas_on_ray(
     partition_column,
@@ -190,11 +236,54 @@ def _read_sql_with_offset_pandas_on_ray(
     columns=None,
     chunksize=None,
 ):  # pragma: no cover
-    """Use a Ray task to read a chunk of SQL source.
-
-    Note: Ray functions are not detected by codecov (thus pragma: no cover)
     """
+    Read a chunk of SQL query or table into a pandas DataFrame using Ray task.
 
+    Parameters
+    ----------
+    partition_column : str
+        Column name used for data partitioning between the workers.
+    start : int
+        Partition the lowest value to request from the `partition_column`.
+    end : int
+        Partition the highest value to request from the `partition_column`.
+    num_splits : int
+        The number of partitions to split the column into.
+    sql : str or SQLAlchemy Selectable (select or text object)
+        SQL query to be executed or a table name.
+    con : SQLAlchemy connectable or str
+        Connection to database (sqlite3 connections are not supported).
+    index_col : str or list of str, optional
+        Column(s) to set as index(MultiIndex).
+    coerce_float : bool, default: True
+        Attempts to convert values of non-string, non-numeric objects
+        (like decimal.Decimal) to floating point, useful for SQL result sets.
+    params : list, tuple or dict, optional
+        List of parameters to pass to execute method. The syntax used
+        to pass parameters is database driver dependent. Check your
+        database driver documentation for which of the five syntax styles,
+        described in PEP 249's paramstyle, is supported.
+    parse_dates : list or dict, optional
+        - List of column names to parse as dates.
+        - Dict of `{column_name: format string}` where format string is
+        strftime compatible in case of parsing string times, or is one of
+        (D, s, ns, ms, us) in case of parsing integer timestamps.
+        - Dict of `{column_name: arg dict}`, where the arg dict corresponds
+        to the keyword arguments of :func:`pandas.to_datetime`
+        Especially useful with databases without native Datetime support,
+        such as SQLite.
+    columns : list, optional
+        List of column names to select from SQL table (only used when reading a
+        table).
+    chunksize : int, optional
+        If specified, return an iterator where `chunksize` is the number of rows
+        to include in each chunk.
+
+    Returns
+    -------
+    list
+        List with splitted read results and it's metadata (index, dtypes, etc.).
+    """
     from .sql import query_put_bounders
 
     query_with_bounders = query_put_bounders(sql, partition_column, start, end)
