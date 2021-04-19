@@ -66,10 +66,6 @@ Component View
 --------------
 Coming soon...
 
-Module/Class View
------------------
-Coming soon...
-
 DataFrame Partitioning
 ----------------------
 
@@ -246,8 +242,8 @@ documentation page on :doc:`contributing </contributing>`.
     - Uses the Ray_ execution framework.
     - The compute kernel/in-memory format is a pyarrow Table.
 
-Modin Implementation Details
-----------------------------
+Module/Class View
+-----------------
 Modin modules layout is shown below. To deep dive into Modin internal implementation 
 details just pick module you are interested in (only some of the modules are covered 
 by documentation for now, the rest is coming soon...).
