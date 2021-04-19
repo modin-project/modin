@@ -442,7 +442,7 @@ def monkeypatching():
     import ray
     import modin.utils
 
-    ray.remote = lambda *args, **kwargs: args[0]
+    ray.remote = lambda *args, **kwargs: lambda cls_or_func: cls_or_func
 
     modin.utils._inherit_docstrings = lambda *args, **kwargs: lambda cls: cls
     modin.utils._inherit_func_docstring = lambda *args, **kwargs: lambda func: func
