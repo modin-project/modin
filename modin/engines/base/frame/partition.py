@@ -217,7 +217,14 @@ class BaseFramePartition(ABC):  # pragma: no cover
     _width_cache = None
 
     def length(self):
-        """Get the length of the object wrapped by this partition."""
+        """
+        Get the length of the object wrapped by this partition.
+
+        Returns
+        -------
+        int
+            The length of the object.
+        """
         if self._length_cache is None:
             cls = type(self)
             func = cls.length_extraction_fn()
@@ -226,7 +233,14 @@ class BaseFramePartition(ABC):  # pragma: no cover
         return self._length_cache
 
     def width(self):
-        """Get the width of the object wrapped by the partition."""
+        """
+        Get the width of the object wrapped by the partition.
+
+        Returns
+        -------
+        int
+            The width of the object.
+        """
         if self._width_cache is None:
             cls = type(self)
             func = cls.width_extraction_fn()

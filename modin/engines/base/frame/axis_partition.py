@@ -42,12 +42,12 @@ class BaseFrameAxisPartition(ABC):  # pragma: no cover
         func : callable
             The function to apply. This will be preprocessed according to
             the corresponding `BaseFramePartition` objects.
-        num_splits : int, default None
+        num_splits : int, default: None
             The number of times to split the result object.
-        other_axis_partition : BaseFrameAxisPartition, default None
+        other_axis_partition : BaseFrameAxisPartition, default: None
             Another `BaseFrameAxisPartition` object to be applied
             to func. This is for operations that are between two data sets.
-        maintain_partitioning : bool, default True
+        maintain_partitioning : bool, default: True
             Whether to keep the partitioning in the same
             orientation as it was previously or not. This is important because we may be
             operating on an individual axis partition and not touching the rest.
@@ -117,7 +117,7 @@ class BaseFrameAxisPartition(ABC):  # pragma: no cover
 
         Parameters
         ----------
-        get_ip : bool, default False
+        get_ip : bool, default: False
             Whether to get node ip address to a single partition or not.
 
         Returns
@@ -136,9 +136,9 @@ class BaseFrameAxisPartition(ABC):  # pragma: no cover
 
         Parameters
         ----------
-        squeeze : bool, default False
+        squeeze : bool, default: False
             Flag used to unwrap only one partition.
-        get_ip : bool, default False
+        get_ip : bool, default: False
             Whether to get node ip address to each partition or not.
 
         Returns
@@ -186,12 +186,12 @@ class PandasFrameAxisPartition(BaseFrameAxisPartition):
         ----------
         func : callable
             The function to apply.
-        num_splits : int, default None
+        num_splits : int, default: None
             The number of times to split the result object.
-        other_axis_partition : PandasFrameAxisPartition, default None
+        other_axis_partition : PandasFrameAxisPartition, default: None
             Another `PandasFrameAxisPartition` object to be applied
             to func. This is for operations that are between two data sets.
-        maintain_partitioning : bool, default True
+        maintain_partitioning : bool, default: True
             Whether to keep the partitioning in the same
             orientation as it was previously or not. This is important because we may be
             operating on an individual AxisPartition and not touching the rest.
