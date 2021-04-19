@@ -24,23 +24,6 @@ class BaseFrameAxisPartition(ABC):  # pragma: no cover
     An abstract class that represents the parent class for any axis partition class.
 
     This class is intended to simplify the way that operations are performed.
-
-    Notes
-    -----
-    The procedures that use this class and its methods assume that
-    they have some global knowledge about the entire axis. This may
-    require the implementation to use concatenation or append on the
-    list of block partitions in this object.
-
-    The `BaseFrameManager` object that controls these objects
-    (through the API exposed here) has an invariant that requires that
-    this object is never returned from a function. It assumes that
-    there will always be `BaseFramePartition` object stored and structures
-    itself accordingly.
-
-    The abstract methods that need to be implemented are `apply` and `shuffle`.
-
-    The children classes must also implement `instance_type` and `partition_type` (see below).
     """
 
     def apply(
@@ -186,13 +169,6 @@ class PandasFrameAxisPartition(BaseFrameAxisPartition):
     An abstract class is created to simplify and consolidate the code for axis partition that run pandas.
 
     Because much of the code is similar, this allows us to reuse this code.
-
-    Subclasses must implement `list_of_blocks` which unwraps the `BaseFramePartition`
-    objects and creates something interpretable as a pandas DataFrame.
-
-    See `modin.engines.ray.pandas_on_ray.axis_partition.PandasOnRayFrameAxisPartition`
-    for an example on how to override/use this class when the implementation needs
-    to be augmented.
     """
 
     def apply(

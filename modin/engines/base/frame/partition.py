@@ -18,14 +18,9 @@ from abc import ABC
 
 class BaseFramePartition(ABC):  # pragma: no cover
     """
-    An abstract class that holds the data and metadata for a single partition.
+    An abstract class that is base for any partition class of ``pandas`` backend.
 
-    The public API exposed by the children of this object is used in `BaseFrameManager`.
-
-    Notes
-    -----
-    These objects are treated as immutable by `BaseFrameManager`
-    subclasses. There is no logic for updating inplace.
+    The class providing an API that has to be overridden by child classes.
     """
 
     def get(self):
