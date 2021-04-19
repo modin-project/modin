@@ -113,21 +113,15 @@ class BasePandasDataset(object):
 
     def _add_sibling(self, sibling):
         """
-        Implement [METHOD_NAME].
-
-        TODO: Add more details for this docstring template.
+        Adds a DataFrame or Series object to the list of siblings. These are objects
+        that share the same query compiler. This function is called when a shallow copy
+        is made.
 
         Parameters
         ----------
         What arguments does this function have.
-        [
-        PARAMETER_NAME: PARAMETERS TYPES
-            Description.
-        ]
-
-        Returns
-        -------
-        What this returns (if anything)
+        sibling : BasePandasDataset
+            Dataset to add to siblings list.
         """
         sibling._siblings = self._siblings + [self]
         self._siblings += [sibling]
@@ -476,6 +470,7 @@ class BasePandasDataset(object):
         """Construct DataFrame or Series object depending on self type."""
         return type(self)(*args, **kwargs)
 
+    @_inherit_docstrings(pandas.abs)
     def abs(self):
         self._validate_dtypes(numeric_only=True)
         return self.__constructor__(query_compiler=self._query_compiler.abs())
@@ -484,11 +479,9 @@ class BasePandasDataset(object):
         """
         Set the index for this DataFrame.
 
-        TODO: add types.
-
         Parameters
         ----------
-        new_index:
+        new_index : pandas.Index
             The new index to set this.
         """
         self._query_compiler.index = new_index
