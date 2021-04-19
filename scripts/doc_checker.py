@@ -122,8 +122,6 @@ def check_spelling_words(doc: Docstring) -> list:
     """
     Check spelling of chosen words in doc.
 
-    Words: "Modin", "pandas", "NumPy", "Ray", "Dask", "PyArrow", "OmniSci", "XGBoost".
-
     Parameters
     ----------
     doc : numpydoc.validate.Docstring
@@ -373,7 +371,7 @@ def numpydoc_validate(path: pathlib.Path) -> bool:
             # get importable name
             module_name = current_path.replace("/", ".").replace("\\", ".")
             # remove ".py"
-            module_name = module_name[:-3]
+            module_name = os.path.splitext(module_name)[0]
 
             with open(current_path) as fd:
                 file_contents = fd.read()
@@ -452,7 +450,7 @@ def monkeypatching():
 
     def monkeypatch(*args, **kwargs):
         if len(args) == 1 and len(kwargs) == 0 and callable(args[0]):
-            # This is the case where the decorator is just @ray.remote.
+            # This is the case where the decorator is just @ray.remote without parameters.
             return args[0]
         return lambda cls_or_func: cls_or_func
 
