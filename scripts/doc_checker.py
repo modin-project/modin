@@ -305,7 +305,7 @@ def get_noqa_checks(doc: Docstring) -> list:
 
 
 # code snippet from numpydoc
-def validate_object(import_path: str) -> bool:
+def validate_object(import_path: str) -> list:
     """
     Check docstrings of an entity that can be imported.
 
@@ -316,12 +316,12 @@ def validate_object(import_path: str) -> bool:
 
     Returns
     -------
-    is_successfull : bool
-        Return True if all checks are successful.
+    errors : list
+        List with string representations of errors.
     """
     from numpydoc.validate import validate
 
-    is_successfull = True
+    errors = []
     doc = Docstring(import_path)
     results = validate(import_path)
     results = validate_modin_error(doc, results)
@@ -332,11 +332,10 @@ def validate_object(import_path: str) -> bool:
             and err_code not in MODIN_ERROR_CODES
         ) or skip_check_if_noqa(doc, err_code, noqa_checks):
             continue
-        is_successfull = False
-        logging.error(
+        errors.append(
             ":".join([import_path, str(results["file_line"]), err_code, err_desc])
         )
-    return is_successfull
+    return errors
 
 
 def numpydoc_validate(path: pathlib.Path) -> bool:
@@ -393,7 +392,6 @@ def numpydoc_validate(path: pathlib.Path) -> bool:
                 if is_public_func(node)
             ]
 
-            logging.info(f"NUMPYDOC OUTPUT FOR {current_path} - CAN BE EMPTY")
             # numpydoc docstrings validation
             # docstrings are taken dynamically
             to_validate = (
@@ -401,8 +399,11 @@ def numpydoc_validate(path: pathlib.Path) -> bool:
                 + [f"{module_name}.{x.name}" for x in (functions + classes)]
                 + methods
             )
-            if not all(list(map(validate_object, to_validate))):
-                is_successfull = False
+            results = list(map(validate_object, to_validate))
+            is_successfull = not any(results)
+            if not is_successfull:
+                logging.info(f"NUMPYDOC OUTPUT FOR {current_path}")
+            [logging.error(error) for errors in results for error in errors]
     return is_successfull
 
 
