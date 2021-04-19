@@ -16,13 +16,31 @@ import types
 import pandas
 import numpy as np
 
-from modin.config import Engine, Backend, IsExperimental, DocstringUrlTestMode
+from modin.config import Engine, Backend, IsExperimental
 
 PANDAS_API_URL_TEMPLATE = f"https://pandas.pydata.org/pandas-docs/version/{pandas.__version__}/reference/api/{{}}.html"
 
-if DocstringUrlTestMode.get():
-    # a list which contains all generated urls so they could be checked for being valid
-    _GENERATED_URLS = set()
+
+def _make_api_url(token):
+    """
+    Generate the link to Pandas documentation.
+
+    Parameters
+    ----------
+    token : str
+        Part of URL to use for generation.
+
+    Returns
+    -------
+    str
+        URL to Pandas doc
+
+    Notes
+    -----
+    This function is extracted for better testability.
+    """
+
+    return PANDAS_API_URL_TEMPLATE.format(token)
 
 
 def _replace_doc(
@@ -74,9 +92,7 @@ def _replace_doc(
             token = f"{apilink}.{attr_name}"
         else:
             token = apilink
-        url = PANDAS_API_URL_TEMPLATE.format(token)
-        if DocstringUrlTestMode.get():
-            _GENERATED_URLS.add(url)
+        url = _make_api_url(token)
         doc += f"\n\nSee `Pandas API documentation <{url}>`_ for more."
 
     if parent_cls and isinstance(target_obj, property):

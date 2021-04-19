@@ -14,18 +14,26 @@
 from urllib.request import urlopen
 from urllib.error import HTTPError
 from concurrent.futures import ThreadPoolExecutor
+import pkgutil
+import importlib
+import pytest
 
-from modin.config import DocstringUrlTestMode
-import modin.utils
-
-assert DocstringUrlTestMode.get(), "Docstring URL test mode has to be enabled"
-
-# ensure all docstring are generated
-from modin.pandas import *  # noqa: E402, F403, F401
+import modin.pandas
 
 
-def test_all_urls_exist():
+@pytest.fixture
+def doc_urls(get_generated_doc_urls):
+    # ensure all docstring are generated - import _everything_ under 'modin.pandas'
+    for modinfo in pkgutil.walk_packages(modin.pandas.__path__, 'modin.pandas.'):
+        try:
+            importlib.import_module(modinfo.name)
+        except ModuleNotFoundError:
+            # some optional 3rd-party dep missing, ignore
+            pass
+    return sorted(get_generated_doc_urls())
 
+
+def test_all_urls_exist(doc_urls):
     broken = []
 
     def _test_url(url):
@@ -36,6 +44,6 @@ def test_all_urls_exist():
             broken.append(url)
 
     with ThreadPoolExecutor(32) as pool:
-        pool.map(_test_url, modin.utils._GENERATED_URLS)
+        pool.map(_test_url, doc_urls)
 
     assert not broken, "Invalid URLs detected"
