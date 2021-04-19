@@ -24,7 +24,7 @@ import modin.pandas
 @pytest.fixture
 def doc_urls(get_generated_doc_urls):
     # ensure all docstring are generated - import _everything_ under 'modin.pandas'
-    for modinfo in pkgutil.walk_packages(modin.pandas.__path__, 'modin.pandas.'):
+    for modinfo in pkgutil.walk_packages(modin.pandas.__path__, "modin.pandas."):
         try:
             importlib.import_module(modinfo.name)
         except ModuleNotFoundError:
