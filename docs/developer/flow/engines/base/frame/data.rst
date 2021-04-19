@@ -11,14 +11,12 @@ significantly reduced set of operations that fit plenty of pandas operations.
 Main task of ``BasePandasFrame`` is storage of partitions, manipulation with labels of axes and
 providing public interface for partition manipulation.
 
-``BasePandasFrame`` can be created from ``pandas.DataFrame``, ``pyarrow.Table`` or from labels of this base frame
+``BasePandasFrame`` can be created from ``pandas.DataFrame``, ``pyarrow.Table`` 
 (methods :meth:`~modin.engines.base.frame.data.BasePandasFrame.from_pandas`,
-:meth:`~modin.engines.base.frame.data.BasePandasFrame.from_arrow`,
-:meth:`~modin.engines.base.frame.data.BasePandasFrame.from_labels` are used respectively). Also,
-``BasePandasFrame`` can be converted to ``np.array``, ``pandas.DataFrame`` or labels of this
-base frame(methods :meth:`~modin.engines.base.frame.data.BasePandasFrame.to_numpy`,
-:meth:`~modin.engines.base.frame.data.BasePandasFrame.to_pandas`,
-:meth:`~modin.engines.base.frame.data.BasePandasFrame.to_labels` are used respectively)
+:meth:`~modin.engines.base.frame.data.BasePandasFrame.from_arrow` are used respectively). Also,
+``BasePandasFrame`` can be converted to ``np.array``, ``pandas.DataFrame``
+(methods :meth:`~modin.engines.base.frame.data.BasePandasFrame.to_numpy`,
+:meth:`~modin.engines.base.frame.data.BasePandasFrame.to_pandas` are used respectively).
 
 Manipulation with labels of axes happens using internal methods for changing labels on the new, 
 adding prefixes/suffixes etc.
