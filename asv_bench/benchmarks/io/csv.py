@@ -26,10 +26,6 @@ from ..utils import (
     get_shape_id,
 )
 
-# ray init
-if ASV_USE_IMPL == "modin":
-    pd.DataFrame([])
-
 
 class BaseReadCsv:
     # test data file can de created only once
@@ -44,6 +40,9 @@ class BaseReadCsv:
         return test_filenames
 
     def setup(self, test_filenames, shape, *args, **kwargs):
+        # ray init
+        if ASV_USE_IMPL == "modin":
+            pd.DataFrame([])
         self.shape_id = get_shape_id(shape)
 
 
@@ -121,6 +120,9 @@ class TimeReadCsvNamesDtype:
         return cache
 
     def setup(self, cache, shape, names, dtype):
+        # ray init
+        if ASV_USE_IMPL == "modin":
+            pd.DataFrame([])
         file_id = self._get_file_id(shape, dtype)
         self.filename, self.names, self.dtype = cache[file_id]
 
