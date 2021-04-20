@@ -94,6 +94,7 @@ _DEFAULT_BEHAVIOUR = {
 } | _ATTRS_NO_LOOKUP
 
 
+@_inherit_docstrings(pandas.DataFrame)
 class BasePandasDataset(object):
     """
     Implement most of the common code that exists in DataFrame/Series.
@@ -470,7 +471,6 @@ class BasePandasDataset(object):
         """Construct DataFrame or Series object depending on self type."""
         return type(self)(*args, **kwargs)
 
-    @_inherit_docstrings(pandas.abs)
     def abs(self):
         self._validate_dtypes(numeric_only=True)
         return self.__constructor__(query_compiler=self._query_compiler.abs())
