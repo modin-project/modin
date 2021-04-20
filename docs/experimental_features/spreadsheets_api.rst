@@ -66,6 +66,15 @@ The spreadsheet widget provides a number of options that allows the user to chan
     * Float precision
     * Highlighting of cells and rows
     * Viewport size
+
+Converting Spreadsheets To and From Dataframes
+----------------------------------------------
+
+.. automodule:: modin.spreadsheet.general
+    :noindex:
+    :members: from_dataframe
+
     
-
-
+.. automodule:: modin.spreadsheet.general
+    :noindex:
+    :members: to_dataframe

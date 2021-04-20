@@ -13,7 +13,7 @@ A Short Example Using the Google Play Store
 .. code-block:: python
 
     import modin.pandas as pd
-    import modin.experimental.sql as mdsql
+    import modin.experimental.sql as sql
 
     # read google play app store list from csv
     gstore_apps_df = pd.read_csv("https://tinyurl.com/googleplaystorecsv")
@@ -30,15 +30,15 @@ App, Category, and Rating, where Price is ‘0’.
     sql_str = "SELECT App, Category, Rating FROM gstore_apps WHERE Price = '0'"
 
     # And simply apply that query to a dataframe
-    result_df = mdsql.query(sql_str, gstore_apps=gstore_apps_df)
+    result_df = sql.query(sql_str, gstore_apps=gstore_apps_df)
 
     # Or, in this case, where the query only requires one table, 
     # you can also ignore the FROM part in the query string:
     query_str = "SELECT App, Category, Rating WHERE Price = '0' "
 
-    # mdsql.query can take query strings without FROM statement 
+    # sql.query can take query strings without FROM statement 
     # you can specify from as the function argument
-    result_df = mdsql.query(query_str, from=gstore_apps_df)
+    result_df = sql.query(query_str, from=gstore_apps_df)
 
 
 Writing Complex Queries
@@ -87,7 +87,7 @@ we need to join the two tables, and operate averages on that join.
     # Run query using apps and reviews dataframes, 
     # NOTE: that you simply pass the names of the tables in the query as arguments
 
-    result_df = mdsql.query( sql_str, 
+    result_df = sql.query( sql_str, 
                             gstore_apps_df = gstore_apps_df, 
                             gstore_reviews_df = gstore_reviews_df)
 
@@ -98,7 +98,7 @@ Or, you can bring the best of doing this in python and run the query in multiple
 
     # join the items and reviews
 
-    result_df = mdsql.query( """ 
+    result_df = sql.query( """ 
     SELECT 
         category, 
         sentiment, 
@@ -110,7 +110,7 @@ Or, you can bring the best of doing this in python and run the query in multiple
 
     # group by category and calculate averages
 
-    result_df = mdsql.query( """
+    result_df = sql.query( """
     SELECT 
         category, 
         avg(sentiment_polarity) as avg_sentiment_polarity, 
@@ -119,7 +119,7 @@ Or, you can bring the best of doing this in python and run the query in multiple
     HAVING CAST(avg_sentiment_subjectivity as float) < 0.5
     ORDER BY avg_sentiment_polarity DESC
     LIMIT 10""", 
-    from= result_df)
+    from = result_df)
 
 
 The crazy thing here is that if you have a cluster or even a computer with more than one core, 
