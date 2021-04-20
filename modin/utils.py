@@ -25,7 +25,7 @@ PANDAS_API_URL_TEMPLATE = f"https://pandas.pydata.org/pandas-docs/version/{panda
 
 def _make_api_url(token):
     """
-    Generate the link to Pandas documentation.
+    Generate the link to pandas documentation.
 
     Parameters
     ----------
@@ -35,7 +35,7 @@ def _make_api_url(token):
     Returns
     -------
     str
-        URL to Pandas doc
+        URL to pandas doc.
 
     Notes
     -----
@@ -50,19 +50,19 @@ def _replace_doc(
     """
     Replace docstring in `target_obj`, possibly taking from `source_obj` and augmenting.
 
-    Can append the link to Pandas API online documentation.
+    Can append the link to pandas API online documentation.
 
     Parameters
     ----------
     source_obj : object
         Any object from which to take docstring from.
     target_obj : object
-        The object which docstring to replace
+        The object which docstring to replace.
     overwrite : bool
         Forces replacing the docstring with the one from `source_obj` even
-        if `target_obj` has its own non-empty docstring
+        if `target_obj` has its own non-empty docstring.
     apilink : str
-        If non-empty, insert the link to Pandas API documentation.
+        If non-empty, insert the link to pandas API documentation.
         Should be the prefix part in the URL template, e.g. "pandas.DataFrame".
     parent_cls : class, optional
         If `target_obj` is an attribute of a class, `parent_cls` should be that class.
@@ -117,22 +117,22 @@ def _inherit_docstrings(parent, excluded=[], overwrite_existing=False, apilink=N
 
     Parameters
     ----------
-        parent : object
-            Parent object from which the decorated object inherits __doc__.
-        excluded : list
-            List of parent objects from which the class does not
-            inherit docstrings.
-        overwrite_existing : bool, default: False
-            Allow overwriting docstrings that already exist in
-            the decorated class
-        apilink : str, default: None
-            If non-empty, insert the link to Pandas API documentation.
-            Should be the prefix part in the URL template, e.g. "pandas.DataFrame".
+    parent : object
+        Parent object from which the decorated object inherits __doc__.
+    excluded : list, optional
+        List of parent objects from which the class does not
+        inherit docstrings.
+    overwrite_existing : bool, default: False
+        Allow overwriting docstrings that already exist in
+        the decorated class.
+    apilink : str, default: None
+        If non-empty, insert the link to pandas API documentation.
+        Should be the prefix part in the URL template, e.g. "pandas.DataFrame".
 
     Returns
     -------
     callable
-        decorator which replaces the decorated object's documentation with `parent` documentation.
+        Decorator which replaces the decorated object's documentation with `parent` documentation.
     """
 
     def _documentable_obj(obj):
@@ -176,19 +176,30 @@ def to_pandas(modin_obj):
 
     Parameters
     ----------
-        obj : modin.DataFrame, modin.Series
-            The Modin DataFrame/Series to convert.
+    modin_obj : modin.DataFrame, modin.Series
+        The Modin DataFrame/Series to convert.
 
     Returns
     -------
     pandas.DataFrame or pandas.Series
-        Converted object with type depending on input
+        Converted object with type depending on input.
     """
     return modin_obj._to_pandas()
 
 
 def hashable(obj):
-    """Return whether the object is hashable."""
+    """
+    Return whether the `obj` is hashable.
+
+    Parameters
+    ----------
+        obj : object
+            The object to check.
+
+    Returns
+    -------
+    bool
+    """
     try:
         hash(obj)
     except TypeError:
@@ -198,19 +209,21 @@ def hashable(obj):
 
 def try_cast_to_pandas(obj, squeeze=False):
     """
-    Convert `obj` and all nested objects from modin to pandas if it is possible.
+    Convert `obj` and all nested objects from Modin to pandas if it is possible.
 
     If no convertion possible return `obj`.
 
     Parameters
     ----------
-        obj : object
-            object to convert from modin to pandas
+    obj : object
+        Object to convert from Modin to pandas.
+    squeeze : bool, default: False
+        Squeeze the converted object(s) before returning them.
 
     Returns
     -------
     object
-        Converted object
+        Converted object.
     """
     if hasattr(obj, "_to_pandas"):
         result = obj._to_pandas()
@@ -253,15 +266,15 @@ def wrap_into_list(*args, skipna=True):
 
     Parameters
     ----------
-    args : tuple
-        Objects to wrap into a list
-    skipna : boolean
+    *args : tuple
+        Objects to wrap into a list.
+    skipna : bool, default: True
         Whether or not to skip nan or None values.
 
     Returns
     -------
     list
-        Passed values wrapped in a list
+        Passed values wrapped in a list.
     """
 
     def isnan(o):
@@ -285,7 +298,7 @@ def wrap_udf_function(func):
     Parameters
     ----------
         func : callable
-            Function to wrap
+            Function to wrap.
 
     Returns
     -------
@@ -309,6 +322,6 @@ def get_current_backend():
     Returns
     -------
     str
-        Returns <Backend>On<Engine>-like string
+        Returns <Backend>On<Engine>-like string.
     """
     return f"{'Experimental' if IsExperimental.get() else ''}{Backend.get()}On{Engine.get()}"
