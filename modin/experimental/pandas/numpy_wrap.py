@@ -180,3 +180,5 @@ else:
             # deletion of others to numpy being wrapped
             if name not in self.__own_attrs__:
                 delattr(self.__get_numpy(), name)
+
+    sys.modules["numpy"] = InterceptedNumpy()

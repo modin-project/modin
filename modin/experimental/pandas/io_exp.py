@@ -49,11 +49,18 @@ from ...pandas import _update_engine
 
 
 def read_sql(
+    sql,
+    con,
+    index_col=None,
+    coerce_float=True,
+    params=None,
+    parse_dates=None,
+    columns=None,
+    chunksize=None,
     partition_column: Optional[str] = None,
     lower_bound: Optional[int] = None,
     upper_bound: Optional[int] = None,
     max_sessions: Optional[int] = None,
-    **kwargs: dict,
 ) -> DataFrame:
     """
     General documentation in `modin.pandas.read_sql`.
@@ -62,6 +69,40 @@ def read_sql(
 
     Parameters
     ----------
+    sql : str or SQLAlchemy Selectable (select or text object)
+        SQL query to be executed or a table name.
+    con : SQLAlchemy connectable, str, or sqlite3 connection
+        Using SQLAlchemy makes it possible to use any DB supported by that
+        library. If a DBAPI2 object, only sqlite3 is supported. The user is responsible
+        for engine disposal and connection closure for the SQLAlchemy
+        connectable; str connections are closed automatically. See
+        `here <https://docs.sqlalchemy.org/en/13/core/connections.html>`_.
+    index_col : str or list of str, optional
+        Column(s) to set as index(MultiIndex).
+    coerce_float : bool, default: True
+        Attempts to convert values of non-string, non-numeric objects (like
+        decimal.Decimal) to floating point, useful for SQL result sets.
+    params : list, tuple or dict, optional
+        List of parameters to pass to execute method. The syntax used to pass
+        parameters is database driver dependent. Check your database driver
+        documentation for which of the five syntax styles, described in PEP 249’s
+        paramstyle, is supported. Eg. for psycopg2, uses %(name)s so use params=
+        {‘name’ : ‘value’}.
+    parse_dates : list or dict, optional
+        - List of column names to parse as dates.
+        - Dict of ``{column_name: format string}`` where format string is
+          strftime compatible in case of parsing string times, or is one of
+          (D, s, ns, ms, us) in case of parsing integer timestamps.
+        - Dict of ``{column_name: arg dict}``, where the arg dict corresponds
+          to the keyword arguments of :func:`pandas.to_datetime`
+          Especially useful with databases without native Datetime support,
+          such as SQLite.
+    columns : list, optional
+        List of column names to select from SQL table (only used when reading
+        a table).
+    chunksize : int, optional
+        If specified, return an iterator where `chunksize` is the
+        number of rows to include in each chunk.
     partition_column : str, optional
         Column used to share the data between the workers (MUST be a INTEGER column).
     lower_bound : int, optional
@@ -70,8 +111,6 @@ def read_sql(
         The maximum value to be requested from the partition_column.
     max_sessions : int, optional
         The maximum number of simultaneous connections allowed to use.
-    **kwargs : dict
-        Keyword arguments in `modin.pandas.read_sql`.
 
     Returns
     -------
