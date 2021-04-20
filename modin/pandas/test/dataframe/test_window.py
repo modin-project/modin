@@ -439,24 +439,7 @@ def test_median_skew_transposed(axis, method):
     )
 
 
-@pytest.mark.parametrize(
-    "numeric_only",
-    [
-        pytest.param(
-            True,
-            marks=pytest.mark.xfail(
-                reason="Internal and external indices do not match."
-            ),
-        ),
-        False,
-        pytest.param(
-            None,
-            marks=pytest.mark.xfail(
-                reason="Internal and external indices do not match."
-            ),
-        ),
-    ],
-)
+@pytest.mark.parametrize("numeric_only", [True, False, None])
 @pytest.mark.parametrize("method", ["median", "skew", "std", "var", "rank", "sem"])
 def test_median_skew_std_var_rank_sem_specific(numeric_only, method):
     eval_general(

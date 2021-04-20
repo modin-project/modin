@@ -11,4 +11,44 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-"""IO Modin benchmarks."""
+
+class weakdict(dict):  # noqa: D101
+    __slots__ = ("__weakref__",)
+
+
+def optional_square(number: int = 5) -> int:  # noqa
+    """
+    Square `number`.
+
+    The function from Modin.
+
+    Parameters
+    ----------
+    number : int
+        Some number.
+
+    Notes
+    -----
+    The `optional_square` Modin function from modin/scripts/examples.py.
+    """
+    return number ** 2
+
+
+def optional_square_empty_parameters(number: int = 5) -> int:
+    """
+    Parameters
+    ----------
+    """
+    return number ** 2
+
+
+def square_summary(number: int) -> int:  # noqa: D103, GL08
+    """
+    Square `number`.
+
+    Examples
+    --------
+    The function that will never be used in modin.pandas.DataFrame same as in
+    Pandas or Numpy.
+    """
+    return number ** 2
