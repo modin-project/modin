@@ -446,7 +446,7 @@ class TextFileDispatcher(FileDispatcher):
         Parameters
         ----------
         splits : list
-            `list` of tuples with partitions data, which defines
+            list of tuples with partitions data, which defines
             parser task (start/end read bytes and etc.).
         **partition_kwargs : dict
             `kwargs` that should be passed to the parser function.
