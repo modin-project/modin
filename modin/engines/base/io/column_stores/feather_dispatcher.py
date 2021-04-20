@@ -35,7 +35,7 @@ class FeatherDispatcher(ColumnStoreDispatcher):
         ----------
         path : str or file-like object
             The filepath of the feather file.
-        columns : array-like, default: None
+        columns : array-like, optional
             Columns to read from file. If not provided, all columns are read.
         **kwargs : dict
             `read_feather` function kwargs.

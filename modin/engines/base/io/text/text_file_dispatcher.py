@@ -203,12 +203,12 @@ class TextFileDispatcher(FileDispatcher):
         ----------
         f : file-like object
             File handle of file to be partitioned.
-        num_partitions : int, default: None
+        num_partitions : int, optional
             For what number of partitions split a file.
             If not specified grabs the value from `modin.config.NPartitions.get()`.
-        nrows : int, default: None
+        nrows : int, optional
             Number of rows of file to read.
-        skiprows : array or callable, default: None
+        skiprows : array or callable, optional
             Specifies rows to skip.
         quotechar : bytes, default: b'"'
             Indicate quote in a file.
@@ -371,7 +371,7 @@ class TextFileDispatcher(FileDispatcher):
         ----------
         header : int, list of int or str, default: "infer"
             Original `header` parameter of `read_csv` function.
-        names :  array-like, default: None
+        names :  array-like, optional
             Original names parameter of `read_csv` function.
 
         Returns
@@ -446,7 +446,7 @@ class TextFileDispatcher(FileDispatcher):
         Parameters
         ----------
         splits : list
-            list of tuples with partitions data, which defines
+            List of tuples with partitions data, which defines
             parser task (start/end read bytes and etc.).
         **partition_kwargs : dict
             `kwargs` that should be passed to the parser function.

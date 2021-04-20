@@ -46,10 +46,10 @@ class SQLDispatcher(FileDispatcher):
             SQL query to be executed or a table name.
         con : SQLAlchemy connectable, str, or sqlite3 connection
             Connection object to database.
-        index_col : str or list of str, default: None
+        index_col : str or list of str, optional
             Column(s) to set as index(MultiIndex).
         **kwargs : dict
-            Parameters to pass into pandas.read_sql function.
+            Parameters to pass into `pandas.read_sql` function.
 
         Returns
         -------
