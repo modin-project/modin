@@ -12,9 +12,10 @@
 # governing permissions and limitations under the License.
 
 """
-This is a module that hides real numpy from future "import numpy" statements
-and replaces it with a wrapping module that serves attributes from either
-local or "remote" numpy depending on active execution context.
+The module replaces real NumPy from future "import numpy" statements.
+
+Replacement occurs with a wrapping module that serves attributes from either
+local or "remote" NumPy depending on active execution context.
 """
 
 import sys
@@ -46,25 +47,26 @@ else:
 
     class InterceptedNumpy(types.ModuleType):
         """
-        This class is intended to replace the "numpy" module as seen by outer world,
-        getting attributes from either local numpy or remote one when remote context
+        The class is intended to replace the "numpy" module as seen by outer world.
+
+        Replacement occurs by getting attributes from either local NumPy or remote one when remote context
         is activated.
-        It also registers helpers for pickling local numpy objects in remote context
+        It also registers helpers for pickling local NumPy objects in remote context
         and vice versa.
 
         Attributes
         ----------
         __own_attrs__ : set
-            attributes that defined in the class
+            Attributes that defined in the class.
         __current_numpy : ModuleType
-            the module to which getting NumPy attributes redirects. For example,
+            The module to which getting NumPy attributes redirects. For example,
             NumPy in remote machine.
         __prev_numpy : ModuleType
-            the previous module that was accessed to get the NumPy attributes
+            The previous module that was accessed to get the NumPy attributes.
         __has_to_warn : bool
-            determines the situation when it is necessary to give a warning
+            Determines the situation when it is necessary to give a warning.
         __reducers : dict
-
+            Custom routines that Pickle calls to serialize an instance of a class.
         """
 
         __own_attrs__ = set(["__own_attrs__"])
@@ -76,7 +78,6 @@ else:
         __reducers = {}
 
         def __init__(self):
-            """Constructor"""
             self.__own_attrs__ = set(type(self).__dict__.keys())
             Engine.subscribe(self.__update_engine)
 
@@ -105,6 +106,7 @@ else:
         def __make_reducer(self, name):
             """
             Prepare a "reducer" routine - the one Pickle calls to serialize an instance of a class.
+
             Note that we need this to allow pickling a local numpy object in "remote numpy" context,
             because without a custom reduce callback pickle complains that what it reduced has a
             different "numpy" class than original.
@@ -156,7 +158,7 @@ else:
                 return real_numpy
             return self.__current_numpy
 
-        def __getattr__(self, name):
+        def __getattr__(self, name):  # noqa: D105
             # note that __getattr__ is not symmetric to __setattr__, as it is
             # only called when an attribute is not found by usual lookups
             obj = getattr(self.__get_numpy(), name)
@@ -165,7 +167,7 @@ else:
                 copyreg.pickle(obj, self.__make_reducer(name))
             return obj
 
-        def __setattr__(self, name, value):
+        def __setattr__(self, name, value):  # noqa: D105
             # set our own attributes on the self instance, but pass through
             # setting other attributes to numpy being wrapped
             if name in self.__own_attrs__:
@@ -173,10 +175,8 @@ else:
             else:
                 setattr(self.__get_numpy(), name, value)
 
-        def __delattr__(self, name):
+        def __delattr__(self, name):  # noqa: D105
             # do not allow to delete our own attributes, pass through
             # deletion of others to numpy being wrapped
             if name not in self.__own_attrs__:
                 delattr(self.__get_numpy(), name)
-
-    sys.modules["numpy"] = InterceptedNumpy()
