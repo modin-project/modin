@@ -12,11 +12,7 @@
 # governing permissions and limitations under the License.
 
 """
-Implement DataFrame/Series public API as Pandas does.
-
-Almost all docstrings for public and magic methods should be inherited from pandas
-for better maintability.
-Manually add documentation for methods which are not presented in pandas.
+Implement DataFrame/Series public API as pandas does.
 """
 
 import numpy as np
@@ -114,13 +110,13 @@ class BasePandasDataset(object):
 
     def _add_sibling(self, sibling):
         """
-        Adds a DataFrame or Series object to the list of siblings. These are objects
-        that share the same query compiler. This function is called when a shallow copy
-        is made.
+        Add a DataFrame or Series object to the list of siblings.
+
+        Siblings are objects that share the same query compiler. This function is called
+        when a shallow copy is made.
 
         Parameters
         ----------
-        What arguments does this function have.
         sibling : BasePandasDataset
             Dataset to add to siblings list.
         """
@@ -131,21 +127,25 @@ class BasePandasDataset(object):
 
     def _build_repr_df(self, num_rows, num_cols):
         """
-        Implement [METHOD_NAME].
-
-        TODO: Add more details for this docstring template.
+        Build pandas DataFrame for string representation.
 
         Parameters
         ----------
-        What arguments does this function have.
-        [
-        PARAMETER_NAME: PARAMETERS TYPES
-            Description.
-        ]
+        num_rows : int
+            Number of rows to show in string representation. If number of
+            rows in this dataset is greater than `num_rows` then half of
+            `num_rows` rows from the beginning and half of `num_rows` rows
+            from the end are shown.
+        num_cols : int
+            Number of columns to show in string representation. If number of
+            columns in this dataset is greater than `num_cols` then half of
+            `num_cols` columns from the beginning and half of `num_cols`
+            columns from the end are shown.
 
         Returns
         -------
-        What this returns (if anything)
+        `pandas.DataFrame` or `pandas.Series` with `num_rows` or fewer rows
+        and `num_cols` or fewer columns.
         """
         # Fast track for empty dataframe.
         if len(self.index) == 0 or (
@@ -202,8 +202,8 @@ class BasePandasDataset(object):
 
         Parameters
         ----------
-        new_query_compiler: query_compiler
-            The new QueryCompiler to use to manage the data
+        new_query_compiler : query_compiler
+            The new QueryCompiler to use to manage the data.
         """
         old_query_compiler = self._query_compiler
         self._query_compiler = new_query_compiler
@@ -228,15 +228,32 @@ class BasePandasDataset(object):
 
         Parameters
         ----------
-        What arguments does this function have.
-        [
-        PARAMETER_NAME: PARAMETERS TYPES
-            Description.
-        ]
+        other : modin.pandas.BasePandasDataset
+            Another dataset to validate against `self`.
+        axis : None or 0 or 1
+            Specifies axis along which to do validation.
+        numeric_only : bool, default: False
+            Validates that both frames have only numeric dtypes.
+        numeric_or_time_only : bool, default: False
+            Validates that both frames have either numeric or time dtypes.
+        numeric_or_object_only : bool, default: False
+            Validates that both frames have either numeric or object dtypes.
+        comparison_dtypes_only : bool, default: False
+            Validates that both frames have either numeric or time or equal dtypes.
+        compare_index : bool, default: False
+            Compare Index if True.
 
         Returns
         -------
-        What this returns (if anything)
+        Other frame if it is determined to be valid.
+
+        Raises
+        ------
+        ValueError
+            If `other` is `Series` and its length is different from
+            length of `self` `axis`.
+        TypeError
+            If any validation checks fail.
         """
         # We skip dtype checking if the other is a scalar.
         if is_scalar(other):
@@ -1845,7 +1862,7 @@ class BasePandasDataset(object):
         self, level=None, drop=False, inplace=False, col_level=0, col_fill=""
     ):
         inplace = validate_bool_kwarg(inplace, "inplace")
-        # Error checking for matching Pandas. Pandas does not allow you to
+        # Error checking for matching pandas. Pandas does not allow you to
         # insert a dropped index into a DataFrame if these columns already
         # exist.
         if (
@@ -1991,7 +2008,7 @@ class BasePandasDataset(object):
 
         if n is None and frac is None:
             # default to n = 1 if n and frac are both None (in accordance with
-            # Pandas specification)
+            # pandas specification)
             n = 1
         elif n is not None and frac is None and n % 1 != 0:
             # n must be an integer
@@ -2710,7 +2727,7 @@ class BasePandasDataset(object):
         if not self._query_compiler.lazy_execution and len(self) == 0:
             return self._default_to_pandas("__getitem__", key)
         # see if we can slice the rows
-        # This lets us reuse code in Pandas to error check
+        # This lets us reuse code in pandas to error check
         indexer = None
         if isinstance(key, slice) or (
             isinstance(key, str)
