@@ -2474,6 +2474,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             groupby_kwargs=groupby_args,
             drop=drop,
             method="size",
+            default_to_pandas_func=lambda grp: grp.size(),
         )
         if groupby_args.get("as_index", True):
             result.columns = ["__reduced__"]
