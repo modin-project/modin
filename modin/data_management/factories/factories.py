@@ -29,19 +29,22 @@ from pandas.util._decorators import doc
 
 import pandas
 
-_doc_abstract_factory_class = """Abstract {role} factory which allows to override the IO module easily.
+_doc_abstract_factory_class = """
+Abstract {role} factory which allows to override the IO module easily.
 
 This class is responsible for dispatching calls of IO-functions to its
 actual engine-specific implementations.
 """
 
-_doc_factory_class = """Factory of {engine_name} engine.
+_doc_factory_class = """
+Factory of {engine_name} engine.
 
 This class is responsible for dispatching calls of IO-functions to its
 actual engine-specific implementations.
 """
 
-_doc_factory_prepare_method = """Initialize Factory.
+_doc_factory_prepare_method = """
+Initialize Factory.
 
 Fills in `.io_cls` class attribute with {engine_name} engine lazily.
 """
@@ -54,7 +57,7 @@ class FactoryInfo(typing.NamedTuple):
     """
     Structure that stores information about factory.
 
-    Attributes
+    Parameters
     ----------
     engine : str
         Name of underlying execution engine.
@@ -80,7 +83,7 @@ class NotRealFactory(Exception):
 
 
 @doc(_doc_abstract_factory_class, role="")
-class BaseFactory(object):
+class BaseFactory(object):  # noqa: D101
     io_cls: BaseIO = None  # The module where the I/O functionality exists.
 
     @classmethod
@@ -105,146 +108,146 @@ class BaseFactory(object):
 
     @classmethod
     @doc(_doc_factory_prepare_method, engine_name="an underlying")
-    def prepare(cls):
+    def prepare(cls):  # noqa: D102
         raise NotImplementedError("Subclasses of BaseFactory must implement prepare")
 
     @classmethod
-    def _from_pandas(cls, df):
+    def _from_pandas(cls, df):  # noqa
         return cls.io_cls.from_pandas(df)
 
     @classmethod
-    def _from_arrow(cls, at):
+    def _from_arrow(cls, at):  # noqa
         return cls.io_cls.from_arrow(at)
 
     @classmethod
-    def _from_non_pandas(cls, *args, **kwargs):
+    def _from_non_pandas(cls, *args, **kwargs):  # noqa
         return cls.io_cls.from_non_pandas(*args, **kwargs)
 
     @classmethod
-    def _read_parquet(cls, **kwargs):
+    def _read_parquet(cls, **kwargs):  # noqa
         return cls.io_cls.read_parquet(**kwargs)
 
     @classmethod
-    def _read_csv(cls, **kwargs):
+    def _read_csv(cls, **kwargs):  # noqa
         return cls.io_cls.read_csv(**kwargs)
 
     @classmethod
-    def _read_json(cls, **kwargs):
+    def _read_json(cls, **kwargs):  # noqa
         return cls.io_cls.read_json(**kwargs)
 
     @classmethod
-    def _read_gbq(cls, **kwargs):
+    def _read_gbq(cls, **kwargs):  # noqa
         return cls.io_cls.read_gbq(**kwargs)
 
     @classmethod
-    def _read_html(cls, **kwargs):
+    def _read_html(cls, **kwargs):  # noqa
         return cls.io_cls.read_html(**kwargs)
 
     @classmethod
-    def _read_clipboard(cls, **kwargs):  # pragma: no cover
+    def _read_clipboard(cls, **kwargs):  # pragma: no cover # noqa
         return cls.io_cls.read_clipboard(**kwargs)
 
     @classmethod
-    def _read_excel(cls, **kwargs):
+    def _read_excel(cls, **kwargs):  # noqa
         return cls.io_cls.read_excel(**kwargs)
 
     @classmethod
-    def _read_hdf(cls, **kwargs):
+    def _read_hdf(cls, **kwargs):  # noqa
         return cls.io_cls.read_hdf(**kwargs)
 
     @classmethod
-    def _read_feather(cls, **kwargs):
+    def _read_feather(cls, **kwargs):  # noqa
         return cls.io_cls.read_feather(**kwargs)
 
     @classmethod
-    def _read_stata(cls, **kwargs):
+    def _read_stata(cls, **kwargs):  # noqa
         return cls.io_cls.read_stata(**kwargs)
 
     @classmethod
-    def _read_sas(cls, **kwargs):  # pragma: no cover
+    def _read_sas(cls, **kwargs):  # pragma: no cover # noqa
         return cls.io_cls.read_sas(**kwargs)
 
     @classmethod
-    def _read_pickle(cls, **kwargs):
+    def _read_pickle(cls, **kwargs):  # noqa
         return cls.io_cls.read_pickle(**kwargs)
 
     @classmethod
-    def _read_sql(cls, **kwargs):
+    def _read_sql(cls, **kwargs):  # noqa
         return cls.io_cls.read_sql(**kwargs)
 
     @classmethod
-    def _read_fwf(cls, **kwargs):
+    def _read_fwf(cls, **kwargs):  # noqa
         return cls.io_cls.read_fwf(**kwargs)
 
     @classmethod
-    def _read_sql_table(cls, **kwargs):
+    def _read_sql_table(cls, **kwargs):  # noqa
         return cls.io_cls.read_sql_table(**kwargs)
 
     @classmethod
-    def _read_sql_query(cls, **kwargs):
+    def _read_sql_query(cls, **kwargs):  # noqa
         return cls.io_cls.read_sql_query(**kwargs)
 
     @classmethod
-    def _read_spss(cls, **kwargs):
+    def _read_spss(cls, **kwargs):  # noqa
         return cls.io_cls.read_spss(**kwargs)
 
     @classmethod
-    def _to_sql(cls, *args, **kwargs):
+    def _to_sql(cls, *args, **kwargs):  # noqa
         return cls.io_cls.to_sql(*args, **kwargs)
 
     @classmethod
-    def _to_pickle(cls, *args, **kwargs):
+    def _to_pickle(cls, *args, **kwargs):  # noqa
         return cls.io_cls.to_pickle(*args, **kwargs)
 
     @classmethod
-    def _to_csv(cls, *args, **kwargs):
+    def _to_csv(cls, *args, **kwargs):  # noqa
         return cls.io_cls.to_csv(*args, **kwargs)
 
 
 @doc(_doc_factory_class, engine_name="`cuDFOnRay")
-class CudfOnRayFactory(BaseFactory):
+class CudfOnRayFactory(BaseFactory):  # noqa: D101
     @classmethod
     @doc(_doc_factory_prepare_method, engine_name="``cuDFOnRayIO``")
-    def prepare(cls):
+    def prepare(cls):  # noqa: D102
         from modin.engines.ray.cudf_on_ray.io import cuDFOnRayIO
 
         cls.io_cls = cuDFOnRayIO
 
 
 @doc(_doc_factory_class, engine_name="`PandasOnRay")
-class PandasOnRayFactory(BaseFactory):
+class PandasOnRayFactory(BaseFactory):  # noqa: D101
     @classmethod
     @doc(_doc_factory_prepare_method, engine_name="``PandasOnRayIO``")
-    def prepare(cls):
+    def prepare(cls):  # noqa: D102
         from modin.engines.ray.pandas_on_ray.io import PandasOnRayIO
 
         cls.io_cls = PandasOnRayIO
 
 
 @doc(_doc_factory_class, engine_name="`PandasOnPython")
-class PandasOnPythonFactory(BaseFactory):
+class PandasOnPythonFactory(BaseFactory):  # noqa: D101
     @classmethod
     @doc(_doc_factory_prepare_method, engine_name="``PandasOnPythonIO``")
-    def prepare(cls):
+    def prepare(cls):  # noqa: D102
         from modin.engines.python.pandas_on_python.io import PandasOnPythonIO
 
         cls.io_cls = PandasOnPythonIO
 
 
 @doc(_doc_factory_class, engine_name="`PandasOnDask`")
-class PandasOnDaskFactory(BaseFactory):
+class PandasOnDaskFactory(BaseFactory):  # noqa: D101
     @classmethod
     @doc(_doc_factory_prepare_method, engine_name="``PandasOnDaskIO``")
-    def prepare(cls):
+    def prepare(cls):  # noqa: D102
         from modin.engines.dask.pandas_on_dask.io import PandasOnDaskIO
 
         cls.io_cls = PandasOnDaskIO
 
 
 @doc(_doc_abstract_factory_class, role="experimental")
-class ExperimentalBaseFactory(BaseFactory):
+class ExperimentalBaseFactory(BaseFactory):  # noqa: D101
     @classmethod
-    def _read_sql(cls, **kwargs):
+    def _read_sql(cls, **kwargs):  # noqa
         if Engine.get() != "Ray":
             if "partition_column" in kwargs:
                 if kwargs["partition_column"] is not None:
@@ -274,10 +277,12 @@ class ExperimentalBaseFactory(BaseFactory):
 
 
 @doc(_doc_factory_class, engine_name="`experimental PandasOnRay`")
-class ExperimentalPandasOnRayFactory(ExperimentalBaseFactory, PandasOnRayFactory):
+class ExperimentalPandasOnRayFactory(
+    ExperimentalBaseFactory, PandasOnRayFactory
+):  # noqa: D101
     @classmethod
     @doc(_doc_factory_prepare_method, engine_name="``ExperimentalPandasOnRayIO``")
-    def prepare(cls):
+    def prepare(cls):  # noqa: D102
         from modin.experimental.engines.pandas_on_ray.io_exp import (
             ExperimentalPandasOnRayIO,
         )
@@ -285,32 +290,34 @@ class ExperimentalPandasOnRayFactory(ExperimentalBaseFactory, PandasOnRayFactory
         cls.io_cls = ExperimentalPandasOnRayIO
 
     @classmethod
-    def _read_csv_glob(cls, **kwargs):
+    def _read_csv_glob(cls, **kwargs):  # noqa
         return cls.io_cls.read_csv_glob(**kwargs)
 
 
 @doc(_doc_factory_class, engine_name="experimental `PandasOnPython")
-class ExperimentalPandasOnPythonFactory(ExperimentalBaseFactory, PandasOnPythonFactory):
+class ExperimentalPandasOnPythonFactory(
+    ExperimentalBaseFactory, PandasOnPythonFactory
+):  # noqa: D101
     pass
 
 
 @doc(_doc_factory_class, engine_name="`experimental PyarrowOnRay`")
-class ExperimentalPyarrowOnRayFactory(BaseFactory):  # pragma: no cover
+class ExperimentalPyarrowOnRayFactory(BaseFactory):  # pragma: no cover # noqa: D101
     @classmethod
     @doc(_doc_factory_prepare_method, engine_name="experimental ``PyarrowOnRayIO``")
-    def prepare(cls):
+    def prepare(cls):  # noqa: D102
         from modin.experimental.engines.pyarrow_on_ray.io import PyarrowOnRayIO
 
         cls.io_cls = PyarrowOnRayIO
 
 
 @doc(_doc_abstract_factory_class, role="experimental remote")
-class ExperimentalRemoteFactory(ExperimentalBaseFactory):
+class ExperimentalRemoteFactory(ExperimentalBaseFactory):  # noqa: D101
     wrapped_factory = BaseFactory
 
     @classmethod
     @doc(_doc_factory_prepare_method, engine_name="an underlying remote")
-    def prepare(cls):
+    def prepare(cls):  # noqa: D102
         # query_compiler import is needed so remote PandasQueryCompiler
         # has an imported local counterpart;
         # if there isn't such counterpart rpyc generates some bogus
@@ -354,25 +361,25 @@ class ExperimentalRemoteFactory(ExperimentalBaseFactory):
 
 
 @doc(_doc_factory_class, engine_name="`experimental remote PandasOnRay")
-class ExperimentalPandasOnCloudrayFactory(ExperimentalRemoteFactory):
+class ExperimentalPandasOnCloudrayFactory(ExperimentalRemoteFactory):  # noqa: D101
     wrapped_factory = PandasOnRayFactory
 
 
 @doc(_doc_factory_class, engine_name="`experimental remote PandasOnPython")
-class ExperimentalPandasOnCloudpythonFactory(ExperimentalRemoteFactory):
+class ExperimentalPandasOnCloudpythonFactory(ExperimentalRemoteFactory):  # noqa: D101
     wrapped_factory = PandasOnPythonFactory
 
 
 @doc(_doc_factory_class, engine_name="`experimental OmnisciOnRay`")
-class ExperimentalOmnisciOnRayFactory(BaseFactory):
+class ExperimentalOmnisciOnRayFactory(BaseFactory):  # noqa: D101
     @classmethod
     @doc(_doc_factory_prepare_method, engine_name="experimental ``OmnisciOnRayIO``")
-    def prepare(cls):
+    def prepare(cls):  # noqa: D102
         from modin.experimental.engines.omnisci_on_ray.io import OmnisciOnRayIO
 
         cls.io_cls = OmnisciOnRayIO
 
 
 @doc(_doc_factory_class, engine_name="`experimental remote OmnisciOnRay`")
-class ExperimentalOmnisciOnCloudrayFactory(ExperimentalRemoteFactory):
+class ExperimentalOmnisciOnCloudrayFactory(ExperimentalRemoteFactory):  # noqa: D101
     wrapped_factory = ExperimentalOmnisciOnRayFactory

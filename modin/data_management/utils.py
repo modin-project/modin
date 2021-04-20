@@ -50,9 +50,8 @@ def compute_chunksize(df, num_splits, default_block_size=32, axis=None):
         Number of splits to separate the DataFrame into.
     default_block_size : int, default: 32
         Minimum number of rows/columns in a single split.
-    axis: {None, 0, 1}
-        Axis to split across. 0 means index axis when 1 means column axis.
-        If None - split across both axes.
+    axis : int, optional
+        Axis to split across. If not specified - split accros both axes.
 
     Returns
     -------
@@ -124,12 +123,32 @@ def split_result_of_axis_func_pandas(axis, num_splits, result, length_list=None)
 
 
 def length_fn_pandas(df):
-    """Compute number of rows of passed pandas.DataFrame."""
+    """
+    Compute number of rows of passed `pandas.DataFrame`.
+
+    Parameters
+    ----------
+    df : pandas.DataFrame
+
+    Returns
+    -------
+    int
+    """
     assert isinstance(df, pandas.DataFrame)
     return len(df) if len(df) > 0 else 0
 
 
 def width_fn_pandas(df):
-    """Compute number of columns of passed pandas.DataFrame."""
+    """
+    Compute number of columns of passed `pandas.DataFrame`.
+
+    Parameters
+    ----------
+    df : pandas.DataFrame
+
+    Returns
+    -------
+    int
+    """
     assert isinstance(df, pandas.DataFrame)
     return len(df.columns) if len(df.columns) > 0 else 0

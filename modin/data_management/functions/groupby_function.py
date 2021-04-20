@@ -11,6 +11,8 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
+"""Module houses GroupBy functions builder class."""
+
 import pandas
 
 from .mapreducefunction import MapReduceFunction
@@ -65,6 +67,10 @@ class GroupbyReduceFunction(MapReduceFunction):
         )
 
     @classmethod
+    # FIXME:
+    #   1. Remove `drop` parameter since it isn't used.
+    #   2. `map_func` is not supposed to be `None`
+    #   3. Case when `map_args` or `groupby_args` is `None` (its default value) is unhandled.
     def map(
         cls,
         df,
@@ -92,13 +98,14 @@ class GroupbyReduceFunction(MapReduceFunction):
         axis : {0, 1}, default: 0
             Axis to group and apply aggregation function along. 0 means index axis
             when 1 means column axis.
-        by : level index name or list of such labels
+        by : level index name or list of such labels, optional
             Index levels, that is used to determine groups.
-        groupby_args : dict
+            If not specified, `other` parameter is used.
+        groupby_args : dict, optional
             Dictionary which carries arguments for `pandas.DataFrame.groupby`.
-        map_func : callable
+        map_func : callable or dict, default: None
             Function to apply to each group.
-        map_args : dict
+        map_args : dict, optional
             Arguments which will be passed to `map_func`.
         drop : bool, default: False
             Indicates whether or not by-data came from the `self` frame.
@@ -135,7 +142,11 @@ class GroupbyReduceFunction(MapReduceFunction):
         return pandas.DataFrame(result)
 
     @classmethod
-    # FIXME: spread `**kwargs` into an actual function arguments.
+    # FIXME:
+    #   1. spread `**kwargs` into an actual function arguments.
+    #   2. `reduce_func` is not supposed to be `None`
+    #   3. Case when `reduce_args` or `groupby_args` is `None` (its default value)
+    #      is unhandled.
     def reduce(
         cls,
         df,
@@ -146,7 +157,7 @@ class GroupbyReduceFunction(MapReduceFunction):
         reduce_args=None,
         drop=False,
         **kwargs,
-    ):
+    ):  # noqa: PR02
         """
         Execute Reduce phase of GroupbyReduce.
 
@@ -156,16 +167,16 @@ class GroupbyReduceFunction(MapReduceFunction):
         ----------
         df : pandas.DataFrame
             Serialized frame which contain groups to combine.
-        partition_idx : int
+        partition_idx : int, default: 0
             Internal index of column partition to which this function is applied.
         axis : {0, 1}, default: 0
             Axis to group and apply aggregation function along. 0 means index axis
             when 1 means column axis.
-        groupby_args : dict
+        groupby_args : dict, optional
             Dictionary which carries arguments for `pandas.DataFrame.groupby`.
-        reduce_func : callable
+        reduce_func : callable or dict, default: None
             Function to apply to each group.
-        reduce_args : dict
+        reduce_args : dict, optional
             Arguments which will be passed to `reduce_func`.
         drop : bool, default: False
             Indicates whether or not by-data came from the `self` frame.
@@ -219,7 +230,7 @@ class GroupbyReduceFunction(MapReduceFunction):
         map_func,
         numeric_only=True,
         **kwargs,
-    ):
+    ):  # noqa: PR02
         """
         Execute GroupBy aggregation with MapReduce approach.
 
@@ -236,11 +247,11 @@ class GroupbyReduceFunction(MapReduceFunction):
             Dictionary which carries arguments for pandas.DataFrame.groupby.
         map_args : dict
             Arguments which will be passed to `map_func`.
-        map_func : callable
+        map_func : callable or dict
             Function to apply to each group at the Map phase.
         numeric_only : bool, default: True
             Whether or not to drop non-numeric columns before executing GroupBy.
-        reduce_func : callable
+        reduce_func : callable or dict
             Function to apply to each group at the Reduce phase.
             (If specified, have to be passed via `kwargs`).
         reduce_args : dict
@@ -346,7 +357,7 @@ class GroupbyReduceFunction(MapReduceFunction):
         reduce_args,
         drop,
         **kwargs,
-    ):
+    ):  # noqa: PR02
         """
         Bind appropriate arguments to map and reduce functions.
 

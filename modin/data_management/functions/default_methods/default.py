@@ -11,6 +11,8 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
+"""Module houses default functions builder class."""
+
 from modin.data_management.functions.function import Function
 from modin.utils import try_cast_to_pandas
 
@@ -32,7 +34,7 @@ class DefaultMethod(Function):
 
     @classmethod
     # FIXME: spread `**call_kwds` into an actual function arguments.
-    def call(cls, func, **call_kwds):
+    def call(cls, func, **call_kwds):  # noqa: PR02
         """
         Build function that do fallback to default pandas implementation for passed `func`.
 
@@ -74,6 +76,8 @@ class DefaultMethod(Function):
 
         def applyier(df, *args, **kwargs):
             """
+            Apply target function to the casted to pandas frame.
+
             This function is directly applied to the casted to pandas frame, executes target
             function under it and processes result so it is possible to create a valid
             query compiler from it.
@@ -115,7 +119,7 @@ class DefaultMethod(Function):
         func : callable or str,
             Function to apply to the casted to pandas frame or its property accesed
             by ``cls.frame_wrapper``.
-        kwargs : kwargs
+        **kwargs : kwargs
             Additional parameters that will be used for building.
 
         Returns
@@ -158,7 +162,7 @@ class DefaultMethod(Function):
         return args_cast
 
     @classmethod
-    def build_property_wrapper(cls, prop):
+    def build_property_wrapper(cls, prop):  # noqa: PR01
         """Build function that access specified property of the frame."""
 
         def property_wrapper(df):
@@ -191,7 +195,7 @@ class DefaultMethod(Function):
         return wrapper
 
     @classmethod
-    def frame_wrapper(cls, df):
+    def frame_wrapper(cls, df):  # noqa: PR01
         """
         Extract frame property to apply function on.
 

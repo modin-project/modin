@@ -11,6 +11,8 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
+"""Module houses default applied-on-str functions builder class."""
+
 from .series_default import SeriesDefault
 
 
@@ -18,6 +20,6 @@ class StrDefault(SeriesDefault):
     """Builder for default-to-pandas methods which is executed under `str` accessor."""
 
     @classmethod
-    def frame_wrapper(cls, df):
+    def frame_wrapper(cls, df):  # noqa: PR01
         """Access `str` accessor of the passed frame."""
         return df.squeeze(axis=1).str

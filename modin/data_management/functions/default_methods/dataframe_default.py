@@ -11,6 +11,8 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
+"""Module houses default DataFrame functions builder class."""
+
 # FIXME: This whole module is duplicating the logic of `default.py` and should be removed.
 
 from .default import DefaultMethod
@@ -20,7 +22,7 @@ import pandas
 
 
 @_inherit_func_docstring(DefaultMethod)
-class DataFrameDefault(DefaultMethod):
+class DataFrameDefault(DefaultMethod):  # noqa: D101
     @classmethod
     def register(cls, func, obj_type=None, **kwargs):
         """
@@ -33,7 +35,7 @@ class DataFrameDefault(DefaultMethod):
         obj_type : object, optional
             If `func` is a string with a function name then `obj_type` provides an
             object to search function in. If not specified `pandas.DataFrame` will be used.
-        kwargs : kwargs
+        **kwargs : kwargs
             Additional parameters that will be used for building.
 
         Returns

@@ -11,6 +11,8 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
+"""Module houses default Series functions builder class."""
+
 from .any_default import AnyDefault
 
 
@@ -20,6 +22,6 @@ class SeriesDefault(AnyDefault):
     OBJECT_TYPE = "Series"
 
     @classmethod
-    def frame_wrapper(cls, df):
+    def frame_wrapper(cls, df):  # noqa: PR01
         """Squeeze passed DataFrame to be able to process Series-specific functions on it."""
         return df.squeeze(axis=1)

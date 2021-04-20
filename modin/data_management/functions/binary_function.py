@@ -11,6 +11,8 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
+"""Module houses Binary functions builder class."""
+
 import numpy as np
 import pandas
 
@@ -22,7 +24,7 @@ class BinaryFunction(Function):
 
     @classmethod
     # FIXME: spread `*call_args` and `**call_kwds` into an actual function arguments.
-    def call(cls, func, *call_args, **call_kwds):
+    def call(cls, func, *call_args, **call_kwds):  # noqa: PR02
         """
         Build template binary function.
 

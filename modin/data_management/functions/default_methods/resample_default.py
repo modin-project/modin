@@ -11,6 +11,8 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
+"""Module houses default Resamle functions builder class."""
+
 from .default import DefaultMethod
 
 
@@ -65,7 +67,7 @@ class ResampleDefault(DefaultMethod):
         ----------
         func : callable
             Aggregation function to execute under resampled frame.
-        squeeze_self : bool
+        squeeze_self : bool, default: False
             Whether or not to squeeze frame before resampling.
         **kwargs : kwargs
             Additional arguments that will be passed to function builder.

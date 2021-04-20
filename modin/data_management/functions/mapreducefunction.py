@@ -11,6 +11,8 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
+"""Module houses MapReduce functions builder class."""
+
 from .function import Function
 
 
@@ -19,15 +21,15 @@ class MapReduceFunction(Function):
 
     @classmethod
     # FIXME: spread `**call_kwds` into an actual function arguments.
-    def call(cls, map_function, reduce_function, **call_kwds):
+    def call(cls, map_function, reduce_function, **call_kwds):  # noqa: PR02
         """
         Build MapReduce function.
 
         Parameters
         ----------
-        map_func : callable
+        map_function : callable
             Source map function.
-        reduce_func : callable
+        reduce_function : callable
             Source reduce function.
         axis : int, optional
             Specifies axis to apply function along.
@@ -55,7 +57,29 @@ class MapReduceFunction(Function):
         return caller
 
     @classmethod
-    def register(cls, map_function, reduce_function=None, **kwargs):
+    # FIXME: `register` is an alias for `call` method. One of them should be removed.
+    def register(cls, map_function, reduce_function=None, **kwargs):  # noqa: PR02
+        """
+        Build MapReduce function.
+
+        Parameters
+        ----------
+        map_function : callable
+            Source map function.
+        reduce_function : callable, optional
+            Source reduce function. If not specified `map_function` will be used.
+        axis : int, optional
+            Specifies axis to apply function along.
+            (If specified, have to be passed via `kwargs`).
+        **kwargs : kwargs
+            Additional parameters in the glory of compatibility. Does not affect the result.
+
+        Returns
+        -------
+        callable
+            Function that takes query compiler and executes passed functions
+            with MapReduce algorithm.
+        """
         if reduce_function is None:
             reduce_function = map_function
         return cls.call(map_function, reduce_function, **kwargs)

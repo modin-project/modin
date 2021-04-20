@@ -17,7 +17,7 @@ Function module provides templates for this type of function:
 * Reduction functions — Function that reduces specified axis into a scalar, but requires knowledge about the whole axis. Be aware that providing this knowledge may be expensive because the execution engine has to concatenate partitions along the specified axis. Also, note that the execution engine expects that the reduction function returns a scalar.
 * Default-to-pandas functions — Do fallback to pandas for passed function.
 
-Each template represented with a class with the corresponding name and implements ``register`` method, which takes functions to apply in an appropriate way and instantiate the related template. Functions that are passed to the ``register`` will be executed under deserialized partitions which are represented by one of the pandas object: ``pandas.DataFrame``, ``pandas.Series`` or ``pandas.DataFrameGroupbyObject`` (depends on the template type).
+Each template represented with a class with the corresponding name and implements ``register`` method, which takes functions to apply in an appropriate way and instantiate the related template. Functions that are passed to the ``register`` will be executed under deserialized and preprocessed (depends on the template) partitions, so the function would take one of the pandas object: ``pandas.DataFrame``, ``pandas.Series`` or ``pandas.DataFrameGroupbyObject``.
 
 .. note:: Currently, functions that are built in that way are supported only in a pandas backend (can be used only in `PandasQueryCompiler`).
 

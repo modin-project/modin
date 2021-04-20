@@ -11,6 +11,8 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
+"""Module contains an interface for function builder classes."""
+
 from typing import Optional
 
 
@@ -69,11 +71,11 @@ class Function(object):
         Parameters
         ----------
         axis : int, optional
-            0 or None means apply on index, 1 means apply on columns
+            0 or None means apply on index, 1 means apply on columns.
 
         Returns
         -------
         int
-            Integer representation of given axis
+            Integer representation of given axis.
         """
         return 0 if axis is None else axis

@@ -11,6 +11,8 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
+"""Module houses default binary functions builder class."""
+
 from .any_default import AnyDefault
 
 import pandas
@@ -18,7 +20,7 @@ from pandas.core.dtypes.common import is_list_like
 
 
 class BinaryDefault(AnyDefault):
-    """Build default-to-pandas methods which executes binary functions"""
+    """Build default-to-pandas methods which executes binary functions."""
 
     @classmethod
     def build_default_to_pandas(cls, fn, fn_name):

@@ -11,6 +11,8 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
+"""Module houses default GroupBy functions builder class."""
+
 from .default import DefaultMethod
 
 import pandas
@@ -241,15 +243,14 @@ class GroupBy:
         return fn
 
     @classmethod
-    def is_aggregate(cls, key):
-        """Check whether `key` is an alias for pandas.GroupBy.aggregation method"""
+    def is_aggregate(cls, key):  # noqa: PR01
+        """Check whether `key` is an alias for pandas.GroupBy.aggregation method."""
         return key in cls.agg_aliases
 
     @classmethod
     def build_groupby(cls, func):
         """
-        Build function that groups DataFrame and applies aggregation
-        function to the every group.
+        Build function that groups DataFrame and applies aggregation function to the every group.
 
         Parameters
         ----------

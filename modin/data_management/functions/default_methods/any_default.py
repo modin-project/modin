@@ -13,6 +13,8 @@
 
 # FIXME: This whole module is duplicating the logic of `default.py` and should be removed.
 
+"""Module houses default functions builder class."""
+
 from .default import DefaultMethod
 
 
@@ -24,7 +26,7 @@ class ObjTypeDeterminer:
     to an object under which `key` function is applied.
     """
 
-    def __getattr__(self, key):
+    def __getattr__(self, key):  # noqa: D105
         def func(df, *args, **kwargs):
             prop = getattr(df, key)
             if callable(prop):
@@ -50,7 +52,7 @@ class AnyDefault(DefaultMethod):
         obj_type : object, optional
             If `func` is a string with a function name then `obj_type` provides an
             object to search function in. If not specified `ObjTypeDeterminer` will be used.
-        kwargs : kwargs
+        **kwargs : kwargs
             Additional parameters that will be used for building.
 
         Returns

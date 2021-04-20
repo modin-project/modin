@@ -11,6 +11,8 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
+"""Module houses Fold functions builder class."""
+
 from .function import Function
 
 
@@ -19,7 +21,7 @@ class FoldFunction(Function):
 
     @classmethod
     # FIXME: spread `**call_kwds` into an actual function arguments.
-    def call(cls, fold_function, **call_kwds):
+    def call(cls, fold_function, **call_kwds):  # noqa: PR02
         """
         Build Fold function that will be performed across rows/columns.
 
