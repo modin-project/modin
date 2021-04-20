@@ -32,7 +32,7 @@ jobs:
           python-version: "3.7.x"
           architecture: "x64"
       - run: pip install black
-      - run: black --check --diff modin/ asv_bench/benchmarks
+      - run: black --check --diff modin/ asv_bench/benchmarks scripts/doc_checker.py
 
   lint-pydocstyle:
     name: lint (pydocstyle)
@@ -45,13 +45,32 @@ jobs:
         with:
           python-version: "3.7.x"
           architecture: "x64"
-      - run: pip install pydocstyle
-      - run: pydocstyle --convention=numpy --add-ignore=D101,D102,D105 modin/pandas/dataframe.py modin/pandas/series.py modin/pandas/groupby.py modin/pandas/base.py
-      - run: pydocstyle --convention=numpy --add-ignore=D101,D103,D105 modin/pandas/io.py
-      - run: pydocstyle --convention=numpy --add-ignore=D101,D102 modin/pandas/series_utils.py
-      - run: pydocstyle --convention=numpy --add-ignore=D103 modin/pandas/general.py
-      - run: pydocstyle --convention=numpy modin/pandas/plotting.py modin/pandas/utils.py modin/pandas/iterator.py modin/pandas/indexing.py
-      - run: pydocstyle --convention=numpy --add-ignore=D100,D104 modin/engines/base/frame
+      - run: pip install pytest pytest-cov pydocstyle numpydoc
+      - run: pytest scripts/test
+      - run: pip install -e .[all]
+      - run: |
+          python scripts/doc_checker.py --add-ignore=D101,D102,D105 --disable-numpydoc \
+            modin/pandas/dataframe.py modin/pandas/series.py \
+            modin/pandas/groupby.py modin/pandas/base.py
+      - run: python scripts/doc_checker.py modin/pandas/io.py
+      - run: |
+          python scripts/doc_checker.py --add-ignore=D101,D102 --disable-numpydoc \
+            modin/pandas/series_utils.py
+      - run: |
+          python scripts/doc_checker.py --add-ignore=D103 --disable-numpydoc \
+            modin/pandas/general.py
+      - run: |
+          python scripts/doc_checker.py --disable-numpydoc \
+            modin/pandas/plotting.py modin/pandas/utils.py \
+            modin/pandas/iterator.py modin/pandas/indexing.py
+      - run: |
+          python scripts/doc_checker.py --add-ignore=D100,D104 --disable-numpydoc \
+            modin/engines/base/frame
+      - run: |
+          python scripts/doc_checker.py asv_bench/benchmarks/utils.py \
+            asv_bench/benchmarks/__init__.py asv_bench/benchmarks/io/__init__.py \
+            asv_bench/benchmarks/scalability/__init__.py
+      - run: python scripts/doc_checker.py scripts/doc_checker.py
 
   lint-flake8:
     name: lint (flake8)
@@ -65,7 +84,7 @@ jobs:
           python-version: "3.7.x"
           architecture: "x64"
       - run: pip install flake8 flake8-print
-      - run: flake8 --enable=T modin/ asv_bench/benchmarks
+      - run: flake8 --enable=T modin/ asv_bench/benchmarks scripts/doc_checker.py
 
   test-api:
     runs-on: ubuntu-latest

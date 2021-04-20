@@ -115,6 +115,7 @@ def _update_engine(publisher: Parameter):
             os.environ["OMP_NUM_THREADS"] = str(multiprocessing.cpu_count())
         if _is_first_update.get("Ray", True):
             initialize_ray()
+
     elif publisher.get() == "Dask":
         if _is_first_update.get("Dask", True):
             from modin.engines.dask.utils import initialize_dask

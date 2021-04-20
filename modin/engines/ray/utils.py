@@ -16,9 +16,11 @@ import os
 import sys
 
 from modin.config import (
+    Backend,
     IsRayCluster,
     RayRedisAddress,
     CpuCount,
+    GpuCount,
     Memory,
     RayPlasmaDir,
     IsOutOfCore,
@@ -156,6 +158,7 @@ def initialize_ray(
 
             ray_init_kwargs = {
                 "num_cpus": CpuCount.get(),
+                "num_gpus": GpuCount.get(),
                 "include_dashboard": False,
                 "ignore_reinit_error": True,
                 "_plasma_directory": plasma_directory,
@@ -180,5 +183,20 @@ def initialize_ray(
 
         ray.worker.global_worker.run_function_on_all_workers(_import_pandas)
 
+        if Backend.get() == "Cudf":
+            from modin.engines.ray.cudf_on_ray.frame.gpu_manager import GPUManager
+            from modin.engines.ray.cudf_on_ray.frame.partition_manager import (
+                GPU_MANAGERS,
+            )
+
+            # Check that GPU_MANAGERS is empty because _update_engine can be called multiple times
+            if not GPU_MANAGERS:
+                for i in range(GpuCount.get()):
+                    GPU_MANAGERS.append(GPUManager.remote(i))
+
     num_cpus = int(ray.cluster_resources()["CPU"])
-    NPartitions._put(num_cpus)
+    num_gpus = int(ray.cluster_resources().get("GPU", 0))
+    if Backend.get() == "Cudf":
+        NPartitions._put(num_gpus)
+    else:
+        NPartitions._put(num_cpus)

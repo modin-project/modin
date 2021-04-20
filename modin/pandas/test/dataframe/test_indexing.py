@@ -177,6 +177,7 @@ def test_iat(data):
         modin_df.iat()
 
 
+@pytest.mark.gpu
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_iloc(request, data):
     modin_df = pd.DataFrame(data)
@@ -227,6 +228,7 @@ def test_iloc(request, data):
             modin_df.iloc[0, 1]
 
 
+@pytest.mark.gpu
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_index(data):
     modin_df = pd.DataFrame(data)
@@ -241,6 +243,7 @@ def test_index(data):
     df_equals(modin_df_cp.index, pandas_df_cp.index)
 
 
+@pytest.mark.gpu
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_indexing_duplicate_axis(data):
     modin_df = pd.DataFrame(data)
@@ -258,6 +261,7 @@ def test_indexing_duplicate_axis(data):
     )
 
 
+@pytest.mark.gpu
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_keys(data):
     modin_df = pd.DataFrame(data)
@@ -456,6 +460,7 @@ def test_loc_order(loc_iter_dfs, reverse_order, axis):
     df_equals(pd_df.loc[select], md_df.loc[select])
 
 
+@pytest.mark.gpu
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_loc_nested_assignment(data):
     modin_df = pd.DataFrame(data)
@@ -731,7 +736,7 @@ def test_rename_multiindex():
     assert_index_equal(modin_renamed.index, renamed.index)
 
 
-@pytest.mark.skip(reason="Pandas does not pass this test")
+@pytest.mark.xfail(reason="Pandas does not pass this test")
 def test_rename_nocopy():
     source_df = pandas.DataFrame(test_data["int_data"])[
         ["col1", "index", "col3", "col4"]
