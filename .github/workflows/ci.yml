@@ -70,6 +70,7 @@ jobs:
           python scripts/doc_checker.py asv_bench/benchmarks/utils.py \
             asv_bench/benchmarks/__init__.py asv_bench/benchmarks/io/__init__.py \
             asv_bench/benchmarks/scalability/__init__.py
+      - run: python scripts/doc_checker.py modin/utils.py
       - run: python scripts/doc_checker.py scripts/doc_checker.py
 
   lint-flake8:
