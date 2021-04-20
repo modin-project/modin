@@ -275,8 +275,7 @@ by documentation for now, the rest is coming soon...).
    │   ├───engines
    │   │   ├───base
    │   │   │   ├───frame
-   │   │   │   ├─── :doc:`io </flow/modin/engines/base/io>`
-   │   │   │   └─── :doc:`series </flow/modin/engines/base/series>`
+   │   │   │   └─── :doc:`io </flow/modin/engines/base/io>`
    │   │   ├───dask
    │   │   │   └───pandas_on_dask
    │   │   ├───python
