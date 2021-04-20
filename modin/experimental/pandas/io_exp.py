@@ -17,6 +17,13 @@ Implement experimental I/O public API.
 Here are the functions which, depending on the name, are an public API extension
 of `pandas/io.py`, or a replacement for the functions of the same name in `pandas/io.py`.
 
+Notes
+-----
+  - to use experimental functions from `modin.pandas` module define
+    `MODIN_EXPERIMENTAL=true`
+  - the functions of this module are only replacements if the parameters and their
+    types are fully matched
+
 Examples
 --------
   - io_exp.read_sql is a replacement of pandas.io.read_sql therefor can be accessed
@@ -25,15 +32,8 @@ Examples
         - `from modin.experimental.pandas import read_sql`
   - io_exp.read_csv_glob is a extension of pandas.io module therefor can be accessed
     only via following import (this is done so that Modin public API in non-experimental
-    mode is as similar as possible to Pandas public API):
+    mode is as similar as possible to pandas public API):
         - `from modin.experimental.pandas import read_csv_glob`
-
-Notes
------
-  - to use experimental functions from `modin.pandas` module define
-    `MODIN_EXPERIMENTAL=true`
-  - the functions of this module are only replacements if the parameters and their
-    types are fully matched
 """
 
 import inspect
@@ -49,41 +49,33 @@ from ...pandas import _update_engine
 
 
 def read_sql(
-    sql,
-    con,
-    index_col=None,
-    coerce_float=True,
-    params=None,
-    parse_dates=None,
-    columns=None,
-    chunksize=None,
     partition_column: Optional[str] = None,
     lower_bound: Optional[int] = None,
     upper_bound: Optional[int] = None,
     max_sessions: Optional[int] = None,
+    **kwargs: dict,
 ) -> DataFrame:
     """
-    General documentation in `pandas.read_sql`.
+    General documentation in `modin.pandas.read_sql`.
 
-    Experimental features
-    ---------------------
-    Simultaneous reading from a sql file.
+    Experimental feature is simultaneous reading from a sql file.
 
-    Experimental parameters
-    -----------------------
-    ...
-    partition_column : str
-        column used to share the data between the workers (MUST be a INTEGER column)
-    lower_bound : int
-        the minimum value to be requested from the partition_column
-    upper_bound : int
-        the maximum value to be requested from the partition_column
-    max_sessions : int
-        the maximum number of simultaneous connections allowed to use
+    Parameters
+    ----------
+    partition_column : str, optional
+        Column used to share the data between the workers (MUST be a INTEGER column).
+    lower_bound : int, optional
+        The minimum value to be requested from the partition_column.
+    upper_bound : int, optional
+        The maximum value to be requested from the partition_column.
+    max_sessions : int, optional
+        The maximum number of simultaneous connections allowed to use.
+    **kwargs : dict
+        Keyword arguments in `modin.pandas.read_sql`.
 
     Returns
     -------
-    Modin DataFrame
+    Modin DataFrame.
     """
     Engine.subscribe(_update_engine)
     assert IsExperimental.get(), "This only works in experimental mode"
@@ -98,7 +90,7 @@ def _make_parser_func(sep: str) -> Callable:
 
     Parameters
     ----------
-    sep: str
+    sep : str
         The separator default to use for the parser.
 
     Returns
@@ -176,23 +168,21 @@ def _read(
     filepath_or_buffer: Union[str, pathlib.Path, IO[AnyStr]], **kwargs
 ) -> DataFrame:
     """
-    General documentation in `pandas.read_csv`.
+    General documentation in `modin.pandas.read_csv`.
 
-    Experimental features
-    ---------------------
-    Simultaneous reading from multiple csv files which are defined using glob pattern.
-    Works only for local files.
+    Experimental feature is simultaneous reading from multiple csv files which are
+    defined using glob pattern. Works only for local files.
 
     Parameters
     ----------
     filepath_or_buffer : str, path object, file-like object
         The filepath of the csv file.
-    kwargs : dict
-        Keyword arguments in pandas.read_csv
+    **kwargs : dict
+        Keyword arguments in `modin.pandas.read_csv`.
 
-    Return
-    ------
-    Modin DataFrame
+    Returns
+    -------
+    Modin DataFrame.
     """
     from modin.data_management.factories.dispatcher import EngineDispatcher
 
