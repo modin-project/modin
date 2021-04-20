@@ -35,7 +35,7 @@ class FeatherDispatcher(ColumnStoreDispatcher):
         ----------
         path : str or file-like object
             The filepath of the feather file.
-        columns : array-like, optional
+        columns : array-like, default: None
             Columns to read from file. If not provided, all columns are read.
         **kwargs : dict
             `read_feather` function kwargs.
@@ -47,9 +47,9 @@ class FeatherDispatcher(ColumnStoreDispatcher):
 
         Notes
         -----
-        `pyarrow` engine and local files only are supported for now,
+        `PyArrow` engine and local files only are supported for now,
         multi threading is set to False by default.
-        pyarrow feather is used. Please refer to the documentation here
+        PyArrow feather is used. Please refer to the documentation here
         https://arrow.apache.org/docs/python/api.html#feather-format
         """
         if columns is None:

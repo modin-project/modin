@@ -377,18 +377,18 @@ class CSVGlobDispatcher(CSVDispatcher):
             File(s) to be partitioned.
         fnames : str or list of str
             File name(s) to be partitioned.
-        num_partitions : int, optional
+        num_partitions : int, default: None
             For what number of partitions split a file.
             If not specified grabs the value from `modin.config.NPartitions.get()`.
-        nrows : int, optional
+        nrows : int, default: None
             Number of rows of file to read.
-        skiprows : int, optional
+        skiprows : int, default: None
             Specifies rows to skip.
-        skip_header : int, optional
+        skip_header : int, default: None
             Specifies header rows to skip.
-        quotechar : bytes, optional. Default b'"'
+        quotechar : bytes, default: b'"'
             Indicate quote in a file.
-        is_quoting : bool, optional. Default True
+        is_quoting : bool, default: True
             Whether or not to consider quotes.
 
         Returns

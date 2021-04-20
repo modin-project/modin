@@ -230,7 +230,7 @@ class BaseIO(object):
 
         Parameters
         ----------
-        **kwargs:
+        **kwargs : dict
             `read_csv` function kwargs including `filepath_or_buffer` parameter.
 
         Returns

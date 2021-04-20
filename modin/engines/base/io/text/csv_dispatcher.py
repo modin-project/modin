@@ -236,7 +236,7 @@ class CSVDispatcher(TextFileDispatcher):
         index_ids : list
             Array with references to the partitions index objects.
         index_col : IndexColType
-            index_col parameter of read_csv function.
+            `index_col` parameter of read_csv function.
         index_name : str
             Name that should be assigned to the index if `index_col`
             is not provided.
@@ -277,11 +277,11 @@ class CSVDispatcher(TextFileDispatcher):
         Parameters
         ----------
         partition_ids : list
-            array with references to the partitions data.
+            Array with references to the partitions data.
         index_ids : list
-            array with references to the partitions index objects.
+            Array with references to the partitions index objects.
         dtypes_ids : list
-            array with references to the partitions dtypes objects.
+            Array with references to the partitions dtypes objects.
         index_col_md : IndexColType
             `index_col` parameter passed to the workers.
         index_name : str
@@ -291,6 +291,8 @@ class CSVDispatcher(TextFileDispatcher):
             Number of columns in each partition.
         column_names : ColumnNamesTypes
             Array with columns names.
+        **kwargs : dict
+            Parameters of `read_csv` function needed for postprocessing.
 
         Returns
         -------

@@ -66,7 +66,7 @@ def _split_result_for_readers(axis, num_splits, df):  # pragma: no cover
     num_splits : int
         The number of splits to create.
     df : pandas.DataFrame
-        pandas.DataFrame to split.
+        `pandas.DataFrame` to split.
 
     Returns
     -------
@@ -86,7 +86,7 @@ def find_common_type_cat(types):
     Parameters
     ----------
     types : array-like
-        array of dtypes.
+        Array of dtypes.
 
     Returns
     -------
@@ -120,7 +120,7 @@ class PandasParser(object):
         Parameters
         ----------
         dtypes_ids : list
-            array with references to the partitions dtypes objects.
+            Array with references to the partitions dtypes objects.
 
         Returns
         -------

@@ -78,7 +78,7 @@ class ColumnStoreDispatcher(FileDispatcher):
         Parameters
         ----------
         partition_ids : list
-            array with references to the partitions data.
+            Array with references to the partitions data.
         row_lengths : list
             Partitions rows lengths.
         column_widths : list
@@ -112,7 +112,7 @@ class ColumnStoreDispatcher(FileDispatcher):
         Parameters
         ----------
         partition_ids : list
-            array with references to the partitions data.
+            Array with references to the partitions data.
 
         Returns
         -------
@@ -181,7 +181,7 @@ class ColumnStoreDispatcher(FileDispatcher):
         Parameters
         ----------
         partition_ids : list
-            array with references to the partitions data.
+            Array with references to the partitions data.
         columns : list
             List of columns that should be read from file.
 

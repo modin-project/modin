@@ -79,7 +79,7 @@ class TextFileDispatcher(FileDispatcher):
         Parameters
         ----------
         partition_ids : list
-                array with references to the partitions data.
+                Array with references to the partitions data.
         row_lengths : list
                 Partitions rows lengths.
         column_widths : list
@@ -151,12 +151,12 @@ class TextFileDispatcher(FileDispatcher):
         Parameters
         ----------
         f : file-like object
-            file handle that should be used for offset movement.
+            File handle that should be used for offset movement.
         offset_size : int
             Number of bytes to read and ignore.
-        quotechar : bytes, optional. Default b'"'
+        quotechar : bytes, default: b'"'
             Indicate quote in a file.
-        is_quoting : bool, optional. Default True
+        is_quoting : bool, default: True
             Whether or not to consider quotes.
 
         Returns
@@ -201,17 +201,18 @@ class TextFileDispatcher(FileDispatcher):
 
         Parameters
         ----------
-        f : file to be partitioned
-        num_partitions : int, optional
+        f : file-like object
+            File handle of file to be partitioned.
+        num_partitions : int, default: None
             For what number of partitions split a file.
-            If not specified grabs the value from `modin.config.NPartitions.get()`
-        nrows : int, optional
+            If not specified grabs the value from `modin.config.NPartitions.get()`.
+        nrows : int, default: None
             Number of rows of file to read.
-        skiprows : array or callable, optional
+        skiprows : array or callable, default: None
             Specifies rows to skip.
-        quotechar : bytes, optional. Default b'"'
+        quotechar : bytes, default: b'"'
             Indicate quote in a file.
-        is_quoting : bool, optional. Default True
+        is_quoting : bool, default: True
             Whether or not to consider quotes.
 
         Returns
@@ -286,14 +287,14 @@ class TextFileDispatcher(FileDispatcher):
         Parameters
         ----------
         f : file-like object
-            file handle that should be used for offset movement.
+            File handle that should be used for offset movement.
         nrows : int
             Number of rows to read.
-        quotechar : bytes, optional. Default b'"'
+        quotechar : bytes, default: b'"'
             Indicate quote in a file.
-        is_quoting : bool, optional. Default True
+        is_quoting : bool, default: True
             Whether or not to consider quotes.
-        outside_quotes : bool, optional. Default True
+        outside_quotes : bool, default: True
             Whether the file pointer is within quotes or not at the time this function is called.
 
         Returns
@@ -332,7 +333,7 @@ class TextFileDispatcher(FileDispatcher):
         Parameters
         ----------
         f : file-like object
-            file handle that should be used for offset movement.
+            File handle that should be used for offset movement.
         quotechar : bytes
             Indicate quote in a file.
         is_quoting : bool
@@ -368,9 +369,9 @@ class TextFileDispatcher(FileDispatcher):
 
         Parameters
         ----------
-        header : int, list of int or str, optional. Default "infer"
+        header : int, list of int or str, default: "infer"
             Original `header` parameter of `read_csv` function.
-        names :  array-like, optional
+        names :  array-like, default: None
             Original names parameter of `read_csv` function.
 
         Returns
@@ -405,7 +406,7 @@ class TextFileDispatcher(FileDispatcher):
         num_splits : int
             The maximum number of splits to separate the DataFrame into.
         column_names : ColumnNamesTypes
-            column names of df.
+            Column names of df.
 
         Returns
         -------
@@ -445,10 +446,10 @@ class TextFileDispatcher(FileDispatcher):
         Parameters
         ----------
         splits : list
-            list of tuples with partitions data, which defines
-            parser task (start/end read bytes and etc.)
+            `list` of tuples with partitions data, which defines
+            parser task (start/end read bytes and etc.).
         **partition_kwargs : dict
-            kwargs that should be passed to the parser function.
+            `kwargs` that should be passed to the parser function.
 
         Returns
         -------

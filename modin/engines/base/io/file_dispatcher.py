@@ -33,7 +33,8 @@ class FileDispatcher:
     Notes
     -----
     `_read`, `deploy`, `parse` and `materialize` are abstract methods and should be
-    implemented in the child classes.
+    implemented in the child classes (functions signatures can differ between child
+    classes).
     """
 
     frame_cls = None
@@ -92,6 +93,13 @@ class FileDispatcher:
         Perform reading of the data from file.
 
         Should be implemented in the child class.
+
+        Parameters
+        ----------
+        *args : iterable
+            Positional arguments of the function.
+        **kwargs : dict
+            Keywords arguments of the function.
         """
         raise NotImplementedError(NOT_IMPLEMENTED_MESSAGE)
 
@@ -131,9 +139,9 @@ class FileDispatcher:
         file_path : str
             String that represents the path to the file (paths to S3 buckets
             are also acceptable).
-        mode : str, optional. Default "rb"
+        mode : str, default: "rb"
             String, which defines which mode file should be open.
-        compression : str, optional. Default "infer"
+        compression : str, default: "infer"
             File compression name (acceptable values are "gzip", "bz2", "xz" and "zip").
 
         Returns
@@ -246,7 +254,7 @@ class FileDispatcher:
         return os.path.exists(file_path)
 
     @classmethod
-    def deploy(cls, func, args, num_returns):
+    def deploy(cls, func, args, num_returns):  # noqa: PR01
         """
         Deploy remote task.
 
@@ -254,7 +262,7 @@ class FileDispatcher:
         """
         raise NotImplementedError(NOT_IMPLEMENTED_MESSAGE)
 
-    def parse(self, func, args, num_returns):
+    def parse(self, func, args, num_returns):  # noqa: PR01
         """
         Parse file's data in the worker process.
 
@@ -263,7 +271,7 @@ class FileDispatcher:
         raise NotImplementedError(NOT_IMPLEMENTED_MESSAGE)
 
     @classmethod
-    def materialize(cls, obj_id):
+    def materialize(cls, obj_id):  # noqa: PR01
         """
         Get results from worker.
 
