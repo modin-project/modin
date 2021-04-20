@@ -29,6 +29,7 @@ import sys
 import inspect
 import shutil
 import logging
+import functools
 from numpydoc.validate import Docstring
 
 logging.basicConfig(
@@ -456,6 +457,9 @@ def monkeypatching():
         return lambda cls_or_func: cls_or_func
 
     ray.remote = monkeypatch
+    modin.utils._inherit_docstrings = functools.wraps(modin.utils._inherit_docstrings)(
+        lambda *args, **kwargs: lambda cls: cls
+    )
 
 
 def validate(
