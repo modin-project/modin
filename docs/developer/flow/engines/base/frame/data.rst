@@ -9,7 +9,13 @@ cases if an operation is striclty private or protected and called inside of the 
 significantly reduced set of operations that fit plenty of pandas operations.
 
 Main task of ``BasePandasFrame`` is storage of partitions, manipulation with labels of axes and
-providing public interface for partition manipulation.
+providing set of methods to perform function from query compiler layer on the internal data.
+
+``BasePandasFrame`` doesn't work with stored array of partitions directly. 
+``BasePandasFrame`` only provides some interface to perform function along internal data. A responsibility for
+the modifying partitions list lies with :doc:`partition_manager`. For example, method
+:meth:`~modin.engines.base.frame.data.BasePandasFrame.broadcast_apply_full_axis` redirects applying
+function to ``BaseFrameManager.broadcast_axis_partitions`` method.
 
 ``BasePandasFrame`` can be created from ``pandas.DataFrame``, ``pyarrow.Table`` 
 (methods :meth:`~modin.engines.base.frame.data.BasePandasFrame.from_pandas`,
@@ -20,12 +26,6 @@ providing public interface for partition manipulation.
 
 Manipulation with labels of axes happens using internal methods for changing labels on the new, 
 adding prefixes/suffixes etc.
-
-As already mentioned, ``BasePandasFrame`` doesn't work with stored array of partitions directly. 
-A responsibility for the modifying partitions list lies with :doc:`partition_manager`. ``BasePandasFrame``
-provides several methods to apply function along partitions. For example, method
-:meth:`~modin.engines.base.frame.data.BasePandasFrame.broadcast_apply_full_axis` redirects applying
-function to ``BaseFrameManager.broadcast_axis_partitions`` method.
 
 
 Public API
