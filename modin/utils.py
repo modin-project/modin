@@ -11,6 +11,8 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
+"""Collection of general utility functions, mostly for internal use."""
+
 import types
 
 import pandas
@@ -39,14 +41,14 @@ def _make_api_url(token):
     -----
     This function is extracted for better testability.
     """
-
     return PANDAS_API_URL_TEMPLATE.format(token)
 
 
 def _replace_doc(
     source_obj, target_obj, overwrite, apilink, parent_cls=None, attr_name=None
 ):
-    """Replaces docstring in `target_obj`, possibly taking from `source_obj` and augmenting.
+    """
+    Replace docstring in `target_obj`, possibly taking from `source_obj` and augmenting.
 
     Can append the link to Pandas API online documentation.
 
@@ -106,10 +108,12 @@ def _replace_doc(
 
 
 def _inherit_docstrings(parent, excluded=[], overwrite_existing=False, apilink=None):
-    """Creates a decorator which overwrites a decorated object __doc__
-    attribute with parent's __doc__ attribute. Also overwrites __doc__ of
+    """
+    Create a decorator which overwrites decorated object docstring(s).
+
+    It takes `parent` __doc__ attribute. Also overwrites __doc__ of
     methods and properties defined in the target if it's a class with the __doc__ of
-    matching methods and properties in parent.
+    matching methods and properties from the `parent`.
 
     Parameters
     ----------
@@ -128,7 +132,7 @@ def _inherit_docstrings(parent, excluded=[], overwrite_existing=False, apilink=N
     Returns
     -------
     callable
-        decorator which replaces the decorated object's documentation with parent's documentation.
+        decorator which replaces the decorated object's documentation with `parent` documentation.
     """
 
     def _documentable_obj(obj):
@@ -167,13 +171,18 @@ def _inherit_docstrings(parent, excluded=[], overwrite_existing=False, apilink=N
 
 
 def to_pandas(modin_obj):
-    """Converts a Modin DataFrame/Series to a pandas DataFrame/Series.
+    """
+    Convert a Modin DataFrame/Series to a pandas DataFrame/Series.
 
-    Args:
-        obj {modin.DataFrame, modin.Series}: The Modin DataFrame/Series to convert.
+    Parameters
+    ----------
+        obj : modin.DataFrame, modin.Series
+            The Modin DataFrame/Series to convert.
 
-    Returns:
-        A new pandas DataFrame or Series.
+    Returns
+    -------
+    pandas.DataFrame or pandas.Series
+        Converted object with type depending on input
     """
     return modin_obj._to_pandas()
 
@@ -189,16 +198,18 @@ def hashable(obj):
 
 def try_cast_to_pandas(obj, squeeze=False):
     """
-    Converts obj and all nested objects from modin to pandas if it is possible,
-    otherwise returns obj
+    Convert `obj` and all nested objects from modin to pandas if it is possible.
+
+    If no convertion possible return `obj`.
 
     Parameters
     ----------
-        obj : object,
+        obj : object
             object to convert from modin to pandas
 
     Returns
     -------
+    object
         Converted object
     """
     if hasattr(obj, "_to_pandas"):
@@ -235,17 +246,22 @@ def try_cast_to_pandas(obj, squeeze=False):
 
 def wrap_into_list(*args, skipna=True):
     """
-    Creates a list of passed values, if some value is a list it appends its values
+    Wrap a sequence of passed values in a flattened list.
+
+    If some value is a list by itself the function appends its values
     to the result one by one instead inserting the whole list object.
 
     Parameters
     ----------
-    skipna: boolean,
+    args : tuple
+        Objects to wrap into a list
+    skipna : boolean
         Whether or not to skip nan or None values.
 
     Returns
     -------
-    List of passed values.
+    list
+        Passed values wrapped in a list
     """
 
     def isnan(o):
@@ -263,6 +279,19 @@ def wrap_into_list(*args, skipna=True):
 
 
 def wrap_udf_function(func):
+    """
+    Create a decorator that makes `func` return pandas objects instead of Modin.
+
+    Parameters
+    ----------
+        func : callable
+            Function to wrap
+
+    Returns
+    -------
+    callable
+    """
+
     def wrapper(*args, **kwargs):
         result = func(*args, **kwargs)
         # if user accidently returns modin DataFrame or Series
@@ -274,4 +303,12 @@ def wrap_udf_function(func):
 
 
 def get_current_backend():
+    """
+    Compose current backend and factory names as a string.
+
+    Returns
+    -------
+    str
+        Returns <Backend>On<Engine>-like string
+    """
     return f"{'Experimental' if IsExperimental.get() else ''}{Backend.get()}On{Engine.get()}"
