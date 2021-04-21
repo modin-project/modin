@@ -78,3 +78,11 @@ Converting Spreadsheets To and From Dataframes
 .. automodule:: modin.spreadsheet.general
     :noindex:
     :members: to_dataframe
+
+
+Further API Documentation
+-------------------------
+
+.. automodule:: modin_spreadsheet.grid
+    :noindex:
+    :members: SpreadsheetWidget
