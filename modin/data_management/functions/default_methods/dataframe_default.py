@@ -16,12 +16,12 @@
 # FIXME: This whole module is duplicating the logic of `default.py` and should be removed.
 
 from .default import DefaultMethod
-from modin.utils import _inherit_func_docstring
+from modin.utils import _inherit_docstrings
 
 import pandas
 
 
-@_inherit_func_docstring(DefaultMethod)
+@_inherit_docstrings(DefaultMethod)
 class DataFrameDefault(DefaultMethod):  # noqa: D101
     @classmethod
     def register(cls, func, obj_type=None, **kwargs):
