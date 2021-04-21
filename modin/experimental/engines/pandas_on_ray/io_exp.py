@@ -168,9 +168,11 @@ class ExperimentalPandasOnRayIO(PandasOnRayIO):
             )
             index_ids.append(partition_id[-1])
         new_index = pandas.RangeIndex(sum(ray.get(index_ids)))
-        return cls.query_compiler_cls(
+        new_query_compiler = cls.query_compiler_cls(
             cls.frame_cls(np.array(partition_ids), new_index, cols_names)
         )
+        new_query_compiler._modin_frame._apply_index_objs(axis=0)
+        return new_query_compiler
 
 
 @ray.remote
