@@ -1335,15 +1335,6 @@ class PandasQueryCompiler(BaseQueryCompiler):
         )
     )
 
-    def repeat(self, repeats):
-        def map_fn(df):
-            return pandas.DataFrame(df.squeeze(axis=1).repeat(repeats))
-
-        if isinstance(repeats, int) or (is_list_like(repeats) and len(repeats) == 1):
-            return MapFunction.register(map_fn, validate_index=True)(self)
-        else:
-            return self.__constructor__(self._modin_frame._apply_full_axis(0, map_fn))
-
     # END Map partitions operations
 
     # String map partitions operations
@@ -1488,9 +1479,6 @@ class PandasQueryCompiler(BaseQueryCompiler):
     dt_days = MapFunction.register(_dt_prop_map("days"))
     dt_microseconds = MapFunction.register(_dt_prop_map("microseconds"))
     dt_nanoseconds = MapFunction.register(_dt_prop_map("nanoseconds"))
-    dt_components = MapFunction.register(
-        _dt_prop_map("components"), validate_columns=True
-    )
     dt_qyear = MapFunction.register(_dt_prop_map("qyear"))
     dt_start_time = MapFunction.register(_dt_prop_map("start_time"))
     dt_end_time = MapFunction.register(_dt_prop_map("end_time"))
