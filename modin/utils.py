@@ -44,6 +44,31 @@ def _make_api_url(token):
     return PANDAS_API_URL_TEMPLATE.format(token)
 
 
+def _get_indent(doc: str) -> int:
+    """
+    Compute indentation in docstring.
+
+    Parameters
+    ----------
+    doc : str
+        The docstring to compute indentation for.
+
+    Returns
+    -------
+    int
+        Minimal indent (excluding empty lines).
+    """
+    indents = []
+    for line in doc.splitlines():
+        if not line.strip():
+            continue
+        for pos, ch in enumerate(line):
+            if ch != " ":
+                break
+        indents.append(pos)
+    return min(indents) if indents else 0
+
+
 def _replace_doc(
     source_obj, target_obj, overwrite, apilink, parent_cls=None, attr_name=None
 ):
@@ -92,7 +117,7 @@ def _replace_doc(
     if (
         source_doc.strip()
         and apilink
-        and "Pandas API documentation <" not in target_doc
+        and "`Pandas API documentation for " not in target_doc
         and (not (attr_name or "").startswith("_"))
     ):
         if attr_name:
@@ -100,7 +125,7 @@ def _replace_doc(
         else:
             token = apilink
         url = _make_api_url(token)
-        doc += f"\n\nSee `Pandas API documentation <{url}>`_ for more."
+        doc += f"\n\n{' ' * _get_indent(doc)}See `Pandas API documentation for {token} <{url}>`_ for more."
 
     if parent_cls and isinstance(target_obj, property):
         setattr(
