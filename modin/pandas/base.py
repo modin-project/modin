@@ -90,7 +90,7 @@ _DEFAULT_BEHAVIOUR = {
 } | _ATTRS_NO_LOOKUP
 
 
-@_inherit_docstrings(pandas.DataFrame)
+@_inherit_docstrings(pandas.DataFrame, apilink="pandas.DataFrame")
 class BasePandasDataset(object):
     """
     Implement most of the common code that exists in DataFrame/Series.
