@@ -12,7 +12,7 @@ Function module provides templates for this type of function:
 * Binary functions — Function that takes two operands (left is always `QueryCompiler`) and evaluates function along them. Engine efficiently broadcasts partitions of the right operand to the left if necessary. 
 * Fold functions — Function that requires knowledge of the whole axis. Be aware that providing this knowledge may be expensive because the execution engine has to concatenate partitions along the specified axis.
 * GroupBy functions — Evaluates GroupBy aggregation for that type of functions that can be executed via MapReduce approach. To be able to form groups engine efficiently broadcasts `by` partitions to each partition of the source frame.
-* Map functions — Apply function to each partition in parallel.
+* Map functions — Apply function to each partition in parallel. Note, that the map function should not change the shape of the partitions.
 * MapReduce functions — Function that reduces specified axis into a scalar. First applies map function to each partition in parallel, then concatenates resulted partitions along the specified axis and applies reduction function. Note that the execution engine expects that the reduction function returns a scalar.
 * Reduction functions — Function that reduces specified axis into a scalar, but requires knowledge about the whole axis. Be aware that providing this knowledge may be expensive because the execution engine has to concatenate partitions along the specified axis. Also, note that the execution engine expects that the reduction function returns a scalar.
 * Default-to-pandas functions — Do fallback to pandas for passed function.

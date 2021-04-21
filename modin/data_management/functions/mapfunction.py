@@ -28,6 +28,8 @@ class MapFunction(Function):
         ----------
         function : callable
             Function that will be applied to the each partition.
+            Function takes `pandas.DataFrame` and returns `pandas.DataFrame`
+            of the same shape.
         *call_args : args
             Args that will be passed to the returned function.
         **call_kwds : kwargs
