@@ -340,28 +340,3 @@ jobs:
           conda list
       - shell: bash -l {0}
         run: python -m pytest modin/spreadsheet/test/test_general.py
-
-  test-docs:
-    runs-on: ubuntu-latest
-    name: test docs
-    steps:
-      - uses: actions/checkout@v2
-        with:
-          fetch-depth: 1
-      - uses: conda-incubator/setup-miniconda@v2
-        with:
-          activate-environment: modin
-          environment-file: environment-dev.yml
-          python-version: 3.7
-          channel-priority: strict
-          use-only-tar-bz2: true # IMPORTANT: This needs to be set for caching to work properly!
-      - name: Conda environment
-        # `shell: bash -l {0}` - special way to activate modin environment
-        shell: bash -l {0}
-        run: |
-          conda info
-          conda list
-      - run: sudo apt update && sudo apt install -y libhdf5-dev
-      - name: Docstring URL validity check
-        shell: bash -l {0}
-        run: python -m pytest modin/test/test_docstring_urls.py
