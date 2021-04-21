@@ -100,7 +100,7 @@ def _replace_doc(
     if parent_cls and isinstance(target_obj, property):
         setattr(
             parent_cls,
-            target_obj.fget.__name__,
+            attr_name,
             property(target_obj.fget, target_obj.fset, target_obj.fdel, doc),
         )
     else:
@@ -144,7 +144,7 @@ def _inherit_docstrings(parent, excluded=[], overwrite_existing=False, apilink=N
             _replace_doc(parent, cls_or_func, overwrite_existing, apilink)
 
         if not isinstance(cls_or_func, types.FunctionType):
-            for base in cls_or_func.__bases__:
+            for base in cls_or_func.__mro__:
                 if base is object:
                     continue
                 for attr, obj in base.__dict__.items():
