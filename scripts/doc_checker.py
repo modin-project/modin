@@ -285,7 +285,7 @@ def get_noqa_checks(doc: Docstring) -> list:
         if not source:
             return []
 
-    noqa_str = None
+    noqa_str = ""
     if not inspect.ismodule(doc.obj):
         # find last line of obj definition
         for line in source.split("\n"):
