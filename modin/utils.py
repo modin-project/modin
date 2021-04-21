@@ -104,7 +104,8 @@ def _replace_doc(
 
     source_doc = source_obj.__doc__ or ""
     target_doc = target_obj.__doc__ or ""
-    doc = source_doc if overwrite or not target_doc else target_doc
+    overwrite = overwrite or not target_doc
+    doc = source_doc if overwrite else target_doc
 
     if parent_cls and not attr_name:
         if isinstance(target_obj, property):
@@ -125,15 +126,19 @@ def _replace_doc(
         else:
             token = apilink
         url = _make_api_url(token)
-        doc += f"\n\n{' ' * _get_indent(doc)}See `Pandas API documentation for {token} <{url}>`_ for more."
+        doc += f"\n{' ' * _get_indent(doc)}See `pandas API documentation for {token} <{url}>`_ for more.\n"
 
     if parent_cls and isinstance(target_obj, property):
+        if overwrite:
+            target_obj.fget.__doc_inherited__ = True
         setattr(
             parent_cls,
             attr_name,
             property(target_obj.fget, target_obj.fset, target_obj.fdel, doc),
         )
     else:
+        if overwrite:
+            target_obj.__doc_inherited__ = True
         target_obj.__doc__ = doc
 
 

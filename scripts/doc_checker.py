@@ -324,6 +324,12 @@ def validate_object(import_path: str) -> list:
 
     errors = []
     doc = Docstring(import_path)
+    if getattr(doc.obj, "__doc_inherited__", False) or (
+        isinstance(doc.obj, property)
+        and getattr(doc.obj.fget, "__doc_inherited__", False)
+    ):
+        # do not check inherited docstrings
+        return errors
     results = validate(import_path)
     results = validate_modin_error(doc, results)
     noqa_checks = get_noqa_checks(doc)
@@ -448,7 +454,6 @@ def pydocstyle_validate(path: pathlib.Path, add_ignore: List[str]) -> int:
 def monkeypatching():
     """Monkeypatch decorators which change __doc__ attribute."""
     import ray
-    import modin.utils
 
     def monkeypatch(*args, **kwargs):
         if len(args) == 1 and len(kwargs) == 0 and callable(args[0]):
@@ -457,9 +462,6 @@ def monkeypatching():
         return lambda cls_or_func: cls_or_func
 
     ray.remote = monkeypatch
-    modin.utils._inherit_docstrings = functools.wraps(modin.utils._inherit_docstrings)(
-        lambda *args, **kwargs: lambda cls: cls
-    )
 
 
 def validate(
