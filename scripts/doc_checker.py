@@ -29,7 +29,6 @@ import sys
 import inspect
 import shutil
 import logging
-import functools
 from numpydoc.validate import Docstring
 
 logging.basicConfig(
@@ -50,6 +49,7 @@ NUMPYDOC_BASE_ERROR_CODES = {
 MODIN_ERROR_CODES = {
     "MD01": "'{parameter}' description should be '[type], default: [value]', found: '{found}'",
     "MD02": "Spelling error in line: {line}, found: '{word}', reference: '{reference}'",
+    "MD03": "Indents for parameters: {{{parameters}}} should match the indentation for the Parameters section",
 }
 
 
@@ -183,6 +183,64 @@ def check_spelling_words(doc: Docstring) -> list:
     return errors
 
 
+def check_parameters_indention(doc: Docstring) -> list:
+    """
+    Check parameters indention since numpydoc reports weird results.
+
+    Parameters
+    ----------
+    doc : numpydoc.validate.Docstring
+        Docstring handler.
+
+    Returns
+    -------
+    list
+        List of tuples with Modin error code and its description.
+    """
+    if "Parameters" not in doc.section_titles:
+        return []
+
+    section_indent = None
+    parameters_section_startline = None
+
+    lines = doc.raw_doc.splitlines()
+    # Find the beginning of the "Parameters" section and its indent;
+    # The case when the section itself has the wrong indentation is handled by
+    # pydocstyle.
+    for idx, line in enumerate(lines):
+        if "Parameters" in line:
+            parameters_section_startline = idx
+            section_indent = " " * (len(line) - len(line.lstrip(" ")))
+            break
+
+    # For the lines where the parameters are described, find the indents.
+    params_name = "|".join(doc.signature_parameters)
+    pattern = r"(^ *)({params_name})(?: *:)".format(params_name=params_name)
+    params_indents = []
+    for line in lines[parameters_section_startline + 1 :]:
+        if not line:
+            break
+        params_indents.append(re.match(pattern, line))
+
+    # For parameters with an error in indentation, create Modin errors.
+    errors = []
+    params_with_erors = [
+        param_indent.group(2)
+        for param_indent in params_indents
+        if param_indent is not None and section_indent != param_indent.group(1)
+    ]
+    if any(params_with_erors):
+        errors.append(
+            (
+                "MD03",
+                MODIN_ERROR_CODES["MD03"].format(
+                    parameters=",".join(params_with_erors),
+                ),
+            )
+        )
+    return errors
+
+
 def validate_modin_error(doc: Docstring, results: dict) -> list:
     """
     Validate custom Modin errors.
@@ -201,6 +259,8 @@ def validate_modin_error(doc: Docstring, results: dict) -> list:
     """
     errors = check_optional_args(doc)
     errors += check_spelling_words(doc)
+    if any((error_code == "PR01" for error_code, _ in results["errors"])):
+        errors += check_parameters_indention(doc)
     results["errors"].extend(errors)
     return results
 
