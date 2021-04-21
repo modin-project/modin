@@ -26,6 +26,7 @@ from modin.data_management.functions.default_methods import (
 from modin.error_message import ErrorMessage
 
 from pandas.core.dtypes.common import is_scalar
+from pandas.util._decorators import doc, Appender, Substitution
 import pandas.core.resample
 import pandas
 import numpy as np
@@ -33,6 +34,8 @@ from typing import List, Hashable
 
 
 def _get_axis(axis):
+    """Build index labels getter of the specified axis."""
+
     def axis_getter(self):
         ErrorMessage.default_to_pandas(f"DataFrame.get_axis({axis})")
         return self.to_pandas().axes[axis]
@@ -41,6 +44,8 @@ def _get_axis(axis):
 
 
 def _set_axis(axis):
+    """Build index labels setter of the specified axis."""
+
     def axis_setter(self, labels):
         new_qc = DataFrameDefault.register(pandas.DataFrame.set_axis)(
             self, axis=axis, labels=labels
@@ -48,6 +53,32 @@ def _set_axis(axis):
         self.__dict__.update(new_qc.__dict__)
 
     return axis_setter
+
+
+_add_one_column_warning = Appender(
+    """.. warning::
+    This method is supported only by one-column query compilers."""
+)
+
+
+def add_refer_to(method):
+    add_note = Appender(
+        # TODO: add direct hyper-link to the corresponding documentation when
+        # it will be generated.
+        """
+        Notes
+        -----
+        Please refer to ``modin.pandas.%(method)s`` for more information
+        about parameters and output format.
+        """,
+        join="",
+    )
+    sub_method = Substitution(method=method)
+
+    def decorator(func):
+        return sub_method(add_note(func))
+
+    return decorator
 
 
 class BaseQueryCompiler(abc.ABC):
@@ -60,21 +91,21 @@ class BaseQueryCompiler(abc.ABC):
     @abc.abstractmethod
     def default_to_pandas(self, pandas_op, *args, **kwargs):
         """
-        Default to pandas behavior.
+        Do fallback to pandas for the passed function.
 
         Parameters
         ----------
-        pandas_op : callable
-            The operation to apply, must be compatible pandas DataFrame call
-        args
-            The arguments for the `pandas_op`
-        kwargs
-            The keyword arguments for the `pandas_op`
+        pandas_op : callable(pandas.DataFrame, *args, **kwargs) -> [pandas.DataFrame, pandas.Series, numpy.ndarray]
+            Function to apply to the casted to pandas frame.
+        *args : args
+            Positional arguments to pass to `pandas_op`.
+        **kwargs
+            Key-value arguments to pass to `pandas_op`.
 
         Returns
         -------
         BaseQueryCompiler
-            The result of the `pandas_op`, converted back to BaseQueryCompiler
+            The result of the `pandas_op`, converted back to `BaseQueryCompiler`.
         """
         pass
 
@@ -87,6 +118,21 @@ class BaseQueryCompiler(abc.ABC):
 
     # Metadata modification abstract methods
     def add_prefix(self, prefix, axis=1):
+        """
+        Add string prefix to the index labels along specified axis.
+
+        Parameters
+        ----------
+        prefix : str
+            The string to add before each label.
+        axis : {0, 1}, default: 1
+            Axis to add prefix along. 0 is for index and 1 is for columns.
+
+        Returns
+        -------
+        BaseQueryCompiler
+            New query compiler with updated labels.
+        """
         if axis:
             return DataFrameDefault.register(pandas.DataFrame.add_prefix)(
                 self, prefix=prefix
@@ -95,6 +141,21 @@ class BaseQueryCompiler(abc.ABC):
             return SeriesDefault.register(pandas.Series.add_prefix)(self, prefix=prefix)
 
     def add_suffix(self, suffix, axis=1):
+        """
+        Add string suffix to the index labels along specified axis.
+
+        Parameters
+        ----------
+        prefix : str
+            The string to add after each label.
+        axis : {0, 1}, default: 1
+            Axis to add suffix along. 0 is for index and 1 is for columns.
+
+        Returns
+        -------
+        BaseQueryCompiler
+            New query compiler with updated labels.
+        """
         if axis:
             return DataFrameDefault.register(pandas.DataFrame.add_suffix)(
                 self, suffix=suffix
@@ -105,10 +166,22 @@ class BaseQueryCompiler(abc.ABC):
     # END Metadata modification abstract methods
 
     # Abstract copy
-    # For copy, we don't want a situation where we modify the metadata of the
-    # copies if we end up modifying something here. We copy all of the metadata
-    # to prevent that.
+
     def copy(self):
+        """
+        Make a copy of this object.
+
+        Returns
+        -------
+        BaseQueryCompiler
+            Copy of self.
+
+        Note
+        ----
+        For copy, we don't want a situation where we modify the metadata of the
+        copies if we end up modifying something here. We copy all of the metadata
+        to prevent that.
+        """
         return DataFrameDefault.register(pandas.DataFrame.copy)(self)
 
     # END Abstract copy
@@ -116,13 +189,31 @@ class BaseQueryCompiler(abc.ABC):
     # Abstract join and append helper functions
 
     def concat(self, axis, other, **kwargs):
-        """Concatenates two objects together.
+        """
+        Concatenate `self` with passed query compilers along specified axis.
 
-        Args:
-            axis: The axis index object to join (0 for columns, 1 for index).
-            other: The other_index to concat with.
+        Parameters
+        ----------
+        axis : {0, 1}
+            Axis to concatenate along. 0 is for index and 1 is for columns.
+        other : BaseQueryCompiler or list of such.
+            Objects to concatenate with `self`.
+        join : {'outer', 'inner', 'right', 'left'}, default: 'outer'
+            Type of join that will be used if indeces on the other axis are different.
+            (If specified, have to be passed via `kwargs`).
+        ignore_index : bool, default: False
+            If `True`, do not use the index values along the concatenation axis.
+            (If specified, have to be passed via `kwargs`).
+            The resulting axis will be labeled 0, …, n - 1.
+        sort : bool, default: False
+            Whether or not to sort non-concatenation axis.
+            (If specified, have to be passed via `kwargs`).
+        **kwargs : kwargs
+            Additional parameters in the glory of compatibility. Does not affect the result.
 
-        Returns:
+        Returns
+        -------
+        BaseQueryCompiler
             Concatenated objects.
         """
         concat_join = ["inner", "outer"]
@@ -155,7 +246,7 @@ class BaseQueryCompiler(abc.ABC):
     # Data Management Methods
     @abc.abstractmethod
     def free(self):
-        """In the future, this will hopefully trigger a cleanup of this object."""
+        """Trigger a cleanup of this object."""
         # TODO create a way to clean up this object.
         pass
 
@@ -169,29 +260,33 @@ class BaseQueryCompiler(abc.ABC):
     # To/From Pandas
     @abc.abstractmethod
     def to_pandas(self):
-        """Converts Modin DataFrame to Pandas DataFrame.
+        """
+        Convert Modin DataFrame to pandas DataFrame.
 
-        Returns:
-            Pandas DataFrame of the QueryCompiler.
+        Returns
+        -------
+        pandas.DataFrame
+            The QueryCompiler converted to pandas.
         """
         pass
 
     @classmethod
     @abc.abstractmethod
     def from_pandas(cls, df, data_cls):
-        """Improve simple Pandas DataFrame to an advanced and superior Modin DataFrame.
+        """
+        Build `QueryCompiler` from pandas DataFrame.
 
         Parameters
         ----------
-        df: pandas.DataFrame
+        df : pandas.DataFrame
             The pandas DataFrame to convert from.
-        data_cls :
-            Modin DataFrame object to convert to.
+        data_cls : cls
+            `BasePandasFrame` object to convert to.
 
         Returns
         -------
         BaseQueryCompiler
-            QueryCompiler containing data from the Pandas DataFrame.
+            `QueryCompiler` containing data from the pandas DataFrame.
         """
         pass
 
@@ -201,14 +296,15 @@ class BaseQueryCompiler(abc.ABC):
     @classmethod
     @abc.abstractmethod
     def from_arrow(cls, at, data_cls):
-        """Improve simple Arrow Table to an advanced and superior Modin DataFrame.
+        """
+        Build `QueryCompiler` from Arrow Table.
 
         Parameters
         ----------
         at : Arrow Table
             The Arrow Table to convert from.
-        data_cls :
-            Modin DataFrame object to convert to.
+        data_cls : cls
+            `BasePandasFrame` object to convert to.
 
         Returns
         -------
@@ -223,11 +319,12 @@ class BaseQueryCompiler(abc.ABC):
 
     def to_numpy(self, **kwargs):
         """
-        Converts Modin DataFrame to NumPy array.
+        Convert Modin DataFrame to NumPy array.
 
         Returns
         -------
-            NumPy array of the QueryCompiler.
+        np.ndarray
+            The QueryCompiler converted to Numpy array.
         """
         return DataFrameDefault.register(pandas.DataFrame.to_numpy)(self, **kwargs)
 
@@ -239,194 +336,476 @@ class BaseQueryCompiler(abc.ABC):
     # such that columns/rows that don't have an index on the other DataFrame
     # result in NaN values.
 
+    __doc_arithmetic_operator_desc = """
+    Perform element-wise {operation} (self {sign} other).
+    """
+
+    __doc_arithmetic_roperator_desc = """
+    Perform element-wise {operation} (other {sign} self).
+    """
+
+    __doc_binary_operator_signature_template = """
+    If axes are note equal, first perform frames allignment.
+
+    Parameters
+    ----------
+    {params}
+
+    Returns
+    -------
+    BaseQueryCompiler
+        Result of binary operation.
+    """
+
+    __doc_binary_operator_params = """other : BaseQueryCompiler, scalar or array-like
+        Other operand of the binary operation.
+    broadcast : bool, default: False
+        If `other` is a one-column query compiler, indicates whether it is a Series or not.
+        Frames and Series have to be processed differently, however we can't distinguish them
+        at the query compiler level, so this parameter is a hint that passed from a high level API.
+    """
+
+    __doc_comparison_operator_params = "".join(
+        [
+            __doc_binary_operator_params,
+            """level : int or label
+        In case of MultiIndex match index values on the passed level.
+    axis : int
+        Axis to match indice along for 1D `other` (list or QueryCompiler that represents Series).
+        """,
+        ]
+    )
+
+    __doc_arithmetic_operator_params = "".join(
+        [
+            __doc_comparison_operator_params,
+            """fill_value : float or None
+        Value to fill missing elements in the result of frame allignment.""",
+        ]
+    )
+
+    __doc_binary_operator = "".join(
+        [
+            __doc_arithmetic_operator_desc,
+            __doc_binary_operator_signature_template.format(
+                params=__doc_binary_operator_params
+            ),
+        ]
+    )
+
+    __doc_binary_roperator = "".join(
+        [
+            __doc_arithmetic_roperator_desc,
+            __doc_binary_operator_signature_template.format(
+                params=__doc_binary_operator_params
+            ),
+        ]
+    )
+
+    __doc_arithmetic_operator = "".join(
+        [
+            __doc_arithmetic_operator_desc,
+            __doc_binary_operator_signature_template.format(
+                params=__doc_arithmetic_operator_params
+            ),
+        ]
+    )
+    __doc_arithmetic_roperator = "".join(
+        [
+            __doc_arithmetic_roperator_desc,
+            __doc_binary_operator_signature_template.format(
+                params=__doc_arithmetic_operator_params
+            ),
+        ]
+    )
+    __doc_comparison_operator = "".join(
+        [
+            __doc_arithmetic_operator_desc,
+            __doc_binary_operator_signature_template.format(
+                params=__doc_comparison_operator_params
+            ),
+        ]
+    )
+
+    @doc(__doc_arithmetic_operator, operation="addition", sign="+")
     def add(self, other, **kwargs):
         return BinaryDefault.register(pandas.DataFrame.add)(self, other=other, **kwargs)
 
     def combine(self, other, **kwargs):
+        """
+        Perform column-wise combine with another QueryCompiler with passed `func`.
+
+        If axes are note equal, first perform frames allignment.
+
+        Parameters
+        ----------
+        other : BaseQueryCompiler
+            Left operand of the binary operation.
+        func : callable(pandas.Series, pandas.Series) -> pandas.Series
+            Function that takes two `pandas.Series` with alligned axes
+            and return one `pandas.Series` - the result combination.
+        fill_value : float or None
+            Value to fill missing values with after frame alignment occurred.
+        overwrite : bool
+            If True, columns in `self` that do not exist in `other`
+            will be overwritten with NaNs.
+
+        Returns
+        -------
+        BaseQueryCompiler
+            Result of combine.
+        """
         return BinaryDefault.register(pandas.DataFrame.combine)(
             self, other=other, **kwargs
         )
 
     def combine_first(self, other, **kwargs):
+        """
+        Fill null elements of `self` with value in the same location in `other`.
+
+        If axes are note equal, first perform frames allignment.
+
+        Parameters
+        ----------
+        other : BaseQueryCompiler
+            Provided frame to use to fill null values.
+
+        Returns
+        -------
+        BaseQueryCompiler
+        """
         return BinaryDefault.register(pandas.DataFrame.combine_first)(
             self, other=other, **kwargs
         )
 
+    @doc(__doc_comparison_operator, operation="equality comparison", sign="==")
     def eq(self, other, **kwargs):
         return BinaryDefault.register(pandas.DataFrame.eq)(self, other=other, **kwargs)
 
+    @doc(__doc_arithmetic_operator, operation="integer division", sign="//")
     def floordiv(self, other, **kwargs):
         return BinaryDefault.register(pandas.DataFrame.floordiv)(
             self, other=other, **kwargs
         )
 
+    @doc(
+        __doc_comparison_operator,
+        operation="greater than or equal comparison",
+        sign=">=",
+    )
     def ge(self, other, **kwargs):
         return BinaryDefault.register(pandas.DataFrame.ge)(self, other=other, **kwargs)
 
+    @doc(__doc_comparison_operator, operation="greater than comparison", sign=">")
     def gt(self, other, **kwargs):
         return BinaryDefault.register(pandas.DataFrame.gt)(self, other=other, **kwargs)
 
+    @doc(
+        __doc_comparison_operator, operation="less than or equal comparison", sign="<="
+    )
     def le(self, other, **kwargs):
         return BinaryDefault.register(pandas.DataFrame.le)(self, other=other, **kwargs)
 
+    @doc(__doc_comparison_operator, operation="less than comparison", sign="<")
     def lt(self, other, **kwargs):
         return BinaryDefault.register(pandas.DataFrame.lt)(self, other=other, **kwargs)
 
+    @doc(__doc_arithmetic_operator, operation="modulo", sign="%")
     def mod(self, other, **kwargs):
         return BinaryDefault.register(pandas.DataFrame.mod)(self, other=other, **kwargs)
 
+    @doc(__doc_arithmetic_operator, operation="multiplication", sign="*")
     def mul(self, other, **kwargs):
         return BinaryDefault.register(pandas.DataFrame.mul)(self, other=other, **kwargs)
 
+    @add_refer_to("DataFrame.corr")
     def corr(self, **kwargs):
+        """
+        Compute pairwise correlation of columns, excluding NA/null values.
+
+        Parameters
+        ----------
+        method : {'pearson', 'kendall', 'spearman'} or callable(pandas.Series, pandas.Series) -> pandas.Series
+            Method of correlation.
+        min_periods : int
+            Minimum number of observations required per pair of columns
+            to have a valid result. If fewer than `min_periods` non-NA values
+            are present the result will be NA.
+
+        Returns
+        -------
+        BaseQueryCompiler
+            Correlation matrix.
+        """
         return DataFrameDefault.register(pandas.DataFrame.corr)(self, **kwargs)
 
+    @add_refer_to("DataFrame.cov")
     def cov(self, **kwargs):
+        """
+        Compute pairwise covariance of columns, excluding NA/null values.
+
+        Parameters
+        ----------
+        min_periods : int
+
+        Returns
+        -------
+        BaseQueryCompiler
+            Covariance matrix.
+        """
         return DataFrameDefault.register(pandas.DataFrame.cov)(self, **kwargs)
 
     def dot(self, other, **kwargs):
+        """
+        Compute the matrix multiplication of self and other.
+
+        Parameters
+        ----------
+        other : BaseQueryCompiler or NumPy array
+            The other query compiler or NumPy array to matrix multiply with self.
+        squeeze_self : boolean
+            The flag to squeeze self.
+        squeeze_other : boolean
+            The flag to squeeze other (this flag is applied if `other` is query compiler).
+
+        Returns
+        -------
+        BaseQueryCompiler
+            A new query compiler that contains result of the matrix multiply.
+        """
         if kwargs.get("squeeze_self", False):
             applyier = pandas.Series.dot
         else:
             applyier = pandas.DataFrame.dot
         return BinaryDefault.register(applyier)(self, other=other, **kwargs)
 
+    @doc(__doc_comparison_operator, operation="not equal comparison", sign="!=")
     def ne(self, other, **kwargs):
         return BinaryDefault.register(pandas.DataFrame.ne)(self, other=other, **kwargs)
 
+    @doc(__doc_arithmetic_operator, operation="exponential power", sign="**")
     def pow(self, other, **kwargs):
         return BinaryDefault.register(pandas.DataFrame.pow)(self, other=other, **kwargs)
 
+    @doc(__doc_arithmetic_roperator, operation="integer division", sign="//")
     def rfloordiv(self, other, **kwargs):
         return BinaryDefault.register(pandas.DataFrame.rfloordiv)(
             self, other=other, **kwargs
         )
 
+    @doc(__doc_arithmetic_roperator, operation="modulo", sign="%")
     def rmod(self, other, **kwargs):
         return BinaryDefault.register(pandas.DataFrame.rmod)(
             self, other=other, **kwargs
         )
 
+    @doc(__doc_arithmetic_roperator, operation="exponential power", sign="**")
     def rpow(self, other, **kwargs):
         return BinaryDefault.register(pandas.DataFrame.rpow)(
             self, other=other, **kwargs
         )
 
+    @doc(__doc_arithmetic_roperator, operation="substraction", sign="-")
     def rsub(self, other, **kwargs):
         return BinaryDefault.register(pandas.DataFrame.rsub)(
             self, other=other, **kwargs
         )
 
+    @doc(__doc_arithmetic_roperator, operation="division", sign="/")
     def rtruediv(self, other, **kwargs):
         return BinaryDefault.register(pandas.DataFrame.rtruediv)(
             self, other=other, **kwargs
         )
 
+    @doc(__doc_arithmetic_operator, operation="substraction", sign="-")
     def sub(self, other, **kwargs):
         return BinaryDefault.register(pandas.DataFrame.sub)(self, other=other, **kwargs)
 
+    @doc(__doc_arithmetic_operator, operation="division", sign="/")
     def truediv(self, other, **kwargs):
         return BinaryDefault.register(pandas.DataFrame.truediv)(
             self, other=other, **kwargs
         )
 
+    @doc(__doc_binary_operator, operation="and", sign="&")
     def __and__(self, other, **kwargs):
         return BinaryDefault.register(pandas.DataFrame.__and__)(
             self, other=other, **kwargs
         )
 
+    @doc(__doc_binary_operator, operation="or", sign="|")
     def __or__(self, other, **kwargs):
         return BinaryDefault.register(pandas.DataFrame.__or__)(
             self, other=other, **kwargs
         )
 
+    @doc(__doc_binary_roperator, operation="and", sign="&")
     def __rand__(self, other, **kwargs):
         return BinaryDefault.register(pandas.DataFrame.__rand__)(
             self, other=other, **kwargs
         )
 
+    @doc(__doc_binary_roperator, operation="or", sign="|")
     def __ror__(self, other, **kwargs):
         return BinaryDefault.register(pandas.DataFrame.__ror__)(
             self, other=other, **kwargs
         )
 
+    @doc(__doc_binary_operator, operation="xor", sign="^")
     def __rxor__(self, other, **kwargs):
         return BinaryDefault.register(pandas.DataFrame.__rxor__)(
             self, other=other, **kwargs
         )
 
+    @doc(__doc_binary_operator, operation="xor", sign="^")
     def __xor__(self, other, **kwargs):
         return BinaryDefault.register(pandas.DataFrame.__xor__)(
             self, other=other, **kwargs
         )
 
+    # FIXME: query compiler shoudln't care about differences between Frame and Series.
+    # We should combine `df_update` and `series_update` into one method.
+    @add_refer_to("DataFrame.update")
     def df_update(self, other, **kwargs):
+        """
+        Update values of self using non-NA values of other at the corresponding positions.
+
+        If axes are not equal, first perform frames allignment.
+
+        Parameters
+        ----------
+        other : BaseQueryCompiler
+            Frame to grab replacement values from.
+        join : {"left"}
+            Specify type of join to allign frames if axes are not equal.
+        overwrite : bool
+            Whether to overwrite every corresponding value of self, or only if it's NAN.
+        filter_func : callable(pandas.Series, pandas.Series) -> numpy.ndarray<bool>
+            Function that takes column of the self and return bool mask for values, that
+            should be overwriten in the self frame.
+        errors : {"raise", "ignore"}
+            If "raise", will raise a `ValueError` if self and other both contain
+            non-NA data in the same place.
+
+        Returns
+        -------
+        BaseQueryCompiler
+            QueryCompiler with updated values.
+        """
         return BinaryDefault.register(pandas.DataFrame.update, inplace=True)(
             self, other=other, **kwargs
         )
 
     def series_update(self, other, **kwargs):
+        """
+        Update values of self using values of other at the corresponding indices.
+
+        Parameters
+        ----------
+        other : BaseQueryCompiler
+            One-column query compiler with updated values.
+        """
         return BinaryDefault.register(pandas.Series.update, inplace=True)(
             self, other=other, squeeze_self=True, squeeze_other=True, **kwargs
         )
 
+    @add_refer_to("DataFrame.clip")
     def clip(self, lower, upper, **kwargs):
+        """
+        Trim values at input threshold.
+
+        Parameters
+        ----------
+        lower : float or list-like
+        upper : float or list-like
+        axis : int
+        inplace : bool
+            Serves the compatibility purpose, have no effect on the result.
+
+        Returns
+        -------
+        BaseQueryCompiler
+            QueryCompiler with values limited by the specified thresholds.
+        """
         return DataFrameDefault.register(pandas.DataFrame.clip)(
             self, lower=lower, upper=upper, **kwargs
         )
 
     def where(self, cond, other, **kwargs):
-        """Gets values from this manager where cond is true else from other.
+        """
+        Update values of self using values from `other` at positions where `cond` is True.
 
-        Args:
-            cond: Condition on which to evaluate values.
+        Parameters
+        ----------
+        cond : BaseQueryCompiler
+            Boolean mask. True - keep the self value, False - replace by `other` value.
+        other : BaseQueryCompiler or pandas.Series
+            Object to grab replacement values from.
+        axis : int
+            Axis to align frames along if axes of self, `cond` and `other` are not equal.
+        level : int or label, optional
+            Level of MultiIndex to align frames along if axes of self, `cond`
+            and `other` are not equal. Currently `level` parameter is not implemented,
+            so only `None` value is acceptable.
 
-        Returns:
-            New QueryCompiler with updated data and index.
+        Returns
+        -------
+        BaseQueryCompiler
+            QueryCompiler with updated data.
         """
         return DataFrameDefault.register(pandas.DataFrame.where)(
             self, cond=cond, other=other, **kwargs
         )
 
+    @add_refer_to("DataFrame.merge")
     def merge(self, right, **kwargs):
         """
-        Merge DataFrame or named Series objects with a database-style join.
+        Merge `QueryCompiler` objects with a database-style join.
 
         Parameters
         ----------
         right : BaseQueryCompiler
-            The query compiler of the right DataFrame to merge with.
+            `QueryCompiler` of the right frame to merge with.
+        how : {"left", "right", "outer", "inner", "cross"}
+        on : label or list of such
+        left_on : label or list of such
+        right_on : label or list of such
+        left_index : bool
+        right_index : bool
+        sort : bool
+        suffixes : list-like
+        copy : bool
+        indicator : bool or str
+        validate : str
 
         Returns
         -------
         BaseQueryCompiler
-            A new query compiler that contains result of the merge.
-
-        Notes
-        -----
-        See pd.merge or pd.DataFrame.merge for more info on kwargs.
+            `QueryCompiler` that contains result of the merge.
         """
         return DataFrameDefault.register(pandas.DataFrame.merge)(
             self, right=right, **kwargs
         )
 
+    @add_refer_to("DataFrame.join")
     def join(self, right, **kwargs):
         """
-        Join columns of another DataFrame.
+        Join columns of another `QueryCompiler`.
 
         Parameters
         ----------
         right : BaseQueryCompiler
-            The query compiler of the right DataFrame to join with.
+            `QueryCompiler` of the right frame to join with.
+        on : label or list of such
+        how : {"left", "right", "outer", "inner"}
+        lsuffix : str
+        rsuffix : str
+        sort : bool
 
         Returns
         -------
         BaseQueryCompiler
-            A new query compiler that contains result of the join.
-
-        Notes
-        -----
-        See pd.DataFrame.join for more info on kwargs.
+            `QueryCompiler` that contains result of the join.
         """
         return DataFrameDefault.register(pandas.DataFrame.join)(self, right, **kwargs)
 
@@ -434,10 +813,17 @@ class BaseQueryCompiler(abc.ABC):
 
     # Abstract Transpose
     def transpose(self, *args, **kwargs):
-        """Transposes this QueryCompiler.
+        """
+        Transpose this `QueryCompiler`.
 
-        Returns:
-            Transposed new QueryCompiler.
+        Parameters
+        ----------
+        copy : bool
+            Whether to copy the data after transposing.
+
+        Returns
+        -------
+            Transposed new `QueryCompiler`.
         """
         return DataFrameDefault.register(pandas.DataFrame.transpose)(
             self, *args, **kwargs
@@ -445,10 +831,10 @@ class BaseQueryCompiler(abc.ABC):
 
     def columnarize(self):
         """
-        Transposes this QueryCompiler if it has a single row but multiple columns.
+        Transpose this `QueryCompiler` if it has a single row but multiple columns.
 
-        This method should be called for QueryCompilers representing a Series object,
-        i.e. self.is_series_like() should be True.
+        This method should be called for `QueryCompilers` representing a Series object,
+        i.e. ``self.is_series_like()`` should be True.
 
         Returns
         -------
@@ -462,53 +848,84 @@ class BaseQueryCompiler(abc.ABC):
         return self
 
     def is_series_like(self):
-        """Return True if QueryCompiler has a single column or row"""
+        """Return True if ``QueryCompiler`` has a single column or row."""
         return len(self.columns) == 1 or len(self.index) == 1
 
     # END Abstract Transpose
 
     # Abstract reindex/reset_index (may shuffle data)
+    @add_refer_to("DataFrame.reindex")
     def reindex(self, axis, labels, **kwargs):
-        """Fits a new index for this Manger.
+        """
+        Allign `QueryCompiler` data with a new index-labels along specified axis.
 
-        Args:
-            axis: The axis index object to target the reindex on.
-            labels: New labels to conform 'axis' on to.
+        Parameters
+        ----------
+        axis : int
+            Axis to align labels along. 0 is for index, 1 is for columns.
+        labels : list-like
+            Index-labels to align with.
+        method : {None, "backfill"/"bfill", "pad"/"ffill", "nearest"}
+            Method to use for filling holes in reindexed frame.
+            Please refer to ``modin.pandas.DataFrame.reindex`` for more information.
+        fill_value : scalar
+            Value to use for missing values in the resulted frame.
+        limit : int
+        tolerance : int
 
-        Returns:
-            New QueryCompiler with updated data and new index.
+        Returns
+        -------
+        BaseQueryCompiler
+            `QueryCompiler` with aligned axis.
         """
         return DataFrameDefault.register(pandas.DataFrame.reindex)(
             self, axis=axis, labels=labels, **kwargs
         )
 
     def reset_index(self, **kwargs):
-        """Removes all levels from index and sets a default level_0 index.
+        """
+        Reset the index, or a level of it.
 
-        Returns:
-            New QueryCompiler with updated data and reset index.
+        Parameters
+        ----------
+        drop : bool
+            Whether to drop the reseted index or insert it at the begining of the frame.
+        level : int or label, optional
+            Level to remove from index. Removes all levels by default.
+        col_level : int or label
+            If the columns have multiple levels, determines which level the labels
+            are inserted into.
+        col_fill : label
+            If the columns have multiple levels, determines how the other levels
+            are named.
+
+        Returns
+        -------
+        BaseQueryCompiler
+            `QueryCompiler` with reseted index.
         """
         return DataFrameDefault.register(pandas.DataFrame.reset_index)(self, **kwargs)
 
     def set_index_from_columns(
         self, keys: List[Hashable], drop: bool = True, append: bool = False
     ):
-        """Create new row labels from a list of columns.
+        """
+        Create new row labels from a list of columns.
 
         Parameters
         ----------
         keys : list of hashable
             The list of column names that will become the new index.
-        drop : boolean
+        drop : bool
             Whether or not to drop the columns provided in the `keys` argument.
-        append : boolean
+        append : bool
             Whether or not to add the columns in `keys` as new levels appended to the
             existing index.
 
         Returns
         -------
-        PandasQueryCompiler
-            A new QueryCompiler with updated index.
+        BaseQueryCompiler
+            A new `QueryCompiler` with updated index.
         """
         return DataFrameDefault.register(pandas.DataFrame.set_index)(
             self, keys=keys, drop=drop, append=append
@@ -524,55 +941,103 @@ class BaseQueryCompiler(abc.ABC):
     # instead.
 
     def is_monotonic_increasing(self):
-        """Return boolean if values in the object are monotonic_increasing.
+        """
+        Return boolean if values in the object are monotonicly increasing.
 
         Returns
         -------
-            bool
+        bool
         """
         return SeriesDefault.register(pandas.Series.is_monotonic_increasing)(self)
 
     def is_monotonic_decreasing(self):
-        """Return boolean if values in the object are monotonic_decreasing.
+        """
+        Return boolean if values in the object are monotonicly decreasing.
 
         Returns
         -------
-            bool
+        bool
         """
         return SeriesDefault.register(pandas.Series.is_monotonic_decreasing)(self)
 
-    def count(self, **kwargs):
-        """Counts the number of non-NaN objects for each column or row.
+    __doc_numeric_method_template = """
+    Get the {method} for each column or row.
 
-        Return:
-            Pandas series containing counts of non-NaN objects from each column or row.
-        """
+    Parameters
+    ----------
+    {params}
+
+    Returns
+    -------
+    BaseQueryCompiler
+        One-column `QueryCompiler` with index labels of the specified axis,
+        where each row contains the {method} for the corresponding
+        row or column.
+
+    Notes
+    -----
+    Please refer to ``modin.pandas.DataFrame.{link}`` for more information about parameters.
+    """
+
+    __doc_numeric_method_base_params = """axis : int
+    level : int or label, optional
+        Currently `level` parameter is not implemented, so only `None` value is acceptable.
+    numeric_only : bool"""
+
+    __doc_numeric_method_na_params = "\n".join(
+        [__doc_numeric_method_base_params, "skipna : bool"]
+    )
+
+    __doc_numeric_method_mincount_params = "\n".join(
+        [
+            __doc_numeric_method_na_params,
+            """min_count : int
+        Currently `min_count` parameter is not implemented, so only `1` is acceptable.""",
+        ]
+    )
+
+    @doc(
+        __doc_numeric_method_template,
+        params=__doc_numeric_method_base_params,
+        method="number of non-NaN values",
+        link="count",
+    )
+    def count(self, **kwargs):
         return DataFrameDefault.register(pandas.DataFrame.count)(self, **kwargs)
 
+    @doc(
+        __doc_numeric_method_template,
+        params=__doc_numeric_method_na_params,
+        method="maximum value",
+        link="max",
+    )
     def max(self, **kwargs):
-        """Returns the maximum value for each column or row.
-
-        Return:
-            Pandas series with the maximum values from each column or row.
-        """
         return DataFrameDefault.register(pandas.DataFrame.max)(self, **kwargs)
 
+    @doc(
+        __doc_numeric_method_template,
+        params=__doc_numeric_method_na_params,
+        method="mean value",
+        link="mean",
+    )
     def mean(self, **kwargs):
-        """Returns the mean for each numerical column or row.
-
-        Return:
-            Pandas series containing the mean from each numerical column or row.
-        """
         return DataFrameDefault.register(pandas.DataFrame.mean)(self, **kwargs)
 
+    @doc(
+        __doc_numeric_method_template,
+        params=__doc_numeric_method_na_params,
+        method="minimum value",
+        link="min",
+    )
     def min(self, **kwargs):
-        """Returns the minimum from each column or row.
-
-        Return:
-            Pandas series with the minimum value from each column or row.
-        """
         return DataFrameDefault.register(pandas.DataFrame.min)(self, **kwargs)
 
+    @doc(
+        __doc_numeric_method_template,
+        params=__doc_numeric_method_mincount_params,
+        method="production",
+        link="prod",
+    )
     def prod(self, squeeze_self, axis, **kwargs):
         """Returns the product of each numerical column or row.
 
@@ -600,6 +1065,12 @@ class BaseQueryCompiler(abc.ABC):
             map_func,
         )(self, axis=axis, **kwargs)
 
+    @doc(
+        __doc_numeric_method_template,
+        params=__doc_numeric_method_mincount_params,
+        method="sum",
+        link="sum",
+    )
     def sum(self, squeeze_self, axis, **kwargs):
         """Returns the sum of each numerical column or row.
 
@@ -627,7 +1098,21 @@ class BaseQueryCompiler(abc.ABC):
             map_func,
         )(self, axis=axis, **kwargs)
 
+    @add_refer_to("to_datetime")
     def to_datetime(self, *args, **kwargs):
+        """
+        Convert columns of the `QueryCompiler` to the datetime dtype.
+
+        Parameters
+        ----------
+        *args : args
+        **kwargs : kwargs
+
+        Returns
+        -------
+        BaseQueryCompiler
+            `QueryCompiler` with all columns converted to datetime dtype.
+        """
         return SeriesDefault.register(pandas.to_datetime)(self, *args, **kwargs)
 
     # END Abstract full Reduce operations
@@ -635,17 +1120,51 @@ class BaseQueryCompiler(abc.ABC):
     # Abstract map partitions operations
     # These operations are operations that apply a function to every partition.
     def abs(self):
+        """
+        Get absolute numeric value of each element.
+
+        Returns
+        -------
+        BaseQueryCompiler
+            `QueryCompiler` with absolute numeric value of each element.
+        """
         return DataFrameDefault.register(pandas.DataFrame.abs)(self)
 
     def applymap(self, func):
+        """
+        Apply passed function elementwise.
+
+        Parameters
+        ----------
+        func : callable(scalar) -> scalar
+            Function to apply to each element of the `QueryCompiler`.
+
+        Returns
+        -------
+        BaseQueryCompiler
+            Transformed `QueryCompiler`.
+        """
         return DataFrameDefault.register(pandas.DataFrame.applymap)(self, func=func)
 
     def conj(self, **kwargs):
         """
-        Return the complex conjugate, element-wise.
+        Get the complex conjugate for every element of self.
 
-        The complex conjugate of a complex number is obtained
-        by changing the sign of its imaginary part.
+        The complex conjugate of a complex number is obtained by changing the sign
+        of its imaginary part. Note that only numeric data is allowed.
+
+        Parameters
+        ----------
+        **kwargs : kwargs, optional
+
+        Returns
+        -------
+        BaseQueryCompiler
+            `QueryCompiler` with conjugate applied element-wise.
+
+        Notes
+        -----
+        Please refer to ``numpy.conj`` for parameters description.
         """
 
         def conj(df, *args, **kwargs):
@@ -653,63 +1172,260 @@ class BaseQueryCompiler(abc.ABC):
 
         return DataFrameDefault.register(conj)(self, **kwargs)
 
+    # FIXME:
+    #   1. High-level objects leaks to the query compiler level.
+    #   2. Spread **kwargs into actual arguments.
     def isin(self, **kwargs):
+        """
+        Check for each element of self whether it's contained in passed values.
+
+        Parameters
+        ----------
+        values : list-like, modin.pandas.Series, modin.pandas.DataFrame or dict
+            Values to check elements of self in.
+
+        Returns
+        -------
+        BaseQueryCompiler
+            Boolean mask for self of whether an element at the corresponding
+            position is contained in `values`.
+        """
         return DataFrameDefault.register(pandas.DataFrame.isin)(self, **kwargs)
 
     def isna(self):
+        """
+        Check for each element of self whether it's NaN.
+
+        Returns
+        -------
+        BaseQueryCompiler
+            Boolean mask for self of whether an element at the corresponding
+            position is NaN.
+        """
         return DataFrameDefault.register(pandas.DataFrame.isna)(self)
 
+    # FIXME: this method is not supposed to take any parameters.
     def negative(self, **kwargs):
+        """
+        Change the sign for every value of self.
+
+        Parameters
+        ----------
+        **kwargs : kwargs
+            Serves the compatibility purpose. Does not affect the result.
+
+        Returns
+        -------
+        BaseQueryCompiler
+
+        Notes
+        -----
+        Be aware, that all `QueryCompiler` values have to be numeric.
+        """
         return DataFrameDefault.register(pandas.DataFrame.__neg__)(self, **kwargs)
 
     def notna(self):
+        """
+        Check for each element of `self` whether it's existing (non-missing) value.
+
+        Returns
+        -------
+        BaseQueryCompiler
+            Boolean mask for `self` of whether an element at the corresponding
+            position is exists.
+        """
         return DataFrameDefault.register(pandas.DataFrame.notna)(self)
 
+    @add_refer_to("DataFrame.round")
     def round(self, **kwargs):
+        """
+        Round every numeric value up to specified number of decimals.
+
+        Parameters
+        ----------
+        decimals : int or list-like
+            Number of decimals to round each column to.
+
+        Returns
+        -------
+        BaseQueryCompiler
+            `QueryCompiler` with rounded values.
+        """
         return DataFrameDefault.register(pandas.DataFrame.round)(self, **kwargs)
 
+    # FIXME:
+    #   1. high-level objects leaks to the query compiler.
+    #   2. remove `inplace` parameter.
+    @add_refer_to("DataFrame.replace")
     def replace(self, **kwargs):
+        """
+        Replace values given in `to_replace` by `value`.
+
+        Parameters
+        ----------
+        to_replace : scalar, list-like, regex, modin.pandas.Series, or None
+        value: scalar, list-like, regex or dict
+        inplace : False
+            This parameter serves the compatibility purpose. Always have to be False.
+        limit : int or None
+        regex : bool or same types as `to_replace`
+        method : {"pad", "ffill", "bfill", None}
+
+        Returns
+        -------
+        BaseQueryCompiler
+            `QueryCompiler` with all `to_replace` values replaced by `value`.
+        """
         return DataFrameDefault.register(pandas.DataFrame.replace)(self, **kwargs)
 
+    @_add_one_column_warning
     def series_view(self, **kwargs):
+        """
+        Reinterpret underlying data with new dtype.
+
+        Parameters
+        ----------
+        dtype : dtype
+            Data type to reinterpret underlying data with.
+
+        Returns
+        -------
+        BaseQueryCompiler
+            New `QueryCompiler` of the same data in memory, with reinterpreted values.
+
+        .. warning::
+            Be aware, that if this method do fallback to pandas, then newly created
+            `QueryCompiler` will be the copy of the original data.
+        """
         return SeriesDefault.register(pandas.Series.view)(self, **kwargs)
 
+    @_add_one_column_warning
+    @add_refer_to("to_numeric")
     def to_numeric(self, *args, **kwargs):
+        """
+        Convert underlying data to numeric dtype.
+
+        Parameters
+        ----------
+        errors : {"ignore", "raise", "coerce"}
+        downcast : {"integer", "signed", "unsigned", "float", None}
+
+        Returns
+        -------
+        BaseQueryCompiler
+            New `QueryCompiler` with converted to numeric values.
+        """
         return SeriesDefault.register(pandas.to_numeric)(self, *args, **kwargs)
 
+    # FIXME: get rid of `**kwargs` parameter.
+    @_add_one_column_warning
     def unique(self, **kwargs):
+        """
+        Get unique values of `self`.
+
+        Parameters
+        ----------
+        **kwargs : kwargs
+            Serves compatibility purpose. Does not affect the result.
+
+        Returns
+        -------
+        BaseQueryCompiler
+            New `QueryCompiler` with unique values.
+        """
         return SeriesDefault.register(pandas.Series.unique)(self, **kwargs)
 
+    @_add_one_column_warning
+    @add_refer_to("Series.searchsorted")
     def searchsorted(self, **kwargs):
+        """
+        Find positions in a sorted `self` where `value` should be inserted to maintain order.
+
+        Parameters
+        ----------
+        value : list-like
+        side : {"left", "right"}
+        sorter : list-like, optional
+
+        Returns
+        -------
+        BaseQueryCompiler
+            One-column `QueryCompiler` which contains indices to insert.
+        """
         return SeriesDefault.register(pandas.Series.searchsorted)(self, **kwargs)
 
     # END Abstract map partitions operations
 
+    @_add_one_column_warning
+    @add_refer_to("Series.value_counts")
     def value_counts(self, **kwargs):
+        """
+        Count unique values of one-column `self`.
+
+        Parameters
+        ----------
+        normalize : bool
+        sort : bool
+        ascending : bool
+        bins : int, optional
+        dropna : bool
+
+        Returns
+        -------
+        BaseQueryCompiler
+            One-column `QueryCompiler` which index labels is a unique elements of `self`
+            and each row contains the number of times corresponding value was met in the `self`.
+        """
         return SeriesDefault.register(pandas.Series.value_counts)(self, **kwargs)
 
+    @add_refer_to("DataFrame.stack")
     def stack(self, level, dropna):
+        """
+        Stack the prescribed level(s) from columns to index.
+
+        Parameters
+        ----------
+        level : int or label
+        dropna : bool
+
+        Returns
+        -------
+        BaseQueryCompiler
+        """
         return DataFrameDefault.register(pandas.DataFrame.stack)(
             self, level=level, dropna=dropna
         )
 
     # Abstract map partitions across select indices
     def astype(self, col_dtypes, **kwargs):
-        """Converts columns dtypes to given dtypes.
+        """
+        Convert columns dtypes to given dtypes.
 
-        Args:
-            col_dtypes: Dictionary of {col: dtype,...} where col is the column
-                name and dtype is a numpy dtype.
+        Parameters
+        ----------
+        col_dtypes : dict
+            Map for column names and new dtypes.
 
-        Returns:
-            DataFrame with updated dtypes.
+        Returns
+        -------
+        BaseQueryCompiler
+            New `QueryCompiler` with updated dtypes.
         """
         return DataFrameDefault.register(pandas.DataFrame.astype)(
             self, dtype=col_dtypes, **kwargs
         )
 
     @property
+    # FIXME:
     def dtypes(self):
+        """
+        Get columns dtypes.
+
+        Returns
+        -------
+        pandas.Series
+            Series with dtypes of each column.
+        """
         return self.to_pandas().dtypes
 
     # END Abstract map partitions across select indices
@@ -721,26 +1437,54 @@ class BaseQueryCompiler(abc.ABC):
     # we will implement a Distributed Series, and this will be returned
     # instead.
     def all(self, **kwargs):
-        """Returns whether all the elements are true, potentially over an axis.
+        """
+        Return whether all the elements are true, potentially over an axis.
 
-        Return:
-            Pandas Series containing boolean values or boolean.
+        Parameters
+        ----------
+        axis : int, optional
+        bool_only : bool, optional
+        skipna : bool
+        level : int or label
+
+        Returns
+        -------
+        BaseQueryCompiler
+            If axis was specified return one-column `QueryCompiler` with index labels
+            of the specified axis, where each row contains boolean of whether all elements
+            at the corresponding row or column are True. Otherwise return `QueryCompiler`
+            with a single bool of whether all elements are True.
         """
         return DataFrameDefault.register(pandas.DataFrame.all)(self, **kwargs)
 
     def any(self, **kwargs):
-        """Returns whether any the elements are true, potentially over an axis.
+        """
+        Return whether any element is true, potentially over an axis.
 
-        Return:
-            Pandas Series containing boolean values or boolean.
+        Parameters
+        ----------
+        axis : int, optional
+        bool_only : bool, optional
+        skipna : bool
+        level : int or label
+
+        Returns
+        -------
+        BaseQueryCompiler
+            If axis was specified return one-column `QueryCompiler` with index labels
+            of the specified axis, where each row contains boolean of whether any element
+            at the corresponding row or column is True. Otherwise return `QueryCompiler`
+            with a single bool of whether any element is True.
         """
         return DataFrameDefault.register(pandas.DataFrame.any)(self, **kwargs)
 
     def first_valid_index(self):
-        """Returns index of first non-NaN/NULL value.
+        """
+        Return index label of first non-NaN/NULL value.
 
-        Return:
-            Scalar of index name.
+        Returns
+        --------
+        scalar
         """
         return (
             DataFrameDefault.register(pandas.DataFrame.first_valid_index)(self)
@@ -748,27 +1492,51 @@ class BaseQueryCompiler(abc.ABC):
             .squeeze()
         )
 
+    @add_refer_to("DataFrame.idxmax")
     def idxmax(self, **kwargs):
-        """Returns the first occurance of the maximum over requested axis.
+        """
+        Get position of the first occurance of the maximum for each row or column.
 
-        Returns:
-            Series containing the maximum of each column or axis.
+        Parameters
+        ----------
+        axis : int
+        skipna : bool
+
+        Returns
+        -------
+        BaseQueryCompiler
+            One-column `QueryCompiler` with index labels of the specified axis,
+            where each row contains position of the maximum element for the
+            corresponding row or column.
         """
         return DataFrameDefault.register(pandas.DataFrame.idxmax)(self, **kwargs)
 
+    @add_refer_to("DataFrame.idxmin")
     def idxmin(self, **kwargs):
-        """Returns the first occurance of the minimum over requested axis.
+        """
+        Get position of the first occurance of the minimum for each row or column.
 
-        Returns:
-            Series containing the minimum of each column or axis.
+        Parameters
+        ----------
+        axis : int
+        skipna : bool
+
+        Returns
+        -------
+        BaseQueryCompiler
+            One-column `QueryCompiler` with index labels of the specified axis,
+            where each row contains position of the minimum element for the
+            corresponding row or column.
         """
         return DataFrameDefault.register(pandas.DataFrame.idxmin)(self, **kwargs)
 
     def last_valid_index(self):
-        """Returns index of last non-NaN/NULL value.
+        """
+        Return index label of last non-NaN/NULL value.
 
-        Return:
-            Scalar of index name.
+        Returns
+        --------
+        scalar
         """
         return (
             DataFrameDefault.register(pandas.DataFrame.last_valid_index)(self)
@@ -776,71 +1544,93 @@ class BaseQueryCompiler(abc.ABC):
             .squeeze()
         )
 
+    @doc(
+        __doc_numeric_method_template,
+        params=__doc_numeric_method_na_params,
+        method="median value",
+        link="median",
+    )
     def median(self, **kwargs):
-        """Returns median of each column or row.
-
-        Returns:
-            Series containing the median of each column or row.
-        """
         return DataFrameDefault.register(pandas.DataFrame.median)(self, **kwargs)
 
+    @add_refer_to("DataFrame.memory_usage")
     def memory_usage(self, **kwargs):
-        """Returns the memory usage of each column.
-
-        Returns:
-            Series containing the memory usage of each column.
         """
-        return DataFrameDefault.register(pandas.DataFrame.memory_usage)(self, **kwargs)
+        Return the memory usage of each column in bytes.
 
-    def nunique(self, **kwargs):
-        """Returns the number of unique items over each column or row.
-
-        Returns:
-            Series of ints indexed by column or index names.
-        """
-        return DataFrameDefault.register(pandas.DataFrame.nunique)(self, **kwargs)
-
-    def quantile_for_single_value(self, **kwargs):
-        """Returns quantile of each column or row.
-
-        Returns:
-            Series containing the quantile of each column or row.
-        """
-        return DataFrameDefault.register(pandas.DataFrame.quantile)(self, **kwargs)
-
-    def skew(self, **kwargs):
-        """Returns skew of each column or row.
-
-        Returns:
-            Series containing the skew of each column or row.
-        """
-        return DataFrameDefault.register(pandas.DataFrame.skew)(self, **kwargs)
-
-    def sem(self, **kwargs):
-        """
-        Returns standard deviation of the mean over requested axis.
+        Parameters
+        ----------
+        index : bool
+        deep : bool
 
         Returns
         -------
         BaseQueryCompiler
-            QueryCompiler containing the standard deviation of the mean over requested axis.
+            One-column `QueryCompiler` with index labels of `self`, where each row
+            contains the memory usage for the corresponding column.
         """
+        return DataFrameDefault.register(pandas.DataFrame.memory_usage)(self, **kwargs)
+
+    @doc(
+        __doc_numeric_method_template,
+        params="""axis : int
+        dropna : bool""",
+        method="the number of unique values",
+        link="nunique",
+    )
+    def nunique(self, **kwargs):
+        return DataFrameDefault.register(pandas.DataFrame.nunique)(self, **kwargs)
+
+    @doc(
+        __doc_numeric_method_template,
+        params="""q : float
+        axis : int
+        numeric_only : bool
+        interpolation : {"linear", "lower", "higher", "midpoint", "nearest"}""",
+        method="value at the given quantile",
+        link="quantile",
+    )
+    def quantile_for_single_value(self, **kwargs):
+        return DataFrameDefault.register(pandas.DataFrame.quantile)(self, **kwargs)
+
+    @doc(
+        __doc_numeric_method_template,
+        params=__doc_numeric_method_na_params,
+        method="unbiased skew",
+        link="skew",
+    )
+    def skew(self, **kwargs):
+        return DataFrameDefault.register(pandas.DataFrame.skew)(self, **kwargs)
+
+    __doc_numeric_method_ddof_params = "\n".join(
+        [__doc_numeric_method_na_params, "ddof : int"]
+    )
+
+    @doc(
+        __doc_numeric_method_template,
+        params=__doc_numeric_method_ddof_params,
+        method="standard deviation of the mean",
+        link="sem",
+    )
+    def sem(self, **kwargs):
         return DataFrameDefault.register(pandas.DataFrame.sem)(self, **kwargs)
 
+    @doc(
+        __doc_numeric_method_template,
+        params=__doc_numeric_method_ddof_params,
+        method="standard deviation",
+        link="std",
+    )
     def std(self, **kwargs):
-        """Returns standard deviation of each column or row.
-
-        Returns:
-            Series containing the standard deviation of each column or row.
-        """
         return DataFrameDefault.register(pandas.DataFrame.std)(self, **kwargs)
 
+    @doc(
+        __doc_numeric_method_template,
+        params=__doc_numeric_method_ddof_params,
+        method="variance",
+        link="var",
+    )
     def var(self, **kwargs):
-        """Returns variance of each column or row.
-
-        Returns:
-            Series containing the variance of each column or row.
-        """
         return DataFrameDefault.register(pandas.DataFrame.var)(self, **kwargs)
 
     # END Abstract column/row partitions reduce operations
@@ -852,10 +1642,26 @@ class BaseQueryCompiler(abc.ABC):
     # we will implement a Distributed Series, and this will be returned
     # instead.
     def describe(self, **kwargs):
-        """Generates descriptive statistics.
+        """
+        Generate descriptive statistics.
 
-        Returns:
-            DataFrame object containing the descriptive statistics of the DataFrame.
+        Parameters
+        ----------
+        percentiles : list-like
+        include : "all" or list of dtypes, optional
+        exclude : list of dtypes, optional
+        datetime_is_numeric : bool
+
+        Returns
+        -------
+        BaseQueryCompiler
+            `QueryCompiler` object containing the descriptive statistics
+            of the underlying data.
+
+        Notes
+        -----
+        For more information about parameters and output statistics format please
+        refer to ``modin.pandas.DataFrame.describe``.
         """
         return DataFrameDefault.register(pandas.DataFrame.describe)(self, **kwargs)
 
@@ -865,29 +1671,94 @@ class BaseQueryCompiler(abc.ABC):
     # These operations require some global knowledge of the full column/row
     # that is being operated on. This means that we have to put all of that
     # data in the same place.
+
+    __doc_cum_method = """
+    Get cummulative {method} for every row or column.
+
+    Parameters
+    ----------
+    axis : int
+    skipna : bool
+
+    Returns
+    -------
+    BaseQueryCompiler
+        `QueryCompiler` of the same shape as `self`, where each element is the {method}
+        of all the previous values in this row or column.
+
+    Notes
+    -----
+    Please refer to ``modin.pandas.DataFrame.{link}`` for more information about parameters.
+    """
+
+    @doc(__doc_cum_method, method="sum", link="cumsum")
     def cumsum(self, **kwargs):
         return DataFrameDefault.register(pandas.DataFrame.cumsum)(self, **kwargs)
 
+    @doc(__doc_cum_method, method="maximum", link="cummax")
     def cummax(self, **kwargs):
         return DataFrameDefault.register(pandas.DataFrame.cummax)(self, **kwargs)
 
+    @doc(__doc_cum_method, method="minimum", link="cummin")
     def cummin(self, **kwargs):
         return DataFrameDefault.register(pandas.DataFrame.cummin)(self, **kwargs)
 
+    @doc(__doc_cum_method, method="product", link="cumprod")
     def cumprod(self, **kwargs):
         return DataFrameDefault.register(pandas.DataFrame.cumprod)(self, **kwargs)
 
+    @add_refer_to("DataFrame.diff")
     def diff(self, **kwargs):
+        """
+        First discrete difference of element.
+
+        Parameters
+        ----------
+        periods : int
+        axis : int
+
+        Returns
+        -------
+        BaseQueryCompiler
+            `QueryCompiler` of the same shape as `self`, where each element is the difference
+            between the corresponding value and the previous value in this row or column.
+        """
         return DataFrameDefault.register(pandas.DataFrame.diff)(self, **kwargs)
 
+    @add_refer_to("DataFrame.dropna")
     def dropna(self, **kwargs):
-        """Returns a new QueryCompiler with null values dropped along given axis.
-        Return:
-            New QueryCompiler
+        """
+        Remove missing values.
+
+        Parameters
+        ----------
+        axis : int
+        how : {"any", "all"}
+        thresh : int, optional
+        subset : list of labels
+
+        Returns
+        -------
+        BaseQueryCompiler
+            New `QueryCompiler` with null values dropped along given axis.
         """
         return DataFrameDefault.register(pandas.DataFrame.dropna)(self, **kwargs)
 
+    @add_refer_to("DataFrame.nlargest")
     def nlargest(self, n=5, columns=None, keep="first"):
+        """
+        Return the first n rows ordered by columns in descending order.
+
+        Parameters
+        ----------
+        n : int, default: 5
+        columns : list of labels, optional
+        keep : {"first", "last", "all"}
+
+        Returns
+        -------
+        BaseQueryCompiler
+        """
         if columns is None:
             return SeriesDefault.register(pandas.Series.nlargest)(self, n=n, keep=keep)
         else:
@@ -895,7 +1766,21 @@ class BaseQueryCompiler(abc.ABC):
                 self, n=n, columns=columns, keep=keep
             )
 
+    @add_refer_to("DataFrame.nsmallest")
     def nsmallest(self, n=5, columns=None, keep="first"):
+        """
+        Return the first n rows ordered by columns in ascending order.
+
+        Parameters
+        ----------
+        n : int, default: 5
+        columns : list of labels, optional
+        keep : {"first", "last", "all"}
+
+        Returns
+        -------
+        BaseQueryCompiler
+        """
         if columns is None:
             return SeriesDefault.register(pandas.Series.nsmallest)(self, n=n, keep=keep)
         else:
@@ -903,73 +1788,197 @@ class BaseQueryCompiler(abc.ABC):
                 self, n=n, columns=columns, keep=keep
             )
 
+    @add_refer_to("DataFrame.eval")
     def eval(self, expr, **kwargs):
-        """Returns a new QueryCompiler with expr evaluated on columns.
+        """
+        Evaluate string expression on `QueryCompiler` columns.
 
-        Args:
-            expr: The string expression to evaluate.
+        Parameters
+        ----------
+        expr : str
+        **kwargs : kwargs
 
-        Returns:
-            A new QueryCompiler with new columns after applying expr.
+        Returns
+        -------
+        BaseQueryCompiler
+            `QueryCompiler` containing the result of evaluation.
         """
         return DataFrameDefault.register(pandas.DataFrame.eval)(
             self, expr=expr, **kwargs
         )
 
+    @add_refer_to("DataFrame.mode")
     def mode(self, **kwargs):
-        """Returns a new QueryCompiler with modes calculated for each label along given axis.
+        """
+        Get the modes for every column or row.
 
-        Returns:
-            A new QueryCompiler with modes calculated.
+        Parameters
+        ----------
+        axis : int
+        numeric_only : bool
+        dropna : bool
+
+        Returns
+        -------
+        BaseQueryCompiler
+            New `QueryCompiler` with modes calculated alogn given axis.
         """
         return DataFrameDefault.register(pandas.DataFrame.mode)(self, **kwargs)
 
+    @add_refer_to("DataFrame.fillna")
     def fillna(self, **kwargs):
-        """Replaces NaN values with the method provided.
+        """
+        Replace NaN values with the method provided.
 
-        Returns:
-            A new QueryCompiler with null values filled.
+        Parameters
+        ----------
+        value : scalar or dict
+        method : {"backfill", "bfill", "pad", "ffill", None}
+        axis : int
+        inplace : False
+            This parameter serves the compatibility purpose. Always have to be False.
+        limit : int, optional
+        downcast : dict, optional
+
+        Returns
+        -------
+        BaseQueryCompiler
+            New `QueryCompiler` with all null values filled.
         """
         return DataFrameDefault.register(pandas.DataFrame.fillna)(self, **kwargs)
 
+    @add_refer_to("DataFrame.query")
     def query(self, expr, **kwargs):
-        """Query columns of the QueryCompiler with a boolean expression.
+        """
+        Query columns of the `QueryCompiler` with a boolean expression.
 
-        Args:
-            expr: Boolean expression to query the columns with.
+        Parameters
+        ----------
+        expr : str
+        **kwargs : kwargs
 
-        Returns:
-            QueryCompiler containing the rows where the boolean expression is satisfied.
+        Returns
+        -------
+        BaseQueryCompiler
+            New `QueryCompiler` containing the rows where the boolean expression is satisfied.
         """
         return DataFrameDefault.register(pandas.DataFrame.query)(
             self, expr=expr, **kwargs
         )
 
+    @add_refer_to("DataFrame.rank")
     def rank(self, **kwargs):
-        """Computes numerical rank along axis. Equal values are set to the average.
+        """
+        Get numerical rank for each value along axis.
 
-        Returns:
-            QueryCompiler containing the ranks of the values along an axis.
+        Parameters
+        ----------
+        axis : int
+        method : {"average", "min", "max", "first", "dense"}
+        numeric_only : bool
+        na_option : {"keep", "top", "bottom"}
+        ascending : bool
+        pct : bool
+
+        Returns
+        -------
+        BaseQueryCompiler
+            `QueryCompiler` of the same shape as `self`, where each element is the
+            numerical rank of the corresponding value along row or column.
         """
         return DataFrameDefault.register(pandas.DataFrame.rank)(self, **kwargs)
 
+    @add_refer_to("DataFrame.sort_index")
     def sort_index(self, **kwargs):
-        """Sorts the data with respect to either the columns or the indices.
+        """
+        Sort data by index or column labels.
 
-        Returns:
-            QueryCompiler containing the data sorted by columns or indices.
+        Parameters
+        ----------
+        axis : int
+        level : int, label or list of such
+        ascending : bool
+        inplace : bool
+        kind : {"quicksort", "mergesort", "heapsort"}
+        na_position : {"first", "last"}
+        sort_remaining : bool
+        ignore_index : bool
+        key : callable(pandas.Index) -> pandas.Index, optional
+
+        Returns
+        -------
+        BaseQueryCompiler
+            New `QueryCompiler` containing the data sorted by columns or indices.
         """
         return DataFrameDefault.register(pandas.DataFrame.sort_index)(self, **kwargs)
 
+    @add_refer_to("DataFrame.melt")
     def melt(self, *args, **kwargs):
+        """
+        Unpivot `QueryCompiler` data from wide to long format.
+
+        Parameters
+        ----------
+        id_vars : list of labels, optional
+        value_vars : list of labels, optional
+        var_name : label
+        value_name : label
+        col_level : int or label
+        ignore_index : bool
+
+        Returns
+        -------
+        BaseQueryCompiler
+            New `QueryCompiler` with unpivoted data.
+        """
         return DataFrameDefault.register(pandas.DataFrame.melt)(self, *args, **kwargs)
 
+    @add_refer_to("DataFrame.sort_values")
     def sort_columns_by_row_values(self, rows, ascending=True, **kwargs):
+        """
+        Reorder the columns based on the lexicographic order of the given rows.
+
+        Parameters
+        ----------
+        rows : label or list of labels
+            The row or rows to sort by.
+        ascending : bool
+            Sort in ascending order (True) or descending order (False).
+        kind : {"quicksort", "mergesort", "heapsort"}
+        na_position : {"first", "last"}
+        ignore_index : bool
+        key : callable(pandas.Index) -> pandas.Index, optional
+
+        Returns
+        -------
+        BaseQueryCompiler
+            New `QueryCompiler` that contains result of the sort.
+        """
         return DataFrameDefault.register(pandas.DataFrame.sort_values)(
             self, by=rows, axis=1, ascending=ascending, **kwargs
         )
 
+    @add_refer_to("DataFrame.sort_values")
     def sort_rows_by_column_values(self, rows, ascending=True, **kwargs):
+        """
+        Reorder the rows based on the lexicographic order of the given columns.
+
+        Parameters
+        ----------
+        columns : label or list of labels
+            The column or columns to sort by.
+        ascending : bool
+            Sort in ascending order (True) or descending order (False).
+        kind : {"quicksort", "mergesort", "heapsort"}
+        na_position : {"first", "last"}
+        ignore_index : bool
+        key : callable(pandas.Index) -> pandas.Index, optional
+
+        Returns
+        -------
+        BaseQueryCompiler
+            New `QueryCompiler` that contains result of the sort.
+        """
         return DataFrameDefault.register(pandas.DataFrame.sort_values)(
             self, by=rows, axis=0, ascending=ascending, **kwargs
         )
@@ -980,12 +1989,16 @@ class BaseQueryCompiler(abc.ABC):
     # These operations require some global knowledge of the full column/row
     # that is being operated on. This means that we have to put all of that
     # data in the same place.
+    @doc(
+        __doc_numeric_method_template,
+        params="""q : list-like
+        axis : int
+        numeric_only : bool
+        interpolation : {"linear", "lower", "higher", "midpoint", "nearest"}""",
+        method="value at the given quantile",
+        link="quantile",
+    )
     def quantile_for_list_of_values(self, **kwargs):
-        """Returns Manager containing quantiles along an axis for numeric columns.
-
-        Returns:
-            QueryCompiler containing quantiles of original QueryCompiler along an axis.
-        """
         return DataFrameDefault.register(pandas.DataFrame.quantile)(self, **kwargs)
 
     # END Abstract map across rows/columns
@@ -993,15 +2006,18 @@ class BaseQueryCompiler(abc.ABC):
     # Abstract __getitem__ methods
     def getitem_array(self, key):
         """
-        Get column or row data specified by key.
+        Mask `QueryCompiler` with `key`.
+
         Parameters
         ----------
-        key : BaseQueryCompiler, numpy.ndarray, pandas.Index or list
-            Target numeric indices or labels by which to retrieve data.
+        key : BaseQueryCompiler, numpy.ndarray or list of column labels
+            Boolean mask represented by `QueryCompiler` or `numpy.ndarray` of the same
+            shape as `self`. Or enumeratable of columns to pick.
+
         Returns
         -------
         BaseQueryCompiler
-            A new Query Compiler.
+            New masked `QueryCompiler`.
         """
 
         def getitem_array(df, key):
@@ -1010,15 +2026,21 @@ class BaseQueryCompiler(abc.ABC):
         return DataFrameDefault.register(getitem_array)(self, key)
 
     def getitem_column_array(self, key, numeric=False):
-        """Get column data for target labels.
+        """
+        Get column data for target labels.
 
-        Args:
-            key: Target labels by which to retrieve data.
-            numeric: A boolean representing whether or not the key passed in represents
-                the numeric index or the named index.
+        Parameters
+        ----------
+        key : list-like
+            Target labels by which to retrieve data.
+        numeric : bool
+            Whether or not the key passed in represents the numeric index
+            or the named index.
 
-        Returns:
-            A new Query Compiler.
+        Returns
+        -------
+        BaseQueryCompiler
+            New `QueryCompiler` that contains specified columns.
         """
 
         def get_column(df, key):
@@ -1030,13 +2052,18 @@ class BaseQueryCompiler(abc.ABC):
         return DataFrameDefault.register(get_column)(self, key=key)
 
     def getitem_row_array(self, key):
-        """Get row data for target labels.
+        """
+        Get row data for target indices.
 
-        Args:
-            key: Target numeric indices by which to retrieve data.
+        Parameters
+        ----------
+        key : list-like
+            Numeric indices of the rows to pick.
 
-        Returns:
-            A new Query Compiler.
+        Returns
+        -------
+        BaseQueryCompiler
+            New `QueryCompiler` that contains specified rows.
         """
 
         def get_row(df, key):
@@ -1052,15 +2079,22 @@ class BaseQueryCompiler(abc.ABC):
     # return a new one from here and let the front end handle the inplace
     # update.
     def insert(self, loc, column, value):
-        """Insert new column data.
+        """
+        Insert new column.
 
-        Args:
-            loc: Insertion index.
-            column: Column labels to insert.
-            value: Dtype object values to insert.
+        Parameters
+        ----------
+        loc : int
+            Insertion position.
+        column : label
+            Label of the new column.
+        value : One-column BaseQueryCompiler, 1D array or scalar
+            Data to fill new column with.
 
-        Returns:
-            A new QueryCompiler with new data inserted.
+        Returns
+        -------
+        BaseQueryCompiler
+            `QueryCompiler` with new column inserted.
         """
         return DataFrameDefault.register(pandas.DataFrame.insert, inplace=True)(
             self, loc=loc, column=column, value=value
@@ -1070,14 +2104,20 @@ class BaseQueryCompiler(abc.ABC):
 
     # Abstract drop
     def drop(self, index=None, columns=None):
-        """Remove row data for target index and columns.
+        """
+        Drop specified rows or columns.
 
-        Args:
-            index: Target index to drop.
-            columns: Target columns to drop.
+        Parameters
+        ----------
+        index : list of labels
+            Labels of rows to drop.
+        columns : list of labels
+            Labels of columns to drop.
 
-        Returns:
-            A new QueryCompiler.
+        Returns
+        -------
+        BaseQueryCompiler
+            New `QueryCompiler` with removed data.
         """
         if index is None and columns is None:
             return self
@@ -1092,14 +2132,29 @@ class BaseQueryCompiler(abc.ABC):
     # There is a wide range of behaviors that are supported, so a lot of the
     # logic can get a bit convoluted.
     def apply(self, func, axis, *args, **kwargs):
-        """Apply func across given axis.
+        """
+        Apply passed function across given axis.
 
-        Args:
-            func: The function to apply.
-            axis: Target axis to apply the function along.
+        Parameters
+        ----------
+        func : callable(pandas.Series) -> scalar, str, list or dict of such
+            The function to apply to each column or row.
+        axis : int
+            Target axis to apply the function along.
+        *args : args
+            Argument to pass to `func`.
+        **kwargs : kwargs
+            Arguments to pass to `func`.
 
-        Returns:
-            A new QueryCompiler.
+        Returns
+        -------
+        BaseQueryCompiler
+            `QueryCompiler` that contain the results of execution and built by
+            the following rules:
+            - Labels of specified axis is the passed functions names.
+            - Labels of the opposite axis is preserved.
+            - Each element is the result of execution corresponding function under
+              corresponding row/column.
         """
         return DataFrameDefault.register(pandas.DataFrame.apply)(
             self, func=func, axis=axis, *args, **kwargs
@@ -1112,6 +2167,51 @@ class BaseQueryCompiler(abc.ABC):
     # nature. They require certain data to exist on the same partition, and
     # after the shuffle, there should be only a local map required.
 
+    # FIXME: `map_args` and `reduce_args` leaked there from `PandasQueryCompiler.groupby_*`,
+    # pandas backend implements groupby via MapReduce approach, but for other backends these
+    # parameters make no sense, they shouldn't be presented in a base class.
+    __doc_groupby_method = """
+    Group `QueryCompiler` data and {aggregation} for every group.
+
+    Parameters
+    ----------
+    by : BaseQueryCompiler, column or index label, Grouper or list of such
+        Object that determine groups.
+    axis : int
+        Axis to group and apply aggregation function along.
+    groupby_args : dict
+        GroupBy parameters in the format of ``modin.pandas.DataFrame.groupby`` signature.
+    map_args : dict
+        If GroupBy implemented with MapReduce approach, specifies arguments to pass to
+        the aggregation function at the map phase.
+    reduce_args : dict, optional
+        If GroupBy implemented with MapReduce approach, specifies arguments to pass to
+        the aggregation function at the reduce phase.
+    numeric_only : bool, default: True
+        Whether or not to drop non-numeric columns before executing GroupBy.
+    drop : bool, default: False
+        If `by` is a `QueryCompiler` indicates whether or not by-data came
+        from the `self`.
+
+    Returns
+    -------
+    BaseQueryCompiler
+        `QueryCompiler` containing the result of groupby aggregation built by the
+        following rules:
+            - Labels on the opposit of specified axis is preserved.
+            - If groupby_args["as_index"] is True then labels on the specified axis
+              is the group names, otherwise labels would be default: 0, 1 ... n.
+            - If groupby_args["as_index"] is False, then first N columns/rows of the frame
+              contain group names, where N is the columns/rows to group on.
+            - Each element of `QueryCompiler` is the {result} for the
+              corresponding group and column/row.
+    """
+
+    @doc(
+        __doc_groupby_method,
+        aggregation="count non-null values",
+        result="number of non-null values",
+    )
     def groupby_count(
         self,
         by,
@@ -1122,29 +2222,6 @@ class BaseQueryCompiler(abc.ABC):
         numeric_only=True,
         drop=False,
     ):
-        """Perform a groupby count.
-
-        Parameters
-        ----------
-        by : BaseQueryCompiler
-            The query compiler object to groupby.
-        axis : 0 or 1
-            The axis to groupby. Must be 0 currently.
-        groupby_args : dict
-            The arguments for the groupby component.
-        map_args : dict
-            The arguments for the `map_func`.
-        reduce_args : dict
-            The arguments for `reduce_func`.
-        numeric_only : bool
-            Whether to drop non-numeric columns.
-        drop : bool
-            Whether the data in `by` was dropped.
-
-        Returns
-        -------
-        BaseQueryCompiler
-        """
         return GroupByDefault.register(pandas.core.groupby.DataFrameGroupBy.count)(
             self,
             by=by,
@@ -1156,6 +2233,11 @@ class BaseQueryCompiler(abc.ABC):
             drop=drop,
         )
 
+    @doc(
+        __doc_groupby_method,
+        aggregation="check whether any element is True",
+        result="boolean of whether there is any element which is True",
+    )
     def groupby_any(
         self,
         by,
@@ -1166,29 +2248,6 @@ class BaseQueryCompiler(abc.ABC):
         numeric_only=True,
         drop=False,
     ):
-        """Perform a groupby any.
-
-        Parameters
-        ----------
-        by : BaseQueryCompiler
-            The query compiler object to groupby.
-        axis : 0 or 1
-            The axis to groupby. Must be 0 currently.
-        groupby_args : dict
-            The arguments for the groupby component.
-        map_args : dict
-            The arguments for the `map_func`.
-        reduce_args : dict
-            The arguments for `reduce_func`.
-        numeric_only : bool
-            Whether to drop non-numeric columns.
-        drop : bool
-            Whether the data in `by` was dropped.
-
-        Returns
-        -------
-        BaseQueryCompiler
-        """
         return GroupByDefault.register(pandas.core.groupby.DataFrameGroupBy.any)(
             self,
             by=by,
@@ -1200,6 +2259,11 @@ class BaseQueryCompiler(abc.ABC):
             drop=drop,
         )
 
+    @doc(
+        __doc_groupby_method,
+        aggregation="get the minimum value",
+        result="minimum value",
+    )
     def groupby_min(
         self,
         by,
@@ -1210,29 +2274,6 @@ class BaseQueryCompiler(abc.ABC):
         numeric_only=True,
         drop=False,
     ):
-        """Perform a groupby min.
-
-        Parameters
-        ----------
-        by : BaseQueryCompiler
-            The query compiler object to groupby.
-        axis : 0 or 1
-            The axis to groupby. Must be 0 currently.
-        groupby_args : dict
-            The arguments for the groupby component.
-        map_args : dict
-            The arguments for the `map_func`.
-        reduce_args : dict
-            The arguments for `reduce_func`.
-        numeric_only : bool
-            Whether to drop non-numeric columns.
-        drop : bool
-            Whether the data in `by` was dropped.
-
-        Returns
-        -------
-        BaseQueryCompiler
-        """
         return GroupByDefault.register(pandas.core.groupby.DataFrameGroupBy.min)(
             self,
             by=by,
@@ -1244,6 +2285,7 @@ class BaseQueryCompiler(abc.ABC):
             drop=drop,
         )
 
+    @doc(__doc_groupby_method, aggregation="compute production", result="product")
     def groupby_prod(
         self,
         by,
@@ -1254,29 +2296,6 @@ class BaseQueryCompiler(abc.ABC):
         numeric_only=True,
         drop=False,
     ):
-        """Perform a groupby prod.
-
-        Parameters
-        ----------
-        by : BaseQueryCompiler
-            The query compiler object to groupby.
-        axis : 0 or 1
-            The axis to groupby. Must be 0 currently.
-        groupby_args : dict
-            The arguments for the groupby component.
-        map_args : dict
-            The arguments for the `map_func`.
-        reduce_args : dict
-            The arguments for `reduce_func`.
-        numeric_only : bool
-            Whether to drop non-numeric columns.
-        drop : bool
-            Whether the data in `by` was dropped.
-
-        Returns
-        -------
-        BaseQueryCompiler
-        """
         return GroupByDefault.register(pandas.core.groupby.DataFrameGroupBy.prod)(
             self,
             by=by,
@@ -1288,6 +2307,11 @@ class BaseQueryCompiler(abc.ABC):
             drop=drop,
         )
 
+    @doc(
+        __doc_groupby_method,
+        aggregation="get the maximum value",
+        result="maximum value",
+    )
     def groupby_max(
         self,
         by,
@@ -1298,29 +2322,6 @@ class BaseQueryCompiler(abc.ABC):
         numeric_only=True,
         drop=False,
     ):
-        """Perform a groupby max.
-
-        Parameters
-        ----------
-        by : BaseQueryCompiler
-            The query compiler object to groupby.
-        axis : 0 or 1
-            The axis to groupby. Must be 0 currently.
-        groupby_args : dict
-            The arguments for the groupby component.
-        map_args : dict
-            The arguments for the `map_func`.
-        reduce_args : dict
-            The arguments for `reduce_func`.
-        numeric_only : bool
-            Whether to drop non-numeric columns.
-        drop : bool
-            Whether the data in `by` was dropped.
-
-        Returns
-        -------
-        BaseQueryCompiler
-        """
         return GroupByDefault.register(pandas.core.groupby.DataFrameGroupBy.max)(
             self,
             by=by,
@@ -1332,6 +2333,11 @@ class BaseQueryCompiler(abc.ABC):
             drop=drop,
         )
 
+    @doc(
+        __doc_groupby_method,
+        aggregation="check whether all elements are True",
+        result="boolean of whether all elements are True",
+    )
     def groupby_all(
         self,
         by,
@@ -1342,29 +2348,6 @@ class BaseQueryCompiler(abc.ABC):
         numeric_only=True,
         drop=False,
     ):
-        """Perform a groupby all.
-
-        Parameters
-        ----------
-        by : BaseQueryCompiler
-            The query compiler object to groupby.
-        axis : 0 or 1
-            The axis to groupby. Must be 0 currently.
-        groupby_args : dict
-            The arguments for the groupby component.
-        map_args : dict
-            The arguments for the `map_func`.
-        reduce_args : dict
-            The arguments for `reduce_func`.
-        numeric_only : bool
-            Whether to drop non-numeric columns.
-        drop : bool
-            Whether the data in `by` was dropped.
-
-        Returns
-        -------
-        BaseQueryCompiler
-        """
         return GroupByDefault.register(pandas.core.groupby.DataFrameGroupBy.all)(
             self,
             by=by,
@@ -1376,6 +2359,7 @@ class BaseQueryCompiler(abc.ABC):
             drop=drop,
         )
 
+    @doc(__doc_groupby_method, aggregation="compute sum", result="sum")
     def groupby_sum(
         self,
         by,
@@ -1386,29 +2370,6 @@ class BaseQueryCompiler(abc.ABC):
         numeric_only=True,
         drop=False,
     ):
-        """Perform a groupby sum.
-
-        Parameters
-        ----------
-        by : BaseQueryCompiler
-            The query compiler object to groupby.
-        axis : 0 or 1
-            The axis to groupby. Must be 0 currently.
-        groupby_args : dict
-            The arguments for the groupby component.
-        map_args : dict
-            The arguments for the `map_func`.
-        reduce_args : dict
-            The arguments for `reduce_func`.
-        numeric_only : bool
-            Whether to drop non-numeric columns.
-        drop : bool
-            Whether the data in `by` was dropped.
-
-        Returns
-        -------
-        BaseQueryCompiler
-        """
         return GroupByDefault.register(pandas.core.groupby.DataFrameGroupBy.sum)(
             self,
             by=by,
@@ -1420,6 +2381,11 @@ class BaseQueryCompiler(abc.ABC):
             drop=drop,
         )
 
+    @doc(
+        __doc_groupby_method,
+        aggregation="get the number of elements",
+        result="number of elements",
+    )
     def groupby_size(
         self,
         by,
@@ -1430,29 +2396,6 @@ class BaseQueryCompiler(abc.ABC):
         numeric_only=True,
         drop=False,
     ):
-        """Perform a groupby size.
-
-        Parameters
-        ----------
-        by : BaseQueryCompiler
-            The query compiler object to groupby.
-        axis : 0 or 1
-            The axis to groupby. Must be 0 currently.
-        groupby_args : dict
-            The arguments for the groupby component.
-        map_args : dict
-            The arguments for the `map_func`.
-        reduce_args : dict
-            The arguments for `reduce_func`.
-        numeric_only : bool
-            Whether to drop non-numeric columns.
-        drop : bool
-            Whether the data in `by` was dropped.
-
-        Returns
-        -------
-        BaseQueryCompiler
-        """
         return GroupByDefault.register(pandas.core.groupby.DataFrameGroupBy.size)(
             self,
             by=by,
@@ -1476,6 +2419,35 @@ class BaseQueryCompiler(abc.ABC):
         groupby_kwargs,
         drop=False,
     ):
+        """
+        Group `QueryCompiler` data and apply passed aggregation function.
+
+        Parameters
+        ----------
+        by : BaseQueryCompiler, column or index label, Grouper or list of such
+            Object that determine groups.
+        is_multi_by : bool
+            If `by` is a `QueryCompiler` or list of such indicates whether it's
+            grouping on multiple columns/rows.
+        axis : int
+            Axis to group and apply aggregation function along.
+        agg_func : dict or callable(pandas.core.groupby.DataFrameGroupBy) -> pandas.DataFrame
+            Function to apply to the pandas GroupBy object.
+        agg_args : dict
+            Positional arguments to pass to the `agg_func`.
+        agg_kwargs : dict
+            Key arguments to pass to the `agg_func`.
+        groupby_kwargs : dict
+            GroupBy parameters in the format of ``modin.pandas.DataFrame.groupby`` signature.
+        drop : bool, default: False
+            If `by` is a `QueryCompiler` indicates whether or not by-data came
+            from the `self`.
+
+        Returns
+        -------
+        BaseQueryCompiler
+            `QueryCompiler` containing the result of groupby aggregation.
+        """
         if isinstance(by, type(self)) and len(by.columns) == 1:
             by = by.columns[0] if drop else by.to_pandas().squeeze()
         elif isinstance(by, type(self)):
@@ -1494,16 +2466,45 @@ class BaseQueryCompiler(abc.ABC):
 
     # END Manual Partitioning methods
 
+    @add_refer_to("DataFrame.unstack")
     def unstack(self, level, fill_value):
+        """
+        Pivot a level of the (necessarily hierarchical) index labels.
+
+        Parameters
+        ----------
+        level : int or label
+        fill_value : scalar or dict
+
+        Returns
+        -------
+        BaseQueryCompiler
+        """
         return DataFrameDefault.register(pandas.DataFrame.unstack)(
             self, level=level, fill_value=fill_value
         )
 
+    @add_refer_to("DataFrame.pivot")
     def pivot(self, index, columns, values):
+        """
+        Produce pivot table based on column values.
+
+        Parameters
+        ----------
+        index : label or list of such, pandas.Index, optional
+        columns : label or list of such
+        values : label or list of such, optional
+
+        Returns
+        -------
+        BaseQueryCompiler
+            New `QueryCompiler` containing pivot table.
+        """
         return DataFrameDefault.register(pandas.DataFrame.pivot)(
             self, index=index, columns=columns, values=values
         )
 
+    @add_refer_to("DataFrame.pivot_table")
     def pivot_table(
         self,
         index,
@@ -1516,6 +2517,25 @@ class BaseQueryCompiler(abc.ABC):
         margins_name,
         observed,
     ):
+        """
+        Create a spreadsheet-style pivot table from underlying data.
+
+        Parameters
+        ----------
+        index : label, pandas.Grouper, array or list of such
+        values : label, optional
+        columns : column, pandas.Grouper, array or list of such
+        aggfunc : callable(pandas.Series) -> scalar, dict of list of such
+        fill_value : scalar, optional
+        margins : bool
+        dropna: bool
+        margins_name : str
+        observed : bool
+
+        Returns
+        -------
+        BaseQueryCompiler
+        """
         return DataFrameDefault.register(pandas.DataFrame.pivot_table)(
             self,
             index=index,
@@ -1529,14 +2549,25 @@ class BaseQueryCompiler(abc.ABC):
             observed=observed,
         )
 
+    @add_refer_to("get_dummies")
     def get_dummies(self, columns, **kwargs):
-        """Convert categorical variables to dummy variables for certain columns.
+        """
+        Convert categorical variables to dummy variables for certain columns.
 
-        Args:
-            columns: The columns to convert.
+        Parameters
+        ----------
+        columns : label or list of such
+            Columns to convert.
+        prefix : str or list of such
+        prefix_sep : str
+        dummy_na : bool
+        drop_first : bool
+        dtype : dtype
 
-        Returns:
-            A new QueryCompiler.
+        Returns
+        -------
+        BaseQueryCompiler
+            New `QueryCompiler` with categorical variables converted to dummy.
         """
 
         def get_dummies(df, columns, **kwargs):
@@ -1544,24 +2575,22 @@ class BaseQueryCompiler(abc.ABC):
 
         return DataFrameDefault.register(get_dummies)(self, columns=columns, **kwargs)
 
+    @_add_one_column_warning
     def repeat(self, repeats):
         """
-        Repeat elements of a Series.
-
-        Returns a new Series where each element of the current Series
-        is repeated consecutively a given number of times.
+        Repeat each element of one-column `QueryCompiler` given number of times.
 
         Parameters
         ----------
         repeats : int or array of ints
             The number of repetitions for each element. This should be a
             non-negative integer. Repeating 0 times will return an empty
-            Series.
+            `QueryCompiler`.
 
         Returns
         -------
-        Series
-            Newly created Series with repeated elements.
+        BaseQueryCompiler
+            New `QueryCompiler` with repeated elements.
         """
         return SeriesDefault.register(pandas.Series.repeat)(self, repeats=repeats)
 
@@ -1576,16 +2605,31 @@ class BaseQueryCompiler(abc.ABC):
 
         Parameters
         ----------
-        axis: int,
+        axis : int
             Axis to return labels on.
 
         Returns
         -------
-            Index
+        pandas.Index
         """
         return self.index if axis == 0 else self.columns
 
     def view(self, index=None, columns=None):
+        """
+        Mask `QueryCompiler` with passed keys.
+
+        Parameters
+        ----------
+        index : list of ints
+            Positional indices of rows to grab.
+        columns : list of ints
+            Positional indices of columns to grab.
+
+        Returns
+        -------
+        BaseQueryCompiler
+            New masked `QueryCompiler`.
+        """
         index = [] if index is None else index
         columns = [] if columns is None else columns
 
@@ -1596,21 +2640,28 @@ class BaseQueryCompiler(abc.ABC):
 
     def insert_item(self, axis, loc, value, how="inner", replace=False):
         """
-        Insert new column/row defined by `value` at the specified `loc`
+        Insert rows/columns defined by `value` at the specified position.
+
+        If frames are not aligned along specified axis, first perform frames allignment.
 
         Parameters
         ----------
-        axis: int, axis to insert along
-        loc: int, position to insert `value`
-        value: BaseQueryCompiler, value to insert
-        how : str,
-            The type of join to join to make.
-        replace: bool (default False),
-            Whether to insert item at `loc` or to replace item at `loc`.
+        axis : int
+            Axis to insert along. 0 means insert rows, when 1 means insert columns.
+        loc : int
+            Position to insert `value`.
+        value : BaseQueryCompiler
+            Rows/columns to insert.
+        how : {"inner", "outer", "left", "right"}
+            Type of join that will be used if frames are not aligned.
+        replace : bool, default: False
+            Whether to insert item after column/row at `loc-th` position or to replace
+            it by `value`.
 
         Returns
         -------
-            A new BaseQueryCompiler
+        BaseQueryCompiler
+            New `QueryCompiler` with inserted values.
         """
         assert isinstance(value, type(self))
 
@@ -1632,6 +2683,24 @@ class BaseQueryCompiler(abc.ABC):
             return self.concat(axis, [value], join=how, sort=False)
 
     def setitem(self, axis, key, value):
+        """
+        Set the row/column defined by `key` to the `value` provided.
+
+        Parameters
+        ----------
+        axis : int
+            Axis to set `value` along. 0 means set row, 1 means set column.
+        key : label
+            Row/column label to set `value` in.
+        value : BaseQueryCompiler, list-like or scalar
+            Define new row/column value.
+
+        Returns
+        -------
+        BaseQueryCompiler
+            New `QueryCompiler` with updated `key` value.
+        """
+
         def setitem(df, axis, key, value):
             if is_scalar(key) and isinstance(value, pandas.DataFrame):
                 value = value.squeeze()
@@ -1644,6 +2713,25 @@ class BaseQueryCompiler(abc.ABC):
         return DataFrameDefault.register(setitem)(self, axis=axis, key=key, value=value)
 
     def write_items(self, row_numeric_index, col_numeric_index, broadcasted_items):
+        """
+        Update `QueryCompiler` elements at the specified positions by passed values.
+
+        Parameters
+        ----------
+        row_numeric_index : list of ints
+            Row positions to write value.
+        col_numeric_index : list of ints
+            Column positions to write value
+        broadcasted_items : 2D-array
+            Values to write. Have to be same size as defined by `row_numeric_index`
+            and `col_numeric_index`.
+
+        Returns
+        -------
+        BaseQueryCompiler
+            New `QueryCompiler` with updated values.
+        """
+
         def write_items(df, broadcasted_items):
             if isinstance(df.iloc[row_numeric_index, col_numeric_index], pandas.Series):
                 broadcasted_items = broadcasted_items.squeeze()
@@ -1666,6 +2754,19 @@ class BaseQueryCompiler(abc.ABC):
     # __delitem__
     # This will change the shape of the resulting data.
     def delitem(self, key):
+        """
+        Drop `key` column.
+
+        Parameters
+        ----------
+        key : label
+            Column name to drop.
+
+        Returns
+        -------
+        BaseQueryCompiler
+            New `QueryCompiler` without `key` column.
+        """
         return self.drop(columns=[key])
 
     # END __delitem__
@@ -1676,7 +2777,7 @@ class BaseQueryCompiler(abc.ABC):
 
         Parameters
         ----------
-        axis : 0 or 1, default 0
+        axis : int, default: 0
             The axis to check (0 - index, 1 - columns).
 
         Returns
@@ -1695,8 +2796,8 @@ class BaseQueryCompiler(abc.ABC):
 
         Parameters
         ----------
-        axis: int (default 0),
-            Axis to return index name on.
+        axis: int, default: 0
+            Axis to get index name on.
 
         Returns
         -------
@@ -1711,9 +2812,9 @@ class BaseQueryCompiler(abc.ABC):
 
         Parameters
         ----------
-        name: hashable,
+        name : hashable
             New index name.
-        axis: int (default 0),
+        axis : int, default: 0
             Axis to set name along.
         """
         self.get_axis(axis).name = name
@@ -1724,8 +2825,8 @@ class BaseQueryCompiler(abc.ABC):
 
         Parameters
         ----------
-        axis: int (default 0),
-            Axis to return index names on.
+        axis : int, default: 0
+            Axis to get index names on.
 
         Returns
         -------
@@ -1740,65 +2841,271 @@ class BaseQueryCompiler(abc.ABC):
 
         Parameters
         ----------
-        names: list,
+        names : list
             New index names.
-        axis: int (default 0),
+        axis : int, default: 0
             Axis to set names along.
         """
         self.get_axis(axis).names = names
 
     # DateTime methods
 
-    dt_ceil = DateTimeDefault.register(pandas.Series.dt.ceil)
-    dt_components = DateTimeDefault.register(pandas.Series.dt.components)
-    dt_date = DateTimeDefault.register(pandas.Series.dt.date)
-    dt_day = DateTimeDefault.register(pandas.Series.dt.day)
-    dt_day_name = DateTimeDefault.register(pandas.Series.dt.day_name)
-    dt_dayofweek = DateTimeDefault.register(pandas.Series.dt.dayofweek)
-    dt_dayofyear = DateTimeDefault.register(pandas.Series.dt.dayofyear)
-    dt_days = DateTimeDefault.register(pandas.Series.dt.days)
-    dt_days_in_month = DateTimeDefault.register(pandas.Series.dt.days_in_month)
-    dt_daysinmonth = DateTimeDefault.register(pandas.Series.dt.daysinmonth)
-    dt_end_time = DateTimeDefault.register(pandas.Series.dt.end_time)
-    dt_floor = DateTimeDefault.register(pandas.Series.dt.floor)
-    dt_freq = DateTimeDefault.register(pandas.Series.dt.freq)
-    dt_hour = DateTimeDefault.register(pandas.Series.dt.hour)
-    dt_is_leap_year = DateTimeDefault.register(pandas.Series.dt.is_leap_year)
-    dt_is_month_end = DateTimeDefault.register(pandas.Series.dt.is_month_end)
-    dt_is_month_start = DateTimeDefault.register(pandas.Series.dt.is_month_start)
-    dt_is_quarter_end = DateTimeDefault.register(pandas.Series.dt.is_quarter_end)
-    dt_is_quarter_start = DateTimeDefault.register(pandas.Series.dt.is_quarter_start)
-    dt_is_year_end = DateTimeDefault.register(pandas.Series.dt.is_year_end)
-    dt_is_year_start = DateTimeDefault.register(pandas.Series.dt.is_year_start)
-    dt_microsecond = DateTimeDefault.register(pandas.Series.dt.microsecond)
-    dt_microseconds = DateTimeDefault.register(pandas.Series.dt.microseconds)
-    dt_minute = DateTimeDefault.register(pandas.Series.dt.minute)
-    dt_month = DateTimeDefault.register(pandas.Series.dt.month)
-    dt_month_name = DateTimeDefault.register(pandas.Series.dt.month_name)
-    dt_nanosecond = DateTimeDefault.register(pandas.Series.dt.nanosecond)
-    dt_nanoseconds = DateTimeDefault.register(pandas.Series.dt.nanoseconds)
-    dt_normalize = DateTimeDefault.register(pandas.Series.dt.normalize)
-    dt_quarter = DateTimeDefault.register(pandas.Series.dt.quarter)
-    dt_qyear = DateTimeDefault.register(pandas.Series.dt.qyear)
-    dt_round = DateTimeDefault.register(pandas.Series.dt.round)
-    dt_second = DateTimeDefault.register(pandas.Series.dt.second)
-    dt_seconds = DateTimeDefault.register(pandas.Series.dt.seconds)
-    dt_start_time = DateTimeDefault.register(pandas.Series.dt.start_time)
-    dt_strftime = DateTimeDefault.register(pandas.Series.dt.strftime)
-    dt_time = DateTimeDefault.register(pandas.Series.dt.time)
-    dt_timetz = DateTimeDefault.register(pandas.Series.dt.timetz)
-    dt_to_period = DateTimeDefault.register(pandas.Series.dt.to_period)
-    dt_to_pydatetime = DateTimeDefault.register(pandas.Series.dt.to_pydatetime)
-    dt_to_pytimedelta = DateTimeDefault.register(pandas.Series.dt.to_pytimedelta)
+    def dt_ceil(self, freq, ambiguous, nonexistent):
+        return DateTimeDefault.register(pandas.Series.dt.ceil)(
+            self, freq, ambiguous, nonexistent
+        )
+
+    @_add_one_column_warning
+    @add_refer_to("Series.dt.components")
+    def dt_components(self):
+        """
+        Spread each date-time value into its components (days, hours, minutes...).
+
+        Returns
+        -------
+        BaseQueryCompiler
+        """
+        return DateTimeDefault.register(pandas.Series.dt.components)(self)
+
+    __doc_dt_properties = """
+    Get {property} for each date-time value.
+
+    Returns
+    -------
+    BaseQueryCompiler
+        New `QueryCompiler` with the same shape as `self`, where each each is
+        {property} for the corresponding date-time value.
+    """
+
+    @_add_one_column_warning
+    @doc(__doc_dt_properties, property="the date without timezone information")
+    def dt_date(self):
+        return DateTimeDefault.register(pandas.Series.dt.date)(self)
+
+    @_add_one_column_warning
+    @doc(__doc_dt_properties, property="day component")
+    def dt_day(self):
+        return DateTimeDefault.register(pandas.Series.dt.day)(self)
+
+    @_add_one_column_warning
+    @doc(__doc_dt_properties, property="day name")
+    def dt_day_name(self, locale):
+        return DateTimeDefault.register(pandas.Series.dt.day_name)(self, locale)
+
+    @_add_one_column_warning
+    @doc(__doc_dt_properties, property="integer day of week")
+    # FIXME: `dt_dayofweek` is an alias for `dt_weekday`, one of them should
+    # be removed.
+    def dt_dayofweek(self):
+        return DateTimeDefault.register(pandas.Series.dt.dayofweek)(self)
+
+    @_add_one_column_warning
+    @doc(__doc_dt_properties, property="day of year")
+    def dt_dayofyear(self):
+        return DateTimeDefault.register(pandas.Series.dt.dayofyear)(self)
+
+    def dt_days(self):
+        return DateTimeDefault.register(pandas.Series.dt.days)(self)
+
+    @_add_one_column_warning
+    @doc(__doc_dt_properties, property="the number of days in month")
+    # FIXME: `dt_days_in_month` is an alias for `dt_daysinmonth`, one of them should
+    # be removed.
+    def dt_days_in_month(self):
+        return DateTimeDefault.register(pandas.Series.dt.days_in_month)(self)
+
+    @_add_one_column_warning
+    @doc(__doc_dt_properties, property="the number of days in month")
+    def dt_daysinmonth(self):
+        return DateTimeDefault.register(pandas.Series.dt.daysinmonth)(self)
+
+    def dt_end_time(self):
+        return DateTimeDefault.register(pandas.Series.dt.end_time)(self)
+
+    def dt_floor(self, freq, ambiguous, nonexistent):
+        return DateTimeDefault.register(pandas.Series.dt.floor)(
+            self, freq, ambiguous, nonexistent
+        )
+
+    def dt_freq(self):
+        return DateTimeDefault.register(pandas.Series.dt.freq)(self)
+
+    @_add_one_column_warning
+    @doc(__doc_dt_properties, property="hours component")
+    def dt_hour(self):
+        return DateTimeDefault.register(pandas.Series.dt.hour)(self)
+
+    @_add_one_column_warning
+    @doc(
+        __doc_dt_properties,
+        property="the boolean of whether corresponding year is leap",
+    )
+    def dt_is_leap_year(self):
+        return DateTimeDefault.register(pandas.Series.dt.is_leap_year)(self)
+
+    @_add_one_column_warning
+    @doc(
+        __doc_dt_properties,
+        property="the boolean of whether the date is the last day of the month",
+    )
+    def dt_is_month_end(self):
+        return DateTimeDefault.register(pandas.Series.dt.is_month_end)(self)
+
+    @_add_one_column_warning
+    @doc(
+        __doc_dt_properties,
+        property="the boolean of whether the date is the first day of the month",
+    )
+    def dt_is_month_start(self):
+        return DateTimeDefault.register(pandas.Series.dt.is_month_start)(self)
+
+    @_add_one_column_warning
+    @doc(
+        __doc_dt_properties,
+        property="the boolean of whether the date is the last day of the quarter",
+    )
+    def dt_is_quarter_end(self):
+        return DateTimeDefault.register(pandas.Series.dt.is_quarter_end)(self)
+
+    @_add_one_column_warning
+    @doc(
+        __doc_dt_properties,
+        property="the boolean of whether the date is the first day of the quarter",
+    )
+    def dt_is_quarter_start(self):
+        return DateTimeDefault.register(pandas.Series.dt.is_quarter_start)(self)
+
+    @_add_one_column_warning
+    @doc(
+        __doc_dt_properties,
+        property="the boolean of whether the date is the last day of the year",
+    )
+    def dt_is_year_end(self):
+        return DateTimeDefault.register(pandas.Series.dt.is_year_end)(self)
+
+    @_add_one_column_warning
+    @doc(
+        __doc_dt_properties,
+        property="the boolean of whether the date is the first day of the year",
+    )
+    def dt_is_year_start(self):
+        return DateTimeDefault.register(pandas.Series.dt.is_year_start)(self)
+
+    @_add_one_column_warning
+    @doc(__doc_dt_properties, property="microseconds component")
+    def dt_microsecond(self):
+        return DateTimeDefault.register(pandas.Series.dt.microsecond)(self)
+
+    def dt_microseconds(self):
+        return DateTimeDefault.register(pandas.Series.dt.microseconds)(self)
+
+    @_add_one_column_warning
+    @doc(__doc_dt_properties, property="minute component")
+    def dt_minute(self):
+        return DateTimeDefault.register(pandas.Series.dt.minute)(self)
+
+    @_add_one_column_warning
+    @doc(__doc_dt_properties, property="month component")
+    def dt_month(self):
+        return DateTimeDefault.register(pandas.Series.dt.month)(self)
+
+    @_add_one_column_warning
+    @doc(__doc_dt_properties, property="the month name")
+    def dt_month_name(self, locale):
+        return DateTimeDefault.register(pandas.Series.dt.month_name)(self, locale)
+
+    @_add_one_column_warning
+    @doc(__doc_dt_properties, property="nanoseconds component")
+    def dt_nanosecond(self):
+        return DateTimeDefault.register(pandas.Series.dt.nanosecond)(self)
+
+    def dt_nanoseconds(self):
+        return DateTimeDefault.register(pandas.Series.dt.nanoseconds)(self)
+
+    def dt_normalize(self):
+        return DateTimeDefault.register(pandas.Series.dt.normalize)(self)
+
+    @_add_one_column_warning
+    @doc(__doc_dt_properties, property="quarter component")
+    def dt_quarter(self):
+        return DateTimeDefault.register(pandas.Series.dt.quarter)(self)
+
+    def dt_qyear(self):
+        return DateTimeDefault.register(pandas.Series.dt.qyear)(self)
+
+    def dt_round(self, freq, ambiguous, nonexistent):
+        return DateTimeDefault.register(pandas.Series.dt.round)(
+            self, freq, ambiguous, nonexistent
+        )
+
+    @_add_one_column_warning
+    @doc(__doc_dt_properties, property="seconds component")
+    def dt_second(self):
+        return DateTimeDefault.register(pandas.Series.dt.second)(self)
+
+    def dt_seconds(self):
+        return DateTimeDefault.register(pandas.Series.dt.seconds)(self)
+
+    def dt_start_time(self):
+        return DateTimeDefault.register(pandas.Series.dt.start_time)(self)
+
+    def dt_strftime(self, date_format):
+        return DateTimeDefault.register(pandas.Series.dt.strftime)(self, date_format)
+
+    @_add_one_column_warning
+    @doc(__doc_dt_properties, property="time component")
+    def dt_time(self):
+        return DateTimeDefault.register(pandas.Series.dt.time)(self)
+
+    @_add_one_column_warning
+    @doc(__doc_dt_properties, property="time component with timezone information")
+    def dt_timetz(self):
+        return DateTimeDefault.register(pandas.Series.dt.timetz)(self)
+
+    def dt_to_period(self, freq):
+        return DateTimeDefault.register(pandas.Series.dt.to_period)(self)
+
+    def dt_to_pydatetime(self):
+        return DateTimeDefault.register(pandas.Series.dt.to_pydatetime)(self)
+
+    def dt_to_pytimedelta(self):
+        return DateTimeDefault.register(pandas.Series.dt.dt_to_pytimedelta)(self)
+
     dt_to_timestamp = DateTimeDefault.register(pandas.Series.dt.to_timestamp)
-    dt_total_seconds = DateTimeDefault.register(pandas.Series.dt.total_seconds)
-    dt_tz = DateTimeDefault.register(pandas.Series.dt.tz)
-    dt_tz_convert = DateTimeDefault.register(pandas.Series.dt.tz_convert)
-    dt_tz_localize = DateTimeDefault.register(pandas.Series.dt.tz_localize)
-    dt_week = DateTimeDefault.register(pandas.Series.dt.week)
-    dt_weekday = DateTimeDefault.register(pandas.Series.dt.weekday)
-    dt_weekofyear = DateTimeDefault.register(pandas.Series.dt.weekofyear)
-    dt_year = DateTimeDefault.register(pandas.Series.dt.year)
+
+    def dt_total_seconds(self):
+        return DateTimeDefault.register(pandas.Series.dt.dt_total_seconds)(self)
+
+    def dt_tz(self):
+        return DateTimeDefault.register(pandas.Series.dt.dt_tz)(self)
+
+    def dt_tz_convert(self, tz):
+        return DateTimeDefault.register(pandas.Series.dt.tz_convert)(self, tz)
+
+    def dt_tz_localize(self, tz, ambiguous, nonexistent):
+        return DateTimeDefault.register(pandas.Series.dt.tz_localize)(
+            self, tz, ambiguous, nonexistent
+        )
+
+    @_add_one_column_warning
+    @doc(__doc_dt_properties, property="week component")
+    def dt_week(self):
+        return DateTimeDefault.register(pandas.Series.dt.week)(self)
+
+    @_add_one_column_warning
+    @doc(__doc_dt_properties, property="integer day of week")
+    def dt_weekday(self):
+        return DateTimeDefault.register(pandas.Series.dt.weekday)(self)
+
+    @_add_one_column_warning
+    @doc(__doc_dt_properties, property="week of year")
+    def dt_weekofyear(self):
+        return DateTimeDefault.register(pandas.Series.dt.weekofyear)(self)
+
+    @_add_one_column_warning
+    @doc(__doc_dt_properties, property="year component")
+    def dt_year(self):
+        return DateTimeDefault.register(pandas.Series.dt.year)(self)
 
     # End of DateTime methods
 
