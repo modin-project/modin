@@ -31,11 +31,14 @@ Let's implement a function that counts non-NA values for each column or row (`pa
 
 To define the MapReduce function that does `count` + `sum` we just need to register the appropriate functions and then assign the result to the picked `QueryCompiler` (`PandasQueryCompiler` in our case): 
 .. code-block:: python
+    from modin.backends import PandasQueryCompiler
+    from modin.data_management.functions import MapReduceFunction
 
     PandasQueryCompiler.custom_count = MapReduceFunction.register(pandas.DataFrame.count, pandas.DataFrame.sum)
 
 Then, we want to handle it from the DataFrame, so we need to create a way to do that:
 .. code-block:: python
+    import modin.pandas as pd
 
     def count_func(self, **kwargs):
         # The constructor allows you to pass in a query compiler as a keyword argument
