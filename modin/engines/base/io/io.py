@@ -22,6 +22,7 @@ from pandas.util._decorators import doc
 from collections import OrderedDict
 from modin.error_message import ErrorMessage
 from modin.backends.base.query_compiler import BaseQueryCompiler
+from modin.utils import _inherit_docstrings
 from typing import Optional
 
 # TODO (amyskov): replace `For parameters description please refer to pandas API.` statement with
@@ -98,6 +99,7 @@ class BaseIO(object):
         return cls.query_compiler_cls.from_arrow(at, cls.frame_cls)
 
     @classmethod
+    @_inherit_docstrings(pandas.read_parquet, apilink="pandas.read_parquet")
     @doc(
         _doc_default_io_method,
         summary="Load a parquet object from the file path, returning a query compiler",
@@ -110,6 +112,7 @@ class BaseIO(object):
         )
 
     @classmethod
+    @_inherit_docstrings(pandas.read_csv, apilink="pandas.read_csv")
     @doc(
         _doc_default_io_method,
         summary="Read a comma-separated values (CSV) file into query compiler",
@@ -251,6 +254,7 @@ class BaseIO(object):
         return pd_obj
 
     @classmethod
+    @_inherit_docstrings(pandas.read_json, apilink="pandas.read_json")
     @doc(
         _doc_default_io_method,
         summary="Convert a JSON string to query compiler",
@@ -297,6 +301,7 @@ class BaseIO(object):
         return cls.from_pandas(pandas.read_json(**kwargs))
 
     @classmethod
+    @_inherit_docstrings(pandas.read_gbq, apilink="pandas.read_gbq")
     @doc(
         _doc_default_io_method,
         summary="Load data from Google BigQuery into query compiler",
@@ -342,6 +347,7 @@ class BaseIO(object):
         )
 
     @classmethod
+    @_inherit_docstrings(pandas.read_html, apilink="pandas.read_html")
     @doc(
         _doc_default_io_method,
         summary="Read HTML tables into query compiler",
@@ -386,6 +392,7 @@ class BaseIO(object):
         return cls.from_pandas(pandas.read_html(**kwargs)[0])
 
     @classmethod
+    @_inherit_docstrings(pandas.read_clipboard, apilink="pandas.read_clipboard")
     @doc(
         _doc_default_io_method,
         summary="Read text from clipboard into query compiler",
@@ -396,6 +403,7 @@ class BaseIO(object):
         return cls.from_pandas(pandas.read_clipboard(sep=sep, **kwargs))
 
     @classmethod
+    @_inherit_docstrings(pandas.read_excel, apilink="pandas.read_excel")
     @doc(
         _doc_default_io_method,
         summary="Read an Excel file into query compiler",
@@ -472,6 +480,7 @@ class BaseIO(object):
             return cls.from_pandas(intermediate)
 
     @classmethod
+    @_inherit_docstrings(pandas.read_hdf, apilink="pandas.read_hdf")
     @doc(
         _doc_default_io_method,
         summary="Read data from hdf store into query compiler",
@@ -509,6 +518,7 @@ class BaseIO(object):
         )
 
     @classmethod
+    @_inherit_docstrings(pandas.read_feather, apilink="pandas.read_feather")
     @doc(
         _doc_default_io_method,
         summary="Load a feather-format object from the file path into query compiler",
@@ -526,6 +536,7 @@ class BaseIO(object):
         )
 
     @classmethod
+    @_inherit_docstrings(pandas.read_stata, apilink="pandas.read_stata")
     @doc(
         _doc_default_io_method,
         summary="Read Stata file into query compiler",
@@ -562,6 +573,7 @@ class BaseIO(object):
         return cls.from_pandas(pandas.read_stata(**kwargs))
 
     @classmethod
+    @_inherit_docstrings(pandas.read_sas, apilink="pandas.read_sas")
     @doc(
         _doc_default_io_method,
         summary="Read SAS files stored as either XPORT or SAS7BDAT format files\ninto query compiler",
@@ -589,6 +601,7 @@ class BaseIO(object):
         )
 
     @classmethod
+    @_inherit_docstrings(pandas.read_pickle, apilink="pandas.read_pickle")
     @doc(
         _doc_default_io_method,
         summary="Load pickled pandas object (or any object) from file into query compiler",
@@ -605,6 +618,7 @@ class BaseIO(object):
         )
 
     @classmethod
+    @_inherit_docstrings(pandas.read_sql, apilink="pandas.read_sql")
     @doc(
         _doc_default_io_method,
         summary="Read SQL query or database table into query compiler",
@@ -636,6 +650,7 @@ class BaseIO(object):
         )
 
     @classmethod
+    @_inherit_docstrings(pandas.read_fwf, apilink="pandas.read_fwf")
     @doc(
         _doc_default_io_method,
         summary="Read a table of fixed-width formatted lines into query compiler",
@@ -664,6 +679,7 @@ class BaseIO(object):
         return pd_obj
 
     @classmethod
+    @_inherit_docstrings(pandas.read_sql_table, apilink="pandas.read_sql_table")
     @doc(
         _doc_default_io_method,
         summary="Read SQL database table into query compiler",
@@ -695,6 +711,7 @@ class BaseIO(object):
         )
 
     @classmethod
+    @_inherit_docstrings(pandas.read_sql_query, apilink="pandas.read_sql_query")
     @doc(
         _doc_default_io_method,
         summary="Read SQL query into query compiler",
@@ -724,6 +741,7 @@ class BaseIO(object):
         )
 
     @classmethod
+    @_inherit_docstrings(pandas.read_spss, apilink="pandas.read_spss")
     @doc(
         _doc_default_io_method,
         summary="Load an SPSS file from the file path, returning a query compiler",
