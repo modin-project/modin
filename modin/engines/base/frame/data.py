@@ -689,10 +689,10 @@ class BasePandasFrame(object):
 
         Parameters
         ----------
-        row_numeric_idx : list of int, default: None
+        row_numeric_idx : list of int, optional
             The ordered list of new row orders such that each position within the list
             indicates the new position.
-        col_numeric_idx : list of int, default: None
+        col_numeric_idx : list of int, optional
             The ordered list of new column orders such that each position within the
             list indicates the new position.
 

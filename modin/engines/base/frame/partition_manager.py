@@ -619,7 +619,7 @@ class BaseFrameManager(ABC):
         dimension being concatenated. A ValueError will be thrown if this
         condition is not met.
         """
-        # TODO: isinstance
+        # TODO: Possible change is `isinstance(right_parts, list)`
         if type(right_parts) is list:
             # `np.array` with partitions of empty ModinFrame has a shape (0,)
             # but `np.concatenate` can concatenate arrays only if its shapes at
