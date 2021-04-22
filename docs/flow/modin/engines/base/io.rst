@@ -6,9 +6,10 @@ IO Module Description
 High-Level Data Import Operation Workflow
 '''''''''''''''''''''''''''''''''''''''''
 
-**Note**: ``read_csv`` on pandas backend and Ray engine was taken as an example
-in this chapter for reader convenience. For other import functions workflow and
-classes/functions naming convension will be the same.
+.. note:: 
+    ``read_csv`` on pandas backend and Ray engine was taken as an example
+    in this chapter for reader convenience. For other import functions workflow and
+    classes/functions naming convension will be the same.
 
 After user calls high-level ``modin.pandas.read_csv`` function, call is forwarded
 to the ``EngineDispatcher``, which defines which factory from
