@@ -29,11 +29,17 @@ from pandas.util._decorators import doc
 
 import pandas
 
+
 _doc_abstract_factory_class = """
 Abstract {role} factory which allows to override the IO module easily.
 
 This class is responsible for dispatching calls of IO-functions to its
 actual engine-specific implementations.
+
+Attributes
+----------
+io_cls : BaseIO
+    IO module class of the underlying engine. The place to dispatch calls to.
 """
 
 _doc_factory_class = """
@@ -41,6 +47,11 @@ Factory of {engine_name} engine.
 
 This class is responsible for dispatching calls of IO-functions to its
 actual engine-specific implementations.
+
+Attributes
+----------
+io_cls : {engine_name}IO
+    IO module class of the underlying engine. The place to dispatch calls to.
 """
 
 _doc_factory_prepare_method = """
@@ -204,7 +215,7 @@ class BaseFactory(object):  # noqa: D101
         return cls.io_cls.to_csv(*args, **kwargs)
 
 
-@doc(_doc_factory_class, engine_name="`cuDFOnRay")
+@doc(_doc_factory_class, engine_name="cuDFOnRay")
 class CudfOnRayFactory(BaseFactory):  # noqa: D101
     @classmethod
     @doc(_doc_factory_prepare_method, engine_name="``cuDFOnRayIO``")
@@ -214,7 +225,7 @@ class CudfOnRayFactory(BaseFactory):  # noqa: D101
         cls.io_cls = cuDFOnRayIO
 
 
-@doc(_doc_factory_class, engine_name="`PandasOnRay")
+@doc(_doc_factory_class, engine_name="PandasOnRay")
 class PandasOnRayFactory(BaseFactory):  # noqa: D101
     @classmethod
     @doc(_doc_factory_prepare_method, engine_name="``PandasOnRayIO``")
@@ -224,7 +235,7 @@ class PandasOnRayFactory(BaseFactory):  # noqa: D101
         cls.io_cls = PandasOnRayIO
 
 
-@doc(_doc_factory_class, engine_name="`PandasOnPython")
+@doc(_doc_factory_class, engine_name="PandasOnPython")
 class PandasOnPythonFactory(BaseFactory):  # noqa: D101
     @classmethod
     @doc(_doc_factory_prepare_method, engine_name="``PandasOnPythonIO``")
@@ -234,7 +245,7 @@ class PandasOnPythonFactory(BaseFactory):  # noqa: D101
         cls.io_cls = PandasOnPythonIO
 
 
-@doc(_doc_factory_class, engine_name="`PandasOnDask`")
+@doc(_doc_factory_class, engine_name="PandasOnDask")
 class PandasOnDaskFactory(BaseFactory):  # noqa: D101
     @classmethod
     @doc(_doc_factory_prepare_method, engine_name="``PandasOnDaskIO``")
@@ -276,7 +287,7 @@ class ExperimentalBaseFactory(BaseFactory):  # noqa: D101
         return cls.io_cls.read_sql(**kwargs)
 
 
-@doc(_doc_factory_class, engine_name="`experimental PandasOnRay`")
+@doc(_doc_factory_class, engine_name="experimental PandasOnRay")
 class ExperimentalPandasOnRayFactory(
     ExperimentalBaseFactory, PandasOnRayFactory
 ):  # noqa: D101
@@ -294,14 +305,14 @@ class ExperimentalPandasOnRayFactory(
         return cls.io_cls.read_csv_glob(**kwargs)
 
 
-@doc(_doc_factory_class, engine_name="experimental `PandasOnPython")
+@doc(_doc_factory_class, engine_name="experimental PandasOnPython")
 class ExperimentalPandasOnPythonFactory(
     ExperimentalBaseFactory, PandasOnPythonFactory
 ):  # noqa: D101
     pass
 
 
-@doc(_doc_factory_class, engine_name="`experimental PyarrowOnRay`")
+@doc(_doc_factory_class, engine_name="experimental PyarrowOnRay")
 class ExperimentalPyarrowOnRayFactory(BaseFactory):  # pragma: no cover # noqa: D101
     @classmethod
     @doc(_doc_factory_prepare_method, engine_name="experimental ``PyarrowOnRayIO``")
@@ -360,17 +371,17 @@ class ExperimentalRemoteFactory(ExperimentalBaseFactory):  # noqa: D101
         cls.io_cls = WrappedIO(get_connection(), cls.wrapped_factory)
 
 
-@doc(_doc_factory_class, engine_name="`experimental remote PandasOnRay")
+@doc(_doc_factory_class, engine_name="experimental remote PandasOnRay")
 class ExperimentalPandasOnCloudrayFactory(ExperimentalRemoteFactory):  # noqa: D101
     wrapped_factory = PandasOnRayFactory
 
 
-@doc(_doc_factory_class, engine_name="`experimental remote PandasOnPython")
+@doc(_doc_factory_class, engine_name="experimental remote PandasOnPython")
 class ExperimentalPandasOnCloudpythonFactory(ExperimentalRemoteFactory):  # noqa: D101
     wrapped_factory = PandasOnPythonFactory
 
 
-@doc(_doc_factory_class, engine_name="`experimental OmnisciOnRay`")
+@doc(_doc_factory_class, engine_name="experimental OmnisciOnRay")
 class ExperimentalOmnisciOnRayFactory(BaseFactory):  # noqa: D101
     @classmethod
     @doc(_doc_factory_prepare_method, engine_name="experimental ``OmnisciOnRayIO``")
@@ -380,6 +391,6 @@ class ExperimentalOmnisciOnRayFactory(BaseFactory):  # noqa: D101
         cls.io_cls = OmnisciOnRayIO
 
 
-@doc(_doc_factory_class, engine_name="`experimental remote OmnisciOnRay`")
+@doc(_doc_factory_class, engine_name="experimental remote OmnisciOnRay")
 class ExperimentalOmnisciOnCloudrayFactory(ExperimentalRemoteFactory):  # noqa: D101
     wrapped_factory = ExperimentalOmnisciOnRayFactory

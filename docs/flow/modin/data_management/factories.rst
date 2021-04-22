@@ -3,13 +3,13 @@ Factories Module Description
 
 Brief description
 '''''''''''''''''
-Modin has many execution backends. Calling any DataFrame API function will end up in some backend-specific method. The responsibility of dispatching high-level API calls to backend-specific function lays on :doc:`QueryCompiler </flow/modin/backends/query_compiler.rst`. Building the `QueryCompiler` from external data is the role of the factories module. The mission of this module is to route IO function calls from the API level to its actual backend-specific implementations, which builds `QueryCompiler` of the corresponding backend.
+Modin has several execution backends. Calling any DataFrame API function will end up in some backend-specific method. The responsibility of dispatching high-level API calls to backend-specific function lays on :doc:`QueryCompiler </flow/modin/backends/query_compiler.rst>`, which is determined by the factory of the corresponding backend. The mission of this module is to route IO function calls from the API level to its actual backend-specific implementations, which build `QueryCompiler` of the appropriate backend.
 
 Backend representation via Factories
 ''''''''''''''''''''''''''''''''''''
 Backend is a combination of the `QueryCompiler` and `Execution Engine`. For example, ``PandasOnRay`` backend means the combination of the ``PandasQueryCompiler`` and ``Ray`` engine. 
 
-In the scope of this module, each backend is represented with a factory class located in ``factories.py``. Factory contains the IO module of the corresponding backend and is responsible for dispatching calls of IO functions to their actual implementations in an underlying IO module. For more information about IO module visit :doc:`related doc </flow/modin/engines/base/io.rst>`.
+In the scope of this module, each backend is represented with a factory class located in ``factories.py``. Factory contains the IO module of the corresponding backend and responsible for dispatching calls of IO functions to their actual implementations in an underlying IO module. For more information about IO module visit :doc:`related doc </flow/modin/engines/base/io.rst>`.
 
 Engine Dispatcher
 '''''''''''''''''

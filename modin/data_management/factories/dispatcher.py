@@ -102,8 +102,17 @@ class EngineDispatcher(object):
         return cls.__engine
 
     @classmethod
-    def _update_engine(cls, _):  # noqa: PR01
-        """Update and prepare engine with a new one specified via Modin config."""
+    # FIXME: replace `_` parameter with `*args`
+    def _update_engine(cls, _):
+        """
+        Update and prepare engine with a new one specified via Modin config.
+
+        Parameters
+        ----------
+        _ : object
+            This parameters serves the compatibility purpose.
+            Does not affect the result.
+        """
         factory_name = get_current_backend() + "Factory"
         try:
             cls.__engine = getattr(factories, factory_name)
