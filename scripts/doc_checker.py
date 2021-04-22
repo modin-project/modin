@@ -50,7 +50,7 @@ NUMPYDOC_BASE_ERROR_CODES = {
 MODIN_ERROR_CODES = {
     "MD01": "'{parameter}' description should be '[type], default: [value]', found: '{found}'",
     "MD02": "Spelling error in line: {line}, found: '{word}', reference: '{reference}'",
-    "MD03": "Section underline is over-indented (in section '{section}')",
+    "MD03": "Section contents is over-indented (in section '{section}')",
 }
 
 
@@ -184,9 +184,9 @@ def check_spelling_words(doc: Docstring) -> list:
     return errors
 
 
-def check_parameters_indention(doc: Docstring) -> list:
+def check_docstring_indention(doc: Docstring) -> list:
     """
-    Check indention since numpydoc reports weird results.
+    Check indention of docstring since numpydoc reports weird results.
 
     Parameters
     ----------
@@ -232,8 +232,7 @@ def validate_modin_error(doc: Docstring, results: dict) -> list:
     """
     errors = check_optional_args(doc)
     errors += check_spelling_words(doc)
-    if any((error_code == "PR01" for error_code, _ in results["errors"])):
-        errors += check_parameters_indention(doc)
+    errors += check_docstring_indention(doc)
     results["errors"].extend(errors)
     return results
 

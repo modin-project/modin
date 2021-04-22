@@ -118,7 +118,7 @@ def _replace_doc(
     if (
         source_doc.strip()
         and apilink
-        and "`Pandas API documentation for " not in target_doc
+        and "`pandas API documentation for " not in target_doc
         and (not (attr_name or "").startswith("_"))
     ):
         if attr_name:
@@ -232,8 +232,8 @@ def hashable(obj):
 
     Parameters
     ----------
-        obj : object
-            The object to check.
+    obj : object
+        The object to check.
 
     Returns
     -------
@@ -336,8 +336,8 @@ def wrap_udf_function(func):
 
     Parameters
     ----------
-        func : callable
-            Function to wrap.
+    func : callable
+        Function to wrap.
 
     Returns
     -------
