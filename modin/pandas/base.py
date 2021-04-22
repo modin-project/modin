@@ -144,8 +144,8 @@ class BasePandasDataset(object):
 
         Returns
         -------
-        `pandas.DataFrame` or `pandas.Series`
-        pandas dataset with `num_rows` or fewer rows and `num_cols` or fewer columns.
+        pandas.DataFrame or pandas.Series
+            pandas dataset with `num_rows` or fewer rows and `num_cols` or fewer columns.
         """
         # Fast track for empty dataframe.
         if len(self.index) == 0 or (
@@ -228,8 +228,10 @@ class BasePandasDataset(object):
         ----------
         other : modin.pandas.BasePandasDataset
             Another dataset to validate against `self`.
-        axis : None or 0 or 1
-            Specifies axis along which to do validation.
+        axis : {None, 0, 1}
+            Specifies axis along which to do validation. When `1` or `None`
+            is specified, validation is done along `index`, if `0` is specified
+            validation is done along `columns` or `other` frame.
         numeric_only : bool, default: False
             Validates that both frames have only numeric dtypes.
         numeric_or_time_only : bool, default: False
@@ -244,7 +246,7 @@ class BasePandasDataset(object):
         Returns
         -------
         modin.pandas.BasePandasDataset
-        Other frame if it is determined to be valid.
+            Other frame if it is determined to be valid.
 
         Raises
         ------
@@ -349,7 +351,7 @@ class BasePandasDataset(object):
         Returns
         -------
         modin.pandas.BasePandasDataset
-        Result of binary operation.
+            Result of binary operation.
         """
         # _axis indicates the operator will use the default axis
         if kwargs.pop("_axis", None) is None:
@@ -396,7 +398,8 @@ class BasePandasDataset(object):
 
         Returns
         -------
-        Result of operation.
+        object
+            Result of operation.
         """
         empty_self_str = "" if not self.empty else " for empty DataFrame"
         ErrorMessage.default_to_pandas(
@@ -478,8 +481,8 @@ class BasePandasDataset(object):
 
         Returns
         -------
-        0 or 1
-        Axis index in the array of axes stored in the dataframe.
+        int
+            0 or 1 - axis index in the array of axes stored in the dataframe.
         """
         return cls._pandas_class._get_axis_number(axis) if axis is not None else 0
 
@@ -497,7 +500,7 @@ class BasePandasDataset(object):
         Returns
         -------
         modin.pandas.BasePandasDataset
-        Constructed object.
+            Constructed object.
         """
         return type(self)(*args, **kwargs)
 
@@ -523,7 +526,7 @@ class BasePandasDataset(object):
         Returns
         -------
         pandas.Index
-        The union of all indexes across the partitions.
+            The union of all indexes across the partitions.
         """
         return self._query_compiler.index
 
@@ -567,7 +570,7 @@ class BasePandasDataset(object):
 
         See Also
         --------
-        aggregate
+        aggregate : Aggregate along any axis.
         """
         _axis = kwargs.pop("_axis", 0)
         kwargs.pop("_level", None)
@@ -600,7 +603,8 @@ class BasePandasDataset(object):
 
         Returns
         -------
-        Function result.
+        object
+            Function result.
         """
         assert isinstance(func, str)
         f = getattr(self, func, None)
@@ -624,8 +628,8 @@ class BasePandasDataset(object):
         Returns
         -------
         list
-        Either a one-element list that contains `dtype` if object denotes a Series
-        or a list that contains `dtypes` if object denotes a DataFrame.
+            Either a one-element list that contains `dtype` if object denotes a Series
+            or a list that contains `dtypes` if object denotes a DataFrame.
         """
         if hasattr(self, "dtype"):
             return [self.dtype]
@@ -1546,14 +1550,14 @@ class BasePandasDataset(object):
         ----------
         op_name : str
             Name of method to apply.
-        axis : int or axis name,
+        axis : int or str
             Axis to apply method on.
         skipna : bool
             Exclude NA/null values when computing the result.
-        level : int or level name
+        level : int or str
             If specified `axis` is a MultiIndex, applying method along a particular
             level, collapsing into a Series.
-        numeric_only : bool, default: None
+        numeric_only : bool, optional
             Include only float, int, boolean columns. If None, will attempt
             to use everything, then use only numeric data.
         **kwargs : dict
@@ -1561,8 +1565,11 @@ class BasePandasDataset(object):
 
         Returns
         -------
-        In case of Series: scalar or Series (if level specified)
-        In case of DataFrame: Series of DataFrame (if level specified)
+        scalar, Series or DataFrame
+            `scalar` - self is Series and level is not specified.
+            `Series` - self is Series and level is specified, or
+                self is DataFrame and level is not specified.
+            `DataFrame` - self is DataFrame and level is specified.
         """
         axis = self._get_axis_number(axis)
         if level is not None:
@@ -2808,9 +2815,9 @@ class BasePandasDataset(object):
 
         Parameters
         ----------
-        key : location or index based slice
+        key : location or index-based slice
             Key that points rows to modify.
-        value : any
+        value : object
             Value to assing to the rows.
         """
         indexer = convert_to_index_sliceable(pandas.DataFrame(index=self.index), key)
@@ -2822,13 +2829,13 @@ class BasePandasDataset(object):
 
         Parameters
         ----------
-        key : location or index based slice
-            Key that points rows to modify.
+        key : location or index-based slice
+            Key that points to rows to retrieve.
 
         Returns
         -------
         modin.pandas.BasePandasDataset
-        Selected rows.
+            Selected rows.
         """
         if key.start is None and key.stop is None:
             return self.copy()
