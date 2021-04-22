@@ -29,7 +29,7 @@ class BaseFramePartition(ABC):  # pragma: no cover
 
         Returns
         -------
-        Any
+        object
             The object that was wrapped by this partition.
 
         Notes
@@ -92,7 +92,7 @@ class BaseFramePartition(ABC):  # pragma: no cover
         pass
 
     def wait(self):
-        """Wait completing computations on the object wrapped by the partition."""
+        """Wait for completion of computations on the object wrapped by the partition."""
         pass
 
     def to_pandas(self):
@@ -155,7 +155,7 @@ class BaseFramePartition(ABC):  # pragma: no cover
 
         Parameters
         ----------
-        obj : Any
+        obj : object
             An object to be put.
 
         Returns

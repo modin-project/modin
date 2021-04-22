@@ -96,13 +96,14 @@ class BaseFrameManager(ABC):
         Returns
         -------
         callable
-            The preprocessed version of the `map_func` provided. Note: This
-            does not require any specific format, only that the
-            `BaseFramePartition.apply` method will recognize it (For the subclass
-            being used).
+            The preprocessed version of the `map_func` provided.
 
         Notes
         -----
+        Preprocessing does not require any specific format, only that the
+        `BaseFramePartition.apply` method will recognize it (for the subclass
+        being used).
+
         If your `BaseFramePartition` objects assume that a function provided
         is serialized or wrapped or in some other format, this is the place
         to add that logic. It is possible that this can also just return
@@ -121,7 +122,7 @@ class BaseFrameManager(ABC):
         Parameters
         ----------
         partitions : list-like
-            List of (smaller) partitions to be transformed to combined to column-wise partitions.
+            List of (smaller) partitions to be combined to column-wise partitions.
 
         Returns
         -------
@@ -147,7 +148,7 @@ class BaseFrameManager(ABC):
         Parameters
         ----------
         partitions : list-like
-            List of (smaller) partitions to be transformed to combined to row-wise partitions.
+            List of (smaller) partitions to be combined to row-wise partitions.
 
         Returns
         -------
@@ -172,7 +173,7 @@ class BaseFrameManager(ABC):
         ----------
         partitions : list-like
             List of partitions to be combined.
-        axis : int (0 or 1)
+        axis : {0, 1}
             0 for column partitions, 1 for row partitions.
 
         Returns
@@ -195,13 +196,13 @@ class BaseFrameManager(ABC):
 
         Parameters
         ----------
-        axis : int (0 or 1)
+        axis : {0, 1}
             Axis to groupby over.
-        partitions : NumPy 2D array,
+        partitions : NumPy 2D array
             Partitions of the ModinFrame to groupby.
         by : NumPy 2D array
             Partitions of 'by' to broadcast.
-        map_func : callable,
+        map_func : callable
             Map function.
         reduce_func : callable,
             Reduce function.
@@ -245,7 +246,7 @@ class BaseFrameManager(ABC):
 
         Parameters
         ----------
-        axis : int (0 or 1)
+        axis : {0, 1}
             Axis to apply and broadcast over.
         apply_func : callable
             Function to apply.
@@ -317,7 +318,7 @@ class BaseFrameManager(ABC):
 
         Parameters
         ----------
-        axis : int (0 or 1)
+        axis : {0, 1}
             Axis to apply and broadcast over.
         apply_func : callable
             Function to apply.
@@ -384,7 +385,7 @@ class BaseFrameManager(ABC):
 
         Parameters
         ----------
-        axis : int (0 or 1)
+        axis : {0, 1}
             Axis to apply and broadcast over.
         apply_func : callable
             Function to apply.
@@ -397,7 +398,7 @@ class BaseFrameManager(ABC):
             Setting it to True disables shuffling data from one partition to another.
         apply_indices : list of ints, default: None
             Indices of `axis ^ 1` to apply function over.
-        enumerate_partitions : bool, optional. Default: False
+        enumerate_partitions : bool, default: False
             Whether or not to pass partition index into `apply_func`.
             Note that `apply_func` must be able to accept `partition_idx` kwarg.
         lengths : list of ints, default: None
@@ -517,7 +518,7 @@ class BaseFrameManager(ABC):
 
         Parameters
         ----------
-        axis : 0 or 1
+        axis : {0, 1}
             Axis to perform the map across (0 - index, 1 - columns).
         partitions : NumPy 2D array
             Partitions of Modin Frame.
@@ -560,7 +561,7 @@ class BaseFrameManager(ABC):
 
         Parameters
         ----------
-        axis : 0 or 1
+        axis : {0, 1}
             Axis to perform the map across (0 - index, 1 - columns).
         partitions : NumPy 2D array
             Partitions of Modin Frame.
@@ -700,7 +701,7 @@ class BaseFrameManager(ABC):
     @classmethod
     def to_numpy(cls, partitions, **kwargs):
         """
-        Convert NumPy array of BaseFramePartition to NumPy array.
+        Convert NumPy array of BaseFramePartition to NumPy array of data stored within `partitions`.
 
         Parameters
         ----------
@@ -808,7 +809,7 @@ class BaseFrameManager(ABC):
 
         Parameters
         ----------
-        at : Arrow Table
+        at : pyarrow.table
             Arrow Table.
         return_dims : bool, default: False
             If it's True, return as (np.ndarray, row_lengths, col_widths),
@@ -828,7 +829,7 @@ class BaseFrameManager(ABC):
 
         Parameters
         ----------
-        axis : 0 or 1
+        axis : {0, 1}
             Axis to extract the labels over.
         partitions : np.ndarray
             NumPy array with BaseFramePartition's.
@@ -916,7 +917,7 @@ class BaseFrameManager(ABC):
 
         Notes
         -----
-        The main use for this is to preprocess the func.
+        This preprocesses the `func` first before applying it to the partitions.
         """
         preprocessed_func = cls.preprocess_func(func)
         return [obj.apply(preprocessed_func, **kwargs) for obj in partitions]
@@ -931,7 +932,7 @@ class BaseFrameManager(ABC):
 
         Parameters
         ----------
-        axis : 0 or 1
+        axis : {0, 1}
             Axis to apply the `func` over.
         partitions : np.ndarray
             The partitions to which the `func` will apply.
@@ -1045,7 +1046,7 @@ class BaseFrameManager(ABC):
 
         Parameters
         ----------
-        axis : 0 or 1
+        axis : {0, 1}
             The axis to apply the function over.
         partitions : np.ndarray
             The partitions to which the `func` will apply.
@@ -1184,7 +1185,7 @@ class BaseFrameManager(ABC):
         Notes
         -----
         For your func to operate directly on the indices provided,
-        it must use `row_internal_indices, col_internal_indices` as keyword
+        it must use `row_internal_indices`, `col_internal_indices` as keyword
         arguments.
         """
         partition_copy = partitions.copy()
@@ -1225,7 +1226,7 @@ class BaseFrameManager(ABC):
 
         Parameters
         ----------
-        axis : 0 or 1
+        axis : {0, 1}
             The axis to apply the function over (0 - rows, 1 - columns).
         left : np.ndarray
             The partitions of left BasePandasFrame.

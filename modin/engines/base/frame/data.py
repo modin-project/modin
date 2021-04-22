@@ -40,16 +40,16 @@ class BasePandasFrame(object):
     partitions : np.ndarray
         A 2D NumPy array of partitions.
     index : sequence
-        The index for the dataframe. Converts to a pandas.Index.
+        The index for the dataframe. Converted to a ``pandas.Index``.
     columns : sequence
-        The columns object for the dataframe. Converts to a pandas.Index.
-    row_lengths : list, default None
+        The columns object for the dataframe. Converted to a ``pandas.Index``.
+    row_lengths : list, optional
         The length of each partition in the rows. The "height" of
         each of the block partitions. Is computed if not provided.
-    column_widths : list, default None
+    column_widths : list, optional
         The width of each partition in the columns. The "width" of
         each of the block partitions. Is computed if not provided.
-    dtypes : pandas.Series, default None
+    dtypes : pandas.Series, optional
         The data types for the dataframe columns.
     """
 
@@ -183,7 +183,7 @@ class BasePandasFrame(object):
 
     def _validate_set_axis(self, new_labels, old_labels):
         """
-        Validate the possibility of replacement old labels on the new labels.
+        Validate the possibility of replacement of old labels with the new labels.
 
         Parameters
         ----------
@@ -279,9 +279,9 @@ class BasePandasFrame(object):
         ----------
         axis : int
             Axis to compute labels along.
-        partitions : np.ndarray, default: None
+        partitions : np.ndarray, optional
             A 2D NumPy array of partitions from which labels will be grabbed.
-            If no specified, partitions will be considered as `self._partitions`.
+            If not specified, partitions will be taken from `self._partitions`.
 
         Returns
         -------
@@ -295,7 +295,7 @@ class BasePandasFrame(object):
         )
 
     def _filter_empties(self):
-        """Remove empty partitions from `self._partitions`."""
+        """Remove empty partitions from `self._partitions` to avoid triggering excess computation."""
         if len(self.axes[0]) == 0 or len(self.axes[1]) == 0:
             # This is the case for an empty frame. We don't want to completely remove
             # all metadata and partitions so for the moment, we won't prune if the frame
@@ -318,9 +318,9 @@ class BasePandasFrame(object):
 
     def _apply_index_objs(self, axis=None):
         """
-        Apply the index object for specific `axis` to the `self._partitions`.
+        Apply the index object for specific `axis` to the `self._partitions` lazily.
 
-        Adds to call-queue of each partition from `self._partitions` function `set_axis`
+        Adds `set_axis` function to call-queue of each partition from `self._partitions`
         to apply new axis.
 
         Parameters
@@ -412,13 +412,13 @@ class BasePandasFrame(object):
 
         Parameters
         ----------
-        row_indices : list of hashable, default: None
+        row_indices : list of hashable, optional
             The row labels to extract.
-        row_numeric_idx : list of int, default: None
+        row_numeric_idx : list of int, optional
             The row indices to extract.
-        col_indices : list of hashable, default: None
+        col_indices : list of hashable, optional
             The column labels to extract.
-        col_numeric_idx : list of int, default: None
+        col_numeric_idx : list of int, optional
             The column indices to extract.
 
         Returns
@@ -899,8 +899,8 @@ class BasePandasFrame(object):
 
         Parameters
         ----------
-        axis : int (0 - rows, 1 - columns)
-            The axis along which to get the indices.
+        axis : {0, 1}
+            The axis along which to get the indices (0 - rows, 1 - columns).
         indices : list of int, slice
             A list of global indices to convert.
 
@@ -1030,7 +1030,7 @@ class BasePandasFrame(object):
 
         Parameters
         ----------
-        axis : int (0 or 1)
+        axis : {0, 1}
             The axis index object to join (0 - rows, 1 - columns).
         indexes : list(Index)
             The indexes to join on.
@@ -1124,7 +1124,8 @@ class BasePandasFrame(object):
 
         Returns
         -------
-        A function to be shipped to the partitions to be executed.
+        callable
+            A function to be shipped to the partitions to be executed.
 
         Notes
         -----
@@ -1193,7 +1194,7 @@ class BasePandasFrame(object):
 
         Parameters
         ----------
-        axis : int (0 or 1)
+        axis : {0, 1}
             The axis to apply the function to (0 - index, 1 - columns).
         func : callable
             The function to reduce the Manager by. This function takes in a Manager.
@@ -1215,7 +1216,7 @@ class BasePandasFrame(object):
 
         Parameters
         ----------
-        axis : int (0 or 1)
+        axis : {0, 1}
             0 for columns and 1 for rows.
         map_func : callable
             Callable function to map the dataframe.
@@ -1259,7 +1260,8 @@ class BasePandasFrame(object):
 
         Returns
         -------
-        A new dataframe.
+        BasePandasFrame
+            A new dataframe.
         """
         new_partitions = self._frame_mgr_cls.map_partitions(self._partitions, func)
         if dtypes == "copy":
@@ -1304,12 +1306,12 @@ class BasePandasFrame(object):
 
         Returns
         -------
+        BasePandasFrame
             A new dataframe.
 
         Notes
         -----
-        BasePandasFrame
-            The data shape is not changed (length and width of the table).
+        The data shape is not changed (length and width of the table).
         """
         new_partitions = self._frame_mgr_cls.map_axis_partitions(
             axis, self._partitions, func
@@ -1370,17 +1372,17 @@ class BasePandasFrame(object):
 
         Parameters
         ----------
-        axis : int (0 or 1)
+        axis : {0, 1}
             The axis to apply over (0 - rows, 1 - columns).
         func : callable
             The function to apply.
-        new_index : list-like, default: None
+        new_index : list-like, optional
             The index of the result. We may know this in advance,
             and if not provided it must be computed.
-        new_columns : list-like, default: None
+        new_columns : list-like, optional
             The columns of the result. We may know this in
             advance, and if not provided it must be computed.
-        dtypes : list-like, default: None
+        dtypes : list-like, optional
             The data types of the result. This is an optimization
             because there are functions that always result in a particular data
             type, and allows us to avoid (re)computing it.
@@ -1426,10 +1428,10 @@ class BasePandasFrame(object):
             The labels to apply over.
         numeric_indices : list-like, default: None
             The indices to apply over.
-        new_index : list-like, default: None
+        new_index : list-like, optional
             The index of the result. We may know this in advance,
             and if not provided it must be computed.
-        new_columns : list-like, default: None
+        new_columns : list-like, optional
             The columns of the result. We may know this in
             advance, and if not provided it must be computed.
         keep_remaining : boolean, default: False
@@ -1437,7 +1439,8 @@ class BasePandasFrame(object):
 
         Returns
         -------
-        A new dataframe.
+        BasePandasFrame
+            A new dataframe.
         """
         assert apply_indices is not None or numeric_indices is not None
         # Convert indices to numeric indices
@@ -1480,7 +1483,7 @@ class BasePandasFrame(object):
 
         Parameters
         ----------
-        axis : int (0 or 1)
+        axis : {0, 1}
             The axis to apply over.
         func : callable
             The function to apply.
@@ -1492,10 +1495,10 @@ class BasePandasFrame(object):
         col_indices : list-like, default: None
             The column indices to apply over. Must be provided
             with `row_indices` to apply over both axes.
-        new_index : list-like, default: None
+        new_index : list-like, optional
             The index of the result. We may know this in advance,
             and if not provided it must be computed.
-        new_columns : list-like, default: None
+        new_columns : list-like, optional
             The columns of the result. We may know this in
             advance, and if not provided it must be computed.
         keep_remaining : boolean, default: False
@@ -1505,7 +1508,8 @@ class BasePandasFrame(object):
 
         Returns
         -------
-        A new dataframe.
+        BasePandasFrame
+            A new dataframe.
         """
         # TODO Infer columns and index from `keep_remaining` and `apply_indices`
         if new_index is None:
@@ -1572,7 +1576,7 @@ class BasePandasFrame(object):
 
         Parameters
         ----------
-        axis : 0 or 1,
+        axis : {0, 1}
             Axis to broadcast over.
         func : callable
             Function to apply.
@@ -1618,7 +1622,7 @@ class BasePandasFrame(object):
 
         Parameters
         ----------
-        axis : 0 or 1
+        axis : {0, 1}
             Axis to broadcast along.
         indices : dict
             Dict of indices and internal indices of partitions where `self` must
@@ -1629,12 +1633,12 @@ class BasePandasFrame(object):
         Returns
         -------
         dict
-            Dictianary with indices of partitions to broadcast.
+            Dictionary with indices of partitions to broadcast.
 
         Notes
         -----
-        New dictianary of indices of `self` partitions means that
-        you want to broadcast it at specified another partition named `other`, for example.
+        New dictionary of indices of `self` partitions represents that
+        you want to broadcast `self` at specified another partition named `other`. For example,
         Dictionary {key: {key1: [0, 1], key2: [5]}} means, that in `other`[key] you want to
         broadcast [self[key1], self[key2]] partitions and internal indices for `self` must be [[0, 1], [5]]
         """
@@ -1676,7 +1680,7 @@ class BasePandasFrame(object):
 
         Parameters
         ----------
-        axis : 0 or 1
+        axis : {0, 1}
             Axis to apply function along.
         func : callable
             Function to apply.
@@ -1691,10 +1695,10 @@ class BasePandasFrame(object):
         broadcast_all : bool, default: True
             Whether broadcast the whole axis of right frame to every
             partition or just a subset of it.
-        new_index : pandas.Index, default: None
+        new_index : pandas.Index, optional
             Index of the result. We may know this in advance,
             and if not provided it must be computed.
-        new_columns : pandas.Index, default: None
+        new_columns : pandas.Index, optional
             Columns of the result. We may know this in advance,
             and if not provided it must be computed.
 
@@ -1762,16 +1766,16 @@ class BasePandasFrame(object):
 
         Parameters
         ----------
-        axis : 0 or 1
+        axis : {0, 1}
             Axis to apply over (0 - rows, 1 - columns).
         func : callable
             Function to apply.
         other : BasePandasFrame or list
             Modin DataFrame(s) to broadcast.
-        new_index : list-like, default: None
+        new_index : list-like, optional
             Index of the result. We may know this in advance,
             and if not provided it must be computed.
-        new_columns : list-like, default: None
+        new_columns : list-like, optional
             Columns of the result. We may know this in
             advance, and if not provided it must be computed.
         apply_indices : list-like, default: None
@@ -1843,7 +1847,7 @@ class BasePandasFrame(object):
 
         Parameters
         ----------
-        axis : 0 or 1
+        axis : {0, 1}
             Axis to copartition along (0 - rows, 1 - columns).
         other : BasePandasFrame
             Other Modin DataFrame(s) to copartition against.
@@ -1952,7 +1956,7 @@ class BasePandasFrame(object):
 
         Parameters
         ----------
-        axis : 0 or 1
+        axis : {0, 1}
             Axis to shuffle over.
         other : BasePandasFrame
             Modin DataFrame to match to `self` partitioning.
@@ -2009,11 +2013,11 @@ class BasePandasFrame(object):
 
     def _concat(self, axis, others, how, sort):
         """
-        Concatenate `self` with one or more others Modin DataFrame.
+        Concatenate `self` with one or more other Modin DataFrames.
 
         Parameters
         ----------
-        axis : 0 or 1
+        axis : {0, 1}
             Axis to concatenate over.
         others : list
             List of Modin DataFrames to concatenate with.
@@ -2090,7 +2094,7 @@ class BasePandasFrame(object):
 
         Parameters
         ----------
-        axis : 0 or 1
+        axis : {0, 1}
             Axis to groupby and aggregate over.
         by : BasePandasFrame or None
             A Modin DataFrame to group by.
@@ -2098,10 +2102,10 @@ class BasePandasFrame(object):
             Map component of the aggregation.
         reduce_func : callable
             Reduce component of the aggregation.
-        new_index : pandas.Index, default: None
+        new_index : pandas.Index, optional
             Index of the result. We may know this in advance,
             and if not provided it must be computed.
-        new_columns : pandas.Index, default: None
+        new_columns : pandas.Index, optional
             Columns of the result. We may know this in advance,
             and if not provided it must be computed.
         apply_indices : list-like, default: None
@@ -2167,7 +2171,7 @@ class BasePandasFrame(object):
 
         Parameters
         ----------
-        at : Arrow Table
+        at : pyarrow.table
             Arrow Table.
 
         Returns
@@ -2205,8 +2209,8 @@ class BasePandasFrame(object):
 
         Returns
         -------
-        Any dtype compatible with pandas.
-            pandas data type.
+        object
+            Any dtype compatible with pandas.
         """
         res = arrow_type.to_pandas_dtype()
         if not isinstance(res, (np.dtype, str)):

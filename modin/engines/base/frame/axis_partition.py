@@ -276,7 +276,7 @@ class PandasFrameAxisPartition(BaseFrameAxisPartition):
 
         Parameters
         ----------
-        axis : 0 or 1
+        axis : {0, 1}
             The axis to perform the function along.
         func : callable
             The function to perform.
@@ -330,7 +330,7 @@ class PandasFrameAxisPartition(BaseFrameAxisPartition):
 
         Parameters
         ----------
-        axis : 0 or 1
+        axis : {0, 1}
             The axis to perform the function along.
         func : callable
             The function to perform.
