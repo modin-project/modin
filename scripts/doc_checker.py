@@ -167,6 +167,12 @@ def check_spelling_words(doc: Docstring) -> list:
         for line in doc.raw_doc.splitlines()
     ]
 
+    docstring_start_line = None
+    for idx, line in enumerate(inspect.getsourcelines(doc.code_obj)[0]):
+        if '"""' in line:
+            docstring_start_line = doc.source_file_def_line + idx
+            break
+
     errors = []
     for line_idx, words_in_line in enumerate(results):
         for word in words_in_line:
@@ -175,7 +181,7 @@ def check_spelling_words(doc: Docstring) -> list:
                 (
                     "MD02",
                     MODIN_ERROR_CODES["MD02"].format(
-                        line=line_idx,
+                        line=docstring_start_line + line_idx,
                         word=word,
                         reference=reference,
                     ),
