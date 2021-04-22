@@ -11,7 +11,14 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-"""The main module through which interaction with the experimental API takes place."""
+"""
+The main module through which interaction with the experimental API takes place.
+
+Although the use of experimental backends and engines is available through the
+`modin.pandas` module when defining environment variable `MODIN_EXPERIMENTAL=true`,
+the use of experimental I/O functions is available only through the
+`modin.experimental.pandas` module.
+"""
 
 from modin.config import IsExperimental
 

@@ -11,30 +11,7 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-"""
-Implement experimental I/O public API.
-
-Here are the functions which, depending on the name, are an public API extension
-of `pandas/io.py`, or a replacement for the functions of the same name in `pandas/io.py`.
-
-Notes
------
-  - to use experimental functions from `modin.pandas` module define
-    `MODIN_EXPERIMENTAL=true`
-  - the functions of this module are only replacements if the parameters and their
-    types are fully matched
-
-Examples
---------
-  - io_exp.read_sql is a replacement of pandas.io.read_sql therefor can be accessed
-    via several imports:
-        - `from modin.pandas import read_sql`
-        - `from modin.experimental.pandas import read_sql`
-  - io_exp.read_csv_glob is a extension of pandas.io module therefor can be accessed
-    only via following import (this is done so that Modin public API in non-experimental
-    mode is as similar as possible to pandas public API):
-        - `from modin.experimental.pandas import read_csv_glob`
-"""
+"""Implement experimental I/O public API."""
 
 import inspect
 import pathlib
@@ -197,15 +174,12 @@ def _make_parser_func(sep: str) -> Callable:
             f_locals["sep"] = "\t"
 
         kwargs = {k: v for k, v in f_locals.items() if k in _pd_read_csv_signature}
-        filepath_or_buffer = kwargs.pop("filepath_or_buffer")
-        return _read(filepath_or_buffer, **kwargs)
+        return _read(**kwargs)
 
     return parser_func
 
 
-def _read(
-    filepath_or_buffer: Union[str, pathlib.Path, IO[AnyStr]], **kwargs
-) -> DataFrame:
+def _read(**kwargs) -> DataFrame:
     """
     General documentation in `modin.pandas.read_csv`.
 
@@ -214,8 +188,6 @@ def _read(
 
     Parameters
     ----------
-    filepath_or_buffer : str, path object, file-like object
-        The filepath of the csv file.
     **kwargs : dict
         Keyword arguments in `modin.pandas.read_csv`.
 
