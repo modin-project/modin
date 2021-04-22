@@ -67,8 +67,8 @@ def test_check_optional_args(import_path, result):
         (
             "scripts.test.examples.square_summary",
             [
-                ("MD02", 6, "Pandas", "pandas"),
-                ("MD02", 6, "Numpy", "NumPy"),
+                ("MD02", 52, "Pandas", "pandas"),
+                ("MD02", 52, "Numpy", "NumPy"),
             ],
         ),
         ("scripts.test.examples.optional_square_empty_parameters", []),
