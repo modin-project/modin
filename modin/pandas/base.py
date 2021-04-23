@@ -125,7 +125,7 @@ class BasePandasDataset(object):
         for sib in self._siblings:
             sib._siblings += [sibling]
 
-    def _build_repr_df(self, num_rows, num_cols):
+    def _build_repr_df(self, num_rows, num_cols):  # noqa: MD02
         """
         Build pandas DataFrame for string representation.
 
@@ -145,7 +145,7 @@ class BasePandasDataset(object):
         Returns
         -------
         pandas.DataFrame or pandas.Series
-            pandas dataset with `num_rows` or fewer rows and `num_cols` or fewer columns.
+            Pandas dataset with `num_rows` or fewer rows and `num_cols` or fewer columns.
         """
         # Fast track for empty dataframe.
         if len(self.index) == 0 or (
@@ -231,7 +231,7 @@ class BasePandasDataset(object):
         axis : {None, 0, 1}
             Specifies axis along which to do validation. When `1` or `None`
             is specified, validation is done along `index`, if `0` is specified
-            validation is done along `columns` or `other` frame.
+            validation is done along `columns` of `other` frame.
         numeric_only : bool, default: False
             Validates that both frames have only numeric dtypes.
         numeric_or_time_only : bool, default: False
