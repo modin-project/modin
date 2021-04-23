@@ -25,8 +25,6 @@ from modin.backends.base.query_compiler import BaseQueryCompiler
 from modin.utils import _inherit_docstrings
 from typing import Optional
 
-# TODO (amyskov): replace `For parameters description please refer to pandas API.` statement with
-# @_inherit_docstrings decorator when #2969 will be merged.
 _doc_default_io_method = """
 {summary} using pandas.
 

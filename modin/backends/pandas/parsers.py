@@ -12,7 +12,32 @@
 # governing permissions and limitations under the License.
 
 
-"""Module houses Modin parser classes, that are used for data parsing on the workers."""
+"""
+Module houses Modin parser classes, that are used for data parsing on the workers.
+
+Notes
+-----
+Data parsing mechanism differs depending on the data format type:
+
+* text format type (CSV, EXCEL, FWF, JSON):
+  File parsing begins from retrieving `start` and `end` parameters from `parse`
+  kwargs - these parameters define start and end bytes of data file, that should
+  be read in the concrete partition. Using this data and file handle got from
+  `fname`, binary data is read by python `read` function. Then resulting data is passed
+  into `pandas.read_*` function as `io.BytesIO` object to get corresponding
+  `pandas.DataFrame` (we need to do this because Modin partitions internally stores data
+  as `pandas.DataFrame`).
+
+* columnar store type (FEATHER, HDF, PARQUET):
+  In this case data chunk to be read is defined by columns names passed as `columns`
+  parameter as part of `parse` kwargs, so no additional action is needed and `fname`
+  and `kwargs` are just passed into `pandas.read_*` function (in some corner cases
+  `pyarrow.read_*` function can be used).
+
+* SQL type:
+  Chunking is incorporated in the `sql` parameter as part of query, so `parse`
+  parameters are passed into `pandas.read_sql` function without modification.
+"""
 
 from collections import OrderedDict
 from io import BytesIO

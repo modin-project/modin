@@ -15,27 +15,6 @@ chunk data parsing is completed, resulting ``DataFrame``-s will be splitted into
 rows/columns in the parsed chunk, and then these frames and some additional metadata will
 be returned.
 
-Data Parsing Mechanism
-''''''''''''''''''''''
-
-Data parsing mechanism differs depending on the data format type:
-
-..
-  TODO: add link to internal data storage implementation docs to the `text format type section`
-  after DOCS-#2954 is merged
-
-* text format type - file parsing begins from retrieving ``start`` and ``end`` parameters
-  from ``parse`` kwargs - these parameters define start and end bytes of data file, that
-  should be read in the concrete partition. Using this data and file handle got from
-  ``fname``, binary data is read by python ``read`` function. Then resulting data is passed
-  into ``pandas.read_*`` function as ``io.BytesIO`` object to get corresponding
-  ``pandas.DataFrame`` (we need to do this because Modin partitions internally stores data
-  as ``pandas.DataFrame``).
-
-* columnar store type - in this case data chunk to be read is defined by columns names
-  passed as ``columns`` parameter as part of ``parse`` kwargs, so no additional action is
-  needed and ``fname`` and ``kwargs`` are just passed into ``pandas.read_*`` function (in
-  some corner cases ``pyarrow.read_*`` function can be used).
-
-* SQL type - chunking is incorporated in the ``sql`` parameter as part of query, so
-  ``parse`` parameters are passed into ``pandas.read_sql`` function without modification.
+.. note:: 
+    If you are interested in the data parsing mechanism implementation details, please refer
+    to the source code documentation.

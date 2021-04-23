@@ -11,16 +11,19 @@ High-Level Data Import Operation Workflow
     in this chapter for reader convenience. For other import functions workflow and
     classes/functions naming convension will be the same.
 
-After user calls high-level ``modin.pandas.read_csv`` function, call is forwarded
-to the ``EngineDispatcher``, which defines which factory from
-``modin/data_management/factories/factories`` and backend/engine specific IO class
-should be used (for Ray engine and pandas backend IO class will be named
-``PandasOnRayIO``). This class defines Modin frame and query compiler classes and
-``read_*`` functions, which could be based on the following classes: ``RayTask`` -
-class for managing remote tasks by concrete distribution engine, ``PandasCSVParser``
-- class for data parsing on the workers by specific backend and ``CSVDispatcher`` -
-class for files handling of concrete file format including chunking that is executed
-on the head node.
+Data import operation workflow diagram is shown below. After user calls high-level
+``modin.pandas.read_csv`` function, call is forwarded to the ``EngineDispatcher``,
+which defines which factory from ``modin.data_management.factories.factories`` and
+backend/engine specific IO class should be used (for Ray engine and pandas backend
+IO class will be named ``PandasOnRayIO``). This class defines Modin frame and query
+compiler classes and ``read_*`` functions, which could be based on the following
+classes: ``RayTask`` - class for managing remote tasks by concrete distribution
+engine, ``PandasCSVParser`` - class for data parsing on the workers by specific
+backend and ``CSVDispatcher`` - class for files handling of concrete file format
+including chunking that is executed on the head node.
+
+.. image:: /img/data_import_workflow.png
+   :align: center
 
 Dispatcher Classes Workflow Overview
 ''''''''''''''''''''''''''''''''''''
