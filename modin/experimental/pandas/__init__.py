@@ -14,10 +14,21 @@
 """
 The main module through which interaction with the experimental API takes place.
 
-Although the use of experimental backends and engines is available through the
+See `Experimental API Ireference` for details.
+
+Notes
+-----
+- Some of experimental APIs deviate from pandas in order to provide improved
+performance.
+- Although the use of experimental backends and engines is available through the
 `modin.pandas` module when defining environment variable `MODIN_EXPERIMENTAL=true`,
 the use of experimental I/O functions is available only through the
 `modin.experimental.pandas` module.
+
+Examples
+--------
+>>> import modin.experimental.pandas as pd
+>>> df = pd.read_csv_glob("data*.csv")
 """
 
 from modin.config import IsExperimental
