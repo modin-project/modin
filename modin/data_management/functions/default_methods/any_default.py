@@ -26,7 +26,20 @@ class ObjTypeDeterminer:
     to an object under which `key` function is applied.
     """
 
-    def __getattr__(self, key):  # noqa: D105
+    def __getattr__(self, key):
+        """
+        Build function that executes `key` function under passed frame.
+
+        Parameters
+        ----------
+        key : str
+
+        Returns
+        -------
+        callable
+            Function that takes DataFrame and executes `key` function on it.
+        """
+
         def func(df, *args, **kwargs):
             prop = getattr(df, key)
             if callable(prop):

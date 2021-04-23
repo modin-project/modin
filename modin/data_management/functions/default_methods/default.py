@@ -162,8 +162,20 @@ class DefaultMethod(Function):
         return args_cast
 
     @classmethod
-    def build_property_wrapper(cls, prop):  # noqa: PR01
-        """Build function that access specified property of the frame."""
+    def build_property_wrapper(cls, prop):
+        """
+        Build function that access specified property of the frame.
+
+        Parameters
+        ----------
+        prop : str
+            Property name to access.
+
+        Returns
+        -------
+        callable
+            Function that takes DataFrame and returns its value of `prop` property.
+        """
 
         def property_wrapper(df):
             return prop.fget(df)
@@ -195,13 +207,21 @@ class DefaultMethod(Function):
         return wrapper
 
     @classmethod
-    def frame_wrapper(cls, df):  # noqa: PR01
+    def frame_wrapper(cls, df):
         """
         Extract frame property to apply function on.
 
         This method is executed under casted to pandas frame right before applying
         a function passed to `register`, which gives an ability to transform frame somehow
         or access its properties, by overriding this method in a child class.
+
+        Parameters
+        ----------
+        df : pandas.DataFrame
+
+        Returns
+        -------
+        pandas.DataFrame
 
         Notes
         -----

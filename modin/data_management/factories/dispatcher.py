@@ -19,7 +19,7 @@ Dispatcher routes the work to excecution engine-specific functions.
 
 from modin.config import Engine, Backend, IsExperimental
 from modin.data_management.factories import factories
-from modin.utils import get_current_backend
+from modin.utils import get_current_backend, _inherit_docstrings
 
 
 class FactoryNotFoundError(AttributeError):
@@ -49,8 +49,19 @@ class StubIoEngine(object):
     def __init__(self, factory_name=""):
         self.factory_name = factory_name or "Unknown"
 
-    def __getattr__(self, name):  # noqa: PR01, RT01
-        """Return a function that raises NotImplementedError for the `name` method."""
+    def __getattr__(self, name):
+        """
+        Return a function that raises `NotImplementedError` for the `name` method.
+
+        Parameters
+        ----------
+        name : str
+            Method name to indicate in `NotImplementedError`.
+
+        Returns
+        -------
+        callable
+        """
 
         def stub(*args, **kw):
             raise NotImplementedError(
@@ -136,123 +147,123 @@ class EngineDispatcher(object):
             cls.__engine.prepare()
 
     @classmethod
-    def from_pandas(cls, df):  # noqa: PR01
-        """Build query compiler from pandas DataFrame."""
+    @_inherit_docstrings(factories.BaseFactory._from_pandas)
+    def from_pandas(cls, df):  # noqa: D102
         return cls.__engine._from_pandas(df)
 
     @classmethod
-    def from_arrow(cls, at):  # noqa: PR01
-        """Build query compiler from Arrow Table."""
+    @_inherit_docstrings(factories.BaseFactory._from_arrow)
+    def from_arrow(cls, at):  # noqa: D102
         return cls.__engine._from_arrow(at)
 
     @classmethod
-    def from_non_pandas(cls, *args, **kwargs):  # noqa: PR01
-        """Build query compiler from a non-pandas object (dict, list, np.array etc...)."""
+    @_inherit_docstrings(factories.BaseFactory._from_non_pandas)
+    def from_non_pandas(cls, *args, **kwargs):  # noqa: D102
         return cls.__engine._from_non_pandas(*args, **kwargs)
 
     @classmethod
-    def read_parquet(cls, **kwargs):  # noqa: PR01
-        """Build query compiler from a Parquet file."""
+    @_inherit_docstrings(factories.BaseFactory._read_parquet)
+    def read_parquet(cls, **kwargs):  # noqa: D102
         return cls.__engine._read_parquet(**kwargs)
 
     @classmethod
-    def read_csv(cls, **kwargs):  # noqa: PR01
-        """Build query compiler from a CSV file."""
+    @_inherit_docstrings(factories.BaseFactory._read_csv)
+    def read_csv(cls, **kwargs):  # noqa: D102
         return cls.__engine._read_csv(**kwargs)
 
     @classmethod
-    def read_csv_glob(cls, **kwargs):  # noqa: PR01
-        """Build query compiler from CSV files."""
+    @_inherit_docstrings(factories.ExperimentalPandasOnRayFactory._read_csv_glob)
+    def read_csv_glob(cls, **kwargs):  # noqa: D102
         return cls.__engine._read_csv_glob(**kwargs)
 
     @classmethod
-    def read_json(cls, **kwargs):  # noqa: PR01
-        """Build query compiler from a JSON file."""
+    @_inherit_docstrings(factories.BaseFactory._read_json)
+    def read_json(cls, **kwargs):  # noqa: D102
         return cls.__engine._read_json(**kwargs)
 
     @classmethod
-    def read_gbq(cls, **kwargs):  # noqa: PR01
-        """Build query compiler from a Google BigQuery."""
+    @_inherit_docstrings(factories.BaseFactory._read_gbq)
+    def read_gbq(cls, **kwargs):  # noqa: D102
         return cls.__engine._read_gbq(**kwargs)
 
     @classmethod
-    def read_html(cls, **kwargs):  # noqa: PR01
-        """Build query compiler from an HTML document."""
+    @_inherit_docstrings(factories.BaseFactory._read_html)
+    def read_html(cls, **kwargs):  # noqa: D102
         return cls.__engine._read_html(**kwargs)
 
     @classmethod
-    def read_clipboard(cls, **kwargs):  # pragma: no cover  # noqa: PR01
-        """Build query compiler from clipboard."""
+    @_inherit_docstrings(factories.BaseFactory._read_clipboard)
+    def read_clipboard(cls, **kwargs):  # noqa: D102
         return cls.__engine._read_clipboard(**kwargs)
 
     @classmethod
-    def read_excel(cls, **kwargs):  # noqa: PR01
-        """Build query compiler from an Excel file."""
+    @_inherit_docstrings(factories.BaseFactory._read_excel)
+    def read_excel(cls, **kwargs):  # noqa: D102
         return cls.__engine._read_excel(**kwargs)
 
     @classmethod
-    def read_hdf(cls, **kwargs):  # noqa: PR01
-        """Build query compiler from an HDFStore."""
+    @_inherit_docstrings(factories.BaseFactory._read_hdf)
+    def read_hdf(cls, **kwargs):  # noqa: D102
         return cls.__engine._read_hdf(**kwargs)
 
     @classmethod
-    def read_feather(cls, **kwargs):  # noqa: PR01
-        """Build query compiler from a feather-format object."""
+    @_inherit_docstrings(factories.BaseFactory._read_feather)
+    def read_feather(cls, **kwargs):  # noqa: D102
         return cls.__engine._read_feather(**kwargs)
 
     @classmethod
-    def read_stata(cls, **kwargs):  # noqa: PR01
-        """Build query compiler from a Stata file."""
+    @_inherit_docstrings(factories.BaseFactory._read_stata)
+    def read_stata(cls, **kwargs):  # noqa: D102
         return cls.__engine._read_stata(**kwargs)
 
     @classmethod
-    def read_sas(cls, **kwargs):  # pragma: no cover  # noqa: PR01
-        """Build query compiler from a SAS files."""
+    @_inherit_docstrings(factories.BaseFactory._read_sas)
+    def read_sas(cls, **kwargs):  # pragma: no cover # noqa: D102
         return cls.__engine._read_sas(**kwargs)
 
     @classmethod
-    def read_pickle(cls, **kwargs):  # noqa: PR01
-        """Build query compiler from a pickled Modin or pandas DataFrame."""
+    @_inherit_docstrings(factories.BaseFactory._read_pickle)
+    def read_pickle(cls, **kwargs):  # noqa: D102
         return cls.__engine._read_pickle(**kwargs)
 
     @classmethod
-    def read_sql(cls, **kwargs):  # noqa: PR01
-        """Build query compiler from a SQL query or database table."""
+    @_inherit_docstrings(factories.BaseFactory._read_sql)
+    def read_sql(cls, **kwargs):  # noqa: D102
         return cls.__engine._read_sql(**kwargs)
 
     @classmethod
-    def read_fwf(cls, **kwargs):  # noqa: PR01
-        """Build query compiler from a table of fixed-width formatted lines."""
+    @_inherit_docstrings(factories.BaseFactory._read_fwf)
+    def read_fwf(cls, **kwargs):  # noqa: D102
         return cls.__engine._read_fwf(**kwargs)
 
     @classmethod
-    def read_sql_table(cls, **kwargs):  # noqa: PR01
-        """Build query compiler from a SQL database table."""
+    @_inherit_docstrings(factories.BaseFactory._read_sql_table)
+    def read_sql_table(cls, **kwargs):  # noqa: D102
         return cls.__engine._read_sql_table(**kwargs)
 
     @classmethod
-    def read_sql_query(cls, **kwargs):  # noqa: PR01
-        """Build query compiler from a SQL query."""
+    @_inherit_docstrings(factories.BaseFactory._read_sql_query)
+    def read_sql_query(cls, **kwargs):  # noqa: D102
         return cls.__engine._read_sql_query(**kwargs)
 
     @classmethod
-    def read_spss(cls, **kwargs):  # noqa: PR01
-        """Build query compiler from an SPSS file."""
+    @_inherit_docstrings(factories.BaseFactory._read_spss)
+    def read_spss(cls, **kwargs):  # noqa: D102
         return cls.__engine._read_spss(**kwargs)
 
     @classmethod
-    def to_sql(cls, *args, **kwargs):  # noqa: PR01
-        """Write Modin DataFrame content to a SQL database."""
+    @_inherit_docstrings(factories.BaseFactory._to_sql)
+    def to_sql(cls, *args, **kwargs):  # noqa: D102
         return cls.__engine._to_sql(*args, **kwargs)
 
     @classmethod
-    def to_pickle(cls, *args, **kwargs):  # noqa: PR01
-        """Pickle Modin DataFrame object."""
+    @_inherit_docstrings(factories.BaseFactory._to_pickle)
+    def to_pickle(cls, *args, **kwargs):  # noqa: D102
         return cls.__engine._to_pickle(*args, **kwargs)
 
     @classmethod
-    def to_csv(cls, *args, **kwargs):  # noqa: PR01
-        """Write Modin DataFrame content to a CSV file."""
+    @_inherit_docstrings(factories.BaseFactory._to_csv)
+    def to_csv(cls, *args, **kwargs):  # noqa: D102
         return cls.__engine._to_csv(*args, **kwargs)
 
 
