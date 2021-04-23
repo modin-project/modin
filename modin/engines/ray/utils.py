@@ -167,13 +167,7 @@ def initialize_ray(
                 "_redis_password": redis_password,
                 "logging_level": 100,
                 "_memory": object_store_memory,
-                "_lru_evict": True,
             }
-            from packaging import version
-
-            # setting of `_lru_evict` parameter raises DeprecationWarning since ray 2.0.0.dev0
-            if version.parse(ray.__version__) >= version.parse("2.0.0.dev0"):
-                ray_init_kwargs.pop("_lru_evict")
             ray.init(**ray_init_kwargs)
 
         _move_stdlib_ahead_of_site_packages()
