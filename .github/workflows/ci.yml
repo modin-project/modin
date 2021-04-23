@@ -234,9 +234,9 @@ jobs:
       - shell: bash -l {0}
         run: python -m pytest modin/test/test_envvar_npartitions.py
       - shell: bash -l {0}
-        run: python -m pytest -n 2 modin/test/test_partition_api.py
-      - shell: bash -l {0}
         run: python -m pytest modin/test/test_utils.py
+      - shell: bash -l {0}
+        run: python -m pytest modin/test/test_partition_api.py
 
   test-defaults:
     needs: [lint-commit, lint-flake8, lint-black, test-api, test-headers]
@@ -270,23 +270,23 @@ jobs:
       - name: Install HDF5
         run: sudo apt update && sudo apt install -y libhdf5-dev
       - run: pytest modin/experimental/xgboost/test/test_default.py --backend=${{ matrix.backend }}
-      - run: python -m pytest -n 2 modin/test/backends/base/test_internals.py --backend=${{ matrix.backend }}
-      - run: pytest -n 2 modin/pandas/test/dataframe/test_binary.py --backend=${{ matrix.backend }}
-      - run: pytest -n 2 modin/pandas/test/dataframe/test_default.py --backend=${{ matrix.backend }}
-      - run: pytest -n 2 modin/pandas/test/dataframe/test_indexing.py --backend=${{ matrix.backend }}
-      - run: pytest -n 2 modin/pandas/test/dataframe/test_iter.py --backend=${{ matrix.backend }}
-      - run: pytest -n 2 modin/pandas/test/dataframe/test_join_sort.py --backend=${{ matrix.backend }}
-      - run: pytest -n 2 modin/pandas/test/dataframe/test_map_metadata.py --backend=${{ matrix.backend }}
-      - run: pytest -n 2 modin/pandas/test/dataframe/test_reduction.py --backend=${{ matrix.backend }}
-      - run: pytest -n 2 modin/pandas/test/dataframe/test_udf.py --backend=${{ matrix.backend }}
-      - run: pytest -n 2 modin/pandas/test/dataframe/test_window.py --backend=${{ matrix.backend }}
-      - run: pytest -n 2 modin/pandas/test/dataframe/test_pickle.py --backend=${{ matrix.backend }}
-      - run: python -m pytest -n 2 modin/pandas/test/test_series.py --backend=${{ matrix.backend }}
-      - run: python -m pytest -n 2 modin/pandas/test/test_rolling.py --backend=${{ matrix.backend }}
-      - run: python -m pytest -n 2 modin/pandas/test/test_concat.py --backend=${{ matrix.backend }}
-      - run: python -m pytest -n 2 modin/pandas/test/test_groupby.py --backend=${{ matrix.backend }}
-      - run: python -m pytest -n 2 modin/pandas/test/test_reshape.py --backend=${{ matrix.backend }}
-      - run: python -m pytest -n 2 modin/pandas/test/test_general.py --backend=${{ matrix.backend }}
+      - run: python -m pytest modin/test/backends/base/test_internals.py --backend=${{ matrix.backend }}
+      - run: pytest modin/pandas/test/dataframe/test_binary.py --backend=${{ matrix.backend }}
+      - run: pytest modin/pandas/test/dataframe/test_default.py --backend=${{ matrix.backend }}
+      - run: pytest modin/pandas/test/dataframe/test_indexing.py --backend=${{ matrix.backend }}
+      - run: pytest modin/pandas/test/dataframe/test_iter.py --backend=${{ matrix.backend }}
+      - run: pytest modin/pandas/test/dataframe/test_join_sort.py --backend=${{ matrix.backend }}
+      - run: pytest modin/pandas/test/dataframe/test_map_metadata.py --backend=${{ matrix.backend }}
+      - run: pytest modin/pandas/test/dataframe/test_reduction.py --backend=${{ matrix.backend }}
+      - run: pytest modin/pandas/test/dataframe/test_udf.py --backend=${{ matrix.backend }}
+      - run: pytest modin/pandas/test/dataframe/test_window.py --backend=${{ matrix.backend }}
+      - run: pytest modin/pandas/test/dataframe/test_pickle.py --backend=${{ matrix.backend }}
+      - run: python -m pytest modin/pandas/test/test_series.py --backend=${{ matrix.backend }}
+      - run: python -m pytest modin/pandas/test/test_rolling.py --backend=${{ matrix.backend }}
+      - run: python -m pytest modin/pandas/test/test_concat.py --backend=${{ matrix.backend }}
+      - run: python -m pytest modin/pandas/test/test_groupby.py --backend=${{ matrix.backend }}
+      - run: python -m pytest modin/pandas/test/test_reshape.py --backend=${{ matrix.backend }}
+      - run: python -m pytest modin/pandas/test/test_general.py --backend=${{ matrix.backend }}
       - run: |
           curl -o codecov https://codecov.io/bash
           VERSION=$(grep -o 'VERSION=\"[0-9\.]*\"' codecov | cut -d'"' -f2);
@@ -406,6 +406,8 @@ jobs:
     env:
       MODIN_ENGINE: ${{matrix.engine}}
       MODIN_MEMORY: 1000000000
+      RAY_LOG_LEVEL: DEBUG
+      RAY_PREALLOCATE_PLASMA_MEMORY: 1
     name: test-ubuntu (engine ${{matrix.engine}}, python ${{matrix.python-version}})
     steps:
       - uses: actions/checkout@v2
@@ -425,27 +427,30 @@ jobs:
           conda list
       - name: Install HDF5
         run: sudo apt update && sudo apt install -y libhdf5-dev
+      - run: ray install-nightly
       - run: MODIN_BENCHMARK_MODE=True pytest modin/pandas/test/internals/test_benchmark_mode.py
-      - run: pytest -n 2 modin/experimental/xgboost/test/test_default.py
-      - run: pytest -n 2 modin/pandas/test/dataframe/test_binary.py
-      - run: pytest -n 2 modin/pandas/test/dataframe/test_default.py
-      - run: pytest -n 2 modin/pandas/test/dataframe/test_indexing.py
-      - run: pytest -n 2 modin/pandas/test/dataframe/test_iter.py
-      - run: pytest -n 2 modin/pandas/test/dataframe/test_join_sort.py
-      - run: pytest -n 2 modin/pandas/test/dataframe/test_map_metadata.py
-      - run: pytest -n 2 modin/pandas/test/dataframe/test_reduction.py
-      - run: pytest -n 2 modin/pandas/test/dataframe/test_udf.py
-      - run: pytest -n 2 modin/pandas/test/dataframe/test_window.py
-      - run: pytest -n 2 modin/pandas/test/dataframe/test_pickle.py
-      - run: python -m pytest -n 2 modin/pandas/test/test_series.py
-      - run: python -m pytest -n 2 modin/pandas/test/test_rolling.py
-      - run: python -m pytest -n 2 modin/pandas/test/test_concat.py
+      - run: pytest modin/experimental/xgboost/test/test_default.py
+      - run: pytest modin/pandas/test/dataframe/test_binary.py -v
+      - run: cat /tmp/ray/session_latest/logs/*
+        if: ${{failure()}}
+      - run: pytest modin/pandas/test/dataframe/test_default.py
+      - run: pytest modin/pandas/test/dataframe/test_indexing.py
+      - run: pytest modin/pandas/test/dataframe/test_iter.py
+      - run: pytest modin/pandas/test/dataframe/test_join_sort.py
+      - run: pytest modin/pandas/test/dataframe/test_map_metadata.py
+      - run: pytest modin/pandas/test/dataframe/test_reduction.py
+      - run: pytest modin/pandas/test/dataframe/test_udf.py
+      - run: pytest modin/pandas/test/dataframe/test_window.py
+      - run: pytest modin/pandas/test/dataframe/test_pickle.py
+      - run: python -m pytest modin/pandas/test/test_series.py
+      - run: python -m pytest modin/pandas/test/test_rolling.py
+      - run: python -m pytest modin/pandas/test/test_concat.py
         if: matrix.engine == 'python'
       - run: python -m pytest modin/pandas/test/test_concat.py # Ray and Dask versions fails with -n 2
         if: matrix.engine != 'python'
-      - run: python -m pytest -n 2 modin/pandas/test/test_groupby.py
-      - run: python -m pytest -n 2 modin/pandas/test/test_reshape.py
-      - run: python -m pytest -n 2 modin/pandas/test/test_general.py
+      - run: python -m pytest modin/pandas/test/test_groupby.py
+      - run: python -m pytest modin/pandas/test/test_reshape.py
+      - run: python -m pytest modin/pandas/test/test_general.py
       - run: python -m pytest modin/pandas/test/test_io.py
       - run: python -m pytest modin/experimental/pandas/test/test_io_exp.py
       - run: pip install dfsql && pytest modin/experimental/sql/test/test_sql.py
@@ -485,9 +490,9 @@ jobs:
           conda info
           conda list
       - shell: bash -l {0}
-        run: python -m pytest -n 2 modin/pandas/test/dataframe/test_map_metadata.py
+        run: python -m pytest modin/pandas/test/dataframe/test_map_metadata.py
       - shell: bash -l {0}
-        run: python -m pytest -n 2 modin/pandas/test/test_series.py
+        run: python -m pytest modin/pandas/test/test_series.py
       - shell: bash -l {0}
         run: python -m pytest modin/pandas/test/test_io.py
       - shell: bash -l {0}

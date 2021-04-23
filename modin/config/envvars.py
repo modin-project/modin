@@ -66,7 +66,7 @@ class Engine(EnvironmentVariable, type=str):
         except ImportError:
             pass
         else:
-            if version.parse(ray.__version__) < version.parse("1.0.0"):
+            if version.parse(ray.__version__) < version.parse("1.3.0"):
                 raise ImportError(
                     "Please `pip install modin[ray]` to install compatible Ray version."
                 )
