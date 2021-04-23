@@ -1,9 +1,12 @@
+..
+    TODO: add links to documentation for mentioned modules.
+
 Factories Module Description
 """"""""""""""""""""""""""""
 
 Brief description
 '''''''''''''''''
-Modin has several execution backends. Calling any DataFrame API function will end up in some backend-specific method. The responsibility of dispatching high-level API calls to backend-specific function lays on :doc:`QueryCompiler </flow/modin/backends/query_compiler.rst>`, which is determined by the factory of the corresponding backend. The mission of this module is to route IO function calls from the API level to its actual backend-specific implementations, which build `QueryCompiler` of the appropriate backend.
+Modin has several execution backends. Calling any DataFrame API function will end up in some backend-specific method. The responsibility of dispatching high-level API calls to backend-specific function lays on `QueryCompiler`, which is determined by the factory of the corresponding backend. The mission of this module is to route IO function calls from the API level to its actual backend-specific implementations, which build `QueryCompiler` of the appropriate backend.
 
 Backend representation via Factories
 ''''''''''''''''''''''''''''''''''''
