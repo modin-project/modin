@@ -169,7 +169,7 @@ def check_spelling_words(doc: Docstring) -> list:
 
     docstring_start_line = None
     for idx, line in enumerate(inspect.getsourcelines(doc.code_obj)[0]):
-        if '"""' in line:
+        if '"""' in line or "'''" in line:
             docstring_start_line = doc.source_file_def_line + idx
             break
 
