@@ -12,7 +12,7 @@
 # governing permissions and limitations under the License.
 
 
-class weakdict(dict):  # noqa: D101
+class weakdict(dict):  # noqa: GL08
     __slots__ = ("__weakref__",)
 
 
@@ -42,7 +42,7 @@ def optional_square_empty_parameters(number: int = 5) -> int:
     return number ** 2
 
 
-def square_summary(number: int) -> int:  # noqa: D103, GL08
+def square_summary(number: int) -> int:  # noqa: PR01, GL08
     """
     Square `number`.
 

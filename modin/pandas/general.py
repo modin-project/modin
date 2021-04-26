@@ -15,8 +15,7 @@
 Implement Pandas general API.
 
 Almost all docstrings for public functions should be inherited from Pandas
-for better maintability. So some codes are ignored in pydocstyle check:
-    - D103: missing docstring in public function
+for better maintability.
 Manually add documentation for methods which are not presented in pandas.
 """
 

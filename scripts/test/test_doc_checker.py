@@ -98,8 +98,8 @@ def test_check_spelling_words(import_path, result):
     [
         ("scripts.test.examples.optional_square", ["all"]),
         ("scripts.test.examples.optional_square_empty_parameters", []),
-        ("scripts.test.examples.square_summary", ["D103", "GL08"]),
-        ("scripts.test.examples.weakdict", ["D101"]),
+        ("scripts.test.examples.square_summary", ["PR01", "GL08"]),
+        ("scripts.test.examples.weakdict", ["GL08"]),
         ("scripts.test.examples", []),
     ],
 )

@@ -49,29 +49,14 @@ jobs:
       - run: pytest scripts/test
       - run: pip install -e .[all]
       - run: |
-          python scripts/doc_checker.py --add-ignore=D101,D102,D105 --disable-numpydoc \
+          python scripts/doc_checker.py \
             modin/pandas/dataframe.py modin/pandas/series.py \
-            modin/pandas/groupby.py modin/pandas/base.py
-      - run: python scripts/doc_checker.py modin/pandas/io.py
-      - run: |
-          python scripts/doc_checker.py --add-ignore=D101,D102 --disable-numpydoc \
-            modin/pandas/series_utils.py
-      - run: |
-          python scripts/doc_checker.py --add-ignore=D102 \
-            modin/engines/base/io/io.py
-      - run: |
-          python scripts/doc_checker.py --add-ignore=D101,D102 \
-            modin/backends/pandas/parsers.py
-      - run: |
-          python scripts/doc_checker.py --add-ignore=D103 --disable-numpydoc \
-            modin/pandas/general.py
-      - run: |
-          python scripts/doc_checker.py --disable-numpydoc \
+            modin/pandas/groupby.py modin/pandas/base.py modin/pandas/io.py \
+            modin/pandas/series_utils.py modin/engines/base/io/io.py \
+            modin/backends/pandas/parsers.py modin/pandas/general.py \
             modin/pandas/plotting.py modin/pandas/utils.py \
-            modin/pandas/iterator.py modin/pandas/indexing.py
-      - run: python scripts/doc_checker.py modin/engines/base/frame
-      - run: |
-          python scripts/doc_checker.py asv_bench/benchmarks/utils.py \
+            modin/pandas/iterator.py modin/pandas/indexing.py \
+            modin/engines/base/frame asv_bench/benchmarks/utils.py \
             asv_bench/benchmarks/__init__.py asv_bench/benchmarks/io/__init__.py \
             asv_bench/benchmarks/scalability/__init__.py \
             modin/engines/base/io/column_stores \

@@ -154,7 +154,7 @@ def check_spelling_words(doc: Docstring) -> list:
     (?:\W|^)                # non-capturing group of either non-word symbol or line start
     ({check_words})         # words to check, example - "modin|pandas|numpy"
     (?:                     # non-capturing group
-        [^"\.\/\w\\]        # any symbol except: '"', '.', '\' and any from [a-zA-Z0-9_]
+        [^"\.\/\w\\]        # any symbol except: '"', '.', '\', '/' and any from [a-zA-Z0-9_]
         | \.\s              # or '.' and any whitespace
         | \.$               # or '.' and end
         | $                 # or end
@@ -264,13 +264,6 @@ def skip_check_if_noqa(doc: Docstring, err_code: str, noqa_checks: list) -> bool
     if noqa_checks == ["all"]:
         return True
 
-    # Documentation checking is performed by two tools: pydocstyle and numpydoc,
-    # the checks of which are sometimes similar, but have different codes. In the
-    # case when we want to disable one of the checks, we would like not to indicate
-    # the codes of the two tools, because this is a duplication in meaning. To do
-    # this, it is necessary to map the codes of the two tools, which is further
-    # done for check of missing docstrings.
-
     # GL08 - missing docstring in an arbitary object; numpydoc code
     if err_code == "GL08":
         name = doc.name.split(".")[-1]
@@ -278,21 +271,6 @@ def skip_check_if_noqa(doc: Docstring, err_code: str, noqa_checks: list) -> bool
         # So there is no error if docstring is missing in __init__
         if name == "__init__":
             return True
-        magic = name.startswith("__") and name.endswith("__")
-        # Codes of missing docstring for different types of objects; pydocstyle codes
-        if inspect.isclass(doc.obj):
-            # D101 - missing docstring in a class
-            err_code = "D101"
-        elif inspect.ismethod(doc.obj):
-            # D102 - missing docstring in a method
-            err_code = "D102"
-        elif inspect.isfunction(doc.obj) and not magic:
-            # D103 - missing docstring in a function
-            err_code = "D103"
-        elif inspect.isfunction(doc.obj) and magic:
-            # D105 - missing docstring in a magic method
-            err_code = "D105"
-
     return err_code in noqa_checks
 
 
@@ -471,6 +449,8 @@ def pydocstyle_validate(path: pathlib.Path, add_ignore: List[str]) -> int:
     pydocstyle = "pydocstyle"
     if not shutil.which(pydocstyle):
         raise ValueError(f"{pydocstyle} not found in PATH")
+    # These check can be done with numpydoc tool, so disable them for pydocstyle.
+    add_ignore.extend(["D100", "D101", "D102", "D103", "D104", "D105"])
     result = subprocess.run(
         [
             pydocstyle,
