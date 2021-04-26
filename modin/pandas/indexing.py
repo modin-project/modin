@@ -1,3 +1,4 @@
+# noqa: MD02
 # Licensed to Modin Development Team under one or more contributor license agreements.
 # See the NOTICE file distributed with this work for additional information regarding
 # copyright ownership.  The Modin Development Team licenses this file to you under the
@@ -39,23 +40,21 @@ from .series import Series
 from .utils import is_scalar
 
 
+# TODO: rename "scaler" to scalar everywhere in this file
+
 def is_slice(x):
     """
-    Implement [METHOD_NAME].
-
-    TODO: Add more details for this docstring template.
+    Check that argument is an instance of slice.
 
     Parameters
     ----------
-    What arguments does this function have.
-    [
-    PARAMETER_NAME: PARAMETERS TYPES
-        Description.
-    ]
+    x : object
+        Object to check.
 
     Returns
     -------
-    What this returns (if anything)
+    bool
+        True if argument is a slice, False otherwise.
     """
     return isinstance(x, slice)
 
@@ -66,10 +65,10 @@ def compute_sliced_len(slc, sequence_len):
 
     Parameters
     ----------
-    slc: slice
-        Slice object
-    sequence_len: int
-        Length of sequence, to which slice will be applied
+    slc : slice
+        Slice object.
+    sequence_len : int
+        Length of sequence, to which slice will be applied.
 
     Returns
     -------
@@ -82,84 +81,68 @@ def compute_sliced_len(slc, sequence_len):
 
 def is_2d(x):
     """
-    Implement [METHOD_NAME].
-
-    TODO: Add more details for this docstring template.
+    Check that argument is a list or a slice.
 
     Parameters
     ----------
-    What arguments does this function have.
-    [
-    PARAMETER_NAME: PARAMETERS TYPES
-        Description.
-    ]
+    x : object
+        Object to check.
 
     Returns
     -------
-    What this returns (if anything)
+    bool
+        `True` if argument is a list or slice, `False` otherwise.
     """
     return is_list_like(x) or is_slice(x)
 
 
 def is_tuple(x):
     """
-    Implement [METHOD_NAME].
-
-    TODO: Add more details for this docstring template.
+    Check that argument is a tuple.
 
     Parameters
     ----------
-    What arguments does this function have.
-    [
-    PARAMETER_NAME: PARAMETERS TYPES
-        Description.
-    ]
+    x : object
+        Object to check.
 
     Returns
     -------
-    What this returns (if anything)
+    bool
+        True if argument is a tuple, False otherwise.
     """
     return isinstance(x, tuple)
 
 
 def is_boolean_array(x):
     """
-    Implement [METHOD_NAME].
-
-    TODO: Add more details for this docstring template.
+    Check that argument is an array of bool.
 
     Parameters
     ----------
-    What arguments does this function have.
-    [
-    PARAMETER_NAME: PARAMETERS TYPES
-        Description.
-    ]
+    x : object
+        Object to check.
 
     Returns
     -------
-    What this returns (if anything)
+    bool
+        True if argument is an array of bool, False otherwise.
     """
     return is_list_like(x) and all(map(is_bool, x))
 
 
 def is_integer_slice(x):
     """
-    Implement [METHOD_NAME].
-
-    TODO: Add more details for this docstring template.
+    Check that argument is an array of int.
 
     Parameters
     ----------
-    What arguments does this function have.
-    [
-    PARAMETER_NAME: PARAMETERS TYPES
-        Description.
-    ]
+    x : object
+        Object to check.
 
     Returns
     -------
-    What this returns (if anything)
+    bool
+        True if argument is an array of int, False otherwise.
     """
     if not is_slice(x):
         return False
@@ -184,20 +167,27 @@ def _parse_tuple(tup):
     """
     Unpack the user input for getitem and setitem and compute ndim.
 
-    TODO: Add more details for this docstring template.
-
     loc[a] -> ([a], :), 1D
     loc[[a,b],] -> ([a,b], :),
     loc[a,b] -> ([a], [b]), 0D
 
     Parameters
     ----------
-    tup: tuple
-        [Descsription]
+    tup : tuple
+        User input to unpack.
 
     Returns
     -------
-    What this returns (if anything)
+    row_loc : list
+        List of row locators.
+    col_list : list
+        List of column locators.
+    ndim : {0, 1, 2}
+        Number of dimensions of located dataset.
+    row_scaler : bool
+        True of `row_loc` is a scalar, False otherwise.
+    col_scaler : bool
+        True of `col_loc` is a scalar, False otherwise.
     """
     row_loc, col_loc = slice(None), slice(None)
 
@@ -221,21 +211,19 @@ def _parse_tuple(tup):
 
 def _compute_ndim(row_loc, col_loc):
     """
-    Compute the ndim of result from locators.
-
-    TODO: Add more details for this docstring template.
+    Compute the number of dimensions of result from locators.
 
     Parameters
     ----------
-    What arguments does this function have.
-    [
-    PARAMETER_NAME: PARAMETERS TYPES
-        Description.
-    ]
+    row_loc : list or scalar
+        Row locator.
+    col_loc : list or scalar
+        Column locator.
 
     Returns
     -------
-    What this returns (if anything)
+    {0, 1, 2}
+        Number of dimensions in located dataset.
     """
     row_scaler = is_scalar(row_loc) or is_tuple(row_loc)
     col_scaler = is_scalar(col_loc) or is_tuple(col_loc)
@@ -255,21 +243,17 @@ class _LocationIndexerBase(object):
 
     def __init__(self, modin_df):
         """
-        Implement [METHOD_NAME].
-
-        TODO: Add more details for this docstring template.
+        Initialize locator object.
 
         Parameters
         ----------
-        What arguments does this function have.
-        [
-        PARAMETER_NAME: PARAMETERS TYPES
-            Description.
-        ]
+        modin_df : DataFrame
+            DataFrame to operate on.
 
         Returns
         -------
-        What this returns (if anything)
+        _LocationIndexerBase
+            Initialized object.
         """
         self.df = modin_df
         self.qc = modin_df._query_compiler
@@ -278,21 +262,21 @@ class _LocationIndexerBase(object):
 
     def __getitem__(self, row_lookup, col_lookup, ndim):
         """
-        Implement [METHOD_NAME].
-
-        TODO: Add more details for this docstring template.
+        Retrieve dataset according to `row_lookup` and `col_lookup`.
 
         Parameters
         ----------
-        What arguments does this function have.
-        [
-        PARAMETER_NAME: PARAMETERS TYPES
-            Description.
-        ]
+        row_lookup : slice or scalar
+            The global row index to retrieve data from.
+        col_lookup : slice or scalar
+            The global col index to retrieve data from.
+        ndim : {0, 1, 2}
+            Number of dimensions in dataset to be retrieved.
 
         Returns
         -------
-        What this returns (if anything)
+        DataFrame or Series
+            Located dataset.
         """
         qc_view = self.qc.view(row_lookup, col_lookup)
         if ndim == 2:
@@ -315,19 +299,20 @@ class _LocationIndexerBase(object):
 
     def __setitem__(self, row_lookup, col_lookup, item, axis=None):
         """
-        Implement [METHOD_NAME].
-
-        TODO: Add more details for this docstring template.
+        Assign `item` value to located dataset.
 
         Parameters
         ----------
-        row_lookup:
-            the global row index to write item to
-        col_lookup:
-            the global col index to write item to
-        item:
+        row_lookup : slice or scalar
+            The global row index to write item to.
+        col_lookup : slice or scalar
+            The global col index to write item to.
+        item : DataFrame, Series or scalar
             The new item needs to be set. It can be any shape that's
             broadcast-able to the product of the lookup tables.
+        axis : {None, 0, 1}, default: None
+            If not None, it means that whole axis is used to assign a value.
+            0 means assign to whole column, 1 means assign to whole row.
         """
         # Convert slices to indices for the purposes of application.
         # TODO (devin-petersohn): Apply to slice without conversion to list
@@ -362,25 +347,34 @@ class _LocationIndexerBase(object):
 
     def _broadcast_item(self, row_lookup, col_lookup, item, to_shape):
         """
-        Use numpy to broadcast or reshape item.
-
-        TODO: Add more details for this docstring template.
+        Use NumPy to broadcast or reshape item.
 
         Parameters
         ----------
-        What arguments does this function have.
-        [
-        PARAMETER_NAME: PARAMETERS TYPES
-            Description.
-        ]
+        row_lookup : slice or scalar
+            The global row index to locate inside of `item`.
+        col_lookup : slice or scalar
+            The global col index to locate inside of `item`.
+        item : DataFrame, Series, query_compiler or scalar
+            Value that should be broadcast to a new shape of `to_shape`.
+        to_shape : tuple of two int
+            Shape of dataset that `item` should be broadcast to.
 
         Returns
         -------
-        What this returns (if anything)
+        ndarray
+            `item` after it was broadcast to `to_shape`.
+
+        Raises
+        ------
+        ValueError
+            If `row_lookup` or `col_lookup` contain values missing in
+            `self` index or columns correspondingly.
+            If `item` cannot be broadcast from its own shape to `to_shape`.
 
         Notes
         -----
-        Numpy is memory efficient, there shouldn't be performance issue.
+        NumPy is memory efficient, there shouldn't be performance issue.
         """
         # It is valid to pass a DataFrame or Series to __setitem__ that is larger than
         # the target the user is trying to overwrite. This
@@ -420,19 +414,14 @@ class _LocationIndexerBase(object):
         """
         Perform remote write and replace blocks.
 
-        TODO: Add more details for this docstring template.
-
         Parameters
         ----------
-        What arguments does this function have.
-        [
-        PARAMETER_NAME: PARAMETERS TYPES
-            Description.
-        ]
-
-        Returns
-        -------
-        What this returns (if anything)
+        row_lookup : slice or scalar
+            The global row index to write item to.
+        col_lookup : slice or scalar
+            The global col index to write item to.
+        item : ndarray
+            The new item value that needs to be assigned to `self`.
         """
         new_qc = self.qc.write_items(row_lookup, col_lookup, item)
         self.df._create_or_update_from_compiler(new_qc, inplace=True)
@@ -443,14 +432,14 @@ class _LocationIndexerBase(object):
 
         Parameters
         ----------
-        row_lookup: slice or list
-            Indexer for rows
-        col_lookup: slice or list
-            Indexer for columns
-        row_scaler: bool
-            Whether indexer for rows was slacar or not
-        col_scaler: bool
-            Whether indexer for columns was slacer or not
+        row_lookup : slice or list
+            Indexer for rows.
+        col_lookup : slice or list
+            Indexer for columns.
+        row_scaler : bool
+            Whether indexer for rows is scalar or not.
+        col_scaler : bool
+            Whether indexer for columns is scalar or not.
 
         Returns
         -------
