@@ -42,6 +42,7 @@ from .utils import is_scalar
 
 # TODO: rename "scaler" to scalar everywhere in this file
 
+
 def is_slice(x):
     """
     Check that argument is an instance of slice.
@@ -239,22 +240,16 @@ def _compute_ndim(row_loc, col_loc):
 
 
 class _LocationIndexerBase(object):
-    """Base class for location indexer like loc and iloc."""
+    """
+    Base class for location indexer like loc and iloc.
+
+    Parameters
+    ----------
+    modin_df : DataFrame
+        DataFrame to operate on.
+    """
 
     def __init__(self, modin_df):
-        """
-        Initialize locator object.
-
-        Parameters
-        ----------
-        modin_df : DataFrame
-            DataFrame to operate on.
-
-        Returns
-        -------
-        _LocationIndexerBase
-            Initialized object.
-        """
         self.df = modin_df
         self.qc = modin_df._query_compiler
         self.row_scaler = False
@@ -362,7 +357,7 @@ class _LocationIndexerBase(object):
 
         Returns
         -------
-        ndarray
+        numpy.ndarray
             `item` after it was broadcast to `to_shape`.
 
         Raises
@@ -420,7 +415,7 @@ class _LocationIndexerBase(object):
             The global row index to write item to.
         col_lookup : slice or scalar
             The global col index to write item to.
-        item : ndarray
+        item : numpy.ndarray
             The new item value that needs to be assigned to `self`.
         """
         new_qc = self.qc.write_items(row_lookup, col_lookup, item)
@@ -479,25 +474,32 @@ class _LocationIndexerBase(object):
 
 
 class _LocIndexer(_LocationIndexerBase):
-    """An indexer for modin_df.loc[] functionality."""
+    """
+    An indexer for modin_df.loc[] functionality.
+
+    Parameters
+    ----------
+    modin_df : DataFrame
+        DataFrame to operate on.
+    """
 
     def __getitem__(self, key):
         """
-        Implement [METHOD_NAME].
-
-        TODO: Add more details for this docstring template.
+        Retrieve dataset according to `key`.
 
         Parameters
         ----------
-        What arguments does this function have.
-        [
-        PARAMETER_NAME: PARAMETERS TYPES
-            Description.
-        ]
+        key : callable or tuple
+            The global row index to retrieve data from.
 
         Returns
         -------
-        What this returns (if anything)
+        DataFrame or Series
+            Located dataset.
+
+        See Also
+        --------
+        pandas.DataFrame.loc
         """
         if callable(key):
             return self.__getitem__(key(self.df))
@@ -560,21 +562,18 @@ class _LocIndexer(_LocationIndexerBase):
 
     def __setitem__(self, key, item):
         """
-        Implement [METHOD_NAME].
-
-        TODO: Add more details for this docstring template.
+        Assign `item` value to dataset located by `key`.
 
         Parameters
         ----------
-        What arguments does this function have.
-        [
-        PARAMETER_NAME: PARAMETERS TYPES
-            Description.
-        ]
+        key : callable or tuple
+            The global row index to assign data to.
+        item : DataFrame, Series or scalar
+            Value that should be assigned to located dataset.
 
-        Returns
-        -------
-        What this returns (if anything)
+        See Also
+        --------
+        pandas.DataFrame.loc
         """
         row_loc, col_loc, _, row_scaler, col_scaler = _parse_tuple(key)
         if isinstance(row_loc, list) and len(row_loc) == 1:
@@ -607,12 +606,17 @@ class _LocIndexer(_LocationIndexerBase):
         """
         Help to _enlarge_axis, compute common labels and extra labels.
 
-        TODO: add types.
+        Parameters
+        ----------
+        locator : pandas.Index
+            Index from locator.
+        base_index : pandas.Index
+            Current index.
 
         Returns
         -------
-        nan_labels:
-            The labels needs to be added
+        nan_labels : pandas.Index
+            The labels needs to be added.
         """
         # base_index_type can be pd.Index or pd.DatetimeIndex
         # depending on user input and pandas behavior
@@ -633,21 +637,21 @@ class _LocIndexer(_LocationIndexerBase):
 
     def _compute_lookup(self, row_loc, col_loc):
         """
-        Implement [METHOD_NAME].
-
-        TODO: Add more details for this docstring template.
+        Compute index and column labels from index and column locators.
 
         Parameters
         ----------
-        What arguments does this function have.
-        [
-        PARAMETER_NAME: PARAMETERS TYPES
-            Description.
-        ]
+        row_loc : slice, list, array or tuple
+            Row locator.
+        col_loc : slice, list, array or tuple
+            Columns locator.
 
         Returns
         -------
-        What this returns (if anything)
+        row_lookup : numpy.ndarray
+            List of index labels.
+        col_lookup : numpy.ndarray
+            List of columns labels.
         """
         if is_list_like(row_loc) and len(row_loc) == 1:
             if (
@@ -688,25 +692,32 @@ class _LocIndexer(_LocationIndexerBase):
 
 
 class _iLocIndexer(_LocationIndexerBase):
-    """An indexer for modin_df.iloc[] functionality."""
+    """
+    An indexer for modin_df.iloc[] functionality.
+
+    Parameters
+    ----------
+    modin_df : DataFrame
+        DataFrame to operate on.
+    """
 
     def __getitem__(self, key):
         """
-        Implement [METHOD_NAME].
-
-        TODO: Add more details for this docstring template.
+        Retrieve dataset according to `key`.
 
         Parameters
         ----------
-        What arguments does this function have.
-        [
-        PARAMETER_NAME: PARAMETERS TYPES
-            Description.
-        ]
+        key : callable or tuple
+            The global row numbers to retrieve data from.
 
         Returns
         -------
-        What this returns (if anything)
+        DataFrame or Series
+            Located dataset.
+
+        See Also
+        --------
+        pandas.DataFrame.iloc
         """
         if callable(key):
             return self.__getitem__(key(self.df))
@@ -723,21 +734,18 @@ class _iLocIndexer(_LocationIndexerBase):
 
     def __setitem__(self, key, item):
         """
-        Implement [METHOD_NAME].
-
-        TODO: Add more details for this docstring template.
+        Assign `item` value to dataset located by `key`.
 
         Parameters
         ----------
-        What arguments does this function have.
-        [
-        PARAMETER_NAME: PARAMETERS TYPES
-            Description.
-        ]
+        key : callable or tuple
+            The global row numbers to assign data to.
+        item : DataFrame, Series or scalar
+            Value that should be assigned to located dataset.
 
-        Returns
-        -------
-        What this returns (if anything)
+        See Also
+        --------
+        pandas.DataFrame.iloc
         """
         row_loc, col_loc, _, row_scaler, col_scaler = _parse_tuple(key)
         self._check_dtypes(row_loc)
@@ -755,21 +763,21 @@ class _iLocIndexer(_LocationIndexerBase):
 
     def _compute_lookup(self, row_loc, col_loc):
         """
-        Implement [METHOD_NAME].
-
-        TODO: Add more details for this docstring template.
+        Compute index and column labels from index and column integer locators.
 
         Parameters
         ----------
-        What arguments does this function have.
-        [
-        PARAMETER_NAME: PARAMETERS TYPES
-            Description.
-        ]
+        row_loc : slice, list, array or tuple
+            Row locator.
+        col_loc : slice, list, array or tuple
+            Columns locator.
 
         Returns
         -------
-        What this returns (if anything)
+        row_lookup : numpy.ndarray
+            List of index labels.
+        col_lookup : numpy.ndarray
+            List of columns labels.
         """
         if (
             not isinstance(row_loc, slice)
@@ -795,21 +803,17 @@ class _iLocIndexer(_LocationIndexerBase):
 
     def _check_dtypes(self, locator):
         """
-        Implement [METHOD_NAME].
-
-        TODO: Add more details for this docstring template.
+        Check that `locator` is an integer scalar, integer slice, integer list or array of booleans.
 
         Parameters
         ----------
-        What arguments does this function have.
-        [
-        PARAMETER_NAME: PARAMETERS TYPES
-            Description.
-        ]
+        locator : scalar, list, slice or array
+            Object to check.
 
-        Returns
-        -------
-        What this returns (if anything)
+        Raises
+        ------
+        ValueError
+            If check fails.
         """
         is_int = is_integer(locator)
         is_int_slice = is_integer_slice(locator)
