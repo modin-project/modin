@@ -4219,7 +4219,16 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
                 if isinstance(axis_loc, pandas.MultiIndex):
                     axis_lookup = self.get_axis(axis).get_indexer_for(axis_loc)
                 else:
-                    axis_lookup = self.get_axis(axis).get_locs(axis_loc)
+                    if (
+                        isinstance(axis_loc, list)
+                        and len(axis_loc) > 1
+                        and is_scalar(axis_loc[0])
+                    ):
+                        axis_lookup = (
+                            self.get_axis(axis).levels[0].get_indexer_for(axis_loc)
+                        )
+                    else:
+                        axis_lookup = self.get_axis(axis).get_locs(axis_loc)
             elif is_boolean_array(axis_loc):
                 axis_lookup = boolean_mask_to_numeric(axis_loc)
             else:
