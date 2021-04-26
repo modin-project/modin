@@ -11,6 +11,8 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
+"""Module houses API to operate on Modin DataFrame partitions that are pandas DataFrame(s)."""
+
 import numpy as np
 
 from modin.backends.pandas.query_compiler import PandasQueryCompiler
@@ -25,10 +27,10 @@ def unwrap_partitions(api_layer_object, axis=None, get_ip=False):
     ----------
     api_layer_object : DataFrame or Series
         The API layer object.
-    axis : None, 0 or 1. Default is None
+    axis : {None, 0, 1}, default: None
         The axis to unwrap partitions for (0 - row partitions, 1 - column partitions).
         If ``axis is None``, the partitions are unwrapped as they are currently stored.
-    get_ip : boolean. Default is False
+    get_ip : bool, default: False
         Whether to get node ip address to each partition or not.
 
     Returns
@@ -99,7 +101,7 @@ def from_partitions(partitions, axis):
         A list of Ray.ObjectRef/Dask.Future to partitions depending on the engine used.
         Or a list of tuples of Ray.ObjectRef/Dask.Future to node ip addresses and partitions
         depending on the engine used (i.e. ``[(Ray.ObjectRef/Dask.Future, Ray.ObjectRef/Dask.Future), ...]``).
-    axis : None, 0 or 1
+    axis : {None, 0 or 1}
         The ``axis`` parameter is used to identify what are the partitions passed.
         You have to set:
 
@@ -109,7 +111,7 @@ def from_partitions(partitions, axis):
 
     Returns
     -------
-    DataFrame
+    modin.pandas.DataFrame
         DataFrame instance created from remote partitions.
     """
     from modin.data_management.factories.dispatcher import EngineDispatcher
