@@ -151,13 +151,16 @@ def check_spelling_words(doc: Docstring) -> list:
 
     # comments work only with re.VERBOSE
     pattern = r"""
-    (?:\W|^)                # non-capturing group of either non-word symbol or line start
+    (?:                     # non-capturing group
+        [^-\\\w\/]          # any symbol except: '-', '\', '/' and any from [a-zA-Z0-9_]
+        | ^                 # or line start
+    )
     ({check_words})         # words to check, example - "modin|pandas|numpy"
     (?:                     # non-capturing group
-        [^"\.\/\w\\]        # any symbol except: '"', '.', '\', '/' and any from [a-zA-Z0-9_]
+        [^-"\.\/\w\\]       # any symbol except: '-', '"', '.', '\', '/' and any from [a-zA-Z0-9_]
         | \.\s              # or '.' and any whitespace
-        | \.$               # or '.' and end
-        | $                 # or end
+        | \.$               # or '.' and line end
+        | $                 # or line end
     )
     """.format(
         check_words=check_words

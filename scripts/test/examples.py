@@ -46,6 +46,8 @@ def square_summary(number: int) -> int:  # noqa: PR01, GL08
     """
     Square `number`.
 
+    See https://github.com/ray-project/ray.
+
     Examples
     --------
     The function that will never be used in modin.pandas.DataFrame same as in
