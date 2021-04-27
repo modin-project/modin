@@ -128,7 +128,7 @@ class RayIO(BaseIO):
             queue.put(get_value + 1)
 
             # used for synchronization purposes
-            return 0
+            return pandas.DataFrame()
 
         # signaling that the partition with id==0 can be written to the file
         queue.put(0)
