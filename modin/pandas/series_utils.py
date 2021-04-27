@@ -203,9 +203,6 @@ class StringMethods(object):
             )
         )
 
-    def repeats(self, repeats):
-        return Series(query_compiler=self._query_compiler.str_repeats(repeats))
-
     def pad(self, width, side="left", fillchar=" "):
         if len(fillchar) != 1:
             raise TypeError("fillchar must be a character, not str")
