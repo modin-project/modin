@@ -81,6 +81,34 @@ def add_refer_to(method):
     return decorator
 
 
+def _doc_dt(prop, dt_type, method):
+    template = """
+    Get {prop} for each {dt_type} value.
+
+    Returns
+    -------
+    BaseQueryCompiler
+        New `QueryCompiler` with the same shape as `self`, where each element is
+        {prop} for the corresponding {dt_type} value.
+    """
+
+    doc_adder = doc(template, prop=prop, dt_type=dt_type)
+    refer_to_appender = add_refer_to(f"Series.dt.{method}")
+
+    def decorator(func):
+        return _add_one_column_warning(refer_to_appender(doc_adder(func)))
+
+    return decorator
+
+
+def _doc_dt_timestamp(prop, method):
+    return _doc_dt(prop, "date-time", method)
+
+
+def _doc_dt_interval(prop, method):
+    return _doc_dt(prop, "interval", method)
+
+
 class BaseQueryCompiler(abc.ABC):
     """Abstract Class that handles the queries to Modin dataframes.
 
@@ -2867,55 +2895,39 @@ class BaseQueryCompiler(abc.ABC):
         """
         return DateTimeDefault.register(pandas.Series.dt.components)(self)
 
-    __doc_dt_properties = """
-    Get {property} for each date-time value.
-
-    Returns
-    -------
-    BaseQueryCompiler
-        New `QueryCompiler` with the same shape as `self`, where each each is
-        {property} for the corresponding date-time value.
-    """
-
-    @_add_one_column_warning
-    @doc(__doc_dt_properties, property="the date without timezone information")
+    @_doc_dt_timestamp(property="the date without timezone information", method="date")
     def dt_date(self):
         return DateTimeDefault.register(pandas.Series.dt.date)(self)
 
-    @_add_one_column_warning
-    @doc(__doc_dt_properties, property="day component")
+    @_doc_dt_timestamp(property="day component", method="day")
     def dt_day(self):
         return DateTimeDefault.register(pandas.Series.dt.day)(self)
 
-    @_add_one_column_warning
-    @doc(__doc_dt_properties, property="day name")
+    @_doc_dt_timestamp(property="day name", method="day_name")
     def dt_day_name(self, locale):
         return DateTimeDefault.register(pandas.Series.dt.day_name)(self, locale)
 
-    @_add_one_column_warning
-    @doc(__doc_dt_properties, property="integer day of week")
+    @_doc_dt_timestamp(property="integer day of week", method="dayofweek")
     # FIXME: `dt_dayofweek` is an alias for `dt_weekday`, one of them should
     # be removed.
     def dt_dayofweek(self):
         return DateTimeDefault.register(pandas.Series.dt.dayofweek)(self)
 
-    @_add_one_column_warning
-    @doc(__doc_dt_properties, property="day of year")
+    @_doc_dt_timestamp(property="day of year", method="dayofyear")
     def dt_dayofyear(self):
         return DateTimeDefault.register(pandas.Series.dt.dayofyear)(self)
 
+    @_doc_dt_interval(property="days", method="days")
     def dt_days(self):
         return DateTimeDefault.register(pandas.Series.dt.days)(self)
 
-    @_add_one_column_warning
-    @doc(__doc_dt_properties, property="the number of days in month")
+    @_doc_dt_timestamp(property="number of days in month", method="days_in_month")
     # FIXME: `dt_days_in_month` is an alias for `dt_daysinmonth`, one of them should
     # be removed.
     def dt_days_in_month(self):
         return DateTimeDefault.register(pandas.Series.dt.days_in_month)(self)
 
-    @_add_one_column_warning
-    @doc(__doc_dt_properties, property="the number of days in month")
+    @_doc_dt_timestamp(property="number of days in month", method="daysinmonth")
     def dt_daysinmonth(self):
         return DateTimeDefault.register(pandas.Series.dt.daysinmonth)(self)
 
@@ -2927,106 +2939,114 @@ class BaseQueryCompiler(abc.ABC):
             self, freq, ambiguous, nonexistent
         )
 
+    @_add_one_column_warning
+    @add_refer_to("Series.dt.freq")
     def dt_freq(self):
+        """
+        Get the time frequency of the underlying time-series data.
+
+        Returns
+        -------
+        BaseQueryCompiler
+            `QueryCompiler` containing a single value, the frequency of the data.
+        """
         return DateTimeDefault.register(pandas.Series.dt.freq)(self)
 
-    @_add_one_column_warning
-    @doc(__doc_dt_properties, property="hours component")
+    @_doc_dt_timestamp(property="hour", method="hour")
     def dt_hour(self):
         return DateTimeDefault.register(pandas.Series.dt.hour)(self)
 
-    @_add_one_column_warning
-    @doc(
-        __doc_dt_properties,
+    @_doc_dt_timestamp(
         property="the boolean of whether corresponding year is leap",
+        method="is_leap_year",
     )
     def dt_is_leap_year(self):
         return DateTimeDefault.register(pandas.Series.dt.is_leap_year)(self)
 
-    @_add_one_column_warning
-    @doc(
-        __doc_dt_properties,
+    @_doc_dt_timestamp(
         property="the boolean of whether the date is the last day of the month",
+        method="is_month_end",
     )
     def dt_is_month_end(self):
         return DateTimeDefault.register(pandas.Series.dt.is_month_end)(self)
 
-    @_add_one_column_warning
-    @doc(
-        __doc_dt_properties,
+    @_doc_dt_timestamp(
         property="the boolean of whether the date is the first day of the month",
+        method="is_month_start",
     )
     def dt_is_month_start(self):
         return DateTimeDefault.register(pandas.Series.dt.is_month_start)(self)
 
-    @_add_one_column_warning
-    @doc(
-        __doc_dt_properties,
+    @_doc_dt_timestamp(
         property="the boolean of whether the date is the last day of the quarter",
+        method="is_quarter_end",
     )
     def dt_is_quarter_end(self):
         return DateTimeDefault.register(pandas.Series.dt.is_quarter_end)(self)
 
-    @_add_one_column_warning
-    @doc(
-        __doc_dt_properties,
+    @_doc_dt_timestamp(
         property="the boolean of whether the date is the first day of the quarter",
+        method="is_quarter_start",
     )
     def dt_is_quarter_start(self):
         return DateTimeDefault.register(pandas.Series.dt.is_quarter_start)(self)
 
-    @_add_one_column_warning
-    @doc(
-        __doc_dt_properties,
+    @_doc_dt_timestamp(
         property="the boolean of whether the date is the last day of the year",
+        method="is_year_end",
     )
     def dt_is_year_end(self):
         return DateTimeDefault.register(pandas.Series.dt.is_year_end)(self)
 
-    @_add_one_column_warning
-    @doc(
-        __doc_dt_properties,
+    @_doc_dt_timestamp(
         property="the boolean of whether the date is the first day of the year",
+        method="is_year_start",
     )
     def dt_is_year_start(self):
         return DateTimeDefault.register(pandas.Series.dt.is_year_start)(self)
 
-    @_add_one_column_warning
-    @doc(__doc_dt_properties, property="microseconds component")
+    @_doc_dt_timestamp(property="microseconds component", method="microsecond")
     def dt_microsecond(self):
         return DateTimeDefault.register(pandas.Series.dt.microsecond)(self)
 
+    @_doc_dt_interval(property="microseconds component", method="microseconds")
     def dt_microseconds(self):
         return DateTimeDefault.register(pandas.Series.dt.microseconds)(self)
 
-    @_add_one_column_warning
-    @doc(__doc_dt_properties, property="minute component")
+    @_doc_dt_timestamp(property="minute component", method="minute")
     def dt_minute(self):
         return DateTimeDefault.register(pandas.Series.dt.minute)(self)
 
-    @_add_one_column_warning
-    @doc(__doc_dt_properties, property="month component")
+    @_doc_dt_timestamp(property="month component", month="month")
     def dt_month(self):
         return DateTimeDefault.register(pandas.Series.dt.month)(self)
 
-    @_add_one_column_warning
-    @doc(__doc_dt_properties, property="the month name")
+    @_doc_dt_timestamp(property="the month name", method="month name")
     def dt_month_name(self, locale):
         return DateTimeDefault.register(pandas.Series.dt.month_name)(self, locale)
 
-    @_add_one_column_warning
-    @doc(__doc_dt_properties, property="nanoseconds component")
+    @_doc_dt_timestamp(property="nanoseconds component", method="nanosecond")
     def dt_nanosecond(self):
         return DateTimeDefault.register(pandas.Series.dt.nanosecond)(self)
 
+    @_doc_dt_interval(property="nanoseconds component", method="nanoseconds")
     def dt_nanoseconds(self):
         return DateTimeDefault.register(pandas.Series.dt.nanoseconds)(self)
 
+    @_add_one_column_warning
+    @add_refer_to("Series.dt.normalize")
     def dt_normalize(self):
+        """
+        Set the time component of each date-time value to midnight.
+
+        Returns
+        -------
+        BaseQueryCompiler
+            New `QueryCompiler` containing date-time values with midnight time.
+        """
         return DateTimeDefault.register(pandas.Series.dt.normalize)(self)
 
-    @_add_one_column_warning
-    @doc(__doc_dt_properties, property="quarter component")
+    @_doc_dt_timestamp(property="quarter component", method="quarter")
     def dt_quarter(self):
         return DateTimeDefault.register(pandas.Series.dt.quarter)(self)
 
@@ -3038,11 +3058,11 @@ class BaseQueryCompiler(abc.ABC):
             self, freq, ambiguous, nonexistent
         )
 
-    @_add_one_column_warning
-    @doc(__doc_dt_properties, property="seconds component")
+    @_doc_dt_timestamp(property="seconds component", method="second")
     def dt_second(self):
         return DateTimeDefault.register(pandas.Series.dt.second)(self)
 
+    @_doc_dt_interval(property="seconds component", method="seconds")
     def dt_seconds(self):
         return DateTimeDefault.register(pandas.Series.dt.seconds)(self)
 
@@ -3052,58 +3072,110 @@ class BaseQueryCompiler(abc.ABC):
     def dt_strftime(self, date_format):
         return DateTimeDefault.register(pandas.Series.dt.strftime)(self, date_format)
 
-    @_add_one_column_warning
-    @doc(__doc_dt_properties, property="time component")
+    @_doc_dt_timestamp(property="time component", method="time")
     def dt_time(self):
         return DateTimeDefault.register(pandas.Series.dt.time)(self)
 
-    @_add_one_column_warning
-    @doc(__doc_dt_properties, property="time component with timezone information")
+    @_doc_dt_timestamp(
+        property="time component with timezone information", method="timetz"
+    )
     def dt_timetz(self):
         return DateTimeDefault.register(pandas.Series.dt.timetz)(self)
 
     def dt_to_period(self, freq):
-        return DateTimeDefault.register(pandas.Series.dt.to_period)(self)
+        return DateTimeDefault.register(pandas.Series.dt.to_period)(self, freq)
 
     def dt_to_pydatetime(self):
+        """
+        Convert underlying data to array of python native `datetime`.
+
+        BaseQueryCompiler
+            New `QueryCompiler` containing 1D array of `datetime` objects.
+        """
         return DateTimeDefault.register(pandas.Series.dt.to_pydatetime)(self)
 
+    # FIXME: there are no references to this method, we should either remove it
+    # or add a call reference at the DataFrame level.
     def dt_to_pytimedelta(self):
+        """
+        Convert underlying data to array of python native `datetime.timedelta`.
+
+        BaseQueryCompiler
+            New `QueryCompiler` containing 1D array of `datetime.timedelta`.
+        """
         return DateTimeDefault.register(pandas.Series.dt.dt_to_pytimedelta)(self)
 
-    dt_to_timestamp = DateTimeDefault.register(pandas.Series.dt.to_timestamp)
+    def dt_to_timestamp(self):
+        return DateTimeDefault.register(pandas.Series.dt.to_timestamp)(self)
 
+    @_doc_dt_interval(property="duration in seconds", method="total_seconds")
     def dt_total_seconds(self):
         return DateTimeDefault.register(pandas.Series.dt.dt_total_seconds)(self)
 
+    @_add_one_column_warning
+    @add_refer_to("Series.dt.tz")
     def dt_tz(self):
+        """
+        Get the time-zone of the underlying time-series data.
+
+        Returns
+        -------
+        BaseQueryCompiler
+            `QueryCompiler` containing a single value, time-zone of the data.
+        """
         return DateTimeDefault.register(pandas.Series.dt.dt_tz)(self)
 
+    @_add_one_column_warning
+    @add_refer_to("Series.dt.tz_convert")
     def dt_tz_convert(self, tz):
+        """
+        Convert time-series data to the specified time zone.
+
+        Parameters
+        ----------
+        tz : str, pytz.timezone, optional
+
+        Returns
+        -------
+        BaseQueryCompiler
+            New `QueryCompiler` containing values with converted time zone.
+        """
         return DateTimeDefault.register(pandas.Series.dt.tz_convert)(self, tz)
 
+    @_add_one_column_warning
+    @add_refer_to("Series.dt.tz_localize")
     def dt_tz_localize(self, tz, ambiguous, nonexistent):
+        """
+        Localize tz-naive to tz-aware.
+
+        Parameters
+        ----------
+        tz : str, pytz.timezone, optional
+        ambiguous : "inner", "NaT", bool mask
+        nonexistent : "shift_forward", "shift_backward, "NaT", pandas.timedelta, default: "raise"
+
+        Returns
+        -------
+        BaseQueryCompiler
+            New `QueryCompiler` containing values with localized time zone.
+        """
         return DateTimeDefault.register(pandas.Series.dt.tz_localize)(
             self, tz, ambiguous, nonexistent
         )
 
-    @_add_one_column_warning
-    @doc(__doc_dt_properties, property="week component")
+    @_doc_dt_timestamp(property="week component", method="week")
     def dt_week(self):
         return DateTimeDefault.register(pandas.Series.dt.week)(self)
 
-    @_add_one_column_warning
-    @doc(__doc_dt_properties, property="integer day of week")
+    @_doc_dt_timestamp(property="integer day of week", method="weekday")
     def dt_weekday(self):
         return DateTimeDefault.register(pandas.Series.dt.weekday)(self)
 
-    @_add_one_column_warning
-    @doc(__doc_dt_properties, property="week of year")
+    @_doc_dt_timestamp(property="week of year", method="weekofyear")
     def dt_weekofyear(self):
         return DateTimeDefault.register(pandas.Series.dt.weekofyear)(self)
 
-    @_add_one_column_warning
-    @doc(__doc_dt_properties, property="year component")
+    @_doc_dt_timestamp(property="year component", method="year")
     def dt_year(self):
         return DateTimeDefault.register(pandas.Series.dt.year)(self)
 

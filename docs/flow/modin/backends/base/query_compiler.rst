@@ -25,7 +25,9 @@ Example
 As an exercise let's define a new query compiler in `Modin`, just to see how easy it is. Usually, query compiler routes formed queries to the underlying :doc:`frame </flow/engines/base/frame/data.rst>` class, which represents an actual execution engine and responsible for executing queries. In the glory of simplicity and independence of this example, our execution engine will be the `pandas` itself.
 
 So, we need to inherit a new class from ``BaseQueryCompiler`` and implement all of the abstract methods. In case of `pandas` as an execution engine it's a trivial task:
+
 .. code-block:: python
+
     from modin.backends import BaseQueryCompiler
 
     class DefaultToPandasQueryCompiler(BaseQueryCompiler):
@@ -48,7 +50,9 @@ So, we need to inherit a new class from ``BaseQueryCompiler`` and implement all 
         free = finalize
 
 All done! Now you've got a fully functional query compiler, which is ready for extensions and already can be used in Modin DataFrame:
+
 .. code-block:: python
+
     import pandas
     pandas_df = pandas.DataFrame({"col1": [1, 2, 2, 1], "col2": [10, 2, 3, 40]})
     # Building our query compiler from pandas object
