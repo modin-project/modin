@@ -17,23 +17,20 @@ from collections.abc import Iterator
 
 
 class PartitionIterator(Iterator):
-    """Iterator on partitioned data."""
+    """
+    Iterator on partitioned data.
+
+    Parameters
+    ----------
+    df : DataFrame
+        The dataframe to iterate over.
+    axis : {0, 1}
+        Axis to iterate over.
+    func : callable
+        The function to get inner iterables from each partition.
+    """
 
     def __init__(self, df, axis, func):
-        """
-        Construct a iterator on partitioned data.
-
-        TODO: add types.
-
-        Parameters
-        ----------
-        df: DataFrame
-            The dataframe to iterate over.
-        axis:
-            axis to iterate over.
-        func:
-            The function to get inner iterables from each partition.
-        """
         self.df = df
         self.axis = axis
         self.index_iter = (
@@ -50,11 +47,25 @@ class PartitionIterator(Iterator):
         self.func = func
 
     def __iter__(self):
-        """Implement iterator interface."""
+        """
+        Implement iterator interface.
+
+        Returns
+        -------
+        PartitionIterator
+            Iterator object.
+        """
         return self
 
     def __next__(self):
-        """Implement iterator interface."""
+        """
+        Implement iterator interface.
+
+        Returns
+        -------
+        PartitionIterator
+            Incremented iterator object.
+        """
         key = next(self.index_iter)
         df = self.df.iloc[key]
         return self.func(df)
