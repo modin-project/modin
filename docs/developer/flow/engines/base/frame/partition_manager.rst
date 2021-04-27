@@ -16,13 +16,12 @@ implementation details.
 
 Partition manager can apply user-passed (arbitrary) function in different modes:
 
-* along both axes piecewise:
+* block-wise (apply a function to individual block partitions):
 
   * optinally accepting partition indices along each axis
   * optionally accepting an item to be split so parts of it would be sent to each partition
 
-* along one axis piecewise
-* along one full axis (when user function needs information about the whole axis)
+* along a full axis (apply a function to an entire column or row made up of block partitions when user function needs information about the whole axis)
 
 It can also broadcast partitions from `right` to `left` when executing certain operations making
 `right` partitions available for functions executed where `left` live.

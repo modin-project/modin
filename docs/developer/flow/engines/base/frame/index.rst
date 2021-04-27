@@ -1,5 +1,5 @@
-Internal DataFrame representation
-=================================
+Base Frame Objects
+==================
 
 Modin paritions data to scale efficiently.
 To keep track of everything a few key classes are introduced: ``Frame``, ``Partition``, ``AxisPartiton`` and ``FrameManager``.
