@@ -113,6 +113,9 @@ nature, you get a fast DataFrame at 1MB and 1TB+.
 
 **Modin is currently under active development. Requests and contributions are welcome!**
 
+**If you are interested in contributions please refer to 'developer documentation' section, where
+you can find 'Getting started' guide, system architecture and internal implementation details docs
+and lots of other useful information.**
 
 .. toctree::
    :caption: Installation

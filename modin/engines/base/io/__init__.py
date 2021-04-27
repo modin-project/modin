@@ -11,6 +11,8 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
+"""IO functions implementations."""
+
 from modin.engines.base.io.io import BaseIO
 from modin.engines.base.io.text.csv_dispatcher import CSVDispatcher
 from modin.engines.base.io.text.csv_glob_dispatcher import CSVGlobDispatcher

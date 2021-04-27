@@ -11,6 +11,14 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
+"""
+Module houses `SQLDispatcher` class.
+
+`SQLDispatcher` contains utils for handling SQL queries or database tables,
+inherits util functions for handling files from `FileDispatcher` class and can be
+used as base class for dipatchers of SQL queries.
+"""
+
 import math
 import numpy as np
 import pandas
@@ -21,17 +29,32 @@ from modin.config import NPartitions
 
 
 class SQLDispatcher(FileDispatcher):
+    """
+    Class handles utils for reading SQL queries or database tables.
+
+    Inherits some common for files util functions from `FileDispatcher` class.
+    """
+
     @classmethod
     def _read(cls, sql, con, index_col=None, **kwargs):
-        """Reads a SQL query or database table into a DataFrame.
+        """
+        Read a SQL query or database table into a query compiler.
 
-        Args:
-            sql: string or SQLAlchemy Selectable (select or text object) SQL query to be
-                executed or a table name.
-            con: SQLAlchemy connectable (engine/connection) or database string URI or
-                DBAPI2 connection (fallback mode)
-            index_col: Column(s) to set as index(MultiIndex).
-            kwargs: Pass into pandas.read_sql function.
+        Parameters
+        ----------
+        sql : str or SQLAlchemy Selectable (select or text object)
+            SQL query to be executed or a table name.
+        con : SQLAlchemy connectable, str, or sqlite3 connection
+            Connection object to database.
+        index_col : str or list of str, optional
+            Column(s) to set as index(MultiIndex).
+        **kwargs : dict
+            Parameters to pass into `pandas.read_sql` function.
+
+        Returns
+        -------
+        BaseQueryCompiler
+            Query compiler with imported data for further processing.
         """
         try:
             import psycopg2 as pg
