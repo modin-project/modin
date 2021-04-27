@@ -48,7 +48,7 @@ class BaseSparseAccessor:
 
     def _default_to_pandas(self, op, *args, **kwargs):
         """
-        Convert dataset to pandas type and call a pandas `op` on it.
+        Convert dataset to pandas type and call a pandas sparse.`op` on it.
 
         Parameters
         ----------
