@@ -35,7 +35,7 @@ class DMatrix(xgb.DMatrix):
     ----------
     data : modin.pandas.DataFrame
         Data source of DMatrix.
-    label : modin.pandas.DataFrame/Series
+    label : modin.pandas.DataFrame or modin.pandas.Series
         Labels used for training.
 
     Notes
@@ -108,8 +108,8 @@ class Booster(xgb.Booster):
         ----------
         data : modin.experimental.xgboost.DMatrix
             Input data used for prediction.
-        num_actors : int, default: None
-            Number of actors for prediction. If it's None, this value will be
+        num_actors : int, optional
+            Number of actors for prediction. If unspecified, this value will be
             computed automatically.
         **kwargs : dict
             Other parameters are the same as `xgboost.Booster.predict`.
@@ -165,8 +165,8 @@ def train(
     evals : list of pairs (modin.experimental.xgboost.DMatrix, str), default: empty
         List of validation sets for which metrics will evaluated during training.
         Validation metrics will help us track the performance of the model.
-    num_actors : int, default: None
-        Number of actors for training. If it's None, this value will be
+    num_actors : int, optional
+        Number of actors for training. If unspecified, this value will be
         computed automatically.
     evals_result : dict, optional
         Dict to store evaluation results in.

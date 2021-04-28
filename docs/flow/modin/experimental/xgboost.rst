@@ -21,7 +21,7 @@ Public interfaces
 Class :ref:`DMatrix <DMatrix>` inherits original class ``xgboost.DMatrix`` and overrides constructor which supports
 only `data` and `label` parameters now. Both of the parameters must be ``modin.pandas.DataFrame``,
 those dataframes will be unwrapped to lists of delayed objects of Modin's row partitions using function
-``modin.distributed.dataframe.pandas.unwrap_partitions``.
+:func:`~modin.distributed.dataframe.pandas.unwrap_partitions`.
 
 .. _DMatrix:
 .. autoclass:: modin.experimental.xgboost.DMatrix

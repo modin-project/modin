@@ -15,7 +15,7 @@
 Module holds internal entities for Modin XGBoost on Ray backend.
 
 Class ModinXGBoostActor provides interfaces to run XGBoost operations
-on remote workers. Other functions create Ray actors, distribute data between etc.
+on remote workers. Other functions create Ray actors, distribute data between them, etc.
 """
 
 import time
@@ -583,15 +583,15 @@ def _train(
     During work it evenly distributes `dtrain` between workers according
     to IP addresses partitions (in case of not even distribution of `dtrain`
     by nodes, part of partitions will be re-distributed between nodes),
-    runs xgb.train on each worker for subset of `dtrain` and reduce training results
+    runs xgb.train on each worker for subset of `dtrain` and reduces training results
     of each worker using Rabit Context.
 
     Parameters
     ----------
     dtrain : modin.experimental.DMatrix
         Data to be trained against.
-    num_actors : int, default None
-        Number of actors for training. If it's None, this value will be
+    num_actors : int, optional
+        Number of actors for training. If unspecified, this value will be
         computed automatically.
     params : dict
         Booster params.
@@ -689,8 +689,8 @@ def _predict(
         A trained booster.
     data : modin.experimental.xgboost.DMatrix
         Input data used for prediction.
-    num_actors : int, optional. Default is None
-        Number of actors for prediction. If it's None, this value will be
+    num_actors : int, optional
+        Number of actors for prediction. If unspecified, this value will be
         computed automatically.
     **kwargs : dist
         Other parameters are the same as `xgboost.Booster.predict`.
