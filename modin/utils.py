@@ -126,7 +126,16 @@ def _replace_doc(
         else:
             token = apilink
         url = _make_api_url(token)
-        doc += f"\n{' ' * _get_indent(doc)}See `pandas API documentation for {token} <{url}>`_ for more.\n"
+
+        indent_line = " " * _get_indent(doc)
+        notes_section = f"\n{indent_line}Notes\n{indent_line}-----\n"
+        url_line = f"{indent_line}See `pandas API documentation for {token} <{url}>`_ for more.\n"
+        notes_section_with_url = notes_section + url_line
+
+        if notes_section in doc:
+            doc = doc.replace(notes_section, notes_section_with_url)
+        else:
+            doc += notes_section_with_url
 
     if parent_cls and isinstance(target_obj, property):
         if overwrite:
