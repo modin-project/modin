@@ -66,7 +66,7 @@ Component View
 --------------
 .. toctree::
    ../flow/modin/engines/base/frame/index
-   flow/experimental/index
+   ../flow/modin/experimental/index
 
 
 DataFrame Partitioning
@@ -295,8 +295,7 @@ by documentation for now, the rest is coming soon...).
    │   │   │   ├───pandas_on_ray
    │   │   │   └───pyarrow_on_ray
    │   │   ├───pandas
-   │   │   ├───sklearn
-   │   │   │   └───model_selection
+   │   │   ├─── :doc:`sklearn </flow/modin/experimental/sklearn>`
    │   │   ├───sql
    │   │   └───xgboost
    │   ├───pandas

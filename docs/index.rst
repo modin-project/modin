@@ -157,7 +157,6 @@ and lots of other useful information.**
    contributing
    developer/architecture
    developer/pandas/partition_api
-   developer/flow/index
 
 .. toctree::
    :caption: Engines, Backends, and APIs
