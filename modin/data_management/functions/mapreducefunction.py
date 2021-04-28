@@ -27,9 +27,9 @@ class MapReduceFunction(Function):
 
         Parameters
         ----------
-        map_function : callable
+        map_function : callable(pandas.DataFrame) -> pandas.DataFrame
             Source map function.
-        reduce_function : callable
+        reduce_function : callable(pandas.DataFrame) -> scalar
             Source reduce function.
         axis : int, optional
             Specifies axis to apply function along.

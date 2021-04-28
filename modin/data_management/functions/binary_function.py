@@ -30,7 +30,7 @@ class BinaryFunction(Function):
 
         Parameters
         ----------
-        func : callable
+        func : callable(pandas.DataFrame, [pandas.DataFrame, list-like, scalar]) -> pandas.DataFrame
             Binary function to execute. Have to be able to accept at least two arguments.
         join_type : {'left', 'right', 'outer', 'inner', None}, default: 'outer'
             Type of join that will be used if indices of operands are not aligned.

@@ -27,7 +27,7 @@ class FoldFunction(Function):
 
         Parameters
         ----------
-        fold_function : callable
+        fold_function : callable(pandas.DataFrame) -> pandas.DataFrame
             Function to apply across rows/columns.
         axis : int, optional
             Specifies axis to apply function along.

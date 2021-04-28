@@ -26,7 +26,7 @@ class MapFunction(Function):
 
         Parameters
         ----------
-        function : callable
+        function : callable(pandas.DataFrame) -> pandas.DataFrame
             Function that will be applied to the each partition.
             Function takes `pandas.DataFrame` and returns `pandas.DataFrame`
             of the same shape.
