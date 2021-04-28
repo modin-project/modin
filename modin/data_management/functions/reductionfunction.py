@@ -29,7 +29,7 @@ class ReductionFunction(Function):
 
         Parameters
         ----------
-        reduction_function : callable(pandas.DataFrame) -> scalar
+        reduction_function : callable(pandas.DataFrame) -> pandas.Series
             Source function.
         axis : int, optional
             Axis to apply function along.

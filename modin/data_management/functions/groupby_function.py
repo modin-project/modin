@@ -34,10 +34,10 @@ class GroupbyReduceFunction(MapReduceFunction):
         map_func : str, dict or callable(pandas.DataFrameGroupBy) -> pandas.DataFrame
             If `str` this parameter will be treated as a function name to register,
             so `map_func` and `reduce_func` will be grabbed from `groupby_reduce_functions`.
-            If dict or callable then this will be treated as a function to apply to each group
+            If dict or callable then this will be treated as a function to apply to the `GroupByObject`
             at the map phase.
         reduce_func : str, dict or callable(pandas.DataFrameGroupBy) -> pandas.DataFrame, optional
-            Function to apply to each group at the reduce phase. If not specified
+            Function to apply to the `GroupByObject` at the reduce phase. If not specified
             will be set the same as 'map_func'.
         **call_kwds : kwargs
             Kwargs that will be passed to the returned function.
@@ -85,7 +85,7 @@ class GroupbyReduceFunction(MapReduceFunction):
         """
         Execute Map phase of GroupbyReduce.
 
-        Groups DataFrame and applies map function to each group. Groups will be
+        Groups DataFrame and applies map function. Groups will be
         preserved in the results index for the following reduce phase.
 
         Parameters
@@ -104,7 +104,7 @@ class GroupbyReduceFunction(MapReduceFunction):
         groupby_args : dict, optional
             Dictionary which carries arguments for `pandas.DataFrame.groupby`.
         map_func : dict or callable(pandas.DataFrameGroupBy) -> pandas.DataFrame, default: None
-            Function to apply to each group.
+            Function to apply to the `GroupByObject`.
         map_args : dict, optional
             Arguments which will be passed to `map_func`.
         drop : bool, default: False
@@ -161,7 +161,7 @@ class GroupbyReduceFunction(MapReduceFunction):
         """
         Execute Reduce phase of GroupbyReduce.
 
-        Combines groups from the Map phase and applies reduce function to each group.
+        Combines groups from the Map phase and applies reduce function.
 
         Parameters
         ----------
@@ -175,7 +175,7 @@ class GroupbyReduceFunction(MapReduceFunction):
         groupby_args : dict, optional
             Dictionary which carries arguments for `pandas.DataFrame.groupby`.
         reduce_func : dict or callable(pandas.DataFrameGroupBy) -> pandas.DataFrame, default: None
-            Function to apply to each group.
+            Function to apply to the `GroupByObject`.
         reduce_args : dict, optional
             Arguments which will be passed to `reduce_func`.
         drop : bool, default: False
@@ -248,11 +248,11 @@ class GroupbyReduceFunction(MapReduceFunction):
         map_args : dict
             Arguments which will be passed to `map_func`.
         map_func : dict or callable(pandas.DataFrameGroupBy) -> pandas.DataFrame
-            Function to apply to each group at the Map phase.
+            Function to apply to the `GroupByObject` at the Map phase.
         numeric_only : bool, default: True
             Whether or not to drop non-numeric columns before executing GroupBy.
         reduce_func : dict or callable(pandas.DataFrameGroupBy) -> pandas.DataFrame
-            Function to apply to each group at the Reduce phase.
+            Function to apply to the `GroupByObject` at the Reduce phase.
             (If specified, have to be passed via `kwargs`).
         reduce_args : dict
             Arguments which will be passed to `reduce_func`.
@@ -371,11 +371,11 @@ class GroupbyReduceFunction(MapReduceFunction):
         groupby_args : dict
             Dictionary which carries arguments for pandas.DataFrame.groupby.
         map_func : dict or callable(pandas.DataFrameGroupBy) -> pandas.DataFrame
-            Function to apply to each group at the Map phase.
+            Function to apply to the `GroupByObject` at the Map phase.
         map_args : dict
             Arguments which will be passed to `map_func`.
         reduce_func : dict or callable(pandas.DataFrameGroupBy) -> pandas.DataFrame
-            Function to apply to each group at the Reduce phase.
+            Function to apply to the `GroupByObject` at the Reduce phase.
         reduce_args : dict
             Arguments which will be passed to `reduce_func`.
         drop : bool, default: False

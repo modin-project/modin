@@ -155,6 +155,7 @@ class GroupBy:
             drop=False,
             **kwargs
         ):
+            """Group DataFrame and applies aggregation function to each group."""
             by = cls.validate_by(by)
 
             grp = df.groupby(by, axis=axis, **groupby_args)
@@ -196,6 +197,7 @@ class GroupBy:
             drop=False,
             **kwargs
         ):
+            """Group DataFrame and applies aggregation function to each group."""
             if not isinstance(by, (pandas.Series, pandas.DataFrame)):
                 by = cls.validate_by(by)
                 return agg_func(
