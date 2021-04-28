@@ -297,7 +297,7 @@ by documentation for now, the rest is coming soon...).
    │   │   ├───pandas
    │   │   ├─── :doc:`sklearn </flow/modin/experimental/sklearn>`
    │   │   ├───sql
-   │   │   └───xgboost
+   │   │   └─── :doc:`xgboost </flow/modin/experimental/xgboost>`
    │   ├───pandas
    │   ├───spreadsheet
    │   └───sql

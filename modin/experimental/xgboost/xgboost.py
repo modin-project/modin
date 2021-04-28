@@ -11,6 +11,7 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
+"""Module holds public interfaces for work Modin XGBoost."""
 
 import logging
 from typing import Dict, Optional
@@ -26,13 +27,15 @@ LOGGER = logging.getLogger("[modin.xgboost]")
 
 class DMatrix(xgb.DMatrix):
     """
-    DMatrix holding on references to DataFrame.
+    DMatrix holds references to partitions of Modin DataFrame.
+
+    On init stage unwrapping partitions of Modin DataFrame is started.
 
     Parameters
     ----------
-    data : DataFrame
+    data : modin.pandas.DataFrame
         Data source of DMatrix.
-    label : DataFrame
+    label : modin.pandas.DataFrame/Series
         Labels used for training.
 
     Notes
@@ -52,6 +55,18 @@ class DMatrix(xgb.DMatrix):
         self.label = unwrap_partitions(label, axis=0)
 
     def __iter__(self):
+        """
+        Return unwrapped `self.data` and `self.label`.
+
+        Yields
+        ------
+        list
+            List of `self.data` with pairs of references to IP of row partition
+            and row partition [(IP_ref0, partition_ref0), ..].
+        list
+            List of `self.label` with references to row partitions
+            [partition_ref0, ..].
+        """
         yield self.data
         yield self.label
 
@@ -60,20 +75,20 @@ class Booster(xgb.Booster):
     """
     A Modin Booster of XGBoost.
 
-    Booster is the model of xgboost, that contains low level routines for
+    Booster is the model of XGBoost, that contains low level routines for
     training, prediction and evaluation.
 
     Parameters
     ----------
-    params : dict. Default is None
+    params : dict, optional
         Parameters for boosters.
-    cache : list
+    cache : list, default: empty
         List of cache items.
-    model_file : string/os.PathLike/Booster/bytearray
-        Path to the model file if it's string or PathLike.
+    model_file : string/os.PathLike/xgb.Booster/bytearray, optional
+        Path to the model file if it's string or PathLike or xgb.Booster.
     """
 
-    def __init__(self, params=None, cache=(), model_file=None):
+    def __init__(self, params=None, cache=(), model_file=None):  # noqa
         super(Booster, self).__init__(params=params, cache=cache, model_file=model_file)
 
     def predict(
@@ -83,21 +98,25 @@ class Booster(xgb.Booster):
         **kwargs,
     ):
         """
-        Run prediction with a trained booster.
+        Run distributed prediction with a trained booster.
+
+        During work it evenly distributes `data` between workers,
+        runs xgb.predict on each worker for subset of `data` and creates
+        Modin DataFrame with prediction results.
 
         Parameters
         ----------
-        data : DMatrix
+        data : modin.experimental.xgboost.DMatrix
             Input data used for prediction.
-        num_actors : int. Default is None
+        num_actors : int, default: None
             Number of actors for prediction. If it's None, this value will be
             computed automatically.
-        \\*\\*kwargs :
+        **kwargs : dict
             Other parameters are the same as `xgboost.Booster.predict`.
 
         Returns
         -------
-        ``modin.pandas.DataFrame``
+        modin.pandas.DataFrame
             Modin DataFrame with prediction results.
         """
         LOGGER.info("Prediction started")
@@ -127,28 +146,36 @@ def train(
     **kwargs,
 ):
     """
-    Train XGBoost model.
+    Run distributed training of XGBoost model.
+
+    During work it evenly distributes `dtrain` between workers according
+    to IP addresses partitions (in case of not even distribution of `dtrain`
+    over nodes, some partitions will be re-distributed between nodes),
+    runs xgb.train on each worker for subset of `dtrain` and reduces training results
+    of each worker using Rabit Context.
 
     Parameters
     ----------
     params : dict
         Booster params.
-    dtrain : DMatrix
+    dtrain : modin.experimental.xgboost.DMatrix
         Data to be trained against.
-    evals: list of pairs (DMatrix, string)
+    *args : iterable
+        Other parameters for `xgboost.train`.
+    evals : list of pairs (modin.experimental.xgboost.DMatrix, str), default: empty
         List of validation sets for which metrics will evaluated during training.
         Validation metrics will help us track the performance of the model.
-    num_actors : int. Default is None
+    num_actors : int, default: None
         Number of actors for training. If it's None, this value will be
         computed automatically.
-    evals_result : dict. Default is None
+    evals_result : dict, optional
         Dict to store evaluation results in.
-    \\*\\*kwargs :
+    **kwargs : dict
         Other parameters are the same as `xgboost.train`.
 
     Returns
     -------
-    ``modin.experimental.xgboost.Booster``
+    modin.experimental.xgboost.Booster
         A trained booster.
     """
     LOGGER.info("Training started")

@@ -10,6 +10,16 @@
 import sys
 import os
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+import ray
+
+# stub ray.remote to be a no-op so it doesn't shadow docstrings
+def noop_decorator(*args, **kwargs):
+    if len(args) == 1 and len(kwargs) == 0 and callable(args[0]):
+        # This is the case where the decorator is just @ray.remote without parameters.
+        return args[0]
+    return lambda cls_or_func: cls_or_func
+ray.remote = noop_decorator
+
 import modin
 
 project = u"Modin"
