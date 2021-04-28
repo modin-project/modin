@@ -11,6 +11,8 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
+"""Module houses class that implements ``BasePandasFrame`` using Ray."""
+
 import pandas
 
 from .partition_manager import PandasOnRayFrameManager
@@ -21,11 +23,46 @@ import ray
 
 
 class PandasOnRayFrame(BasePandasFrame):
+    """
+    The class implements the interface in ``BasePandasFrame`` using Ray.
+
+    Parameters
+    ----------
+    partitions : np.ndarray
+        A 2D NumPy array of partitions.
+    index : sequence
+        The index for the dataframe. Converts to a pandas.Index.
+    columns : sequence
+        The columns object for the dataframe. Converts to a pandas.Index.
+    row_lengths : list, default None
+        The length of each partition in the rows. The "height" of
+        each of the block partitions. Is computed if not provided.
+    column_widths : list, default None
+        The width of each partition in the columns. The "width" of
+        each of the block partitions. Is computed if not provided.
+    dtypes : pandas.Series, default None
+        The data types for the dataframe columns.
+    """
 
     _frame_mgr_cls = PandasOnRayFrameManager
 
     @classmethod
     def combine_dtypes(cls, list_of_dtypes, column_names):
+        """
+        Describe how data types should be combined when they do not match.
+
+        Parameters
+        ----------
+        list_of_dtypes : list
+            A list of pandas Series with the data types.
+        column_names : list
+            The names of the columns that the data types map to.
+
+        Returns
+        -------
+        pandas.Series
+             A pandas Series containing the finalized data types.
+        """
         # Compute dtypes by getting collecting and combining all of the partitions. The
         # reported dtypes from differing rows can be different based on the inference in
         # the limited data seen by each worker. We use pandas to compute the exact dtype

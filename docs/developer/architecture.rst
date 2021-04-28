@@ -66,6 +66,7 @@ Component View
 --------------
 .. toctree::
    ../flow/modin/engines/base/frame/index
+   flow/engines/ray/pandas_on_ray/frame/index
    ../flow/modin/experimental/index
 
 
