@@ -155,6 +155,11 @@ class DefaultMethod(Function):
         wrapper = cls.build_default_to_pandas(fn, fn_name)
 
         def args_cast(self, *args, **kwargs):
+            """
+            Preprocess `default_to_pandas` function arguments and applies default function.
+
+            Cast all Modin objects that function arguments contain to its pandas representation.
+            """
             args = try_cast_to_pandas(args)
             kwargs = try_cast_to_pandas(kwargs)
             return wrapper(self, *args, **kwargs)
@@ -164,7 +169,7 @@ class DefaultMethod(Function):
     @classmethod
     def build_property_wrapper(cls, prop):
         """
-        Build function that access specified property of the frame.
+        Build function that accesses specified property of the frame.
 
         Parameters
         ----------
@@ -178,6 +183,7 @@ class DefaultMethod(Function):
         """
 
         def property_wrapper(df):
+            """Get specified property of the passed object."""
             return prop.fget(df)
 
         return property_wrapper
@@ -202,6 +208,7 @@ class DefaultMethod(Function):
         fn.__name__ = f"<function {cls.OBJECT_TYPE}.{fn_name}>"
 
         def wrapper(self, *args, **kwargs):
+            """Do fallback to pandas for the specified function."""
             return self.default_to_pandas(fn, *args, **kwargs)
 
         return wrapper

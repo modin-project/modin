@@ -186,7 +186,7 @@ class BaseFactory(object):  # noqa: D101
     @classmethod
     @doc(
         _doc_io_method_template,
-        source="an Parquet file",
+        source="a Parquet file",
         params=_doc_io_method_kwargs_params,
         method="read_parquet",
     )
@@ -346,7 +346,7 @@ class BaseFactory(object):  # noqa: D101
     @classmethod
     @doc(
         _doc_io_method_template,
-        source="a SPSS file",
+        source="an SPSS file",
         params=_doc_io_method_kwargs_params,
         method="read_spss",
     )

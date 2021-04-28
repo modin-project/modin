@@ -42,6 +42,7 @@ class FoldFunction(Function):
         """
 
         def caller(query_compiler, *args, **kwargs):
+            """Execute Fold function against passed query compiler."""
             axis = call_kwds.get("axis", kwargs.get("axis"))
             return query_compiler.__constructor__(
                 query_compiler._modin_frame._fold(

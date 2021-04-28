@@ -42,6 +42,7 @@ class MapFunction(Function):
         """
 
         def caller(query_compiler, *args, **kwargs):
+            """Execute Map function against passed query compiler."""
             return query_compiler.__constructor__(
                 query_compiler._modin_frame._map(
                     lambda x: function(x, *args, **kwargs), *call_args, **call_kwds

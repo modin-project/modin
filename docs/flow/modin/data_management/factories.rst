@@ -20,7 +20,7 @@ Backend is a combination of the `QueryCompiler` and `Execution Engine`. For exam
 engine. 
 
 In the scope of this module, each backend is represented with a factory class located in
-``factories.py``. Factory contains the IO module of the corresponding backend and
+``factories.py``. Factory contains the IO module of the corresponding backend and is
 responsible for dispatching calls of IO functions to their actual implementations in an
 underlying IO module. For more information about IO module visit :doc:`related doc </flow/modin/engines/base/io>`.
 

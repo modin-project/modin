@@ -37,11 +37,12 @@ class BinaryDefault(AnyDefault):
         Returns
         -------
         callable
-            Function that takes query compiler, does fallback to pandas and applies `fn`
+            Function that takes query compiler, does fallback to pandas and applies binary `fn`
             to the casted to pandas frame.
         """
 
         def bin_ops_wrapper(df, other, *args, **kwargs):
+            """Apply specified binary function to the passed operands."""
             squeeze_other = kwargs.pop("broadcast", False) or kwargs.pop(
                 "squeeze_other", False
             )

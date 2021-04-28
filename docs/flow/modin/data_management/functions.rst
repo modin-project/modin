@@ -24,7 +24,7 @@ Function module provides templates for this type of function:
 
 Map functions
 -------------
-Apply function to each partition in parallel. Note, that the map function should not change the shape of the partitions.
+Apply function to each partition in parallel. **Note**: map function should not change the shape of the partitions.
 
 .. figure:: /img/map_evaluation.svg
     :align: center

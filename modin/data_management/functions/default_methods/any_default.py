@@ -28,7 +28,7 @@ class ObjTypeDeterminer:
 
     def __getattr__(self, key):
         """
-        Build function that executes `key` function under passed frame.
+        Build function that executes `key` function over passed frame.
 
         Parameters
         ----------
@@ -41,6 +41,7 @@ class ObjTypeDeterminer:
         """
 
         def func(df, *args, **kwargs):
+            """Access specified attribute of the passed object and calls it if it's callable."""
             prop = getattr(df, key)
             if callable(prop):
                 return prop(*args, **kwargs)

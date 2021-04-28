@@ -50,6 +50,7 @@ class GroupBy:
         """
 
         def try_cast_series(df):
+            """Cast one-column frame to Series."""
             if isinstance(df, pandas.DataFrame):
                 df = df.squeeze(axis=1)
             if not isinstance(df, pandas.Series):
