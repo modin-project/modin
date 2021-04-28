@@ -286,14 +286,14 @@ by documentation for now, the rest is coming soon...).
    │   │   └───ray
    │   │       ├───generic
    │   │       └───pandas_on_ray
-   │   ├───experimental
+   │   ├── :doc:`experimental </flow/modin/experimental/experimental>`
    │   │   ├───backends
    │   │   │   └───omnisci
    │   │   ├───cloud
    │   │   ├───engines
    │   │   │   ├───omnisci_on_ray
-   │   │   │   ├───pandas_on_ray
-   │   │   │   └───pyarrow_on_ray
+   │   │   │   ├─── :doc:`pandas_on_ray </flow/modin/experimental/engines/pandas_on_ray>`
+   │   │   │   └─── :doc:`pyarrow_on_ray </flow/modin/experimental/engines/pyarrow_on_ray>`
    │   │   ├─── :doc:`pandas </flow/modin/experimental/pandas>`
    │   │   ├─── :doc:`sklearn </flow/modin/experimental/sklearn>`
    │   │   ├───sql
