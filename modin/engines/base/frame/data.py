@@ -177,7 +177,7 @@ class BasePandasFrame(object):
         reduce_func = self._build_mapreduce_func(0, dtype_builder)
         # For now we will use a pandas Series for the dtypes.
         if len(self.columns) > 0:
-            dtypes = self._map_reduce(0, map_func, reduce_func).to_pandas().iloc[0]
+            dtypes = self.map_reduce(0, map_func, reduce_func).to_pandas().iloc[0]
         else:
             dtypes = pandas.Series([])
         # reset name to None because we use "__reduced__" internally
@@ -575,7 +575,7 @@ class BasePandasFrame(object):
         # to reorder here based on the expected order from within the data.
         # We create a dictionary mapping the position of the numeric index with respect
         # to all others, then recreate that order by mapping the new order values from
-        # the old. This information is sent to `reorder_labels`.
+        # the old. This information is sent to `_reorder_labels`.
         if row_numeric_idx is not None:
             row_order_mapping = dict(
                 zip(sorted(row_numeric_idx), range(len(row_numeric_idx)))
@@ -590,7 +590,7 @@ class BasePandasFrame(object):
             new_col_order = [col_order_mapping[idx] for idx in col_numeric_idx]
         else:
             new_col_order = None
-        return intermediate.reorder_labels(
+        return intermediate._reorder_labels(
             row_numeric_idx=new_row_order, col_numeric_idx=new_col_order
         )
 
@@ -696,7 +696,7 @@ class BasePandasFrame(object):
         result.index = new_labels
         return result
 
-    def reorder_labels(self, row_numeric_idx=None, col_numeric_idx=None):
+    def _reorder_labels(self, row_numeric_idx=None, col_numeric_idx=None):
         """
         Reorder the column and or rows in this DataFrame.
 
@@ -884,7 +884,7 @@ class BasePandasFrame(object):
 
     # END Metadata modification methods
 
-    def _numeric_columns(self, include_bool=True):
+    def numeric_columns(self, include_bool=True):
         """
         Return the names of numeric columns in the frame.
 
@@ -1201,7 +1201,7 @@ class BasePandasFrame(object):
         )
         return result
 
-    def _fold_reduce(self, axis, func):
+    def fold_reduce(self, axis, func):
         """
         Apply function that reduces Frame Manager to series but requires knowledge of full axis.
 
@@ -1223,7 +1223,7 @@ class BasePandasFrame(object):
         )
         return self._compute_map_reduce_metadata(axis, new_parts)
 
-    def _map_reduce(self, axis, map_func, reduce_func=None):
+    def map_reduce(self, axis, map_func, reduce_func=None):
         """
         Apply function that will reduce the data to a pandas Series.
 
@@ -1254,7 +1254,7 @@ class BasePandasFrame(object):
         )
         return self._compute_map_reduce_metadata(axis, reduce_parts)
 
-    def _map(self, func, dtypes=None):
+    def map(self, func, dtypes=None):
         """
         Perform a function that maps across the entire dataset.
 
@@ -1288,7 +1288,7 @@ class BasePandasFrame(object):
             dtypes=dtypes,
         )
 
-    def _fold(self, axis, func):
+    def fold(self, axis, func):
         """
         Perform a function across an entire axis.
 
@@ -1354,7 +1354,7 @@ class BasePandasFrame(object):
             self.dtypes if axis == 0 else None,
         )
 
-    def _apply_full_axis(
+    def apply_full_axis(
         self,
         axis,
         func,
@@ -1400,7 +1400,7 @@ class BasePandasFrame(object):
             other=None,
         )
 
-    def _apply_full_axis_select_indices(
+    def apply_full_axis_select_indices(
         self,
         axis,
         func,
@@ -1461,7 +1461,7 @@ class BasePandasFrame(object):
             new_columns = self.columns if axis == 0 else None
         return self.__constructor__(new_partitions, new_index, new_columns, None, None)
 
-    def _apply_select_indices(
+    def apply_select_indices(
         self,
         axis,
         func,
@@ -1709,7 +1709,7 @@ class BasePandasFrame(object):
         if other is None:
             if apply_indices is None:
                 apply_indices = self.axes[axis][numeric_indices]
-            return self._apply_select_indices(
+            return self.apply_select_indices(
                 axis=axis,
                 func=func,
                 apply_indices=apply_indices,
@@ -1977,7 +1977,7 @@ class BasePandasFrame(object):
             axis, other._partitions, lambda x: x, lengths
         )
 
-    def _binary_op(self, op, right_frame, join_type="outer"):
+    def binary_op(self, op, right_frame, join_type="outer"):
         """
         Perform an operation that requires joining with another Modin DataFrame.
 
@@ -2006,7 +2006,7 @@ class BasePandasFrame(object):
         new_columns = self.columns.join(right_frame.columns, how=join_type)
         return self.__constructor__(new_frame, joined_index, new_columns, None, None)
 
-    def _concat(self, axis, others, how, sort):
+    def concat(self, axis, others, how, sort):
         """
         Concatenate `self` with one or more other Modin DataFrames.
 
@@ -2280,7 +2280,7 @@ class BasePandasFrame(object):
             dtypes=new_dtypes,
         )
 
-    def finalize(self):
+    def _finalize(self):
         """
         Perform all deferred calls on partitions.
 

@@ -31,7 +31,7 @@ import re
 
 
 class OmnisciOnRayFrameManager(RayFrameManager):
-    """This method implements the interface in `BaseFrameManager`."""
+    """This method implements the interface in `BasePandasFrameManager`."""
 
     # This object uses RayRemotePartition objects as the underlying store.
     _partition_class = OmnisciOnRayFramePartition

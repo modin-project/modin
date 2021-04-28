@@ -1,5 +1,5 @@
-BaseFrameManager
-""""""""""""""""
+BasePandasFrameManager
+""""""""""""""""""""""
 
 The class is base for any partition manager class of ``pandas`` backend and serves as
 intermediate level between ``pandas`` base frame and conforming :doc:`partition <partition>` class.
@@ -8,7 +8,7 @@ block partitions, row partitions or column partitions, i.e. the class can form a
 block partitions to apply a function if an operation requires access to an entire column or row.
 The class translates frame API into partition API and also can have some preprocessing operations
 depending on the partition type for improving performance (for example,
-:meth:`~modin.engines.base.frame.partition_manager.BaseFrameManager.preprocess_func`).
+:meth:`~modin.engines.base.frame.partition_manager.BasePandasFrameManager.preprocess_func`).
 
 Main task of partition manager is to keep knowledge of how partitions are stored and managed
 internal to itself, so surrounding code could use it via lean enough API without worrying about
@@ -41,5 +41,5 @@ as well as manages conversion to numpy and pandas representations.
 Public API
 ----------
 
-.. autoclass:: modin.engines.base.frame.partition_manager.BaseFrameManager
+.. autoclass:: modin.engines.base.frame.partition_manager.BasePandasFrameManager
   :members:

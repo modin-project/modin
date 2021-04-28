@@ -255,7 +255,7 @@ class cuDFOnRayFrame(PandasOnRayFrame):
         # to reorder here based on the expected order from within the data.
         # We create a dictionary mapping the position of the numeric index with respect
         # to all others, then recreate that order by mapping the new order values from
-        # the old. This information is sent to `reorder_labels`.
+        # the old. This information is sent to `_reorder_labels`.
         if row_numeric_idx is not None:
             row_order_mapping = dict(
                 zip(sorted(row_numeric_idx), range(len(row_numeric_idx)))
@@ -270,6 +270,6 @@ class cuDFOnRayFrame(PandasOnRayFrame):
             new_col_order = [col_order_mapping[idx] for idx in col_numeric_idx]
         else:
             new_col_order = None
-        return intermediate.reorder_labels(
+        return intermediate._reorder_labels(
             row_numeric_idx=new_row_order, col_numeric_idx=new_col_order
         )

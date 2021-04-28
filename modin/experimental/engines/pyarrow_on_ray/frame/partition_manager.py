@@ -25,7 +25,7 @@ class PyarrowOnRayFrameManager(RayFrameManager):
     """
     Class for tracking partitions with PyArrow backend and Ray engine.
 
-    Inherits all functionality from ``RayFrameManager`` and ``BaseFrameManager`` base
+    Inherits all functionality from ``RayFrameManager`` and ``BasePandasFrameManager`` base
     classes.
     """
 

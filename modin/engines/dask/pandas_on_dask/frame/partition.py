@@ -16,7 +16,7 @@
 import pandas
 
 from modin.data_management.utils import length_fn_pandas, width_fn_pandas
-from modin.engines.base.frame.partition import BaseFramePartition
+from modin.engines.base.frame.partition import BasePandasFramePartition
 
 from distributed.client import get_client
 from distributed import Future
@@ -50,9 +50,9 @@ def apply_list_of_funcs(funcs, df):
     return df, get_ip()
 
 
-class PandasOnDaskFramePartition(BaseFramePartition):
+class PandasOnDaskFramePartition(BasePandasFramePartition):
     """
-    The class implements the interface in ``BaseFramePartition``.
+    The class implements the interface in ``BasePandasFramePartition``.
 
     Parameters
     ----------
@@ -264,7 +264,7 @@ class PandasOnDaskFramePartition(BaseFramePartition):
         return func
 
     @classmethod
-    def length_extraction_fn(cls):
+    def _length_extraction_fn(cls):
         """
         Return the function that computes the length of the object wrapped by this partition.
 
@@ -276,7 +276,7 @@ class PandasOnDaskFramePartition(BaseFramePartition):
         return length_fn_pandas
 
     @classmethod
-    def width_extraction_fn(cls):
+    def _width_extraction_fn(cls):
         """
         Return the function that computes the width of the object wrapped by this partition.
 

@@ -13,13 +13,13 @@
 
 import pandas
 
-from modin.engines.base.frame.partition import BaseFramePartition
+from modin.engines.base.frame.partition import BasePandasFramePartition
 import pyarrow
 
 import ray
 
 
-class OmnisciOnRayFramePartition(BaseFramePartition):
+class OmnisciOnRayFramePartition(BasePandasFramePartition):
     def __init__(
         self, object_id=None, frame_id=None, arrow_table=None, length=None, width=None
     ):

@@ -241,7 +241,7 @@ class OmnisciOnRayFrame(BasePandasFrame):
                 by_cols = Index.__new__(Index, data=by_cols, dtype=self.columns.dtype)
                 by_frame = self.mask(col_indices=by_cols)
                 if by_frames:
-                    by_frame = by_frame._concat(
+                    by_frame = by_frame.concat(
                         axis=1, other_modin_frames=by_frames, ignore_index=True
                     )
             else:
@@ -673,7 +673,7 @@ class OmnisciOnRayFrame(BasePandasFrame):
 
         return new_frame
 
-    def _concat(
+    def concat(
         self, axis, other_modin_frames, join="outer", sort=False, ignore_index=False
     ):
         if not other_modin_frames:

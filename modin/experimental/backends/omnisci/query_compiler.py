@@ -391,7 +391,7 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
         ignore_index = kwargs.get("ignore_index", False)
         other_modin_frames = [o._modin_frame for o in other]
 
-        new_modin_frame = self._modin_frame._concat(
+        new_modin_frame = self._modin_frame.concat(
             axis, other_modin_frames, join=join, sort=sort, ignore_index=ignore_index
         )
         return self.__constructor__(new_modin_frame)

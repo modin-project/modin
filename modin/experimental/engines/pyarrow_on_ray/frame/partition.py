@@ -72,7 +72,7 @@ class PyarrowOnRayFramePartition(PandasOnRayFramePartition):
         return PyarrowOnRayFramePartition(ray.put(pyarrow.Table.from_pandas(obj)))
 
     @classmethod
-    def length_extraction_fn(cls):
+    def _length_extraction_fn(cls):
         """
         Return the callable that extracts the number of rows from the given ``pyarrow.Table``.
 
@@ -83,7 +83,7 @@ class PyarrowOnRayFramePartition(PandasOnRayFramePartition):
         return lambda table: table.num_rows
 
     @classmethod
-    def width_extraction_fn(cls):
+    def _width_extraction_fn(cls):
         """
         Return the callable that extracts the number of columns from the given ``pyarrow.Table``.
 

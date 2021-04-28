@@ -212,7 +212,7 @@ class TestQC(BaseQueryCompiler):
         self._modin_frame = modin_frame
 
     def finalize(self):
-        self._modin_frame.finalize()
+        self._modin_frame._finalize()
 
     @classmethod
     def from_pandas(cls, df, data_cls):

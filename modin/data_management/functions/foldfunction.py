@@ -41,7 +41,7 @@ class FoldFunction(Function):
             """Execute Fold function against passed query compiler."""
             _axis = kwargs.get("axis") if axis is None else axis
             return query_compiler.__constructor__(
-                query_compiler._modin_frame._fold(
+                query_compiler._modin_frame.fold(
                     cls.validate_axis(_axis),
                     lambda x: fold_function(x, *args, **kwargs),
                 )

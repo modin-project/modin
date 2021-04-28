@@ -37,7 +37,7 @@ def progress_bar_wrapper(f):
         f: The name of the function to be wrapped.
 
     Returns:
-        A new BaseFrameManager object, the type of object that called this.
+        A new BasePandasFrameManager object, the type of object that called this.
     """
     from functools import wraps
 
@@ -99,7 +99,7 @@ def func(df, apply_func, call_queue_df=None, call_queues_other=None, *others):
 
 
 class PandasOnRayFrameManager(RayFrameManager):
-    """This method implements the interface in `BaseFrameManager`."""
+    """This method implements the interface in `BasePandasFrameManager`."""
 
     # This object uses RayRemotePartition objects as the underlying store.
     _partition_class = PandasOnRayFramePartition

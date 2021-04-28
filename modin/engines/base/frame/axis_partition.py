@@ -41,7 +41,7 @@ class BaseFrameAxisPartition(ABC):  # pragma: no cover
         ----------
         func : callable
             The function to apply. This will be preprocessed according to
-            the corresponding `BaseFramePartition` objects.
+            the corresponding `BasePandasFramePartition` objects.
         num_splits : int, default: None
             The number of times to split the result object.
         other_axis_partition : BaseFrameAxisPartition, default: None
@@ -60,14 +60,14 @@ class BaseFrameAxisPartition(ABC):  # pragma: no cover
         Returns
         -------
         list
-            A list of `BaseFramePartition` objects.
+            A list of `BasePandasFramePartition` objects.
 
         Notes
         -----
         The procedures that invoke this method assume full axis
         knowledge. Implement this method accordingly.
 
-        You must return a list of `BaseFramePartition` objects from this method.
+        You must return a list of `BasePandasFramePartition` objects from this method.
         """
         pass
 
@@ -87,7 +87,7 @@ class BaseFrameAxisPartition(ABC):  # pragma: no cover
         Returns
         -------
         list
-            A list of `BaseFramePartition` objects split by `lengths`.
+            A list of `BasePandasFramePartition` objects split by `lengths`.
         """
         pass
 
@@ -97,12 +97,12 @@ class BaseFrameAxisPartition(ABC):  # pragma: no cover
 
     def _wrap_partitions(self, partitions):
         """
-        Wrap remote partition objects with `BaseFramePartition` class.
+        Wrap remote partition objects with `BasePandasFramePartition` class.
 
         Parameters
         ----------
         partitions : list
-            List of remotes partition objects to be wrapped with `BaseFramePartition` class.
+            List of remotes partition objects to be wrapped with `BasePandasFramePartition` class.
 
         Returns
         -------
@@ -204,7 +204,7 @@ class PandasFrameAxisPartition(BaseFrameAxisPartition):
         Returns
         -------
         list
-            A list of `BaseFramePartition` objects.
+            A list of `BasePandasFramePartition` objects.
         """
         if num_splits is None:
             num_splits = len(self.list_of_blocks)
@@ -257,7 +257,7 @@ class PandasFrameAxisPartition(BaseFrameAxisPartition):
         Returns
         -------
         list
-            A list of `BaseFramePartition` objects split by `lengths`.
+            A list of `BasePandasFramePartition` objects split by `lengths`.
         """
         num_splits = len(lengths)
         # We add these to kwargs and will pop them off before performing the operation.

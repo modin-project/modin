@@ -55,7 +55,7 @@ class cuDFQueryCompiler(PandasQueryCompiler):
                     partition.iloc[i, j] = it
             return partition
 
-        new_modin_frame = self._modin_frame._apply_select_indices(
+        new_modin_frame = self._modin_frame.apply_select_indices(
             axis=None,
             func=iloc_mut,
             row_indices=row_numeric_index,

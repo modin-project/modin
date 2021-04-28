@@ -11,7 +11,7 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-from modin.engines.base.frame.partition_manager import BaseFrameManager
+from modin.engines.base.frame.partition_manager import BasePandasFrameManager
 from .axis_partition import (
     PandasOnPythonFrameColumnPartition,
     PandasOnPythonFrameRowPartition,
@@ -19,8 +19,8 @@ from .axis_partition import (
 from .partition import PandasOnPythonFramePartition
 
 
-class PythonFrameManager(BaseFrameManager):
-    """This method implements the interface in `BaseFrameManager`."""
+class PythonFrameManager(BasePandasFrameManager):
+    """This method implements the interface in `BasePandasFrameManager`."""
 
     # This object uses RayRemotePartition objects as the underlying store.
     _partition_class = PandasOnPythonFramePartition
