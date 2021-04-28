@@ -1,4 +1,3 @@
-# noqa: MD02
 # Licensed to Modin Development Team under one or more contributor license agreements.
 # See the NOTICE file distributed with this work for additional information regarding
 # copyright ownership.  The Modin Development Team licenses this file to you under the
@@ -12,6 +11,7 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
+# noqa: MD02
 """
 Details about how Indexing Helper Class works.
 
@@ -443,9 +443,9 @@ class _LocationIndexerBase(object):
 
         Notes
         -----
-            axis = 0: column assignment df[col] = item
-            axis = 1: row assignment df.loc[row] = item
-            axis = None: assignment along both axes
+        axis = 0: column assignment df[col] = item
+        axis = 1: row assignment df.loc[row] = item
+        axis = None: assignment along both axes
         """
         if self.df.shape == (1, 1):
             return None if not (row_scaler ^ col_scaler) else 1 if row_scaler else 0
