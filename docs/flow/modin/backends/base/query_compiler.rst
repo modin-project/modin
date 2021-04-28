@@ -68,4 +68,4 @@ All done! Now you've got a fully functional query compiler, which is ready for e
     0     1    50
     1     2     5
 
-To be able to select this query compiler as default via ``modin.config`` you also need to define the combination of your query compiler and pandas execution engine as a backend by adding the corresponding factory. To find more information about factories, visit :doc:`corresponding section </flow/modin/data_management/factories.rst` of the flow documentation.
+To be able to select this query compiler as default via ``modin.config`` you also need to define the combination of your query compiler and pandas execution engine as a backend by adding the corresponding factory. To find more information about factories, visit :doc:`corresponding section </flow/modin/data_management/factories.rst>` of the flow documentation.

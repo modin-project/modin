@@ -109,6 +109,10 @@ def _doc_dt_interval(prop, method):
     return _doc_dt(prop, "interval", method)
 
 
+def _doc_dt_period(prop, method):
+    return _doc_dt(prop, "period", method)
+
+
 class BaseQueryCompiler(abc.ABC):
     """Abstract Class that handles the queries to Modin dataframes.
 
@@ -2878,6 +2882,24 @@ class BaseQueryCompiler(abc.ABC):
 
     # DateTime methods
 
+    __doc_dt_round = """
+    Perform {method} operation on the underlying time-series data to the specified `freq`.
+
+    Parameters
+    ----------
+    freq : str
+    ambigious : "infer", "NaT", bool mask, default "raise"
+    nonexistent : "shift_forward", "shift_backward", "NaT", timedelta, default "raise"
+
+    Returns
+    -------
+    BaseQueryCompiler
+        New `QueryCompiler` with performed {method} operation on every element.
+    """
+
+    @_add_one_column_warning
+    @add_refer_to("Series.dt.ceil")
+    @doc(__doc_dt_round, method="ceil")
     def dt_ceil(self, freq, ambiguous, nonexistent):
         return DateTimeDefault.register(pandas.Series.dt.ceil)(
             self, freq, ambiguous, nonexistent
@@ -2931,9 +2953,13 @@ class BaseQueryCompiler(abc.ABC):
     def dt_daysinmonth(self):
         return DateTimeDefault.register(pandas.Series.dt.daysinmonth)(self)
 
+    @_doc_dt_period(property="the timestamp of end time", method="end_time")
     def dt_end_time(self):
         return DateTimeDefault.register(pandas.Series.dt.end_time)(self)
 
+    @_add_one_column_warning
+    @add_refer_to("Series.dt.floor")
+    @doc(__doc_dt_round, method="floor")
     def dt_floor(self, freq, ambiguous, nonexistent):
         return DateTimeDefault.register(pandas.Series.dt.floor)(
             self, freq, ambiguous, nonexistent
@@ -3050,9 +3076,13 @@ class BaseQueryCompiler(abc.ABC):
     def dt_quarter(self):
         return DateTimeDefault.register(pandas.Series.dt.quarter)(self)
 
+    @_doc_dt_period(property="the fiscal year", method="qyear")
     def dt_qyear(self):
         return DateTimeDefault.register(pandas.Series.dt.qyear)(self)
 
+    @_add_one_column_warning
+    @add_refer_to("Series.dt.round")
+    @doc(__doc_dt_round, method="round")
     def dt_round(self, freq, ambiguous, nonexistent):
         return DateTimeDefault.register(pandas.Series.dt.round)(
             self, freq, ambiguous, nonexistent
@@ -3066,6 +3096,7 @@ class BaseQueryCompiler(abc.ABC):
     def dt_seconds(self):
         return DateTimeDefault.register(pandas.Series.dt.seconds)(self)
 
+    @_doc_dt_period(property="the timestamp of start time", method="start_time")
     def dt_start_time(self):
         return DateTimeDefault.register(pandas.Series.dt.start_time)(self)
 
@@ -3082,13 +3113,31 @@ class BaseQueryCompiler(abc.ABC):
     def dt_timetz(self):
         return DateTimeDefault.register(pandas.Series.dt.timetz)(self)
 
+    @_add_one_column_warning
+    @add_refer_to("Series.dt.to_period")
     def dt_to_period(self, freq):
+        """
+        Convert underlying data to the period at a particular frequency.
+
+        Parameters
+        ----------
+        freq : str, optional
+
+        Returns
+        -------
+        BaseQueryCompiler
+            New `QueryCompiler` containing period data.
+        """
         return DateTimeDefault.register(pandas.Series.dt.to_period)(self, freq)
 
+    @_add_one_column_warning
+    @add_refer_to("Series.dt.to_pydatetime")
     def dt_to_pydatetime(self):
         """
         Convert underlying data to array of python native `datetime`.
 
+        Returns
+        -------
         BaseQueryCompiler
             New `QueryCompiler` containing 1D array of `datetime` objects.
         """
@@ -3096,15 +3145,20 @@ class BaseQueryCompiler(abc.ABC):
 
     # FIXME: there are no references to this method, we should either remove it
     # or add a call reference at the DataFrame level.
+    @_add_one_column_warning
+    @add_refer_to("Series.dt.to_pytimedelta")
     def dt_to_pytimedelta(self):
         """
         Convert underlying data to array of python native `datetime.timedelta`.
 
+        Returns
+        -------
         BaseQueryCompiler
             New `QueryCompiler` containing 1D array of `datetime.timedelta`.
         """
         return DateTimeDefault.register(pandas.Series.dt.dt_to_pytimedelta)(self)
 
+    @_doc_dt_period(property="the timestamp representation", method="to_timestamp")
     def dt_to_timestamp(self):
         return DateTimeDefault.register(pandas.Series.dt.to_timestamp)(self)
 
