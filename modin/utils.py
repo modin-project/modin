@@ -375,11 +375,20 @@ def get_current_backend():
     return f"{'Experimental' if IsExperimental.get() else ''}{Backend.get()}On{Engine.get()}"
 
 
-def instancer(cls):
+def instancer(_class):
     """
     Create a dummy instance each time this is imported.
 
     This serves the purpose of allowing us to use all of pandas plotting methods
     without aliasing and writing each of them ourselves.
+
+    Parameters
+    ----------
+    _class : object
+
+    Returns
+    -------
+    object
+        Instance of `_class`.
     """
-    return cls()
+    return _class()

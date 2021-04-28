@@ -29,6 +29,7 @@ import sys
 import inspect
 import shutil
 import logging
+import functools
 from numpydoc.validate import Docstring
 from numpydoc.docscrape import NumpyDocString
 
@@ -486,7 +487,12 @@ def monkeypatching():
         return lambda cls_or_func: cls_or_func
 
     ray.remote = monkeypatch
-    modin.utils.instancer = lambda cls: cls
+
+    @functools.wraps(modin.utils.instancer)
+    def instancer(cls):
+        return cls
+
+    modin.utils.instancer = instancer
 
     # monkey-patch numpydoc for working correctly with properties
     def load_obj(name, old_load_obj=Docstring._load_obj):
