@@ -45,7 +45,7 @@ jobs:
         with:
           python-version: "3.7.x"
           architecture: "x64"
-      - run: pip install pytest pytest-cov pydocstyle numpydoc
+      - run: pip install pytest pytest-cov pytest-xdist pydocstyle numpydoc
       - run: pytest scripts/test
       - run: pip install -e .[all]
       - run: |
@@ -219,7 +219,7 @@ jobs:
       - shell: bash -l {0}
         run: python -m pytest modin/test/test_envvar_npartitions.py
       - shell: bash -l {0}
-        run: python -m pytest modin/test/test_partition_api.py
+        run: python -m pytest -n 2 modin/test/test_partition_api.py
 
   test-defaults:
     needs: [lint-commit, lint-flake8, lint-black, test-api, test-headers]
@@ -252,39 +252,39 @@ jobs:
       - shell: bash -l {0}
         run: pytest modin/experimental/xgboost/test/test_default.py --backend=${{ matrix.backend }}
       - shell: bash -l {0}
-        run: python -m pytest modin/test/backends/base/test_internals.py --backend=${{ matrix.backend }}
+        run: python -m pytest -n 2 modin/test/backends/base/test_internals.py --backend=${{ matrix.backend }}
       - shell: bash -l {0}
-        run: pytest modin/pandas/test/dataframe/test_binary.py --backend=${{ matrix.backend }}
+        run: pytest -n 2 modin/pandas/test/dataframe/test_binary.py --backend=${{ matrix.backend }}
       - shell: bash -l {0}
-        run: pytest modin/pandas/test/dataframe/test_default.py --backend=${{ matrix.backend }}
+        run: pytest -n 2 modin/pandas/test/dataframe/test_default.py --backend=${{ matrix.backend }}
       - shell: bash -l {0}
-        run: pytest modin/pandas/test/dataframe/test_indexing.py --backend=${{ matrix.backend }}
+        run: pytest -n 2 modin/pandas/test/dataframe/test_indexing.py --backend=${{ matrix.backend }}
       - shell: bash -l {0}
-        run: pytest modin/pandas/test/dataframe/test_iter.py --backend=${{ matrix.backend }}
+        run: pytest -n 2 modin/pandas/test/dataframe/test_iter.py --backend=${{ matrix.backend }}
       - shell: bash -l {0}
-        run: pytest modin/pandas/test/dataframe/test_join_sort.py --backend=${{ matrix.backend }}
+        run: pytest -n 2 modin/pandas/test/dataframe/test_join_sort.py --backend=${{ matrix.backend }}
       - shell: bash -l {0}
-        run: pytest modin/pandas/test/dataframe/test_map_metadata.py --backend=${{ matrix.backend }}
+        run: pytest -n 2 modin/pandas/test/dataframe/test_map_metadata.py --backend=${{ matrix.backend }}
       - shell: bash -l {0}
-        run: pytest modin/pandas/test/dataframe/test_reduction.py --backend=${{ matrix.backend }}
+        run: pytest -n 2 modin/pandas/test/dataframe/test_reduction.py --backend=${{ matrix.backend }}
       - shell: bash -l {0}
-        run: pytest modin/pandas/test/dataframe/test_udf.py --backend=${{ matrix.backend }}
+        run: pytest -n 2 modin/pandas/test/dataframe/test_udf.py --backend=${{ matrix.backend }}
       - shell: bash -l {0}
-        run: pytest modin/pandas/test/dataframe/test_window.py --backend=${{ matrix.backend }}
+        run: pytest -n 2 modin/pandas/test/dataframe/test_window.py --backend=${{ matrix.backend }}
       - shell: bash -l {0}
-        run: pytest modin/pandas/test/dataframe/test_pickle.py --backend=${{ matrix.backend }}
+        run: pytest -n 2 modin/pandas/test/dataframe/test_pickle.py --backend=${{ matrix.backend }}
       - shell: bash -l {0}
-        run: python -m pytest modin/pandas/test/test_series.py --backend=${{ matrix.backend }}
+        run: python -m pytest -n 2 modin/pandas/test/test_series.py --backend=${{ matrix.backend }}
       - shell: bash -l {0}
-        run: python -m pytest modin/pandas/test/test_rolling.py --backend=${{ matrix.backend }}
+        run: python -m pytest -n 2 modin/pandas/test/test_rolling.py --backend=${{ matrix.backend }}
       - shell: bash -l {0}
-        run: python -m pytest modin/pandas/test/test_concat.py --backend=${{ matrix.backend }}
+        run: python -m pytest -n 2 modin/pandas/test/test_concat.py --backend=${{ matrix.backend }}
       - shell: bash -l {0}
-        run: python -m pytest modin/pandas/test/test_groupby.py --backend=${{ matrix.backend }}
+        run: python -m pytest -n 2 modin/pandas/test/test_groupby.py --backend=${{ matrix.backend }}
       - shell: bash -l {0}
-        run: python -m pytest modin/pandas/test/test_reshape.py --backend=${{ matrix.backend }}
+        run: python -m pytest -n 2 modin/pandas/test/test_reshape.py --backend=${{ matrix.backend }}
       - shell: bash -l {0}
-        run: python -m pytest modin/pandas/test/test_general.py --backend=${{ matrix.backend }}
+        run: python -m pytest -n 2 modin/pandas/test/test_general.py --backend=${{ matrix.backend }}
       - shell: bash -l {0}
         run: bash <(curl -s https://codecov.io/bash)
 
@@ -406,39 +406,39 @@ jobs:
       - shell: bash -l {0}
         run: MODIN_BENCHMARK_MODE=True pytest modin/pandas/test/internals/test_benchmark_mode.py
       - shell: bash -l {0}
-        run: pytest modin/experimental/xgboost/test/test_default.py
+        run: pytest -n 2 modin/experimental/xgboost/test/test_default.py
       - shell: bash -l {0}
-        run: pytest modin/pandas/test/dataframe/test_binary.py
+        run: pytest -n 2 modin/pandas/test/dataframe/test_binary.py
       - shell: bash -l {0}
-        run: pytest modin/pandas/test/dataframe/test_default.py
+        run: pytest -n 2 modin/pandas/test/dataframe/test_default.py
       - shell: bash -l {0}
-        run: pytest modin/pandas/test/dataframe/test_indexing.py
+        run: pytest -n 2 modin/pandas/test/dataframe/test_indexing.py
       - shell: bash -l {0}
-        run: pytest modin/pandas/test/dataframe/test_iter.py
+        run: pytest -n 2 modin/pandas/test/dataframe/test_iter.py
       - shell: bash -l {0}
-        run: pytest modin/pandas/test/dataframe/test_join_sort.py
+        run: pytest -n 2 modin/pandas/test/dataframe/test_join_sort.py
       - shell: bash -l {0}
-        run: pytest modin/pandas/test/dataframe/test_map_metadata.py
+        run: pytest -n 2 modin/pandas/test/dataframe/test_map_metadata.py
       - shell: bash -l {0}
-        run: pytest modin/pandas/test/dataframe/test_reduction.py
+        run: pytest -n 2 modin/pandas/test/dataframe/test_reduction.py
       - shell: bash -l {0}
-        run: pytest modin/pandas/test/dataframe/test_udf.py
+        run: pytest -n 2 modin/pandas/test/dataframe/test_udf.py
       - shell: bash -l {0}
-        run: pytest modin/pandas/test/dataframe/test_window.py
+        run: pytest -n 2 modin/pandas/test/dataframe/test_window.py
       - shell: bash -l {0}
-        run: pytest modin/pandas/test/dataframe/test_pickle.py
+        run: pytest -n 2 modin/pandas/test/dataframe/test_pickle.py
       - shell: bash -l {0}
-        run: python -m pytest modin/pandas/test/test_series.py
+        run: python -m pytest -n 2 modin/pandas/test/test_series.py
       - shell: bash -l {0}
-        run: python -m pytest modin/pandas/test/test_rolling.py
+        run: python -m pytest -n 2 modin/pandas/test/test_rolling.py
       - shell: bash -l {0}
-        run: python -m pytest modin/pandas/test/test_concat.py
+        run: python -m pytest -n 2 modin/pandas/test/test_concat.py
       - shell: bash -l {0}
-        run: python -m pytest modin/pandas/test/test_groupby.py
+        run: python -m pytest -n 2 modin/pandas/test/test_groupby.py
       - shell: bash -l {0}
-        run: python -m pytest modin/pandas/test/test_reshape.py
+        run: python -m pytest -n 2 modin/pandas/test/test_reshape.py
       - shell: bash -l {0}
-        run: python -m pytest modin/pandas/test/test_general.py
+        run: python -m pytest -n 2 modin/pandas/test/test_general.py
       - shell: bash -l {0}
         run: python -m pytest modin/pandas/test/test_io.py
       - shell: bash -l {0}
@@ -473,9 +473,9 @@ jobs:
           conda info
           conda list
       - shell: bash -l {0}
-        run: python -m pytest modin/pandas/test/dataframe/test_map_metadata.py
+        run: python -m pytest -n 2 modin/pandas/test/dataframe/test_map_metadata.py
       - shell: bash -l {0}
-        run: python -m pytest modin/pandas/test/test_series.py
+        run: python -m pytest -n 2 modin/pandas/test/test_series.py
       - shell: bash -l {0}
         run: python -m pytest modin/pandas/test/test_io.py
       - shell: bash -l {0}
@@ -540,52 +540,52 @@ jobs:
           conda info
           conda list
       - shell: bash -l {0}
-        run: pytest modin/pandas/test/dataframe/test_binary.py
+        run: pytest -n 2 modin/pandas/test/dataframe/test_binary.py
         if: matrix.part == 'DataFrame'
       - shell: bash -l {0}
-        run: pytest modin/pandas/test/dataframe/test_default.py
+        run: pytest -n 2 modin/pandas/test/dataframe/test_default.py
         if: matrix.part == 'DataFrame'
       - shell: bash -l {0}
-        run: pytest modin/pandas/test/dataframe/test_indexing.py
+        run: pytest -n 2 modin/pandas/test/dataframe/test_indexing.py
         if: matrix.part == 'DataFrame'
       - shell: bash -l {0}
-        run: pytest modin/pandas/test/dataframe/test_iter.py
+        run: pytest -n 2 modin/pandas/test/dataframe/test_iter.py
         if: matrix.part == 'DataFrame'
       - shell: bash -l {0}
-        run: pytest modin/pandas/test/dataframe/test_join_sort.py
+        run: pytest -n 2 modin/pandas/test/dataframe/test_join_sort.py
         if: matrix.part == 'DataFrame'
       - shell: bash -l {0}
-        run: pytest modin/pandas/test/dataframe/test_map_metadata.py
+        run: pytest -n 2 modin/pandas/test/dataframe/test_map_metadata.py
         if: matrix.part == 'DataFrame'
       - shell: bash -l {0}
-        run: pytest modin/pandas/test/dataframe/test_reduction.py
+        run: pytest -n 2 modin/pandas/test/dataframe/test_reduction.py
         if: matrix.part == 'DataFrame'
       - shell: bash -l {0}
-        run: pytest modin/pandas/test/dataframe/test_udf.py
+        run: pytest -n 2 modin/pandas/test/dataframe/test_udf.py
         if: matrix.part == 'DataFrame'
       - shell: bash -l {0}
-        run: pytest modin/pandas/test/dataframe/test_window.py
+        run: pytest -n 2 modin/pandas/test/dataframe/test_window.py
         if: matrix.part == 'DataFrame'
       - shell: bash -l {0}
-        run: pytest modin/pandas/test/dataframe/test_pickle.py
+        run: pytest -n 2 modin/pandas/test/dataframe/test_pickle.py
         if: matrix.part == 'DataFrame'
       - shell: bash -l {0}
-        run: python -m pytest modin/pandas/test/test_series.py
+        run: python -m pytest -n 2 modin/pandas/test/test_series.py
         if: matrix.part == 3
       - shell: bash -l {0}
-        run: python -m pytest modin/pandas/test/test_rolling.py
+        run: python -m pytest -n 2 modin/pandas/test/test_rolling.py
         if: matrix.part == 3
       - shell: bash -l {0}
-        run: python -m pytest modin/pandas/test/test_concat.py
+        run: python -m pytest -n 2 modin/pandas/test/test_concat.py
         if: matrix.part == 3
       - shell: bash -l {0}
-        run: python -m pytest modin/pandas/test/test_groupby.py
+        run: python -m pytest -n 2 modin/pandas/test/test_groupby.py
         if: matrix.part == 3
       - shell: bash -l {0}
-        run: python -m pytest modin/pandas/test/test_reshape.py
+        run: python -m pytest -n 2 modin/pandas/test/test_reshape.py
         if: matrix.part == 3
       - shell: bash -l {0}
-        run: python -m pytest modin/pandas/test/test_general.py
+        run: python -m pytest -n 2 modin/pandas/test/test_general.py
         if: matrix.part == 3
       - shell: bash -l {0}
         timeout-minutes: 20
