@@ -307,8 +307,15 @@ def get_noqa_checks(doc: Docstring) -> list:
                 noqa_str = line
                 break
     else:
-        # pydocstyle only check first line; aling with it
-        noqa_str = source.split("\n", 1)[0]
+        # noqa string is defined as the first line before the docstring
+        if not doc.raw_doc:
+            # noqa string is meaningless if there is no docstring in module
+            return []
+        lines = source.split("\n")
+        for idx, line in enumerate(lines):
+            if '"""' in line or "'''" in line:
+                noqa_str = lines[idx - 1]
+                break
 
     if "# noqa:" in noqa_str:
         noqa_checks = noqa_str.split("# noqa:", 1)[1].split(",")

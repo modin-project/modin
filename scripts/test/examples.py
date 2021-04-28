@@ -1,3 +1,4 @@
+# noqa: MD01
 # Licensed to Modin Development Team under one or more contributor license agreements.
 # See the NOTICE file distributed with this work for additional information regarding
 # copyright ownership.  The Modin Development Team licenses this file to you under the
@@ -11,6 +12,8 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
+# noqa: MD02
+"""Function examples for docstring testing."""
 
 class weakdict(dict):  # noqa: GL08
     __slots__ = ("__weakref__",)

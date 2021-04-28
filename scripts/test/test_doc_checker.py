@@ -67,8 +67,8 @@ def test_check_optional_args(import_path, result):
         (
             "scripts.test.examples.square_summary",
             [
-                ("MD02", 54, "Pandas", "pandas"),
-                ("MD02", 54, "Numpy", "NumPy"),
+                ("MD02", 57, "Pandas", "pandas"),
+                ("MD02", 57, "Numpy", "NumPy"),
             ],
         ),
         ("scripts.test.examples.optional_square_empty_parameters", []),
@@ -100,7 +100,7 @@ def test_check_spelling_words(import_path, result):
         ("scripts.test.examples.optional_square_empty_parameters", []),
         ("scripts.test.examples.square_summary", ["PR01", "GL08"]),
         ("scripts.test.examples.weakdict", ["GL08"]),
-        ("scripts.test.examples", []),
+        ("scripts.test.examples", ["MD02"]),
     ],
 )
 def test_get_noqa_checks(import_path, result):
