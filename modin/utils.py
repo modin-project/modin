@@ -364,3 +364,13 @@ def get_current_backend():
         Returns <Backend>On<Engine>-like string.
     """
     return f"{'Experimental' if IsExperimental.get() else ''}{Backend.get()}On{Engine.get()}"
+
+
+def instancer(cls):
+    """
+    Create a dummy instance each time this is imported.
+
+    This serves the purpose of allowing us to use all of pandas plotting methods
+    without aliasing and writing each of them ourselves.
+    """
+    return cls()

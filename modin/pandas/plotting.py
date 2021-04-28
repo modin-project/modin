@@ -15,18 +15,8 @@
 
 from pandas import plotting as pdplot
 
-from modin.utils import to_pandas
+from modin.utils import instancer, to_pandas
 from .dataframe import DataFrame
-
-
-def instancer(cls):
-    """
-    Create a dummy instance each time this is imported.
-
-    This serves the purpose of allowing us to use all of pandas plotting methods
-    without aliasing and writing each of them ourselves.
-    """
-    return cls()
 
 
 @instancer

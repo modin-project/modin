@@ -296,13 +296,8 @@ def get_noqa_checks(doc: Docstring) -> list:
     If noqa doesn't have any codes - returns ["all"].
     """
     source = doc.method_source
-    # case when property decorator is used; it hides sources
-    if not source and isinstance(doc.obj, property):
-        new_doc = Docstring(doc.name)
-        new_doc.obj = doc.obj.fget
-        source = new_doc.method_source
-        if not source:
-            return []
+    if not source:
+        return []
 
     noqa_str = ""
     if not inspect.ismodule(doc.obj):
@@ -475,6 +470,7 @@ def pydocstyle_validate(path: pathlib.Path, add_ignore: List[str]) -> int:
 def monkeypatching():
     """Monkeypatch decorators which change __doc__ attribute."""
     import ray
+    import modin.utils
 
     def monkeypatch(*args, **kwargs):
         if len(args) == 1 and len(kwargs) == 0 and callable(args[0]):
@@ -483,6 +479,18 @@ def monkeypatching():
         return lambda cls_or_func: cls_or_func
 
     ray.remote = monkeypatch
+    modin.utils.instancer = lambda cls: cls
+
+    # monkey patch numpydoc for correct work with properties
+    old_load_obj = Docstring._load_obj
+
+    def load_obj(name):
+        obj = old_load_obj(name)
+        if isinstance(obj, property):
+            obj = obj.fget
+        return obj
+
+    Docstring._load_obj = staticmethod(load_obj)
 
 
 def validate(
