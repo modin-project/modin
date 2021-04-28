@@ -66,7 +66,7 @@ Component View
 --------------
 .. toctree::
    ../flow/modin/engines/base/frame/index
-   flow/engines/ray/pandas_on_ray/frame/index
+   ../flow/modin/engines/ray/pandas_on_ray/frame/index
    ../flow/modin/experimental/index
 
 
@@ -287,6 +287,7 @@ by documentation for now, the rest is coming soon...).
    │   │   └───ray
    │   │       ├───generic
    │   │       └───pandas_on_ray
+   │   │           └─── :doc:`frame </flow/modin/engines/ray/pandas_on_ray/frame/index>`
    │   ├───experimental
    │   │   ├───backends
    │   │   │   └───omnisci
