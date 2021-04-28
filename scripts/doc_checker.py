@@ -481,10 +481,8 @@ def monkeypatching():
     ray.remote = monkeypatch
     modin.utils.instancer = lambda cls: cls
 
-    # monkey patch numpydoc for correct work with properties
-    old_load_obj = Docstring._load_obj
-
-    def load_obj(name):
+    # monkey-patch numpydoc for working correctly with properties
+    def load_obj(name, old_load_obj=Docstring._load_obj):
         obj = old_load_obj(name)
         if isinstance(obj, property):
             obj = obj.fget
