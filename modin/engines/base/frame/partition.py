@@ -11,164 +11,205 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
+"""The module defines base interface for a partition of a Modin DataFrame."""
+
 from abc import ABC
 
 
 class BaseFramePartition(ABC):  # pragma: no cover
-    """An abstract class that holds the data and metadata for a single partition.
+    """
+    An abstract class that is base for any partition class of ``pandas`` backend.
 
-    The public API exposed by the children of this object is used in `BaseFrameManager`.
-
-    Note: These objects are treated as immutable by `BaseFrameManager`
-    subclasses. There is no logic for updating inplace.
+    The class providing an API that has to be overridden by child classes.
     """
 
     def get(self):
-        """Return the object wrapped by this one to the original format.
-
-        Note: This is the opposite of the classmethod `put`.
-            E.g. if you assign `x = BaseFramePartition.put(1)`, `x.get()` should
-            always return 1.
+        """
+        Get the object wrapped by this partition.
 
         Returns
         -------
-            The object that was `put`.
+        object
+            The object that was wrapped by this partition.
+
+        Notes
+        -----
+        This is the opposite of the classmethod `put`.
+        E.g. if you assign `x = BaseFramePartition.put(1)`, `x.get()` should
+        always return 1.
         """
         pass
 
     def apply(self, func, **kwargs):
-        """Apply some callable function to the data in this partition.
+        """
+        Apply a function to the object wrapped by this partition.
 
-        Note: It is up to the implementation how kwargs are handled. They are
-            an important part of many implementations. As of right now, they
-            are not serialized.
-
-        Args
-        ----
+        Parameters
+        ----------
         func : callable
-            The function to apply.
+            Function to apply.
+        **kwargs : dict
+            Additional keyword arguments to be passed in `func`.
 
         Returns
         -------
-             A new `BaseFramePartition` containing the object that has had `func`
-             applied to it.
+        BaseFramePartition
+            New `BaseFramePartition` object.
+
+        Notes
+        -----
+        It is up to the implementation how `kwargs` are handled. They are
+        an important part of many implementations. As of right now, they
+        are not serialized.
         """
         pass
 
     def add_to_apply_calls(self, func, **kwargs):
-        """Add the function to the apply function call stack.
+        """
+        Add a function to the call queue.
 
-        Note: This function will be executed when apply is called. It will be executed
-        in the order inserted; apply's func operates the last and return
-
-        Args
-        ----
+        Parameters
+        ----------
         func : callable
-            The function to apply.
+            Function to be added to the call queue.
+        **kwargs : dict
+            Additional keyword arguments to be passed in `func`.
 
         Returns
         -------
-            A new `BaseFramePartition` with the function added to the call queue.
+        BaseFramePartition
+            New `BaseFramePartition` object with the function added to the call queue.
+
+        Notes
+        -----
+        This function will be executed when `apply` is called. It will be executed
+        in the order inserted; apply's func operates the last and return.
         """
         pass
 
     def drain_call_queue(self):
-        """Execute all functionality stored in the call queue."""
+        """Execute all operations stored in the call queue on the object wrapped by this partition."""
         pass
 
     def wait(self):
-        """Wait for partition' computations result."""
+        """Wait for completion of computations on the object wrapped by the partition."""
         pass
 
     def to_pandas(self):
-        """Convert the object stored in this partition to a Pandas DataFrame.
-
-        Note: If the underlying object is a Pandas DataFrame, this will likely
-            only need to call `get`
+        """
+        Convert the object wrapped by this partition to a pandas DataFrame.
 
         Returns
         -------
-            A Pandas DataFrame.
+        pandas.DataFrame
+
+        Notes
+        -----
+        If the underlying object is a pandas DataFrame, this will likely
+        only need to call `get`.
         """
         pass
 
     def to_numpy(self, **kwargs):
-        """Convert the object stored in this partition to a NumPy array.
+        """
+        Convert the object wrapped by this partition to a NumPy array.
 
-        Note: If the underlying object is a Pandas DataFrame, this will return
-            a 2D NumPy array.
+        Parameters
+        ----------
+        **kwargs : dict
+            Additional keyword arguments to be passed in `to_numpy`.
 
         Returns
         -------
-            A NumPy array.
+        np.ndarray
+
+        Notes
+        -----
+        If the underlying object is a pandas DataFrame, this will return
+        a 2D NumPy array.
         """
         pass
 
     def mask(self, row_indices, col_indices):
-        """Lazily create a mask that extracts the indices provided.
+        """
+        Lazily create a mask that extracts the indices provided.
 
-        Args:
-            row_indices: The indices for the rows to extract.
-            col_indices: The indices for the columns to extract.
+        Parameters
+        ----------
+        row_indices : list-like
+            The indices for the rows to extract.
+        col_indices : list-like
+            The indices for the columns to extract.
 
         Returns
         -------
-            A `BaseFramePartition` object.
+        BaseFramePartition
+            New `BaseFramePartition` object.
         """
         pass
 
     @classmethod
     def put(cls, obj):
-        """Format a given object.
+        """
+        Put an object into a store and wrap it with partition object.
 
         Parameters
         ----------
-        obj: object
-            An object.
+        obj : object
+            An object to be put.
 
         Returns
         -------
-            A `BaseFramePartition` object.
+        BaseFramePartition
+            New `BaseFramePartition` object.
         """
         pass
 
     @classmethod
     def preprocess_func(cls, func):
-        """Preprocess a function before an `apply` call.
+        """
+        Preprocess a function before an `apply` call.
 
-        Note: This is a classmethod because the definition of how to preprocess
-            should be class-wide. Also, we may want to use this before we
-            deploy a preprocessed function to multiple `BaseFramePartition`
-            objects.
-
-        Args
-        ----
+        Parameters
+        ----------
         func : callable
-            The function to preprocess.
+            Function to preprocess.
 
         Returns
         -------
+        callable
             An object that can be accepted by `apply`.
+
+        Notes
+        -----
+        This is a classmethod because the definition of how to preprocess
+        should be class-wide. Also, we may want to use this before we
+        deploy a preprocessed function to multiple `BaseFramePartition`
+        objects.
         """
         pass
 
     @classmethod
     def length_extraction_fn(cls):
-        """Compute the length of the object in this partition.
+        """
+        Return the function that computes the length of the object wrapped by this partition.
 
         Returns
         -------
-            A callable function.
+        callable
+            The function that computes the length of the object wrapped by this partition.
         """
         pass
 
     @classmethod
     def width_extraction_fn(cls):
-        """Compute the width of the object in this partition.
+        """
+        Return the function that computes the width of the object wrapped by this partition.
 
         Returns
         -------
-            A callable function.
+        callable
+            The function that computes the width of the object wrapped by this partition.
         """
         pass
 
@@ -176,7 +217,14 @@ class BaseFramePartition(ABC):  # pragma: no cover
     _width_cache = None
 
     def length(self):
-        """Return the length of partition."""
+        """
+        Get the length of the object wrapped by this partition.
+
+        Returns
+        -------
+        int
+            The length of the object.
+        """
         if self._length_cache is None:
             cls = type(self)
             func = cls.length_extraction_fn()
@@ -185,7 +233,14 @@ class BaseFramePartition(ABC):  # pragma: no cover
         return self._length_cache
 
     def width(self):
-        """Return the width of partition."""
+        """
+        Get the width of the object wrapped by the partition.
+
+        Returns
+        -------
+        int
+            The width of the object.
+        """
         if self._width_cache is None:
             cls = type(self)
             func = cls.width_extraction_fn()
@@ -195,10 +250,12 @@ class BaseFramePartition(ABC):  # pragma: no cover
 
     @classmethod
     def empty(cls):
-        """Create an empty partition.
+        """
+        Create a new partition that wraps an empty pandas DataFrame.
 
         Returns
         -------
-            An empty partition
+        BaseFramePartition
+            New `BaseFramePartition` object.
         """
         pass

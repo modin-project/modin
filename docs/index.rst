@@ -10,7 +10,7 @@
     <p align="center"><b>To use Modin, replace the pandas import:</b></p>
 
 .. figure:: img/Modin_Pandas_Import.gif
-   :align: center   
+   :align: center
 
 Scale your pandas workflow by changing a single line of code
 """"""""""""""""""""""""""""""""""""""""""""""""""""""""""""
