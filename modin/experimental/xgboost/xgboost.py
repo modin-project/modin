@@ -88,7 +88,7 @@ class Booster(xgb.Booster):
         Path to the model file if it's string or PathLike or xgb.Booster.
     """
 
-    def __init__(self, params=None, cache=(), model_file=None):  # noqa
+    def __init__(self, params=None, cache=(), model_file=None):  # noqa: MD01
         super(Booster, self).__init__(params=params, cache=cache, model_file=model_file)
 
     def predict(
