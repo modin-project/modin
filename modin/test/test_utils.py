@@ -82,8 +82,10 @@ def wrapped_cls():
 
     return Wrapped
 
+
 def test_doc_inherit_clslevel(wrapped_cls):
     assert wrapped_cls.__doc__ == BaseChild.__doc__
+
 
 def test_doc_inherit_methods(wrapped_cls):
     assert wrapped_cls.method.__doc__ == BaseChild.method.__doc__
@@ -98,6 +100,6 @@ def test_doc_inherit_special(wrapped_cls):
 
 
 def test_doc_inherit_props(wrapped_cls):
-    assert type(wrapped_cls.method) == type(BaseChild.method)
+    assert type(wrapped_cls.method) == type(BaseChild.method)  # noqa: E721
     assert wrapped_cls.prop.__doc__ == BaseChild.prop.__doc__
     assert wrapped_cls.F.__doc__ == BaseChild.F.__doc__
