@@ -3,11 +3,15 @@ Base query compiler
 
 Brief description
 '''''''''''''''''
-``BaseQueryCompiler`` is an abstract class of query compiler, it sets a common interface, that every other query compilers in Modin have to follow. Base class contains basic implementations for most of the interface methods, all them are :doc:`defaulting to pandas </supported_apis/index.rst#defaulting-to-pandas>`.
+``BaseQueryCompiler`` is an abstract class of query compiler, it sets a common interface,
+that every other query compilers in Modin have to follow. Base class contains basic
+implementations for most of the interface methods, all them are
+:doc:`defaulting to pandas </supported_apis/index.rst#defaulting-to-pandas>`.
 
 Subclassing ``BaseQueryCompiler``
 '''''''''''''''''''''''''''''''''
-If you want to add new type of query compiler to Modin you need to inherit new class from `BaseQueryCompiler` and implement the rest of the abstract methods:
+If you want to add new type of query compiler to Modin you need to inherit new
+class from `BaseQueryCompiler` and implement the rest of the abstract methods:
 
 - ``from_pandas``
 - ``from_arrow``
@@ -18,13 +22,20 @@ If you want to add new type of query compiler to Modin you need to inherit new c
 
 (Please refer to the code documentation to see contracts for these functions).
 
-This is a minimum set of operations to ensure the proper work of your new query compiler, the rest of the API will be defaulted pandas. To add backend-specific implementation for some of the query compiler operation, just override the corresponding method in your query compiler class.
+This is a minimum set of operations to ensure the proper work of your new query compiler,
+the rest of the API will be defaulted pandas. To add backend-specific implementation for
+some of the query compiler operation, just override the corresponding method in your
+query compiler class.
 
 Example
 '''''''
-As an exercise let's define a new query compiler in `Modin`, just to see how easy it is. Usually, query compiler routes formed queries to the underlying :doc:`frame </flow/engines/base/frame/data.rst>` class, which represents an actual execution engine and responsible for executing queries. In the glory of simplicity and independence of this example, our execution engine will be the `pandas` itself.
+As an exercise let's define a new query compiler in `Modin`, just to see how easy it is.
+Usually, query compiler routes formed queries to the underlying :doc:`frame </flow/engines/base/frame/data.rst>` class,
+which represents an actual execution engine and responsible for executing queries. In the glory
+of simplicity and independence of this example, our execution engine will be the `pandas` itself.
 
-So, we need to inherit a new class from ``BaseQueryCompiler`` and implement all of the abstract methods. In case of `pandas` as an execution engine it's a trivial task:
+So, we need to inherit a new class from ``BaseQueryCompiler`` and implement all of the abstract methods.
+In case of `pandas` as an execution engine it's a trivial task:
 
 .. code-block:: python
 
@@ -49,7 +60,8 @@ So, we need to inherit a new class from ``BaseQueryCompiler`` and implement all 
         finalize = lambda self: None
         free = finalize
 
-All done! Now you've got a fully functional query compiler, which is ready for extensions and already can be used in Modin DataFrame:
+All done! Now you've got a fully functional query compiler, which is ready for extensions
+and already can be used in Modin DataFrame:
 
 .. code-block:: python
 
@@ -68,4 +80,7 @@ All done! Now you've got a fully functional query compiler, which is ready for e
     0     1    50
     1     2     5
 
-To be able to select this query compiler as default via ``modin.config`` you also need to define the combination of your query compiler and pandas execution engine as a backend by adding the corresponding factory. To find more information about factories, visit :doc:`corresponding section </flow/modin/data_management/factories.rst>` of the flow documentation.
+To be able to select this query compiler as default via ``modin.config`` you also need
+to define the combination of your query compiler and pandas execution engine as a backend
+by adding the corresponding factory. To find more information about factories,
+visit :doc:`corresponding section </flow/modin/data_management/factories>` of the flow documentation.
