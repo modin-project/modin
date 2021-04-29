@@ -186,9 +186,9 @@ def _parse_tuple(tup):
     ndim : {0, 1, 2}
         Number of dimensions of located dataset.
     row_scaler : bool
-        True of `row_loc` is a scalar, False otherwise.
+        True if `row_loc` is a scalar, False otherwise.
     col_scaler : bool
-        True of `col_loc` is a scalar, False otherwise.
+        True if `col_loc` is a scalar, False otherwise.
     """
     row_loc, col_loc = slice(None), slice(None)
 
@@ -245,7 +245,7 @@ class _LocationIndexerBase(object):
 
     Parameters
     ----------
-    modin_df : DataFrame
+    modin_df : modin.pandas.DataFrame
         DataFrame to operate on.
     """
 
@@ -270,7 +270,7 @@ class _LocationIndexerBase(object):
 
         Returns
         -------
-        DataFrame or Series
+        modin.pandas.DataFrame or modin.pandas.Series
             Located dataset.
         """
         qc_view = self.qc.view(row_lookup, col_lookup)
@@ -353,12 +353,12 @@ class _LocationIndexerBase(object):
         item : DataFrame, Series, query_compiler or scalar
             Value that should be broadcast to a new shape of `to_shape`.
         to_shape : tuple of two int
-            Shape of dataset that `item` should be broadcast to.
+            Shape of dataset that `item` should be broadcasted to.
 
         Returns
         -------
         numpy.ndarray
-            `item` after it was broadcast to `to_shape`.
+            `item` after it was broadcasted to `to_shape`.
 
         Raises
         ------
@@ -479,7 +479,7 @@ class _LocIndexer(_LocationIndexerBase):
 
     Parameters
     ----------
-    modin_df : DataFrame
+    modin_df : modin.pandas.DataFrame
         DataFrame to operate on.
     """
 
@@ -494,7 +494,7 @@ class _LocIndexer(_LocationIndexerBase):
 
         Returns
         -------
-        DataFrame or Series
+        modin.pandas.DataFrame or modin.pandas.Series
             Located dataset.
 
         See Also
@@ -568,7 +568,7 @@ class _LocIndexer(_LocationIndexerBase):
         ----------
         key : callable or tuple
             The global row index to assign data to.
-        item : DataFrame, Series or scalar
+        item : modin.pandas.DataFrame, modin.pandas.Series or scalar
             Value that should be assigned to located dataset.
 
         See Also
@@ -616,7 +616,7 @@ class _LocIndexer(_LocationIndexerBase):
         Returns
         -------
         nan_labels : pandas.Index
-            The labels needs to be added.
+            The labels that need to be added.
         """
         # base_index_type can be pd.Index or pd.DatetimeIndex
         # depending on user input and pandas behavior
@@ -697,7 +697,7 @@ class _iLocIndexer(_LocationIndexerBase):
 
     Parameters
     ----------
-    modin_df : DataFrame
+    modin_df : modin.pandas.DataFrame
         DataFrame to operate on.
     """
 
@@ -740,7 +740,7 @@ class _iLocIndexer(_LocationIndexerBase):
         ----------
         key : callable or tuple
             The global row numbers to assign data to.
-        item : DataFrame, Series or scalar
+        item : modin.pandas.DataFrame, modin.pandas.Series or scalar
             Value that should be assigned to located dataset.
 
         See Also
