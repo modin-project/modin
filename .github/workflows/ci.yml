@@ -540,52 +540,52 @@ jobs:
           conda info
           conda list
       - shell: bash -l {0}
-        run: pytest -n 2 modin/pandas/test/dataframe/test_binary.py
+        run: pytest modin/pandas/test/dataframe/test_binary.py
         if: matrix.part == 'DataFrame'
       - shell: bash -l {0}
-        run: pytest -n 2 modin/pandas/test/dataframe/test_default.py
+        run: pytest modin/pandas/test/dataframe/test_default.py
         if: matrix.part == 'DataFrame'
       - shell: bash -l {0}
-        run: pytest -n 2 modin/pandas/test/dataframe/test_indexing.py
+        run: pytest modin/pandas/test/dataframe/test_indexing.py
         if: matrix.part == 'DataFrame'
       - shell: bash -l {0}
-        run: pytest -n 2 modin/pandas/test/dataframe/test_iter.py
+        run: pytest modin/pandas/test/dataframe/test_iter.py
         if: matrix.part == 'DataFrame'
       - shell: bash -l {0}
-        run: pytest -n 2 modin/pandas/test/dataframe/test_join_sort.py
+        run: pytest modin/pandas/test/dataframe/test_join_sort.py
         if: matrix.part == 'DataFrame'
       - shell: bash -l {0}
-        run: pytest -n 2 modin/pandas/test/dataframe/test_map_metadata.py
+        run: pytest modin/pandas/test/dataframe/test_map_metadata.py
         if: matrix.part == 'DataFrame'
       - shell: bash -l {0}
-        run: pytest -n 2 modin/pandas/test/dataframe/test_reduction.py
+        run: pytest modin/pandas/test/dataframe/test_reduction.py
         if: matrix.part == 'DataFrame'
       - shell: bash -l {0}
-        run: pytest -n 2 modin/pandas/test/dataframe/test_udf.py
+        run: pytest modin/pandas/test/dataframe/test_udf.py
         if: matrix.part == 'DataFrame'
       - shell: bash -l {0}
-        run: pytest -n 2 modin/pandas/test/dataframe/test_window.py
+        run: pytest modin/pandas/test/dataframe/test_window.py
         if: matrix.part == 'DataFrame'
       - shell: bash -l {0}
-        run: pytest -n 2 modin/pandas/test/dataframe/test_pickle.py
+        run: pytest modin/pandas/test/dataframe/test_pickle.py
         if: matrix.part == 'DataFrame'
       - shell: bash -l {0}
-        run: python -m pytest -n 2 modin/pandas/test/test_series.py
+        run: python -m pytest modin/pandas/test/test_series.py
         if: matrix.part == 3
       - shell: bash -l {0}
-        run: python -m pytest -n 2 modin/pandas/test/test_rolling.py
+        run: python -m pytest modin/pandas/test/test_rolling.py
         if: matrix.part == 3
       - shell: bash -l {0}
-        run: python -m pytest -n 2 modin/pandas/test/test_concat.py
+        run: python -m pytest modin/pandas/test/test_concat.py
         if: matrix.part == 3
       - shell: bash -l {0}
-        run: python -m pytest -n 2 modin/pandas/test/test_groupby.py
+        run: python -m pytest modin/pandas/test/test_groupby.py
         if: matrix.part == 3
       - shell: bash -l {0}
-        run: python -m pytest -n 2 modin/pandas/test/test_reshape.py
+        run: python -m pytest modin/pandas/test/test_reshape.py
         if: matrix.part == 3
       - shell: bash -l {0}
-        run: python -m pytest -n 2 modin/pandas/test/test_general.py
+        run: python -m pytest modin/pandas/test/test_general.py
         if: matrix.part == 3
       - shell: bash -l {0}
         timeout-minutes: 20
