@@ -41,7 +41,7 @@ class ObjTypeDeterminer:
         """
 
         def func(df, *args, **kwargs):
-            """Access specified attribute of the passed object and calls it if it's callable."""
+            """Access specified attribute of the passed object and call it if it's callable."""
             prop = getattr(df, key)
             if callable(prop):
                 return prop(*args, **kwargs)

@@ -41,7 +41,7 @@ class Resampler:
         """
 
         def fn(df, resample_args, *args, **kwargs):
-            """Resample time-series data of the passed frame and applies specified aggregation."""
+            """Resample time-series data of the passed frame and apply specified aggregation."""
             if squeeze_self:
                 df = df.squeeze(axis=1)
             resampler = df.resample(*resample_args)

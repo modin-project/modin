@@ -18,7 +18,9 @@ will be executed under deserialized and preprocessed (depends on the template)
 partitions, so the function would take one of the pandas object: ``pandas.DataFrame``,
 ``pandas.Series`` or ``pandas.DataFrameGroupbyObject``.
 
-.. note:: Currently, functions that are built in that way are supported only in a pandas backend (can be used only in `PandasQueryCompiler`).
+.. note:: 
+    Currently, functions that are built in that way are supported only in a pandas
+    backend (can be used only in `PandasQueryCompiler`).
 
 Function module provides templates for this type of function:
 
@@ -54,7 +56,11 @@ Engine efficiently broadcasts partitions of the right operand to the left if nec
 .. figure:: /img/binary_evaluation.svg
     :align: center
 
-.. warning:: To be able to do frame broadcasting, partitioning along the index axis of both frames have to be equal, otherwise, they needed aligning first. The execution engine will do it automatically, but note, that this requires repartitioning, which is a much expensive operation than the binary function itself.
+.. warning::
+    To be able to do frame broadcasting, partitioning along the index axis of both frames
+    has to be equal, otherwise they need to be aligned first. The execution engine will do
+    it automatically but note that this requires repartitioning, which is a much 
+    more expensive operation than the binary function itself.
 
 Fold functions
 --------------
@@ -68,7 +74,7 @@ To be able to form groups engine efficiently broadcasts `by` partitions to each 
 
 Default-to-pandas functions
 ---------------------------
-Do :doc:`fallback to pandas </supported_apis/index>` for passed function.
+Do :ref:`fallback to pandas <defaulting-to-pandas-mechanism>` for passed function.
 
 
 How to register your own function

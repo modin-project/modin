@@ -156,7 +156,7 @@ class DefaultMethod(Function):
 
         def args_cast(self, *args, **kwargs):
             """
-            Preprocess `default_to_pandas` function arguments and applies default function.
+            Preprocess `default_to_pandas` function arguments and apply default function.
 
             Cast all Modin objects that function arguments contain to its pandas representation.
             """
