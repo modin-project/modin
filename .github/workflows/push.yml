@@ -261,7 +261,7 @@ jobs:
         if: matrix.part == 3
       - run: python -m pytest modin/pandas/test/test_general.py
         if: matrix.part == 3
-      - timeout-minutes: 20
+      - timeout-minutes: 30
         run: python -m pytest modin/pandas/test/test_io.py
         if: matrix.part == 3
       - run: choco install codecov
