@@ -208,7 +208,9 @@ jobs:
       matrix:
         python-version: ["3.7", "3.8"]
         engine: ["ray", "dask"]
-        part: ["DataFrame", 3]
+        part:
+          - DataFrame
+          - 3
     env:
       MODIN_ENGINE: ${{matrix.engine}}
       MODIN_MEMORY: 1000000000
