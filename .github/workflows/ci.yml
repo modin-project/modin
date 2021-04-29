@@ -49,7 +49,7 @@ jobs:
       - run: pytest scripts/test
       - run: pip install -e .[all]
       - run: |
-          python scripts/doc_checker.py --disable-numpydoc \
+          python scripts/doc_checker.py --add-ignore=D101,D102,D103,D105 --disable-numpydoc \
             modin/pandas/dataframe.py modin/pandas/series.py \
             modin/pandas/groupby.py modin/pandas/base.py \
             modin/pandas/series_utils.py modin/pandas/general.py \
