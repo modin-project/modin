@@ -30,7 +30,7 @@ class Plotting(object):
         Returns
         -------
         list
-            List if attributes of `self`.
+            List of attributes in `self`.
         """
         return dir(pdplot)
 

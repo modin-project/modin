@@ -150,12 +150,12 @@ def is_label(obj, label, axis=0):
 
     Parameters
     ----------
-    obj : DataFrame, Series or QueryCompiler
+    obj : modin.pandas.DataFrame, modin.pandas.Series or modin.backends.base.BaseQueryCompiler
         Object to check.
     label : object
         Label name to check.
     axis : {0, 1}, default: 0
-        Axis to search name along.
+        Axis to search for `label` along.
 
     Returns
     -------

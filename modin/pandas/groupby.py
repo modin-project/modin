@@ -758,8 +758,8 @@ class DataFrameGroupBy(object):
 
         Returns
         -------
-        tuple
-            GroupBy object broken down into tuples for iteration.
+        generator
+            Generator expression of GroupBy object broken down into tuples for iteration.
         """
         from .dataframe import DataFrame
 
@@ -959,7 +959,7 @@ class DataFrameGroupBy(object):
 
     def _default_to_pandas(self, f, *args, **kwargs):
         """
-        Execute function `f` in default to pandas way.
+        Execute function `f` in default-to-pandas way.
 
         Parameters
         ----------
@@ -972,7 +972,7 @@ class DataFrameGroupBy(object):
 
         Returns
         -------
-        DataFrame
+        modin.pandas.DataFrame
             A new Modin DataFrame with the result of the pandas function.
         """
         if (
@@ -1024,8 +1024,8 @@ class SeriesGroupBy(DataFrameGroupBy):
 
         Returns
         -------
-        tuple
-            GroupBy object broken down into tuples for iteration.
+        generator
+            Generator expression of GroupBy object broken down into tuples for iteration.
         """
         group_ids = self._index_grouped.keys()
         if self._axis == 0:

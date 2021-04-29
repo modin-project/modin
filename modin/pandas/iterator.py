@@ -22,7 +22,7 @@ class PartitionIterator(Iterator):
 
     Parameters
     ----------
-    df : DataFrame
+    df : modin.pandas.DataFrame
         The dataframe to iterate over.
     axis : {0, 1}
         Axis to iterate over.
