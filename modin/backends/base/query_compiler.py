@@ -56,7 +56,8 @@ def _set_axis(axis):
 
 
 _add_one_column_warning = Appender(
-    """.. warning::
+    """
+    .. warning::
     This method is supported only by one-column query compilers."""
 )
 
@@ -83,14 +84,14 @@ def add_refer_to(method):
 
 def _doc_dt(prop, dt_type, method):
     template = """
-    Get {prop} for each {dt_type} value.
+        Get {prop} for each {dt_type} value.
 
-    Returns
-    -------
-    BaseQueryCompiler
-        New `QueryCompiler` with the same shape as `self`, where each element is
-        {prop} for the corresponding {dt_type} value.
-    """
+        Returns
+        -------
+        BaseQueryCompiler
+            New `QueryCompiler` with the same shape as `self`, where each element is
+            {prop} for the corresponding {dt_type} value.
+        """
 
     doc_adder = doc(template, prop=prop, dt_type=dt_type)
     refer_to_appender = add_refer_to(f"Series.dt.{method}")
@@ -101,16 +102,44 @@ def _doc_dt(prop, dt_type, method):
     return decorator
 
 
-def _doc_dt_timestamp(prop, method):
-    return _doc_dt(prop, "date-time", method)
+def _doc_dt_timestamp(property, method):
+    return _doc_dt(property, "date-time", method)
 
 
-def _doc_dt_interval(prop, method):
-    return _doc_dt(prop, "interval", method)
+def _doc_dt_interval(property, method):
+    return _doc_dt(property, "interval", method)
 
 
-def _doc_dt_period(prop, method):
-    return _doc_dt(prop, "period", method)
+def _doc_dt_period(property, method):
+    return _doc_dt(property, "period", method)
+
+
+def _doc_str_method(method, params=None):
+    template = """
+        Apply "{method}" function to each string value in `QueryCompiler`.
+        {params}
+        Returns
+        -------
+        BaseQueryCompiler
+            New `QueryCompiler` containing the result of execution of the "{method}" function
+            against each string element.
+        """
+
+    params_template = """
+        Parameters
+        ----------
+        {params}
+        """
+
+    params_substitution = params_template.format(params=params) if params else ""
+
+    doc_adder = doc(template, method=method, params=params_substitution)
+    refer_to_appender = add_refer_to(f"Series.str.{method}")
+
+    def decorator(func):
+        return _add_one_column_warning(refer_to_appender(doc_adder(func)))
+
+    return decorator
 
 
 class BaseQueryCompiler(abc.ABC):
@@ -3043,7 +3072,7 @@ class BaseQueryCompiler(abc.ABC):
     def dt_minute(self):
         return DateTimeDefault.register(pandas.Series.dt.minute)(self)
 
-    @_doc_dt_timestamp(property="month component", month="month")
+    @_doc_dt_timestamp(property="month component", method="month")
     def dt_month(self):
         return DateTimeDefault.register(pandas.Series.dt.month)(self)
 
@@ -3665,52 +3694,305 @@ class BaseQueryCompiler(abc.ABC):
 
     # Str methods
 
-    str_capitalize = StrDefault.register(pandas.Series.str.capitalize)
-    str_center = StrDefault.register(pandas.Series.str.center)
-    str_contains = StrDefault.register(pandas.Series.str.contains)
-    str_count = StrDefault.register(pandas.Series.str.count)
-    str_endswith = StrDefault.register(pandas.Series.str.endswith)
-    str_find = StrDefault.register(pandas.Series.str.find)
-    str_findall = StrDefault.register(pandas.Series.str.findall)
-    str_get = StrDefault.register(pandas.Series.str.get)
-    str_index = StrDefault.register(pandas.Series.str.index)
-    str_isalnum = StrDefault.register(pandas.Series.str.isalnum)
-    str_isalpha = StrDefault.register(pandas.Series.str.isalpha)
-    str_isdecimal = StrDefault.register(pandas.Series.str.isdecimal)
-    str_isdigit = StrDefault.register(pandas.Series.str.isdigit)
-    str_islower = StrDefault.register(pandas.Series.str.islower)
-    str_isnumeric = StrDefault.register(pandas.Series.str.isnumeric)
-    str_isspace = StrDefault.register(pandas.Series.str.isspace)
-    str_istitle = StrDefault.register(pandas.Series.str.istitle)
-    str_isupper = StrDefault.register(pandas.Series.str.isupper)
-    str_join = StrDefault.register(pandas.Series.str.join)
-    str_len = StrDefault.register(pandas.Series.str.len)
-    str_ljust = StrDefault.register(pandas.Series.str.ljust)
-    str_lower = StrDefault.register(pandas.Series.str.lower)
-    str_lstrip = StrDefault.register(pandas.Series.str.lstrip)
-    str_match = StrDefault.register(pandas.Series.str.match)
-    str_normalize = StrDefault.register(pandas.Series.str.normalize)
-    str_pad = StrDefault.register(pandas.Series.str.pad)
-    str_partition = StrDefault.register(pandas.Series.str.partition)
-    str_repeat = StrDefault.register(pandas.Series.str.repeat)
-    str_replace = StrDefault.register(pandas.Series.str.replace)
-    str_rfind = StrDefault.register(pandas.Series.str.rfind)
-    str_rindex = StrDefault.register(pandas.Series.str.rindex)
-    str_rjust = StrDefault.register(pandas.Series.str.rjust)
-    str_rpartition = StrDefault.register(pandas.Series.str.rpartition)
-    str_rsplit = StrDefault.register(pandas.Series.str.rsplit)
-    str_rstrip = StrDefault.register(pandas.Series.str.rstrip)
-    str_slice = StrDefault.register(pandas.Series.str.slice)
-    str_slice_replace = StrDefault.register(pandas.Series.str.slice_replace)
-    str_split = StrDefault.register(pandas.Series.str.split)
-    str_startswith = StrDefault.register(pandas.Series.str.startswith)
-    str_strip = StrDefault.register(pandas.Series.str.strip)
-    str_swapcase = StrDefault.register(pandas.Series.str.swapcase)
-    str_title = StrDefault.register(pandas.Series.str.title)
-    str_translate = StrDefault.register(pandas.Series.str.translate)
-    str_upper = StrDefault.register(pandas.Series.str.upper)
-    str_wrap = StrDefault.register(pandas.Series.str.wrap)
-    str_zfill = StrDefault.register(pandas.Series.str.zfill)
+    @_doc_str_method(method="capitalize", params="")
+    def str_capitalize(self):
+        return StrDefault.register(pandas.Series.str.capitalize)(self)
+
+    @_doc_str_method(
+        method="center",
+        params="""width : int
+        fillchar : str, default: ' '""",
+    )
+    def str_center(self, width, fillchar=" "):
+        return StrDefault.register(pandas.Series.str.center)(self, width, fillchar)
+
+    @_doc_str_method(
+        method="contains",
+        params="""pat : str
+        case : bool, default: True
+        flags : int, default: 0
+        na : object, default: np.NaN
+        regex : bool, default: True""",
+    )
+    def str_contains(self, pat, case=True, flags=0, na=np.NaN, regex=True):
+        return StrDefault.register(pandas.Series.str.contains)(
+            self, pat, case, flags, na, regex
+        )
+
+    @_doc_str_method(
+        method="count",
+        params="""pat : str
+        flags : int, default: 0
+        **kwargs : kwargs""",
+    )
+    def str_count(self, pat, flags=0, **kwargs):
+        return StrDefault.register(pandas.Series.str.count)(self, pat, flags, **kwargs)
+
+    @_doc_str_method(
+        method="endswith",
+        params="""pat : str
+        na : object, default: np.NaN""",
+    )
+    def str_endswith(self, pat, na=np.NaN):
+        return StrDefault.register(pandas.Series.str.endswith)(self, pat, na)
+
+    @_doc_str_method(
+        method="find",
+        params="""sub : str
+        start : int, default: 0
+        end : int, optional""",
+    )
+    def str_find(self, sub, start=0, end=None):
+        return StrDefault.register(pandas.Series.str.find)(self, sub, start, end)
+
+    @_doc_str_method(
+        method="findall",
+        params="""pat : str
+        flags : int, default: 0
+        **kwargs : kwargs""",
+    )
+    def str_findall(self, pat, flags=0, **kwargs):
+        return StrDefault.register(pandas.Series.str.findall)(
+            self, pat, flags, **kwargs
+        )
+
+    @_doc_str_method(method="get", params="i : int")
+    def str_get(self, i):
+        return StrDefault.register(pandas.Series.str.get)(self, i)
+
+    @_doc_str_method(
+        method="index",
+        params="""sub : str
+        start : int, default: 0
+        end : int, optional""",
+    )
+    def str_index(self, sub, start=0, end=None):
+        return StrDefault.register(pandas.Series.str.index)(self, sub, start, end)
+
+    @_doc_str_method(method="isalnum", params="")
+    def str_isalnum(self):
+        return StrDefault.register(pandas.Series.str.isalnum)(self)
+
+    @_doc_str_method(method="isalpha", params="")
+    def str_isalpha(self):
+        return StrDefault.register(pandas.Series.str.isalpha)(self)
+
+    @_doc_str_method(method="isdecimal", params="")
+    def str_isdecimal(self):
+        return StrDefault.register(pandas.Series.str.isdecimal)(self)
+
+    @_doc_str_method(method="isdigit", params="")
+    def str_isdigit(self):
+        return StrDefault.register(pandas.Series.str.isdigit)(self)
+
+    @_doc_str_method(method="islower", params="")
+    def str_islower(self):
+        return StrDefault.register(pandas.Series.str.islower)(self)
+
+    @_doc_str_method(method="isnumeric", params="")
+    def str_isnumeric(self):
+        return StrDefault.register(pandas.Series.str.isnumeric)(self)
+
+    @_doc_str_method(method="isspace", params="")
+    def str_isspace(self):
+        return StrDefault.register(pandas.Series.str.isspace)(self)
+
+    @_doc_str_method(method="istitle", params="")
+    def str_istitle(self):
+        return StrDefault.register(pandas.Series.str.istitle)(self)
+
+    @_doc_str_method(method="isupper", params="")
+    def str_isupper(self):
+        return StrDefault.register(pandas.Series.str.isupper)(self)
+
+    @_doc_str_method(method="join", params="sep : str")
+    def str_join(self, sep):
+        return StrDefault.register(pandas.Series.str.join)(self, sep)
+
+    @_doc_str_method(method="len", params="")
+    def str_len(self):
+        return StrDefault.register(pandas.Series.str.len)(self)
+
+    @_doc_str_method(
+        method="ljust",
+        params="""width : int
+        fillchar : str, default: ' '""",
+    )
+    def str_ljust(self, width, fillchar=" "):
+        return StrDefault.register(pandas.Series.str.ljust)(self, width, fillchar)
+
+    @_doc_str_method(method="lower", params="")
+    def str_lower(self):
+        return StrDefault.register(pandas.Series.str.lower)(self)
+
+    @_doc_str_method(method="lstrip", params="to_strip : str, optional")
+    def str_lstrip(self, to_strip=None):
+        return StrDefault.register(pandas.Series.str.lstrip)(self, to_strip)
+
+    @_doc_str_method(
+        method="match",
+        params="""pat : str
+        case : bool, default: True
+        flags : int, default: 0
+        na : object, default: np.NaN""",
+    )
+    def str_match(self, pat, case=True, flags=0, na=np.NaN):
+        return StrDefault.register(pandas.Series.str.match)(self, pat, case, flags, na)
+
+    @_doc_str_method(method="normalize", params="form : {'NFC', 'NFKC', 'NFD', 'NFKD'}")
+    def str_normalize(self, form):
+        return StrDefault.register(pandas.Series.str.normalize)(self, form)
+
+    @_doc_str_method(
+        method="pad",
+        params="""width : int
+        side : {'left', 'right', 'both'}, default: 'left'
+        fillchar : str, default: ' '""",
+    )
+    def str_pad(self, width, side="left", fillchar=" "):
+        return StrDefault.register(pandas.Series.str.pad)(self, width, side, fillchar)
+
+    @_doc_str_method(
+        method="partition",
+        params="""sep : str, default: ' '
+        expand : bool, default: True""",
+    )
+    def str_partition(self, sep=" ", expand=True):
+        return StrDefault.register(pandas.Series.str.partition)(self, sep, expand)
+
+    @_doc_str_method(method="repeat", params="repeats : int")
+    def str_repeat(self, repeats):
+        return StrDefault.register(pandas.Series.str.repeat)(self, repeats)
+
+    @_doc_str_method(
+        method="replace",
+        params="""pat : str
+        repl : str or callable
+        n : int, default: -1
+        case : bool, optional
+        flags : int, default: 0
+        regex : bool, default: True""",
+    )
+    def str_replace(self, pat, repl, n=-1, case=None, flags=0, regex=True):
+        return StrDefault.register(pandas.Series.str.replace)(
+            self, pat, repl, n, case, flags, regex
+        )
+
+    @_doc_str_method(
+        method="rfind",
+        params="""sub : str
+        start : int, default: 0
+        end : int, optional""",
+    )
+    def str_rfind(self, sub, start=0, end=None):
+        return StrDefault.register(pandas.Series.str.rfind)(self, sub, start, end)
+
+    @_doc_str_method(
+        method="rindex",
+        params="""sub : str
+        start : int, default: 0
+        end : int, optional""",
+    )
+    def str_rindex(self, sub, start=0, end=None):
+        return StrDefault.register(pandas.Series.str.rindex)(self, sub, start, end)
+
+    @_doc_str_method(
+        method="rjust",
+        params="""width : int
+        fillchar : str, default: ' '""",
+    )
+    def str_rjust(self, width, fillchar=" "):
+        return StrDefault.register(pandas.Series.str.rjust)(self, width, fillchar)
+
+    @_doc_str_method(
+        method="rpartition",
+        params="""sep : str, default: ' '
+        expand : bool, default: True""",
+    )
+    def str_rpartition(self, sep=" ", expand=True):
+        return StrDefault.register(pandas.Series.str.rpartition)(self, sep, expand)
+
+    @_doc_str_method(
+        method="rsplit",
+        params="""pat : str, optional
+        n : int, default: -1
+        expand : bool, default: False""",
+    )
+    def str_rsplit(self, pat=None, n=-1, expand=False):
+        return StrDefault.register(pandas.Series.str.rsplit)(self, pat, n, expand)
+
+    @_doc_str_method(method="rstrip", params="to_strip : str, optional")
+    def str_rstrip(self, to_strip=None):
+        return StrDefault.register(pandas.Series.str.rstrip)(self, to_strip)
+
+    @_doc_str_method(
+        method="slice",
+        params="""start : int, optional
+        stop : int, optional
+        step : int, optional""",
+    )
+    def str_slice(self, start=None, stop=None, step=None):
+        return StrDefault.register(pandas.Series.str.slice)(self, start, stop, step)
+
+    @_doc_str_method(
+        method="slice_replace",
+        params="""start : int, optional
+        stop : int, optional
+        repl : str or callable, optional""",
+    )
+    def str_slice_replace(self, start=None, stop=None, repl=None):
+        return StrDefault.register(pandas.Series.str.slice_replace)(
+            self, start, stop, repl
+        )
+
+    @_doc_str_method(
+        method="split",
+        params="""pat : str, optional
+        n : int, default: -1
+        expand : bool, default: False""",
+    )
+    def str_split(self, pat=None, n=-1, expand=False):
+        return StrDefault.register(pandas.Series.str.split)(self, pat, n, expand)
+
+    @_doc_str_method(
+        method="startswith",
+        params="""pat : str
+        na : object, default: np.NaN""",
+    )
+    def str_startswith(self, pat, na=np.NaN):
+        return StrDefault.register(pandas.Series.str.startswith)(self, pat, na)
+
+    @_doc_str_method(method="strip", params="to_strip : str, optional")
+    def str_strip(self, to_strip=None):
+        return StrDefault.register(pandas.Series.str.strip)(self, to_strip)
+
+    @_doc_str_method(method="swapcase", params="")
+    def str_swapcase(self):
+        return StrDefault.register(pandas.Series.str.swapcase)(self)
+
+    @_doc_str_method(method="title", params="")
+    def str_title(self):
+        return StrDefault.register(pandas.Series.str.title)(self)
+
+    @_doc_str_method(method="translate", params="table : dict")
+    def str_translate(self, table):
+        return StrDefault.register(pandas.Series.str.translate)(self, table)
+
+    @_doc_str_method(method="upper", params="")
+    def str_upper(self):
+        return StrDefault.register(pandas.Series.str.upper)(self)
+
+    @_doc_str_method(
+        method="wrap",
+        params="""width : int
+        **kwargs : kwargs""",
+    )
+    def str_wrap(self, width, **kwargs):
+        return StrDefault.register(pandas.Series.str.wrap)(self, width, **kwargs)
+
+    @_doc_str_method(method="zfill", params="width : int")
+    def str_zfill(self, width):
+        return StrDefault.register(pandas.Series.str.zfill)(self, width)
 
     # End of Str methods
 
