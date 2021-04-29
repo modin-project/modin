@@ -14,7 +14,7 @@
 """
 The main module through which interaction with the experimental API takes place.
 
-See `Experimental API Ireference` for details.
+See `Experimental API Reference` for details.
 
 Notes
 -----

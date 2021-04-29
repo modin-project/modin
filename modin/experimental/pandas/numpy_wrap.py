@@ -57,10 +57,10 @@ else:
         Attributes
         ----------
         __own_attrs__ : set
-            Attributes that defined in the class.
+            Attributes that are defined in this class so access to them must never be proxied.
         __current_numpy : ModuleType
             The module to which getting NumPy attributes redirects. For example,
-            NumPy in remote machine.
+            NumPy on remote machine.
         __prev_numpy : ModuleType
             The previous module that was accessed to get the NumPy attributes.
         __has_to_warn : bool

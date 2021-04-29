@@ -40,9 +40,9 @@ def read_sql(
     max_sessions: Optional[int] = None,
 ) -> DataFrame:
     """
-    General documentation in `modin.pandas.read_sql`.
+    General documentation is available in `modin.pandas.read_sql`.
 
-    Experimental feature is simultaneous reading from a sql file.
+    This experimental feature provides distributed reading from a sql file.
 
     Parameters
     ----------
@@ -91,7 +91,7 @@ def read_sql(
 
     Returns
     -------
-    Modin DataFrame.
+    modin.DataFrame
     """
     Engine.subscribe(_update_engine)
     assert IsExperimental.get(), "This only works in experimental mode"
@@ -181,10 +181,10 @@ def _make_parser_func(sep: str) -> Callable:
 
 def _read(**kwargs) -> DataFrame:
     """
-    General documentation in `modin.pandas.read_csv`.
+    General documentation is available in `modin.pandas.read_csv`.
 
-    Experimental feature is simultaneous reading from multiple csv files which are
-    defined using glob pattern. Works only for local files.
+    This experimental feature provides parallel reading from multiple csv files which are
+    defined by glob pattern. Works for local files only!
 
     Parameters
     ----------
@@ -193,7 +193,7 @@ def _read(**kwargs) -> DataFrame:
 
     Returns
     -------
-    Modin DataFrame.
+    modin.DataFrame
     """
     from modin.data_management.factories.dispatcher import EngineDispatcher
 
