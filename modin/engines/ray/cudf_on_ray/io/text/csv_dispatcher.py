@@ -12,6 +12,7 @@
 # governing permissions and limitations under the License.
 
 """Module holds ``cuDFCSVDispatcher`` that is implemented using cuDF-entities."""
+
 import numpy as np
 
 from modin.engines.base.io import CSVDispatcher
@@ -21,7 +22,7 @@ from typing import Tuple
 
 class cuDFCSVDispatcher(CSVDispatcher):
     """
-    The class implements ``CSVDispatcher`` using cuDF-entities.
+    The class implements ``CSVDispatcher`` using cuDF backend.
 
     This class handles utils for reading `.csv` files.
     """
@@ -72,7 +73,7 @@ class cuDFCSVDispatcher(CSVDispatcher):
         splits : list
             List of tuples with partitions data, which defines
             parser task (start/end read bytes and etc.)
-        partition_kwargs : dict
+        **partition_kwargs : dict
             Dictionary with keyword args that will be passed to the parser function.
 
         Returns

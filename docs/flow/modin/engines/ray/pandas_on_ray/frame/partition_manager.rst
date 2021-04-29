@@ -1,7 +1,7 @@
 PandasOnRayFrameManager
-"""""""""""""""""""""""""""
+"""""""""""""""""""""""
 
-The class is specific implementation of ``BaseFrameManager`` uusing Ray distributed engine.
+The class is specific implementation of ``BaseFrameManager`` using Ray distributed engine.
 This class is responsible for partitions manipulation and applying a funcion to
 block/row/column partitions.
 
