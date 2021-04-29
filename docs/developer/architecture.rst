@@ -294,7 +294,7 @@ by documentation for now, the rest is coming soon...).
    │   │   │   ├───omnisci_on_ray
    │   │   │   ├───pandas_on_ray
    │   │   │   └───pyarrow_on_ray
-   │   │   ├───pandas
+   │   │   ├─── :doc:`pandas </flow/modin/experimental/pandas>`
    │   │   ├─── :doc:`sklearn </flow/modin/experimental/sklearn>`
    │   │   ├───sql
    │   │   └───xgboost
