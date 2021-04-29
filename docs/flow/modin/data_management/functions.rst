@@ -51,7 +51,8 @@ in the map phase. Note that the execution engine expects that the reduction func
 Binary functions
 ----------------
 Function that takes two operands (left is always `QueryCompiler`) and evaluates function along them.
-Engine efficiently broadcasts partitions of the right operand to the left if necessary.
+If both operands are query compilers then the execution engine broadcasts partitions of
+the right operand to the left.
 
 .. figure:: /img/binary_evaluation.svg
     :align: center
@@ -70,7 +71,7 @@ expensive because the execution engine has to concatenate partitions along the s
 GroupBy functions
 -----------------
 Evaluates GroupBy aggregation for that type of functions that can be executed via MapReduce approach.
-To be able to form groups engine efficiently broadcasts `by` partitions to each partition of the source frame.
+To be able to form groups engine broadcasts `by` partitions to each partition of the source frame.
 
 Default-to-pandas functions
 ---------------------------
