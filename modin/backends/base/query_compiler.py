@@ -3237,54 +3237,429 @@ class BaseQueryCompiler(abc.ABC):
 
     # Resample methods
 
-    resample_agg_df = ResampleDefault.register(pandas.core.resample.Resampler.aggregate)
-    resample_agg_ser = ResampleDefault.register(
-        pandas.core.resample.Resampler.aggregate, squeeze_self=True
+    __doc_resample_reduction = """
+    Resample time-series data and apply aggregation on it.
+
+    Group data into intervals by time-series row/column with
+    a specified frequency and get the {method} for each group.
+
+    Parameters
+    ----------
+    resample_args : list
+        Resample parameters in the format of ``modin.pandas.DataFrame.resample`` signature.
+    {params}
+    *args : args
+        Serves the compatibility purpose. Does not affect the result.
+    **kwargs : kwargs
+        Serves the compatibility purpose. Does not affect the result.
+
+    Returns
+    -------
+    BaseQueryCompiler
+        New `QueryCompiler` containing the result of resample aggregation built by the
+        following rules:
+            - Labels on the specified axis is the group names (time-stamps)
+            - Labels on the opposit of specified axis is preserved.
+            - Each element of `QueryCompiler` is the {method} for the
+            corresponding group and column/row.
+    """
+
+    __doc_resample_agg = """
+    Resample time-series data and apply aggregation on it.
+
+    Group data into intervals by time-series row/column with
+    a specified frequency and {method} for each group.
+
+    Parameters
+    ----------
+    resample_args : list
+        Resample parameters in the format of ``modin.pandas.DataFrame.resample`` signature.
+    {params}
+    *args : args
+        Arguments to pass to the aggregation function.
+    **kwargs : kwargs
+        Arguments to pass to the aggregation function.
+
+    Returns
+    -------
+    BaseQueryCompiler
+        New `QueryCompiler` containing the result of resample aggregation built by the
+        following rules:
+            - Labels on the specified axis is the group names (time-stamps)
+            - Labels on the opposit of specified axis is MultiIndex, where first level
+              contains preserved labels of this axis and the second level is the {output}.
+            - Each element of `QueryCompiler` is the result of corresponding function for the
+              corresponding group and column/row.
+    """
+
+    __doc_resample_udf_agg = __doc_resample_agg.format(
+        method="apply passed aggregation function",
+        params="func : str, dir, callable(pandas.Series) -> scalar, or list of such",
+        output="function names",
     )
-    resample_app_df = ResampleDefault.register(pandas.core.resample.Resampler.apply)
-    resample_app_ser = ResampleDefault.register(
-        pandas.core.resample.Resampler.apply, squeeze_self=True
+
+    # FIXME:
+    #   1. Backend shouldn't care about differences between Series and DataFrame
+    #      so `resample_agg_df` and `resample_agg_ser` should be combined.
+    #   2. In DataFrame API `Resampler.aggregate` is an alias for `Resampler.apply`
+    #      we should remove one of these methods: `resample_agg_*` or `resample_app_*`.
+    @doc(__doc_resample_udf_agg)
+    def resample_agg_df(self, resample_args, func, *args, **kwargs):
+        return ResampleDefault.register(pandas.core.resample.Resampler.aggregate)(
+            self, resample_args, func, *args, **kwargs
+        )
+
+    @doc(__doc_resample_udf_agg)
+    def resample_agg_ser(self, resample_args, func, *args, **kwargs):
+        return ResampleDefault.register(
+            pandas.core.resample.Resampler.aggregate, squeeze_self=True
+        )(self, resample_args, func, *args, **kwargs)
+
+    @doc(__doc_resample_udf_agg)
+    def resample_app_df(self, resample_args, func, *args, **kwargs):
+        return ResampleDefault.register(pandas.core.resample.Resampler.apply)(
+            self, resample_args, func, *args, **kwargs
+        )
+
+    @doc(__doc_resample_udf_agg)
+    def resample_app_ser(self, resample_args, func, *args, **kwargs):
+        return ResampleDefault.register(
+            pandas.core.resample.Resampler.apply, squeeze_self=True
+        )(self, resample_args, func, *args, **kwargs)
+
+    def resample_asfreq(self, resample_args, fill_value):
+        """
+        Resample time-series data and get the values at the new frequency.
+
+        Group data into intervals by time-series row/column with
+        a specified frequency and get values at the new frequency..
+
+        Parameters
+        ----------
+        resample_args : list
+            Resample parameters in the format of ``modin.pandas.DataFrame.resample`` signature.
+        fill_value : scalar
+
+        Returns
+        -------
+        BaseQueryCompiler
+            New `QueryCompiler` containing values at the specified frequency.
+        """
+        return ResampleDefault.register(pandas.core.resample.Resampler.asfreq)(
+            self, resample_args, fill_value
+        )
+
+    __doc_resample_fillna = """
+    Resample time-series data and fill missing values.
+
+    Group data into intervals by time-series row/column with
+    a specified frequency and fill missing values in each group independently
+    using {method} method.
+
+    Parameters
+    ----------
+    resample_args : list
+        Resample parameters in the format of ``modin.pandas.DataFrame.resample`` signature.
+    {params}
+    limit : int
+
+    Returns
+    -------
+    BaseQueryCompiler
+        New `QueryCompiler` containing unsampled data with missing values filled.
+    """
+
+    # FIXME: `resample_backfill` is an alias for `resample_bfill`, on of these method
+    # should be removed.
+    @doc(__doc_resample_fillna, method="back-fill", params="")
+    def resample_backfill(self, resample_args, limit):
+        return ResampleDefault.register(pandas.core.resample.Resampler.backfill)(
+            self, resample_args, limit
+        )
+
+    @doc(__doc_resample_fillna, method="back-fill", params="")
+    def resample_bfill(self, resample_args, limit):
+        return ResampleDefault.register(pandas.core.resample.Resampler.bfill)(
+            self, resample_args, limit
+        )
+
+    @doc(__doc_resample_reduction, method="number of non-NA values", params="")
+    def resample_count(self, resample_args):
+        return ResampleDefault.register(pandas.core.resample.Resampler.count)(
+            self, resample_args
+        )
+
+    # FIXME: `resample_ffill` is an alias for `resample_pad`, on of these method
+    # should be removed.
+    @doc(__doc_resample_fillna, method="forward-fill", params="")
+    def resample_ffill(self, resample_args, limit):
+        return ResampleDefault.register(pandas.core.resample.Resampler.ffill)(
+            self, resample_args, limit
+        )
+
+    # FIXME: we should combine all method all resample fillna methods into `resample_fillna`
+    @doc(__doc_resample_fillna, method="specified", params="method : str")
+    def resample_fillna(self, resample_args, method, limit):
+        return ResampleDefault.register(pandas.core.resample.Resampler.fillna)(
+            self, resample_args, method, limit
+        )
+
+    @doc(__doc_resample_reduction, method="first element", params="_method : str")
+    def resample_first(self, resample_args, _method, *args, **kwargs):
+        return ResampleDefault.register(pandas.core.resample.Resampler.first)(
+            self, resample_args, _method, *args, **kwargs
+        )
+
+    # FIXME: high-level objects leaks to the query compiler.
+    def resample_get_group(self, resample_args, name, obj):
+        """
+        Resample time-series data and get the specified group.
+
+        Group data into intervals by time-series row/column with
+        a specified frequency and get the values of the specified group.
+
+        Parameters
+        ----------
+        resample_args : list
+            Resample parameters in the format of ``modin.pandas.DataFrame.resample`` signature.
+        name : object
+        obj : modin.pandas.DataFrame, optional
+
+        Returns
+        -------
+        BaseQueryCompiler
+            New `QueryCompiler` containing the values from the specified group.
+        """
+        return ResampleDefault.register(pandas.core.resample.Resampler.get_group)(
+            self, resample_args, name, obj
+        )
+
+    @doc(
+        __doc_resample_fillna,
+        method="specified interpolation method",
+        params="""method : str
+    axis : int
+    inplace : False
+        This parameter serves the compatibility purpose. Always have to be False.
+    limit_direction : {"forward", "backward", "both"}
+    limit_area : {None, "inside", "outside"}
+    downcast : str, optional
+    **kwargs : kwargs""",
     )
-    resample_asfreq = ResampleDefault.register(pandas.core.resample.Resampler.asfreq)
-    resample_backfill = ResampleDefault.register(
-        pandas.core.resample.Resampler.backfill
+    def resample_interpolate(
+        self,
+        resample_args,
+        method,
+        axis,
+        limit,
+        inplace,
+        limit_direction,
+        limit_area,
+        downcast,
+        **kwargs,
+    ):
+        return ResampleDefault.register(pandas.core.resample.Resampler.interpolate)(
+            self,
+            resample_args,
+            method,
+            axis,
+            limit,
+            inplace,
+            limit_direction,
+            limit_area,
+            downcast,
+            **kwargs,
+        )
+
+    @doc(__doc_resample_reduction, method="last element", params="_method : str")
+    def resample_last(self, resample_args, _method, *args, **kwargs):
+        return ResampleDefault.register(pandas.core.resample.Resampler.last)(
+            self, resample_args, _method, *args, **kwargs
+        )
+
+    @doc(__doc_resample_reduction, method="maximum value", params="_method : str")
+    def resample_max(self, resample_args, _method, *args, **kwargs):
+        return ResampleDefault.register(pandas.core.resample.Resampler.max)(
+            self, resample_args, _method, *args, **kwargs
+        )
+
+    @doc(__doc_resample_reduction, method="mean value", params="_method : str")
+    def resample_mean(self, resample_args, _method, *args, **kwargs):
+        return ResampleDefault.register(pandas.core.resample.Resampler.mean)(
+            self, resample_args, _method, *args, **kwargs
+        )
+
+    @doc(__doc_resample_reduction, method="median value", params="_method : str")
+    def resample_median(self, resample_args, _method, *args, **kwargs):
+        return ResampleDefault.register(pandas.core.resample.Resampler.median)(
+            self, resample_args, _method, *args, **kwargs
+        )
+
+    @doc(__doc_resample_reduction, method="minimum value", params="_method : str")
+    def resample_min(self, resample_args, _method, *args, **kwargs):
+        return ResampleDefault.register(pandas.core.resample.Resampler.min)(
+            self, resample_args, _method, *args, **kwargs
+        )
+
+    @doc(__doc_resample_fillna, method="'nearest'", params="")
+    def resample_nearest(self, resample_args, limit):
+        return ResampleDefault.register(pandas.core.resample.Resampler.nearest)(
+            self, resample_args, limit
+        )
+
+    @doc(
+        __doc_resample_reduction,
+        method="number of unique values",
+        params="_method : str",
     )
-    resample_bfill = ResampleDefault.register(pandas.core.resample.Resampler.bfill)
-    resample_count = ResampleDefault.register(pandas.core.resample.Resampler.count)
-    resample_ffill = ResampleDefault.register(pandas.core.resample.Resampler.ffill)
-    resample_fillna = ResampleDefault.register(pandas.core.resample.Resampler.fillna)
-    resample_first = ResampleDefault.register(pandas.core.resample.Resampler.first)
-    resample_get_group = ResampleDefault.register(
-        pandas.core.resample.Resampler.get_group
+    def resample_nunique(self, resample_args, _method, *args, **kwargs):
+        return ResampleDefault.register(pandas.core.resample.Resampler.nunique)(
+            self, resample_args, _method, *args, **kwargs
+        )
+
+    # FIXME: Backend shouldn't care about differences between Series and DataFrame
+    # so `resample_ohlc_df` and `resample_ohlc_ser` should be combined.
+    @doc(
+        __doc_resample_agg,
+        method="compute open, high, low and close values",
+        params="_method : str",
+        output="labels of columns containing computed values",
     )
-    resample_interpolate = ResampleDefault.register(
-        pandas.core.resample.Resampler.interpolate
+    def resample_ohlc_df(self, resample_args, _method, *args, **kwargs):
+        return ResampleDefault.register(pandas.core.resample.Resampler.ohlc)(
+            self, resample_args, _method, *args, **kwargs
+        )
+
+    @doc(
+        __doc_resample_agg,
+        method="compute open, high, low and close values",
+        params="_method : str",
+        output="labels of columns containing computed values",
     )
-    resample_last = ResampleDefault.register(pandas.core.resample.Resampler.last)
-    resample_max = ResampleDefault.register(pandas.core.resample.Resampler.max)
-    resample_mean = ResampleDefault.register(pandas.core.resample.Resampler.mean)
-    resample_median = ResampleDefault.register(pandas.core.resample.Resampler.median)
-    resample_min = ResampleDefault.register(pandas.core.resample.Resampler.min)
-    resample_nearest = ResampleDefault.register(pandas.core.resample.Resampler.nearest)
-    resample_nunique = ResampleDefault.register(pandas.core.resample.Resampler.nunique)
-    resample_ohlc_df = ResampleDefault.register(pandas.core.resample.Resampler.ohlc)
-    resample_ohlc_ser = ResampleDefault.register(
-        pandas.core.resample.Resampler.ohlc, squeeze_self=True
+    def resample_ohlc_ser(self, resample_args, _method, *args, **kwargs):
+        return ResampleDefault.register(
+            pandas.core.resample.Resampler.ohlc, squeeze_self=True
+        )(self, resample_args, _method, *args, **kwargs)
+
+    @doc(__doc_resample_fillna, method="'pad'", params="")
+    def resample_pad(self, resample_args, limit):
+        return ResampleDefault.register(pandas.core.resample.Resampler.pad)(
+            self, resample_args, limit
+        )
+
+    # FIXME: This method require us to build high-level resampler object
+    # which we shouldn't do at the backend. We need to move this at the front.
+    def resample_pipe(self, resample_args, func, *args, **kwargs):
+        """
+        Resample time-series data and apply aggregation on it.
+
+        Group data into intervals by time-series row/column with
+        a specified frequency, build equivalent `pandas.Resampler` object
+        and apply passed function to it.
+
+        Parameters
+        ----------
+        resample_args : list
+            Resample parameters in the format of ``modin.pandas.DataFrame.resample`` signature.
+        func : callable(pandas.Resampler) -> object
+        *args : args
+            Arguments to pass to the function.
+        **kwargs : kwargs
+            Arguments to pass to the function.
+
+        Returns
+        -------
+        BaseQueryCompiler
+            New `QueryCompiler` containing the result of passed function.
+        """
+        return ResampleDefault.register(pandas.core.resample.Resampler.pipe)(
+            self, resample_args, func, *args, **kwargs
+        )
+
+    @doc(
+        __doc_resample_reduction,
+        method="product",
+        params="""_method : str
+        min_count : int""",
     )
-    resample_pad = ResampleDefault.register(pandas.core.resample.Resampler.pad)
-    resample_pipe = ResampleDefault.register(pandas.core.resample.Resampler.pipe)
-    resample_prod = ResampleDefault.register(pandas.core.resample.Resampler.prod)
-    resample_quantile = ResampleDefault.register(
-        pandas.core.resample.Resampler.quantile
+    def resample_prod(self, resample_args, _method, min_count, *args, **kwargs):
+        return ResampleDefault.register(pandas.core.resample.Resampler.prod)(
+            self, resample_args, _method, min_count, *args, **kwargs
+        )
+
+    @doc(__doc_resample_reduction, method="quantile", params="q : float")
+    def resample_quantile(self, resample_args, q, **kwargs):
+        return ResampleDefault.register(pandas.core.resample.Resampler.quantile)(
+            self, resample_args, q, **kwargs
+        )
+
+    @doc(
+        __doc_resample_reduction,
+        method="standart error of the mean",
+        params="ddof : int",
     )
-    resample_sem = ResampleDefault.register(pandas.core.resample.Resampler.sem)
-    resample_size = ResampleDefault.register(pandas.core.resample.Resampler.size)
-    resample_std = ResampleDefault.register(pandas.core.resample.Resampler.std)
-    resample_sum = ResampleDefault.register(pandas.core.resample.Resampler.sum)
-    resample_transform = ResampleDefault.register(
-        pandas.core.resample.Resampler.transform
+    def resample_sem(self, resample_args, _method, ddof, *args, **kwargs):
+        return ResampleDefault.register(pandas.core.resample.Resampler.sem)(
+            self, resample_args, _method, ddof, *args, **kwargs
+        )
+
+    @doc(__doc_resample_reduction, method="number of element in a group", params="")
+    def resample_size(self, resample_args, *args, **kwargs):
+        return ResampleDefault.register(pandas.core.resample.Resampler.size)(
+            self, resample_args, *args, **kwargs
+        )
+
+    @doc(__doc_resample_reduction, method="standart deviation", params="ddof : int")
+    def resample_std(self, resample_args, ddof, *args, **kwargs):
+        return ResampleDefault.register(pandas.core.resample.Resampler.std)(
+            self, resample_args, ddof, *args, **kwargs
+        )
+
+    @doc(
+        __doc_resample_reduction,
+        method="sum",
+        params="""_method : str
+        min_count : int""",
     )
-    resample_var = ResampleDefault.register(pandas.core.resample.Resampler.var)
+    def resample_sum(self, resample_args, _method, min_count, *args, **kwargs):
+        return ResampleDefault.register(pandas.core.resample.Resampler.sum)(
+            self, resample_args, _method, min_count, *args, **kwargs
+        )
+
+    # FIXME: This method require us to build high-level resampler object
+    # which we shouldn't do at the backend. We need to move this at the front.
+    def resample_transform(self, resample_args, arg, *args, **kwargs):
+        """
+        Resample time-series data and apply aggregation on it.
+
+        Group data into intervals by time-series row/column with
+        a specified frequency, build equivalent `pandas.Resampler` object
+        and apply passed function to it.
+
+        Parameters
+        ----------
+        resample_args : list
+            Resample parameters in the format of ``modin.pandas.DataFrame.resample`` signature.
+        arg : callable(pandas.Resampler) -> pandas.Series
+        *args : args
+            Arguments to pass to the function.
+        **kwargs : kwargs
+            Arguments to pass to the function.
+
+        Returns
+        -------
+        BaseQueryCompiler
+            New `QueryCompiler` containing the result of passed function.
+        """
+        return ResampleDefault.register(pandas.core.resample.Resampler.transform)(
+            self, resample_args, arg, *args, **kwargs
+        )
+
+    @doc(__doc_resample_reduction, method="variance", params="ddof : int")
+    def resample_var(self, resample_args, ddof, *args, **kwargs):
+        return ResampleDefault.register(pandas.core.resample.Resampler.var)(
+            self, resample_args, ddof, *args, **kwargs
+        )
 
     # End of Resample methods
 

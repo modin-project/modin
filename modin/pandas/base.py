@@ -2878,6 +2878,8 @@ class Resampler(object):
         self._dataframe = dataframe
         self._query_compiler = dataframe._query_compiler
         axis = self._dataframe._get_axis_number(axis)
+        # FIXME: this should be converted into a dict to ensure simplicity
+        # of handling resample parameters at the backend level.
         self.resample_args = [
             rule,
             axis,
