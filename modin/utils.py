@@ -72,6 +72,11 @@ def _replace_doc(
         Gives the name to `target_obj` if it's an attribute of `parent_cls`.
         Needed to handle some special cases and in most cases could be determined automatically.
     """
+    if isinstance(target_obj, (staticmethod, classmethod)):
+        # we cannot replace docs on decorated objects, we must replace them
+        # on original functions instead
+        target_obj = target_obj.__func__
+
     source_doc = source_obj.__doc__ or ""
     target_doc = target_obj.__doc__ or ""
     doc = source_doc if overwrite or not target_doc else target_doc
@@ -137,7 +142,11 @@ def _inherit_docstrings(parent, excluded=[], overwrite_existing=False, apilink=N
 
     def _documentable_obj(obj):
         """Check if `obj` docstring could be patched."""
-        return callable(obj) or (isinstance(obj, property) and obj.fget)
+        return (
+            callable(obj)
+            or (isinstance(obj, property) and obj.fget)
+            or (isinstance(obj, (staticmethod, classmethod)) and obj.__func__)
+        )
 
     def decorator(cls_or_func):
         if parent not in excluded:
