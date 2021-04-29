@@ -436,7 +436,9 @@ def numpydoc_validate(path: pathlib.Path) -> bool:
     return is_successfull
 
 
-def pydocstyle_validate(path: pathlib.Path, add_ignore: List[str]) -> int:
+def pydocstyle_validate(
+    path: pathlib.Path, add_ignore: List[str], use_numpydoc: bool
+) -> int:
     """
     Perform pydocstyle checks.
 
@@ -446,6 +448,8 @@ def pydocstyle_validate(path: pathlib.Path, add_ignore: List[str]) -> int:
         Filename or directory path for check.
     add_ignore : List[int]
         `pydocstyle` error codes which are not verified.
+    use_numpydoc : bool
+        Disable duplicate `pydocstyle` checks if `numpydoc` is in use.
 
     Returns
     -------
@@ -456,7 +460,8 @@ def pydocstyle_validate(path: pathlib.Path, add_ignore: List[str]) -> int:
     if not shutil.which(pydocstyle):
         raise ValueError(f"{pydocstyle} not found in PATH")
     # These check can be done with numpydoc tool, so disable them for pydocstyle.
-    add_ignore.extend(["D100", "D101", "D102", "D103", "D104", "D105"])
+    if use_numpydoc:
+        add_ignore.extend(["D100", "D101", "D102", "D103", "D104", "D105"])
     result = subprocess.run(
         [
             pydocstyle,
@@ -488,11 +493,7 @@ def monkeypatching():
 
     ray.remote = monkeypatch
 
-    @functools.wraps(modin.utils.instancer)
-    def instancer(cls):
-        return cls
-
-    modin.utils.instancer = instancer
+    modin.utils.instancer = functools.wraps(modin.utils.instancer)(lambda cls: cls)
 
     # monkey-patch numpydoc for working correctly with properties
     def load_obj(name, old_load_obj=Docstring._load_obj):
@@ -526,7 +527,7 @@ def validate(
     """
     is_successfull = True
     for path in paths:
-        if not pydocstyle_validate(path, add_ignore):
+        if not pydocstyle_validate(path, add_ignore, use_numpydoc):
             is_successfull = False
         if use_numpydoc:
             if not numpydoc_validate(path):
