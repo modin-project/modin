@@ -14,6 +14,7 @@
 """Module holds `train_test_splt` function."""
 
 
+# FIXME: Change `**options`-->`train_size=0.75`
 def train_test_split(df, **options):
     """
     Split input data to train and test data.
