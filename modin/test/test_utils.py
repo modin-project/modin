@@ -85,23 +85,32 @@ def wrapped_cls():
     return Wrapped
 
 
+def _check_doc(wrapped, orig):
+    assert wrapped.__doc__ == orig.__doc__
+    if isinstance(wrapped, property):
+        assert wrapped.fget.__doc_inherited__
+    else:
+        assert wrapped.__doc_inherited__
+
+
 def test_doc_inherit_clslevel(wrapped_cls):
-    assert wrapped_cls.__doc__ == BaseChild.__doc__
+    _check_doc(wrapped_cls, BaseChild)
 
 
 def test_doc_inherit_methods(wrapped_cls):
-    assert wrapped_cls.method.__doc__ == BaseChild.method.__doc__
-    assert wrapped_cls.base_method.__doc__ == BaseParent.base_method.__doc__
-    assert wrapped_cls.own_method.__doc__ == BaseChild.own_method.__doc__
+    _check_doc(wrapped_cls.method, BaseChild.method)
+    _check_doc(wrapped_cls.base_method, BaseParent.base_method)
+    _check_doc(wrapped_cls.own_method, BaseChild.own_method)
     assert wrapped_cls.no_overwrite.__doc__ != BaseChild.no_overwrite.__doc__
+    assert not getattr(wrapped_cls.no_overwrite, "__doc_inherited__", False)
 
 
 def test_doc_inherit_special(wrapped_cls):
-    assert wrapped_cls.static.__doc__ == BaseChild.static.__doc__
-    assert wrapped_cls.clsmtd.__doc__ == BaseChild.clsmtd.__doc__
+    _check_doc(wrapped_cls.static, BaseChild.static)
+    _check_doc(wrapped_cls.clsmtd, BaseChild.clsmtd)
 
 
 def test_doc_inherit_props(wrapped_cls):
     assert type(wrapped_cls.method) == type(BaseChild.method)  # noqa: E721
-    assert wrapped_cls.prop.__doc__ == BaseChild.prop.__doc__
-    assert wrapped_cls.F.__doc__ == BaseChild.F.__doc__
+    _check_doc(wrapped_cls.prop, BaseChild.prop)
+    _check_doc(wrapped_cls.F, BaseChild.F)
