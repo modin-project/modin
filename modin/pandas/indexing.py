@@ -308,6 +308,7 @@ class _LocationIndexerBase(object):
         axis : {None, 0, 1}, default: None
             If not None, it means that whole axis is used to assign a value.
             0 means assign to whole column, 1 means assign to whole row.
+            If None, it means that partial assignment is done on both axes.
         """
         # Convert slices to indices for the purposes of application.
         # TODO (devin-petersohn): Apply to slice without conversion to list
