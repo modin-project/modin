@@ -176,6 +176,7 @@ def _make_parser_func(sep: str) -> Callable:
         kwargs = {k: v for k, v in f_locals.items() if k in _pd_read_csv_signature}
         return _read(**kwargs)
 
+    parser_func.__doc__ = _read.__doc__
     return parser_func
 
 
@@ -216,4 +217,3 @@ def _read(**kwargs) -> DataFrame:
 
 
 read_csv_glob = _make_parser_func(sep=",")
-read_csv_glob.__doc__ = _read.__doc__
