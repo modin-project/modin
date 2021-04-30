@@ -282,6 +282,24 @@ class FileDispatcher:
 
     @classmethod
     def build_partition(cls, partition_ids, row_lengths, column_widths):
+        """
+        Build array with partitions of `cls.frame_partition_cls` class.
+
+        Parameters
+        ----------
+        partition_ids : list
+            Array with references to the partitions data.
+        row_lengths : list
+            Partitions rows lengths.
+        column_widths : list
+            Number of columns in each partition.
+
+        Returns
+        -------
+        np.ndarray
+            array with shape equals to the shape of `partition_ids` and
+            filed with partition objects.
+        """
         return np.array(
             [
                 [
