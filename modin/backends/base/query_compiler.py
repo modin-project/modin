@@ -57,8 +57,8 @@ def _set_axis(axis):
 
 _add_one_column_warning = Appender(
     """
-    .. warning::
-    This method is supported only by one-column query compilers."""
+.. warning::
+This method is supported only by one-column query compilers."""
 )
 
 
@@ -83,16 +83,22 @@ def add_refer_to(method):
 
 
 def _doc_qc_method(
-    template, params=None, refer_to=None, one_column_method=False, **kwargs
+    template,
+    params=None,
+    refer_to=None,
+    one_column_method=False,
+    try_insert_params_section=False,
+    **kwargs,
 ):
     params_template = """
         Parameters
         ----------
         {params}
         """
-    params_substitution = params_template.format(params=params) if params else ""
+    if try_insert_params_section:
+        params = params_template.format(params=params) if params else ""
 
-    doc_adder = doc(template, params=params_substitution, **kwargs)
+    doc_adder = doc(template, params=params, **kwargs)
     refer_to_appender = add_refer_to(refer_to)
 
     def decorator(func):
@@ -123,6 +129,7 @@ def _doc_dt(prop, dt_type, method, params=None):
         dt_type=dt_type,
         params=params,
         one_column_method=True,
+        try_insert_params_section=True,
     )
 
 
@@ -155,6 +162,60 @@ def _doc_str_method(method, params=None):
         params=params,
         refer_to=f"Series.str.{method}",
         one_column_method=True,
+        try_insert_params_section=True,
+    )
+
+
+def _doc_window_method(
+    result,
+    method,
+    action=None,
+    win_type="rolling window",
+    params="",
+    build_rulles="aggregation",
+):
+    template = """
+        Create {win_type} and {action} for each window.
+
+        Parameters
+        ----------
+        {window_args_name} : list
+            Rolling windows arguments with the same signature as ``modin.pandas.DataFrame.rolling``.
+        {params}
+
+        Returns
+        -------
+        BaseQueryCompiler
+            New `QueryCompiler` containing {result} for each window, built by the following
+            rulles:
+            {build_rulles}
+        """
+    doc_build_rulles = {
+        "aggregation": f"""- Output `QueryCompiler` has the same shape and axes labels as the source.
+            - Each element is the {result} for the corresponding window.""",
+        "udf_aggregation": """- Labels on the specified axis is preserved.
+            - Labels on the opposit of specified axis is MultiIndex, where first level
+            contains preserved labels of this axis and the second level is the function names.
+            - Each element of `QueryCompiler` is the result of corresponding function for the
+            corresponding window and column/row.""",
+    }
+    if action is None:
+        action = f"compute {result}"
+    window_args_dict = {
+        "rolling window": "rolling_args",
+        "default": "window_args",
+    }
+    window_args_name = window_args_dict.get(win_type, window_args_dict["default"])
+
+    return _doc_qc_method(
+        template,
+        result=result,
+        action=action,
+        win_type=win_type,
+        params=params,
+        build_rulles=doc_build_rulles.get(build_rulles, build_rulles),
+        refer_to=f"Rolling.{method}",
+        window_args_name=window_args_name,
     )
 
 
@@ -4018,34 +4079,240 @@ class BaseQueryCompiler(abc.ABC):
 
     # Rolling methods
 
-    rolling_aggregate = RollingDefault.register(
-        pandas.core.window.rolling.Rolling.aggregate
+    # FIXME: most of the rolling/window methods takes *args and **kwargs parameters
+    # which only serves the compatibility with numpy, this behaviour is inherited
+    # from the API level, we should get rid of it.
+
+    @_doc_window_method(
+        result="the result of passed functions",
+        action="apply specified functions",
+        method="aggregate",
+        params="""func : str, dict, callable(pandas.Series) -> scalar, or list of such
+        *args : args
+        **kwargs : kwargs""",
+        build_rulles="udf_aggregation",
     )
-    rolling_apply = RollingDefault.register(pandas.core.window.rolling.Rolling.apply)
-    rolling_corr = RollingDefault.register(pandas.core.window.rolling.Rolling.corr)
-    rolling_count = RollingDefault.register(pandas.core.window.rolling.Rolling.count)
-    rolling_cov = RollingDefault.register(pandas.core.window.rolling.Rolling.cov)
-    rolling_kurt = RollingDefault.register(pandas.core.window.rolling.Rolling.kurt)
-    rolling_max = RollingDefault.register(pandas.core.window.rolling.Rolling.max)
-    rolling_mean = RollingDefault.register(pandas.core.window.rolling.Rolling.mean)
-    rolling_median = RollingDefault.register(pandas.core.window.rolling.Rolling.median)
-    rolling_min = RollingDefault.register(pandas.core.window.rolling.Rolling.min)
-    rolling_quantile = RollingDefault.register(
-        pandas.core.window.rolling.Rolling.quantile
+    def rolling_aggregate(self, func, *args, **kwargs):
+        return RollingDefault.register(pandas.core.window.rolling.Rolling.aggregate)(
+            self, func, *args, **kwargs
+        )
+
+    # FIXME: at the query compiler method `rolling_apply` is an alias for `rolling_aggregate`,
+    # one of these should be removed.
+    @_doc_window_method(
+        result="the result of passed function",
+        action="apply specified function",
+        method="apply",
+        params="""func : callable(pandas.Series) -> scalar
+        raw : bool, default: False
+        engine : None
+            This parameters serves the compatibility purpose. Always have to be None.
+        engine_kwargs : None
+            This parameters serves the compatibility purpose. Always have to be None.
+        args : tuple, optional
+        kwargs : dict, optional""",
+        build_rulles="udf_aggregation",
     )
-    rolling_skew = RollingDefault.register(pandas.core.window.rolling.Rolling.skew)
-    rolling_std = RollingDefault.register(pandas.core.window.rolling.Rolling.std)
-    rolling_sum = RollingDefault.register(pandas.core.window.rolling.Rolling.sum)
-    rolling_var = RollingDefault.register(pandas.core.window.rolling.Rolling.var)
+    def rolling_apply(
+        self,
+        func,
+        raw=False,
+        engine=None,
+        engine_kwargs=None,
+        args=None,
+        kwargs=None,
+    ):
+        return RollingDefault.register(pandas.core.window.rolling.Rolling.apply)(
+            self, func, raw, engine, engine_kwargs, args, kwargs
+        )
+
+    @_doc_window_method(
+        result="correlation",
+        method="corr",
+        params="""other : modin.pandas.Series, modin.pandas.DataFrame, list-like, optional
+        pairwise : bool, optional
+        *args : args
+        **kwargs : kwargs""",
+    )
+    def rolling_corr(self, other=None, pairwise=None, *args, **kwargs):
+        return RollingDefault.register(pandas.core.window.rolling.Rolling.corr)(
+            self, other, pairwise, *args, **kwargs
+        )
+
+    @_doc_window_method(result="number of non-NA values", method="count", params="")
+    def rolling_count(self):
+        return RollingDefault.register(pandas.core.window.rolling.Rolling.count)(self)
+
+    @_doc_window_method(
+        result="covariance",
+        method="cov",
+        params="""other : modin.pandas.Series, modin.pandas.DataFrame, list-like, optional
+        pairwise : bool, optional
+        ddof : int, default:  1
+        **kwargs : kwargs""",
+    )
+    def rolling_cov(self, other=None, pairwise=None, ddof=1, **kwargs):
+        return RollingDefault.register(pandas.core.window.rolling.Rolling.cov)(
+            self, other, pairwise, ddof, **kwargs
+        )
+
+    @_doc_window_method(
+        result="unibased kurtosis", method="kurt", params="**kwargs : kwargs"
+    )
+    def rolling_kurt(self, **kwargs):
+        return RollingDefault.register(pandas.core.window.rolling.Rolling.kurt)(
+            self, **kwargs
+        )
+
+    @_doc_window_method(
+        result="maximum value",
+        method="max",
+        params="""*args : args
+        **kwargs : kwargs""",
+    )
+    def rolling_max(self, *args, **kwargs):
+        return RollingDefault.register(pandas.core.window.rolling.Rolling.max)(
+            self, *args, **kwargs
+        )
+
+    @_doc_window_method(
+        result="mean value",
+        method="mean",
+        params="""*args : args
+        **kwargs : kwargs""",
+    )
+    def rolling_mean(self, *args, **kwargs):
+        return RollingDefault.register(pandas.core.window.rolling.Rolling.mean)(
+            self, *args, **kwargs
+        )
+
+    @_doc_window_method(
+        result="median value", method="median", params="**kwargs : kwargs"
+    )
+    def rolling_median(self, **kwargs):
+        return RollingDefault.register(pandas.core.window.rolling.Rolling.median)(
+            self, **kwargs
+        )
+
+    @_doc_window_method(
+        result="minimum value",
+        method="min",
+        params="""*args : args
+        **kwargs : kwargs""",
+    )
+    def rolling_min(self, *args, **kwargs):
+        return RollingDefault.register(pandas.core.window.rolling.Rolling.min)(
+            self, *args, **kwargs
+        )
+
+    @_doc_window_method(
+        result="quantile",
+        method="quantile",
+        params="""quantile : float
+        interpolation : {'linear', 'lower', 'higher', 'midpoint', 'nearest'}, default: 'linear'
+        **kwargs : kwargs""",
+    )
+    def rolling_quantile(self, quantile, interpolation="linear", **kwargs):
+        return RollingDefault.register(pandas.core.window.rolling.Rolling.quantile)(
+            self, quantile, interpolation, **kwargs
+        )
+
+    @_doc_window_method(
+        result="unibased skewness", method="skew", params="**kwargs : kwargs"
+    )
+    def rolling_skew(self, **kwargs):
+        return RollingDefault.register(pandas.core.window.rolling.Rolling.skew)(
+            self, **kwargs
+        )
+
+    @_doc_window_method(
+        result="standart deviation",
+        method="std",
+        params="""ddof : int, default: 1
+        *args : args
+        **kwargs : kwargs""",
+    )
+    def rolling_std(self, ddof=1, *args, **kwargs):
+        return RollingDefault.register(pandas.core.window.rolling.Rolling.std)(
+            self, ddof, *args, **kwargs
+        )
+
+    @_doc_window_method(
+        result="sum",
+        method="sum",
+        params="""*args : args
+        **kwargs : kwargs""",
+    )
+    def rolling_sum(self, *args, **kwargs):
+        return RollingDefault.register(pandas.core.window.rolling.Rolling.sum)(
+            self, *args, **kwargs
+        )
+
+    @_doc_window_method(
+        result="variance",
+        method="var",
+        params="""ddof : int, default: 1
+        *args : args
+        **kwargs : kwargs""",
+    )
+    def rolling_var(self, ddof=1, *args, **kwargs):
+        return RollingDefault.register(pandas.core.window.rolling.Rolling.var)(
+            self, ddof, *args, **kwargs
+        )
 
     # End of Rolling methods
 
     # Window methods
 
-    window_mean = RollingDefault.register(pandas.core.window.Window.mean)
-    window_std = RollingDefault.register(pandas.core.window.Window.std)
-    window_sum = RollingDefault.register(pandas.core.window.Window.sum)
-    window_var = RollingDefault.register(pandas.core.window.Window.var)
+    @_doc_window_method(
+        win_type="window of the specified type",
+        result="mean",
+        method="mean",
+        params="""*args : args
+        **kwargs : kwargs""",
+    )
+    def window_mean(self, *args, **kwargs):
+        return RollingDefault.register(pandas.core.window.Window.mean)(
+            self, *args, **kwargs
+        )
+
+    @_doc_window_method(
+        win_type="window of the specified type",
+        result="standart deviation",
+        method="std",
+        params="""ddof : int, default: 1
+        *args : args
+        **kwargs : kwargs""",
+    )
+    def window_std(self, ddof=1, *args, **kwargs):
+        return RollingDefault.register(pandas.core.window.Window.std)(
+            self, ddof, *args, **kwargs
+        )
+
+    @_doc_window_method(
+        win_type="window of the specified type",
+        result="sum",
+        method="sum",
+        params="""*args : args
+        **kwargs : kwargs""",
+    )
+    def window_sum(self, *args, **kwargs):
+        return RollingDefault.register(pandas.core.window.Window.sum)(
+            self, *args, **kwargs
+        )
+
+    @_doc_window_method(
+        win_type="window of the specified type",
+        result="variance",
+        method="var",
+        params="""ddof : int, default: 1
+        *args : args
+        **kwargs : kwargs""",
+    )
+    def window_var(self, ddof=1, *args, **kwargs):
+        return RollingDefault.register(pandas.core.window.Window.var)(
+            self, ddof, *args, **kwargs
+        )
 
     # End of Window methods
 
