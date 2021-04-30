@@ -9,48 +9,28 @@
 # -- Project information -----------------------------------------------------
 import sys
 import os
+import types
+
+# fake cuDF-related modules if they're missing
+for mod_name in ("cudf", "cupy"):
+    try:
+        __import__(mod_name)
+    except ImportError:
+        sys.modules[mod_name] = types.ModuleType(
+            mod_name, f"fake {mod_name} for building docs"
+        )
+if not hasattr(sys.modules["cudf"], "DataFrame"):
+    sys.modules["cudf"].DataFrame = type("DataFrame", (object,), {})
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 import modin
 
-
-def hide_lines(path, patterns_to_hide, is_unhide=False):
-    walker = os.walk(path)
-
-    for root, _, files in walker:
-        for file in files:
-            if not file.endswith(".py"):
-                continue
-
-            file_name = os.path.join(root, file)
-            with open(file_name, "r") as fd:
-                file_text = fd.readlines()
-                for i, line in enumerate(file_text):
-                    for pattern in patterns_to_hide:
-                        if is_unhide:
-                            if pattern in line:
-                                file_text[i] = line[1:]
-                        else:
-                            if pattern in line:
-                                file_text[i] = "#" + line
-            with open(file_name, "w") as fd:
-                fd.writelines(file_text)
-
-
-hide_lines(
-    os.path.abspath(
-        os.path.join(os.path.dirname(__file__), "../modin/engines/ray/cudf_on_ray")
-    ),
-    ["import cudf", "import cupy", "instance_type = cudf.DataFrame"],
-    is_unhide=False,
-)
-
-project = u"Modin"
-copyright = u"2018-2021, Modin"
-author = u"Modin contributors"
+project = "Modin"
+copyright = "2018-2021, Modin"
+author = "Modin contributors"
 
 # The short X.Y version
-version = u"{}".format(modin.__version__)
+version = "{}".format(modin.__version__)
 # The full version, including alpha/beta/rc tags
 release = version
 
@@ -99,7 +79,7 @@ language = None
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
 # This pattern also affects html_static_path and html_extra_path .
-exclude_patterns = [u"_build", "Thumbs.db", ".DS_Store"]
+exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
 
 # The name of the Pygments (syntax highlighting) style to use.
 pygments_style = "sphinx"
@@ -125,7 +105,7 @@ html_logo = "img/MODIN_ver2.png"
 html_theme_options = {
     "sidebarwidth": 270,
     "collapse_navigation": False,
-    "navigation_depth": 6,
+    "navigation_depth": 4,
 }
 
 # Custom sidebar templates, must be a dictionary that maps document names
