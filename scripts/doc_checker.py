@@ -429,10 +429,11 @@ def numpydoc_validate(path: pathlib.Path) -> bool:
                 + methods
             )
             results = list(map(validate_object, to_validate))
-            is_successfull = not any(results)
-            if not is_successfull:
+            is_successfull_file = not any(results)
+            if not is_successfull_file:
                 logging.info(f"NUMPYDOC OUTPUT FOR {current_path}")
             [logging.error(error) for errors in results for error in errors]
+            is_successfull &= is_successfull_file
     return is_successfull
 
 
