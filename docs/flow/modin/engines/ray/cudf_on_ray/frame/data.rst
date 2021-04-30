@@ -7,6 +7,6 @@ It serves an intermediate level between ``cuDFQueryCompiler`` and ``cuDFOnRayFra
 Public API
 ----------
 
-.. .. autoclass:: modin.engines.ray.cudf_on_ray.frame.data.cuDFOnRayFrame
-..   :noindex:
-..   :members:
+.. autoclass:: modin.engines.ray.cudf_on_ray.frame.data.cuDFOnRayFrame
+  :noindex:
+  :members:

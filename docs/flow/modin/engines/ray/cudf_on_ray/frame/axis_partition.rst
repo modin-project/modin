@@ -8,9 +8,9 @@ made up of list of block partitions that are stored in this class.
 Public API
 ----------
 
-.. .. autoclass:: modin.engines.ray.cudf_on_ray.frame.axis_partition.cuDFOnRayFrameAxisPartition
-..   :noindex:
-..   :members:
+.. autoclass:: modin.engines.ray.cudf_on_ray.frame.axis_partition.cuDFOnRayFrameAxisPartition
+  :noindex:
+  :members:
 
 cuOnRayFrameColumnPartition
 """""""""""""""""""""""""""
@@ -18,9 +18,9 @@ cuOnRayFrameColumnPartition
 Public API
 ----------
 
-.. .. autoclass:: modin.engines.ray.cudf_on_ray.frame.axis_partition.cuDFOnRayFrameColumnPartition
-..   :noindex:
-..   :members:
+.. autoclass:: modin.engines.ray.cudf_on_ray.frame.axis_partition.cuDFOnRayFrameColumnPartition
+  :noindex:
+  :members:
 
 cuDFOnRayFrameRowPartition
 """"""""""""""""""""""""""
@@ -28,6 +28,6 @@ cuDFOnRayFrameRowPartition
 Public API
 ----------
 
-.. .. autoclass:: modin.engines.ray.cudf_on_ray.frame.axis_partition.cuDFOnRayFrameRowPartition
-..   :noindex:
-..   :members:
+.. autoclass:: modin.engines.ray.cudf_on_ray.frame.axis_partition.cuDFOnRayFrameRowPartition
+  :noindex:
+  :members:

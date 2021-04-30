@@ -9,6 +9,6 @@ block/row/column partitions.
 Public API
 ----------
 
-.. .. autoclass:: modin.engines.ray.cudf_on_ray.frame.partition_manager.cuDFOnRayFrameManager
-..   :noindex:
-..   :members:
+.. autoclass:: modin.engines.ray.cudf_on_ray.frame.partition_manager.cuDFOnRayFrameManager
+  :noindex:
+  :members:

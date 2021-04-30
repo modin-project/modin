@@ -12,6 +12,6 @@ An operation on a block partition can be performed in two modes:
 Public API
 ----------
 
-.. .. autoclass:: modin.engines.ray.cudf_on_ray.frame.partition.cuDFOnRayFramePartition
-..   :noindex:
-..   :members:
+.. autoclass:: modin.engines.ray.cudf_on_ray.frame.partition.cuDFOnRayFramePartition
+  :noindex:
+  :members:

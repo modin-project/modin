@@ -9,18 +9,41 @@
 # -- Project information -----------------------------------------------------
 import sys
 import os
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-import ray
 
-# stub ray.remote to be a no-op so it doesn't shadow docstrings
-def noop_decorator(*args, **kwargs):
-    if len(args) == 1 and len(kwargs) == 0 and callable(args[0]):
-        # This is the case where the decorator is just @ray.remote without parameters.
-        return args[0]
-    return lambda cls_or_func: cls_or_func
-ray.remote = noop_decorator
-
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 import modin
+
+
+def hide_lines(path, patterns_to_hide, is_unhide=False):
+    walker = os.walk(path)
+
+    for root, _, files in walker:
+        for file in files:
+            if not file.endswith(".py"):
+                continue
+
+            file_name = os.path.join(root, file)
+            with open(file_name, "r") as fd:
+                file_text = fd.readlines()
+                for i, line in enumerate(file_text):
+                    for pattern in patterns_to_hide:
+                        if is_unhide:
+                            if pattern in line:
+                                file_text[i] = line[1:]
+                        else:
+                            if pattern in line:
+                                file_text[i] = "#" + line
+            with open(file_name, "w") as fd:
+                fd.writelines(file_text)
+
+
+hide_lines(
+    os.path.abspath(
+        os.path.join(os.path.dirname(__file__), "../modin/engines/ray/cudf_on_ray")
+    ),
+    ["import cudf", "import cupy", "instance_type = cudf.DataFrame"],
+    is_unhide=False,
+)
 
 project = u"Modin"
 copyright = u"2018-2021, Modin"
@@ -45,11 +68,11 @@ extensions = [
     "sphinx.ext.autodoc",
     "sphinx.ext.napoleon",
     "sphinx.ext.intersphinx",
-    'sphinx.ext.todo',
-    'sphinx.ext.mathjax',
-    'sphinx.ext.githubpages',
-    'sphinx.ext.graphviz',
-    'sphinxcontrib.plantuml',
+    "sphinx.ext.todo",
+    "sphinx.ext.mathjax",
+    "sphinx.ext.githubpages",
+    "sphinx.ext.graphviz",
+    "sphinxcontrib.plantuml",
     "sphinx_issues",
 ]
 
@@ -99,7 +122,11 @@ html_logo = "img/MODIN_ver2.png"
 # further.  For a list of options available for each theme, see the
 # documentation.
 #
-html_theme_options = {"sidebarwidth": 270, 'collapse_navigation': False, 'navigation_depth': 6}
+html_theme_options = {
+    "sidebarwidth": 270,
+    "collapse_navigation": False,
+    "navigation_depth": 6,
+}
 
 # Custom sidebar templates, must be a dictionary that maps document names
 # to template names.
