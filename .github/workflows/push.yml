@@ -160,9 +160,9 @@ jobs:
       - run: python -m pytest -n 2 modin/pandas/test/test_series.py
       - run: python -m pytest -n 2 modin/pandas/test/test_rolling.py
       - run: python -m pytest -n 2 modin/pandas/test/test_concat.py
-        if: matrix.engine != 'ray'
-      - run: python -m pytest modin/pandas/test/test_concat.py # Ray version fails with -n 2
-        if: matrix.engine == 'ray'
+        if: matrix.engine == 'python'
+      - run: python -m pytest modin/pandas/test/test_concat.py # Ray and Dask versions fails with -n 2
+        if: matrix.engine != 'python'
       - run: python -m pytest -n 2 modin/pandas/test/test_groupby.py
       - run: python -m pytest -n 2 modin/pandas/test/test_reshape.py
       - run: python -m pytest -n 2 modin/pandas/test/test_general.py
