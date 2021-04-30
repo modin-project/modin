@@ -82,36 +82,60 @@ def add_refer_to(method):
     return decorator
 
 
-def _doc_dt(prop, dt_type, method):
+def _doc_qc_method(
+    template, params=None, refer_to=None, one_column_method=False, **kwargs
+):
+    params_template = """
+        Parameters
+        ----------
+        {params}
+        """
+    params_substitution = params_template.format(params=params) if params else ""
+
+    doc_adder = doc(template, params=params_substitution, **kwargs)
+    refer_to_appender = add_refer_to(refer_to)
+
+    def decorator(func):
+        decorated = doc_adder(func)
+        if refer_to:
+            decorated = refer_to_appender(decorated)
+        if one_column_method:
+            decorated = _add_one_column_warning(decorated)
+        return decorated
+
+    return decorator
+
+
+def _doc_dt(prop, dt_type, method, params=None):
     template = """
         Get {prop} for each {dt_type} value.
-
+        {params}
         Returns
         -------
         BaseQueryCompiler
             New `QueryCompiler` with the same shape as `self`, where each element is
             {prop} for the corresponding {dt_type} value.
         """
-
-    doc_adder = doc(template, prop=prop, dt_type=dt_type)
-    refer_to_appender = add_refer_to(f"Series.dt.{method}")
-
-    def decorator(func):
-        return _add_one_column_warning(refer_to_appender(doc_adder(func)))
-
-    return decorator
-
-
-def _doc_dt_timestamp(property, method):
-    return _doc_dt(property, "date-time", method)
+    return _doc_qc_method(
+        template,
+        refer_to=f"Series.dt.{method}",
+        prop=prop,
+        dt_type=dt_type,
+        params=params,
+        one_column_method=True,
+    )
 
 
-def _doc_dt_interval(property, method):
-    return _doc_dt(property, "interval", method)
+def _doc_dt_timestamp(property, method, params=None):
+    return _doc_dt(property, "date-time", method, params)
 
 
-def _doc_dt_period(property, method):
-    return _doc_dt(property, "period", method)
+def _doc_dt_interval(property, method, params=None):
+    return _doc_dt(property, "interval", method, params)
+
+
+def _doc_dt_period(property, method, params=None):
+    return _doc_dt(property, "period", method, params)
 
 
 def _doc_str_method(method, params=None):
@@ -125,21 +149,13 @@ def _doc_str_method(method, params=None):
             against each string element.
         """
 
-    params_template = """
-        Parameters
-        ----------
-        {params}
-        """
-
-    params_substitution = params_template.format(params=params) if params else ""
-
-    doc_adder = doc(template, method=method, params=params_substitution)
-    refer_to_appender = add_refer_to(f"Series.str.{method}")
-
-    def decorator(func):
-        return _add_one_column_warning(refer_to_appender(doc_adder(func)))
-
-    return decorator
+    return _doc_qc_method(
+        template,
+        method=method,
+        params=params,
+        refer_to=f"Series.str.{method}",
+        one_column_method=True,
+    )
 
 
 class BaseQueryCompiler(abc.ABC):
@@ -2929,7 +2945,7 @@ class BaseQueryCompiler(abc.ABC):
     @_add_one_column_warning
     @add_refer_to("Series.dt.ceil")
     @doc(__doc_dt_round, method="ceil")
-    def dt_ceil(self, freq, ambiguous, nonexistent):
+    def dt_ceil(self, freq, ambiguous="raise", nonexistent="raise"):
         return DateTimeDefault.register(pandas.Series.dt.ceil)(
             self, freq, ambiguous, nonexistent
         )
@@ -2954,8 +2970,10 @@ class BaseQueryCompiler(abc.ABC):
     def dt_day(self):
         return DateTimeDefault.register(pandas.Series.dt.day)(self)
 
-    @_doc_dt_timestamp(property="day name", method="day_name")
-    def dt_day_name(self, locale):
+    @_doc_dt_timestamp(
+        property="day name", method="day_name", params="locale : str, optional"
+    )
+    def dt_day_name(self, locale=None):
         return DateTimeDefault.register(pandas.Series.dt.day_name)(self, locale)
 
     @_doc_dt_timestamp(property="integer day of week", method="dayofweek")
@@ -2989,7 +3007,7 @@ class BaseQueryCompiler(abc.ABC):
     @_add_one_column_warning
     @add_refer_to("Series.dt.floor")
     @doc(__doc_dt_round, method="floor")
-    def dt_floor(self, freq, ambiguous, nonexistent):
+    def dt_floor(self, freq, ambiguous="raise", nonexistent="raise"):
         return DateTimeDefault.register(pandas.Series.dt.floor)(
             self, freq, ambiguous, nonexistent
         )
@@ -3076,8 +3094,10 @@ class BaseQueryCompiler(abc.ABC):
     def dt_month(self):
         return DateTimeDefault.register(pandas.Series.dt.month)(self)
 
-    @_doc_dt_timestamp(property="the month name", method="month name")
-    def dt_month_name(self, locale):
+    @_doc_dt_timestamp(
+        property="the month name", method="month name", params="locale : str, optional"
+    )
+    def dt_month_name(self, locale=None):
         return DateTimeDefault.register(pandas.Series.dt.month_name)(self, locale)
 
     @_doc_dt_timestamp(property="nanoseconds component", method="nanosecond")
@@ -3112,7 +3132,7 @@ class BaseQueryCompiler(abc.ABC):
     @_add_one_column_warning
     @add_refer_to("Series.dt.round")
     @doc(__doc_dt_round, method="round")
-    def dt_round(self, freq, ambiguous, nonexistent):
+    def dt_round(self, freq, ambiguous="raise", nonexistent="raise"):
         return DateTimeDefault.register(pandas.Series.dt.round)(
             self, freq, ambiguous, nonexistent
         )
@@ -3144,7 +3164,7 @@ class BaseQueryCompiler(abc.ABC):
 
     @_add_one_column_warning
     @add_refer_to("Series.dt.to_period")
-    def dt_to_period(self, freq):
+    def dt_to_period(self, freq=None):
         """
         Convert underlying data to the period at a particular frequency.
 
@@ -3185,7 +3205,7 @@ class BaseQueryCompiler(abc.ABC):
         BaseQueryCompiler
             New `QueryCompiler` containing 1D array of `datetime.timedelta`.
         """
-        return DateTimeDefault.register(pandas.Series.dt.dt_to_pytimedelta)(self)
+        return DateTimeDefault.register(pandas.Series.dt.to_pytimedelta)(self)
 
     @_doc_dt_period(property="the timestamp representation", method="to_timestamp")
     def dt_to_timestamp(self):
@@ -3193,7 +3213,7 @@ class BaseQueryCompiler(abc.ABC):
 
     @_doc_dt_interval(property="duration in seconds", method="total_seconds")
     def dt_total_seconds(self):
-        return DateTimeDefault.register(pandas.Series.dt.dt_total_seconds)(self)
+        return DateTimeDefault.register(pandas.Series.dt.total_seconds)(self)
 
     @_add_one_column_warning
     @add_refer_to("Series.dt.tz")
@@ -3206,7 +3226,7 @@ class BaseQueryCompiler(abc.ABC):
         BaseQueryCompiler
             `QueryCompiler` containing a single value, time-zone of the data.
         """
-        return DateTimeDefault.register(pandas.Series.dt.dt_tz)(self)
+        return DateTimeDefault.register(pandas.Series.dt.tz)(self)
 
     @_add_one_column_warning
     @add_refer_to("Series.dt.tz_convert")
@@ -3227,14 +3247,14 @@ class BaseQueryCompiler(abc.ABC):
 
     @_add_one_column_warning
     @add_refer_to("Series.dt.tz_localize")
-    def dt_tz_localize(self, tz, ambiguous, nonexistent):
+    def dt_tz_localize(self, tz, ambiguous="raise", nonexistent="raise"):
         """
         Localize tz-naive to tz-aware.
 
         Parameters
         ----------
         tz : str, pytz.timezone, optional
-        ambiguous : "inner", "NaT", bool mask
+        ambiguous : "inner", "NaT", bool mask, default: "raise"
         nonexistent : "shift_forward", "shift_backward, "NaT", pandas.timedelta, default: "raise"
 
         Returns
@@ -3625,11 +3645,11 @@ class BaseQueryCompiler(abc.ABC):
     @doc(
         __doc_resample_reduction,
         method="standart error of the mean",
-        params="ddof : int",
+        params="ddof : int, default: 1",
     )
-    def resample_sem(self, resample_args, _method, ddof, *args, **kwargs):
+    def resample_sem(self, resample_args, ddof=1, *args, **kwargs):
         return ResampleDefault.register(pandas.core.resample.Resampler.sem)(
-            self, resample_args, _method, ddof, *args, **kwargs
+            self, resample_args, ddof, *args, **kwargs
         )
 
     @doc(__doc_resample_reduction, method="number of element in a group", params="")
