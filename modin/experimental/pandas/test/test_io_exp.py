@@ -24,7 +24,6 @@ from modin.pandas.test.utils import df_equals
 )
 def test_from_sql_distributed(make_sql_connection):  # noqa: F811
     if Engine.get() == "Ray":
-        pytest.xfail("Distributed read_sql is broken, see GH#2194")
         filename = "test_from_sql_distributed.db"
         table = "test_from_sql_distributed"
         conn = make_sql_connection(filename, table)
@@ -32,10 +31,20 @@ def test_from_sql_distributed(make_sql_connection):  # noqa: F811
 
         pandas_df = pandas.read_sql(query, conn)
         modin_df_from_query = pd.read_sql(
-            query, conn, partition_column="col1", lower_bound=0, upper_bound=6
+            query,
+            conn,
+            partition_column="col1",
+            lower_bound=0,
+            upper_bound=6,
+            max_sessions=2,
         )
         modin_df_from_table = pd.read_sql(
-            table, conn, partition_column="col1", lower_bound=0, upper_bound=6
+            table,
+            conn,
+            partition_column="col1",
+            lower_bound=0,
+            upper_bound=6,
+            max_sessions=2,
         )
 
         df_equals(modin_df_from_query, pandas_df)

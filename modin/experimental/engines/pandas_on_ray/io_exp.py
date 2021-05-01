@@ -130,7 +130,7 @@ class ExperimentalPandasOnRayIO(PandasOnRayIO):
             )
         #  starts the distributed alternative
         cols_names, query = get_query_info(sql, con, partition_column)
-        num_parts = min(NPartitions.get(), max_sessions)
+        num_parts = min(NPartitions.get(), max_sessions if max_sessions else 1)
         num_splits = min(len(cols_names), num_parts)
         diff = (upper_bound - lower_bound) + 1
         min_size = diff // num_parts
@@ -168,9 +168,11 @@ class ExperimentalPandasOnRayIO(PandasOnRayIO):
             )
             index_ids.append(partition_id[-1])
         new_index = pandas.RangeIndex(sum(ray.get(index_ids)))
-        return cls.query_compiler_cls(
+        new_query_compiler = cls.query_compiler_cls(
             cls.frame_cls(np.array(partition_ids), new_index, cols_names)
         )
+        new_query_compiler._modin_frame._apply_index_objs(axis=0)
+        return new_query_compiler
 
 
 @ray.remote

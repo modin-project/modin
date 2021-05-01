@@ -28,7 +28,7 @@ def make_unknown_env():
 @pytest.fixture(params=[str, ExactStr])
 def make_custom_envvar(request):
     class CustomVar(EnvironmentVariable, type=request.param):
-        """ custom var """
+        """custom var"""
 
         default = 10
         varname = "MODIN_CUSTOM"

@@ -11,6 +11,8 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
+"""Module houses `ParquetDispatcher` class, that is used for reading `.parquet` files."""
+
 import os
 
 from modin.engines.base.io.column_stores.column_store_dispatcher import (
@@ -20,26 +22,32 @@ from modin.error_message import ErrorMessage
 
 
 class ParquetDispatcher(ColumnStoreDispatcher):
+    """
+    Class handles utils for reading `.parquet` files.
+
+    Inherits some common for columnar store files util functions from
+    `ColumnStoreDispatcher` class.
+    """
+
     @classmethod
     def _read(cls, path, engine, columns, **kwargs):
-        """Load a parquet object from the file path, returning a Modin DataFrame.
-
-        Modin only supports pyarrow engine for now.
+        """
+        Load a parquet object from the file path, returning a query compiler.
 
         Parameters
         ----------
-        path: str
+        path : str, path object or file-like object
             The filepath of the parquet file in local filesystem or hdfs.
-        engine: 'pyarrow'
-            Parquet library to use
-        columns: list or None
+        engine : str
+            Parquet library to use (only 'PyArrow' is supported for now).
+        columns : list
             If not None, only these columns will be read from the file.
-        kwargs: dict
+        **kwargs : dict
             Keyword arguments.
 
         Returns
         -------
-        PandasQueryCompiler
+        BaseQueryCompiler
             A new Query Compiler.
 
         Notes

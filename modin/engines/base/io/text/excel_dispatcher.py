@@ -11,6 +11,8 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
+"""Module houses `ExcelDispatcher` class, that is used for reading excel files."""
+
 import pandas
 import re
 import sys
@@ -24,8 +26,29 @@ EXCEL_READ_BLOCK_SIZE = 4096
 
 
 class ExcelDispatcher(TextFileDispatcher):
+    """
+    Class handles utils for reading excel files.
+
+    Inherits some common for text files util functions from `TextFileDispatcher` class.
+    """
+
     @classmethod
     def _read(cls, io, **kwargs):
+        """
+        Read data from `io` according to the passed `read_excel` `kwargs` parameters.
+
+        Parameters
+        ----------
+        io : str, bytes, ExcelFile, xlrd.Book, path object, or file-like object
+            `io` parameter of `read_excel` function.
+        **kwargs : dict
+            Parameters of `read_excel` function.
+
+        Returns
+        -------
+        new_query_compiler : BaseQueryCompiler
+            Query compiler with imported data for further processing.
+        """
         if (
             kwargs.get("engine", None) is not None
             and kwargs.get("engine") != "openpyxl"

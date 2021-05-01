@@ -57,7 +57,7 @@ from .groupby import DataFrameGroupBy
 from .accessor import CachedAccessor, SparseFrameAccessor
 
 
-@_inherit_docstrings(pandas.DataFrame, excluded=[pandas.DataFrame.__init__])
+@_inherit_docstrings(pandas.DataFrame, apilink="pandas.DataFrame")
 class DataFrame(BasePandasDataset):
     _pandas_class = pandas.DataFrame
 
@@ -2132,14 +2132,6 @@ class DataFrame(BasePandasDataset):
             return df.attrs
 
         self._default_to_pandas(attrs)
-
-    @property
-    def __doc__(self):  # pragma: no cover
-        def __doc__(df):
-            """Define __name__ attr because properties do not have it."""
-            return df.__doc__
-
-        return self._default_to_pandas(__doc__)
 
     @property
     def style(self):

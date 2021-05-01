@@ -11,6 +11,8 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
+"""Module houses `HDFDispatcher` class, that is used for reading hdf data."""
+
 import pandas
 
 from modin.engines.base.io.column_stores.column_store_dispatcher import (
@@ -20,8 +22,28 @@ from modin.error_message import ErrorMessage
 
 
 class HDFDispatcher(ColumnStoreDispatcher):  # pragma: no cover
+    """
+    Class handles utils for reading hdf data.
+
+    Inherits some common for columnar store files util functions from
+    `ColumnStoreDispatcher` class.
+    """
+
     @classmethod
     def _validate_hdf_format(cls, path_or_buf):
+        """
+        Validate `path_or_buf` and then return `table_type` parameter of store group attribute.
+
+        Parameters
+        ----------
+        path_or_buf : str, buffer or path object
+            Path to the file to open, or an open :class:`pandas.HDFStore` object.
+
+        Returns
+        -------
+        str
+            `table_type` parameter of store group attribute.
+        """
         s = pandas.HDFStore(path_or_buf)
         groups = s.groups()
         if len(groups) == 0:
@@ -33,15 +55,20 @@ class HDFDispatcher(ColumnStoreDispatcher):  # pragma: no cover
 
     @classmethod
     def _read(cls, path_or_buf, **kwargs):
-        """Load a h5 file from the file path or buffer, returning a DataFrame.
+        """
+        Load an h5 file from the file path or buffer, returning a query compiler.
 
-        Args:
-            path: string, buffer or path object
-                Path to the file to open, or an open :class:`pandas.HDFStore` object.
-            kwargs: Pass into pandas.read_hdf function.
+        Parameters
+        ----------
+        path_or_buf : str, buffer or path object
+            Path to the file to open, or an open :class:`pandas.HDFStore` object.
+        **kwargs : dict
+            Pass into pandas.read_hdf function.
 
-        Returns:
-            DataFrame constructed from the h5 file.
+        Returns
+        -------
+        BaseQueryCompiler
+            Query compiler with imported data for further processing.
         """
         if cls._validate_hdf_format(path_or_buf=path_or_buf) is None:
             ErrorMessage.default_to_pandas(

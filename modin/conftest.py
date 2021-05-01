@@ -20,15 +20,35 @@ import pyarrow as pa
 import pyarrow.parquet as pq
 import shutil
 
-import modin
-import modin.config
-from modin.config import IsExperimental
+assert (
+    "modin.utils" not in sys.modules
+), "Do not import modin.utils before patching, or tests could fail"
+# every import under this assert has to be postfixed with 'noqa: E402'
+# as flake8 complains about that... but we _have_ to make sure we
+# monkey-patch at the right spot, otherwise testing doc URLs might
+# not catch all of them
+import modin.utils  # noqa: E402
 
-from modin.backends import PandasQueryCompiler, BaseQueryCompiler
-from modin.engines.python.pandas_on_python.io import PandasOnPythonIO
-from modin.data_management.factories import factories
-from modin.utils import get_current_backend
-from modin.pandas.test.utils import (
+_generated_doc_urls = set()
+
+
+def _saving_make_api_url(token, _make_api_url=modin.utils._make_api_url):
+    url = _make_api_url(token)
+    _generated_doc_urls.add(url)
+    return url
+
+
+modin.utils._make_api_url = _saving_make_api_url
+
+import modin  # noqa: E402
+import modin.config  # noqa: E402
+from modin.config import IsExperimental  # noqa: E402
+
+from modin.backends import PandasQueryCompiler, BaseQueryCompiler  # noqa: E402
+from modin.engines.python.pandas_on_python.io import PandasOnPythonIO  # noqa: E402
+from modin.data_management.factories import factories  # noqa: E402
+from modin.utils import get_current_backend  # noqa: E402
+from modin.pandas.test.utils import (  # noqa: E402
     _make_csv_file,
     get_unique_filename,
     teardown_test_files,
@@ -426,3 +446,8 @@ def TestReadGlobCSVFixture():
     yield
 
     teardown_test_files(filenames)
+
+
+@pytest.fixture
+def get_generated_doc_urls():
+    return lambda: _generated_doc_urls

@@ -7,6 +7,9 @@
 # http://www.sphinx-doc.org/en/stable/config
 
 # -- Project information -----------------------------------------------------
+import sys
+import os
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 import modin
 
 project = u"Modin"
@@ -86,7 +89,7 @@ html_logo = "img/MODIN_ver2.png"
 # further.  For a list of options available for each theme, see the
 # documentation.
 #
-html_theme_options = {"sidebarwidth": 270, 'collapse_navigation': False}
+html_theme_options = {"sidebarwidth": 270, 'collapse_navigation': False, 'navigation_depth': 6}
 
 # Custom sidebar templates, must be a dictionary that maps document names
 # to template names.

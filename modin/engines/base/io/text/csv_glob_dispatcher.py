@@ -11,6 +11,8 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
+"""Module houses `CSVGlobDispatcher` class, that is used for reading multiple `.csv` files simultaneously."""
+
 from contextlib import ExitStack
 import csv
 import glob
@@ -29,8 +31,29 @@ from modin.engines.base.io.text.csv_dispatcher import CSVDispatcher
 
 
 class CSVGlobDispatcher(CSVDispatcher):
+    """
+    Class contains utils for reading multiple `.csv` files simultaneously.
+
+    Inherits some common for `.csv` files util functions from `CSVDispatcher` class.
+    """
+
     @classmethod
     def _read(cls, filepath_or_buffer, **kwargs):
+        """
+        Read data from multiple `.csv` files passed with `filepath_or_buffer` simultaneously.
+
+        Parameters
+        ----------
+        filepath_or_buffer : str, path object or file-like object
+            `filepath_or_buffer` parameter of read_csv function.
+        **kwargs : dict
+            Parameters of `read_csv` function.
+
+        Returns
+        -------
+        new_query_compiler : BaseQueryCompiler
+            Query compiler with imported data for further processing.
+        """
         # Ensures that the file is a string file path. Otherwise, default to pandas.
         filepath_or_buffer = cls.get_path_or_buffer(filepath_or_buffer)
         if isinstance(filepath_or_buffer, str):
@@ -263,17 +286,17 @@ class CSVGlobDispatcher(CSVDispatcher):
     @classmethod
     def file_exists(cls, file_path: str) -> bool:
         """
-        Checks if the file_path is valid.
+        Check if the `file_path` is valid.
 
         Parameters
         ----------
-        file_path: str
+        file_path : str
             String representing a path.
 
         Returns
         -------
         bool
-            True if the glob path is valid.
+            True if the path is valid.
         """
         if isinstance(file_path, str):
             match = S3_ADDRESS_REGEX.search(file_path)
@@ -296,11 +319,11 @@ class CSVGlobDispatcher(CSVDispatcher):
     @classmethod
     def get_path(cls, file_path: str) -> list:
         """
-        Returns the path of the file(s).
+        Return the path of the file(s).
 
         Parameters
         ----------
-        file_path: str
+        file_path : str
             String representing a path.
 
         Returns
@@ -350,33 +373,34 @@ class CSVGlobDispatcher(CSVDispatcher):
 
         Parameters
         ----------
-        files: file or list of files
+        files : file or list of files
             File(s) to be partitioned.
-        fnames: str or list of str
+        fnames : str or list of str
             File name(s) to be partitioned.
-        num_partitions: int, optional
+        num_partitions : int, optional
             For what number of partitions split a file.
             If not specified grabs the value from `modin.config.NPartitions.get()`.
-        nrows: int, optional
+        nrows : int, optional
             Number of rows of file to read.
-        skiprows: int, optional
+        skiprows : int, optional
             Specifies rows to skip.
-        skip_header: int, optional
+        skip_header : int, optional
             Specifies header rows to skip.
-        quotechar: bytes, default b'"'
+        quotechar : bytes, default: b'"'
             Indicate quote in a file.
-        is_quoting: bool, default True
+        is_quoting : bool, default: True
             Whether or not to consider quotes.
-
-        Notes
-        -----
-        The logic gets really complicated if we try to use the TextFileDispatcher.partitioned_file().
 
         Returns
         -------
         list
             List, where each element of the list is a list of tuples. The inner lists
-            of tuples contains the data file name of the chunk, chunk start offset, and chunk end offsets for its corresponding file.
+            of tuples contains the data file name of the chunk, chunk start offset, and
+            chunk end offsets for its corresponding file.
+
+        Notes
+        -----
+        The logic gets really complicated if we try to use the `TextFileDispatcher.partitioned_file`.
         """
         if type(files) != list:
             files = [files]

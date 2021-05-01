@@ -157,7 +157,7 @@ class TestCSV:
     }
 
     def test_usecols_csv(self):
-        """ check with the following arguments: names, dtype, skiprows, delimiter """
+        """check with the following arguments: names, dtype, skiprows, delimiter"""
         csv_file = os.path.join(self.root, "modin/pandas/test/data", "test_usecols.csv")
 
         for kwargs in (

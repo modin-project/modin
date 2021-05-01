@@ -11,71 +11,195 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
+"""Collection of general utility functions, mostly for internal use."""
+
+import types
+
 import pandas
 import numpy as np
 
 from modin.config import Engine, Backend, IsExperimental
 
-
-def _inherit_func_docstring(source_func):
-    """Define `func` docstring from `source_func`."""
-
-    def decorator(func):
-        func.__doc__ = source_func.__doc__
-        return func
-
-    return decorator
+PANDAS_API_URL_TEMPLATE = f"https://pandas.pydata.org/pandas-docs/version/{pandas.__version__}/reference/api/{{}}.html"
 
 
-def _inherit_docstrings(parent, excluded=[]):
-    """Creates a decorator which overwrites a decorated class' __doc__
-    attribute with parent's __doc__ attribute. Also overwrites __doc__ of
-    methods and properties defined in the class with the __doc__ of matching
-    methods and properties in parent.
+def _make_api_url(token):
+    """
+    Generate the link to pandas documentation.
 
-    Args:
-        parent (object): Class from which the decorated class inherits __doc__.
-        excluded (list): List of parent objects from which the class does not
-            inherit docstrings.
+    Parameters
+    ----------
+    token : str
+        Part of URL to use for generation.
 
-    Returns:
-        function: decorator which replaces the decorated class' documentation
-            parent's documentation.
+    Returns
+    -------
+    str
+        URL to pandas doc.
+
+    Notes
+    -----
+    This function is extracted for better testability.
+    """
+    return PANDAS_API_URL_TEMPLATE.format(token)
+
+
+def _replace_doc(
+    source_obj, target_obj, overwrite, apilink, parent_cls=None, attr_name=None
+):
+    """
+    Replace docstring in `target_obj`, possibly taking from `source_obj` and augmenting.
+
+    Can append the link to pandas API online documentation.
+
+    Parameters
+    ----------
+    source_obj : object
+        Any object from which to take docstring from.
+    target_obj : object
+        The object which docstring to replace.
+    overwrite : bool
+        Forces replacing the docstring with the one from `source_obj` even
+        if `target_obj` has its own non-empty docstring.
+    apilink : str
+        If non-empty, insert the link to pandas API documentation.
+        Should be the prefix part in the URL template, e.g. "pandas.DataFrame".
+    parent_cls : class, optional
+        If `target_obj` is an attribute of a class, `parent_cls` should be that class.
+        This is used for generating the API URL as well as for handling special cases
+        like `target_obj` being a property.
+    attr_name : str, optional
+        Gives the name to `target_obj` if it's an attribute of `parent_cls`.
+        Needed to handle some special cases and in most cases could be determined automatically.
+    """
+    source_doc = source_obj.__doc__ or ""
+    target_doc = target_obj.__doc__ or ""
+    doc = source_doc if overwrite or not target_doc else target_doc
+
+    if parent_cls and not attr_name:
+        if isinstance(target_obj, property):
+            attr_name = target_obj.fget.__name__
+        elif isinstance(target_obj, (staticmethod, classmethod)):
+            attr_name = target_obj.__func__.__name__
+        else:
+            attr_name = target_obj.__name__
+
+    if (
+        source_doc.strip()
+        and apilink
+        and "Pandas API documentation <" not in target_doc
+        and (not (attr_name or "").startswith("_"))
+    ):
+        if attr_name:
+            token = f"{apilink}.{attr_name}"
+        else:
+            token = apilink
+        url = _make_api_url(token)
+        doc += f"\n\nSee `Pandas API documentation <{url}>`_ for more."
+
+    if parent_cls and isinstance(target_obj, property):
+        setattr(
+            parent_cls,
+            target_obj.fget.__name__,
+            property(target_obj.fget, target_obj.fset, target_obj.fdel, doc),
+        )
+    else:
+        target_obj.__doc__ = doc
+
+
+def _inherit_docstrings(parent, excluded=[], overwrite_existing=False, apilink=None):
+    """
+    Create a decorator which overwrites decorated object docstring(s).
+
+    It takes `parent` __doc__ attribute. Also overwrites __doc__ of
+    methods and properties defined in the target if it's a class with the __doc__ of
+    matching methods and properties from the `parent`.
+
+    Parameters
+    ----------
+    parent : object
+        Parent object from which the decorated object inherits __doc__.
+    excluded : list, optional
+        List of parent objects from which the class does not
+        inherit docstrings.
+    overwrite_existing : bool, default: False
+        Allow overwriting docstrings that already exist in
+        the decorated class.
+    apilink : str, default: None
+        If non-empty, insert the link to pandas API documentation.
+        Should be the prefix part in the URL template, e.g. "pandas.DataFrame".
+
+    Returns
+    -------
+    callable
+        Decorator which replaces the decorated object's documentation with `parent` documentation.
     """
 
-    def decorator(cls):
+    def _documentable_obj(obj):
+        """Check if `obj` docstring could be patched."""
+        return callable(obj) or (isinstance(obj, property) and obj.fget)
+
+    def decorator(cls_or_func):
         if parent not in excluded:
-            cls.__doc__ = parent.__doc__
-        for attr, obj in cls.__dict__.items():
-            parent_obj = getattr(parent, attr, None)
-            if parent_obj in excluded or (
-                not callable(parent_obj) and not isinstance(parent_obj, property)
-            ):
-                continue
-            if callable(obj):
-                obj.__doc__ = parent_obj.__doc__
-            elif isinstance(obj, property) and obj.fget is not None:
-                p = property(obj.fget, obj.fset, obj.fdel, parent_obj.__doc__)
-                setattr(cls, attr, p)
-        return cls
+            _replace_doc(parent, cls_or_func, overwrite_existing, apilink)
+
+        if not isinstance(cls_or_func, types.FunctionType):
+            for base in cls_or_func.__bases__:
+                if base is object:
+                    continue
+                for attr, obj in base.__dict__.items():
+                    parent_obj = getattr(parent, attr, None)
+                    if (
+                        parent_obj in excluded
+                        or not _documentable_obj(parent_obj)
+                        or not _documentable_obj(obj)
+                    ):
+                        continue
+
+                    _replace_doc(
+                        parent_obj,
+                        obj,
+                        overwrite_existing,
+                        apilink,
+                        parent_cls=cls_or_func,
+                        attr_name=attr,
+                    )
+
+        return cls_or_func
 
     return decorator
 
 
 def to_pandas(modin_obj):
-    """Converts a Modin DataFrame/Series to a pandas DataFrame/Series.
+    """
+    Convert a Modin DataFrame/Series to a pandas DataFrame/Series.
 
-    Args:
-        obj {modin.DataFrame, modin.Series}: The Modin DataFrame/Series to convert.
+    Parameters
+    ----------
+    modin_obj : modin.DataFrame, modin.Series
+        The Modin DataFrame/Series to convert.
 
-    Returns:
-        A new pandas DataFrame or Series.
+    Returns
+    -------
+    pandas.DataFrame or pandas.Series
+        Converted object with type depending on input.
     """
     return modin_obj._to_pandas()
 
 
 def hashable(obj):
-    """Return whether the object is hashable."""
+    """
+    Return whether the `obj` is hashable.
+
+    Parameters
+    ----------
+        obj : object
+            The object to check.
+
+    Returns
+    -------
+    bool
+    """
     try:
         hash(obj)
     except TypeError:
@@ -85,17 +209,21 @@ def hashable(obj):
 
 def try_cast_to_pandas(obj, squeeze=False):
     """
-    Converts obj and all nested objects from modin to pandas if it is possible,
-    otherwise returns obj
+    Convert `obj` and all nested objects from Modin to pandas if it is possible.
+
+    If no convertion possible return `obj`.
 
     Parameters
     ----------
-        obj : object,
-            object to convert from modin to pandas
+    obj : object
+        Object to convert from Modin to pandas.
+    squeeze : bool, default: False
+        Squeeze the converted object(s) before returning them.
 
     Returns
     -------
-        Converted object
+    object
+        Converted object.
     """
     if hasattr(obj, "_to_pandas"):
         result = obj._to_pandas()
@@ -131,17 +259,22 @@ def try_cast_to_pandas(obj, squeeze=False):
 
 def wrap_into_list(*args, skipna=True):
     """
-    Creates a list of passed values, if some value is a list it appends its values
+    Wrap a sequence of passed values in a flattened list.
+
+    If some value is a list by itself the function appends its values
     to the result one by one instead inserting the whole list object.
 
     Parameters
     ----------
-    skipna: boolean,
+    *args : tuple
+        Objects to wrap into a list.
+    skipna : bool, default: True
         Whether or not to skip nan or None values.
 
     Returns
     -------
-    List of passed values.
+    list
+        Passed values wrapped in a list.
     """
 
     def isnan(o):
@@ -159,6 +292,19 @@ def wrap_into_list(*args, skipna=True):
 
 
 def wrap_udf_function(func):
+    """
+    Create a decorator that makes `func` return pandas objects instead of Modin.
+
+    Parameters
+    ----------
+        func : callable
+            Function to wrap.
+
+    Returns
+    -------
+    callable
+    """
+
     def wrapper(*args, **kwargs):
         result = func(*args, **kwargs)
         # if user accidently returns modin DataFrame or Series
@@ -170,4 +316,12 @@ def wrap_udf_function(func):
 
 
 def get_current_backend():
+    """
+    Compose current backend and factory names as a string.
+
+    Returns
+    -------
+    str
+        Returns <Backend>On<Engine>-like string.
+    """
     return f"{'Experimental' if IsExperimental.get() else ''}{Backend.get()}On{Engine.get()}"
