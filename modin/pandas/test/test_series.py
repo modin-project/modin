@@ -2346,7 +2346,7 @@ def test_prod(axis, skipna):
     "numeric_only",
     [
         None,
-        pytest.param(False, marks=pytest.mark.skipif(reason="See pandas issue #41074")),
+        pytest.param(False, marks=pytest.mark.xfail(reason="See pandas issue #41074")),
         pytest.param(True, marks=pytest.mark.xfail(reason="didn't raise Exception")),
     ],
 )
@@ -3036,7 +3036,7 @@ def test_subtract(data):
     "numeric_only",
     [
         None,
-        pytest.param(False, marks=pytest.mark.skipif(reason="See pandas issue #41074")),
+        pytest.param(False, marks=pytest.mark.xfail(reason="See pandas issue #41074")),
         True,
     ],
 )
