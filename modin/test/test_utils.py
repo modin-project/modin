@@ -15,6 +15,8 @@ import pytest
 import modin.utils
 
 
+# Note: classes below are used for purely testing purposes - they
+# simulate real-world use cases for _inherit_docstring
 class BaseParent:
     def method(self):
         """ordinary method (base)"""
