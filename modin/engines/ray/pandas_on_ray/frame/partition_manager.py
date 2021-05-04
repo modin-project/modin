@@ -95,12 +95,12 @@ def func(df, apply_func, call_queue_df=None, call_queues_other=None, *others):
         Dataframe to which `apply_func` will be applied.
         After running function, automaterialization
         ray.ObjectRef->pandas.DataFrame happens.
-    apply_func : callable or ray.ObjectRef
+    apply_func : {callable, ray.ObjectRef}
         The function to apply.
-    call_queue_df : list, default: None
-        The call_queue to be executed on `df`.
-    call_queues_other : list, default: None
-        The call_queue to be executed on `others`.
+    call_queue_df : list, optional
+        The call queue to be executed on `df`.
+    call_queues_other : list, optional
+        The call queue to be executed on `others`.
     *others : iterable
         List of other parameters.
 
@@ -144,10 +144,10 @@ class PandasOnRayFrameManager(RayFrameManager):
 
         Parameters
         ----------
-        axis : 0 or 1
+        axis : {0, 1}
             Axis to extract the labels over.
         partitions : np.ndarray
-            NumPy array with PandasOnRayFramePartition's.
+            NumPy array with BaseFramePartition's.
         index_func : callable, default: None
             The function to be used to extract the indices.
 
@@ -183,26 +183,26 @@ class PandasOnRayFrameManager(RayFrameManager):
     @classmethod
     def broadcast_apply(cls, axis, apply_func, left, right, other_name="r"):
         """
-        Broadcast the `right` partitions to `left` and apply `apply_func` function.
+        Broadcast the `right` partitions to `left` and apply `apply_func` to selected indices.
 
         Parameters
         ----------
-        axis : int (0 or 1)
+        axis : {0, 1}
             Axis to apply and broadcast over.
         apply_func : callable
             Function to apply.
-        left : NumPy 2D array
-            Left partitions.
-        right : NumPy 2D array
-            Right partitions.
+        left : np.ndarray
+            NumPy 2D array of left partitions.
+        right : np.ndarray
+            NumPy 2D array of right partitions.
         other_name : str, default: "r"
             Name of key-value argument for `apply_func` that
             is used to pass `right` to `apply_func`.
 
         Returns
         -------
-        NumPy array
-            An of partition objects.
+        np.ndarray
+            An array of partition objects.
         """
 
         def mapper(df, others):
@@ -243,15 +243,15 @@ class PandasOnRayFrameManager(RayFrameManager):
 
         Parameters
         ----------
-        partitions : NumPy 2D array
-            Partitions housing the data of Modin Frame.
+        partitions : np.ndarray
+            A NumPy 2D array of partitions to perform operation on.
         map_func : callable
             Function to apply.
 
         Returns
         -------
-        NumPy array
-            An array of partitions
+        np.ndarray
+            A NumPy array of partitions.
         """
         return super(PandasOnRayFrameManager, cls).map_partitions(partitions, map_func)
 
@@ -263,15 +263,15 @@ class PandasOnRayFrameManager(RayFrameManager):
 
         Parameters
         ----------
-        partitions : NumPy 2D array
-            Partitions of Modin Frame.
+        partitions : np.ndarray
+            A NumPy 2D array of partitions to perform operation on.
         map_func : callable
             Function to apply.
 
         Returns
         -------
-        NumPy array
-            An array of partitions
+        np.ndarray
+            A NumPy array of partitions.
         """
         return super(PandasOnRayFrameManager, cls).lazy_map_partitions(
             partitions, map_func
@@ -293,10 +293,10 @@ class PandasOnRayFrameManager(RayFrameManager):
 
         Parameters
         ----------
-        axis : 0 or 1
+        axis : {0, 1}
             Axis to perform the map across (0 - index, 1 - columns).
-        partitions : NumPy 2D array
-            Partitions of Modin Frame.
+        partitions : np.ndarray
+            A NumPy 2D array of partitions to perform operation on.
         map_func : callable
             Function to apply.
         keep_partitioning : bool, default: False
@@ -310,8 +310,8 @@ class PandasOnRayFrameManager(RayFrameManager):
 
         Returns
         -------
-        NumPy array
-            An array of new partitions for Modin Frame.
+        np.ndarray
+            A NumPy array of new partitions for Modin Frame.
 
         Notes
         -----
@@ -326,7 +326,7 @@ class PandasOnRayFrameManager(RayFrameManager):
     @progress_bar_wrapper
     def _apply_func_to_list_of_partitions(cls, func, partitions, **kwargs):
         """
-        Apply a function to a list of remote partitions.
+        Apply a `func` to a list of remote `partitions`.
 
         Parameters
         ----------
@@ -340,7 +340,7 @@ class PandasOnRayFrameManager(RayFrameManager):
         Returns
         -------
         list
-            A list of RayFramePartition objects.
+            A list of ``RayFramePartition`` objects.
 
         Notes
         -----
@@ -356,11 +356,11 @@ class PandasOnRayFrameManager(RayFrameManager):
         cls, axis, partitions, func, indices, keep_remaining=False
     ):
         """
-        Apply a function to select indices.
+        Apply a `func` to select indices of `partitions`.
 
         Parameters
         ----------
-        axis : 0 or 1
+        axis : {0, 1}
             Axis to apply the `func` over.
         partitions : np.ndarray
             The partitions to which the `func` will apply.
@@ -394,12 +394,12 @@ class PandasOnRayFrameManager(RayFrameManager):
         cls, axis, partitions, func, indices, keep_remaining=False
     ):
         """
-        Apply a function to a select subset of full columns/rows.
+        Apply a `func` to a select subset of full columns/rows.
 
         Parameters
         ----------
-        axis : 0 or 1
-            The axis to apply the function over.
+        axis : {0, 1}
+            The axis to apply the `func` over.
         partitions : np.ndarray
             The partitions to which the `func` will apply.
         func : callable
@@ -453,7 +453,7 @@ class PandasOnRayFrameManager(RayFrameManager):
             List of row partitions.
         col_partitions_list : list
             List of column partitions.
-        item_to_distribute : item, default: None
+        item_to_distribute : item, optional
             The item to split up so it can be applied over both axes.
 
         Returns
@@ -483,7 +483,7 @@ class PandasOnRayFrameManager(RayFrameManager):
 
         Parameters
         ----------
-        axis : 0 or 1
+        axis : {0, 1}
             The axis to apply the function over (0 - rows, 1 - columns).
         left : np.ndarray
             The partitions of left PandasOnRayFrame.
