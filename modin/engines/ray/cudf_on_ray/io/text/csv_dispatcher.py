@@ -72,7 +72,7 @@ class cuDFCSVDispatcher(CSVDispatcher):
         ----------
         splits : list
             List of tuples with partitions data, which defines
-            parser task (start/end read bytes and etc.)
+            parser task (start/end read bytes and etc).
         **partition_kwargs : dict
             Dictionary with keyword args that will be passed to the parser function.
 

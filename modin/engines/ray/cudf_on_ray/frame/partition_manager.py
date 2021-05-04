@@ -49,7 +49,7 @@ def func(df, other, apply_func):
     -------
     The type of return of `apply_func`
         The result of the `apply_func`
-        (will be a ray.ObjectRef in outside level).
+        (will be a ``ray.ObjectRef`` in outside level).
     """
     return apply_func(ray.get(df.get.remote()), ray.get(other.get.remote()))
 
@@ -72,13 +72,13 @@ class cuDFOnRayFrameManager(RayFrameManager):
             List of keys associated with dataframes in
             `gpu_managers`.
         gpu_managers : list
-            List of `GPUManager` object, which stores
+            List of ``GPUManager`` objects, which stores
             dataframes.
 
         Returns
         -------
-        NumPy array
-            A NumPy array of cuDFOnRayFramePartition objects.
+        np.ndarray
+            A NumPy array of ``cuDFOnRayFramePartition`` objects.
         """
         return np.array(
             [
@@ -101,12 +101,12 @@ class cuDFOnRayFrameManager(RayFrameManager):
     @classmethod
     def from_pandas(cls, df, return_dims=False):
         """
-        Create partitions from pandas.DataFrame/Series.
+        Create partitions from ``pandas.DataFrame/pandas.Series``.
 
         Parameters
         ----------
-        df : pandas.DataFrame/Series
-            A pandas.DataFrame to add.
+        df : pandas.DataFrame/pandas.Series
+            A ``pandas.DataFrame`` to add.
         return_dims : boolean, default: False
             Is return dimensions or not.
 
@@ -143,20 +143,22 @@ class cuDFOnRayFrameManager(RayFrameManager):
         Apply `map_func` to every partition lazily.
 
         Compared to Modin-CPU, Modin-GPU lazy version represents:
-        (1) A scheduled function in the ray task graph.
+
+        (1) A scheduled function in the Ray task graph.
+
         (2) A non-materialized key.
 
         Parameters
         ----------
-        partitions : NumPy array
+        partitions : np.ndarray
             NumPy array with partitions.
-        map_func: callable
+        map_func : callable
            The function to apply.
 
         Returns
         -------
-        NumPy array
-            A NumPy array of cuDFOnRayFramePartition objects.
+        np.ndarray
+            A NumPy array of ``cuDFOnRayFramePartition`` objects.
         """
         preprocessed_map_func = cls.preprocess_func(map_func)
         partitions_flat = partitions.flatten()
@@ -177,19 +179,15 @@ class cuDFOnRayFrameManager(RayFrameManager):
         ----------
         func : callable
             The function to apply.
-        partitions : NumPy array
+        partitions : np.ndarray
             NumPy array with partitions.
         **kwargs : dict
             Additional keywords arguments to be passed in `func`.
 
         Returns
         -------
-            A list of cuDFOnRayFrameManager objects.
-
-        Notes
-        -----
-        NumPy array
-            A NumPy array of cuDFOnRayFramePartition objects.
+        np.ndarray
+            A NumPy array of ``cuDFOnRayFrameManager`` objects.
         """
         preprocessed_map_func = cls.preprocess_func(func)
         key_futures = ray.get(

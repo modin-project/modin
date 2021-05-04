@@ -24,7 +24,26 @@ from modin.error_message import ErrorMessage
 
 
 class cuDFOnRayFrame(PandasOnRayFrame):
-    """The class implements ``PandasOnRayFrame`` using cuDF."""
+    """
+    The class implements ``PandasOnRayFrame`` using cuDF.
+
+    Parameters
+    ----------
+    partitions : np.ndarray
+        A 2D NumPy array of partitions.
+    index : sequence
+        The index for the dataframe. Converted to a ``pandas.Index``.
+    columns : sequence
+        The columns object for the dataframe. Converted to a ``pandas.Index``.
+    row_lengths : list, optional
+        The length of each partition in the rows. The "height" of
+        each of the block partitions. Is computed if not provided.
+    column_widths : list, optional
+        The width of each partition in the columns. The "width" of
+        each of the block partitions. Is computed if not provided.
+    dtypes : pandas.Series, optional
+        The data types for the dataframe columns.
+    """
 
     _frame_mgr_cls = cuDFOnRayFrameManager
 
@@ -116,7 +135,7 @@ class cuDFOnRayFrame(PandasOnRayFrame):
         Returns
         -------
         cuDFOnRayFrame
-             A new cuDFOnRayFrame from the mask provided.
+             A new ``cuDFOnRayFrame`` from the mask provided.
 
         Notes
         -----

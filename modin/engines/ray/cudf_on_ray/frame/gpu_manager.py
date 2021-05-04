@@ -11,7 +11,7 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-"""Module holds Ray actor-class that stored cudf.DataFrame's."""
+"""Module holds Ray actor-class that stored ``cudf.DataFrame``s."""
 
 import ray
 import cudf
@@ -21,7 +21,7 @@ import pandas
 @ray.remote(num_gpus=1)
 class GPUManager(object):
     """
-    Ray actor-class to store cudf.DataFrame's and execute functions on it.
+    Ray actor-class to store ``cudf.DataFrame``s and execute functions on it.
 
     Parameters
     ----------
@@ -47,13 +47,13 @@ class GPUManager(object):
             The second key associated with dataframe from `self.cudf_dataframe_dict`.
         func : callable
             A function to apply.
-        **kwargs: dict
+        **kwargs : dict
             Additional keywords arguments to be passed in `func`.
 
         Returns
         -------
         The type of return of `func`
-            The result of the `func` (will be a ray.ObjectRef in outside level).
+            The result of the `func` (will be a ``ray.ObjectRef`` in outside level).
         """
         df1 = self.cudf_dataframe_dict[first]
         df2 = self.cudf_dataframe_dict[other] if other else None
@@ -67,7 +67,7 @@ class GPUManager(object):
         """
         Apply `func` to values associated with `first`/`other` keys of `self.cudf_dataframe_dict`.
 
-        Store the return value of `func` (a new cudf.DataFrame)
+        Store the return value of `func` (a new ``cudf.DataFrame``)
         into `self.cudf_dataframe_dict`.
 
         Parameters
@@ -78,14 +78,14 @@ class GPUManager(object):
             The second key associated with dataframe from `self.cudf_dataframe_dict`.
         func : callable
             A function to apply.
-        **kwargs: dict
+        **kwargs : dict
             Additional keywords arguments to be passed in `func`.
 
         Returns
         -------
         int
-            The new key of the new dataFrame stored in `self.cudf_dataframe_dict`
-            (will be a ray.ObjectRef in outside level).
+            The new key of the new dataframe stored in `self.cudf_dataframe_dict`
+            (will be a ``ray.ObjectRef`` in outside level).
         """
         df1 = self.cudf_dataframe_dict[first]
         if not other:
@@ -103,10 +103,10 @@ class GPUManager(object):
         """
         Apply `func` to values associated with `first`/`others` keys of `self.cudf_dataframe_dict`.
 
-        Dataframes associated with `others` keys will be concatenated to one df2
+        Dataframes associated with `others` keys will be concatenated to one
         dataframe.
 
-        Store the return value of `func` (a new cudf.DataFrame)
+        Store the return value of `func` (a new ``cudf.DataFrame``)
         into `self.cudf_dataframe_dict`.
 
         Parameters
@@ -117,16 +117,16 @@ class GPUManager(object):
             The list of keys associated with dataframe from `self.cudf_dataframe_dict`.
         func : callable
             A function to apply.
-        axis : {0, 1}
-            An axis corresponding to a particular row/column of the dataFrame.
-        **kwargs: dict
+        axis : {0, 1}, default: 0
+            An axis corresponding to a particular row/column of the dataframe.
+        **kwargs : dict
             Additional keywords arguments to be passed in `func`.
 
         Returns
         -------
         int
-            The new key of the new dataFrame stored in `self.cudf_dataframe_dict`
-            (will be a ray.ObjectRef in outside level).
+            The new key of the new dataframe stored in `self.cudf_dataframe_dict`
+            (will be a ``ray.ObjectRef`` in outside level).
         """
         # TODO: Try to use `axis` parameter of cudf.concat
         join_func = (
@@ -150,13 +150,13 @@ class GPUManager(object):
         Parameters
         ----------
         df : cudf.DataFrame
-            The cudf.DataFrame to be added.
+            The ``cudf.DataFrame`` to be added.
 
         Returns
         -------
         int
             The key associated with added dataframe
-            (will be a ray.ObjectRef in outside level).
+            (will be a ``ray.ObjectRef`` in outside level).
         """
         self.key += 1
         self.cudf_dataframe_dict[self.key] = df
@@ -182,7 +182,7 @@ class GPUManager(object):
         -------
         int
             The gpu_id from this object
-            (will be a ray.ObjectRef in outside level).
+            (will be a ``ray.ObjectRef`` in outside level).
         """
         return self.gpu_id
 
@@ -198,7 +198,7 @@ class GPUManager(object):
         Returns
         -------
         cudf.DataFrame
-            Dataframe corresponded to `key`(will be a ray.ObjectRef
+            Dataframe corresponded to `key`(will be a ``ray.ObjectRef``
             in outside level).
         """
         return self.cudf_dataframe_dict[key]
@@ -216,7 +216,7 @@ class GPUManager(object):
         -------
         int
             The key associated with added dataframe
-            (will be a ray.ObjectRef in outside level).
+            (will be a ``ray.ObjectRef`` in outside level).
         """
         if isinstance(pandas_df, pandas.Series):
             pandas_df = pandas_df.to_frame()

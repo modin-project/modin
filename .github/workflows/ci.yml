@@ -83,15 +83,7 @@ jobs:
             modin/engines/ray/pandas_on_ray/frame/axis_partition.py \
             modin/engines/ray/pandas_on_ray/frame/data.py \
             modin/engines/ray/pandas_on_ray/frame/partition_manager.py
-      - run: |
-          python scripts/doc_checker.py --disable-numpydoc \
-            modin/engines/ray/cudf_on_ray/frame/axis_partition.py \
-            modin/engines/ray/cudf_on_ray/frame/data.py \
-            modin/engines/ray/cudf_on_ray/frame/gpu_manager.py \
-            modin/engines/ray/cudf_on_ray/frame/partition_manager.py \
-            modin/engines/ray/cudf_on_ray/frame/partition.py \
-            modin/engines/ray/cudf_on_ray/io/io.py \
-            modin/engines/ray/cudf_on_ray/io/text/csv_dispatcher.py
+      - run: python scripts/doc_checker.py modin/engines/ray/cudf_on_ray
       - run: python scripts/doc_checker.py scripts/doc_checker.py
       - run: |
           python scripts/doc_checker.py modin/experimental/pandas/io_exp.py \

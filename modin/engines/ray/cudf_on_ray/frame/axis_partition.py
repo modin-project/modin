@@ -25,8 +25,8 @@ class cuDFOnRayFrameAxisPartition(object):
 
     Parameters
     ----------
-    partitions : NumPy array
-        NumPy array with cuDFOnRayFramePartition's.
+    partitions : np.ndarray
+        NumPy array with ``cuDFOnRayFramePartition``-s.
     """
 
     def __init__(self, partitions):
@@ -37,7 +37,14 @@ class cuDFOnRayFrameAxisPartition(object):
 
 
 class cuDFOnRayFrameColumnPartition(cuDFOnRayFrameAxisPartition):
-    """The column partition implementation of ``cuDFOnRayFrameAxisPartition``."""
+    """
+    The column partition implementation of ``cuDFOnRayFrameAxisPartition``.
+
+    Parameters
+    ----------
+    partitions : np.ndarray
+        NumPy array with ``cuDFOnRayFramePartition``-s.
+    """
 
     axis = 0
 
@@ -71,7 +78,14 @@ class cuDFOnRayFrameColumnPartition(cuDFOnRayFrameAxisPartition):
 
 
 class cuDFOnRayFrameRowPartition(cuDFOnRayFrameAxisPartition):
-    """The row partition implementation of ``cuDFOnRayFrameAxisPartition``."""
+    """
+    The row partition implementation of ``cuDFOnRayFrameAxisPartition``.
+
+    Parameters
+    ----------
+    partitions : np.ndarray
+        NumPy array with ``cuDFOnRayFramePartition``-s.
+    """
 
     axis = 1
 

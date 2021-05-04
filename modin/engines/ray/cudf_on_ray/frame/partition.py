@@ -32,11 +32,11 @@ class cuDFOnRayFramePartition(BaseFramePartition):
         A gpu manager to store cuDF dataframes.
     key : ray.ObjectRef or int
         An integer key(or reference to key) associated with
-        cudf.DataFrame stored in `gpu_manager`.
+        ``cudf.DataFrame`` stored in `gpu_manager`.
     length : ray.ObjectRef or int, optional
-        Length or reference to it of wrapped pandas DataFrame.
+        Length or reference to it of wrapped ``pandas.DataFrame``.
     width : ray.ObjectRef or int, optional
-        Width or reference to it of wrapped pandas DataFrame.
+        Width or reference to it of wrapped ``pandas.DataFrame``.
     """
 
     _length_cache = None
@@ -54,7 +54,14 @@ class cuDFOnRayFramePartition(BaseFramePartition):
         self._width_cache = width
 
     def __copy__(self):
-        """Create a copy of this object."""
+        """
+        Create a copy of this object.
+
+        Returns
+        -------
+        cuDFOnRayFramePartition
+            A copy of this object.
+        """
         # Shallow copy.
         return cuDFOnRayFramePartition(
             self.gpu_manager, self.key, self._length_cache, self._width_cache
@@ -70,7 +77,7 @@ class cuDFOnRayFramePartition(BaseFramePartition):
         gpu_manager : modin.engines.ray.cudf_on_ray.frame.GPUManager
             A gpu manager to store cuDF dataframes.
         pandas_dataframe : pandas.DataFrame/pandas.Series
-            A pandas DataFrame/Series to put.
+            A ``pandas.DataFrame/pandas.Series`` to put.
 
         Returns
         -------
@@ -240,7 +247,14 @@ class cuDFOnRayFramePartition(BaseFramePartition):
         )
 
     def get_gpu_manager(self):
-        """Get gpu manager associated with this partition."""
+        """
+        Get gpu manager associated with this partition.
+
+        Returns
+        -------
+        modin.engines.ray.cudf_on_ray.frame.GPUManager
+            ``GPUManager`` associated with this object.
+        """
         return self.gpu_manager
 
     def get_key(self):
@@ -321,7 +335,8 @@ class cuDFOnRayFramePartition(BaseFramePartition):
         self.gpu_manager.free.remote(self.get_key())
 
     def copy(self):
-        """Create a full copy of this object.
+        """
+        Create a full copy of this object.
 
         Returns
         -------
