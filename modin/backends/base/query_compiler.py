@@ -33,28 +33,6 @@ import numpy as np
 from typing import List, Hashable
 
 
-def _get_axis(axis):
-    """Build index labels getter of the specified axis."""
-
-    def axis_getter(self):
-        ErrorMessage.default_to_pandas(f"DataFrame.get_axis({axis})")
-        return self.to_pandas().axes[axis]
-
-    return axis_getter
-
-
-def _set_axis(axis):
-    """Build index labels setter of the specified axis."""
-
-    def axis_setter(self, labels):
-        new_qc = DataFrameDefault.register(pandas.DataFrame.set_axis)(
-            self, axis=axis, labels=labels
-        )
-        self.__dict__.update(new_qc.__dict__)
-
-    return axis_setter
-
-
 _add_one_column_warning = Appender(
     """
 .. warning::
@@ -63,6 +41,18 @@ This method is supported only by one-column query compilers."""
 
 
 def add_refer_to(method):
+    """
+    Build decorator which appends link to the high-level equivalent method to the function docstring.
+
+    Parameters
+    ----------
+    method : str
+        Method name in ``modin.pandas`` module to refer to.
+
+    Returns
+    -------
+    callable
+    """
     add_note = Appender(
         # TODO: add direct hyper-link to the corresponding documentation when
         # it will be generated.
@@ -90,6 +80,32 @@ def _doc_qc_method(
     try_insert_params_section=False,
     **kwargs,
 ):
+    """
+    Build decorator which adds docstring for query compiler method.
+
+    Parameters
+    ----------
+    template : str
+        Method docstring in the numpy docstyle format. Must contains {params}
+        placeholder.
+    params : str, optional
+        Method parameters in the numpy docstyle format to substitute
+        to the `template`.
+    refer_to : str, optional
+        Method name in ``modin.pandas`` module to refer to for more information
+        about parameters and output format.
+    one_column_method : bool, default: False
+        Whether to append note that this method is for one-column
+        query compilers only.
+    try_insert_params_section : bool, default: False
+        Whether to insert parameters section in `template`.
+    **kwargs : kwargs
+        Values to substitute to the `template`.
+
+    Returns
+    -------
+    callable
+    """
     params_template = """
         Parameters
         ----------
@@ -113,6 +129,25 @@ def _doc_qc_method(
 
 
 def _doc_binary_method(operation, sign, r=False, op_type="arithmetic"):
+    """
+    Build decorator which adds docstring for binary method.
+
+    Parameters
+    ----------
+    operation : str
+        Name of the binary operation.
+    sign : str
+        Sign which represents specified binary operation.
+    r : bool, default: False
+        Whether `self` is the right operand.
+    op_type : {"arithmetic", "logical", "comparison"}, default: arithmetic
+        Type of the binary operation.
+
+    Returns
+    -------
+    callable
+    """
+
     template = """
     Perform element-wise {operation} ({verbose}).
 
@@ -160,6 +195,27 @@ def _doc_binary_method(operation, sign, r=False, op_type="arithmetic"):
 
 
 def _doc_reduce_agg(method, link, params=None, extra_params=None):
+    """
+    Build decorator which adds docstring for the reduction method.
+
+    Parameters
+    ----------
+    method : str
+        The result of the method.
+    link : str
+        Method name in ``modin.pandas.DataFrame`` module to refer to for
+        more information about parameters and output format.
+    params : str, optional
+        Method parameters in the numpy docstyle format to substitute
+        to the docstring template.
+    extra_params : list of str, optional
+        Method parameter names to append to the docstring template. Parameter
+        type and description will be grabbed from `extra_params_map`.
+
+    Returns
+    -------
+    callable
+    """
     template = """
     Get the {method} for each column or row.
 
@@ -212,6 +268,22 @@ def _doc_reduce_agg(method, link, params=None, extra_params=None):
 
 
 def _doc_cum_agg(method, link):
+    """
+    Build decorator which adds docstring for the cummulative method.
+
+    Parameters
+    ----------
+    method : str
+        The result of the method.
+    link : str
+        Method name in ``modin.pandas.DataFrame`` module to refer to for
+        more information about parameters and output format.
+
+    Returns
+    -------
+    callable
+    """
+
     template = """
     Get cummulative {method} for every row or column.
 
@@ -230,7 +302,28 @@ def _doc_cum_agg(method, link):
     return _doc_qc_method(template, method=method, refer_to=f"DataFrame.{link}")
 
 
-def _doc_resample(action, link, build_rulles, params=""):
+def _doc_resample(action, link, build_rulles, params=None):
+    """
+    Build decorator which adds docstring for the resample aggregation method.
+
+    Parameters
+    ----------
+    action : str
+        What method does with the resampled data.
+    link : str
+        Method name in ``modin.pandas.base.Resampler`` module to refer to for
+        more information about parameters and output format.
+    build_rulles : str
+        Description of the data output format.
+    params : str, optional
+        Method parameters in the numpy docstyle format to substitute
+        to the docstring template.
+
+    Returns
+    -------
+    callable
+    """
+
     template = """
     Resample time-series data and apply aggregation on it.
 
@@ -258,7 +351,26 @@ def _doc_resample(action, link, build_rulles, params=""):
     )
 
 
-def _doc_resample_reduction(result, link, params=""):
+def _doc_resample_reduction(result, link, params=None):
+    """
+    Build decorator which adds docstring for the resample reduction method.
+
+    Parameters
+    ----------
+    result : str
+        The result of the method.
+    link : str
+        Method name in ``modin.pandas.base.Resampler`` module to refer to for
+        more information about parameters and output format.
+    params : str, optional
+        Method parameters in the numpy docstyle format to substitute
+        to the docstring template.
+
+    Returns
+    -------
+    callable
+    """
+
     action = f"compute {result} for each group"
 
     params_substitution = """*args : args
@@ -266,7 +378,7 @@ def _doc_resample_reduction(result, link, params=""):
     **kwargs : kwargs
         Serves the compatibility purpose. Does not affect the result."""
 
-    if params != "":
+    if params:
         params_substitution = f"""{params}
     {params_substitution}"""
 
@@ -282,6 +394,27 @@ def _doc_resample_reduction(result, link, params=""):
 
 
 def _doc_resample_agg(action, output, params, link):
+    """
+    Build decorator which adds docstring for the resample aggregation method.
+
+    Parameters
+    ----------
+    action : str
+        What method does with the resampled data.
+    output : str
+        What is the content of column names in the result.
+    params : str, optional
+        Method parameters in the numpy docstyle format to substitute
+        to the docstring template.
+    link : str
+        Method name in ``modin.pandas.base.Resampler`` module to refer to for
+        more information about parameters and output format.
+
+    Returns
+    -------
+    callable
+    """
+
     action = f"{action} for each group"
 
     params_substitution = """*args: args
@@ -306,6 +439,25 @@ def _doc_resample_agg(action, output, params, link):
 
 
 def _doc_resample_fillna(method, link, params=""):
+    """
+    Build decorator which adds docstring for the resample fillna query compiler method.
+
+    Parameters
+    ----------
+    method : str
+        Fillna method name.
+    link : str
+        Method name in ``modin.pandas.base.Resampler`` module to refer to for
+        more information about parameters and output format.
+    params : str, optional
+        Method parameters in the numpy docstyle format to substitute
+        to the docstring template.
+
+    Returns
+    -------
+    callable
+    """
+
     action = f"fill missing values en each group independently using {method} method"
     params_substitution = "limit : int"
 
@@ -321,6 +473,24 @@ def _doc_resample_fillna(method, link, params=""):
 
 
 def _doc_dt(prop, dt_type, method, params=None):
+    """
+    Build decorator which adds docstring for the date-time property getter methods.
+
+    Parameters
+    ----------
+    dt_type : str
+        Type of the processed date-time data.
+    method : str
+        Method name in ``modin.pandas.series_utils.DatetimeProperties`` module
+        to refer to for more information about parameters and output format.
+    params : str, optional
+        Method parameters in the numpy docstyle format to substitute
+        to the docstring template.
+
+    Returns
+    -------
+    callable
+    """
     template = """
         Get {prop} for each {dt_type} value.
         {params}
@@ -342,18 +512,86 @@ def _doc_dt(prop, dt_type, method, params=None):
 
 
 def _doc_dt_timestamp(property, method, params=None):
+    """
+    Build decorator which adds docstring for the timestamp property getter methods.
+
+    Parameters
+    ----------
+    property : str
+        Property name which will be returned.
+    method : str
+        Method name in ``modin.pandas.series_utils.DatetimeProperties`` module
+        to refer to for more information about parameters and output format.
+    params : str, optional
+        Method parameters in the numpy docstyle format to substitute
+        to the docstring template.
+
+    Returns
+    -------
+    callable
+    """
     return _doc_dt(property, "date-time", method, params)
 
 
 def _doc_dt_interval(property, method, params=None):
+    """
+    Build decorator which adds docstring for the interval property getter methods.
+
+    Parameters
+    ----------
+    property : str
+        Property name which will be returned.
+    method : str
+        Method name in ``modin.pandas.series_utils.DatetimeProperties`` module
+        to refer to for more information about parameters and output format.
+    params : str, optional
+        Method parameters in the numpy docstyle format to substitute
+        to the docstring template.
+
+    Returns
+    -------
+    callable
+    """
     return _doc_dt(property, "interval", method, params)
 
 
 def _doc_dt_period(property, method, params=None):
+    """
+    Build decorator which adds docstring for the period property getter methods.
+
+    Parameters
+    ----------
+    property : str
+        Property name which will be returned.
+    method : str
+        Method name in ``modin.pandas.series_utils.DatetimeProperties`` module
+        to refer to for more information about parameters and output format.
+    params : str, optional
+        Method parameters in the numpy docstyle format to substitute
+        to the docstring template.
+
+    Returns
+    -------
+    callable
+    """
     return _doc_dt(property, "period", method, params)
 
 
 def _doc_dt_round(method):
+    """
+    Build decorator which adds docstring for the date-time round method.
+
+    Parameters
+    ----------
+    method : str
+        Method name in ``modin.pandas.series_utils.DatetimeProperties`` module
+        to refer to for more information about parameters and output format.
+
+    Returns
+    -------
+    callable
+    """
+
     template = """
     Perform {method} operation on the underlying time-series data to the specified `freq`.
 
@@ -375,6 +613,23 @@ def _doc_dt_round(method):
 
 
 def _doc_str_method(method, params=None):
+    """
+    Build decorator which adds docstring for the string methods.
+
+    Parameters
+    ----------
+    method : str
+        Method name in ``modin.pandas.series_utils.StringMethods`` module
+        to refer to for more information about parameters and output format.
+    params : str, optional
+        Method parameters in the numpy docstyle format to substitute
+        to the docstring template.
+
+    Returns
+    -------
+    callable
+    """
+
     template = """
         Apply "{method}" function to each string value in `QueryCompiler`.
         {params}
@@ -400,9 +655,32 @@ def _doc_window_method(
     method,
     action=None,
     win_type="rolling window",
-    params="",
+    params=None,
     build_rulles="aggregation",
 ):
+    """
+    Build decorator which adds docstring for the window method.
+
+    Parameters
+    ----------
+    method : str
+        Method name in ``modin.pandas.base.Window`` module to refer to
+        for more information about parameters and output format.
+    action : str, optional
+        What method does with the created window.
+    win_type : str, default: "rolling_window"
+        Type of window that the method creates.
+    params : str, optional
+        Method parameters in the numpy docstyle format to substitute
+        to the docstring template.
+    build_rulles : str
+        Description of the data output format.
+
+    Returns
+    -------
+    callable
+    """
+
     template = """
         Create {win_type} and {action} for each window.
 
@@ -446,6 +724,28 @@ def _doc_window_method(
         refer_to=f"Rolling.{method}",
         window_args_name=window_args_name,
     )
+
+
+def _get_axis(axis):
+    """Build index labels getter of the specified axis."""
+
+    def axis_getter(self):
+        ErrorMessage.default_to_pandas(f"DataFrame.get_axis({axis})")
+        return self.to_pandas().axes[axis]
+
+    return axis_getter
+
+
+def _set_axis(axis):
+    """Build index labels setter of the specified axis."""
+
+    def axis_setter(self, labels):
+        new_qc = DataFrameDefault.register(pandas.DataFrame.set_axis)(
+            self, axis=axis, labels=labels
+        )
+        self.__dict__.update(new_qc.__dict__)
+
+    return axis_setter
 
 
 class BaseQueryCompiler(abc.ABC):
