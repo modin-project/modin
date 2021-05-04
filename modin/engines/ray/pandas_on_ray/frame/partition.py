@@ -15,10 +15,9 @@ import pandas
 
 from modin.data_management.utils import length_fn_pandas, width_fn_pandas
 from modin.engines.base.frame.partition import PandasFramePartition
-from modin.engines.ray.utils import handle_ray_task_error
+
 
 import ray
-from ray.worker import RayTaskError
 from ray.services import get_node_ip_address
 from packaging import version
 
@@ -49,10 +48,7 @@ class PandasOnRayFramePartition(PandasFramePartition):
         """
         if len(self.call_queue):
             self.drain_call_queue()
-        try:
-            return ray.get(self.oid)
-        except RayTaskError as e:
-            handle_ray_task_error(e)
+        return ray.get(self.oid)
 
     def apply(self, func, **kwargs):
         """Apply a function to the object stored in this partition.
@@ -92,10 +88,7 @@ class PandasOnRayFramePartition(PandasFramePartition):
 
     def wait(self):
         self.drain_call_queue()
-        try:
-            ray.wait([self.oid])
-        except RayTaskError as e:
-            handle_ray_task_error(e)
+        ray.wait([self.oid])
 
     def __copy__(self):
         return PandasOnRayFramePartition(
@@ -186,10 +179,7 @@ class PandasOnRayFramePartition(PandasFramePartition):
                     self.oid
                 )
         if isinstance(self._length_cache, ObjectIDType):
-            try:
-                self._length_cache = ray.get(self._length_cache)
-            except RayTaskError as e:
-                handle_ray_task_error(e)
+            self._length_cache = ray.get(self._length_cache)
         return self._length_cache
 
     def width(self):
@@ -201,10 +191,7 @@ class PandasOnRayFramePartition(PandasFramePartition):
                     self.oid
                 )
         if isinstance(self._width_cache, ObjectIDType):
-            try:
-                self._width_cache = ray.get(self._width_cache)
-            except RayTaskError as e:
-                handle_ray_task_error(e)
+            self._width_cache = ray.get(self._width_cache)
         return self._width_cache
 
     def ip(self):
@@ -214,10 +201,7 @@ class PandasOnRayFramePartition(PandasFramePartition):
             else:
                 self._ip_cache = self.apply(lambda df: df)._ip_cache
         if isinstance(self._ip_cache, ObjectIDType):
-            try:
-                self._ip_cache = ray.get(self._ip_cache)
-            except RayTaskError as e:
-                handle_ray_task_error(e)
+            self._ip_cache = ray.get(self._ip_cache)
         return self._ip_cache
 
     @classmethod

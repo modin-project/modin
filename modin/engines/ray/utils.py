@@ -11,7 +11,6 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-import builtins
 import os
 import sys
 
@@ -26,19 +25,6 @@ from modin.config import (
     IsOutOfCore,
     NPartitions,
 )
-
-
-def handle_ray_task_error(e):
-    for s in e.traceback_str.split("\n")[::-1]:
-        if "Error" in s or "Exception" in s:
-            try:
-                raise getattr(builtins, s.split(":")[0])("".join(s.split(":")[1:]))
-            except AttributeError as att_err:
-                if "module" in str(att_err) and builtins.__name__ in str(att_err):
-                    pass
-                else:
-                    raise att_err
-    raise e
 
 
 # Register a fix import function to run on all_workers including the driver.
