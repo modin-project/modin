@@ -112,6 +112,214 @@ def _doc_qc_method(
     return decorator
 
 
+def _doc_binary_method(operation, sign, r=False, op_type="arithmetic"):
+    template = """
+    Perform element-wise {operation} ({verbose}).
+
+    If axes are note equal, first perform frames allignment.
+
+    Parameters
+    ----------
+    other : BaseQueryCompiler, scalar or array-like
+        Other operand of the binary operation.
+    broadcast : bool, default: False
+        If `other` is a one-column query compiler, indicates whether it is a Series or not.
+        Frames and Series have to be processed differently, however we can't distinguish them
+        at the query compiler level, so this parameter is a hint that passed from a high level API.
+    {params}
+    Returns
+    -------
+    BaseQueryCompiler
+        Result of binary operation.
+    """
+
+    extra_params = {
+        "logical": """level : int or label
+        In case of MultiIndex match index values on the passed level.
+    axis : int
+        Axis to match indice along for 1D `other` (list or QueryCompiler that represents Series).
+        """,
+        "arithmetic": """level : int or label
+        In case of MultiIndex match index values on the passed level.
+    axis : int
+        Axis to match indice along for 1D `other` (list or QueryCompiler that represents Series).
+    fill_value : float or None
+        Value to fill missing elements in the result of frame allignment.
+        """,
+    }
+
+    verbose_substitution = f"other {sign} self" if r else f"self {sign} other"
+    params_substitution = extra_params.get(op_type, "")
+
+    return _doc_qc_method(
+        template,
+        params=params_substitution,
+        operation=operation,
+        verbose=verbose_substitution,
+    )
+
+
+def _doc_reduce_agg(method, link, params=None, extra_params=None):
+    template = """
+    Get the {method} for each column or row.
+
+    Parameters
+    ----------
+    {params}
+
+    Returns
+    -------
+    BaseQueryCompiler
+        One-column `QueryCompiler` with index labels of the specified axis,
+        where each row contains the {method} for the corresponding
+        row or column.
+    """
+
+    if params is None:
+        params = """axis : int
+    level : None
+        Serves the compatibility purpose. Always have to be None.
+    numeric_only : bool"""
+
+    if extra_params is None:
+        extra_params = []
+
+    extra_params_map = {
+        "skipna": """
+    skipna : bool""",
+        "min_count": """
+    min_count : int""",
+        "ddof": """
+    ddof : int""",
+        "*args": """
+    *args : args
+        Serves the compatibility purpose. Does not affect the result.""",
+        "**kwargs": """
+    **kwargs : kwargs
+        Serves the compatibility purpose. Does not affect the result.""",
+    }
+
+    params = "".join(
+        [params]
+        + [extra_params_map.get(param, f"{param} : object") for param in extra_params]
+    )
+    return _doc_qc_method(
+        template,
+        params=params,
+        method=method,
+        refer_to=f"DataFrame.{link}",
+    )
+
+
+def _doc_cum_agg(method, link):
+    template = """
+    Get cummulative {method} for every row or column.
+
+    Parameters
+    ----------
+    axis : int
+    skipna : bool
+
+    Returns
+    -------
+    BaseQueryCompiler
+        `QueryCompiler` of the same shape as `self`, where each element is the {method}
+        of all the previous values in this row or column.
+    """
+
+    return _doc_qc_method(template, method=method, refer_to=f"DataFrame.{link}")
+
+
+def _doc_resample(action, link, build_rulles, params=""):
+    template = """
+    Resample time-series data and apply aggregation on it.
+
+    Group data into intervals by time-series row/column with
+    a specified frequency and {action}.
+
+    Parameters
+    ----------
+    resample_args : list
+        Resample parameters in the format of ``modin.pandas.DataFrame.resample`` signature.
+    {params}
+
+    Returns
+    -------
+    BaseQueryCompiler
+        New `QueryCompiler` containing the result of resample aggregation built by the
+        following rules: {build_rulles}
+    """
+    return _doc_qc_method(
+        template,
+        action=action,
+        params=params,
+        build_rulles=build_rulles,
+        refer_to=f"Resampler.{link}",
+    )
+
+
+def _doc_resample_reduction(result, link, params=""):
+    action = f"compute {result} for each group"
+
+    params_substitution = """*args : args
+        Serves the compatibility purpose. Does not affect the result.
+    **kwargs : kwargs
+        Serves the compatibility purpose. Does not affect the result."""
+
+    if params != "":
+        params_substitution = f"""{params}
+    {params_substitution}"""
+
+    build_rulles = f"""
+        - Labels on the specified axis is the group names (time-stamps)
+        - Labels on the opposit of specified axis is preserved.
+        - Each element of `QueryCompiler` is the {result} for the
+            corresponding group and column/row.
+        """
+    return _doc_resample(
+        action=action, params=params_substitution, build_rulles=build_rulles, link=link
+    )
+
+
+def _doc_resample_agg(action, output, params, link):
+    action = f"{action} for each group"
+
+    params_substitution = """*args: args
+        Arguments to pass to the aggregation function.
+    **kwargs: kwargs
+        Arguments to pass to the aggregation function."""
+
+    if params != "":
+        params_substitution = f"""{params}
+    {params_substitution}"""
+
+    build_rulles = f"""
+        - Labels on the specified axis is the group names (time-stamps)
+        - Labels on the opposit of specified axis is MultiIndex, where first level
+            contains preserved labels of this axis and the second level is the {output}.
+        - Each element of `QueryCompiler` is the result of corresponding function for the
+            corresponding group and column/row.
+        """
+    return _doc_resample(
+        action=action, params=params_substitution, build_rulles=build_rulles, link=link
+    )
+
+
+def _doc_resample_fillna(method, link, params=""):
+    action = f"fill missing values en each group independently using {method} method"
+    params_substitution = "limit : int"
+
+    if params != "":
+        params_substitution = f"""{params_substitution}
+    {params}"""
+
+    build_rulles = "`QueryCompiler` contains unsampled data with missing values filled."
+
+    return _doc_resample(
+        action=action, params=params_substitution, build_rulles=build_rulles, link=link
+    )
+
+
 def _doc_dt(prop, dt_type, method, params=None):
     template = """
         Get {prop} for each {dt_type} value.
@@ -143,6 +351,27 @@ def _doc_dt_interval(property, method, params=None):
 
 def _doc_dt_period(property, method, params=None):
     return _doc_dt(property, "period", method, params)
+
+
+def _doc_dt_round(method):
+    template = """
+    Perform {method} operation on the underlying time-series data to the specified `freq`.
+
+    Parameters
+    ----------
+    freq : str
+    ambigious : "infer", "NaT", bool mask, default "raise"
+    nonexistent : "shift_forward", "shift_backward", "NaT", timedelta, default "raise"
+
+    Returns
+    -------
+    BaseQueryCompiler
+        New `QueryCompiler` with performed {method} operation on every element.
+    """
+
+    return _doc_qc_method(
+        template, method=method, refer_to=f"Series.dt.{method}", one_column_method=True
+    )
 
 
 def _doc_str_method(method, params=None):
@@ -233,7 +462,7 @@ class BaseQueryCompiler(abc.ABC):
 
         Parameters
         ----------
-        pandas_op : callable(pandas.DataFrame, *args, **kwargs) -> [pandas.DataFrame, pandas.Series, numpy.ndarray]
+        pandas_op : callable(pandas.DataFrame, *args, **kwargs) -> object
             Function to apply to the casted to pandas frame.
         *args : args
             Positional arguments to pass to `pandas_op`.
@@ -474,98 +703,7 @@ class BaseQueryCompiler(abc.ABC):
     # such that columns/rows that don't have an index on the other DataFrame
     # result in NaN values.
 
-    __doc_arithmetic_operator_desc = """
-    Perform element-wise {operation} (self {sign} other).
-    """
-
-    __doc_arithmetic_roperator_desc = """
-    Perform element-wise {operation} (other {sign} self).
-    """
-
-    __doc_binary_operator_signature_template = """
-    If axes are note equal, first perform frames allignment.
-
-    Parameters
-    ----------
-    {params}
-
-    Returns
-    -------
-    BaseQueryCompiler
-        Result of binary operation.
-    """
-
-    __doc_binary_operator_params = """other : BaseQueryCompiler, scalar or array-like
-        Other operand of the binary operation.
-    broadcast : bool, default: False
-        If `other` is a one-column query compiler, indicates whether it is a Series or not.
-        Frames and Series have to be processed differently, however we can't distinguish them
-        at the query compiler level, so this parameter is a hint that passed from a high level API.
-    """
-
-    __doc_comparison_operator_params = "".join(
-        [
-            __doc_binary_operator_params,
-            """level : int or label
-        In case of MultiIndex match index values on the passed level.
-    axis : int
-        Axis to match indice along for 1D `other` (list or QueryCompiler that represents Series).
-        """,
-        ]
-    )
-
-    __doc_arithmetic_operator_params = "".join(
-        [
-            __doc_comparison_operator_params,
-            """fill_value : float or None
-        Value to fill missing elements in the result of frame allignment.""",
-        ]
-    )
-
-    __doc_binary_operator = "".join(
-        [
-            __doc_arithmetic_operator_desc,
-            __doc_binary_operator_signature_template.format(
-                params=__doc_binary_operator_params
-            ),
-        ]
-    )
-
-    __doc_binary_roperator = "".join(
-        [
-            __doc_arithmetic_roperator_desc,
-            __doc_binary_operator_signature_template.format(
-                params=__doc_binary_operator_params
-            ),
-        ]
-    )
-
-    __doc_arithmetic_operator = "".join(
-        [
-            __doc_arithmetic_operator_desc,
-            __doc_binary_operator_signature_template.format(
-                params=__doc_arithmetic_operator_params
-            ),
-        ]
-    )
-    __doc_arithmetic_roperator = "".join(
-        [
-            __doc_arithmetic_roperator_desc,
-            __doc_binary_operator_signature_template.format(
-                params=__doc_arithmetic_operator_params
-            ),
-        ]
-    )
-    __doc_comparison_operator = "".join(
-        [
-            __doc_arithmetic_operator_desc,
-            __doc_binary_operator_signature_template.format(
-                params=__doc_comparison_operator_params
-            ),
-        ]
-    )
-
-    @doc(__doc_arithmetic_operator, operation="addition", sign="+")
+    @_doc_binary_method(operation="addition", sign="+")
     def add(self, other, **kwargs):
         return BinaryDefault.register(pandas.DataFrame.add)(self, other=other, **kwargs)
 
@@ -616,43 +754,45 @@ class BaseQueryCompiler(abc.ABC):
             self, other=other, **kwargs
         )
 
-    @doc(__doc_comparison_operator, operation="equality comparison", sign="==")
+    @_doc_binary_method(operation="equality comparison", sign="==")
     def eq(self, other, **kwargs):
         return BinaryDefault.register(pandas.DataFrame.eq)(self, other=other, **kwargs)
 
-    @doc(__doc_arithmetic_operator, operation="integer division", sign="//")
+    @_doc_binary_method(operation="integer division", sign="//")
     def floordiv(self, other, **kwargs):
         return BinaryDefault.register(pandas.DataFrame.floordiv)(
             self, other=other, **kwargs
         )
 
-    @doc(
-        __doc_comparison_operator,
-        operation="greater than or equal comparison",
-        sign=">=",
+    @_doc_binary_method(
+        operation="greater than or equal comparison", sign=">=", op_type="comparison"
     )
     def ge(self, other, **kwargs):
         return BinaryDefault.register(pandas.DataFrame.ge)(self, other=other, **kwargs)
 
-    @doc(__doc_comparison_operator, operation="greater than comparison", sign=">")
+    @_doc_binary_method(
+        operation="greater than comparison", sign=">", op_type="comparison"
+    )
     def gt(self, other, **kwargs):
         return BinaryDefault.register(pandas.DataFrame.gt)(self, other=other, **kwargs)
 
-    @doc(
-        __doc_comparison_operator, operation="less than or equal comparison", sign="<="
+    @_doc_binary_method(
+        operation="less than or equal comparison", sign="<=", op_type="comparison"
     )
     def le(self, other, **kwargs):
         return BinaryDefault.register(pandas.DataFrame.le)(self, other=other, **kwargs)
 
-    @doc(__doc_comparison_operator, operation="less than comparison", sign="<")
+    @_doc_binary_method(
+        operation="less than comparison", sign="<", op_type="comparison"
+    )
     def lt(self, other, **kwargs):
         return BinaryDefault.register(pandas.DataFrame.lt)(self, other=other, **kwargs)
 
-    @doc(__doc_arithmetic_operator, operation="modulo", sign="%")
+    @_doc_binary_method(operation="modulo", sign="%")
     def mod(self, other, **kwargs):
         return BinaryDefault.register(pandas.DataFrame.mod)(self, other=other, **kwargs)
 
-    @doc(__doc_arithmetic_operator, operation="multiplication", sign="*")
+    @_doc_binary_method(operation="multiplication", sign="*")
     def mul(self, other, **kwargs):
         return BinaryDefault.register(pandas.DataFrame.mul)(self, other=other, **kwargs)
 
@@ -717,85 +857,87 @@ class BaseQueryCompiler(abc.ABC):
             applyier = pandas.DataFrame.dot
         return BinaryDefault.register(applyier)(self, other=other, **kwargs)
 
-    @doc(__doc_comparison_operator, operation="not equal comparison", sign="!=")
+    @_doc_binary_method(
+        operation="not equal comparison", sign="!=", op_type="comparison"
+    )
     def ne(self, other, **kwargs):
         return BinaryDefault.register(pandas.DataFrame.ne)(self, other=other, **kwargs)
 
-    @doc(__doc_arithmetic_operator, operation="exponential power", sign="**")
+    @_doc_binary_method(operation="exponential power", sign="**")
     def pow(self, other, **kwargs):
         return BinaryDefault.register(pandas.DataFrame.pow)(self, other=other, **kwargs)
 
-    @doc(__doc_arithmetic_roperator, operation="integer division", sign="//")
+    @_doc_binary_method(operation="integer division", sign="//", r=True)
     def rfloordiv(self, other, **kwargs):
         return BinaryDefault.register(pandas.DataFrame.rfloordiv)(
             self, other=other, **kwargs
         )
 
-    @doc(__doc_arithmetic_roperator, operation="modulo", sign="%")
+    @_doc_binary_method(operation="modulo", sign="%", r=True)
     def rmod(self, other, **kwargs):
         return BinaryDefault.register(pandas.DataFrame.rmod)(
             self, other=other, **kwargs
         )
 
-    @doc(__doc_arithmetic_roperator, operation="exponential power", sign="**")
+    @_doc_binary_method(operation="exponential power", sign="**", r=True)
     def rpow(self, other, **kwargs):
         return BinaryDefault.register(pandas.DataFrame.rpow)(
             self, other=other, **kwargs
         )
 
-    @doc(__doc_arithmetic_roperator, operation="substraction", sign="-")
+    @_doc_binary_method(operation="substraction", sign="-", r=True)
     def rsub(self, other, **kwargs):
         return BinaryDefault.register(pandas.DataFrame.rsub)(
             self, other=other, **kwargs
         )
 
-    @doc(__doc_arithmetic_roperator, operation="division", sign="/")
+    @_doc_binary_method(operation="division", sign="/", r=True)
     def rtruediv(self, other, **kwargs):
         return BinaryDefault.register(pandas.DataFrame.rtruediv)(
             self, other=other, **kwargs
         )
 
-    @doc(__doc_arithmetic_operator, operation="substraction", sign="-")
+    @_doc_binary_method(operation="substraction", sign="-")
     def sub(self, other, **kwargs):
         return BinaryDefault.register(pandas.DataFrame.sub)(self, other=other, **kwargs)
 
-    @doc(__doc_arithmetic_operator, operation="division", sign="/")
+    @_doc_binary_method(operation="division", sign="/")
     def truediv(self, other, **kwargs):
         return BinaryDefault.register(pandas.DataFrame.truediv)(
             self, other=other, **kwargs
         )
 
-    @doc(__doc_binary_operator, operation="and", sign="&")
+    @_doc_binary_method(operation="conjunction", sign="&", op_type="logical")
     def __and__(self, other, **kwargs):
         return BinaryDefault.register(pandas.DataFrame.__and__)(
             self, other=other, **kwargs
         )
 
-    @doc(__doc_binary_operator, operation="or", sign="|")
+    @_doc_binary_method(operation="disjunction", sign="|", op_type="logical")
     def __or__(self, other, **kwargs):
         return BinaryDefault.register(pandas.DataFrame.__or__)(
             self, other=other, **kwargs
         )
 
-    @doc(__doc_binary_roperator, operation="and", sign="&")
+    @_doc_binary_method(operation="conjunction", sign="&", op_type="logical", r=True)
     def __rand__(self, other, **kwargs):
         return BinaryDefault.register(pandas.DataFrame.__rand__)(
             self, other=other, **kwargs
         )
 
-    @doc(__doc_binary_roperator, operation="or", sign="|")
+    @_doc_binary_method(operation="disjunction", sign="|", op_type="logical", r=True)
     def __ror__(self, other, **kwargs):
         return BinaryDefault.register(pandas.DataFrame.__ror__)(
             self, other=other, **kwargs
         )
 
-    @doc(__doc_binary_operator, operation="xor", sign="^")
+    @_doc_binary_method(operation="exclusive or", sign="^", op_type="logical", r=True)
     def __rxor__(self, other, **kwargs):
         return BinaryDefault.register(pandas.DataFrame.__rxor__)(
             self, other=other, **kwargs
         )
 
-    @doc(__doc_binary_operator, operation="xor", sign="^")
+    @_doc_binary_method(operation="exclusive or", sign="^", op_type="logical")
     def __xor__(self, other, **kwargs):
         return BinaryDefault.register(pandas.DataFrame.__xor__)(
             self, other=other, **kwargs
@@ -1098,83 +1240,24 @@ class BaseQueryCompiler(abc.ABC):
         """
         return SeriesDefault.register(pandas.Series.is_monotonic_decreasing)(self)
 
-    __doc_numeric_method_template = """
-    Get the {method} for each column or row.
-
-    Parameters
-    ----------
-    {params}
-
-    Returns
-    -------
-    BaseQueryCompiler
-        One-column `QueryCompiler` with index labels of the specified axis,
-        where each row contains the {method} for the corresponding
-        row or column.
-
-    Notes
-    -----
-    Please refer to ``modin.pandas.DataFrame.{link}`` for more information about parameters.
-    """
-
-    __doc_numeric_method_base_params = """axis : int
-    level : int or label, optional
-        Currently `level` parameter is not implemented, so only `None` value is acceptable.
-    numeric_only : bool"""
-
-    __doc_numeric_method_na_params = "\n".join(
-        [__doc_numeric_method_base_params, "skipna : bool"]
-    )
-
-    __doc_numeric_method_mincount_params = "\n".join(
-        [
-            __doc_numeric_method_na_params,
-            """min_count : int
-        Currently `min_count` parameter is not implemented, so only `1` is acceptable.""",
-        ]
-    )
-
-    @doc(
-        __doc_numeric_method_template,
-        params=__doc_numeric_method_base_params,
-        method="number of non-NaN values",
-        link="count",
-    )
+    @_doc_reduce_agg(method="number of non-NaN values", link="count")
     def count(self, **kwargs):
         return DataFrameDefault.register(pandas.DataFrame.count)(self, **kwargs)
 
-    @doc(
-        __doc_numeric_method_template,
-        params=__doc_numeric_method_na_params,
-        method="maximum value",
-        link="max",
-    )
+    @_doc_reduce_agg(method="maximum value", link="max", extra_params=["skipna"])
     def max(self, **kwargs):
         return DataFrameDefault.register(pandas.DataFrame.max)(self, **kwargs)
 
-    @doc(
-        __doc_numeric_method_template,
-        params=__doc_numeric_method_na_params,
-        method="mean value",
-        link="mean",
-    )
+    @_doc_reduce_agg(method="mean value", link="mean", extra_params=["skipna"])
     def mean(self, **kwargs):
         return DataFrameDefault.register(pandas.DataFrame.mean)(self, **kwargs)
 
-    @doc(
-        __doc_numeric_method_template,
-        params=__doc_numeric_method_na_params,
-        method="minimum value",
-        link="min",
-    )
+    @_doc_reduce_agg(method="manimum value", link="min", extra_params=["skipna"])
     def min(self, **kwargs):
         return DataFrameDefault.register(pandas.DataFrame.min)(self, **kwargs)
 
-    @doc(
-        __doc_numeric_method_template,
-        params=__doc_numeric_method_mincount_params,
-        method="production",
-        link="prod",
+    @_doc_reduce_agg(
+        method="production", link="prod", extra_params=["skipna", "min_count"]
     )
     def prod(self, squeeze_self, axis, **kwargs):
         """Returns the product of each numerical column or row.
@@ -1203,12 +1286,7 @@ class BaseQueryCompiler(abc.ABC):
             map_func,
         )(self, axis=axis, **kwargs)
 
-    @doc(
-        __doc_numeric_method_template,
-        params=__doc_numeric_method_mincount_params,
-        method="sum",
-        link="sum",
-    )
+    @_doc_reduce_agg(method="sum", link="sum", extra_params=["skipna", "min_count"])
     def sum(self, squeeze_self, axis, **kwargs):
         """Returns the sum of each numerical column or row.
 
@@ -1682,12 +1760,7 @@ class BaseQueryCompiler(abc.ABC):
             .squeeze()
         )
 
-    @doc(
-        __doc_numeric_method_template,
-        params=__doc_numeric_method_na_params,
-        method="median value",
-        link="median",
-    )
+    @_doc_reduce_agg(method="median value", link="median", extra_params=["skipna"])
     def median(self, **kwargs):
         return DataFrameDefault.register(pandas.DataFrame.median)(self, **kwargs)
 
@@ -1709,65 +1782,45 @@ class BaseQueryCompiler(abc.ABC):
         """
         return DataFrameDefault.register(pandas.DataFrame.memory_usage)(self, **kwargs)
 
-    @doc(
-        __doc_numeric_method_template,
+    @_doc_reduce_agg(
+        method="number of unique values",
+        link="nunique",
         params="""axis : int
         dropna : bool""",
-        method="the number of unique values",
-        link="nunique",
     )
     def nunique(self, **kwargs):
         return DataFrameDefault.register(pandas.DataFrame.nunique)(self, **kwargs)
 
-    @doc(
-        __doc_numeric_method_template,
+    @_doc_reduce_agg(
+        method="value at the given quantile",
+        link="quantile",
         params="""q : float
         axis : int
         numeric_only : bool
         interpolation : {"linear", "lower", "higher", "midpoint", "nearest"}""",
-        method="value at the given quantile",
-        link="quantile",
     )
     def quantile_for_single_value(self, **kwargs):
         return DataFrameDefault.register(pandas.DataFrame.quantile)(self, **kwargs)
 
-    @doc(
-        __doc_numeric_method_template,
-        params=__doc_numeric_method_na_params,
-        method="unbiased skew",
-        link="skew",
-    )
+    @_doc_reduce_agg(method="unbiased skew", link="skew", extra_params=["skipna"])
     def skew(self, **kwargs):
         return DataFrameDefault.register(pandas.DataFrame.skew)(self, **kwargs)
 
-    __doc_numeric_method_ddof_params = "\n".join(
-        [__doc_numeric_method_na_params, "ddof : int"]
-    )
-
-    @doc(
-        __doc_numeric_method_template,
-        params=__doc_numeric_method_ddof_params,
+    @_doc_reduce_agg(
         method="standard deviation of the mean",
         link="sem",
+        extra_params=["skipna", "ddof"],
     )
     def sem(self, **kwargs):
         return DataFrameDefault.register(pandas.DataFrame.sem)(self, **kwargs)
 
-    @doc(
-        __doc_numeric_method_template,
-        params=__doc_numeric_method_ddof_params,
-        method="standard deviation",
-        link="std",
+    @_doc_reduce_agg(
+        method="standard deviation", link="std", extra_params=["skipna", "ddof"]
     )
     def std(self, **kwargs):
         return DataFrameDefault.register(pandas.DataFrame.std)(self, **kwargs)
 
-    @doc(
-        __doc_numeric_method_template,
-        params=__doc_numeric_method_ddof_params,
-        method="variance",
-        link="var",
-    )
+    @_doc_reduce_agg(method="variance", link="var", extra_params=["skipna", "ddof"])
     def var(self, **kwargs):
         return DataFrameDefault.register(pandas.DataFrame.var)(self, **kwargs)
 
@@ -1810,38 +1863,19 @@ class BaseQueryCompiler(abc.ABC):
     # that is being operated on. This means that we have to put all of that
     # data in the same place.
 
-    __doc_cum_method = """
-    Get cummulative {method} for every row or column.
-
-    Parameters
-    ----------
-    axis : int
-    skipna : bool
-
-    Returns
-    -------
-    BaseQueryCompiler
-        `QueryCompiler` of the same shape as `self`, where each element is the {method}
-        of all the previous values in this row or column.
-
-    Notes
-    -----
-    Please refer to ``modin.pandas.DataFrame.{link}`` for more information about parameters.
-    """
-
-    @doc(__doc_cum_method, method="sum", link="cumsum")
+    @_doc_cum_agg(method="sum", link="cumsum")
     def cumsum(self, **kwargs):
         return DataFrameDefault.register(pandas.DataFrame.cumsum)(self, **kwargs)
 
-    @doc(__doc_cum_method, method="maximum", link="cummax")
+    @_doc_cum_agg(method="maximum", link="cummax")
     def cummax(self, **kwargs):
         return DataFrameDefault.register(pandas.DataFrame.cummax)(self, **kwargs)
 
-    @doc(__doc_cum_method, method="minimum", link="cummin")
+    @_doc_cum_agg(method="minimum", link="cummin")
     def cummin(self, **kwargs):
         return DataFrameDefault.register(pandas.DataFrame.cummin)(self, **kwargs)
 
-    @doc(__doc_cum_method, method="product", link="cumprod")
+    @_doc_cum_agg(method="product", link="cumprod")
     def cumprod(self, **kwargs):
         return DataFrameDefault.register(pandas.DataFrame.cumprod)(self, **kwargs)
 
@@ -2127,14 +2161,13 @@ class BaseQueryCompiler(abc.ABC):
     # These operations require some global knowledge of the full column/row
     # that is being operated on. This means that we have to put all of that
     # data in the same place.
-    @doc(
-        __doc_numeric_method_template,
+    @_doc_reduce_agg(
+        method="value at the given quantile",
+        link="quantile",
         params="""q : list-like
         axis : int
         numeric_only : bool
         interpolation : {"linear", "lower", "higher", "midpoint", "nearest"}""",
-        method="value at the given quantile",
-        link="quantile",
     )
     def quantile_for_list_of_values(self, **kwargs):
         return DataFrameDefault.register(pandas.DataFrame.quantile)(self, **kwargs)
@@ -2988,24 +3021,7 @@ class BaseQueryCompiler(abc.ABC):
 
     # DateTime methods
 
-    __doc_dt_round = """
-    Perform {method} operation on the underlying time-series data to the specified `freq`.
-
-    Parameters
-    ----------
-    freq : str
-    ambigious : "infer", "NaT", bool mask, default "raise"
-    nonexistent : "shift_forward", "shift_backward", "NaT", timedelta, default "raise"
-
-    Returns
-    -------
-    BaseQueryCompiler
-        New `QueryCompiler` with performed {method} operation on every element.
-    """
-
-    @_add_one_column_warning
-    @add_refer_to("Series.dt.ceil")
-    @doc(__doc_dt_round, method="ceil")
+    @_doc_dt_round(method="ceil")
     def dt_ceil(self, freq, ambiguous="raise", nonexistent="raise"):
         return DateTimeDefault.register(pandas.Series.dt.ceil)(
             self, freq, ambiguous, nonexistent
@@ -3065,9 +3081,7 @@ class BaseQueryCompiler(abc.ABC):
     def dt_end_time(self):
         return DateTimeDefault.register(pandas.Series.dt.end_time)(self)
 
-    @_add_one_column_warning
-    @add_refer_to("Series.dt.floor")
-    @doc(__doc_dt_round, method="floor")
+    @_doc_dt_round(method="floor")
     def dt_floor(self, freq, ambiguous="raise", nonexistent="raise"):
         return DateTimeDefault.register(pandas.Series.dt.floor)(
             self, freq, ambiguous, nonexistent
@@ -3190,9 +3204,7 @@ class BaseQueryCompiler(abc.ABC):
     def dt_qyear(self):
         return DateTimeDefault.register(pandas.Series.dt.qyear)(self)
 
-    @_add_one_column_warning
-    @add_refer_to("Series.dt.round")
-    @doc(__doc_dt_round, method="round")
+    @_doc_dt_round(method="round")
     def dt_round(self, freq, ambiguous="raise", nonexistent="raise"):
         return DateTimeDefault.register(pandas.Series.dt.round)(
             self, freq, ambiguous, nonexistent
@@ -3347,91 +3359,50 @@ class BaseQueryCompiler(abc.ABC):
 
     # Resample methods
 
-    __doc_resample_reduction = """
-    Resample time-series data and apply aggregation on it.
-
-    Group data into intervals by time-series row/column with
-    a specified frequency and get the {method} for each group.
-
-    Parameters
-    ----------
-    resample_args : list
-        Resample parameters in the format of ``modin.pandas.DataFrame.resample`` signature.
-    {params}
-    *args : args
-        Serves the compatibility purpose. Does not affect the result.
-    **kwargs : kwargs
-        Serves the compatibility purpose. Does not affect the result.
-
-    Returns
-    -------
-    BaseQueryCompiler
-        New `QueryCompiler` containing the result of resample aggregation built by the
-        following rules:
-            - Labels on the specified axis is the group names (time-stamps)
-            - Labels on the opposit of specified axis is preserved.
-            - Each element of `QueryCompiler` is the {method} for the
-            corresponding group and column/row.
-    """
-
-    __doc_resample_agg = """
-    Resample time-series data and apply aggregation on it.
-
-    Group data into intervals by time-series row/column with
-    a specified frequency and {method} for each group.
-
-    Parameters
-    ----------
-    resample_args : list
-        Resample parameters in the format of ``modin.pandas.DataFrame.resample`` signature.
-    {params}
-    *args : args
-        Arguments to pass to the aggregation function.
-    **kwargs : kwargs
-        Arguments to pass to the aggregation function.
-
-    Returns
-    -------
-    BaseQueryCompiler
-        New `QueryCompiler` containing the result of resample aggregation built by the
-        following rules:
-            - Labels on the specified axis is the group names (time-stamps)
-            - Labels on the opposit of specified axis is MultiIndex, where first level
-              contains preserved labels of this axis and the second level is the {output}.
-            - Each element of `QueryCompiler` is the result of corresponding function for the
-              corresponding group and column/row.
-    """
-
-    __doc_resample_udf_agg = __doc_resample_agg.format(
-        method="apply passed aggregation function",
-        params="func : str, dir, callable(pandas.Series) -> scalar, or list of such",
-        output="function names",
-    )
-
     # FIXME:
     #   1. Backend shouldn't care about differences between Series and DataFrame
     #      so `resample_agg_df` and `resample_agg_ser` should be combined.
     #   2. In DataFrame API `Resampler.aggregate` is an alias for `Resampler.apply`
     #      we should remove one of these methods: `resample_agg_*` or `resample_app_*`.
-    @doc(__doc_resample_udf_agg)
+    @_doc_resample_agg(
+        action="apply passed aggregation function",
+        params="func : str, dict, callable(pandas.Series) -> scalar, or list of such",
+        output="function names",
+        link="agg",
+    )
     def resample_agg_df(self, resample_args, func, *args, **kwargs):
         return ResampleDefault.register(pandas.core.resample.Resampler.aggregate)(
             self, resample_args, func, *args, **kwargs
         )
 
-    @doc(__doc_resample_udf_agg)
+    @_doc_resample_agg(
+        action="apply passed aggregation function",
+        params="func : str, dict, callable(pandas.Series) -> scalar, or list of such",
+        output="function names",
+        link="agg",
+    )
     def resample_agg_ser(self, resample_args, func, *args, **kwargs):
         return ResampleDefault.register(
             pandas.core.resample.Resampler.aggregate, squeeze_self=True
         )(self, resample_args, func, *args, **kwargs)
 
-    @doc(__doc_resample_udf_agg)
+    @_doc_resample_agg(
+        action="apply passed aggregation function",
+        params="func : str, dict, callable(pandas.Series) -> scalar",
+        output="function names",
+        link="apply",
+    )
     def resample_app_df(self, resample_args, func, *args, **kwargs):
         return ResampleDefault.register(pandas.core.resample.Resampler.apply)(
             self, resample_args, func, *args, **kwargs
         )
 
-    @doc(__doc_resample_udf_agg)
+    @_doc_resample_agg(
+        action="apply passed aggregation function",
+        params="func : str, dict, callable(pandas.Series) -> scalar",
+        output="function names",
+        link="apply",
+    )
     def resample_app_ser(self, resample_args, func, *args, **kwargs):
         return ResampleDefault.register(
             pandas.core.resample.Resampler.apply, squeeze_self=True
@@ -3459,41 +3430,21 @@ class BaseQueryCompiler(abc.ABC):
             self, resample_args, fill_value
         )
 
-    __doc_resample_fillna = """
-    Resample time-series data and fill missing values.
-
-    Group data into intervals by time-series row/column with
-    a specified frequency and fill missing values in each group independently
-    using {method} method.
-
-    Parameters
-    ----------
-    resample_args : list
-        Resample parameters in the format of ``modin.pandas.DataFrame.resample`` signature.
-    {params}
-    limit : int
-
-    Returns
-    -------
-    BaseQueryCompiler
-        New `QueryCompiler` containing unsampled data with missing values filled.
-    """
-
     # FIXME: `resample_backfill` is an alias for `resample_bfill`, on of these method
     # should be removed.
-    @doc(__doc_resample_fillna, method="back-fill", params="")
+    @_doc_resample_fillna(method="back-fill", link="backfill")
     def resample_backfill(self, resample_args, limit):
         return ResampleDefault.register(pandas.core.resample.Resampler.backfill)(
             self, resample_args, limit
         )
 
-    @doc(__doc_resample_fillna, method="back-fill", params="")
+    @_doc_resample_fillna(method="back-fill", link="bfill")
     def resample_bfill(self, resample_args, limit):
         return ResampleDefault.register(pandas.core.resample.Resampler.bfill)(
             self, resample_args, limit
         )
 
-    @doc(__doc_resample_reduction, method="number of non-NA values", params="")
+    @_doc_resample_reduction(result="number of non-NA values", link="count")
     def resample_count(self, resample_args):
         return ResampleDefault.register(pandas.core.resample.Resampler.count)(
             self, resample_args
@@ -3501,20 +3452,22 @@ class BaseQueryCompiler(abc.ABC):
 
     # FIXME: `resample_ffill` is an alias for `resample_pad`, on of these method
     # should be removed.
-    @doc(__doc_resample_fillna, method="forward-fill", params="")
+    @_doc_resample_fillna(method="forward-fill", link="ffill")
     def resample_ffill(self, resample_args, limit):
         return ResampleDefault.register(pandas.core.resample.Resampler.ffill)(
             self, resample_args, limit
         )
 
     # FIXME: we should combine all method all resample fillna methods into `resample_fillna`
-    @doc(__doc_resample_fillna, method="specified", params="method : str")
-    def resample_fillna(self, resample_args, method, limit):
+    @_doc_resample_fillna(method="specified", link="fillna", params="method : str")
+    def resample_fillna(self, resample_args, limit, method):
         return ResampleDefault.register(pandas.core.resample.Resampler.fillna)(
             self, resample_args, method, limit
         )
 
-    @doc(__doc_resample_reduction, method="first element", params="_method : str")
+    @_doc_resample_reduction(
+        result="first element", link="first", params="_method : str"
+    )
     def resample_first(self, resample_args, _method, *args, **kwargs):
         return ResampleDefault.register(pandas.core.resample.Resampler.first)(
             self, resample_args, _method, *args, **kwargs
@@ -3544,9 +3497,9 @@ class BaseQueryCompiler(abc.ABC):
             self, resample_args, name, obj
         )
 
-    @doc(
-        __doc_resample_fillna,
+    @_doc_resample_fillna(
         method="specified interpolation method",
+        link="interpolate",
         params="""method : str
     axis : int
     inplace : False
@@ -3559,9 +3512,9 @@ class BaseQueryCompiler(abc.ABC):
     def resample_interpolate(
         self,
         resample_args,
+        limit,
         method,
         axis,
-        limit,
         inplace,
         limit_direction,
         limit_area,
@@ -3581,46 +3534,46 @@ class BaseQueryCompiler(abc.ABC):
             **kwargs,
         )
 
-    @doc(__doc_resample_reduction, method="last element", params="_method : str")
+    @_doc_resample_reduction(result="last element", params="_method : str", link="last")
     def resample_last(self, resample_args, _method, *args, **kwargs):
         return ResampleDefault.register(pandas.core.resample.Resampler.last)(
             self, resample_args, _method, *args, **kwargs
         )
 
-    @doc(__doc_resample_reduction, method="maximum value", params="_method : str")
+    @_doc_resample_reduction(result="maximum value", params="_method : str", link="max")
     def resample_max(self, resample_args, _method, *args, **kwargs):
         return ResampleDefault.register(pandas.core.resample.Resampler.max)(
             self, resample_args, _method, *args, **kwargs
         )
 
-    @doc(__doc_resample_reduction, method="mean value", params="_method : str")
+    @_doc_resample_reduction(result="mean value", params="_method : str", link="mean")
     def resample_mean(self, resample_args, _method, *args, **kwargs):
         return ResampleDefault.register(pandas.core.resample.Resampler.mean)(
             self, resample_args, _method, *args, **kwargs
         )
 
-    @doc(__doc_resample_reduction, method="median value", params="_method : str")
+    @_doc_resample_reduction(
+        result="median value", params="_method : str", link="median"
+    )
     def resample_median(self, resample_args, _method, *args, **kwargs):
         return ResampleDefault.register(pandas.core.resample.Resampler.median)(
             self, resample_args, _method, *args, **kwargs
         )
 
-    @doc(__doc_resample_reduction, method="minimum value", params="_method : str")
+    @_doc_resample_reduction(result="minimum value", params="_method : str", link="min")
     def resample_min(self, resample_args, _method, *args, **kwargs):
         return ResampleDefault.register(pandas.core.resample.Resampler.min)(
             self, resample_args, _method, *args, **kwargs
         )
 
-    @doc(__doc_resample_fillna, method="'nearest'", params="")
+    @_doc_resample_fillna(method="'nearest'", link="nearest")
     def resample_nearest(self, resample_args, limit):
         return ResampleDefault.register(pandas.core.resample.Resampler.nearest)(
             self, resample_args, limit
         )
 
-    @doc(
-        __doc_resample_reduction,
-        method="number of unique values",
-        params="_method : str",
+    @_doc_resample_reduction(
+        result="number of unique values", params="_method : str", link="nunique"
     )
     def resample_nunique(self, resample_args, _method, *args, **kwargs):
         return ResampleDefault.register(pandas.core.resample.Resampler.nunique)(
@@ -3629,29 +3582,29 @@ class BaseQueryCompiler(abc.ABC):
 
     # FIXME: Backend shouldn't care about differences between Series and DataFrame
     # so `resample_ohlc_df` and `resample_ohlc_ser` should be combined.
-    @doc(
-        __doc_resample_agg,
-        method="compute open, high, low and close values",
+    @_doc_resample_agg(
+        action="compute open, high, low and close values",
         params="_method : str",
         output="labels of columns containing computed values",
+        link="ohlc",
     )
     def resample_ohlc_df(self, resample_args, _method, *args, **kwargs):
         return ResampleDefault.register(pandas.core.resample.Resampler.ohlc)(
             self, resample_args, _method, *args, **kwargs
         )
 
-    @doc(
-        __doc_resample_agg,
-        method="compute open, high, low and close values",
+    @_doc_resample_agg(
+        action="compute open, high, low and close values",
         params="_method : str",
         output="labels of columns containing computed values",
+        link="ohlc",
     )
     def resample_ohlc_ser(self, resample_args, _method, *args, **kwargs):
         return ResampleDefault.register(
             pandas.core.resample.Resampler.ohlc, squeeze_self=True
         )(self, resample_args, _method, *args, **kwargs)
 
-    @doc(__doc_resample_fillna, method="'pad'", params="")
+    @_doc_resample_fillna(method="'pad'", link="pad")
     def resample_pad(self, resample_args, limit):
         return ResampleDefault.register(pandas.core.resample.Resampler.pad)(
             self, resample_args, limit
@@ -3686,50 +3639,50 @@ class BaseQueryCompiler(abc.ABC):
             self, resample_args, func, *args, **kwargs
         )
 
-    @doc(
-        __doc_resample_reduction,
-        method="product",
+    @_doc_resample_reduction(
+        result="product",
         params="""_method : str
         min_count : int""",
+        link="prod",
     )
     def resample_prod(self, resample_args, _method, min_count, *args, **kwargs):
         return ResampleDefault.register(pandas.core.resample.Resampler.prod)(
             self, resample_args, _method, min_count, *args, **kwargs
         )
 
-    @doc(__doc_resample_reduction, method="quantile", params="q : float")
+    @_doc_resample_reduction(result="quantile", params="q : float", link="quantile")
     def resample_quantile(self, resample_args, q, **kwargs):
         return ResampleDefault.register(pandas.core.resample.Resampler.quantile)(
             self, resample_args, q, **kwargs
         )
 
-    @doc(
-        __doc_resample_reduction,
-        method="standart error of the mean",
-        params="ddof : int, default: 1",
+    @_doc_resample_reduction(
+        result="standart error of the mean", params="ddof : int, default: 1", link="sem"
     )
     def resample_sem(self, resample_args, ddof=1, *args, **kwargs):
         return ResampleDefault.register(pandas.core.resample.Resampler.sem)(
             self, resample_args, ddof, *args, **kwargs
         )
 
-    @doc(__doc_resample_reduction, method="number of element in a group", params="")
+    @_doc_resample_reduction(result="number of element in a group", link="size")
     def resample_size(self, resample_args, *args, **kwargs):
         return ResampleDefault.register(pandas.core.resample.Resampler.size)(
             self, resample_args, *args, **kwargs
         )
 
-    @doc(__doc_resample_reduction, method="standart deviation", params="ddof : int")
+    @_doc_resample_reduction(
+        result="standart deviation", params="ddof : int", link="std"
+    )
     def resample_std(self, resample_args, ddof, *args, **kwargs):
         return ResampleDefault.register(pandas.core.resample.Resampler.std)(
             self, resample_args, ddof, *args, **kwargs
         )
 
-    @doc(
-        __doc_resample_reduction,
-        method="sum",
+    @_doc_resample_reduction(
+        result="sum",
         params="""_method : str
         min_count : int""",
+        link="sum",
     )
     def resample_sum(self, resample_args, _method, min_count, *args, **kwargs):
         return ResampleDefault.register(pandas.core.resample.Resampler.sum)(
@@ -3765,7 +3718,7 @@ class BaseQueryCompiler(abc.ABC):
             self, resample_args, arg, *args, **kwargs
         )
 
-    @doc(__doc_resample_reduction, method="variance", params="ddof : int")
+    @_doc_resample_reduction(result="variance", params="ddof : int", link="var")
     def resample_var(self, resample_args, ddof, *args, **kwargs):
         return ResampleDefault.register(pandas.core.resample.Resampler.var)(
             self, resample_args, ddof, *args, **kwargs
@@ -4318,17 +4271,84 @@ class BaseQueryCompiler(abc.ABC):
 
     # Categories methods
 
-    cat_codes = CatDefault.register(pandas.Series.cat.codes)
+    @_add_one_column_warning
+    def cat_codes(self):
+        """
+        Convert underlying categories data into its codes.
+
+        Returns
+        -------
+        BaseQueryCompiler
+            New `QueryCompiler` containing the integer codes of the underlying
+            categories.
+        """
+        return CatDefault.register(pandas.Series.cat.codes)(self)
 
     # End of Categories methods
 
     # DataFrame methods
 
-    invert = DataFrameDefault.register(pandas.DataFrame.__invert__)
-    mad = DataFrameDefault.register(pandas.DataFrame.mad)
-    kurt = DataFrameDefault.register(pandas.DataFrame.kurt)
+    def invert(self):
+        """
+        Apply bitwise invertion for each element of the `QueryCompiler`.
+
+        Returns
+        -------
+        BaseQueryCompiler
+            New `QueryCompiler` containing bitwise invertion for each value.
+        """
+        return DataFrameDefault.register(pandas.DataFrame.__invert__)(self)
+
+    @_doc_reduce_agg(
+        method="mean absolute deviation",
+        params="""axis : int
+    skipna : bool
+    level : None
+        Serves the compatibility purpose. Always have to be None.""",
+        link="mad",
+    )
+    def mad(self, axis, skipna, level=None):
+        return DataFrameDefault.register(pandas.DataFrame.mad)(
+            self, axis=axis, skipna=skipna, level=level
+        )
+
+    @_doc_reduce_agg(
+        method="unibased kurtosis", link="kurt", extra_params=["skipna", "**kwargs"]
+    )
+    def kurt(self, axis, skipna, level=None, numeric_only=None, **kwargs):
+        return DataFrameDefault.register(pandas.DataFrame.kurt)(
+            self, axis=axis, skipna=skipna, numeric_only=numeric_only, **kwargs
+        )
+
     sum_min_count = sum
     prod_min_count = prod
-    compare = DataFrameDefault.register(pandas.DataFrame.compare)
+
+    @add_refer_to("DataFrame.compare")
+    def compare(self, other, align_axis, keep_shape, keep_equal):
+        """
+        Compare data of two `QueryCompilers` and highlight the difference.
+
+        Parameters
+        ----------
+        other : BaseQueryCompiler
+            Query compiler to compare with. Have to be the same shape and the same
+            labeling as `self`.
+        align_axis : int
+        keep_shape : bool
+        keep_equal : bool
+
+        Returns
+        -------
+        BaseQueryCompiler
+            New `QueryCompiler` containing the differences between `self` and passed
+            query compiler.
+        """
+        return DataFrameDefault.register(pandas.DataFrame.compare)(
+            self,
+            other=other,
+            align_axis=align_axis,
+            keep_shape=keep_shape,
+            keep_equal=keep_equal,
+        )
 
     # End of DataFrame methods
