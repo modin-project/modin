@@ -6,7 +6,7 @@ Brief description
 ``BaseQueryCompiler`` is an abstract class of query compiler, it sets a common interface,
 that every other query compilers in Modin have to follow. Base class contains basic
 implementations for most of the interface methods, all them are
-:doc:`defaulting to pandas </supported_apis/index.rst#defaulting-to-pandas>`.
+:ref:`defaulting to pandas <defaulting-to-pandas-mechanism>`.
 
 Subclassing ``BaseQueryCompiler``
 '''''''''''''''''''''''''''''''''
@@ -30,7 +30,7 @@ query compiler class.
 Example
 '''''''
 As an exercise let's define a new query compiler in `Modin`, just to see how easy it is.
-Usually, query compiler routes formed queries to the underlying :doc:`frame </flow/engines/base/frame/data.rst>` class,
+Usually, query compiler routes formed queries to the underlying :doc:`frame </flow/modin/engines/base/frame/data>` class,
 which represents an actual execution engine and responsible for executing queries. In the glory
 of simplicity and independence of this example, our execution engine will be the `pandas` itself.
 
@@ -53,12 +53,17 @@ In case of `pandas` as an execution engine it's a trivial task:
         def from_arrow(cls, at, *args, **kwargs):
             return cls(at.to_pandas())
 
-        to_pandas = lambda self: self._pandas_df.copy()
-        default_to_pandas = lambda self, pandas_op, *args, **kwargs: type(self)(
-            pandas_op(self.to_pandas(), *args, **kwargs)
-        )
-        finalize = lambda self: None
-        free = finalize
+        def to_pandas(self):
+            return self._pandas_df.copy()
+
+        def default_to_pandas(self, pandas_op, *args, **kwargs):
+            return type(self)(pandas_op(self.to_pandas(), *args, **kwargs))
+        
+        def finalize(self):
+            pass
+
+        def free(self):
+            pass
 
 All done! Now you've got a fully functional query compiler, which is ready for extensions
 and already can be used in Modin DataFrame:

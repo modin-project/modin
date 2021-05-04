@@ -259,9 +259,9 @@ by documentation for now, the rest is coming soon...).
    ├───docs
    ├───examples
    ├───modin
-   │   ├───backends
+   │   ├─── :doc:`backends </flow/modin/backends/index>`
    │   │   ├───base
-   │   │   │   └───query_compiler
+   │   │   │   └─── :doc:`query_compiler </flow/modin/backends/base/query_compiler>`
    │   │   ├───pandas
    │   │   |   ├─── :doc:`parsers </flow/modin/backends/pandas/parsers>`
    │   │   │   └───query_compiler
