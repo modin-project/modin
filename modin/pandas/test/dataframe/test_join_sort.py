@@ -31,7 +31,7 @@ from modin.pandas.test.utils import (
     test_data,
     generate_multiindex,
     eval_general,
-    rotate_decimal_digits,
+    rotate_decimal_digits_or_symbols,
     extra_test_parameters,
 )
 from modin.config import NPartitions
@@ -414,12 +414,12 @@ def test_sort_multiindex(sort_remaining):
     [
         pytest.param(
             "mergesort",
-            marks=pytest.mark.xfail(reason="multiindex levels do not work"),
+            marks=pytest.mark.skipif(not extra_test_parameters, reason="extra"),
         ),
         "quicksort",
         pytest.param(
             "heapsort",
-            marks=pytest.mark.xfail(reason="multiindex levels do not work"),
+            marks=pytest.mark.skipif(not extra_test_parameters, reason="extra"),
         ),
     ],
 )
@@ -429,12 +429,15 @@ def test_sort_multiindex(sort_remaining):
     bool_arg_values,
     ids=arg_keys("ignore_index", bool_arg_keys),
 )
-@pytest.mark.parametrize("key", [None, rotate_decimal_digits])
+@pytest.mark.parametrize("key", [None, rotate_decimal_digits_or_symbols])
 def test_sort_values(
     data, by, axis, ascending, inplace, kind, na_position, ignore_index, key
 ):
     if (axis == 1 or axis == "columns") and ignore_index:
         pytest.skip("Pandas bug #39426 which is fixed in Pandas 1.3")
+
+    if ascending is None and key is not None:
+        pytest.skip("Pandas bug #41318")
 
     if "multiindex" in by:
         index = generate_multiindex(len(data[list(data.keys())[0]]), nlevels=2)

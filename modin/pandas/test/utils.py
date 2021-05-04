@@ -1245,7 +1245,11 @@ def sort_index_for_equal_values(series, ascending=False):
     return res
 
 
-def rotate_decimal_digits(number):
-    tens = number / 10
-    ones = number % 10
-    return tens + ones * 10
+def rotate_decimal_digits_or_symbols(value):
+    if value.dtype == object:
+        # When dtype is object, we assume that it is actually strings from MultiIndex level names
+        return [x[-1] + x[:-1] for x in value]
+    else:
+        tens = value // 10
+        ones = value % 10
+        return tens + ones * 10
