@@ -34,6 +34,7 @@ from numpydoc.validate import Docstring
 from numpydoc.docscrape import NumpyDocString
 
 import types
+
 # fake cuDF-related modules if they're missing
 for mod_name in ("cudf", "cupy"):
     try:
