@@ -262,9 +262,9 @@ by documentation for now, the rest is coming soon...).
    │   ├───backends
    │   │   ├───base
    │   │   │   └───query_compiler
-   │   │   ├───pandas
+   │   │   ├─── :doc:`pandas </flow/modin/backends/pandas/index>`
    │   │   |   ├─── :doc:`parsers </flow/modin/backends/pandas/parsers>`
-   │   │   │   └───query_compiler
+   │   │   │   └─── :doc:`query_compiler </flow/modin/backends/pandas/query_compiler>`
    │   │   └───pyarrow
    │   │   |   ├───parsers
    │   │   │   └───query_compiler
