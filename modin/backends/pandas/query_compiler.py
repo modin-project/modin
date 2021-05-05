@@ -61,7 +61,7 @@ def _get_axis(axis):
     Parameters
     ----------
     axis : {0, 1}
-        Axis to get labels from.
+        Axis to get labels from. 0 is for index and 1 is for column.
 
     Returns
     -------
@@ -80,7 +80,7 @@ def _set_axis(axis):
     Parameters
     ----------
     axis : {0, 1}
-        Axis to set labels on.
+        Axis to set labels on. 0 is for index and 1 is for column.
 
     Returns
     -------
