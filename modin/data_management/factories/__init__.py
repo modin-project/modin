@@ -15,7 +15,7 @@ from . import factories
 
 
 def _get_remote_engines():
-    """Yield engines of all of the experemental remote factories."""
+    """Yield engines of all of the experimental remote factories."""
     for name in dir(factories):
         obj = getattr(factories, name)
         if isinstance(obj, type) and issubclass(
