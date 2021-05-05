@@ -990,7 +990,7 @@ class BaseQueryCompiler(abc.ABC):
     @abc.abstractmethod
     def to_pandas(self):
         """
-        Convert Modin DataFrame to pandas DataFrame.
+        Convert underlying query compilers data to to pandas DataFrame.
 
         Returns
         -------
@@ -1048,7 +1048,7 @@ class BaseQueryCompiler(abc.ABC):
 
     def to_numpy(self, **kwargs):  # noqa: PR02
         """
-        Convert Modin DataFrame to NumPy array.
+        Convert underlying query compilers data to NumPy array.
 
         Parameters
         ----------

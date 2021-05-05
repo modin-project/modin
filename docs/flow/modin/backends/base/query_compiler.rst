@@ -13,14 +13,14 @@ Subclassing ``BaseQueryCompiler``
 If you want to add new type of query compiler to Modin you need to inherit new
 class from `BaseQueryCompiler` and implement the rest of the abstract methods:
 
-- ``from_pandas``
-- ``from_arrow``
-- ``to_pandas``
-- ``default_to_pandas``
-- ``finalize``
-- ``free``
+- ``from_pandas`` build query compiler from pandas DataFrame.
+- ``from_arrow`` build query compiler from Arrow Table.
+- ``to_pandas`` get query compilers representation via pandas DataFrame.
+- ``default_to_pandas`` do :ref:`fallback to pandas <defaulting-to-pandas-mechanism>` for the passed function. 
+- ``finalize`` finalize object constructing.
+- ``free`` trigger memory cleaning.
 
-(Please refer to the code documentation to see contracts for these functions).
+(Please refer to the code documentation to see full contracts for these functions).
 
 This is a minimum set of operations to ensure the proper work of your new query compiler,
 the rest of the API will be defaulted pandas. To add backend-specific implementation for
