@@ -192,10 +192,14 @@ def _inherit_docstrings(parent, excluded=[], overwrite_existing=False, apilink=N
             _replace_doc(parent, cls_or_func, overwrite_existing, apilink)
 
         if not isinstance(cls_or_func, types.FunctionType):
+            seen = set()
             for base in cls_or_func.__mro__:
                 if base is object:
                     continue
                 for attr, obj in base.__dict__.items():
+                    if attr in seen:
+                        continue
+                    seen.add(attr)
                     parent_obj = getattr(parent, attr, None)
                     if (
                         parent_obj in excluded
