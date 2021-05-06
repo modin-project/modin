@@ -58,7 +58,13 @@ class BasePandasFrame(object):
 
     @property
     def __constructor__(self):
-        """Create a new instance of this object."""
+        """
+        Create a new instance of this object.
+
+        Returns
+        -------
+        BasePandasFrame
+        """
         return type(self)
 
     def __init__(
@@ -268,7 +274,14 @@ class BasePandasFrame(object):
 
     @property
     def axes(self):
-        """Get index and columns that can be accessed with an `axis` integer."""
+        """
+        Get index and columns that can be accessed with an `axis` integer.
+
+        Returns
+        -------
+        list
+            List with two values: index and columns.
+        """
         return [self.index, self.columns]
 
     def _compute_axis_labels(self, axis: int, partitions=None):

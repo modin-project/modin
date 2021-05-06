@@ -31,6 +31,7 @@ import shutil
 import logging
 import functools
 from numpydoc.validate import Docstring
+from numpydoc.docscrape import NumpyDocString
 
 logging.basicConfig(
     stream=sys.stdout, format="%(levelname)s:%(message)s", level=logging.INFO
@@ -50,6 +51,7 @@ NUMPYDOC_BASE_ERROR_CODES = {
 MODIN_ERROR_CODES = {
     "MD01": "'{parameter}' description should be '[type], default: [value]', found: '{found}'",
     "MD02": "Spelling error in line: {line}, found: '{word}', reference: '{reference}'",
+    "MD03": "Section contents is over-indented (in section '{section}')",
 }
 
 
@@ -150,13 +152,16 @@ def check_spelling_words(doc: Docstring) -> list:
 
     # comments work only with re.VERBOSE
     pattern = r"""
-    (?:\W|^)                # non-capturing group of either non-word symbol or line start
+    (?:                     # non-capturing group
+        [^-\\\w\/]          # any symbol except: '-', '\', '/' and any from [a-zA-Z0-9_]
+        | ^                 # or line start
+    )
     ({check_words})         # words to check, example - "modin|pandas|numpy"
     (?:                     # non-capturing group
-        [^"\.\/\w\\]        # any symbol except: '"', '.', '\' and any from [a-zA-Z0-9_]
+        [^-"\.\/\w\\]       # any symbol except: '-', '"', '.', '\', '/' and any from [a-zA-Z0-9_]
         | \.\s              # or '.' and any whitespace
-        | \.$               # or '.' and end
-        | $                 # or end
+        | \.$               # or '.' and line end
+        | $                 # or line end
     )
     """.format(
         check_words=check_words
@@ -166,6 +171,12 @@ def check_spelling_words(doc: Docstring) -> list:
         for line in doc.raw_doc.splitlines()
     ]
 
+    docstring_start_line = None
+    for idx, line in enumerate(inspect.getsourcelines(doc.code_obj)[0]):
+        if '"""' in line or "'''" in line:
+            docstring_start_line = doc.source_file_def_line + idx
+            break
+
     errors = []
     for line_idx, words_in_line in enumerate(results):
         for word in words_in_line:
@@ -174,11 +185,41 @@ def check_spelling_words(doc: Docstring) -> list:
                 (
                     "MD02",
                     MODIN_ERROR_CODES["MD02"].format(
-                        line=line_idx,
+                        line=docstring_start_line + line_idx,
                         word=word,
                         reference=reference,
                     ),
                 )
+            )
+    return errors
+
+
+def check_docstring_indention(doc: Docstring) -> list:
+    """
+    Check indention of docstring since numpydoc reports weird results.
+
+    Parameters
+    ----------
+    doc : numpydoc.validate.Docstring
+        Docstring handler.
+
+    Returns
+    -------
+    list
+        List of tuples with Modin error code and its description.
+    """
+    from modin.utils import _get_indent
+
+    numpy_docstring = NumpyDocString(doc.clean_doc)
+    numpy_docstring._doc.reset()
+    numpy_docstring._parse_summary()
+    sections = list(numpy_docstring._read_sections())
+    errors = []
+    for section in sections:
+        description = "\n".join(section[1])
+        if _get_indent(description) != 0:
+            errors.append(
+                ("MD03", MODIN_ERROR_CODES["MD03"].format(section=section[0]))
             )
     return errors
 
@@ -201,6 +242,7 @@ def validate_modin_error(doc: Docstring, results: dict) -> list:
     """
     errors = check_optional_args(doc)
     errors += check_spelling_words(doc)
+    errors += check_docstring_indention(doc)
     results["errors"].extend(errors)
     return results
 
@@ -226,13 +268,6 @@ def skip_check_if_noqa(doc: Docstring, err_code: str, noqa_checks: list) -> bool
     if noqa_checks == ["all"]:
         return True
 
-    # Documentation checking is performed by two tools: pydocstyle and numpydoc,
-    # the checks of which are sometimes similar, but have different codes. In the
-    # case when we want to disable one of the checks, we would like not to indicate
-    # the codes of the two tools, because this is a duplication in meaning. To do
-    # this, it is necessary to map the codes of the two tools, which is further
-    # done for check of missing docstrings.
-
     # GL08 - missing docstring in an arbitary object; numpydoc code
     if err_code == "GL08":
         name = doc.name.split(".")[-1]
@@ -240,21 +275,6 @@ def skip_check_if_noqa(doc: Docstring, err_code: str, noqa_checks: list) -> bool
         # So there is no error if docstring is missing in __init__
         if name == "__init__":
             return True
-        magic = name.startswith("__") and name.endswith("__")
-        # Codes of missing docstring for different types of objects; pydocstyle codes
-        if inspect.isclass(doc.obj):
-            # D101 - missing docstring in a class
-            err_code = "D101"
-        elif inspect.ismethod(doc.obj):
-            # D102 - missing docstring in a method
-            err_code = "D102"
-        elif inspect.isfunction(doc.obj) and not magic:
-            # D103 - missing docstring in a function
-            err_code = "D103"
-        elif inspect.isfunction(doc.obj) and magic:
-            # D105 - missing docstring in a magic method
-            err_code = "D105"
-
     return err_code in noqa_checks
 
 
@@ -277,15 +297,10 @@ def get_noqa_checks(doc: Docstring) -> list:
     If noqa doesn't have any codes - returns ["all"].
     """
     source = doc.method_source
-    # case when property decorator is used; it hides sources
-    if not source and isinstance(doc.obj, property):
-        new_doc = Docstring(doc.name)
-        new_doc.obj = doc.obj.fget
-        source = new_doc.method_source
-        if not source:
-            return []
+    if not source:
+        return []
 
-    noqa_str = None
+    noqa_str = ""
     if not inspect.ismodule(doc.obj):
         # find last line of obj definition
         for line in source.split("\n"):
@@ -293,8 +308,15 @@ def get_noqa_checks(doc: Docstring) -> list:
                 noqa_str = line
                 break
     else:
-        # pydocstyle only check first line; aling with it
-        noqa_str = source.split("\n", 1)[0]
+        # noqa string is defined as the first line before the docstring
+        if not doc.raw_doc:
+            # noqa string is meaningless if there is no docstring in module
+            return []
+        lines = source.split("\n")
+        for idx, line in enumerate(lines):
+            if '"""' in line or "'''" in line:
+                noqa_str = lines[idx - 1]
+                break
 
     if "# noqa:" in noqa_str:
         noqa_checks = noqa_str.split("# noqa:", 1)[1].split(",")
@@ -324,6 +346,12 @@ def validate_object(import_path: str) -> list:
 
     errors = []
     doc = Docstring(import_path)
+    if getattr(doc.obj, "__doc_inherited__", False) or (
+        isinstance(doc.obj, property)
+        and getattr(doc.obj.fget, "__doc_inherited__", False)
+    ):
+        # do not check inherited docstrings
+        return errors
     results = validate(import_path)
     results = validate_modin_error(doc, results)
     noqa_checks = get_noqa_checks(doc)
@@ -401,14 +429,17 @@ def numpydoc_validate(path: pathlib.Path) -> bool:
                 + methods
             )
             results = list(map(validate_object, to_validate))
-            is_successfull = not any(results)
-            if not is_successfull:
+            is_successfull_file = not any(results)
+            if not is_successfull_file:
                 logging.info(f"NUMPYDOC OUTPUT FOR {current_path}")
             [logging.error(error) for errors in results for error in errors]
+            is_successfull &= is_successfull_file
     return is_successfull
 
 
-def pydocstyle_validate(path: pathlib.Path, add_ignore: List[str]) -> int:
+def pydocstyle_validate(
+    path: pathlib.Path, add_ignore: List[str], use_numpydoc: bool
+) -> int:
     """
     Perform pydocstyle checks.
 
@@ -418,6 +449,8 @@ def pydocstyle_validate(path: pathlib.Path, add_ignore: List[str]) -> int:
         Filename or directory path for check.
     add_ignore : List[int]
         `pydocstyle` error codes which are not verified.
+    use_numpydoc : bool
+        Disable duplicate `pydocstyle` checks if `numpydoc` is in use.
 
     Returns
     -------
@@ -427,6 +460,9 @@ def pydocstyle_validate(path: pathlib.Path, add_ignore: List[str]) -> int:
     pydocstyle = "pydocstyle"
     if not shutil.which(pydocstyle):
         raise ValueError(f"{pydocstyle} not found in PATH")
+    # These check can be done with numpydoc tool, so disable them for pydocstyle.
+    if use_numpydoc:
+        add_ignore.extend(["D100", "D101", "D102", "D103", "D104", "D105"])
     result = subprocess.run(
         [
             pydocstyle,
@@ -457,9 +493,17 @@ def monkeypatching():
         return lambda cls_or_func: cls_or_func
 
     ray.remote = monkeypatch
-    modin.utils._inherit_docstrings = functools.wraps(modin.utils._inherit_docstrings)(
-        lambda *args, **kwargs: lambda cls: cls
-    )
+
+    modin.utils.instancer = functools.wraps(modin.utils.instancer)(lambda cls: cls)
+
+    # monkey-patch numpydoc for working correctly with properties
+    def load_obj(name, old_load_obj=Docstring._load_obj):
+        obj = old_load_obj(name)
+        if isinstance(obj, property):
+            obj = obj.fget
+        return obj
+
+    Docstring._load_obj = staticmethod(load_obj)
 
 
 def validate(
@@ -484,7 +528,7 @@ def validate(
     """
     is_successfull = True
     for path in paths:
-        if not pydocstyle_validate(path, add_ignore):
+        if not pydocstyle_validate(path, add_ignore, use_numpydoc):
             is_successfull = False
         if use_numpydoc:
             if not numpydoc_validate(path):
