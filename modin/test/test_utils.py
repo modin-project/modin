@@ -97,7 +97,6 @@ def test_doc_inherit_clslevel(wrapped_cls):
     _check_doc(wrapped_cls, BaseChild)
 
 
-
 def test_doc_inherit_methods(wrapped_cls):
     _check_doc(wrapped_cls.method, BaseChild.method)
     _check_doc(wrapped_cls.base_method, BaseParent.base_method)
