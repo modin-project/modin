@@ -223,8 +223,6 @@ def gen_data(
     ncols: int,
     rand_low: int,
     rand_high: int,
-    groupby_ncols: Optional[int] = None,
-    count_groups: Optional[int] = None,
 ) -> dict:
     """
     Generate data with caching.
@@ -245,12 +243,6 @@ def gen_data(
         Low bound for random generator.
     rand_high : int
         High bound for random generator.
-    groupby_ncols : int, optional
-        Number of columns for which `groupby` will be called in the future;
-        to get more stable performance results, we need to have the same number of values
-        in each group every benchmarking time.
-    count_groups : int, optional
-        Count of groups in groupby columns.
 
     Returns
     -------
@@ -258,26 +250,12 @@ def gen_data(
         Number of keys - `ncols`, each of them store np.ndarray of `nrows` length.
         When `data_type`=="str_int" some of the columns will be of string type.
     """
-    assert not (
-        (groupby_ncols is None) ^ (count_groups is None)
-    ), "You must either specify both parameters 'groupby_ncols' and 'count_groups' or none of them."
-
-    groupby_columns = None
-    if groupby_ncols:
-        ncols -= groupby_ncols
-        groupby_columns = [f"groupby_col{x}" for x in range(groupby_ncols)]
-
     if data_type == "int":
-        data = gen_int_data(nrows, ncols, rand_low, rand_high)
+        return gen_int_data(nrows, ncols, rand_low, rand_high)
     elif data_type == "str_int":
-        data = gen_str_int_data(nrows, ncols, rand_low, rand_high)
+        return gen_str_int_data(nrows, ncols, rand_low, rand_high)
     else:
         assert False
-
-    if groupby_ncols:
-        for groupby_col in groupby_columns:
-            data[groupby_col] = np.tile(np.arange(count_groups), nrows // count_groups)
-    return data, groupby_columns
 
 
 def generate_dataframe(
@@ -289,7 +267,6 @@ def generate_dataframe(
     rand_high: int,
     groupby_ncols: Optional[int] = None,
     count_groups: Optional[int] = None,
-    do_cache: bool = False,
 ) -> Union[pd.DataFrame, pandas.DataFrame]:
     """
     Generate DataFrame with caching.
@@ -320,8 +297,6 @@ def generate_dataframe(
         in each group every benchmarking time.
     count_groups : int, default: None
         Count of groups in groupby columns.
-    do_cache : bool, default: False
-        Enable cache if needed.
 
     Returns
     -------
@@ -331,33 +306,52 @@ def generate_dataframe(
     -----
     The list of groupby columns names returns when groupby columns are generated.
     """
-    df = None
-    if do_cache:
-        cache_key = (
-            *(impl, data_type, nrows, ncols, rand_low, rand_high),
-            *(groupby_ncols, count_groups),
-        )
-        if cache_key in dataframes_cache:
-            df, groupby_columns = dataframes_cache[cache_key]
+    assert not (
+        (groupby_ncols is None) ^ (count_groups is None)
+    ), "You must either specify both parameters 'groupby_ncols' and 'count_groups' or none of them."
 
-    if not df:
-        logging.info(
-            "Allocating {} DataFrame {}: {} rows and {} columns [{}-{}]".format(
-                impl, data_type, nrows, ncols, rand_low, rand_high
-            )
-        )
-        data, groupby_columns = gen_data(
-            data_type, nrows, ncols, rand_low, rand_high, groupby_ncols, count_groups
-        )
-        df = IMPL[impl].DataFrame(data)
+    if groupby_ncols and count_groups:
+        ncols -= groupby_ncols
 
-    if do_cache:
-        dataframes_cache[cache_key] = (df, groupby_columns)
+    cache_key = (
+        impl,
+        data_type,
+        nrows,
+        ncols,
+        rand_low,
+        rand_high,
+        groupby_ncols,
+        count_groups,
+    )
 
-    if groupby_columns:
-        return df, groupby_columns
+    if cache_key in dataframes_cache:
+        return dataframes_cache[cache_key]
+
+    logging.info(
+        "Allocating {} DataFrame {}: {} rows and {} columns [{}-{}]".format(
+            impl, data_type, nrows, ncols, rand_low, rand_high
+        )
+    )
+    data = gen_data(data_type, nrows, ncols, rand_low, rand_high)
+
+    if groupby_ncols and count_groups:
+        groupby_columns = [f"groupby_col{x}" for x in range(groupby_ncols)]
+        for groupby_col in groupby_columns:
+            data[groupby_col] = np.tile(np.arange(count_groups), nrows // count_groups)
+
+    if impl == "modin":
+        df = pd.DataFrame(data)
+    elif impl == "pandas":
+        df = pandas.DataFrame(data)
     else:
-        return df
+        assert False
+
+    if groupby_ncols and count_groups:
+        dataframes_cache[cache_key] = df, groupby_columns
+        return df, groupby_columns
+
+    dataframes_cache[cache_key] = df
+    return df
 
 
 def random_string() -> str:
