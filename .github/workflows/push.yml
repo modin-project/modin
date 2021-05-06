@@ -87,7 +87,7 @@ jobs:
           if sha512sum -c --ignore-missing --status SHA512SUM; then
               bash ./codecov
           else
-              echo CORRUPTED CODECOV SCRIPT
+              echo 'CORRUPTED CODECOV SCRIPT!!!'
               exit 10
           fi
 
@@ -121,7 +121,15 @@ jobs:
       - shell: bash -l {0}
         run: pytest modin/experimental/engines/omnisci_on_ray/test/test_dataframe.py
       - shell: bash -l {0}
-        run: bash <(curl -s https://codecov.io/bash)
+        run: |
+          curl -o codecov https://codecov.io/bash
+          curl -o SHA512SUM https://raw.githubusercontent.com/codecov/codecov-bash/master/SHA512SUM
+          if sha512sum -c --ignore-missing --status SHA512SUM; then
+              bash ./codecov
+          else
+              echo 'CORRUPTED CODECOV SCRIPT!!!'
+              exit 10
+          fi
 
   test-all:
     runs-on: ubuntu-latest
@@ -176,7 +184,15 @@ jobs:
       - run: python -m pytest -n 2 modin/pandas/test/test_general.py
       - run: python -m pytest modin/pandas/test/test_io.py
       - run: python -m pytest modin/experimental/pandas/test/test_io_exp.py
-      - run: bash <(curl -s https://codecov.io/bash)
+      - run: |
+          curl -o codecov https://codecov.io/bash
+          curl -o SHA512SUM https://raw.githubusercontent.com/codecov/codecov-bash/master/SHA512SUM
+          if sha512sum -c --ignore-missing --status SHA512SUM; then
+              bash ./codecov
+          else
+              echo 'CORRUPTED CODECOV SCRIPT!!!'
+              exit 10
+          fi
 
   test-windows:
     runs-on: windows-latest
