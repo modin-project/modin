@@ -84,7 +84,11 @@ jobs:
       - run: |
           curl -o codecov https://codecov.io/bash
           curl -o SHA512SUM https://raw.githubusercontent.com/codecov/codecov-bash/master/SHA512SUM
-          bash <(curl -s https://codecov.io/bash)
+          if sha512sum -c --ignore-missing --status SHA512SUM; then
+              bash ./codecov
+          else
+              exit 10
+          fi
 
   test-omnisci:
     runs-on: ubuntu-latest
