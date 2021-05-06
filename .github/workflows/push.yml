@@ -87,6 +87,7 @@ jobs:
           if sha512sum -c --ignore-missing --status SHA512SUM; then
               bash ./codecov
           else
+              echo CORRUPTED CODECOV SCRIPT
               exit 10
           fi
 
