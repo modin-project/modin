@@ -81,7 +81,10 @@ jobs:
       - run: python -m pytest -n 2 modin/pandas/test/test_groupby.py --backend=${{ matrix.backend }}
       - run: python -m pytest -n 2 modin/pandas/test/test_reshape.py --backend=${{ matrix.backend }}
       - run: python -m pytest -n 2 modin/pandas/test/test_general.py --backend=${{ matrix.backend }}
-      - run: bash <(curl -s https://codecov.io/bash)
+      - run: |
+          curl -o codecov https://codecov.io/bash
+          curl -o SHA512SUM https://raw.githubusercontent.com/codecov/codecov-bash/master/SHA512SUM
+          bash <(curl -s https://codecov.io/bash)
 
   test-omnisci:
     runs-on: ubuntu-latest
