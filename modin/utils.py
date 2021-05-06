@@ -18,6 +18,7 @@ import types
 import pandas
 import numpy as np
 
+from pandas.util._decorators import Appender
 from modin.config import Engine, Backend, IsExperimental
 
 PANDAS_API_URL_TEMPLATE = f"https://pandas.pydata.org/pandas-docs/version/{pandas.__version__}/reference/api/{{}}.html"
@@ -67,6 +68,44 @@ def _get_indent(doc: str) -> int:
                 break
         indents.append(pos)
     return min(indents) if indents else 0
+
+
+def append_to_docstring(message: str):
+    """
+    Create a decorator which appends passed message to the function's docstring.
+
+    Parameters
+    ----------
+    message : str
+        Message to append.
+
+    Returns
+    -------
+    callable
+    """
+
+    def decorator(func):
+        func_indent = _get_indent(func.__doc__)
+        message_indent = _get_indent(message)
+
+        indent_diff = abs(func_indent - message_indent)
+        if func_indent < message_indent:
+            to_append = "\n".join(
+                [
+                    line[indent_diff:] if len(line) >= indent_diff else line
+                    for line in message.splitlines()
+                ]
+            )
+        elif func_indent > message_indent:
+            indent_str = " " * indent_diff
+            to_append = "\n".join(indent_str + line for line in message.splitlines())
+        else:
+            to_append = message
+
+        appender = Appender(to_append)
+        return appender(func)
+
+    return decorator
 
 
 def _replace_doc(
