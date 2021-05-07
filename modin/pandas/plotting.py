@@ -11,7 +11,7 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-"""Implement Pandas plotting API."""
+"""Implement pandas plotting API."""
 
 from pandas import plotting as pdplot
 
@@ -21,7 +21,7 @@ from .dataframe import DataFrame
 
 @instancer
 class Plotting(object):
-    """Wrapper of Pandas plotting module."""
+    """Wrapper of pandas plotting module."""
 
     def __dir__(self):
         """
@@ -50,7 +50,7 @@ class Plotting(object):
             returned which converts its arguments to pandas and calls a function pandas.plotting.`item`
             on these arguments.
             If attribute is found in pandas.plotting but it is not a callable, returns it.
-            Otherwise function tries to look for an attribute in `self.`
+            Otherwise function tries to look for an attribute in `self`.
         """
         if hasattr(pdplot, item):
             func = getattr(pdplot, item)

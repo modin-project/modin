@@ -44,6 +44,19 @@ class BaseSparseAccessor:
         self._validate(data)
 
     def _validate(self, data):
+        """
+        Verify that `data` dtypes are compatible with `pandas.core.arrays.sparse.dtype.SparseDtype`.
+
+        Parameters
+        ----------
+        data : DataFrame
+            Object to check.
+
+        Raises
+        ------
+        NotImplementedError
+            Function is implemented in child classes.
+        """
         raise NotImplementedError
 
     def _default_to_pandas(self, op, *args, **kwargs):
