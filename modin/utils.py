@@ -156,8 +156,8 @@ def _inherit_docstrings(parent, excluded=[], overwrite_existing=False, apilink=N
     Create a decorator which overwrites decorated object docstring(s).
 
     It takes `parent` __doc__ attribute. Also overwrites __doc__ of
-    methods and properties defined in the target if it's a class with the __doc__ of
-    matching methods and properties from the `parent`.
+    methods and properties defined in the target or its ancestors if it's a class
+    with the __doc__ of matching methods and properties from the `parent`.
 
     Parameters
     ----------
@@ -177,6 +177,12 @@ def _inherit_docstrings(parent, excluded=[], overwrite_existing=False, apilink=N
     -------
     callable
         Decorator which replaces the decorated object's documentation with `parent` documentation.
+
+    Notes
+    -----
+    Keep in mind that the function will override docstrings even for attributes which
+    are not defined in target class (but are defined in the ancestor class),
+    which means that ancestor class attribute docstrings could also change.
     """
 
     def _documentable_obj(obj):
@@ -192,10 +198,14 @@ def _inherit_docstrings(parent, excluded=[], overwrite_existing=False, apilink=N
             _replace_doc(parent, cls_or_func, overwrite_existing, apilink)
 
         if not isinstance(cls_or_func, types.FunctionType):
+            seen = set()
             for base in cls_or_func.__mro__:
                 if base is object:
                     continue
                 for attr, obj in base.__dict__.items():
+                    if attr in seen:
+                        continue
+                    seen.add(attr)
                     parent_obj = getattr(parent, attr, None)
                     if (
                         parent_obj in excluded

@@ -114,3 +114,18 @@ def test_doc_inherit_props(wrapped_cls):
     assert type(wrapped_cls.method) == type(BaseChild.method)  # noqa: E721
     _check_doc(wrapped_cls.prop, BaseChild.prop)
     _check_doc(wrapped_cls.F, BaseChild.F)
+
+
+def test_doc_inherit_prop_builder():
+    def builder(name):
+        return property(lambda self: name)
+
+    class Parent:
+        prop = builder("Parent")
+
+    @modin.utils._inherit_docstrings(Parent)
+    class Child(Parent):
+        prop = builder("Child")
+
+    assert Parent().prop == "Parent"
+    assert Child().prop == "Child"
