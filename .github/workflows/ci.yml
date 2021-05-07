@@ -260,7 +260,15 @@ jobs:
       - run: python -m pytest -n 2 modin/pandas/test/test_groupby.py --backend=${{ matrix.backend }}
       - run: python -m pytest -n 2 modin/pandas/test/test_reshape.py --backend=${{ matrix.backend }}
       - run: python -m pytest -n 2 modin/pandas/test/test_general.py --backend=${{ matrix.backend }}
-      - run: bash <(curl -s https://codecov.io/bash)
+      - run: |
+          curl -o codecov https://codecov.io/bash
+          curl -o SHA512SUM https://raw.githubusercontent.com/codecov/codecov-bash/master/SHA512SUM
+          if sha512sum -c --ignore-missing --status SHA512SUM; then
+              bash ./codecov
+          else
+              echo 'CORRUPTED CODECOV SCRIPT!!!'
+              exit 10
+          fi
 
   test-omnisci:
     needs: [lint-commit, lint-flake8, lint-black, test-api, test-headers]
@@ -295,7 +303,15 @@ jobs:
       - shell: bash -l {0}
         run: pytest modin/experimental/engines/omnisci_on_ray/test/test_dataframe.py
       - shell: bash -l {0}
-        run: bash <(curl -s https://codecov.io/bash)
+        run: |
+          curl -o codecov https://codecov.io/bash
+          curl -o SHA512SUM https://raw.githubusercontent.com/codecov/codecov-bash/master/SHA512SUM
+          if sha512sum -c --ignore-missing --status SHA512SUM; then
+              bash ./codecov
+          else
+              echo 'CORRUPTED CODECOV SCRIPT!!!'
+              exit 10
+          fi
 
   test-asv-benchmarks:
     needs: [lint-commit, lint-flake8, lint-black, test-api, test-headers]
@@ -404,7 +420,15 @@ jobs:
       - run: python -m pytest modin/pandas/test/test_io.py
       - run: python -m pytest modin/experimental/pandas/test/test_io_exp.py
       - run: pip install dfsql && pytest modin/experimental/sql/test/test_sql.py
-      - run: bash <(curl -s https://codecov.io/bash)
+      - run: |
+          curl -o codecov https://codecov.io/bash
+          curl -o SHA512SUM https://raw.githubusercontent.com/codecov/codecov-bash/master/SHA512SUM
+          if sha512sum -c --ignore-missing --status SHA512SUM; then
+              bash ./codecov
+          else
+              echo 'CORRUPTED CODECOV SCRIPT!!!'
+              exit 10
+          fi
 
   test-experimental:
     needs: [lint-commit, lint-flake8, lint-black, test-api, test-headers]
@@ -437,7 +461,15 @@ jobs:
       - shell: bash -l {0}
         run: python -m pytest modin/pandas/test/test_io.py
       - shell: bash -l {0}
-        run: bash <(curl -s https://codecov.io/bash)
+        run: |
+          curl -o codecov https://codecov.io/bash
+          curl -o SHA512SUM https://raw.githubusercontent.com/codecov/codecov-bash/master/SHA512SUM
+          if sha512sum -c --ignore-missing --status SHA512SUM; then
+              bash ./codecov
+          else
+              echo 'CORRUPTED CODECOV SCRIPT!!!'
+              exit 10
+          fi
 
   test-cloud:
     needs: [lint-commit, lint-flake8, lint-black, test-api, test-headers]
@@ -466,7 +498,15 @@ jobs:
       - shell: bash -l {0}
         run: python -m pytest --simulate-cloud=normal modin/pandas/test/test_io.py::TestCsv
       - shell: bash -l {0}
-        run: bash <(curl -s https://codecov.io/bash)
+        run: |
+          curl -o codecov https://codecov.io/bash
+          curl -o SHA512SUM https://raw.githubusercontent.com/codecov/codecov-bash/master/SHA512SUM
+          if sha512sum -c --ignore-missing --status SHA512SUM; then
+              bash ./codecov
+          else
+              echo 'CORRUPTED CODECOV SCRIPT!!!'
+              exit 10
+          fi
 
   test-windows:
     needs: [lint-commit, lint-flake8, lint-black, test-api, test-headers]
