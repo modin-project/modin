@@ -288,6 +288,7 @@ def deploy_ray_func_between_two_axis_partitions(
 
     Returns
     -------
+    list
         List of PyArrow Tables.
     """
     lt_table = concat_arrow_table_partitions(axis, partitions[:len_of_left])

@@ -26,7 +26,7 @@ from modin.engines.base.frame.data import BasePandasFrame
 import ray
 
 
-class PyarrowOnRayFrame(BasePandasFrame):  # noqa: PR01,PR02,PR04,PR10
+class PyarrowOnRayFrame(BasePandasFrame):
     """
     Class for dataframes with PyArrow backend and Ray engine.
 
@@ -35,8 +35,20 @@ class PyarrowOnRayFrame(BasePandasFrame):  # noqa: PR01,PR02,PR04,PR10
 
     Parameters
     ----------
-    TBD.
-    TODO: add parameters after #2955 is merged.
+    partitions : np.ndarray
+        A 2D NumPy array of partitions.
+    index : sequence
+        The index for the dataframe. Converted to a ``pandas.Index``.
+    columns : sequence
+        The columns object for the dataframe. Converted to a ``pandas.Index``.
+    row_lengths : list, optional
+        The length of each partition in the rows. The "height" of
+        each of the block partitions. Is computed if not provided.
+    column_widths : list, optional
+        The width of each partition in the columns. The "width" of
+        each of the block partitions. Is computed if not provided.
+    dtypes : pandas.Series, optional
+        The data types for the dataframe columns.
     """
 
     _frame_mgr_cls = PyarrowOnRayFrameManager

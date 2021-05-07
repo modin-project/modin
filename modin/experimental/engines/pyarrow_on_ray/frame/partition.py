@@ -20,9 +20,7 @@ import ray
 import pyarrow
 
 
-class PyarrowOnRayFramePartition(
-    PandasOnRayFramePartition
-):  # noqa: PR01,PR02,PR04,PR10
+class PyarrowOnRayFramePartition(PandasOnRayFramePartition):
     """
     Class provides partition interface specific for PyArrow backend and Ray engine.
 
@@ -30,8 +28,16 @@ class PyarrowOnRayFramePartition(
 
     Parameters
     ----------
-    TBD.
-    TODO: add parameters after #2944 is merged.
+    object_id : ray.ObjectRef
+        A reference to pandas DataFrame that need to be wrapped with this class.
+    length : ray.ObjectRef or int, optional
+        Length or reference to it of wrapped pandas DataFrame.
+    width : ray.ObjectRef or int, optional
+        Width or reference to it of wrapped pandas DataFrame.
+    ip : ray.ObjectRef or str, optional
+        Node IP address or reference to it that holds wrapped pandas DataFrame.
+    call_queue : list
+        Call queue that needs to be executed on wrapped pandas DataFrame.
     """
 
     def to_pandas(self):

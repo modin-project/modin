@@ -245,6 +245,8 @@ documentation page on :doc:`contributing </contributing>`.
     - Uses the Ray_ execution framework.
     - The compute kernel/in-memory format is a pyarrow Table.
 
+.. _directory-tree:
+
 Module/Class View
 -----------------
 Modin modules layout is shown below. To deep dive into Modin internal implementation

@@ -498,7 +498,7 @@ def monkeypatching():
     # CI uses `pip install -e .[all]` command for installing pip dependencies, but pip `pyarrow`
     # package doesn't have `gandiva` submodule (ARROW-8518), so we are replacing it with
     # `unittest.mock.Mock`
-    sys.modules["pyarrow.gandiva"] = Mock()                 
+    sys.modules["pyarrow.gandiva"] = Mock()
 
     modin.utils.instancer = functools.wraps(modin.utils.instancer)(lambda cls: cls)
 

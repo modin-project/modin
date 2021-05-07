@@ -8,7 +8,4 @@ to increase the performance gain. In that cases, depending on exact experimental
 user will need to install additional packages, set environment variables or replace standard
 Modin import statement ``import modin.pandas as pd`` with modified version
 ``import modin.experimental.pandas as pd``. For concreate experimental feature example, please
-refer to the needed link from the directory tree.
-
-..
-  TODO: add link to the directory tree after DOCS-#2943 is merged.
+refer to the needed link from the :ref:`directory tree <directory-tree>`.

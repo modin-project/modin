@@ -25,7 +25,7 @@ from modin.engines.base.io import CSVDispatcher
 
 
 class PyarrowOnRayCSVDispatcher(RayTask, PyarrowCSVParser, CSVDispatcher):
-    """Deprecated class."""
+    """Class handles utils for reading `.csv` files with PyArrow backend and Ray engine."""
 
     frame_cls = PyarrowOnRayFrame
     frame_partition_cls = PyarrowOnRayFramePartition
@@ -33,7 +33,7 @@ class PyarrowOnRayCSVDispatcher(RayTask, PyarrowCSVParser, CSVDispatcher):
 
 
 class PyarrowOnRayIO(RayIO):
-    """Deprecated class."""
+    """Class for storing IO functions operated on PyArrow backend and Ray engine."""
 
     frame_cls = PyarrowOnRayFrame
     frame_partition_cls = PyarrowOnRayFramePartition
