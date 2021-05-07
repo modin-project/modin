@@ -22,7 +22,7 @@ import pandas
 
 
 @_inherit_docstrings(DefaultMethod)
-class DataFrameDefault(DefaultMethod):  # noqa: D101
+class DataFrameDefault(DefaultMethod):
     @classmethod
     def register(cls, func, obj_type=None, **kwargs):
         """

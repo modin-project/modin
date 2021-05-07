@@ -148,122 +148,122 @@ class EngineDispatcher(object):
 
     @classmethod
     @_inherit_docstrings(factories.BaseFactory._from_pandas)
-    def from_pandas(cls, df):  # noqa: D102
+    def from_pandas(cls, df):
         return cls.__engine._from_pandas(df)
 
     @classmethod
     @_inherit_docstrings(factories.BaseFactory._from_arrow)
-    def from_arrow(cls, at):  # noqa: D102
+    def from_arrow(cls, at):
         return cls.__engine._from_arrow(at)
 
     @classmethod
     @_inherit_docstrings(factories.BaseFactory._from_non_pandas)
-    def from_non_pandas(cls, *args, **kwargs):  # noqa: D102
+    def from_non_pandas(cls, *args, **kwargs):
         return cls.__engine._from_non_pandas(*args, **kwargs)
 
     @classmethod
     @_inherit_docstrings(factories.BaseFactory._read_parquet)
-    def read_parquet(cls, **kwargs):  # noqa: D102
+    def read_parquet(cls, **kwargs):
         return cls.__engine._read_parquet(**kwargs)
 
     @classmethod
     @_inherit_docstrings(factories.BaseFactory._read_csv)
-    def read_csv(cls, **kwargs):  # noqa: D102
+    def read_csv(cls, **kwargs):
         return cls.__engine._read_csv(**kwargs)
 
     @classmethod
     @_inherit_docstrings(factories.ExperimentalPandasOnRayFactory._read_csv_glob)
-    def read_csv_glob(cls, **kwargs):  # noqa: D102
+    def read_csv_glob(cls, **kwargs):
         return cls.__engine._read_csv_glob(**kwargs)
 
     @classmethod
     @_inherit_docstrings(factories.BaseFactory._read_json)
-    def read_json(cls, **kwargs):  # noqa: D102
+    def read_json(cls, **kwargs):
         return cls.__engine._read_json(**kwargs)
 
     @classmethod
     @_inherit_docstrings(factories.BaseFactory._read_gbq)
-    def read_gbq(cls, **kwargs):  # noqa: D102
+    def read_gbq(cls, **kwargs):
         return cls.__engine._read_gbq(**kwargs)
 
     @classmethod
     @_inherit_docstrings(factories.BaseFactory._read_html)
-    def read_html(cls, **kwargs):  # noqa: D102
+    def read_html(cls, **kwargs):
         return cls.__engine._read_html(**kwargs)
 
     @classmethod
     @_inherit_docstrings(factories.BaseFactory._read_clipboard)
-    def read_clipboard(cls, **kwargs):  # noqa: D102
+    def read_clipboard(cls, **kwargs):
         return cls.__engine._read_clipboard(**kwargs)
 
     @classmethod
     @_inherit_docstrings(factories.BaseFactory._read_excel)
-    def read_excel(cls, **kwargs):  # noqa: D102
+    def read_excel(cls, **kwargs):
         return cls.__engine._read_excel(**kwargs)
 
     @classmethod
     @_inherit_docstrings(factories.BaseFactory._read_hdf)
-    def read_hdf(cls, **kwargs):  # noqa: D102
+    def read_hdf(cls, **kwargs):
         return cls.__engine._read_hdf(**kwargs)
 
     @classmethod
     @_inherit_docstrings(factories.BaseFactory._read_feather)
-    def read_feather(cls, **kwargs):  # noqa: D102
+    def read_feather(cls, **kwargs):
         return cls.__engine._read_feather(**kwargs)
 
     @classmethod
     @_inherit_docstrings(factories.BaseFactory._read_stata)
-    def read_stata(cls, **kwargs):  # noqa: D102
+    def read_stata(cls, **kwargs):
         return cls.__engine._read_stata(**kwargs)
 
     @classmethod
     @_inherit_docstrings(factories.BaseFactory._read_sas)
-    def read_sas(cls, **kwargs):  # pragma: no cover # noqa: D102
+    def read_sas(cls, **kwargs):  # pragma: no cover
         return cls.__engine._read_sas(**kwargs)
 
     @classmethod
     @_inherit_docstrings(factories.BaseFactory._read_pickle)
-    def read_pickle(cls, **kwargs):  # noqa: D102
+    def read_pickle(cls, **kwargs):
         return cls.__engine._read_pickle(**kwargs)
 
     @classmethod
     @_inherit_docstrings(factories.BaseFactory._read_sql)
-    def read_sql(cls, **kwargs):  # noqa: D102
+    def read_sql(cls, **kwargs):
         return cls.__engine._read_sql(**kwargs)
 
     @classmethod
     @_inherit_docstrings(factories.BaseFactory._read_fwf)
-    def read_fwf(cls, **kwargs):  # noqa: D102
+    def read_fwf(cls, **kwargs):
         return cls.__engine._read_fwf(**kwargs)
 
     @classmethod
     @_inherit_docstrings(factories.BaseFactory._read_sql_table)
-    def read_sql_table(cls, **kwargs):  # noqa: D102
+    def read_sql_table(cls, **kwargs):
         return cls.__engine._read_sql_table(**kwargs)
 
     @classmethod
     @_inherit_docstrings(factories.BaseFactory._read_sql_query)
-    def read_sql_query(cls, **kwargs):  # noqa: D102
+    def read_sql_query(cls, **kwargs):
         return cls.__engine._read_sql_query(**kwargs)
 
     @classmethod
     @_inherit_docstrings(factories.BaseFactory._read_spss)
-    def read_spss(cls, **kwargs):  # noqa: D102
+    def read_spss(cls, **kwargs):
         return cls.__engine._read_spss(**kwargs)
 
     @classmethod
     @_inherit_docstrings(factories.BaseFactory._to_sql)
-    def to_sql(cls, *args, **kwargs):  # noqa: D102
+    def to_sql(cls, *args, **kwargs):
         return cls.__engine._to_sql(*args, **kwargs)
 
     @classmethod
     @_inherit_docstrings(factories.BaseFactory._to_pickle)
-    def to_pickle(cls, *args, **kwargs):  # noqa: D102
+    def to_pickle(cls, *args, **kwargs):
         return cls.__engine._to_pickle(*args, **kwargs)
 
     @classmethod
     @_inherit_docstrings(factories.BaseFactory._to_csv)
-    def to_csv(cls, *args, **kwargs):  # noqa: D102
+    def to_csv(cls, *args, **kwargs):
         return cls.__engine._to_csv(*args, **kwargs)
 
 
