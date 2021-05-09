@@ -18,6 +18,7 @@ from modin_spreadsheet import show_grid, SpreadsheetWidget
 def from_dataframe(
     dataframe,
     show_toolbar=None,
+    show_history=None,
     precision=None,
     grid_options=None,
     column_options=None,
@@ -56,6 +57,9 @@ def from_dataframe(
         Whether to show a toolbar with options for adding/removing rows.
         Adding/removing rows is an experimental feature which only works
         with DataFrames that have an integer index.
+    show_history : bool
+        Whether to show the cell containing the spreadsheet transformation
+        history.
     column_options : dict
         Column options that are to be applied to every column. See the
         Notes section below for more information on the available options,
@@ -171,6 +175,7 @@ def from_dataframe(
     return show_grid(
         dataframe,
         show_toolbar,
+        show_history,
         precision,
         grid_options,
         column_options,
