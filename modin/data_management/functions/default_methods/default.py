@@ -33,8 +33,7 @@ class DefaultMethod(Function):
     OBJECT_TYPE = "DataFrame"
 
     @classmethod
-    # FIXME: spread `**call_kwds` into an actual function arguments.
-    def call(cls, func, **call_kwds):  # noqa: PR02
+    def call(cls, func, obj_type=pandas.DataFrame, inplace=None, fn_name=None):
         """
         Build function that do fallback to default pandas implementation for passed `func`.
 
@@ -45,16 +44,13 @@ class DefaultMethod(Function):
             by ``cls.frame_wrapper``.
         obj_type : object, default: pandas.DataFrame
             If `func` is a string with a function name then `obj_type` provides an
-            object to search function in. (If specified, have to be passed via `kwargs`).
-        inplace : bool, default: False
+            object to search function in.
+        inplace : bool, optional
             If True return an object to which `func` was applied, otherwise return
-            the result of `func`. (If specified, have to be passed via `kwargs`).
+            the result of `func`.
         fn_name : str, optional
             Function name which will be shown in default-to-pandas warning message.
             If not specified, name will be deducted from `func`.
-            (If specified, have to be passed via `kwargs`).
-        **call_kwds : kwargs
-            Additional parameters in the glory of compatibility. Does not affect the result.
 
         Returns
         -------
@@ -62,12 +58,10 @@ class DefaultMethod(Function):
             Function that takes query compiler, does fallback to pandas and applies `func`
             to the casted to pandas frame or its property accesed by ``cls.frame_wrapper``.
         """
-        obj = call_kwds.get("obj_type", pandas.DataFrame)
-        force_inplace = call_kwds.get("inplace")
-        fn_name = call_kwds.get("fn_name", getattr(func, "__name__", str(func)))
+        fn_name = getattr(func, "__name__", str(func)) if fn_name is None else fn_name
 
         if isinstance(func, str):
-            fn = getattr(obj, func)
+            fn = getattr(obj_type, func)
         else:
             fn = func
 
@@ -101,10 +95,10 @@ class DefaultMethod(Function):
                     result.name = "__reduced__"
                 result = result.to_frame()
 
-            inplace = kwargs.get("inplace", False)
-            if force_inplace is not None:
-                inplace = force_inplace
-            return result if not inplace else df
+            inplace_method = kwargs.get("inplace", False)
+            if inplace is not None:
+                inplace_method = inplace
+            return result if not inplace_method else df
 
         return cls.build_wrapper(applyier, fn_name)
 

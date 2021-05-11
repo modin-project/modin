@@ -156,8 +156,8 @@ class GroupbyReduceFunction(MapReduceFunction):
         reduce_func=None,
         reduce_args=None,
         drop=False,
-        **kwargs,
-    ):  # noqa: PR02
+        method=None,
+    ):
         """
         Execute Reduce phase of GroupbyReduce.
 
@@ -182,9 +182,6 @@ class GroupbyReduceFunction(MapReduceFunction):
             Indicates whether or not by-data came from the `self` frame.
         method : str, optional
             Name of the groupby function. This is a hint to be able to do special casing.
-            (If specified, have to be passed via `kwargs`).
-        **kwargs : kwargs
-            Additional parameters in the glory of compatibility. Does not affect the result.
 
         Returns
         -------
@@ -199,7 +196,6 @@ class GroupbyReduceFunction(MapReduceFunction):
             df.drop(columns=by_part, errors="ignore", inplace=True)
 
         groupby_args = groupby_args.copy()
-        method = kwargs.get("method", None)
         as_index = groupby_args["as_index"]
 
         # Set `as_index` to True to track the metadata of the grouping object
@@ -219,7 +215,6 @@ class GroupbyReduceFunction(MapReduceFunction):
         return pandas.DataFrame(result)
 
     @classmethod
-    # FIXME: spread `**kwargs` into an actual function arguments.
     def caller(
         cls,
         query_compiler,
@@ -228,9 +223,12 @@ class GroupbyReduceFunction(MapReduceFunction):
         groupby_args,
         map_args,
         map_func,
+        reduce_func,
+        reduce_args,
         numeric_only=True,
-        **kwargs,
-    ):  # noqa: PR02
+        drop=False,
+        method=None,
+    ):
         """
         Execute GroupBy aggregation with MapReduce approach.
 
@@ -249,22 +247,16 @@ class GroupbyReduceFunction(MapReduceFunction):
             Arguments which will be passed to `map_func`.
         map_func : dict or callable(pandas.DataFrameGroupBy) -> pandas.DataFrame
             Function to apply to the `GroupByObject` at the Map phase.
-        numeric_only : bool, default: True
-            Whether or not to drop non-numeric columns before executing GroupBy.
         reduce_func : dict or callable(pandas.DataFrameGroupBy) -> pandas.DataFrame
             Function to apply to the `GroupByObject` at the Reduce phase.
-            (If specified, have to be passed via `kwargs`).
         reduce_args : dict
             Arguments which will be passed to `reduce_func`.
-            (If specified, have to be passed via `kwargs`).
+        numeric_only : bool, default: True
+            Whether or not to drop non-numeric columns before executing GroupBy.
         drop : bool, default: False
             Indicates whether or not by-data came from the `self` frame.
-            (If specified, have to be passed via `kwargs`).
         method : str, optional
             Name of the GroupBy aggregation function. This is a hint to be able to do special casing.
-            (If specified, have to be passed via `kwargs`).
-        **kwargs : kwargs
-            Additional parameters in the glory of compatibility. Does not affect the result.
 
         Returns
         -------
@@ -302,7 +294,10 @@ class GroupbyReduceFunction(MapReduceFunction):
             groupby_args=groupby_args,
             map_func=map_func,
             map_args=map_args,
-            **kwargs,
+            reduce_func=reduce_func,
+            reduce_args=reduce_args,
+            drop=drop,
+            method=method,
         )
 
         # If `by` is a ModinFrame, then its partitions will be broadcasted to every
@@ -345,7 +340,6 @@ class GroupbyReduceFunction(MapReduceFunction):
         return lambda grp: grp.agg(partition_dict)
 
     @classmethod
-    # FIXME: spread `**kwargs` into an actual function arguments.
     def build_map_reduce_functions(
         cls,
         by,
@@ -356,8 +350,8 @@ class GroupbyReduceFunction(MapReduceFunction):
         reduce_func,
         reduce_args,
         drop,
-        **kwargs,
-    ):  # noqa: PR02
+        method=None,
+    ):
         """
         Bind appropriate arguments to map and reduce functions.
 
@@ -382,8 +376,6 @@ class GroupbyReduceFunction(MapReduceFunction):
             Indicates whether or not by-data came from the `self` frame.
         method : str, optional
             Name of the GroupBy aggregation function. This is a hint to be able to do special casing.
-        **kwargs : kwargs
-            Additional parameters in the glory of compatibility. Does not affect the result.
 
         Returns
         -------
@@ -427,7 +419,7 @@ class GroupbyReduceFunction(MapReduceFunction):
                     reduce_func=reduce_func,
                     reduce_args=reduce_args,
                     drop=drop,
-                    **kwargs,
+                    method=method,
                     **call_kwargs,
                 )
 

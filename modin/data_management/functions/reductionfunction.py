@@ -20,8 +20,7 @@ class ReductionFunction(Function):
     """Builder class for Reduction functions."""
 
     @classmethod
-    # FIXME: spread `**call_kwds` into an actual function arguments.
-    def call(cls, reduction_function, **call_kwds):  # noqa: PR02
+    def call(cls, reduction_function, axis=None):
         """
         Build Reduction function that will be performed across rows/columns.
 
@@ -33,9 +32,6 @@ class ReductionFunction(Function):
             Source function.
         axis : int, optional
             Axis to apply function along.
-            (If specified, have to be passed via `kwargs`).
-        **call_kwds : kwargs
-            Additional parameters in the glory of compatibility. Does not affect the result.
 
         Returns
         -------
@@ -45,10 +41,10 @@ class ReductionFunction(Function):
 
         def caller(query_compiler, *args, **kwargs):
             """Execute Reduction function against passed query compiler."""
-            axis = call_kwds.get("axis", kwargs.get("axis"))
+            _axis = kwargs.get("axis") if axis is None else axis
             return query_compiler.__constructor__(
                 query_compiler._modin_frame._fold_reduce(
-                    cls.validate_axis(axis),
+                    cls.validate_axis(_axis),
                     lambda x: reduction_function(x, *args, **kwargs),
                 )
             )
