@@ -495,10 +495,9 @@ def monkeypatching():
 
     ray.remote = monkeypatch
 
-    # CI uses `pip install -e .[all]` command for installing pip dependencies, but pip `pyarrow`
-    # package doesn't have `gandiva` submodule (ARROW-8518), so we are replacing it with
-    # `unittest.mock.Mock`
+    # We are mocking packages we don't need for docs checking in order to avoid import errors
     sys.modules["pyarrow.gandiva"] = Mock()
+    sys.modules["sqlalchemy"] = Mock()
 
     modin.utils.instancer = functools.wraps(modin.utils.instancer)(lambda cls: cls)
 
