@@ -1,7 +1,7 @@
 :orphan:
 
-Experimental Pandas Module Description
-""""""""""""""""""""""""""""""""""""""
+Experimental Pandas API
+"""""""""""""""""""""""
 
 .. automodule:: modin.experimental.pandas
   :noindex:
