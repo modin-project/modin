@@ -46,6 +46,7 @@ RUN wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -
     echo ". '${CONDA_DIR}/etc/profile.d/conda.sh'" >> "${HOME}/.profile"
 
 RUN conda update -n base -c defaults conda -y && \
+    conda config --set channel_priority strict && \
     conda create -n modin --yes --no-default-packages && \
     conda activate modin && \
     conda install -c intel/label/modin -c conda-forge "numpy<1.20.0" omniscidbe4py "ray-core>=1.0" \
