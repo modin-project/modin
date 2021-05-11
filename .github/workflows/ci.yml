@@ -74,6 +74,9 @@ jobs:
       - run: |
           python scripts/doc_checker.py modin/experimental/pandas/io_exp.py \
             modin/experimental/pandas/numpy_wrap.py modin/experimental/pandas/__init__.py
+      - run: |
+          python scripts/doc_checker.py modin/backends/pyarrow/query_compiler.py \
+            modin/backends/pyarrow/parsers.py
 
   lint-flake8:
     name: lint (flake8)
