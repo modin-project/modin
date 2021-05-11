@@ -22,13 +22,12 @@ statement as follows:
 Implemented Operations
 ''''''''''''''''''''''
 For now ``ExperimentalPandasOnRayIO`` implements two methods - ``read_sql`` and
-``read_csv_glob``. The first one is method that allows user to use typical
+``read_csv_glob``. The first method allows the user to use typical
 ``pandas.read_sql`` function extended with `Spark-like parameters
 <https://spark.apache.org/docs/2.0.0/api/R/read.jdbc.html>`_ such as
 ``partition_column``, ``lower_bound`` and ``upper_bound``. With these parameters,
-user will be able to partition imported data in the way he need it. The second
-implemented method allows to read multiple CSV files simultaneously using directory
-patterns like it is done in the `Dask API <https://docs.dask.org/en/latest/dataframe-api.html#dask.dataframe.read_csv>`_.
+the user will be able to specify how to partition the imported data. The second
+implemented method allows to read multiple CSV files simultaneously when a `Python Glob <https://docs.python.org/3/library/glob.html>`_ object is provided as a parameter.
 
 Submodules Description
 ''''''''''''''''''''''
