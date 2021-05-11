@@ -11,7 +11,15 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
+"""
+Module contains PyarrowQueryCompiler class.
+
+PyarrowQueryCompiler is responsible for compiling efficient DataFrame algebra
+queries for the `PyarrowOnRayFrame`.
+"""
+
 from modin.backends.pandas.query_compiler import PandasQueryCompiler
+from modin.utils import _inherit_docstrings
 import pandas
 from pandas.core.computation.expr import Expr
 from pandas.core.computation.scope import Scope
@@ -22,22 +30,49 @@ import pyarrow.gandiva as gandiva
 
 
 class FakeSeries:
+    """
+    Series metadata class.
+
+    Parameters
+    ----------
+    dtype : dtype
+        Data-type of the represented Series.
+    """
+
     def __init__(self, dtype):
         self.dtype = dtype
 
 
+@_inherit_docstrings(PandasQueryCompiler)
 class PyarrowQueryCompiler(PandasQueryCompiler):
+    """
+    Query compiler for the pyarrow backend.
+
+    This class translates common query compiler API into the DataFrame Algebra
+    queries, that is supposed to be executed by `PyarrowOnRayFrame`.
+
+    Parameters
+    ----------
+    modin_frame : PyarrowOnRayFrame
+        Modin Frame to query with the compiled queries.
+    """
+
     def query(self, expr, **kwargs):
-        """Query columns of the QueryCompiler with a boolean expression.
-
-        Args:
-            expr: Boolean expression to query the columns with.
-
-        Returns:
-            QueryCompiler containing the rows where the boolean expression is satisfied.
-        """
-
         def gen_table_expr(table, expr):
+            """
+            Build pandas expression for the specified query.
+
+            Parameters
+            ----------
+            table : pyarrow.Table
+                Table to evaluate expression on.
+            expr : str
+                Query string to evaluate on the `table` columns.
+
+            Returns
+            -------
+            pandas.core.computation.expr.Expr
+            """
             resolver = {
                 name: FakeSeries(dtype.to_pandas_dtype())
                 for name, dtype in zip(table.schema.names, table.schema.types)
@@ -66,6 +101,22 @@ class PyarrowQueryCompiler(PandasQueryCompiler):
         }
 
         def build_node(table, terms, builder):
+            """
+            Build expression Node in Gandiva notation for the specified pandas expression.
+
+            Parameters
+            ----------
+            table : pyarrow.Table
+                Table to evaluate expression on.
+            terms : pandas.core.computation.expr.Term
+                Pandas expression to evaluate.
+            builder : pyarrow.gandiva.TreeExprBuilder
+                Pyarrow node builder.
+
+            Returns
+            -------
+            pyarrow.gandiva.Node
+            """
             if isinstance(terms, Constant):
                 return builder.make_literal(
                     terms.value, (pa.from_numpy_dtype(terms.return_type))
@@ -113,6 +164,17 @@ class PyarrowQueryCompiler(PandasQueryCompiler):
             raise TypeError("Unsupported term type: %s" % terms)
 
         def can_be_condition(expr):
+            """
+            Check whether the passed expression is a conditional operation.
+
+            Parameters
+            ----------
+            expr : pandas.core.computation.expr.Expr
+
+            Returns
+            -------
+            bool
+            """
             if isinstance(expr.terms, BinOp):
                 if expr.terms.op in cmp_ops or expr.terms.op in ("&", "|"):
                     return True
@@ -122,6 +184,18 @@ class PyarrowQueryCompiler(PandasQueryCompiler):
             return False
 
         def filter_with_selection_vector(table, s):
+            """
+            Filter passed pyarrow table with the specified filter.
+
+            Parameters
+            ----------
+            table : pyarrow.Table
+            s : pyarrow.gandiva.SelectionVector
+
+            Returns
+            -------
+            pyarrow.Table
+            """
             record_batch = table.to_batches()[0]
             indices = s.to_array()  # .to_numpy()
             new_columns = [
@@ -130,6 +204,20 @@ class PyarrowQueryCompiler(PandasQueryCompiler):
             return pa.Table.from_arrays(new_columns, record_batch.schema.names)
 
         def gandiva_query(table, query):
+            """
+            Evaluate string query on the passed table.
+
+            Parameters
+            ----------
+            table : pyarrow.Table
+                Table to evaluate query on.
+            query : str
+                Query string to evaluate on the `table` columns.
+
+            Returns
+            -------
+            pyarrow.Table
+            """
             expr = gen_table_expr(table, query)
             if not can_be_condition(expr):
                 raise ValueError("Root operation should be a filter.")
@@ -142,6 +230,20 @@ class PyarrowQueryCompiler(PandasQueryCompiler):
             return result
 
         def gandiva_query2(table, query):
+            """
+            Build gandiva filter based on the specified query.
+
+            Parameters
+            ----------
+            table : pyarrow.Table
+                Table to evaluate query on.
+            query : str
+                Query string to evaluate on the `table` columns.
+
+            Returns
+            -------
+            pyarrow.gandiva.Filter
+            """
             expr = gen_table_expr(table, query)
             if not can_be_condition(expr):
                 raise ValueError("Root operation should be a filter.")
@@ -152,10 +254,15 @@ class PyarrowQueryCompiler(PandasQueryCompiler):
             return filt
 
         def query_builder(arrow_table, **kwargs):
+            """Evaluate string query on the passed pyarrow table."""
             return gandiva_query(arrow_table, kwargs.get("expr", ""))
 
         kwargs["expr"] = expr
+        # FIXME: `PandasQueryCompiler._prepare_method` was removed in #721,
+        # it is no longer needed to wrap function to apply.
         func = self._prepare_method(query_builder, **kwargs)
+        # FIXME: `PandasQueryCompiler._map_across_full_axis` was removed in #721.
+        # This method call should be replaced to its equivalent from `data_management.function`
         new_data = self._map_across_full_axis(1, func)
         # Query removes rows, so we need to update the index
         new_index = self._compute_index(0, new_data, False)
@@ -164,7 +271,25 @@ class PyarrowQueryCompiler(PandasQueryCompiler):
         )
 
     def _compute_index(self, axis, data_object, compute_diff=True):
+        """
+        Compute index labels of the passed Modin Frame along specified axis.
+
+        Parameters
+        ----------
+        axis : {0, 1}
+            Axis to compute index labels along. 0 is for index and 1 is for column.
+        data_object : PyarrowOnRayFrame
+            Modin Frame object to build indices from.
+        compute_diff : bool, default: True
+            Whether to cut the resulted indices to a subset of the self indices.
+
+        Returns
+        -------
+        pandas.Index
+        """
+
         def arrow_index_extraction(table, axis):
+            """Extract index labels from the passed pyarrow table the along specified axis."""
             if not axis:
                 return pandas.Index(table.column(table.num_columns - 1))
             else:
@@ -175,6 +300,8 @@ class PyarrowQueryCompiler(PandasQueryCompiler):
 
         index_obj = self.index if not axis else self.columns
         old_blocks = self.data if compute_diff else None
+        # FIXME: `BasePandasFrame.get_indices` was deprecated, this call should be
+        # replaced either to `BasePandasFrame._compute_axis_label` or `BasePandasFrame.axes`.
         new_indices = data_object.get_indices(
             axis=axis,
             index_func=lambda df: arrow_index_extraction(df, axis),
@@ -183,19 +310,7 @@ class PyarrowQueryCompiler(PandasQueryCompiler):
         return index_obj[new_indices] if compute_diff else new_indices
 
     def to_pandas(self):
-        """Converts Modin DataFrame to Pandas DataFrame.
-
-        Returns:
-            Pandas DataFrame of the QueryCompiler.
-        """
         return self._modin_frame.to_pandas()
 
     def to_numpy(self, **kwargs):
-        """
-        Converts Modin DataFrame to NumPy array.
-
-        Returns
-        -------
-            NumPy array of the QueryCompiler.
-        """
         return self._modin_frame.to_numpy(**kwargs)
