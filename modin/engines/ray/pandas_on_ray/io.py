@@ -11,6 +11,8 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
+"""The module holding PandasOnRay factory which performs I/O using pandas on Ray."""
+
 from modin.backends.pandas.query_compiler import PandasQueryCompiler
 from modin.engines.ray.generic.io import RayIO
 from modin.engines.base.io import (
@@ -37,6 +39,7 @@ from modin.engines.ray.pandas_on_ray.frame.data import PandasOnRayFrame
 
 
 class PandasOnRayIO(RayIO):
+    """Factory providing methods for performing I/O operations using pandas as backend on Ray as engine."""
 
     frame_cls = PandasOnRayFrame
     query_compiler_cls = PandasQueryCompiler
