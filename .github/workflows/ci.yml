@@ -86,7 +86,8 @@ jobs:
             modin/engines/ray/utils.py \
             modin/engines/ray/task_wrapper.py \
             modin/engines/ray/pandas_on_ray/io.py \
-            modin/engines/ray/generic/io.py
+            modin/engines/ray/generic/io.py \
+            modin/engines/ray/generic/frame/partition_manager.py
       - run: python scripts/doc_checker.py modin/engines/ray/cudf_on_ray
       - run: python scripts/doc_checker.py scripts/doc_checker.py
       - run: |
