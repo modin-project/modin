@@ -3,15 +3,15 @@ Modin XGBoost module description
 High-level Module Overview
 ''''''''''''''''''''''''''
 
-This module holds classes, public interface and internal functions for distributed xgboost in Modin.
+This module holds classes, public interface and internal functions for distributed XGBoost in Modin.
 
 Public classes :ref:`Booster <Booster>`, :ref:`DMatrix <DMatrix>` and function  :ref:`train <train>` provide
-the user with familiar xgboost interfaces. They are located in the ``modin.experimental.xgboost.xgboost`` module.
+the user with familiar XGBoost interfaces. They are located in the ``modin.experimental.xgboost.xgboost`` module.
 
 The internal module ``modin.experimental.xgboost.xgboost.xgboost_ray`` contains the implementation of Modin XGBoost
-for the Ray backend. This module mainly consist of the Ray actor-class :ref:`ModinXGBoostActor <Actor>`,
-a function to distribution Modin's partitions between actors :ref:`_assign_row_partitions_to_actors <assign_parts>`,
-a internal :ref:`_train <internal_train>`/:ref:`_predict <internal_predict>` functions used from the public interfaces 
+for the Ray backend. This module mainly consists of the Ray actor-class :ref:`ModinXGBoostActor <Actor>`,
+a function to distribute Modin's partitions between actors :ref:`_assign_row_partitions_to_actors <assign_parts>`,
+an internal :ref:`_train <internal_train>`/:ref:`_predict <internal_predict>` function used from the public interfaces 
 and additional util functions for computing cluster resources, actor creations etc.
 
 Public interfaces
@@ -66,7 +66,7 @@ Approximate execution flow of internal implementation is the following:
 
    * int - `num_actors` won't be changed. This value will be used.
    * "default_train" - `num_actors` will be computed using condition that 1 actor should use maximum 2 CPUs.
-     This condition was chosen for using maximum parallel workers with multithreaded xgboost training (2 threads
+     This condition was chosen for using maximum parallel workers with multithreaded XGBoost training (2 threads
      per worker will be used in this case).
    * "default_predict" - `num_actors` will be computed using condition that 1 actor should use maximum 8 CPUs.
      This condition was chosen to combine parallelization techniques: parallel actors and parallel threads.
@@ -93,9 +93,9 @@ Approximate execution flow of internal implementation is the following:
 
 6. Methods ``train`` or ``predict`` of :ref:`ModinXGBoostActor <Actor>` class object are called remotely.
 
-   * ``train``: method runs xgboost training on local data of actor, connects to ``Rabit Tracker`` for sharing
+   * ``train``: method runs XGBoost training on local data of actor, connects to ``Rabit Tracker`` for sharing
      training state between actors and returns dictionary with `booster` and `evaluation results`.
-   * ``predict``: method runs xgboost prediction on local data of actor and returns IP address of actor and partial
+   * ``predict``: method runs XGBoost prediction on local data of actor and returns IP address of actor and partial
      prediction (``pandas.DataFrame``).
 
 7. On the final stage results from actors are returned.
