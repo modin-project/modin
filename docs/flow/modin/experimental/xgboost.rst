@@ -10,7 +10,7 @@ the user with familiar xgboost interfaces. They are located in the ``modin.exper
 
 The internal module ``modin.experimental.xgboost.xgboost.xgboost_ray`` contains the implementation of Modin XGBoost
 for the Ray backend. This module mainly consist of the Ray actor-class :ref:`ModinXGBoostActor <Actor>`,
-function to distribution Modin's partitions between actors :ref:`_assign_row_partitions_to_actors <assign_parts>`,
+a function to distribution Modin's partitions between actors :ref:`_assign_row_partitions_to_actors <assign_parts>`,
 a internal :ref:`_train <internal_train>`/:ref:`_predict <internal_predict>` functions used from the public interfaces 
 and additional util functions for computing cluster resources, actor creations etc.
 
