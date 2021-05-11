@@ -66,6 +66,7 @@ Component View
 --------------
 .. toctree::
    ../flow/modin/engines/base/frame/index
+   ../flow/modin/engines/ray/generic
    ../flow/modin/engines/ray/pandas_on_ray/frame/index
    ../flow/modin/engines/ray/cudf_on_ray/frame/index
    ../flow/modin/experimental/index
@@ -286,7 +287,7 @@ by documentation for now, the rest is coming soon...).
    │   │   ├───python
    │   │   │   └───pandas_on_python
    │   │   └───ray
-   │   │       ├───generic
+   │   │       ├─── :doc:`generic </flow/modin/engines/ray/generic>`
    │   │       ├───cudf_on_ray
    │   │       │   ├─── :doc:`frame </flow/modin/engines/ray/cudf_on_ray/frame/index>`
    │   │       │   └─── :doc:`io </flow/modin/engines/ray/cudf_on_ray/io>`
