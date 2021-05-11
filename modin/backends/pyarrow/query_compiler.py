@@ -15,7 +15,7 @@
 Module contains PyarrowQueryCompiler class.
 
 PyarrowQueryCompiler is responsible for compiling efficient DataFrame algebra
-queries for the `PyarrowOnRayFrame`.
+queries for the PyarrowOnRayFrame.
 """
 
 from modin.backends.pandas.query_compiler import PandasQueryCompiler
@@ -46,10 +46,10 @@ class FakeSeries:
 @_inherit_docstrings(PandasQueryCompiler)
 class PyarrowQueryCompiler(PandasQueryCompiler):
     """
-    Query compiler for the pyarrow backend.
+    Query compiler for the PyArrow backend.
 
     This class translates common query compiler API into the DataFrame Algebra
-    queries, that is supposed to be executed by `PyarrowOnRayFrame`.
+    queries, that is supposed to be executed by PyarrowOnRayFrame.
 
     Parameters
     ----------

@@ -19,18 +19,18 @@ import pandas
 
 
 class PyarrowCSVParser:
-    """Class for handling CSV files on the workers using pyarrow backend."""
+    """Class for handling CSV files on the workers using PyArrow backend."""
 
     def parse(self, **kwargs):  # noqa: PR02
         """
-        Parse CSV file into pyarrow tables.
+        Parse CSV file into PyArrow tables.
 
         Parameters
         ----------
         fname : str
             Name of the CSV file to parse.
         num_splits : int
-            Number of partitions to split the resulted Pyarrow table into.
+            Number of partitions to split the resulted PyArrow table into.
         start : int
             Position in the specified file to start parsing from.
         end : int
@@ -44,7 +44,7 @@ class PyarrowCSVParser:
         -------
         list
             List with splitted parse results and it's metadata:
-            - First `num_split` elements are Pyarrow tables, representing the corresponding chunk.
+            - First `num_split` elements are PyArrow tables, representing the corresponding chunk.
             - Next element is the number of rows in the parsed table.
             - Last element is the pandas Series, containing the data-types for each column of the parsed table.
         """

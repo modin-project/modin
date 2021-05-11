@@ -37,17 +37,26 @@ jobs:
   lint-pydocstyle:
     name: lint (pydocstyle)
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash -l {0}
     steps:
       - uses: actions/checkout@v2
         with:
           fetch-depth: 1
-      - uses: actions/setup-python@v2
+      - uses: conda-incubator/setup-miniconda@v2
         with:
-          python-version: "3.7.x"
-          architecture: "x64"
-      - run: pip install pytest pytest-cov pydocstyle numpydoc==1.1.0
-      - run: pytest scripts/test
-      - run: pip install -e .[all]
+          activate-environment: modin
+          environment-file: environment-dev.yml
+          python-version: 3.7
+          channel-priority: strict
+          use-only-tar-bz2: true # IMPORTANT: This needs to be set for caching to work properly!
+      - run: conda install pydocstyle numpydoc==1.0.0
+      - name: Conda environment
+        run: |
+          conda info
+          conda list
+      - run: python -m pytest scripts/test
       - run: |
           python scripts/doc_checker.py --add-ignore=D101,D102,D103,D105 --disable-numpydoc \
             modin/pandas/dataframe.py modin/pandas/series.py \
