@@ -44,7 +44,14 @@ class cuDFOnRayFramePartition(BaseFramePartition):
 
     @property
     def __constructor__(self):
-        """Create a new instance of this object."""
+        """
+        Create a new instance of this object.
+
+        Returns
+        -------
+        cuDFOnRayFramePartition
+            New instance of cuDF partition.
+        """
         return type(self)
 
     def __init__(self, gpu_manager, key, length=None, width=None):
