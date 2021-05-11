@@ -1254,7 +1254,7 @@ class BasePandasFrame(object):
         )
         return self._compute_map_reduce_metadata(axis, reduce_parts)
 
-    def _map(self, func, dtypes=None, validate_index=False, validate_columns=False):
+    def _map(self, func, dtypes=None):
         """
         Perform a function that maps across the entire dataset.
 
@@ -1266,10 +1266,6 @@ class BasePandasFrame(object):
             The data types for the result. This is an optimization
             because there are functions that always result in a particular data
             type, and this allows us to avoid (re)computing it.
-        validate_index : bool, default: False
-            Is index validation required after performing `func` on partitions.
-        validate_columns : bool, default: False
-            Is column validation required after performing `func` on partitions.
 
         Returns
         -------
@@ -1283,26 +1279,12 @@ class BasePandasFrame(object):
             dtypes = pandas.Series(
                 [np.dtype(dtypes)] * len(self.columns), index=self.columns
             )
-
-        axis_validate_mask = [validate_index, validate_columns]
-        new_axes = [
-            self._compute_axis_labels(axis, new_partitions)
-            if should_validate
-            else self.axes[axis]
-            for axis, should_validate in enumerate(axis_validate_mask)
-        ]
-
-        new_lengths = [
-            self._axes_lengths[axis]
-            if len(new_axes[axis]) == len(self.axes[axis])
-            else None
-            for axis in [0, 1]
-        ]
-
         return self.__constructor__(
             new_partitions,
-            *new_axes,
-            *new_lengths,
+            self.axes[0],
+            self.axes[1],
+            self._row_lengths_cache,
+            self._column_widths_cache,
             dtypes=dtypes,
         )
 
