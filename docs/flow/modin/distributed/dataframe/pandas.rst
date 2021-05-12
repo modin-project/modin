@@ -1,7 +1,7 @@
 Pandas Partition API
 ====================
 
-This page contains description of API to operate on Modin DataFrame partitions that are pandas DataFrame(s).
+This page contains a description of the API to extract partitions from and build Modin Dataframes.
 
 unwrap_partitions
 -----------------
