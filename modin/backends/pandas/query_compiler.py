@@ -20,6 +20,7 @@ from pandas.core.dtypes.common import (
     is_list_like,
     is_numeric_dtype,
     is_datetime_or_timedelta_dtype,
+    is_scalar,
 )
 from pandas.core.base import DataError
 from collections.abc import Iterable, Container
@@ -742,8 +743,51 @@ class PandasQueryCompiler(BaseQueryCompiler):
         return self.default_to_pandas(is_monotonic_increasing)
 
     count = MapReduceFunction.register(pandas.DataFrame.count, pandas.DataFrame.sum)
-    sum = MapReduceFunction.register(pandas.DataFrame.sum)
-    prod = MapReduceFunction.register(pandas.DataFrame.prod)
+
+    def sum(self, squeeze_self, axis, **kwargs):
+        # TODO: rework to original implementation after pandas issue #41074 resolves if possible.
+        def map_func(df, **kwargs):
+            if squeeze_self:
+                result = df.squeeze(axis=1).sum(**kwargs)
+                if is_scalar(result):
+                    if axis:
+                        return pandas.DataFrame(
+                            [result], index=["__reduced__"], columns=["__reduced__"]
+                        )
+                    else:
+                        return pandas.Series([result], index=[df.columns[0]])
+                else:
+                    return result
+            else:
+                return df.sum(**kwargs)
+
+        return MapReduceFunction.register(
+            map_func,
+            map_func,
+        )(self, axis=axis, **kwargs)
+
+    def prod(self, squeeze_self, axis, **kwargs):
+        # TODO: rework to original implementation after pandas issue #41074 resolves if possible.
+        def map_func(df, **kwargs):
+            if squeeze_self:
+                result = df.squeeze(axis=1).prod(**kwargs)
+                if is_scalar(result):
+                    if axis:
+                        return pandas.DataFrame(
+                            [result], index=["__reduced__"], columns=["__reduced__"]
+                        )
+                    else:
+                        return pandas.Series([result], index=[df.columns[0]])
+                else:
+                    return result
+            else:
+                return df.prod(**kwargs)
+
+        return MapReduceFunction.register(
+            map_func,
+            map_func,
+        )(self, axis=axis, **kwargs)
+
     any = MapReduceFunction.register(pandas.DataFrame.any, pandas.DataFrame.any)
     all = MapReduceFunction.register(pandas.DataFrame.all, pandas.DataFrame.all)
     memory_usage = MapReduceFunction.register(
@@ -840,8 +884,49 @@ class PandasQueryCompiler(BaseQueryCompiler):
     sem = ReductionFunction.register(pandas.DataFrame.sem)
     std = ReductionFunction.register(pandas.DataFrame.std)
     var = ReductionFunction.register(pandas.DataFrame.var)
-    sum_min_count = ReductionFunction.register(pandas.DataFrame.sum)
-    prod_min_count = ReductionFunction.register(pandas.DataFrame.prod)
+
+    def sum_min_count(self, squeeze_self, axis, **kwargs):
+        # TODO: rework to original implementation after pandas issue #41074 resolves if possible.
+        def reduce_func(df, **kwargs):
+            if squeeze_self:
+                result = df.squeeze(axis=1).sum(**kwargs)
+                if is_scalar(result):
+                    if axis:
+                        return pandas.DataFrame(
+                            [result], index=["__reduced__"], columns=["__reduced__"]
+                        )
+                    else:
+                        return pandas.Series([result], index=[df.columns[0]])
+                else:
+                    return result
+            else:
+                return df.sum(**kwargs)
+
+        return ReductionFunction.register(
+            reduce_func,
+        )(self, axis=axis, **kwargs)
+
+    def prod_min_count(self, squeeze_self, axis, **kwargs):
+        # TODO: rework to original implementation after pandas issue #41074 resolves if possible.
+        def reduce_func(df, **kwargs):
+            if squeeze_self:
+                result = df.squeeze(axis=1).prod(**kwargs)
+                if is_scalar(result):
+                    if axis:
+                        return pandas.DataFrame(
+                            [result], index=["__reduced__"], columns=["__reduced__"]
+                        )
+                    else:
+                        return pandas.Series([result], index=[df.columns[0]])
+                else:
+                    return result
+            else:
+                return df.prod(**kwargs)
+
+        return ReductionFunction.register(
+            reduce_func,
+        )(self, axis=axis, **kwargs)
+
     quantile_for_single_value = ReductionFunction.register(pandas.DataFrame.quantile)
     mad = ReductionFunction.register(pandas.DataFrame.mad)
     to_datetime = ReductionFunction.register(

@@ -2343,12 +2343,7 @@ def test_prod(axis, skipna):
 
 
 @pytest.mark.parametrize(
-    "numeric_only",
-    [
-        None,
-        pytest.param(False, marks=pytest.mark.xfail(reason="See pandas issue #41074")),
-        pytest.param(True, marks=pytest.mark.xfail(reason="didn't raise Exception")),
-    ],
+    "numeric_only", bool_arg_values, ids=arg_keys("numeric_only", bool_arg_keys)
 )
 @pytest.mark.parametrize(
     "min_count", int_arg_values, ids=arg_keys("min_count", int_arg_keys)
@@ -3033,12 +3028,7 @@ def test_subtract(data):
     "skipna", bool_arg_values, ids=arg_keys("skipna", bool_arg_keys)
 )
 @pytest.mark.parametrize(
-    "numeric_only",
-    [
-        None,
-        pytest.param(False, marks=pytest.mark.xfail(reason="See pandas issue #41074")),
-        True,
-    ],
+    "numeric_only", bool_arg_values, ids=arg_keys("numeric_only", bool_arg_keys)
 )
 @pytest.mark.parametrize(
     "min_count", int_arg_values, ids=arg_keys("min_count", int_arg_keys)
