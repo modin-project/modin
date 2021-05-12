@@ -682,7 +682,7 @@ def eval_general(
                     ), f"not acceptable exception type: {md_e.value}"
         else:
             md_result = fn(modin_df, **md_kwargs)
-            return (md_result, pd_result) if not __inplace__ else (modin_df, pandas_df)
+            return (md_result, pd_result) if not inplace else (modin_df, pandas_df)
 
     for key, value in kwargs.items():
         if check_kwargs_callable and callable(value):
@@ -1243,3 +1243,13 @@ def sort_index_for_equal_values(series, ascending=False):
         res.index = res.index.droplevel(0)
     res.name = series.name
     return res
+
+
+def rotate_decimal_digits_or_symbols(value):
+    if value.dtype == object:
+        # When dtype is object, we assume that it is actually strings from MultiIndex level names
+        return [x[-1] + x[:-1] for x in value]
+    else:
+        tens = value // 10
+        ones = value % 10
+        return tens + ones * 10

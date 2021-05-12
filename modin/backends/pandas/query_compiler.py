@@ -2946,8 +2946,8 @@ class PandasQueryCompiler(BaseQueryCompiler):
         PandasQueryCompiler
             A new query compiler that contains result of the sort
         """
-        na_position = kwargs.get("na_position", "last")
-        kind = kwargs.get("kind", "quicksort")
+        ignore_index = kwargs.get("ignore_index", False)
+        kwargs["ignore_index"] = False
         if not is_list_like(columns):
             columns = [columns]
         # Currently, sort_values will just reindex based on the sorted values.
@@ -2957,30 +2957,30 @@ class PandasQueryCompiler(BaseQueryCompiler):
             col: self.getitem_column_array([col]).to_pandas().squeeze(axis=1)
             for col in columns
         }
+        # Clear index level names because they also appear in broadcast_value_dict
+        orig_index_level_names = self.index.names
+        tmp_index = self.index.copy()
+        tmp_index.names = [None] * tmp_index.nlevels
         # Index may contain duplicates
-        broadcast_values1 = pandas.DataFrame(broadcast_value_dict, index=self.index)
+        broadcast_values1 = pandas.DataFrame(broadcast_value_dict, index=tmp_index)
         # Index without duplicates
         broadcast_values2 = pandas.DataFrame(broadcast_value_dict)
         broadcast_values2 = broadcast_values2.reset_index(drop=True)
         # Index may contain duplicates
         new_index1 = broadcast_values1.sort_values(
-            by=columns,
-            axis=0,
-            ascending=ascending,
-            kind=kind,
-            na_position=na_position,
+            by=columns, axis=0, ascending=ascending, **kwargs
         ).index
         # Index without duplicates
         new_index2 = broadcast_values2.sort_values(
-            by=columns,
-            axis=0,
-            ascending=ascending,
-            kind=kind,
-            na_position=na_position,
+            by=columns, axis=0, ascending=ascending, **kwargs
         ).index
 
         result = self.reset_index(drop=True).reindex(axis=0, labels=new_index2)
-        result.index = new_index1
+        if ignore_index:
+            result = result.reset_index(drop=True)
+        else:
+            result.index = new_index1
+            result.index.names = orig_index_level_names
         return result
 
     def sort_columns_by_row_values(self, rows, ascending=True, **kwargs):
@@ -2998,8 +2998,6 @@ class PandasQueryCompiler(BaseQueryCompiler):
         PandasQueryCompiler
             A new query compiler that contains result of the sort
         """
-        na_position = kwargs.get("na_position", "last")
-        kind = kwargs.get("kind", "quicksort")
         if not is_list_like(rows):
             rows = [rows]
         ErrorMessage.default_to_pandas("sort_values")
@@ -3012,11 +3010,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         )
         broadcast_values.columns = self.columns
         new_columns = broadcast_values.sort_values(
-            by=rows,
-            axis=1,
-            ascending=ascending,
-            kind=kind,
-            na_position=na_position,
+            by=rows, axis=1, ascending=ascending, **kwargs
         ).columns
         return self.reindex(axis=1, labels=new_columns)
 
