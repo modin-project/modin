@@ -3,30 +3,30 @@
 Query compiler
 ==============
 
-Modin has several execution backends. Calling any DataFrame API function will end up in
-some backend-specific method. Query compiler is a bridge between Modin DataFrame and
+Modin supports several execution backends. Calling any DataFrame API function will end up in
+some backend-specific method. The query compiler is a bridge between Modin Dataframe and
 an actual execution engine.
 
 .. image:: /img/simplified_query_flow.svg
     :align: right
     :width: 300px
 
-Query compilers of all backends provide a common API, which is used by Modin DataFrame
+Query compilers of all backends implement a common API, which is used by the Modin Dataframe
 to emulate pandas API. The role of the query compiler is to translate its API into
-a set of DataFrame algebra operations. Each query compiler instance contains
-:doc:`frame </flow/modin/engines/base/frame/index>` of the selected execution engine and query
+a pairing of known user-defined functions and dataframe algebra operators. Each query compiler instance contains a
+:doc:`frame </flow/modin/engines/base/frame/index>` of the selected execution engine and queries
 it with the compiled queries to get the result. The query compiler object is immutable,
 so the result of every method is a new query compiler.
 
-Query compilers API is defined by the :doc:`BaseQueryCompiler <base/query_compiler>` class
-and partially mimic the pandas API, however, they're not equal. Query compilers API
+The query compilers API is defined by the :doc:`BaseQueryCompiler <base/query_compiler>` class
+and may resemble the pandas API, however, they're not equal. The query compilers API
 is significantly reduced in comparison with pandas, since many corner cases or even the
-whole methods can be handled at the DataFrame level with the existing API.
+whole methods can be handled at the API layer with the existing API.
 
-Query compiler is the level where Modin stops distinguishing Frame and Series objects.
-Series is represented by one-column query compiler, where Series name is the column label,
-if Series is unnamed, then the label would be ``"__reduced__"``. DataFrame API level
-interprets one-column query compilers as Series or DataFrame depending on the operation context.
+The query compiler is the level where Modin stops distinguishing Frame and Series (or column) objects.
+A Series is represented by a one-column query compiler, where the Series name is the column label.
+If Series is unnamed, then the label is ``"__reduced__"``. The Dataframe API layer
+interprets a one-column query compiler as Series or DataFrame depending on the operation context.
 
 .. note::
     Although we're declaring that there is no difference between DataFrame and Series at the query compiler,

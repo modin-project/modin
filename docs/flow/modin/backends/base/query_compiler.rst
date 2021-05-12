@@ -5,15 +5,15 @@ Base query compiler
 
 Brief description
 '''''''''''''''''
-``BaseQueryCompiler`` is an abstract class of query compiler, it sets a common interface,
-that every other query compilers in Modin have to follow. Base class contains basic
-implementations for most of the interface methods, all them are
-:ref:`defaulting to pandas <defaulting-to-pandas-mechanism>`.
+``BaseQueryCompiler`` is an abstract class of query compiler, and sets a common interface
+that every other query compiler implementation in Modin must follow. The Base class contains a basic
+implementations for most of the interface methods, all of which
+:ref:`default to pandas <defaulting-to-pandas-mechanism>`.
 
 Subclassing ``BaseQueryCompiler``
 '''''''''''''''''''''''''''''''''
-If you want to add new type of query compiler to Modin you need to inherit new
-class from `BaseQueryCompiler` and implement the rest of the abstract methods:
+If you want to add new type of query compiler to Modin the new class needs to inherit
+from `BaseQueryCompiler` and implement the abstract methods:
 
 - ``from_pandas`` build query compiler from pandas DataFrame.
 - ``from_arrow`` build query compiler from Arrow Table.
@@ -22,22 +22,22 @@ class from `BaseQueryCompiler` and implement the rest of the abstract methods:
 - ``finalize`` finalize object constructing.
 - ``free`` trigger memory cleaning.
 
-(Please refer to the code documentation to see full contracts for these functions).
+(Please refer to the code documentation to see the full documentation for these functions).
 
-This is a minimum set of operations to ensure the proper work of your new query compiler,
-the rest of the API will be defaulted pandas. To add backend-specific implementation for
-some of the query compiler operation, just override the corresponding method in your
+This is a minimum set of operations to ensure a new query compiler will function in the Modin architecture,
+and the rest of the API can safely default to the pandas implementation. To add a backend-specific implementation for
+some of the query compiler operations, just override the corresponding method in your
 query compiler class.
 
 Example
 '''''''
 As an exercise let's define a new query compiler in `Modin`, just to see how easy it is.
-Usually, query compiler routes formed queries to the underlying :doc:`frame </flow/modin/engines/base/frame/data>` class,
-which represents an actual execution engine and responsible for executing queries. In the glory
+Usually, the query compiler routes formed queries to the underlying :doc:`frame </flow/modin/engines/base/frame/data>` class,
+which represents submits operators to an execution engine. For the sake
 of simplicity and independence of this example, our execution engine will be the `pandas` itself.
 
 So, we need to inherit a new class from ``BaseQueryCompiler`` and implement all of the abstract methods.
-In case of `pandas` as an execution engine it's a trivial task:
+In this case, with `pandas` as an execution engine, it's trivial:
 
 .. code-block:: python
 
