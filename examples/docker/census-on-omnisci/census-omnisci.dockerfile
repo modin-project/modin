@@ -18,9 +18,6 @@ ENV no_proxy ${no_proxy}
 ENV MODIN_BACKEND "omnisci"
 ENV MODIN_EXPERIMENTAL "true"
 
-ARG conda_extra_channel
-ENV add_extra_channel=${conda_extra_channel:+"-c ${conda_extra_channel}"}
-
 RUN apt-get update --yes && apt-get upgrade --yes \
     && apt-get install wget --yes && \
     rm -rf /var/lib/apt/lists/*
@@ -39,7 +36,7 @@ ENV CONDA_DIR ${HOME}/miniconda
 
 SHELL ["/bin/bash", "--login", "-c"]
 
-RUN wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O /tmp/miniconda3.sh && \
+RUN wget -nv https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O /tmp/miniconda3.sh && \
     bash /tmp/miniconda3.sh -b -p "${CONDA_DIR}" -f -u && \
     "${CONDA_DIR}/bin/conda" init bash && \
     rm -f /tmp/miniconda3.sh && \
@@ -49,16 +46,12 @@ RUN conda update -n base -c defaults conda -y && \
     conda config --set channel_priority strict && \
     conda create -n modin --yes --no-default-packages && \
     conda activate modin && \
-    conda install -c intel/label/modin -c conda-forge modin "ray>=1.0.0" "numpy<1.20.0"
-
-RUN conda activate modin && \
-    conda install -c intel/label/modin -c conda-forge -c intel ${add_extra_channel} \
-        "daal4py>=2021.1" dpcpp_cpp_rt && \
-    conda install -c conda-forge "scikit-learn<0.24.0" && \
+    conda install -c intel/label/modin -c conda-forge -c intel \
+        modin "ray>=1.0.0" "numpy<1.20.0" "scikit-learn<0.24.0" "daal4py>=2021.1" dpcpp_cpp_rt && \
     conda clean --all --yes
 
-COPY ipums_education2income_1970-2010.csv "${HOME}/ipums_education2income_1970-2010.csv"
-
 COPY census-omnisci.py "${HOME}/census-omnisci.py"
+RUN mkdir /dataset
+RUN echo 'conda activate modin && python -u ${HOME}/census-omnisci.py $*' > /entrypoint.sh
 
-CMD ["/bin/bash", "--login", "-c", "conda activate modin && python ${HOME}/census-omnisci.py"]
+ENTRYPOINT ["/bin/bash", "--login", "/entrypoint.sh"]

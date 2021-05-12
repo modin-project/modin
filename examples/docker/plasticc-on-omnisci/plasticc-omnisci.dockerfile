@@ -39,7 +39,7 @@ ENV CONDA_DIR ${HOME}/miniconda
 
 SHELL ["/bin/bash", "--login", "-c"]
 
-RUN wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O /tmp/miniconda3.sh && \
+RUN wget -nv https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O /tmp/miniconda3.sh && \
     bash /tmp/miniconda3.sh -b -p "${CONDA_DIR}" -f -u && \
     "${CONDA_DIR}/bin/conda" init bash && \
     rm -f /tmp/miniconda3.sh && \
@@ -66,4 +66,4 @@ COPY test_set_metadata.csv "${HOME}/test_set_metadata.csv"
 
 COPY plasticc-omnisci.py "${HOME}/plasticc-omnisci.py"
 
-CMD ["/bin/bash", "--login", "-c", "conda activate modin && python ${HOME}/plasticc-omnisci.py"]
+CMD ["/bin/bash", "--login", "-c", "conda activate modin && python -u ${HOME}/plasticc-omnisci.py"]
