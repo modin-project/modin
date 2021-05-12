@@ -308,6 +308,7 @@ by documentation for now, the rest is coming soon...).
    │   │   ├───sql
    │   │   └─── :doc:`xgboost </flow/modin/experimental/xgboost>`
    │   ├───pandas
+   │   │   └─── :doc:`series </flow/modin/pandas/series>`
    │   ├───spreadsheet
    │   └───sql
    ├───requirements
