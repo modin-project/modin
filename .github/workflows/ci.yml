@@ -12,7 +12,7 @@ jobs:
           fetch-depth: 0
       - uses: actions/setup-node@v1
         with:
-          node-version: "10.x"
+          node-version: "12.x"
       - run: npm install --save-dev @commitlint/{config-conventional,cli} commitlint-plugin-jira-rules commitlint-config-jira
       - name: Add dependencies for commitlint action
         run: echo "NODE_PATH=$GITHUB_WORKSPACE/node_modules" >> $GITHUB_ENV
