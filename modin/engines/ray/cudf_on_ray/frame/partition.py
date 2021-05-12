@@ -113,6 +113,7 @@ class cuDFOnRayFramePartition(BaseFramePartition):
         """
         return self.gpu_manager.apply.remote(self.get_key(), None, func, **kwargs)
 
+    # TODO: Check the need of this method
     def apply_result_not_dataframe(self, func, **kwargs):
         """
         Apply `func` to this partition.
