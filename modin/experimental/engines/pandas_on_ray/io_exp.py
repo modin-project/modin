@@ -215,7 +215,7 @@ class ExperimentalPandasOnRayIO(PandasOnRayIO):
         new_query_compiler = cls.query_compiler_cls(
             cls.frame_cls(np.array(partition_ids), new_index, cols_names)
         )
-        new_query_compiler._modin_frame._apply_index_objs(axis=0)
+        new_query_compiler._modin_frame.synchronize_labels(axis=0)
         return new_query_compiler
 
 

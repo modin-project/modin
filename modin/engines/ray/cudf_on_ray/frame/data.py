@@ -25,7 +25,7 @@ class cuDFOnRayFrame(PandasOnRayFrame):
 
     _frame_mgr_cls = cuDFOnRayFrameManager
 
-    def _apply_index_objs(self, axis=None):
+    def synchronize_labels(self, axis=None):
         """Eagerly applies the index object (Index or Columns) to the partitions.
 
         Args:

@@ -331,6 +331,6 @@ class CSVDispatcher(TextFileDispatcher):
         if kwargs.get("squeeze", False) and len(new_query_compiler.columns) == 1:
             return new_query_compiler[new_query_compiler.columns[0]]
         if index_col_md is None:
-            new_query_compiler._modin_frame._apply_index_objs(axis=0)
+            new_query_compiler._modin_frame.synchronize_labels(axis=0)
 
         return new_query_compiler

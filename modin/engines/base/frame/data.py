@@ -249,7 +249,7 @@ class BasePandasFrame(object):
         else:
             new_index = self._validate_set_axis(new_index, self._index_cache)
             self._index_cache = new_index
-        self._apply_index_objs(axis=0)
+        self.synchronize_labels(axis=0)
 
     def _set_columns(self, new_columns):
         """
@@ -267,7 +267,7 @@ class BasePandasFrame(object):
             self._columns_cache = new_columns
             if self._dtypes is not None:
                 self._dtypes.index = new_columns
-        self._apply_index_objs(axis=1)
+        self.synchronize_labels(axis=1)
 
     columns = property(_get_columns, _set_columns)
     index = property(_get_index, _set_index)
@@ -329,7 +329,7 @@ class BasePandasFrame(object):
         self._column_widths_cache = [w for w in self._column_widths if w != 0]
         self._row_lengths_cache = [r for r in self._row_lengths if r != 0]
 
-    def _apply_index_objs(self, axis=None):
+    def synchronize_labels(self, axis=None):
         """
         Apply the index object for specific `axis` to the `self._partitions` lazily.
 
@@ -668,7 +668,7 @@ class BasePandasFrame(object):
             column_widths=new_column_widths,
         )
         # Propagate the new row labels to the all dataframe partitions
-        result._apply_index_objs(0)
+        result.synchronize_labels(0)
         return result
 
     def to_labels(self, column_list: List[Hashable]) -> "BasePandasFrame":
@@ -1829,9 +1829,9 @@ class BasePandasFrame(object):
             dtypes,
         )
         if new_index is not None:
-            result._apply_index_objs(0)
+            result.synchronize_labels(0)
         if new_columns is not None:
-            result._apply_index_objs(1)
+            result.synchronize_labels(1)
         return result
 
     def _copartition(self, axis, other, how, sort, force_repartition=False):
@@ -2280,11 +2280,11 @@ class BasePandasFrame(object):
             dtypes=new_dtypes,
         )
 
-    def _finalize(self):
+    def finalize(self):
         """
         Perform all deferred calls on partitions.
 
-        This makes `self` Modin DataFrame independent of a history of queries
+        This makes `self` Modin Dataframe independent of a history of queries
         that were used to build it.
         """
-        [part.drain_call_queue() for row in self._partitions for part in row]
+        self._frame_mgr_cls.finalize(self._partitions)

@@ -53,7 +53,7 @@ class PyarrowOnRayFrame(BasePandasFrame):
 
     _frame_mgr_cls = PyarrowOnRayFrameManager
 
-    def _apply_index_objs(self, axis=None):
+    def synchronize_labels(self, axis=None):
         """
         Lazily apply the index object (Index or Columns) to the partitions.
 

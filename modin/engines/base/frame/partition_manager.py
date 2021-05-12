@@ -1258,3 +1258,16 @@ class BasePandasFrameManager(ABC):
             ]
         )
         return result if axis else result.T
+
+    @classmethod
+    @wait_computations_if_benchmark_mode
+    def finalize(cls, partitions):
+        """
+        Perform all deferred calls on partitions.
+
+        Parameters
+        ----------
+        partitions : np.ndarray
+            Partitions of Modin Dataframe on which all deferred calls should be performed.
+        """
+        [part.drain_call_queue() for row in partitions for part in row]
