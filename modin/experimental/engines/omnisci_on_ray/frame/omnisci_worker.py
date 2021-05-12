@@ -20,7 +20,7 @@ import numpy as np
 
 prev = sys.getdlopenflags()
 sys.setdlopenflags(1 | 256)  # RTLD_LAZY+RTLD_GLOBAL
-from dbe import PyDbEngine
+from omniscidbe import PyDbEngine
 
 sys.setdlopenflags(prev)
 

@@ -1,6 +1,5 @@
 name: modin_on_omnisci
 channels:
-  - intel/label/modintest
   - conda-forge
 dependencies:
   - pandas==1.2.3
@@ -13,7 +12,7 @@ dependencies:
   - pytest-xdist>=2.1.0
   - coverage<5.0
   - pygithub==1.53
-  - omniscidbe4py
+  - pyomniscidbe
   - s3fs>=0.4.2
   - ray-core >=1.0.0,<1.2.0
   - openpyxl
