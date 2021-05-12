@@ -479,18 +479,18 @@ class PandasOnRayFrameManager(RayFrameManager):
     @progress_bar_wrapper
     def binary_operation(cls, axis, left, func, right):
         """
-        Apply a function that requires two PandasOnRayFrame objects.
+        Apply a function that requires partitions of two ``PandasOnRayFrame`` objects.
 
         Parameters
         ----------
         axis : {0, 1}
             The axis to apply the function over (0 - rows, 1 - columns).
         left : np.ndarray
-            The partitions of left PandasOnRayFrame.
+            The partitions of left ``PandasOnRayFrame``.
         func : callable
             The function to apply.
         right : np.ndarray
-            The partitions of right PandasOnRayFrame.
+            The partitions of right ``PandasOnRayFrame``.
 
         Returns
         -------

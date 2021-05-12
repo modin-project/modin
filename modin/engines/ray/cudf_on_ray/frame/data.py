@@ -11,7 +11,7 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-"""Module houses implementation of ``PandasOnRayFrame`` class using cuDF."""
+"""Module houses class that implements ``PandasOnRayFrame`` class using cuDF."""
 
 import numpy as np
 import ray
@@ -25,7 +25,7 @@ from modin.error_message import ErrorMessage
 
 class cuDFOnRayFrame(PandasOnRayFrame):
     """
-    The class implements ``PandasOnRayFrame`` using cuDF.
+    The class implements the interface in ``PandasOnRayFrame`` using cuDF.
 
     Parameters
     ----------

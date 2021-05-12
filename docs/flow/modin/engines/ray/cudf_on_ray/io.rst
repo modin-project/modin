@@ -9,7 +9,7 @@ cuDFOnRayIO
 """""""""""
 
 The class ``cuDFOnRayIO`` implements ``BaseIO`` base class using cuDF-backend
-entities(``cuDFOnRayFrame``, ``cuDFOnRayFramePartition`` etc.).
+entities (``cuDFOnRayFrame``, ``cuDFOnRayFramePartition`` etc.).
 
 Public API
 ----------
