@@ -22,7 +22,7 @@ from ray.services import get_node_ip_address
 
 class PandasOnRayFrameAxisPartition(PandasFrameAxisPartition):
     def __init__(self, list_of_blocks, get_ip=False):
-        # Unwrap from BasePandasFramePartition object for ease of use
+        # Unwrap from PandasFramePartition object for ease of use
         for obj in list_of_blocks:
             obj.drain_call_queue()
         self.list_of_blocks = [obj.oid for obj in list_of_blocks]

@@ -16,11 +16,11 @@ import cudf
 import cupy
 import numpy as np
 import cupy as cp
-from modin.engines.base.frame.partition import BasePandasFramePartition
+from modin.engines.base.frame.partition import PandasFramePartition
 from pandas.core.dtypes.common import is_list_like
 
 
-class cuDFOnRayFramePartition(BasePandasFramePartition):
+class cuDFOnRayFramePartition(PandasFramePartition):
 
     _length_cache = None
     _width_cache = None

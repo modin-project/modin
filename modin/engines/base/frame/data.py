@@ -12,9 +12,9 @@
 # governing permissions and limitations under the License.
 
 """
-Module contains class BasePandasFrame.
+Module contains class PandasFrame.
 
-BasePandasFrame is a parent abstract class for any dataframe class
+PandasFrame is a parent abstract class for any dataframe class
 for pandas backend.
 """
 from collections import OrderedDict
@@ -29,7 +29,7 @@ from modin.error_message import ErrorMessage
 from modin.backends.pandas.parsers import find_common_type_cat as find_common_type
 
 
-class BasePandasFrame(object):
+class PandasFrame(object):
     """
     An abstract class that represents the parent class for any pandas backend dataframe class.
 
@@ -53,7 +53,7 @@ class BasePandasFrame(object):
         The data types for the dataframe columns.
     """
 
-    _frame_mgr_cls = None
+    _partition_mgr_cls = None
     _query_compiler_cls = PandasQueryCompiler
 
     @property
@@ -63,7 +63,7 @@ class BasePandasFrame(object):
 
         Returns
         -------
-        BasePandasFrame
+        PandasFrame
         """
         return type(self)
 
@@ -303,7 +303,7 @@ class BasePandasFrame(object):
         """
         if partitions is None:
             partitions = self._partitions
-        return self._frame_mgr_cls.get_indices(
+        return self._partition_mgr_cls.get_indices(
             axis, partitions, lambda df: df.axes[axis]
         )
 
@@ -436,8 +436,8 @@ class BasePandasFrame(object):
 
         Returns
         -------
-        BasePandasFrame
-             A new BasePandasFrame from the mask provided.
+        PandasFrame
+             A new PandasFrame from the mask provided.
 
         Notes
         -----
@@ -594,7 +594,7 @@ class BasePandasFrame(object):
             row_numeric_idx=new_row_order, col_numeric_idx=new_col_order
         )
 
-    def from_labels(self) -> "BasePandasFrame":
+    def from_labels(self) -> "PandasFrame":
         """
         Convert the row labels to a column of data, inserted at the first position.
 
@@ -603,8 +603,8 @@ class BasePandasFrame(object):
 
         Returns
         -------
-        BasePandasFrame
-            A BasePandasFrame with new columns from index labels.
+        PandasFrame
+            A PandasFrame with new columns from index labels.
         """
         new_row_labels = pandas.RangeIndex(len(self.index))
 
@@ -650,7 +650,7 @@ class BasePandasFrame(object):
             df.index.names = new_column_names
             return df.reset_index()
 
-        new_parts = self._frame_mgr_cls.apply_func_to_select_indices(
+        new_parts = self._partition_mgr_cls.apply_func_to_select_indices(
             0,
             self._partitions,
             from_labels_executor,
@@ -671,7 +671,7 @@ class BasePandasFrame(object):
         result.synchronize_labels(0)
         return result
 
-    def to_labels(self, column_list: List[Hashable]) -> "BasePandasFrame":
+    def to_labels(self, column_list: List[Hashable]) -> "PandasFrame":
         """
         Move one or more columns into the row labels. Previous labels are dropped.
 
@@ -682,8 +682,8 @@ class BasePandasFrame(object):
 
         Returns
         -------
-        BasePandasFrame
-            A new BasePandasFrame that has the updated labels.
+        PandasFrame
+            A new PandasFrame that has the updated labels.
         """
         extracted_columns = self.mask(col_indices=column_list).to_pandas()
         if len(column_list) == 1:
@@ -711,11 +711,11 @@ class BasePandasFrame(object):
 
         Returns
         -------
-        BasePandasFrame
-            A new BasePandasFrame with reordered columns and/or rows.
+        PandasFrame
+            A new PandasFrame with reordered columns and/or rows.
         """
         if row_numeric_idx is not None:
-            ordered_rows = self._frame_mgr_cls.map_axis_partitions(
+            ordered_rows = self._partition_mgr_cls.map_axis_partitions(
                 0, self._partitions, lambda df: df.iloc[row_numeric_idx]
             )
             row_idx = self.index[row_numeric_idx]
@@ -723,7 +723,7 @@ class BasePandasFrame(object):
             ordered_rows = self._partitions
             row_idx = self.index
         if col_numeric_idx is not None:
-            ordered_cols = self._frame_mgr_cls.map_axis_partitions(
+            ordered_cols = self._partition_mgr_cls.map_axis_partitions(
                 1, ordered_rows, lambda df: df.iloc[:, col_numeric_idx]
             )
             col_idx = self.columns[col_numeric_idx]
@@ -738,7 +738,7 @@ class BasePandasFrame(object):
 
         Returns
         -------
-        BasePandasFrame
+        PandasFrame
             A copied version of this object.
         """
         return self.__constructor__(
@@ -823,7 +823,9 @@ class BasePandasFrame(object):
             """Compute new partition frame with dtypes updated."""
             return df.astype({k: v for k, v in col_dtypes.items() if k in df})
 
-        new_frame = self._frame_mgr_cls.map_partitions(self._partitions, astype_builder)
+        new_frame = self._partition_mgr_cls.map_partitions(
+            self._partitions, astype_builder
+        )
         return self.__constructor__(
             new_frame,
             self.index,
@@ -847,7 +849,7 @@ class BasePandasFrame(object):
 
         Returns
         -------
-        BasePandasFrame
+        PandasFrame
             A new dataframe with the updated labels.
         """
         new_labels = self.axes[axis].map(lambda x: str(prefix) + str(x))
@@ -871,7 +873,7 @@ class BasePandasFrame(object):
 
         Returns
         -------
-        BasePandasFrame
+        PandasFrame
             A new dataframe with the updated labels.
         """
         new_labels = self.axes[axis].map(lambda x: str(x) + str(suffix))
@@ -1181,7 +1183,7 @@ class BasePandasFrame(object):
 
         Returns
         -------
-        BasePandasFrame
+        PandasFrame
             Modin series (1xN frame) containing the reduced data.
         """
         new_axes, new_axes_lengths = [0, 0], [0, 0]
@@ -1214,11 +1216,11 @@ class BasePandasFrame(object):
 
         Returns
         -------
-        BasePandasFrame
+        PandasFrame
             Modin series (1xN frame) containing the reduced data.
         """
         func = self._build_mapreduce_func(axis, func)
-        new_parts = self._frame_mgr_cls.map_axis_partitions(
+        new_parts = self._partition_mgr_cls.map_axis_partitions(
             axis, self._partitions, func
         )
         return self._compute_map_reduce_metadata(axis, new_parts)
@@ -1239,7 +1241,7 @@ class BasePandasFrame(object):
 
         Returns
         -------
-        BasePandasFrame
+        PandasFrame
             A new dataframe.
         """
         map_func = self._build_mapreduce_func(axis, map_func)
@@ -1248,8 +1250,8 @@ class BasePandasFrame(object):
         else:
             reduce_func = self._build_mapreduce_func(axis, reduce_func)
 
-        map_parts = self._frame_mgr_cls.map_partitions(self._partitions, map_func)
-        reduce_parts = self._frame_mgr_cls.map_axis_partitions(
+        map_parts = self._partition_mgr_cls.map_partitions(self._partitions, map_func)
+        reduce_parts = self._partition_mgr_cls.map_axis_partitions(
             axis, map_parts, reduce_func
         )
         return self._compute_map_reduce_metadata(axis, reduce_parts)
@@ -1269,10 +1271,10 @@ class BasePandasFrame(object):
 
         Returns
         -------
-        BasePandasFrame
+        PandasFrame
             A new dataframe.
         """
-        new_partitions = self._frame_mgr_cls.map_partitions(self._partitions, func)
+        new_partitions = self._partition_mgr_cls.map_partitions(self._partitions, func)
         if dtypes == "copy":
             dtypes = self._dtypes
         elif dtypes is not None:
@@ -1301,14 +1303,14 @@ class BasePandasFrame(object):
 
         Returns
         -------
-        BasePandasFrame
+        PandasFrame
             A new dataframe.
 
         Notes
         -----
         The data shape is not changed (length and width of the table).
         """
-        new_partitions = self._frame_mgr_cls.map_axis_partitions(
+        new_partitions = self._partition_mgr_cls.map_axis_partitions(
             axis, self._partitions, func
         )
         return self.__constructor__(
@@ -1333,10 +1335,10 @@ class BasePandasFrame(object):
 
         Returns
         -------
-        BasePandasFrame
+        PandasFrame
             A new filtered dataframe.
         """
-        new_partitions = self._frame_mgr_cls.map_axis_partitions(
+        new_partitions = self._partition_mgr_cls.map_axis_partitions(
             axis, self._partitions, func, keep_partitioning=True
         )
         new_axes, new_lengths = [0, 0], [0, 0]
@@ -1384,7 +1386,7 @@ class BasePandasFrame(object):
 
         Returns
         -------
-        BasePandasFrame
+        PandasFrame
             A new dataframe.
 
         Notes
@@ -1434,7 +1436,7 @@ class BasePandasFrame(object):
 
         Returns
         -------
-        BasePandasFrame
+        PandasFrame
             A new dataframe.
         """
         assert apply_indices is not None or numeric_indices is not None
@@ -1446,7 +1448,7 @@ class BasePandasFrame(object):
         # being applied over)
         dict_indices = self._get_dict_of_block_index(axis ^ 1, numeric_indices)
         new_partitions = (
-            self._frame_mgr_cls.apply_func_to_select_indices_along_full_axis(
+            self._partition_mgr_cls.apply_func_to_select_indices_along_full_axis(
                 axis,
                 self._partitions,
                 func,
@@ -1503,7 +1505,7 @@ class BasePandasFrame(object):
 
         Returns
         -------
-        BasePandasFrame
+        PandasFrame
             A new dataframe.
         """
         # TODO Infer columns and index from `keep_remaining` and `apply_indices`
@@ -1518,7 +1520,7 @@ class BasePandasFrame(object):
             numeric_indices = old_index.get_indexer_for(apply_indices)
             # Get indices being applied to (opposite of indices being applied over)
             dict_indices = self._get_dict_of_block_index(axis ^ 1, numeric_indices)
-            new_partitions = self._frame_mgr_cls.apply_func_to_select_indices(
+            new_partitions = self._partition_mgr_cls.apply_func_to_select_indices(
                 axis,
                 self._partitions,
                 func,
@@ -1548,7 +1550,7 @@ class BasePandasFrame(object):
             assert item_to_distribute is not None
             row_partitions_list = self._get_dict_of_block_index(0, row_indices).items()
             col_partitions_list = self._get_dict_of_block_index(1, col_indices).items()
-            new_partitions = self._frame_mgr_cls.apply_func_to_indices_both_axis(
+            new_partitions = self._partition_mgr_cls.apply_func_to_indices_both_axis(
                 self._partitions,
                 func,
                 row_partitions_list,
@@ -1575,7 +1577,7 @@ class BasePandasFrame(object):
             Axis to broadcast over.
         func : callable
             Function to apply.
-        other : BasePandasFrame
+        other : PandasFrame
             Modin DataFrame to broadcast.
         join_type : str, default: "left"
             Type of join to apply.
@@ -1586,7 +1588,7 @@ class BasePandasFrame(object):
 
         Returns
         -------
-        BasePandasFrame
+        PandasFrame
             New Modin DataFrame.
         """
         # Only sort the indices if they do not match
@@ -1595,7 +1597,7 @@ class BasePandasFrame(object):
         )
         # unwrap list returned by `copartition`.
         right_parts = right_parts[0]
-        new_frame = self._frame_mgr_cls.broadcast_apply(
+        new_frame = self._partition_mgr_cls.broadcast_apply(
             axis, func, left_parts, right_parts
         )
         if dtypes == "copy":
@@ -1679,7 +1681,7 @@ class BasePandasFrame(object):
             Axis to apply function along.
         func : callable
             Function to apply.
-        other : BasePandasFrame
+        other : PandasFrame
             Partitions of which should be broadcasted.
         apply_indices : list, default: None
             List of labels to apply (if `numeric_indices` are not specified).
@@ -1699,7 +1701,7 @@ class BasePandasFrame(object):
 
         Returns
         -------
-        BasePandasFrame
+        PandasFrame
             New Modin DataFrame.
         """
         assert (
@@ -1726,7 +1728,7 @@ class BasePandasFrame(object):
         broadcasted_dict = other._prepare_frame_to_broadcast(
             axis, dict_indices, broadcast_all=broadcast_all
         )
-        new_partitions = self._frame_mgr_cls.broadcast_apply_select_indices(
+        new_partitions = self._partition_mgr_cls.broadcast_apply_select_indices(
             axis,
             func,
             self._partitions,
@@ -1765,7 +1767,7 @@ class BasePandasFrame(object):
             Axis to apply over (0 - rows, 1 - columns).
         func : callable
             Function to apply.
-        other : BasePandasFrame or list
+        other : PandasFrame or list
             Modin DataFrame(s) to broadcast.
         new_index : list-like, optional
             Index of the result. We may know this in advance,
@@ -1785,7 +1787,7 @@ class BasePandasFrame(object):
 
         Returns
         -------
-        BasePandasFrame
+        PandasFrame
             New Modin DataFrame.
         """
         if other is not None:
@@ -1799,7 +1801,7 @@ class BasePandasFrame(object):
                 axis ^ 1, numeric_indices
             ).keys()
 
-        new_partitions = self._frame_mgr_cls.broadcast_axis_partitions(
+        new_partitions = self._partition_mgr_cls.broadcast_axis_partitions(
             axis=axis,
             left=self._partitions,
             right=other,
@@ -1844,7 +1846,7 @@ class BasePandasFrame(object):
         ----------
         axis : {0, 1}
             Axis to copartition along (0 - rows, 1 - columns).
-        other : BasePandasFrame
+        other : PandasFrame
             Other Modin DataFrame(s) to copartition against.
         how : str
             How to manage joining the index object ("left", "right", etc.).
@@ -1898,7 +1900,7 @@ class BasePandasFrame(object):
 
         # perform repartitioning and reindexing for `base_frame` if needed
         if do_repartition_base:
-            reindexed_base = base_frame._frame_mgr_cls.map_axis_partitions(
+            reindexed_base = base_frame._partition_mgr_cls.map_axis_partitions(
                 axis,
                 base_frame._partitions,
                 make_reindexer(do_reindex_base, base_frame_idx),
@@ -1930,7 +1932,7 @@ class BasePandasFrame(object):
                 # indices of others frame start from `base_frame_idx` + 1
                 reindexed_other_list[i] = other_frames[
                     i
-                ]._frame_mgr_cls.map_axis_partitions(
+                ]._partition_mgr_cls.map_axis_partitions(
                     axis,
                     other_frames[i]._partitions,
                     make_reindexer(do_repartition_others[i], base_frame_idx + 1 + i),
@@ -1953,12 +1955,12 @@ class BasePandasFrame(object):
         ----------
         axis : {0, 1}
             Axis to shuffle over.
-        other : BasePandasFrame
+        other : PandasFrame
             Modin DataFrame to match to `self` partitioning.
 
         Returns
         -------
-        BasePandasFrame
+        PandasFrame
             Shuffled version of `other`.
 
         Notes
@@ -1973,7 +1975,7 @@ class BasePandasFrame(object):
             lengths = self._row_lengths
         else:
             lengths = self._column_widths
-        return other._frame_mgr_cls.simple_shuffle(
+        return other._partition_mgr_cls.simple_shuffle(
             axis, other._partitions, lambda x: x, lengths
         )
 
@@ -1985,14 +1987,14 @@ class BasePandasFrame(object):
         ----------
         op : callable
             Function to apply after the join.
-        right_frame : BasePandasFrame
+        right_frame : PandasFrame
             Modin DataFrame to join with.
         join_type : str, default: "outer"
             Type of join to apply.
 
         Returns
         -------
-        BasePandasFrame
+        PandasFrame
             New Modin DataFrame.
         """
         left_parts, right_parts, joined_index = self._copartition(
@@ -2000,7 +2002,7 @@ class BasePandasFrame(object):
         )
         # unwrap list returned by `copartition`.
         right_parts = right_parts[0]
-        new_frame = self._frame_mgr_cls.binary_operation(
+        new_frame = self._partition_mgr_cls.binary_operation(
             1, left_parts, lambda l, r: op(l, r), right_parts
         )
         new_columns = self.columns.join(right_frame.columns, how=join_type)
@@ -2023,7 +2025,7 @@ class BasePandasFrame(object):
 
         Returns
         -------
-        BasePandasFrame
+        PandasFrame
             New Modin DataFrame.
         """
         # Fast path for equivalent columns and partitioning
@@ -2057,7 +2059,7 @@ class BasePandasFrame(object):
             )
             new_lengths = None
             new_widths = None
-        new_partitions = self._frame_mgr_cls.concat(axis, left_parts, right_parts)
+        new_partitions = self._partition_mgr_cls.concat(axis, left_parts, right_parts)
         if axis == 0:
             new_index = self.index.append([other.index for other in others])
             new_columns = joined_index
@@ -2091,7 +2093,7 @@ class BasePandasFrame(object):
         ----------
         axis : {0, 1}
             Axis to groupby and aggregate over.
-        by : BasePandasFrame or None
+        by : PandasFrame or None
             A Modin DataFrame to group by.
         map_func : callable
             Map component of the aggregation.
@@ -2108,7 +2110,7 @@ class BasePandasFrame(object):
 
         Returns
         -------
-        BasePandasFrame
+        PandasFrame
             New Modin DataFrame.
         """
         by_parts = by if by is None else by._partitions
@@ -2119,7 +2121,7 @@ class BasePandasFrame(object):
                 self._get_dict_of_block_index(axis ^ 1, numeric_indices).keys()
             )
 
-        new_partitions = self._frame_mgr_cls.groupby_reduce(
+        new_partitions = self._partition_mgr_cls.groupby_reduce(
             axis, self._partitions, by_parts, map_func, reduce_func, apply_indices
         )
         new_axes = [
@@ -2143,13 +2145,15 @@ class BasePandasFrame(object):
 
         Returns
         -------
-        BasePandasFrame
+        PandasFrame
             New Modin DataFrame.
         """
         new_index = df.index
         new_columns = df.columns
         new_dtypes = df.dtypes
-        new_frame, new_lengths, new_widths = cls._frame_mgr_cls.from_pandas(df, True)
+        new_frame, new_lengths, new_widths = cls._partition_mgr_cls.from_pandas(
+            df, True
+        )
         return cls(
             new_frame,
             new_index,
@@ -2171,10 +2175,10 @@ class BasePandasFrame(object):
 
         Returns
         -------
-        BasePandasFrame
+        PandasFrame
             New Modin DataFrame.
         """
-        new_frame, new_lengths, new_widths = cls._frame_mgr_cls.from_arrow(
+        new_frame, new_lengths, new_widths = cls._partition_mgr_cls.from_arrow(
             at, return_dims=True
         )
         new_columns = Index.__new__(Index, data=at.column_names, dtype="O")
@@ -2220,7 +2224,7 @@ class BasePandasFrame(object):
         -------
         pandas.DataFrame
         """
-        df = self._frame_mgr_cls.to_pandas(self._partitions)
+        df = self._partition_mgr_cls.to_pandas(self._partitions)
         if df.empty:
             if len(self.columns) != 0:
                 df = pandas.DataFrame(columns=self.columns)
@@ -2250,7 +2254,7 @@ class BasePandasFrame(object):
         -------
         np.ndarray
         """
-        return self._frame_mgr_cls.to_numpy(self._partitions, **kwargs)
+        return self._partition_mgr_cls.to_numpy(self._partitions, **kwargs)
 
     def transpose(self):
         """
@@ -2261,10 +2265,10 @@ class BasePandasFrame(object):
 
         Returns
         -------
-        BasePandasFrame
+        PandasFrame
             New Modin DataFrame.
         """
-        new_partitions = self._frame_mgr_cls.lazy_map_partitions(
+        new_partitions = self._partition_mgr_cls.lazy_map_partitions(
             self._partitions, lambda df: df.T
         ).T
         new_dtypes = pandas.Series(
@@ -2287,4 +2291,4 @@ class BasePandasFrame(object):
         This makes `self` Modin Dataframe independent of a history of queries
         that were used to build it.
         """
-        self._frame_mgr_cls.finalize(self._partitions)
+        self._partition_mgr_cls.finalize(self._partitions)

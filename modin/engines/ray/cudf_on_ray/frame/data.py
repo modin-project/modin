@@ -15,7 +15,7 @@ import numpy as np
 import ray
 
 from .partition import cuDFOnRayFramePartition
-from .partition_manager import cuDFOnRayFrameManager
+from .partition_manager import cuDFOnRayFramePartitionManager
 
 from modin.engines.ray.pandas_on_ray.frame.data import PandasOnRayFrame
 from modin.error_message import ErrorMessage
@@ -23,7 +23,7 @@ from modin.error_message import ErrorMessage
 
 class cuDFOnRayFrame(PandasOnRayFrame):
 
-    _frame_mgr_cls = cuDFOnRayFrameManager
+    _partition_mgr_cls = cuDFOnRayFramePartitionManager
 
     def synchronize_labels(self, axis=None):
         """Eagerly applies the index object (Index or Columns) to the partitions.
@@ -116,8 +116,8 @@ class cuDFOnRayFrame(PandasOnRayFrame):
 
         Returns
         -------
-        BasePandasFrame
-             A new BasePandasFrame from the mask provided.
+        PandasFrame
+             A new PandasFrame from the mask provided.
         """
         if isinstance(row_numeric_idx, slice) and (
             row_numeric_idx == slice(None) or row_numeric_idx == slice(0, None)
@@ -225,7 +225,7 @@ class cuDFOnRayFrame(PandasOnRayFrame):
         shape = key_and_gpus.shape[:2]
         keys = ray.get(key_and_gpus[:, :, 0].flatten().tolist())
         gpu_managers = key_and_gpus[:, :, 1].flatten().tolist()
-        new_partitions = self._frame_mgr_cls._create_partitions(
+        new_partitions = self._partition_mgr_cls._create_partitions(
             keys, gpu_managers
         ).reshape(shape)
         intermediate = self.__constructor__(

@@ -22,7 +22,9 @@ from .partition import cuDFOnRayFramePartition
 
 from modin.data_management.utils import split_result_of_axis_func_pandas
 from modin.config import GpuCount
-from modin.engines.ray.generic.frame.partition_manager import RayFrameManager
+from modin.engines.ray.generic.frame.partition_manager import (
+    GenericRayFramePartitionManager,
+)
 
 # Global view of GPU Actors
 GPU_MANAGERS = []
@@ -33,7 +35,7 @@ def func(df, other, apply_func):
     return apply_func(ray.get(df.get.remote()), ray.get(other.get.remote()))
 
 
-class cuDFOnRayFrameManager(RayFrameManager):
+class cuDFOnRayFramePartitionManager(GenericRayFramePartitionManager):
 
     _partition_class = cuDFOnRayFramePartition
     _column_partitions_class = cuDFOnRayFrameColumnPartition
@@ -49,7 +51,7 @@ class cuDFOnRayFrameManager(RayFrameManager):
 
         Returns
         -------
-            A list of cuDFOnRayFrameManager objects.
+            A list of cuDFOnRayFramePartitionManager objects.
         """
         return np.array(
             [
@@ -99,7 +101,7 @@ class cuDFOnRayFrameManager(RayFrameManager):
 
         Returns
         -------
-            A new cuDFOnRayFrameManager object with a ray.ObjectRef as key.
+            A new cuDFOnRayFramePartitionManager object with a ray.ObjectRef as key.
         """
         preprocessed_map_func = cls.preprocess_func(map_func)
         partitions_flat = partitions.flatten()
@@ -123,7 +125,7 @@ class cuDFOnRayFrameManager(RayFrameManager):
 
         Returns
         -------
-            A list of cuDFOnRayFrameManager objects.
+            A list of cuDFOnRayFramePartitionManager objects.
         """
         preprocessed_map_func = cls.preprocess_func(func)
         key_futures = ray.get(

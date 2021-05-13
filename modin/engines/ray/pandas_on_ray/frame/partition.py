@@ -14,7 +14,7 @@
 import pandas
 
 from modin.data_management.utils import length_fn_pandas, width_fn_pandas
-from modin.engines.base.frame.partition import BasePandasFramePartition
+from modin.engines.base.frame.partition import PandasFramePartition
 from modin.engines.ray.utils import handle_ray_task_error
 
 import ray
@@ -29,7 +29,7 @@ if version.parse(ray.__version__) >= version.parse("1.2.0"):
     ObjectIDType = (ray.ObjectRef, ClientObjectRef)
 
 
-class PandasOnRayFramePartition(BasePandasFramePartition):
+class PandasOnRayFramePartition(PandasFramePartition):
     def __init__(self, object_id, length=None, width=None, ip=None, call_queue=None):
         assert isinstance(object_id, ObjectIDType)
 

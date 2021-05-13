@@ -13,13 +13,13 @@
 
 import numpy as np
 
-from modin.engines.base.frame.partition_manager import BasePandasFrameManager
+from modin.engines.base.frame.partition_manager import PandasFramePartitionManager
 
 import ray
 
 
-class RayFrameManager(BasePandasFrameManager):
-    """This method implements the interface in `BasePandasFrameManager`."""
+class GenericRayFramePartitionManager(PandasFramePartitionManager):
+    """This method implements the interface in `PandasFramePartitionManager`."""
 
     @classmethod
     def to_numpy(cls, partitions, **kwargs):

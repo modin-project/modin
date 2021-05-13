@@ -14,18 +14,18 @@
 import pandas
 
 from modin.data_management.utils import length_fn_pandas, width_fn_pandas
-from modin.engines.base.frame.partition import BasePandasFramePartition
+from modin.engines.base.frame.partition import PandasFramePartition
 
 
-class PandasOnPythonFramePartition(BasePandasFramePartition):
+class PandasOnPythonFramePartition(PandasFramePartition):
     """This abstract class holds the data and metadata for a single partition.
     The methods required for implementing this abstract class are listed in
     the section immediately following this.
 
     The API exposed by the children of this object is used in
-    `BasePandasFrameManager`.
+    `PandasFramePartitionManager`.
 
-    Note: These objects are treated as immutable by `BasePandasFrameManager`
+    Note: These objects are treated as immutable by `PandasFramePartitionManager`
     subclasses. There is no logic for updating inplace.
     """
 
@@ -59,7 +59,7 @@ class PandasOnPythonFramePartition(BasePandasFramePartition):
             func: The lambda to apply (may already be correctly formatted)
 
         Returns:
-             A new `BasePandasFramePartition` containing the object that has had `func`
+             A new `PandasFramePartition` containing the object that has had `func`
              applied to it.
         """
 
@@ -142,7 +142,7 @@ class PandasOnPythonFramePartition(BasePandasFramePartition):
 
         Note: This is a classmethod because the definition of how to preprocess
             should be class-wide. Also, we may want to use this before we
-            deploy a preprocessed function to multiple `BasePandasFramePartition`
+            deploy a preprocessed function to multiple `PandasFramePartition`
             objects.
 
         Args:

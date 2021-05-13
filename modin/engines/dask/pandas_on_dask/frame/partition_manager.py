@@ -15,7 +15,7 @@
 
 import numpy as np
 
-from modin.engines.base.frame.partition_manager import BasePandasFrameManager
+from modin.engines.base.frame.partition_manager import PandasFramePartitionManager
 from .axis_partition import (
     PandasOnDaskFrameColumnPartition,
     PandasOnDaskFrameRowPartition,
@@ -74,8 +74,8 @@ def deploy_func(df, apply_func, call_queue_df=None, call_queues_other=None, *oth
     return apply_func(df, new_others)
 
 
-class DaskFrameManager(BasePandasFrameManager):
-    """This class implements the interface in `BasePandasFrameManager`."""
+class PandasOnDaskFramePartitionManager(PandasFramePartitionManager):
+    """This class implements the interface in `PandasFramePartitionManager`."""
 
     # This object uses PandasOnDaskFramePartition objects as the underlying store.
     _partition_class = PandasOnDaskFramePartition

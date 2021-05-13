@@ -132,7 +132,7 @@ class RayIO(BaseIO):
 
         # signaling that the partition with id==0 can be written to the file
         queue.put(0)
-        result = qc._modin_frame._frame_mgr_cls.map_axis_partitions(
+        result = qc._modin_frame._partition_mgr_cls.map_axis_partitions(
             axis=1,
             partitions=qc._modin_frame._partitions,
             map_func=func,

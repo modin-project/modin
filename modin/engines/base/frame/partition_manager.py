@@ -12,7 +12,7 @@
 # governing permissions and limitations under the License.
 
 """
-Module holding base FrameManager class - the thing that tracks partitions across the distribution.
+Module holding base PartitionManager class - the thing that tracks partitions across the distribution.
 
 The manager also allows manipulating the data - running functions at each partition, shuffle over the distribution, etc.
 """
@@ -69,12 +69,12 @@ def wait_computations_if_benchmark_mode(func):
     return func
 
 
-class BasePandasFrameManager(ABC):
+class PandasFramePartitionManager(ABC):
     """
     Base class for managing the dataframe data layout and operators across the distribution of partitions.
 
     Partition class is the class to use for storing each partition.
-    Each partition must extend the `BasePandasFramePartition` class.
+    Each partition must extend the `PandasFramePartition` class.
     """
 
     _partition_class = None
@@ -86,7 +86,7 @@ class BasePandasFrameManager(ABC):
     @classmethod
     def preprocess_func(cls, map_func):
         """
-        Preprocess a function to be applied to `BasePandasFramePartition` objects.
+        Preprocess a function to be applied to `PandasFramePartition` objects.
 
         Parameters
         ----------
@@ -101,13 +101,13 @@ class BasePandasFrameManager(ABC):
         Notes
         -----
         Preprocessing does not require any specific format, only that the
-        `BasePandasFramePartition.apply` method will recognize it (for the subclass
+        `PandasFramePartition.apply` method will recognize it (for the subclass
         being used).
 
-        If your `BasePandasFramePartition` objects assume that a function provided
+        If your `PandasFramePartition` objects assume that a function provided
         is serialized or wrapped or in some other format, this is the place
         to add that logic. It is possible that this can also just return
-        `map_func` if the `apply` method of the `BasePandasFramePartition` object
+        `map_func` if the `apply` method of the `PandasFramePartition` object
         you are using does not require any modification to a given function.
         """
         return cls._partition_class.preprocess_func(map_func)
@@ -663,12 +663,12 @@ class BasePandasFrameManager(ABC):
     @classmethod
     def to_pandas(cls, partitions):
         """
-        Convert NumPy array of BasePandasFramePartition to pandas DataFrame.
+        Convert NumPy array of PandasFramePartition to pandas DataFrame.
 
         Parameters
         ----------
         partitions : np.ndarray
-            NumPy array of BasePandasFramePartition.
+            NumPy array of PandasFramePartition.
 
         Returns
         -------
@@ -701,14 +701,14 @@ class BasePandasFrameManager(ABC):
     @classmethod
     def to_numpy(cls, partitions, **kwargs):
         """
-        Convert NumPy array of BasePandasFramePartition to NumPy array of data stored within `partitions`.
+        Convert NumPy array of PandasFramePartition to NumPy array of data stored within `partitions`.
 
         Parameters
         ----------
         partitions : np.ndarray
-            NumPy array of BasePandasFramePartition.
+            NumPy array of PandasFramePartition.
         **kwargs : dict
-            Keyword arguments for BasePandasFramePartition.to_numpy function.
+            Keyword arguments for PandasFramePartition.to_numpy function.
 
         Returns
         -------
@@ -832,7 +832,7 @@ class BasePandasFrameManager(ABC):
         axis : {0, 1}
             Axis to extract the labels over.
         partitions : np.ndarray
-            NumPy array with BasePandasFramePartition's.
+            NumPy array with PandasFramePartition's.
         index_func : callable, default: None
             The function to be used to extract the indices.
 
@@ -883,12 +883,12 @@ class BasePandasFrameManager(ABC):
         other : np.ndarray
             The partitions to be broadcasted to `partitions`.
         **kwargs : dict
-            Keyword arguments for BasePandasFramePartition.apply function.
+            Keyword arguments for PandasFramePartition.apply function.
 
         Returns
         -------
         list
-            A list of BasePandasFramePartition objects.
+            A list of PandasFramePartition objects.
         """
         preprocessed_func = cls.preprocess_func(func)
         return [
@@ -908,12 +908,12 @@ class BasePandasFrameManager(ABC):
         partitions : np.ndarray
             The partitions to which the `func` will apply.
         **kwargs : dict
-            Keyword arguments for BasePandasFramePartition.apply function.
+            Keyword arguments for PandasFramePartition.apply function.
 
         Returns
         -------
         list
-            A list of BasePandasFramePartition objects.
+            A list of PandasFramePartition objects.
 
         Notes
         -----
@@ -1222,18 +1222,18 @@ class BasePandasFrameManager(ABC):
     @wait_computations_if_benchmark_mode
     def binary_operation(cls, axis, left, func, right):
         """
-        Apply a function that requires two BasePandasFrame objects.
+        Apply a function that requires two PandasFrame objects.
 
         Parameters
         ----------
         axis : {0, 1}
             The axis to apply the function over (0 - rows, 1 - columns).
         left : np.ndarray
-            The partitions of left BasePandasFrame.
+            The partitions of left PandasFrame.
         func : callable
             The function to apply.
         right : np.ndarray
-            The partitions of right BasePandasFrame.
+            The partitions of right PandasFrame.
 
         Returns
         -------

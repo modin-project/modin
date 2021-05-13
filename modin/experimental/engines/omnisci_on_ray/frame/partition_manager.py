@@ -14,7 +14,9 @@
 from modin.pandas.utils import is_scalar
 import numpy as np
 
-from modin.engines.ray.generic.frame.partition_manager import RayFrameManager
+from modin.engines.ray.generic.frame.partition_manager import (
+    GenericRayFramePartitionManager,
+)
 from .axis_partition import (
     OmnisciOnRayFrameColumnPartition,
     OmnisciOnRayFrameRowPartition,
@@ -30,8 +32,8 @@ import pandas
 import re
 
 
-class OmnisciOnRayFrameManager(RayFrameManager):
-    """This method implements the interface in `BasePandasFrameManager`."""
+class OmnisciOnRayFramePartitionManager(GenericRayFramePartitionManager):
+    """This method implements the interface in `PandasFramePartitionManager`."""
 
     # This object uses RayRemotePartition objects as the underlying store.
     _partition_class = OmnisciOnRayFramePartition

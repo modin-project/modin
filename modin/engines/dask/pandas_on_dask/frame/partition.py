@@ -16,7 +16,7 @@
 import pandas
 
 from modin.data_management.utils import length_fn_pandas, width_fn_pandas
-from modin.engines.base.frame.partition import BasePandasFramePartition
+from modin.engines.base.frame.partition import PandasFramePartition
 
 from distributed.client import get_client
 from distributed import Future
@@ -50,9 +50,9 @@ def apply_list_of_funcs(funcs, df):
     return df, get_ip()
 
 
-class PandasOnDaskFramePartition(BasePandasFramePartition):
+class PandasOnDaskFramePartition(PandasFramePartition):
     """
-    The class implements the interface in ``BasePandasFramePartition``.
+    The class implements the interface in ``PandasFramePartition``.
 
     Parameters
     ----------
