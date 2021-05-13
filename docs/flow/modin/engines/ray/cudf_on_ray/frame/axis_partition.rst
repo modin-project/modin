@@ -9,7 +9,6 @@ Public API
 ----------
 
 .. autoclass:: modin.engines.ray.cudf_on_ray.frame.axis_partition.cuDFOnRayFrameAxisPartition
-  :noindex:
   :members:
 
 cuOnRayFrameColumnPartition
@@ -19,7 +18,6 @@ Public API
 ----------
 
 .. autoclass:: modin.engines.ray.cudf_on_ray.frame.axis_partition.cuDFOnRayFrameColumnPartition
-  :noindex:
   :members:
 
 cuDFOnRayFrameRowPartition
@@ -29,5 +27,4 @@ Public API
 ----------
 
 .. autoclass:: modin.engines.ray.cudf_on_ray.frame.axis_partition.cuDFOnRayFrameRowPartition
-  :noindex:
   :members:

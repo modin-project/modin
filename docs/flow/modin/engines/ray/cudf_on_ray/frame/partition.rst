@@ -1,8 +1,9 @@
 cuDFOnRayFramePartition
 """""""""""""""""""""""""
 
-The class is specific implementation of ``BaseFramePartition``, providing an API
-to perform an operation on a block partition, namely, cudf.DataFrame, using Ray as an execution engine.
+The class is specific implementation of :py:class:`~modin.engines.base.frame.partition.BaseFramePartition`,
+providing an API to perform an operation on a block partition, namely, ``cudf.DataFrame``,
+using Ray as an execution engine.
 
 An operation on a block partition can be performed by two ways:
 

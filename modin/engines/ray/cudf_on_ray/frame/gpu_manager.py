@@ -21,7 +21,7 @@ import pandas
 @ray.remote(num_gpus=1)
 class GPUManager(object):
     """
-    Ray actor-class to store ``cudf.DataFrame``s and execute functions on it.
+    Ray actor-class to store ``cudf.DataFrame``-s and execute functions on it.
 
     Parameters
     ----------
@@ -176,7 +176,7 @@ class GPUManager(object):
 
     def get_id(self):
         """
-        Get the gpu_id from this object.
+        Get the `self.gpu_id` from this object.
 
         Returns
         -------
@@ -205,7 +205,7 @@ class GPUManager(object):
 
     def put(self, pandas_df):
         """
-        Convert `pandas_df` to cudf.DataFrame and put it to `self.cudf_dataframe_dict`.
+        Convert `pandas_df` to ``cudf.DataFrame`` and put it to `self.cudf_dataframe_dict`.
 
         Parameters
         ----------

@@ -11,6 +11,15 @@ import sys
 import os
 import types
 
+import ray
+# stub ray.remote to be a no-op so it doesn't shadow docstrings
+def noop_decorator(*args, **kwargs):
+    if len(args) == 1 and len(kwargs) == 0 and callable(args[0]):
+        # This is the case where the decorator is just @ray.remote without parameters.
+        return args[0]
+    return lambda cls_or_func: cls_or_func
+ray.remote = noop_decorator
+
 # fake cuDF-related modules if they're missing
 for mod_name in ("cudf", "cupy"):
     try:

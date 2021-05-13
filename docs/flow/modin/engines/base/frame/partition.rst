@@ -17,5 +17,4 @@ Public API
 ----------
 
 .. autoclass:: modin.engines.base.frame.partition.BaseFramePartition
-  :noindex:
   :members:
