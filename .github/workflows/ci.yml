@@ -78,16 +78,7 @@ jobs:
           python scripts/doc_checker.py modin/experimental/xgboost/__init__.py \
             modin/experimental/xgboost/utils.py modin/experimental/xgboost/xgboost.py \
             modin/experimental/xgboost/xgboost_ray.py
-      - run: |
-          python scripts/doc_checker.py modin/engines/ray/pandas_on_ray/frame/partition.py \
-            modin/engines/ray/pandas_on_ray/frame/axis_partition.py \
-            modin/engines/ray/pandas_on_ray/frame/data.py \
-            modin/engines/ray/pandas_on_ray/frame/partition_manager.py \
-            modin/engines/ray/utils.py \
-            modin/engines/ray/task_wrapper.py \
-            modin/engines/ray/pandas_on_ray/io.py \
-            modin/engines/ray/generic/io.py \
-            modin/engines/ray/generic/frame/partition_manager.py
+      - run: python scripts/doc_checker.py modin/engines/ray
       - run: python scripts/doc_checker.py modin/engines/ray/cudf_on_ray
       - run: python scripts/doc_checker.py scripts/doc_checker.py
       - run: |
