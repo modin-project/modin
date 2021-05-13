@@ -14,7 +14,6 @@
 from .expr import (
     InputRefExpr,
     LiteralExpr,
-    OpExpr,
     AggregateExpr,
     build_if_then_else,
     build_row_idx_filter_expr,
@@ -467,63 +466,19 @@ class CalciteBuilder:
         self._push(CalciteProjectionNode(fields, exprs))
 
     def _process_join(self, op):
-        left = op.input[0]
-        right = op.input[1]
-
-        assert (
-            op.on is not None
-        ), "Merge with unspecified 'on' parameter is not supported in the engine"
-
-        for col in op.on:
-            assert (
-                col in left._table_cols and col in right._table_cols
-            ), f"Column '{col}'' is missing in one of merge operands"
-
-        """ Join, only equal-join supported """
-        cmps = [self._ref(left, c).eq(self._ref(right, c)) for c in op.on]
-        if len(cmps) > 1:
-            condition = OpExpr("AND", cmps, get_dtype(bool))
-        else:
-            condition = cmps[0]
         node = CalciteJoinNode(
             left_id=self._input_node(0).id,
             right_id=self._input_node(1).id,
             how=op.how,
-            condition=condition,
+            condition=self._translate(op.condition),
         )
         self._push(node)
 
-        """Projection for both frames"""
-        fields = []
-        exprs = []
-        conflicting_cols = set(left.columns) & set(right.columns) - set(op.on)
-        """First goes 'on' column then all left columns(+suffix for conflicting names)
-        but 'on' then all right columns(+suffix for conflicting names) but 'on'"""
-        on_idx = [-1] * len(op.on)
-        for c in left.columns:
-            if c in op.on:
-                on_idx[op.on.index(c)] = len(fields)
-            suffix = op.suffixes[0] if c in conflicting_cols else ""
-            fields.append(c + suffix)
-            exprs.append(self._ref(left, c))
-
-        for c in right.columns:
-            if c not in op.on:
-                suffix = op.suffixes[1] if c in conflicting_cols else ""
-                fields.append(c + suffix)
-                exprs.append(self._ref(right, c))
-
-        self._push(CalciteProjectionNode(fields, exprs))
-
-        # TODO: current input translation system doesn't work here
-        # because there is no frame to reference for index computation.
-        # We should build calcite tree to keep references to input
-        # nodes and keep scheme in calcite nodes. For now just use
-        # known index on_idx.
-        if op.sort is True:
-            """Sort by key column"""
-            collation = [CalciteCollation(CalciteInputIdxExpr(x)) for x in on_idx]
-            self._push(CalciteSortNode(collation))
+        self._push(
+            CalciteProjectionNode(
+                op.exprs.keys(), [self._translate(val) for val in op.exprs.values()]
+            )
+        )
 
     def _process_union(self, op):
         self._push(CalciteUnionNode(self._input_ids(), True))

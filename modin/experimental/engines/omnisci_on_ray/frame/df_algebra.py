@@ -229,30 +229,38 @@ class TransformNode(DFAlgNode):
 
 class JoinNode(DFAlgNode):
     def __init__(
-        self, left, right, how="inner", on=None, sort=False, suffixes=("_x", "_y")
+        self,
+        left,
+        right,
+        how="inner",
+        exprs=None,
+        condition=None,
     ):
         self.input = [left, right]
         self.how = how
-        self.on = on
-        self.sort = sort
-        self.suffixes = suffixes
+        self.exprs = exprs
+        self.condition = condition
 
     def copy(self):
         return JoinNode(
             self.input[0],
             self.input[1],
             self.how,
-            self.on,
-            self.sort,
+            self.exprs,
+            self.condition,
         )
 
     def _prints(self, prefix):
+        exprs_str = ""
+        for k, v in self.exprs.items():
+            exprs_str += f"{prefix}    {k}: {v}\n"
         return (
             f"{prefix}JoinNode:\n"
-            f"{prefix}  How: {self.how}\n"
-            f"{prefix}  On: {self.on}\n"
-            f"{prefix}  Sorting: {self.sort}\n"
-            f"{prefix}  Suffixes: {self.suffixes}\n" + self._prints_input(prefix + "  ")
+            f"{prefix}  Fields:\n"
+            + exprs_str
+            + f"{prefix}  How: {self.how}\n"
+            + f"{prefix}  Condition: {self.condition}\n"
+            + self._prints_input(prefix + "  ")
         )
 
 

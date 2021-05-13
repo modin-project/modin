@@ -551,34 +551,50 @@ class OmnisciOnRayFrame(PandasFrame):
 
         new_columns = []
         new_dtypes = []
+        exprs = OrderedDict()
 
         conflicting_cols = set(self.columns) & set(other.columns) - set(on)
         for c in self.columns:
             suffix = suffixes[0] if c in conflicting_cols else ""
             new_columns.append(c + suffix)
             new_dtypes.append(self._dtypes[c])
+            exprs[c + suffix] = self.ref(c)
         for c in other.columns:
             if c not in on:
                 suffix = suffixes[1] if c in conflicting_cols else ""
                 new_columns.append(c + suffix)
                 new_dtypes.append(other._dtypes[c])
+                exprs[c + suffix] = other.ref(c)
+
+        if len(on) == 1:
+            condition = self.ref(on[0]).eq(other.ref(on[0]))
+        else:
+            condition = OpExpr(
+                "AND", [self.ref(col).eq(other.ref(col)) for col in on], get_dtype(bool)
+            )
 
         op = JoinNode(
             self,
             other,
             how=how,
-            on=on,
-            sort=sort,
-            suffixes=suffixes,
+            exprs=exprs,
+            condition=condition,
         )
 
         new_columns = Index.__new__(Index, data=new_columns, dtype=self.columns.dtype)
-        return self.__constructor__(
+        res = self.__constructor__(
             dtypes=new_dtypes,
             columns=new_columns,
             op=op,
             force_execution_mode=self._force_execution_mode,
         )
+
+        if sort:
+            res = res.sort_rows(
+                on, ascending=True, ignore_index=True, na_position="last"
+            )
+
+        return res
 
     def _index_width(self):
         if self._index_cols is None:
