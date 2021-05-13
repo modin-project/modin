@@ -123,7 +123,7 @@ class BasePandasDataset(object):
         for sib in self._siblings:
             sib._siblings += [sibling]
 
-    def _build_repr_df(self, num_rows, num_cols):  # noqa: MD02
+    def _build_repr_df(self, num_rows, num_cols):
         """
         Build pandas DataFrame for string representation.
 
@@ -143,7 +143,7 @@ class BasePandasDataset(object):
         Returns
         -------
         pandas.DataFrame or pandas.Series
-            Pandas dataset with `num_rows` or fewer rows and `num_cols` or fewer columns.
+            A pandas dataset with `num_rows` or fewer rows and `num_cols` or fewer columns.
         """
         # Fast track for empty dataframe.
         if len(self.index) == 0 or (
@@ -390,9 +390,9 @@ class BasePandasDataset(object):
         op : str
             Name of pandas function.
         *args : list
-            Additional positional arguments to be passed in `op`.
+            Additional positional arguments to be passed to `op`.
         **kwargs : dict
-            Additional keywords arguments to be passed in `op`.
+            Additional keywords arguments to be passed to `op`.
 
         Returns
         -------

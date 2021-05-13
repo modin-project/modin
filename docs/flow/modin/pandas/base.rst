@@ -1,8 +1,7 @@
 BasePandasDataset
 """""""""""""""""
 
-The class is base for Modin ``DataFrame`` and ``Series`` classes and implements functionality that is common to both
-``DataFrame`` and ``Series`` of corresponding pandas API types.
+The class implements functionality that is common to Modin's pandas API for both ``DataFrame`` and ``Series`` classes.
 
 Public API
 ----------
