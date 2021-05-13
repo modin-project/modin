@@ -27,7 +27,9 @@ For now ``ExperimentalPandasOnRayIO`` implements two methods - ``read_sql`` and
 <https://spark.apache.org/docs/2.0.0/api/R/read.jdbc.html>`_ such as
 ``partition_column``, ``lower_bound`` and ``upper_bound``. With these parameters,
 the user will be able to specify how to partition the imported data. The second
-implemented method allows to read multiple CSV files simultaneously when a `Python Glob <https://docs.python.org/3/library/glob.html>`_ object is provided as a parameter.
+implemented method allows to read multiple CSV files simultaneously when a
+`Python Glob <https://docs.python.org/3/library/glob.html>`_ object is provided
+as a parameter.
 
 Submodules Description
 ''''''''''''''''''''''
