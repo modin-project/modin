@@ -12,8 +12,8 @@ In addition to wrapping a pandas DataFrame, the class also holds the following m
 
 An operation on a block partition can be performed in two modes:
 
-* asyncronously - via :meth:`~modin.engines.dask.pandas_on_dask.frame.partition.PandasOnDaskFramePartition.apply`
-* lazily - via :meth:`~modin.engines.dask.pandas_on_dask.frame.partition.PandasOnDaskFramePartition.add_to_apply_calls`
+* asyncronously_ - via :meth:`~modin.engines.dask.pandas_on_dask.frame.partition.PandasOnDaskFramePartition.apply`
+* lazily_ - via :meth:`~modin.engines.dask.pandas_on_dask.frame.partition.PandasOnDaskFramePartition.add_to_apply_calls`
 
 Public API
 ----------
@@ -21,3 +21,6 @@ Public API
 .. autoclass:: modin.engines.dask.pandas_on_dask.frame.partition.PandasOnDaskFramePartition
   :noindex:
   :members:
+
+  .. _asyncronously: https://en.wikipedia.org/wiki/Asynchrony_(computer_programming)
+  .. _lazily: https://en.wikipedia.org/wiki/Lazy_evaluation

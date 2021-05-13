@@ -50,6 +50,7 @@ class PandasOnDaskFrame(BasePandasFrame):
 
         Returns
         -------
+        list
             A list of row partitions lengths.
         """
         client = _get_global_client()
@@ -66,6 +67,7 @@ class PandasOnDaskFrame(BasePandasFrame):
 
         Returns
         -------
+        list
             A list of column partitions widths.
         """
         client = _get_global_client()
