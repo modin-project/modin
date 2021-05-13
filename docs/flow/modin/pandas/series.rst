@@ -5,13 +5,13 @@ Series Module Overview
 
 Modin Series
 ''''''''''''
-Modin Series represents disrtibuted `pandas.Series` object providing the same
+Modin Series represents disrtibuted ``pandas.Series`` object providing the same
 pandas API. Internally passed data is divided into partitions in order to
 parallelize computations and utilize the user's hardware as much as possible.
-After the user calls some ``Series`` function, this call is internally rewritten into a representation,
-that can be processed in parallel by the partitions. These results can be e.g.,
-reduced to single output, identical to the single threaded pandas `Series` method
-output.
+After the user calls some ``Series`` function, this call is internally rewritten
+into a representation, that can be processed in parallel by the partitions. These
+results can be e.g., reduced to single output, identical to the single threaded
+pandas ``Series`` method output.
 
 ..
     TODO: add link to the docs with detailed description of queries compilation
@@ -19,12 +19,12 @@ output.
 
 Usage Guide
 '''''''''''
-The most efficient way to create Modin `Series` is to import data from external
-storage using the highly efficient Modin IO methods (for example using `pd.read_csv`, see details for
-Modin IO methods in the :doc:`separate section </flow/modin/engines/base/io>`), but even if
-the data does not originate from a file, any pandas supported data type or `pandas.Series`
-can be used. Internally, the `Series` data is distributed across all partitions,
-which usually corresponds to the number of the user's hardware CPUs. If needed,
+The most efficient way to create Modin ``Series`` is to import data from external
+storage using the highly efficient Modin IO methods (for example using ``pd.read_csv``,
+see details for Modin IO methods in the :doc:`separate section </flow/modin/engines/base/io>`),
+but even if the data does not originate from a file, any pandas supported data type or
+``pandas.Series`` can be used. Internally, the ``Series`` data is distributed across all
+partitions, which usually corresponds to the number of the user's hardware CPUs. If needed,
 the number of partitions can be changed by setting Modin config.
 
 Let's consider simple example of creation and interacting with Modin ``Series``:
