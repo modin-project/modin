@@ -54,14 +54,14 @@ class PandasOnRayFrame(BasePandasFrame):
         Parameters
         ----------
         list_of_dtypes : list
-            A list of pandas Series with the data types.
+            A list of ``pandas.Series`` with the data types.
         column_names : list
             The names of the columns that the data types map to.
 
         Returns
         -------
         pandas.Series
-             A pandas Series containing the finalized data types.
+             A ``pandas.Series`` containing the finalized data types.
         """
         # Compute dtypes by getting collecting and combining all of the partitions. The
         # reported dtypes from differing rows can be different based on the inference in

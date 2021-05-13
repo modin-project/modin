@@ -191,7 +191,7 @@ class cuDFOnRayFrameManager(RayFrameManager):
 
         Notes
         -----
-        The main use for this is to preprocess the func.
+        This preprocesses the `func` first before applying it to the partitions.
         """
         preprocessed_map_func = cls.preprocess_func(func)
         key_futures = ray.get(

@@ -94,7 +94,7 @@ def func(df, apply_func, call_queue_df=None, call_queues_other=None, *others):
     df : ray.ObjectRef
         Dataframe to which `apply_func` will be applied.
         After running function, automaterialization
-        ray.ObjectRef->pandas.DataFrame happens.
+        ``ray.ObjectRef``->``pandas.DataFrame`` happens.
     apply_func : {callable, ray.ObjectRef}
         The function to apply.
     call_queue_df : list, optional
@@ -148,14 +148,14 @@ class PandasOnRayFrameManager(RayFrameManager):
         axis : {0, 1}
             Axis to extract the labels over.
         partitions : np.ndarray
-            NumPy array with BaseFramePartition's.
+            NumPy array with ``BaseFramePartition``-s.
         index_func : callable, default: None
             The function to be used to extract the indices.
 
         Returns
         -------
         pandas.Index
-            A pandas Index object.
+            A ``pandas.Index`` object.
 
         Notes
         -----
@@ -345,7 +345,7 @@ class PandasOnRayFrameManager(RayFrameManager):
 
         Notes
         -----
-        The main use for this is to preprocess the func.
+        This preprocesses the `func` first before applying it to the partitions.
         """
         return super(PandasOnRayFrameManager, cls)._apply_func_to_list_of_partitions(
             func, partitions, **kwargs
