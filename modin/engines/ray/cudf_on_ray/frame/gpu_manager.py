@@ -11,7 +11,7 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-"""Module holds Ray actor-class that stored ``cudf.DataFrame``s."""
+"""Module holds Ray actor-class that stores ``cudf.DataFrame``s."""
 
 import ray
 import cudf
@@ -45,6 +45,7 @@ class GPUManager(object):
             The first key associated with dataframe from `self.cudf_dataframe_dict`.
         other : int
             The second key associated with dataframe from `self.cudf_dataframe_dict`.
+            If it isn't a real key, the `func` will be applied to the `first` only.
         func : callable
             A function to apply.
         **kwargs : dict
@@ -65,7 +66,7 @@ class GPUManager(object):
 
     def apply(self, first, other, func, **kwargs):
         """
-        Apply `func` to values associated with `first`/`other` keys of `self.cudf_dataframe_dict`.
+        Apply `func` to values associated with `first`/`other` keys of `self.cudf_dataframe_dict` with storing of the result.
 
         Store the return value of `func` (a new ``cudf.DataFrame``)
         into `self.cudf_dataframe_dict`.
@@ -76,6 +77,7 @@ class GPUManager(object):
             The first key associated with dataframe from `self.cudf_dataframe_dict`.
         other : int or ray.ObjectRef
             The second key associated with dataframe from `self.cudf_dataframe_dict`.
+            If it isn't a real key, the `func` will be applied to the `first` only.
         func : callable
             A function to apply.
         **kwargs : dict
@@ -101,7 +103,7 @@ class GPUManager(object):
 
     def reduce(self, first, others, func, axis=0, **kwargs):
         """
-        Apply `func` to values associated with `first`/`others` keys of `self.cudf_dataframe_dict`.
+        Apply `func` to values associated with `first` key and `others` keys of `self.cudf_dataframe_dict` with storing of the result.
 
         Dataframes associated with `others` keys will be concatenated to one
         dataframe.
@@ -113,7 +115,7 @@ class GPUManager(object):
         ----------
         first : int
             The first key associated with dataframe from `self.cudf_dataframe_dict`.
-        others : list
+        others : list of int / list of ray.ObjectRef
             The list of keys associated with dataframe from `self.cudf_dataframe_dict`.
         func : callable
             A function to apply.
@@ -127,6 +129,11 @@ class GPUManager(object):
         int
             The new key of the new dataframe stored in `self.cudf_dataframe_dict`
             (will be a ``ray.ObjectRef`` in outside level).
+
+        Notes
+        -----
+        If ``len(others) == 0`` `func` should be able to work with 2nd
+        positional argument with None value.
         """
         # TODO: Try to use `axis` parameter of cudf.concat
         join_func = (
@@ -198,7 +205,7 @@ class GPUManager(object):
         Returns
         -------
         cudf.DataFrame
-            Dataframe corresponded to `key`(will be a ``ray.ObjectRef``
+            Dataframe corresponding to `key`(will be a ``ray.ObjectRef``
             in outside level).
         """
         return self.cudf_dataframe_dict[key]

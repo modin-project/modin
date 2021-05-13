@@ -31,7 +31,7 @@ class cuDFOnRayFramePartition(BaseFramePartition):
     gpu_manager : modin.engines.ray.cudf_on_ray.frame.GPUManager
         A gpu manager to store cuDF dataframes.
     key : ray.ObjectRef or int
-        An integer key(or reference to key) associated with
+        An integer key (or reference to key) associated with
         ``cudf.DataFrame`` stored in `gpu_manager`.
     length : ray.ObjectRef or int, optional
         Length or reference to it of wrapped ``pandas.DataFrame``.
@@ -131,7 +131,7 @@ class cuDFOnRayFramePartition(BaseFramePartition):
             A reference to integer key of result
             in internal dict-storage of `self.gpu_manager`.
         """
-        # TODO: Can't found `gpu_manager.apply_result_not_dataframe` method.
+        # FIXME: Can't find `gpu_manager.apply_result_not_dataframe` method.
         return self.gpu_manager.apply_result_not_dataframe.remote(
             self.get_key(), func, **kwargs
         )
@@ -151,6 +151,10 @@ class cuDFOnRayFramePartition(BaseFramePartition):
         -------
         cuDFOnRayFramePartition
             New partition based on result of `func`.
+
+        Notes
+        -----
+        We eagerly schedule the apply `func` and produce a new ``cuDFOnRayFramePartition``.
         """
         return cuDFOnRayFramePartition(self.gpu_manager, self.apply(func, **kwargs))
 
@@ -277,13 +281,13 @@ class cuDFOnRayFramePartition(BaseFramePartition):
 
     def get_object_id(self):
         """
-        Get object stored by this partition from `self.gpu_manager`.
+        Get object stored for this partition from `self.gpu_manager`.
 
         Returns
         -------
         ray.ObjectRef
         """
-        # TODO: Can't found `gpu_manager.get_object_id` method. Possible, method
+        # FIXME: Can't find `gpu_manager.get_object_id` method. Probably, method
         # `gpu_manager.get_oid` should be used.
         return self.gpu_manager.get_object_id.remote(self.get_key())
 
@@ -295,7 +299,7 @@ class cuDFOnRayFramePartition(BaseFramePartition):
         -------
         ray.ObjectRef
         """
-        # TODO: Can't found `gpu_manager.get` method. Possible, method
+        # FIXME: Can't find `gpu_manager.get` method. Probably, method
         # `gpu_manager.get_oid` should be used.
         return self.gpu_manager.get.remote(self.get_key())
 
@@ -323,6 +327,7 @@ class cuDFOnRayFramePartition(BaseFramePartition):
         """
 
         def convert(df):
+            """Convert `df` to NumPy array."""
             if len(df.columns == 1):
                 df = df.iloc[:, 0]
             if isinstance(df, cudf.Series):  # convert to column vector
@@ -332,7 +337,7 @@ class cuDFOnRayFramePartition(BaseFramePartition):
             ):  # dataframes do not support df.values with strings
                 return cupy.asnumpy(df.values)
 
-        # TODO: Can't found `gpu_manager.apply_result_not_dataframe` method.
+        # FIXME: Can't find `gpu_manager.apply_result_not_dataframe` method.
         return self.gpu_manager.apply_result_not_dataframe.remote(
             self.get_key(),
             convert,

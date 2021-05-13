@@ -54,7 +54,7 @@ class cuDFOnRayFrameColumnPartition(cuDFOnRayFrameAxisPartition):
 
         Parameters
         ----------
-        func : calalble
+        func : callable
             A func to apply.
 
         Returns
@@ -68,7 +68,9 @@ class cuDFOnRayFrameColumnPartition(cuDFOnRayFrameAxisPartition):
             gpu_manager.get.remote(key) for gpu_manager, key in zip(gpu_managers, keys)
         ]
 
-        # TODO: Fix incorrect parameters of function.
+        # FIXME: The signature if `head_gpu_manager.reduce` requires
+        # (first, others, func, axis=0, **kwargs) parameters, but `first`
+        # parameter isn't presented.
         key = head_gpu_manager.reduce.remote(
             cudf_dataframe_object_ids, axis=self.axis, func=func
         )
@@ -89,8 +91,6 @@ class cuDFOnRayFrameRowPartition(cuDFOnRayFrameAxisPartition):
 
     axis = 1
 
-    # Since we are using row partitions, we can bypass the ray plasma store during axis reduction
-    # functions.
     def reduce(self, func):
         """
         Reduce partitions along `self.axis` and apply `func`.
@@ -103,11 +103,16 @@ class cuDFOnRayFrameRowPartition(cuDFOnRayFrameAxisPartition):
         Returns
         -------
         cuDFOnRayFramePartition
+
+        Notes
+        -----
+        Since we are using row partitions, we can bypass the Ray plasma
+        store during axis reduction functions.
         """
         keys = [partition.get_key() for partition in self.partitions]
         gpu = self.partitions[0].get_gpu_manager()
 
-        # TODO: Method `gpu_manager.reduce_key_list` does not exist.
+        # FIXME: Method `gpu_manager.reduce_key_list` does not exist.
         key = gpu.reduce_key_list.remote(keys, func)
         key = ray.get(key)
         return cuDFOnRayFramePartition(gpu_manager=gpu, key=key)

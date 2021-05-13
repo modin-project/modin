@@ -72,7 +72,7 @@ class cuDFOnRayFrameManager(RayFrameManager):
             List of keys associated with dataframes in
             `gpu_managers`.
         gpu_managers : list
-            List of ``GPUManager`` objects, which stores
+            List of ``GPUManager`` objects, which store
             dataframes.
 
         Returns
@@ -113,7 +113,7 @@ class cuDFOnRayFrameManager(RayFrameManager):
         Returns
         -------
         list or tuple
-            List of partitions in case `return_dims` == True,
+            List of partitions in case `return_dims` == False,
             tuple (partitions, row lengths, col widths) in other case.
         """
         num_splits = GpuCount.get()
@@ -188,6 +188,10 @@ class cuDFOnRayFrameManager(RayFrameManager):
         -------
         np.ndarray
             A NumPy array of ``cuDFOnRayFrameManager`` objects.
+
+        Notes
+        -----
+        The main use for this is to preprocess the func.
         """
         preprocessed_map_func = cls.preprocess_func(func)
         key_futures = ray.get(

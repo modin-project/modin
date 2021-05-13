@@ -45,8 +45,8 @@ def progress_bar_wrapper(f):
 
     Returns
     -------
-    A new BaseFrameManager object, the type of object that
-    called this.
+    callable
+        Decorated version of `f` which reports progress.
     """
     from functools import wraps
 
@@ -106,7 +106,8 @@ def func(df, apply_func, call_queue_df=None, call_queues_other=None, *others):
 
     Returns
     -------
-    The same as returns of `apply_func`.
+    object
+        The same as returns of `apply_func`.
     """
     if call_queue_df is not None and len(call_queue_df) > 0:
         for call, kwargs in call_queue_df:
@@ -301,7 +302,7 @@ class PandasOnRayFrameManager(RayFrameManager):
             Function to apply.
         keep_partitioning : bool, default: False
             Whether to keep partitioning for Modin Frame.
-            Setting it to True stops data shuffling between partitions.
+            Setting it to True prevents data shuffling between partitions.
         lengths : list of ints, default: None
             List of lengths to shuffle the object.
         enumerate_partitions : bool, default: False
@@ -356,7 +357,7 @@ class PandasOnRayFrameManager(RayFrameManager):
         cls, axis, partitions, func, indices, keep_remaining=False
     ):
         """
-        Apply a `func` to select indices of `partitions`.
+        Apply a `func` to select `indices` of `partitions`.
 
         Parameters
         ----------
@@ -464,7 +465,7 @@ class PandasOnRayFrameManager(RayFrameManager):
         Notes
         -----
         For your func to operate directly on the indices provided,
-        it must use `row_internal_indices, col_internal_indices` as keyword
+        it must use ``row_internal_indices`` and ``col_internal_indices`` as keyword
         arguments.
         """
         return super(PandasOnRayFrameManager, cls).apply_func_to_indices_both_axis(
