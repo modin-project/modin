@@ -301,16 +301,18 @@ class PandasCSVGlobParser(PandasCSVParser):
         ]
 
 
+@doc(_doc_pandas_parser_class, data_type="pickled pandas objects")
 class PandasPickleExperimentalParser(PandasParser):
     @staticmethod
-    def parse(filepath, **kwargs):
+    @doc(_doc_parse_func, parameters=_doc_parse_parameters_common)
+    def parse(fname, **kwargs):
         warnings.filterwarnings("ignore")
         num_splits = 1
 
-        df = pandas.read_pickle(filepath, **kwargs)
+        df = pandas.read_pickle(fname, **kwargs)
         assert isinstance(
             df, pandas.DataFrame
-        ), f"Pickled obj type: [{type(df)}] in [{filepath}]; works only with pandas.DataFrame"
+        ), f"Pickled obj type: [{type(df)}] in [{fname}]; works only with pandas.DataFrame"
 
         length = len(df)
         width = len(df.columns)

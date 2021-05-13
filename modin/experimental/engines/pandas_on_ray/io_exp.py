@@ -18,7 +18,6 @@ Any function or class can be considered experimental API if it is not strictly r
 backend API, even if it is only extending the API.
 """
 
-import os
 import numpy as np
 import pandas
 import warnings
@@ -236,8 +235,16 @@ class ExperimentalPandasOnRayIO(PandasOnRayIO):
         - if `*` in the filename then it will be replaced by the increasing sequence 0, 1, 2, …
         - if `*` is not the filename, then will be used default implementation.
 
-        Example #1: 4 partitions and input filename="partition*.pkl.gz", then filenames will be:
+        Examples #1: 4 partitions and input filename="partition*.pkl.gz", then filenames will be:
         `partition0.pkl.gz`, `partition1.pkl.gz`, `partition2.pkl.gz`, `partition3.pkl.gz`.
+
+        Parameters
+        ----------
+        qc : BaseQueryCompiler
+            The query compiler of the Modin dataframe that we want
+            to run ``to_pickle_distributed`` on.
+        **kwargs : dict
+            Parameters for ``pandas.to_pickle(**kwargs)``.
         """
         if (
             not isinstance(kwargs["filepath_or_buffer"], str)
