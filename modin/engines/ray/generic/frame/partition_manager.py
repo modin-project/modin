@@ -26,7 +26,7 @@ class RayFrameManager(BaseFrameManager):
     @classmethod
     def to_numpy(cls, partitions, **kwargs):
         """
-        Convert this object into a NumPy array from the partitions.
+        Convert `partitions` into a NumPy array.
 
         Parameters
         ----------

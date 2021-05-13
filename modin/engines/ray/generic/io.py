@@ -27,12 +27,12 @@ class RayIO(BaseIO):
     @classmethod
     def to_sql(cls, qc, **kwargs):
         """
-        Write records stored in a DataFrame to a SQL database.
+        Write records stored in the `qc` to a SQL database.
 
         Parameters
         ----------
         qc : BaseQueryCompiler
-            The query compiler of the DataFrame that we want to run to_sql on.
+            The query compiler of the Modin dataframe that we want to run ``to_sql`` on.
         **kwargs : dict
             Parameters for ``pandas.to_sql(**kwargs)``.
         """
@@ -54,8 +54,8 @@ class RayIO(BaseIO):
 
             Notes
             -----
-            This function returns an empty DataFrame because ``apply_full_axis``
-            expects a Frame object as a result of operation (and to_sql has no dataframe result).
+            This function returns an empty ``pandas.DataFrame`` because ``apply_full_axis``
+            expects a Frame object as a result of operation (and ``to_sql`` has no dataframe result).
             """
             df.columns = columns
             df.to_sql(**kwargs)
@@ -68,7 +68,7 @@ class RayIO(BaseIO):
     @staticmethod
     def _to_csv_check_support(kwargs):
         """
-        Check if parallel version of to_csv could be used.
+        Check if parallel version of ``to_csv`` could be used.
 
         Parameters
         ----------
@@ -78,7 +78,7 @@ class RayIO(BaseIO):
         Returns
         -------
         bool
-            Whether parallel version of to_csv is applicable.
+            Whether parallel version of ``to_csv`` is applicable.
         """
         path_or_buf = kwargs["path_or_buf"]
         compression = kwargs["compression"]
@@ -105,12 +105,12 @@ class RayIO(BaseIO):
     @classmethod
     def to_csv(cls, qc, **kwargs):
         """
-        Write records stored in a DataFrame to a CSV file.
+        Write records stored in the `qc` to a CSV file.
 
         Parameters
         ----------
         qc : BaseQueryCompiler
-            The query compiler of the DataFrame that we want to run to_csv on.
+            The query compiler of the Modin dataframe that we want to run ``to_csv`` on.
         **kwargs : dict
             Parameters for ``pandas.to_csv(**kwargs)``.
         """
@@ -130,7 +130,7 @@ class RayIO(BaseIO):
             df : pandas.DataFrame
                 A chunk of rows to write to a CSV file.
             **kw : dict
-                Arguments to pass to pandas.to_csv(**kw) plus an extra argument
+                Arguments to pass to ``pandas.to_csv(**kw)`` plus an extra argument
                 `partition_idx` serving as chunk index to maintain rows order.
             """
             if kw["partition_idx"] != 0:

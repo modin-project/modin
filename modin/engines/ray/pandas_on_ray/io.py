@@ -11,7 +11,7 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-"""The module holding PandasOnRay factory which performs I/O using pandas on Ray."""
+"""The module holds the factory which performs I/O using pandas on Ray."""
 
 from modin.backends.pandas.query_compiler import PandasQueryCompiler
 from modin.engines.ray.generic.io import RayIO

@@ -62,12 +62,12 @@ class PandasOnRayFramePartition(BaseFramePartition):
 
     def get(self):
         """
-        Get the object wrapped by this partition out of the plasma store.
+        Get the object wrapped by this partition out of the Plasma store.
 
         Returns
         -------
         pandas.DataFrame
-            The object from the plasma store.
+            The object from the Plasma store.
         """
         if len(self.call_queue):
             self.drain_call_queue()
@@ -238,7 +238,7 @@ class PandasOnRayFramePartition(BaseFramePartition):
     @classmethod
     def put(cls, obj):
         """
-        Put an object into plasma store and wrap it with partition object.
+        Put an object into Plasma store and wrap it with partition object.
 
         Parameters
         ----------
@@ -255,7 +255,7 @@ class PandasOnRayFramePartition(BaseFramePartition):
     @classmethod
     def preprocess_func(cls, func):
         """
-        Put a function into the plasma store to use in ``apply``.
+        Put a function into the Plasma store to use in ``apply``.
 
         Parameters
         ----------
