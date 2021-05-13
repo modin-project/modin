@@ -8,9 +8,9 @@ Modin Series
 Modin Series represents disrtibuted `pandas.Series` object providing the same
 pandas API. Internally passed data is divided into partitions in order to
 parallelize computations and utilize the user's hardware as much as possible.
-After the user calls some `Series` function, this call is converted into the query,
-that can be processed in parallel by the partitions and then these results
-reduced to single output, that is similar to single threaded pandas `Series` method
+After the user calls some ``Series`` function, this call is internally rewritten into a representation,
+that can be processed in parallel by the partitions. These results can be e.g.,
+reduced to single output, identical to the single threaded pandas `Series` method
 output.
 
 ..
@@ -19,15 +19,15 @@ output.
 
 Usage Guide
 '''''''''''
-The most efficient way to create Modin `Series` is to import it's data from the external
-storage using high efficient Modin IO methods (for example using `pd.read_csv`, see details for
+The most efficient way to create Modin `Series` is to import data from external
+storage using the highly efficient Modin IO methods (for example using `pd.read_csv`, see details for
 Modin IO methods in the :doc:`separate section </flow/modin/engines/base/io>`), but even if
-you don't have such storage, any pandas supported data type or `pandas.Series` themself
-can be used. Most of the times `Series` data is evenly distributed across all partitions,
-which number corresponds to the number of the user's hardware CPUs, but if it is needed
-the number of partitions can be changed by seeting Modin config.
+the data does not originate from a file, any pandas supported data type or `pandas.Series`
+can be used. Internally, the `Series` data is distributed across all partitions,
+which usually corresponds to the number of the user's hardware CPUs. If needed,
+the number of partitions can be changed by setting Modin config.
 
-Let's consider simple example of creation and interacting with Modin `Series`:
+Let's consider simple example of creation and interacting with Modin ``Series``:
 
 .. code-block:: python
 
@@ -99,5 +99,5 @@ Let's consider simple example of creation and interacting with Modin `Series`:
 
     [65 rows x 1 columns]
 
-As it can be seen from the example above, Modin `Series` can be easily created similarly to pandas `Series`
-and tuning of it's partitioning can be done by setting of the single config.
+As we show in the example above, Modin ``Series`` can be easily created, and supports any input that pandas ``Series`` supports.
+Also note that tuning of the ``Series`` partitioning can be done by setting of a single config.
