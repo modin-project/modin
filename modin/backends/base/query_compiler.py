@@ -573,32 +573,6 @@ class BaseQueryCompiler(abc.ABC):
         """
         return DataFrameDefault.register(pandas.DataFrame.min)(self, **kwargs)
 
-    def sum(self, squeeze_self, axis, **kwargs):
-        """Returns the sum of each numerical column or row.
-
-        Return:
-            Pandas series with the sum of each numerical column or row.
-        """
-        # TODO: rework to original implementation after pandas issue #41074 resolves if possible.
-        def map_func(df, **kwargs):
-            if squeeze_self:
-                result = df.squeeze(axis=1).sum(**kwargs)
-                if is_scalar(result):
-                    if axis:
-                        return pandas.DataFrame(
-                            [result], index=["__reduced__"], columns=["__reduced__"]
-                        )
-                    else:
-                        return pandas.Series([result], index=[df.columns[0]])
-                else:
-                    return result
-            else:
-                return df.sum(**kwargs)
-
-        return DataFrameDefault.register(
-            map_func,
-        )(self, axis=axis, **kwargs)
-
     def prod(self, squeeze_self, axis, **kwargs):
         """Returns the product of each numerical column or row.
 
@@ -607,6 +581,7 @@ class BaseQueryCompiler(abc.ABC):
         """
         # TODO: rework to original implementation after pandas issue #41074 resolves if possible.
         def map_func(df, **kwargs):
+            """Apply .prod to DataFrame or Series in depend on `squeeze_self.`"""
             if squeeze_self:
                 result = df.squeeze(axis=1).prod(**kwargs)
                 if is_scalar(result):
@@ -620,6 +595,33 @@ class BaseQueryCompiler(abc.ABC):
                     return result
             else:
                 return df.prod(**kwargs)
+
+        return DataFrameDefault.register(
+            map_func,
+        )(self, axis=axis, **kwargs)
+
+    def sum(self, squeeze_self, axis, **kwargs):
+        """Returns the sum of each numerical column or row.
+
+        Return:
+            Pandas series with the sum of each numerical column or row.
+        """
+        # TODO: rework to original implementation after pandas issue #41074 resolves if possible.
+        def map_func(df, **kwargs):
+            """Apply .sum to DataFrame or Series in depend on `squeeze_self.`"""
+            if squeeze_self:
+                result = df.squeeze(axis=1).sum(**kwargs)
+                if is_scalar(result):
+                    if axis:
+                        return pandas.DataFrame(
+                            [result], index=["__reduced__"], columns=["__reduced__"]
+                        )
+                    else:
+                        return pandas.Series([result], index=[df.columns[0]])
+                else:
+                    return result
+            else:
+                return df.sum(**kwargs)
 
         return DataFrameDefault.register(
             map_func,

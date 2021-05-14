@@ -747,6 +747,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
     def sum(self, squeeze_self, axis, **kwargs):
         # TODO: rework to original implementation after pandas issue #41074 resolves if possible.
         def map_func(df, **kwargs):
+            """Apply .sum to DataFrame or Series in depend on `squeeze_self.`"""
             if squeeze_self:
                 result = df.squeeze(axis=1).sum(**kwargs)
                 if is_scalar(result):
@@ -769,6 +770,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
     def prod(self, squeeze_self, axis, **kwargs):
         # TODO: rework to original implementation after pandas issue #41074 resolves if possible.
         def map_func(df, **kwargs):
+            """Apply .prod to DataFrame or Series in depend on `squeeze_self.`"""
             if squeeze_self:
                 result = df.squeeze(axis=1).prod(**kwargs)
                 if is_scalar(result):
@@ -888,6 +890,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
     def sum_min_count(self, squeeze_self, axis, **kwargs):
         # TODO: rework to original implementation after pandas issue #41074 resolves if possible.
         def reduce_func(df, **kwargs):
+            """Apply .sum to DataFrame or Series in depend on `squeeze_self.`"""
             if squeeze_self:
                 result = df.squeeze(axis=1).sum(**kwargs)
                 if is_scalar(result):
@@ -909,6 +912,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
     def prod_min_count(self, squeeze_self, axis, **kwargs):
         # TODO: rework to original implementation after pandas issue #41074 resolves if possible.
         def reduce_func(df, **kwargs):
+            """Apply .prod to DataFrame or Series in depend on `squeeze_self.`"""
             if squeeze_self:
                 result = df.squeeze(axis=1).prod(**kwargs)
                 if is_scalar(result):
