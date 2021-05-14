@@ -68,9 +68,9 @@ class cuDFOnRayFrameColumnPartition(cuDFOnRayFrameAxisPartition):
             gpu_manager.get.remote(key) for gpu_manager, key in zip(gpu_managers, keys)
         ]
 
-        # FIXME: The signature if `head_gpu_manager.reduce` requires
+        # FIXME: The signature of `head_gpu_manager.reduce` requires
         # (first, others, func, axis=0, **kwargs) parameters, but `first`
-        # parameter isn't presented.
+        # parameter isn't present.
         key = head_gpu_manager.reduce.remote(
             cudf_dataframe_object_ids, axis=self.axis, func=func
         )
