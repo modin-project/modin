@@ -11,10 +11,39 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
+"""
+Module contains class ``PandasOnPythonFrame``.
+
+``PandasOnPythonFrame`` is dataframe class with pandas backend and Python engine.
+"""
+
 from modin.engines.base.frame.data import PandasFrame
 from .partition_manager import PandasOnPythonFramePartitionManager
 
 
 class PandasOnPythonFrame(PandasFrame):
+    """
+    Class for dataframes with pandas backend and Python engine.
+
+    ``PandasOnPythonFrame`` doesn't implement any specific interfaces,
+    all functionality is inherited from the ``BasePandasFrame`` class.
+
+    Parameters
+    ----------
+    partitions : np.ndarray
+        A 2D NumPy array of partitions.
+    index : sequence
+        The index for the dataframe. Converted to a ``pandas.Index``.
+    columns : sequence
+        The columns object for the dataframe. Converted to a ``pandas.Index``.
+    row_lengths : list, optional
+        The length of each partition in the rows. The "height" of
+        each of the block partitions. Is computed if not provided.
+    column_widths : list, optional
+        The width of each partition in the columns. The "width" of
+        each of the block partitions. Is computed if not provided.
+    dtypes : pandas.Series, optional
+        The data types for the dataframe columns.
+    """
 
     _partition_mgr_cls = PandasOnPythonFramePartitionManager
