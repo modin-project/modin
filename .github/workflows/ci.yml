@@ -397,7 +397,7 @@ jobs:
         shell: bash -l {0}
     strategy:
       matrix:
-        python-version: ["3.7", "3.8"]
+        python-version: ["3.7"]
         engine: ["python", "ray", "dask"]
     env:
       MODIN_ENGINE: ${{matrix.engine}}
