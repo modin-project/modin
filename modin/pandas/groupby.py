@@ -309,7 +309,7 @@ class DataFrameGroupBy(object):
         Raises
         ------
         NotImplementedError
-            If some column names are not found in `self`.
+            Column lookups on GroupBy with arbitrary Series in by is not yet supported.
         """
         kwargs = {**self._kwargs.copy(), "squeeze": self._squeeze}
         # Most of time indexing DataFrameGroupBy results in another DataFrameGroupBy object unless circumstances are
