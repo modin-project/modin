@@ -21,7 +21,6 @@ from modin.config import (
     CpuCount,
     GpuCount,
     Memory,
-    RayPlasmaDir,
     IsOutOfCore,
     NPartitions,
 )
