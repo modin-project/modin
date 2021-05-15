@@ -17,7 +17,6 @@ import sys
 from modin.config import (
     Backend,
     IsRayCluster,
-    RayRedisAddress,
     CpuCount,
     GpuCount,
     Memory,
@@ -82,19 +81,14 @@ def initialize_ray(
     import ray
 
     if not ray.is_initialized() or override_is_cluster:
-        import secrets
-
         cluster = override_is_cluster or IsRayCluster.get()
-        redis_address = override_redis_address or RayRedisAddress.get()
-        redis_password = override_redis_password or secrets.token_hex(32)
 
         if cluster:
             # We only start ray in a cluster setting for the head node.
             ray.init(
-                address=redis_address or "auto",
+                address="auto",
                 include_dashboard=False,
                 ignore_reinit_error=True,
-                _redis_password=redis_password,
             )
         else:
             from modin.error_message import ErrorMessage
@@ -134,12 +128,9 @@ def initialize_ray(
                 "num_gpus": GpuCount.get(),
                 "include_dashboard": False,
                 "ignore_reinit_error": True,
-                "object_store_memory": object_store_memory,
-                "address": redis_address,
-                "_redis_password": redis_password,
                 "_memory": object_store_memory,
             }
-            ray.init()
+            ray.init(**ray_init_kwargs)
 
         _move_stdlib_ahead_of_site_packages()
         ray.worker.global_worker.run_function_on_all_workers(
