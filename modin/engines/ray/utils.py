@@ -139,7 +139,7 @@ def initialize_ray(
                 "_redis_password": redis_password,
                 "_memory": object_store_memory,
             }
-            ray.init(**ray_init_kwargs)
+            ray.init()
 
         _move_stdlib_ahead_of_site_packages()
         ray.worker.global_worker.run_function_on_all_workers(
