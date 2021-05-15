@@ -408,18 +408,7 @@ jobs:
       - uses: actions/checkout@v2
         with:
           fetch-depth: 1
-      - uses: conda-incubator/setup-miniconda@v2
-        with:
-          activate-environment: modin
-          environment-file: environment-dev.yml
-          python-version: ${{matrix.python-version}}
-          channel-priority: strict
-          use-only-tar-bz2: true # IMPORTANT: This needs to be set for caching to work properly!
-      - name: Conda environment
-        shell: bash -l {0}
-        run: |
-          conda info
-          conda list
+      - run: pip install -U -r requirements-dev.txt
       - name: Install HDF5
         run: sudo apt update && sudo apt install -y libhdf5-dev
       - run: MODIN_BENCHMARK_MODE=True pytest modin/pandas/test/internals/test_benchmark_mode.py
@@ -536,92 +525,6 @@ jobs:
               echo 'CORRUPTED CODECOV SCRIPT!!!'
               exit 10
           fi
-
-  test-windows:
-    needs: [lint-commit, lint-flake8, lint-black, test-api, test-headers]
-    runs-on: windows-latest
-    defaults:
-      run:
-        shell: bash -l {0}
-    strategy:
-      matrix:
-        python-version: ["3.7", "3.8"]
-        engine: ["ray", "dask"]
-        test-task:
-          - modin/pandas/test/dataframe/test_binary.py
-          - modin/pandas/test/dataframe/test_default.py
-          - modin/pandas/test/dataframe/test_indexing.py
-          - modin/pandas/test/dataframe/test_iter.py
-          - modin/pandas/test/dataframe/test_join_sort.py
-          - modin/pandas/test/dataframe/test_map_metadata.py
-          - modin/pandas/test/dataframe/test_reduction.py
-          - modin/pandas/test/dataframe/test_udf.py
-          - modin/pandas/test/dataframe/test_window.py
-          - modin/pandas/test/dataframe/test_pickle.py
-          - modin/pandas/test/test_series.py
-          - modin/pandas/test/test_rolling.py
-          - modin/pandas/test/test_concat.py
-          - modin/pandas/test/test_groupby.py
-          - modin/pandas/test/test_reshape.py
-          - modin/pandas/test/test_general.py
-          - modin/pandas/test/test_io.py
-    env:
-      MODIN_ENGINE: ${{matrix.engine}}
-      MODIN_MEMORY: 1000000000
-    name: test-windows
-    steps:
-      - uses: actions/checkout@v2
-        with:
-          fetch-depth: 1
-      - uses: conda-incubator/setup-miniconda@v2
-        with:
-          activate-environment: modin
-          environment-file: environment-dev.yml
-          python-version: ${{matrix.python-version}}
-          channel-priority: strict
-          use-only-tar-bz2: true # IMPORTANT: This needs to be set for caching to work properly!
-          auto-update-conda: true # this enable `use-only-tar-bz2` feature on Windows
-      - name: Conda environment
-        run: |
-          conda info
-          conda list
-      - run: python -m pytest ${{matrix.test-task}}
-        if: matrix.test-task != 'modin/pandas/test/test_io.py'
-      - timeout-minutes: 30
-        run: python -m pytest modin/pandas/test/test_io.py
-        if: matrix.test-task == 'modin/pandas/test/test_io.py'
-      - run: choco install codecov
-      - run: codecov -f ./coverage.xml
-
-  test-pyarrow:
-    needs: [lint-commit, lint-flake8, lint-black, test-api, test-headers]
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        python-version: ["3.7", "3.8"]
-    env:
-      MODIN_BACKEND: pyarrow
-      MODIN_EXPERIMENTAL: "True"
-    name: test (pyarrow, python ${{matrix.python-version}})
-    steps:
-      - uses: actions/checkout@v2
-        with:
-          fetch-depth: 1
-      - uses: conda-incubator/setup-miniconda@v2
-        with:
-          activate-environment: modin
-          environment-file: environment-dev.yml
-          python-version: ${{matrix.python-version}}
-          channel-priority: strict
-          use-only-tar-bz2: true # IMPORTANT: This needs to be set for caching to work properly!
-      - name: Conda environment
-        shell: bash -l {0}
-        run: |
-          conda info
-          conda list
-      - run: sudo apt update && sudo apt install -y libhdf5-dev
-      - shell: bash -l {0}
-        run: python -m pytest modin/pandas/test/test_io.py::TestCsv
 
   test-spreadsheet:
     needs: [ lint-commit, lint-flake8, lint-black, test-api, test-headers ]
