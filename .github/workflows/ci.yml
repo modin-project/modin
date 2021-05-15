@@ -413,7 +413,6 @@ jobs:
         run: sudo apt update && sudo apt install -y libhdf5-dev
       - run: MODIN_BENCHMARK_MODE=True pytest modin/pandas/test/internals/test_benchmark_mode.py
       - run: pytest modin/experimental/xgboost/test/test_default.py
-      - run: pytest modin/pandas/test/dataframe/test_binary.py
       - run: pytest modin/pandas/test/dataframe/test_default.py
       - run: pytest modin/pandas/test/dataframe/test_indexing.py
       - run: pytest modin/pandas/test/dataframe/test_iter.py
