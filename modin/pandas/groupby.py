@@ -477,65 +477,9 @@ class DataFrameGroupBy(object):
         )
 
     def size(self):
-        if self._axis == 0:
-            # Series objects in 'by' mean we couldn't handle the case
-            # and transform 'by' to a query compiler.
-            # In this case we are just defaulting to pandas.
-            if is_list_like(self._by) and any(
-                isinstance(o, type(self._df._query_compiler)) for o in self._by
-            ):
-                work_object = DataFrameGroupBy(
-                    self._df,
-                    self._by,
-                    self._axis,
-                    drop=False,
-                    idx_name=None,
-                    squeeze=self._squeeze,
-                    **self._kwargs,
-                )
-                result = work_object._wrap_aggregation(
-                    type(work_object._query_compiler).groupby_size,
-                    lambda df: df.size(),
-                    numeric_only=False,
-                )
-                result = result.__constructor__(
-                    query_compiler=result._query_compiler
-                ).squeeze(axis=1)
-                if isinstance(result, Series):
-                    # Pandas does not name size() output for Series
-                    result.name = None
-                return result
-            work_object = SeriesGroupBy(
-                self._df[self._df.columns[0]]
-                if self._kwargs.get("as_index")
-                else self._df[self._df.columns[0]].to_frame(),
-                self._by,
-                self._axis,
-                drop=False,
-                idx_name=None,
-                squeeze=self._squeeze,
-                **self._kwargs,
-            )
-            result = work_object._wrap_aggregation(
-                type(work_object._query_compiler).groupby_size,
-                lambda df: df.size(),
-                numeric_only=False,
-            )
-            result = result.__constructor__(query_compiler=result._query_compiler)
-            if not self._kwargs.get("as_index") and not isinstance(result, Series):
-                result = result.rename(columns={0: "size"})
-                result = (
-                    result.rename(columns={"__reduced__": "index"})
-                    if "__reduced__" in result.columns
-                    else result
-                )
-            else:
-                # Pandas does not name size() output for Series
-                result.name = None
-            return result.fillna(0)
-        else:
+        if self._axis == 1:
             return DataFrameGroupBy(
-                self._df.T,
+                self._df.T.iloc[:, [0]],
                 self._by,
                 0,
                 drop=self._drop,
@@ -543,6 +487,34 @@ class DataFrameGroupBy(object):
                 squeeze=self._squeeze,
                 **self._kwargs,
             ).size()
+        work_object = type(self)(
+            self._df,
+            self._by,
+            self._axis,
+            drop=False,
+            idx_name=None,
+            squeeze=self._squeeze,
+            **self._kwargs,
+        )
+        result = work_object._wrap_aggregation(
+            type(work_object._query_compiler).groupby_size,
+            lambda df: df.size(),
+            numeric_only=False,
+        )
+        if not isinstance(result, Series):
+            result = result.squeeze(axis=1)
+        if not self._kwargs.get("as_index") and not isinstance(result, Series):
+            result = result.rename(columns={0: "size"})
+            result = (
+                result.rename(columns={"__reduced__": "index"})
+                if "__reduced__" in result.columns
+                else result
+            )
+        elif isinstance(self._df, Series):
+            result.name = self._df.name
+        else:
+            result.name = None
+        return result.fillna(0)
 
     def sum(self, **kwargs):
         return self._wrap_aggregation(

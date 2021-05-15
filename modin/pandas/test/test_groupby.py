@@ -914,6 +914,7 @@ def test_series_groupby(by, as_index_series_or_dataframe):
         eval_max(modin_groupby, pandas_groupby)
         eval_len(modin_groupby, pandas_groupby)
         eval_sum(modin_groupby, pandas_groupby)
+        eval_size(modin_groupby, pandas_groupby)
         eval_ngroup(modin_groupby, pandas_groupby)
         eval_nunique(modin_groupby, pandas_groupby)
         eval_median(modin_groupby, pandas_groupby)
