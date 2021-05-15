@@ -247,8 +247,8 @@ documentation page on :doc:`contributing </contributing>`.
 
 Module/Class View
 -----------------
-Modin modules layout is shown below. To deep dive into Modin internal implementation 
-details just pick module you are interested in (only some of the modules are covered 
+Modin modules layout is shown below. To deep dive into Modin internal implementation
+details just pick module you are interested in (only some of the modules are covered
 by documentation for now, the rest is coming soon...).
 
 .. parsed-literal::
@@ -274,7 +274,7 @@ by documentation for now, the rest is coming soon...).
    │   │   └───functions
    │   ├───distributed
    │   │   └───dataframe
-   │   │       └───pandas
+   │   │       └─── :doc:`pandas </flow/modin/distributed/dataframe/pandas>`
    │   ├───engines
    │   │   ├───base
    │   │   │   ├─── :doc:`frame </flow/modin/engines/base/frame/index>`

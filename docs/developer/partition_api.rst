@@ -11,34 +11,15 @@ Partition IPs
 For finer grained placement control, Modin also provides an API to get the IP addresses of the nodes that hold each partition.
 You can pass the partitions having needed IPs to your function. It can help with minimazing of data movement between nodes.
 
-unwrap_partitions
------------------
+Partition API implementations
+-----------------------------
+By default, a Modin Dataframe stores underlying partitions as ``pandas.DataFrame`` objects.
+You can find the specific implementation of Modin's Partition Interface in :doc:`Pandas Partition API </flow/modin/distributed/dataframe/pandas>`.
 
-.. automodule:: modin.distributed.dataframe.pandas
-  :noindex:
-  :members: unwrap_partitions
+.. toctree::
+  :hidden:
 
-from_partitions
----------------
-
-.. automodule:: modin.distributed.dataframe.pandas
-  :noindex:
-  :members: from_partitions
-
-Example
--------
-
-.. code-block:: python
-
-  import modin.pandas as pd
-  from modin.distributed.dataframe.pandas import unwrap_partitions, from_partitions
-  import numpy as np
-  data = np.random.randint(0, 100, size=(2 ** 10, 2 ** 8))
-  df = pd.DataFrame(data)
-  partitions = unwrap_partitions(df, axis=0, get_ip=True)
-  print(partitions)
-  new_df = from_partitions(partitions, axis=0)
-  print(new_df)
+  /flow/modin/distributed/dataframe/pandas
 
 Ray engine
 ----------
