@@ -228,6 +228,7 @@ class GroupbyReduceFunction(MapReduceFunction):
         numeric_only=True,
         drop=False,
         method=None,
+        default_to_pandas_func=None,
     ):
         """
         Execute GroupBy aggregation with MapReduce approach.
@@ -257,6 +258,9 @@ class GroupbyReduceFunction(MapReduceFunction):
             Indicates whether or not by-data came from the `self` frame.
         method : str, optional
             Name of the GroupBy aggregation function. This is a hint to be able to do special casing.
+        default_to_pandas_func : callable(pandas.DataFrameGroupBy) -> pandas.DataFrame, optional
+            The pandas aggregation function equivalent to the `map_func + reduce_func`.
+            Used in case of defaulting to pandas. If not specified `map_func` is used.
 
         Returns
         -------
@@ -268,14 +272,14 @@ class GroupbyReduceFunction(MapReduceFunction):
             or isinstance(by, pandas.Grouper)
         ):
             by = try_cast_to_pandas(by, squeeze=True)
-            default_func = kwargs.get(
-                "default_to_pandas_func",
-                (lambda grp: grp.agg(map_func))
-                if isinstance(map_func, dict)
-                else map_func,
-            )
+            if default_to_pandas_func is None:
+                default_to_pandas_func = (
+                    (lambda grp: grp.agg(map_func))
+                    if isinstance(map_func, dict)
+                    else map_func
+                )
             return query_compiler.default_to_pandas(
-                lambda df: default_func(
+                lambda df: default_to_pandas_func(
                     df.groupby(by=by, axis=axis, **groupby_args), **map_args
                 )
             )
