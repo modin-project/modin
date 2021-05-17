@@ -38,15 +38,15 @@ class PandasOnRayFramePartition(BaseFramePartition):
     Parameters
     ----------
     object_id : ray.ObjectRef
-        A reference to pandas DataFrame that need to be wrapped with this class.
+        A reference to ``pandas.DataFrame`` that need to be wrapped with this class.
     length : ray.ObjectRef or int, optional
-        Length or reference to it of wrapped pandas DataFrame.
+        Length or reference to it of wrapped ``pandas.DataFrame``.
     width : ray.ObjectRef or int, optional
-        Width or reference to it of wrapped pandas DataFrame.
+        Width or reference to it of wrapped ``pandas.DataFrame``.
     ip : ray.ObjectRef or str, optional
-        Node IP address or reference to it that holds wrapped pandas DataFrame.
+        Node IP address or reference to it that holds wrapped ``pandas.DataFrame``.
     call_queue : list
-        Call queue that needs to be executed on wrapped pandas DataFrame.
+        Call queue that needs to be executed on wrapped ``pandas.DataFrame``.
     """
 
     def __init__(self, object_id, length=None, width=None, ip=None, call_queue=None):
@@ -85,7 +85,7 @@ class PandasOnRayFramePartition(BaseFramePartition):
         func : callable or ray.ObjectRef
             A function to apply.
         **kwargs
-            Additional keyword arguments to be passed in ``func``.
+            Additional keyword arguments to be passed in `func`.
 
         Returns
         -------
@@ -94,7 +94,7 @@ class PandasOnRayFramePartition(BaseFramePartition):
 
         Notes
         -----
-        It does not matter if ``func`` is callable or an ``ray.ObjectRef``. Ray will
+        It does not matter if `func` is callable or an ``ray.ObjectRef``. Ray will
         handle it correctly either way. The keyword arguments are sent as a dictionary.
         """
         oid = self.oid
@@ -111,7 +111,7 @@ class PandasOnRayFramePartition(BaseFramePartition):
         func : callable or ray.ObjectRef
             Function to be added to the call queue.
         **kwargs : dict
-            Additional keyword arguments to be passed in ``func``.
+            Additional keyword arguments to be passed in `func`.
 
         Returns
         -------
@@ -120,7 +120,7 @@ class PandasOnRayFramePartition(BaseFramePartition):
 
         Notes
         -----
-        It does not matter if ``func`` is callable or an ``ray.ObjectRef``. Ray will
+        It does not matter if `func` is callable or an ``ray.ObjectRef``. Ray will
         handle it correctly either way. The keyword arguments are sent as a dictionary.
         """
         return PandasOnRayFramePartition(
@@ -168,7 +168,7 @@ class PandasOnRayFramePartition(BaseFramePartition):
 
     def to_pandas(self):
         """
-        Convert the object wrapped by this partition to a pandas DataFrame.
+        Convert the object wrapped by this partition to a ``pandas.DataFrame``.
 
         Returns
         -------
@@ -189,7 +189,7 @@ class PandasOnRayFramePartition(BaseFramePartition):
 
         Returns
         -------
-        np.ndarray.
+        np.ndarray
         """
         return self.apply(lambda df, **kwargs: df.to_numpy(**kwargs)).get()
 
@@ -265,7 +265,7 @@ class PandasOnRayFramePartition(BaseFramePartition):
         Returns
         -------
         ray.ObjectRef
-            A reference to ``func``.
+            A reference to `func`.
         """
         return ray.put(func)
 
@@ -376,17 +376,19 @@ class PandasOnRayFramePartition(BaseFramePartition):
 @ray.remote(num_returns=2)
 def get_index_and_columns(df):
     """
-    Get index and columns of a pandas DataFrame.
+    Get the number of rows and columns of a pandas DataFrame.
 
     Parameters
     ----------
     df : pandas.DataFrame
-        A pandas DataFrame whose index and columns needs to be got.
+        A pandas DataFrame which dimensions are needed.
 
     Returns
     -------
-    tuple
-        Tuple of index and columns of ``df``.
+    int
+        The number of rows.
+    int
+        The number of columns.
     """
     return len(df.index), len(df.columns)
 
@@ -405,9 +407,14 @@ def deploy_ray_func(call_queue, partition):  # pragma: no cover
 
     Returns
     -------
-    tuple
-        Tuple of result pandas DataFrame, index, columns and node IP address
-        where ``deploy_ray_func`` was executed.
+    pandas.DataFrame
+        The resulting pandas DataFrame.
+    int
+        The number of rows of the resulting pandas DataFrame.
+    int
+        The number of columns of the resulting pandas DataFrame.
+    str
+        The node IP address of the worker process.
     """
 
     def deserialize(obj):

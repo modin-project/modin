@@ -54,7 +54,7 @@ class PandasOnRayFrameAxisPartition(PandasFrameAxisPartition):
 
         Parameters
         ----------
-        axis : 0 or 1
+        axis : {0, 1}
             The axis to perform the function along.
         func : callable
             The function to perform.
@@ -71,7 +71,7 @@ class PandasOnRayFrameAxisPartition(PandasFrameAxisPartition):
         Returns
         -------
         list
-            A list of pandas DataFrames.
+            A list of ``pandas.DataFrame``-s.
         """
         lengths = kwargs.get("_lengths", None)
         return deploy_ray_func._remote(
@@ -96,7 +96,7 @@ class PandasOnRayFrameAxisPartition(PandasFrameAxisPartition):
 
         Parameters
         ----------
-        axis : 0 or 1
+        axis : {0, 1}
             The axis to perform the function along.
         func : callable
             The function to perform.
@@ -115,7 +115,7 @@ class PandasOnRayFrameAxisPartition(PandasFrameAxisPartition):
         Returns
         -------
         list
-            A list of pandas DataFrames.
+            A list of ``pandas.DataFrame``-s.
         """
         return deploy_ray_func._remote(
             args=(
@@ -133,12 +133,12 @@ class PandasOnRayFrameAxisPartition(PandasFrameAxisPartition):
 
     def _wrap_partitions(self, partitions):
         """
-        Wrap partitions passed as a list of ray.ObjectRef with ``PandasOnRayFramePartition`` class.
+        Wrap partitions passed as a list of ``ray.ObjectRef`` with ``PandasOnRayFramePartition`` class.
 
         Parameters
         ----------
         partitions : list
-            List of ray.ObjectRef.
+            List of ``ray.ObjectRef``.
 
         Returns
         -------
