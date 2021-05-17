@@ -44,3 +44,11 @@ This module houses submodules of all of the stable query compilers:
 - :doc:`Pyarrow module<pyarrow/index>` contains query compiler and text parsers for Pyarrow backend.
 
 You can find more in the :doc:`experimental section </flow/modin/experimental/backends/>`.
+
+.. toctree::
+    :hidden:
+
+    base/query_compiler
+    pandas/index
+    cudf/index
+    pyarrow/index
