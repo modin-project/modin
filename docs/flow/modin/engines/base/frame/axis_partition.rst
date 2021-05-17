@@ -19,7 +19,6 @@ Public API
 ----------
 
 .. autoclass:: modin.engines.base.frame.axis_partition.BaseFrameAxisPartition
-  :noindex:
   :members:
 
 PandasFrameAxisPartition
@@ -37,5 +36,4 @@ Public API
 ----------
 
 .. autoclass:: modin.engines.base.frame.axis_partition.PandasFrameAxisPartition
-  :noindex:
   :members:

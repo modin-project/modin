@@ -1,13 +1,12 @@
 DaskFrameManager
 """"""""""""""""
 
-The class is specific implementation of ``BaseFrameManager`` using Dask as the execution engine.
-This class is responsible for partitions manipulation and applying a funcion to
+The class is specific implementation of :py:class:`~modin.engines.base.frame.partition_manager.BaseFrameManager`
+using Dask as the execution engine. This class is responsible for partitions manipulation and applying a funcion to
 block/row/column partitions.
 
 Public API
 ----------
 
 .. autoclass:: modin.engines.dask.pandas_on_dask.frame.partition_manager.DaskFrameManager
-  :noindex:
   :members:
