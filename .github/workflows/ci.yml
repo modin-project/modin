@@ -425,9 +425,8 @@ jobs:
       - run: MODIN_BENCHMARK_MODE=True pytest modin/pandas/test/internals/test_benchmark_mode.py
       - run: pytest modin/experimental/xgboost/test/test_default.py
       - run: pytest modin/pandas/test/dataframe/test_binary.py
-      - name: Dump logs
+      - run: cat /tmp/ray/session_latest/logs/*
         if: $({failure()})
-        run: cat /tmp/ray/session_latest/logs/*
       - run: pytest modin/pandas/test/dataframe/test_default.py
       - run: pytest modin/pandas/test/dataframe/test_indexing.py
       - run: pytest modin/pandas/test/dataframe/test_iter.py
