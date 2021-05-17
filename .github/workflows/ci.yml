@@ -426,7 +426,7 @@ jobs:
       - run: pytest modin/experimental/xgboost/test/test_default.py
       - run: pytest modin/pandas/test/dataframe/test_binary.py
       - run: cat /tmp/ray/session_latest/logs/*
-        if: $({failure()})
+        if: ${{failure()}}
       - run: pytest modin/pandas/test/dataframe/test_default.py
       - run: pytest modin/pandas/test/dataframe/test_indexing.py
       - run: pytest modin/pandas/test/dataframe/test_iter.py
