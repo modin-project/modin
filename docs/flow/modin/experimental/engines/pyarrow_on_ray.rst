@@ -8,7 +8,7 @@ High-Level Module Overview
 
 This module houses experimental functionality with PyArrow backend and Ray
 engine. The biggest difference from core engines is that internally each partition
-is represented as ``pyarrow.Table`` put in the ``Ray`` plasma store.
+is represented as ``pyarrow.Table`` put in the ``Ray`` Plasma store.
 
 Why to Use PyArrow Tables
 '''''''''''''''''''''''''

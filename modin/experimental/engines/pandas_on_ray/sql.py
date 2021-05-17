@@ -142,10 +142,6 @@ def check_query(query):
     ----------
     query : str
         Query string.
-
-    Returns
-    -------
-    None
     """
     q = query.lower()
     if "select " not in q:
@@ -190,10 +186,6 @@ def check_partition_column(partition_column, cols):
         Column name used for data partitioning between the workers.
     cols : OrderedDict/dict
         Dictionary with columns names and python types.
-
-    Returns
-    -------
-    None
     """
     for k, v in cols.items():
         if k == partition_column:
@@ -274,16 +266,10 @@ def query_put_bounders(query, partition_column, start, end):
 class InvalidArguments(Exception):
     """Exception that should be raised if invalid arguments combination was found."""
 
-    pass
-
 
 class InvalidQuery(Exception):
-    """Exception, that should be raised if invalid query statement was found."""
-
-    pass
+    """Exception that should be raised if invalid query statement was found."""
 
 
 class InvalidPartitionColumn(Exception):
-    """Exception, that should be raised if `partition_column` doesn't satisfy predefined requirements."""
-
-    pass
+    """Exception that should be raised if `partition_column` doesn't satisfy predefined requirements."""

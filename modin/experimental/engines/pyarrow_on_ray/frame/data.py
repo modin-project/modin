@@ -12,9 +12,9 @@
 # governing permissions and limitations under the License.
 
 """
-Module contains class `PyarrowOnRayFrame`.
+Module contains class ``PyarrowOnRayFrame``.
 
-`PyarrowOnRayFrame` is a dataframe class with PyArrow backend and Ray engine.
+``PyarrowOnRayFrame`` is a dataframe class with PyArrow backend and Ray engine.
 """
 
 import pandas
@@ -30,8 +30,8 @@ class PyarrowOnRayFrame(BasePandasFrame):
     """
     Class for dataframes with PyArrow backend and Ray engine.
 
-    `PyarrowOnRayFrame` implements interfaces specific for PyArrow and Ray,
-    other functionality is inherited from the `BasePandasFrame` class.
+    ``PyarrowOnRayFrame`` implements interfaces specific for PyArrow and Ray,
+    other functionality is inherited from the ``BasePandasFrame`` class.
 
     Parameters
     ----------
@@ -59,7 +59,7 @@ class PyarrowOnRayFrame(BasePandasFrame):
 
         Parameters
         ----------
-        axis : int, optional
+        axis : {0, 1}, optional
             Parameter is deprecated and affects nothing.
         """
         self._filter_empties()
@@ -99,7 +99,7 @@ class PyarrowOnRayFrame(BasePandasFrame):
 
     def to_pandas(self):
         """
-        Convert frame object to a pandas DataFrame.
+        Convert frame object to a ``pandas.DataFrame``.
 
         Returns
         -------

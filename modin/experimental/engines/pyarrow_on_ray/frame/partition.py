@@ -24,25 +24,25 @@ class PyarrowOnRayFramePartition(PandasOnRayFramePartition):
     """
     Class provides partition interface specific for PyArrow backend and Ray engine.
 
-    Inherits functionality from the `PandasOnRayFramePartition` class.
+    Inherits functionality from the ``PandasOnRayFramePartition`` class.
 
     Parameters
     ----------
     object_id : ray.ObjectRef
-        A reference to pandas DataFrame that needs to be wrapped with this class.
+        A reference to ``pandas.DataFrame`` that needs to be wrapped with this class.
     length : ray.ObjectRef or int, optional
-        Length or reference to it of wrapped pandas DataFrame.
+        Length or reference to it of wrapped ``pandas.DataFrame``.
     width : ray.ObjectRef or int, optional
-        Width or reference to it of wrapped pandas DataFrame.
+        Width or reference to it of wrapped ``pandas.DataFrame``.
     ip : ray.ObjectRef or str, optional
-        Node IP address or reference to it that holds wrapped pandas DataFrame.
-    call_queue : list
-        Call queue that needs to be executed on wrapped pandas DataFrame.
+        Node IP address or reference to it that holds wrapped ``pandas.DataFrame``.
+    call_queue : list, optional
+        Call queue that needs to be executed on wrapped ``pandas.DataFrame``.
     """
 
     def to_pandas(self):
         """
-        Convert the object stored in this partition to a pandas DataFrame.
+        Convert the object stored in this partition to a ``pandas.DataFrame``.
 
         Returns
         -------
@@ -67,14 +67,14 @@ class PyarrowOnRayFramePartition(PandasOnRayFramePartition):
         Returns
         -------
         PyarrowOnRayFramePartition
-            A `RayRemotePartition` object.
+            A ``RayRemotePartition`` object.
         """
         return PyarrowOnRayFramePartition(ray.put(pyarrow.Table.from_pandas(obj)))
 
     @classmethod
     def length_extraction_fn(cls):
         """
-        Extract the number of rows from the given `pyarrow.Table`.
+        Return the callable that extracts the number of rows from the given ``pyarrow.Table``.
 
         Returns
         -------
@@ -85,7 +85,7 @@ class PyarrowOnRayFramePartition(PandasOnRayFramePartition):
     @classmethod
     def width_extraction_fn(cls):
         """
-        Extract the number of columns from the given `pyarrow.Table`.
+        Return the callable that extracts the number of columns from the given ``pyarrow.Table``.
 
         Returns
         -------
@@ -96,11 +96,11 @@ class PyarrowOnRayFramePartition(PandasOnRayFramePartition):
     @classmethod
     def empty(cls):
         """
-        Put empty `pandas.DataFrame` in the Plasma store and wrap it in this object.
+        Put empty ``pandas.DataFrame`` in the Plasma store and wrap it in this object.
 
         Returns
         -------
         PyarrowOnRayFramePartition
-            A `RayRemotePartition` object.
+            A ``RayRemotePartition`` object.
         """
         return cls.put(pandas.DataFrame())

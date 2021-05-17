@@ -45,9 +45,9 @@ class CSVGlobDispatcher(CSVDispatcher):
         Parameters
         ----------
         filepath_or_buffer : str, path object or file-like object
-            `filepath_or_buffer` parameter of read_csv function.
+            `filepath_or_buffer` parameter of ``read_csv`` function.
         **kwargs : dict
-            Parameters of `read_csv` function.
+            Parameters of ``read_csv`` function.
 
         Returns
         -------

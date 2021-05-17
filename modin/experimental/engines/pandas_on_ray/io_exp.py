@@ -38,7 +38,7 @@ import ray
 @ray.remote
 def _read_parquet_columns(path, columns, num_splits, kwargs):  # pragma: no cover
     """
-    Read columns from Parquet file into a `pandas.DataFrame` using Ray task.
+    Read columns from Parquet file into a ``pandas.DataFrame`` using Ray task.
 
     Parameters
     ----------
@@ -49,19 +49,17 @@ def _read_parquet_columns(path, columns, num_splits, kwargs):  # pragma: no cove
     num_splits : int
         The number of partitions to split the column into.
     kwargs : dict
-        Keyward arguments to pass into `pyarrow.parquet.read` function.
+        Keyward arguments to pass into ``pyarrow.parquet.read`` function.
 
     Returns
     -------
     list
-        A list containing the splitted `pandas.DataFrame`-s and the Index as the last
-        element. If ``index_col`` is not set, then we jut return the length.
-        This is used to determine the total length of the DataFrame to build a
-        default Index.
+        A list containing the splitted ``pandas.DataFrame``-s and the Index as the last
+        element.
 
     Notes
     -----
-    `pyarrow.parquet.read` is used internally as the parse function.
+    ``pyarrow.parquet.read`` is used internally as the parse function.
     """
     import pyarrow.parquet as pq
 
@@ -79,8 +77,8 @@ class ExperimentalPandasOnRayIO(PandasOnRayIO):
     """
     Class for handling experimental IO functionality with pandas backend and Ray engine.
 
-    `ExperimentalPandasOnRayIO` inherits some util functions and unmodified IO functions
-    from `PandasOnRayIO` class.
+    ``ExperimentalPandasOnRayIO`` inherits some util functions and unmodified IO functions
+    from ``PandasOnRayIO`` class.
     """
 
     build_args = dict(
@@ -129,14 +127,16 @@ class ExperimentalPandasOnRayIO(PandasOnRayIO):
             database driver documentation for which of the five syntax styles,
             described in PEP 249's paramstyle, is supported.
         parse_dates : list or dict, optional
+            The behavior is as follows:
+
             - List of column names to parse as dates.
             - Dict of `{column_name: format string}` where format string is
-            strftime compatible in case of parsing string times, or is one of
-            (D, s, ns, ms, us) in case of parsing integer timestamps.
+              strftime compatible in case of parsing string times, or is one of
+              (D, s, ns, ms, us) in case of parsing integer timestamps.
             - Dict of `{column_name: arg dict}`, where the arg dict corresponds
-            to the keyword arguments of :func:`pandas.to_datetime`
-            Especially useful with databases without native Datetime support,
-            such as SQLite.
+              to the keyword arguments of ``pandas.to_datetime``.
+              Especially useful with databases without native Datetime support,
+              such as SQLite.
         columns : list, optional
             List of column names to select from SQL table (only used when reading a
             table).
@@ -151,8 +151,7 @@ class ExperimentalPandasOnRayIO(PandasOnRayIO):
         upper_bound : int, optional
             The maximum value to be requested from the `partition_column`.
         max_sessions : int, optional
-            The maximum number of simultaneous connections allowed to use
-            (the desired number of partitions).
+            The maximum number of simultaneous connections allowed to use.
 
         Returns
         -------
@@ -264,14 +263,16 @@ def _read_sql_with_offset_pandas_on_ray(
         database driver documentation for which of the five syntax styles,
         described in PEP 249's paramstyle, is supported.
     parse_dates : list or dict, optional
+        The behavior is as follows:
+
         - List of column names to parse as dates.
         - Dict of `{column_name: format string}` where format string is
-        strftime compatible in case of parsing string times, or is one of
-        (D, s, ns, ms, us) in case of parsing integer timestamps.
+          strftime compatible in case of parsing string times, or is one of
+          (D, s, ns, ms, us) in case of parsing integer timestamps.
         - Dict of `{column_name: arg dict}`, where the arg dict corresponds
-        to the keyword arguments of :func:`pandas.to_datetime`
-        Especially useful with databases without native Datetime support,
-        such as SQLite.
+          to the keyword arguments of ``pandas.to_datetime``
+          Especially useful with databases without native Datetime support,
+          such as SQLite.
     columns : list, optional
         List of column names to select from SQL table (only used when reading a
         table).
