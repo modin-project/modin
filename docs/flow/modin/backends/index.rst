@@ -1,7 +1,13 @@
-:orphan:
-
-Query compiler
+Query Compiler
 ==============
+
+.. toctree::
+    :hidden:
+
+    base/query_compiler
+    pandas/index
+    cudf/index
+    pyarrow/index
 
 Modin supports several execution backends. Calling any DataFrame API function will end up in
 some backend-specific method. The query compiler is a bridge between Modin Dataframe and
@@ -44,11 +50,3 @@ This module houses submodules of all of the stable query compilers:
 - :doc:`Pyarrow module<pyarrow/index>` contains query compiler and text parsers for Pyarrow backend.
 
 You can find more in the :doc:`experimental section </flow/modin/experimental/backends/>`.
-
-.. toctree::
-    :hidden:
-
-    base/query_compiler
-    pandas/index
-    cudf/index
-    pyarrow/index

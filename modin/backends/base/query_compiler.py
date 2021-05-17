@@ -14,7 +14,7 @@
 """
 Module contains class BaseQueryCompiler.
 
-BaseQueryCompiler is a parent abstract class for any other query compiler class.
+``BaseQueryCompiler`` is a parent abstract class for any other query compiler class.
 """
 
 import abc
@@ -67,7 +67,7 @@ def _add_deprecation_warning(replacement_method):
     """
     message = f"""
     .. warning::
-        This method duplicates logic of `{replacement_method}`` and will be removed soon.
+        This method duplicates logic of ``{replacement_method}`` and will be removed soon.
     """
     appender = append_to_docstring(message)
 
@@ -264,7 +264,7 @@ def _doc_reduce_agg(method, link, params=None, extra_params=None):
         Returns
         -------
         BaseQueryCompiler
-            One-column `QueryCompiler` with index labels of the specified axis,
+            One-column QueryCompiler with index labels of the specified axis,
             where each row contains the {method} for the corresponding
             row or column.
         """
@@ -334,14 +334,14 @@ def _doc_cum_agg(method, link):
         Returns
         -------
         BaseQueryCompiler
-            `QueryCompiler` of the same shape as `self`, where each element is the {method}
+            QueryCompiler of the same shape as `self`, where each element is the {method}
             of all the previous values in this row or column.
         """
 
     return _doc_qc_method(template, method=method, refer_to=f"DataFrame.{link}")
 
 
-def _doc_resample(action, link, build_rulles, params=None):
+def _doc_resample(action, link, build_rules, params=None):
     """
     Build decorator which adds docstring for the resample aggregation method.
 
@@ -352,7 +352,7 @@ def _doc_resample(action, link, build_rulles, params=None):
     link : str
         Method name in ``modin.pandas.base.Resampler`` module to refer to for
         more information about parameters and output format.
-    build_rulles : str
+    build_rules : str
         Description of the data output format.
     params : str, optional
         Method parameters in the NumPy docstyle format to substitute
@@ -376,8 +376,9 @@ def _doc_resample(action, link, build_rulles, params=None):
         Returns
         -------
         BaseQueryCompiler
-            New `QueryCompiler` containing the result of resample aggregation built by the
-            following rules: {build_rulles}
+            New QueryCompiler containing the result of resample aggregation built by the
+            following rules:
+            {build_rules}
         """
     if params and params.strip(" \t")[-1] != "\n":
         params += "\n"
@@ -385,7 +386,7 @@ def _doc_resample(action, link, build_rulles, params=None):
         template,
         action=action,
         params=params,
-        build_rulles=build_rulles,
+        build_rules=build_rules,
         refer_to=f"Resampler.{link}",
     )
 
@@ -430,13 +431,13 @@ def _doc_resample_reduction(result, link, params=None, compatibility_params=True
         params_substitution = f"""{params}
         {params_substitution}"""
 
-    build_rulles = f"""
+    build_rules = f"""
             - Labels on the specified axis is the group names (time-stamps)
             - Labels on the opposit of specified axis is preserved.
-            - Each element of `QueryCompiler` is the {result} for the
-                corresponding group and column/row."""
+            - Each element of QueryCompiler is the {result} for the
+              corresponding group and column/row."""
     return _doc_resample(
-        action=action, params=params_substitution, build_rulles=build_rulles, link=link
+        action=action, params=params_substitution, build_rules=build_rules, link=link
     )
 
 
@@ -473,14 +474,14 @@ def _doc_resample_agg(action, output, params, link):
         params_substitution = f"""{params}
         {params_substitution}"""
 
-    build_rulles = f"""
+    build_rules = f"""
             - Labels on the specified axis is the group names (time-stamps)
             - Labels on the opposit of specified axis is MultiIndex, where first level
-                contains preserved labels of this axis and the second level is the {output}.
-            - Each element of `QueryCompiler` is the result of corresponding function for the
-                corresponding group and column/row."""
+              contains preserved labels of this axis and the second level is the {output}.
+            - Each element of QueryCompiler is the result of corresponding function for the
+              corresponding group and column/row."""
     return _doc_resample(
-        action=action, params=params_substitution, build_rulles=build_rulles, link=link
+        action=action, params=params_substitution, build_rules=build_rules, link=link
     )
 
 
@@ -514,10 +515,10 @@ def _doc_resample_fillna(method, link, params=None, overwrite_template_params=Fa
         params_substitution = f"""{params}
         {params_substitution}"""
 
-    build_rulles = "`QueryCompiler` contains unsampled data with missing values filled."
+    build_rules = "QueryCompiler contains unsampled data with missing values filled."
 
     return _doc_resample(
-        action=action, params=params_substitution, build_rulles=build_rulles, link=link
+        action=action, params=params_substitution, build_rules=build_rules, link=link
     )
 
 
@@ -548,7 +549,7 @@ def _doc_dt(prop, dt_type, method, params=None):
         Returns
         -------
         BaseQueryCompiler
-            New `QueryCompiler` with the same shape as `self`, where each element is
+            New QueryCompiler with the same shape as `self`, where each element is
             {prop} for the corresponding {dt_type} value.
         """
     return _doc_qc_method(
@@ -654,7 +655,7 @@ def _doc_dt_round(method):
         Returns
         -------
         BaseQueryCompiler
-            New `QueryCompiler` with performed {method} operation on every element.
+            New QueryCompiler with performed {method} operation on every element.
         """
 
     return _doc_qc_method(
@@ -680,12 +681,12 @@ def _doc_str_method(method, params=None):
     callable
     """
     template = """
-        Apply "{method}" function to each string value in `QueryCompiler`.
+        Apply "{method}" function to each string value in QueryCompiler.
         {params}
         Returns
         -------
         BaseQueryCompiler
-            New `QueryCompiler` containing the result of execution of the "{method}" function
+            New QueryCompiler containing the result of execution of the "{method}" function
             against each string element.
         """
 
@@ -705,7 +706,7 @@ def _doc_window_method(
     action=None,
     win_type="rolling window",
     params=None,
-    build_rulles="aggregation",
+    build_rules="aggregation",
 ):
     """
     Build decorator which adds docstring for the window method.
@@ -724,7 +725,7 @@ def _doc_window_method(
     params : str, optional
         Method parameters in the NumPy docstyle format to substitute
         to the docstring template.
-    build_rulles : str, default: "aggregation"
+    build_rules : str, default: "aggregation"
         Description of the data output format.
 
     Returns
@@ -742,17 +743,17 @@ def _doc_window_method(
         Returns
         -------
         BaseQueryCompiler
-            New `QueryCompiler` containing {result} for each window, built by the following
+            New QueryCompiler containing {result} for each window, built by the following
             rulles:
-            {build_rulles}
+            {build_rules}
         """
-    doc_build_rulles = {
-        "aggregation": f"""- Output `QueryCompiler` has the same shape and axes labels as the source.
+    doc_build_rules = {
+        "aggregation": f"""- Output QueryCompiler has the same shape and axes labels as the source.
             - Each element is the {result} for the corresponding window.""",
         "udf_aggregation": """- Labels on the specified axis is preserved.
             - Labels on the opposit of specified axis is MultiIndex, where first level
             contains preserved labels of this axis and the second level is the function names.
-            - Each element of `QueryCompiler` is the result of corresponding function for the
+            - Each element of QueryCompiler is the result of corresponding function for the
             corresponding window and column/row.""",
     }
     if action is None:
@@ -771,7 +772,7 @@ def _doc_window_method(
         action=action,
         win_type=win_type,
         params=params,
-        build_rulles=doc_build_rulles.get(build_rulles, build_rulles),
+        build_rules=doc_build_rules.get(build_rules, build_rules),
         refer_to=f"Rolling.{method}",
         window_args_name=window_args_name,
     )
@@ -796,7 +797,7 @@ def _doc_groupby_method(result, link, action=None):
     callable
     """
     template = """
-    Group `QueryCompiler` data and {action} for every group.
+    Group QueryCompiler data and {action} for every group.
 
     Parameters
     ----------
@@ -816,21 +817,22 @@ def _doc_groupby_method(result, link, action=None):
     numeric_only : bool, default: True
         Whether or not to drop non-numeric columns before executing GroupBy.
     drop : bool, default: False
-        If `by` is a `QueryCompiler` indicates whether or not by-data came
+        If `by` is a QueryCompiler indicates whether or not by-data came
         from the `self`.
 
     Returns
     -------
     BaseQueryCompiler
-        `QueryCompiler` containing the result of groupby aggregation built by the
+        QueryCompiler containing the result of groupby aggregation built by the
         following rules:
-            - Labels on the opposit of specified axis is preserved.
-            - If groupby_args["as_index"] is True then labels on the specified axis
-              is the group names, otherwise labels would be default: 0, 1 ... n.
-            - If groupby_args["as_index"] is False, then first N columns/rows of the frame
-              contain group names, where N is the columns/rows to group on.
-            - Each element of `QueryCompiler` is the {result} for the
-              corresponding group and column/row.
+
+        - Labels on the opposit of specified axis is preserved.
+        - If groupby_args["as_index"] is True then labels on the specified axis
+          is the group names, otherwise labels would be default: 0, 1 ... n.
+        - If groupby_args["as_index"] is False, then first N columns/rows of the frame
+          contain group names, where N is the columns/rows to group on.
+        - Each element of QueryCompiler is the {result} for the
+          corresponding group and column/row.
     """
     if action is None:
         action = f"compute {result}"
@@ -900,7 +902,7 @@ class BaseQueryCompiler(abc.ABC):
     ----------
     lazy_execution : bool
         Whether underlying execution engine is designed to be executed in a lazy mode only.
-        If True, such `QueryCompiler` will be handled differently at the front-end in order
+        If True, such QueryCompiler will be handled differently at the front-end in order
         to reduce execution triggering as much as possible.
 
     Notes
@@ -916,17 +918,17 @@ class BaseQueryCompiler(abc.ABC):
 
         Parameters
         ----------
-        pandas_op : callable(pandas.DataFrame, *args, **kwargs) -> object
+        pandas_op : callable(pandas.DataFrame) -> object
             Function to apply to the casted to pandas frame.
         *args : iterable
             Positional arguments to pass to `pandas_op`.
-        **kwargs
+        **kwargs : dict
             Key-value arguments to pass to `pandas_op`.
 
         Returns
         -------
         BaseQueryCompiler
-            The result of the `pandas_op`, converted back to `BaseQueryCompiler`.
+            The result of the `pandas_op`, converted back to ``BaseQueryCompiler``.
         """
         pass
 
@@ -1023,7 +1025,7 @@ class BaseQueryCompiler(abc.ABC):
             Type of join that will be used if indeces on the other axis are different.
             (If specified, have to be passed via `kwargs`).
         ignore_index : bool, default: False
-            If `True`, do not use the index values along the concatenation axis.
+            If True, do not use the index values along the concatenation axis.
             (If specified, have to be passed via `kwargs`).
             The resulting axis will be labeled 0, …, n - 1.
         sort : bool, default: False
@@ -1082,7 +1084,7 @@ class BaseQueryCompiler(abc.ABC):
     @abc.abstractmethod
     def to_pandas(self):
         """
-        Convert underlying query compilers data to pandas DataFrame.
+        Convert underlying query compilers data to ``pandas.DataFrame``.
 
         Returns
         -------
@@ -1095,19 +1097,19 @@ class BaseQueryCompiler(abc.ABC):
     @abc.abstractmethod
     def from_pandas(cls, df, data_cls):
         """
-        Build `QueryCompiler` from pandas DataFrame.
+        Build QueryCompiler from pandas DataFrame.
 
         Parameters
         ----------
         df : pandas.DataFrame
             The pandas DataFrame to convert from.
         data_cls : cls
-            `BasePandasFrame` class to convert to.
+            ``BasePandasFrame`` class to convert to.
 
         Returns
         -------
         BaseQueryCompiler
-            `QueryCompiler` containing data from the pandas DataFrame.
+            QueryCompiler containing data from the pandas DataFrame.
         """
         pass
 
@@ -1118,14 +1120,14 @@ class BaseQueryCompiler(abc.ABC):
     @abc.abstractmethod
     def from_arrow(cls, at, data_cls):
         """
-        Build `QueryCompiler` from Arrow Table.
+        Build QueryCompiler from Arrow Table.
 
         Parameters
         ----------
         at : Arrow Table
             The Arrow Table to convert from.
         data_cls : cls
-            `BasePandasFrame` class to convert to.
+            ``BasePandasFrame`` class to convert to.
 
         Returns
         -------
@@ -1184,8 +1186,8 @@ class BaseQueryCompiler(abc.ABC):
         other : BaseQueryCompiler
             Left operand of the binary operation.
         func : callable(pandas.Series, pandas.Series) -> pandas.Series
-            Function that takes two `pandas.Series` with alligned axes
-            and return one `pandas.Series` - the result combination.
+            Function that takes two ``pandas.Series`` with alligned axes
+            and return one ``pandas.Series`` - the result combination.
         fill_value : float or None
             Value to fill missing values with after frame alignment occurred.
         overwrite : bool
@@ -1441,7 +1443,7 @@ class BaseQueryCompiler(abc.ABC):
             Function that takes column of the self and return bool mask for values, that
             should be overwriten in the self frame.
         errors : {"raise", "ignore"}
-            If "raise", will raise a `ValueError` if self and other both contain
+            If "raise", will raise a ``ValueError`` if self and other both contain
             non-NA data in the same place.
         **kwargs : dict
             Serves the compatibility purpose. Does not affect the result.
@@ -1449,7 +1451,7 @@ class BaseQueryCompiler(abc.ABC):
         Returns
         -------
         BaseQueryCompiler
-            New `QueryCompiler` with updated values.
+            New QueryCompiler with updated values.
         """
         return BinaryDefault.register(pandas.DataFrame.update, inplace=True)(
             self, other=other, **kwargs
@@ -1470,7 +1472,7 @@ class BaseQueryCompiler(abc.ABC):
         Returns
         -------
         BaseQueryCompiler
-            New `QueryCompiler` with updated values.
+            New QueryCompiler with updated values.
         """
         return BinaryDefault.register(pandas.Series.update, inplace=True)(
             self, other=other, squeeze_self=True, squeeze_other=True, **kwargs
@@ -1517,7 +1519,7 @@ class BaseQueryCompiler(abc.ABC):
         level : int or label, optional
             Level of MultiIndex to align frames along if axes of self, `cond`
             and `other` are not equal. Currently `level` parameter is not implemented,
-            so only `None` value is acceptable.
+            so only None value is acceptable.
         **kwargs : dict
             Serves the compatibility purpose. Does not affect the result.
 
@@ -1533,12 +1535,12 @@ class BaseQueryCompiler(abc.ABC):
     @add_refer_to("DataFrame.merge")
     def merge(self, right, **kwargs):  # noqa: PR02
         """
-        Merge `QueryCompiler` objects with a database-style join.
+        Merge QueryCompiler objects with a database-style join.
 
         Parameters
         ----------
         right : BaseQueryCompiler
-            `QueryCompiler` of the right frame to merge with.
+            QueryCompiler of the right frame to merge with.
         how : {"left", "right", "outer", "inner", "cross"}
         on : label or list of such
         left_on : label or list of such
@@ -1556,7 +1558,7 @@ class BaseQueryCompiler(abc.ABC):
         Returns
         -------
         BaseQueryCompiler
-            `QueryCompiler` that contains result of the merge.
+            QueryCompiler that contains result of the merge.
         """
         return DataFrameDefault.register(pandas.DataFrame.merge)(
             self, right=right, **kwargs
@@ -1565,12 +1567,12 @@ class BaseQueryCompiler(abc.ABC):
     @add_refer_to("DataFrame.join")
     def join(self, right, **kwargs):  # noqa: PR02
         """
-        Join columns of another `QueryCompiler`.
+        Join columns of another QueryCompiler.
 
         Parameters
         ----------
         right : BaseQueryCompiler
-            `QueryCompiler` of the right frame to join with.
+            QueryCompiler of the right frame to join with.
         on : label or list of such
         how : {"left", "right", "outer", "inner"}
         lsuffix : str
@@ -1582,7 +1584,7 @@ class BaseQueryCompiler(abc.ABC):
         Returns
         -------
         BaseQueryCompiler
-            `QueryCompiler` that contains result of the join.
+            QueryCompiler that contains result of the join.
         """
         return DataFrameDefault.register(pandas.DataFrame.join)(self, right, **kwargs)
 
@@ -1591,7 +1593,7 @@ class BaseQueryCompiler(abc.ABC):
     # Abstract Transpose
     def transpose(self, *args, **kwargs):  # noqa: PR02
         """
-        Transpose this `QueryCompiler`.
+        Transpose this QueryCompiler.
 
         Parameters
         ----------
@@ -1605,7 +1607,7 @@ class BaseQueryCompiler(abc.ABC):
         Returns
         -------
         BaseQueryCompiler
-            Transposed new `QueryCompiler`.
+            Transposed new QueryCompiler.
         """
         return DataFrameDefault.register(pandas.DataFrame.transpose)(
             self, *args, **kwargs
@@ -1613,9 +1615,9 @@ class BaseQueryCompiler(abc.ABC):
 
     def columnarize(self):
         """
-        Transpose this `QueryCompiler` if it has a single row but multiple columns.
+        Transpose this QueryCompiler if it has a single row but multiple columns.
 
-        This method should be called for `QueryCompilers` representing a Series object,
+        This method should be called for QueryCompilers representing a Series object,
         i.e. ``self.is_series_like()`` should be True.
 
         Returns
@@ -1631,12 +1633,12 @@ class BaseQueryCompiler(abc.ABC):
 
     def is_series_like(self):
         """
-        Check whether this `QueryCompiler` can represent `modin.pandas.Series` object.
+        Check whether this QueryCompiler can represent ``modin.pandas.Series`` object.
 
         Returns
         -------
         bool
-            Return True if `QueryCompiler` has a single column or row, False otherwise.
+            Return True if QueryCompiler has a single column or row, False otherwise.
         """
         return len(self.columns) == 1 or len(self.index) == 1
 
@@ -1646,7 +1648,7 @@ class BaseQueryCompiler(abc.ABC):
     @add_refer_to("DataFrame.reindex")
     def reindex(self, axis, labels, **kwargs):  # noqa: PR02
         """
-        Allign `QueryCompiler` data with a new index-labels along specified axis.
+        Allign QueryCompiler data with a new index-labels along specified axis.
 
         Parameters
         ----------
@@ -1667,7 +1669,7 @@ class BaseQueryCompiler(abc.ABC):
         Returns
         -------
         BaseQueryCompiler
-            `QueryCompiler` with aligned axis.
+            QueryCompiler with aligned axis.
         """
         return DataFrameDefault.register(pandas.DataFrame.reindex)(
             self, axis=axis, labels=labels, **kwargs
@@ -1696,7 +1698,7 @@ class BaseQueryCompiler(abc.ABC):
         Returns
         -------
         BaseQueryCompiler
-            `QueryCompiler` with reseted index.
+            QueryCompiler with reseted index.
         """
         return DataFrameDefault.register(pandas.DataFrame.reset_index)(self, **kwargs)
 
@@ -1719,7 +1721,7 @@ class BaseQueryCompiler(abc.ABC):
         Returns
         -------
         BaseQueryCompiler
-            A new `QueryCompiler` with updated index.
+            A new QueryCompiler with updated index.
         """
         return DataFrameDefault.register(pandas.DataFrame.set_index)(
             self, keys=keys, drop=drop, append=append
@@ -1841,7 +1843,7 @@ class BaseQueryCompiler(abc.ABC):
     @add_refer_to("to_datetime")
     def to_datetime(self, *args, **kwargs):
         """
-        Convert columns of the `QueryCompiler` to the datetime dtype.
+        Convert columns of the QueryCompiler to the datetime dtype.
 
         Parameters
         ----------
@@ -1851,7 +1853,7 @@ class BaseQueryCompiler(abc.ABC):
         Returns
         -------
         BaseQueryCompiler
-            `QueryCompiler` with all columns converted to datetime dtype.
+            QueryCompiler with all columns converted to datetime dtype.
         """
         return SeriesDefault.register(pandas.to_datetime)(self, *args, **kwargs)
 
@@ -1866,7 +1868,7 @@ class BaseQueryCompiler(abc.ABC):
         Returns
         -------
         BaseQueryCompiler
-            `QueryCompiler` with absolute numeric value of each element.
+            QueryCompiler with absolute numeric value of each element.
         """
         return DataFrameDefault.register(pandas.DataFrame.abs)(self)
 
@@ -1877,17 +1879,17 @@ class BaseQueryCompiler(abc.ABC):
         Parameters
         ----------
         func : callable(scalar) -> scalar
-            Function to apply to each element of the `QueryCompiler`.
+            Function to apply to each element of the QueryCompiler.
 
         Returns
         -------
         BaseQueryCompiler
-            Transformed `QueryCompiler`.
+            Transformed QueryCompiler.
         """
         return DataFrameDefault.register(pandas.DataFrame.applymap)(self, func=func)
 
     # FIXME: `**kwargs` which follows `numpy.conj` signature was inherited
-    # from `PandasQueryCompiler`, we should get rid of this dependency.
+    # from ``PandasQueryCompiler``, we should get rid of this dependency.
     def conj(self, **kwargs):
         """
         Get the complex conjugate for every element of self.
@@ -1902,7 +1904,7 @@ class BaseQueryCompiler(abc.ABC):
         Returns
         -------
         BaseQueryCompiler
-            `QueryCompiler` with conjugate applied element-wise.
+            QueryCompiler with conjugate applied element-wise.
 
         Notes
         -----
@@ -1964,7 +1966,7 @@ class BaseQueryCompiler(abc.ABC):
 
         Notes
         -----
-        Be aware, that all `QueryCompiler` values have to be numeric.
+        Be aware, that all QueryCompiler values have to be numeric.
         """
         return DataFrameDefault.register(pandas.DataFrame.__neg__)(self, **kwargs)
 
@@ -1995,7 +1997,7 @@ class BaseQueryCompiler(abc.ABC):
         Returns
         -------
         BaseQueryCompiler
-            `QueryCompiler` with rounded values.
+            QueryCompiler with rounded values.
         """
         return DataFrameDefault.register(pandas.DataFrame.round)(self, **kwargs)
 
@@ -2022,7 +2024,7 @@ class BaseQueryCompiler(abc.ABC):
         Returns
         -------
         BaseQueryCompiler
-            `QueryCompiler` with all `to_replace` values replaced by `value`.
+            QueryCompiler with all `to_replace` values replaced by `value`.
         """
         return DataFrameDefault.register(pandas.DataFrame.replace)(self, **kwargs)
 
@@ -2041,11 +2043,11 @@ class BaseQueryCompiler(abc.ABC):
         Returns
         -------
         BaseQueryCompiler
-            New `QueryCompiler` of the same data in memory, with reinterpreted values.
+            New QueryCompiler of the same data in memory, with reinterpreted values.
 
         .. warning::
             Be aware, that if this method do fallback to pandas, then newly created
-            `QueryCompiler` will be the copy of the original data.
+            QueryCompiler will be the copy of the original data.
         """
         return SeriesDefault.register(pandas.Series.view)(self, **kwargs)
 
@@ -2067,7 +2069,7 @@ class BaseQueryCompiler(abc.ABC):
         Returns
         -------
         BaseQueryCompiler
-            New `QueryCompiler` with converted to numeric values.
+            New QueryCompiler with converted to numeric values.
         """
         return SeriesDefault.register(pandas.to_numeric)(self, *args, **kwargs)
 
@@ -2086,7 +2088,7 @@ class BaseQueryCompiler(abc.ABC):
         Returns
         -------
         BaseQueryCompiler
-            New `QueryCompiler` with unique values.
+            New QueryCompiler with unique values.
         """
         return SeriesDefault.register(pandas.Series.unique)(self, **kwargs)
 
@@ -2107,7 +2109,7 @@ class BaseQueryCompiler(abc.ABC):
         Returns
         -------
         BaseQueryCompiler
-            One-column `QueryCompiler` which contains indices to insert.
+            One-column QueryCompiler which contains indices to insert.
         """
         return SeriesDefault.register(pandas.Series.searchsorted)(self, **kwargs)
 
@@ -2132,7 +2134,7 @@ class BaseQueryCompiler(abc.ABC):
         Returns
         -------
         BaseQueryCompiler
-            One-column `QueryCompiler` which index labels is a unique elements of `self`
+            One-column QueryCompiler which index labels is a unique elements of `self`
             and each row contains the number of times corresponding value was met in the `self`.
         """
         return SeriesDefault.register(pandas.Series.value_counts)(self, **kwargs)
@@ -2170,7 +2172,7 @@ class BaseQueryCompiler(abc.ABC):
         Returns
         -------
         BaseQueryCompiler
-            New `QueryCompiler` with updated dtypes.
+            New QueryCompiler with updated dtypes.
         """
         return DataFrameDefault.register(pandas.DataFrame.astype)(
             self, dtype=col_dtypes, **kwargs
@@ -2216,9 +2218,9 @@ class BaseQueryCompiler(abc.ABC):
         Returns
         -------
         BaseQueryCompiler
-            If axis was specified return one-column `QueryCompiler` with index labels
+            If axis was specified return one-column QueryCompiler with index labels
             of the specified axis, where each row contains boolean of whether all elements
-            at the corresponding row or column are True. Otherwise return `QueryCompiler`
+            at the corresponding row or column are True. Otherwise return QueryCompiler
             with a single bool of whether all elements are True.
         """
         return DataFrameDefault.register(pandas.DataFrame.all)(self, **kwargs)
@@ -2240,9 +2242,9 @@ class BaseQueryCompiler(abc.ABC):
         Returns
         -------
         BaseQueryCompiler
-            If axis was specified return one-column `QueryCompiler` with index labels
+            If axis was specified return one-column QueryCompiler with index labels
             of the specified axis, where each row contains boolean of whether any element
-            at the corresponding row or column is True. Otherwise return `QueryCompiler`
+            at the corresponding row or column is True. Otherwise return QueryCompiler
             with a single bool of whether any element is True.
         """
         return DataFrameDefault.register(pandas.DataFrame.any)(self, **kwargs)
@@ -2276,7 +2278,7 @@ class BaseQueryCompiler(abc.ABC):
         Returns
         -------
         BaseQueryCompiler
-            One-column `QueryCompiler` with index labels of the specified axis,
+            One-column QueryCompiler with index labels of the specified axis,
             where each row contains position of the maximum element for the
             corresponding row or column.
         """
@@ -2297,7 +2299,7 @@ class BaseQueryCompiler(abc.ABC):
         Returns
         -------
         BaseQueryCompiler
-            One-column `QueryCompiler` with index labels of the specified axis,
+            One-column QueryCompiler with index labels of the specified axis,
             where each row contains position of the minimum element for the
             corresponding row or column.
         """
@@ -2338,7 +2340,7 @@ class BaseQueryCompiler(abc.ABC):
         Returns
         -------
         BaseQueryCompiler
-            One-column `QueryCompiler` with index labels of `self`, where each row
+            One-column QueryCompiler with index labels of `self`, where each row
             contains the memory usage for the corresponding column.
         """
         return DataFrameDefault.register(pandas.DataFrame.memory_usage)(self, **kwargs)
@@ -2418,7 +2420,7 @@ class BaseQueryCompiler(abc.ABC):
         Returns
         -------
         BaseQueryCompiler
-            `QueryCompiler` object containing the descriptive statistics
+            QueryCompiler object containing the descriptive statistics
             of the underlying data.
         """
         return DataFrameDefault.register(pandas.DataFrame.describe)(self, **kwargs)
@@ -2461,7 +2463,7 @@ class BaseQueryCompiler(abc.ABC):
         Returns
         -------
         BaseQueryCompiler
-            `QueryCompiler` of the same shape as `self`, where each element is the difference
+            QueryCompiler of the same shape as `self`, where each element is the difference
             between the corresponding value and the previous value in this row or column.
         """
         return DataFrameDefault.register(pandas.DataFrame.diff)(self, **kwargs)
@@ -2483,7 +2485,7 @@ class BaseQueryCompiler(abc.ABC):
         Returns
         -------
         BaseQueryCompiler
-            New `QueryCompiler` with null values dropped along given axis.
+            New QueryCompiler with null values dropped along given axis.
         """
         return DataFrameDefault.register(pandas.DataFrame.dropna)(self, **kwargs)
 
@@ -2534,7 +2536,7 @@ class BaseQueryCompiler(abc.ABC):
     @add_refer_to("DataFrame.eval")
     def eval(self, expr, **kwargs):
         """
-        Evaluate string expression on `QueryCompiler` columns.
+        Evaluate string expression on QueryCompiler columns.
 
         Parameters
         ----------
@@ -2544,7 +2546,7 @@ class BaseQueryCompiler(abc.ABC):
         Returns
         -------
         BaseQueryCompiler
-            `QueryCompiler` containing the result of evaluation.
+            QueryCompiler containing the result of evaluation.
         """
         return DataFrameDefault.register(pandas.DataFrame.eval)(
             self, expr=expr, **kwargs
@@ -2566,7 +2568,7 @@ class BaseQueryCompiler(abc.ABC):
         Returns
         -------
         BaseQueryCompiler
-            New `QueryCompiler` with modes calculated alogn given axis.
+            New QueryCompiler with modes calculated alogn given axis.
         """
         return DataFrameDefault.register(pandas.DataFrame.mode)(self, **kwargs)
 
@@ -2590,14 +2592,14 @@ class BaseQueryCompiler(abc.ABC):
         Returns
         -------
         BaseQueryCompiler
-            New `QueryCompiler` with all null values filled.
+            New QueryCompiler with all null values filled.
         """
         return DataFrameDefault.register(pandas.DataFrame.fillna)(self, **kwargs)
 
     @add_refer_to("DataFrame.query")
     def query(self, expr, **kwargs):
         """
-        Query columns of the `QueryCompiler` with a boolean expression.
+        Query columns of the QueryCompiler with a boolean expression.
 
         Parameters
         ----------
@@ -2607,7 +2609,7 @@ class BaseQueryCompiler(abc.ABC):
         Returns
         -------
         BaseQueryCompiler
-            New `QueryCompiler` containing the rows where the boolean expression is satisfied.
+            New QueryCompiler containing the rows where the boolean expression is satisfied.
         """
         return DataFrameDefault.register(pandas.DataFrame.query)(
             self, expr=expr, **kwargs
@@ -2632,7 +2634,7 @@ class BaseQueryCompiler(abc.ABC):
         Returns
         -------
         BaseQueryCompiler
-            `QueryCompiler` of the same shape as `self`, where each element is the
+            QueryCompiler of the same shape as `self`, where each element is the
             numerical rank of the corresponding value along row or column.
         """
         return DataFrameDefault.register(pandas.DataFrame.rank)(self, **kwargs)
@@ -2659,14 +2661,14 @@ class BaseQueryCompiler(abc.ABC):
         Returns
         -------
         BaseQueryCompiler
-            New `QueryCompiler` containing the data sorted by columns or indices.
+            New QueryCompiler containing the data sorted by columns or indices.
         """
         return DataFrameDefault.register(pandas.DataFrame.sort_index)(self, **kwargs)
 
     @add_refer_to("DataFrame.melt")
     def melt(self, *args, **kwargs):  # noqa: PR02
         """
-        Unpivot `QueryCompiler` data from wide to long format.
+        Unpivot QueryCompiler data from wide to long format.
 
         Parameters
         ----------
@@ -2684,7 +2686,7 @@ class BaseQueryCompiler(abc.ABC):
         Returns
         -------
         BaseQueryCompiler
-            New `QueryCompiler` with unpivoted data.
+            New QueryCompiler with unpivoted data.
         """
         return DataFrameDefault.register(pandas.DataFrame.melt)(self, *args, **kwargs)
 
@@ -2709,7 +2711,7 @@ class BaseQueryCompiler(abc.ABC):
         Returns
         -------
         BaseQueryCompiler
-            New `QueryCompiler` that contains result of the sort.
+            New QueryCompiler that contains result of the sort.
         """
         return DataFrameDefault.register(pandas.DataFrame.sort_values)(
             self, by=rows, axis=1, ascending=ascending, **kwargs
@@ -2738,7 +2740,7 @@ class BaseQueryCompiler(abc.ABC):
         Returns
         -------
         BaseQueryCompiler
-            New `QueryCompiler` that contains result of the sort.
+            New QueryCompiler that contains result of the sort.
         """
         return DataFrameDefault.register(pandas.DataFrame.sort_values)(
             self, by=columns, axis=0, ascending=ascending, **kwargs
@@ -2767,18 +2769,18 @@ class BaseQueryCompiler(abc.ABC):
     # Abstract __getitem__ methods
     def getitem_array(self, key):
         """
-        Mask `QueryCompiler` with `key`.
+        Mask QueryCompiler with `key`.
 
         Parameters
         ----------
         key : BaseQueryCompiler, np.ndarray or list of column labels
-            Boolean mask represented by `QueryCompiler` or `np.ndarray` of the same
+            Boolean mask represented by QueryCompiler or ``np.ndarray`` of the same
             shape as `self`. Or enumeratable of columns to pick.
 
         Returns
         -------
         BaseQueryCompiler
-            New masked `QueryCompiler`.
+            New masked QueryCompiler.
         """
 
         def getitem_array(df, key):
@@ -2801,7 +2803,7 @@ class BaseQueryCompiler(abc.ABC):
         Returns
         -------
         BaseQueryCompiler
-            New `QueryCompiler` that contains specified columns.
+            New QueryCompiler that contains specified columns.
         """
 
         def get_column(df, key):
@@ -2824,7 +2826,7 @@ class BaseQueryCompiler(abc.ABC):
         Returns
         -------
         BaseQueryCompiler
-            New `QueryCompiler` that contains specified rows.
+            New QueryCompiler that contains specified rows.
         """
 
         def get_row(df, key):
@@ -2855,7 +2857,7 @@ class BaseQueryCompiler(abc.ABC):
         Returns
         -------
         BaseQueryCompiler
-            `QueryCompiler` with new column inserted.
+            QueryCompiler with new column inserted.
         """
         return DataFrameDefault.register(pandas.DataFrame.insert, inplace=True)(
             self, loc=loc, column=column, value=value
@@ -2878,7 +2880,7 @@ class BaseQueryCompiler(abc.ABC):
         Returns
         -------
         BaseQueryCompiler
-            New `QueryCompiler` with removed data.
+            New QueryCompiler with removed data.
         """
         if index is None and columns is None:
             return self
@@ -2911,8 +2913,9 @@ class BaseQueryCompiler(abc.ABC):
         Returns
         -------
         BaseQueryCompiler
-            `QueryCompiler` that contain the results of execution and built by
+            QueryCompiler that contain the results of execution and built by
             the following rules:
+
             - Labels of specified axis is the passed functions names.
             - Labels of the opposite axis is preserved.
             - Each element is the result of execution corresponding function under
@@ -3139,14 +3142,14 @@ class BaseQueryCompiler(abc.ABC):
         drop=False,
     ):
         """
-        Group `QueryCompiler` data and apply passed aggregation function.
+        Group QueryCompiler data and apply passed aggregation function.
 
         Parameters
         ----------
         by : BaseQueryCompiler, column or index label, Grouper or list of such
             Object that determine groups.
         is_multi_by : bool
-            If `by` is a `QueryCompiler` or list of such indicates whether it's
+            If `by` is a QueryCompiler or list of such indicates whether it's
             grouping on multiple columns/rows.
         axis : {0, 1}
             Axis to group and apply aggregation function along.
@@ -3160,13 +3163,13 @@ class BaseQueryCompiler(abc.ABC):
         groupby_kwargs : dict
             GroupBy parameters in the format of ``modin.pandas.DataFrame.groupby`` signature.
         drop : bool, default: False
-            If `by` is a `QueryCompiler` indicates whether or not by-data came
+            If `by` is a QueryCompiler indicates whether or not by-data came
             from the `self`.
 
         Returns
         -------
         BaseQueryCompiler
-            `QueryCompiler` containing the result of groupby aggregation.
+            QueryCompiler containing the result of groupby aggregation.
         """
         if isinstance(by, type(self)) and len(by.columns) == 1:
             by = by.columns[0] if drop else by.to_pandas().squeeze()
@@ -3218,7 +3221,7 @@ class BaseQueryCompiler(abc.ABC):
         Returns
         -------
         BaseQueryCompiler
-            New `QueryCompiler` containing pivot table.
+            New QueryCompiler containing pivot table.
         """
         return DataFrameDefault.register(pandas.DataFrame.pivot)(
             self, index=index, columns=columns, values=values
@@ -3289,7 +3292,7 @@ class BaseQueryCompiler(abc.ABC):
         Returns
         -------
         BaseQueryCompiler
-            New `QueryCompiler` with categorical variables converted to dummy.
+            New QueryCompiler with categorical variables converted to dummy.
         """
 
         def get_dummies(df, columns, **kwargs):
@@ -3300,19 +3303,19 @@ class BaseQueryCompiler(abc.ABC):
     @_add_one_column_warning
     def repeat(self, repeats):
         """
-        Repeat each element of one-column `QueryCompiler` given number of times.
+        Repeat each element of one-column QueryCompiler given number of times.
 
         Parameters
         ----------
         repeats : int or array of ints
             The number of repetitions for each element. This should be a
             non-negative integer. Repeating 0 times will return an empty
-            `QueryCompiler`.
+            QueryCompiler.
 
         Returns
         -------
         BaseQueryCompiler
-            New `QueryCompiler` with repeated elements.
+            New QueryCompiler with repeated elements.
         """
         return SeriesDefault.register(pandas.Series.repeat)(self, repeats=repeats)
 
@@ -3339,7 +3342,7 @@ class BaseQueryCompiler(abc.ABC):
 
     def view(self, index=None, columns=None):
         """
-        Mask `QueryCompiler` with passed keys.
+        Mask QueryCompiler with passed keys.
 
         Parameters
         ----------
@@ -3351,7 +3354,7 @@ class BaseQueryCompiler(abc.ABC):
         Returns
         -------
         BaseQueryCompiler
-            New masked `QueryCompiler`.
+            New masked QueryCompiler.
         """
         index = [] if index is None else index
         columns = [] if columns is None else columns
@@ -3384,7 +3387,7 @@ class BaseQueryCompiler(abc.ABC):
         Returns
         -------
         BaseQueryCompiler
-            New `QueryCompiler` with inserted values.
+            New QueryCompiler with inserted values.
         """
         assert isinstance(value, type(self))
 
@@ -3421,7 +3424,7 @@ class BaseQueryCompiler(abc.ABC):
         Returns
         -------
         BaseQueryCompiler
-            New `QueryCompiler` with updated `key` value.
+            New QueryCompiler with updated `key` value.
         """
 
         def setitem(df, axis, key, value):
@@ -3437,7 +3440,7 @@ class BaseQueryCompiler(abc.ABC):
 
     def write_items(self, row_numeric_index, col_numeric_index, broadcasted_items):
         """
-        Update `QueryCompiler` elements at the specified positions by passed values.
+        Update QueryCompiler elements at the specified positions by passed values.
 
         Parameters
         ----------
@@ -3452,7 +3455,7 @@ class BaseQueryCompiler(abc.ABC):
         Returns
         -------
         BaseQueryCompiler
-            New `QueryCompiler` with updated values.
+            New QueryCompiler with updated values.
         """
 
         def write_items(df, broadcasted_items):
@@ -3496,7 +3499,7 @@ class BaseQueryCompiler(abc.ABC):
         Returns
         -------
         BaseQueryCompiler
-            New `QueryCompiler` without `key` column.
+            New QueryCompiler without `key` column.
         """
         return self.drop(columns=[key])
 
@@ -3656,7 +3659,7 @@ class BaseQueryCompiler(abc.ABC):
         Returns
         -------
         BaseQueryCompiler
-            `QueryCompiler` containing a single value, the frequency of the data.
+            QueryCompiler containing a single value, the frequency of the data.
         """
         return DateTimeDefault.register(pandas.Series.dt.freq)(self)
 
@@ -3752,7 +3755,7 @@ class BaseQueryCompiler(abc.ABC):
         Returns
         -------
         BaseQueryCompiler
-            New `QueryCompiler` containing date-time values with midnight time.
+            New QueryCompiler containing date-time values with midnight time.
         """
         return DateTimeDefault.register(pandas.Series.dt.normalize)(self)
 
@@ -3794,7 +3797,7 @@ class BaseQueryCompiler(abc.ABC):
         Returns
         -------
         BaseQueryCompiler
-            New `QueryCompiler` containing formated date-time values.
+            New QueryCompiler containing formated date-time values.
         """
         return DateTimeDefault.register(pandas.Series.dt.strftime)(self, date_format)
 
@@ -3821,7 +3824,7 @@ class BaseQueryCompiler(abc.ABC):
         Returns
         -------
         BaseQueryCompiler
-            New `QueryCompiler` containing period data.
+            New QueryCompiler containing period data.
         """
         return DateTimeDefault.register(pandas.Series.dt.to_period)(self, freq)
 
@@ -3829,12 +3832,12 @@ class BaseQueryCompiler(abc.ABC):
     @add_refer_to("Series.dt.to_pydatetime")
     def dt_to_pydatetime(self):
         """
-        Convert underlying data to array of python native `datetime`.
+        Convert underlying data to array of python native ``datetime``.
 
         Returns
         -------
         BaseQueryCompiler
-            New `QueryCompiler` containing 1D array of `datetime` objects.
+            New QueryCompiler containing 1D array of ``datetime`` objects.
         """
         return DateTimeDefault.register(pandas.Series.dt.to_pydatetime)(self)
 
@@ -3844,12 +3847,12 @@ class BaseQueryCompiler(abc.ABC):
     @add_refer_to("Series.dt.to_pytimedelta")
     def dt_to_pytimedelta(self):
         """
-        Convert underlying data to array of python native `datetime.timedelta`.
+        Convert underlying data to array of python native ``datetime.timedelta``.
 
         Returns
         -------
         BaseQueryCompiler
-            New `QueryCompiler` containing 1D array of `datetime.timedelta`.
+            New QueryCompiler containing 1D array of ``datetime.timedelta``.
         """
         return DateTimeDefault.register(pandas.Series.dt.to_pytimedelta)(self)
 
@@ -3870,7 +3873,7 @@ class BaseQueryCompiler(abc.ABC):
         Returns
         -------
         BaseQueryCompiler
-            `QueryCompiler` containing a single value, time-zone of the data.
+            QueryCompiler containing a single value, time-zone of the data.
         """
         return DateTimeDefault.register(pandas.Series.dt.tz)(self)
 
@@ -3887,7 +3890,7 @@ class BaseQueryCompiler(abc.ABC):
         Returns
         -------
         BaseQueryCompiler
-            New `QueryCompiler` containing values with converted time zone.
+            New QueryCompiler containing values with converted time zone.
         """
         return DateTimeDefault.register(pandas.Series.dt.tz_convert)(self, tz)
 
@@ -3906,7 +3909,7 @@ class BaseQueryCompiler(abc.ABC):
         Returns
         -------
         BaseQueryCompiler
-            New `QueryCompiler` containing values with localized time zone.
+            New QueryCompiler containing values with localized time zone.
         """
         return DateTimeDefault.register(pandas.Series.dt.tz_localize)(
             self, tz, ambiguous, nonexistent
@@ -4000,7 +4003,7 @@ class BaseQueryCompiler(abc.ABC):
         Returns
         -------
         BaseQueryCompiler
-            New `QueryCompiler` containing values at the specified frequency.
+            New QueryCompiler containing values at the specified frequency.
         """
         return ResampleDefault.register(pandas.core.resample.Resampler.asfreq)(
             self, resample_args, fill_value
@@ -4069,7 +4072,7 @@ class BaseQueryCompiler(abc.ABC):
         Returns
         -------
         BaseQueryCompiler
-            New `QueryCompiler` containing the values from the specified group.
+            New QueryCompiler containing the values from the specified group.
         """
         return ResampleDefault.register(pandas.core.resample.Resampler.get_group)(
             self, resample_args, name, obj
@@ -4198,7 +4201,7 @@ class BaseQueryCompiler(abc.ABC):
         Resample time-series data and apply aggregation on it.
 
         Group data into intervals by time-series row/column with
-        a specified frequency, build equivalent `pandas.Resampler` object
+        a specified frequency, build equivalent ``pandas.Resampler`` object
         and apply passed function to it.
 
         Parameters
@@ -4214,7 +4217,7 @@ class BaseQueryCompiler(abc.ABC):
         Returns
         -------
         BaseQueryCompiler
-            New `QueryCompiler` containing the result of passed function.
+            New QueryCompiler containing the result of passed function.
         """
         return ResampleDefault.register(pandas.core.resample.Resampler.pipe)(
             self, resample_args, func, *args, **kwargs
@@ -4277,7 +4280,7 @@ class BaseQueryCompiler(abc.ABC):
         Resample time-series data and apply aggregation on it.
 
         Group data into intervals by time-series row/column with
-        a specified frequency, build equivalent `pandas.Resampler` object
+        a specified frequency, build equivalent ``pandas.Resampler`` object
         and apply passed function to it.
 
         Parameters
@@ -4293,7 +4296,7 @@ class BaseQueryCompiler(abc.ABC):
         Returns
         -------
         BaseQueryCompiler
-            New `QueryCompiler` containing the result of passed function.
+            New QueryCompiler containing the result of passed function.
         """
         return ResampleDefault.register(pandas.core.resample.Resampler.transform)(
             self, resample_args, arg, *args, **kwargs
@@ -4624,7 +4627,7 @@ class BaseQueryCompiler(abc.ABC):
         params="""func : str, dict, callable(pandas.Series) -> scalar, or list of such
         *args : iterable
         **kwargs : dict""",
-        build_rulles="udf_aggregation",
+        build_rules="udf_aggregation",
     )
     def rolling_aggregate(self, rolling_args, func, *args, **kwargs):
         return RollingDefault.register(pandas.core.window.rolling.Rolling.aggregate)(
@@ -4646,7 +4649,7 @@ class BaseQueryCompiler(abc.ABC):
             This parameters serves the compatibility purpose. Always have to be None.
         args : tuple, optional
         kwargs : dict, optional""",
-        build_rulles="udf_aggregation",
+        build_rules="udf_aggregation",
     )
     def rolling_apply(
         self,
@@ -4866,7 +4869,7 @@ class BaseQueryCompiler(abc.ABC):
         Returns
         -------
         BaseQueryCompiler
-            New `QueryCompiler` containing the integer codes of the underlying
+            New QueryCompiler containing the integer codes of the underlying
             categories.
         """
         return CatDefault.register(pandas.Series.cat.codes)(self)
@@ -4877,12 +4880,12 @@ class BaseQueryCompiler(abc.ABC):
 
     def invert(self):
         """
-        Apply bitwise invertion for each element of the `QueryCompiler`.
+        Apply bitwise invertion for each element of the QueryCompiler.
 
         Returns
         -------
         BaseQueryCompiler
-            New `QueryCompiler` containing bitwise invertion for each value.
+            New QueryCompiler containing bitwise invertion for each value.
         """
         return DataFrameDefault.register(pandas.DataFrame.__invert__)(self)
 
@@ -4913,7 +4916,7 @@ class BaseQueryCompiler(abc.ABC):
     @add_refer_to("DataFrame.compare")
     def compare(self, other, align_axis, keep_shape, keep_equal):
         """
-        Compare data of two `QueryCompilers` and highlight the difference.
+        Compare data of two QueryCompilers and highlight the difference.
 
         Parameters
         ----------
@@ -4927,7 +4930,7 @@ class BaseQueryCompiler(abc.ABC):
         Returns
         -------
         BaseQueryCompiler
-            New `QueryCompiler` containing the differences between `self` and passed
+            New QueryCompiler containing the differences between `self` and passed
             query compiler.
         """
         return DataFrameDefault.register(pandas.DataFrame.compare)(

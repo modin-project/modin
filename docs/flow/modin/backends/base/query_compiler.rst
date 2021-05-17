@@ -1,4 +1,4 @@
-Base query compiler
+Base Query Compiler
 """""""""""""""""""
 
 Brief description
@@ -89,3 +89,10 @@ To be able to select this query compiler as default via ``modin.config`` you als
 to define the combination of your query compiler and pandas execution engine as a backend
 by adding the corresponding factory. To find more information about factories,
 visit :doc:`corresponding section </flow/modin/data_management/factories>` of the flow documentation.
+
+
+Query Compiler API
+''''''''''''''''''
+
+.. autoclass:: modin.backends.base.query_compiler.BaseQueryCompiler
+    :members:
