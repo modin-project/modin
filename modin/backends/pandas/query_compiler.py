@@ -12,10 +12,10 @@
 # governing permissions and limitations under the License.
 
 """
-Module contains PandasQueryCompiler class.
+Module contains ``PandasQueryCompiler`` class.
 
-PandasQueryCompiler is responsible for compiling efficient DataFrame algebra
-queries for the `BasePandasFrame`.
+``PandasQueryCompiler`` is responsible for compiling efficient DataFrame algebra
+queries for the ``BasePandasFrame``.
 """
 
 import numpy as np
@@ -101,12 +101,12 @@ def _set_axis(axis):
 
 def _str_map(func_name):
     """
-    Build function that calls specified string function on frames `str` accessor.
+    Build function that calls specified string function on frames ``str`` accessor.
 
     Parameters
     ----------
     func_name : str
-        String function name to execute on `str` accessor.
+        String function name to execute on ``str`` accessor.
 
     Returns
     -------
@@ -123,7 +123,7 @@ def _str_map(func_name):
 
 def _dt_prop_map(property_name):
     """
-    Build function that access specified property of the `dt` property of the passed frame.
+    Build function that access specified property of the ``dt`` property of the passed frame.
 
     Parameters
     ----------
@@ -137,7 +137,7 @@ def _dt_prop_map(property_name):
 
     Notes
     -----
-    This applies non-callable properties of `Series.dt`.
+    This applies non-callable properties of ``Series.dt``.
     """
 
     def dt_op_builder(df, *args, **kwargs):
@@ -155,7 +155,7 @@ def _dt_prop_map(property_name):
 
 def _dt_func_map(func_name):
     """
-    Build function that apply specified method against `dt` property of the passed frame.
+    Build function that apply specified method against ``dt`` property of the passed frame.
 
     Parameters
     ----------
@@ -169,11 +169,11 @@ def _dt_func_map(func_name):
 
     Notes
     -----
-    This applies callable methods of `Series.dt`.
+    This applies callable methods of ``Series.dt``.
     """
 
     def dt_op_builder(df, *args, **kwargs):
-        """Apply specified function against `dt` accessor of the passed frame."""
+        """Apply specified function against ``dt`` accessor of the passed frame."""
         dt_s = df.squeeze(axis=1).dt
         return pandas.DataFrame(
             getattr(pandas.Series.dt, func_name)(dt_s, *args, **kwargs)
@@ -219,7 +219,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
     Query compiler for the pandas backend.
 
     This class translates common query compiler API into the DataFrame Algebra
-    queries, that is supposed to be executed by `BasePandasFrame`.
+    queries, that is supposed to be executed by ``BasePandasFrame``.
 
     Parameters
     ----------
@@ -688,7 +688,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
     def sum(self, squeeze_self, axis, **kwargs):
         # TODO: rework to original implementation after pandas issue #41074 resolves if possible.
         def map_func(df, **kwargs):
-            """Apply .sum to DataFrame or Series in depend on `squeeze_self.`"""
+            """Apply sum function to DataFrame or Series in depend on `squeeze_self`."""
             if squeeze_self:
                 result = df.squeeze(axis=1).sum(**kwargs)
                 if is_scalar(result):
@@ -711,7 +711,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
     def prod(self, squeeze_self, axis, **kwargs):
         # TODO: rework to original implementation after pandas issue #41074 resolves if possible.
         def map_func(df, **kwargs):
-            """Apply .prod to DataFrame or Series in depend on `squeeze_self.`"""
+            """Apply product function to DataFrame or Series in depend on `squeeze_self`."""
             if squeeze_self:
                 result = df.squeeze(axis=1).prod(**kwargs)
                 if is_scalar(result):
@@ -834,7 +834,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
     def sum_min_count(self, squeeze_self, axis, **kwargs):
         # TODO: rework to original implementation after pandas issue #41074 resolves if possible.
         def reduce_func(df, **kwargs):
-            """Apply .sum to DataFrame or Series in depend on `squeeze_self.`"""
+            """Apply sum function to DataFrame or Series in depend on `squeeze_self`."""
             if squeeze_self:
                 result = df.squeeze(axis=1).sum(**kwargs)
                 if is_scalar(result):
@@ -856,7 +856,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
     def prod_min_count(self, squeeze_self, axis, **kwargs):
         # TODO: rework to original implementation after pandas issue #41074 resolves if possible.
         def reduce_func(df, **kwargs):
-            """Apply .prod to DataFrame or Series in depend on `squeeze_self.`"""
+            """Apply product function to DataFrame or Series in depend on `squeeze_self`."""
             if squeeze_self:
                 result = df.squeeze(axis=1).prod(**kwargs)
                 if is_scalar(result):
@@ -911,7 +911,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         Returns
         -------
         PandasQueryCompiler
-            New `QueryCompiler` containing the result of resample aggregation.
+            New QueryCompiler containing the result of resample aggregation.
         """
 
         def map_func(df, resample_args=resample_args):
@@ -1264,7 +1264,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             Returns
             -------
             bool
-                True if `calc` index is not MultiIndex or MultiIndex and built in a tree manner.
+                True if `calc_index` is not MultiIndex or MultiIndex and built in a tree manner.
                 False otherwise.
             """
             if not isinstance(calc_index, pandas.MultiIndex):
@@ -1825,12 +1825,12 @@ class PandasQueryCompiler(BaseQueryCompiler):
         Returns
         -------
         PandasQueryCompiler
-            New `QueryCompiler` containing the first N rows of the data
+            New QueryCompiler containing the first N rows of the data
             sorted in the given order.
         """
 
         def map_func(df, n=n, keep=keep, columns=columns):
-            """Return first N rows of the sorted data for a single partition."""
+            """Return first `N` rows of the sorted data for a single partition."""
             if columns is None:
                 return pandas.DataFrame(
                     getattr(pandas.Series, sort_type)(
@@ -2212,7 +2212,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         Returns
         -------
         BaseQueryCompiler
-            New `QueryCompiler` with updated `key` value.
+            New QueryCompiler with updated `key` value.
         """
 
         def setitem_builder(df, internal_indices=[]):
@@ -2391,7 +2391,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         Returns
         -------
         PandasQueryCompiler
-            New `QueryCompiler` containing the results of passed function
+            New QueryCompiler containing the results of passed function
             for each row/column.
         """
         assert isinstance(func, str)
@@ -2420,7 +2420,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         Returns
         -------
         PandasQueryCompiler
-            New `QueryCompiler` containing the results of passed functions.
+            New QueryCompiler containing the results of passed functions.
         """
         if "axis" not in kwargs:
             kwargs["axis"] = axis
@@ -2456,7 +2456,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         Returns
         -------
         PandasQueryCompiler
-            New `QueryCompiler` containing the results of passed functions.
+            New QueryCompiler containing the results of passed functions.
         """
         # When the function is list-like, the function names become the index/columns
         new_index = (
@@ -2497,7 +2497,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         Returns
         -------
         PandasQueryCompiler
-            New `QueryCompiler` containing the results of passed function
+            New QueryCompiler containing the results of passed function
             for each row/column.
         """
         func = wrap_udf_function(func)
@@ -2570,7 +2570,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             0 is for index, when 1 is for columns.
         agg_func : dict(label) -> str
             Dictionary that maps row/column labels to the function names.
-            **Note:** specified functions have to be supported by `GroupbyReduceFunction`.
+            **Note:** specified functions have to be supported by ``modin.data_management.functions.GroupbyReduceFunction``.
         agg_args : list
             Serves the compatibility purpose. Does not affect the result.
         agg_kwargs : dict
@@ -2578,13 +2578,15 @@ class PandasQueryCompiler(BaseQueryCompiler):
         groupby_kwargs : dict
             GroupBy parameters in the format of ``modin.pandas.DataFrame.groupby`` signature.
         drop : bool, default: False
-            If `by` is a `QueryCompiler` indicates whether or not by-data came
+            If `by` is a QueryCompiler indicates whether or not by-data came
             from the `self`.
+        **kwargs : dict
+            Additional parameters to pass to the ``modin.data_management.functions.GroupbyReduceFunction.register``.
 
         Returns
         -------
         PandasQueryCompiler
-            New `QueryCompiler` containing the result of groupby dictionary aggregation.
+            New QueryCompiler containing the result of groupby dictionary aggregation.
         """
         map_dict = {}
         reduce_dict = {}
