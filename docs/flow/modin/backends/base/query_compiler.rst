@@ -11,7 +11,7 @@ implementations for most of the interface methods, all of which
 Subclassing ``BaseQueryCompiler``
 '''''''''''''''''''''''''''''''''
 If you want to add new type of query compiler to Modin the new class needs to inherit
-from `BaseQueryCompiler` and implement the abstract methods:
+from ``BaseQueryCompiler`` and implement the abstract methods:
 
 - ``from_pandas`` build query compiler from pandas DataFrame.
 - ``from_arrow`` build query compiler from Arrow Table.
@@ -89,7 +89,6 @@ To be able to select this query compiler as default via ``modin.config`` you als
 to define the combination of your query compiler and pandas execution engine as a backend
 by adding the corresponding factory. To find more information about factories,
 visit :doc:`corresponding section </flow/modin/data_management/factories>` of the flow documentation.
-
 
 Query Compiler API
 ''''''''''''''''''

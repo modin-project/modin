@@ -46,7 +46,7 @@ This module houses submodules of all of the stable query compilers:
 
 - :doc:`Base module<base/query_compiler>` contains an abstract query compiler class which defines common API.
 - :doc:`Pandas module<pandas/index>` contains query compiler and text parsers for pandas backend.
-- :doc:`Cudf module<cudf/index>` contains query compiler and text parsers for Cuda backend.
+- :doc:`Cudf module<cudf/index>` contains query compiler and text parsers for Cudf backend.
 - :doc:`Pyarrow module<pyarrow/index>` contains query compiler and text parsers for Pyarrow backend.
 
 You can find more in the :doc:`experimental section </flow/modin/experimental/backends/>`.
