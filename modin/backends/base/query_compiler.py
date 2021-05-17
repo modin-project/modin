@@ -12,7 +12,7 @@
 # governing permissions and limitations under the License.
 
 """
-Module contains class BaseQueryCompiler.
+Module contains class ``BaseQueryCompiler``.
 
 ``BaseQueryCompiler`` is a parent abstract class for any other query compiler class.
 """
@@ -2029,6 +2029,7 @@ class BaseQueryCompiler(abc.ABC):
         return DataFrameDefault.register(pandas.DataFrame.replace)(self, **kwargs)
 
     @_add_one_column_warning
+    @add_refer_to("Series.view")
     def series_view(self, **kwargs):  # noqa: PR02
         """
         Reinterpret underlying data with new dtype.
@@ -3301,6 +3302,7 @@ class BaseQueryCompiler(abc.ABC):
         return DataFrameDefault.register(get_dummies)(self, columns=columns, **kwargs)
 
     @_add_one_column_warning
+    @add_refer_to("Series.repeat")
     def repeat(self, repeats):
         """
         Repeat each element of one-column QueryCompiler given number of times.
@@ -4862,6 +4864,7 @@ class BaseQueryCompiler(abc.ABC):
     # Categories methods
 
     @_add_one_column_warning
+    @add_refer_to("Series.cat.codes")
     def cat_codes(self):
         """
         Convert underlying categories data into its codes.
