@@ -12,10 +12,10 @@
 # governing permissions and limitations under the License.
 
 """
-Module contains PyarrowQueryCompiler class.
+Module contains ``PyarrowQueryCompiler`` class.
 
-PyarrowQueryCompiler is responsible for compiling efficient DataFrame algebra
-queries for the PyarrowOnRayFrame.
+``PyarrowQueryCompiler`` is responsible for compiling efficient DataFrame algebra
+queries for the ``PyarrowOnRayFrame``.
 """
 
 from modin.backends.pandas.query_compiler import PandasQueryCompiler
@@ -49,7 +49,7 @@ class PyarrowQueryCompiler(PandasQueryCompiler):
     Query compiler for the PyArrow backend.
 
     This class translates common query compiler API into the DataFrame Algebra
-    queries, that is supposed to be executed by PyarrowOnRayFrame.
+    queries, that is supposed to be executed by ``PyarrowOnRayFrame``.
 
     Parameters
     ----------

@@ -1,5 +1,3 @@
-:orphan:
-
 PyArrow query compiler
 """"""""""""""""""""""
 ``PyarrowQueryCompiler`` is responsible for compiling efficient DataFrame algebra queries for the

@@ -1,7 +1,12 @@
-:orphan:
-
 PyArrow backend
 """""""""""""""
+
+.. toctree::
+    :hidden:
+
+    query_compiler
+    parsers
+
 In general, PyArrow backend follows the flow of the pandas backend: query compiler contains an instance of Modin Frame,
 which is internally split into partitions. The main difference is that partitions contain PyArrow tables,
 instead of DataFrames like in pandas backend. To learn more about this approach please

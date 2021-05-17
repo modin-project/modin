@@ -1,5 +1,3 @@
-:orphan:
-
 PyArrow Parsers Module Description
 """"""""""""""""""""""""""""""""""
 This module houses parser classes that are responsible for data parsing on the workers for the PyArrow backend.
