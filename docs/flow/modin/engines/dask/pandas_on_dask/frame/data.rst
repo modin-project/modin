@@ -2,7 +2,7 @@ PandasOnDaskFrame
 """""""""""""""""
 
 The class is specific implementation of the dataframe algebra for ``PandasOnDask`` backend.
-It serves an intermediate level between ``pandas`` query compiler and ``PandasOnDaskFrameManager``.
+It serves as an intermediate level between ``pandas`` query compiler and ``PandasOnDaskFrameManager``.
 
 Public API
 ----------

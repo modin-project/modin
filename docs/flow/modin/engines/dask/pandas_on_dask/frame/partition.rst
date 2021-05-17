@@ -1,8 +1,8 @@
 PandasOnDaskFramePartition
 """"""""""""""""""""""""""
 
-The class is specific implementation of ``BaseFramePartition``, providing an API
-to perform an operation on a block partition, namely, pandas DataFrame, using Dask as an execution engine.
+The class is specific implementation of ``BaseFramePartition``, providing the API
+to perform operations on a block partition, namely, ``pandas.DataFrame``, using Dask as the execution engine.
 
 In addition to wrapping a pandas DataFrame, the class also holds the following metadata:
 
@@ -12,7 +12,7 @@ In addition to wrapping a pandas DataFrame, the class also holds the following m
 
 An operation on a block partition can be performed in two modes:
 
-* asyncronously_ - via :meth:`~modin.engines.dask.pandas_on_dask.frame.partition.PandasOnDaskFramePartition.apply`
+* asynchronously_ - via :meth:`~modin.engines.dask.pandas_on_dask.frame.partition.PandasOnDaskFramePartition.apply`
 * lazily_ - via :meth:`~modin.engines.dask.pandas_on_dask.frame.partition.PandasOnDaskFramePartition.add_to_apply_calls`
 
 Public API
@@ -22,5 +22,5 @@ Public API
   :noindex:
   :members:
 
-  .. _asyncronously: https://en.wikipedia.org/wiki/Asynchrony_(computer_programming)
+  .. _asynchronously: https://en.wikipedia.org/wiki/Asynchrony_(computer_programming)
   .. _lazily: https://en.wikipedia.org/wiki/Lazy_evaluation

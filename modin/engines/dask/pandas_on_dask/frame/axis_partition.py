@@ -31,7 +31,7 @@ class PandasOnDaskFrameAxisPartition(PandasFrameAxisPartition):
     list_of_blocks : list
         List of ``PandasOnDaskFramePartition`` objects.
     get_ip : bool, default: False
-        Whether to get node IP addresses to conforming partitions or not.
+        Whether to get node IP addresses of conforming partitions or not.
     """
 
     def __init__(self, list_of_blocks, get_ip=False):
@@ -54,7 +54,7 @@ class PandasOnDaskFrameAxisPartition(PandasFrameAxisPartition):
 
         Parameters
         ----------
-        axis : 0 or 1
+        axis : {0, 1}
             The axis to perform the function along.
         func : callable
             The function to perform.
@@ -105,7 +105,7 @@ class PandasOnDaskFrameAxisPartition(PandasFrameAxisPartition):
 
         Parameters
         ----------
-        axis : 0 or 1
+        axis : {0, 1}
             The axis to perform the function along.
         func : callable
             The function to perform.

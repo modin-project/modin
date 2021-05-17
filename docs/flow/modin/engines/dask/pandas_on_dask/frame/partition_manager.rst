@@ -1,7 +1,7 @@
 DaskFrameManager
 """"""""""""""""
 
-The class is specific implementation of ``BaseFrameManager`` using Dask as an execution engine.
+The class is specific implementation of ``BaseFrameManager`` using Dask as the execution engine.
 This class is responsible for partitions manipulation and applying a funcion to
 block/row/column partitions.
 

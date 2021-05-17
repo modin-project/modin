@@ -48,7 +48,7 @@ class DaskTask:
     @classmethod
     def materialize(cls, future):
         """
-        Materialize data matching ``future`` object.
+        Materialize data matching `future` object.
 
         Parameters
         ----------

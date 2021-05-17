@@ -38,9 +38,10 @@ def apply_list_of_funcs(funcs, df):
 
     Returns
     -------
-    tuple
-        Tuple of result pandas DataFrame and node IP address
-        where ``apply_list_of_funcs`` was executed.
+    pandas.DataFrame
+        The resulting pandas DataFrame.
+    str
+        The node IP address of the worker process.
     """
     for func, kwargs in funcs:
         if isinstance(func, bytes):
@@ -63,7 +64,7 @@ class PandasOnDaskFramePartition(BaseFramePartition):
         Width or reference to it of wrapped pandas DataFrame.
     ip : distributed.Future or str, optional
         Node IP address or reference to it that holds wrapped pandas DataFrame.
-    call_queue : list
+    call_queue : list, optional
         Call queue that needs to be executed on wrapped pandas DataFrame.
     """
 

@@ -28,9 +28,9 @@ class PandasOnDaskFrame(BasePandasFrame):
     partitions : np.ndarray
         A 2D NumPy array of partitions.
     index : sequence
-        The index for the dataframe. Converts to a pandas.Index.
+        The index for the dataframe. Converted to a pandas.Index.
     columns : sequence
-        The columns object for the dataframe. Converts to a pandas.Index.
+        The columns object for the dataframe. Converted to a pandas.Index.
     row_lengths : list, optional
         The length of each partition in the rows. The "height" of
         each of the block partitions. Is computed if not provided.

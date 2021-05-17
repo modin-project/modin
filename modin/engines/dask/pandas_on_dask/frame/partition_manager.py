@@ -37,7 +37,7 @@ def deploy_func(df, apply_func, call_queue_df=None, call_queues_other=None, *oth
     df : distributed.Future
         Dataframe to which `apply_func` will be applied.
         After running function, automaterialization
-        distributed.Future->pandas.DataFrame happens.
+        ``distributed.Future``->``pandas.DataFrame`` happens.
     apply_func : callable
         The function to apply.
     call_queue_df : list, default: None
@@ -89,11 +89,11 @@ class DaskFrameManager(BaseFrameManager):
 
         Parameters
         ----------
-        axis : 0 or 1
+        axis : {0, 1}
             Axis to extract the labels over.
         partitions : np.ndarray
             The array of partitions from which need to extract the labels.
-        index_func : callable, default: None
+        index_func : callable
             The function to be used to extract the indices.
 
         Returns
@@ -133,7 +133,7 @@ class DaskFrameManager(BaseFrameManager):
 
         Parameters
         ----------
-        axis : 0 or 1
+        axis : {0, 1}
             Axis to apply and broadcast over.
         apply_func : callable
             Function to apply.
