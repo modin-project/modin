@@ -1781,17 +1781,15 @@ class BaseQueryCompiler(abc.ABC):
     @_doc_reduce_agg(
         method="production",
         link="prod",
-        extra_params=["skipna", "min_count", "**kwargs"],
+        extra_params=["**kwargs"],
+        params="""squeeze_self : bool
+            Whether the query compiler represents a Series at the front-end.
+        axis : {0, 1}""",
     )
     def prod(self, squeeze_self, axis, **kwargs):
-        """Returns the product of each numerical column or row.
-
-        Return:
-            Pandas series with the product of each numerical column or row.
-        """
         # TODO: rework to original implementation after pandas issue #41074 resolves if possible.
         def map_func(df, **kwargs):
-            """Apply .prod to DataFrame or Series in depend on `squeeze_self.`"""
+            """Apply product function to DataFrame or Series in depend on `squeeze_self`."""
             if squeeze_self:
                 result = df.squeeze(axis=1).prod(**kwargs)
                 if is_scalar(result):
@@ -1811,17 +1809,17 @@ class BaseQueryCompiler(abc.ABC):
         )(self, axis=axis, **kwargs)
 
     @_doc_reduce_agg(
-        method="sum", link="sum", extra_params=["skipna", "min_count", "**kwargs"]
+        method="sum",
+        link="sum",
+        extra_params=["**kwargs"],
+        params="""squeeze_self : bool
+            Whether the query compiler represents a Series at the front-end.
+        axis : {0, 1}""",
     )
     def sum(self, squeeze_self, axis, **kwargs):
-        """Returns the sum of each numerical column or row.
-
-        Return:
-            Pandas series with the sum of each numerical column or row.
-        """
         # TODO: rework to original implementation after pandas issue #41074 resolves if possible.
         def map_func(df, **kwargs):
-            """Apply .sum to DataFrame or Series in depend on `squeeze_self.`"""
+            """Apply sum function to DataFrame or Series in depend on `squeeze_self`."""
             if squeeze_self:
                 result = df.squeeze(axis=1).sum(**kwargs)
                 if is_scalar(result):
@@ -4909,40 +4907,8 @@ class BaseQueryCompiler(abc.ABC):
             self, axis=axis, skipna=skipna, numeric_only=numeric_only, **kwargs
         )
 
-<<<<<<< HEAD
     sum_min_count = sum
     prod_min_count = prod
-=======
-    # FIXME: this method should be combined with `sum`
-    @_doc_reduce_agg(
-        method="sum", link="sum", extra_params=["skipna", "min_count", "**kwargs"]
-    )
-    def sum_min_count(self, axis, level, numeric_only, skipna, min_count, **kwargs):
-        return DataFrameDefault.register(pandas.DataFrame.sum)(
-            self,
-            axis=axis,
-            level=level,
-            numeric_only=numeric_only,
-            skipna=skipna,
-            min_count=min_count,
-            **kwargs,
-        )
-
-    # FIXME: this method should be combined with `prod`
-    @_doc_reduce_agg(
-        method="product", link="prod", extra_params=["skipna", "min_count", "**kwargs"]
-    )
-    def prod_min_count(self, axis, level, numeric_only, skipna, min_count, **kwargs):
-        return DataFrameDefault.register(pandas.DataFrame.prod)(
-            self,
-            axis=axis,
-            level=level,
-            numeric_only=numeric_only,
-            skipna=skipna,
-            min_count=min_count,
-            **kwargs,
-        )
->>>>>>> DOCS-#2996: align docstring with numpy docstyle
 
     @add_refer_to("DataFrame.compare")
     def compare(self, other, align_axis, keep_shape, keep_equal):
