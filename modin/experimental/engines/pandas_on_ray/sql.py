@@ -182,7 +182,7 @@ def get_query_columns(engine, query):
 
 def check_partition_column(partition_column, cols):
     """
-    Check `partition_column` existence and it`s type.
+    Check `partition_column` existence and it's type.
 
     Parameters
     ----------
@@ -255,9 +255,9 @@ def query_put_bounders(query, partition_column, start, end):
     partition_column : str
         Column name used for data partitioning between the workers.
     start : int
-        Partition the lowest value to request from the `partition_column`.
+        Lowest value to request from the `partition_column`.
     end : int
-        Partition the highest value to request from the `partition_column`.
+        Highest value to request from the `partition_column`.
 
     Returns
     -------
@@ -272,7 +272,7 @@ def query_put_bounders(query, partition_column, start, end):
 
 
 class InvalidArguments(Exception):
-    """Exception, that should be raised if invalid arguments combination was found."""
+    """Exception that should be raised if invalid arguments combination was found."""
 
     pass
 

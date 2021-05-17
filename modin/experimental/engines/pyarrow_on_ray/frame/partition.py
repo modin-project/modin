@@ -29,7 +29,7 @@ class PyarrowOnRayFramePartition(PandasOnRayFramePartition):
     Parameters
     ----------
     object_id : ray.ObjectRef
-        A reference to pandas DataFrame that need to be wrapped with this class.
+        A reference to pandas DataFrame that needs to be wrapped with this class.
     length : ray.ObjectRef or int, optional
         Length or reference to it of wrapped pandas DataFrame.
     width : ray.ObjectRef or int, optional

@@ -14,8 +14,8 @@
 """
 Module houses experimental IO classes and parser functions needed for these classes.
 
-Any function or class can be experimental API if it not only replicating existent
-backend API, but even extending it.
+Any function or class can be considered experimental API if it is not strictly replicating existent
+backend API, even if it is only extending the API.
 """
 
 import numpy as np
@@ -55,13 +55,13 @@ def _read_parquet_columns(path, columns, num_splits, kwargs):  # pragma: no cove
     -------
     list
         A list containing the splitted `pandas.DataFrame`-s and the Index as the last
-        element. If there is not `index_col` set, then we just return the length.
+        element. If ``index_col`` is not set, then we jut return the length.
         This is used to determine the total length of the DataFrame to build a
         default Index.
 
     Notes
     -----
-    `pyarrow.parquet.read` is used internally as parse function.
+    `pyarrow.parquet.read` is used internally as the parse function.
     """
     import pyarrow.parquet as pq
 
@@ -79,7 +79,7 @@ class ExperimentalPandasOnRayIO(PandasOnRayIO):
     """
     Class for handling experimental IO functionality with pandas backend and Ray engine.
 
-    `ExperimentalPandasOnRayIO` inherits some util functions and not modified IO functions
+    `ExperimentalPandasOnRayIO` inherits some util functions and unmodified IO functions
     from `PandasOnRayIO` class.
     """
 
@@ -124,7 +124,7 @@ class ExperimentalPandasOnRayIO(PandasOnRayIO):
             Attempts to convert values of non-string, non-numeric objects
             (like decimal.Decimal) to floating point, useful for SQL result sets.
         params : list, tuple or dict, optional
-            List of parameters to pass to execute method. The syntax used
+            List of parameters to pass to ``execute`` method. The syntax used
             to pass parameters is database driver dependent. Check your
             database driver documentation for which of the five syntax styles,
             described in PEP 249's paramstyle, is supported.
@@ -244,9 +244,9 @@ def _read_sql_with_offset_pandas_on_ray(
     partition_column : str
         Column name used for data partitioning between the workers.
     start : int
-        Partition the lowest value to request from the `partition_column`.
+        Lowest value to request from the `partition_column`.
     end : int
-        Partition the highest value to request from the `partition_column`.
+        Highest value to request from the `partition_column`.
     num_splits : int
         The number of partitions to split the column into.
     sql : str or SQLAlchemy Selectable (select or text object)
@@ -259,7 +259,7 @@ def _read_sql_with_offset_pandas_on_ray(
         Attempts to convert values of non-string, non-numeric objects
         (like decimal.Decimal) to floating point, useful for SQL result sets.
     params : list, tuple or dict, optional
-        List of parameters to pass to execute method. The syntax used
+        List of parameters to pass to ``execute`` method. The syntax used
         to pass parameters is database driver dependent. Check your
         database driver documentation for which of the five syntax styles,
         described in PEP 249's paramstyle, is supported.

@@ -24,12 +24,12 @@ class PyarrowOnRayFrameAxisPartition(BaseFrameAxisPartition):
     """
     Class defines axis partition interface with PyArrow backend and Ray engine.
 
-    Inherits functionality from `BaseFrameAxisPartition` class.
+    Inherits functionality from ``BaseFrameAxisPartition`` class.
 
     Parameters
     ----------
     list_of_blocks : list
-        List with partition objects to create common axis partition.
+        List with partition objects to create common axis partition for.
     """
 
     def __init__(self, list_of_blocks):
@@ -38,7 +38,7 @@ class PyarrowOnRayFrameAxisPartition(BaseFrameAxisPartition):
 
     def apply(self, func, num_splits=None, other_axis_partition=None, **kwargs):
         """
-        Apply func to the object in the plasma store.
+        Apply func to the object in the Plasma store.
 
         Parameters
         ----------
@@ -146,7 +146,7 @@ class PyarrowOnRayFrameRowPartition(PyarrowOnRayFrameAxisPartition):
 
 def concat_arrow_table_partitions(axis, partitions):
     """
-    Concat given partitions into single table.
+    Concatenate given `partitions` in a single table.
 
     Parameters
     ----------
@@ -237,7 +237,7 @@ def deploy_ray_axis_func(axis, func, num_splits, kwargs, *partitions):
 
     Parameters
     ----------
-    axis : int
+    axis : {0, 1}
         The axis to perform the function along.
     func : callable
         The function to perform.

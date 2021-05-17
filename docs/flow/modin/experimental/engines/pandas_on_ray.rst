@@ -2,8 +2,10 @@
 
 Pandas-on-Ray Module Description
 """"""""""""""""""""""""""""""""
+
 High-Level Module Overview
 ''''''''''''''''''''''''''
+
 This module houses experimental functionality with pandas backend and Ray
 engine. This functionality is concentrated in the ``ExperimentalPandasOnRayIO`` class,
 that contains methods, which extend typical pandas API to give user more flexibility
@@ -11,7 +13,8 @@ with IO operations.
 
 Usage Guide
 '''''''''''
-In order to use this experimental features, just modify standard Modin import
+
+In order to use the experimental features, just modify standard Modin import
 statement as follows:
 
 .. code-block:: python
@@ -21,6 +24,7 @@ statement as follows:
 
 Implemented Operations
 ''''''''''''''''''''''
+
 For now ``ExperimentalPandasOnRayIO`` implements two methods - ``read_sql`` and
 ``read_csv_glob``. The first method allows the user to use typical
 ``pandas.read_sql`` function extended with `Spark-like parameters
@@ -33,6 +37,7 @@ as a parameter.
 
 Submodules Description
 ''''''''''''''''''''''
+
 ``modin.experimental.engines.pandas_on_ray`` module is used mostly for storing utils and 
 functions for experimanetal IO class:
 

@@ -14,7 +14,7 @@
 """
 Module contains class `PyarrowOnRayFrame`.
 
-`PyarrowOnRayFrame` is dataframe class with PyArrow backend and Ray engine.
+`PyarrowOnRayFrame` is a dataframe class with PyArrow backend and Ray engine.
 """
 
 import pandas
@@ -30,7 +30,7 @@ class PyarrowOnRayFrame(BasePandasFrame):
     """
     Class for dataframes with PyArrow backend and Ray engine.
 
-    `PyarrowOnRayFrame` implements specific for PyArrow and Ray interfaces,
+    `PyarrowOnRayFrame` implements interfaces specific for PyArrow and Ray,
     other functionality is inherited from the `BasePandasFrame` class.
 
     Parameters
