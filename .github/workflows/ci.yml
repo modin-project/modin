@@ -79,7 +79,6 @@ jobs:
             modin/experimental/xgboost/utils.py modin/experimental/xgboost/xgboost.py \
             modin/experimental/xgboost/xgboost_ray.py
       - run: python scripts/doc_checker.py modin/engines/ray
-      - run: python scripts/doc_checker.py modin/engines/ray/cudf_on_ray
       - run: python scripts/doc_checker.py scripts/doc_checker.py
       - run: |
           python scripts/doc_checker.py modin/experimental/pandas/io_exp.py \
