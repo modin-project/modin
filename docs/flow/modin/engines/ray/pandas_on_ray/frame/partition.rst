@@ -12,8 +12,8 @@ In addition to wrapping a pandas DataFrame, the class also holds the following m
 
 An operation on a block partition can be performed in two modes:
 
-* asynchronously_ - via :meth:`~modin.engines.ray.pandas_on_ray.frame.PandasOnRayFramePartition.apply`
-* lazily_ - via :meth:`~modin.engines.ray.pandas_on_ray.frame.PandasOnRayFramePartition.add_to_apply_calls`
+* asynchronously_ - via :meth:`~modin.engines.ray.pandas_on_ray.frame.partition.PandasOnRayFramePartition.apply`
+* lazily_ - via :meth:`~modin.engines.ray.pandas_on_ray.frame.partition.PandasOnRayFramePartition.add_to_apply_calls`
 
 Public API
 ----------
