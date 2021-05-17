@@ -1,4 +1,4 @@
-Pandas query compiler
+Pandas Query Compiler
 """""""""""""""""""""
 ``PandasQueryCompiler`` is responsible for compiling efficient DataFrame algebra queries for the
 :doc:`BasePandasFrame </flow/modin/engines/base/frame/data>`, specifically for dataframes backed by

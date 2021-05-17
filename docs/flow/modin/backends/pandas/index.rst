@@ -1,6 +1,12 @@
 Pandas backend
 """"""""""""""
 
+.. toctree::
+    :hidden:
+
+    query_compiler
+    parsers
+
 High-Level Module Overview
 ''''''''''''''''''''''''''
 This module houses submodules which are responsible for communication between
