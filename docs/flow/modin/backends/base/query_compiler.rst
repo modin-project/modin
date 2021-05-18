@@ -3,22 +3,22 @@ Base Query Compiler
 
 Brief description
 '''''''''''''''''
-``BaseQueryCompiler`` is an abstract class of query compiler, and sets a common interface
+:py:class:`~modin.backends.base.query_compiler.BaseQueryCompiler` is an abstract class of query compiler, and sets a common interface
 that every other query compiler implementation in Modin must follow. The Base class contains a basic
 implementations for most of the interface methods, all of which
 :ref:`default to pandas <defaulting-to-pandas-mechanism>`.
 
-Subclassing ``BaseQueryCompiler``
-'''''''''''''''''''''''''''''''''
+Subclassing :py:class:`~modin.backends.base.query_compiler.BaseQueryCompiler`
+'''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 If you want to add new type of query compiler to Modin the new class needs to inherit
-from ``BaseQueryCompiler`` and implement the abstract methods:
+from :py:class:`~modin.backends.base.query_compiler.BaseQueryCompiler` and implement the abstract methods:
 
-- ``from_pandas`` build query compiler from pandas DataFrame.
-- ``from_arrow`` build query compiler from Arrow Table.
-- ``to_pandas`` get query compilers representation via pandas DataFrame.
-- ``default_to_pandas`` do :ref:`fallback to pandas <defaulting-to-pandas-mechanism>` for the passed function. 
-- ``finalize`` finalize object constructing.
-- ``free`` trigger memory cleaning.
+- :py:meth:`~modin.backends.base.query_compiler.BaseQueryCompiler.from_pandas` build query compiler from pandas DataFrame.
+- :py:meth:`~modin.backends.base.query_compiler.BaseQueryCompiler.from_arrow` build query compiler from Arrow Table.
+- :py:meth:`~modin.backends.base.query_compiler.BaseQueryCompiler.to_pandas` get query compilers representation via pandas DataFrame.
+- :py:meth:`~modin.backends.base.query_compiler.BaseQueryCompiler.default_to_pandas` do :ref:`fallback to pandas <defaulting-to-pandas-mechanism>` for the passed function. 
+- :py:meth:`~modin.backends.base.query_compiler.BaseQueryCompiler.finalize` finalize object constructing.
+- :py:meth:`~modin.backends.base.query_compiler.BaseQueryCompiler.free` trigger memory cleaning.
 
 (Please refer to the code documentation to see the full documentation for these functions).
 
@@ -34,7 +34,7 @@ Usually, the query compiler routes formed queries to the underlying :doc:`frame 
 which represents submits operators to an execution engine. For the sake
 of simplicity and independence of this example, our execution engine will be the `pandas` itself.
 
-So, we need to inherit a new class from ``BaseQueryCompiler`` and implement all of the abstract methods.
+So, we need to inherit a new class from :py:class:`~modin.backends.base.query_compiler.BaseQueryCompiler` and implement all of the abstract methods.
 In this case, with `pandas` as an execution engine, it's trivial:
 
 .. code-block:: python

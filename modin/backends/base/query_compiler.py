@@ -1104,7 +1104,7 @@ class BaseQueryCompiler(abc.ABC):
         df : pandas.DataFrame
             The pandas DataFrame to convert from.
         data_cls : cls
-            ``BasePandasFrame`` class to convert to.
+            :py:class:`~modin.engines.base.frame.data.BasePandasFrame` class to convert to.
 
         Returns
         -------
@@ -1127,7 +1127,7 @@ class BaseQueryCompiler(abc.ABC):
         at : Arrow Table
             The Arrow Table to convert from.
         data_cls : cls
-            ``BasePandasFrame`` class to convert to.
+            :py:class:`~modin.engines.base.frame.data.BasePandasFrame` class to convert to.
 
         Returns
         -------

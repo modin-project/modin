@@ -24,7 +24,7 @@ a pairing of known user-defined functions and dataframe algebra operators. Each 
 it with the compiled queries to get the result. The query compiler object is immutable,
 so the result of every method is a new query compiler.
 
-The query compilers API is defined by the :doc:`BaseQueryCompiler <base/query_compiler>` class
+The query compilers API is defined by the :py:class:`~modin.backends.base.query_compiler.BaseQueryCompiler` class
 and may resemble the pandas API, however, they're not equal. The query compilers API
 is significantly reduced in comparison with pandas, since many corner cases or even the
 whole methods can be handled at the API layer with the existing API.
@@ -46,7 +46,7 @@ This module houses submodules of all of the stable query compilers:
 
 - :doc:`Base module<base/query_compiler>` contains an abstract query compiler class which defines common API.
 - :doc:`Pandas module<pandas/index>` contains query compiler and text parsers for pandas backend.
-- :doc:`Cudf module<cudf/index>` contains query compiler and text parsers for Cudf backend.
+- :doc:`CuDF module<cudf/index>` contains query compiler and text parsers for CuDF backend.
 - :doc:`Pyarrow module<pyarrow/index>` contains query compiler and text parsers for Pyarrow backend.
 
 You can find more in the :doc:`experimental section </flow/modin/experimental/backends/>`.
