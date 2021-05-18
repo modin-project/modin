@@ -45,7 +45,7 @@ jobs:
         with:
           python-version: "3.7.x"
           architecture: "x64"
-      - run: pip install pytest pytest-cov pydocstyle numpydoc==1.1.0
+      - run: pip install pytest pytest-cov pydocstyle numpydoc==1.1.0 xgboost
       - run: pytest scripts/test
       - run: pip install -e .[all]
       - run: |
@@ -74,6 +74,10 @@ jobs:
       - run: python scripts/doc_checker.py modin/distributed
       - run: python scripts/doc_checker.py modin/utils.py
       - run: python scripts/doc_checker.py modin/experimental/sklearn
+      - run: |
+          python scripts/doc_checker.py modin/experimental/xgboost/__init__.py \
+            modin/experimental/xgboost/utils.py modin/experimental/xgboost/xgboost.py \
+            modin/experimental/xgboost/xgboost_ray.py
       - run: python scripts/doc_checker.py scripts/doc_checker.py
       - run: |
           python scripts/doc_checker.py modin/experimental/pandas/io_exp.py \
