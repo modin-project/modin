@@ -11,6 +11,27 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
+"""
+The main module through which interaction with the experimental API takes place.
+
+See `Experimental API Reference` for details.
+
+Notes
+-----
+* Some of experimental APIs deviate from pandas in order to provide improved
+  performance.
+
+* Although the use of experimental backends and engines is available through the
+  `modin.pandas` module when defining environment variable `MODIN_EXPERIMENTAL=true`,
+  the use of experimental I/O functions is available only through the
+  `modin.experimental.pandas` module.
+
+Examples
+--------
+>>> import modin.experimental.pandas as pd
+>>> df = pd.read_csv_glob("data*.csv")
+"""
+
 from modin.config import IsExperimental
 
 IsExperimental.put(True)
