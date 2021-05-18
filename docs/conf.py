@@ -12,6 +12,10 @@ import os
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 import modin
 
+from unittest.mock import Mock
+# Emulating existence of not installed modules to generate API documentation without installing them.
+sys.modules["pyarrow.gandiva"] = Mock()
+
 project = u"Modin"
 copyright = u"2018-2021, Modin"
 author = u"Modin contributors"

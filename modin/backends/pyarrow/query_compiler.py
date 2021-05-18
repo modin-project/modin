@@ -49,7 +49,7 @@ class PyarrowQueryCompiler(PandasQueryCompiler):
     Query compiler for the PyArrow backend.
 
     This class translates common query compiler API into the DataFrame Algebra
-    queries, that is supposed to be executed by ``PyarrowOnRayFrame``.
+    queries, that is supposed to be executed by :py:class:`~modin.experimental.engines.pyarrow_on_ray.frame.data.PyarrowOnRayFrame`.
 
     Parameters
     ----------
