@@ -23,6 +23,7 @@ from pandas.core.dtypes.common import (
 )
 from pandas._libs.lib import no_default
 from pandas._typing import IndexKeyFunc
+from pandas.util._decorators import doc
 import sys
 from typing import Union, Optional
 import warnings
@@ -34,6 +35,52 @@ from .iterator import PartitionIterator
 from .utils import from_pandas, is_scalar
 from .accessor import CachedAccessor, SparseAccessor
 from . import _update_engine
+
+_doc_binary_operation = """
+Return {operation} of Series and `{other}` (binary operator `{bin_op}`).
+
+Parameters
+----------
+{other} : Series or scalar value
+    The second operand to perform computation.
+
+Returns
+-------
+{returns}
+"""
+
+
+def _doc_binary_op(operation, bin_op, other="right", returns="Series"):
+    """
+    Return callable documenting `Series` binary operator.
+
+    Parameters
+    ----------
+    operation : str
+        Operation name.
+    bin_op : str
+        Binary operation name.
+    other : str, default: 'right'
+        The second operand name.
+    returns : str, default: 'Series'
+        Type of returns.
+
+    Returns
+    -------
+    callable
+    """
+    doc_op = doc(
+        _doc_binary_operation,
+        operation=operation,
+        other=other,
+        bin_op=bin_op,
+        returns=returns,
+    )
+
+    def decorator(op):
+        return doc_op(op)
+
+    return decorator
 
 
 @_inherit_docstrings(
@@ -67,36 +114,6 @@ class Series(BasePandasDataset):
         `pandas` internal parameter.
     query_compiler : BaseQueryCompiler, optional
         A query compiler object to create the Series from.
-
-    Attributes
-    ----------
-    T
-    array
-    at
-    attrs
-    axes
-    dt
-    dtype
-    dtypes
-    cat
-    flags
-    hasnans
-    iat
-    iloc
-    index
-    is_monotonic
-    is_monotonic_decreasing
-    is_monotonic_increasing
-    is_unique
-    loc
-    name
-    nbytes
-    ndim
-    shape
-    str
-    size
-    values
-    empty
     """
 
     _pandas_class = pandas.Series
@@ -183,25 +200,34 @@ class Series(BasePandasDataset):
     # should be done to columns of parent.
     _parent_axis = 0
 
+    @_doc_binary_op(operation="addition", bin_op="add")
     def __add__(self, right):
         return self.add(right)
 
+    @_doc_binary_op(operation="addition", bin_op="add", other="left")
     def __radd__(self, left):
         return self.add(left)
 
+    @_doc_binary_op(operation="union", bin_op="and", other="other")
     def __and__(self, other):
         if isinstance(other, (list, np.ndarray, pandas.Series)):
             return self._default_to_pandas(pandas.Series.__and__, other)
         new_self, new_other = self._prepare_inter_op(other)
         return super(Series, new_self).__and__(new_other)
 
+    @_doc_binary_op(operation="union", bin_op="and", other="other")
     def __rand__(self, other):
         if isinstance(other, (list, np.ndarray, pandas.Series)):
             return self._default_to_pandas(pandas.Series.__rand__, other)
         new_self, new_other = self._prepare_inter_op(other)
         return super(Series, new_self).__rand__(new_other)
 
-    def __array__(self, dtype=None):  # noqa: PR01, RT01
+    # add `_inherit_docstrings` decorator to force method link addition.
+    @_inherit_docstrings(pandas.Series.__array__, apilink="pandas.Series.__array__")
+    def __array__(self, dtype=None):  # noqa: PR01, RT01, D200
+        """
+        Return the values as a NumPy array.
+        """
         return super(Series, self).__array__(dtype).flatten()
 
     @property
@@ -218,40 +244,131 @@ class Series(BasePandasDataset):
 
     # FIXME: __bytes__ was removed in newer pandas versions, so Modin
     # can remove it too.
-    def __bytes__(self):  # noqa: RT01
-        """Return bytes representation of the Series, method is deprecated now."""
+    def __bytes__(self):
+        """
+        Return bytes representation of the Series.
+
+        Returns
+        -------
+        bytes
+
+        Notes
+        -----
+        Method is deprecated.
+        """
         return self._default_to_pandas(pandas.Series.__bytes__)
 
     def __contains__(self, key):
+        """
+        Check if `key` in the `Series.index`.
+
+        Parameters
+        ----------
+        key : hashable
+            Key to check the presence in the index.
+
+        Returns
+        -------
+        bool
+        """
         return key in self.index
 
     def __copy__(self, deep=True):
+        """
+        Return the copy of the Series.
+
+        Parameters
+        ----------
+        deep : bool, default: True
+            Whether the copy should be deep or not.
+
+        Returns
+        -------
+        Series
+        """
         return self.copy(deep=deep)
 
     def __deepcopy__(self, memo=None):
+        """
+        Return the deep copy of the Series.
+
+        Parameters
+        ----------
+        memo : Any, optional
+           Deprecated parameter.
+
+        Returns
+        -------
+        Series
+        """
         return self.copy(deep=True)
 
     def __delitem__(self, key):
+        """
+        Delete item identified by `key` label.
+
+        Parameters
+        ----------
+        key : hashable
+            Key to delete.
+        """
         if key not in self.keys():
             raise KeyError(key)
         self.drop(labels=key, inplace=True)
 
+    @_doc_binary_op(
+        operation="integer division and modulo",
+        bin_op="divmod",
+        returns="tuple of two Series",
+    )
     def __divmod__(self, right):
         return self.divmod(right)
 
+    @_doc_binary_op(
+        operation="integer division and modulo",
+        bin_op="divmod",
+        other="left",
+        returns="tuple of two Series",
+    )
     def __rdivmod__(self, left):
         return self.rdivmod(left)
 
     def __float__(self):
+        """
+        Return float representation of Series.
+
+        Returns
+        -------
+        float
+        """
         return float(self.squeeze())
 
+    @_doc_binary_op(operation="integer division", bin_op="floordiv")
     def __floordiv__(self, right):
         return self.floordiv(right)
 
+    @_doc_binary_op(operation="integer division", bin_op="floordiv")
     def __rfloordiv__(self, right):
         return self.rfloordiv(right)
 
     def __getattr__(self, key):
+        """
+        Return item identified by `key`.
+
+        Parameters
+        ----------
+        key : hashable
+            Key to get.
+
+        Returns
+        -------
+        Any
+
+        Notes
+        -----
+        First try to use `__getattribute__` method. If it fails
+        try to get `key` from `Series` fields.
+        """
         try:
             return object.__getattribute__(self, key)
         except AttributeError as e:
@@ -260,54 +377,85 @@ class Series(BasePandasDataset):
             raise e
 
     def __int__(self):
+        """
+        Return integer representation of Series.
+
+        Returns
+        -------
+        int
+        """
         return int(self.squeeze())
 
     def __iter__(self):
+        """
+        Return an iterator of the values.
+
+        Returns
+        -------
+        iterable
+        """
         return self._to_pandas().__iter__()
 
+    @_doc_binary_op(operation="modulo", bin_op="mod")
     def __mod__(self, right):
         return self.mod(right)
 
+    @_doc_binary_op(operation="modulo", bin_op="mod", other="left")
     def __rmod__(self, left):
         return self.rmod(left)
 
+    @_doc_binary_op(operation="multiplication", bin_op="mul")
     def __mul__(self, right):
         return self.mul(right)
 
+    @_doc_binary_op(operation="multiplication", bin_op="mul", other="left")
     def __rmul__(self, left):
         return self.rmul(left)
 
+    @_doc_binary_op(operation="disjunction", bin_op="or", other="other")
     def __or__(self, other):
         if isinstance(other, (list, np.ndarray, pandas.Series)):
             return self._default_to_pandas(pandas.Series.__or__, other)
         new_self, new_other = self._prepare_inter_op(other)
         return super(Series, new_self).__or__(new_other)
 
+    @_doc_binary_op(operation="disjunction", bin_op="or", other="other")
     def __ror__(self, other):
         if isinstance(other, (list, np.ndarray, pandas.Series)):
             return self._default_to_pandas(pandas.Series.__ror__, other)
         new_self, new_other = self._prepare_inter_op(other)
         return super(Series, new_self).__ror__(new_other)
 
+    @_doc_binary_op(operation="exclusive or", bin_op="xor", other="other")
     def __xor__(self, other):
         if isinstance(other, (list, np.ndarray, pandas.Series)):
             return self._default_to_pandas(pandas.Series.__xor__, other)
         new_self, new_other = self._prepare_inter_op(other)
         return super(Series, new_self).__xor__(new_other)
 
+    @_doc_binary_op(operation="exclusive or", bin_op="xor", other="other")
     def __rxor__(self, other):
         if isinstance(other, (list, np.ndarray, pandas.Series)):
             return self._default_to_pandas(pandas.Series.__rxor__, other)
         new_self, new_other = self._prepare_inter_op(other)
         return super(Series, new_self).__rxor__(new_other)
 
+    @_doc_binary_op(operation="exponential power", bin_op="pow")
     def __pow__(self, right):
         return self.pow(right)
 
+    @_doc_binary_op(operation="exponential power", bin_op="pow", other="left")
     def __rpow__(self, left):
         return self.rpow(left)
 
     def __repr__(self):
+        """
+        Return a string representation for a particular Series.
+
+        Returns
+        -------
+        str
+        """
         num_rows = pandas.get_option("max_rows") or 60
         num_cols = pandas.get_option("max_columns") or 20
         temp_df = self._build_repr_df(num_rows, num_cols)
@@ -339,25 +487,51 @@ class Series(BasePandasDataset):
         )
 
     def __round__(self, decimals=0):
+        """
+        Round each value in a Series to the given number of decimals.
+
+        Parameters
+        ----------
+        decimals : int, default: 0
+            Number of decimal places to round to.
+
+        Returns
+        -------
+        Series
+        """
         return self._create_or_update_from_compiler(
             self._query_compiler.round(decimals=decimals)
         )
 
     def __setitem__(self, key, value):
+        """
+        Set `value` identified by `key` in the Series.
+
+        Parameters
+        ----------
+        key : hashable
+            Key to set.
+        value : Any
+            Value to set.
+        """
         if isinstance(key, slice):
             self._setitem_slice(key, value)
         else:
             self.loc[key] = value
 
+    @_doc_binary_op(operation="subtraction", bin_op="sub")
     def __sub__(self, right):
         return self.sub(right)
 
+    @_doc_binary_op(operation="subtraction", bin_op="sub", other="left")
     def __rsub__(self, left):
         return self.rsub(left)
 
+    @_doc_binary_op(operation="floating division", bin_op="truediv")
     def __truediv__(self, right):
         return self.truediv(right)
 
+    @_doc_binary_op(operation="floating division", bin_op="truediv", other="left")
     def __rtruediv__(self, left):
         return self.rtruediv(left)
 
@@ -2137,7 +2311,7 @@ class Series(BasePandasDataset):
 
         Returns
         -------
-        None, pandas.Series or pandas.DataFrame
+        Series, DataFrame or None
             None if update was done, Series or DataFrame otherwise.
         """
         assert (
