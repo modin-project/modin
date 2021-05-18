@@ -2,7 +2,7 @@ PyArrow Query Compiler
 """"""""""""""""""""""
 :py:class:`~modin.backends.pyarrow.query_compiler.PyarrowQueryCompiler` is responsible for compiling efficient
 DataFrame algebra queries for the :doc:`PyarrowOnRayFrame </flow/modin/experimental/engines/pyarrow_on_ray>`, 
-the such frames that are backed by ``pyarrow.Table`` objects.
+the frames which are backed by ``pyarrow.Table`` objects.
 
 Each :py:class:`~modin.backends.pyarrow.query_compiler.PyarrowQueryCompiler` contains an instance of
 :py:class:`~modin.experimental.engines.pyarrow_on_ray.frame.data.PyarrowOnRayFrame` which it queries to get the result.
@@ -16,3 +16,4 @@ section only overridden methods are presented.
 
 .. autoclass:: modin.backends.pyarrow.query_compiler.PyarrowQueryCompiler
   :members:
+  :show-inheritance:

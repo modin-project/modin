@@ -301,7 +301,7 @@ class PyarrowQueryCompiler(PandasQueryCompiler):
         index_obj = self.index if not axis else self.columns
         old_blocks = self.data if compute_diff else None
         # FIXME: `BasePandasFrame.get_indices` was deprecated, this call should be
-        # replaced either to `BasePandasFrame._compute_axis_label` or `BasePandasFrame.axes`.
+        # replaced either by `BasePandasFrame._compute_axis_label` or by `BasePandasFrame.axes`.
         new_indices = data_object.get_indices(
             axis=axis,
             index_func=lambda df: arrow_index_extraction(df, axis),

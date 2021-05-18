@@ -22,5 +22,5 @@ the query compiler level and execution engine level for PyArrow backend:
 - :doc:`Parsers <parsers>` are responsible for parsing data on workers during IO operations.
 
 .. note::
-    Currently the only one available PyArrow backend is ``PyarrowOnRay`` which works
+    Currently the only one available PyArrow backend factory is ``PyarrowOnRay`` which works
     in :doc:`experimental mode </flow/modin/experimental/experimental>` only.

@@ -5,3 +5,10 @@ Parsers for PyArrow backends follow an interface of :doc:`pandas backend parsers
 parser class of every file format implements ``parse`` method, which parses the specified part
 of the file and builds PyArrow tables from the parsed data, based on the specified chunk size and number of splits.
 The resulted PyArrow tables will be used as a partitions payload in the :py:class:`~modin.experimental.engines.pyarrow_on_ray.frame.data.PyarrowOnRayFrame`.
+
+Public API
+''''''''''
+
+.. automodule:: modin.backends.pyarrow.parsers
+    :members:
+
