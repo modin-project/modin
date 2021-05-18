@@ -75,7 +75,7 @@ def deploy_func(df, apply_func, call_queue_df=None, call_queues_other=None, *oth
 
 
 class PandasOnDaskFramePartitionManager(PandasFramePartitionManager):
-    """This class implements the interface in `PandasFramePartitionManager`."""
+    """The class implements the interface in `PandasFramePartitionManager`."""
 
     # This object uses PandasOnDaskFramePartition objects as the underlying store.
     _partition_class = PandasOnDaskFramePartition

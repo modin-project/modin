@@ -1486,7 +1486,8 @@ class PandasQueryCompiler(BaseQueryCompiler):
     # END String map partitions operations
 
     def unique(self):
-        """Return unique values of Series object.
+        """
+        Return unique values of Series object.
 
         Returns
         -------

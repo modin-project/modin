@@ -8,7 +8,7 @@ into the partition manager for processing. Direct partitions manipulation by thi
 cases if an operation is striclty private or protected and called inside of the class only. The class provides
 significantly reduced set of operations that fit plenty of pandas operations.
 
-Main task of ``PandasFrame`` is storage of partitions, manipulation with labels of axes and
+Main tasks of ``PandasFrame`` are storage of partitions, manipulation with labels of axes and
 providing set of methods to perform operations on the internal data.
 
 As mentioned above, ``PandasFrame`` shouldn't work with stored partitions directly and

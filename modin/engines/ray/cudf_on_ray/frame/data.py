@@ -26,7 +26,7 @@ class cuDFOnRayFrame(PandasOnRayFrame):
     _partition_mgr_cls = cuDFOnRayFramePartitionManager
 
     def synchronize_labels(self, axis=None):
-        """Eagerly applies the index object (Index or Columns) to the partitions.
+        """Synchronize labels by applying the index object (Index or Columns) to the partitions eagerly.
 
         Args:
             axis: The axis to apply to, None applies to both axes.

@@ -55,7 +55,7 @@ class PyarrowOnRayFrame(PandasFrame):
 
     def synchronize_labels(self, axis=None):
         """
-        Lazily apply the index object (Index or Columns) to the partitions.
+        Synchronize labels by applying the index object (Index or Columns) to the partitions lazily.
 
         Parameters
         ----------

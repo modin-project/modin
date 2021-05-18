@@ -331,7 +331,7 @@ class PandasFrame(object):
 
     def synchronize_labels(self, axis=None):
         """
-        Apply the index object for specific `axis` to the `self._partitions` lazily.
+        Synchronize labels by applying the index object for specific `axis` to the `self._partitions` lazily.
 
         Adds `set_axis` function to call-queue of each partition from `self._partitions`
         to apply new axis.
