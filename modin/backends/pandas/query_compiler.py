@@ -186,7 +186,7 @@ def copy_df_for_func(func, display_name: str = None):
     """
     Build function that execute specified `func` against passed frame inplace.
 
-    Built function copies passed frame, apply `func` to the copy and return
+    Built function copies passed frame, applies `func` to the copy and returns
     the modified frame.
 
     Parameters
@@ -688,7 +688,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
     def sum(self, squeeze_self, axis, **kwargs):
         # TODO: rework to original implementation after pandas issue #41074 resolves if possible.
         def map_func(df, **kwargs):
-            """Apply sum function to DataFrame or Series in depend on `squeeze_self`."""
+            """Apply sum function to DataFrame or Series depending on `squeeze_self`."""
             if squeeze_self:
                 result = df.squeeze(axis=1).sum(**kwargs)
                 if is_scalar(result):
@@ -711,7 +711,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
     def prod(self, squeeze_self, axis, **kwargs):
         # TODO: rework to original implementation after pandas issue #41074 resolves if possible.
         def map_func(df, **kwargs):
-            """Apply product function to DataFrame or Series in depend on `squeeze_self`."""
+            """Apply product function to DataFrame or Series depending on `squeeze_self`."""
             if squeeze_self:
                 result = df.squeeze(axis=1).prod(**kwargs)
                 if is_scalar(result):
@@ -780,7 +780,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             """
             Perform Map phase of the `mean`.
 
-            Compute sum and number of element in a given partition.
+            Compute sum and number of elements in a given partition.
             """
             result = pandas.DataFrame(
                 {
@@ -834,7 +834,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
     def sum_min_count(self, squeeze_self, axis, **kwargs):
         # TODO: rework to original implementation after pandas issue #41074 resolves if possible.
         def reduce_func(df, **kwargs):
-            """Apply sum function to DataFrame or Series in depend on `squeeze_self`."""
+            """Apply sum function to DataFrame or Series depending on `squeeze_self`."""
             if squeeze_self:
                 result = df.squeeze(axis=1).sum(**kwargs)
                 if is_scalar(result):
@@ -856,7 +856,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
     def prod_min_count(self, squeeze_self, axis, **kwargs):
         # TODO: rework to original implementation after pandas issue #41074 resolves if possible.
         def reduce_func(df, **kwargs):
-            """Apply product function to DataFrame or Series in depend on `squeeze_self`."""
+            """Apply product function to DataFrame or Series depending on `squeeze_self`."""
             if squeeze_self:
                 result = df.squeeze(axis=1).prod(**kwargs)
                 if is_scalar(result):
@@ -1305,7 +1305,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             Parameters
             ----------
             index : pandas.Index
-                Index of the originam frame.
+                Index of the original frame.
             columns : pandas.Index
                 Columns of the original frame.
             consider_index : bool, default: True
@@ -2207,7 +2207,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             Define new row/column value.
         how : {"inner", "outer", "left", "right", None}, default: "inner"
             Type of join to perform if specified axis of `self` and `value` are not
-            equal. If None reindex `value` with `self` labels without join.
+            equal. If `how` is `None`, reindex `value` with `self` labels without joining.
 
         Returns
         -------
@@ -2370,7 +2370,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         else:
             pass
 
-    # FIXME: `_apply_text_func_elementwise` is almost duplicates the logic of `_callable_func`,
+    # FIXME: `_apply_text_func_elementwise` duplicates most of the logic of `_callable_func`,
     # these methods should be combined.
     def _apply_text_func_elementwise(self, func, axis, *args, **kwargs):
         """
@@ -2558,7 +2558,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         """
         Group underlying data and apply aggregation functions to each group of the specified column/row.
 
-        This method is responsible to perform dictionary groupby aggregation for such functions,
+        This method is responsible of performing dictionary groupby aggregation for such functions,
         that can be implemented via MapReduce approach.
 
         Parameters
@@ -2571,6 +2571,8 @@ class PandasQueryCompiler(BaseQueryCompiler):
         agg_func : dict(label) -> str
             Dictionary that maps row/column labels to the function names.
             **Note:** specified functions have to be supported by ``modin.data_management.functions.GroupbyReduceFunction``.
+            Supported functions are listed in the ``modin.data_management.functions.GroupbyReduceFunction.groupby_reduce_functions``
+            dictionary.
         agg_args : list
             Serves the compatibility purpose. Does not affect the result.
         agg_kwargs : dict
