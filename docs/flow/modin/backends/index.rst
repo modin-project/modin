@@ -18,7 +18,7 @@ an actual execution engine.
     :width: 300px
 
 Query compilers of all backends implement a common API, which is used by the Modin Dataframe
-to emulate pandas API. The role of the query compiler is to translate its API into
+to support dataframe queries. The role of the query compiler is to translate its API into
 a pairing of known user-defined functions and dataframe algebra operators. Each query compiler instance contains a
 :doc:`frame </flow/modin/engines/base/frame/index>` of the selected execution engine and queries
 it with the compiled queries to get the result. The query compiler object is immutable,
