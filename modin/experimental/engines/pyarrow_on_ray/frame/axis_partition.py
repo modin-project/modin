@@ -153,7 +153,7 @@ def concat_arrow_table_partitions(axis, partitions):
     Parameters
     ----------
     axis : {0, 1}
-        The axis to concat over.
+        The axis to concatenate over.
     partitions : array-like
         Array with partitions for concatenating.
 
@@ -191,7 +191,7 @@ def split_arrow_table_result(axis, result, num_partitions, num_splits, metadata)
     num_partitions : int
         Number of partitions that `result` was constructed from.
     num_splits : int
-        The number of splits to return (see ``split_result_of_axis_func_pandas``).
+        The number of splits to return.
     metadata : dict
         Dictionary with ``pyarrow.Table`` metadata.
 
@@ -242,9 +242,9 @@ def deploy_ray_axis_func(axis, func, num_splits, kwargs, *partitions):
     axis : {0, 1}
         The axis to perform the function along.
     func : callable
-        The function to perform.
+        The function to deploy.
     num_splits : int
-        The number of splits to return (see ``split_result_of_axis_func_pandas``).
+        The number of splits to return.
     kwargs : dict
         A dictionary of keyword arguments.
     *partitions : array-like
@@ -277,9 +277,9 @@ def deploy_ray_func_between_two_axis_partitions(
     axis : {0, 1}
         The axis to perform the function along.
     func : callable
-        The function to perform.
+        The function to deploy.
     num_splits : int
-        The number of splits to return (see ``split_result_of_axis_func_pandas``).
+        The number of splits to return.
     len_of_left : int
         The number of values in `partitions` that belong to the left data set.
     kwargs : dict
@@ -316,9 +316,9 @@ def deploy_ray_shuffle_func(axis, func, num_splits, kwargs, *partitions):
     axis : {0, 1}
         The axis to perform the function along.
     func : callable
-        The function to perform.
+        The function to deploy.
     num_splits : int
-        The number of splits to return (see ``split_result_of_axis_func_pandas``).
+        The number of splits to return.
     kwargs : dict
         A dictionary of keyword arguments.
     *partitions : array-like
@@ -328,4 +328,3 @@ def deploy_ray_shuffle_func(axis, func, num_splits, kwargs, *partitions):
     -----
     Function is deprecated.
     """
-    pass

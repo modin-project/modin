@@ -152,7 +152,7 @@ def check_query(query):
 
 def get_query_columns(engine, query):
     """
-    Extract columns names and python typos from the `query`.
+    Extract columns names and python types from the `query`.
 
     Parameters
     ----------
@@ -216,7 +216,7 @@ def get_query_info(sql, con, partition_column):
     Returns
     -------
     list
-        Columns name list.
+        Columns names list.
     str
         Query string.
     """
