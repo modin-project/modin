@@ -11,6 +11,12 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
+"""
+Module holds internal entities for Modin XGBoost on Ray backend.
+
+Class ModinXGBoostActor provides interfaces to run XGBoost operations
+on remote workers. Other functions create Ray actors, distribute data between them, etc.
+"""
 
 import time
 import logging
@@ -32,6 +38,17 @@ LOGGER = logging.getLogger("[modin.xgboost]")
 
 @ray.remote
 class ModinXGBoostActor:
+    """
+    Ray actor-class runs training/prediction on remote workers.
+
+    Parameters
+    ----------
+    rank : int
+        Rank of this actor.
+    nthread : int
+        Number of threads used by XGBoost in this actor.
+    """
+
     def __init__(self, rank, nthread):
         self._evals = []
         self._rank = rank
@@ -42,6 +59,21 @@ class ModinXGBoostActor:
         )
 
     def _get_dmatrix(self, X_y):
+        """
+        Create xgboost.DMatrix from sequence of pandas.DataFrame objects.
+
+        First half of `X_y` should contains objects for `X`, second for `y`.
+
+        Parameters
+        ----------
+        X_y : list
+            List of pandas.DataFrame objects.
+
+        Returns
+        -------
+        xgb.DMatrix
+            A XGBoost DMatrix.
+        """
         s = time.time()
         X = X_y[: len(X_y) // 2]
         y = X_y[len(X_y) // 2 :]
@@ -57,9 +89,29 @@ class ModinXGBoostActor:
         return xgb.DMatrix(X, y, nthread=self._nthreads)
 
     def get_ip(self):
+        """
+        Get IP address of actor.
+
+        Returns
+        -------
+        str
+            An IP address of node used by actor.
+        """
         return get_node_ip_address()
 
     def set_train_data(self, *X_y, add_as_eval_method=None):
+        """
+        Set train data for actor.
+
+        Parameters
+        ----------
+        *X_y : iterable
+            Sequence of ray.ObjectRef objects. First half of sequence is for
+            `X` data, second for `y`. When it is passed in actor, auto-materialization
+            of ray.ObjectRef -> pandas.DataFrame happens.
+        add_as_eval_method : str, optional
+            Name of eval data. Used in case when train data also used for evaluation.
+        """
         self._dtrain = self._get_dmatrix(X_y)
 
         if add_as_eval_method is not None:
@@ -69,6 +121,15 @@ class ModinXGBoostActor:
         self,
         *X,
     ):
+        """
+        Set prediction data for actor.
+
+        Parameters
+        ----------
+        *X : iterable
+            Sequence of ray.ObjectRef objects. When it is passed in actor, auto-materialization
+            of ray.ObjectRef -> pandas.DataFrame happens.
+        """
         X = pandas.concat(X, axis=0)
         self._dpredict = {
             "dmatrix": xgb.DMatrix(X, nthread=self._nthreads),
@@ -76,9 +137,45 @@ class ModinXGBoostActor:
         }
 
     def add_eval_data(self, *X_y, eval_method):
+        """
+        Add evaluation data for actor.
+
+        Parameters
+        ----------
+        *X_y : iterable
+            Sequence of ray.ObjectRef objects. First half of sequence is for
+            `X` data, second for `y`. When it is passed in actor, auto-materialization
+            of ray.ObjectRef -> pandas.DataFrame happens.
+        eval_method : str
+            Name of eval data.
+        """
         self._evals.append((self._get_dmatrix(X_y), eval_method))
 
     def train(self, rabit_args, params, *args, **kwargs):
+        """
+        Run local XGBoost training.
+
+        Connects to Rabit Tracker environment to share training data between
+        actors and trains XGBoost booster using `self._dtrain`.
+
+        Parameters
+        ----------
+        rabit_args : list
+            List with environment variables for Rabit Tracker.
+        params : dict
+            Booster params.
+        *args : iterable
+            Other parameters for `xgboost.train`.
+        **kwargs : dict
+            Other parameters for `xgboost.train`.
+
+        Returns
+        -------
+        dict
+            A dictionary with trained booster and dict of
+            evaluation results
+            as {"booster": xgb.Booster, "history": dict}.
+        """
         local_params = params.copy()
         local_dtrain = self._dtrain
         local_evals = self._evals
@@ -101,6 +198,22 @@ class ModinXGBoostActor:
             return {"booster": bst, "history": evals_result}
 
     def predict(self, booster: xgb.Booster, **kwargs):
+        """
+        Run local XGBoost prediction.
+
+        Parameters
+        ----------
+        booster : xgboost.Booster
+            A trained booster.
+        **kwargs : dict
+            Other parameters for `xgboost.Booster.predict`.
+
+        Returns
+        -------
+        tuple
+            Pair of IP address of caller and pandas.DataFrame
+            with partial prediction result.
+        """
         local_dpredict = self._dpredict
         booster.set_param({"nthread": self._nthreads})
 
@@ -116,10 +229,27 @@ class ModinXGBoostActor:
 
 
 def _get_cluster_cpus():
+    """
+    Get number of CPUs available on Ray cluster.
+
+    Returns
+    -------
+    int
+        Number of CPUs available on cluster.
+    """
     return ray.cluster_resources().get("CPU", 1)
 
 
 def _get_min_cpus_per_node():
+    """
+    Get min number of node CPUs available on cluster nodes.
+
+    Returns
+    -------
+    int
+        Min number of CPUs per node.
+    """
+    # TODO: max_node_cpus -> min_node_cpus
     max_node_cpus = min(
         node.get("Resources", {}).get("CPU", 0.0) for node in ray.nodes()
     )
@@ -127,6 +257,19 @@ def _get_min_cpus_per_node():
 
 
 def _get_cpus_per_actor(num_actors):
+    """
+    Get number of CPUs to use by each actor.
+
+    Parameters
+    ----------
+    num_actors : int
+        Number of Ray actors.
+
+    Returns
+    -------
+    int
+        Number of CPUs per actor.
+    """
     cluster_cpus = _get_cluster_cpus()
     cpus_per_actor = max(
         1, min(int(_get_min_cpus_per_node() or 1), int(cluster_cpus // num_actors))
@@ -135,6 +278,23 @@ def _get_cpus_per_actor(num_actors):
 
 
 def _get_num_actors(num_actors):
+    """
+    Get number on actors to create.
+
+    In case `num_actors` is 'default_train' string,
+    integer number of actors will be computed  by condition
+    2 CPUs per 1 actor, in case 'default_predict' 8 CPUs per 1 actor.
+
+    Parameters
+    ----------
+    num_actors : int or {'default_train', 'default_predict'}
+        Number of actors to create or str to set defaults.
+
+    Returns
+    -------
+    int
+        Number of actors to create.
+    """
     min_cpus_per_node = _get_min_cpus_per_node()
     if num_actors == "default_train":
         num_actors_per_node = max(1, int(min_cpus_per_node // 2))
@@ -149,6 +309,21 @@ def _get_num_actors(num_actors):
 
 
 def _create_placement_group(num_cpus_per_actor, num_actors):
+    """
+    Create Ray placement group to grab resources.
+
+    Parameters
+    ----------
+    num_cpus_per_actor : int
+        Number of CPUs per actor.
+    num_actors : int
+        Number of actors.
+
+    Returns
+    -------
+    ray.util.PlacementGroup
+        Placement group with grabbed resources.
+    """
     cpu_bundle = {"CPU": num_cpus_per_actor}
     bundles = [cpu_bundle for _ in range(num_actors)]
 
@@ -163,6 +338,19 @@ def _create_placement_group(num_cpus_per_actor, num_actors):
 
 
 def create_actors(num_actors):
+    """
+    Create ModinXGBoostActors.
+
+    Parameters
+    ----------
+    num_actors : int
+        Number of actors to create.
+
+    Returns
+    -------
+    tuple
+        Pair of actors list and placement group of actors.
+    """
     num_cpus_per_actor = _get_cpus_per_actor(num_actors)
     pg = _create_placement_group(num_cpus_per_actor, num_actors)
     actors = [
@@ -179,6 +367,7 @@ def _split_data_across_actors(
 ):
     """
     Split row partitions of data between actors.
+
     Parameters
     ----------
     actors : list
@@ -187,14 +376,10 @@ def _split_data_across_actors(
         The function for setting data in actor.
     X_parts : list
         Row partitions of X data.
-    y_parts : list. Default is None
+    y_parts : list, optional
         Row partitions of y data.
-    is_predict : boolean. Default is False
+    is_predict : bool, default: False
         Is split data for predict or not.
-    Returns
-    -------
-    dict
-        Dictionary with orders of partitions by actor ranks as {actor_rank: order}.
     """
     X_parts_by_actors = _assign_row_partitions_to_actors(
         actors,
@@ -226,17 +411,27 @@ def _assign_row_partitions_to_actors(
 ):
     """
     Assign row_partitions to actors.
+
+    In case of `is_predict` == False, `row_partitions` will be
+    assigned to actors according to their IPs. If distribution isn't
+    even, partitions will be moved from actor with excess partitions
+    to actor with lack of them.
+
+    In case of `is_predict` == True, `row_partitions` will be
+    assigned evenly to actors in order.
+
     Parameters
     ----------
     actors : list
         List of used actors.
     row_partitions : list
         Row partitions of data to assign.
-    data_for_aligning : dict. Default is None
+    data_for_aligning : dict, optional
         Data according to the order of which should be
-        distributed row_partitions. Used to align y with X.
-    is_predict : boolean. Default is False
+        distributed `row_partitions`. Used to align y with X.
+    is_predict : bool, default: False
         Is split data for predict or not.
+
     Returns
     -------
     dict
@@ -382,6 +577,39 @@ def _train(
     evals=(),
     **kwargs,
 ):
+    """
+    Run distributed training of XGBoost model on Ray backend.
+
+    During work it evenly distributes `dtrain` between workers according
+    to IP addresses partitions (in case of not even distribution of `dtrain`
+    by nodes, part of partitions will be re-distributed between nodes),
+    runs xgb.train on each worker for subset of `dtrain` and reduces training results
+    of each worker using Rabit Context.
+
+    Parameters
+    ----------
+    dtrain : modin.experimental.DMatrix
+        Data to be trained against.
+    num_actors : int, optional
+        Number of actors for training. If unspecified, this value will be
+        computed automatically.
+    params : dict
+        Booster params.
+    *args : iterable
+        Other parameters for `xgboost.train`.
+    evals : list of pairs (modin.experimental.xgboost.DMatrix, str), default: empty
+        List of validation sets for which metrics will be evaluated during training.
+        Validation metrics will help us track the performance of the model.
+    **kwargs : dict
+        Other parameters are the same as `xgboost.train`.
+
+    Returns
+    -------
+    dict
+        A dictionary with trained booster and dict of
+        evaluation results
+        as {"booster": xgboost.Booster, "history": dict}.
+    """
     s = time.time()
 
     X_row_parts, y_row_parts = dtrain
@@ -448,6 +676,30 @@ def _predict(
     num_actors,
     **kwargs,
 ):
+    """
+    Run distributed prediction with a trained booster on Ray backend.
+
+    During work it evenly distributes `data` between workers,
+    runs xgb.predict on each worker for subset of `data` and creates
+    Modin DataFrame with prediction results.
+
+    Parameters
+    ----------
+    booster : xgboost.Booster
+        A trained booster.
+    data : modin.experimental.xgboost.DMatrix
+        Input data used for prediction.
+    num_actors : int, optional
+        Number of actors for prediction. If unspecified, this value will be
+        computed automatically.
+    **kwargs : dist
+        Other parameters are the same as `xgboost.Booster.predict`.
+
+    Returns
+    -------
+    modin.pandas.DataFrame
+        Modin DataFrame with prediction results.
+    """
     s = time.time()
 
     X_row_parts, _ = data

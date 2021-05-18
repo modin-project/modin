@@ -12,6 +12,7 @@
 # governing permissions and limitations under the License.
 
 import os
+import sys
 import time
 from collections import OrderedDict
 from functools import partial
@@ -43,8 +44,18 @@ def create_dtypes():
 
     # load metadata
     columns_names = [
-        "object_id", "ra", "decl", "gal_l", "gal_b", "ddf", "hostgal_specz",
-        "hostgal_photoz", "hostgal_photoz_err", "distmod", "mwebv", "target",
+        "object_id",
+        "ra",
+        "decl",
+        "gal_l",
+        "gal_b",
+        "ddf",
+        "hostgal_specz",
+        "hostgal_photoz",
+        "hostgal_photoz_err",
+        "distmod",
+        "mwebv",
+        "target",
     ]
     meta_dtypes = ["int32"] + ["float32"] * 4 + ["int32"] + ["float32"] * 5 + ["int32"]
     meta_dtypes = OrderedDict(
@@ -69,7 +80,7 @@ def measure(name, func, *args, **kw):
     t0 = time.time()
     res = func(*args, **kw)
     t1 = time.time()
-    print(f'{name}: {t1 - t0} sec')
+    print(f"{name}: {t1 - t0} sec")
     return res
 
 
@@ -120,24 +131,34 @@ def multi_weighted_logloss(y_true, y_preds, classes, class_weights):
 
 
 def xgb_multi_weighted_logloss(y_predicted, y_true, classes, class_weights):
-    loss = multi_weighted_logloss(y_true.get_label(), y_predicted, classes, class_weights)
+    loss = multi_weighted_logloss(
+        y_true.get_label(), y_predicted, classes, class_weights
+    )
     return "wloss", loss
+
 
 ################ helper functions ###############################
 
 
-def read(dtypes, meta_dtypes):
-    train = pd.read_csv(os.path.expanduser("~/training_set.csv"), dtype=dtypes)
+def read(
+    training_set_filename,
+    test_set_filename,
+    training_set_metadata_filename,
+    test_set_metadata_filename,
+    dtypes,
+    meta_dtypes,
+):
+    train = pd.read_csv(training_set_filename, dtype=dtypes)
     test = pd.read_csv(
-        os.path.expanduser("~/test_set_skiprows.csv"),
+        test_set_filename,
         names=list(dtypes.keys()),
         dtype=dtypes,
         header=0,
     )
 
-    train_meta = pd.read_csv(os.path.expanduser("~/training_set_metadata.csv"), dtype=meta_dtypes)
+    train_meta = pd.read_csv(training_set_metadata_filename, dtype=meta_dtypes)
     target = meta_dtypes.pop("target")
-    test_meta = pd.read_csv(os.path.expanduser("~/test_set_metadata.csv"), dtype=meta_dtypes)
+    test_meta = pd.read_csv(test_set_metadata_filename, dtype=meta_dtypes)
     meta_dtypes["target"] = target
 
     dfs = (train, train_meta, test, test_meta)
@@ -167,7 +188,9 @@ def etl(df, df_meta):
 
     agg_df["flux_diff"] = agg_df["flux_max"] - agg_df["flux_min"]
     agg_df["flux_dif2"] = agg_df["flux_diff"] / agg_df["flux_mean"]
-    agg_df["flux_w_mean"] = agg_df["flux_by_flux_ratio_sq_sum"] / agg_df["flux_ratio_sq_sum"]
+    agg_df["flux_w_mean"] = (
+        agg_df["flux_by_flux_ratio_sq_sum"] / agg_df["flux_ratio_sq_sum"]
+    )
     agg_df["flux_dif3"] = agg_df["flux_diff"] / agg_df["flux_w_mean"]
     agg_df["mjd_diff"] = agg_df["mjd_max"] - agg_df["mjd_min"]
 
@@ -184,7 +207,9 @@ def etl(df, df_meta):
 
 
 def ml(train_final, test_final):
-    X_train, y_train, X_test, y_test, Xt, classes, class_weights = split_step(train_final, test_final)
+    X_train, y_train, X_test, y_test, Xt, classes, class_weights = split_step(
+        train_final, test_final
+    )
 
     cpu_params = {
         "objective": "multi:softprob",
@@ -198,7 +223,9 @@ def ml(train_final, test_final):
         "colsample_bytree": 0.7,
     }
 
-    func_loss = partial(xgb_multi_weighted_logloss, classes=classes, class_weights=class_weights)
+    func_loss = partial(
+        xgb_multi_weighted_logloss, classes=classes, class_weights=class_weights
+    )
 
     dtrain = xgb.DMatrix(data=X_train, label=y_train)
     dvalid = xgb.DMatrix(data=X_test, label=y_test)
@@ -224,14 +251,31 @@ def ml(train_final, test_final):
 
 
 def main():
+    if len(sys.argv) != 5:
+        print(
+            f"USAGE: docker run --rm -v /path/to/dataset:/dataset plasticc-omnisci <training set file name in /path/to/dataset> <test set file name in /path/to/dataset> <training set metadata file name in /path/to/dataset> <test set metadata file name in /path/to/dataset>"
+        )
+        return
+
     dtypes, meta_dtypes = create_dtypes()
 
-    train, train_meta, test, test_meta = measure('Reading', read, dtypes, meta_dtypes)
-    train_final, test_final = measure("ETL", all_etl, train, train_meta, test, test_meta)
+    train, train_meta, test, test_meta = measure(
+        "Reading",
+        read,
+        os.path.join("/dataset", sys.argv[1]),
+        os.path.join("/dataset", sys.argv[2]),
+        os.path.join("/dataset", sys.argv[3]),
+        os.path.join("/dataset", sys.argv[4]),
+        dtypes,
+        meta_dtypes,
+    )
+    train_final, test_final = measure(
+        "ETL", all_etl, train, train_meta, test, test_meta
+    )
     cpu_loss = measure("ML", ml, train_final, test_final)
 
     print("validation cpu_loss:", cpu_loss)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

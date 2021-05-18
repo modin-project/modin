@@ -11,16 +11,7 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-"""
-Implement GroupBy public API as Pandas does.
-
-Almost all docstrings for public and magic methods should be inherited from Pandas
-for better maintability. So some codes are ignored in pydocstyle check:
-    - D101: missing docstring in class
-    - D102: missing docstring in public method
-    - D105: missing docstring in magic method
-Manually add documentation for methods which are not presented in pandas.
-"""
+"""Implement GroupBy public API as pandas does."""
 
 import numpy as np
 import pandas
@@ -45,12 +36,7 @@ from .series import Series
 from .utils import is_label
 
 
-@_inherit_docstrings(
-    pandas.core.groupby.DataFrameGroupBy,
-    excluded=[
-        pandas.core.groupby.DataFrameGroupBy.__init__,
-    ],
-)
+@_inherit_docstrings(pandas.core.groupby.DataFrameGroupBy)
 class DataFrameGroupBy(object):
     def __init__(
         self,
@@ -108,11 +94,11 @@ class DataFrameGroupBy(object):
 
     def __getattr__(self, key):
         """
-        Afer regular attribute access, looks up the name in the columns.
+        Alter regular attribute access, looks up the name in the columns.
 
         Parameters
         ----------
-        key: str
+        key : str
             Attribute name.
 
         Returns
@@ -158,6 +144,18 @@ class DataFrameGroupBy(object):
         return self._default_to_pandas(lambda df: df.ohlc())
 
     def __bytes__(self):
+        """
+        Convert DataFrameGroupBy object into a python2-style byte string.
+
+        Returns
+        -------
+        bytearray
+            Byte array representation of `self`.
+
+        Notes
+        -----
+        Deprecated and removed in pandas and will be likely removed in Modin.
+        """
         return self._default_to_pandas(lambda df: df.__bytes__())
 
     @property
@@ -181,6 +179,18 @@ class DataFrameGroupBy(object):
 
     @property
     def ndim(self):
+        """
+        Return 2.
+
+        Returns
+        -------
+        int
+            Returns 2.
+
+        Notes
+        -----
+        Deprecated and removed in pandas and will be likely removed in Modin.
+        """
         return 2  # ndim is always 2 for DataFrames
 
     def shift(self, periods=1, freq=None, axis=0, fill_value=None):
@@ -283,6 +293,24 @@ class DataFrameGroupBy(object):
         return self.bfill(limit)
 
     def __getitem__(self, key):
+        """
+        Implement indexing operation on a DataFrameGroupBy object.
+
+        Parameters
+        ----------
+        key : list or str
+            Names of columns to use as subset of original object.
+
+        Returns
+        -------
+        DataFrameGroupBy or SeriesGroupBy
+            Result of indexing operation.
+
+        Raises
+        ------
+        NotImplementedError
+            Column lookups on GroupBy with arbitrary Series in by is not yet supported.
+        """
         kwargs = {**self._kwargs.copy(), "squeeze": self._squeeze}
         # Most of time indexing DataFrameGroupBy results in another DataFrameGroupBy object unless circumstances are
         # special in which case SeriesGroupBy has to be returned. Such circumstances are when key equals to a single
@@ -480,65 +508,9 @@ class DataFrameGroupBy(object):
         )
 
     def size(self):
-        if self._axis == 0:
-            # Series objects in 'by' mean we couldn't handle the case
-            # and transform 'by' to a query compiler.
-            # In this case we are just defaulting to pandas.
-            if is_list_like(self._by) and any(
-                isinstance(o, type(self._df._query_compiler)) for o in self._by
-            ):
-                work_object = DataFrameGroupBy(
-                    self._df,
-                    self._by,
-                    self._axis,
-                    drop=False,
-                    idx_name=None,
-                    squeeze=self._squeeze,
-                    **self._kwargs,
-                )
-                result = work_object._wrap_aggregation(
-                    type(work_object._query_compiler).groupby_size,
-                    lambda df: df.size(),
-                    numeric_only=False,
-                )
-                result = result.__constructor__(
-                    query_compiler=result._query_compiler
-                ).squeeze(axis=1)
-                if isinstance(result, Series):
-                    # Pandas does not name size() output for Series
-                    result.name = None
-                return result
-            work_object = SeriesGroupBy(
-                self._df[self._df.columns[0]]
-                if self._kwargs.get("as_index")
-                else self._df[self._df.columns[0]].to_frame(),
-                self._by,
-                self._axis,
-                drop=False,
-                idx_name=None,
-                squeeze=self._squeeze,
-                **self._kwargs,
-            )
-            result = work_object._wrap_aggregation(
-                type(work_object._query_compiler).groupby_size,
-                lambda df: df.size(),
-                numeric_only=False,
-            )
-            result = result.__constructor__(query_compiler=result._query_compiler)
-            if not self._kwargs.get("as_index") and not isinstance(result, Series):
-                result = result.rename(columns={0: "size"})
-                result = (
-                    result.rename(columns={"__reduced__": "index"})
-                    if "__reduced__" in result.columns
-                    else result
-                )
-            else:
-                # Pandas does not name size() output for Series
-                result.name = None
-            return result.fillna(0)
-        else:
+        if self._axis == 1:
             return DataFrameGroupBy(
-                self._df.T,
+                self._df.T.iloc[:, [0]],
                 self._by,
                 0,
                 drop=self._drop,
@@ -546,6 +518,34 @@ class DataFrameGroupBy(object):
                 squeeze=self._squeeze,
                 **self._kwargs,
             ).size()
+        work_object = type(self)(
+            self._df,
+            self._by,
+            self._axis,
+            drop=False,
+            idx_name=None,
+            squeeze=self._squeeze,
+            **self._kwargs,
+        )
+        result = work_object._wrap_aggregation(
+            type(work_object._query_compiler).groupby_size,
+            lambda df: df.size(),
+            numeric_only=False,
+        )
+        if not isinstance(result, Series):
+            result = result.squeeze(axis=1)
+        if not self._kwargs.get("as_index") and not isinstance(result, Series):
+            result = result.rename(columns={0: "size"})
+            result = (
+                result.rename(columns={"__reduced__": "index"})
+                if "__reduced__" in result.columns
+                else result
+            )
+        elif isinstance(self._df, Series):
+            result.name = self._df.name
+        else:
+            result.name = None
+        return result.fillna(0)
 
     def sum(self, **kwargs):
         return self._wrap_aggregation(
@@ -690,84 +690,48 @@ class DataFrameGroupBy(object):
     @property
     def _index(self):
         """
-        Implement [METHOD_NAME].
-
-        TODO: Add more details for this docstring template.
-
-        Parameters
-        ----------
-        What arguments does this function have.
-        [
-        PARAMETER_NAME: PARAMETERS TYPES
-            Description.
-        ]
+        Get index value.
 
         Returns
         -------
-        What this returns (if anything)
+        pandas.Index
+            Index value.
         """
         return self._query_compiler.index
 
     @property
     def _sort(self):
         """
-        Implement [METHOD_NAME].
-
-        TODO: Add more details for this docstring template.
-
-        Parameters
-        ----------
-        What arguments does this function have.
-        [
-        PARAMETER_NAME: PARAMETERS TYPES
-            Description.
-        ]
+        Get sort parameter value.
 
         Returns
         -------
-        What this returns (if anything)
+        bool
+            Value of sort parameter used to create DataFrameGroupBy object.
         """
         return self._kwargs.get("sort")
 
     @property
     def _as_index(self):
         """
-        Implement [METHOD_NAME].
-
-        TODO: Add more details for this docstring template.
-
-        Parameters
-        ----------
-        What arguments does this function have.
-        [
-        PARAMETER_NAME: PARAMETERS TYPES
-            Description.
-        ]
+        Get as_index parameter value.
 
         Returns
         -------
-        What this returns (if anything)
+        bool
+            Value of as_index parameter used to create DataFrameGroupBy object.
         """
         return self._kwargs.get("as_index")
 
     @property
     def _iter(self):
         """
-        Implement [METHOD_NAME].
-
-        TODO: Add more details for this docstring template.
-
-        Parameters
-        ----------
-        What arguments does this function have.
-        [
-        PARAMETER_NAME: PARAMETERS TYPES
-            Description.
-        ]
+        Construct a tuple of (group_id, DataFrame) tuples to allow iteration over groups.
 
         Returns
         -------
-        What this returns (if anything)
+        generator
+            Generator expression of GroupBy object broken down into tuples for iteration.
         """
         from .dataframe import DataFrame
 
@@ -800,21 +764,16 @@ class DataFrameGroupBy(object):
     @property
     def _index_grouped(self):
         """
-        Implement [METHOD_NAME].
-
-        TODO: Add more details for this docstring template.
-
-        Parameters
-        ----------
-        What arguments does this function have.
-        [
-        PARAMETER_NAME: PARAMETERS TYPES
-            Description.
-        ]
+        Construct an index of group IDs.
 
         Returns
         -------
-        What this returns (if anything)
+        dict
+            A dict of {group name -> group labels} values.
+
+        See Also
+        --------
+        pandas.core.groupby.GroupBy.groups
         """
         if self._index_grouped_cache is None:
             # Splitting level-by and column-by since we serialize them in a different ways
@@ -891,11 +850,11 @@ class DataFrameGroupBy(object):
             The query compiler method to call.
         default_func : callable
             The function to call if we need to default to pandas.
-        drop : bool
+        drop : bool, default: True
             Whether or not to the grouping columns should be dropped on this operation.
-        numeric_only : bool
+        numeric_only : bool, default: True
             True for numeric only computations, False otherwise.
-        kwargs
+        **kwargs : dict
             The keyword arguments to be passed to the calling function.
 
         Returns
@@ -933,16 +892,19 @@ class DataFrameGroupBy(object):
         """
         Perform aggregation and combine stages based on a given function.
 
-        TODO: add types.
-
         Parameters
         ----------
-        f: callable
+        f : callable
             The function to apply to each group.
+        *args : list
+            Extra positional arguments to pass to `f`.
+        **kwargs : dict
+            Extra keyword arguments to pass to `f`.
 
         Returns
         -------
-        A new combined DataFrame with the result of all groups.
+        DataFrame
+            A new combined DataFrame with the result of all groups.
         """
         assert callable(f) or isinstance(
             f, dict
@@ -969,18 +931,21 @@ class DataFrameGroupBy(object):
 
     def _default_to_pandas(self, f, *args, **kwargs):
         """
-        Defaults the execution of this function to pandas.
-
-        TODO: add types.
+        Execute function `f` in default-to-pandas way.
 
         Parameters
         ----------
-        f:
+        f : callable
             The function to apply to each group.
+        *args : list
+            Extra positional arguments to pass to `f`.
+        **kwargs : dict
+            Extra keyword arguments to pass to `f`.
 
         Returns
         -------
-        A new Modin DataFrame with the result of the pandas function.
+        modin.pandas.DataFrame
+            A new Modin DataFrame with the result of the pandas function.
         """
         if (
             isinstance(self._by, type(self._query_compiler))
@@ -1006,35 +971,33 @@ class DataFrameGroupBy(object):
         return self._df._default_to_pandas(groupby_on_multiple_columns, *args, **kwargs)
 
 
-@_inherit_docstrings(
-    pandas.core.groupby.SeriesGroupBy,
-    excluded=[
-        pandas.core.groupby.SeriesGroupBy.__init__,
-    ],
-)
+@_inherit_docstrings(pandas.core.groupby.SeriesGroupBy)
 class SeriesGroupBy(DataFrameGroupBy):
     @property
     def ndim(self):
+        """
+        Return 1.
+
+        Returns
+        -------
+        int
+            Returns 1.
+
+        Notes
+        -----
+        Deprecated and removed in pandas and will be likely removed in Modin.
+        """
         return 1  # ndim is always 1 for Series
 
     @property
     def _iter(self):
         """
-        Implement [METHOD_NAME].
-
-        TODO: Add more details for this docstring template.
-
-        Parameters
-        ----------
-        What arguments does this function have.
-        [
-        PARAMETER_NAME: PARAMETERS TYPES
-            Description.
-        ]
+        Construct a tuple of (group_id, Series) tuples to allow iteration over groups.
 
         Returns
         -------
-        What this returns (if anything)
+        generator
+            Generator expression of GroupBy object broken down into tuples for iteration.
         """
         group_ids = self._index_grouped.keys()
         if self._axis == 0:

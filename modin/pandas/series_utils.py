@@ -12,15 +12,9 @@
 # governing permissions and limitations under the License.
 
 """
-Implement Series's accessors public API as Pandas does.
+Implement Series's accessors public API as pandas does.
 
 Accessors: `Series.cat`, `Series.str`, `Series.dt`
-
-Almost all docstrings for public and magic methods should be inherited from Pandas
-for better maintability. So some codes are ignored in pydocstyle check:
-    - D101: missing docstring in class
-    - D102: missing docstring in public method
-Manually add documentation for methods which are not presented in pandas.
 """
 
 import sys
@@ -37,12 +31,7 @@ else:
     from re import _pattern_type
 
 
-@_inherit_docstrings(
-    pandas.core.arrays.categorical.CategoricalAccessor,
-    excluded=[
-        pandas.core.arrays.categorical.CategoricalAccessor.__init__,
-    ],
-)
+@_inherit_docstrings(pandas.core.arrays.categorical.CategoricalAccessor)
 class CategoryMethods(object):
     def __init__(self, series):
         self._series = series
@@ -111,17 +100,29 @@ class CategoryMethods(object):
         return self._default_to_pandas(pandas.Series.cat.as_unordered, inplace=inplace)
 
     def _default_to_pandas(self, op, *args, **kwargs):
+        """
+        Convert `self` to pandas type and call a pandas cat.`op` on it.
+
+        Parameters
+        ----------
+        op : str
+            Name of pandas function.
+        *args : list
+            Additional positional arguments to be passed in `op`.
+        **kwargs : dict
+            Additional keywords arguments to be passed in `op`.
+
+        Returns
+        -------
+        object
+            Result of operation.
+        """
         return self._series._default_to_pandas(
             lambda series: op(series.cat, *args, **kwargs)
         )
 
 
-@_inherit_docstrings(
-    pandas.core.strings.StringMethods,
-    excluded=[
-        pandas.core.strings.StringMethods.__init__,
-    ],
-)
+@_inherit_docstrings(pandas.core.strings.StringMethods)
 class StringMethods(object):
     def __init__(self, series):
         # Check if dtypes is objects
@@ -202,9 +203,6 @@ class StringMethods(object):
                 pat, repl, n=n, case=case, flags=flags, regex=regex
             )
         )
-
-    def repeats(self, repeats):
-        return Series(query_compiler=self._query_compiler.str_repeats(repeats))
 
     def pad(self, width, side="left", fillchar=" "):
         if len(fillchar) != 1:
@@ -430,17 +428,29 @@ class StringMethods(object):
         return Series(query_compiler=self._query_compiler.str_isdecimal())
 
     def _default_to_pandas(self, op, *args, **kwargs):
+        """
+        Convert `self` to pandas type and call a pandas str.`op` on it.
+
+        Parameters
+        ----------
+        op : str
+            Name of pandas function.
+        *args : list
+            Additional positional arguments to be passed in `op`.
+        **kwargs : dict
+            Additional keywords arguments to be passed in `op`.
+
+        Returns
+        -------
+        object
+            Result of operation.
+        """
         return self._series._default_to_pandas(
             lambda series: op(series.str, *args, **kwargs)
         )
 
 
-@_inherit_docstrings(
-    pandas.core.indexes.accessors.CombinedDatetimelikeProperties,
-    excluded=[
-        pandas.core.indexes.accessors.CombinedDatetimelikeProperties.__init__,
-    ],
-)
+@_inherit_docstrings(pandas.core.indexes.accessors.CombinedDatetimelikeProperties)
 class DatetimeProperties(object):
     def __init__(self, series):
         self._series = series

@@ -20,6 +20,7 @@ from pandas.core.dtypes.common import (
     is_list_like,
     is_numeric_dtype,
     is_datetime_or_timedelta_dtype,
+    is_scalar,
 )
 from pandas.core.base import DataError
 from collections.abc import Iterable, Container
@@ -742,8 +743,53 @@ class PandasQueryCompiler(BaseQueryCompiler):
         return self.default_to_pandas(is_monotonic_increasing)
 
     count = MapReduceFunction.register(pandas.DataFrame.count, pandas.DataFrame.sum)
-    sum = MapReduceFunction.register(pandas.DataFrame.sum)
-    prod = MapReduceFunction.register(pandas.DataFrame.prod)
+
+    def sum(self, squeeze_self, axis, **kwargs):
+        # TODO: rework to original implementation after pandas issue #41074 resolves if possible.
+        def map_func(df, **kwargs):
+            """Apply .sum to DataFrame or Series in depend on `squeeze_self.`"""
+            if squeeze_self:
+                result = df.squeeze(axis=1).sum(**kwargs)
+                if is_scalar(result):
+                    if axis:
+                        return pandas.DataFrame(
+                            [result], index=["__reduced__"], columns=["__reduced__"]
+                        )
+                    else:
+                        return pandas.Series([result], index=[df.columns[0]])
+                else:
+                    return result
+            else:
+                return df.sum(**kwargs)
+
+        return MapReduceFunction.register(
+            map_func,
+            map_func,
+        )(self, axis=axis, **kwargs)
+
+    def prod(self, squeeze_self, axis, **kwargs):
+        # TODO: rework to original implementation after pandas issue #41074 resolves if possible.
+        def map_func(df, **kwargs):
+            """Apply .prod to DataFrame or Series in depend on `squeeze_self.`"""
+            if squeeze_self:
+                result = df.squeeze(axis=1).prod(**kwargs)
+                if is_scalar(result):
+                    if axis:
+                        return pandas.DataFrame(
+                            [result], index=["__reduced__"], columns=["__reduced__"]
+                        )
+                    else:
+                        return pandas.Series([result], index=[df.columns[0]])
+                else:
+                    return result
+            else:
+                return df.prod(**kwargs)
+
+        return MapReduceFunction.register(
+            map_func,
+            map_func,
+        )(self, axis=axis, **kwargs)
+
     any = MapReduceFunction.register(pandas.DataFrame.any, pandas.DataFrame.any)
     all = MapReduceFunction.register(pandas.DataFrame.all, pandas.DataFrame.all)
     memory_usage = MapReduceFunction.register(
@@ -840,8 +886,51 @@ class PandasQueryCompiler(BaseQueryCompiler):
     sem = ReductionFunction.register(pandas.DataFrame.sem)
     std = ReductionFunction.register(pandas.DataFrame.std)
     var = ReductionFunction.register(pandas.DataFrame.var)
-    sum_min_count = ReductionFunction.register(pandas.DataFrame.sum)
-    prod_min_count = ReductionFunction.register(pandas.DataFrame.prod)
+
+    def sum_min_count(self, squeeze_self, axis, **kwargs):
+        # TODO: rework to original implementation after pandas issue #41074 resolves if possible.
+        def reduce_func(df, **kwargs):
+            """Apply .sum to DataFrame or Series in depend on `squeeze_self.`"""
+            if squeeze_self:
+                result = df.squeeze(axis=1).sum(**kwargs)
+                if is_scalar(result):
+                    if axis:
+                        return pandas.DataFrame(
+                            [result], index=["__reduced__"], columns=["__reduced__"]
+                        )
+                    else:
+                        return pandas.Series([result], index=[df.columns[0]])
+                else:
+                    return result
+            else:
+                return df.sum(**kwargs)
+
+        return ReductionFunction.register(
+            reduce_func,
+        )(self, axis=axis, **kwargs)
+
+    def prod_min_count(self, squeeze_self, axis, **kwargs):
+        # TODO: rework to original implementation after pandas issue #41074 resolves if possible.
+        def reduce_func(df, **kwargs):
+            """Apply .prod to DataFrame or Series in depend on `squeeze_self.`"""
+            if squeeze_self:
+                result = df.squeeze(axis=1).prod(**kwargs)
+                if is_scalar(result):
+                    if axis:
+                        return pandas.DataFrame(
+                            [result], index=["__reduced__"], columns=["__reduced__"]
+                        )
+                    else:
+                        return pandas.Series([result], index=[df.columns[0]])
+                else:
+                    return result
+            else:
+                return df.prod(**kwargs)
+
+        return ReductionFunction.register(
+            reduce_func,
+        )(self, axis=axis, **kwargs)
+
     quantile_for_single_value = ReductionFunction.register(pandas.DataFrame.quantile)
     mad = ReductionFunction.register(pandas.DataFrame.mad)
     to_datetime = ReductionFunction.register(
@@ -1335,15 +1424,6 @@ class PandasQueryCompiler(BaseQueryCompiler):
         )
     )
 
-    def repeat(self, repeats):
-        def map_fn(df):
-            return pandas.DataFrame(df.squeeze(axis=1).repeat(repeats))
-
-        if isinstance(repeats, int) or (is_list_like(repeats) and len(repeats) == 1):
-            return MapFunction.register(map_fn, validate_index=True)(self)
-        else:
-            return self.__constructor__(self._modin_frame._apply_full_axis(0, map_fn))
-
     # END Map partitions operations
 
     # String map partitions operations
@@ -1488,9 +1568,6 @@ class PandasQueryCompiler(BaseQueryCompiler):
     dt_days = MapFunction.register(_dt_prop_map("days"))
     dt_microseconds = MapFunction.register(_dt_prop_map("microseconds"))
     dt_nanoseconds = MapFunction.register(_dt_prop_map("nanoseconds"))
-    dt_components = MapFunction.register(
-        _dt_prop_map("components"), validate_columns=True
-    )
     dt_qyear = MapFunction.register(_dt_prop_map("qyear"))
     dt_start_time = MapFunction.register(_dt_prop_map("start_time"))
     dt_end_time = MapFunction.register(_dt_prop_map("end_time"))
@@ -2460,11 +2537,41 @@ class PandasQueryCompiler(BaseQueryCompiler):
     groupby_max = GroupbyReduceFunction.register("max")
     groupby_min = GroupbyReduceFunction.register("min")
     groupby_prod = GroupbyReduceFunction.register("prod")
-    groupby_size = GroupbyReduceFunction.register("size", method="size")
     groupby_sum = GroupbyReduceFunction.register("sum")
 
+    def groupby_size(
+        self, by, axis, groupby_args, map_args, reduce_args, numeric_only, drop
+    ):
+        result = self._groupby_dict_reduce(
+            by=by,
+            axis=axis,
+            agg_func={self.columns[0]: [("__size_col__", "size")]},
+            agg_args=[],
+            agg_kwargs={},
+            groupby_kwargs=groupby_args,
+            drop=drop,
+            method="size",
+            default_to_pandas_func=lambda grp: grp.size(),
+        )
+        if groupby_args.get("as_index", True):
+            result.columns = ["__reduced__"]
+        elif isinstance(result.columns, pandas.MultiIndex):
+            # Dropping one extra-level which was added because of renaming aggregation
+            result.columns = (
+                result.columns[:-1].droplevel(-1).append(pandas.Index(["size"]))
+            )
+        return result
+
     def _groupby_dict_reduce(
-        self, by, axis, agg_func, agg_args, agg_kwargs, groupby_kwargs, drop=False
+        self,
+        by,
+        axis,
+        agg_func,
+        agg_args,
+        agg_kwargs,
+        groupby_kwargs,
+        drop=False,
+        **kwargs,
     ):
         map_dict = {}
         reduce_dict = {}
@@ -2497,7 +2604,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 )
                 reduce_dict[reduced_col_name] = groupby_reduce_functions[func][1]
             map_dict[col] = map_fns
-        return GroupbyReduceFunction.register(map_dict, reduce_dict)(
+        return GroupbyReduceFunction.register(map_dict, reduce_dict, **kwargs)(
             query_compiler=self,
             by=by,
             axis=axis,
@@ -2958,8 +3065,8 @@ class PandasQueryCompiler(BaseQueryCompiler):
         PandasQueryCompiler
             A new query compiler that contains result of the sort
         """
-        na_position = kwargs.get("na_position", "last")
-        kind = kwargs.get("kind", "quicksort")
+        ignore_index = kwargs.get("ignore_index", False)
+        kwargs["ignore_index"] = False
         if not is_list_like(columns):
             columns = [columns]
         # Currently, sort_values will just reindex based on the sorted values.
@@ -2969,30 +3076,30 @@ class PandasQueryCompiler(BaseQueryCompiler):
             col: self.getitem_column_array([col]).to_pandas().squeeze(axis=1)
             for col in columns
         }
+        # Clear index level names because they also appear in broadcast_value_dict
+        orig_index_level_names = self.index.names
+        tmp_index = self.index.copy()
+        tmp_index.names = [None] * tmp_index.nlevels
         # Index may contain duplicates
-        broadcast_values1 = pandas.DataFrame(broadcast_value_dict, index=self.index)
+        broadcast_values1 = pandas.DataFrame(broadcast_value_dict, index=tmp_index)
         # Index without duplicates
         broadcast_values2 = pandas.DataFrame(broadcast_value_dict)
         broadcast_values2 = broadcast_values2.reset_index(drop=True)
         # Index may contain duplicates
         new_index1 = broadcast_values1.sort_values(
-            by=columns,
-            axis=0,
-            ascending=ascending,
-            kind=kind,
-            na_position=na_position,
+            by=columns, axis=0, ascending=ascending, **kwargs
         ).index
         # Index without duplicates
         new_index2 = broadcast_values2.sort_values(
-            by=columns,
-            axis=0,
-            ascending=ascending,
-            kind=kind,
-            na_position=na_position,
+            by=columns, axis=0, ascending=ascending, **kwargs
         ).index
 
         result = self.reset_index(drop=True).reindex(axis=0, labels=new_index2)
-        result.index = new_index1
+        if ignore_index:
+            result = result.reset_index(drop=True)
+        else:
+            result.index = new_index1
+            result.index.names = orig_index_level_names
         return result
 
     def sort_columns_by_row_values(self, rows, ascending=True, **kwargs):
@@ -3010,8 +3117,6 @@ class PandasQueryCompiler(BaseQueryCompiler):
         PandasQueryCompiler
             A new query compiler that contains result of the sort
         """
-        na_position = kwargs.get("na_position", "last")
-        kind = kwargs.get("kind", "quicksort")
         if not is_list_like(rows):
             rows = [rows]
         ErrorMessage.default_to_pandas("sort_values")
@@ -3024,11 +3129,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         )
         broadcast_values.columns = self.columns
         new_columns = broadcast_values.sort_values(
-            by=rows,
-            axis=1,
-            ascending=ascending,
-            kind=kind,
-            na_position=na_position,
+            by=rows, axis=1, ascending=ascending, **kwargs
         ).columns
         return self.reindex(axis=1, labels=new_columns)
 

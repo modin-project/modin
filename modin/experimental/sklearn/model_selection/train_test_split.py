@@ -11,8 +11,27 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
+"""Module holds `train_test_splt` function."""
 
+
+# FIXME: Change `**options`-->`train_size=0.75`
 def train_test_split(df, **options):
+    """
+    Split input data to train and test data.
+
+    Parameters
+    ----------
+    df : modin.pandas.DataFrame / modin.pandas.Series
+        Data to split.
+    **options : dict
+        Keyword arguments. If `train_size` key isn't provided
+        `train_size` will be 0.75.
+
+    Returns
+    -------
+    tuple
+        A pair of modin.pandas.DataFrame / modin.pandas.Series.
+    """
     train_size = options.get("train_size", 0.75)
     train = df.iloc[: int(len(df) * train_size)]
     test = df.iloc[len(train) :]

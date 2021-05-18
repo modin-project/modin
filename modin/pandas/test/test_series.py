@@ -2343,12 +2343,7 @@ def test_prod(axis, skipna):
 
 
 @pytest.mark.parametrize(
-    "numeric_only",
-    [
-        None,
-        False,
-        pytest.param(True, marks=pytest.mark.xfail(reason="didn't raise Exception")),
-    ],
+    "numeric_only", bool_arg_values, ids=arg_keys("numeric_only", bool_arg_keys)
 )
 @pytest.mark.parametrize(
     "min_count", int_arg_values, ids=arg_keys("min_count", int_arg_keys)
@@ -3032,7 +3027,9 @@ def test_subtract(data):
 @pytest.mark.parametrize(
     "skipna", bool_arg_values, ids=arg_keys("skipna", bool_arg_keys)
 )
-@pytest.mark.parametrize("numeric_only", [None, False, True])
+@pytest.mark.parametrize(
+    "numeric_only", bool_arg_values, ids=arg_keys("numeric_only", bool_arg_keys)
+)
 @pytest.mark.parametrize(
     "min_count", int_arg_values, ids=arg_keys("min_count", int_arg_keys)
 )
@@ -3633,16 +3630,16 @@ def test_str_replace(data, pat, repl, n, case):
 
 @pytest.mark.parametrize("data", test_string_data_values, ids=test_string_data_keys)
 @pytest.mark.parametrize("repeats", int_arg_values, ids=int_arg_keys)
-def test_str_repeats(data, repeats):
+def test_str_repeat(data, repeats):
     modin_series, pandas_series = create_test_series(data)
 
     try:
-        pandas_result = pandas_series.str.repeats(repeats)
+        pandas_result = pandas_series.str.repeat(repeats)
     except Exception as e:
         with pytest.raises(type(e)):
-            modin_series.str.repeats(repeats)
+            modin_series.str.repeat(repeats)
     else:
-        modin_result = modin_series.str.repeats(repeats)
+        modin_result = modin_series.str.repeat(repeats)
         df_equals(modin_result, pandas_result)
 
 

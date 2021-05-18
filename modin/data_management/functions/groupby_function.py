@@ -153,10 +153,11 @@ class GroupbyReduceFunction(MapReduceFunction):
             or isinstance(by, pandas.Grouper)
         ):
             by = try_cast_to_pandas(by, squeeze=True)
-            default_func = (
+            default_func = kwargs.get(
+                "default_to_pandas_func",
                 (lambda grp: grp.agg(map_func))
                 if isinstance(map_func, dict)
-                else map_func
+                else map_func,
             )
             return query_compiler.default_to_pandas(
                 lambda df: default_func(

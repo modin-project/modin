@@ -15,10 +15,7 @@
 Implement Series public API as Pandas does.
 
 Almost all docstrings for public and magic methods should be inherited from Pandas
-for better maintability. So some codes are ignored in pydocstyle check:
-    - D101: missing docstring in class
-    - D102: missing docstring in public method
-    - D105: missing docstring in magic method
+for better maintability.
 Manually add documentation for methods which are not presented in pandas.
 """
 
@@ -986,6 +983,10 @@ class Series(BasePandasDataset):
             return self.groupby(level=level, axis=axis, sort=False).prod(
                 numeric_only=numeric_only, min_count=min_count, **kwargs
             )
+        if numeric_only:
+            raise NotImplementedError(
+                f"Series.{self.name} does not implement numeric_only."
+            )
         new_index = self.columns if axis else self.index
         if min_count > len(new_index):
             return np.nan
@@ -994,6 +995,7 @@ class Series(BasePandasDataset):
         if min_count > 1:
             return data._reduce_dimension(
                 data._query_compiler.prod_min_count(
+                    squeeze_self=True,
                     axis=axis,
                     skipna=skipna,
                     level=level,
@@ -1004,6 +1006,7 @@ class Series(BasePandasDataset):
             )
         return data._reduce_dimension(
             data._query_compiler.prod(
+                squeeze_self=True,
                 axis=axis,
                 skipna=skipna,
                 level=level,
@@ -1283,6 +1286,7 @@ class Series(BasePandasDataset):
         if min_count > 1:
             return data._reduce_dimension(
                 data._query_compiler.sum_min_count(
+                    squeeze_self=True,
                     axis=axis,
                     skipna=skipna,
                     level=level,
@@ -1293,6 +1297,7 @@ class Series(BasePandasDataset):
             )
         return data._reduce_dimension(
             data._query_compiler.sum(
+                squeeze_self=True,
                 axis=axis,
                 skipna=skipna,
                 level=level,

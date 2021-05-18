@@ -163,7 +163,7 @@ and lots of other useful information.**
 
    contributing
    developer/architecture
-   developer/pandas/partition_api
+   developer/partition_api
 
 .. toctree::
    :caption: Engines, Backends, and APIs

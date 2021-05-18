@@ -15,10 +15,7 @@
 Implement DataFrame public API as Pandas does.
 
 Almost all docstrings for public and magic methods should be inherited from Pandas
-for better maintability. So some codes are ignored in pydocstyle check:
-    - D101: missing docstring in class
-    - D102: missing docstring in public method
-    - D105: missing docstring in magic method
+for better maintability.
 Manually add documentation for methods which are not presented in pandas.
 """
 
@@ -1372,6 +1369,7 @@ class DataFrame(BasePandasDataset):
         if min_count > 1:
             return data._reduce_dimension(
                 data._query_compiler.prod_min_count(
+                    squeeze_self=False,
                     axis=axis,
                     skipna=skipna,
                     level=level,
@@ -1382,6 +1380,7 @@ class DataFrame(BasePandasDataset):
             )
         return data._reduce_dimension(
             data._query_compiler.prod(
+                squeeze_self=False,
                 axis=axis,
                 skipna=skipna,
                 level=level,
@@ -1715,6 +1714,7 @@ class DataFrame(BasePandasDataset):
         if min_count > 1:
             return data._reduce_dimension(
                 data._query_compiler.sum_min_count(
+                    squeeze_self=False,
                     axis=axis,
                     skipna=skipna,
                     level=level,
@@ -1725,6 +1725,7 @@ class DataFrame(BasePandasDataset):
             )
         return data._reduce_dimension(
             data._query_compiler.sum(
+                squeeze_self=False,
                 axis=axis,
                 skipna=skipna,
                 level=level,

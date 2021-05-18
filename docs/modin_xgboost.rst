@@ -25,9 +25,11 @@ Distributed XGBoost functionality is placed in ``modin.experimental.xgboost`` mo
 ``modin.experimental.xgboost`` provides a drop-in replacement API for ``train`` and ``Booster.predict`` xgboost functions.
 
 .. automodule:: modin.experimental.xgboost
+  :noindex:
   :members: train
 
 .. autoclass:: modin.experimental.xgboost.Booster
+  :noindex:
   :members: predict
 
 

@@ -12,6 +12,7 @@
 # governing permissions and limitations under the License.
 
 import os
+import sys
 import time
 import modin.pandas as pd
 from modin.experimental.engines.omnisci_on_ray.frame.omnisci_worker import OmnisciServer
@@ -25,25 +26,105 @@ import sklearn.linear_model as lm
 import numpy as np
 
 
-def read():
+def read(filename):
     columns_names = [
-        "YEAR0", "DATANUM", "SERIAL", "CBSERIAL", "HHWT", "CPI99", "GQ", "QGQ", "PERNUM", "PERWT", "SEX",
-        "AGE", "EDUC", "EDUCD", "INCTOT", "SEX_HEAD", "SEX_MOM", "SEX_POP", "SEX_SP", "SEX_MOM2", "SEX_POP2",
-        "AGE_HEAD", "AGE_MOM", "AGE_POP", "AGE_SP", "AGE_MOM2", "AGE_POP2", "EDUC_HEAD", "EDUC_MOM", "EDUC_POP",
-        "EDUC_SP", "EDUC_MOM2", "EDUC_POP2", "EDUCD_HEAD", "EDUCD_MOM", "EDUCD_POP", "EDUCD_SP", "EDUCD_MOM2",
-        "EDUCD_POP2", "INCTOT_HEAD", "INCTOT_MOM", "INCTOT_POP", "INCTOT_SP", "INCTOT_MOM2", "INCTOT_POP2",
+        "YEAR0",
+        "DATANUM",
+        "SERIAL",
+        "CBSERIAL",
+        "HHWT",
+        "CPI99",
+        "GQ",
+        "QGQ",
+        "PERNUM",
+        "PERWT",
+        "SEX",
+        "AGE",
+        "EDUC",
+        "EDUCD",
+        "INCTOT",
+        "SEX_HEAD",
+        "SEX_MOM",
+        "SEX_POP",
+        "SEX_SP",
+        "SEX_MOM2",
+        "SEX_POP2",
+        "AGE_HEAD",
+        "AGE_MOM",
+        "AGE_POP",
+        "AGE_SP",
+        "AGE_MOM2",
+        "AGE_POP2",
+        "EDUC_HEAD",
+        "EDUC_MOM",
+        "EDUC_POP",
+        "EDUC_SP",
+        "EDUC_MOM2",
+        "EDUC_POP2",
+        "EDUCD_HEAD",
+        "EDUCD_MOM",
+        "EDUCD_POP",
+        "EDUCD_SP",
+        "EDUCD_MOM2",
+        "EDUCD_POP2",
+        "INCTOT_HEAD",
+        "INCTOT_MOM",
+        "INCTOT_POP",
+        "INCTOT_SP",
+        "INCTOT_MOM2",
+        "INCTOT_POP2",
     ]
     columns_types = [
-        "int64", "int64", "int64", "float64", "int64", "float64", "int64", "float64", "int64", "int64",
-        "int64", "int64", "int64", "int64", "int64", "float64", "float64", "float64", "float64", "float64",
-        "float64", "float64", "float64", "float64", "float64", "float64", "float64", "float64", "float64",
-        "float64", "float64", "float64", "float64", "float64", "float64", "float64", "float64", "float64",
-        "float64", "float64", "float64", "float64", "float64", "float64", "float64",
+        "int64",
+        "int64",
+        "int64",
+        "float64",
+        "int64",
+        "float64",
+        "int64",
+        "float64",
+        "int64",
+        "int64",
+        "int64",
+        "int64",
+        "int64",
+        "int64",
+        "int64",
+        "float64",
+        "float64",
+        "float64",
+        "float64",
+        "float64",
+        "float64",
+        "float64",
+        "float64",
+        "float64",
+        "float64",
+        "float64",
+        "float64",
+        "float64",
+        "float64",
+        "float64",
+        "float64",
+        "float64",
+        "float64",
+        "float64",
+        "float64",
+        "float64",
+        "float64",
+        "float64",
+        "float64",
+        "float64",
+        "float64",
+        "float64",
+        "float64",
+        "float64",
+        "float64",
     ]
     dtypes = {columns_names[i]: columns_types[i] for i in range(len(columns_names))}
 
     df = pd.read_csv(
-        os.path.expanduser('~/ipums_education2income_1970-2010.csv'),
+        filename,
         names=columns_names,
         dtype=dtypes,
         skiprows=1,
@@ -60,9 +141,30 @@ def read():
 
 def etl(df):
     keep_cols = [
-        "YEAR0", "DATANUM", "SERIAL", "CBSERIAL", "HHWT", "CPI99", "GQ", "PERNUM", "SEX", "AGE",
-        "INCTOT", "EDUC", "EDUCD", "EDUC_HEAD", "EDUC_POP", "EDUC_MOM", "EDUCD_MOM2", "EDUCD_POP2",
-        "INCTOT_MOM", "INCTOT_POP", "INCTOT_MOM2", "INCTOT_POP2", "INCTOT_HEAD", "SEX_HEAD",
+        "YEAR0",
+        "DATANUM",
+        "SERIAL",
+        "CBSERIAL",
+        "HHWT",
+        "CPI99",
+        "GQ",
+        "PERNUM",
+        "SEX",
+        "AGE",
+        "INCTOT",
+        "EDUC",
+        "EDUCD",
+        "EDUC_HEAD",
+        "EDUC_POP",
+        "EDUC_MOM",
+        "EDUCD_MOM2",
+        "EDUCD_POP2",
+        "INCTOT_MOM",
+        "INCTOT_POP",
+        "INCTOT_MOM2",
+        "INCTOT_POP2",
+        "INCTOT_HEAD",
+        "SEX_HEAD",
     ]
     df = df[keep_cols]
 
@@ -143,20 +245,27 @@ def measure(name, func, *args, **kw):
     t0 = time.time()
     res = func(*args, **kw)
     t1 = time.time()
-    print(f'{name}: {t1 - t0} sec')
+    print(f"{name}: {t1 - t0} sec")
     return res
 
 
 def main():
+    if len(sys.argv) != 2:
+        print(
+            f"USAGE: docker run --rm -v /path/to/dataset:/dataset census-omnisci <data file name in /path/to/dataset>"
+        )
+        return
     # ML specific
     N_RUNS = 50
     TEST_SIZE = 0.1
     RANDOM_STATE = 777
 
-    df = measure('Reading', read)
-    _, X, y = measure('ETL', etl, df)
-    measure('ML', ml, X, y, random_state=RANDOM_STATE, n_runs=N_RUNS, test_size=TEST_SIZE)
+    df = measure("Reading", read, os.path.join("/dataset", sys.argv[1]))
+    _, X, y = measure("ETL", etl, df)
+    measure(
+        "ML", ml, X, y, random_state=RANDOM_STATE, n_runs=N_RUNS, test_size=TEST_SIZE
+    )
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

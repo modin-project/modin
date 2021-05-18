@@ -15,10 +15,7 @@
 Implement I/O public API as pandas does.
 
 Almost all docstrings for public and magic methods should be inherited from pandas
-for better maintability. So some codes are ignored in pydocstyle check:
-    - D101: missing docstring in class
-    - D103: missing docstring in public function
-    - D105: missing docstring in magic method
+for better maintability.
 Manually add documentation for methods which are not presented in pandas.
 """
 
@@ -122,7 +119,7 @@ def read_csv(
     memory_map=False,
     float_precision=None,
     storage_options: StorageOptions = None,
-):  # noqa: D103
+):
     # ISSUE #2408: parse parameter shared with pandas read_csv and read_table and update with provided args
     _pd_read_csv_signature = {
         val.name for val in inspect.signature(pandas.read_csv).parameters.values()
@@ -187,7 +184,7 @@ def read_table(
     low_memory=True,
     memory_map=False,
     float_precision=None,
-):  # noqa: D103
+):
     # ISSUE #2408: parse parameter shared with pandas read_csv and read_table and update with provided args
     _pd_read_csv_signature = {
         val.name for val in inspect.signature(pandas.read_csv).parameters.values()
@@ -206,7 +203,7 @@ def read_parquet(
     columns=None,
     use_nullable_dtypes: bool = False,
     **kwargs,
-):  # noqa: D103
+):
     from modin.data_management.factories.dispatcher import EngineDispatcher
 
     Engine.subscribe(_update_engine)
@@ -239,7 +236,7 @@ def read_json(
     compression="infer",
     nrows: Optional[int] = None,
     storage_options: StorageOptions = None,
-):  # noqa: D103
+):
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
 
     from modin.data_management.factories.dispatcher import EngineDispatcher
@@ -263,7 +260,7 @@ def read_gbq(
     use_bqstorage_api: Optional[bool] = None,
     progress_bar_type: Optional[str] = None,
     max_results: Optional[int] = None,
-) -> DataFrame:  # noqa: D103
+) -> DataFrame:
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
     kwargs.update(kwargs.pop("kwargs", {}))
 
@@ -290,7 +287,7 @@ def read_html(
     na_values=None,
     keep_default_na=True,
     displayed_only=True,
-):  # noqa: D103
+):
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
 
     from modin.data_management.factories.dispatcher import EngineDispatcher
@@ -300,7 +297,7 @@ def read_html(
 
 
 @_inherit_docstrings(pandas.read_clipboard)
-def read_clipboard(sep=r"\s+", **kwargs):  # pragma: no cover # noqa: D103
+def read_clipboard(sep=r"\s+", **kwargs):  # pragma: no cover
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
     kwargs.update(kwargs.pop("kwargs", {}))
 
@@ -338,7 +335,7 @@ def read_excel(
     convert_float=True,
     mangle_dupe_cols=True,
     storage_options: StorageOptions = None,
-):  # noqa: D103
+):
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
 
     from modin.data_management.factories.dispatcher import EngineDispatcher
@@ -367,7 +364,7 @@ def read_hdf(
     iterator=False,
     chunksize: Optional[int] = None,
     **kwargs,
-):  # noqa: D103
+):
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
     kwargs.update(kwargs.pop("kwargs", {}))
 
@@ -383,7 +380,7 @@ def read_feather(
     columns=None,
     use_threads: bool = True,
     storage_options: StorageOptions = None,
-):  # noqa: D103
+):
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
 
     from modin.data_management.factories.dispatcher import EngineDispatcher
@@ -405,7 +402,7 @@ def read_stata(
     chunksize=None,
     iterator=False,
     storage_options: StorageOptions = None,
-):  # noqa: D103
+):
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
 
     from modin.data_management.factories.dispatcher import EngineDispatcher
@@ -422,7 +419,7 @@ def read_sas(
     encoding=None,
     chunksize=None,
     iterator=False,
-):  # pragma: no cover # noqa: D103
+):  # pragma: no cover
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
 
     from modin.data_management.factories.dispatcher import EngineDispatcher
@@ -436,7 +433,7 @@ def read_pickle(
     filepath_or_buffer: FilePathOrBuffer,
     compression: Optional[str] = "infer",
     storage_options: StorageOptions = None,
-):  # noqa: D103
+):
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
 
     from modin.data_management.factories.dispatcher import EngineDispatcher
@@ -455,7 +452,7 @@ def read_sql(
     parse_dates=None,
     columns=None,
     chunksize=None,
-):  # noqa: D103
+):
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
 
     from modin.data_management.factories.dispatcher import EngineDispatcher
@@ -477,7 +474,7 @@ def read_fwf(
     widths=None,
     infer_nrows=100,
     **kwds,
-):  # noqa: D103
+):
     from modin.data_management.factories.dispatcher import EngineDispatcher
 
     Engine.subscribe(_update_engine)
@@ -504,7 +501,7 @@ def read_sql_table(
     parse_dates=None,
     columns=None,
     chunksize=None,
-):  # noqa: D103
+):
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
 
     from modin.data_management.factories.dispatcher import EngineDispatcher
@@ -522,7 +519,7 @@ def read_sql_query(
     params=None,
     parse_dates=None,
     chunksize=None,
-):  # noqa: D103
+):
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
 
     from modin.data_management.factories.dispatcher import EngineDispatcher
@@ -536,7 +533,7 @@ def read_spss(
     path: Union[str, pathlib.Path],
     usecols: Union[Sequence[str], type(None)] = None,
     convert_categoricals: bool = True,
-):  # noqa: D103
+):
     from modin.data_management.factories.dispatcher import EngineDispatcher
 
     Engine.subscribe(_update_engine)
@@ -552,7 +549,7 @@ def to_pickle(
     compression: Optional[str] = "infer",
     protocol: int = pickle.HIGHEST_PROTOCOL,
     storage_options: StorageOptions = None,
-):  # noqa: D103
+):
     from modin.data_management.factories.dispatcher import EngineDispatcher
 
     Engine.subscribe(_update_engine)
@@ -573,7 +570,7 @@ def json_normalize(
     errors: Optional[str] = "raise",
     sep: str = ".",
     max_level: Optional[int] = None,
-) -> DataFrame:  # noqa: D103
+) -> DataFrame:
     ErrorMessage.default_to_pandas("json_normalize")
     Engine.subscribe(_update_engine)
     return DataFrame(
@@ -586,15 +583,15 @@ def json_normalize(
 @_inherit_docstrings(pandas.read_orc)
 def read_orc(
     path: FilePathOrBuffer, columns: Optional[List[str]] = None, **kwargs
-) -> DataFrame:  # noqa: D103
+) -> DataFrame:
     ErrorMessage.default_to_pandas("read_orc")
     Engine.subscribe(_update_engine)
     return DataFrame(pandas.read_orc(path, columns, **kwargs))
 
 
 @_inherit_docstrings(pandas.HDFStore)
-class HDFStore(pandas.HDFStore):  # noqa: D101
-    def __getattribute__(self, item):  # noqa: D105
+class HDFStore(pandas.HDFStore):
+    def __getattribute__(self, item):
         default_behaviors = ["__init__", "__class__"]
         method = super(HDFStore, self).__getattribute__(item)
         if item not in default_behaviors:
@@ -642,8 +639,8 @@ class HDFStore(pandas.HDFStore):  # noqa: D101
 
 
 @_inherit_docstrings(pandas.ExcelFile)
-class ExcelFile(pandas.ExcelFile):  # noqa: D101
-    def __getattribute__(self, item):  # noqa: D105
+class ExcelFile(pandas.ExcelFile):
+    def __getattribute__(self, item):
         default_behaviors = ["__init__", "__class__"]
         method = super(ExcelFile, self).__getattribute__(item)
         if item not in default_behaviors:

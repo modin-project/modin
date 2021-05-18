@@ -11,34 +11,47 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-"""Implement Pandas plotting API."""
+"""Implement pandas plotting API."""
 
 from pandas import plotting as pdplot
 
-from modin.utils import to_pandas
+from modin.utils import instancer, to_pandas
 from .dataframe import DataFrame
-
-
-def instancer(cls):
-    """
-    Create a dummy instance each time this is imported.
-
-    This serves the purpose of allowing us to use all of pandas plotting methods
-    without aliasing and writing each of them ourselves.
-    """
-    return cls()
 
 
 @instancer
 class Plotting(object):
-    """Wrapper of Pandas plotting module."""
+    """Wrapper of pandas plotting module."""
 
     def __dir__(self):
-        """Enable tab completion of plotting library."""
+        """
+        Enable tab completion of plotting library.
+
+        Returns
+        -------
+        list
+            List of attributes in `self`.
+        """
         return dir(pdplot)
 
     def __getattribute__(self, item):
-        """Convert any Modin DataFrames in parameters to pandas so that they can be plotted normally."""
+        """
+        Convert any Modin DataFrames in parameters to pandas so that they can be plotted normally.
+
+        Parameters
+        ----------
+        item : str
+            Attribute to look for.
+
+        Returns
+        -------
+        object
+            If attribute is found in pandas.plotting, and it is a callable, a wrapper function is
+            returned which converts its arguments to pandas and calls a function pandas.plotting.`item`
+            on these arguments.
+            If attribute is found in pandas.plotting but it is not a callable, returns it.
+            Otherwise function tries to look for an attribute in `self`.
+        """
         if hasattr(pdplot, item):
             func = getattr(pdplot, item)
             if callable(func):

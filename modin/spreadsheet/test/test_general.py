@@ -24,7 +24,7 @@ def get_test_data():
         "A": 1.0,
         "B": pd.Timestamp("20130102"),
         "C": pd.Series(1, index=list(range(4)), dtype="float32"),
-        "D": np.array([3] * 4, dtype="int32"),
+        "D": np.array([5, 2, 3, 1], dtype="int32"),
         "E": pd.Categorical(["test", "train", "foo", "bar"]),
         "F": ["foo", "bar", "buzz", "fox"],
     }
@@ -40,6 +40,22 @@ def test_from_dataframe():
 
     with pytest.raises(TypeError):
         mss.from_dataframe(pandas_df)
+
+    # Check parameters don't error
+    def can_edit_row(row):
+        return row["D"] > 2
+
+    modin_result = mss.from_dataframe(
+        modin_df,
+        show_toolbar=True,
+        show_history=True,
+        precision=1,
+        grid_options={"forceFitColumns": False, "filterable": False},
+        column_options={"D": {"editable": True}},
+        column_definitions={"editable": False},
+        row_edit_callback=can_edit_row,
+    )
+    assert isinstance(modin_result, SpreadsheetWidget)
 
 
 def test_to_dataframe():

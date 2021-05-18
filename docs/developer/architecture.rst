@@ -66,6 +66,7 @@ Component View
 --------------
 .. toctree::
    ../flow/modin/engines/base/frame/index
+   ../flow/modin/experimental/index
 
 
 DataFrame Partitioning
@@ -246,8 +247,8 @@ documentation page on :doc:`contributing </contributing>`.
 
 Module/Class View
 -----------------
-Modin modules layout is shown below. To deep dive into Modin internal implementation 
-details just pick module you are interested in (only some of the modules are covered 
+Modin modules layout is shown below. To deep dive into Modin internal implementation
+details just pick module you are interested in (only some of the modules are covered
 by documentation for now, the rest is coming soon...).
 
 .. parsed-literal::
@@ -273,7 +274,7 @@ by documentation for now, the rest is coming soon...).
    │   │   └───functions
    │   ├───distributed
    │   │   └───dataframe
-   │   │       └───pandas
+   │   │       └─── :doc:`pandas </flow/modin/distributed/dataframe/pandas>`
    │   ├───engines
    │   │   ├───base
    │   │   │   ├─── :doc:`frame </flow/modin/engines/base/frame/index>`
@@ -293,11 +294,10 @@ by documentation for now, the rest is coming soon...).
    │   │   │   ├───omnisci_on_ray
    │   │   │   ├───pandas_on_ray
    │   │   │   └───pyarrow_on_ray
-   │   │   ├───pandas
-   │   │   ├───sklearn
-   │   │   │   └───model_selection
+   │   │   ├─── :doc:`pandas </flow/modin/experimental/pandas>`
+   │   │   ├─── :doc:`sklearn </flow/modin/experimental/sklearn>`
    │   │   ├───sql
-   │   │   └───xgboost
+   │   │   └─── :doc:`xgboost </flow/modin/experimental/xgboost>`
    │   ├───pandas
    │   ├───spreadsheet
    │   └───sql

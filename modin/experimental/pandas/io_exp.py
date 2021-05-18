@@ -11,9 +11,11 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
+"""Implement experimental I/O public API."""
+
 import inspect
 import pathlib
-from typing import Union, IO, AnyStr
+from typing import Union, IO, AnyStr, Callable, Optional
 
 import pandas
 
@@ -32,41 +34,64 @@ def read_sql(
     parse_dates=None,
     columns=None,
     chunksize=None,
-    partition_column=None,
-    lower_bound=None,
-    upper_bound=None,
-    max_sessions=None,
-):
-    """Read SQL query or database table into a DataFrame.
+    partition_column: Optional[str] = None,
+    lower_bound: Optional[int] = None,
+    upper_bound: Optional[int] = None,
+    max_sessions: Optional[int] = None,
+) -> DataFrame:
+    """
+    General documentation is available in `modin.pandas.read_sql`.
 
-    Args:
-        sql: string or SQLAlchemy Selectable (select or text object) SQL query to be executed or a table name.
-        con: SQLAlchemy connectable (engine/connection) or database string URI or DBAPI2 connection (fallback mode)
-        index_col: Column(s) to set as index(MultiIndex).
-        coerce_float: Attempts to convert values of non-string, non-numeric objects (like decimal.Decimal) to
-                      floating point, useful for SQL result sets.
-        params: List of parameters to pass to execute method. The syntax used
-                to pass parameters is database driver dependent. Check your
-                database driver documentation for which of the five syntax styles,
-                described in PEP 249's paramstyle, is supported.
-        parse_dates:
-                     - List of column names to parse as dates.
-                     - Dict of ``{column_name: format string}`` where format string is
-                       strftime compatible in case of parsing string times, or is one of
-                       (D, s, ns, ms, us) in case of parsing integer timestamps.
-                     - Dict of ``{column_name: arg dict}``, where the arg dict corresponds
-                       to the keyword arguments of :func:`pandas.to_datetime`
-                       Especially useful with databases without native Datetime support,
-                       such as SQLite.
-        columns: List of column names to select from SQL table (only used when reading a table).
-        chunksize: If specified, return an iterator where `chunksize` is the number of rows to include in each chunk.
-        partition_column: column used to share the data between the workers (MUST be a INTEGER column)
-        lower_bound: the minimum value to be requested from the partition_column
-        upper_bound: the maximum value to be requested from the partition_column
-        max_sessions: the maximum number of simultaneous connections allowed to use
+    This experimental feature provides distributed reading from a sql file.
 
-    Returns:
-        Pandas Dataframe
+    Parameters
+    ----------
+    sql : str or SQLAlchemy Selectable (select or text object)
+        SQL query to be executed or a table name.
+    con : SQLAlchemy connectable, str, or sqlite3 connection
+        Using SQLAlchemy makes it possible to use any DB supported by that
+        library. If a DBAPI2 object, only sqlite3 is supported. The user is responsible
+        for engine disposal and connection closure for the SQLAlchemy
+        connectable; str connections are closed automatically. See
+        `here <https://docs.sqlalchemy.org/en/13/core/connections.html>`_.
+    index_col : str or list of str, optional
+        Column(s) to set as index(MultiIndex).
+    coerce_float : bool, default: True
+        Attempts to convert values of non-string, non-numeric objects (like
+        decimal.Decimal) to floating point, useful for SQL result sets.
+    params : list, tuple or dict, optional
+        List of parameters to pass to execute method. The syntax used to pass
+        parameters is database driver dependent. Check your database driver
+        documentation for which of the five syntax styles, described in PEP 249’s
+        paramstyle, is supported. Eg. for psycopg2, uses %(name)s so use params=
+        {‘name’ : ‘value’}.
+    parse_dates : list or dict, optional
+        - List of column names to parse as dates.
+        - Dict of ``{column_name: format string}`` where format string is
+          strftime compatible in case of parsing string times, or is one of
+          (D, s, ns, ms, us) in case of parsing integer timestamps.
+        - Dict of ``{column_name: arg dict}``, where the arg dict corresponds
+          to the keyword arguments of :func:`pandas.to_datetime`
+          Especially useful with databases without native Datetime support,
+          such as SQLite.
+    columns : list, optional
+        List of column names to select from SQL table (only used when reading
+        a table).
+    chunksize : int, optional
+        If specified, return an iterator where `chunksize` is the
+        number of rows to include in each chunk.
+    partition_column : str, optional
+        Column used to share the data between the workers (MUST be a INTEGER column).
+    lower_bound : int, optional
+        The minimum value to be requested from the partition_column.
+    upper_bound : int, optional
+        The maximum value to be requested from the partition_column.
+    max_sessions : int, optional
+        The maximum number of simultaneous connections allowed to use.
+
+    Returns
+    -------
+    modin.DataFrame
     """
     Engine.subscribe(_update_engine)
     assert IsExperimental.get(), "This only works in experimental mode"
@@ -75,18 +100,18 @@ def read_sql(
 
 
 # CSV and table
-def _make_parser_func(sep):
+def _make_parser_func(sep: str) -> Callable:
     """
     Create a parser function from the given sep.
 
     Parameters
     ----------
-    sep: str
+    sep : str
         The separator default to use for the parser.
 
     Returns
     -------
-    A function object.
+    Callable
     """
 
     def parser_func(
@@ -139,7 +164,7 @@ def _make_parser_func(sep):
         low_memory=True,
         memory_map=False,
         float_precision=None,
-    ):
+    ) -> DataFrame:
         # ISSUE #2408: parse parameter shared with pandas read_csv and read_table and update with provided args
         _pd_read_csv_signature = {
             val.name for val in inspect.signature(pandas.read_csv).parameters.values()
@@ -151,19 +176,25 @@ def _make_parser_func(sep):
         kwargs = {k: v for k, v in f_locals.items() if k in _pd_read_csv_signature}
         return _read(**kwargs)
 
+    parser_func.__doc__ = _read.__doc__
     return parser_func
 
 
-def _read(**kwargs):
+def _read(**kwargs) -> DataFrame:
     """
-    Read csv file from local disk.
+    General documentation is available in `modin.pandas.read_csv`.
+
+    This experimental feature provides parallel reading from multiple csv files which are
+    defined by glob pattern. Works for local files only!
 
     Parameters
     ----------
-    filepath_or_buffer:
-        The filepath of the csv file.
-        We only support local files for now.
-    kwargs: Keyword arguments in pandas.read_csv
+    **kwargs : dict
+        Keyword arguments in `modin.pandas.read_csv`.
+
+    Returns
+    -------
+    modin.DataFrame
     """
     from modin.data_management.factories.dispatcher import EngineDispatcher
 

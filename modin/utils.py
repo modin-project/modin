@@ -44,6 +44,31 @@ def _make_api_url(token):
     return PANDAS_API_URL_TEMPLATE.format(token)
 
 
+def _get_indent(doc: str) -> int:
+    """
+    Compute indentation in docstring.
+
+    Parameters
+    ----------
+    doc : str
+        The docstring to compute indentation for.
+
+    Returns
+    -------
+    int
+        Minimal indent (excluding empty lines).
+    """
+    indents = []
+    for line in doc.splitlines():
+        if not line.strip():
+            continue
+        for pos, ch in enumerate(line):
+            if ch != " ":
+                break
+        indents.append(pos)
+    return min(indents) if indents else 0
+
+
 def _replace_doc(
     source_obj, target_obj, overwrite, apilink, parent_cls=None, attr_name=None
 ):
@@ -72,9 +97,15 @@ def _replace_doc(
         Gives the name to `target_obj` if it's an attribute of `parent_cls`.
         Needed to handle some special cases and in most cases could be determined automatically.
     """
+    if isinstance(target_obj, (staticmethod, classmethod)):
+        # we cannot replace docs on decorated objects, we must replace them
+        # on original functions instead
+        target_obj = target_obj.__func__
+
     source_doc = source_obj.__doc__ or ""
     target_doc = target_obj.__doc__ or ""
-    doc = source_doc if overwrite or not target_doc else target_doc
+    overwrite = overwrite or not target_doc
+    doc = source_doc if overwrite else target_doc
 
     if parent_cls and not attr_name:
         if isinstance(target_obj, property):
@@ -87,7 +118,7 @@ def _replace_doc(
     if (
         source_doc.strip()
         and apilink
-        and "Pandas API documentation <" not in target_doc
+        and "`pandas API documentation for " not in target_doc
         and (not (attr_name or "").startswith("_"))
     ):
         if attr_name:
@@ -95,15 +126,28 @@ def _replace_doc(
         else:
             token = apilink
         url = _make_api_url(token)
-        doc += f"\n\nSee `Pandas API documentation <{url}>`_ for more."
+
+        indent_line = " " * _get_indent(doc)
+        notes_section = f"\n{indent_line}Notes\n{indent_line}-----\n"
+        url_line = f"{indent_line}See `pandas API documentation for {token} <{url}>`_ for more.\n"
+        notes_section_with_url = notes_section + url_line
+
+        if notes_section in doc:
+            doc = doc.replace(notes_section, notes_section_with_url)
+        else:
+            doc += notes_section_with_url
 
     if parent_cls and isinstance(target_obj, property):
+        if overwrite:
+            target_obj.fget.__doc_inherited__ = True
         setattr(
             parent_cls,
-            target_obj.fget.__name__,
+            attr_name,
             property(target_obj.fget, target_obj.fset, target_obj.fdel, doc),
         )
     else:
+        if overwrite:
+            target_obj.__doc_inherited__ = True
         target_obj.__doc__ = doc
 
 
@@ -112,8 +156,8 @@ def _inherit_docstrings(parent, excluded=[], overwrite_existing=False, apilink=N
     Create a decorator which overwrites decorated object docstring(s).
 
     It takes `parent` __doc__ attribute. Also overwrites __doc__ of
-    methods and properties defined in the target if it's a class with the __doc__ of
-    matching methods and properties from the `parent`.
+    methods and properties defined in the target or its ancestors if it's a class
+    with the __doc__ of matching methods and properties from the `parent`.
 
     Parameters
     ----------
@@ -133,21 +177,35 @@ def _inherit_docstrings(parent, excluded=[], overwrite_existing=False, apilink=N
     -------
     callable
         Decorator which replaces the decorated object's documentation with `parent` documentation.
+
+    Notes
+    -----
+    Keep in mind that the function will override docstrings even for attributes which
+    are not defined in target class (but are defined in the ancestor class),
+    which means that ancestor class attribute docstrings could also change.
     """
 
     def _documentable_obj(obj):
         """Check if `obj` docstring could be patched."""
-        return callable(obj) or (isinstance(obj, property) and obj.fget)
+        return (
+            callable(obj)
+            or (isinstance(obj, property) and obj.fget)
+            or (isinstance(obj, (staticmethod, classmethod)) and obj.__func__)
+        )
 
     def decorator(cls_or_func):
         if parent not in excluded:
             _replace_doc(parent, cls_or_func, overwrite_existing, apilink)
 
         if not isinstance(cls_or_func, types.FunctionType):
-            for base in cls_or_func.__bases__:
+            seen = set()
+            for base in cls_or_func.__mro__:
                 if base is object:
                     continue
                 for attr, obj in base.__dict__.items():
+                    if attr in seen:
+                        continue
+                    seen.add(attr)
                     parent_obj = getattr(parent, attr, None)
                     if (
                         parent_obj in excluded
@@ -193,8 +251,8 @@ def hashable(obj):
 
     Parameters
     ----------
-        obj : object
-            The object to check.
+    obj : object
+        The object to check.
 
     Returns
     -------
@@ -297,8 +355,8 @@ def wrap_udf_function(func):
 
     Parameters
     ----------
-        func : callable
-            Function to wrap.
+    func : callable
+        Function to wrap.
 
     Returns
     -------
@@ -325,3 +383,22 @@ def get_current_backend():
         Returns <Backend>On<Engine>-like string.
     """
     return f"{'Experimental' if IsExperimental.get() else ''}{Backend.get()}On{Engine.get()}"
+
+
+def instancer(_class):
+    """
+    Create a dummy instance each time this is imported.
+
+    This serves the purpose of allowing us to use all of pandas plotting methods
+    without aliasing and writing each of them ourselves.
+
+    Parameters
+    ----------
+    _class : object
+
+    Returns
+    -------
+    object
+        Instance of `_class`.
+    """
+    return _class()

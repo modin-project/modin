@@ -35,19 +35,22 @@ ENV CONDA_DIR ${HOME}/miniconda
 
 SHELL ["/bin/bash", "--login", "-c"]
 
-RUN wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O /tmp/miniconda3.sh && \
+RUN wget -nv https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O /tmp/miniconda3.sh && \
     bash /tmp/miniconda3.sh -b -p "${CONDA_DIR}" -f -u && \
     "${CONDA_DIR}/bin/conda" init bash && \
     rm -f /tmp/miniconda3.sh && \
     echo ". '${CONDA_DIR}/etc/profile.d/conda.sh'" >> "${HOME}/.profile"
 
 RUN conda update -n base -c defaults conda -y && \
+    conda config --set channel_priority strict && \
     conda create -n modin --yes --no-default-packages && \
     conda activate modin && \
-    conda install -c intel/label/modin -c conda-forge modin "ray>=1.0.0" "numpy<1.20.0" && \
+    conda install -c intel/label/modin -c conda-forge modin "ray>=1.0.0" "numpy==1.20.0" && \
     conda clean --all --yes
 
-COPY trips_xaa.csv "${HOME}/trips_xaa.csv"
 COPY nyc-taxi-omnisci.py "${HOME}/nyc-taxi-omnisci.py"
+RUN mkdir /dataset
+RUN echo 'conda activate modin && python -u ${HOME}/nyc-taxi-omnisci.py $*' > /entrypoint.sh
 
-CMD ["/bin/bash", "--login", "-c", "conda activate modin && python ${HOME}/nyc-taxi-omnisci.py"]
+ENTRYPOINT ["/bin/bash", "--login", "/entrypoint.sh"]
+
