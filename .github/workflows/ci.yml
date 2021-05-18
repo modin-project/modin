@@ -58,7 +58,6 @@ jobs:
       - run: |
           python scripts/doc_checker.py \
             modin/pandas/io.py modin/engines/base/io/io.py \
-            modin/backends/pandas/parsers.py  \
             modin/engines/base/frame asv_bench/benchmarks/utils.py \
             asv_bench/benchmarks/__init__.py asv_bench/benchmarks/io/__init__.py \
             asv_bench/benchmarks/scalability/__init__.py \
@@ -74,7 +73,7 @@ jobs:
       - run: |
           python scripts/doc_checker.py modin/experimental/pandas/io_exp.py \
             modin/experimental/pandas/numpy_wrap.py modin/experimental/pandas/__init__.py
-      - run: python scripts/doc_checker.py modin/backends/pandas/query_compiler.py
+      - run: python scripts/doc_checker.py modin/backends/pandas
 
   lint-flake8:
     name: lint (flake8)
