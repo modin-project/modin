@@ -13,13 +13,13 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-echo "Note: a user is responsible for preparing the datasets.
-The datasets must be named as: 'training_set.csv', 'test_set_skiprows.csv',
-'training_set_metadata.csv', 'test_set_metadata.csv' and
-be in the folder with 'plasticc-omnisci.dockerfile'."
-
 cd "`dirname \"$0\"`"
 
 docker build -f plasticc-omnisci.dockerfile -t plasticc-omnisci --build-arg no_proxy \
-    --build-arg https_proxy --build-arg http_proxy --build-arg conda_extra_channel .
-printf "\n\nTo run the benchmark execute:\n\tdocker run --rm plasticc-omnisci\n"
+    --build-arg https_proxy --build-arg http_proxy .
+
+echo -e "\nNote: a user is responsible for preparing the datasets.
+The datasets must include four files: training set, test set,
+training set metadata and test set metadata."
+printf "\n\nTo run the benchmark execute:\n"
+printf "\tdocker run --rm -v /path/to/dataset:/dataset plasticc-omnisci <training set file name in /path/to/dataset> <test set file name in /path/to/dataset> <training set metadata file name in /path/to/dataset> <test set metadata file name in /path/to/dataset>\n"
