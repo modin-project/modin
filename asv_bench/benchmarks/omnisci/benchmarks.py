@@ -70,7 +70,7 @@ class TimeMerge:
         self.df2 = generate_dataframe(
             ASV_USE_IMPL, "int", *shapes[1], RAND_LOW, RAND_HIGH
         )
-        trigger_import((self.df1, self.df2))
+        trigger_import(self.df1, self.df2)
 
     def time_merge(self, shapes, how):
         # merging dataframes by index is not supported, therefore we merge by column
@@ -96,7 +96,7 @@ class TimeIndexing:
 
     def setup(self, shape, indexer_type):
         self.df = generate_dataframe(ASV_USE_IMPL, "int", *shape, RAND_LOW, RAND_HIGH)
-        trigger_import((self.df,))
+        trigger_import(self.df)
         self.indexer = {
             "bool": [False, True] * (shape[0] // 2),
             "scalar": shape[0] // 2,
@@ -121,7 +121,7 @@ class TimeHead:
 
     def setup(self, shape, head_count):
         self.df = generate_dataframe(ASV_USE_IMPL, "int", *shape, RAND_LOW, RAND_HIGH)
-        trigger_import((self.df,))
+        trigger_import(self.df)
         self.head_count = (
             int(head_count * len(self.df.index))
             if isinstance(head_count, float)
@@ -140,7 +140,7 @@ class TimeProperties:
 
     def setup(self, shape):
         self.df = generate_dataframe(ASV_USE_IMPL, "int", *shape, RAND_LOW, RAND_HIGH)
-        trigger_import((self.df,))
+        trigger_import(self.df)
 
     def time_shape(self, shape):
         return self.df.shape
