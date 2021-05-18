@@ -376,12 +376,11 @@ jobs:
           git fetch upstream
           if git diff upstream/master --name-only | grep -q "^asv_bench/"; then
               asv machine --yes
-              asv run --quick --show-stderr --launch-method=spawn \
+              asv run --quick --show-stderr --launch-method=spawn -b ^benchmarks -b ^io -b ^scalability \
                 | sed "/failed$/ s/^/##[error]/" | tee benchmarks.log
               # check omnisci backend
-              MODIN_BACKEND=omnisci MODIN_EXPERIMENTAL=true asv run --quick \
+              MODIN_BACKEND=omnisci MODIN_EXPERIMENTAL=true asv run --quick -b ^omnisci \
                 --show-stderr --launch-method=spawn --config asv.conf.omnisci.json \
-                -b time_head -b time_iloc -b time_loc -b time_columns -b time_index -b time_shape \
                 | sed "/failed$/ s/^/##[error]/" | tee benchmarks.log
               if grep "failed" benchmarks.log > /dev/null ; then
                   exit 1

@@ -28,7 +28,7 @@ import uuid
 from typing import Optional, Union
 
 RAND_LOW = 0
-RAND_HIGH = 100
+RAND_HIGH = 1_000_000_000
 random_state = np.random.RandomState(seed=42)
 
 
