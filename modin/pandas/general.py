@@ -11,13 +11,7 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-"""
-Implement Pandas general API.
-
-Almost all docstrings for public functions should be inherited from Pandas
-for better maintability.
-Manually add documentation for methods which are not presented in pandas.
-"""
+"""Implement pandas general API."""
 
 import pandas
 import numpy as np
@@ -666,13 +660,14 @@ def _determine_name(objs: Iterable[BaseQueryCompiler], axis: Union[int, str]):
     Parameters
     ----------
     objs : iterable of QueryCompilers
-        objects to concatenate
+        Objects to concatenate.
     axis : int or str
-        the axis to concatenate along
+        The axis to concatenate along.
+
     Returns
     -------
-    `list` with single element - computed index name, `None` if it could not
-    be determined
+    list with single element
+        Computed index name, `None` if it could not be determined.
     """
     axis = pandas.DataFrame()._get_axis_number(axis)
 
