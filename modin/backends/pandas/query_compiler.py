@@ -219,7 +219,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
     Query compiler for the pandas backend.
 
     This class translates common query compiler API into the DataFrame Algebra
-    queries, that is supposed to be executed by ``BasePandasFrame``.
+    queries, that is supposed to be executed by :py:class:`~modin.engines.base.frame.data.BasePandasFrame`.
 
     Parameters
     ----------
