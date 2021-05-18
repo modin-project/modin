@@ -122,7 +122,7 @@ Or, you can bring the best of doing this in python and run the query in multiple
     from = result_df)
 
 
-The crazy thing here is that if you have a cluster or even a computer with more than one core, 
+If you have a cluster or even a computer with more than one CPU core, 
 you can write SQL and Modin will run those queries in a distributed and optimized way. 
 
 Further Examples and Full Documentation

@@ -3,10 +3,10 @@ Overview
 Modin aims to not only optimize Pandas, but also provide a comprehensive, 
 integrated toolkit for data scientists. We are actively developing data science tools 
 such as DataFrame - spreadsheet integration, DataFrame algebra, progress bars, SQL queries
-on DataFrames, and more. Please feel free to contact us anytime for the latest updates!
+on DataFrames, and more. Join the `Discourse`_ for the latest updates!
 
-Modin Spreadsheets API: Render Dataframes as Spreadsheets
----------------------------------------------------------
+Modin Spreadsheet API: Render Dataframes as Spreadsheets
+--------------------------------------------------------
 The Spreadsheet API for Modin allows you to render the dataframe as a spreadsheet to easily explore 
 your data and perform operations on a graphical user interface. The API also includes features for recording 
 the changes made to the dataframe and exporting them as reproducible code. Built on top of Modin and SlickGrid, 
@@ -40,7 +40,8 @@ SQL on Modin Dataframes
 Read about Modin Dataframe support for SQL queries in this recent `blog post`_. Check out the `Modin SQL documentation`_ as well!
 
 .. _`blog post`: https://medium.com/riselab/why-every-data-scientist-using-pandas-needs-modin-bringing-sql-to-dataframes-3b216b29a7c0
-.. _`Modin SQL documentation`: /modin_sql.html
-.. _`Modin Spreadsheet API documentation`: /spreadsheets_api.html
-.. _`Progress Bar documentation`: /progress_bar.html
+.. _`Modin SQL documentation`: /experimental_features/modin_sql.html
+.. _`Modin Spreadsheet API documentation`: /experimental_features/spreadsheets_api.html
+.. _`Progress Bar documentation`: /experimental_features/progress_bar.html
 .. _`Paper`: https://arxiv.org/pdf/2001.00888.pdf
+.. _`Discourse`: https://discuss.modin.org
