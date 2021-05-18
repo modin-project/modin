@@ -65,7 +65,7 @@ class Series(BasePandasDataset):
         Copy input data.
     fastpath : bool, default: False
         `pandas` internal parameter.
-    query_compiler : query_compiler
+    query_compiler : BaseQueryCompiler, optional
         A query compiler object to create the Series from.
 
     Attributes
@@ -209,12 +209,10 @@ class Series(BasePandasDataset):
         """
         Return pandas `__array_priority__` Series internal parameter.
 
-        `__array_priority__` is parameter that is used by pandas during
-        interaction with NumPy.
-
         Returns
         -------
         int
+            Internal pandas parameter ``__array_priority__`` used during interaction with NumPy.
         """
         return self._to_pandas().__array_priority__
 
@@ -2029,7 +2027,7 @@ class Series(BasePandasDataset):
 
         Parameters
         ----------
-        axis : int
+        axis : {0, 1}
             Axis to validate over.
         numeric_only : bool
             Whether or not to allow only numeric data.
@@ -2055,7 +2053,7 @@ class Series(BasePandasDataset):
 
         Parameters
         ----------
-        axis : int
+        axis : {0, 1}
             Axis to validate over.
         numeric_only : bool
             Whether or not to allow only numeric data.
@@ -2095,7 +2093,7 @@ class Series(BasePandasDataset):
 
         Parameters
         ----------
-        axis : int
+        axis : {0, 1}
             Axis to inspect on having numeric types only.
 
         Returns
@@ -2104,14 +2102,14 @@ class Series(BasePandasDataset):
 
         Notes
         -----
-        `numeric_only` parameter does not supported by Series, so this method
-        do anything. FUnction added for compatibility with Modin DataFrame.
+        `numeric_only` parameter is not supported by Series, so this method
+        does not do anything. The method is added for compatibility with Modin DataFrame.
         """
         return self
 
     def _update_inplace(self, new_query_compiler):
         """
-        Update the current Series inplace using 'new_query_compiler'.
+        Update the current Series in-place using `new_query_compiler`.
 
         Parameters
         ----------
@@ -2163,12 +2161,14 @@ class Series(BasePandasDataset):
         Parameters
         ----------
         other : Series or scalar value
-            Another object `self` should interact.
+            Another object `self` should interact with.
 
         Returns
         -------
-        tuple
-            Tuple with prepared `self` and `other`.
+        Series
+            Prepared `self`.
+        Series
+            Prepared `other`.
         """
         if isinstance(other, Series):
             new_self = self.copy()
@@ -2184,7 +2184,7 @@ class Series(BasePandasDataset):
 
     def _getitem(self, key):
         """
-        Get the data specified by key for this Series.
+        Get the data specified by `key` for this Series.
 
         Parameters
         ----------

@@ -25,16 +25,16 @@ see details for Modin IO methods in the :doc:`separate section </flow/modin/engi
 but even if the data does not originate from a file, any pandas supported data type or
 ``pandas.Series`` can be used. Internally, the ``Series`` data is distributed across all
 partitions, which usually corresponds to the number of the user's hardware CPUs. If needed,
-the number of partitions can be changed by setting Modin config.
+the number of partitions can be changed by setting ``modin.config.NPartitions``.
 
 Let's consider simple example of creation and interacting with Modin ``Series``:
 
 .. code-block:: python
 
-    import os
+    import modin.config
 
     # This explicitely sets the number of partitions
-    os.environ["MODIN_CPUS"] = "4"
+    modin.config.NPartitions.put(4)
 
     import modin.pandas as pd
     import pandas
