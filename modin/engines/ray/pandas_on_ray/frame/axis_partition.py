@@ -59,7 +59,7 @@ class PandasOnRayFrameAxisPartition(PandasFrameAxisPartition):
         func : callable
             The function to perform.
         num_splits : int
-            The number of splits to return (see `split_result_of_axis_func_pandas`).
+            The number of splits to return (see ``split_result_of_axis_func_pandas``).
         kwargs : dict
             Additional keywords arguments to be passed in `func`.
         maintain_partitioning : bool
@@ -101,7 +101,7 @@ class PandasOnRayFrameAxisPartition(PandasFrameAxisPartition):
         func : callable
             The function to perform.
         num_splits : int
-            The number of splits to return (see `split_result_of_axis_func_pandas`).
+            The number of splits to return (see ``split_result_of_axis_func_pandas``).
         len_of_left : int
             The number of values in `partitions` that belong to the left data set.
         other_shape : np.ndarray
