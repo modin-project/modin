@@ -376,9 +376,13 @@ jobs:
           git fetch upstream
           if git diff upstream/master --name-only | grep -q "^asv_bench/"; then
               asv machine --yes
-              asv run --quick --show-stderr --launch-method=spawn -b ^benchmarks -b ^io -b ^scalability \
-                | sed "/failed$/ s/^/##[error]/" | tee benchmarks.log
+              #asv run --quick --show-stderr --launch-method=spawn -b ^benchmarks -b ^io -b ^scalability \
+              #  | sed "/failed$/ s/^/##[error]/" | tee benchmarks.log
               # check omnisci backend
+              asv setup --config asv.conf.omnisci.json -v
+              conda activate $(conda env list | grep .asv)
+              conda list
+              conda deactivate
               MODIN_BACKEND=omnisci MODIN_EXPERIMENTAL=true asv run --quick -b ^omnisci \
                 --show-stderr --launch-method=spawn --config asv.conf.omnisci.json \
                 | sed "/failed$/ s/^/##[error]/" | tee benchmarks.log
