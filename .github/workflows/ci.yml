@@ -114,7 +114,7 @@ jobs:
           python-version: "3.7.x"
           architecture: "x64"
       - run: pip install flake8 flake8-print
-      - run: flake8 --enable=T modin/ asv_bench/benchmarks scripts/doc_checker.py
+      - run: flake8 modin/ asv_bench/benchmarks scripts/doc_checker.py
 
   test-api:
     runs-on: ubuntu-latest
@@ -379,10 +379,15 @@ jobs:
               #asv run --quick --show-stderr --launch-method=spawn -b ^benchmarks -b ^io -b ^scalability \
               #  | sed "/failed$/ s/^/##[error]/" | tee benchmarks.log
               # check omnisci backend
-              asv setup --config asv.conf.omnisci.json -v
+              MODIN_BACKEND=omnisci MODIN_EXPERIMENTAL=true asv run --quick \
+                -b ^omnisci.benchmarks.TimeHead -b ^omnisci.benchmarks.TimeReadCsvNames \
+                --show-stderr --launch-method=spawn --config asv.conf.omnisci.json -v || echo $?
+
+              conda init bash
               conda activate $(conda env list | grep .asv)
               conda list
               conda deactivate
+
               MODIN_BACKEND=omnisci MODIN_EXPERIMENTAL=true asv run --quick -b ^omnisci \
                 --show-stderr --launch-method=spawn --config asv.conf.omnisci.json \
                 | sed "/failed$/ s/^/##[error]/" | tee benchmarks.log

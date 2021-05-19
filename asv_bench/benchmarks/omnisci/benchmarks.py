@@ -13,6 +13,8 @@
 
 """General Modin on OmniSci backend benchmarks."""
 
+from time import time
+
 import modin.pandas as pd
 import numpy as np
 
@@ -51,6 +53,7 @@ UNARY_OP_DATA_SIZE = {
 
 
 def trigger_import(*dfs):
+    print("triger_import start")
     from modin.experimental.engines.omnisci_on_ray.frame.omnisci_worker import (
         OmnisciServer,
     )
@@ -62,6 +65,7 @@ def trigger_import(*dfs):
         ].frame_id = OmnisciServer().put_arrow_to_omnisci(
             df._query_compiler._modin_frame._partitions[0][0].get()
         )  # to trigger real execution
+    print("triger_import end")
 
 
 class TimeMerge:
@@ -128,6 +132,7 @@ class TimeHead:
     ]
 
     def setup(self, shape, head_count):
+        start = time()
         self.df = generate_dataframe(ASV_USE_IMPL, "int", *shape, RAND_LOW, RAND_HIGH)
         trigger_import(self.df)
         self.head_count = (
@@ -135,9 +140,12 @@ class TimeHead:
             if isinstance(head_count, float)
             else head_count
         )
+        print(f"setup time: {time()-start}")
 
     def time_head(self, shape, head_count):
+        start = time()
         execute(self.df.head(self.head_count))
+        print(f"time_head time: {time()-start}")
 
 
 class TimeProperties:
@@ -258,14 +266,13 @@ class TimeReadCsvNames:
         self.filename, self.names, self.dtype = cache[file_id]
 
     def time_read_csv_names(self, cache, shape):
-        execute(
-            IMPL[ASV_USE_IMPL].read_csv(
-                self.filename,
-                names=self.names,
-                header=0,
-                dtype=self.dtype,
-            )
+        df = IMPL[ASV_USE_IMPL].read_csv(
+            self.filename,
+            names=self.names,
+            header=0,
+            dtype=self.dtype,
         )
+        trigger_import(df)
 
 
 class TimeValueCountsSeries:
@@ -424,4 +431,4 @@ class TimeAppend:
         )
 
     def time_append(self, shapes):
-        print(self.df1.append(self.df2))
+        execute(self.df1.append(self.df2))
