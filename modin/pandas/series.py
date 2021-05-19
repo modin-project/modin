@@ -77,10 +77,7 @@ def _doc_binary_op(operation, bin_op, other="right", returns="Series"):
         returns=returns,
     )
 
-    def decorator(op):
-        return doc_op(op)
-
-    return decorator
+    return doc_op
 
 
 @_inherit_docstrings(
