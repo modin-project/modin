@@ -67,13 +67,10 @@ assert ASV_USE_BACKEND in ("pandas", "omnisci", "pyarrow")
 BINARY_OP_DATA_SIZE = {
     "big": [
         ((5000, 5000), (5000, 5000)),
-        # the case extremely inefficient
-        # ((20, 500_000), (10, 1_000_000)),
         ((500_000, 20), (1_000_000, 10)),
     ],
     "small": [
         ((250, 250), (250, 250)),
-        ((20, 10_000), (10, 25_000)),
         ((10_000, 20), (25_000, 10)),
     ],
 }
@@ -81,13 +78,10 @@ BINARY_OP_DATA_SIZE = {
 UNARY_OP_DATA_SIZE = {
     "big": [
         (5000, 5000),
-        # the case extremely inefficient
-        # (10, 1_000_000),
         (1_000_000, 10),
     ],
     "small": [
         (250, 250),
-        (10, 10_000),
         (10_000, 10),
     ],
 }

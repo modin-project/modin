@@ -114,7 +114,7 @@ jobs:
           python-version: "3.7.x"
           architecture: "x64"
       - run: pip install flake8 flake8-print
-      - run: flake8 modin/ asv_bench/benchmarks scripts/doc_checker.py
+      - run: flake8 --enable=T modin/ asv_bench/benchmarks scripts/doc_checker.py
 
   test-api:
     runs-on: ubuntu-latest
@@ -350,6 +350,9 @@ jobs:
   test-asv-benchmarks:
     needs: [lint-commit, lint-flake8, lint-black, test-api, test-headers]
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash -l {0}
     env:
       MODIN_ENGINE: ray
       MODIN_MEMORY: 1000000000
@@ -359,12 +362,16 @@ jobs:
       - uses: actions/checkout@v2
         with:
           fetch-depth: 1
-      - uses: actions/setup-python@v2
+      - uses: conda-incubator/setup-miniconda@v2
         with:
-          python-version: "3.7.x"
-          architecture: "x64"
+          auto-activate-base: true
+          activate-environment: ""
       - name: ASV installation
-        run: pip install git+https://github.com/airspeed-velocity/asv.git@ef016e233cb9a0b19d517135104f49e0a3c380e9
+        run: |
+          # FIXME: use the tag or release version of ASV as soon as it appears;
+          # The ability to build a conda environment by specifying yml file has not
+          # yet appeared in the release versions;
+          pip install git+https://github.com/airspeed-velocity/asv.git@ef016e233cb9a0b19d517135104f49e0a3c380e9
       - name: Running benchmarks
         run: |
           # ASV correctly creates environments for testing only from the branch
@@ -376,20 +383,11 @@ jobs:
           git fetch upstream
           if git diff upstream/master --name-only | grep -q "^asv_bench/"; then
               asv machine --yes
-              #asv run --quick --show-stderr --launch-method=spawn -b ^benchmarks -b ^io -b ^scalability \
-              #  | sed "/failed$/ s/^/##[error]/" | tee benchmarks.log
+              asv run --quick --show-stderr --launch-method=spawn -b ^benchmarks -b ^io -b ^scalability \
+                | sed "/failed$/ s/^/##[error]/" | tee benchmarks.log
               # check omnisci backend
-              MODIN_BACKEND=omnisci MODIN_EXPERIMENTAL=true asv run --quick \
-                -b ^omnisci.benchmarks.TimeHead -b ^omnisci.benchmarks.TimeReadCsvNames \
-                --show-stderr --launch-method=forkserver --config asv.conf.omnisci.json -v || echo $?
-
-              conda init bash
-              conda activate $(conda env list | grep .asv)
-              conda list
-              conda deactivate
-
               MODIN_BACKEND=omnisci MODIN_EXPERIMENTAL=true asv run --quick -b ^omnisci \
-                --show-stderr --launch-method=spawn --config asv.conf.omnisci.json \
+                --show-stderr --launch-method=forkserver --config asv.conf.omnisci.json \
                 | sed "/failed$/ s/^/##[error]/" | tee benchmarks.log
               if grep "failed" benchmarks.log > /dev/null ; then
                   exit 1
