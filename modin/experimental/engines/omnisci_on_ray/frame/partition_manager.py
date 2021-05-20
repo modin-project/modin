@@ -109,7 +109,9 @@ class OmnisciOnRayFrameManager(RayFrameManager):
             type_samples = obj.iloc[0][cols]
 
             unsupported_cols = [
-                name for name, col in type_samples.items() if not isinstance(col, str)
+                name
+                for name, col in type_samples.items()
+                if not isinstance(col, str) and pandas.notna(col)
             ]
 
             if len(unsupported_cols) > 0:
