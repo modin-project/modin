@@ -121,7 +121,7 @@ class OmnisciOnRayFrameManager(RayFrameManager):
 
             try:
                 at = pyarrow.Table.from_pandas(obj)
-            except pyarrow.lib.ArrowTypeError as e:
+            except (pyarrow.lib.ArrowTypeError, pyarrow.lib.ArrowInvalid) as e:
                 regex = r"Conversion failed for column ([^\W]*)"
                 unsupported_cols = []
                 for msg in e.args:
