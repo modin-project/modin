@@ -11,6 +11,7 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
+from modin.pandas.utils import is_scalar
 import numpy as np
 
 from modin.engines.ray.generic.frame.partition_manager import RayFrameManager
@@ -111,7 +112,8 @@ class OmnisciOnRayFrameManager(RayFrameManager):
             unsupported_cols = [
                 name
                 for name, col in type_samples.items()
-                if not isinstance(col, str) and pandas.notna(col)
+                if not isinstance(col, str)
+                and not (is_scalar(col) and pandas.isna(col))
             ]
 
             if len(unsupported_cols) > 0:
