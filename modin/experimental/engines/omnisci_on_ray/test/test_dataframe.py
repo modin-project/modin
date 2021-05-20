@@ -1714,29 +1714,22 @@ class TestDropna:
 
 
 class TestUnsupportedColumns:
-    good_data = {
-        "col1": ["1", "2", None, "2", "1"],
-        "col2": [None, "3", None, "2", "1"],
-    }
-    bad_data = {
-        "col1": [1, "2", None, "2", "1"],
-        "col2": [None, 3, None, "2", "1"],
-    }
-
     @pytest.mark.parametrize(
-        "data,bad_columns",
-        [[good_data, []], [bad_data, bad_data.keys()]],
-        ids=["supported", "unsupported"],
+        "data,is_good",
+        [
+            [["1", "2", None, "2", "1"], True],
+            [[None, "3", None, "2", "1"], True],
+            [[1, "2", None, "2", "1"], False],
+            [[None, 3, None, "2", "1"], False],
+        ],
     )
-    def test_unsupported_columns(self, data, bad_columns):
-        pandas_df = pandas.DataFrame(data)
-        obj, cols = OmnisciOnRayFrameManager._get_unsupported_cols(pandas_df)
-        if bad_columns:
-            assert not obj
-            assert set(cols) == set(bad_columns)
+    def test_unsupported_columns(self, data, is_good):
+        pandas_df = pandas.DataFrame({"col": data})
+        obj, bad_cols = OmnisciOnRayFrameManager._get_unsupported_cols(pandas_df)
+        if is_good:
+            assert obj and not bad_cols
         else:
-            assert obj
-            assert not cols
+            assert not obj and bad_cols == ["col"]
 
 
 if __name__ == "__main__":
