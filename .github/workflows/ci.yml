@@ -381,7 +381,7 @@ jobs:
               # check omnisci backend
               MODIN_BACKEND=omnisci MODIN_EXPERIMENTAL=true asv run --quick \
                 -b ^omnisci.benchmarks.TimeHead -b ^omnisci.benchmarks.TimeReadCsvNames \
-                --show-stderr --launch-method=spawn --config asv.conf.omnisci.json -v || echo $?
+                --show-stderr --launch-method=forkserver --config asv.conf.omnisci.json -v || echo $?
 
               conda init bash
               conda activate $(conda env list | grep .asv)
