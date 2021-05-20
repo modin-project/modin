@@ -35,6 +35,10 @@ from modin.pandas.test.utils import (
     eval_io,
 )
 
+from modin.experimental.engines.omnisci_on_ray.frame.partition_manager import (
+    OmnisciOnRayFrameManager,
+)
+
 
 def set_execution_mode(frame, mode, recursive=False):
     if isinstance(frame, (pd.Series, pd.DataFrame)):
@@ -1707,6 +1711,32 @@ class TestDropna:
             return df.groupby(by=by, dropna=dropna).sum().fillna(0)
 
         run_and_compare(applier, data=self.data)
+
+
+class TestUnsupportedColumns:
+    good_data = {
+        "col1": ["1", "2", None, "2", "1"],
+        "col2": [None, "3", None, "2", "1"],
+    }
+    bad_data = {
+        "col1": [1, "2", None, "2", "1"],
+        "col2": [None, 3, None, "2", "1"],
+    }
+
+    @pytest.mark.parametrize(
+        "data,bad_columns",
+        [[good_data, []], [bad_data, bad_data.keys()]],
+        ids=["supported", "unsupported"],
+    )
+    def test_unsupported_columns(self, data, bad_columns):
+        pandas_df = pandas.DataFrame(data)
+        obj, cols = OmnisciOnRayFrameManager._get_unsupported_cols(pandas_df)
+        if bad_columns:
+            assert not obj
+            assert set(cols) == set(bad_columns)
+        else:
+            assert obj
+            assert not cols
 
 
 if __name__ == "__main__":
