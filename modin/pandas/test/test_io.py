@@ -389,7 +389,9 @@ class TestCsv:
         if xfail_case_1:
             pytest.xfail("modin and pandas dataframes differs - issue #2446")
         if xfail_case_2:
-            pytest.xfail("read_csv fails because of duplicated columns names")
+            pytest.xfail(
+                "read_csv fails because of duplicated columns names - issue #3080"
+            )
         if request.config.getoption("--simulate-cloud").lower() != "off":
             pytest.xfail(
                 reason="The reason of tests fail in `cloud` mode is unknown for now - issue #2340"
@@ -463,7 +465,7 @@ class TestCsv:
     def test_read_csv_mangle_dupe_cols(self):
         if Backend.get() == "Omnisci":
             pytest.xfail(
-                "processing of duplicated columns in OmniSci backend is not supported yet"
+                "processing of duplicated columns in OmniSci backend is not supported yet - issue #3080"
             )
         unique_filename = get_unique_filename()
         str_non_unique_cols = "col,col,col,col\n5, 6, 7, 8\n9, 10, 11, 12\n"
@@ -520,9 +522,14 @@ class TestCsv:
                 reason="The reason of tests fail in `cloud` mode is unknown for now - issue #2340"
             )
 
-        if Backend.get() == "Omnisci" and not isinstance(parse_dates, bool):
+        if (
+            Backend.get() == "Omnisci"
+            and isinstance(parse_dates, list)
+            and ("col4" in parse_dates or 3 in parse_dates)
+        ):
+            # import pdb; pdb.set_trace()
             pytest.xfail(
-                "In some cases read_csv with `parse_dates` with OmniSci backend outputs incorrect result"
+                "In some cases read_csv with `parse_dates` with OmniSci backend outputs incorrect result - issue #3081"
             )
 
         raising_exceptions = io_ops_bad_exc  # default value
@@ -730,7 +737,7 @@ class TestCsv:
 
     # Error Handling parameters tests
     @pytest.mark.xfail(
-        Engine.get() != "Python",
+        Engine.get() != "Python" and Backend.get() != "Omnisci",
         reason="read_csv with Ray engine doen't raise `bad lines` exceptions - issue #2500",
     )
     @pytest.mark.parametrize("warn_bad_lines", [True, False])
@@ -898,7 +905,7 @@ class TestCsv:
     def test_read_csv_skiprows_names(self, names, skiprows):
         if Backend.get() == "Omnisci" and names is None and skiprows in [1, None]:
             pytest.xfail(
-                "processing of duplicated columns in OmniSci backend is not supported yet"
+                "processing of duplicated columns in OmniSci backend is not supported yet - issue #3080"
             )
         eval_io(
             fn_name="read_csv",
@@ -943,21 +950,13 @@ class TestCsv:
     @pytest.mark.parametrize("nrows", [21, 5, None])
     @pytest.mark.parametrize("skiprows", [4, 1, 500, None])
     def test_read_csv_newlines_in_quotes(self, nrows, skiprows):
-        if (
-            Backend.get() == "Omnisci"
-            and skiprows not in [0, 1, None]
-            and nrows is None
-        ):
-            pytest.xfail(
-                "read_csv with OmniSci backend incorrectly handles multilines if skiprows is present - issue-#2904"
-            )
         eval_io(
             fn_name="read_csv",
             # read_csv kwargs
             filepath_or_buffer="modin/pandas/test/data/newlines.csv",
             nrows=nrows,
             skiprows=skiprows,
-            cast_to_str=Backend.get() != "Omnisci",
+            cast_to_str=True,
         )
 
     def test_read_csv_sep_none(self, request):
@@ -1018,7 +1017,7 @@ class TestCsv:
 
     @pytest.mark.skipif(
         Backend.get() == "Omnisci",
-        reason="to_csv is not implemented with OmniSci backend yet",
+        reason="to_csv is not implemented with OmniSci backend yet - issue #3082",
     )
     @pytest.mark.parametrize("header", [False, True])
     @pytest.mark.parametrize("mode", ["w", "wb+"])
@@ -1042,7 +1041,7 @@ class TestCsv:
 
     @pytest.mark.skipif(
         Backend.get() == "Omnisci",
-        reason="to_csv is not implemented with OmniSci backend yet",
+        reason="to_csv is not implemented with OmniSci backend yet - issue #3082",
     )
     def test_dataframe_to_csv(self, request):
         if request.config.getoption("--simulate-cloud").lower() != "off":
@@ -1057,7 +1056,7 @@ class TestCsv:
 
     @pytest.mark.skipif(
         Backend.get() == "Omnisci",
-        reason="to_csv is not implemented with OmniSci backend yet",
+        reason="to_csv is not implemented with OmniSci backend yet - issue #3082",
     )
     def test_series_to_csv(self, request):
         if request.config.getoption("--simulate-cloud").lower() != "off":
