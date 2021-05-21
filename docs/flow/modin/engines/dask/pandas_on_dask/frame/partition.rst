@@ -1,7 +1,7 @@
 PandasOnDaskFramePartition
 """"""""""""""""""""""""""
 
-The class is specific implementation of :py:class:`~modin.engines.base.frame.partition.BaseFramePartition`,
+The class is the specific implementation of :py:class:`~modin.engines.base.frame.partition.BaseFramePartition`,
 providing the API to perform operations on a block partition, namely, ``pandas.DataFrame``, using Dask as the execution engine.
 
 In addition to wrapping a pandas DataFrame, the class also holds the following metadata:

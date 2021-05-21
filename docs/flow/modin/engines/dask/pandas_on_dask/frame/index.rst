@@ -1,7 +1,7 @@
 PandasOnDask Frame Objects
 ==========================
 
-This page describes implementation of :doc:`Base Frame Objects </flow/modin/engines/base/frame/index>`
+This page describes the implementation of :doc:`Base Frame Objects </flow/modin/engines/base/frame/index>`
 specific for ``PandasOnDask`` backend.
 
 * :doc:`Frame <data>`
