@@ -1,8 +1,8 @@
 PandasOnRayFrameManager
 """""""""""""""""""""""
 
-The class is specific implementation of :py:class:`~modin.engines.base.frame.partition_manager.BaseFrameManager`
-using Ray distributed engine. This class is responsible for partitions manipulation and applying a funcion to
+This class is the specific implementation of :py:class:`~modin.engines.base.frame.partition_manager.BaseFrameManager`
+using Ray distributed engine. This class is responsible for partition manipulation and applying a funcion to
 block/row/column partitions.
 
 Public API

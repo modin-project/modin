@@ -1,7 +1,7 @@
 cuDFOnRayFrame
 """"""""""""""""
 
-The class is specific implementation of :py:class:`~modin.engines.base.frame.data.BasePandasFrame`
+The class is the specific implementation of :py:class:`~modin.engines.base.frame.data.BasePandasFrame`
 class using Ray distributed engine. It serves as an intermediate level between 
 :py:class:`~modin.backends.cudf.query_compiler.cuDFQueryCompiler` and
 :py:class:`~modin.engines.ray.cudf_on_ray.frame.partition_manager.cuDFOnRayFrameManager`.
