@@ -1,5 +1,3 @@
-:orphan:
-
 Pandas Parsers Module Description
 """""""""""""""""""""""""""""""""
 High-Level Module Overview
