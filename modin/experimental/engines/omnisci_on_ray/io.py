@@ -47,7 +47,7 @@ ReadCsvKwargsType = Dict[
 
 
 class ArrowEngineException(Exception):
-    pass
+    """Exception should raised in the case if Arrow engine specific incompatibilities is found."""
 
 
 class OmnisciOnRayIO(RayIO, TextFileDispatcher):
@@ -350,19 +350,18 @@ class OmnisciOnRayIO(RayIO, TextFileDispatcher):
         read_csv_kwargs: ReadCsvKwargsType,
     ) -> Tuple[bool, str]:
         """
-        Check if passed parameters are supported by current modin.read_csv
-        implementation.
+        Check if passed parameters are supported by current ``modin.pandas.read_csv`` implementation.
 
         Parameters
         ----------
-        read_csv_kwargs: ReadCsvKwargsType
+        read_csv_kwargs : dict
                 Parameters of read_csv function.
 
         Returns
         -------
-        bool:
+        bool
             Whether passed parameters are supported or not.
-        str:
+        str
             Error message that should be raised if user explicitly set `engine="arrow"`.
         """
         filepath_or_buffer = read_csv_kwargs.get("filepath_or_buffer", None)
@@ -417,11 +416,6 @@ class OmnisciOnRayIO(RayIO, TextFileDispatcher):
             raise ValueError(
                 "Specified a delimiter with both sep and delim_whitespace=True; you can only specify one."
             )
-        elif delimiter == "\n":
-            return (
-                False,
-                "read_csv with 'arrow' engine doesn't support delimiter = '\\n' parameter",
-            )
 
         if names:
             empty_pandas_df = pandas.read_csv(
@@ -440,24 +434,26 @@ class OmnisciOnRayIO(RayIO, TextFileDispatcher):
             if header not in [None, 0, "infer"]:
                 return (
                     False,
-                    "read_csv with 'arrow' engine and provided 'names' parameter supports only 0, None and 'infer' header values",
+                    "read_csv with 'arrow' engine and provided 'names' parameter supports only 0, None and "
+                    "'infer' header values",
                 )
             elif columns_number != len(names):
-                # pyarrow.lib.ArrowInvalid: CSV parse error: Expected 1 columns, got 6
                 return (
                     False,
-                    "read_csv with 'arrow' engine doesn't support names parameter, which length doesn't match with actual number of columns",
+                    "read_csv with 'arrow' engine doesn't support names parameter, which length doesn't match "
+                    "with actual number of columns",
                 )
         else:
             if header not in [0, "infer"]:
                 return (
                     False,
-                    "read_csv with 'arrow' engine without 'names' parameter provided supports only 0 and 'infer' header values",
+                    "read_csv with 'arrow' engine without 'names' parameter provided supports only 0 and 'infer' "
+                    "header values",
                 )
 
         if not read_csv_kwargs.get("skip_blank_lines", True):
             # in some corner cases empty lines are handled as '',
-            # while pandas handles it as NaNs
+            # while pandas handles it as NaNs - issue #3084
             return (
                 False,
                 "read_csv with 'arrow' engine doesn't support skip_blank_lines = False parameter",

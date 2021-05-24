@@ -527,7 +527,6 @@ class TestCsv:
             and isinstance(parse_dates, list)
             and ("col4" in parse_dates or 3 in parse_dates)
         ):
-            # import pdb; pdb.set_trace()
             pytest.xfail(
                 "In some cases read_csv with `parse_dates` with OmniSci backend outputs incorrect result - issue #3081"
             )
@@ -904,6 +903,9 @@ class TestCsv:
     @pytest.mark.parametrize("skiprows", [1, 2, 3, 4, None])
     def test_read_csv_skiprows_names(self, names, skiprows):
         if Backend.get() == "Omnisci" and names is None and skiprows in [1, None]:
+            # If these conditions are satisfied, columns names will be inferred
+            # from the first row, that will contain duplicated values, that is
+            # not supported by  `Omnisci` backend yet.
             pytest.xfail(
                 "processing of duplicated columns in OmniSci backend is not supported yet - issue #3080"
             )
@@ -956,7 +958,7 @@ class TestCsv:
             filepath_or_buffer="modin/pandas/test/data/newlines.csv",
             nrows=nrows,
             skiprows=skiprows,
-            cast_to_str=True,
+            cast_to_str=True if Backend.get() != "Omnisci" else False,
         )
 
     def test_read_csv_sep_none(self, request):
