@@ -11,13 +11,38 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
+"""Module houses Map functions builder class."""
+
 from .function import Function
 
 
 class MapFunction(Function):
+    """Builder class for Map functions."""
+
     @classmethod
     def call(cls, function, *call_args, **call_kwds):
+        """
+        Build Map function that will be performed across each partition.
+
+        Parameters
+        ----------
+        function : callable(pandas.DataFrame) -> pandas.DataFrame
+            Function that will be applied to the each partition.
+            Function takes `pandas.DataFrame` and returns `pandas.DataFrame`
+            of the same shape.
+        *call_args : args
+            Args that will be passed to the returned function.
+        **call_kwds : kwargs
+            Kwargs that will be passed to the returned function.
+
+        Returns
+        -------
+        callable
+            Function that takes query compiler and executes map function.
+        """
+
         def caller(query_compiler, *args, **kwargs):
+            """Execute Map function against passed query compiler."""
             return query_compiler.__constructor__(
                 query_compiler._modin_frame._map(
                     lambda x: function(x, *args, **kwargs), *call_args, **call_kwds

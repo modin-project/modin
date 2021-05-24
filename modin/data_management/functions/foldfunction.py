@@ -11,17 +11,38 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
+"""Module houses Fold functions builder class."""
+
 from .function import Function
 
 
 class FoldFunction(Function):
+    """Builder class for FoldReduce functions."""
+
     @classmethod
-    def call(cls, fold_function, **call_kwds):
+    def call(cls, fold_function, axis=None):
+        """
+        Build Fold function that will be performed across rows/columns.
+
+        Parameters
+        ----------
+        fold_function : callable(pandas.DataFrame) -> pandas.DataFrame
+            Function to apply across rows/columns.
+        axis : int, optional
+            Specifies axis to apply function along.
+
+        Returns
+        -------
+        callable
+            Function that takes query compiler and executes Fold function.
+        """
+
         def caller(query_compiler, *args, **kwargs):
-            axis = call_kwds.get("axis", kwargs.get("axis"))
+            """Execute Fold function against passed query compiler."""
+            _axis = kwargs.get("axis") if axis is None else axis
             return query_compiler.__constructor__(
                 query_compiler._modin_frame._fold(
-                    cls.validate_axis(axis),
+                    cls.validate_axis(_axis),
                     lambda x: fold_function(x, *args, **kwargs),
                 )
             )

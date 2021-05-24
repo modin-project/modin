@@ -275,8 +275,8 @@ by documentation for now, the rest is coming soon...).
    │   │   │   └───query_compiler
    │   ├───config
    │   ├───data_management
-   │   │   ├───factories
-   │   │   └───functions
+   │   │   ├─── :doc:`factories </flow/modin/data_management/factories>`
+   │   │   └─── :doc:`functions </flow/modin/data_management/functions>`
    │   ├───distributed
    │   │   └───dataframe
    │   │       └─── :doc:`pandas </flow/modin/distributed/dataframe/pandas>`

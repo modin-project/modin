@@ -11,20 +11,58 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
+"""
+Contain IO dispatcher class.
+
+Dispatcher routes the work to excecution engine-specific functions.
+"""
+
 from modin.config import Engine, Backend, IsExperimental
 from modin.data_management.factories import factories
-from modin.utils import get_current_backend
+from modin.utils import get_current_backend, _inherit_docstrings
 
 
 class FactoryNotFoundError(AttributeError):
+    """
+    ``FactoryNotFound`` exception class.
+
+    Raise when no matching factory could be found.
+    """
+
     pass
 
 
 class StubIoEngine(object):
+    """
+    IO-Engine that does nothing more than raise NotImplementedError when any method is called.
+
+    Parameters
+    ----------
+    factory_name : str
+        Factory name, which will be reflected in error messages.
+
+    Notes
+    -----
+    Used for testing purposes.
+    """
+
     def __init__(self, factory_name=""):
         self.factory_name = factory_name or "Unknown"
 
     def __getattr__(self, name):
+        """
+        Return a function that raises `NotImplementedError` for the `name` method.
+
+        Parameters
+        ----------
+        name : str
+            Method name to indicate in `NotImplementedError`.
+
+        Returns
+        -------
+        callable
+        """
+
         def stub(*args, **kw):
             raise NotImplementedError(
                 f"Method {self.factory_name}.{name} is not implemented"
@@ -35,7 +73,10 @@ class StubIoEngine(object):
 
 class StubFactory(factories.BaseFactory):
     """
-    A factory that does nothing more than raise NotImplementedError when any method is called.
+    Factory that does nothing more than raise NotImplementedError when any method is called.
+
+    Notes
+    -----
     Used for testing purposes.
     """
 
@@ -43,24 +84,46 @@ class StubFactory(factories.BaseFactory):
 
     @classmethod
     def set_failing_name(cls, factory_name):
+        """
+        Fill in `.io_cls` class attribute with ``StubIoEngine`` engine.
+
+        Parameters
+        ----------
+        factory_name : str
+            Name to pass to the ``StubIoEngine`` constructor.
+        """
         cls.io_cls = StubIoEngine(factory_name)
         return cls
 
 
 class EngineDispatcher(object):
     """
-    This is the 'ingestion' point which knows where to route the work
+    Class that routes IO-work to the engines.
+
+    This class is responsible for keeping selected engine up-to-date and dispatching
+    calls of IO-functions to its actual engine-specific implementations.
     """
 
     __engine: factories.BaseFactory = None
 
     @classmethod
     def get_engine(cls) -> factories.BaseFactory:
+        """Get current execution engine."""
         # mostly for testing
         return cls.__engine
 
     @classmethod
+    # FIXME: replace `_` parameter with `*args`
     def _update_engine(cls, _):
+        """
+        Update and prepare engine with a new one specified via Modin config.
+
+        Parameters
+        ----------
+        _ : object
+            This parameters serves the compatibility purpose.
+            Does not affect the result.
+        """
         factory_name = get_current_backend() + "Factory"
         try:
             cls.__engine = getattr(factories, factory_name)
@@ -84,98 +147,122 @@ class EngineDispatcher(object):
             cls.__engine.prepare()
 
     @classmethod
+    @_inherit_docstrings(factories.BaseFactory._from_pandas)
     def from_pandas(cls, df):
         return cls.__engine._from_pandas(df)
 
     @classmethod
+    @_inherit_docstrings(factories.BaseFactory._from_arrow)
     def from_arrow(cls, at):
         return cls.__engine._from_arrow(at)
 
     @classmethod
+    @_inherit_docstrings(factories.BaseFactory._from_non_pandas)
     def from_non_pandas(cls, *args, **kwargs):
         return cls.__engine._from_non_pandas(*args, **kwargs)
 
     @classmethod
+    @_inherit_docstrings(factories.BaseFactory._read_parquet)
     def read_parquet(cls, **kwargs):
         return cls.__engine._read_parquet(**kwargs)
 
     @classmethod
+    @_inherit_docstrings(factories.BaseFactory._read_csv)
     def read_csv(cls, **kwargs):
         return cls.__engine._read_csv(**kwargs)
 
     @classmethod
+    @_inherit_docstrings(factories.ExperimentalPandasOnRayFactory._read_csv_glob)
     def read_csv_glob(cls, **kwargs):
         return cls.__engine._read_csv_glob(**kwargs)
 
     @classmethod
+    @_inherit_docstrings(factories.BaseFactory._read_json)
     def read_json(cls, **kwargs):
         return cls.__engine._read_json(**kwargs)
 
     @classmethod
+    @_inherit_docstrings(factories.BaseFactory._read_gbq)
     def read_gbq(cls, **kwargs):
         return cls.__engine._read_gbq(**kwargs)
 
     @classmethod
+    @_inherit_docstrings(factories.BaseFactory._read_html)
     def read_html(cls, **kwargs):
         return cls.__engine._read_html(**kwargs)
 
     @classmethod
-    def read_clipboard(cls, **kwargs):  # pragma: no cover
+    @_inherit_docstrings(factories.BaseFactory._read_clipboard)
+    def read_clipboard(cls, **kwargs):
         return cls.__engine._read_clipboard(**kwargs)
 
     @classmethod
+    @_inherit_docstrings(factories.BaseFactory._read_excel)
     def read_excel(cls, **kwargs):
         return cls.__engine._read_excel(**kwargs)
 
     @classmethod
+    @_inherit_docstrings(factories.BaseFactory._read_hdf)
     def read_hdf(cls, **kwargs):
         return cls.__engine._read_hdf(**kwargs)
 
     @classmethod
+    @_inherit_docstrings(factories.BaseFactory._read_feather)
     def read_feather(cls, **kwargs):
         return cls.__engine._read_feather(**kwargs)
 
     @classmethod
+    @_inherit_docstrings(factories.BaseFactory._read_stata)
     def read_stata(cls, **kwargs):
         return cls.__engine._read_stata(**kwargs)
 
     @classmethod
+    @_inherit_docstrings(factories.BaseFactory._read_sas)
     def read_sas(cls, **kwargs):  # pragma: no cover
         return cls.__engine._read_sas(**kwargs)
 
     @classmethod
+    @_inherit_docstrings(factories.BaseFactory._read_pickle)
     def read_pickle(cls, **kwargs):
         return cls.__engine._read_pickle(**kwargs)
 
     @classmethod
+    @_inherit_docstrings(factories.BaseFactory._read_sql)
     def read_sql(cls, **kwargs):
         return cls.__engine._read_sql(**kwargs)
 
     @classmethod
+    @_inherit_docstrings(factories.BaseFactory._read_fwf)
     def read_fwf(cls, **kwargs):
         return cls.__engine._read_fwf(**kwargs)
 
     @classmethod
+    @_inherit_docstrings(factories.BaseFactory._read_sql_table)
     def read_sql_table(cls, **kwargs):
         return cls.__engine._read_sql_table(**kwargs)
 
     @classmethod
+    @_inherit_docstrings(factories.BaseFactory._read_sql_query)
     def read_sql_query(cls, **kwargs):
         return cls.__engine._read_sql_query(**kwargs)
 
     @classmethod
+    @_inherit_docstrings(factories.BaseFactory._read_spss)
     def read_spss(cls, **kwargs):
         return cls.__engine._read_spss(**kwargs)
 
     @classmethod
+    @_inherit_docstrings(factories.BaseFactory._to_sql)
     def to_sql(cls, *args, **kwargs):
         return cls.__engine._to_sql(*args, **kwargs)
 
     @classmethod
+    @_inherit_docstrings(factories.BaseFactory._to_pickle)
     def to_pickle(cls, *args, **kwargs):
         return cls.__engine._to_pickle(*args, **kwargs)
 
     @classmethod
+    @_inherit_docstrings(factories.BaseFactory._to_csv)
     def to_csv(cls, *args, **kwargs):
         return cls.__engine._to_csv(*args, **kwargs)
 
