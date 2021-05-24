@@ -103,7 +103,7 @@ The API is the outer-most layer that faces users. The majority of our current ef
 spent implementing the components of the pandas API. We have implemented a toy example
 for a sqlite API as a proof of concept, but this isn't ready for usage/testing. There
 are also plans to expose the Modin DataFrame API as a reduced API set that encompasses
-the entire pandas/dataframe API.
+the entire pandas/dataframe API. See `experimental features`_ for more information. 
 
 .. toctree::
    :caption: Base Pandas Dataset API
@@ -320,3 +320,4 @@ by documentation for now, the rest is coming soon...).
 .. _issue: https://github.com/modin-project/modin/issues
 .. _Discourse: https://discuss.modin.org
 .. _task parallel: https://en.wikipedia.org/wiki/Task_parallelism
+.. _experimental features: /experimental_features/index.html

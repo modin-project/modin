@@ -2,21 +2,26 @@ Using Modin
 ===========
 
 Modin is an early stage `DataFrame`_ library that wraps `pandas`_ and transparently
-distributes the data and computation, accelerating your pandas workflows with one line
-of code change. The user does not need to know how many cores their system has, nor do
-they need to specify how to distribute the data. In fact, users can continue using their
-previous pandas notebooks while experiencing a considerable speedup from Modin, even on
+distributes the data and computation, accelerating your pandas workflows with **one line
+of code change.** The user does not need to know how many cores their system has, nor do
+they need to specify how to distribute the data. In fact, users can **continue using their
+previous pandas notebooks** while experiencing a considerable speedup from Modin, even on
 a single machine. Only a modification of the import statement is needed, as we
 demonstrate below. Once you’ve changed your import statement, you’re ready to use Modin
 just like you would pandas, since the API is identical to pandas.
+
+Quickstart
+----------------------------
 
 .. code-block:: python
 
   # import pandas as pd
   import modin.pandas as pd
 
-Currently, we have part of the pandas API implemented and are working toward full
-functional parity with pandas.
+**That's it. You're ready to use Modin on your previous pandas notebooks.** 
+
+We currently have most of the pandas API implemented and are working toward 
+full functional parity with pandas (as well as even more `tools and features`_ ).
 
 Using Modin on a Single Node
 ----------------------------
@@ -141,3 +146,4 @@ used to create the blog post.
 .. _`Ray's documentation`: https://ray.readthedocs.io/en/latest/api.html
 .. _`blog post`: https://rise.cs.berkeley.edu/blog/pandas-on-ray-early-lessons/
 .. _`Jupyter Notebook`: https://gist.github.com/devin-petersohn/f424d9fb5579a96507c709a36d487f24#file-pandas_on_ray_blog_post_0-ipynb
+.. _`tools and features`: comparisons/upcoming_features.html
