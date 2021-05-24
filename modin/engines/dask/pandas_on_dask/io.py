@@ -11,6 +11,8 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
+"""Module houses class that implements ``BaseIO`` using Dask as an execution engine."""
+
 from modin.engines.base.io import BaseIO
 from modin.backends.pandas.query_compiler import PandasQueryCompiler
 from modin.engines.dask.pandas_on_dask.frame.data import PandasOnDaskFrame
@@ -35,6 +37,7 @@ from modin.engines.dask.task_wrapper import DaskTask
 
 
 class PandasOnDaskIO(BaseIO):
+    """The class implements interface in ``BaseIO`` using Dask as an execution engine."""
 
     frame_cls = PandasOnDaskFrame
     query_compiler_cls = PandasQueryCompiler

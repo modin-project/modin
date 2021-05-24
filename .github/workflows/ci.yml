@@ -55,6 +55,8 @@ jobs:
             modin/pandas/series_utils.py modin/pandas/general.py \
             modin/pandas/plotting.py modin/pandas/utils.py \
             modin/pandas/iterator.py modin/pandas/indexing.py \
+      - run: python scripts/doc_checker.py modin/engines/base/frame
+      - run: python scripts/doc_checker.py modin/engines/dask
       - run: |
           python scripts/doc_checker.py \
             modin/pandas/accessor.py modin/pandas/general.py \

@@ -66,6 +66,7 @@ Component View
 --------------
 .. toctree::
    ../flow/modin/engines/base/frame/index
+   ../flow/modin/engines/dask/pandas_on_dask/frame/index
    ../flow/modin/experimental/index
 
 
@@ -288,6 +289,7 @@ by documentation for now, the rest is coming soon...).
    │   │   │   └─── :doc:`io </flow/modin/engines/base/io>`
    │   │   ├───dask
    │   │   │   └───pandas_on_dask
+   │   │   |       └─── :doc:`frame </flow/modin/engines/dask/pandas_on_dask/frame/index>`
    │   │   ├───python
    │   │   │   └───pandas_on_python
    │   │   └───ray
