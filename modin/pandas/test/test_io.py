@@ -16,21 +16,13 @@ import numpy as np
 import pandas
 from pandas.errors import ParserWarning
 from collections import OrderedDict
-from modin.config import TestDatasetSize, Backend
+from modin.config import TestDatasetSize, Engine, Backend, IsExperimental
 from modin.utils import to_pandas
 from modin.pandas.utils import from_arrow
 import pyarrow as pa
 import os
 import shutil
-
-try:
-    import sqlalchemy as sa
-except ImportError:
-    # `read_csv` tests can be executed with OmniSci backend,
-    # but OmniSci environment file doesn't contain `sqlalchemy`
-    # dependency
-    if Backend.get() != "Omnisci":
-        raise
+import sqlalchemy as sa
 import csv
 import tempfile
 
@@ -51,8 +43,6 @@ from .utils import (
     teardown_test_files,
     generate_dataframe,
 )
-
-from modin.config import Engine, Backend, IsExperimental
 
 if Backend.get() == "Pandas":
     import modin.pandas as pd
