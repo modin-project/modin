@@ -958,7 +958,7 @@ class TestCsv:
             filepath_or_buffer="modin/pandas/test/data/newlines.csv",
             nrows=nrows,
             skiprows=skiprows,
-            cast_to_str=True if Backend.get() != "Omnisci" else False,
+            cast_to_str=Backend.get() != "Omnisci",
         )
 
     def test_read_csv_sep_none(self, request):

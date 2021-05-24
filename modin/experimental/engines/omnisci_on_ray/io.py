@@ -374,7 +374,7 @@ class OmnisciOnRayIO(RayIO, TextFileDispatcher):
         if read_csv_kwargs.get("compression", "infer") != "infer":
             return (
                 False,
-                "read_csv with 'arrow' engine doesn't support compression parameter, compression inferred"
+                "read_csv with 'arrow' engine doesn't support compression parameter, compression must be inferred"
                 " automatically (supported compression types are gzip and bz2)",
             )
 
@@ -393,7 +393,7 @@ class OmnisciOnRayIO(RayIO, TextFileDispatcher):
             if hasattr(filepath_or_buffer, "read"):
                 return (
                     False,
-                    "read_csv with 'arrow' engine doesn't support file handles",
+                    "read_csv with 'arrow' engine doesn't support file-like objects",
                 )
             else:
                 raise ValueError(
