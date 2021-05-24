@@ -36,7 +36,7 @@ from modin.pandas.test.utils import (
 )
 
 from modin.experimental.engines.omnisci_on_ray.frame.partition_manager import (
-    OmnisciOnRayFrameManager,
+    OmnisciOnRayFramePartitionManager,
 )
 
 
@@ -1725,7 +1725,9 @@ class TestUnsupportedColumns:
     )
     def test_unsupported_columns(self, data, is_good):
         pandas_df = pandas.DataFrame({"col": data})
-        obj, bad_cols = OmnisciOnRayFrameManager._get_unsupported_cols(pandas_df)
+        obj, bad_cols = OmnisciOnRayFramePartitionManager._get_unsupported_cols(
+            pandas_df
+        )
         if is_good:
             assert obj and not bad_cols
         else:

@@ -15,7 +15,7 @@
 Module contains ``PandasQueryCompiler`` class.
 
 ``PandasQueryCompiler`` is responsible for compiling efficient DataFrame algebra
-queries for the ``BasePandasFrame``.
+queries for the ``PandasFrame``.
 """
 
 import numpy as np
@@ -219,11 +219,11 @@ class PandasQueryCompiler(BaseQueryCompiler):
     Query compiler for the pandas backend.
 
     This class translates common query compiler API into the DataFrame Algebra
-    queries, that is supposed to be executed by :py:class:`~modin.engines.base.frame.data.BasePandasFrame`.
+    queries, that is supposed to be executed by :py:class:`~modin.engines.base.frame.data.PandasFrame`.
 
     Parameters
     ----------
-    modin_frame : BasePandasFrame
+    modin_frame : PandasFrame
         Modin Frame to query with the compiled queries.
     """
 
@@ -1486,14 +1486,6 @@ class PandasQueryCompiler(BaseQueryCompiler):
     # END String map partitions operations
 
     def unique(self):
-        """
-        Return unique values of Series object.
-
-        Returns
-        -------
-        ndarray
-            The unique values returned as a NumPy array.
-        """
         new_modin_frame = self._modin_frame.apply_full_axis(
             0,
             lambda x: x.squeeze(axis=1).unique(),
