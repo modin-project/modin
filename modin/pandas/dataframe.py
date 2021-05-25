@@ -11,13 +11,7 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-"""
-Implement DataFrame public API as Pandas does.
-
-Almost all docstrings for public and magic methods should be inherited from Pandas
-for better maintability.
-Manually add documentation for methods which are not presented in pandas.
-"""
+"""Module houses ``DataFrame`` class, that is distributed version of ``pandas.DataFrame``."""
 
 import pandas
 from pandas.core.common import apply_if_callable
@@ -54,8 +48,52 @@ from .groupby import DataFrameGroupBy
 from .accessor import CachedAccessor, SparseFrameAccessor
 
 
-@_inherit_docstrings(pandas.DataFrame, apilink="pandas.DataFrame")
+@_inherit_docstrings(
+    pandas.DataFrame, excluded=[pandas.DataFrame.__init__], apilink="pandas.DataFrame"
+)
 class DataFrame(BasePandasDataset):
+    """
+    Modin distributed representation of `pandas.DataFrame`.
+
+    Internally passed data is divided into partitions in order to parallelize
+    computations and utilize the user's hardware as much as possible.
+
+    Inherit common for DataFrames and Series functionality from the
+    `BasePandasDataset` class.
+
+    Parameters
+    ----------
+    data : DataFrame, Series, pandas.DataFrame, ndarray, Iterable or dict, optional
+        Dict can contain ``Series``, arrays, constants, dataclass or list-like objects.
+        If data is a dict, column order follows insertion-order.
+    index : Index or array-like, optional
+        Index to use for resulting frame. Will default to ``RangeIndex`` if no
+        indexing information part of input data and no index provided.
+    columns : Index or array-like, optional
+        Column labels to use for resulting frame. Will default to
+        ``RangeIndex`` if no column labels are provided.
+    dtype : str, np.dtype, or pandas.ExtensionDtype, optional
+        Data type to force. Only a single dtype is allowed. If None, infer.
+    copy : bool, default: False
+        Copy data from inputs. Only affects ``pandas.DataFrame`` / 2d ndarray input.
+    query_compiler : BaseQueryCompiler, optional
+        A query compiler object to create the ``DataFrame`` from.
+
+    Notes
+    -----
+    ``DataFrame`` can be created either from passed `data` or `query_compiler`. If both
+    parameters are provided, data source will be prioritized in the next order:
+
+    1) Modin ``DataFrame`` or ``Series`` passed with `data` parameter.
+    2) Query compiler from the `query_compiler` parameter.
+    3) Various pandas/NumPy/Python data structures passed with `data` parameter.
+
+    The last option is less desirable since import of such data structures is very
+    inefficient, please use previously created Modin structures from the fist two
+    options or import data using highly efficient Modin IO tools (for example
+    ``pd.read_csv``).
+    """
+
     _pandas_class = pandas.DataFrame
 
     def __init__(
@@ -67,25 +105,6 @@ class DataFrame(BasePandasDataset):
         copy=False,
         query_compiler=None,
     ):
-        """
-        Distributed DataFrame object backed by Pandas dataframes.
-
-        Parameters
-        ----------
-        data: NumPy ndarray (structured or homogeneous) or dict:
-            Dict can contain Series, arrays, constants, or list-like
-            objects.
-        index: pandas.Index, list
-            The row index for this DataFrame.
-        columns: pandas.Index
-            The column names for this DataFrame, in pandas Index object.
-        dtype: Data type to force.
-            Only a single dtype is allowed. If None, infer
-        copy: bool
-            Copy data from inputs. Only affects DataFrame / 2d ndarray input.
-        query_compiler: query_compiler
-            A query compiler object to manage distributed computation.
-        """
         Engine.subscribe(_update_engine)
         if isinstance(data, (DataFrame, Series)):
             self._query_compiler = data._query_compiler.copy()
@@ -157,6 +176,13 @@ class DataFrame(BasePandasDataset):
             self._query_compiler = query_compiler
 
     def __repr__(self):
+        """
+        Return a string representation for a particular DataFrame.
+
+        Returns
+        -------
+        str
+        """
         from pandas.io.formats import console
 
         num_rows = pandas.get_option("display.max_rows") or 10
@@ -190,6 +216,13 @@ class DataFrame(BasePandasDataset):
             return result
 
     def _repr_html_(self):  # pragma: no cover
+        """
+        Return a html representation for a particular DataFrame.
+
+        Returns
+        -------
+        str
+        """
         num_rows = pandas.get_option("max_rows") or 60
         num_cols = pandas.get_option("max_columns") or 20
 
@@ -212,7 +245,8 @@ class DataFrame(BasePandasDataset):
 
         Returns
         -------
-        The union of all indexes across the partitions.
+        pandas.Index
+            The union of all indexes across the partitions.
         """
         return self._query_compiler.columns
 
@@ -222,29 +256,41 @@ class DataFrame(BasePandasDataset):
 
         Parameters
         ----------
-        new_columns: The new index to set this
+        new_columns : list-like, Index
+            The new index to set.
         """
         self._query_compiler.columns = new_columns
 
     columns = property(_get_columns, _set_columns)
 
     @property
-    def ndim(self):
-        # DataFrames have an invariant that requires they be 2 dimensions.
+    def ndim(self):  # noqa: RT01, D200
+        """
+        Return the number of dimensions of the underlying data, by definition 2.
+        """
         return 2
 
     def drop_duplicates(
         self, subset=None, keep="first", inplace=False, ignore_index=False
-    ):
+    ):  # noqa: PR01, RT01, D200
+        """
+        Return DataFrame with duplicate rows removed.
+        """
         return super(DataFrame, self).drop_duplicates(
             subset=subset, keep=keep, inplace=inplace
         )
 
     @property
-    def dtypes(self):
+    def dtypes(self):  # noqa: RT01, D200
+        """
+        Return the dtypes in the DataFrame.
+        """
         return self._query_compiler.dtypes
 
-    def duplicated(self, subset=None, keep="first"):
+    def duplicated(self, subset=None, keep="first"):  # noqa: PR01, RT01, D200
+        """
+        Return boolean Series denoting duplicate rows.
+        """
         import hashlib
 
         df = self[subset] if subset is not None else self
@@ -262,30 +308,53 @@ class DataFrame(BasePandasDataset):
         return duplicates
 
     @property
-    def empty(self):
+    def empty(self):  # noqa: RT01, D200
+        """
+        Indicate whether DataFrame is empty.
+        """
         return len(self.columns) == 0 or len(self.index) == 0
 
     @property
-    def axes(self):
+    def axes(self):  # noqa: RT01, D200
+        """
+        Return a list representing the axes of the DataFrame.
+        """
         return [self.index, self.columns]
 
     @property
-    def shape(self):
+    def shape(self):  # noqa: RT01, D200
+        """
+        Return a tuple representing the dimensionality of the DataFrame.
+        """
         return len(self.index), len(self.columns)
 
-    def add_prefix(self, prefix):
+    def add_prefix(self, prefix):  # noqa: PR01, RT01, D200
+        """
+        Prefix labels with string `prefix`.
+        """
         return DataFrame(query_compiler=self._query_compiler.add_prefix(prefix))
 
-    def add_suffix(self, suffix):
+    def add_suffix(self, suffix):  # noqa: PR01, RT01, D200
+        """
+        Suffix labels with string `suffix`.
+        """
         return DataFrame(query_compiler=self._query_compiler.add_suffix(suffix))
 
-    def applymap(self, func, na_action: Optional[str] = None):
+    def applymap(self, func, na_action: Optional[str] = None):  # noqa: PR01, RT01, D200
+        """
+        Apply a function to a Dataframe elementwise.
+        """
         if not callable(func):
             raise ValueError("'{0}' object is not callable".format(type(func)))
         ErrorMessage.non_verified_udf()
         return DataFrame(query_compiler=self._query_compiler.applymap(func))
 
-    def apply(self, func, axis=0, raw=False, result_type=None, args=(), **kwds):
+    def apply(
+        self, func, axis=0, raw=False, result_type=None, args=(), **kwds
+    ):  # noqa: PR01, RT01, D200
+        """
+        Apply a function along an axis of the DataFrame.
+        """
         axis = self._get_axis_number(axis)
         query_compiler = super(DataFrame, self).apply(
             func, axis=axis, raw=raw, result_type=result_type, args=args, **kwds
@@ -334,7 +403,10 @@ class DataFrame(BasePandasDataset):
         squeeze: bool = no_default,
         observed=False,
         dropna: bool = True,
-    ):
+    ):  # noqa: PR01, RT01, D200
+        """
+        Group DataFrame using a mapper or by a Series of columns.
+        """
         if squeeze is not no_default:
             warnings.warn(
                 (
@@ -445,15 +517,26 @@ class DataFrame(BasePandasDataset):
             dropna=dropna,
         )
 
-    def keys(self):
+    def keys(self):  # noqa: RT01, D200
+        """
+        Get columns of the DataFrame.
+        """
         return self.columns
 
-    def transpose(self, copy=False, *args):
+    def transpose(self, copy=False, *args):  # noqa: PR01, RT01, D200
+        """
+        Transpose index and columns.
+        """
         return DataFrame(query_compiler=self._query_compiler.transpose(*args))
 
     T = property(transpose)
 
-    def add(self, other, axis="columns", level=None, fill_value=None):
+    def add(
+        self, other, axis="columns", level=None, fill_value=None
+    ):  # noqa: PR01, RT01, D200
+        """
+        Get Addition of dataframe and `other`, element-wise (binary operator `add`).
+        """
         return self._binary_op(
             "add",
             other,
@@ -463,7 +546,12 @@ class DataFrame(BasePandasDataset):
             broadcast=isinstance(other, Series),
         )
 
-    def append(self, other, ignore_index=False, verify_integrity=False, sort=False):
+    def append(
+        self, other, ignore_index=False, verify_integrity=False, sort=False
+    ):  # noqa: PR01, RT01, D200
+        """
+        Append rows of `other` to the end of caller, returning a new object.
+        """
         if sort is False:
             warnings.warn(
                 "Due to https://github.com/pandas-dev/pandas/issues/35092, "
@@ -517,7 +605,10 @@ class DataFrame(BasePandasDataset):
         )
         return DataFrame(query_compiler=query_compiler)
 
-    def assign(self, **kwargs):
+    def assign(self, **kwargs):  # noqa: PR01, RT01, D200
+        """
+        Assign new columns to a DataFrame.
+        """
         df = self.copy()
         for k, v in kwargs.items():
             if callable(v):
@@ -539,7 +630,10 @@ class DataFrame(BasePandasDataset):
         return_type=None,
         backend=None,
         **kwargs,
-    ):
+    ):  # noqa: PR01, RT01, D200
+        """
+        Make a box plot from DataFrame columns.
+        """
         return to_pandas(self).boxplot(
             column=column,
             by=by,
@@ -554,7 +648,12 @@ class DataFrame(BasePandasDataset):
             **kwargs,
         )
 
-    def combine(self, other, func, fill_value=None, overwrite=True):
+    def combine(
+        self, other, func, fill_value=None, overwrite=True
+    ):  # noqa: PR01, RT01, D200
+        """
+        Perform column-wise combine with another DataFrame.
+        """
         return super(DataFrame, self).combine(
             other, func, fill_value=fill_value, overwrite=overwrite
         )
@@ -565,7 +664,10 @@ class DataFrame(BasePandasDataset):
         align_axis: Union[str, int] = 1,
         keep_shape: bool = False,
         keep_equal: bool = False,
-    ) -> "DataFrame":
+    ) -> "DataFrame":  # noqa: PR01, RT01, D200
+        """
+        Compare to another DataFrame and show the differences.
+        """
         if not isinstance(other, DataFrame):
             raise TypeError(f"Cannot compare DataFrame to {type(other)}")
         other = self._validate_other(other, 0, compare_index=True)
@@ -578,7 +680,10 @@ class DataFrame(BasePandasDataset):
             )
         )
 
-    def corr(self, method="pearson", min_periods=1):
+    def corr(self, method="pearson", min_periods=1):  # noqa: PR01, RT01, D200
+        """
+        Compute pairwise correlation of columns, excluding NA/null values.
+        """
         return self.__constructor__(
             query_compiler=self._query_compiler.corr(
                 method=method,
@@ -586,14 +691,22 @@ class DataFrame(BasePandasDataset):
             )
         )
 
-    def corrwith(self, other, axis=0, drop=False, method="pearson"):
+    def corrwith(
+        self, other, axis=0, drop=False, method="pearson"
+    ):  # noqa: PR01, RT01, D200
+        """
+        Compute pairwise correlation.
+        """
         if isinstance(other, DataFrame):
             other = other._query_compiler.to_pandas()
         return self._default_to_pandas(
             pandas.DataFrame.corrwith, other, axis=axis, drop=drop, method=method
         )
 
-    def cov(self, min_periods=None, ddof: Optional[int] = 1):
+    def cov(self, min_periods=None, ddof: Optional[int] = 1):  # noqa: PR01, RT01, D200
+        """
+        Compute pairwise covariance of columns, excluding NA/null values.
+        """
         numeric_df = self.drop(
             columns=[
                 i for i in self.dtypes.index if not is_numeric_dtype(self.dtypes[i])
@@ -628,7 +741,10 @@ class DataFrame(BasePandasDataset):
             result = numeric_df.__constructor__(query_compiler=result)
         return result
 
-    def dot(self, other):
+    def dot(self, other):  # noqa: PR01, RT01, D200
+        """
+        Compute the matrix multiplication between the DataFrame and other.
+        """
         if isinstance(other, BasePandasDataset):
             common = self.columns.union(other.index)
             if len(common) > len(self.columns) or len(common) > len(other.index):
@@ -663,12 +779,18 @@ class DataFrame(BasePandasDataset):
             query_compiler=self._query_compiler.dot(other, squeeze_self=False)
         )
 
-    def eq(self, other, axis="columns", level=None):
+    def eq(self, other, axis="columns", level=None):  # noqa: PR01, RT01, D200
+        """
+        Perform equality comparison of DataFrame and `other` (binary operator `eq`).
+        """
         return self._binary_op(
             "eq", other, axis=axis, level=level, broadcast=isinstance(other, Series)
         )
 
-    def equals(self, other):
+    def equals(self, other):  # noqa: PR01, RT01, D200
+        """
+        Test whether two objects contain the same elements.
+        """
         if isinstance(other, pandas.DataFrame):
             # Copy into a Modin DataFrame to simplify logic below
             other = DataFrame(other)
@@ -678,12 +800,20 @@ class DataFrame(BasePandasDataset):
             and self.eq(other).all().all()
         )
 
-    def explode(self, column: Union[str, Tuple], ignore_index: bool = False):
+    def explode(
+        self, column: Union[str, Tuple], ignore_index: bool = False
+    ):  # noqa: PR01, RT01, D200
+        """
+        Transform each element of a list-like to a row, replicating index values.
+        """
         return self._default_to_pandas(
             pandas.DataFrame.explode, column, ignore_index=ignore_index
         )
 
-    def eval(self, expr, inplace=False, **kwargs):
+    def eval(self, expr, inplace=False, **kwargs):  # noqa: PR01, RT01, D200
+        """
+        Evaluate a string describing operations on DataFrame columns.
+        """
         self._validate_eval_query(expr, **kwargs)
         inplace = validate_bool_kwarg(inplace, "inplace")
         new_query_compiler = self._query_compiler.eval(expr, **kwargs)
@@ -701,7 +831,12 @@ class DataFrame(BasePandasDataset):
                 query_compiler=new_query_compiler
             )
 
-    def floordiv(self, other, axis="columns", level=None, fill_value=None):
+    def floordiv(
+        self, other, axis="columns", level=None, fill_value=None
+    ):  # noqa: PR01, RT01, D200
+        """
+        Get integer division of dataframe and `other`, element-wise (binary operator `floordiv`).
+        """
         return self._binary_op(
             "floordiv",
             other,
@@ -714,7 +849,10 @@ class DataFrame(BasePandasDataset):
     @classmethod
     def from_dict(
         cls, data, orient="columns", dtype=None, columns=None
-    ):  # pragma: no cover
+    ):  # pragma: no cover # noqa: PR01, RT01, D200
+        """
+        Construct DataFrame from dict of array-like or dicts.
+        """
         ErrorMessage.default_to_pandas("`from_dict`")
         return from_pandas(
             pandas.DataFrame.from_dict(
@@ -731,7 +869,10 @@ class DataFrame(BasePandasDataset):
         columns=None,
         coerce_float=False,
         nrows=None,
-    ):  # pragma: no cover
+    ):  # pragma: no cover # noqa: PR01, RT01, D200
+        """
+        Convert structured or record ndarray to DataFrame.
+        """
         ErrorMessage.default_to_pandas("`from_records`")
         return from_pandas(
             pandas.DataFrame.from_records(
@@ -744,12 +885,18 @@ class DataFrame(BasePandasDataset):
             )
         )
 
-    def ge(self, other, axis="columns", level=None):
+    def ge(self, other, axis="columns", level=None):  # noqa: PR01, RT01, D200
+        """
+        Get greater than or equal comparison of dataframe and `other`, element-wise (binary operator `ge`).
+        """
         return self._binary_op(
             "ge", other, axis=axis, level=level, broadcast=isinstance(other, Series)
         )
 
-    def gt(self, other, axis="columns", level=None):
+    def gt(self, other, axis="columns", level=None):  # noqa: PR01, RT01, D200
+        """
+        Get greater than comparison of dataframe and `other`, element-wise (binary operator `ge`).
+        """
         return self._binary_op(
             "gt", other, axis=axis, level=level, broadcast=isinstance(other, Series)
         )
@@ -770,7 +917,10 @@ class DataFrame(BasePandasDataset):
         layout=None,
         bins=10,
         **kwds,
-    ):  # pragma: no cover
+    ):  # pragma: no cover # noqa: PR01, RT01, D200
+        """
+        Make a histogram of the DataFrame.
+        """
         return self._default_to_pandas(
             pandas.DataFrame.hist,
             column=column,
@@ -797,7 +947,11 @@ class DataFrame(BasePandasDataset):
         memory_usage: Optional[Union[bool, str]] = None,
         show_counts: Optional[bool] = None,
         null_counts: Optional[bool] = None,
-    ):
+    ):  # noqa: PR01, D200
+        """
+        Print a concise summary of the DataFrame.
+        """
+
         def put_str(src, output_len=None, spaces=2):
             src = str(src)
             return src.ljust(output_len if output_len else len(src)) + " " * spaces
@@ -925,7 +1079,10 @@ class DataFrame(BasePandasDataset):
         output.append("")
         buf.write("\n".join(output))
 
-    def insert(self, loc, column, value, allow_duplicates=False):
+    def insert(self, loc, column, value, allow_duplicates=False):  # noqa: PR01, D200
+        """
+        Insert column into DataFrame at specified location.
+        """
         if isinstance(value, (DataFrame, pandas.DataFrame)):
             if len(value.columns) != 1:
                 raise ValueError("Wrong number of items passed 2, placement implies 1")
@@ -983,7 +1140,10 @@ class DataFrame(BasePandasDataset):
         limit_area=None,
         downcast=None,
         **kwargs,
-    ):
+    ):  # noqa: PR01, RT01, D200
+        """
+        Fill NaN values using an interpolation method.
+        """
         return self._default_to_pandas(
             pandas.DataFrame.interpolate,
             method=method,
@@ -996,34 +1156,58 @@ class DataFrame(BasePandasDataset):
             **kwargs,
         )
 
-    def iterrows(self):
+    def iterrows(self):  # noqa: D200
+        """
+        Iterate over DataFrame rows as (index, Series) pairs.
+        """
+
         def iterrow_builder(s):
+            """Return tuple of the given `s` parameter name and the parameter themself."""
             return s.name, s
 
         partition_iterator = PartitionIterator(self, 0, iterrow_builder)
         for v in partition_iterator:
             yield v
 
-    def items(self):
+    def items(self):  # noqa: D200
+        """
+        Iterate over (column name, Series) pairs.
+        """
+
         def items_builder(s):
+            """Return tuple of the given `s` parameter name and the parameter themself."""
             return s.name, s
 
         partition_iterator = PartitionIterator(self, 1, items_builder)
         for v in partition_iterator:
             yield v
 
-    def iteritems(self):
+    def iteritems(self):  # noqa: RT01, D200
+        """
+        Iterate over (column name, Series) pairs.
+        """
         return self.items()
 
-    def itertuples(self, index=True, name="Pandas"):
+    def itertuples(self, index=True, name="Pandas"):  # noqa: PR01, D200
+        """
+        Iterate over DataFrame rows as namedtuples.
+        """
+
         def itertuples_builder(s):
+            """Return the next namedtuple."""
+            print(next(s._to_pandas().to_frame().T.itertuples(index=index, name=name)))
             return next(s._to_pandas().to_frame().T.itertuples(index=index, name=name))
 
         partition_iterator = PartitionIterator(self, 0, itertuples_builder)
         for v in partition_iterator:
             yield v
 
-    def join(self, other, on=None, how="left", lsuffix="", rsuffix="", sort=False):
+    def join(
+        self, other, on=None, how="left", lsuffix="", rsuffix="", sort=False
+    ):  # noqa: PR01, RT01, D200
+        """
+        Join columns of another DataFrame.
+        """
         if isinstance(other, Series):
             if other.name is None:
                 raise ValueError("Other Series must have a name")
@@ -1076,15 +1260,24 @@ class DataFrame(BasePandasDataset):
         new_frame.columns = new_columns
         return new_frame
 
-    def le(self, other, axis="columns", level=None):
+    def le(self, other, axis="columns", level=None):  # noqa: PR01, RT01, D200
+        """
+        Get Less than or equal comparison of dataframe and `other`, element-wise (binary operator `le`).
+        """
         return self._binary_op(
             "le", other, axis=axis, level=level, broadcast=isinstance(other, Series)
         )
 
-    def lookup(self, row_labels, col_labels):
+    def lookup(self, row_labels, col_labels):  # noqa: PR01, RT01, D200
+        """
+        Label-based "fancy indexing" function for DataFrame.
+        """
         return self._default_to_pandas(pandas.DataFrame.lookup, row_labels, col_labels)
 
-    def lt(self, other, axis="columns", level=None):
+    def lt(self, other, axis="columns", level=None):  # noqa: PR01, RT01, D200
+        """
+        Get Less than comparison of dataframe and `other`, element-wise (binary operator `le`).
+        """
         return self._binary_op(
             "lt", other, axis=axis, level=level, broadcast=isinstance(other, Series)
         )
@@ -1097,7 +1290,10 @@ class DataFrame(BasePandasDataset):
         value_name="value",
         col_level=None,
         ignore_index=True,
-    ):
+    ):  # noqa: PR01, RT01, D200
+        """
+        Unpivot a DataFrame from wide to long format, optionally leaving identifiers set.
+        """
         return self.__constructor__(
             query_compiler=self._query_compiler.melt(
                 id_vars=id_vars,
@@ -1109,7 +1305,10 @@ class DataFrame(BasePandasDataset):
             )
         )
 
-    def memory_usage(self, index=True, deep=False):
+    def memory_usage(self, index=True, deep=False):  # noqa: PR01, RT01, D200
+        """
+        Return the memory usage of each column in bytes.
+        """
         if index:
             result = self._reduce_dimension(
                 self._query_compiler.memory_usage(index=False, deep=deep)
@@ -1132,7 +1331,10 @@ class DataFrame(BasePandasDataset):
         copy=True,
         indicator=False,
         validate=None,
-    ):
+    ):  # noqa: PR01, RT01, D200
+        """
+        Merge DataFrame or named Series objects with a database-style join.
+        """
         if isinstance(right, Series):
             if right.name is None:
                 raise ValueError("Cannot merge a Series without a name")
@@ -1165,7 +1367,12 @@ class DataFrame(BasePandasDataset):
             )
         )
 
-    def mod(self, other, axis="columns", level=None, fill_value=None):
+    def mod(
+        self, other, axis="columns", level=None, fill_value=None
+    ):  # noqa: PR01, RT01, D200
+        """
+        Get modulo of dataframe and `other`, element-wise (binary operator `mod`).
+        """
         return self._binary_op(
             "mod",
             other,
@@ -1175,7 +1382,12 @@ class DataFrame(BasePandasDataset):
             broadcast=isinstance(other, Series),
         )
 
-    def mul(self, other, axis="columns", level=None, fill_value=None):
+    def mul(
+        self, other, axis="columns", level=None, fill_value=None
+    ):  # noqa: PR01, RT01, D200
+        """
+        Get multiplication of dataframe and `other`, element-wise (binary operator `mul`).
+        """
         return self._binary_op(
             "mul",
             other,
@@ -1187,22 +1399,34 @@ class DataFrame(BasePandasDataset):
 
     rmul = multiply = mul
 
-    def ne(self, other, axis="columns", level=None):
+    def ne(self, other, axis="columns", level=None):  # noqa: PR01, RT01, D200
+        """
+        Get not equal comparison of dataframe and `other`, element-wise (binary operator `ne`).
+        """
         return self._binary_op(
             "ne", other, axis=axis, level=level, broadcast=isinstance(other, Series)
         )
 
-    def nlargest(self, n, columns, keep="first"):
+    def nlargest(self, n, columns, keep="first"):  # noqa: PR01, RT01, D200
+        """
+        Return the first `n` rows ordered by `columns` in descending order.
+        """
         return DataFrame(query_compiler=self._query_compiler.nlargest(n, columns, keep))
 
-    def nsmallest(self, n, columns, keep="first"):
+    def nsmallest(self, n, columns, keep="first"):  # noqa: PR01, RT01, D200
+        """
+        Return the first `n` rows ordered by `columns` in ascending order.
+        """
         return DataFrame(
             query_compiler=self._query_compiler.nsmallest(
                 n=n, columns=columns, keep=keep
             )
         )
 
-    def slice_shift(self, periods=1, axis=0):
+    def slice_shift(self, periods=1, axis=0):  # noqa: PR01, RT01, D200
+        """
+        Equivalent to `shift` without copying data.
+        """
         if periods == 0:
             return self.copy()
 
@@ -1233,7 +1457,10 @@ class DataFrame(BasePandasDataset):
                 new_df.columns = new_columns
                 return new_df
 
-    def unstack(self, level=-1, fill_value=None):
+    def unstack(self, level=-1, fill_value=None):  # noqa: PR01, RT01, D200
+        """
+        Pivot a level of the (necessarily hierarchical) index labels.
+        """
         if not isinstance(self.index, pandas.MultiIndex) or (
             isinstance(self.index, pandas.MultiIndex)
             and is_list_like(level)
@@ -1247,7 +1474,10 @@ class DataFrame(BasePandasDataset):
                 query_compiler=self._query_compiler.unstack(level, fill_value)
             )
 
-    def pivot(self, index=None, columns=None, values=None):
+    def pivot(self, index=None, columns=None, values=None):  # noqa: PR01, RT01, D200
+        """
+        Return reshaped DataFrame organized by given index / column values.
+        """
         return self.__constructor__(
             query_compiler=self._query_compiler.pivot(
                 index=index, columns=columns, values=values
@@ -1265,7 +1495,10 @@ class DataFrame(BasePandasDataset):
         dropna=True,
         margins_name="All",
         observed=False,
-    ):
+    ):  # noqa: PR01, RT01, D200
+        """
+        Create a spreadsheet-style pivot table as a DataFrame.
+        """
         result = DataFrame(
             query_compiler=self._query_compiler.pivot_table(
                 index=index,
@@ -1315,10 +1548,18 @@ class DataFrame(BasePandasDataset):
         secondary_y=False,
         sort_columns=False,
         **kwargs,
-    ):
+    ):  # noqa: PR01, RT01, D200
+        """
+        Make plots of DataFrame.
+        """
         return self._to_pandas().plot
 
-    def pow(self, other, axis="columns", level=None, fill_value=None):
+    def pow(
+        self, other, axis="columns", level=None, fill_value=None
+    ):  # noqa: PR01, RT01, D200
+        """
+        Get exponential power of dataframe and `other`, element-wise (binary operator `pow`).
+        """
         if isinstance(other, Series):
             return self._default_to_pandas(
                 "pow", other, axis=axis, level=level, fill_value=fill_value
@@ -1340,7 +1581,10 @@ class DataFrame(BasePandasDataset):
         numeric_only=None,
         min_count=0,
         **kwargs,
-    ):
+    ):  # noqa: PR01, RT01, D200
+        """
+        Return the product of the values over the requested axis.
+        """
         axis = self._get_axis_number(axis)
         if level is not None:
             if (
@@ -1393,7 +1637,10 @@ class DataFrame(BasePandasDataset):
     product = prod
     radd = add
 
-    def query(self, expr, inplace=False, **kwargs):
+    def query(self, expr, inplace=False, **kwargs):  # noqa: PR01, RT01, D200
+        """
+        Query the columns of a DataFrame with a boolean expression.
+        """
         ErrorMessage.non_verified_udf()
         self._validate_eval_query(expr, **kwargs)
         inplace = validate_bool_kwarg(inplace, "inplace")
@@ -1412,7 +1659,10 @@ class DataFrame(BasePandasDataset):
         fill_value=np.nan,
         limit=None,
         tolerance=None,
-    ):
+    ):  # noqa: PR01, RT01, D200
+        """
+        Conform DataFrame to new index with optional filling logic.
+        """
         axis = self._get_axis_number(axis)
         if axis == 0 and labels is not None:
             index = labels
@@ -1439,7 +1689,10 @@ class DataFrame(BasePandasDataset):
         inplace=False,
         level=None,
         errors="ignore",
-    ):
+    ):  # noqa: PR01, RT01, D200
+        """
+        Alter axes labels.
+        """
         inplace = validate_bool_kwarg(inplace, "inplace")
         if mapper is None and index is None and columns is None:
             raise TypeError("must pass an index to rename")
@@ -1483,7 +1736,10 @@ class DataFrame(BasePandasDataset):
         limit=None,
         regex=False,
         method="pad",
-    ):
+    ):  # noqa: PR01, RT01, D200
+        """
+        Replace values given in `to_replace` with `value`.
+        """
         inplace = validate_bool_kwarg(inplace, "inplace")
         new_query_compiler = self._query_compiler.replace(
             to_replace=to_replace,
@@ -1495,7 +1751,12 @@ class DataFrame(BasePandasDataset):
         )
         return self._create_or_update_from_compiler(new_query_compiler, inplace)
 
-    def rfloordiv(self, other, axis="columns", level=None, fill_value=None):
+    def rfloordiv(
+        self, other, axis="columns", level=None, fill_value=None
+    ):  # noqa: PR01, RT01, D200
+        """
+        Get integer division of dataframe and `other`, element-wise (binary operator `rfloordiv`).
+        """
         return self._binary_op(
             "rfloordiv",
             other,
@@ -1505,7 +1766,12 @@ class DataFrame(BasePandasDataset):
             broadcast=isinstance(other, Series),
         )
 
-    def rmod(self, other, axis="columns", level=None, fill_value=None):
+    def rmod(
+        self, other, axis="columns", level=None, fill_value=None
+    ):  # noqa: PR01, RT01, D200
+        """
+        Get modulo of dataframe and `other`, element-wise (binary operator `rmod`).
+        """
         return self._binary_op(
             "rmod",
             other,
@@ -1515,7 +1781,12 @@ class DataFrame(BasePandasDataset):
             broadcast=isinstance(other, Series),
         )
 
-    def rpow(self, other, axis="columns", level=None, fill_value=None):
+    def rpow(
+        self, other, axis="columns", level=None, fill_value=None
+    ):  # noqa: PR01, RT01, D200
+        """
+        Get exponential power of dataframe and `other`, element-wise (binary operator `rpow`).
+        """
         if isinstance(other, Series):
             return self._default_to_pandas(
                 "rpow", other, axis=axis, level=level, fill_value=fill_value
@@ -1529,7 +1800,12 @@ class DataFrame(BasePandasDataset):
             broadcast=isinstance(other, Series),
         )
 
-    def rsub(self, other, axis="columns", level=None, fill_value=None):
+    def rsub(
+        self, other, axis="columns", level=None, fill_value=None
+    ):  # noqa: PR01, RT01, D200
+        """
+        Get subtraction of dataframe and `other`, element-wise (binary operator `rsub`).
+        """
         return self._binary_op(
             "rsub",
             other,
@@ -1539,7 +1815,12 @@ class DataFrame(BasePandasDataset):
             broadcast=isinstance(other, Series),
         )
 
-    def rtruediv(self, other, axis="columns", level=None, fill_value=None):
+    def rtruediv(
+        self, other, axis="columns", level=None, fill_value=None
+    ):  # noqa: PR01, RT01, D200
+        """
+        Get floating division of dataframe and `other`, element-wise (binary operator `rtruediv`).
+        """
         return self._binary_op(
             "rtruediv",
             other,
@@ -1551,7 +1832,10 @@ class DataFrame(BasePandasDataset):
 
     rdiv = rtruediv
 
-    def select_dtypes(self, include=None, exclude=None):
+    def select_dtypes(self, include=None, exclude=None):  # noqa: PR01, RT01, D200
+        """
+        Return a subset of the DataFrame's columns based on the column dtypes.
+        """
         # Validates arguments for whether both include and exclude are None or
         # if they are disjoint. Also invalidates string dtypes.
         pandas.DataFrame().select_dtypes(include, exclude)
@@ -1589,7 +1873,10 @@ class DataFrame(BasePandasDataset):
 
     def set_index(
         self, keys, drop=True, append=False, inplace=False, verify_integrity=False
-    ):
+    ):  # noqa: PR01, RT01, D200
+        """
+        Set the DataFrame index using existing columns.
+        """
         inplace = validate_bool_kwarg(inplace, "inplace")
         if not isinstance(keys, list):
             keys = [keys]
@@ -1641,7 +1928,10 @@ class DataFrame(BasePandasDataset):
 
     sparse = CachedAccessor("sparse", SparseFrameAccessor)
 
-    def squeeze(self, axis=None):
+    def squeeze(self, axis=None):  # noqa: PR01, RT01, D200
+        """
+        Squeeze 1 dimensional axis objects into scalars.
+        """
         axis = self._get_axis_number(axis) if axis is not None else None
         if axis is None and (len(self.columns) == 1 or len(self.index) == 1):
             return Series(query_compiler=self._query_compiler).squeeze()
@@ -1652,7 +1942,10 @@ class DataFrame(BasePandasDataset):
         else:
             return self.copy()
 
-    def stack(self, level=-1, dropna=True):
+    def stack(self, level=-1, dropna=True):  # noqa: PR01, RT01, D200
+        """
+        Stack the prescribed level(s) from columns to index.
+        """
         if not isinstance(self.columns, pandas.MultiIndex) or (
             isinstance(self.columns, pandas.MultiIndex)
             and is_list_like(level)
@@ -1664,7 +1957,12 @@ class DataFrame(BasePandasDataset):
         else:
             return DataFrame(query_compiler=self._query_compiler.stack(level, dropna))
 
-    def sub(self, other, axis="columns", level=None, fill_value=None):
+    def sub(
+        self, other, axis="columns", level=None, fill_value=None
+    ):  # noqa: PR01, RT01, D200
+        """
+        Get subtraction of dataframe and `other`, element-wise (binary operator `sub`).
+        """
         return self._binary_op(
             "sub",
             other,
@@ -1684,7 +1982,10 @@ class DataFrame(BasePandasDataset):
         numeric_only=None,
         min_count=0,
         **kwargs,
-    ):
+    ):  # noqa: PR01, RT01, D200
+        """
+        Return the sum of the values over the requested axis.
+        """
         axis = self._get_axis_number(axis)
         axis_to_apply = self.columns if axis else self.index
         if (
@@ -1735,7 +2036,10 @@ class DataFrame(BasePandasDataset):
             )
         )
 
-    def to_feather(self, path, **kwargs):  # pragma: no cover
+    def to_feather(self, path, **kwargs):  # pragma: no cover # noqa: PR01, RT01, D200
+        """
+        Write a DataFrame to the binary Feather format.
+        """
         return self._default_to_pandas(pandas.DataFrame.to_feather, path, **kwargs)
 
     def to_gbq(
@@ -1750,7 +2054,10 @@ class DataFrame(BasePandasDataset):
         location=None,
         progress_bar=True,
         credentials=None,
-    ):  # pragma: no cover
+    ):  # pragma: no cover # noqa: PR01, RT01, D200
+        """
+        Write a DataFrame to a Google BigQuery table.
+        """
         return self._default_to_pandas(
             pandas.DataFrame.to_gbq,
             destination_table,
@@ -1790,7 +2097,10 @@ class DataFrame(BasePandasDataset):
         table_id=None,
         render_links=False,
         encoding=None,
-    ):
+    ):  # noqa: PR01, RT01, D200
+        """
+        Render a DataFrame as an HTML table.
+        """
         return self._default_to_pandas(
             pandas.DataFrame.to_html,
             buf=buf,
@@ -1827,7 +2137,10 @@ class DataFrame(BasePandasDataset):
         partition_cols=None,
         storage_options: StorageOptions = None,
         **kwargs,
-    ):  # pragma: no cover
+    ):  # pragma: no cover # noqa: PR01, RT01, D200
+        """
+        Write a DataFrame to the binary parquet format.
+        """
         return self._default_to_pandas(
             pandas.DataFrame.to_parquet,
             path,
@@ -1839,10 +2152,20 @@ class DataFrame(BasePandasDataset):
             **kwargs,
         )
 
-    def to_period(self, freq=None, axis=0, copy=True):  # pragma: no cover
+    def to_period(
+        self, freq=None, axis=0, copy=True
+    ):  # pragma: no cover # noqa: PR01, RT01, D200
+        """
+        Convert DataFrame from DatetimeIndex to PeriodIndex.
+        """
         return super(DataFrame, self).to_period(freq=freq, axis=axis, copy=copy)
 
-    def to_records(self, index=True, column_dtypes=None, index_dtypes=None):
+    def to_records(
+        self, index=True, column_dtypes=None, index_dtypes=None
+    ):  # noqa: PR01, RT01, D200
+        """
+        Convert DataFrame to a NumPy record array.
+        """
         return self._default_to_pandas(
             pandas.DataFrame.to_records,
             index=index,
@@ -1863,7 +2186,10 @@ class DataFrame(BasePandasDataset):
         convert_strl=None,
         compression: Union[str, Mapping[str, str], None] = "infer",
         storage_options: StorageOptions = None,
-    ):  # pragma: no cover
+    ):  # pragma: no cover # noqa: PR01, RT01, D200
+        """
+        Export DataFrame object to Stata data format.
+        """
         return self._default_to_pandas(
             pandas.DataFrame.to_stata,
             path,
@@ -1879,12 +2205,22 @@ class DataFrame(BasePandasDataset):
             storage_options=storage_options,
         )
 
-    def to_timestamp(self, freq=None, how="start", axis=0, copy=True):
+    def to_timestamp(
+        self, freq=None, how="start", axis=0, copy=True
+    ):  # noqa: PR01, RT01, D200
+        """
+        Cast to DatetimeIndex of timestamps, at *beginning* of period.
+        """
         return super(DataFrame, self).to_timestamp(
             freq=freq, how=how, axis=axis, copy=copy
         )
 
-    def truediv(self, other, axis="columns", level=None, fill_value=None):
+    def truediv(
+        self, other, axis="columns", level=None, fill_value=None
+    ):  # noqa: PR01, RT01, D200
+        """
+        Get floating division of DataFrame and `other`, element-wise (binary operator `truediv`).
+        """
         return self._binary_op(
             "truediv",
             other,
@@ -1898,7 +2234,10 @@ class DataFrame(BasePandasDataset):
 
     def update(
         self, other, join="left", overwrite=True, filter_func=None, errors="ignore"
-    ):
+    ):  # noqa: PR01, RT01, D200
+        """
+        Modify in place using non-NA values from another DataFrame.
+        """
         if not isinstance(other, DataFrame):
             other = DataFrame(other)
         query_compiler = self._query_compiler.df_update(
@@ -1916,7 +2255,10 @@ class DataFrame(BasePandasDataset):
         normalize: bool = False,
         sort: bool = True,
         ascending: bool = False,
-    ):
+    ):  # noqa: PR01, RT01, D200
+        """
+        Return a Series containing counts of unique rows in the DataFrame.
+        """
         return self._default_to_pandas(
             "value_counts",
             subset=subset,
@@ -1934,7 +2276,10 @@ class DataFrame(BasePandasDataset):
         level=None,
         errors="raise",
         try_cast=False,
-    ):
+    ):  # noqa: PR01, RT01, D200
+        """
+        Replace values where the condition is False.
+        """
         inplace = validate_bool_kwarg(inplace, "inplace")
         if isinstance(other, pandas.Series) and axis is None:
             raise ValueError("Must specify axis=0 or 1")
@@ -1975,12 +2320,28 @@ class DataFrame(BasePandasDataset):
         )
         return self._create_or_update_from_compiler(query_compiler, inplace)
 
-    def xs(self, key, axis=0, level=None, drop_level=True):
+    def xs(self, key, axis=0, level=None, drop_level=True):  # noqa: PR01, RT01, D200
+        """
+        Return cross-section from the DataFrame.
+        """
         return self._default_to_pandas(
             pandas.DataFrame.xs, key, axis=axis, level=level, drop_level=drop_level
         )
 
     def _getitem_column(self, key):
+        """
+        Get column specified by `key`.
+
+        Parameters
+        ----------
+        key : hashable
+            Key that points to column to retrieve.
+
+        Returns
+        -------
+        Series
+            Selected column.
+        """
         if key not in self.keys():
             raise KeyError("{}".format(key))
         s = DataFrame(
@@ -1992,6 +2353,23 @@ class DataFrame(BasePandasDataset):
         return s
 
     def __getattr__(self, key):
+        """
+        Return item identified by `key`.
+
+        Parameters
+        ----------
+        key : hashable
+            Key to get.
+
+        Returns
+        -------
+        Any
+
+        Notes
+        -----
+        First try to use `__getattribute__` method. If it fails
+        try to get `key` from `DataFrame` fields.
+        """
         try:
             return object.__getattribute__(self, key)
         except AttributeError as e:
@@ -2000,6 +2378,16 @@ class DataFrame(BasePandasDataset):
             raise e
 
     def __setattr__(self, key, value):
+        """
+        Set attribute `value` identified by `key`.
+
+        Parameters
+        ----------
+        key : hashable
+            Key to set.
+        value : Any
+            Value to set.
+        """
         # We have to check for this first because we have to be able to set
         # _query_compiler before we check if the key is in self
         if key in ["_query_compiler"] or key in self.__dict__:
@@ -2015,6 +2403,20 @@ class DataFrame(BasePandasDataset):
         object.__setattr__(self, key, value)
 
     def __setitem__(self, key, value):
+        """
+        Set attribute `value` identified by `key`.
+
+        Parameters
+        ----------
+        key : Any
+            Key to set.
+        value : Any
+            Value to set.
+
+        Returns
+        -------
+        None
+        """
         if isinstance(key, slice):
             return self._setitem_slice(key, value)
 
@@ -2088,18 +2490,65 @@ class DataFrame(BasePandasDataset):
             self._update_inplace(self._query_compiler.setitem(0, key, value))
 
     def __hash__(self):
+        """
+        Return hash representation of the DataFrame.
+
+        Returns
+        -------
+        int
+        """
         return self._default_to_pandas(pandas.DataFrame.__hash__)
 
     def __iter__(self):
+        """
+        Iterate over info axis.
+
+        Returns
+        -------
+        iterable
+            Iterator of the columns names.
+        """
         return iter(self.columns)
 
     def __contains__(self, key):
+        """
+        Check if `key` in the `DataFrame.columns`.
+
+        Parameters
+        ----------
+        key : hashable
+            Key to check the presence in the columns.
+
+        Returns
+        -------
+        bool
+        """
         return self.columns.__contains__(key)
 
     def __round__(self, decimals=0):
+        """
+        Round each value in a DataFrame to the given number of decimals.
+
+        Parameters
+        ----------
+        decimals : int, default: 0
+            Number of decimal places to round to.
+
+        Returns
+        -------
+        DataFrame
+        """
         return self._default_to_pandas(pandas.DataFrame.__round__, decimals=decimals)
 
     def __delitem__(self, key):
+        """
+        Delete item identified by `key` label.
+
+        Parameters
+        ----------
+        key : hashable
+            Key to delete.
+        """
         if key not in self:
             raise KeyError(key)
         self._update_inplace(new_query_compiler=self._query_compiler.delitem(key))
@@ -2128,14 +2577,22 @@ class DataFrame(BasePandasDataset):
     __rdiv__ = rdiv
 
     @property
-    def attrs(self):
+    def attrs(self):  # noqa: D200
+        """
+        Return dictionary of global attributes of this dataset.
+        """
+
         def attrs(df):
             return df.attrs
 
         self._default_to_pandas(attrs)
 
     @property
-    def style(self):
+    def style(self):  # noqa: RT01, D200
+        """
+        Return a Styler object.
+        """
+
         def style(df):
             """Define __name__ attr because properties do not have it."""
             return df.style
@@ -2144,18 +2601,19 @@ class DataFrame(BasePandasDataset):
 
     def _create_or_update_from_compiler(self, new_query_compiler, inplace=False):
         """
-        Return or update a DataFrame given new query_compiler.
-
-        TODO: add description for parameters.
+        Return or update a DataFrame with given `new_query_compiler`.
 
         Parameters
         ----------
-        new_query_compiler: query_compiler
-        inplace: bool
+        new_query_compiler : PandasQueryCompiler
+            QueryCompiler to use to manage the data.
+        inplace : bool, default: False
+            Whether or not to perform update or creation inplace.
 
         Returns
         -------
-        dataframe
+        DataFrame or None
+            None if update was done, DataFrame otherwise.
         """
         assert (
             isinstance(new_query_compiler, type(self._query_compiler))
@@ -2168,17 +2626,17 @@ class DataFrame(BasePandasDataset):
 
     def _get_numeric_data(self, axis: int):
         """
-        Grabs only numeric columns from frame.
+        Grab only numeric data from DataFrame.
 
         Parameters
         ----------
-        axis: int
+        axis : {0, 1}
             Axis to inspect on having numeric types only.
-            If axis is not 0, returns the frame itself.
 
         Returns
         -------
-        DataFrame with numeric data.
+        DataFrame
+            DataFrame with numeric data.
         """
         # Pandas ignores `numeric_only` if `axis` is 1, but we do have to drop
         # non-numeric columns if `axis` is 0.
@@ -2192,13 +2650,14 @@ class DataFrame(BasePandasDataset):
 
     def _validate_dtypes(self, numeric_only=False):
         """
-        Help to check that all the dtypes are the same.
-
-        TODO: add description for parameters.
+        Check that all the dtypes are the same.
 
         Parameters
         ----------
-        numeric_only: bool
+        numeric_only : bool, default: False
+            Whether or not to allow only numeric data.
+            If True and non-numeric data is found, exception
+            will be raised.
         """
         dtype = self.dtypes[0]
         for t in self.dtypes:
@@ -2210,6 +2669,21 @@ class DataFrame(BasePandasDataset):
                 )
 
     def _validate_dtypes_min_max(self, axis, numeric_only):
+        """
+        Validate data dtype for `min` and `max` methods.
+
+        Parameters
+        ----------
+        axis : {0, 1}
+            Axis to validate over.
+        numeric_only : bool
+            Whether or not to allow only numeric data.
+            If True and non-numeric data is found, exception.
+
+        Returns
+        -------
+        DataFrame
+        """
         # If our DataFrame has both numeric and non-numeric dtypes then
         # comparisons between these types do not make sense and we must raise a
         # TypeError. The exception to this rule is when there are datetime and
@@ -2238,21 +2712,22 @@ class DataFrame(BasePandasDataset):
 
     def _validate_dtypes_sum_prod_mean(self, axis, numeric_only, ignore_axis=False):
         """
-        Raise TypeErrors for sum, prod, and mean where necessary.
-
-        TODO: Add more details for this docstring template.
+        Validate data dtype for `sum`, `prod` and `mean` methods.
 
         Parameters
         ----------
-        What arguments does this function have.
-        [
-        PARAMETER_NAME: PARAMETERS TYPES
-            Description.
-        ]
+        axis : {0, 1}
+            Axis to validate over.
+        numeric_only : bool
+            Whether or not to allow only numeric data.
+            If True and non-numeric data is found, exception
+            will be raised.
+        ignore_axis : bool, default: False
+            Whether or not to ignore `axis` parameter.
 
         Returns
         -------
-        What this returns (if anything)
+        DataFrame
         """
         # We cannot add datetime types, so if we are summing a column with
         # dtype datetime64 and cannot ignore non-numeric types, we must throw a
@@ -2291,17 +2766,26 @@ class DataFrame(BasePandasDataset):
         )
 
     def _to_pandas(self):
+        """
+        Convert Modin DataFrame to pandas DataFrame.
+
+        Returns
+        -------
+        pandas.DataFrame
+        """
         return self._query_compiler.to_pandas()
 
     def _validate_eval_query(self, expr, **kwargs):
         """
-        Help to check the arguments to eval() and query().
+        Validate the arguments of ``eval`` and ``query`` functions.
 
         Parameters
         ----------
-        expr: The expression to evaluate. This string cannot contain any
+        expr : str
+            The expression to evaluate. This string cannot contain any
             Python statements, only Python expressions.
-        **kwargs
+        **kwargs : dict
+            Optional arguments of ``eval`` and ``query`` functions.
         """
         if isinstance(expr, str) and expr == "":
             raise ValueError("expr cannot be an empty string")
@@ -2317,21 +2801,16 @@ class DataFrame(BasePandasDataset):
 
     def _reduce_dimension(self, query_compiler):
         """
-        Implement [METHOD_NAME].
-
-        TODO: Add more details for this docstring template.
+        Reduce the dimension of data from the `query_compiler`.
 
         Parameters
         ----------
-        What arguments does this function have.
-        [
-        PARAMETER_NAME: PARAMETERS TYPES
-            Description.
-        ]
+        query_compiler : BaseQueryCompiler
+            Query compiler to retrieve the data.
 
         Returns
         -------
-        What this returns (if anything)
+        Series
         """
         return Series(query_compiler=query_compiler)
 
@@ -2339,20 +2818,19 @@ class DataFrame(BasePandasDataset):
         """
         Alter the name or names of the axis.
 
-        TODO: add types.
-
         Parameters
         ----------
-        name:
-            Name for the Index, or list of names for the MultiIndex
-        axis:
-            0 or 'index' for the index; 1 or 'columns' for the columns
-        inplace:
-            Whether to modify `self` directly or return a copy
+        name : str or list of str
+            Name for the Index, or list of names for the MultiIndex.
+        axis : str or int, default: 0
+            The axis to set the label.
+            0 or 'index' for the index, 1 or 'columns' for the columns.
+        inplace : bool, default: False
+            Whether to modify `self` directly or return a copy.
 
         Returns
         -------
-        Type of caller or None if inplace=True.
+        DataFrame or None
         """
         axis = self._get_axis_number(axis)
         renamed = self if inplace else self.copy()
@@ -2367,10 +2845,15 @@ class DataFrame(BasePandasDataset):
         """
         Convert `self` to datetime.
 
+        Parameters
+        ----------
+        **kwargs : dict
+            Optional arguments to use during query compiler's
+            `to_datetime` invocation.
+
         Returns
         -------
-        datetime
-            Series: Series of datetime64 dtype
+        Series of datetime64 dtype
         """
         return self._reduce_dimension(
             query_compiler=self._query_compiler.to_datetime(**kwargs)
@@ -2378,15 +2861,17 @@ class DataFrame(BasePandasDataset):
 
     def _getitem(self, key):
         """
-        Get the column specified by key for this DataFrame.
+        Get the data specified by `key` for this DataFrame.
 
         Parameters
         ----------
-        key: the column name.
+        key : callable, Series, DataFrame, np.ndarray, pandas.Index or list
+            Data identifiers to retrieve.
 
         Returns
         -------
-        A Pandas Series representing the value for the column.
+        Series or DataFrame
+            Retrieved data.
         """
         key = apply_if_callable(key, self)
         # Shortcut if key is an actual column
@@ -2417,12 +2902,34 @@ class DataFrame(BasePandasDataset):
         Re-creates the object from previously-serialized lightweight representation.
 
         The method is used for faster but not disk-storable persistence.
+
+        Parameters
+        ----------
+        query_compiler : BaseQueryCompiler
+            Query compiler to use for object re-creation.
+
+        Returns
+        -------
+        DataFrame
+            New DataFrame based on the `query_compiler`.
         """
         return cls(query_compiler=query_compiler)
 
     @classmethod
     def _inflate_full(cls, pandas_df):
-        """Re-creates the object from previously-serialized disk-storable representation."""
+        """
+        Re-creates the object from previously-serialized disk-storable representation.
+
+        Parameters
+        ----------
+        pandas_df : pandas.DataFrame
+            Data to use for object re-creation.
+
+        Returns
+        -------
+        DataFrame
+            New DataFrame based on the `pandas_df`.
+        """
         return cls(data=from_pandas(pandas_df))
 
     def __reduce__(self):
