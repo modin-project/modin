@@ -403,6 +403,7 @@ jobs:
       MODIN_ENGINE: ${{matrix.engine}}
       MODIN_MEMORY: 1000000000
       RAY_LOG_LEVEL: DEBUG
+      RAY_PREALLOCATE_PLASMA_MEMORY: 1
     name: test-ubuntu (engine ${{matrix.engine}}, python ${{matrix.python-version}})
     steps:
       - uses: actions/checkout@v2
@@ -422,6 +423,7 @@ jobs:
           conda list
       - name: Install HDF5
         run: sudo apt update && sudo apt install -y libhdf5-dev
+      - run: ray install nightly
       - run: MODIN_BENCHMARK_MODE=True pytest modin/pandas/test/internals/test_benchmark_mode.py
       - run: pytest modin/experimental/xgboost/test/test_default.py
       - run: pytest modin/pandas/test/dataframe/test_binary.py -v
