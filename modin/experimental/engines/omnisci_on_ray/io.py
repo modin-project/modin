@@ -418,6 +418,13 @@ class OmnisciOnRayIO(RayIO, TextFileDispatcher):
             )
 
         if names:
+            if header not in [None, 0, "infer"]:
+                return (
+                    False,
+                    "read_csv with 'arrow' engine and provided 'names' parameter supports only 0, None and "
+                    "'infer' header values",
+                )
+
             empty_pandas_df = pandas.read_csv(
                 **dict(
                     read_csv_kwargs,
@@ -431,13 +438,7 @@ class OmnisciOnRayIO(RayIO, TextFileDispatcher):
                 ),
             )
             columns_number = len(empty_pandas_df.columns)
-            if header not in [None, 0, "infer"]:
-                return (
-                    False,
-                    "read_csv with 'arrow' engine and provided 'names' parameter supports only 0, None and "
-                    "'infer' header values",
-                )
-            elif columns_number != len(names):
+            if columns_number != len(names):
                 return (
                     False,
                     "read_csv with 'arrow' engine doesn't support names parameter, which length doesn't match "
