@@ -15,7 +15,7 @@ from :py:class:`~modin.backends.base.query_compiler.BaseQueryCompiler` and imple
 
 - :py:meth:`~modin.backends.base.query_compiler.BaseQueryCompiler.from_pandas` build query compiler from pandas DataFrame.
 - :py:meth:`~modin.backends.base.query_compiler.BaseQueryCompiler.from_arrow` build query compiler from Arrow Table.
-- :py:meth:`~modin.backends.base.query_compiler.BaseQueryCompiler.to_pandas` get query compilers representation via pandas DataFrame.
+- :py:meth:`~modin.backends.base.query_compiler.BaseQueryCompiler.to_pandas` get query compiler representation as pandas DataFrame.
 - :py:meth:`~modin.backends.base.query_compiler.BaseQueryCompiler.default_to_pandas` do :ref:`fallback to pandas <defaulting-to-pandas-mechanism>` for the passed function. 
 - :py:meth:`~modin.backends.base.query_compiler.BaseQueryCompiler.finalize` finalize object constructing.
 - :py:meth:`~modin.backends.base.query_compiler.BaseQueryCompiler.free` trigger memory cleaning.

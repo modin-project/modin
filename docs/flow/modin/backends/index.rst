@@ -29,14 +29,14 @@ and may resemble the pandas API, however, they're not equal. The query compilers
 is significantly reduced in comparison with pandas, since many corner cases or even the
 whole methods can be handled at the API layer with the existing API.
 
-The query compiler is the level where Modin stops distinguishing Frame and Series (or column) objects.
-A Series is represented by a one-column query compiler, where the Series name is the column label.
+The query compiler is the level where Modin stops distinguishing DataFrame and Series (or column) objects.
+A Series is represented by a `1xN` query compiler, where the Series name is the column label.
 If Series is unnamed, then the label is ``"__reduced__"``. The Dataframe API layer
 interprets a one-column query compiler as Series or DataFrame depending on the operation context.
 
 .. note::
     Although we're declaring that there is no difference between DataFrame and Series at the query compiler,
-    you still may find methods like ``method_ser`` and ``method_df`` which perform differently because they
+    you still may find methods like ``method_ser`` and ``method_df`` which are implemented differently because they're
     emulating either Series or DataFrame logic, or you may find parameters, which indicates whether this one-column
     query compiler is representing Series or not. All of these are hacks, and we're working on getting rid of them.
 
