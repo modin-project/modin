@@ -222,14 +222,14 @@ def handle_readonly_buffer(func: callable, display_name: str = None):
     Parameters
     ----------
     func : callable(pandas.DataFrame)
-        The function, which should not update the dataframe inplace
+        The function, which should not update the dataframe inplace.
     display_name : str, optional
         The function's name, which can be displayed by a progress bar.
 
     Returns
     -------
     callable(pandas.DataFrame)
-        A callable function to be applied in the partitions
+        A callable function to be applied in the partitions.
     """
 
     def caller(df, *args, **kwargs):
