@@ -1,3 +1,5 @@
+:orphan:
+
 Modin SQL API
 =============
 
