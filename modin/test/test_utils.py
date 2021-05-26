@@ -14,6 +14,8 @@
 import pytest
 import modin.utils
 
+from textwrap import dedent
+
 
 # Note: classes below are used for purely testing purposes - they
 # simulate real-world use cases for _inherit_docstring
@@ -129,3 +131,43 @@ def test_doc_inherit_prop_builder():
 
     assert Parent().prop == "Parent"
     assert Child().prop == "Child"
+
+
+@pytest.mark.parametrize(
+    "source_doc,to_append,expected",
+    [
+        (
+            "One-line doc.",
+            "One-line message.",
+            "One-line doc.One-line message.",
+        ),
+        (
+            """
+            Regular doc-string
+                With the setted indent style.
+            """,
+            """
+                    Doc-string having different indents
+                        in comparison with the regular one.
+            """,
+            """
+            Regular doc-string
+                With the setted indent style.
+
+            Doc-string having different indents
+                in comparison with the regular one.
+            """,
+        ),
+    ],
+)
+def test_append_to_docstring(source_doc, to_append, expected):
+    def source_fn():
+        pass
+
+    source_fn.__doc__ = source_doc
+    result_fn = modin.utils.append_to_docstring(to_append)(source_fn)
+
+    answer = dedent(result_fn.__doc__)
+    expected = dedent(expected)
+
+    assert answer == expected
