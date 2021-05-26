@@ -11,6 +11,7 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
+from modin.pandas.utils import is_scalar
 import numpy as np
 
 from modin.engines.ray.generic.frame.partition_manager import RayFrameManager
@@ -109,7 +110,10 @@ class OmnisciOnRayFrameManager(RayFrameManager):
             type_samples = obj.iloc[0][cols]
 
             unsupported_cols = [
-                name for name, col in type_samples.items() if not isinstance(col, str)
+                name
+                for name, col in type_samples.items()
+                if not isinstance(col, str)
+                and not (is_scalar(col) and pandas.isna(col))
             ]
 
             if len(unsupported_cols) > 0:
@@ -117,7 +121,7 @@ class OmnisciOnRayFrameManager(RayFrameManager):
 
             try:
                 at = pyarrow.Table.from_pandas(obj)
-            except pyarrow.lib.ArrowTypeError as e:
+            except (pyarrow.lib.ArrowTypeError, pyarrow.lib.ArrowInvalid) as e:
                 regex = r"Conversion failed for column ([^\W]*)"
                 unsupported_cols = []
                 for msg in e.args:

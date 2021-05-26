@@ -11,6 +11,8 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
+"""Module houses class that wraps data (block partition) and its metadata."""
+
 import pandas
 
 from modin.data_management.utils import length_fn_pandas, width_fn_pandas
@@ -24,6 +26,23 @@ from dask.distributed import wait
 
 
 def apply_list_of_funcs(funcs, df):
+    """
+    Execute all operations stored in the call queue on the partition in a worker process.
+
+    Parameters
+    ----------
+    funcs : list
+        A call queue that needs to be executed on the partition.
+    df : pandas.DataFrame
+        A pandas DataFrame the call queue needs to be executed on.
+
+    Returns
+    -------
+    pandas.DataFrame
+        The resulting pandas DataFrame.
+    str
+        The node IP address of the worker process.
+    """
     for func, kwargs in funcs:
         if isinstance(func, bytes):
             func = pkl.loads(func)
@@ -32,15 +51,21 @@ def apply_list_of_funcs(funcs, df):
 
 
 class PandasOnDaskFramePartition(BaseFramePartition):
-    """This abstract class holds the data and metadata for a single partition.
-    The methods required for implementing this abstract class are listed in
-    the section immediately following this.
+    """
+    The class implements the interface in ``BaseFramePartition``.
 
-    The API exposed by the children of this object is used in
-    `BaseFrameManager`.
-
-    Note: These objects are treated as immutable by `BaseFrameManager`
-    subclasses. There is no logic for updating inplace.
+    Parameters
+    ----------
+    future : distributed.Future
+        A reference to pandas DataFrame that need to be wrapped with this class.
+    length : distributed.Future or int, optional
+        Length or reference to it of wrapped pandas DataFrame.
+    width : distributed.Future or int, optional
+        Width or reference to it of wrapped pandas DataFrame.
+    ip : distributed.Future or str, optional
+        Node IP address or reference to it that holds wrapped pandas DataFrame.
+    call_queue : list, optional
+        Call queue that needs to be executed on wrapped pandas DataFrame.
     """
 
     def __init__(self, future, length=None, width=None, ip=None, call_queue=None):
@@ -53,12 +78,13 @@ class PandasOnDaskFramePartition(BaseFramePartition):
         self._ip_cache = ip
 
     def get(self):
-        """Flushes the call_queue and returns the data.
+        """
+        Get the object wrapped by this partition out of the distributed memory.
 
-        Note: Since this object is a simple wrapper, just return the data.
-
-        Returns:
-            The object that was `put`.
+        Returns
+        -------
+        pandas.DataFrame
+            The object from the distributed memory.
         """
         self.drain_call_queue()
         # blocking operation
@@ -67,18 +93,24 @@ class PandasOnDaskFramePartition(BaseFramePartition):
         return self.future.result()
 
     def apply(self, func, **kwargs):
-        """Apply some callable function to the data in this partition.
+        """
+        Apply a function to the object wrapped by this partition.
 
-        Note: It is up to the implementation how kwargs are handled. They are
-            an important part of many implementations. As of right now, they
-            are not serialized.
+        Parameters
+        ----------
+        func : callable
+            A function to apply.
+        **kwargs
+            Additional keyword arguments to be passed in ``func``.
 
-        Args:
-            func: The lambda to apply (may already be correctly formatted)
+        Returns
+        -------
+        PandasOnDaskFramePartition
+            A new ``PandasOnDaskFramePartition`` object.
 
-        Returns:
-             A new `BaseFramePartition` containing the object that has had `func`
-             applied to it.
+        Notes
+        -----
+        The keyword arguments are sent as a dictionary.
         """
         func = pkl.dumps(func)
         call_queue = self.call_queue + [[func, kwargs]]
@@ -89,11 +121,31 @@ class PandasOnDaskFramePartition(BaseFramePartition):
         return PandasOnDaskFramePartition(futures[0], ip=futures[1])
 
     def add_to_apply_calls(self, func, **kwargs):
+        """
+        Add a function to the call queue.
+
+        Parameters
+        ----------
+        func : callable
+            Function to be added to the call queue.
+        **kwargs : dict
+            Additional keyword arguments to be passed in ``func``.
+
+        Returns
+        -------
+        PandasOnDaskFramePartition
+            A new ``PandasOnDaskFramePartition`` object.
+
+        Notes
+        -----
+        The keyword arguments are sent as a dictionary.
+        """
         return PandasOnDaskFramePartition(
             self.future, call_queue=self.call_queue + [[pkl.dumps(func), kwargs]]
         )
 
     def drain_call_queue(self):
+        """Execute all operations stored in the call queue on the object wrapped by this partition."""
         if len(self.call_queue) == 0:
             return
         new_partition = self.apply(lambda x: x)
@@ -102,10 +154,26 @@ class PandasOnDaskFramePartition(BaseFramePartition):
         self.call_queue = []
 
     def wait(self):
+        """Wait completing computations on the object wrapped by the partition."""
         self.drain_call_queue()
         wait(self.future)
 
     def mask(self, row_indices, col_indices):
+        """
+        Lazily create a mask that extracts the indices provided.
+
+        Parameters
+        ----------
+        row_indices : list-like
+            The indices for the rows to extract.
+        col_indices : list-like
+            The indices for the columns to extract.
+
+        Returns
+        -------
+        PandasOnDaskFramePartition
+            A new ``PandasOnDaskFramePartition`` object.
+        """
         new_obj = self.add_to_apply_calls(
             lambda df: pandas.DataFrame(df.iloc[row_indices, col_indices])
         )
@@ -116,6 +184,14 @@ class PandasOnDaskFramePartition(BaseFramePartition):
         return new_obj
 
     def __copy__(self):
+        """
+        Create a copy of this partition.
+
+        Returns
+        -------
+        PandasOnDaskFramePartition
+            A copy of this partition.
+        """
         return PandasOnDaskFramePartition(
             self.future,
             length=self._length_cache,
@@ -125,13 +201,12 @@ class PandasOnDaskFramePartition(BaseFramePartition):
         )
 
     def to_pandas(self):
-        """Convert the object stored in this partition to a Pandas DataFrame.
+        """
+        Convert the object wrapped by this partition to a pandas DataFrame.
 
-        Note: If the underlying object is a Pandas DataFrame, this will likely
-            only need to call `get`
-
-        Returns:
-            A Pandas DataFrame.
+        Returns
+        -------
+        pandas.DataFrame
         """
         dataframe = self.get()
         assert type(dataframe) is pandas.DataFrame or type(dataframe) is pandas.Series
@@ -140,59 +215,75 @@ class PandasOnDaskFramePartition(BaseFramePartition):
 
     def to_numpy(self, **kwargs):
         """
-        Convert the object stored in this partition to a NumPy array.
+        Convert the object wrapped by this partition to a NumPy array.
+
+        Parameters
+        ----------
+        **kwargs : dict
+            Additional keyword arguments to be passed in ``to_numpy``.
 
         Returns
         -------
-            A NumPy array.
+        np.ndarray.
         """
         return self.apply(lambda df, **kwargs: df.to_numpy(**kwargs)).get()
 
     @classmethod
     def put(cls, obj):
-        """A factory classmethod to format a given object.
+        """
+        Put an object into distributed memory and wrap it with partition object.
 
-        Args:
-            obj: An object.
+        Parameters
+        ----------
+        obj : any
+            An object to be put.
 
-        Returns:
-            A `RemotePartitions` object.
+        Returns
+        -------
+        PandasOnDaskFramePartition
+            A new ``PandasOnDaskFramePartition`` object.
         """
         client = get_client()
         return cls(client.scatter(obj, hash=False))
 
     @classmethod
     def preprocess_func(cls, func):
-        """Preprocess a function before an `apply` call.
+        """
+        Preprocess a function before an ``apply`` call.
 
-        Note: This is a classmethod because the definition of how to preprocess
-            should be class-wide. Also, we may want to use this before we
-            deploy a preprocessed function to multiple `BaseFramePartition`
-            objects.
+        Parameters
+        ----------
+        func : callable
+            The function to preprocess.
 
-        Args:
-            func: The function to preprocess.
-
-        Returns:
-            An object that can be accepted by `apply`.
+        Returns
+        -------
+        callable
+            An object that can be accepted by ``apply``.
         """
         return func
 
     @classmethod
     def length_extraction_fn(cls):
-        """The function to compute the length of the object in this partition.
+        """
+        Return the function that computes the length of the object wrapped by this partition.
 
-        Returns:
-            A callable function.
+        Returns
+        -------
+        callable
+            The function that computes the length of the object wrapped by this partition.
         """
         return length_fn_pandas
 
     @classmethod
     def width_extraction_fn(cls):
-        """The function to compute the width of the object in this partition.
+        """
+        Return the function that computes the width of the object wrapped by this partition.
 
-        Returns:
-            A callable function.
+        Returns
+        -------
+        callable
+            The function that computes the width of the object wrapped by this partition.
         """
         return width_fn_pandas
 
@@ -200,6 +291,14 @@ class PandasOnDaskFramePartition(BaseFramePartition):
     _width_cache = None
 
     def length(self):
+        """
+        Get the length of the object wrapped by this partition.
+
+        Returns
+        -------
+        int
+            The length of the object.
+        """
         if self._length_cache is None:
             self._length_cache = self.apply(lambda df: len(df)).future
         if isinstance(self._length_cache, Future):
@@ -207,6 +306,14 @@ class PandasOnDaskFramePartition(BaseFramePartition):
         return self._length_cache
 
     def width(self):
+        """
+        Get the width of the object wrapped by the partition.
+
+        Returns
+        -------
+        int
+            The width of the object.
+        """
         if self._width_cache is None:
             self._width_cache = self.apply(lambda df: len(df.columns)).future
         if isinstance(self._width_cache, Future):
@@ -214,6 +321,14 @@ class PandasOnDaskFramePartition(BaseFramePartition):
         return self._width_cache
 
     def ip(self):
+        """
+        Get the node IP address of the object wrapped by this partition.
+
+        Returns
+        -------
+        str
+            IP address of the node that holds the data.
+        """
         if self._ip_cache is None:
             self._ip_cache = self.apply(lambda df: df)._ip_cache
         if isinstance(self._ip_cache, Future):
@@ -222,4 +337,12 @@ class PandasOnDaskFramePartition(BaseFramePartition):
 
     @classmethod
     def empty(cls):
+        """
+        Create a new partition that wraps an empty pandas DataFrame.
+
+        Returns
+        -------
+        PandasOnDaskFramePartition
+            A new ``PandasOnDaskFramePartition`` object.
+        """
         return cls(pandas.DataFrame(), 0, 0)

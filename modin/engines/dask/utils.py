@@ -11,11 +11,14 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
+"""Module houses utility function to initialize Dask environment."""
+
 from modin.config import CpuCount, NPartitions
 from modin.error_message import ErrorMessage
 
 
 def initialize_dask():
+    """Initialize Dask environment."""
     from distributed.client import get_client
 
     try:

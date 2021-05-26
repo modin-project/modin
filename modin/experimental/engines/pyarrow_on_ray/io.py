@@ -11,6 +11,8 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
+"""Module for housing IO classes with PyArrow backend and Ray engine."""
+
 from modin.backends.pyarrow.query_compiler import PyarrowQueryCompiler
 from modin.engines.ray.generic.io import RayIO
 from modin.experimental.engines.pyarrow_on_ray.frame.data import PyarrowOnRayFrame
@@ -23,12 +25,16 @@ from modin.engines.base.io import CSVDispatcher
 
 
 class PyarrowOnRayCSVDispatcher(RayTask, PyarrowCSVParser, CSVDispatcher):
+    """Class handles utils for reading `.csv` files with PyArrow backend and Ray engine."""
+
     frame_cls = PyarrowOnRayFrame
     frame_partition_cls = PyarrowOnRayFramePartition
     query_compiler_cls = PyarrowQueryCompiler
 
 
 class PyarrowOnRayIO(RayIO):
+    """Class for storing IO functions operated on PyArrow backend and Ray engine."""
+
     frame_cls = PyarrowOnRayFrame
     frame_partition_cls = PyarrowOnRayFramePartition
     query_compiler_cls = PyarrowQueryCompiler

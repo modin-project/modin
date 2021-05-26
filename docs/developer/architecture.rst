@@ -66,6 +66,7 @@ Component View
 --------------
 .. toctree::
    ../flow/modin/engines/base/frame/index
+   ../flow/modin/engines/dask/pandas_on_dask/frame/index
    ../flow/modin/experimental/index
    ../flow/modin/backends/index
 
@@ -104,7 +105,12 @@ The API is the outer-most layer that faces users. The majority of our current ef
 spent implementing the components of the pandas API. We have implemented a toy example
 for a sqlite API as a proof of concept, but this isn't ready for usage/testing. There
 are also plans to expose the Modin DataFrame API as a reduced API set that encompasses
-the entire pandas/dataframe API.
+the entire pandas/dataframe API. See `experimental features`_ for more information. 
+
+.. toctree::
+   :caption: Base Pandas Dataset API
+
+   pandas/base
 
 Query Compiler
 """"""""""""""
@@ -246,6 +252,8 @@ documentation page on :doc:`contributing </contributing>`.
     - Uses the Ray_ execution framework.
     - The compute kernel/in-memory format is a pyarrow Table.
 
+.. _directory-tree:
+
 Module/Class View
 -----------------
 Modin modules layout is shown below. To deep dive into Modin internal implementation
@@ -263,16 +271,16 @@ by documentation for now, the rest is coming soon...).
    │   ├─── :doc:`backends </flow/modin/backends/index>`
    │   │   ├───base
    │   │   │   └─── :doc:`query_compiler </flow/modin/backends/base/query_compiler>`
-   │   │   ├───pandas
+   │   │   ├─── :doc:`pandas </flow/modin/backends/pandas/index>`
    │   │   |   ├─── :doc:`parsers </flow/modin/backends/pandas/parsers>`
-   │   │   │   └───query_compiler
+   │   │   │   └─── :doc:`query_compiler </flow/modin/backends/pandas/query_compiler>`
    │   │   └───pyarrow
    │   │   |   ├───parsers
    │   │   │   └───query_compiler
    │   ├───config
    │   ├───data_management
-   │   │   ├───factories
-   │   │   └───functions
+   │   │   ├─── :doc:`factories </flow/modin/data_management/factories>`
+   │   │   └─── :doc:`functions </flow/modin/data_management/functions>`
    │   ├───distributed
    │   │   └───dataframe
    │   │       └─── :doc:`pandas </flow/modin/distributed/dataframe/pandas>`
@@ -282,19 +290,20 @@ by documentation for now, the rest is coming soon...).
    │   │   │   └─── :doc:`io </flow/modin/engines/base/io>`
    │   │   ├───dask
    │   │   │   └───pandas_on_dask
+   │   │   |       └─── :doc:`frame </flow/modin/engines/dask/pandas_on_dask/frame/index>`
    │   │   ├───python
    │   │   │   └───pandas_on_python
    │   │   └───ray
    │   │       ├───generic
    │   │       └───pandas_on_ray
-   │   ├───experimental
+   │   ├── :doc:`experimental </flow/modin/experimental/experimental>`
    │   │   ├───backends
    │   │   │   └───omnisci
    │   │   ├───cloud
    │   │   ├───engines
    │   │   │   ├───omnisci_on_ray
-   │   │   │   ├───pandas_on_ray
-   │   │   │   └───pyarrow_on_ray
+   │   │   │   ├─── :doc:`pandas_on_ray </flow/modin/experimental/engines/pandas_on_ray>`
+   │   │   │   └─── :doc:`pyarrow_on_ray </flow/modin/experimental/engines/pyarrow_on_ray>`
    │   │   ├─── :doc:`pandas </flow/modin/experimental/pandas>`
    │   │   ├─── :doc:`sklearn </flow/modin/experimental/sklearn>`
    │   │   ├───sql
@@ -314,3 +323,4 @@ by documentation for now, the rest is coming soon...).
 .. _issue: https://github.com/modin-project/modin/issues
 .. _Discourse: https://discuss.modin.org
 .. _task parallel: https://en.wikipedia.org/wiki/Task_parallelism
+.. _experimental features: /experimental_features/index.html
