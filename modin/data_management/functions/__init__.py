@@ -11,6 +11,8 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
+"""Function module provides template for a query compiler methods for a set of common operations."""
+
 from .function import Function
 from .mapfunction import MapFunction
 from .mapreducefunction import MapReduceFunction

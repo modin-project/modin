@@ -17,7 +17,7 @@ import numpy as np
 import ray
 
 from .partition import cuDFOnRayFramePartition
-from .partition_manager import cuDFOnRayFrameManager
+from .partition_manager import cuDFOnRayFramePartitionManager
 
 from modin.engines.ray.pandas_on_ray.frame.data import PandasOnRayFrame
 from modin.error_message import ErrorMessage
@@ -45,11 +45,11 @@ class cuDFOnRayFrame(PandasOnRayFrame):
         The data types for the dataframe columns.
     """
 
-    _frame_mgr_cls = cuDFOnRayFrameManager
+    _partition_mgr_cls = cuDFOnRayFramePartitionManager
 
-    def _apply_index_objs(self, axis=None):
+    def synchronize_labels(self, axis=None):
         """
-        Eagerly applies the index object (index or/and columns) to the `self._partitions`.
+        Synchronize labels by applying the index object (Index or Columns) to the partitions eagerly.
 
         Parameters
         ----------
@@ -248,7 +248,7 @@ class cuDFOnRayFrame(PandasOnRayFrame):
         shape = key_and_gpus.shape[:2]
         keys = ray.get(key_and_gpus[:, :, 0].flatten().tolist())
         gpu_managers = key_and_gpus[:, :, 1].flatten().tolist()
-        new_partitions = self._frame_mgr_cls._create_partitions(
+        new_partitions = self._partition_mgr_cls._create_partitions(
             keys, gpu_managers
         ).reshape(shape)
         intermediate = self.__constructor__(
@@ -278,7 +278,7 @@ class cuDFOnRayFrame(PandasOnRayFrame):
         # to reorder here based on the expected order from within the data.
         # We create a dictionary mapping the position of the numeric index with respect
         # to all others, then recreate that order by mapping the new order values from
-        # the old. This information is sent to `reorder_labels`.
+        # the old. This information is sent to `_reorder_labels`.
         if row_numeric_idx is not None:
             row_order_mapping = dict(
                 zip(sorted(row_numeric_idx), range(len(row_numeric_idx)))
@@ -293,6 +293,6 @@ class cuDFOnRayFrame(PandasOnRayFrame):
             new_col_order = [col_order_mapping[idx] for idx in col_numeric_idx]
         else:
             new_col_order = None
-        return intermediate.reorder_labels(
+        return intermediate._reorder_labels(
             row_numeric_idx=new_row_order, col_numeric_idx=new_col_order
         )

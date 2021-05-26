@@ -61,7 +61,7 @@ class RayIO(BaseIO):
             df.to_sql(**kwargs)
             return pandas.DataFrame()
 
-        result = qc._modin_frame._apply_full_axis(1, func, new_index=[], new_columns=[])
+        result = qc._modin_frame.apply_full_axis(1, func, new_index=[], new_columns=[])
         # FIXME: we should be waiting for completion less expensievely, maybe use _modin_frame.materialize()?
         result.to_pandas()  # blocking operation
 
@@ -183,7 +183,7 @@ class RayIO(BaseIO):
 
         # signaling that the partition with id==0 can be written to the file
         queue.put(0)
-        result = qc._modin_frame._frame_mgr_cls.map_axis_partitions(
+        result = qc._modin_frame._partition_mgr_cls.map_axis_partitions(
             axis=1,
             partitions=qc._modin_frame._partitions,
             map_func=func,

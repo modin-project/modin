@@ -11,9 +11,11 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
+"""Module houses class that implements ``PandasFramePartitionManager``."""
+
 import numpy as np
 
-from modin.engines.base.frame.partition_manager import BaseFrameManager
+from modin.engines.base.frame.partition_manager import PandasFramePartitionManager
 from .axis_partition import (
     PandasOnDaskFrameColumnPartition,
     PandasOnDaskFrameRowPartition,
@@ -27,6 +29,28 @@ import cloudpickle as pkl
 
 
 def deploy_func(df, apply_func, call_queue_df=None, call_queues_other=None, *others):
+    """
+    Perform `apply_func` for `df` remotely.
+
+    Parameters
+    ----------
+    df : distributed.Future
+        Dataframe to which `apply_func` will be applied.
+        After running function, automaterialization
+        ``distributed.Future``->``pandas.DataFrame`` happens.
+    apply_func : callable
+        The function to apply.
+    call_queue_df : list, default: None
+        The call_queue to be executed on `df`.
+    call_queues_other : list, default: None
+        The call_queue to be executed on `others`.
+    *others : iterable
+        List of other parameters.
+
+    Returns
+    -------
+    The same as returns of `apply_func`.
+    """
     if call_queue_df is not None and len(call_queue_df) > 0:
         for call, kwargs in call_queue_df:
             if isinstance(call, bytes):
@@ -50,10 +74,10 @@ def deploy_func(df, apply_func, call_queue_df=None, call_queues_other=None, *oth
     return apply_func(df, new_others)
 
 
-class DaskFrameManager(BaseFrameManager):
-    """This class implements the interface in `BaseFrameManager`."""
+class PandasOnDaskFramePartitionManager(PandasFramePartitionManager):
+    """The class implements the interface in `PandasFramePartitionManager`."""
 
-    # This object uses RayRemotePartition objects as the underlying store.
+    # This object uses PandasOnDaskFramePartition objects as the underlying store.
     _partition_class = PandasOnDaskFramePartition
     _column_partitions_class = PandasOnDaskFrameColumnPartition
     _row_partition_class = PandasOnDaskFrameRowPartition
@@ -61,21 +85,21 @@ class DaskFrameManager(BaseFrameManager):
     @classmethod
     def get_indices(cls, axis, partitions, index_func):
         """
-        This gets the internal indices stored in the partitions.
+        Get the internal indices stored in the partitions.
 
         Parameters
         ----------
-            axis : 0 or 1
-                This axis to extract the labels (0 - index, 1 - columns).
-            partitions : NumPy array
-                The array of partitions from which need to extract the labels.
-            index_func : callable
-                The function to be used to extract the function.
+        axis : {0, 1}
+            Axis to extract the labels over.
+        partitions : np.ndarray
+            The array of partitions from which need to extract the labels.
+        index_func : callable
+            The function to be used to extract the indices.
 
         Returns
         -------
-        Index
-            A Pandas Index object.
+        pandas.Index
+            A pandas Index object.
 
         Notes
         -----
@@ -104,6 +128,29 @@ class DaskFrameManager(BaseFrameManager):
 
     @classmethod
     def broadcast_apply(cls, axis, apply_func, left, right, other_name="r"):
+        """
+        Broadcast the `right` partitions to `left` and apply `apply_func` function.
+
+        Parameters
+        ----------
+        axis : {0, 1}
+            Axis to apply and broadcast over.
+        apply_func : callable
+            Function to apply.
+        left : np.ndarray
+            NumPy array of left partitions.
+        right : np.ndarray
+            NumPy array of right partitions.
+        other_name : str, default: "r"
+            Name of key-value argument for `apply_func` that
+            is used to pass `right` to `apply_func`.
+
+        Returns
+        -------
+        np.ndarray
+            NumPy array of result partition objects.
+        """
+
         def mapper(df, others):
             other = pandas.concat(others, axis=axis ^ 1)
             return apply_func(df, **{other_name: other})

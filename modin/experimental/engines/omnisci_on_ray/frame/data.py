@@ -11,9 +11,9 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-from modin.engines.base.frame.data import BasePandasFrame
+from modin.engines.base.frame.data import PandasFrame
 from modin.experimental.backends.omnisci.query_compiler import DFAlgQueryCompiler
-from .partition_manager import OmnisciOnRayFrameManager
+from .partition_manager import OmnisciOnRayFramePartitionManager
 
 from pandas.core.index import ensure_index, Index, MultiIndex, RangeIndex
 from pandas.core.dtypes.common import get_dtype, is_list_like, is_bool_dtype
@@ -49,10 +49,10 @@ import pyarrow
 import re
 
 
-class OmnisciOnRayFrame(BasePandasFrame):
+class OmnisciOnRayFrame(PandasFrame):
 
     _query_compiler_cls = DFAlgQueryCompiler
-    _frame_mgr_cls = OmnisciOnRayFrameManager
+    _partition_mgr_cls = OmnisciOnRayFramePartitionManager
 
     _next_id = [1]
 
@@ -128,9 +128,9 @@ class OmnisciOnRayFrame(BasePandasFrame):
             if table.column_names[0] != f"F_{self._table_cols[0]}":
                 new_names = [f"F_{col}" for col in table.column_names]
                 new_table = table.rename_columns(new_names)
-                self._partitions[0][0] = self._frame_mgr_cls._partition_class.put_arrow(
-                    new_table
-                )
+                self._partitions[0][
+                    0
+                ] = self._partition_mgr_cls._partition_class.put_arrow(new_table)
 
         self._uses_rowid = uses_rowid
         # Tests use forced execution mode to take control over frame
@@ -241,7 +241,7 @@ class OmnisciOnRayFrame(BasePandasFrame):
                 by_cols = Index.__new__(Index, data=by_cols, dtype=self.columns.dtype)
                 by_frame = self.mask(col_indices=by_cols)
                 if by_frames:
-                    by_frame = by_frame._concat(
+                    by_frame = by_frame.concat(
                         axis=1, other_modin_frames=by_frames, ignore_index=True
                     )
             else:
@@ -673,7 +673,7 @@ class OmnisciOnRayFrame(BasePandasFrame):
 
         return new_frame
 
-    def _concat(
+    def concat(
         self, axis, other_modin_frames, join="outer", sort=False, ignore_index=False
     ):
         if not other_modin_frames:
@@ -1032,14 +1032,14 @@ class OmnisciOnRayFrame(BasePandasFrame):
         if self._can_execute_arrow():
             new_table = self._execute_arrow()
             new_partitions = np.empty((1, 1), dtype=np.dtype(object))
-            new_partitions[0][0] = self._frame_mgr_cls._partition_class.put_arrow(
+            new_partitions[0][0] = self._partition_mgr_cls._partition_class.put_arrow(
                 new_table
             )
         else:
             if self._force_execution_mode == "arrow":
                 raise RuntimeError("forced arrow execution failed")
 
-            new_partitions = self._frame_mgr_cls.run_exec_plan(
+            new_partitions = self._partition_mgr_cls.run_exec_plan(
                 self._op, self._index_cols, self._dtypes, self._table_cols
             )
         self._partitions = new_partitions
@@ -1337,7 +1337,7 @@ class OmnisciOnRayFrame(BasePandasFrame):
         if self._force_execution_mode == "lazy":
             raise RuntimeError("unexpected to_pandas triggered on lazy frame")
 
-        df = self._frame_mgr_cls.to_pandas(self._partitions)
+        df = self._partition_mgr_cls.to_pandas(self._partitions)
 
         # If we make dataframe from Arrow table then we might need to set
         # index columns.
@@ -1414,7 +1414,7 @@ class OmnisciOnRayFrame(BasePandasFrame):
             new_lengths,
             new_widths,
             unsupported_cols,
-        ) = cls._frame_mgr_cls.from_pandas(df, True)
+        ) = cls._partition_mgr_cls.from_pandas(df, True)
 
         if len(unsupported_cols) > 0:
             ErrorMessage.single_warning(
@@ -1447,7 +1447,7 @@ class OmnisciOnRayFrame(BasePandasFrame):
             new_lengths,
             new_widths,
             unsupported_cols,
-        ) = cls._frame_mgr_cls.from_arrow(at, return_dims=True)
+        ) = cls._partition_mgr_cls.from_arrow(at, return_dims=True)
 
         if index_cols:
             data_cols = [col for col in at.column_names if col not in index_cols]

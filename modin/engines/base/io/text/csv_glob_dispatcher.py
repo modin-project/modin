@@ -45,9 +45,9 @@ class CSVGlobDispatcher(CSVDispatcher):
         Parameters
         ----------
         filepath_or_buffer : str, path object or file-like object
-            `filepath_or_buffer` parameter of read_csv function.
+            `filepath_or_buffer` parameter of ``read_csv`` function.
         **kwargs : dict
-            Parameters of `read_csv` function.
+            Parameters of ``read_csv`` function.
 
         Returns
         -------
@@ -280,7 +280,7 @@ class CSVGlobDispatcher(CSVDispatcher):
         if kwargs.get("squeeze", False) and len(new_query_compiler.columns) == 1:
             return new_query_compiler[new_query_compiler.columns[0]]
         if index_col is None:
-            new_query_compiler._modin_frame._apply_index_objs(axis=0)
+            new_query_compiler._modin_frame.synchronize_labels(axis=0)
         return new_query_compiler
 
     @classmethod

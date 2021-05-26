@@ -24,7 +24,9 @@ from .partition import cuDFOnRayFramePartition
 
 from modin.data_management.utils import split_result_of_axis_func_pandas
 from modin.config import GpuCount
-from modin.engines.ray.generic.frame.partition_manager import RayFrameManager
+from modin.engines.ray.generic.frame.partition_manager import (
+    GenericRayFramePartitionManager,
+)
 
 # Global view of GPU Actors
 GPU_MANAGERS = []
@@ -54,7 +56,7 @@ def func(df, other, apply_func):
     return apply_func(ray.get(df.get.remote()), ray.get(other.get.remote()))
 
 
-class cuDFOnRayFrameManager(RayFrameManager):
+class cuDFOnRayFramePartitionManager(GenericRayFramePartitionManager):
     """The class implements the interface in ``RayFrameManager`` using cuDF on Ray."""
 
     _partition_class = cuDFOnRayFramePartition
@@ -187,7 +189,7 @@ class cuDFOnRayFrameManager(RayFrameManager):
         Returns
         -------
         np.ndarray
-            A NumPy array of ``cuDFOnRayFrameManager`` objects.
+            A NumPy array of ``cuDFOnRayFramePartition`` objects.
 
         Notes
         -----

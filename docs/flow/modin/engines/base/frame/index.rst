@@ -2,7 +2,7 @@ Base Frame Objects
 ==================
 
 Modin paritions data to scale efficiently.
-To keep track of everything a few key classes are introduced: ``Frame``, ``Partition``, ``AxisPartiton`` and ``FrameManager``.
+To keep track of everything a few key classes are introduced: ``Frame``, ``Partition``, ``AxisPartiton`` and ``PartitionManager``.
 
 * :doc:`Frame <data>` is the class conforming to DataFrame Algebra.
 * :doc:`Partition <partition>` is an element of a NxM grid which, when combined, represents the ``Frame``

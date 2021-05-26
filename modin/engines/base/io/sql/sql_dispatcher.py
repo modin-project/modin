@@ -121,5 +121,5 @@ class SQLDispatcher(FileDispatcher):
             ]
             new_index = pandas.Index(index_lst).set_names(index_col)
         new_frame = cls.frame_cls(np.array(partition_ids), new_index, cols_names)
-        new_frame._apply_index_objs(axis=0)
+        new_frame.synchronize_labels(axis=0)
         return cls.query_compiler_cls(new_frame)

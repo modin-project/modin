@@ -11,10 +11,25 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
+"""Module houses default applied-on-category functions builder class."""
+
 from .series_default import SeriesDefault
 
 
 class CatDefault(SeriesDefault):
+    """Builder for default-to-pandas methods which is executed under category accessor."""
+
     @classmethod
     def frame_wrapper(cls, df):
+        """
+        Get category accessor of the passed frame.
+
+        Parameters
+        ----------
+        df : pandas.DataFrame
+
+        Returns
+        -------
+        pandas.core.arrays.categorical.CategoricalAccessor
+        """
         return df.squeeze(axis=1).cat

@@ -15,16 +15,16 @@
 
 import pandas
 
-from .partition_manager import PandasOnRayFrameManager
-from modin.engines.base.frame.data import BasePandasFrame
+from .partition_manager import PandasOnRayFramePartitionManager
+from modin.engines.base.frame.data import PandasFrame
 from modin.backends.pandas.parsers import find_common_type_cat as find_common_type
 
 import ray
 
 
-class PandasOnRayFrame(BasePandasFrame):
+class PandasOnRayFrame(PandasFrame):
     """
-    The class implements the interface in ``BasePandasFrame`` using Ray.
+    The class implements the interface in ``PandasFrame`` using Ray.
 
     Parameters
     ----------
@@ -44,7 +44,7 @@ class PandasOnRayFrame(BasePandasFrame):
         The data types for the dataframe columns.
     """
 
-    _frame_mgr_cls = PandasOnRayFrameManager
+    _partition_mgr_cls = PandasOnRayFramePartitionManager
 
     @classmethod
     def combine_dtypes(cls, list_of_dtypes, column_names):

@@ -11,43 +11,132 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
+"""
+Module contains Factories for all of the supported Modin backends.
+
+Factory is a bridge between calls of IO function from high-level API and its
+actual implementation in the engine, bound to that factory. Each backend is represented
+with a Factory class.
+"""
+
 import warnings
 import typing
 import re
 
 from modin.config import Engine
+from modin.utils import _inherit_docstrings
 from modin.engines.base.io import BaseIO
+from pandas.util._decorators import doc
 
 import pandas
+
+
+_doc_abstract_factory_class = """
+Abstract {role} factory which allows to override the IO module easily.
+
+This class is responsible for dispatching calls of IO-functions to its
+actual engine-specific implementations.
+
+Attributes
+----------
+io_cls : BaseIO
+    IO module class of the underlying engine. The place to dispatch calls to.
+"""
+
+_doc_factory_class = """
+Factory of {engine_name} engine.
+
+This class is responsible for dispatching calls of IO-functions to its
+actual engine-specific implementations.
+
+Attributes
+----------
+io_cls : {engine_name}IO
+    IO module class of the underlying engine. The place to dispatch calls to.
+"""
+
+_doc_factory_prepare_method = """
+Initialize Factory.
+
+Fills in `.io_cls` class attribute with {engine_name} engine lazily.
+"""
+
+_doc_io_method_raw_template = """
+Build query compiler from {source}.
+
+Parameters
+----------
+{params}
+
+Returns
+-------
+QueryCompiler
+    Query compiler of the selected backend.
+"""
+
+_doc_io_method_template = (
+    _doc_io_method_raw_template
+    + """
+See Also
+--------
+modin.pandas.{method}
+"""
+)
+
+_doc_io_method_all_params = """*args : args
+    Arguments to pass to the QueryCompiler builder method.
+**kwargs : kwargs
+    Arguments to pass to the QueryCompiler builder method."""
+
+_doc_io_method_kwargs_params = """**kwargs : kwargs
+    Arguments to pass to the QueryCompiler builder method."""
+
 
 types_dictionary = {"pandas": {"category": pandas.CategoricalDtype}}
 
 
 class FactoryInfo(typing.NamedTuple):
+    """
+    Structure that stores information about factory.
+
+    Parameters
+    ----------
+    engine : str
+        Name of underlying execution engine.
+    partition : str
+        Name of the partition format.
+    experimental : bool
+        Whether underlying engine is experimental-only.
+    """
+
     engine: str
     partition: str
     experimental: bool
 
 
 class NotRealFactory(Exception):
+    """
+    ``NotRealFactory`` exception class.
+
+    Raise when no matching factory could be found.
+    """
+
     pass
 
 
+@doc(_doc_abstract_factory_class, role="")
 class BaseFactory(object):
-    """
-    Abstract factory which allows to override the io module easily.
-    """
-
     io_cls: BaseIO = None  # The module where the I/O functionality exists.
 
     @classmethod
     def get_info(cls) -> FactoryInfo:
         """
-        This gets the information about the factory: its execution engine,
-        partitioning format and whether it's experimental-only.
+        Get information about current factory.
 
-        Note that it parses factory name, so it must be conformant with how
-        ExecutionEngine class constructs factory names.
+        Notes
+        -----
+        It parses factory name, so it must be conformant with how ExecutionEngine
+        class constructs factory names.
         """
         try:
             experimental, partition, engine = re.match(
@@ -60,151 +149,297 @@ class BaseFactory(object):
         )
 
     @classmethod
+    @doc(_doc_factory_prepare_method, engine_name="an underlying")
     def prepare(cls):
-        """
-        Fills in .io_cls class attribute lazily
-        """
         raise NotImplementedError("Subclasses of BaseFactory must implement prepare")
 
     @classmethod
+    @doc(
+        _doc_io_method_template,
+        source="pandas DataFrame",
+        params="df : pandas.DataFrame",
+        method="utils.from_pandas",
+    )
     def _from_pandas(cls, df):
         return cls.io_cls.from_pandas(df)
 
     @classmethod
+    @doc(
+        _doc_io_method_template,
+        source="Arrow Table",
+        params="at : pyarrow.Table",
+        method="utils.from_arrow",
+    )
     def _from_arrow(cls, at):
         return cls.io_cls.from_arrow(at)
 
     @classmethod
+    @doc(
+        _doc_io_method_template,
+        source="a non-pandas object (dict, list, np.array etc...)",
+        params=_doc_io_method_all_params,
+        method="utils.from_non_pandas",
+    )
     def _from_non_pandas(cls, *args, **kwargs):
         return cls.io_cls.from_non_pandas(*args, **kwargs)
 
     @classmethod
+    @doc(
+        _doc_io_method_template,
+        source="a Parquet file",
+        params=_doc_io_method_kwargs_params,
+        method="read_parquet",
+    )
     def _read_parquet(cls, **kwargs):
         return cls.io_cls.read_parquet(**kwargs)
 
     @classmethod
+    @doc(
+        _doc_io_method_template,
+        source="a CSV file",
+        params=_doc_io_method_kwargs_params,
+        method="read_csv",
+    )
     def _read_csv(cls, **kwargs):
         return cls.io_cls.read_csv(**kwargs)
 
     @classmethod
+    @doc(
+        _doc_io_method_template,
+        source="a JSON file",
+        params=_doc_io_method_kwargs_params,
+        method="read_json",
+    )
     def _read_json(cls, **kwargs):
         return cls.io_cls.read_json(**kwargs)
 
     @classmethod
+    @doc(
+        _doc_io_method_template,
+        source="a Google BigQuery",
+        params=_doc_io_method_kwargs_params,
+        method="read_gbq",
+    )
     def _read_gbq(cls, **kwargs):
         return cls.io_cls.read_gbq(**kwargs)
 
     @classmethod
+    @doc(
+        _doc_io_method_template,
+        source="an HTML document",
+        params=_doc_io_method_kwargs_params,
+        method="read_html",
+    )
     def _read_html(cls, **kwargs):
         return cls.io_cls.read_html(**kwargs)
 
     @classmethod
+    @doc(
+        _doc_io_method_template,
+        source="clipboard",
+        params=_doc_io_method_kwargs_params,
+        method="read_clipboard",
+    )
     def _read_clipboard(cls, **kwargs):  # pragma: no cover
         return cls.io_cls.read_clipboard(**kwargs)
 
     @classmethod
+    @doc(
+        _doc_io_method_template,
+        source="an Excel file",
+        params=_doc_io_method_kwargs_params,
+        method="read_excel",
+    )
     def _read_excel(cls, **kwargs):
         return cls.io_cls.read_excel(**kwargs)
 
     @classmethod
+    @doc(
+        _doc_io_method_template,
+        source="an HDFStore",
+        params=_doc_io_method_kwargs_params,
+        method="read_hdf",
+    )
     def _read_hdf(cls, **kwargs):
         return cls.io_cls.read_hdf(**kwargs)
 
     @classmethod
+    @doc(
+        _doc_io_method_template,
+        source="a feather-format object",
+        params=_doc_io_method_kwargs_params,
+        method="read_feather",
+    )
     def _read_feather(cls, **kwargs):
         return cls.io_cls.read_feather(**kwargs)
 
     @classmethod
+    @doc(
+        _doc_io_method_template,
+        source="a Stata file",
+        params=_doc_io_method_kwargs_params,
+        method="read_stata",
+    )
     def _read_stata(cls, **kwargs):
         return cls.io_cls.read_stata(**kwargs)
 
     @classmethod
+    @doc(
+        _doc_io_method_template,
+        source="a SAS file",
+        params=_doc_io_method_kwargs_params,
+        method="read_sas",
+    )
     def _read_sas(cls, **kwargs):  # pragma: no cover
         return cls.io_cls.read_sas(**kwargs)
 
     @classmethod
+    @doc(
+        _doc_io_method_template,
+        source="a pickled Modin or pandas DataFrame",
+        params=_doc_io_method_kwargs_params,
+        method="read_pickle",
+    )
     def _read_pickle(cls, **kwargs):
         return cls.io_cls.read_pickle(**kwargs)
 
     @classmethod
+    @doc(
+        _doc_io_method_template,
+        source="a SQL query or database table",
+        params=_doc_io_method_kwargs_params,
+        method="read_sql",
+    )
     def _read_sql(cls, **kwargs):
         return cls.io_cls.read_sql(**kwargs)
 
     @classmethod
+    @doc(
+        _doc_io_method_template,
+        source="a table of fixed-width formatted lines",
+        params=_doc_io_method_kwargs_params,
+        method="read_fwf",
+    )
     def _read_fwf(cls, **kwargs):
         return cls.io_cls.read_fwf(**kwargs)
 
     @classmethod
+    @doc(
+        _doc_io_method_template,
+        source="a SQL database table",
+        params=_doc_io_method_kwargs_params,
+        method="read_sql_table",
+    )
     def _read_sql_table(cls, **kwargs):
         return cls.io_cls.read_sql_table(**kwargs)
 
     @classmethod
+    @doc(
+        _doc_io_method_template,
+        source="a SQL query",
+        params=_doc_io_method_kwargs_params,
+        method="read_sql_query",
+    )
     def _read_sql_query(cls, **kwargs):
         return cls.io_cls.read_sql_query(**kwargs)
 
     @classmethod
+    @doc(
+        _doc_io_method_template,
+        source="an SPSS file",
+        params=_doc_io_method_kwargs_params,
+        method="read_spss",
+    )
     def _read_spss(cls, **kwargs):
         return cls.io_cls.read_spss(**kwargs)
 
     @classmethod
     def _to_sql(cls, *args, **kwargs):
+        """
+        Write query compiler content to a SQL database.
+
+        Parameters
+        ----------
+        *args : args
+            Arguments to the writer method.
+        **kwargs : kwargs
+            Arguments to the writer method.
+        """
         return cls.io_cls.to_sql(*args, **kwargs)
 
     @classmethod
     def _to_pickle(cls, *args, **kwargs):
+        """
+        Pickle query compiler object.
+
+        Parameters
+        ----------
+        *args : args
+            Arguments to the writer method.
+        **kwargs : kwargs
+            Arguments to the writer method.
+        """
         return cls.io_cls.to_pickle(*args, **kwargs)
 
     @classmethod
     def _to_csv(cls, *args, **kwargs):
+        """
+        Write query compiler content to a CSV file.
+
+        Parameters
+        ----------
+        *args : args
+            Arguments to pass to the writer method.
+        **kwargs : kwargs
+            Arguments to pass to the writer method.
+        """
         return cls.io_cls.to_csv(*args, **kwargs)
 
 
+@doc(_doc_factory_class, engine_name="cuDFOnRay")
 class CudfOnRayFactory(BaseFactory):
     @classmethod
+    @doc(_doc_factory_prepare_method, engine_name="``cuDFOnRayIO``")
     def prepare(cls):
-        """
-        Fills in .io_cls class attribute lazily
-        """
         from modin.engines.ray.cudf_on_ray.io import cuDFOnRayIO
 
         cls.io_cls = cuDFOnRayIO
 
 
+@doc(_doc_factory_class, engine_name="PandasOnRay")
 class PandasOnRayFactory(BaseFactory):
     @classmethod
+    @doc(_doc_factory_prepare_method, engine_name="``PandasOnRayIO``")
     def prepare(cls):
-        """
-        Fills in .io_cls class attribute lazily
-        """
         from modin.engines.ray.pandas_on_ray.io import PandasOnRayIO
 
         cls.io_cls = PandasOnRayIO
 
 
+@doc(_doc_factory_class, engine_name="PandasOnPython")
 class PandasOnPythonFactory(BaseFactory):
     @classmethod
+    @doc(_doc_factory_prepare_method, engine_name="``PandasOnPythonIO``")
     def prepare(cls):
-        """
-        Fills in .io_cls class attribute lazily
-        """
         from modin.engines.python.pandas_on_python.io import PandasOnPythonIO
 
         cls.io_cls = PandasOnPythonIO
 
 
+@doc(_doc_factory_class, engine_name="PandasOnDask")
 class PandasOnDaskFactory(BaseFactory):
     @classmethod
+    @doc(_doc_factory_prepare_method, engine_name="``PandasOnDaskIO``")
     def prepare(cls):
-        """
-        Fills in .io_cls class attribute lazily
-        """
         from modin.engines.dask.pandas_on_dask.io import PandasOnDaskIO
 
         cls.io_cls = PandasOnDaskIO
 
 
+@doc(_doc_abstract_factory_class, role="experimental")
 class ExperimentalBaseFactory(BaseFactory):
     @classmethod
+    @_inherit_docstrings(BaseFactory._read_sql)
     def _read_sql(cls, **kwargs):
         if Engine.get() != "Ray":
             if "partition_column" in kwargs:
@@ -234,12 +469,11 @@ class ExperimentalBaseFactory(BaseFactory):
         return cls.io_cls.read_sql(**kwargs)
 
 
+@doc(_doc_factory_class, engine_name="experimental PandasOnRay")
 class ExperimentalPandasOnRayFactory(ExperimentalBaseFactory, PandasOnRayFactory):
     @classmethod
+    @doc(_doc_factory_prepare_method, engine_name="``ExperimentalPandasOnRayIO``")
     def prepare(cls):
-        """
-        Fills in .io_cls class attribute lazily
-        """
         from modin.experimental.engines.pandas_on_ray.io_exp import (
             ExperimentalPandasOnRayIO,
         )
@@ -247,29 +481,36 @@ class ExperimentalPandasOnRayFactory(ExperimentalBaseFactory, PandasOnRayFactory
         cls.io_cls = ExperimentalPandasOnRayIO
 
     @classmethod
+    @doc(
+        _doc_io_method_raw_template,
+        source="CSV files",
+        params=_doc_io_method_kwargs_params,
+    )
     def _read_csv_glob(cls, **kwargs):
         return cls.io_cls.read_csv_glob(**kwargs)
 
 
+@doc(_doc_factory_class, engine_name="experimental PandasOnPython")
 class ExperimentalPandasOnPythonFactory(ExperimentalBaseFactory, PandasOnPythonFactory):
     pass
 
 
+@doc(_doc_factory_class, engine_name="experimental PyarrowOnRay")
 class ExperimentalPyarrowOnRayFactory(BaseFactory):  # pragma: no cover
     @classmethod
+    @doc(_doc_factory_prepare_method, engine_name="experimental ``PyarrowOnRayIO``")
     def prepare(cls):
-        """
-        Fills in .io_cls class attribute lazily
-        """
         from modin.experimental.engines.pyarrow_on_ray.io import PyarrowOnRayIO
 
         cls.io_cls = PyarrowOnRayIO
 
 
+@doc(_doc_abstract_factory_class, role="experimental remote")
 class ExperimentalRemoteFactory(ExperimentalBaseFactory):
     wrapped_factory = BaseFactory
 
     @classmethod
+    @doc(_doc_factory_prepare_method, engine_name="an underlying remote")
     def prepare(cls):
         # query_compiler import is needed so remote PandasQueryCompiler
         # has an imported local counterpart;
@@ -313,24 +554,26 @@ class ExperimentalRemoteFactory(ExperimentalBaseFactory):
         cls.io_cls = WrappedIO(get_connection(), cls.wrapped_factory)
 
 
+@doc(_doc_factory_class, engine_name="experimental remote PandasOnRay")
 class ExperimentalPandasOnCloudrayFactory(ExperimentalRemoteFactory):
     wrapped_factory = PandasOnRayFactory
 
 
+@doc(_doc_factory_class, engine_name="experimental remote PandasOnPython")
 class ExperimentalPandasOnCloudpythonFactory(ExperimentalRemoteFactory):
     wrapped_factory = PandasOnPythonFactory
 
 
+@doc(_doc_factory_class, engine_name="experimental OmnisciOnRay")
 class ExperimentalOmnisciOnRayFactory(BaseFactory):
     @classmethod
+    @doc(_doc_factory_prepare_method, engine_name="experimental ``OmnisciOnRayIO``")
     def prepare(cls):
-        """
-        Fills in .io_cls class attribute lazily
-        """
         from modin.experimental.engines.omnisci_on_ray.io import OmnisciOnRayIO
 
         cls.io_cls = OmnisciOnRayIO
 
 
+@doc(_doc_factory_class, engine_name="experimental remote OmnisciOnRay")
 class ExperimentalOmnisciOnCloudrayFactory(ExperimentalRemoteFactory):
     wrapped_factory = ExperimentalOmnisciOnRayFactory

@@ -18,7 +18,9 @@ import numpy as np
 import threading
 
 from modin.config import ProgressBar
-from modin.engines.ray.generic.frame.partition_manager import RayFrameManager
+from modin.engines.ray.generic.frame.partition_manager import (
+    GenericRayFramePartitionManager,
+)
 from .axis_partition import (
     PandasOnRayFrameColumnPartition,
     PandasOnRayFrameRowPartition,
@@ -130,8 +132,8 @@ def func(df, apply_func, call_queue_df=None, call_queues_other=None, *others):
     return apply_func(df, new_others)
 
 
-class PandasOnRayFrameManager(RayFrameManager):
-    """The class implements the interface in ``RayFrameManager`` using Ray."""
+class PandasOnRayFramePartitionManager(GenericRayFramePartitionManager):
+    """The class implements the interface in `PandasFramePartitionManager`."""
 
     # This object uses RayRemotePartition objects as the underlying store.
     _partition_class = PandasOnRayFramePartition
@@ -254,7 +256,9 @@ class PandasOnRayFrameManager(RayFrameManager):
         np.ndarray
             A NumPy array of partitions.
         """
-        return super(PandasOnRayFrameManager, cls).map_partitions(partitions, map_func)
+        return super(PandasOnRayFramePartitionManager, cls).map_partitions(
+            partitions, map_func
+        )
 
     @classmethod
     @progress_bar_wrapper
@@ -274,7 +278,7 @@ class PandasOnRayFrameManager(RayFrameManager):
         np.ndarray
             A NumPy array of partitions.
         """
-        return super(PandasOnRayFrameManager, cls).lazy_map_partitions(
+        return super(PandasOnRayFramePartitionManager, cls).lazy_map_partitions(
             partitions, map_func
         )
 
@@ -319,7 +323,7 @@ class PandasOnRayFrameManager(RayFrameManager):
         This method should be used in the case when `map_func` relies on
         some global information about the axis.
         """
-        return super(PandasOnRayFrameManager, cls).map_axis_partitions(
+        return super(PandasOnRayFramePartitionManager, cls).map_axis_partitions(
             axis, partitions, map_func, keep_partitioning, lengths, enumerate_partitions
         )
 
@@ -347,9 +351,9 @@ class PandasOnRayFrameManager(RayFrameManager):
         -----
         This preprocesses the `func` first before applying it to the partitions.
         """
-        return super(PandasOnRayFrameManager, cls)._apply_func_to_list_of_partitions(
-            func, partitions, **kwargs
-        )
+        return super(
+            PandasOnRayFramePartitionManager, cls
+        )._apply_func_to_list_of_partitions(func, partitions, **kwargs)
 
     @classmethod
     @progress_bar_wrapper
@@ -385,7 +389,9 @@ class PandasOnRayFrameManager(RayFrameManager):
         this to work correctly. This prevents information leakage of the
         internal index to the external representation.
         """
-        return super(PandasOnRayFrameManager, cls).apply_func_to_select_indices(
+        return super(
+            PandasOnRayFramePartitionManager, cls
+        ).apply_func_to_select_indices(
             axis, partitions, func, indices, keep_remaining=keep_remaining
         )
 
@@ -426,7 +432,7 @@ class PandasOnRayFrameManager(RayFrameManager):
         it must use `internal_indices` as a keyword argument.
         """
         return super(
-            PandasOnRayFrameManager, cls
+            PandasOnRayFramePartitionManager, cls
         ).apply_func_to_select_indices_along_full_axis(
             axis, partitions, func, indices, keep_remaining
         )
@@ -468,7 +474,9 @@ class PandasOnRayFrameManager(RayFrameManager):
         it must use ``row_internal_indices`` and ``col_internal_indices`` as keyword
         arguments.
         """
-        return super(PandasOnRayFrameManager, cls).apply_func_to_indices_both_axis(
+        return super(
+            PandasOnRayFramePartitionManager, cls
+        ).apply_func_to_indices_both_axis(
             partitions,
             func,
             row_partitions_list,
@@ -498,6 +506,6 @@ class PandasOnRayFrameManager(RayFrameManager):
         np.ndarray
             A NumPy array with new partitions.
         """
-        return super(PandasOnRayFrameManager, cls).binary_operation(
+        return super(PandasOnRayFramePartitionManager, cls).binary_operation(
             axis, left, func, right
         )

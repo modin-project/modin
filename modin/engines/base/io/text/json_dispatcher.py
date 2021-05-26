@@ -117,5 +117,5 @@ class JSONDispatcher(TextFileDispatcher):
             column_widths,
             dtypes=dtypes,
         )
-        new_frame._apply_index_objs(axis=0)
+        new_frame.synchronize_labels(axis=0)
         return cls.query_compiler_cls(new_frame)

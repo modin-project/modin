@@ -123,7 +123,7 @@ and lots of other useful information.**
    installation
 
 .. toctree::
-   :caption: Using Modin
+   :caption: Getting Started
 
    using_modin
    out_of_core
@@ -134,10 +134,17 @@ and lots of other useful information.**
 
    examples/index
 
+.. toctree:: 
+   :caption: Experimental Features
+
+   experimental_features/index
+   experimental_features/modin_sql
+   experimental_features/spreadsheets_api
+   experimental_features/progress_bar
+
 .. toctree::
    :caption: How is Modin different from ...?
 
-   comparisons/index
    comparisons/pandas
    comparisons/dask
    comparisons/spark
@@ -164,7 +171,6 @@ and lots of other useful information.**
    UsingPandasonRay/index
    UsingPandasonDask/index
    UsingPyarrowonRay/index
-   UsingSQLonRay/index
 
 .. toctree::
    :caption: Help

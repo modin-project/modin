@@ -18,13 +18,13 @@ import cudf
 import cupy
 import numpy as np
 import cupy as cp
-from modin.engines.base.frame.partition import BaseFramePartition
+from modin.engines.base.frame.partition import PandasFramePartition
 from pandas.core.dtypes.common import is_list_like
 
 
-class cuDFOnRayFramePartition(BaseFramePartition):
+class cuDFOnRayFramePartition(PandasFramePartition):
     """
-    The class implements the interface in ``BaseFramePartition`` using cuDF on Ray.
+    The class implements the interface in ``PandasFramePartition`` using cuDF on Ray.
 
     Parameters
     ----------

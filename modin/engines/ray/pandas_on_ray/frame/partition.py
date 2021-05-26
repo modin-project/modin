@@ -16,7 +16,7 @@
 import pandas
 
 from modin.data_management.utils import length_fn_pandas, width_fn_pandas
-from modin.engines.base.frame.partition import BaseFramePartition
+from modin.engines.base.frame.partition import PandasFramePartition
 from modin.engines.ray.utils import handle_ray_task_error
 
 import ray
@@ -31,9 +31,9 @@ if version.parse(ray.__version__) >= version.parse("1.2.0"):
     ObjectIDType = (ray.ObjectRef, ClientObjectRef)
 
 
-class PandasOnRayFramePartition(BaseFramePartition):
+class PandasOnRayFramePartition(PandasFramePartition):
     """
-    The class implements the interface in ``BaseFramePartition``.
+    The class implements the interface in ``PandasFramePartition``.
 
     Parameters
     ----------
@@ -337,7 +337,7 @@ class PandasOnRayFramePartition(BaseFramePartition):
         return self._ip_cache
 
     @classmethod
-    def length_extraction_fn(cls):
+    def _length_extraction_fn(cls):
         """
         Return the function that computes the length of the object wrapped by this partition.
 
@@ -349,7 +349,7 @@ class PandasOnRayFramePartition(BaseFramePartition):
         return length_fn_pandas
 
     @classmethod
-    def width_extraction_fn(cls):
+    def _width_extraction_fn(cls):
         """
         Return the function that computes the width of the object wrapped by this partition.
 
