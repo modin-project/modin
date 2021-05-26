@@ -212,6 +212,37 @@ def copy_df_for_func(func, display_name: str = None):
     return caller
 
 
+def handle_readonly_buffer(func: callable, display_name: str = None):
+    """
+    Build a function that handles read-only buffers in the workers.
+
+    This utility is for operators that have in-place side effects in pandas,
+    but are not themselves inplace.
+
+    Parameters
+    ----------
+    func : callable(pandas.DataFrame)
+        The function, which should not update the dataframe inplace
+    display_name : str, optional
+        The function's name, which can be displayed by a progress bar.
+
+    Returns
+    -------
+    callable(pandas.DataFrame)
+        A callable function to be applied in the partitions
+    """
+
+    def caller(df, *args, **kwargs):
+        try:
+            return func(df, *args, **kwargs)
+        except ValueError:
+            return func(df.copy(), *args, **kwargs)
+
+    if display_name is not None:
+        caller.__name__ = display_name
+    return caller
+
+
 @_inherit_docstrings(BaseQueryCompiler)
 class PandasQueryCompiler(BaseQueryCompiler):
     """
@@ -788,12 +819,21 @@ class PandasQueryCompiler(BaseQueryCompiler):
     prod_min_count = ReductionFunction.register(pandas.DataFrame.prod)
     quantile_for_single_value = ReductionFunction.register(pandas.DataFrame.quantile)
     mad = ReductionFunction.register(pandas.DataFrame.mad)
-    to_datetime = ReductionFunction.register(
-        lambda df, *args, **kwargs: pandas.to_datetime(
-            df.squeeze(axis=1), *args, **kwargs
-        ),
-        axis=1,
-    )
+
+    def to_datetime(self, *args, **kwargs):
+        if len(self.columns) == 1:
+            return MapFunction.register(
+                # to_datetime has inplace side effects, see GH#3063
+                handle_readonly_buffer(
+                    lambda df, *args, **kwargs: pandas.to_datetime(
+                        df.squeeze(axis=1), *args, **kwargs
+                    ).to_frame()
+                ),
+            )(self, *args, **kwargs)
+        else:
+            return ReductionFunction.register(pandas.to_datetime, axis=1)(
+                self, *args, **kwargs
+            )
 
     # END Reduction operations
 

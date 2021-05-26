@@ -644,6 +644,18 @@ def test_to_datetime():
     )
 
 
+def test_to_datetime_inplace_side_effect():
+    # See GH#3063
+    times = list(range(1617993360, 1618193360))
+    values = list(range(215441, 415441))
+    modin_df = pd.DataFrame({"time": times, "value": values})
+    pandas_df = pandas.DataFrame({"time": times, "value": values})
+    df_equals(
+        pd.to_datetime(modin_df["time"], unit="s"),
+        pandas.to_datetime(pandas_df["time"], unit="s"),
+    )
+
+
 @pytest.mark.parametrize(
     "data, errors, downcast",
     [
