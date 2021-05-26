@@ -14,18 +14,18 @@
 import pandas
 
 from modin.data_management.utils import length_fn_pandas, width_fn_pandas
-from modin.engines.base.frame.partition import BaseFramePartition
+from modin.engines.base.frame.partition import PandasFramePartition
 
 
-class PandasOnPythonFramePartition(BaseFramePartition):
+class PandasOnPythonFramePartition(PandasFramePartition):
     """This abstract class holds the data and metadata for a single partition.
     The methods required for implementing this abstract class are listed in
     the section immediately following this.
 
     The API exposed by the children of this object is used in
-    `BaseFrameManager`.
+    `PandasFramePartitionManager`.
 
-    Note: These objects are treated as immutable by `BaseFrameManager`
+    Note: These objects are treated as immutable by `PandasFramePartitionManager`
     subclasses. There is no logic for updating inplace.
     """
 
@@ -59,7 +59,7 @@ class PandasOnPythonFramePartition(BaseFramePartition):
             func: The lambda to apply (may already be correctly formatted)
 
         Returns:
-             A new `BaseFramePartition` containing the object that has had `func`
+             A new `PandasFramePartition` containing the object that has had `func`
              applied to it.
         """
 
@@ -142,7 +142,7 @@ class PandasOnPythonFramePartition(BaseFramePartition):
 
         Note: This is a classmethod because the definition of how to preprocess
             should be class-wide. Also, we may want to use this before we
-            deploy a preprocessed function to multiple `BaseFramePartition`
+            deploy a preprocessed function to multiple `PandasFramePartition`
             objects.
 
         Args:
@@ -154,7 +154,7 @@ class PandasOnPythonFramePartition(BaseFramePartition):
         return func
 
     @classmethod
-    def length_extraction_fn(cls):
+    def _length_extraction_fn(cls):
         """The function to compute the length of the object in this partition.
 
         Returns:
@@ -163,7 +163,7 @@ class PandasOnPythonFramePartition(BaseFramePartition):
         return length_fn_pandas
 
     @classmethod
-    def width_extraction_fn(cls):
+    def _width_extraction_fn(cls):
         """The function to compute the width of the object in this partition.
 
         Returns:
@@ -176,12 +176,12 @@ class PandasOnPythonFramePartition(BaseFramePartition):
 
     def length(self):
         if self._length_cache is None:
-            self._length_cache = self.apply(self.length_extraction_fn()).data
+            self._length_cache = self.apply(self._length_extraction_fn()).data
         return self._length_cache
 
     def width(self):
         if self._width_cache is None:
-            self._width_cache = self.apply(self.width_extraction_fn()).data
+            self._width_cache = self.apply(self._width_extraction_fn()).data
         return self._width_cache
 
     @classmethod

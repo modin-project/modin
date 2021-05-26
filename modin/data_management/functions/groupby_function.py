@@ -287,7 +287,7 @@ class GroupbyReduceFunction(MapReduceFunction):
 
         if numeric_only:
             qc = query_compiler.getitem_column_array(
-                query_compiler._modin_frame._numeric_columns(True)
+                query_compiler._modin_frame.numeric_columns(True)
             )
         else:
             qc = query_compiler

@@ -15,7 +15,7 @@
 Module contains ``PandasQueryCompiler`` class.
 
 ``PandasQueryCompiler`` is responsible for compiling efficient DataFrame algebra
-queries for the ``BasePandasFrame``.
+queries for the ``PandasFrame``.
 """
 
 import numpy as np
@@ -219,11 +219,11 @@ class PandasQueryCompiler(BaseQueryCompiler):
     Query compiler for the pandas backend.
 
     This class translates common query compiler API into the DataFrame Algebra
-    queries, that is supposed to be executed by :py:class:`~modin.engines.base.frame.data.BasePandasFrame`.
+    queries, that is supposed to be executed by :py:class:`~modin.engines.base.frame.data.PandasFrame`.
 
     Parameters
     ----------
-    modin_frame : BasePandasFrame
+    modin_frame : PandasFrame
         Modin Frame to query with the compiled queries.
     """
 
@@ -314,7 +314,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         join = kwargs.get("join", "outer")
         ignore_index = kwargs.get("ignore_index", False)
         other_modin_frame = [o._modin_frame for o in other]
-        new_modin_frame = self._modin_frame._concat(axis, other_modin_frame, join, sort)
+        new_modin_frame = self._modin_frame.concat(axis, other_modin_frame, join, sort)
         result = self.__constructor__(new_modin_frame)
         if ignore_index:
             if axis == 0:
@@ -400,14 +400,14 @@ class PandasQueryCompiler(BaseQueryCompiler):
             def where_builder_first_pass(cond, other, **kwargs):
                 return cond.where(cond, other, **kwargs)
 
-            first_pass = cond._modin_frame._binary_op(
+            first_pass = cond._modin_frame.binary_op(
                 where_builder_first_pass, other._modin_frame, join_type="left"
             )
 
             def where_builder_second_pass(df, new_other, **kwargs):
                 return df.where(new_other.eq(True), new_other, **kwargs)
 
-            new_modin_frame = self._modin_frame._binary_op(
+            new_modin_frame = self._modin_frame.binary_op(
                 where_builder_second_pass, first_pass, join_type="left"
             )
         # This will be a Series of scalars to be applied based on the condition
@@ -417,7 +417,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             def where_builder_series(df, cond):
                 return df.where(cond, other, **kwargs)
 
-            new_modin_frame = self._modin_frame._binary_op(
+            new_modin_frame = self._modin_frame.binary_op(
                 where_builder_series, cond._modin_frame, join_type="left"
             )
         return self.__constructor__(new_modin_frame)
@@ -440,7 +440,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 return pandas.merge(left, right, **kwargs)
 
             new_self = self.__constructor__(
-                self._modin_frame._apply_full_axis(1, map_func)
+                self._modin_frame.apply_full_axis(1, map_func)
             )
             is_reset_index = True
             if left_on and right_on:
@@ -485,7 +485,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 return pandas.DataFrame.join(left, right, **kwargs)
 
             new_self = self.__constructor__(
-                self._modin_frame._apply_full_axis(1, map_func)
+                self._modin_frame.apply_full_axis(1, map_func)
             )
             return new_self.sort_rows_by_column_values(on) if sort else new_self
         else:
@@ -497,7 +497,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
     def reindex(self, axis, labels, **kwargs):
         new_index = self.index if axis else labels
         new_columns = labels if axis else self.columns
-        new_modin_frame = self._modin_frame._apply_full_axis(
+        new_modin_frame = self._modin_frame.apply_full_axis(
             axis,
             lambda df: df.reindex(labels=labels, axis=axis, **kwargs),
             new_index=new_index,
@@ -936,7 +936,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             else:
                 return val
 
-        new_modin_frame = self._modin_frame._apply_full_axis(
+        new_modin_frame = self._modin_frame.apply_full_axis(
             axis=0, func=map_func, new_columns=new_columns
         )
         return self.__constructor__(new_modin_frame)
@@ -1224,7 +1224,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             )(self)
 
     def rolling_aggregate(self, rolling_args, func, *args, **kwargs):
-        new_modin_frame = self._modin_frame._apply_full_axis(
+        new_modin_frame = self._modin_frame.apply_full_axis(
             0,
             lambda df: pandas.DataFrame(
                 df.rolling(*rolling_args).aggregate(func=func, *args, **kwargs)
@@ -1293,7 +1293,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         else:
             obj = self
 
-        new_modin_frame = obj._modin_frame._apply_full_axis(
+        new_modin_frame = obj._modin_frame.apply_full_axis(
             axis, map_func, new_columns=new_columns
         )
         result = self.__constructor__(new_modin_frame)
@@ -1397,7 +1397,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         else:
             new_columns = None
 
-        new_modin_frame = self._modin_frame._apply_full_axis(
+        new_modin_frame = self._modin_frame.apply_full_axis(
             1,
             lambda df: pandas.DataFrame(df.stack(level=level, dropna=dropna)),
             new_columns=new_columns,
@@ -1486,7 +1486,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
     # END String map partitions operations
 
     def unique(self):
-        new_modin_frame = self._modin_frame._apply_full_axis(
+        new_modin_frame = self._modin_frame.apply_full_axis(
             0,
             lambda x: x.squeeze(axis=1).unique(),
             new_columns=self.columns,
@@ -1585,7 +1585,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         # `squeeze` will convert it to a scalar.
         first_result = (
             self.__constructor__(
-                self._modin_frame._fold_reduce(0, first_valid_index_builder)
+                self._modin_frame.fold_reduce(0, first_valid_index_builder)
             )
             .min(axis=1)
             .to_pandas()
@@ -1605,7 +1605,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         # `squeeze` will convert it to a scalar.
         first_result = (
             self.__constructor__(
-                self._modin_frame._fold_reduce(0, last_valid_index_builder)
+                self._modin_frame.fold_reduce(0, last_valid_index_builder)
             )
             .max(axis=1)
             .to_pandas()
@@ -1647,7 +1647,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             return df.iloc[:, internal_indices].describe(**kwargs)
 
         return self.__constructor__(
-            self._modin_frame._apply_full_axis_select_indices(
+            self._modin_frame.apply_full_axis_select_indices(
                 0,
                 describe_builder,
                 empty_df.columns,
@@ -1674,11 +1674,9 @@ class PandasQueryCompiler(BaseQueryCompiler):
         kwargs["lower"] = lower
         axis = kwargs.get("axis", 0)
         if is_list_like(lower) or is_list_like(upper):
-            new_modin_frame = self._modin_frame._fold(
-                axis, lambda df: df.clip(**kwargs)
-            )
+            new_modin_frame = self._modin_frame.fold(axis, lambda df: df.clip(**kwargs))
         else:
-            new_modin_frame = self._modin_frame._map(lambda df: df.clip(**kwargs))
+            new_modin_frame = self._modin_frame.map(lambda df: df.clip(**kwargs))
         return self.__constructor__(new_modin_frame)
 
     def corr(self, method="pearson", min_periods=1):
@@ -1763,7 +1761,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         columns = self.columns
         index = columns.copy()
         transponed_self = self.transpose()
-        new_modin_frame = transponed_self._modin_frame._apply_full_axis(
+        new_modin_frame = transponed_self._modin_frame.apply_full_axis(
             1, map_func, new_index=index, new_columns=columns
         )
         return transponed_self.__constructor__(new_modin_frame)
@@ -1798,7 +1796,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             new_columns = ["__reduced__"] if num_cols == 1 else None
             axis = 1
 
-        new_modin_frame = self._modin_frame._apply_full_axis(
+        new_modin_frame = self._modin_frame.apply_full_axis(
             axis, map_func, new_index=new_index, new_columns=new_columns
         )
         return self.__constructor__(new_modin_frame)
@@ -1846,7 +1844,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         else:
             new_columns = self.columns
 
-        new_modin_frame = self._modin_frame._apply_full_axis(
+        new_modin_frame = self._modin_frame.apply_full_axis(
             axis=0, func=map_func, new_columns=new_columns
         )
         return self.__constructor__(new_modin_frame)
@@ -1871,7 +1869,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             )
         else:
             new_columns = empty_eval.columns
-        new_modin_frame = self._modin_frame._apply_full_axis(
+        new_modin_frame = self._modin_frame.apply_full_axis(
             1,
             lambda df: pandas.DataFrame(df.eval(expr, inplace=False, **kwargs)),
             new_index=self.index,
@@ -1901,7 +1899,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         else:
             new_index = self.index
             new_columns = pandas.RangeIndex(len(self.columns))
-        new_modin_frame = self._modin_frame._apply_full_axis(
+        new_modin_frame = self._modin_frame.apply_full_axis(
             axis, mode_builder, new_index=new_index, new_columns=new_columns
         )
         return self.__constructor__(new_modin_frame).dropna(axis=axis, how="all")
@@ -1925,9 +1923,9 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 return df.fillna(**kwargs)
 
         if full_axis:
-            new_modin_frame = self._modin_frame._fold(axis, fillna)
+            new_modin_frame = self._modin_frame.fold(axis, fillna)
         else:
-            new_modin_frame = self._modin_frame._map(fillna)
+            new_modin_frame = self._modin_frame.map(fillna)
         return self.__constructor__(new_modin_frame)
 
     def quantile_for_list_of_values(self, **kwargs):
@@ -1937,7 +1935,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         assert isinstance(q, (pandas.Series, np.ndarray, pandas.Index, list))
 
         if numeric_only:
-            new_columns = self._modin_frame._numeric_columns()
+            new_columns = self._modin_frame.numeric_columns()
         else:
             new_columns = [
                 col
@@ -1967,7 +1965,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             new_columns = pandas.Float64Index(q)
         else:
             q_index = pandas.Float64Index(q)
-        new_modin_frame = query_compiler._modin_frame._apply_full_axis(
+        new_modin_frame = query_compiler._modin_frame.apply_full_axis(
             axis,
             lambda df: quantile_builder(df, **kwargs),
             new_index=q_index,
@@ -1988,7 +1986,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
     def rank(self, **kwargs):
         axis = kwargs.get("axis", 0)
         numeric_only = True if axis else kwargs.get("numeric_only", False)
-        new_modin_frame = self._modin_frame._apply_full_axis(
+        new_modin_frame = self._modin_frame.apply_full_axis(
             axis,
             lambda df: df.rank(**kwargs),
             new_index=self.index,
@@ -2025,7 +2023,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         else:
             new_index = pandas.Series(self.index).sort_values(**kwargs)
             new_columns = self.columns
-        new_modin_frame = self._modin_frame._apply_full_axis(
+        new_modin_frame = self._modin_frame.apply_full_axis(
             axis,
             lambda df: df.sort_index(
                 axis=axis, level=level, sort_remaining=sort_remaining, **kwargs
@@ -2252,10 +2250,10 @@ class PandasQueryCompiler(BaseQueryCompiler):
             idx = self.get_axis(axis ^ 1).get_indexer_for([key])[0]
             return self.insert_item(axis ^ 1, idx, value, how, replace=True)
 
-        # TODO: rework by passing list-like values to `_apply_select_indices`
+        # TODO: rework by passing list-like values to `apply_select_indices`
         # as an item to distribute
         if is_list_like(value):
-            new_modin_frame = self._modin_frame._apply_full_axis_select_indices(
+            new_modin_frame = self._modin_frame.apply_full_axis_select_indices(
                 axis,
                 setitem_builder,
                 [key],
@@ -2264,7 +2262,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 keep_remaining=True,
             )
         else:
-            new_modin_frame = self._modin_frame._apply_select_indices(
+            new_modin_frame = self._modin_frame.apply_select_indices(
                 axis,
                 setitem_builder,
                 [key],
@@ -2337,9 +2335,9 @@ class PandasQueryCompiler(BaseQueryCompiler):
             df.insert(internal_idx, column, value)
             return df
 
-        # TODO: rework by passing list-like values to `_apply_select_indices`
+        # TODO: rework by passing list-like values to `apply_select_indices`
         # as an item to distribute
-        new_modin_frame = self._modin_frame._apply_full_axis_select_indices(
+        new_modin_frame = self._modin_frame.apply_full_axis_select_indices(
             0,
             insert,
             numeric_indices=[loc],
@@ -2396,7 +2394,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         """
         assert isinstance(func, str)
         kwargs["axis"] = axis
-        new_modin_frame = self._modin_frame._apply_full_axis(
+        new_modin_frame = self._modin_frame.apply_full_axis(
             axis, lambda df: df.apply(func, *args, **kwargs)
         )
         return self.__constructor__(new_modin_frame)
@@ -2432,7 +2430,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
         func = {k: wrap_udf_function(v) if callable(v) else v for k, v in func.items()}
         return self.__constructor__(
-            self._modin_frame._apply_full_axis_select_indices(
+            self._modin_frame.apply_full_axis_select_indices(
                 axis, dict_apply_builder, func, keep_remaining=False
             )
         )
@@ -2470,7 +2468,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             else self.columns
         )
         func = [wrap_udf_function(f) if callable(f) else f for f in func]
-        new_modin_frame = self._modin_frame._apply_full_axis(
+        new_modin_frame = self._modin_frame.apply_full_axis(
             axis,
             lambda df: pandas.DataFrame(df.apply(func, axis, *args, **kwargs)),
             new_index=new_index,
@@ -2501,7 +2499,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             for each row/column.
         """
         func = wrap_udf_function(func)
-        new_modin_frame = self._modin_frame._apply_full_axis(
+        new_modin_frame = self._modin_frame.apply_full_axis(
             axis, lambda df: df.apply(func, axis=axis, *args, **kwargs)
         )
         return self.__constructor__(new_modin_frame)
@@ -2928,7 +2926,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             obj.index = index
 
         reindexed = self.__constructor__(
-            obj._modin_frame._apply_full_axis(
+            obj._modin_frame.apply_full_axis(
                 1,
                 lambda df: df.set_index(to_reindex, append=(len(to_reindex) == 1)),
                 new_columns=obj.columns.drop(to_reindex),
@@ -3053,14 +3051,14 @@ class PandasQueryCompiler(BaseQueryCompiler):
         # efficient if we are mapping over all of the data to do it this way
         # than it would be to reuse the code for specific columns.
         if len(columns) == len(self.columns):
-            new_modin_frame = self._modin_frame._apply_full_axis(
+            new_modin_frame = self._modin_frame.apply_full_axis(
                 0, lambda df: pandas.get_dummies(df, **kwargs), new_index=self.index
             )
             untouched_frame = None
         else:
             new_modin_frame = self._modin_frame.mask(
                 col_indices=columns
-            )._apply_full_axis(
+            ).apply_full_axis(
                 0, lambda df: pandas.get_dummies(df, **kwargs), new_index=self.index
             )
             untouched_frame = self.drop(columns=columns)
@@ -3068,7 +3066,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         # prepend the `new_modin_frame` with the raw data from the columns that were
         # not selected.
         if len(columns) != len(self.columns):
-            new_modin_frame = untouched_frame._modin_frame._concat(
+            new_modin_frame = untouched_frame._modin_frame.concat(
                 1, [new_modin_frame], how="left", sort=False
             )
         return self.__constructor__(new_modin_frame)
@@ -3108,7 +3106,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             partition.iloc[row_internal_indices, col_internal_indices] = item
             return partition
 
-        new_modin_frame = self._modin_frame._apply_select_indices(
+        new_modin_frame = self._modin_frame.apply_select_indices(
             axis=None,
             func=iloc_mut,
             row_indices=row_numeric_index,

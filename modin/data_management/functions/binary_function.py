@@ -89,7 +89,7 @@ class BinaryFunction(Function):
                     )
                 else:
                     return query_compiler.__constructor__(
-                        query_compiler._modin_frame._binary_op(
+                        query_compiler._modin_frame.binary_op(
                             lambda x, y: func(x, y, *args, **kwargs),
                             other._modin_frame,
                             join_type=join_type,
@@ -97,14 +97,14 @@ class BinaryFunction(Function):
                     )
             else:
                 if isinstance(other, (list, np.ndarray, pandas.Series)):
-                    new_modin_frame = query_compiler._modin_frame._apply_full_axis(
+                    new_modin_frame = query_compiler._modin_frame.apply_full_axis(
                         axis,
                         lambda df: func(df, other, *args, **kwargs),
                         new_index=query_compiler.index,
                         new_columns=query_compiler.columns,
                     )
                 else:
-                    new_modin_frame = query_compiler._modin_frame._map(
+                    new_modin_frame = query_compiler._modin_frame.map(
                         lambda df: func(df, other, *args, **kwargs)
                     )
                 return query_compiler.__constructor__(new_modin_frame)
