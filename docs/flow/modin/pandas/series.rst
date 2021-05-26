@@ -3,13 +3,13 @@
 Series Module Overview
 """"""""""""""""""""""
 
-Modin Series
-''''''''''''
-Modin Series represents disrtibuted ``pandas.Series`` object providing the same
-pandas API. Internally passed data is divided into partitions in order to
+Modin's ``pandas.Series`` API
+'''''''''''''''''''''''''''''
+Modin's ``pandas.Series`` API is backed by a distributed object providing an indentical
+API to pandas. Internally, the data is divided into partitions in order to
 parallelize computations and utilize the user's hardware as much as possible.
 After the user calls some ``Series`` function, this call is internally rewritten
-into a representation, that can be processed in parallel by the partitions. These
+into a representation that can be processed in parallel by the partitions. These
 results can be e.g., reduced to single output, identical to the single threaded
 pandas ``Series`` method output.
 
