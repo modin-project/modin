@@ -11,7 +11,7 @@ Query Compiler
 
 Modin supports several execution backends. Calling any DataFrame API function will end up in
 some backend-specific method. The query compiler is a bridge between Modin Dataframe and
-an actual execution engine.
+the actual execution engine.
 
 .. image:: /img/simplified_query_flow.svg
     :align: right
@@ -44,9 +44,9 @@ High-level module overview
 ''''''''''''''''''''''''''
 This module houses submodules of all of the stable query compilers:
 
-- :doc:`Base module<base/query_compiler>` contains an abstract query compiler class which defines common API.
-- :doc:`Pandas module<pandas/index>` contains query compiler and text parsers for pandas backend.
-- :doc:`cuDF module<cudf/index>` contains query compiler and text parsers for cuDF backend.
-- :doc:`Pyarrow module<pyarrow/index>` contains query compiler and text parsers for Pyarrow backend.
+- :doc:`Base module <base/query_compiler>` contains an abstract query compiler class which defines common API.
+- :doc:`Pandas module <pandas/index>` contains query compiler and text parsers for pandas backend.
+- :doc:`cuDF module <cudf/index>` contains query compiler and text parsers for cuDF backend.
+- :doc:`Pyarrow module <pyarrow/index>` contains query compiler and text parsers for Pyarrow backend.
 
 You can find more in the :doc:`experimental section </flow/modin/experimental/backends/>`.

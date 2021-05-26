@@ -31,7 +31,7 @@ Example
 '''''''
 As an exercise let's define a new query compiler in `Modin`, just to see how easy it is.
 Usually, the query compiler routes formed queries to the underlying :doc:`frame </flow/modin/engines/base/frame/data>` class,
-which represents submits operators to an execution engine. For the sake
+which submits operators to an execution engine. For the sake
 of simplicity and independence of this example, our execution engine will be the `pandas` itself.
 
 So, we need to inherit a new class from :py:class:`~modin.backends.base.query_compiler.BaseQueryCompiler` and implement all of the abstract methods.
