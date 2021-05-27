@@ -285,7 +285,8 @@ jobs:
       - run: python -m pytest -n 2 modin/pandas/test/test_general.py --backend=${{ matrix.backend }}
       - run: |
           curl -o codecov https://codecov.io/bash
-          curl -o SHA512SUM https://raw.githubusercontent.com/codecov/codecov-bash/master/SHA512SUM
+          VERSION=$(grep -o 'VERSION=\"[0-9\.]*\"' codecov | cut -d'"' -f2);
+          curl -o SHA512SUM "https://raw.githubusercontent.com/codecov/codecov-bash/${VERSION}/SHA512SUM"
           if sha512sum -c --ignore-missing --status SHA512SUM; then
               bash ./codecov
           else
@@ -328,7 +329,8 @@ jobs:
       - shell: bash -l {0}
         run: |
           curl -o codecov https://codecov.io/bash
-          curl -o SHA512SUM https://raw.githubusercontent.com/codecov/codecov-bash/master/SHA512SUM
+          VERSION=$(grep -o 'VERSION=\"[0-9\.]*\"' codecov | cut -d'"' -f2);
+          curl -o SHA512SUM "https://raw.githubusercontent.com/codecov/codecov-bash/${VERSION}/SHA512SUM"
           if sha512sum -c --ignore-missing --status SHA512SUM; then
               bash ./codecov
           else
@@ -445,7 +447,8 @@ jobs:
       - run: pip install dfsql && pytest modin/experimental/sql/test/test_sql.py
       - run: |
           curl -o codecov https://codecov.io/bash
-          curl -o SHA512SUM https://raw.githubusercontent.com/codecov/codecov-bash/master/SHA512SUM
+          VERSION=$(grep -o 'VERSION=\"[0-9\.]*\"' codecov | cut -d'"' -f2);
+          curl -o SHA512SUM "https://raw.githubusercontent.com/codecov/codecov-bash/${VERSION}/SHA512SUM"
           if sha512sum -c --ignore-missing --status SHA512SUM; then
               bash ./codecov
           else
@@ -486,7 +489,8 @@ jobs:
       - shell: bash -l {0}
         run: |
           curl -o codecov https://codecov.io/bash
-          curl -o SHA512SUM https://raw.githubusercontent.com/codecov/codecov-bash/master/SHA512SUM
+          VERSION=$(grep -o 'VERSION=\"[0-9\.]*\"' codecov | cut -d'"' -f2);
+          curl -o SHA512SUM "https://raw.githubusercontent.com/codecov/codecov-bash/${VERSION}/SHA512SUM"
           if sha512sum -c --ignore-missing --status SHA512SUM; then
               bash ./codecov
           else
@@ -523,7 +527,8 @@ jobs:
       - shell: bash -l {0}
         run: |
           curl -o codecov https://codecov.io/bash
-          curl -o SHA512SUM https://raw.githubusercontent.com/codecov/codecov-bash/master/SHA512SUM
+          VERSION=$(grep -o 'VERSION=\"[0-9\.]*\"' codecov | cut -d'"' -f2);
+          curl -o SHA512SUM "https://raw.githubusercontent.com/codecov/codecov-bash/${VERSION}/SHA512SUM"
           if sha512sum -c --ignore-missing --status SHA512SUM; then
               bash ./codecov
           else
