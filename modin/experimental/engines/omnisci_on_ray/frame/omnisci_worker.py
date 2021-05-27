@@ -17,12 +17,15 @@ import os
 
 import pyarrow as pa
 import numpy as np
+from sys import platform
 
-prev = sys.getdlopenflags()
-sys.setdlopenflags(1 | 256)  # RTLD_LAZY+RTLD_GLOBAL
+if platform == "linux" or platform == "linux2":
+   prev = sys.getdlopenflags()
+   sys.setdlopenflags(1 | 256)  # RTLD_LAZY+RTLD_GLOBAL
 from dbe import PyDbEngine
 
-sys.setdlopenflags(prev)
+if platform == "linux" or platform == "linux2":
+   sys.setdlopenflags(prev)
 
 from modin.config import OmnisciFragmentSize
 
