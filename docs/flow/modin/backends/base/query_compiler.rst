@@ -23,7 +23,7 @@ from :py:class:`~modin.backends.base.query_compiler.BaseQueryCompiler` and imple
 (Please refer to the code documentation to see the full documentation for these functions).
 
 This is a minimum set of operations to ensure a new query compiler will function in the Modin architecture,
-and the rest of the API can safely default to the pandas implementation. To add a backend-specific implementation for
+and the rest of the API can safely default to the pandas implementation via the base class implementation. To add a backend-specific implementation for
 some of the query compiler operations, just override the corresponding method in your
 query compiler class.
 
@@ -32,9 +32,9 @@ Example
 As an exercise let's define a new query compiler in `Modin`, just to see how easy it is.
 Usually, the query compiler routes formed queries to the underlying :doc:`frame </flow/modin/engines/base/frame/data>` class,
 which submits operators to an execution engine. For the sake
-of simplicity and independence of this example, our execution engine will be the `pandas` itself.
+of simplicity and independence of this example, our execution engine will be the pandas itself.
 
-So, we need to inherit a new class from :py:class:`~modin.backends.base.query_compiler.BaseQueryCompiler` and implement all of the abstract methods.
+We need to inherit a new class from :py:class:`~modin.backends.base.query_compiler.BaseQueryCompiler` and implement all of the abstract methods.
 In this case, with `pandas` as an execution engine, it's trivial:
 
 .. code-block:: python
