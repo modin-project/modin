@@ -11,10 +11,10 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-from modin.engines.base.frame.data import BasePandasFrame
-from .partition_manager import PythonFrameManager
+from modin.engines.base.frame.data import PandasFrame
+from .partition_manager import PandasOnPythonFramePartitionManager
 
 
-class PandasOnPythonFrame(BasePandasFrame):
+class PandasOnPythonFrame(PandasFrame):
 
-    _frame_mgr_cls = PythonFrameManager
+    _partition_mgr_cls = PandasOnPythonFramePartitionManager

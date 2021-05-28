@@ -20,18 +20,18 @@ Module contains class ``PyarrowOnRayFrame``.
 import pandas
 from pandas.core.dtypes.cast import find_common_type
 
-from .partition_manager import PyarrowOnRayFrameManager
-from modin.engines.base.frame.data import BasePandasFrame
+from .partition_manager import PyarrowOnRayFramePartitionManager
+from modin.engines.base.frame.data import PandasFrame
 
 import ray
 
 
-class PyarrowOnRayFrame(BasePandasFrame):
+class PyarrowOnRayFrame(PandasFrame):
     """
     Class for dataframes with PyArrow backend and Ray engine.
 
     ``PyarrowOnRayFrame`` implements interfaces specific for PyArrow and Ray,
-    other functionality is inherited from the ``BasePandasFrame`` class.
+    other functionality is inherited from the ``PandasFrame`` class.
 
     Parameters
     ----------
@@ -51,11 +51,11 @@ class PyarrowOnRayFrame(BasePandasFrame):
         The data types for the dataframe columns.
     """
 
-    _frame_mgr_cls = PyarrowOnRayFrameManager
+    _partition_mgr_cls = PyarrowOnRayFramePartitionManager
 
-    def _apply_index_objs(self, axis=None):
+    def synchronize_labels(self, axis=None):
         """
-        Lazily apply the index object (Index or Columns) to the partitions.
+        Synchronize labels by applying the index object (Index or Columns) to the partitions lazily.
 
         Parameters
         ----------

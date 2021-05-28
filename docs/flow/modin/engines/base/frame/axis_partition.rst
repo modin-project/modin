@@ -11,9 +11,9 @@ The procedures that use this class and its methods assume that they have some gl
 about the entire axis. This may require the implementation to use concatenation or append on the
 list of block partitions.
 
-The ``BaseFrameManager`` object that controls these objects (through the API exposed here) has an invariant
+The ``PandasFramePartitionManager`` object that controls these objects (through the API exposed here) has an invariant
 that requires that this object is never returned from a function. It assumes that there will always be
-``BaseFramePartition`` object stored and structures itself accordingly.
+``PandasFramePartition`` object stored and structures itself accordingly.
 
 Public API
 ----------
@@ -26,7 +26,7 @@ PandasFrameAxisPartition
 
 The class is base for any axis partition class of ``pandas`` backend.
 
-Subclasses must implement ``list_of_blocks`` which represents data wrapped by the ``BaseFramePartition``
+Subclasses must implement ``list_of_blocks`` which represents data wrapped by the ``PandasFramePartition``
 objects and creates something interpretable as a pandas DataFrame.
 
 See ``modin.engines.ray.pandas_on_ray.axis_partition.PandasOnRayFrameAxisPartition``

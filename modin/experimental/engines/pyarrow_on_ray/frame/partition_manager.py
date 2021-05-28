@@ -13,7 +13,9 @@
 
 """Module houses class for tracking partitions with PyArrow backend and Ray engine."""
 
-from modin.engines.ray.generic.frame.partition_manager import RayFrameManager
+from modin.engines.ray.generic.frame.partition_manager import (
+    GenericRayFramePartitionManager,
+)
 from .axis_partition import (
     PyarrowOnRayFrameColumnPartition,
     PyarrowOnRayFrameRowPartition,
@@ -21,11 +23,11 @@ from .axis_partition import (
 from .partition import PyarrowOnRayFramePartition
 
 
-class PyarrowOnRayFrameManager(RayFrameManager):
+class PyarrowOnRayFramePartitionManager(GenericRayFramePartitionManager):
     """
     Class for tracking partitions with PyArrow backend and Ray engine.
 
-    Inherits all functionality from ``RayFrameManager`` and ``BaseFrameManager`` base
+    Inherits all functionality from ``GenericRayFramePartitionManager`` and ``PandasFramePartitionManager`` base
     classes.
     """
 

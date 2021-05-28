@@ -11,11 +11,11 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-"""Module houses class that implements ``BaseFrameManager``."""
+"""Module houses class that implements ``PandasFramePartitionManager``."""
 
 import numpy as np
 
-from modin.engines.base.frame.partition_manager import BaseFrameManager
+from modin.engines.base.frame.partition_manager import PandasFramePartitionManager
 from .axis_partition import (
     PandasOnDaskFrameColumnPartition,
     PandasOnDaskFrameRowPartition,
@@ -74,8 +74,8 @@ def deploy_func(df, apply_func, call_queue_df=None, call_queues_other=None, *oth
     return apply_func(df, new_others)
 
 
-class DaskFrameManager(BaseFrameManager):
-    """The class implements the interface in `BaseFrameManager`."""
+class PandasOnDaskFramePartitionManager(PandasFramePartitionManager):
+    """The class implements the interface in `PandasFramePartitionManager`."""
 
     # This object uses PandasOnDaskFramePartition objects as the underlying store.
     _partition_class = PandasOnDaskFramePartition

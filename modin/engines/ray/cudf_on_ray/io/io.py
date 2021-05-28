@@ -16,7 +16,7 @@ from modin.engines.ray.cudf_on_ray.io import cuDFCSVDispatcher
 from modin.backends.cudf.query_compiler import cuDFQueryCompiler
 from modin.engines.ray.cudf_on_ray.frame.data import cuDFOnRayFrame
 from modin.engines.ray.cudf_on_ray.frame.partition_manager import (
-    cuDFOnRayFrameManager,
+    cuDFOnRayFramePartitionManager,
 )
 from modin.engines.ray.cudf_on_ray.frame.partition import (
     cuDFOnRayFramePartition,
@@ -36,7 +36,7 @@ class cuDFOnRayIO(BaseIO):
         frame_partition_cls=cuDFOnRayFramePartition,
         query_compiler_cls=cuDFQueryCompiler,
         frame_cls=cuDFOnRayFrame,
-        frame_partition_mgr_cls=cuDFOnRayFrameManager,
+        frame_partition_mgr_cls=cuDFOnRayFramePartitionManager,
     )
 
     read_csv = type("", (RayTask, cuDFCSVParser, cuDFCSVDispatcher), build_args).read

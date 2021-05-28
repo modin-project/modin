@@ -40,8 +40,8 @@ SQL on Modin Dataframes
 Read about Modin Dataframe support for SQL queries in this recent `blog post`_. Check out the `Modin SQL documentation`_ as well!
 
 .. _`blog post`: https://medium.com/riselab/why-every-data-scientist-using-pandas-needs-modin-bringing-sql-to-dataframes-3b216b29a7c0
-.. _`Modin SQL documentation`: /experimental_features/modin_sql.html
-.. _`Modin Spreadsheet API documentation`: /experimental_features/spreadsheets_api.html
-.. _`Progress Bar documentation`: /experimental_features/progress_bar.html
+.. _`Modin SQL documentation`: modin_sql.html
+.. _`Modin Spreadsheet API documentation`: spreadsheets_api.html
+.. _`Progress Bar documentation`: progress_bar.html
 .. _`Paper`: https://arxiv.org/pdf/2001.00888.pdf
 .. _`Discourse`: https://discuss.modin.org

@@ -55,7 +55,7 @@ def test_unwrap_partitions(axis):
                     )
     else:
         expected_axis_partitions = (
-            df._query_compiler._modin_frame._frame_mgr_cls.axis_partition(
+            df._query_compiler._modin_frame._partition_mgr_cls.axis_partition(
                 df._query_compiler._modin_frame._partitions, axis ^ 1
             )
         )
