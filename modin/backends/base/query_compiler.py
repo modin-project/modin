@@ -429,7 +429,7 @@ def _doc_resample_agg(action, output, refer_to, params=None):
     -------
     callable
     """
-    action = f"{action} for each group"
+    action = f"{action} for each group over the specified axis"
 
     params_substitution = """
         *args : iterable
@@ -535,8 +535,8 @@ _doc_dt_round = partial(
     Parameters
     ----------
     freq : str
-    ambiguous : "infer", "NaT", bool mask, default: "raise"
-    nonexistent : "shift_forward", "shift_backward", "NaT", timedelta, default: "raise"
+    ambiguous : {{"raise", "infer", "NaT"}} or bool mask, default: "raise"
+    nonexistent : {{"raise", "shift_forward", "shift_backward", "NaT"}} or timedelta, default: "raise"
 
     Returns
     -------
@@ -654,7 +654,7 @@ def _doc_groupby_method(result, refer_to, action=None):
     Parameters
     ----------
     result : str
-        The result of aggregation.
+        The result of reduction.
     refer_to : str
         Method name in ``modin.pandas.groupby`` module to refer to
         for more information about parameters and output format.
@@ -678,11 +678,11 @@ def _doc_groupby_method(result, refer_to, action=None):
     groupby_args : dict
         GroupBy parameters in the format of ``modin.pandas.DataFrame.groupby`` signature.
     map_args : dict
-        If GroupBy implemented with MapReduce approach, specifies arguments to pass to
-        the aggregation function at the map phase.
+        Keyword arguments to pass to the reduction function. If GroupBy is implemented with MapReduce
+        approach, passes this arguments at the map phase only.
     reduce_args : dict, optional
-        If GroupBy implemented with MapReduce approach, specifies arguments to pass to
-        the aggregation function at the reduce phase.
+        If GroupBy is implemented with MapReduce approach, specifies arguments to pass to
+        the aggregation function at the reduce phase, has no effect otherwise.
     numeric_only : bool, default: True
         Whether or not to drop non-numeric columns before executing GroupBy.
     drop : bool, default: False
@@ -697,7 +697,7 @@ def _doc_groupby_method(result, refer_to, action=None):
 
         - Labels on the opposit of specified axis is preserved.
         - If groupby_args["as_index"] is True then labels on the specified axis
-          is the group names, otherwise labels would be default: 0, 1 ... n.
+          are the group names, otherwise labels would be default: 0, 1 ... n.
         - If groupby_args["as_index"] is False, then first N columns/rows of the frame
           contain group names, where N is the columns/rows to group on.
         - Each element of QueryCompiler is the {result} for the
@@ -896,15 +896,15 @@ class BaseQueryCompiler(abc.ABC):
         other : BaseQueryCompiler or list of such
             Objects to concatenate with `self`.
         join : {'outer', 'inner', 'right', 'left'}, default: 'outer'
-            Type of join that will be used if indeces on the other axis are different.
-            (If specified, have to be passed via `kwargs`).
+            Type of join that will be used if indices on the other axis are different.
+            (note: if specified, has to be passed via `kwargs`).
         ignore_index : bool, default: False
             If True, do not use the index values along the concatenation axis.
-            (If specified, have to be passed via `kwargs`).
             The resulting axis will be labeled 0, …, n - 1.
+            (note: if specified, has to be passed via `kwargs`).
         sort : bool, default: False
             Whether or not to sort non-concatenation axis.
-            (If specified, have to be passed via `kwargs`).
+            (note: if specified, has to be passed via `kwargs`).
         **kwargs : dict
             Serves the compatibility purpose. Does not affect the result.
 
@@ -977,7 +977,7 @@ class BaseQueryCompiler(abc.ABC):
         ----------
         df : pandas.DataFrame
             The pandas DataFrame to convert from.
-        data_cls : cls
+        data_cls : type
             :py:class:`~modin.engines.base.frame.data.BasePandasFrame` class to convert to.
 
         Returns
@@ -1000,7 +1000,7 @@ class BaseQueryCompiler(abc.ABC):
         ----------
         at : Arrow Table
             The Arrow Table to convert from.
-        data_cls : cls
+        data_cls : type
             :py:class:`~modin.engines.base.frame.data.BasePandasFrame` class to convert to.
 
         Returns
@@ -1053,7 +1053,7 @@ class BaseQueryCompiler(abc.ABC):
         """
         Perform column-wise combine with another QueryCompiler with passed `func`.
 
-        If axes are note equal, first perform frames allignment.
+        If axes are not equal, perform frames allignment first.
 
         Parameters
         ----------
@@ -1084,7 +1084,7 @@ class BaseQueryCompiler(abc.ABC):
         """
         Fill null elements of `self` with value in the same location in `other`.
 
-        If axes are note equal, first perform frames allignment.
+        If axes are not equal, perform frames allignment first.
 
         Parameters
         ----------
@@ -1193,9 +1193,9 @@ class BaseQueryCompiler(abc.ABC):
         other : BaseQueryCompiler or NumPy array
             The other query compiler or NumPy array to matrix multiply with self.
         squeeze_self : boolean
-            The flag to squeeze self.
+            If `self` is a one-column query compiler, indicates whether it represents Series object.
         squeeze_other : boolean
-            The flag to squeeze other (this flag is applied if `other` is query compiler).
+            If `other` is a one-column query compiler, indicates whether it represents Series object.
         **kwargs : dict
             Serves the compatibility purpose. Does not affect the result.
 
@@ -1309,14 +1309,15 @@ class BaseQueryCompiler(abc.ABC):
         """
         Update values of self using non-NA values of other at the corresponding positions.
 
-        If axes are not equal, first perform frames allignment.
+        If axes are not equal, perform frames allignment first.
 
         Parameters
         ----------
         other : BaseQueryCompiler
             Frame to grab replacement values from.
         join : {"left"}
-            Specify type of join to allign frames if axes are not equal.
+            Specify type of join to allign frames if axes are not equal
+            (note: currently only one type of join is implemented).
         overwrite : bool
             Whether to overwrite every corresponding value of self, or only if it's NAN.
         filter_func : callable(pandas.Series, pandas.Series) -> numpy.ndarray<bool>
@@ -1542,7 +1543,6 @@ class BaseQueryCompiler(abc.ABC):
             Index-labels to align with.
         method : {None, "backfill"/"bfill", "pad"/"ffill", "nearest"}
             Method to use for filling holes in reindexed frame.
-            Please refer to ``modin.pandas.DataFrame.reindex`` for more information.
         fill_value : scalar
             Value to use for missing values in the resulted frame.
         limit : int
@@ -1803,7 +1803,8 @@ class BaseQueryCompiler(abc.ABC):
         return DataFrameDefault.register(conj)(self, **kwargs)
 
     # FIXME:
-    #   1. High-level objects leaks to the query compiler level.
+    #   1. This function takes Modin Series and DataFrames via `values` parameter,
+    #      we should avoid leaking of the high-level objects to the query compiler level.
     #   2. Spread **kwargs into actual arguments.
     def isin(self, **kwargs):  # noqa: PR02
         """
@@ -1864,7 +1865,7 @@ class BaseQueryCompiler(abc.ABC):
         -------
         BaseQueryCompiler
             Boolean mask for `self` of whether an element at the corresponding
-            position is exists.
+            position is not NaN.
         """
         return DataFrameDefault.register(pandas.DataFrame.notna)(self)
 
@@ -1900,7 +1901,7 @@ class BaseQueryCompiler(abc.ABC):
         to_replace : scalar, list-like, regex, modin.pandas.Series, or None
         value : scalar, list-like, regex or dict
         inplace : {False}
-            This parameter serves the compatibility purpose. Always have to be False.
+            This parameter serves the compatibility purpose. Always has to be False.
         limit : int or None
         regex : bool or same types as `to_replace`
         method : {"pad", "ffill", "bfill", None}
@@ -1915,7 +1916,10 @@ class BaseQueryCompiler(abc.ABC):
         return DataFrameDefault.register(pandas.DataFrame.replace)(self, **kwargs)
 
     @_add_one_column_warning
-    @add_refer_to("Series.view")
+    # FIXME: adding refer-to note will create two instances of the "Notes" section,
+    # this breaks numpydoc style rules and also crashes the doc-style checker script.
+    # For now manually added the refer-to message.
+    # @add_refer_to("Series.view")
     def series_view(self, **kwargs):  # noqa: PR02
         """
         Reinterpret underlying data with new dtype.
@@ -1932,9 +1936,12 @@ class BaseQueryCompiler(abc.ABC):
         BaseQueryCompiler
             New QueryCompiler of the same data in memory, with reinterpreted values.
 
-        .. warning::
-            Be aware, that if this method do fallback to pandas, then newly created
-            QueryCompiler will be the copy of the original data.
+        Notes
+        -----
+            - Be aware, that if this method do fallback to pandas, then newly created
+              QueryCompiler will be the copy of the original data.
+            - Please refer to ``modin.pandas.Series.view`` for more information
+              about parameters and output format.
         """
         return SeriesDefault.register(pandas.Series.view)(self, **kwargs)
 
@@ -2153,7 +2160,7 @@ class BaseQueryCompiler(abc.ABC):
     @add_refer_to("DataFrame.idxmax")
     def idxmax(self, **kwargs):  # noqa: PR02
         """
-        Get position of the first occurance of the maximum for each row or column.
+        Get position of the first occurence of the maximum for each row or column.
 
         Parameters
         ----------
@@ -2174,7 +2181,7 @@ class BaseQueryCompiler(abc.ABC):
     @add_refer_to("DataFrame.idxmin")
     def idxmin(self, **kwargs):  # noqa: PR02
         """
-        Get position of the first occurance of the minimum for each row or column.
+        Get position of the first occurence of the minimum for each row or column.
 
         Parameters
         ----------
@@ -2381,12 +2388,15 @@ class BaseQueryCompiler(abc.ABC):
     @add_refer_to("DataFrame.nlargest")
     def nlargest(self, n=5, columns=None, keep="first"):
         """
-        Return the first n rows ordered by columns in descending order.
+        Return the first `n` rows ordered by `columns` in descending order.
 
         Parameters
         ----------
         n : int, default: 5
         columns : list of labels, optional
+            Column labels to order by.
+            (note: this parameter can be ommited only for a single-column query compilers
+            representing Series object, otherwise `columns` has to be specified).
         keep : {"first", "last", "all"}, default: "first"
 
         Returns
@@ -2403,12 +2413,15 @@ class BaseQueryCompiler(abc.ABC):
     @add_refer_to("DataFrame.nsmallest")
     def nsmallest(self, n=5, columns=None, keep="first"):
         """
-        Return the first n rows ordered by columns in ascending order.
+        Return the first `n` rows ordered by `columns` in ascending order.
 
         Parameters
         ----------
         n : int, default: 5
         columns : list of labels, optional
+            Column labels to order by.
+            (note: this parameter can be ommited only for a single-column query compilers
+            representing Series object, otherwise `columns` has to be specified).
         keep : {"first", "last", "all"}, default: "first"
 
         Returns
@@ -2472,7 +2485,7 @@ class BaseQueryCompiler(abc.ABC):
         method : {"backfill", "bfill", "pad", "ffill", None}
         axis : {{0, 1}}
         inplace : {False}
-            This parameter serves the compatibility purpose. Always have to be False.
+            This parameter serves the compatibility purpose. Always has to be False.
         limit : int, optional
         downcast : dict, optional
         **kwargs : dict
@@ -2507,7 +2520,10 @@ class BaseQueryCompiler(abc.ABC):
     @add_refer_to("DataFrame.rank")
     def rank(self, **kwargs):  # noqa: PR02
         """
-        Get numerical rank for each value along axis.
+        Compute numerical rank along the specified axis.
+
+        By default, equal values are assigned a rank that is the average of the ranks
+        of those values, this behaviour can be changed via `method` parameter.
 
         Parameters
         ----------
@@ -2665,7 +2681,7 @@ class BaseQueryCompiler(abc.ABC):
         ----------
         key : BaseQueryCompiler, np.ndarray or list of column labels
             Boolean mask represented by QueryCompiler or ``np.ndarray`` of the same
-            shape as `self`. Or enumeratable of columns to pick.
+            shape as `self`, or enumeratable of columns to pick.
 
         Returns
         -------
@@ -2806,9 +2822,9 @@ class BaseQueryCompiler(abc.ABC):
             QueryCompiler that contain the results of execution and built by
             the following rules:
 
-            - Labels of specified axis is the passed functions names.
-            - Labels of the opposite axis is preserved.
-            - Each element is the result of execution corresponding function under
+            - Labels of specified axis are the passed functions names.
+            - Labels of the opposite axis are preserved.
+            - Each element is the result of execution of `func` against
               corresponding row/column.
         """
         return DataFrameDefault.register(pandas.DataFrame.apply)(
@@ -2824,7 +2840,7 @@ class BaseQueryCompiler(abc.ABC):
 
     # FIXME: `map_args` and `reduce_args` leaked there from `PandasQueryCompiler.groupby_*`,
     # pandas backend implements groupby via MapReduce approach, but for other backends these
-    # parameters make no sense, they shouldn't be presented in a base class.
+    # parameters make no sense, they shouldn't be present in a base class.
 
     @_doc_groupby_method(
         action="count non-null values",
@@ -3055,7 +3071,7 @@ class BaseQueryCompiler(abc.ABC):
         agg_kwargs : dict
             Key arguments to pass to the `agg_func`.
         groupby_kwargs : dict
-            GroupBy parameters in the format of ``modin.pandas.DataFrame.groupby`` signature.
+            GroupBy parameters as expected by ``modin.pandas.DataFrame.groupby`` signature.
         drop : bool, default: False
             If `by` is a QueryCompiler indicates whether or not by-data came
             from the `self`.
@@ -3263,7 +3279,7 @@ class BaseQueryCompiler(abc.ABC):
         """
         Insert rows/columns defined by `value` at the specified position.
 
-        If frames are not aligned along specified axis, first perform frames allignment.
+        If frames are not aligned along specified axis, perform frames allignment first.
 
         Parameters
         ----------
@@ -3337,6 +3353,8 @@ class BaseQueryCompiler(abc.ABC):
         """
         Update QueryCompiler elements at the specified positions by passed values.
 
+        In contrast to ``setitem`` this method allows to do 2D assignments.
+
         Parameters
         ----------
         row_numeric_index : list of ints
@@ -3370,7 +3388,7 @@ class BaseQueryCompiler(abc.ABC):
     @property
     def __constructor__(self):
         """
-        Get query compilers constructor.
+        Get query compiler constructor.
 
         By default, constructor method will invoke an init.
 
@@ -3780,7 +3798,7 @@ class BaseQueryCompiler(abc.ABC):
 
         Parameters
         ----------
-        tz : str, pytz.timezone, optional
+        tz : str, pytz.timezone
 
         Returns
         -------
@@ -3798,8 +3816,8 @@ class BaseQueryCompiler(abc.ABC):
         Parameters
         ----------
         tz : str, pytz.timezone, optional
-        ambiguous : "inner", "NaT", bool mask, default: "raise"
-        nonexistent : "shift_forward", "shift_backward, "NaT", pandas.timedelta, default: "raise"
+        ambiguous : {"raise", "inner", "NaT"} or bool mask, default: "raise"
+        nonexistent : {"raise", "shift_forward", "shift_backward, "NaT"} or pandas.timedelta, default: "raise"
 
         Returns
         -------
@@ -3949,7 +3967,8 @@ class BaseQueryCompiler(abc.ABC):
             self, resample_args, _method, *args, **kwargs
         )
 
-    # FIXME: high-level objects leaks to the query compiler.
+    # FIXME: This function takes Modin DataFrame via `values` parameter,
+    # we should avoid leaking of the high-level objects to the query compiler level.
     def resample_get_group(self, resample_args, name, obj):
         """
         Resample time-series data and get the specified group.
@@ -3981,7 +4000,7 @@ class BaseQueryCompiler(abc.ABC):
         axis : {{0, 1}}
         limit : int
         inplace : {False}
-            This parameter serves the compatibility purpose. Always have to be False.
+            This parameter serves the compatibility purpose. Always has to be False.
         limit_direction : {"forward", "backward", "both"}
         limit_area : {None, "inside", "outside"}
         downcast : str, optional
@@ -4113,7 +4132,7 @@ class BaseQueryCompiler(abc.ABC):
         ----------
         resample_args : list
             Resample parameters in the format of ``modin.pandas.DataFrame.resample`` signature.
-        func : callable(pandas.Resampler) -> object
+        func : callable(pandas.Resampler) -> object or tuple(callable, str)
         *args : iterable
             Positional arguments to pass to function.
         **kwargs : dict
@@ -4156,7 +4175,7 @@ class BaseQueryCompiler(abc.ABC):
             self, resample_args, ddof, *args, **kwargs
         )
 
-    @_doc_resample_reduction(result="number of element in a group", refer_to="size")
+    @_doc_resample_reduction(result="number of elements in a group", refer_to="size")
     def resample_size(self, resample_args, *args, **kwargs):
         return ResampleDefault.register(pandas.core.resample.Resampler.size)(
             self, resample_args, *args, **kwargs
@@ -4189,14 +4208,15 @@ class BaseQueryCompiler(abc.ABC):
         Resample time-series data and apply aggregation on it.
 
         Group data into intervals by time-series row/column with
-        a specified frequency, build equivalent ``pandas.Resampler`` object
-        and apply passed function to it.
+        a specified frequency and call passed function on each group.
+        In contrast to ``resample_app_df`` apply function to the whole group,
+        instead of a single axis.
 
         Parameters
         ----------
         resample_args : list
             Resample parameters in the format of ``modin.pandas.DataFrame.resample`` signature.
-        arg : callable(pandas.Resampler) -> pandas.Series
+        arg : callable(pandas.DataFrame) -> pandas.Series
         *args : iterable
             Positional arguments to pass to function.
         **kwargs : dict
@@ -4549,8 +4569,8 @@ class BaseQueryCompiler(abc.ABC):
 
     # Rolling methods
 
-    # FIXME: most of the rolling/window methods takes *args and **kwargs parameters
-    # which only serves the compatibility with numpy, this behaviour is inherited
+    # FIXME: most of the rolling/window methods take *args and **kwargs parameters
+    # which are only needed for the compatibility with numpy, this behaviour is inherited
     # from the API level, we should get rid of it.
 
     @_doc_window_method(
@@ -4579,9 +4599,9 @@ class BaseQueryCompiler(abc.ABC):
         func : callable(pandas.Series) -> scalar
         raw : bool, default: False
         engine : None, default: None
-            This parameters serves the compatibility purpose. Always have to be None.
+            This parameters serves the compatibility purpose. Always has to be None.
         engine_kwargs : None, default: None
-            This parameters serves the compatibility purpose. Always have to be None.
+            This parameters serves the compatibility purpose. Always has to be None.
         args : tuple, optional
         kwargs : dict, optional""",
         build_rules="udf_aggregation",
@@ -4844,7 +4864,7 @@ class BaseQueryCompiler(abc.ABC):
         axis : {{0, 1}}
         skipna : bool
         level : None, default: None
-            Serves the compatibility purpose. Always have to be None.""",
+            Serves the compatibility purpose. Always has to be None.""",
         refer_to="mad",
     )
     def mad(self, axis, skipna, level=None):
