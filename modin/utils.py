@@ -14,12 +14,16 @@
 """Collection of general utility functions, mostly for internal use."""
 
 import types
+import re
+
+from collections import OrderedDict
+from textwrap import dedent, indent
+from typing import Union
 
 import pandas
 import numpy as np
 
 from pandas.util._decorators import Appender
-from textwrap import dedent, indent
 from modin.config import Engine, Backend, IsExperimental
 
 PANDAS_API_URL_TEMPLATE = f"https://pandas.pydata.org/pandas-docs/version/{pandas.__version__}/reference/api/{{}}.html"
@@ -60,15 +64,123 @@ def _get_indent(doc: str) -> int:
     int
         Minimal indent (excluding empty lines).
     """
+    indents = _get_indents(doc)
+    return min(indents) if indents else 0
+
+
+def _get_indents(source: Union[list, str]) -> list:
+    """
+    Compute indentation for each line of the source string.
+
+    Parameters
+    ----------
+    source : str or list of str
+        String to compute indents for. Passed list considered
+        as a list of lines of the source string.
+
+    Returns
+    -------
+    list of ints
+        List containing computed indents for each line.
+    """
+
     indents = []
-    for line in doc.splitlines():
+
+    if not isinstance(source, list):
+        source = source.splitlines()
+
+    for line in source:
         if not line.strip():
             continue
         for pos, ch in enumerate(line):
             if ch != " ":
                 break
         indents.append(pos)
-    return min(indents) if indents else 0
+    return indents
+
+
+def format_string(template: str, **kwargs) -> str:
+    """
+    Insert passed values at the corresponding placeholders of the specified template.
+
+    In contrast with the regular ``str.format`` this function computes proper
+    indents for the placeholder values.
+
+    Parameters
+    ----------
+    template : str
+        Template to substitute values in.
+    **kwargs : dict
+        Dictionary that maps placeholder names with values.
+
+    Returns
+    -------
+    str
+        Formated string.
+    """
+    # We want to change indentation only for those values, whose placeholder located
+    # at the beginning of the line, in that case, the placeholder sets an indentation
+    # that the filling value has to obey.
+    template_lines = template.splitlines()
+    # RegExp determining placeholders located at the beginning of the line.
+    regex = r"^[ ^{]*{(\w+)}"
+    to_align = OrderedDict()
+    for line_idx, line in enumerate(template_lines):
+        if line.strip() == "":
+            continue
+        match = re.search(regex, line)
+        if match is None:
+            continue
+        value_key = match.group(1)
+        to_align[value_key] = line_idx
+
+    indents = _get_indents([template_lines[i] for i in to_align.values()])
+    for key, nspaces in zip(to_align.keys(), indents):
+        value = kwargs.get(key)
+        if not value:
+            continue
+        value = dedent(value)
+
+        # Since placeholder is located at the beginning of a new line, its already
+        # has '\n' before it, so to avoid double new lines we want to ensure that
+        # the value string doesn't starts with '\n'
+        if value[0] == "\n":
+            value = value[1:]
+        # `.splitlines()` doesn't preserve last empty line,
+        # so we have to restore it further
+        value_lines = value.splitlines()
+        # We're not indenting the first line of the value, since it's already indented
+        # properly because of the placeholder indentation.
+        indented_lines = [indent(line, " " * nspaces) for line in value_lines[1:]]
+        # If necessary, restoring the last line dropped by `.splitlines()`
+        if value[-1] == "\n":
+            indented_lines += [" " * nspaces]
+
+        indented_value = "\n".join([value_lines[0], *indented_lines])
+        kwargs[key] = indented_value
+
+    return template.format(**kwargs)
+
+
+def align_indents(source: str, target: str) -> str:
+    """
+    Align indents of two strings.
+
+    Parameters
+    ----------
+    source : str
+        Source function to align indents with.
+    target : str
+        Target function to align indents.
+
+    Returns
+    -------
+    str
+        Target function with indents aligned with the source.
+    """
+    source_indent = _get_indent(source)
+    target = dedent(target)
+    return indent(target, " " * source_indent)
 
 
 def append_to_docstring(message: str):
@@ -86,10 +198,7 @@ def append_to_docstring(message: str):
     """
 
     def decorator(func):
-        func_indent = _get_indent(func.__doc__)
-        no_indent_message = dedent(message)
-        to_append = indent(no_indent_message, " " * func_indent)
-
+        to_append = align_indents(func.__doc__, message)
         return Appender(to_append)(func)
 
     return decorator

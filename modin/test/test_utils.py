@@ -14,7 +14,7 @@
 import pytest
 import modin.utils
 
-from textwrap import dedent
+from textwrap import dedent, indent
 
 
 # Note: classes below are used for purely testing purposes - they
@@ -170,4 +170,63 @@ def test_append_to_docstring(source_doc, to_append, expected):
     answer = dedent(result_fn.__doc__)
     expected = dedent(expected)
 
+    assert answer == expected
+
+
+def test_align_indents():
+    source = """
+    Source string that sets
+        the indent pattern."""
+    target = indent(source, " " * 5)
+    result = modin.utils.align_indents(source, target)
+    assert source == result
+
+
+def test_format_string():
+    template = """
+            Source template string that has some {inline_placeholder}s.
+            Placeholder1:
+            {new_line_placeholder1}
+            Placeholder2:
+            {new_line_placeholder2}
+            Placeholder3:
+            {new_line_placeholder3}Text text:
+                Placeholder4:
+                {new_line_placeholder4}
+    """
+
+    singleline_value = "Single-line value"
+    multiline_value = """
+        Some string
+            Having different indentation
+        From the source one."""
+    multiline_value_new_line = multiline_value + "\n"
+
+    expected = """
+            Source template string that has some Single-line values.
+            Placeholder1:
+            Some string
+                Having different indentation
+            From the source one.
+            Placeholder2:
+            Single-line value
+            Placeholder3:
+            Some string
+                Having different indentation
+            From the source one.
+            Text text:
+                Placeholder4:
+                Some string
+                    Having different indentation
+                From the source one.
+    """
+
+    answer = modin.utils.format_string(
+        template,
+        inline_placeholder=singleline_value,
+        new_line_placeholder1=multiline_value,
+        new_line_placeholder2=singleline_value,
+        new_line_placeholder3=multiline_value_new_line,
+        new_line_placeholder4=multiline_value,
+    )
     assert answer == expected

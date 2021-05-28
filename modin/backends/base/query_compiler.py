@@ -31,22 +31,36 @@ from modin.data_management.functions.default_methods import (
     GroupByDefault,
 )
 from modin.error_message import ErrorMessage
-from modin.utils import append_to_docstring
+from modin.utils import append_to_docstring, format_string
 
 from pandas.core.dtypes.common import is_scalar
-from pandas.util._decorators import doc
 import pandas.core.resample
 import pandas
 import numpy as np
 from typing import List, Hashable
 
 
-_add_one_column_warning = append_to_docstring(
-    """
-    .. warning::
-        This method is supported only by one-column query compilers.
-    """
-)
+_one_column_warning = """
+.. warning::
+    This method is supported only by one-column query compilers.
+"""
+
+
+_deprecation_warning = """
+.. warning::
+    This method duplicates logic of ``{0}`` and will be removed soon.
+"""
+
+
+_refer_to_note = """
+Notes
+-----
+Please refer to ``modin.pandas.{0}`` for more information
+about parameters and output format.
+"""
+
+
+_add_one_column_warning = append_to_docstring(_one_column_warning)
 
 
 def _add_deprecation_warning(replacement_method):
@@ -65,10 +79,7 @@ def _add_deprecation_warning(replacement_method):
     -------
     callable
     """
-    message = f"""
-    .. warning::
-        This method duplicates logic of ``{replacement_method}`` and will be removed soon.
-    """
+    message = _deprecation_warning.format(replacement_method)
     appender = append_to_docstring(message)
 
     def decorator(func):
@@ -90,12 +101,7 @@ def add_refer_to(method):
     -------
     callable
     """
-    note = f"""
-        Notes
-        -----
-        Please refer to ``modin.pandas.{method}`` for more information
-        about parameters and output format.
-        """
+    note = _refer_to_note.format(method)
     appender = append_to_docstring(note)
 
     def decorator(func):
@@ -109,7 +115,6 @@ def _doc_qc_method(
     params=None,
     refer_to=None,
     one_column_method=False,
-    try_insert_params_section=False,
     **kwargs,
 ):
     """
@@ -122,15 +127,14 @@ def _doc_qc_method(
         placeholder.
     params : str, optional
         Method parameters in the NumPy docstyle format to substitute
-        to the `template`.
+        to the `template`. `params` string should not include the "Parameters"
+        header.
     refer_to : str, optional
         Method name in ``modin.pandas`` module to refer to for more information
         about parameters and output format.
     one_column_method : bool, default: False
         Whether to append note that this method is for one-column
         query compilers only.
-    try_insert_params_section : bool, default: False
-        Whether to insert parameters section in `template`.
     **kwargs : dict
         Values to substitute to the `template`.
 
@@ -139,31 +143,30 @@ def _doc_qc_method(
     callable
     """
     params_template = """
+
         Parameters
         ----------
         {params}
         """
-    if try_insert_params_section:
-        params = params_template.format(params=params) if params else ""
 
-    if params is None:
-        params = ""
-
-    doc_adder = doc(template, params=params, **kwargs)
-    refer_to_appender = add_refer_to(refer_to)
+    params = format_string(params_template, params=params) if params else ""
+    substituted = format_string(template, params=params, **kwargs)
 
     def decorator(func):
-        decorated = doc_adder(func)
+        func.__doc__ = substituted
+        appendix = ""
         if refer_to:
-            decorated = refer_to_appender(decorated)
+            appendix += _refer_to_note.format(refer_to)
         if one_column_method:
-            decorated = _add_one_column_warning(decorated)
-        return decorated
+            appendix += _one_column_warning
+        if appendix:
+            func = append_to_docstring(appendix)(func)
+        return func
 
     return decorator
 
 
-def _doc_binary_method(operation, sign, r=False, op_type="arithmetic"):
+def _doc_binary_method(operation, sign, self_on_right=False, op_type="arithmetic"):
     """
     Build decorator which adds docstring for binary method.
 
@@ -173,7 +176,7 @@ def _doc_binary_method(operation, sign, r=False, op_type="arithmetic"):
         Name of the binary operation.
     sign : str
         Sign which represents specified binary operation.
-    r : bool, default: False
+    self_on_right : bool, default: False
         Whether `self` is the right operand.
     op_type : {"arithmetic", "logical", "comparison"}, default: "arithmetic"
         Type of the binary operation.
@@ -183,7 +186,7 @@ def _doc_binary_method(operation, sign, r=False, op_type="arithmetic"):
     callable
     """
     template = """
-    Perform element-wise {operation} ({verbose}).
+    Perform element-wise {operation} (``{verbose}``).
 
     If axes are note equal, first perform frames allignment.
 
@@ -195,7 +198,7 @@ def _doc_binary_method(operation, sign, r=False, op_type="arithmetic"):
         If `other` is a one-column query compiler, indicates whether it is a Series or not.
         Frames and Series have to be processed differently, however we can't distinguish them
         at the query compiler level, so this parameter is a hint that passed from a high level API.
-    {params}**kwargs : dict
+    {extra_params}**kwargs : dict
         Serves the compatibility purpose. Does not affect the result.
 
     Returns
@@ -205,28 +208,31 @@ def _doc_binary_method(operation, sign, r=False, op_type="arithmetic"):
     """
 
     extra_params = {
-        "logical": """level : int or label
-        In case of MultiIndex match index values on the passed level.
-    axis : {0, 1}
-        Axis to match indice along for 1D `other` (list or QueryCompiler that represents Series).
-        0 is for index, when 1 is for columns.
-    """,
-        "arithmetic": """level : int or label
-        In case of MultiIndex match index values on the passed level.
-    axis : {0, 1}
-        Axis to match indice along for 1D `other` (list or QueryCompiler that represents Series).
-        0 is for index, when 1 is for columns.
-    fill_value : float or None
-        Value to fill missing elements in the result of frame allignment.
-    """,
+        "logical": """
+        level : int or label
+            In case of MultiIndex match index values on the passed level.
+        axis : {{0, 1}}
+            Axis to match indice along for 1D `other` (list or QueryCompiler that represents Series).
+            0 is for index, when 1 is for columns.
+        """,
+        "arithmetic": """
+        level : int or label
+            In case of MultiIndex match index values on the passed level.
+        axis : {{0, 1}}
+            Axis to match indice along for 1D `other` (list or QueryCompiler that represents Series).
+            0 is for index, when 1 is for columns.
+        fill_value : float or None
+            Value to fill missing elements in the result of frame allignment.
+        """,
     }
 
-    verbose_substitution = f"other {sign} self" if r else f"self {sign} other"
+    verbose_substitution = (
+        f"other {sign} self" if self_on_right else f"self {sign} other"
+    )
     params_substitution = extra_params.get(op_type, "")
-
     return _doc_qc_method(
         template,
-        params=params_substitution,
+        extra_params=params_substitution,
         operation=operation,
         verbose=verbose_substitution,
     )
@@ -256,11 +262,7 @@ def _doc_reduce_agg(method, link, params=None, extra_params=None):
     """
     template = """
         Get the {method} for each column or row.
-
-        Parameters
-        ----------
         {params}
-
         Returns
         -------
         BaseQueryCompiler
@@ -270,13 +272,11 @@ def _doc_reduce_agg(method, link, params=None, extra_params=None):
         """
 
     if params is None:
-        params = """axis : {0, 1}
+        params = """
+        axis : {{0, 1}}
         level : None, default: None
             Serves the compatibility purpose. Always have to be None.
         numeric_only : bool, optional"""
-
-    if extra_params is None:
-        extra_params = []
 
     extra_params_map = {
         "skipna": """
@@ -295,7 +295,10 @@ def _doc_reduce_agg(method, link, params=None, extra_params=None):
 
     params = "".join(
         [params]
-        + [extra_params_map.get(param, f"{param} : object") for param in extra_params]
+        + [
+            extra_params_map.get(param, f"{param} : object\n")
+            for param in (extra_params or [])
+        ]
     )
     return _doc_qc_method(
         template,
@@ -372,20 +375,19 @@ def _doc_resample(action, link, build_rules, params=None):
         ----------
         resample_args : list
             Resample parameters in the format of ``modin.pandas.DataFrame.resample`` signature.
-        {params}
+        {extra_params}
         Returns
         -------
         BaseQueryCompiler
             New QueryCompiler containing the result of resample aggregation built by the
             following rules:
+
             {build_rules}
         """
-    if params and params.strip(" \t")[-1] != "\n":
-        params += "\n"
     return _doc_qc_method(
         template,
         action=action,
-        params=params,
+        extra_params=params,
         build_rules=build_rules,
         refer_to=f"Resampler.{link}",
     )
@@ -417,7 +419,8 @@ def _doc_resample_reduction(result, link, params=None, compatibility_params=True
 
     params_substitution = (
         (
-            """*args : iterable
+            """
+        *args : iterable
             Serves the compatibility purpose. Does not affect the result.
         **kwargs : dict
             Serves the compatibility purpose. Does not affect the result.
@@ -428,8 +431,11 @@ def _doc_resample_reduction(result, link, params=None, compatibility_params=True
     )
 
     if params:
-        params_substitution = f"""{params}
-        {params_substitution}"""
+        params_substitution = format_string(
+            "{params}\n{params_substitution}",
+            params=params,
+            params_substitution=params_substitution,
+        )
 
     build_rules = f"""
             - Labels on the specified axis is the group names (time-stamps)
@@ -464,15 +470,19 @@ def _doc_resample_agg(action, output, params, link):
     """
     action = f"{action} for each group"
 
-    params_substitution = """*args : iterable
+    params_substitution = """
+        *args : iterable
             Positional arguments to pass to the aggregation function.
         **kwargs : dict
             Keyword arguments to pass to the aggregation function.
         """
 
-    if params != "":
-        params_substitution = f"""{params}
-        {params_substitution}"""
+    if params:
+        params_substitution = format_string(
+            "{params}\n{params_substitution}",
+            params=params,
+            params_substitution=params_substitution,
+        )
 
     build_rules = f"""
             - Labels on the specified axis is the group names (time-stamps)
@@ -508,14 +518,20 @@ def _doc_resample_fillna(method, link, params=None, overwrite_template_params=Fa
     callable
     """
     action = f"fill missing values in each group independently using {method} method"
-    params_substitution = "limit : int"
+    params_substitution = "limit : int\n"
 
-    if params is not None:
-        params_substitution = "" if overwrite_template_params else params_substitution
-        params_substitution = f"""{params}
-        {params_substitution}"""
+    if params:
+        params_substitution = (
+            params
+            if overwrite_template_params
+            else format_string(
+                "{params}\n{params_substitution}",
+                params=params,
+                params_substitution=params_substitution,
+            )
+        )
 
-    build_rules = "QueryCompiler contains unsampled data with missing values filled."
+    build_rules = "- QueryCompiler contains unsampled data with missing values filled."
 
     return _doc_resample(
         action=action, params=params_substitution, build_rules=build_rules, link=link
@@ -739,39 +755,44 @@ def _doc_window_method(
         ----------
         {window_args_name} : list
             Rolling windows arguments with the same signature as ``modin.pandas.DataFrame.rolling``.
-        {params}
+        {extra_params}
         Returns
         -------
         BaseQueryCompiler
             New QueryCompiler containing {result} for each window, built by the following
             rulles:
+
             {build_rules}
         """
     doc_build_rules = {
-        "aggregation": f"""- Output QueryCompiler has the same shape and axes labels as the source.
+        "aggregation": f"""
+            - Output QueryCompiler has the same shape and axes labels as the source.
             - Each element is the {result} for the corresponding window.""",
-        "udf_aggregation": """- Labels on the specified axis is preserved.
+        "udf_aggregation": """
+            - Labels on the specified axis is preserved.
             - Labels on the opposit of specified axis is MultiIndex, where first level
-            contains preserved labels of this axis and the second level is the function names.
+              contains preserved labels of this axis and the second level is the function names.
             - Each element of QueryCompiler is the result of corresponding function for the
-            corresponding window and column/row.""",
+              corresponding window and column/row.""",
     }
     if action is None:
         action = f"compute {result}"
-    if params and params.strip(" \t")[-1] != "\n":
+    window_args_name = "rolling_args" if win_type == "rolling window" else "window_args"
+
+    # We need that `params` value ended with new line to have
+    # an empty line between "parameters" and "return" sections
+    if params and params[-1] != "\n":
         params += "\n"
-    window_args_dict = {
-        "rolling window": "rolling_args",
-        "default": "window_args",
-    }
-    window_args_name = window_args_dict.get(win_type, window_args_dict["default"])
+
+    if params is None:
+        params = ""
 
     return _doc_qc_method(
         template,
         result=result,
         action=action,
         win_type=win_type,
-        params=params,
+        extra_params=params,
         build_rules=doc_build_rules.get(build_rules, build_rules),
         refer_to=f"Rolling.{method}",
         window_args_name=window_args_name,
@@ -848,7 +869,7 @@ def _get_axis(axis):
 
     Parameters
     ----------
-    axis : {0, 1}
+    axis : {{0, 1}}
         Axis to get labels from.
 
     Returns
@@ -869,7 +890,7 @@ def _set_axis(axis):
 
     Parameters
     ----------
-    axis : {0, 1}
+    axis : {{0, 1}}
         Axis to set labels on.
 
     Returns
@@ -948,7 +969,7 @@ class BaseQueryCompiler(abc.ABC):
         ----------
         prefix : str
             The string to add before each label.
-        axis : {0, 1}, default: 1
+        axis : {{0, 1}}, default: 1
             Axis to add prefix along. 0 is for index and 1 is for columns.
 
         Returns
@@ -971,7 +992,7 @@ class BaseQueryCompiler(abc.ABC):
         ----------
         suffix : str
             The string to add after each label.
-        axis : {0, 1}, default: 1
+        axis : {{0, 1}}, default: 1
             Axis to add suffix along. 0 is for index and 1 is for columns.
 
         Returns
@@ -1017,7 +1038,7 @@ class BaseQueryCompiler(abc.ABC):
 
         Parameters
         ----------
-        axis : {0, 1}
+        axis : {{0, 1}}
             Axis to concatenate along. 0 is for index and 1 is for columns.
         other : BaseQueryCompiler or list of such
             Objects to concatenate with `self`.
@@ -1346,31 +1367,31 @@ class BaseQueryCompiler(abc.ABC):
     def pow(self, other, **kwargs):  # noqa: PR02
         return BinaryDefault.register(pandas.DataFrame.pow)(self, other=other, **kwargs)
 
-    @_doc_binary_method(operation="integer division", sign="//", r=True)
+    @_doc_binary_method(operation="integer division", sign="//", self_on_right=True)
     def rfloordiv(self, other, **kwargs):  # noqa: PR02
         return BinaryDefault.register(pandas.DataFrame.rfloordiv)(
             self, other=other, **kwargs
         )
 
-    @_doc_binary_method(operation="modulo", sign="%", r=True)
+    @_doc_binary_method(operation="modulo", sign="%", self_on_right=True)
     def rmod(self, other, **kwargs):  # noqa: PR02
         return BinaryDefault.register(pandas.DataFrame.rmod)(
             self, other=other, **kwargs
         )
 
-    @_doc_binary_method(operation="exponential power", sign="**", r=True)
+    @_doc_binary_method(operation="exponential power", sign="**", self_on_right=True)
     def rpow(self, other, **kwargs):  # noqa: PR02
         return BinaryDefault.register(pandas.DataFrame.rpow)(
             self, other=other, **kwargs
         )
 
-    @_doc_binary_method(operation="substraction", sign="-", r=True)
+    @_doc_binary_method(operation="substraction", sign="-", self_on_right=True)
     def rsub(self, other, **kwargs):  # noqa: PR02
         return BinaryDefault.register(pandas.DataFrame.rsub)(
             self, other=other, **kwargs
         )
 
-    @_doc_binary_method(operation="division", sign="/", r=True)
+    @_doc_binary_method(operation="division", sign="/", self_on_right=True)
     def rtruediv(self, other, **kwargs):  # noqa: PR02
         return BinaryDefault.register(pandas.DataFrame.rtruediv)(
             self, other=other, **kwargs
@@ -1398,19 +1419,25 @@ class BaseQueryCompiler(abc.ABC):
             self, other=other, **kwargs
         )
 
-    @_doc_binary_method(operation="conjunction", sign="&", op_type="logical", r=True)
+    @_doc_binary_method(
+        operation="conjunction", sign="&", op_type="logical", self_on_right=True
+    )
     def __rand__(self, other, **kwargs):  # noqa: PR02
         return BinaryDefault.register(pandas.DataFrame.__rand__)(
             self, other=other, **kwargs
         )
 
-    @_doc_binary_method(operation="disjunction", sign="|", op_type="logical", r=True)
+    @_doc_binary_method(
+        operation="disjunction", sign="|", op_type="logical", self_on_right=True
+    )
     def __ror__(self, other, **kwargs):  # noqa: PR02
         return BinaryDefault.register(pandas.DataFrame.__ror__)(
             self, other=other, **kwargs
         )
 
-    @_doc_binary_method(operation="exclusive or", sign="^", op_type="logical", r=True)
+    @_doc_binary_method(
+        operation="exclusive or", sign="^", op_type="logical", self_on_right=True
+    )
     def __rxor__(self, other, **kwargs):  # noqa: PR02
         return BinaryDefault.register(pandas.DataFrame.__rxor__)(
             self, other=other, **kwargs
@@ -1475,7 +1502,11 @@ class BaseQueryCompiler(abc.ABC):
             New QueryCompiler with updated values.
         """
         return BinaryDefault.register(pandas.Series.update, inplace=True)(
-            self, other=other, squeeze_self=True, squeeze_other=True, **kwargs
+            self,
+            other=other,
+            squeeze_self=True,
+            squeeze_otheself_on_right=True,
+            **kwargs,
         )
 
     @add_refer_to("DataFrame.clip")
@@ -1487,7 +1518,7 @@ class BaseQueryCompiler(abc.ABC):
         ----------
         lower : float or list-like
         upper : float or list-like
-        axis : {0, 1}
+        axis : {{0, 1}}
         inplace : bool
             Serves the compatibility purpose. Does not affect the result.
         **kwargs : dict
@@ -1513,7 +1544,7 @@ class BaseQueryCompiler(abc.ABC):
             Boolean mask. True - keep the self value, False - replace by `other` value.
         other : BaseQueryCompiler or pandas.Series
             Object to grab replacement values from.
-        axis : {0, 1}
+        axis : {{0, 1}}
             Axis to align frames along if axes of self, `cond` and `other` are not equal.
             0 is for index, when 1 is for columns.
         level : int or label, optional
@@ -1652,7 +1683,7 @@ class BaseQueryCompiler(abc.ABC):
 
         Parameters
         ----------
-        axis : {0, 1}
+        axis : {{0, 1}}
             Axis to align labels along. 0 is for index, 1 is for columns.
         labels : list-like
             Index-labels to align with.
@@ -1784,9 +1815,10 @@ class BaseQueryCompiler(abc.ABC):
         method="production",
         link="prod",
         extra_params=["**kwargs"],
-        params="""squeeze_self : bool
+        params="""
+        squeeze_self : bool
             Whether the query compiler represents a Series at the front-end.
-        axis : {0, 1}""",
+        axis : {{0, 1}}""",
     )
     def prod(self, squeeze_self, axis, **kwargs):
         # TODO: rework to original implementation after pandas issue #41074 resolves if possible.
@@ -1814,9 +1846,10 @@ class BaseQueryCompiler(abc.ABC):
         method="sum",
         link="sum",
         extra_params=["**kwargs"],
-        params="""squeeze_self : bool
+        params="""
+        squeeze_self : bool
             Whether the query compiler represents a Series at the front-end.
-        axis : {0, 1}""",
+        axis : {{0, 1}}""",
     )
     def sum(self, squeeze_self, axis, **kwargs):
         # TODO: rework to original implementation after pandas issue #41074 resolves if possible.
@@ -2209,7 +2242,7 @@ class BaseQueryCompiler(abc.ABC):
 
         Parameters
         ----------
-        axis : {0, 1}, optional
+        axis : {{0, 1}}, optional
         bool_only : bool, optional
         skipna : bool
         level : int or label
@@ -2233,7 +2266,7 @@ class BaseQueryCompiler(abc.ABC):
 
         Parameters
         ----------
-        axis : {0, 1}, optional
+        axis : {{0, 1}}, optional
         bool_only : bool, optional
         skipna : bool
         level : int or label
@@ -2271,7 +2304,7 @@ class BaseQueryCompiler(abc.ABC):
 
         Parameters
         ----------
-        axis : {0, 1}
+        axis : {{0, 1}}
         skipna : bool
         **kwargs : dict
             Serves the compatibility purpose. Does not affect the result.
@@ -2292,7 +2325,7 @@ class BaseQueryCompiler(abc.ABC):
 
         Parameters
         ----------
-        axis : {0, 1}
+        axis : {{0, 1}}
         skipna : bool
         **kwargs : dict
             Serves the compatibility purpose. Does not affect the result.
@@ -2349,7 +2382,8 @@ class BaseQueryCompiler(abc.ABC):
     @_doc_reduce_agg(
         method="number of unique values",
         link="nunique",
-        params="""axis : {0, 1}
+        params="""
+        axis : {{0, 1}}
         dropna : bool""",
         extra_params=["**kwargs"],
     )
@@ -2359,10 +2393,11 @@ class BaseQueryCompiler(abc.ABC):
     @_doc_reduce_agg(
         method="value at the given quantile",
         link="quantile",
-        params="""q : float
-        axis : {0, 1}
+        params="""
+        q : float
+        axis : {{0, 1}}
         numeric_only : bool
-        interpolation : {"linear", "lower", "higher", "midpoint", "nearest"}""",
+        interpolation : {{"linear", "lower", "higher", "midpoint", "nearest"}}""",
         extra_params=["**kwargs"],
     )
     def quantile_for_single_value(self, **kwargs):  # noqa: PR02
@@ -2457,7 +2492,7 @@ class BaseQueryCompiler(abc.ABC):
         Parameters
         ----------
         periods : int
-        axis : {0, 1}
+        axis : {{0, 1}}
         **kwargs : dict
             Serves the compatibility purpose. Does not affect the result.
 
@@ -2476,7 +2511,7 @@ class BaseQueryCompiler(abc.ABC):
 
         Parameters
         ----------
-        axis : {0, 1}
+        axis : {{0, 1}}
         how : {"any", "all"}
         thresh : int, optional
         subset : list of labels
@@ -2560,7 +2595,7 @@ class BaseQueryCompiler(abc.ABC):
 
         Parameters
         ----------
-        axis : {0, 1}
+        axis : {{0, 1}}
         numeric_only : bool
         dropna : bool
         **kwargs : dict
@@ -2582,7 +2617,7 @@ class BaseQueryCompiler(abc.ABC):
         ----------
         value : scalar or dict
         method : {"backfill", "bfill", "pad", "ffill", None}
-        axis : {0, 1}
+        axis : {{0, 1}}
         inplace : {False}
             This parameter serves the compatibility purpose. Always have to be False.
         limit : int, optional
@@ -2623,7 +2658,7 @@ class BaseQueryCompiler(abc.ABC):
 
         Parameters
         ----------
-        axis : {0, 1}
+        axis : {{0, 1}}
         method : {"average", "min", "max", "first", "dense"}
         numeric_only : bool
         na_option : {"keep", "top", "bottom"}
@@ -2647,7 +2682,7 @@ class BaseQueryCompiler(abc.ABC):
 
         Parameters
         ----------
-        axis : {0, 1}
+        axis : {{0, 1}}
         level : int, label or list of such
         ascending : bool
         inplace : bool
@@ -2756,8 +2791,9 @@ class BaseQueryCompiler(abc.ABC):
     @_doc_reduce_agg(
         method="value at the given quantile",
         link="quantile",
-        params="""q : list-like
-        axis : {0, 1}
+        params="""
+        q : list-like
+        axis : {{0, 1}}
         numeric_only : bool
         interpolation : {"linear", "lower", "higher", "midpoint", "nearest"}""",
         extra_params=["**kwargs"],
@@ -2903,7 +2939,7 @@ class BaseQueryCompiler(abc.ABC):
         ----------
         func : callable(pandas.Series) -> scalar, str, list or dict of such
             The function to apply to each column or row.
-        axis : {0, 1}
+        axis : {{0, 1}}
             Target axis to apply the function along.
             0 is for index, 1 is for columns.
         *args : iterable
@@ -3152,7 +3188,7 @@ class BaseQueryCompiler(abc.ABC):
         is_multi_by : bool
             If `by` is a QueryCompiler or list of such indicates whether it's
             grouping on multiple columns/rows.
-        axis : {0, 1}
+        axis : {{0, 1}}
             Axis to group and apply aggregation function along.
             0 is for index, when 1 is for columns.
         agg_func : dict or callable(pandas.core.groupby.DataFrameGroupBy) -> pandas.DataFrame
@@ -3332,7 +3368,7 @@ class BaseQueryCompiler(abc.ABC):
 
         Parameters
         ----------
-        axis : {0, 1}
+        axis : {{0, 1}}
             Axis to return labels on.
             0 is for index, when 1 is for columns.
 
@@ -3374,7 +3410,7 @@ class BaseQueryCompiler(abc.ABC):
 
         Parameters
         ----------
-        axis : {0, 1}
+        axis : {{0, 1}}
             Axis to insert along. 0 means insert rows, when 1 means insert columns.
         loc : int
             Position to insert `value`.
@@ -3416,7 +3452,7 @@ class BaseQueryCompiler(abc.ABC):
 
         Parameters
         ----------
-        axis : {0, 1}
+        axis : {{0, 1}}
             Axis to set `value` along. 0 means set row, 1 means set column.
         key : label
             Row/column label to set `value` in.
@@ -3513,7 +3549,7 @@ class BaseQueryCompiler(abc.ABC):
 
         Parameters
         ----------
-        axis : {0, 1}, default: 0
+        axis : {{0, 1}}, default: 0
             The axis to check (0 - index, 1 - columns).
 
         Returns
@@ -3532,7 +3568,7 @@ class BaseQueryCompiler(abc.ABC):
 
         Parameters
         ----------
-        axis : {0, 1}, default: 0
+        axis : {{0, 1}}, default: 0
             Axis to get index name on.
 
         Returns
@@ -3550,7 +3586,7 @@ class BaseQueryCompiler(abc.ABC):
         ----------
         name : hashable
             New index name.
-        axis : {0, 1}, default: 0
+        axis : {{0, 1}}, default: 0
             Axis to set name along.
         """
         self.get_axis(axis).name = name
@@ -3561,7 +3597,7 @@ class BaseQueryCompiler(abc.ABC):
 
         Parameters
         ----------
-        axis : {0, 1}, default: 0
+        axis : {{0, 1}}, default: 0
             Axis to get index names on.
 
         Returns
@@ -3579,7 +3615,7 @@ class BaseQueryCompiler(abc.ABC):
         ----------
         names : list
             New index names.
-        axis : {0, 1}, default: 0
+        axis : {{0, 1}}, default: 0
             Axis to set names along.
         """
         self.get_axis(axis).names = names
@@ -4083,15 +4119,17 @@ class BaseQueryCompiler(abc.ABC):
     @_doc_resample_fillna(
         method="specified interpolation",
         link="interpolate",
-        params="""method : str
-        axis : {0, 1}
+        params="""
+        method : str
+        axis : {{0, 1}}
         limit : int
         inplace : {False}
             This parameter serves the compatibility purpose. Always have to be False.
         limit_direction : {"forward", "backward", "both"}
         limit_area : {None, "inside", "outside"}
         downcast : str, optional
-        **kwargs : dict""",
+        **kwargs : dict
+        """,
         overwrite_template_params=True,
     )
     def resample_interpolate(
@@ -4227,7 +4265,8 @@ class BaseQueryCompiler(abc.ABC):
 
     @_doc_resample_reduction(
         result="product",
-        params="""_method : str
+        params="""
+        _method : str
         min_count : int""",
         link="prod",
     )
@@ -4266,7 +4305,8 @@ class BaseQueryCompiler(abc.ABC):
 
     @_doc_resample_reduction(
         result="sum",
-        params="""_method : str
+        params="""
+        _method : str
         min_count : int""",
         link="sum",
     )
@@ -4320,7 +4360,8 @@ class BaseQueryCompiler(abc.ABC):
 
     @_doc_str_method(
         method="center",
-        params="""width : int
+        params="""
+        width : int
         fillchar : str, default: ' '""",
     )
     def str_center(self, width, fillchar=" "):
@@ -4328,7 +4369,8 @@ class BaseQueryCompiler(abc.ABC):
 
     @_doc_str_method(
         method="contains",
-        params="""pat : str
+        params="""
+        pat : str
         case : bool, default: True
         flags : int, default: 0
         na : object, default: np.NaN
@@ -4341,7 +4383,8 @@ class BaseQueryCompiler(abc.ABC):
 
     @_doc_str_method(
         method="count",
-        params="""pat : str
+        params="""
+        pat : str
         flags : int, default: 0
         **kwargs : dict""",
     )
@@ -4350,7 +4393,8 @@ class BaseQueryCompiler(abc.ABC):
 
     @_doc_str_method(
         method="endswith",
-        params="""pat : str
+        params="""
+        pat : str
         na : object, default: np.NaN""",
     )
     def str_endswith(self, pat, na=np.NaN):
@@ -4358,7 +4402,8 @@ class BaseQueryCompiler(abc.ABC):
 
     @_doc_str_method(
         method="find",
-        params="""sub : str
+        params="""
+        sub : str
         start : int, default: 0
         end : int, optional""",
     )
@@ -4367,7 +4412,8 @@ class BaseQueryCompiler(abc.ABC):
 
     @_doc_str_method(
         method="findall",
-        params="""pat : str
+        params="""
+        pat : str
         flags : int, default: 0
         **kwargs : dict""",
     )
@@ -4382,7 +4428,8 @@ class BaseQueryCompiler(abc.ABC):
 
     @_doc_str_method(
         method="index",
-        params="""sub : str
+        params="""
+        sub : str
         start : int, default: 0
         end : int, optional""",
     )
@@ -4435,7 +4482,8 @@ class BaseQueryCompiler(abc.ABC):
 
     @_doc_str_method(
         method="ljust",
-        params="""width : int
+        params="""
+        width : int
         fillchar : str, default: ' '""",
     )
     def str_ljust(self, width, fillchar=" "):
@@ -4451,7 +4499,8 @@ class BaseQueryCompiler(abc.ABC):
 
     @_doc_str_method(
         method="match",
-        params="""pat : str
+        params="""
+        pat : str
         case : bool, default: True
         flags : int, default: 0
         na : object, default: np.NaN""",
@@ -4465,7 +4514,8 @@ class BaseQueryCompiler(abc.ABC):
 
     @_doc_str_method(
         method="pad",
-        params="""width : int
+        params="""
+        width : int
         side : {'left', 'right', 'both'}, default: 'left'
         fillchar : str, default: ' '""",
     )
@@ -4474,7 +4524,8 @@ class BaseQueryCompiler(abc.ABC):
 
     @_doc_str_method(
         method="partition",
-        params="""sep : str, default: ' '
+        params="""
+        sep : str, default: ' '
         expand : bool, default: True""",
     )
     def str_partition(self, sep=" ", expand=True):
@@ -4486,7 +4537,8 @@ class BaseQueryCompiler(abc.ABC):
 
     @_doc_str_method(
         method="replace",
-        params="""pat : str
+        params="""
+        pat : str
         repl : str or callable
         n : int, default: -1
         case : bool, optional
@@ -4500,7 +4552,8 @@ class BaseQueryCompiler(abc.ABC):
 
     @_doc_str_method(
         method="rfind",
-        params="""sub : str
+        params="""
+        sub : str
         start : int, default: 0
         end : int, optional""",
     )
@@ -4509,7 +4562,8 @@ class BaseQueryCompiler(abc.ABC):
 
     @_doc_str_method(
         method="rindex",
-        params="""sub : str
+        params="""
+        sub : str
         start : int, default: 0
         end : int, optional""",
     )
@@ -4518,7 +4572,8 @@ class BaseQueryCompiler(abc.ABC):
 
     @_doc_str_method(
         method="rjust",
-        params="""width : int
+        params="""
+        width : int
         fillchar : str, default: ' '""",
     )
     def str_rjust(self, width, fillchar=" "):
@@ -4526,7 +4581,8 @@ class BaseQueryCompiler(abc.ABC):
 
     @_doc_str_method(
         method="rpartition",
-        params="""sep : str, default: ' '
+        params="""
+        sep : str, default: ' '
         expand : bool, default: True""",
     )
     def str_rpartition(self, sep=" ", expand=True):
@@ -4534,7 +4590,8 @@ class BaseQueryCompiler(abc.ABC):
 
     @_doc_str_method(
         method="rsplit",
-        params="""pat : str, optional
+        params="""
+        pat : str, optional
         n : int, default: -1
         expand : bool, default: False""",
     )
@@ -4547,7 +4604,8 @@ class BaseQueryCompiler(abc.ABC):
 
     @_doc_str_method(
         method="slice",
-        params="""start : int, optional
+        params="""
+        start : int, optional
         stop : int, optional
         step : int, optional""",
     )
@@ -4556,7 +4614,8 @@ class BaseQueryCompiler(abc.ABC):
 
     @_doc_str_method(
         method="slice_replace",
-        params="""start : int, optional
+        params="""
+        start : int, optional
         stop : int, optional
         repl : str or callable, optional""",
     )
@@ -4567,7 +4626,8 @@ class BaseQueryCompiler(abc.ABC):
 
     @_doc_str_method(
         method="split",
-        params="""pat : str, optional
+        params="""
+        pat : str, optional
         n : int, default: -1
         expand : bool, default: False""",
     )
@@ -4576,7 +4636,8 @@ class BaseQueryCompiler(abc.ABC):
 
     @_doc_str_method(
         method="startswith",
-        params="""pat : str
+        params="""
+        pat : str
         na : object, default: np.NaN""",
     )
     def str_startswith(self, pat, na=np.NaN):
@@ -4604,7 +4665,8 @@ class BaseQueryCompiler(abc.ABC):
 
     @_doc_str_method(
         method="wrap",
-        params="""width : int
+        params="""
+        width : int
         **kwargs : dict""",
     )
     def str_wrap(self, width, **kwargs):
@@ -4626,7 +4688,8 @@ class BaseQueryCompiler(abc.ABC):
         result="the result of passed functions",
         action="apply specified functions",
         method="aggregate",
-        params="""func : str, dict, callable(pandas.Series) -> scalar, or list of such
+        params="""
+        func : str, dict, callable(pandas.Series) -> scalar, or list of such
         *args : iterable
         **kwargs : dict""",
         build_rules="udf_aggregation",
@@ -4643,7 +4706,8 @@ class BaseQueryCompiler(abc.ABC):
         result="the result of passed function",
         action="apply specified function",
         method="apply",
-        params="""func : callable(pandas.Series) -> scalar
+        params="""
+        func : callable(pandas.Series) -> scalar
         raw : bool, default: False
         engine : None, default: None
             This parameters serves the compatibility purpose. Always have to be None.
@@ -4670,7 +4734,8 @@ class BaseQueryCompiler(abc.ABC):
     @_doc_window_method(
         result="correlation",
         method="corr",
-        params="""other : modin.pandas.Series, modin.pandas.DataFrame, list-like, optional
+        params="""
+        other : modin.pandas.Series, modin.pandas.DataFrame, list-like, optional
         pairwise : bool, optional
         *args : iterable
         **kwargs : dict""",
@@ -4689,7 +4754,8 @@ class BaseQueryCompiler(abc.ABC):
     @_doc_window_method(
         result="covariance",
         method="cov",
-        params="""other : modin.pandas.Series, modin.pandas.DataFrame, list-like, optional
+        params="""
+        other : modin.pandas.Series, modin.pandas.DataFrame, list-like, optional
         pairwise : bool, optional
         ddof : int, default:  1
         **kwargs : dict""",
@@ -4710,7 +4776,8 @@ class BaseQueryCompiler(abc.ABC):
     @_doc_window_method(
         result="maximum value",
         method="max",
-        params="""*args : iterable
+        params="""
+        *args : iterable
         **kwargs : dict""",
     )
     def rolling_max(self, rolling_args, *args, **kwargs):
@@ -4721,7 +4788,8 @@ class BaseQueryCompiler(abc.ABC):
     @_doc_window_method(
         result="mean value",
         method="mean",
-        params="""*args : iterable
+        params="""
+        *args : iterable
         **kwargs : dict""",
     )
     def rolling_mean(self, rolling_args, *args, **kwargs):
@@ -4740,7 +4808,8 @@ class BaseQueryCompiler(abc.ABC):
     @_doc_window_method(
         result="minimum value",
         method="min",
-        params="""*args : iterable
+        params="""
+        *args : iterable
         **kwargs : dict""",
     )
     def rolling_min(self, rolling_args, *args, **kwargs):
@@ -4751,7 +4820,8 @@ class BaseQueryCompiler(abc.ABC):
     @_doc_window_method(
         result="quantile",
         method="quantile",
-        params="""quantile : float
+        params="""
+        quantile : float
         interpolation : {'linear', 'lower', 'higher', 'midpoint', 'nearest'}, default: 'linear'
         **kwargs : dict""",
     )
@@ -4773,7 +4843,8 @@ class BaseQueryCompiler(abc.ABC):
     @_doc_window_method(
         result="standart deviation",
         method="std",
-        params="""ddof : int, default: 1
+        params="""
+        ddof : int, default: 1
         *args : iterable
         **kwargs : dict""",
     )
@@ -4785,7 +4856,8 @@ class BaseQueryCompiler(abc.ABC):
     @_doc_window_method(
         result="sum",
         method="sum",
-        params="""*args : iterable
+        params="""
+        *args : iterable
         **kwargs : dict""",
     )
     def rolling_sum(self, rolling_args, *args, **kwargs):
@@ -4796,7 +4868,8 @@ class BaseQueryCompiler(abc.ABC):
     @_doc_window_method(
         result="variance",
         method="var",
-        params="""ddof : int, default: 1
+        params="""
+        ddof : int, default: 1
         *args : iterable
         **kwargs : dict""",
     )
@@ -4813,7 +4886,8 @@ class BaseQueryCompiler(abc.ABC):
         win_type="window of the specified type",
         result="mean",
         method="mean",
-        params="""*args : iterable
+        params="""
+        *args : iterable
         **kwargs : dict""",
     )
     def window_mean(self, window_args, *args, **kwargs):
@@ -4825,7 +4899,8 @@ class BaseQueryCompiler(abc.ABC):
         win_type="window of the specified type",
         result="standart deviation",
         method="std",
-        params="""ddof : int, default: 1
+        params="""
+        ddof : int, default: 1
         *args : iterable
         **kwargs : dict""",
     )
@@ -4838,7 +4913,8 @@ class BaseQueryCompiler(abc.ABC):
         win_type="window of the specified type",
         result="sum",
         method="sum",
-        params="""*args : iterable
+        params="""
+        *args : iterable
         **kwargs : dict""",
     )
     def window_sum(self, window_args, *args, **kwargs):
@@ -4850,7 +4926,8 @@ class BaseQueryCompiler(abc.ABC):
         win_type="window of the specified type",
         result="variance",
         method="var",
-        params="""ddof : int, default: 1
+        params="""
+        ddof : int, default: 1
         *args : iterable
         **kwargs : dict""",
     )
@@ -4894,7 +4971,8 @@ class BaseQueryCompiler(abc.ABC):
 
     @_doc_reduce_agg(
         method="mean absolute deviation",
-        params="""axis : {0, 1}
+        params="""
+        axis : {{0, 1}}
         skipna : bool
         level : None, default: None
             Serves the compatibility purpose. Always have to be None.""",
@@ -4926,7 +5004,7 @@ class BaseQueryCompiler(abc.ABC):
         other : BaseQueryCompiler
             Query compiler to compare with. Have to be the same shape and the same
             labeling as `self`.
-        align_axis : {0, 1}
+        align_axis : {{0, 1}}
         keep_shape : bool
         keep_equal : bool
 
