@@ -644,7 +644,7 @@ def doc_groupby_method(result, refer_to, action=None):
         Axis to group and apply aggregation function along.
         0 is for index, when 1 is for columns.
     groupby_args : dict
-        GroupBy parameters in the format of ``modin.pandas.DataFrame.groupby`` signature.
+        GroupBy parameters as expected by ``modin.pandas.DataFrame.groupby`` signature.
     map_args : dict
         Keyword arguments to pass to the reduction function. If GroupBy is implemented with MapReduce
         approach, passes this arguments at the map phase only.

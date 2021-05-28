@@ -3244,7 +3244,7 @@ class BaseQueryCompiler(abc.ABC):
         Parameters
         ----------
         resample_args : list
-            Resample parameters in the format of ``modin.pandas.DataFrame.resample`` signature.
+            Resample parameters as expected by ``modin.pandas.DataFrame.resample`` signature.
         fill_value : scalar
 
         Returns
@@ -3315,7 +3315,7 @@ class BaseQueryCompiler(abc.ABC):
         Parameters
         ----------
         resample_args : list
-            Resample parameters in the format of ``modin.pandas.DataFrame.resample`` signature.
+            Resample parameters as expected by ``modin.pandas.DataFrame.resample`` signature.
         name : object
         obj : modin.pandas.DataFrame, optional
 
@@ -3467,7 +3467,7 @@ class BaseQueryCompiler(abc.ABC):
         Parameters
         ----------
         resample_args : list
-            Resample parameters in the format of ``modin.pandas.DataFrame.resample`` signature.
+            Resample parameters as expected by ``modin.pandas.DataFrame.resample`` signature.
         func : callable(pandas.Resampler) -> object or tuple(callable, str)
         *args : iterable
             Positional arguments to pass to function.
@@ -3555,7 +3555,7 @@ class BaseQueryCompiler(abc.ABC):
         Parameters
         ----------
         resample_args : list
-            Resample parameters in the format of ``modin.pandas.DataFrame.resample`` signature.
+            Resample parameters as expected by ``modin.pandas.DataFrame.resample`` signature.
         arg : callable(pandas.DataFrame) -> pandas.Series
         *args : iterable
             Positional arguments to pass to function.
