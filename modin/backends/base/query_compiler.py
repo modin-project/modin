@@ -18,6 +18,7 @@ Module contains class ``BaseQueryCompiler``.
 """
 
 import abc
+from functools import partial
 
 from modin.data_management.functions.default_methods import (
     DataFrameDefault,
@@ -68,7 +69,7 @@ def _add_deprecation_warning(replacement_method):
     Build decorator which appends deprecation warning to the function's docstring.
 
     Appended warning indicates that the current method duplicates functionality of
-    some other method and so have to be removed.
+    some other method and so is slated to be removed in the future.
 
     Parameters
     ----------
@@ -80,12 +81,7 @@ def _add_deprecation_warning(replacement_method):
     callable
     """
     message = _deprecation_warning.format(replacement_method)
-    appender = append_to_docstring(message)
-
-    def decorator(func):
-        return appender(func)
-
-    return decorator
+    return append_to_docstring(message)
 
 
 def add_refer_to(method):
@@ -102,18 +98,14 @@ def add_refer_to(method):
     callable
     """
     note = _refer_to_note.format(method)
-    appender = append_to_docstring(note)
-
-    def decorator(func):
-        return appender(func)
-
-    return decorator
+    return append_to_docstring(note)
 
 
 def _doc_qc_method(
     template,
     params=None,
     refer_to=None,
+    refer_to_module_name=None,
     one_column_method=False,
     **kwargs,
 ):
@@ -127,16 +119,17 @@ def _doc_qc_method(
         placeholder.
     params : str, optional
         Method parameters in the NumPy docstyle format to substitute
-        to the `template`. `params` string should not include the "Parameters"
+        in the `template`. `params` string should not include the "Parameters"
         header.
     refer_to : str, optional
-        Method name in ``modin.pandas`` module to refer to for more information
+        Method name in `refer_to_module_name` module to refer to for more information
         about parameters and output format.
+    refer_to_module_name : str, optional
     one_column_method : bool, default: False
         Whether to append note that this method is for one-column
         query compilers only.
     **kwargs : dict
-        Values to substitute to the `template`.
+        Values to substitute in the `template`.
 
     Returns
     -------
@@ -150,7 +143,9 @@ def _doc_qc_method(
         """
 
     params = format_string(params_template, params=params) if params else ""
-    substituted = format_string(template, params=params, **kwargs)
+    substituted = format_string(template, params=params, refer_to=refer_to, **kwargs)
+    if refer_to_module_name:
+        refer_to = f"{refer_to_module_name}.{refer_to}"
 
     def decorator(func):
         func.__doc__ = substituted
@@ -238,7 +233,7 @@ def _doc_binary_method(operation, sign, self_on_right=False, op_type="arithmetic
     )
 
 
-def _doc_reduce_agg(method, link, params=None, extra_params=None):
+def _doc_reduce_agg(method, refer_to, params=None, extra_params=None):
     """
     Build decorator which adds docstring for the reduction method.
 
@@ -246,15 +241,16 @@ def _doc_reduce_agg(method, link, params=None, extra_params=None):
     ----------
     method : str
         The result of the method.
-    link : str
+    refer_to : str
         Method name in ``modin.pandas.DataFrame`` module to refer to for
         more information about parameters and output format.
     params : str, optional
         Method parameters in the NumPy docstyle format to substitute
         to the docstring template.
-    extra_params : list of str, optional
+    extra_params : sequence of str, optional
         Method parameter names to append to the docstring template. Parameter
-        type and description will be grabbed from `extra_params_map`.
+        type and description will be grabbed from ``extra_params_map`` (Please
+        refer to the source code of this function to explore the map).
 
     Returns
     -------
@@ -275,7 +271,7 @@ def _doc_reduce_agg(method, link, params=None, extra_params=None):
         params = """
         axis : {{0, 1}}
         level : None, default: None
-            Serves the compatibility purpose. Always have to be None.
+            Serves the compatibility purpose. Always has to be None.
         numeric_only : bool, optional"""
 
     extra_params_map = {
@@ -304,96 +300,58 @@ def _doc_reduce_agg(method, link, params=None, extra_params=None):
         template,
         params=params,
         method=method,
-        refer_to=f"DataFrame.{link}",
+        refer_to=f"DataFrame.{refer_to}",
     )
 
 
-def _doc_cum_agg(method, link):
-    """
-    Build decorator which adds docstring for the cummulative method.
+_doc_cum_agg = partial(
+    _doc_qc_method,
+    template="""
+    Get cummulative {method} for every row or column.
 
     Parameters
     ----------
-    method : str
-        The result of the method.
-    link : str
-        Method name in ``modin.pandas.DataFrame`` module to refer to for
-        more information about parameters and output format.
+    axis : {{0, 1}}
+    skipna : bool
+    **kwargs : dict
+        Serves the compatibility purpose. Does not affect the result.
 
     Returns
     -------
-    callable
-    """
-    template = """
-        Get cummulative {method} for every row or column.
-
-        Parameters
-        ----------
-        axis : {{0, 1}}
-        skipna : bool
-        **kwargs : dict
-            Serves the compatibility purpose. Does not affect the result.
-
-        Returns
-        -------
-        BaseQueryCompiler
-            QueryCompiler of the same shape as `self`, where each element is the {method}
-            of all the previous values in this row or column.
-        """
-
-    return _doc_qc_method(template, method=method, refer_to=f"DataFrame.{link}")
+    BaseQueryCompiler
+        QueryCompiler of the same shape as `self`, where each element is the {method}
+        of all the previous values in this row or column.
+    """,
+    refer_to_module_name="DataFrame",
+)
 
 
-def _doc_resample(action, link, build_rules, params=None):
-    """
-    Build decorator which adds docstring for the resample aggregation method.
+_doc_resample = partial(
+    _doc_qc_method,
+    template="""
+    Resample time-series data and apply aggregation on it.
+
+    Group data into intervals by time-series row/column with
+    a specified frequency and {action}.
 
     Parameters
     ----------
-    action : str
-        What method does with the resampled data.
-    link : str
-        Method name in ``modin.pandas.base.Resampler`` module to refer to for
-        more information about parameters and output format.
-    build_rules : str
-        Description of the data output format.
-    params : str, optional
-        Method parameters in the NumPy docstyle format to substitute
-        to the docstring template.
-
+    resample_args : list
+        Resample parameters as expected by ``modin.pandas.DataFrame.resample`` signature.
+    {extra_params}
     Returns
     -------
-    callable
-    """
-    template = """
-        Resample time-series data and apply aggregation on it.
+    BaseQueryCompiler
+        New QueryCompiler containing the result of resample aggregation built by the
+        following rules:
 
-        Group data into intervals by time-series row/column with
-        a specified frequency and {action}.
-
-        Parameters
-        ----------
-        resample_args : list
-            Resample parameters in the format of ``modin.pandas.DataFrame.resample`` signature.
-        {extra_params}
-        Returns
-        -------
-        BaseQueryCompiler
-            New QueryCompiler containing the result of resample aggregation built by the
-            following rules:
-
-            {build_rules}
-        """
-    return _doc_qc_method(
-        template,
-        action=action,
-        extra_params=params,
-        build_rules=build_rules,
-        refer_to=f"Resampler.{link}",
-    )
+        {build_rules}
+    """,
+    refer_to_module_name="DataFrame.Resampler",
+)
 
 
-def _doc_resample_reduction(result, link, params=None, compatibility_params=True):
+def _doc_resample_reduction(result, refer_to, params=None, compatibility_params=True):
     """
     Build decorator which adds docstring for the resample reduction method.
 
@@ -401,7 +359,7 @@ def _doc_resample_reduction(result, link, params=None, compatibility_params=True
     ----------
     result : str
         The result of the method.
-    link : str
+    refer_to : str
         Method name in ``modin.pandas.base.Resampler`` module to refer to for
         more information about parameters and output format.
     params : str, optional
@@ -438,16 +396,19 @@ def _doc_resample_reduction(result, link, params=None, compatibility_params=True
         )
 
     build_rules = f"""
-            - Labels on the specified axis is the group names (time-stamps)
-            - Labels on the opposit of specified axis is preserved.
+            - Labels on the specified axis are the group names (time-stamps)
+            - Labels on the opposit of specified axis are preserved.
             - Each element of QueryCompiler is the {result} for the
               corresponding group and column/row."""
     return _doc_resample(
-        action=action, params=params_substitution, build_rules=build_rules, link=link
+        action=action,
+        extra_params=params_substitution,
+        build_rules=build_rules,
+        refer_to=refer_to,
     )
 
 
-def _doc_resample_agg(action, output, params, link):
+def _doc_resample_agg(action, output, refer_to, params=None):
     """
     Build decorator which adds docstring for the resample aggregation method.
 
@@ -457,12 +418,12 @@ def _doc_resample_agg(action, output, params, link):
         What method does with the resampled data.
     output : str
         What is the content of column names in the result.
+    refer_to : str
+        Method name in ``modin.pandas.base.Resampler`` module to refer to for
+        more information about parameters and output format.
     params : str, optional
         Method parameters in the NumPy docstyle format to substitute
         to the docstring template.
-    link : str
-        Method name in ``modin.pandas.base.Resampler`` module to refer to for
-        more information about parameters and output format.
 
     Returns
     -------
@@ -485,17 +446,22 @@ def _doc_resample_agg(action, output, params, link):
         )
 
     build_rules = f"""
-            - Labels on the specified axis is the group names (time-stamps)
-            - Labels on the opposit of specified axis is MultiIndex, where first level
+            - Labels on the specified axis are the group names (time-stamps)
+            - Labels on the opposit of specified axis are a MultiIndex, where first level
               contains preserved labels of this axis and the second level is the {output}.
             - Each element of QueryCompiler is the result of corresponding function for the
               corresponding group and column/row."""
     return _doc_resample(
-        action=action, params=params_substitution, build_rules=build_rules, link=link
+        action=action,
+        extra_params=params_substitution,
+        build_rules=build_rules,
+        refer_to=refer_to,
     )
 
 
-def _doc_resample_fillna(method, link, params=None, overwrite_template_params=False):
+def _doc_resample_fillna(
+    method, refer_to, params=None, overwrite_template_params=False
+):
     """
     Build decorator which adds docstring for the resample fillna query compiler method.
 
@@ -503,7 +469,7 @@ def _doc_resample_fillna(method, link, params=None, overwrite_template_params=Fa
     ----------
     method : str
         Fillna method name.
-    link : str
+    refer_to : str
         Method name in ``modin.pandas.base.Resampler`` module to refer to for
         more information about parameters and output format.
     params : str, optional
@@ -534,191 +500,73 @@ def _doc_resample_fillna(method, link, params=None, overwrite_template_params=Fa
     build_rules = "- QueryCompiler contains unsampled data with missing values filled."
 
     return _doc_resample(
-        action=action, params=params_substitution, build_rules=build_rules, link=link
+        action=action,
+        extra_params=params_substitution,
+        build_rules=build_rules,
+        refer_to=refer_to,
     )
 
 
-def _doc_dt(prop, dt_type, method, params=None):
-    """
-    Build decorator which adds docstring for the date-time property getter methods.
+_doc_dt = partial(
+    _doc_qc_method,
+    template="""
+    Get {prop} for each {dt_type} value.
+    {params}
+    Returns
+    -------
+    BaseQueryCompiler
+        New QueryCompiler with the same shape as `self`, where each element is
+        {prop} for the corresponding {dt_type} value.
+    """,
+    one_column_method=True,
+    refer_to_module_name="Series.dt",
+)
+
+
+_doc_dt_timestamp = partial(_doc_dt, dt_type="datetime")
+_doc_dt_interval = partial(_doc_dt, dt_type="interval")
+_doc_dt_period = partial(_doc_dt, dt_type="period")
+
+_doc_dt_round = partial(
+    _doc_qc_method,
+    template="""
+    Perform {refer_to} operation on the underlying time-series data to the specified `freq`.
 
     Parameters
     ----------
-    prop : str
-        Property name that method is accessing.
-    dt_type : str
-        Type of the processed date-time data.
-    method : str
-        Method name in ``modin.pandas.series_utils.DatetimeProperties`` module
-        to refer to for more information about parameters and output format.
-    params : str, optional
-        Method parameters in the NumPy docstyle format to substitute
-        to the docstring template.
+    freq : str
+    ambiguous : "infer", "NaT", bool mask, default: "raise"
+    nonexistent : "shift_forward", "shift_backward", "NaT", timedelta, default: "raise"
 
     Returns
     -------
-    callable
-    """
-    template = """
-        Get {prop} for each {dt_type} value.
-        {params}
-        Returns
-        -------
-        BaseQueryCompiler
-            New QueryCompiler with the same shape as `self`, where each element is
-            {prop} for the corresponding {dt_type} value.
-        """
-    return _doc_qc_method(
-        template,
-        refer_to=f"Series.dt.{method}",
-        prop=prop,
-        dt_type=dt_type,
-        params=params,
-        one_column_method=True,
-        try_insert_params_section=True,
-    )
+    BaseQueryCompiler
+        New QueryCompiler with performed {refer_to} operation on every element.
+    """,
+    one_column_method=True,
+    refer_to_module_name="Series.dt",
+)
 
 
-def _doc_dt_timestamp(property, method, params=None):
-    """
-    Build decorator which adds docstring for the timestamp property getter methods.
-
-    Parameters
-    ----------
-    property : str
-        Property name that method is accessing.
-    method : str
-        Method name in ``modin.pandas.series_utils.DatetimeProperties`` module
-        to refer to for more information about parameters and output format.
-    params : str, optional
-        Method parameters in the NumPy docstyle format to substitute
-        to the docstring template.
-
+_doc_str_method = partial(
+    _doc_qc_method,
+    template="""
+    Apply "{refer_to}" function to each string value in QueryCompiler.
+    {params}
     Returns
     -------
-    callable
-    """
-    return _doc_dt(property, "date-time", method, params)
-
-
-def _doc_dt_interval(property, method, params=None):
-    """
-    Build decorator which adds docstring for the interval property getter methods.
-
-    Parameters
-    ----------
-    property : str
-        Property name that method is accessing.
-    method : str
-        Method name in ``modin.pandas.series_utils.DatetimeProperties`` module
-        to refer to for more information about parameters and output format.
-    params : str, optional
-        Method parameters in the NumPy docstyle format to substitute
-        to the docstring template.
-
-    Returns
-    -------
-    callable
-    """
-    return _doc_dt(property, "interval", method, params)
-
-
-def _doc_dt_period(property, method, params=None):
-    """
-    Build decorator which adds docstring for the period property getter methods.
-
-    Parameters
-    ----------
-    property : str
-        Property name that method is accessing.
-    method : str
-        Method name in ``modin.pandas.series_utils.DatetimeProperties`` module
-        to refer to for more information about parameters and output format.
-    params : str, optional
-        Method parameters in the NumPy docstyle format to substitute
-        to the docstring template.
-
-    Returns
-    -------
-    callable
-    """
-    return _doc_dt(property, "period", method, params)
-
-
-def _doc_dt_round(method):
-    """
-    Build decorator which adds docstring for the date-time round method.
-
-    Parameters
-    ----------
-    method : str
-        Method name in ``modin.pandas.series_utils.DatetimeProperties`` module
-        to refer to for more information about parameters and output format.
-
-    Returns
-    -------
-    callable
-    """
-    template = """
-        Perform {method} operation on the underlying time-series data to the specified `freq`.
-
-        Parameters
-        ----------
-        freq : str
-        ambiguous : "infer", "NaT", bool mask, default: "raise"
-        nonexistent : "shift_forward", "shift_backward", "NaT", timedelta, default: "raise"
-
-        Returns
-        -------
-        BaseQueryCompiler
-            New QueryCompiler with performed {method} operation on every element.
-        """
-
-    return _doc_qc_method(
-        template, method=method, refer_to=f"Series.dt.{method}", one_column_method=True
-    )
-
-
-def _doc_str_method(method, params=None):
-    """
-    Build decorator which adds docstring for the string methods.
-
-    Parameters
-    ----------
-    method : str
-        Method name in ``modin.pandas.series_utils.StringMethods`` module
-        to refer to for more information about parameters and output format.
-    params : str, optional
-        Method parameters in the NumPy docstyle format to substitute
-        to the docstring template.
-
-    Returns
-    -------
-    callable
-    """
-    template = """
-        Apply "{method}" function to each string value in QueryCompiler.
-        {params}
-        Returns
-        -------
-        BaseQueryCompiler
-            New QueryCompiler containing the result of execution of the "{method}" function
-            against each string element.
-        """
-
-    return _doc_qc_method(
-        template,
-        method=method,
-        params=params,
-        refer_to=f"Series.str.{method}",
-        one_column_method=True,
-        try_insert_params_section=True,
-    )
+    BaseQueryCompiler
+        New QueryCompiler containing the result of execution of the "{refer_to}" function
+        against each string element.
+    """,
+    one_column_method=True,
+    refer_to_module_name="Series.str",
+)
 
 
 def _doc_window_method(
     result,
-    method,
+    refer_to,
     action=None,
     win_type="rolling window",
     params=None,
@@ -731,7 +579,7 @@ def _doc_window_method(
     ----------
     result : str
         The result of the method.
-    method : str
+    refer_to : str
         Method name in ``modin.pandas.base.Window`` module to refer to
         for more information about parameters and output format.
     action : str, optional
@@ -794,12 +642,12 @@ def _doc_window_method(
         win_type=win_type,
         extra_params=params,
         build_rules=doc_build_rules.get(build_rules, build_rules),
-        refer_to=f"Rolling.{method}",
+        refer_to=f"Rolling.{refer_to}",
         window_args_name=window_args_name,
     )
 
 
-def _doc_groupby_method(result, link, action=None):
+def _doc_groupby_method(result, refer_to, action=None):
     """
     Build decorator which adds docstring for the groupby reduce method.
 
@@ -807,7 +655,7 @@ def _doc_groupby_method(result, link, action=None):
     ----------
     result : str
         The result of aggregation.
-    link : str
+    refer_to : str
         Method name in ``modin.pandas.groupby`` module to refer to
         for more information about parameters and output format.
     action : str, optional
@@ -854,12 +702,17 @@ def _doc_groupby_method(result, link, action=None):
           contain group names, where N is the columns/rows to group on.
         - Each element of QueryCompiler is the {result} for the
           corresponding group and column/row.
+
+    .. warning
+        `map_args` and `reduce_args` parameters are deprecated. They're leaked here from
+        ``PandasQueryCompiler.groupby_*``, pandas backend implements groupby via MapReduce
+        approach, but for other backends these parameters make no sense, and so they'll be removed in the future.
     """
     if action is None:
         action = f"compute {result}"
 
     return _doc_qc_method(
-        template, result=result, action=action, refer_to=f"GroupBy.{link}"
+        template, result=result, action=action, refer_to=f"GroupBy.{refer_to}"
     )
 
 
@@ -1788,32 +1641,32 @@ class BaseQueryCompiler(abc.ABC):
         return SeriesDefault.register(pandas.Series.is_monotonic_decreasing)(self)
 
     @_doc_reduce_agg(
-        method="number of non-NaN values", link="count", extra_params=["**kwargs"]
+        method="number of non-NaN values", refer_to="count", extra_params=["**kwargs"]
     )
     def count(self, **kwargs):  # noqa: PR02
         return DataFrameDefault.register(pandas.DataFrame.count)(self, **kwargs)
 
     @_doc_reduce_agg(
-        method="maximum value", link="max", extra_params=["skipna", "**kwargs"]
+        method="maximum value", refer_to="max", extra_params=["skipna", "**kwargs"]
     )
     def max(self, **kwargs):  # noqa: PR02
         return DataFrameDefault.register(pandas.DataFrame.max)(self, **kwargs)
 
     @_doc_reduce_agg(
-        method="mean value", link="mean", extra_params=["skipna", "**kwargs"]
+        method="mean value", refer_to="mean", extra_params=["skipna", "**kwargs"]
     )
     def mean(self, **kwargs):  # noqa: PR02
         return DataFrameDefault.register(pandas.DataFrame.mean)(self, **kwargs)
 
     @_doc_reduce_agg(
-        method="manimum value", link="min", extra_params=["skipna", "**kwargs"]
+        method="manimum value", refer_to="min", extra_params=["skipna", "**kwargs"]
     )
     def min(self, **kwargs):  # noqa: PR02
         return DataFrameDefault.register(pandas.DataFrame.min)(self, **kwargs)
 
     @_doc_reduce_agg(
         method="production",
-        link="prod",
+        refer_to="prod",
         extra_params=["**kwargs"],
         params="""
         squeeze_self : bool
@@ -1844,7 +1697,7 @@ class BaseQueryCompiler(abc.ABC):
 
     @_doc_reduce_agg(
         method="sum",
-        link="sum",
+        refer_to="sum",
         extra_params=["**kwargs"],
         params="""
         squeeze_self : bool
@@ -2354,7 +2207,7 @@ class BaseQueryCompiler(abc.ABC):
         )
 
     @_doc_reduce_agg(
-        method="median value", link="median", extra_params=["skipna", "**kwargs"]
+        method="median value", refer_to="median", extra_params=["skipna", "**kwargs"]
     )
     def median(self, **kwargs):  # noqa: PR02
         return DataFrameDefault.register(pandas.DataFrame.median)(self, **kwargs)
@@ -2381,7 +2234,7 @@ class BaseQueryCompiler(abc.ABC):
 
     @_doc_reduce_agg(
         method="number of unique values",
-        link="nunique",
+        refer_to="nunique",
         params="""
         axis : {{0, 1}}
         dropna : bool""",
@@ -2392,7 +2245,7 @@ class BaseQueryCompiler(abc.ABC):
 
     @_doc_reduce_agg(
         method="value at the given quantile",
-        link="quantile",
+        refer_to="quantile",
         params="""
         q : float
         axis : {{0, 1}}
@@ -2404,14 +2257,14 @@ class BaseQueryCompiler(abc.ABC):
         return DataFrameDefault.register(pandas.DataFrame.quantile)(self, **kwargs)
 
     @_doc_reduce_agg(
-        method="unbiased skew", link="skew", extra_params=["skipna", "**kwargs"]
+        method="unbiased skew", refer_to="skew", extra_params=["skipna", "**kwargs"]
     )
     def skew(self, **kwargs):  # noqa: PR02
         return DataFrameDefault.register(pandas.DataFrame.skew)(self, **kwargs)
 
     @_doc_reduce_agg(
         method="standard deviation of the mean",
-        link="sem",
+        refer_to="sem",
         extra_params=["skipna", "ddof", "**kwargs"],
     )
     def sem(self, **kwargs):  # noqa: PR02
@@ -2419,14 +2272,14 @@ class BaseQueryCompiler(abc.ABC):
 
     @_doc_reduce_agg(
         method="standard deviation",
-        link="std",
+        refer_to="std",
         extra_params=["skipna", "ddof", "**kwargs"],
     )
     def std(self, **kwargs):  # noqa: PR02
         return DataFrameDefault.register(pandas.DataFrame.std)(self, **kwargs)
 
     @_doc_reduce_agg(
-        method="variance", link="var", extra_params=["skipna", "ddof", "**kwargs"]
+        method="variance", refer_to="var", extra_params=["skipna", "ddof", "**kwargs"]
     )
     def var(self, **kwargs):  # noqa: PR02
         return DataFrameDefault.register(pandas.DataFrame.var)(self, **kwargs)
@@ -2468,19 +2321,19 @@ class BaseQueryCompiler(abc.ABC):
     # that is being operated on. This means that we have to put all of that
     # data in the same place.
 
-    @_doc_cum_agg(method="sum", link="cumsum")
+    @_doc_cum_agg(method="sum", refer_to="cumsum")
     def cumsum(self, **kwargs):  # noqa: PR02
         return DataFrameDefault.register(pandas.DataFrame.cumsum)(self, **kwargs)
 
-    @_doc_cum_agg(method="maximum", link="cummax")
+    @_doc_cum_agg(method="maximum", refer_to="cummax")
     def cummax(self, **kwargs):  # noqa: PR02
         return DataFrameDefault.register(pandas.DataFrame.cummax)(self, **kwargs)
 
-    @_doc_cum_agg(method="minimum", link="cummin")
+    @_doc_cum_agg(method="minimum", refer_to="cummin")
     def cummin(self, **kwargs):  # noqa: PR02
         return DataFrameDefault.register(pandas.DataFrame.cummin)(self, **kwargs)
 
-    @_doc_cum_agg(method="product", link="cumprod")
+    @_doc_cum_agg(method="product", refer_to="cumprod")
     def cumprod(self, **kwargs):  # noqa: PR02
         return DataFrameDefault.register(pandas.DataFrame.cumprod)(self, **kwargs)
 
@@ -2790,7 +2643,7 @@ class BaseQueryCompiler(abc.ABC):
     # data in the same place.
     @_doc_reduce_agg(
         method="value at the given quantile",
-        link="quantile",
+        refer_to="quantile",
         params="""
         q : list-like
         axis : {{0, 1}}
@@ -2974,7 +2827,9 @@ class BaseQueryCompiler(abc.ABC):
     # parameters make no sense, they shouldn't be presented in a base class.
 
     @_doc_groupby_method(
-        action="count non-null values", result="number of non-null values", link="count"
+        action="count non-null values",
+        result="number of non-null values",
+        refer_to="count",
     )
     def groupby_count(
         self,
@@ -3000,7 +2855,7 @@ class BaseQueryCompiler(abc.ABC):
     @_doc_groupby_method(
         action="check whether any element is True",
         result="boolean of whether there is any element which is True",
-        link="any",
+        refer_to="any",
     )
     def groupby_any(
         self,
@@ -3024,7 +2879,7 @@ class BaseQueryCompiler(abc.ABC):
         )
 
     @_doc_groupby_method(
-        action="get the minimum value", result="minimum value", link="min"
+        action="get the minimum value", result="minimum value", refer_to="min"
     )
     def groupby_min(
         self,
@@ -3047,7 +2902,7 @@ class BaseQueryCompiler(abc.ABC):
             drop=drop,
         )
 
-    @_doc_groupby_method(result="product", link="prod")
+    @_doc_groupby_method(result="product", refer_to="prod")
     def groupby_prod(
         self,
         by,
@@ -3070,7 +2925,7 @@ class BaseQueryCompiler(abc.ABC):
         )
 
     @_doc_groupby_method(
-        action="get the maximum value", result="maximum value", link="max"
+        action="get the maximum value", result="maximum value", refer_to="max"
     )
     def groupby_max(
         self,
@@ -3096,7 +2951,7 @@ class BaseQueryCompiler(abc.ABC):
     @_doc_groupby_method(
         action="check whether all elements are True",
         result="boolean of whether all elements are True",
-        link="all",
+        refer_to="all",
     )
     def groupby_all(
         self,
@@ -3119,7 +2974,7 @@ class BaseQueryCompiler(abc.ABC):
             drop=drop,
         )
 
-    @_doc_groupby_method(result="sum", link="sum")
+    @_doc_groupby_method(result="sum", refer_to="sum")
     def groupby_sum(
         self,
         by,
@@ -3142,7 +2997,9 @@ class BaseQueryCompiler(abc.ABC):
         )
 
     @_doc_groupby_method(
-        action="get the number of elements", result="number of elements", link="size"
+        action="get the number of elements",
+        result="number of elements",
+        refer_to="size",
     )
     def groupby_size(
         self,
@@ -3622,7 +3479,7 @@ class BaseQueryCompiler(abc.ABC):
 
     # DateTime methods
 
-    @_doc_dt_round(method="ceil")
+    @_doc_dt_round(refer_to="ceil")
     def dt_ceil(self, freq, ambiguous="raise", nonexistent="raise"):
         return DateTimeDefault.register(pandas.Series.dt.ceil)(
             self, freq, ambiguous, nonexistent
@@ -3640,49 +3497,49 @@ class BaseQueryCompiler(abc.ABC):
         """
         return DateTimeDefault.register(pandas.Series.dt.components)(self)
 
-    @_doc_dt_timestamp(property="the date without timezone information", method="date")
+    @_doc_dt_timestamp(prop="the date without timezone information", refer_to="date")
     def dt_date(self):
         return DateTimeDefault.register(pandas.Series.dt.date)(self)
 
-    @_doc_dt_timestamp(property="day component", method="day")
+    @_doc_dt_timestamp(prop="day component", refer_to="day")
     def dt_day(self):
         return DateTimeDefault.register(pandas.Series.dt.day)(self)
 
     @_doc_dt_timestamp(
-        property="day name", method="day_name", params="locale : str, optional"
+        prop="day name", refer_to="day_name", params="locale : str, optional"
     )
     def dt_day_name(self, locale=None):
         return DateTimeDefault.register(pandas.Series.dt.day_name)(self, locale)
 
-    @_doc_dt_timestamp(property="integer day of week", method="dayofweek")
+    @_doc_dt_timestamp(prop="integer day of week", refer_to="dayofweek")
     # FIXME: `dt_dayofweek` is an alias for `dt_weekday`, one of them should
     # be removed.
     def dt_dayofweek(self):
         return DateTimeDefault.register(pandas.Series.dt.dayofweek)(self)
 
-    @_doc_dt_timestamp(property="day of year", method="dayofyear")
+    @_doc_dt_timestamp(prop="day of year", refer_to="dayofyear")
     def dt_dayofyear(self):
         return DateTimeDefault.register(pandas.Series.dt.dayofyear)(self)
 
-    @_doc_dt_interval(property="days", method="days")
+    @_doc_dt_interval(prop="days", refer_to="days")
     def dt_days(self):
         return DateTimeDefault.register(pandas.Series.dt.days)(self)
 
-    @_doc_dt_timestamp(property="number of days in month", method="days_in_month")
+    @_doc_dt_timestamp(prop="number of days in month", refer_to="days_in_month")
     # FIXME: `dt_days_in_month` is an alias for `dt_daysinmonth`, one of them should
     # be removed.
     def dt_days_in_month(self):
         return DateTimeDefault.register(pandas.Series.dt.days_in_month)(self)
 
-    @_doc_dt_timestamp(property="number of days in month", method="daysinmonth")
+    @_doc_dt_timestamp(prop="number of days in month", refer_to="daysinmonth")
     def dt_daysinmonth(self):
         return DateTimeDefault.register(pandas.Series.dt.daysinmonth)(self)
 
-    @_doc_dt_period(property="the timestamp of end time", method="end_time")
+    @_doc_dt_period(prop="the timestamp of end time", refer_to="end_time")
     def dt_end_time(self):
         return DateTimeDefault.register(pandas.Series.dt.end_time)(self)
 
-    @_doc_dt_round(method="floor")
+    @_doc_dt_round(refer_to="floor")
     def dt_floor(self, freq, ambiguous="raise", nonexistent="raise"):
         return DateTimeDefault.register(pandas.Series.dt.floor)(
             self, freq, ambiguous, nonexistent
@@ -3701,86 +3558,86 @@ class BaseQueryCompiler(abc.ABC):
         """
         return DateTimeDefault.register(pandas.Series.dt.freq)(self)
 
-    @_doc_dt_timestamp(property="hour", method="hour")
+    @_doc_dt_timestamp(prop="hour", refer_to="hour")
     def dt_hour(self):
         return DateTimeDefault.register(pandas.Series.dt.hour)(self)
 
     @_doc_dt_timestamp(
-        property="the boolean of whether corresponding year is leap",
-        method="is_leap_year",
+        prop="the boolean of whether corresponding year is leap",
+        refer_to="is_leap_year",
     )
     def dt_is_leap_year(self):
         return DateTimeDefault.register(pandas.Series.dt.is_leap_year)(self)
 
     @_doc_dt_timestamp(
-        property="the boolean of whether the date is the last day of the month",
-        method="is_month_end",
+        prop="the boolean of whether the date is the last day of the month",
+        refer_to="is_month_end",
     )
     def dt_is_month_end(self):
         return DateTimeDefault.register(pandas.Series.dt.is_month_end)(self)
 
     @_doc_dt_timestamp(
-        property="the boolean of whether the date is the first day of the month",
-        method="is_month_start",
+        prop="the boolean of whether the date is the first day of the month",
+        refer_to="is_month_start",
     )
     def dt_is_month_start(self):
         return DateTimeDefault.register(pandas.Series.dt.is_month_start)(self)
 
     @_doc_dt_timestamp(
-        property="the boolean of whether the date is the last day of the quarter",
-        method="is_quarter_end",
+        prop="the boolean of whether the date is the last day of the quarter",
+        refer_to="is_quarter_end",
     )
     def dt_is_quarter_end(self):
         return DateTimeDefault.register(pandas.Series.dt.is_quarter_end)(self)
 
     @_doc_dt_timestamp(
-        property="the boolean of whether the date is the first day of the quarter",
-        method="is_quarter_start",
+        prop="the boolean of whether the date is the first day of the quarter",
+        refer_to="is_quarter_start",
     )
     def dt_is_quarter_start(self):
         return DateTimeDefault.register(pandas.Series.dt.is_quarter_start)(self)
 
     @_doc_dt_timestamp(
-        property="the boolean of whether the date is the last day of the year",
-        method="is_year_end",
+        prop="the boolean of whether the date is the last day of the year",
+        refer_to="is_year_end",
     )
     def dt_is_year_end(self):
         return DateTimeDefault.register(pandas.Series.dt.is_year_end)(self)
 
     @_doc_dt_timestamp(
-        property="the boolean of whether the date is the first day of the year",
-        method="is_year_start",
+        prop="the boolean of whether the date is the first day of the year",
+        refer_to="is_year_start",
     )
     def dt_is_year_start(self):
         return DateTimeDefault.register(pandas.Series.dt.is_year_start)(self)
 
-    @_doc_dt_timestamp(property="microseconds component", method="microsecond")
+    @_doc_dt_timestamp(prop="microseconds component", refer_to="microsecond")
     def dt_microsecond(self):
         return DateTimeDefault.register(pandas.Series.dt.microsecond)(self)
 
-    @_doc_dt_interval(property="microseconds component", method="microseconds")
+    @_doc_dt_interval(prop="microseconds component", refer_to="microseconds")
     def dt_microseconds(self):
         return DateTimeDefault.register(pandas.Series.dt.microseconds)(self)
 
-    @_doc_dt_timestamp(property="minute component", method="minute")
+    @_doc_dt_timestamp(prop="minute component", refer_to="minute")
     def dt_minute(self):
         return DateTimeDefault.register(pandas.Series.dt.minute)(self)
 
-    @_doc_dt_timestamp(property="month component", method="month")
+    @_doc_dt_timestamp(prop="month component", refer_to="month")
     def dt_month(self):
         return DateTimeDefault.register(pandas.Series.dt.month)(self)
 
     @_doc_dt_timestamp(
-        property="the month name", method="month name", params="locale : str, optional"
+        prop="the month name", refer_to="month name", params="locale : str, optional"
     )
     def dt_month_name(self, locale=None):
         return DateTimeDefault.register(pandas.Series.dt.month_name)(self, locale)
 
-    @_doc_dt_timestamp(property="nanoseconds component", method="nanosecond")
+    @_doc_dt_timestamp(prop="nanoseconds component", refer_to="nanosecond")
     def dt_nanosecond(self):
         return DateTimeDefault.register(pandas.Series.dt.nanosecond)(self)
 
-    @_doc_dt_interval(property="nanoseconds component", method="nanoseconds")
+    @_doc_dt_interval(prop="nanoseconds component", refer_to="nanoseconds")
     def dt_nanoseconds(self):
         return DateTimeDefault.register(pandas.Series.dt.nanoseconds)(self)
 
@@ -3797,29 +3654,29 @@ class BaseQueryCompiler(abc.ABC):
         """
         return DateTimeDefault.register(pandas.Series.dt.normalize)(self)
 
-    @_doc_dt_timestamp(property="quarter component", method="quarter")
+    @_doc_dt_timestamp(prop="quarter component", refer_to="quarter")
     def dt_quarter(self):
         return DateTimeDefault.register(pandas.Series.dt.quarter)(self)
 
-    @_doc_dt_period(property="the fiscal year", method="qyear")
+    @_doc_dt_period(prop="the fiscal year", refer_to="qyear")
     def dt_qyear(self):
         return DateTimeDefault.register(pandas.Series.dt.qyear)(self)
 
-    @_doc_dt_round(method="round")
+    @_doc_dt_round(refer_to="round")
     def dt_round(self, freq, ambiguous="raise", nonexistent="raise"):
         return DateTimeDefault.register(pandas.Series.dt.round)(
             self, freq, ambiguous, nonexistent
         )
 
-    @_doc_dt_timestamp(property="seconds component", method="second")
+    @_doc_dt_timestamp(prop="seconds component", refer_to="second")
     def dt_second(self):
         return DateTimeDefault.register(pandas.Series.dt.second)(self)
 
-    @_doc_dt_interval(property="seconds component", method="seconds")
+    @_doc_dt_interval(prop="seconds component", refer_to="seconds")
     def dt_seconds(self):
         return DateTimeDefault.register(pandas.Series.dt.seconds)(self)
 
-    @_doc_dt_period(property="the timestamp of start time", method="start_time")
+    @_doc_dt_period(prop="the timestamp of start time", refer_to="start_time")
     def dt_start_time(self):
         return DateTimeDefault.register(pandas.Series.dt.start_time)(self)
 
@@ -3839,12 +3696,12 @@ class BaseQueryCompiler(abc.ABC):
         """
         return DateTimeDefault.register(pandas.Series.dt.strftime)(self, date_format)
 
-    @_doc_dt_timestamp(property="time component", method="time")
+    @_doc_dt_timestamp(prop="time component", refer_to="time")
     def dt_time(self):
         return DateTimeDefault.register(pandas.Series.dt.time)(self)
 
     @_doc_dt_timestamp(
-        property="time component with timezone information", method="timetz"
+        prop="time component with timezone information", refer_to="timetz"
     )
     def dt_timetz(self):
         return DateTimeDefault.register(pandas.Series.dt.timetz)(self)
@@ -3894,11 +3751,11 @@ class BaseQueryCompiler(abc.ABC):
         """
         return DateTimeDefault.register(pandas.Series.dt.to_pytimedelta)(self)
 
-    @_doc_dt_period(property="the timestamp representation", method="to_timestamp")
+    @_doc_dt_period(prop="the timestamp representation", refer_to="to_timestamp")
     def dt_to_timestamp(self):
         return DateTimeDefault.register(pandas.Series.dt.to_timestamp)(self)
 
-    @_doc_dt_interval(property="duration in seconds", method="total_seconds")
+    @_doc_dt_interval(prop="duration in seconds", refer_to="total_seconds")
     def dt_total_seconds(self):
         return DateTimeDefault.register(pandas.Series.dt.total_seconds)(self)
 
@@ -3953,19 +3810,19 @@ class BaseQueryCompiler(abc.ABC):
             self, tz, ambiguous, nonexistent
         )
 
-    @_doc_dt_timestamp(property="week component", method="week")
+    @_doc_dt_timestamp(prop="week component", refer_to="week")
     def dt_week(self):
         return DateTimeDefault.register(pandas.Series.dt.week)(self)
 
-    @_doc_dt_timestamp(property="integer day of week", method="weekday")
+    @_doc_dt_timestamp(prop="integer day of week", refer_to="weekday")
     def dt_weekday(self):
         return DateTimeDefault.register(pandas.Series.dt.weekday)(self)
 
-    @_doc_dt_timestamp(property="week of year", method="weekofyear")
+    @_doc_dt_timestamp(prop="week of year", refer_to="weekofyear")
     def dt_weekofyear(self):
         return DateTimeDefault.register(pandas.Series.dt.weekofyear)(self)
 
-    @_doc_dt_timestamp(property="year component", method="year")
+    @_doc_dt_timestamp(prop="year component", refer_to="year")
     def dt_year(self):
         return DateTimeDefault.register(pandas.Series.dt.year)(self)
 
@@ -3982,7 +3839,7 @@ class BaseQueryCompiler(abc.ABC):
         action="apply passed aggregation function",
         params="func : str, dict, callable(pandas.Series) -> scalar, or list of such",
         output="function names",
-        link="agg",
+        refer_to="agg",
     )
     def resample_agg_df(self, resample_args, func, *args, **kwargs):
         return ResampleDefault.register(pandas.core.resample.Resampler.aggregate)(
@@ -3994,7 +3851,7 @@ class BaseQueryCompiler(abc.ABC):
         action="apply passed aggregation function in a one-column query compiler",
         params="func : str, dict, callable(pandas.Series) -> scalar, or list of such",
         output="function names",
-        link="agg",
+        refer_to="agg",
     )
     def resample_agg_ser(self, resample_args, func, *args, **kwargs):
         return ResampleDefault.register(
@@ -4006,7 +3863,7 @@ class BaseQueryCompiler(abc.ABC):
         action="apply passed aggregation function",
         params="func : str, dict, callable(pandas.Series) -> scalar, or list of such",
         output="function names",
-        link="apply",
+        refer_to="apply",
     )
     def resample_app_df(self, resample_args, func, *args, **kwargs):
         return ResampleDefault.register(pandas.core.resample.Resampler.apply)(
@@ -4018,7 +3875,7 @@ class BaseQueryCompiler(abc.ABC):
         action="apply passed aggregation function in a one-column query compiler",
         params="func : str, dict, callable(pandas.Series) -> scalar, or list of such",
         output="function names",
-        link="apply",
+        refer_to="apply",
     )
     def resample_app_ser(self, resample_args, func, *args, **kwargs):
         return ResampleDefault.register(
@@ -4049,20 +3906,20 @@ class BaseQueryCompiler(abc.ABC):
 
     # FIXME: `resample_backfill` is an alias for `resample_bfill`, on of these method
     # should be removed.
-    @_doc_resample_fillna(method="back-fill", link="backfill")
+    @_doc_resample_fillna(method="back-fill", refer_to="backfill")
     def resample_backfill(self, resample_args, limit):
         return ResampleDefault.register(pandas.core.resample.Resampler.backfill)(
             self, resample_args, limit
         )
 
-    @_doc_resample_fillna(method="back-fill", link="bfill")
+    @_doc_resample_fillna(method="back-fill", refer_to="bfill")
     def resample_bfill(self, resample_args, limit):
         return ResampleDefault.register(pandas.core.resample.Resampler.bfill)(
             self, resample_args, limit
         )
 
     @_doc_resample_reduction(
-        result="number of non-NA values", link="count", compatibility_params=False
+        result="number of non-NA values", refer_to="count", compatibility_params=False
     )
     def resample_count(self, resample_args):
         return ResampleDefault.register(pandas.core.resample.Resampler.count)(
@@ -4071,21 +3928,21 @@ class BaseQueryCompiler(abc.ABC):
 
     # FIXME: `resample_ffill` is an alias for `resample_pad`, on of these method
     # should be removed.
-    @_doc_resample_fillna(method="forward-fill", link="ffill")
+    @_doc_resample_fillna(method="forward-fill", refer_to="ffill")
     def resample_ffill(self, resample_args, limit):
         return ResampleDefault.register(pandas.core.resample.Resampler.ffill)(
             self, resample_args, limit
         )
 
     # FIXME: we should combine all method all resample fillna methods into `resample_fillna`
-    @_doc_resample_fillna(method="specified", link="fillna", params="method : str")
+    @_doc_resample_fillna(method="specified", refer_to="fillna", params="method : str")
     def resample_fillna(self, resample_args, method, limit):
         return ResampleDefault.register(pandas.core.resample.Resampler.fillna)(
             self, resample_args, method, limit
         )
 
     @_doc_resample_reduction(
-        result="first element", link="first", params="_method : str"
+        result="first element", refer_to="first", params="_method : str"
     )
     def resample_first(self, resample_args, _method, *args, **kwargs):
         return ResampleDefault.register(pandas.core.resample.Resampler.first)(
@@ -4118,7 +3975,7 @@ class BaseQueryCompiler(abc.ABC):
 
     @_doc_resample_fillna(
         method="specified interpolation",
-        link="interpolate",
+        refer_to="interpolate",
         params="""
         method : str
         axis : {{0, 1}}
@@ -4157,46 +4014,54 @@ class BaseQueryCompiler(abc.ABC):
             **kwargs,
         )
 
-    @_doc_resample_reduction(result="last element", params="_method : str", link="last")
+    @_doc_resample_reduction(
+        result="last element", params="_method : str", refer_to="last"
+    )
     def resample_last(self, resample_args, _method, *args, **kwargs):
         return ResampleDefault.register(pandas.core.resample.Resampler.last)(
             self, resample_args, _method, *args, **kwargs
         )
 
-    @_doc_resample_reduction(result="maximum value", params="_method : str", link="max")
+    @_doc_resample_reduction(
+        result="maximum value", params="_method : str", refer_to="max"
+    )
     def resample_max(self, resample_args, _method, *args, **kwargs):
         return ResampleDefault.register(pandas.core.resample.Resampler.max)(
             self, resample_args, _method, *args, **kwargs
         )
 
-    @_doc_resample_reduction(result="mean value", params="_method : str", link="mean")
+    @_doc_resample_reduction(
+        result="mean value", params="_method : str", refer_to="mean"
+    )
     def resample_mean(self, resample_args, _method, *args, **kwargs):
         return ResampleDefault.register(pandas.core.resample.Resampler.mean)(
             self, resample_args, _method, *args, **kwargs
         )
 
     @_doc_resample_reduction(
-        result="median value", params="_method : str", link="median"
+        result="median value", params="_method : str", refer_to="median"
     )
     def resample_median(self, resample_args, _method, *args, **kwargs):
         return ResampleDefault.register(pandas.core.resample.Resampler.median)(
             self, resample_args, _method, *args, **kwargs
         )
 
-    @_doc_resample_reduction(result="minimum value", params="_method : str", link="min")
+    @_doc_resample_reduction(
+        result="minimum value", params="_method : str", refer_to="min"
+    )
     def resample_min(self, resample_args, _method, *args, **kwargs):
         return ResampleDefault.register(pandas.core.resample.Resampler.min)(
             self, resample_args, _method, *args, **kwargs
         )
 
-    @_doc_resample_fillna(method="'nearest'", link="nearest")
+    @_doc_resample_fillna(method="'nearest'", refer_to="nearest")
     def resample_nearest(self, resample_args, limit):
         return ResampleDefault.register(pandas.core.resample.Resampler.nearest)(
             self, resample_args, limit
         )
 
     @_doc_resample_reduction(
-        result="number of unique values", params="_method : str", link="nunique"
+        result="number of unique values", params="_method : str", refer_to="nunique"
     )
     def resample_nunique(self, resample_args, _method, *args, **kwargs):
         return ResampleDefault.register(pandas.core.resample.Resampler.nunique)(
@@ -4209,7 +4074,7 @@ class BaseQueryCompiler(abc.ABC):
         action="compute open, high, low and close values",
         params="_method : str",
         output="labels of columns containing computed values",
-        link="ohlc",
+        refer_to="ohlc",
     )
     def resample_ohlc_df(self, resample_args, _method, *args, **kwargs):
         return ResampleDefault.register(pandas.core.resample.Resampler.ohlc)(
@@ -4220,14 +4085,14 @@ class BaseQueryCompiler(abc.ABC):
         action="compute open, high, low and close values",
         params="_method : str",
         output="labels of columns containing computed values",
-        link="ohlc",
+        refer_to="ohlc",
     )
     def resample_ohlc_ser(self, resample_args, _method, *args, **kwargs):
         return ResampleDefault.register(
             pandas.core.resample.Resampler.ohlc, squeeze_self=True
         )(self, resample_args, _method, *args, **kwargs)
 
-    @_doc_resample_fillna(method="'pad'", link="pad")
+    @_doc_resample_fillna(method="'pad'", refer_to="pad")
     def resample_pad(self, resample_args, limit):
         return ResampleDefault.register(pandas.core.resample.Resampler.pad)(
             self, resample_args, limit
@@ -4268,35 +4133,37 @@ class BaseQueryCompiler(abc.ABC):
         params="""
         _method : str
         min_count : int""",
-        link="prod",
+        refer_to="prod",
     )
     def resample_prod(self, resample_args, _method, min_count, *args, **kwargs):
         return ResampleDefault.register(pandas.core.resample.Resampler.prod)(
             self, resample_args, _method, min_count, *args, **kwargs
         )
 
-    @_doc_resample_reduction(result="quantile", params="q : float", link="quantile")
+    @_doc_resample_reduction(result="quantile", params="q : float", refer_to="quantile")
     def resample_quantile(self, resample_args, q, *args, **kwargs):
         return ResampleDefault.register(pandas.core.resample.Resampler.quantile)(
             self, resample_args, q, *args, **kwargs
         )
 
     @_doc_resample_reduction(
-        result="standart error of the mean", params="ddof : int, default: 1", link="sem"
+        result="standart error of the mean",
+        params="ddof : int, default: 1",
+        refer_to="sem",
     )
     def resample_sem(self, resample_args, ddof=1, *args, **kwargs):
         return ResampleDefault.register(pandas.core.resample.Resampler.sem)(
             self, resample_args, ddof, *args, **kwargs
         )
 
-    @_doc_resample_reduction(result="number of element in a group", link="size")
+    @_doc_resample_reduction(result="number of element in a group", refer_to="size")
     def resample_size(self, resample_args, *args, **kwargs):
         return ResampleDefault.register(pandas.core.resample.Resampler.size)(
             self, resample_args, *args, **kwargs
         )
 
     @_doc_resample_reduction(
-        result="standart deviation", params="ddof : int", link="std"
+        result="standart deviation", params="ddof : int", refer_to="std"
     )
     def resample_std(self, resample_args, ddof, *args, **kwargs):
         return ResampleDefault.register(pandas.core.resample.Resampler.std)(
@@ -4308,7 +4175,7 @@ class BaseQueryCompiler(abc.ABC):
         params="""
         _method : str
         min_count : int""",
-        link="sum",
+        refer_to="sum",
     )
     def resample_sum(self, resample_args, _method, min_count, *args, **kwargs):
         return ResampleDefault.register(pandas.core.resample.Resampler.sum)(
@@ -4344,7 +4211,7 @@ class BaseQueryCompiler(abc.ABC):
             self, resample_args, arg, *args, **kwargs
         )
 
-    @_doc_resample_reduction(result="variance", params="ddof : int", link="var")
+    @_doc_resample_reduction(result="variance", params="ddof : int", refer_to="var")
     def resample_var(self, resample_args, ddof, *args, **kwargs):
         return ResampleDefault.register(pandas.core.resample.Resampler.var)(
             self, resample_args, ddof, *args, **kwargs
@@ -4354,12 +4221,12 @@ class BaseQueryCompiler(abc.ABC):
 
     # Str methods
 
-    @_doc_str_method(method="capitalize", params="")
+    @_doc_str_method(refer_to="capitalize", params="")
     def str_capitalize(self):
         return StrDefault.register(pandas.Series.str.capitalize)(self)
 
     @_doc_str_method(
-        method="center",
+        refer_to="center",
         params="""
         width : int
         fillchar : str, default: ' '""",
@@ -4368,7 +4235,7 @@ class BaseQueryCompiler(abc.ABC):
         return StrDefault.register(pandas.Series.str.center)(self, width, fillchar)
 
     @_doc_str_method(
-        method="contains",
+        refer_to="contains",
         params="""
         pat : str
         case : bool, default: True
@@ -4382,7 +4249,7 @@ class BaseQueryCompiler(abc.ABC):
         )
 
     @_doc_str_method(
-        method="count",
+        refer_to="count",
         params="""
         pat : str
         flags : int, default: 0
@@ -4392,7 +4259,7 @@ class BaseQueryCompiler(abc.ABC):
         return StrDefault.register(pandas.Series.str.count)(self, pat, flags, **kwargs)
 
     @_doc_str_method(
-        method="endswith",
+        refer_to="endswith",
         params="""
         pat : str
         na : object, default: np.NaN""",
@@ -4401,7 +4268,7 @@ class BaseQueryCompiler(abc.ABC):
         return StrDefault.register(pandas.Series.str.endswith)(self, pat, na)
 
     @_doc_str_method(
-        method="find",
+        refer_to="find",
         params="""
         sub : str
         start : int, default: 0
@@ -4411,7 +4278,7 @@ class BaseQueryCompiler(abc.ABC):
         return StrDefault.register(pandas.Series.str.find)(self, sub, start, end)
 
     @_doc_str_method(
-        method="findall",
+        refer_to="findall",
         params="""
         pat : str
         flags : int, default: 0
@@ -4422,12 +4289,12 @@ class BaseQueryCompiler(abc.ABC):
             self, pat, flags, **kwargs
         )
 
-    @_doc_str_method(method="get", params="i : int")
+    @_doc_str_method(refer_to="get", params="i : int")
     def str_get(self, i):
         return StrDefault.register(pandas.Series.str.get)(self, i)
 
     @_doc_str_method(
-        method="index",
+        refer_to="index",
         params="""
         sub : str
         start : int, default: 0
@@ -4436,52 +4303,52 @@ class BaseQueryCompiler(abc.ABC):
     def str_index(self, sub, start=0, end=None):
         return StrDefault.register(pandas.Series.str.index)(self, sub, start, end)
 
-    @_doc_str_method(method="isalnum", params="")
+    @_doc_str_method(refer_to="isalnum", params="")
     def str_isalnum(self):
         return StrDefault.register(pandas.Series.str.isalnum)(self)
 
-    @_doc_str_method(method="isalpha", params="")
+    @_doc_str_method(refer_to="isalpha", params="")
     def str_isalpha(self):
         return StrDefault.register(pandas.Series.str.isalpha)(self)
 
-    @_doc_str_method(method="isdecimal", params="")
+    @_doc_str_method(refer_to="isdecimal", params="")
     def str_isdecimal(self):
         return StrDefault.register(pandas.Series.str.isdecimal)(self)
 
-    @_doc_str_method(method="isdigit", params="")
+    @_doc_str_method(refer_to="isdigit", params="")
     def str_isdigit(self):
         return StrDefault.register(pandas.Series.str.isdigit)(self)
 
-    @_doc_str_method(method="islower", params="")
+    @_doc_str_method(refer_to="islower", params="")
     def str_islower(self):
         return StrDefault.register(pandas.Series.str.islower)(self)
 
-    @_doc_str_method(method="isnumeric", params="")
+    @_doc_str_method(refer_to="isnumeric", params="")
     def str_isnumeric(self):
         return StrDefault.register(pandas.Series.str.isnumeric)(self)
 
-    @_doc_str_method(method="isspace", params="")
+    @_doc_str_method(refer_to="isspace", params="")
     def str_isspace(self):
         return StrDefault.register(pandas.Series.str.isspace)(self)
 
-    @_doc_str_method(method="istitle", params="")
+    @_doc_str_method(refer_to="istitle", params="")
     def str_istitle(self):
         return StrDefault.register(pandas.Series.str.istitle)(self)
 
-    @_doc_str_method(method="isupper", params="")
+    @_doc_str_method(refer_to="isupper", params="")
     def str_isupper(self):
         return StrDefault.register(pandas.Series.str.isupper)(self)
 
-    @_doc_str_method(method="join", params="sep : str")
+    @_doc_str_method(refer_to="join", params="sep : str")
     def str_join(self, sep):
         return StrDefault.register(pandas.Series.str.join)(self, sep)
 
-    @_doc_str_method(method="len", params="")
+    @_doc_str_method(refer_to="len", params="")
     def str_len(self):
         return StrDefault.register(pandas.Series.str.len)(self)
 
     @_doc_str_method(
-        method="ljust",
+        refer_to="ljust",
         params="""
         width : int
         fillchar : str, default: ' '""",
@@ -4489,16 +4356,16 @@ class BaseQueryCompiler(abc.ABC):
     def str_ljust(self, width, fillchar=" "):
         return StrDefault.register(pandas.Series.str.ljust)(self, width, fillchar)
 
-    @_doc_str_method(method="lower", params="")
+    @_doc_str_method(refer_to="lower", params="")
     def str_lower(self):
         return StrDefault.register(pandas.Series.str.lower)(self)
 
-    @_doc_str_method(method="lstrip", params="to_strip : str, optional")
+    @_doc_str_method(refer_to="lstrip", params="to_strip : str, optional")
     def str_lstrip(self, to_strip=None):
         return StrDefault.register(pandas.Series.str.lstrip)(self, to_strip)
 
     @_doc_str_method(
-        method="match",
+        refer_to="match",
         params="""
         pat : str
         case : bool, default: True
@@ -4508,12 +4375,14 @@ class BaseQueryCompiler(abc.ABC):
     def str_match(self, pat, case=True, flags=0, na=np.NaN):
         return StrDefault.register(pandas.Series.str.match)(self, pat, case, flags, na)
 
-    @_doc_str_method(method="normalize", params="form : {'NFC', 'NFKC', 'NFD', 'NFKD'}")
+    @_doc_str_method(
+        refer_to="normalize", params="form : {'NFC', 'NFKC', 'NFD', 'NFKD'}"
+    )
     def str_normalize(self, form):
         return StrDefault.register(pandas.Series.str.normalize)(self, form)
 
     @_doc_str_method(
-        method="pad",
+        refer_to="pad",
         params="""
         width : int
         side : {'left', 'right', 'both'}, default: 'left'
@@ -4523,7 +4392,7 @@ class BaseQueryCompiler(abc.ABC):
         return StrDefault.register(pandas.Series.str.pad)(self, width, side, fillchar)
 
     @_doc_str_method(
-        method="partition",
+        refer_to="partition",
         params="""
         sep : str, default: ' '
         expand : bool, default: True""",
@@ -4531,12 +4400,12 @@ class BaseQueryCompiler(abc.ABC):
     def str_partition(self, sep=" ", expand=True):
         return StrDefault.register(pandas.Series.str.partition)(self, sep, expand)
 
-    @_doc_str_method(method="repeat", params="repeats : int")
+    @_doc_str_method(refer_to="repeat", params="repeats : int")
     def str_repeat(self, repeats):
         return StrDefault.register(pandas.Series.str.repeat)(self, repeats)
 
     @_doc_str_method(
-        method="replace",
+        refer_to="replace",
         params="""
         pat : str
         repl : str or callable
@@ -4551,7 +4420,7 @@ class BaseQueryCompiler(abc.ABC):
         )
 
     @_doc_str_method(
-        method="rfind",
+        refer_to="rfind",
         params="""
         sub : str
         start : int, default: 0
@@ -4561,7 +4430,7 @@ class BaseQueryCompiler(abc.ABC):
         return StrDefault.register(pandas.Series.str.rfind)(self, sub, start, end)
 
     @_doc_str_method(
-        method="rindex",
+        refer_to="rindex",
         params="""
         sub : str
         start : int, default: 0
@@ -4571,7 +4440,7 @@ class BaseQueryCompiler(abc.ABC):
         return StrDefault.register(pandas.Series.str.rindex)(self, sub, start, end)
 
     @_doc_str_method(
-        method="rjust",
+        refer_to="rjust",
         params="""
         width : int
         fillchar : str, default: ' '""",
@@ -4580,7 +4449,7 @@ class BaseQueryCompiler(abc.ABC):
         return StrDefault.register(pandas.Series.str.rjust)(self, width, fillchar)
 
     @_doc_str_method(
-        method="rpartition",
+        refer_to="rpartition",
         params="""
         sep : str, default: ' '
         expand : bool, default: True""",
@@ -4589,7 +4458,7 @@ class BaseQueryCompiler(abc.ABC):
         return StrDefault.register(pandas.Series.str.rpartition)(self, sep, expand)
 
     @_doc_str_method(
-        method="rsplit",
+        refer_to="rsplit",
         params="""
         pat : str, optional
         n : int, default: -1
@@ -4598,12 +4467,12 @@ class BaseQueryCompiler(abc.ABC):
     def str_rsplit(self, pat=None, n=-1, expand=False):
         return StrDefault.register(pandas.Series.str.rsplit)(self, pat, n, expand)
 
-    @_doc_str_method(method="rstrip", params="to_strip : str, optional")
+    @_doc_str_method(refer_to="rstrip", params="to_strip : str, optional")
     def str_rstrip(self, to_strip=None):
         return StrDefault.register(pandas.Series.str.rstrip)(self, to_strip)
 
     @_doc_str_method(
-        method="slice",
+        refer_to="slice",
         params="""
         start : int, optional
         stop : int, optional
@@ -4613,7 +4482,7 @@ class BaseQueryCompiler(abc.ABC):
         return StrDefault.register(pandas.Series.str.slice)(self, start, stop, step)
 
     @_doc_str_method(
-        method="slice_replace",
+        refer_to="slice_replace",
         params="""
         start : int, optional
         stop : int, optional
@@ -4625,7 +4494,7 @@ class BaseQueryCompiler(abc.ABC):
         )
 
     @_doc_str_method(
-        method="split",
+        refer_to="split",
         params="""
         pat : str, optional
         n : int, default: -1
@@ -4635,7 +4504,7 @@ class BaseQueryCompiler(abc.ABC):
         return StrDefault.register(pandas.Series.str.split)(self, pat, n, expand)
 
     @_doc_str_method(
-        method="startswith",
+        refer_to="startswith",
         params="""
         pat : str
         na : object, default: np.NaN""",
@@ -4643,28 +4512,28 @@ class BaseQueryCompiler(abc.ABC):
     def str_startswith(self, pat, na=np.NaN):
         return StrDefault.register(pandas.Series.str.startswith)(self, pat, na)
 
-    @_doc_str_method(method="strip", params="to_strip : str, optional")
+    @_doc_str_method(refer_to="strip", params="to_strip : str, optional")
     def str_strip(self, to_strip=None):
         return StrDefault.register(pandas.Series.str.strip)(self, to_strip)
 
-    @_doc_str_method(method="swapcase", params="")
+    @_doc_str_method(refer_to="swapcase", params="")
     def str_swapcase(self):
         return StrDefault.register(pandas.Series.str.swapcase)(self)
 
-    @_doc_str_method(method="title", params="")
+    @_doc_str_method(refer_to="title", params="")
     def str_title(self):
         return StrDefault.register(pandas.Series.str.title)(self)
 
-    @_doc_str_method(method="translate", params="table : dict")
+    @_doc_str_method(refer_to="translate", params="table : dict")
     def str_translate(self, table):
         return StrDefault.register(pandas.Series.str.translate)(self, table)
 
-    @_doc_str_method(method="upper", params="")
+    @_doc_str_method(refer_to="upper", params="")
     def str_upper(self):
         return StrDefault.register(pandas.Series.str.upper)(self)
 
     @_doc_str_method(
-        method="wrap",
+        refer_to="wrap",
         params="""
         width : int
         **kwargs : dict""",
@@ -4672,7 +4541,7 @@ class BaseQueryCompiler(abc.ABC):
     def str_wrap(self, width, **kwargs):
         return StrDefault.register(pandas.Series.str.wrap)(self, width, **kwargs)
 
-    @_doc_str_method(method="zfill", params="width : int")
+    @_doc_str_method(refer_to="zfill", params="width : int")
     def str_zfill(self, width):
         return StrDefault.register(pandas.Series.str.zfill)(self, width)
 
@@ -4687,7 +4556,7 @@ class BaseQueryCompiler(abc.ABC):
     @_doc_window_method(
         result="the result of passed functions",
         action="apply specified functions",
-        method="aggregate",
+        refer_to="aggregate",
         params="""
         func : str, dict, callable(pandas.Series) -> scalar, or list of such
         *args : iterable
@@ -4705,7 +4574,7 @@ class BaseQueryCompiler(abc.ABC):
     @_doc_window_method(
         result="the result of passed function",
         action="apply specified function",
-        method="apply",
+        refer_to="apply",
         params="""
         func : callable(pandas.Series) -> scalar
         raw : bool, default: False
@@ -4733,7 +4602,7 @@ class BaseQueryCompiler(abc.ABC):
 
     @_doc_window_method(
         result="correlation",
-        method="corr",
+        refer_to="corr",
         params="""
         other : modin.pandas.Series, modin.pandas.DataFrame, list-like, optional
         pairwise : bool, optional
@@ -4745,7 +4614,7 @@ class BaseQueryCompiler(abc.ABC):
             self, rolling_args, other, pairwise, *args, **kwargs
         )
 
-    @_doc_window_method(result="number of non-NA values", method="count")
+    @_doc_window_method(result="number of non-NA values", refer_to="count")
     def rolling_count(self, rolling_args):
         return RollingDefault.register(pandas.core.window.rolling.Rolling.count)(
             self, rolling_args
@@ -4753,7 +4622,7 @@ class BaseQueryCompiler(abc.ABC):
 
     @_doc_window_method(
         result="covariance",
-        method="cov",
+        refer_to="cov",
         params="""
         other : modin.pandas.Series, modin.pandas.DataFrame, list-like, optional
         pairwise : bool, optional
@@ -4766,7 +4635,7 @@ class BaseQueryCompiler(abc.ABC):
         )
 
     @_doc_window_method(
-        result="unibased kurtosis", method="kurt", params="**kwargs : dict"
+        result="unibased kurtosis", refer_to="kurt", params="**kwargs : dict"
     )
     def rolling_kurt(self, rolling_args, **kwargs):
         return RollingDefault.register(pandas.core.window.rolling.Rolling.kurt)(
@@ -4775,7 +4644,7 @@ class BaseQueryCompiler(abc.ABC):
 
     @_doc_window_method(
         result="maximum value",
-        method="max",
+        refer_to="max",
         params="""
         *args : iterable
         **kwargs : dict""",
@@ -4787,7 +4656,7 @@ class BaseQueryCompiler(abc.ABC):
 
     @_doc_window_method(
         result="mean value",
-        method="mean",
+        refer_to="mean",
         params="""
         *args : iterable
         **kwargs : dict""",
@@ -4798,7 +4667,7 @@ class BaseQueryCompiler(abc.ABC):
         )
 
     @_doc_window_method(
-        result="median value", method="median", params="**kwargs : dict"
+        result="median value", refer_to="median", params="**kwargs : dict"
     )
     def rolling_median(self, rolling_args, **kwargs):
         return RollingDefault.register(pandas.core.window.rolling.Rolling.median)(
@@ -4807,7 +4676,7 @@ class BaseQueryCompiler(abc.ABC):
 
     @_doc_window_method(
         result="minimum value",
-        method="min",
+        refer_to="min",
         params="""
         *args : iterable
         **kwargs : dict""",
@@ -4819,7 +4688,7 @@ class BaseQueryCompiler(abc.ABC):
 
     @_doc_window_method(
         result="quantile",
-        method="quantile",
+        refer_to="quantile",
         params="""
         quantile : float
         interpolation : {'linear', 'lower', 'higher', 'midpoint', 'nearest'}, default: 'linear'
@@ -4833,7 +4702,7 @@ class BaseQueryCompiler(abc.ABC):
         )
 
     @_doc_window_method(
-        result="unibased skewness", method="skew", params="**kwargs : dict"
+        result="unibased skewness", refer_to="skew", params="**kwargs : dict"
     )
     def rolling_skew(self, rolling_args, **kwargs):
         return RollingDefault.register(pandas.core.window.rolling.Rolling.skew)(
@@ -4842,7 +4711,7 @@ class BaseQueryCompiler(abc.ABC):
 
     @_doc_window_method(
         result="standart deviation",
-        method="std",
+        refer_to="std",
         params="""
         ddof : int, default: 1
         *args : iterable
@@ -4855,7 +4724,7 @@ class BaseQueryCompiler(abc.ABC):
 
     @_doc_window_method(
         result="sum",
-        method="sum",
+        refer_to="sum",
         params="""
         *args : iterable
         **kwargs : dict""",
@@ -4867,7 +4736,7 @@ class BaseQueryCompiler(abc.ABC):
 
     @_doc_window_method(
         result="variance",
-        method="var",
+        refer_to="var",
         params="""
         ddof : int, default: 1
         *args : iterable
@@ -4885,7 +4754,7 @@ class BaseQueryCompiler(abc.ABC):
     @_doc_window_method(
         win_type="window of the specified type",
         result="mean",
-        method="mean",
+        refer_to="mean",
         params="""
         *args : iterable
         **kwargs : dict""",
@@ -4898,7 +4767,7 @@ class BaseQueryCompiler(abc.ABC):
     @_doc_window_method(
         win_type="window of the specified type",
         result="standart deviation",
-        method="std",
+        refer_to="std",
         params="""
         ddof : int, default: 1
         *args : iterable
@@ -4912,7 +4781,7 @@ class BaseQueryCompiler(abc.ABC):
     @_doc_window_method(
         win_type="window of the specified type",
         result="sum",
-        method="sum",
+        refer_to="sum",
         params="""
         *args : iterable
         **kwargs : dict""",
@@ -4925,7 +4794,7 @@ class BaseQueryCompiler(abc.ABC):
     @_doc_window_method(
         win_type="window of the specified type",
         result="variance",
-        method="var",
+        refer_to="var",
         params="""
         ddof : int, default: 1
         *args : iterable
@@ -4976,7 +4845,7 @@ class BaseQueryCompiler(abc.ABC):
         skipna : bool
         level : None, default: None
             Serves the compatibility purpose. Always have to be None.""",
-        link="mad",
+        refer_to="mad",
     )
     def mad(self, axis, skipna, level=None):
         return DataFrameDefault.register(pandas.DataFrame.mad)(
@@ -4984,7 +4853,7 @@ class BaseQueryCompiler(abc.ABC):
         )
 
     @_doc_reduce_agg(
-        method="unibased kurtosis", link="kurt", extra_params=["skipna", "**kwargs"]
+        method="unibased kurtosis", refer_to="kurt", extra_params=["skipna", "**kwargs"]
     )
     def kurt(self, axis, level=None, numeric_only=None, skipna=True, **kwargs):
         return DataFrameDefault.register(pandas.DataFrame.kurt)(
