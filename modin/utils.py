@@ -83,7 +83,6 @@ def _get_indents(source: Union[list, str]) -> list:
     list of ints
         List containing computed indents for each line.
     """
-
     indents = []
 
     if not isinstance(source, list):
@@ -103,7 +102,7 @@ def format_string(template: str, **kwargs) -> str:
     """
     Insert passed values at the corresponding placeholders of the specified template.
 
-    In contrast with the regular ``str.format`` this function computes proper
+    In contrast with the regular ``str.format()`` this function computes proper
     indents for the placeholder values.
 
     Parameters
