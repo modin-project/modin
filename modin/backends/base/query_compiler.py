@@ -687,7 +687,7 @@ class BaseQueryCompiler(abc.ABC):
             self,
             other=other,
             squeeze_self=True,
-            squeeze_otheself_on_right=True,
+            squeeze_other=True,
             **kwargs,
         )
 
