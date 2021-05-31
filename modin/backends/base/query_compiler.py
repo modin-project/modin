@@ -88,7 +88,7 @@ def _set_axis(axis):
 # by using *args and **kwargs. They should be spread into actual parameters.
 # Currently actual arguments are placed in the methods docstrings, but since they're
 # not presented in the function's signature it makes linter to raise `PR02: unknow parameters`
-# warning. For now, they're silenced by using `noqa`.
+# warning. For now, they're silenced by using `noqa` (Modin issue #3108).
 class BaseQueryCompiler(abc.ABC):
     """
     Abstract class that handles the queries to Modin dataframes.
@@ -385,7 +385,7 @@ class BaseQueryCompiler(abc.ABC):
             Left operand of the binary operation.
         func : callable(pandas.Series, pandas.Series) -> pandas.Series
             Function that takes two ``pandas.Series`` with alligned axes
-            and return one ``pandas.Series`` - the result combination.
+            and returns one ``pandas.Series`` - the result combination.
         fill_value : float or None
             Value to fill missing values with after frame alignment occurred.
         overwrite : bool
@@ -631,7 +631,7 @@ class BaseQueryCompiler(abc.ABC):
         )
 
     # FIXME: query compiler shoudln't care about differences between Frame and Series.
-    # We should combine `df_update` and `series_update` into one method.
+    # We should combine `df_update` and `series_update` into one method (Modin issue #3101).
     @doc_utils.add_refer_to("DataFrame.update")
     def df_update(self, other, **kwargs):  # noqa: PR02
         """
@@ -1104,6 +1104,7 @@ class BaseQueryCompiler(abc.ABC):
 
     # FIXME: `**kwargs` which follows `numpy.conj` signature was inherited
     # from ``PandasQueryCompiler``, we should get rid of this dependency.
+    # (Modin issue #3108)
     def conj(self, **kwargs):
         """
         Get the complex conjugate for every element of self.
@@ -1133,7 +1134,8 @@ class BaseQueryCompiler(abc.ABC):
     # FIXME:
     #   1. This function takes Modin Series and DataFrames via `values` parameter,
     #      we should avoid leaking of the high-level objects to the query compiler level.
-    #   2. Spread **kwargs into actual arguments.
+    #      (Modin issue #3106)
+    #   2. Spread **kwargs into actual arguments (Modin issue #3108).
     def isin(self, **kwargs):  # noqa: PR02
         """
         Check for each element of self whether it's contained in passed values.
@@ -1165,7 +1167,7 @@ class BaseQueryCompiler(abc.ABC):
         """
         return DataFrameDefault.register(pandas.DataFrame.isna)(self)
 
-    # FIXME: this method is not supposed to take any parameters.
+    # FIXME: this method is not supposed to take any parameters (Modin issue #3108).
     def negative(self, **kwargs):
         """
         Change the sign for every value of self.
@@ -1217,7 +1219,7 @@ class BaseQueryCompiler(abc.ABC):
         return DataFrameDefault.register(pandas.DataFrame.round)(self, **kwargs)
 
     # FIXME:
-    #   1. high-level objects leaks to the query compiler.
+    #   1. high-level objects leaks to the query compiler (Modin issue #3106).
     #   2. remove `inplace` parameter.
     @doc_utils.add_refer_to("DataFrame.replace")
     def replace(self, **kwargs):  # noqa: PR02
@@ -1295,7 +1297,7 @@ class BaseQueryCompiler(abc.ABC):
         """
         return SeriesDefault.register(pandas.to_numeric)(self, *args, **kwargs)
 
-    # FIXME: get rid of `**kwargs` parameter.
+    # FIXME: get rid of `**kwargs` parameter (Modin issue #3108).
     @doc_utils.add_one_column_warning
     @doc_utils.add_refer_to("Series.unique")
     def unique(self, **kwargs):
@@ -1422,7 +1424,7 @@ class BaseQueryCompiler(abc.ABC):
     # instead.
 
     # FIXME: we're handling level parameter at front-end, it shouldn't
-    # propagate to the query compiler
+    # propagate to the query compiler (Modin issue #3102)
     @doc_utils.add_refer_to("DataFrame.all")
     def all(self, **kwargs):  # noqa: PR02
         """
@@ -2147,7 +2149,7 @@ class BaseQueryCompiler(abc.ABC):
         Returns
         -------
         BaseQueryCompiler
-            QueryCompiler that contain the results of execution and built by
+            QueryCompiler that contains the results of execution and is built by
             the following rules:
 
             - Labels of specified axis are the passed functions names.
@@ -2861,7 +2863,7 @@ class BaseQueryCompiler(abc.ABC):
 
     @doc_utils.doc_dt_timestamp(prop="integer day of week", refer_to="dayofweek")
     # FIXME: `dt_dayofweek` is an alias for `dt_weekday`, one of them should
-    # be removed.
+    # be removed (Modin issue #3107).
     def dt_dayofweek(self):
         return DateTimeDefault.register(pandas.Series.dt.dayofweek)(self)
 
@@ -2877,7 +2879,7 @@ class BaseQueryCompiler(abc.ABC):
         prop="number of days in month", refer_to="days_in_month"
     )
     # FIXME: `dt_days_in_month` is an alias for `dt_daysinmonth`, one of them should
-    # be removed.
+    # be removed (Modin issue #3107).
     def dt_days_in_month(self):
         return DateTimeDefault.register(pandas.Series.dt.days_in_month)(self)
 
@@ -3087,7 +3089,7 @@ class BaseQueryCompiler(abc.ABC):
         return DateTimeDefault.register(pandas.Series.dt.to_pydatetime)(self)
 
     # FIXME: there are no references to this method, we should either remove it
-    # or add a call reference at the DataFrame level.
+    # or add a call reference at the DataFrame level (Modin issue #3103).
     @doc_utils.add_one_column_warning
     @doc_utils.add_refer_to("Series.dt.to_pytimedelta")
     def dt_to_pytimedelta(self):
@@ -3184,9 +3186,9 @@ class BaseQueryCompiler(abc.ABC):
 
     # FIXME:
     #   1. Backend shouldn't care about differences between Series and DataFrame
-    #      so `resample_agg_df` and `resample_agg_ser` should be combined.
+    #      so `resample_agg_df` and `resample_agg_ser` should be combined (Modin issue #3104).
     #   2. In DataFrame API `Resampler.aggregate` is an alias for `Resampler.apply`
-    #      we should remove one of these methods: `resample_agg_*` or `resample_app_*`.
+    #      we should remove one of these methods: `resample_agg_*` or `resample_app_*` (Modin issue #3107).
     @doc_utils.doc_resample_agg(
         action="apply passed aggregation function",
         params="func : str, dict, callable(pandas.Series) -> scalar, or list of such",
@@ -3257,7 +3259,7 @@ class BaseQueryCompiler(abc.ABC):
         )
 
     # FIXME: `resample_backfill` is an alias for `resample_bfill`, on of these method
-    # should be removed.
+    # should be removed (Modin issue #3107).
     @doc_utils.doc_resample_fillna(method="back-fill", refer_to="backfill")
     def resample_backfill(self, resample_args, limit):
         return ResampleDefault.register(pandas.core.resample.Resampler.backfill)(
@@ -3279,7 +3281,7 @@ class BaseQueryCompiler(abc.ABC):
         )
 
     # FIXME: `resample_ffill` is an alias for `resample_pad`, on of these method
-    # should be removed.
+    # should be removed (Modin issue #3107).
     @doc_utils.doc_resample_fillna(method="forward-fill", refer_to="ffill")
     def resample_ffill(self, resample_args, limit):
         return ResampleDefault.register(pandas.core.resample.Resampler.ffill)(
@@ -3287,6 +3289,7 @@ class BaseQueryCompiler(abc.ABC):
         )
 
     # FIXME: we should combine all method all resample fillna methods into `resample_fillna`
+    # (Modin issue #3107)
     @doc_utils.doc_resample_fillna(
         method="specified", refer_to="fillna", params="method : str"
     )
@@ -3303,8 +3306,9 @@ class BaseQueryCompiler(abc.ABC):
             self, resample_args, _method, *args, **kwargs
         )
 
-    # FIXME: This function takes Modin DataFrame via `values` parameter,
+    # FIXME: This function takes Modin DataFrame via `obj` parameter,
     # we should avoid leaking of the high-level objects to the query compiler level.
+    # (Modin issue #3106)
     def resample_get_group(self, resample_args, name, obj):
         """
         Resample time-series data and get the specified group.
@@ -3424,7 +3428,7 @@ class BaseQueryCompiler(abc.ABC):
         )
 
     # FIXME: Backend shouldn't care about differences between Series and DataFrame
-    # so `resample_ohlc_df` and `resample_ohlc_ser` should be combined.
+    # so `resample_ohlc_df` and `resample_ohlc_ser` should be combined (Modin issue #3104).
     @doc_utils.doc_resample_agg(
         action="compute open, high, low and close values",
         params="_method : str",
@@ -3455,6 +3459,7 @@ class BaseQueryCompiler(abc.ABC):
 
     # FIXME: This method require us to build high-level resampler object
     # which we shouldn't do at the backend. We need to move this at the front.
+    # (Modin issue #3105)
     @doc_utils.add_refer_to("Resampler.pipe")
     def resample_pipe(self, resample_args, func, *args, **kwargs):
         """
@@ -3541,8 +3546,6 @@ class BaseQueryCompiler(abc.ABC):
             self, resample_args, _method, min_count, *args, **kwargs
         )
 
-    # FIXME: This method require us to build high-level resampler object
-    # which we shouldn't do at the backend. We need to move this at the front.
     def resample_transform(self, resample_args, arg, *args, **kwargs):
         """
         Resample time-series data and apply aggregation on it.
@@ -3913,7 +3916,7 @@ class BaseQueryCompiler(abc.ABC):
 
     # FIXME: most of the rolling/window methods take *args and **kwargs parameters
     # which are only needed for the compatibility with numpy, this behaviour is inherited
-    # from the API level, we should get rid of it.
+    # from the API level, we should get rid of it (Modin issue #3108).
 
     @doc_utils.doc_window_method(
         result="the result of passed functions",
@@ -3931,7 +3934,7 @@ class BaseQueryCompiler(abc.ABC):
         )
 
     # FIXME: at the query compiler method `rolling_apply` is an alias for `rolling_aggregate`,
-    # one of these should be removed.
+    # one of these should be removed (Modin issue #3107).
     @doc_utils.add_deprecation_warning(replacement_method="rolling_aggregate")
     @doc_utils.doc_window_method(
         result="the result of passed function",

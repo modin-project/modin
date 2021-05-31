@@ -70,6 +70,7 @@ def add_refer_to(method):
     -------
     callable
     """
+    # FIXME: this would break numpydoc if there already is a `Notes` section
     note = _refer_to_note.format(method)
     return append_to_docstring(note)
 
