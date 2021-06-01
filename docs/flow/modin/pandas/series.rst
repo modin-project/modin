@@ -5,7 +5,7 @@ Series Module Overview
 
 Modin's ``pandas.Series`` API
 '''''''''''''''''''''''''''''
-Modin's ``pandas.Series`` API is backed by a distributed object providing an indentical
+Modin's ``pandas.Series`` API is backed by a distributed object providing an identical
 API to pandas. Internally, the data is divided into partitions in order to
 parallelize computations and utilize the user's hardware as much as possible.
 After the user calls some ``Series`` function, this call is internally rewritten
