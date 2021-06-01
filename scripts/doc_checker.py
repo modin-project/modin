@@ -33,6 +33,19 @@ import functools
 from numpydoc.validate import Docstring
 from numpydoc.docscrape import NumpyDocString
 
+import types
+
+# fake cuDF-related modules if they're missing
+for mod_name in ("cudf", "cupy"):
+    try:
+        __import__(mod_name)
+    except ImportError:
+        sys.modules[mod_name] = types.ModuleType(
+            mod_name, f"fake {mod_name} for checking docstrings"
+        )
+if not hasattr(sys.modules["cudf"], "DataFrame"):
+    sys.modules["cudf"].DataFrame = type("DataFrame", (object,), {})
+
 logging.basicConfig(
     stream=sys.stdout, format="%(levelname)s:%(message)s", level=logging.INFO
 )
@@ -143,10 +156,8 @@ def check_spelling_words(doc: Docstring) -> list:
     if not doc.raw_doc:
         return []
     components = set(
-        [
-            *("Modin", "pandas", "NumPy", "Ray", "Dask"),
-            *("PyArrow", "OmniSci", "XGBoost"),
-        ]
+        ["Modin", "pandas", "NumPy", "Ray", "Dask"]
+        + ["PyArrow", "OmniSci", "XGBoost", "Plasma"]
     )
     check_words = "|".join(x.lower() for x in components)
 

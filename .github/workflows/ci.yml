@@ -82,6 +82,7 @@ jobs:
           python scripts/doc_checker.py modin/experimental/xgboost/__init__.py \
             modin/experimental/xgboost/utils.py modin/experimental/xgboost/xgboost.py \
             modin/experimental/xgboost/xgboost_ray.py
+      - run: python scripts/doc_checker.py modin/engines/ray
       - run: |
           python scripts/doc_checker.py modin/data_management/functions \
             modin/data_management/factories/factories.py                \

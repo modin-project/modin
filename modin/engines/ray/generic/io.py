@@ -11,6 +11,8 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
+"""The module holds base class implementing required I/O over Ray."""
+
 import io
 import pandas
 
@@ -20,12 +22,19 @@ from ray import wait
 
 
 class RayIO(BaseIO):
+    """Base class for doing I/O operations over Ray."""
+
     @classmethod
     def to_sql(cls, qc, **kwargs):
-        """Write records stored in a DataFrame to a SQL database.
-        Args:
-            qc: the query compiler of the DF that we want to run to_sql on
-            kwargs: parameters for pandas.to_sql(**kwargs)
+        """
+        Write records stored in the `qc` to a SQL database.
+
+        Parameters
+        ----------
+        qc : BaseQueryCompiler
+            The query compiler of the Modin dataframe that we want to run ``to_sql`` on.
+        **kwargs : dict
+            Parameters for ``pandas.to_sql(**kwargs)``.
         """
         # we first insert an empty DF in order to create the full table in the database
         # This also helps to validate the input against pandas
@@ -40,16 +49,37 @@ class RayIO(BaseIO):
         columns = qc.columns
 
         def func(df):
+            """
+            Override column names in the wrapped dataframe and convert it to SQL.
+
+            Notes
+            -----
+            This function returns an empty ``pandas.DataFrame`` because ``apply_full_axis``
+            expects a Frame object as a result of operation (and ``to_sql`` has no dataframe result).
+            """
             df.columns = columns
             df.to_sql(**kwargs)
             return pandas.DataFrame()
 
         result = qc._modin_frame.apply_full_axis(1, func, new_index=[], new_columns=[])
-        # blocking operation
-        result.to_pandas()
+        # FIXME: we should be waiting for completion less expensievely, maybe use _modin_frame.materialize()?
+        result.to_pandas()  # blocking operation
 
     @staticmethod
     def _to_csv_check_support(kwargs):
+        """
+        Check if parallel version of ``to_csv`` could be used.
+
+        Parameters
+        ----------
+        kwargs : dict
+            Keyword arguments passed to ``.to_csv()``.
+
+        Returns
+        -------
+        bool
+            Whether parallel version of ``to_csv`` is applicable.
+        """
         path_or_buf = kwargs["path_or_buf"]
         compression = kwargs["compression"]
         if not isinstance(path_or_buf, str):
@@ -74,6 +104,16 @@ class RayIO(BaseIO):
 
     @classmethod
     def to_csv(cls, qc, **kwargs):
+        """
+        Write records stored in the `qc` to a CSV file.
+
+        Parameters
+        ----------
+        qc : BaseQueryCompiler
+            The query compiler of the Modin dataframe that we want to run ``to_csv`` on.
+        **kwargs : dict
+            Parameters for ``pandas.to_csv(**kwargs)``.
+        """
         if not cls._to_csv_check_support(kwargs):
             return BaseIO.to_csv(qc, **kwargs)
 
@@ -82,6 +122,17 @@ class RayIO(BaseIO):
         queue = Queue(maxsize=1)
 
         def func(df, **kw):
+            """
+            Dump a chunk of rows as csv, then save them to target maintaining order.
+
+            Parameters
+            ----------
+            df : pandas.DataFrame
+                A chunk of rows to write to a CSV file.
+            **kw : dict
+                Arguments to pass to ``pandas.to_csv(**kw)`` plus an extra argument
+                `partition_idx` serving as chunk index to maintain rows order.
+            """
             if kw["partition_idx"] != 0:
                 # we need to create a new file only for first recording
                 # all the rest should be recorded in appending mode
