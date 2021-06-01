@@ -20,7 +20,6 @@ from modin.distributed.dataframe.pandas import unwrap_partitions, from_partition
 from modin.config import Engine, NPartitions
 from modin.pandas.test.utils import df_equals
 from modin.pandas.indexing import compute_sliced_len
-
 from modin.data_management.factories.dispatcher import EngineDispatcher
 
 PartitionClass = (
@@ -119,8 +118,8 @@ def test_from_partitions(axis):
     df_equals(expected_df, actual_df)
 
 
-@pytest.mark.parametrize("row_indices", [[0, 2], slice(None, None, 2)])
-@pytest.mark.parametrize("col_indices", [[0, 2], slice(None, None, 2)])
+@pytest.mark.parametrize("row_indices", [[0, 2], slice(None)])
+@pytest.mark.parametrize("col_indices", [[0, 2], slice(None)])
 @pytest.mark.parametrize("is_length_future", [False, True])
 @pytest.mark.parametrize("is_width_future", [False, True])
 def test_mask_preserve_cache(

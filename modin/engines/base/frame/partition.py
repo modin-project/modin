@@ -133,6 +133,17 @@ class PandasFramePartition(ABC):  # pragma: no cover
         """
         pass
 
+    def __copy__(self):
+        """
+        Create a copy of this partition.
+
+        Returns
+        -------
+        PandasFramePartition
+            A copy of this partition.
+        """
+        pass
+
     def mask(self, row_indices, col_indices):
         """
         Lazily create a mask that extracts the indices provided.
