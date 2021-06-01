@@ -11,6 +11,16 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
+"""
+Implement various accessor classes for DataFrame and Series API.
+
+SparseFrameAccessor implements API of pandas.DataFrame.sparse accessor.
+
+SparseAccessor implements API of pandas.Series.sparse accessor.
+
+CachedAccessor implements API of pandas.core.accessor.CachedAccessor
+"""
+
 import pandas
 from pandas.core.arrays.sparse.dtype import SparseDtype
 
@@ -18,6 +28,15 @@ from modin.utils import _inherit_docstrings
 
 
 class BaseSparseAccessor:
+    """
+    Base class for various sparse DataFrame accessor classes.
+
+    Parameters
+    ----------
+    data : DataFrame or Series
+        Object to operate on.
+    """
+
     _validation_msg = "Can only use the '.sparse' accessor with Sparse data."
 
     def __init__(self, data=None):
@@ -25,9 +44,39 @@ class BaseSparseAccessor:
         self._validate(data)
 
     def _validate(self, data):
+        """
+        Verify that `data` dtypes are compatible with `pandas.core.arrays.sparse.dtype.SparseDtype`.
+
+        Parameters
+        ----------
+        data : DataFrame
+            Object to check.
+
+        Raises
+        ------
+        NotImplementedError
+            Function is implemented in child classes.
+        """
         raise NotImplementedError
 
     def _default_to_pandas(self, op, *args, **kwargs):
+        """
+        Convert dataset to pandas type and call a pandas sparse.`op` on it.
+
+        Parameters
+        ----------
+        op : str
+            Name of pandas function.
+        *args : list
+            Additional positional arguments to be passed in `op`.
+        **kwargs : dict
+            Additional keywords arguments to be passed in `op`.
+
+        Returns
+        -------
+        object
+            Result of operation.
+        """
         return self._parent._default_to_pandas(
             lambda parent: op(parent.sparse, *args, **kwargs)
         )
@@ -36,6 +85,19 @@ class BaseSparseAccessor:
 @_inherit_docstrings(pandas.core.arrays.sparse.accessor.SparseFrameAccessor)
 class SparseFrameAccessor(BaseSparseAccessor):
     def _validate(self, data):
+        """
+        Verify that `data` dtypes are compatible with `pandas.core.arrays.sparse.dtype.SparseDtype`.
+
+        Parameters
+        ----------
+        data : DataFrame
+            Object to check.
+
+        Raises
+        ------
+        AttributeError
+            If check fails.
+        """
         dtypes = data.dtypes
         if not all(isinstance(t, SparseDtype) for t in dtypes):
             raise AttributeError(self._validation_msg)
@@ -60,6 +122,19 @@ class SparseFrameAccessor(BaseSparseAccessor):
 @_inherit_docstrings(pandas.core.arrays.sparse.accessor.SparseAccessor)
 class SparseAccessor(BaseSparseAccessor):
     def _validate(self, data):
+        """
+        Verify that `data` dtype is compatible with `pandas.core.arrays.sparse.dtype.SparseDtype`.
+
+        Parameters
+        ----------
+        data : Series
+            Object to check.
+
+        Raises
+        ------
+        AttributeError
+            If check fails.
+        """
         if not isinstance(data.dtype, SparseDtype):
             raise AttributeError(self._validation_msg)
 

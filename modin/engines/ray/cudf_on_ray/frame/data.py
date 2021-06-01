@@ -11,30 +11,50 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
+"""Module houses class that implements ``PandasOnRayFrame`` class using cuDF."""
+
 import numpy as np
 import ray
 
 from .partition import cuDFOnRayFramePartition
-from .partition_manager import cuDFOnRayFrameManager
+from .partition_manager import cuDFOnRayFramePartitionManager
 
 from modin.engines.ray.pandas_on_ray.frame.data import PandasOnRayFrame
 from modin.error_message import ErrorMessage
 
 
 class cuDFOnRayFrame(PandasOnRayFrame):
+    """
+    The class implements the interface in ``PandasOnRayFrame`` using cuDF.
 
-    _frame_mgr_cls = cuDFOnRayFrameManager
+    Parameters
+    ----------
+    partitions : np.ndarray
+        A 2D NumPy array of partitions.
+    index : sequence
+        The index for the dataframe. Converted to a ``pandas.Index``.
+    columns : sequence
+        The columns object for the dataframe. Converted to a ``pandas.Index``.
+    row_lengths : list, optional
+        The length of each partition in the rows. The "height" of
+        each of the block partitions. Is computed if not provided.
+    column_widths : list, optional
+        The width of each partition in the columns. The "width" of
+        each of the block partitions. Is computed if not provided.
+    dtypes : pandas.Series, optional
+        The data types for the dataframe columns.
+    """
 
-    def _apply_index_objs(self, axis=None):
-        """Eagerly applies the index object (Index or Columns) to the partitions.
+    _partition_mgr_cls = cuDFOnRayFramePartitionManager
 
-        Args:
-            axis: The axis to apply to, None applies to both axes.
+    def synchronize_labels(self, axis=None):
+        """
+        Synchronize labels by applying the index object (Index or Columns) to the partitions eagerly.
 
-        Returns
-        -------
-            A new 2D array of partitions that have the index assignment added to the
-            call queue.
+        Parameters
+        ----------
+        axis : {0, 1, None}, default: None
+            The axis to apply to. If None, it applies to both axes.
         """
         ErrorMessage.catch_bugs_and_request_email(
             axis is not None and axis not in [0, 1]
@@ -98,26 +118,29 @@ class cuDFOnRayFrame(PandasOnRayFrame):
         col_indices=None,
         col_numeric_idx=None,
     ):
-        """Lazily select columns or rows from given indices.
-
-        Note: If both row_indices and row_numeric_idx are set, row_indices will be used.
-            The same rule applied to col_indices and col_numeric_idx.
+        """
+        Lazily select columns or rows from given indices.
 
         Parameters
         ----------
-        row_indices : list of hashable
+        row_indices : list of hashable, optional
             The row labels to extract.
-        row_numeric_idx : list of int
+        row_numeric_idx : list of int, optional
             The row indices to extract.
-        col_indices : list of hashable
+        col_indices : list of hashable, optional
             The column labels to extract.
-        col_numeric_idx : list of int
+        col_numeric_idx : list of int, optional
             The column indices to extract.
 
         Returns
         -------
-        BasePandasFrame
-             A new BasePandasFrame from the mask provided.
+        cuDFOnRayFrame
+             A new ``cuDFOnRayFrame`` from the mask provided.
+
+        Notes
+        -----
+        If both `row_indices` and `row_numeric_idx` are set, `row_indices` will be used.
+        The same rule applied to `col_indices` and `col_numeric_idx`.
         """
         if isinstance(row_numeric_idx, slice) and (
             row_numeric_idx == slice(None) or row_numeric_idx == slice(0, None)
@@ -225,7 +248,7 @@ class cuDFOnRayFrame(PandasOnRayFrame):
         shape = key_and_gpus.shape[:2]
         keys = ray.get(key_and_gpus[:, :, 0].flatten().tolist())
         gpu_managers = key_and_gpus[:, :, 1].flatten().tolist()
-        new_partitions = self._frame_mgr_cls._create_partitions(
+        new_partitions = self._partition_mgr_cls._create_partitions(
             keys, gpu_managers
         ).reshape(shape)
         intermediate = self.__constructor__(
@@ -255,7 +278,7 @@ class cuDFOnRayFrame(PandasOnRayFrame):
         # to reorder here based on the expected order from within the data.
         # We create a dictionary mapping the position of the numeric index with respect
         # to all others, then recreate that order by mapping the new order values from
-        # the old. This information is sent to `reorder_labels`.
+        # the old. This information is sent to `_reorder_labels`.
         if row_numeric_idx is not None:
             row_order_mapping = dict(
                 zip(sorted(row_numeric_idx), range(len(row_numeric_idx)))
@@ -270,6 +293,6 @@ class cuDFOnRayFrame(PandasOnRayFrame):
             new_col_order = [col_order_mapping[idx] for idx in col_numeric_idx]
         else:
             new_col_order = None
-        return intermediate.reorder_labels(
+        return intermediate._reorder_labels(
             row_numeric_idx=new_row_order, col_numeric_idx=new_col_order
         )

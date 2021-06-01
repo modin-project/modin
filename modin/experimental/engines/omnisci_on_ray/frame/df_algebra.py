@@ -181,9 +181,9 @@ class TransformNode(DFAlgNode):
         self.input = [base]
         self._original_refs = None
         if fold:
-            self._fold()
+            self.fold()
 
-    def _fold(self):
+    def fold(self):
         if isinstance(self.input[0]._op, TransformNode):
             self._original_refs = {
                 col for col in self.exprs if isinstance(self.exprs[col], InputRefExpr)

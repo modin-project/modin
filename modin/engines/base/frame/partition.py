@@ -16,7 +16,7 @@
 from abc import ABC
 
 
-class BaseFramePartition(ABC):  # pragma: no cover
+class PandasFramePartition(ABC):  # pragma: no cover
     """
     An abstract class that is base for any partition class of ``pandas`` backend.
 
@@ -35,7 +35,7 @@ class BaseFramePartition(ABC):  # pragma: no cover
         Notes
         -----
         This is the opposite of the classmethod `put`.
-        E.g. if you assign `x = BaseFramePartition.put(1)`, `x.get()` should
+        E.g. if you assign `x = PandasFramePartition.put(1)`, `x.get()` should
         always return 1.
         """
         pass
@@ -53,8 +53,8 @@ class BaseFramePartition(ABC):  # pragma: no cover
 
         Returns
         -------
-        BaseFramePartition
-            New `BaseFramePartition` object.
+        PandasFramePartition
+            New `PandasFramePartition` object.
 
         Notes
         -----
@@ -77,8 +77,8 @@ class BaseFramePartition(ABC):  # pragma: no cover
 
         Returns
         -------
-        BaseFramePartition
-            New `BaseFramePartition` object with the function added to the call queue.
+        PandasFramePartition
+            New `PandasFramePartition` object with the function added to the call queue.
 
         Notes
         -----
@@ -143,8 +143,8 @@ class BaseFramePartition(ABC):  # pragma: no cover
 
         Returns
         -------
-        BaseFramePartition
-            New `BaseFramePartition` object.
+        PandasFramePartition
+            New `PandasFramePartition` object.
         """
         pass
 
@@ -160,8 +160,8 @@ class BaseFramePartition(ABC):  # pragma: no cover
 
         Returns
         -------
-        BaseFramePartition
-            New `BaseFramePartition` object.
+        PandasFramePartition
+            New `PandasFramePartition` object.
         """
         pass
 
@@ -184,13 +184,13 @@ class BaseFramePartition(ABC):  # pragma: no cover
         -----
         This is a classmethod because the definition of how to preprocess
         should be class-wide. Also, we may want to use this before we
-        deploy a preprocessed function to multiple `BaseFramePartition`
+        deploy a preprocessed function to multiple `PandasFramePartition`
         objects.
         """
         pass
 
     @classmethod
-    def length_extraction_fn(cls):
+    def _length_extraction_fn(cls):
         """
         Return the function that computes the length of the object wrapped by this partition.
 
@@ -202,7 +202,7 @@ class BaseFramePartition(ABC):  # pragma: no cover
         pass
 
     @classmethod
-    def width_extraction_fn(cls):
+    def _width_extraction_fn(cls):
         """
         Return the function that computes the width of the object wrapped by this partition.
 
@@ -227,7 +227,7 @@ class BaseFramePartition(ABC):  # pragma: no cover
         """
         if self._length_cache is None:
             cls = type(self)
-            func = cls.length_extraction_fn()
+            func = cls._length_extraction_fn()
             preprocessed_func = cls.preprocess_func(func)
             self._length_cache = self.apply(preprocessed_func)
         return self._length_cache
@@ -243,7 +243,7 @@ class BaseFramePartition(ABC):  # pragma: no cover
         """
         if self._width_cache is None:
             cls = type(self)
-            func = cls.width_extraction_fn()
+            func = cls._width_extraction_fn()
             preprocessed_func = cls.preprocess_func(func)
             self._width_cache = self.apply(preprocessed_func)
         return self._width_cache
@@ -255,7 +255,7 @@ class BaseFramePartition(ABC):  # pragma: no cover
 
         Returns
         -------
-        BaseFramePartition
-            New `BaseFramePartition` object.
+        PandasFramePartition
+            New `PandasFramePartition` object.
         """
         pass

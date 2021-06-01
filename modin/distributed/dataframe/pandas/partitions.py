@@ -78,10 +78,8 @@ def unwrap_partitions(api_layer_object, axis=None, get_ip=False):
             f"Do not know how to unwrap '{actual_engine}' underlying partitions"
         )
     else:
-        partitions = (
-            api_layer_object._query_compiler._modin_frame._frame_mgr_cls.axis_partition(
-                api_layer_object._query_compiler._modin_frame._partitions, axis ^ 1
-            )
+        partitions = api_layer_object._query_compiler._modin_frame._partition_mgr_cls.axis_partition(
+            api_layer_object._query_compiler._modin_frame._partitions, axis ^ 1
         )
         return [
             part.force_materialization(get_ip=get_ip).unwrap(
@@ -118,9 +116,9 @@ def from_partitions(partitions, axis):
 
     factory = EngineDispatcher.get_engine()
 
-    partition_class = factory.io_cls.frame_cls._frame_mgr_cls._partition_class
+    partition_class = factory.io_cls.frame_cls._partition_mgr_cls._partition_class
     partition_frame_class = factory.io_cls.frame_cls
-    partition_mgr_class = factory.io_cls.frame_cls._frame_mgr_cls
+    partition_mgr_class = factory.io_cls.frame_cls._partition_mgr_cls
 
     # Since we store partitions of Modin DataFrame as a 2D NumPy array we need to place
     # passed partitions to 2D NumPy array to pass it to internal Modin Frame class.

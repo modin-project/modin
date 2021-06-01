@@ -11,6 +11,8 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
+"""Module houses default binary functions builder class."""
+
 from .any_default import AnyDefault
 
 import pandas
@@ -18,9 +20,29 @@ from pandas.core.dtypes.common import is_list_like
 
 
 class BinaryDefault(AnyDefault):
+    """Build default-to-pandas methods which executes binary functions."""
+
     @classmethod
     def build_default_to_pandas(cls, fn, fn_name):
+        """
+        Build function that do fallback to pandas for passed binary `fn`.
+
+        Parameters
+        ----------
+        fn : callable
+            Binary function to apply to the casted to pandas frame and other operand.
+        fn_name : str
+            Function name which will be shown in default-to-pandas warning message.
+
+        Returns
+        -------
+        callable
+            Function that takes query compiler, does fallback to pandas and applies binary `fn`
+            to the casted to pandas frame.
+        """
+
         def bin_ops_wrapper(df, other, *args, **kwargs):
+            """Apply specified binary function to the passed operands."""
             squeeze_other = kwargs.pop("broadcast", False) or kwargs.pop(
                 "squeeze_other", False
             )

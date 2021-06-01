@@ -11,6 +11,8 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
+"""Module holds ``cuDFCSVDispatcher`` that is implemented using cuDF-entities."""
+
 import numpy as np
 
 from modin.engines.base.io import CSVDispatcher
@@ -19,8 +21,33 @@ from typing import Tuple
 
 
 class cuDFCSVDispatcher(CSVDispatcher):
+    """
+    The class implements ``CSVDispatcher`` using cuDF backend.
+
+    This class handles utils for reading `.csv` files.
+    """
+
     @classmethod
     def build_partition(cls, partition_ids, row_lengths, column_widths):
+        """
+        Build array with partitions of `cls.frame_partition_cls` class.
+
+        Parameters
+        ----------
+        partition_ids : list
+            Array with references to the partitions data.
+        row_lengths : list
+            Partitions rows lengths.
+        column_widths : list
+            Number of columns in each partition.
+
+        Returns
+        -------
+        np.ndarray
+            Array with shape equals to the shape of `partition_ids` and
+            filed with partitions objects.
+        """
+
         def create_partition(i, j):
             return cls.frame_partition_cls(
                 GPU_MANAGERS[i],
@@ -40,21 +67,23 @@ class cuDFCSVDispatcher(CSVDispatcher):
     def _launch_tasks(cls, splits: list, **partition_kwargs) -> Tuple[list, list, list]:
         """
         Launch tasks to read partitions.
+
+        Parameters
         ----------
-        splits: list
-            list of tuples with partitions data, which defines
-            parser task (start/end read bytes and etc.)
-        partition_kwargs:
-            kwargs that should be passed to the parser function.
+        splits : list
+            List of tuples with partitions data, which defines
+            parser task (start/end read bytes and etc).
+        **partition_kwargs : dict
+            Dictionary with keyword args that will be passed to the parser function.
 
         Returns
         -------
-        partition_ids: list
-                array with references to the partitions data.
-        index_ids: list
-                array with references to the partitions index objects.
-        dtypes_ids: list
-                array with references to the partitions dtypes objects.
+        partition_ids : list
+            List with references to the partitions data.
+        index_ids : list
+            List with references to the partitions index objects.
+        dtypes_ids : list
+            List with references to the partitions dtypes objects.
         """
         partition_ids = []
         index_ids = []

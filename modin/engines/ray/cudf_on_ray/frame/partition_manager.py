@@ -11,6 +11,8 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
+"""Module houses class that implements ``RayFrameManager`` using cuDF."""
+
 import numpy as np
 import ray
 
@@ -22,18 +24,40 @@ from .partition import cuDFOnRayFramePartition
 
 from modin.data_management.utils import split_result_of_axis_func_pandas
 from modin.config import GpuCount
-from modin.engines.ray.generic.frame.partition_manager import RayFrameManager
+from modin.engines.ray.generic.frame.partition_manager import (
+    GenericRayFramePartitionManager,
+)
 
 # Global view of GPU Actors
 GPU_MANAGERS = []
 
 
+# TODO: Check the need for this func
 @ray.remote(num_cpus=1, num_gpus=0.5)
 def func(df, other, apply_func):
+    """
+    Perform remotely `apply_func` on `df` and `other` objects.
+
+    Parameters
+    ----------
+    df : cuDFOnRayFramePartition
+        Object to be processed.
+    other : cuDFOnRayFramePartition
+        Object to be processed.
+    apply_func : callable
+        Function to apply.
+
+    Returns
+    -------
+    The type of return of `apply_func`
+        The result of the `apply_func`
+        (will be a ``ray.ObjectRef`` in outside level).
+    """
     return apply_func(ray.get(df.get.remote()), ray.get(other.get.remote()))
 
 
-class cuDFOnRayFrameManager(RayFrameManager):
+class cuDFOnRayFramePartitionManager(GenericRayFramePartitionManager):
+    """The class implements the interface in ``RayFrameManager`` using cuDF on Ray."""
 
     _partition_class = cuDFOnRayFramePartition
     _column_partitions_class = cuDFOnRayFrameColumnPartition
@@ -41,15 +65,22 @@ class cuDFOnRayFrameManager(RayFrameManager):
 
     @classmethod
     def _create_partitions(cls, keys, gpu_managers):
-        """Internal helper method to create partitions data structure
+        """
+        Create NumPy array of partitions.
 
-        Args:
-            keys: gpu cache keys
-            gpu_managers: gpu where the partition resides
+        Parameters
+        ----------
+        keys : list
+            List of keys associated with dataframes in
+            `gpu_managers`.
+        gpu_managers : list
+            List of ``GPUManager`` objects, which store
+            dataframes.
 
         Returns
         -------
-            A list of cuDFOnRayFrameManager objects.
+        np.ndarray
+            A NumPy array of ``cuDFOnRayFramePartition`` objects.
         """
         return np.array(
             [
@@ -60,10 +91,33 @@ class cuDFOnRayFrameManager(RayFrameManager):
 
     @classmethod
     def _get_gpu_managers(cls):
+        """
+        Get list of gpu managers.
+
+        Returns
+        -------
+        list
+        """
         return GPU_MANAGERS
 
     @classmethod
     def from_pandas(cls, df, return_dims=False):
+        """
+        Create partitions from ``pandas.DataFrame/pandas.Series``.
+
+        Parameters
+        ----------
+        df : pandas.DataFrame/pandas.Series
+            A ``pandas.DataFrame`` to add.
+        return_dims : boolean, default: False
+            Is return dimensions or not.
+
+        Returns
+        -------
+        list or tuple
+            List of partitions in case `return_dims` == False,
+            tuple (partitions, row lengths, col widths) in other case.
+        """
         num_splits = GpuCount.get()
         put_func = cls._partition_class.put
         # For now, we default to row partitioning
@@ -88,18 +142,25 @@ class cuDFOnRayFrameManager(RayFrameManager):
     @classmethod
     def lazy_map_partitions(cls, partitions, map_func):
         """
-        Apply `map_func` to every partition lazily. Compared to Modin-CPU, Modin-GPU lazy version represents:
-        (1) A scheduled function in the ray task graph.
+        Apply `map_func` to every partition lazily.
+
+        Compared to Modin-CPU, Modin-GPU lazy version represents:
+
+        (1) A scheduled function in the Ray task graph.
+
         (2) A non-materialized key.
 
         Parameters
         ----------
-        map_func: callable
+        partitions : np.ndarray
+            NumPy array with partitions.
+        map_func : callable
            The function to apply.
 
         Returns
         -------
-            A new cuDFOnRayFrameManager object with a ray.ObjectRef as key.
+        np.ndarray
+            A NumPy array of ``cuDFOnRayFramePartition`` objects.
         """
         preprocessed_map_func = cls.preprocess_func(map_func)
         partitions_flat = partitions.flatten()
@@ -113,17 +174,26 @@ class cuDFOnRayFrameManager(RayFrameManager):
 
     @classmethod
     def _apply_func_to_list_of_partitions(cls, func, partitions, **kwargs):
-        """Apply a function to a list of remote partitions.
+        """
+        Apply `func` to a list of remote partitions from `partitions`.
 
-        Note: The main use for this is to preprocess the func.
-
-        Args:
-            func: The func to apply
-            partitions: The list of partitions
+        Parameters
+        ----------
+        func : callable
+            The function to apply.
+        partitions : np.ndarray
+            NumPy array with partitions.
+        **kwargs : dict
+            Additional keywords arguments to be passed in `func`.
 
         Returns
         -------
-            A list of cuDFOnRayFrameManager objects.
+        np.ndarray
+            A NumPy array of ``cuDFOnRayFramePartition`` objects.
+
+        Notes
+        -----
+        This preprocesses the `func` first before applying it to the partitions.
         """
         preprocessed_map_func = cls.preprocess_func(func)
         key_futures = ray.get(

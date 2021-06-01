@@ -11,10 +11,25 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
+"""Module houses default applied-on-datetime functions builder class."""
+
 from .series_default import SeriesDefault
 
 
 class DateTimeDefault(SeriesDefault):
+    """Builder for default-to-pandas methods which is executed under datetime accessor."""
+
     @classmethod
     def frame_wrapper(cls, df):
+        """
+        Get datetime accessor of the passed frame.
+
+        Parameters
+        ----------
+        df : pandas.DataFrame
+
+        Returns
+        -------
+        pandas.core.indexes.accessors.DatetimeProperties
+        """
         return df.squeeze(axis=1).dt

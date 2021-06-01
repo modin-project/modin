@@ -13,6 +13,8 @@ Questions on implementation details
 If you have a question about the implementation details or would like more information
 about an API or method in Modin, please contact the Modin `developer mailing list`_.
 
+.. _defaulting-to-pandas-mechanism:
+
 Defaulting to pandas
 --------------------
 

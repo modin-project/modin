@@ -11,20 +11,29 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
+"""Module houses util functions for handling experimental SQL IO functions."""
+
 from collections import OrderedDict
 from sqlalchemy import MetaData, Table, create_engine, inspect
 
 
 def is_distributed(partition_column, lower_bound, upper_bound):
-    """Check if is possible distribute a query given that args
+    """
+    Check if is possible to distribute a query with the given args.
 
-    Args:
-        partition_column: column used to share the data between the workers
-        lower_bound: the minimum value to be requested from the partition_column
-        upper_bound: the maximum value to be requested from the partition_column
+    Parameters
+    ----------
+    partition_column : str
+        Column name used for data partitioning between the workers.
+    lower_bound : int
+        The minimum value to be requested from the `partition_column`.
+    upper_bound : int
+        The maximum value to be requested from the `partition_column`.
 
-    Returns:
-        True for distributed or False if not
+    Returns
+    -------
+    bool
+        Whether the given query is distributable or not.
     """
     if (
         (partition_column is not None)
@@ -45,14 +54,20 @@ def is_distributed(partition_column, lower_bound, upper_bound):
 
 
 def is_table(engine, sql):
-    """Check with the given sql arg is query or table
+    """
+    Check if given `sql` parameter is a table name.
 
-    Args:
-        engine: SQLAlchemy connection engine
-        sql: SQL query or table name
+    Parameters
+    ----------
+    engine : sqlalchemy.engine.base.Engine
+        SQLAlchemy connection engine.
+    sql : str
+        SQL query to be executed or a table name.
 
-    Returns:
-        True for table or False if not
+    Returns
+    -------
+    bool
+        Whether `sql` a table name or not.
     """
     if inspect(engine).has_table(sql):
         return True
@@ -60,14 +75,20 @@ def is_table(engine, sql):
 
 
 def get_table_metadata(engine, table):
-    """Extract all useful infos from the given table
+    """
+    Extract all useful data from the given table.
 
-    Args:
-        engine: SQLAlchemy connection engine
-        table: table name
+    Parameters
+    ----------
+    engine : sqlalchemy.engine.base.Engine
+        SQLAlchemy connection engine.
+    table : str
+        Table name.
 
-    Returns:
-        Dictionary of infos
+    Returns
+    -------
+    sqlalchemy.sql.schema.Table
+        Extracted metadata.
     """
     metadata = MetaData()
     metadata.reflect(bind=engine, only=[table])
@@ -76,13 +97,18 @@ def get_table_metadata(engine, table):
 
 
 def get_table_columns(metadata):
-    """Extract columns names and python typos from metadata
+    """
+    Extract columns names and python types from the `metadata`.
 
-    Args:
-        metadata: Table metadata
+    Parameters
+    ----------
+    metadata : sqlalchemy.sql.schema.Table
+        Table metadata.
 
-    Returns:
-        dict with columns names and python types
+    Returns
+    -------
+    OrderedDict
+        Dictionary with columns names and python types.
     """
     cols = OrderedDict()
     for col in metadata.c:
@@ -92,25 +118,30 @@ def get_table_columns(metadata):
 
 
 def build_query_from_table(name):
-    """Create a query given the table name
+    """
+    Create a query from the given table name.
 
-    Args:
-        name: Table name
+    Parameters
+    ----------
+    name : str
+        Table name.
 
-    Returns:
-        query string
+    Returns
+    -------
+    str
+        Query string.
     """
     return "SELECT * FROM {0}".format(name)
 
 
 def check_query(query):
-    """Check query sanity
+    """
+    Check query sanity.
 
-    Args:
-        query: query string
-
-    Returns:
-        None
+    Parameters
+    ----------
+    query : str
+        Query string.
     """
     q = query.lower()
     if "select " not in q:
@@ -120,14 +151,20 @@ def check_query(query):
 
 
 def get_query_columns(engine, query):
-    """Extract columns names and python typos from query
+    """
+    Extract columns names and python types from the `query`.
 
-    Args:
-        engine: SQLAlchemy connection engine
-        query: SQL query
+    Parameters
+    ----------
+    engine : sqlalchemy.engine.base.Engine
+        SQLAlchemy connection engine.
+    query : str
+        SQL query.
 
-    Returns:
-        dict with columns names and python types
+    Returns
+    -------
+    OrderedDict
+        Dictionary with columns names and python types.
     """
     con = engine.connect()
     result = con.execute(query).fetchone()
@@ -140,14 +177,15 @@ def get_query_columns(engine, query):
 
 
 def check_partition_column(partition_column, cols):
-    """Check partition_column existence and type
+    """
+    Check `partition_column` existence and it's type.
 
-    Args:
-        partition_column: partition_column name
-        cols: dict with columns names and python types
-
-    Returns:
-        None
+    Parameters
+    ----------
+    partition_column : str
+        Column name used for data partitioning between the workers.
+    cols : OrderedDict/dict
+        Dictionary with columns names and python types.
     """
     for k, v in cols.items():
         if k == partition_column:
@@ -163,15 +201,24 @@ def check_partition_column(partition_column, cols):
 
 
 def get_query_info(sql, con, partition_column):
-    """Return a columns name list and the query string
+    """
+    Compute metadata needed for query distribution.
 
-    Args:
-        sql: SQL query or table name
-        con: database connection or url string
-        partition_column: column used to share the data between the workers
+    Parameters
+    ----------
+    sql : str
+        SQL query to be executed or a table name.
+    con : SQLAlchemy connectable or str
+        Database connection or url string.
+    partition_column : str
+        Column name used for data partitioning between the workers.
 
-    Returns:
-        Columns name list and query string
+    Returns
+    -------
+    list
+        Columns names list.
+    str
+        Query string.
     """
     engine = create_engine(con)
     if is_table(engine, sql):
@@ -190,16 +237,24 @@ def get_query_info(sql, con, partition_column):
 
 
 def query_put_bounders(query, partition_column, start, end):
-    """Put bounders in the query
+    """
+    Put partition boundaries into the query.
 
-    Args:
-        query: SQL query string
-        partition_column: partition_column name
-        start: lower_bound
-        end: upper_bound
+    Parameters
+    ----------
+    query : str
+        SQL query string.
+    partition_column : str
+        Column name used for data partitioning between the workers.
+    start : int
+        Lowest value to request from the `partition_column`.
+    end : int
+        Highest value to request from the `partition_column`.
 
-    Returns:
-        Query with bounders
+    Returns
+    -------
+    str
+        Query string with boundaries.
     """
     where = " WHERE TMP_TABLE.{0} >= {1} AND TMP_TABLE.{0} <= {2}".format(
         partition_column, start, end
@@ -209,12 +264,12 @@ def query_put_bounders(query, partition_column, start, end):
 
 
 class InvalidArguments(Exception):
-    pass
+    """Exception that should be raised if invalid arguments combination was found."""
 
 
 class InvalidQuery(Exception):
-    pass
+    """Exception that should be raised if invalid query statement was found."""
 
 
 class InvalidPartitionColumn(Exception):
-    pass
+    """Exception that should be raised if `partition_column` doesn't satisfy predefined requirements."""

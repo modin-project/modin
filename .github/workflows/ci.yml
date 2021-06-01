@@ -45,20 +45,26 @@ jobs:
         with:
           python-version: "3.7.x"
           architecture: "x64"
-      - run: pip install pytest pytest-cov pydocstyle numpydoc==1.1.0
+      - run: pip install pytest pytest-cov pydocstyle numpydoc==1.1.0 xgboost
       - run: pytest scripts/test
       - run: pip install -e .[all]
       - run: |
           python scripts/doc_checker.py --add-ignore=D101,D102,D103,D105 --disable-numpydoc \
             modin/pandas/dataframe.py modin/pandas/series.py \
-            modin/pandas/groupby.py modin/pandas/base.py \
+            modin/pandas/groupby.py \
             modin/pandas/series_utils.py modin/pandas/general.py \
             modin/pandas/plotting.py modin/pandas/utils.py \
             modin/pandas/iterator.py modin/pandas/indexing.py \
+      - run: python scripts/doc_checker.py modin/engines/base/frame
+      - run: python scripts/doc_checker.py modin/engines/dask
       - run: |
           python scripts/doc_checker.py \
+            modin/pandas/accessor.py modin/pandas/general.py \
+            modin/pandas/groupby.py modin/pandas/indexing.py \
+            modin/pandas/iterator.py modin/pandas/plotting.py \
+            modin/pandas/series_utils.py modin/pandas/utils.py \
+            modin/pandas/base.py \
             modin/pandas/io.py modin/engines/base/io/io.py \
-            modin/backends/pandas/parsers.py  \
             modin/engines/base/frame asv_bench/benchmarks/utils.py \
             asv_bench/benchmarks/__init__.py asv_bench/benchmarks/io/__init__.py \
             asv_bench/benchmarks/scalability/__init__.py \
@@ -66,15 +72,28 @@ jobs:
             modin/engines/base/io/sql \
             modin/engines/base/io/text \
             modin/engines/base/io/__init__.py \
-            modin/engines/base/io/file_dispatcher.py
+            modin/engines/base/io/file_dispatcher.py \
+            modin/experimental/engines/pandas_on_ray \
+            modin/experimental/engines/pyarrow_on_ray
       - run: python scripts/doc_checker.py modin/distributed
       - run: python scripts/doc_checker.py modin/utils.py
       - run: python scripts/doc_checker.py modin/experimental/sklearn
+      - run: |
+          python scripts/doc_checker.py modin/experimental/xgboost/__init__.py \
+            modin/experimental/xgboost/utils.py modin/experimental/xgboost/xgboost.py \
+            modin/experimental/xgboost/xgboost_ray.py
+      - run: python scripts/doc_checker.py modin/engines/ray
+      - run: |
+          python scripts/doc_checker.py modin/data_management/functions \
+            modin/data_management/factories/factories.py                \
+            modin/data_management/factories/dispatcher.py               \
+            modin/data_management/utils.py
       - run: python scripts/doc_checker.py scripts/doc_checker.py
       - run: |
           python scripts/doc_checker.py modin/experimental/pandas/io_exp.py \
             modin/experimental/pandas/numpy_wrap.py modin/experimental/pandas/__init__.py
       - run: python scripts/doc_checker.py modin/backends/pyarrow
+      - run: python scripts/doc_checker.py modin/backends/pandas
 
   lint-flake8:
     name: lint (flake8)
@@ -268,7 +287,8 @@ jobs:
       - run: python -m pytest -n 2 modin/pandas/test/test_general.py --backend=${{ matrix.backend }}
       - run: |
           curl -o codecov https://codecov.io/bash
-          curl -o SHA512SUM https://raw.githubusercontent.com/codecov/codecov-bash/master/SHA512SUM
+          VERSION=$(grep -o 'VERSION=\"[0-9\.]*\"' codecov | cut -d'"' -f2);
+          curl -o SHA512SUM "https://raw.githubusercontent.com/codecov/codecov-bash/${VERSION}/SHA512SUM"
           if sha512sum -c --ignore-missing --status SHA512SUM; then
               bash ./codecov
           else
@@ -311,7 +331,8 @@ jobs:
       - shell: bash -l {0}
         run: |
           curl -o codecov https://codecov.io/bash
-          curl -o SHA512SUM https://raw.githubusercontent.com/codecov/codecov-bash/master/SHA512SUM
+          VERSION=$(grep -o 'VERSION=\"[0-9\.]*\"' codecov | cut -d'"' -f2);
+          curl -o SHA512SUM "https://raw.githubusercontent.com/codecov/codecov-bash/${VERSION}/SHA512SUM"
           if sha512sum -c --ignore-missing --status SHA512SUM; then
               bash ./codecov
           else
@@ -428,7 +449,8 @@ jobs:
       - run: pip install dfsql && pytest modin/experimental/sql/test/test_sql.py
       - run: |
           curl -o codecov https://codecov.io/bash
-          curl -o SHA512SUM https://raw.githubusercontent.com/codecov/codecov-bash/master/SHA512SUM
+          VERSION=$(grep -o 'VERSION=\"[0-9\.]*\"' codecov | cut -d'"' -f2);
+          curl -o SHA512SUM "https://raw.githubusercontent.com/codecov/codecov-bash/${VERSION}/SHA512SUM"
           if sha512sum -c --ignore-missing --status SHA512SUM; then
               bash ./codecov
           else
@@ -469,7 +491,8 @@ jobs:
       - shell: bash -l {0}
         run: |
           curl -o codecov https://codecov.io/bash
-          curl -o SHA512SUM https://raw.githubusercontent.com/codecov/codecov-bash/master/SHA512SUM
+          VERSION=$(grep -o 'VERSION=\"[0-9\.]*\"' codecov | cut -d'"' -f2);
+          curl -o SHA512SUM "https://raw.githubusercontent.com/codecov/codecov-bash/${VERSION}/SHA512SUM"
           if sha512sum -c --ignore-missing --status SHA512SUM; then
               bash ./codecov
           else
@@ -506,7 +529,8 @@ jobs:
       - shell: bash -l {0}
         run: |
           curl -o codecov https://codecov.io/bash
-          curl -o SHA512SUM https://raw.githubusercontent.com/codecov/codecov-bash/master/SHA512SUM
+          VERSION=$(grep -o 'VERSION=\"[0-9\.]*\"' codecov | cut -d'"' -f2);
+          curl -o SHA512SUM "https://raw.githubusercontent.com/codecov/codecov-bash/${VERSION}/SHA512SUM"
           if sha512sum -c --ignore-missing --status SHA512SUM; then
               bash ./codecov
           else
