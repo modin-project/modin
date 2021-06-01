@@ -19,14 +19,35 @@ import modin.pandas as pd
 from modin.distributed.dataframe.pandas import unwrap_partitions, from_partitions
 from modin.config import Engine, NPartitions
 from modin.pandas.test.utils import df_equals
+from modin.pandas.indexing import compute_sliced_len
 
+from modin.data_management.factories.dispatcher import EngineDispatcher
+
+PartitionClass = (
+    EngineDispatcher.get_engine().io_cls.frame_cls._partition_mgr_cls._partition_class
+)
 
 if Engine.get() == "Ray":
     import ray
-if Engine.get() == "Dask":
+
+    put_func = ray.put
+    get_func = ray.get
+    FutureType = ray.ObjectRef
+elif Engine.get() == "Dask":
     from distributed.client import get_client
+    from distributed import Future
+
+    put_func = lambda x: get_client().scatter(x)  # noqa: E731
+    get_func = lambda x: x.result()  # noqa: E731
+    FutureType = Future
+else:
+    put_func = lambda x: x  # noqa: E731
+    get_func = lambda x: x  # noqa: E731
+    FutureType = object
 
 NPartitions.put(4)
+# HACK: implicit engine initialization (Modin issue #2989)
+pd.DataFrame([])
 
 
 @pytest.mark.parametrize("axis", [None, 0, 1])
@@ -96,3 +117,53 @@ def test_from_partitions(axis):
             futures = client.scatter([df1, df2], hash=False)
     actual_df = from_partitions(futures, axis)
     df_equals(expected_df, actual_df)
+
+
+@pytest.mark.parametrize("row_indices", [[0, 2], slice(None, None, 2)])
+@pytest.mark.parametrize("col_indices", [[0, 2], slice(None, None, 2)])
+@pytest.mark.parametrize("is_length_future", [False, True])
+@pytest.mark.parametrize("is_width_future", [False, True])
+def test_mask_preserve_cache(
+    row_indices, col_indices, is_length_future, is_width_future
+):
+    def serialize(obj):
+        if isinstance(obj, FutureType):
+            return get_func(obj)
+        return obj
+
+    def compute_length(indices, length):
+        if not isinstance(indices, slice):
+            return len(indices)
+        return compute_sliced_len(indices, length)
+
+    df = pandas.DataFrame({"a": [1, 2, 3, 4], "b": [5, 6, 7, 8], "c": [9, 10, 11, 12]})
+    obj_id = put_func(df)
+
+    partition_shape = [
+        put_func(len(df)) if is_length_future else len(df),
+        put_func(len(df.columns)) if is_width_future else len(df.columns),
+    ]
+
+    source_partition = PartitionClass(obj_id, *partition_shape)
+    masked_partition = source_partition.mask(
+        row_indices=row_indices, col_indices=col_indices
+    )
+
+    expected_length = compute_length(row_indices, len(df))
+    expected_width = compute_length(col_indices, len(df.columns))
+
+    # Check that the cache is preserved
+    assert expected_length == serialize(masked_partition._length_cache)
+    assert expected_width == serialize(masked_partition._width_cache)
+    # Check that the cache is interpreted properly
+    assert expected_length == masked_partition.length()
+    assert expected_width == masked_partition.width()
+    # Recompute shape explicitly to check that the cached data was correct
+    expected_length, expected_width = [
+        masked_partition._length_cache,
+        masked_partition._width_cache,
+    ]
+    masked_partition._length_cache = None
+    masked_partition._width_cache = None
+    assert expected_length == masked_partition.length()
+    assert expected_width == masked_partition.width()

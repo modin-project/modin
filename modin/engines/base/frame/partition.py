@@ -14,6 +14,9 @@
 """The module defines base interface for a partition of a Modin DataFrame."""
 
 from abc import ABC
+from modin.pandas.indexing import compute_sliced_len
+
+import pandas
 
 
 class PandasFramePartition(ABC):  # pragma: no cover
@@ -146,7 +149,45 @@ class PandasFramePartition(ABC):  # pragma: no cover
         PandasFramePartition
             New `PandasFramePartition` object.
         """
-        pass
+        if (
+            (isinstance(row_indices, slice) and row_indices == slice(None))
+            or (
+                not isinstance(row_indices, slice)
+                and isinstance(self._length_cache, int)
+                and len(row_indices) == self._length_cache
+            )
+        ) and (
+            (isinstance(col_indices, slice) and col_indices == slice(None))
+            or (
+                not isinstance(col_indices, slice)
+                and isinstance(self._width_cache, int)
+                and len(col_indices) == self._width_cache
+            )
+        ):
+            return self.__copy__()
+
+        new_obj = self.add_to_apply_calls(
+            lambda df: pandas.DataFrame(df.iloc[row_indices, col_indices])
+        )
+        new_obj._length_cache = (
+            (
+                compute_sliced_len(row_indices, self._length_cache)
+                if isinstance(self._length_cache, int)
+                else None
+            )
+            if isinstance(row_indices, slice)
+            else len(row_indices)
+        )
+        new_obj._width_cache = (
+            (
+                compute_sliced_len(col_indices, self._width_cache)
+                if isinstance(self._width_cache, int)
+                else None
+            )
+            if isinstance(col_indices, slice)
+            else len(col_indices)
+        )
+        return new_obj
 
     @classmethod
     def put(cls, obj):

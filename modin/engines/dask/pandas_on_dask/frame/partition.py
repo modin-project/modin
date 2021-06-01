@@ -24,6 +24,9 @@ from distributed.utils import get_ip
 import cloudpickle as pkl
 from dask.distributed import wait
 
+from distributed.client import _get_global_client
+from modin.pandas.indexing import compute_sliced_len
+
 
 def apply_list_of_funcs(funcs, df):
     """
@@ -174,13 +177,16 @@ class PandasOnDaskFramePartition(PandasFramePartition):
         PandasOnDaskFramePartition
             A new ``PandasOnDaskFramePartition`` object.
         """
-        new_obj = self.add_to_apply_calls(
-            lambda df: pandas.DataFrame(df.iloc[row_indices, col_indices])
-        )
-        if not isinstance(row_indices, slice):
-            new_obj._length_cache = len(row_indices)
-        if not isinstance(col_indices, slice):
-            new_obj._width_cache = len(col_indices)
+        new_obj = super().mask(row_indices, col_indices)
+        client = _get_global_client()
+        if isinstance(row_indices, slice) and isinstance(self._length_cache, Future):
+            new_obj._length_cache = client.submit(
+                compute_sliced_len, row_indices, self._length_cache
+            )
+        if isinstance(col_indices, slice) and isinstance(self._width_cache, Future):
+            new_obj._width_cache = client.submit(
+                compute_sliced_len, col_indices, self._width_cache
+            )
         return new_obj
 
     def __copy__(self):
