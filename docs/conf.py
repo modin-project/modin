@@ -20,8 +20,8 @@ def noop_decorator(*args, **kwargs):
     return lambda cls_or_func: cls_or_func
 ray.remote = noop_decorator
 
-# fake cuDF-related modules if they're missing
-for mod_name in ("cudf", "cupy"):
+# fake modules if they're missing
+for mod_name in ("cudf", "cupy", "pyarrow.gandiva"):
     try:
         __import__(mod_name)
     except ImportError:
@@ -33,10 +33,6 @@ if not hasattr(sys.modules["cudf"], "DataFrame"):
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 import modin
-
-from unittest.mock import Mock
-# Emulating existence of not installed modules to generate API documentation without installing them.
-sys.modules["pyarrow.gandiva"] = Mock()
 
 project = "Modin"
 copyright = "2018-2021, Modin"
