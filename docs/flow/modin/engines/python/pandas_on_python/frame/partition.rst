@@ -1,7 +1,7 @@
 PandasOnPythonFramePartition
 """"""""""""""""""""""""""""
 
-The class is specific implementation of :py:class:`~modin.engines.base.frame.partition.BaseFramePartition`,
+The class is specific implementation of :py:class:`~modin.engines.base.frame.partition.PandasFramePartition`,
 providing the API to perform operations on a block partition using Python as the execution engine.
 
 In addition to wrapping a ``pandas.DataFrame``, the class also holds the following metadata:

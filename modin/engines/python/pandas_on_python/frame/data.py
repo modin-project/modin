@@ -26,7 +26,7 @@ class PandasOnPythonFrame(PandasFrame):
     Class for dataframes with pandas backend and Python engine.
 
     ``PandasOnPythonFrame`` doesn't implement any specific interfaces,
-    all functionality is inherited from the ``BasePandasFrame`` class.
+    all functionality is inherited from the ``PandasFrame`` class.
 
     Parameters
     ----------

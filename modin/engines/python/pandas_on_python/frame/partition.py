@@ -24,7 +24,7 @@ class PandasOnPythonFramePartition(PandasFramePartition):
     Partition class with interface for pandas backend and Python engine.
 
     Class holds the data and metadata for a single partition and implements
-    methods of parent abstract class ``BaseFramePartition``.
+    methods of parent abstract class ``PandasFramePartition``.
 
     Parameters
     ----------

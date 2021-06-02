@@ -25,7 +25,7 @@ class PandasOnPythonFramePartitionManager(PandasFramePartitionManager):
     """
     Class for managing partitions with pandas backend and Python engine.
 
-    Inherits all functionality from ``BaseFrameManager`` base class.
+    Inherits all functionality from ``PandasFramePartitionManager`` base class.
     """
 
     _partition_class = PandasOnPythonFramePartition
