@@ -150,7 +150,7 @@ class PandasOnRayFramePartitionManager(GenericRayFramePartitionManager):
         axis : {0, 1}
             Axis to extract the labels over.
         partitions : np.ndarray
-            NumPy array with ``BaseFramePartition``-s.
+            NumPy array with ``PandasFramePartition``-s.
         index_func : callable, default: None
             The function to be used to extract the indices.
 
