@@ -317,6 +317,14 @@ class PersistentPickle(EnvironmentVariable, type=bool):
     varname = "MODIN_PERSISTENT_PICKLE"
     default = False
 
+class TestRayClient(EnvironmentVariable, type=bool):
+    """
+    When set to True, runs a fixture before test collection to start and a ray
+    server and connect to it.
+    """
+
+    varname = "TEST_RAY_CLIENT"
+    default = False
 
 def _check_vars():
     """

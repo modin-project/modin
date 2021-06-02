@@ -16,6 +16,7 @@
 import builtins
 import os
 import sys
+import ray
 
 from modin.config import (
     Backend,
@@ -45,6 +46,8 @@ def handle_ray_task_error(e):
         Remote exception converted to built-in exception if possible,
         original exception untouched otherwise.
     """
+    if not hasattr(e, "traceback_str"):
+        raise e
     for s in e.traceback_str.split("\n")[::-1]:
         if "Error" in s or "Exception" in s:
             try:
@@ -211,8 +214,8 @@ def initialize_ray(
             }
             from packaging import version
 
-            # setting of `_lru_evict` parameter raises DeprecationWarning since ray 2.0.0.dev0
-            if version.parse(ray.__version__) >= version.parse("2.0.0.dev0"):
+            # setting of `_lru_evict` parameter raises DeprecationWarning since ray 1.3.0
+            if version.parse(ray.__version__) >= version.parse("1.3.0"):
                 ray_init_kwargs.pop("_lru_evict")
             ray.init(**ray_init_kwargs)
 
