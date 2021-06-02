@@ -11,11 +11,18 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
+"""
+Content of this file should be executed if module `modin.config` is called.
+
+If module is called (using `python -m modin.config`) configs help will be printed.
+"""
+
 from . import *  # noqa: F403, F401
 from .pubsub import Parameter
 
 
 def print_config_help():
+    """Print all configs help messages."""
     for objname in sorted(globals()):
         obj = globals()[objname]
         if isinstance(obj, type) and issubclass(obj, Parameter) and not obj.is_abstract:
