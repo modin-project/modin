@@ -1250,6 +1250,7 @@ class BasePandasDataset(object):
 
     pad = ffill
 
+    @_inherit_docstrings(pandas.DataFrame.fillna)
     def _fillna(
         self,
         squeeze_self,
