@@ -1946,7 +1946,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
                     def fillna_builder(df):
                         return df.fillna(value, **kwargs)
 
-                    new_modin_frame = self._modin_frame._map(fillna_builder)
+                    new_modin_frame = self._modin_frame.map(fillna_builder)
 
                 else:
 
