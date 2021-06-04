@@ -11,7 +11,7 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-"""Module houses class that implements ``RayFrameManager`` using cuDF."""
+"""Module houses class that implements ``GenericRayFramePartitionManager`` using cuDF."""
 
 import numpy as np
 import ray
@@ -57,7 +57,7 @@ def func(df, other, apply_func):
 
 
 class cuDFOnRayFramePartitionManager(GenericRayFramePartitionManager):
-    """The class implements the interface in ``RayFrameManager`` using cuDF on Ray."""
+    """The class implements the interface in ``GenericRayFramePartitionManager`` using cuDF on Ray."""
 
     _partition_class = cuDFOnRayFramePartition
     _column_partitions_class = cuDFOnRayFrameColumnPartition
