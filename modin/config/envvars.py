@@ -335,16 +335,13 @@ class BenchmarkMode(EnvironmentVariable, type=bool):
 
 
 class PersistentPickle(EnvironmentVariable, type=bool):
-    """
-    Wheather serialization should be persistent.
-
-    When set to off, it allows faster serialization which is only
-    valid in current run (i.e. useless for saving to disk).
-    When set to on, Modin objects could be saved to disk and loaded
-    but serialization/deserialization could take more time.
-    """
+    """Wheather serialization should be persistent."""
 
     varname = "MODIN_PERSISTENT_PICKLE"
+    # When set to off, it allows faster serialization which is only
+    # valid in current run (i.e. useless for saving to disk).
+    # When set to on, Modin objects could be saved to disk and loaded
+    # but serialization/deserialization could take more time.
     default = False
 
 

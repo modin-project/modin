@@ -19,15 +19,63 @@ If module is called (using `python -m modin.config`) configs help will be printe
 
 from . import *  # noqa: F403, F401
 from .pubsub import Parameter
+import pandas
+import argparse
+import os
 
 
 def print_config_help():
-    """Print all configs help messages."""
+    """Print configs help messages."""
     for objname in sorted(globals()):
         obj = globals()[objname]
         if isinstance(obj, type) and issubclass(obj, Parameter) and not obj.is_abstract:
             print(f"{obj.get_help()}\n\tCurrent value: {obj.get()}")  # noqa: T001
 
 
+def export_config_help(filename: str):
+    """
+    Export all configs help messages to the CSV file.
+
+    Parameters
+    ----------
+    filename : str
+        Name of the file to export help messages.
+    """
+    configs = pandas.DataFrame(
+        columns=[
+            "Config Name",
+            "Env. Variable Name",
+            "Default Value",
+            "Description",
+            "Options",
+        ]
+    )
+    for objname in sorted(globals()):
+        obj = globals()[objname]
+        if isinstance(obj, type) and issubclass(obj, Parameter) and not obj.is_abstract:
+            data = {
+                "Config Name": obj.__name__,
+                "Env. Variable Name": obj.varname,
+                "Default Value": obj._get_default(),
+                "Description": obj.__doc__,
+                "Options": obj.choices,
+            }
+            configs = configs.append(data, ignore_index=True)
+
+    configs.to_csv(filename, index=False)
+
+
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "-export_dist",
+        dest="export_dist",
+        type=str,
+        required=False,
+        default=None,
+        help="File to export configs help.",
+    )
+    export_dist = parser.parse_args().export_dist
+    if export_dist and not os.path.exists(export_dist):
+        export_config_help(export_dist)
     print_config_help()
