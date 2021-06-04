@@ -17,7 +17,7 @@ from modin.config import Engine, Backend
 from modin import set_backends
 
 from modin.data_management.factories.dispatcher import (
-    EngineDispatcher,
+    FactoryDispatcher,
     FactoryNotFoundError,
 )
 from modin.data_management.factories import factories
@@ -73,20 +73,20 @@ factories.FooOnBarFactory = FooOnBarFactory
 pd._NOINIT_ENGINES |= {"Test", "Bar"}
 
 
-def test_default_engine():
-    assert issubclass(EngineDispatcher.get_engine(), factories.BaseFactory)
-    assert EngineDispatcher.get_engine().io_cls
+def test_default_factory():
+    assert issubclass(FactoryDispatcher.get_factory(), factories.BaseFactory)
+    assert FactoryDispatcher.get_factory().io_cls
 
 
-def test_engine_switch():
+def test_factory_switch():
     Engine.put("Test")
-    assert EngineDispatcher.get_engine() == PandasOnTestFactory
-    assert EngineDispatcher.get_engine().io_cls == "Foo"
+    assert FactoryDispatcher.get_factory() == PandasOnTestFactory
+    assert FactoryDispatcher.get_factory().io_cls == "Foo"
     Engine.put("Python")  # revert engine to default
 
     Backend.put("Test")
-    assert EngineDispatcher.get_engine() == TestOnPythonFactory
-    assert EngineDispatcher.get_engine().io_cls == "Bar"
+    assert FactoryDispatcher.get_factory() == TestOnPythonFactory
+    assert FactoryDispatcher.get_factory().io_cls == "Bar"
     Backend.put("Pandas")  # revert engine to default
 
 
@@ -98,4 +98,4 @@ def test_engine_wrong_factory():
 
 def test_set_backends():
     set_backends("Bar", "Foo")
-    assert EngineDispatcher.get_engine() == FooOnBarFactory
+    assert FactoryDispatcher.get_factory() == FooOnBarFactory

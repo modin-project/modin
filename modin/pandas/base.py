@@ -2418,9 +2418,9 @@ class BasePandasDataset(object):
         }
         new_query_compiler = self._query_compiler
 
-        from modin.data_management.factories.dispatcher import EngineDispatcher
+        from modin.data_management.factories.dispatcher import FactoryDispatcher
 
-        return EngineDispatcher.to_csv(new_query_compiler, **kwargs)
+        return FactoryDispatcher.to_csv(new_query_compiler, **kwargs)
 
     def to_dict(self, orient="dict", into=dict):  # pragma: no cover
         return self._default_to_pandas("to_dict", orient=orient, into=into)
@@ -2660,9 +2660,9 @@ class BasePandasDataset(object):
             # so pandas._to_sql will not write the index to the database as well
             index = False
 
-        from modin.data_management.factories.dispatcher import EngineDispatcher
+        from modin.data_management.factories.dispatcher import FactoryDispatcher
 
-        EngineDispatcher.to_sql(
+        FactoryDispatcher.to_sql(
             new_query_compiler,
             name=name,
             con=con,

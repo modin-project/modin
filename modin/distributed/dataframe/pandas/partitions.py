@@ -112,9 +112,9 @@ def from_partitions(partitions, axis):
     modin.pandas.DataFrame
         DataFrame instance created from remote partitions.
     """
-    from modin.data_management.factories.dispatcher import EngineDispatcher
+    from modin.data_management.factories.dispatcher import FactoryDispatcher
 
-    factory = EngineDispatcher.get_engine()
+    factory = FactoryDispatcher.get_factory()
 
     partition_class = factory.io_cls.frame_cls._partition_mgr_cls._partition_class
     partition_frame_class = factory.io_cls.frame_cls

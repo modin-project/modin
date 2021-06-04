@@ -21,7 +21,7 @@ import pandas
 
 from . import DataFrame
 from modin.config import IsExperimental, Engine
-from modin.data_management.factories.dispatcher import EngineDispatcher
+from modin.data_management.factories.dispatcher import FactoryDispatcher
 from ...pandas import _update_engine
 
 
@@ -96,7 +96,7 @@ def read_sql(
     Engine.subscribe(_update_engine)
     assert IsExperimental.get(), "This only works in experimental mode"
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
-    return DataFrame(query_compiler=EngineDispatcher.read_sql(**kwargs))
+    return DataFrame(query_compiler=FactoryDispatcher.read_sql(**kwargs))
 
 
 # CSV and table
@@ -196,12 +196,12 @@ def _read(**kwargs) -> DataFrame:
     -------
     modin.DataFrame
     """
-    from modin.data_management.factories.dispatcher import EngineDispatcher
+    from modin.data_management.factories.dispatcher import FactoryDispatcher
 
     Engine.subscribe(_update_engine)
 
     try:
-        pd_obj = EngineDispatcher.read_csv_glob(**kwargs)
+        pd_obj = FactoryDispatcher.read_csv_glob(**kwargs)
     except AttributeError:
         raise AttributeError("read_csv_glob() is only implemented for pandas on Ray.")
 
