@@ -15,6 +15,7 @@
 
 from abc import ABC
 from modin.pandas.indexing import compute_sliced_len
+from copy import copy
 
 import pandas
 
@@ -133,17 +134,6 @@ class PandasFramePartition(ABC):  # pragma: no cover
         """
         pass
 
-    def __copy__(self):
-        """
-        Create a copy of this partition.
-
-        Returns
-        -------
-        PandasFramePartition
-            A copy of this partition.
-        """
-        pass
-
     def mask(self, row_indices, col_indices):
         """
         Lazily create a mask that extracts the indices provided.
@@ -160,22 +150,24 @@ class PandasFramePartition(ABC):  # pragma: no cover
         PandasFramePartition
             New `PandasFramePartition` object.
         """
-        if (
-            (isinstance(row_indices, slice) and row_indices == slice(None))
-            or (
-                not isinstance(row_indices, slice)
-                and isinstance(self._length_cache, int)
-                and len(row_indices) == self._length_cache
+
+        def is_full_axis_mask(index, axis_length):
+            """Check whether `index` mask grabs `axis_length` amount of elements."""
+            if isinstance(index, slice):
+                return index == slice(None) or (
+                    isinstance(axis_length, int)
+                    and compute_sliced_len(index, axis_length) == axis_length
+                )
+            return (
+                hasattr(index, "__len__")
+                and isinstance(axis_length, int)
+                and len(index) == axis_length
             )
-        ) and (
-            (isinstance(col_indices, slice) and col_indices == slice(None))
-            or (
-                not isinstance(col_indices, slice)
-                and isinstance(self._width_cache, int)
-                and len(col_indices) == self._width_cache
-            )
+
+        if is_full_axis_mask(row_indices, self._length_cache) and is_full_axis_mask(
+            col_indices, self._width_cache
         ):
-            return self.__copy__()
+            return copy(self)
 
         new_obj = self.add_to_apply_calls(
             lambda df: pandas.DataFrame(df.iloc[row_indices, col_indices])

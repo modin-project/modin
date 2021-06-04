@@ -48,22 +48,6 @@ class PandasOnPythonFramePartition(PandasFramePartition):
         self.drain_call_queue()
         return self.data.copy()
 
-    def __copy__(self):
-        """
-        Create a copy of this partition.
-
-        Returns
-        -------
-        PandasOnPythonFramePartition
-            A copy of this partition.
-        """
-        return type(self)(
-            data=self.data,
-            length=self._length_cache,
-            width=self._width_cache,
-            call_queue=self.call_queue,
-        )
-
     def apply(self, func, **kwargs):
         """Apply some callable function to the data in this partition.
 

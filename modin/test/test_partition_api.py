@@ -125,7 +125,7 @@ def test_from_partitions(axis):
 def test_mask_preserve_cache(
     row_indices, col_indices, is_length_future, is_width_future
 ):
-    def serialize(obj):
+    def deserialize(obj):
         if isinstance(obj, FutureType):
             return get_func(obj)
         return obj
@@ -152,8 +152,8 @@ def test_mask_preserve_cache(
     expected_width = compute_length(col_indices, len(df.columns))
 
     # Check that the cache is preserved
-    assert expected_length == serialize(masked_partition._length_cache)
-    assert expected_width == serialize(masked_partition._width_cache)
+    assert expected_length == deserialize(masked_partition._length_cache)
+    assert expected_width == deserialize(masked_partition._width_cache)
     # Check that the cache is interpreted properly
     assert expected_length == masked_partition.length()
     assert expected_width == masked_partition.width()
