@@ -1923,7 +1923,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
                         # correct behavior.
                         return series.squeeze(axis=1).fillna(value=value, **kwargs)
 
-                    new_modin_frame = self._modin_frame._apply_full_axis(
+                    new_modin_frame = self._modin_frame.apply_full_axis(
                         0, fillna_builder
                     )
                 else:
@@ -1935,7 +1935,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
                         # objects (when `limit` parameter is absent) as it works on two `Series`.
                         return series.fillna(value, **kwargs)
 
-                    new_modin_frame = self._modin_frame._binary_op(
+                    new_modin_frame = self._modin_frame.binary_op(
                         fillna_builder, value._modin_frame, join_type="left"
                     )
             else:
