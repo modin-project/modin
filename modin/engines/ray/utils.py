@@ -21,6 +21,7 @@ from modin.config import (
     Backend,
     IsRayCluster,
     RayRedisAddress,
+    RayRedisPassword,
     CpuCount,
     GpuCount,
     Memory,
@@ -132,16 +133,14 @@ def initialize_ray(
         If not specified, ``modin.config.RayRedisAddress`` is used.
     override_redis_password : str, optional
         What password to use when connecting to Redis.
-        If not specified, a new random one is generated.
+        If not specified, ``modin.config.RayRedisPassword`` is used.
     """
     import ray
 
     if not ray.is_initialized() or override_is_cluster:
-        import secrets
-
         cluster = override_is_cluster or IsRayCluster.get()
         redis_address = override_redis_address or RayRedisAddress.get()
-        redis_password = override_redis_password or secrets.token_hex(32)
+        redis_password = override_redis_password or RayRedisPassword.get()
 
         if cluster:
             # We only start ray in a cluster setting for the head node.
