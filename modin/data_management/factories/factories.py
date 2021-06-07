@@ -135,7 +135,7 @@ class BaseFactory(object):
 
         Notes
         -----
-        It parses factory name, so it must be conformant with how ExecutionEngine
+        It parses factory name, so it must be conformant with how ``FactoryDispatcher``
         class constructs factory names.
         """
         try:
