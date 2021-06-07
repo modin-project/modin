@@ -167,9 +167,9 @@ class PandasOnDaskFramePartition(PandasFramePartition):
 
         Parameters
         ----------
-        row_indices : list-like
+        row_indices : list-like, slice or label
             The indices for the rows to extract.
-        col_indices : list-like
+        col_indices : list-like, slice or label
             The indices for the columns to extract.
 
         Returns

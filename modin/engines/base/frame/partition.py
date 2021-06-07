@@ -17,7 +17,7 @@ from abc import ABC
 from modin.pandas.indexing import compute_sliced_len
 from copy import copy
 
-import pandas
+from pandas.api.types import is_scalar
 
 
 class PandasFramePartition(ABC):  # pragma: no cover
@@ -140,9 +140,9 @@ class PandasFramePartition(ABC):  # pragma: no cover
 
         Parameters
         ----------
-        row_indices : list-like
+        row_indices : list-like, slice or label
             The indices for the rows to extract.
-        col_indices : list-like
+        col_indices : list-like, slice or label
             The indices for the columns to extract.
 
         Returns
@@ -164,14 +164,15 @@ class PandasFramePartition(ABC):  # pragma: no cover
                 and len(index) == axis_length
             )
 
+        row_indices = [row_indices] if is_scalar(row_indices) else row_indices
+        col_indices = [col_indices] if is_scalar(col_indices) else col_indices
+
         if is_full_axis_mask(row_indices, self._length_cache) and is_full_axis_mask(
             col_indices, self._width_cache
         ):
             return copy(self)
 
-        new_obj = self.add_to_apply_calls(
-            lambda df: pandas.DataFrame(df.iloc[row_indices, col_indices])
-        )
+        new_obj = self.add_to_apply_calls(lambda df: df.iloc[row_indices, col_indices])
         new_obj._length_cache = (
             (
                 compute_sliced_len(row_indices, self._length_cache)
