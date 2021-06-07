@@ -375,7 +375,7 @@ def wrap_udf_function(func):
 
 def get_current_backend():
     """
-    Return current factory name as a string.
+    Return current backend name as a string.
 
     Returns
     -------

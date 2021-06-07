@@ -196,8 +196,6 @@ def _read(**kwargs) -> DataFrame:
     -------
     modin.DataFrame
     """
-    from modin.data_management.factories.dispatcher import FactoryDispatcher
-
     Engine.subscribe(_update_engine)
 
     try:
