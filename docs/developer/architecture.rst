@@ -71,6 +71,7 @@ Component View
    ../flow/modin/engines/ray/cudf_on_ray/frame/index
    ../flow/modin/engines/dask/pandas_on_dask/frame/index
    ../flow/modin/experimental/index
+   ../flow/modin/engines/python/pandas_on_python/frame/index
 
 
 DataFrame Partitioning
@@ -276,9 +277,9 @@ by documentation for now, the rest is coming soon...).
    │   │   ├─── :doc:`pandas </flow/modin/backends/pandas/index>`
    │   │   |   ├─── :doc:`parsers </flow/modin/backends/pandas/parsers>`
    │   │   │   └─── :doc:`query_compiler </flow/modin/backends/pandas/query_compiler>`
-   │   │   └───pyarrow
-   │   │   |   ├───parsers
-   │   │   │   └───query_compiler
+   │   │   └─── :doc:`pyarrow </flow/modin/backends/pyarrow/index>`
+   │   │   |   ├─── :doc:`parsers </flow/modin/backends/pyarrow/parsers>`
+   │   │   │   └─── :doc:`query_compiler </flow/modin/backends/pyarrow/query_compiler>`
    │   ├───config
    │   ├───data_management
    │   │   ├─── :doc:`factories </flow/modin/data_management/factories>`
@@ -295,6 +296,7 @@ by documentation for now, the rest is coming soon...).
    │   │   |       └─── :doc:`frame </flow/modin/engines/dask/pandas_on_dask/frame/index>`
    │   │   ├───python
    │   │   │   └───pandas_on_python
+   │   │   │       └─── :doc:`frame </flow/modin/engines/python/pandas_on_python/frame/index>`
    │   │   └───ray
    │   │       ├─── :doc:`generic </flow/modin/engines/ray/generic>`
    │   │       ├───cudf_on_ray

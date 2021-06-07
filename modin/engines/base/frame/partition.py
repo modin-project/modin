@@ -14,6 +14,10 @@
 """The module defines base interface for a partition of a Modin DataFrame."""
 
 from abc import ABC
+from modin.pandas.indexing import compute_sliced_len
+from copy import copy
+
+from pandas.api.types import is_scalar
 
 
 class PandasFramePartition(ABC):  # pragma: no cover
@@ -136,9 +140,9 @@ class PandasFramePartition(ABC):  # pragma: no cover
 
         Parameters
         ----------
-        row_indices : list-like
+        row_indices : list-like, slice or label
             The indices for the rows to extract.
-        col_indices : list-like
+        col_indices : list-like, slice or label
             The indices for the columns to extract.
 
         Returns
@@ -146,7 +150,41 @@ class PandasFramePartition(ABC):  # pragma: no cover
         PandasFramePartition
             New `PandasFramePartition` object.
         """
-        pass
+
+        def is_full_axis_mask(index, axis_length):
+            """Check whether `index` mask grabs `axis_length` amount of elements."""
+            if isinstance(index, slice):
+                return index == slice(None) or (
+                    isinstance(axis_length, int)
+                    and compute_sliced_len(index, axis_length) == axis_length
+                )
+            return (
+                hasattr(index, "__len__")
+                and isinstance(axis_length, int)
+                and len(index) == axis_length
+            )
+
+        row_indices = [row_indices] if is_scalar(row_indices) else row_indices
+        col_indices = [col_indices] if is_scalar(col_indices) else col_indices
+
+        if is_full_axis_mask(row_indices, self._length_cache) and is_full_axis_mask(
+            col_indices, self._width_cache
+        ):
+            return copy(self)
+
+        new_obj = self.add_to_apply_calls(lambda df: df.iloc[row_indices, col_indices])
+
+        def try_recompute_cache(indices, previous_cache):
+            """Compute new axis-length cache for the masked frame based on its previous cache."""
+            if not isinstance(indices, slice):
+                return len(indices)
+            if not isinstance(previous_cache, int):
+                return None
+            return compute_sliced_len(indices, previous_cache)
+
+        new_obj._length_cache = try_recompute_cache(row_indices, self._length_cache)
+        new_obj._width_cache = try_recompute_cache(col_indices, self._width_cache)
+        return new_obj
 
     @classmethod
     def put(cls, obj):

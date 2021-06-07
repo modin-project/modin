@@ -45,6 +45,7 @@ def test_top_level_api_equality():
     ]
 
     ignore_modin = [
+        "indexing",
         "iterator",
         "series",
         "accessor",

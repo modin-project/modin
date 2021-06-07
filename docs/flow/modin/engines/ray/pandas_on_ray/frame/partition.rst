@@ -1,7 +1,7 @@
 PandasOnRayFramePartition
 """""""""""""""""""""""""
 
-The class is the specific implementation of :py:class:`~modin.engines.base.frame.partition.BaseFramePartition`,
+The class is the specific implementation of :py:class:`~modin.engines.base.frame.partition.PandasFramePartition`,
 providing the API to perform operations on a block partition, namely, ``pandas.DataFrame``, using Ray as an execution engine.
 
 In addition to wrapping a pandas DataFrame, the class also holds the following metadata:

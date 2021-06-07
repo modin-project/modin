@@ -11,7 +11,7 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-"""Module houses class that implements ``RayFrameManager`` using Ray."""
+"""Module houses class that implements ``GenericRayFramePartitionManager`` using Ray."""
 
 import inspect
 import numpy as np
@@ -150,7 +150,7 @@ class PandasOnRayFramePartitionManager(GenericRayFramePartitionManager):
         axis : {0, 1}
             Axis to extract the labels over.
         partitions : np.ndarray
-            NumPy array with ``BaseFramePartition``-s.
+            NumPy array with ``PandasFramePartition``-s.
         index_func : callable, default: None
             The function to be used to extract the indices.
 

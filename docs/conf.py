@@ -20,8 +20,8 @@ def noop_decorator(*args, **kwargs):
     return lambda cls_or_func: cls_or_func
 ray.remote = noop_decorator
 
-# fake cuDF-related modules if they're missing
-for mod_name in ("cudf", "cupy"):
+# fake modules if they're missing
+for mod_name in ("cudf", "cupy", "pyarrow.gandiva"):
     try:
         __import__(mod_name)
     except ImportError:
