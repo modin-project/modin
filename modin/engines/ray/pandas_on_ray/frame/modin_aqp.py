@@ -11,6 +11,8 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
+"""The module for working with displaying progress bars for Ray engine."""
+
 import ray
 import os
 import time
@@ -22,6 +24,18 @@ bar_lock = threading.Lock()
 
 
 def call_progress_bar(result_parts, line_no):
+    """
+    Attach a progress bar to given `result_parts`.
+
+    The progress bar is expected to be shown in a Jupyter Notebook cell.
+
+    Parameters
+    ----------
+    result_parts : list of list of ray.ObjectRef
+        Objects which are being computed for which progress is requested.
+    line_no : int
+        Line number in the call stack which we're displaying progress for.
+    """
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
         try:
@@ -74,10 +88,26 @@ def call_progress_bar(result_parts, line_no):
 
 
 def display_time_updates(bar):
+    """
+    Start displaying the progress `bar` in a notebook.
+
+    Parameters
+    ----------
+    bar : tqdm.tqdm
+        The progress bar wrapper to display in a notebook cell.
+    """
     threading.Thread(target=show_time_updates, args=(bar,)).start()
 
 
 def show_time_updates(p_bar):
+    """
+    Refresh displayed progress bar `p_bar` periodically until it is complete.
+
+    Parameters
+    ----------
+    p_bar : tqdm.tqdm
+        The progress bar wrapper being displayed to refresh.
+    """
     while p_bar.total > p_bar.n:
         time.sleep(1)
         if p_bar.total > p_bar.n:

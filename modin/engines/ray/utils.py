@@ -11,6 +11,8 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
+"""The module holds utility and initialization routines for Modin on Ray."""
+
 import builtins
 import os
 import sys
@@ -19,6 +21,7 @@ from modin.config import (
     Backend,
     IsRayCluster,
     RayRedisAddress,
+    RayRedisPassword,
     CpuCount,
     GpuCount,
     Memory,
@@ -29,6 +32,20 @@ from modin.config import (
 
 
 def handle_ray_task_error(e):
+    """
+    Re-raise remote exception as local built-in exception if possible.
+
+    Parameters
+    ----------
+    e : ray.exceptions.RayTaskError
+        Remote exception as reported by Ray.
+
+    Raises
+    ------
+    Exception
+        Remote exception converted to built-in exception if possible,
+        original exception untouched otherwise.
+    """
     for s in e.traceback_str.split("\n")[::-1]:
         if "Error" in s or "Exception" in s:
             try:
@@ -41,9 +58,20 @@ def handle_ray_task_error(e):
     raise e
 
 
-# Register a fix import function to run on all_workers including the driver.
-# This is a hack solution to fix #647, #746
 def _move_stdlib_ahead_of_site_packages(*args):
+    """
+    Ensure packages from stdlib have higher import priority than from site-packages.
+
+    Parameters
+    ----------
+    *args : tuple
+        Ignored, added for compatibility with Ray.
+
+    Notes
+    -----
+    This function is expected to be run on all workers including the driver.
+    This is a hack solution to fix GH-#647, GH-#746.
+    """
     site_packages_path = None
     site_packages_path_index = -1
     for i, path in enumerate(sys.path):
@@ -64,10 +92,23 @@ def _move_stdlib_ahead_of_site_packages(*args):
         sys.path.insert(site_packages_path_index, os.path.dirname(site_packages_path))
 
 
-# Register a fix to import pandas on all workers before running tasks.
-# This prevents a race condition between two threads deserializing functions
-# and trying to import pandas at the same time.
 def _import_pandas(*args):
+    """
+    Import pandas to make sure all its machinery is ready.
+
+    This prevents a race condition between two threads deserializing functions
+    and trying to import pandas at the same time.
+
+    Parameters
+    ----------
+    *args : tuple
+        Ignored, added for compatibility with Ray.
+
+    Notes
+    -----
+    This function is expected to be run on all workers before any
+    serialization or deserialization starts.
+    """
     import pandas  # noqa F401
 
 
@@ -77,31 +118,29 @@ def initialize_ray(
     override_redis_password: str = None,
 ):
     """
-    Initializes ray based on parameters, environment variables and internal defaults.
+    Initialize Ray based on parameters, ``modin.config`` variables and internal defaults.
 
     Parameters
     ----------
-    override_is_cluster: bool, optional
-        Whether to override the detection of Moding being run in a cluster
+    override_is_cluster : bool, default: False
+        Whether to override the detection of Modin being run in a cluster
         and always assume this runs on cluster head node.
-        This also overrides Ray worker detection and always runs the function,
-        not only from main thread.
-        If not specified, $MODIN_RAY_CLUSTER env variable is used.
-    override_redis_address: str, optional
+        This also overrides Ray worker detection and always runs the initialization
+        function (runs from main thread only by default).
+        If not specified, ``modin.config.IsRayCluster`` variable is used.
+    override_redis_address : str, optional
         What Redis address to connect to when running in Ray cluster.
-        If not specified, $MODIN_REDIS_ADDRESS is used.
-    override_redis_password: str, optional
+        If not specified, ``modin.config.RayRedisAddress`` is used.
+    override_redis_password : str, optional
         What password to use when connecting to Redis.
-        If not specified, a new random one is generated.
+        If not specified, ``modin.config.RayRedisPassword`` is used.
     """
     import ray
 
     if not ray.is_initialized() or override_is_cluster:
-        import secrets
-
         cluster = override_is_cluster or IsRayCluster.get()
         redis_address = override_redis_address or RayRedisAddress.get()
-        redis_password = override_redis_password or secrets.token_hex(32)
+        redis_password = override_redis_password or RayRedisPassword.get()
 
         if cluster:
             # We only start ray in a cluster setting for the head node.

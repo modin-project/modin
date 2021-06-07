@@ -66,9 +66,13 @@ Component View
 --------------
 .. toctree::
    ../flow/modin/engines/base/frame/index
+   ../flow/modin/engines/ray/generic
+   ../flow/modin/engines/ray/pandas_on_ray/frame/index
+   ../flow/modin/engines/ray/cudf_on_ray/frame/index
    ../flow/modin/engines/dask/pandas_on_dask/frame/index
    ../flow/modin/experimental/index
    ../flow/modin/backends/index
+   ../flow/modin/engines/python/pandas_on_python/frame/index
 
 
 DataFrame Partitioning
@@ -274,9 +278,9 @@ by documentation for now, the rest is coming soon...).
    │   │   ├─── :doc:`pandas </flow/modin/backends/pandas/index>`
    │   │   |   ├─── :doc:`parsers </flow/modin/backends/pandas/parsers>`
    │   │   │   └─── :doc:`query_compiler </flow/modin/backends/pandas/query_compiler>`
-   │   │   └───pyarrow
-   │   │   |   ├───parsers
-   │   │   │   └───query_compiler
+   │   │   └─── :doc:`pyarrow </flow/modin/backends/pyarrow/index>`
+   │   │   |   ├─── :doc:`parsers </flow/modin/backends/pyarrow/parsers>`
+   │   │   │   └─── :doc:`query_compiler </flow/modin/backends/pyarrow/query_compiler>`
    │   ├───config
    │   ├───data_management
    │   │   ├─── :doc:`factories </flow/modin/data_management/factories>`
@@ -293,9 +297,15 @@ by documentation for now, the rest is coming soon...).
    │   │   |       └─── :doc:`frame </flow/modin/engines/dask/pandas_on_dask/frame/index>`
    │   │   ├───python
    │   │   │   └───pandas_on_python
+   │   │   │       └─── :doc:`frame </flow/modin/engines/python/pandas_on_python/frame/index>`
    │   │   └───ray
-   │   │       ├───generic
+   │   │       ├─── :doc:`generic </flow/modin/engines/ray/generic>`
+   │   │       ├───cudf_on_ray
+   │   │       │   ├─── :doc:`frame </flow/modin/engines/ray/cudf_on_ray/frame/index>`
+   │   │       │   └─── :doc:`io </flow/modin/engines/ray/cudf_on_ray/io>`
    │   │       └───pandas_on_ray
+   │   │           └─── :doc:`frame </flow/modin/engines/ray/pandas_on_ray/frame/index>`
+   │   ├───experimental
    │   ├── :doc:`experimental </flow/modin/experimental/experimental>`
    │   │   ├───backends
    │   │   │   └───omnisci
@@ -309,6 +319,7 @@ by documentation for now, the rest is coming soon...).
    │   │   ├───sql
    │   │   └─── :doc:`xgboost </flow/modin/experimental/xgboost>`
    │   ├───pandas
+   │   │   └─── :doc:`series </flow/modin/pandas/series>`
    │   ├───spreadsheet
    │   └───sql
    ├───requirements

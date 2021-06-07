@@ -11,6 +11,8 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
+"""Module houses class that implements ``PandasOnRayFrame`` class using cuDF."""
+
 import numpy as np
 import ray
 
@@ -22,19 +24,37 @@ from modin.error_message import ErrorMessage
 
 
 class cuDFOnRayFrame(PandasOnRayFrame):
+    """
+    The class implements the interface in ``PandasOnRayFrame`` using cuDF.
+
+    Parameters
+    ----------
+    partitions : np.ndarray
+        A 2D NumPy array of partitions.
+    index : sequence
+        The index for the dataframe. Converted to a ``pandas.Index``.
+    columns : sequence
+        The columns object for the dataframe. Converted to a ``pandas.Index``.
+    row_lengths : list, optional
+        The length of each partition in the rows. The "height" of
+        each of the block partitions. Is computed if not provided.
+    column_widths : list, optional
+        The width of each partition in the columns. The "width" of
+        each of the block partitions. Is computed if not provided.
+    dtypes : pandas.Series, optional
+        The data types for the dataframe columns.
+    """
 
     _partition_mgr_cls = cuDFOnRayFramePartitionManager
 
     def synchronize_labels(self, axis=None):
-        """Synchronize labels by applying the index object (Index or Columns) to the partitions eagerly.
+        """
+        Synchronize labels by applying the index object (Index or Columns) to the partitions eagerly.
 
-        Args:
-            axis: The axis to apply to, None applies to both axes.
-
-        Returns
-        -------
-            A new 2D array of partitions that have the index assignment added to the
-            call queue.
+        Parameters
+        ----------
+        axis : {0, 1, None}, default: None
+            The axis to apply to. If None, it applies to both axes.
         """
         ErrorMessage.catch_bugs_and_request_email(
             axis is not None and axis not in [0, 1]
@@ -98,26 +118,29 @@ class cuDFOnRayFrame(PandasOnRayFrame):
         col_indices=None,
         col_numeric_idx=None,
     ):
-        """Lazily select columns or rows from given indices.
-
-        Note: If both row_indices and row_numeric_idx are set, row_indices will be used.
-            The same rule applied to col_indices and col_numeric_idx.
+        """
+        Lazily select columns or rows from given indices.
 
         Parameters
         ----------
-        row_indices : list of hashable
+        row_indices : list of hashable, optional
             The row labels to extract.
-        row_numeric_idx : list of int
+        row_numeric_idx : list of int, optional
             The row indices to extract.
-        col_indices : list of hashable
+        col_indices : list of hashable, optional
             The column labels to extract.
-        col_numeric_idx : list of int
+        col_numeric_idx : list of int, optional
             The column indices to extract.
 
         Returns
         -------
-        PandasFrame
-             A new PandasFrame from the mask provided.
+        cuDFOnRayFrame
+             A new ``cuDFOnRayFrame`` from the mask provided.
+
+        Notes
+        -----
+        If both `row_indices` and `row_numeric_idx` are set, `row_indices` will be used.
+        The same rule applied to `col_indices` and `col_numeric_idx`.
         """
         if isinstance(row_numeric_idx, slice) and (
             row_numeric_idx == slice(None) or row_numeric_idx == slice(0, None)

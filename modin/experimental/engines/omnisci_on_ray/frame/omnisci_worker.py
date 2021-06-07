@@ -18,11 +18,17 @@ import os
 import pyarrow as pa
 import numpy as np
 
-prev = sys.getdlopenflags()
-sys.setdlopenflags(1 | 256)  # RTLD_LAZY+RTLD_GLOBAL
-from dbe import PyDbEngine
+if sys.platform == "linux":
+    prev = sys.getdlopenflags()
+    sys.setdlopenflags(1 | 256)  # RTLD_LAZY+RTLD_GLOBAL
 
-sys.setdlopenflags(prev)
+try:
+    from omniscidbe import PyDbEngine
+except ModuleNotFoundError:  # fallback for older omniscidbe4py package naming
+    from dbe import PyDbEngine
+
+if sys.platform == "linux":
+    sys.setdlopenflags(prev)
 
 from modin.config import OmnisciFragmentSize
 

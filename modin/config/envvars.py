@@ -16,6 +16,7 @@ import sys
 from textwrap import dedent
 import warnings
 from packaging import version
+import secrets
 
 from .pubsub import Parameter, _TYPE_PARAMS, ExactStr, ValueSource
 
@@ -119,6 +120,15 @@ class RayRedisAddress(EnvironmentVariable, type=ExactStr):
     """
 
     varname = "MODIN_REDIS_ADDRESS"
+
+
+class RayRedisPassword(EnvironmentVariable, type=ExactStr):
+    """
+    What password to use for connecting to Redis
+    """
+
+    varname = "MODIN_REDIS_PASSWORD"
+    default = secrets.token_hex(32)
 
 
 class CpuCount(EnvironmentVariable, type=int):

@@ -11,6 +11,8 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
+"""Module holds implementation of ``BaseIO`` using cuDF."""
+
 from modin.engines.base.io import BaseIO
 from modin.engines.ray.cudf_on_ray.io import cuDFCSVDispatcher
 from modin.backends.cudf.query_compiler import cuDFQueryCompiler
@@ -28,6 +30,7 @@ from modin.backends.cudf.parser import cuDFCSVParser
 
 
 class cuDFOnRayIO(BaseIO):
+    """The class implements ``BaseIO`` class using cuDF-entities."""
 
     frame_cls = cuDFOnRayFrame
     query_compiler_cls = cuDFQueryCompiler
