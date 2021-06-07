@@ -173,24 +173,21 @@ class PandasFramePartition(ABC):  # pragma: no cover
             return copy(self)
 
         new_obj = self.add_to_apply_calls(lambda df: df.iloc[row_indices, col_indices])
-        new_obj._length_cache = (
-            (
-                compute_sliced_len(row_indices, self._length_cache)
-                if isinstance(self._length_cache, int)
-                else None
+
+        def try_recompute_cache(indices, previous_cache):
+            """Compute new axis-length cache for the masked frame based on its previous cache."""
+            return (
+                (
+                    compute_sliced_len(indices, previous_cache)
+                    if isinstance(previous_cache, int)
+                    else None
+                )
+                if isinstance(indices, slice)
+                else len(indices)
             )
-            if isinstance(row_indices, slice)
-            else len(row_indices)
-        )
-        new_obj._width_cache = (
-            (
-                compute_sliced_len(col_indices, self._width_cache)
-                if isinstance(self._width_cache, int)
-                else None
-            )
-            if isinstance(col_indices, slice)
-            else len(col_indices)
-        )
+
+        new_obj._length_cache = try_recompute_cache(row_indices, self._length_cache)
+        new_obj._width_cache = try_recompute_cache(col_indices, self._width_cache)
         return new_obj
 
     @classmethod
