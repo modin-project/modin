@@ -39,10 +39,14 @@ elif Engine.get() == "Dask":
     put_func = lambda x: get_client().scatter(x)  # noqa: E731
     get_func = lambda x: x.result()  # noqa: E731
     FutureType = Future
-else:
+elif Engine.get() == "Python":
     put_func = lambda x: x  # noqa: E731
     get_func = lambda x: x  # noqa: E731
     FutureType = object
+else:
+    raise NotImplementedError(
+        f"'{Engine.get()}' engine is not supported by these test suites"
+    )
 
 NPartitions.put(4)
 # HACK: implicit engine initialization (Modin issue #2989)

@@ -176,15 +176,11 @@ class PandasFramePartition(ABC):  # pragma: no cover
 
         def try_recompute_cache(indices, previous_cache):
             """Compute new axis-length cache for the masked frame based on its previous cache."""
-            return (
-                (
-                    compute_sliced_len(indices, previous_cache)
-                    if isinstance(previous_cache, int)
-                    else None
-                )
-                if isinstance(indices, slice)
-                else len(indices)
-            )
+            if not isinstance(indices, slice):
+                return len(indices)
+            if not isinstance(previous_cache, int):
+                return None
+            return compute_sliced_len(indices, previous_cache)
 
         new_obj._length_cache = try_recompute_cache(row_indices, self._length_cache)
         new_obj._width_cache = try_recompute_cache(col_indices, self._width_cache)
