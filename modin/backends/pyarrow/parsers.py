@@ -11,21 +11,47 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
+"""Module houses Modin parser classes, that are used for data parsing on the workers."""
+
 from modin.data_management.utils import get_default_chunksize
 from io import BytesIO
 import pandas
 
 
 class PyarrowCSVParser:
-    def parse(self, **kwargs):
+    """Class for handling CSV files on the workers using PyArrow backend."""
+
+    def parse(self, fname, num_splits, start, end, header, **kwargs):
+        """
+        Parse CSV file into PyArrow tables.
+
+        Parameters
+        ----------
+        fname : str
+            Name of the CSV file to parse.
+        num_splits : int
+            Number of partitions to split the resulted PyArrow table into.
+        start : int
+            Position in the specified file to start parsing from.
+        end : int
+            Position in the specified file to end parsing at.
+        header : str
+            Header line that will be interpret as the first line of the parsed CSV file.
+        **kwargs : kwargs
+            Serves the compatibility purpose. Does not affect the result.
+
+        Returns
+        -------
+        list
+            List with splitted parse results and it's metadata:
+
+            - First `num_split` elements are PyArrow tables, representing the corresponding chunk.
+            - Next element is the number of rows in the parsed table.
+            - Last element is the pandas Series, containing the data-types for each column of the parsed table.
+        """
         import pyarrow as pa
         import pyarrow.csv as csv
 
-        fname = kwargs.pop("fname", None)
-        num_splits = kwargs.pop("num_splits", None)
-        start = kwargs.pop("start", None)
-        end = kwargs.pop("end", None)
-        header = kwargs.pop("header", None)
         bio = open(fname, "rb")
         # The header line for the CSV file
         first_line = bio.readline()

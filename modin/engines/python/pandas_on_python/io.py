@@ -11,12 +11,19 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
+"""Module for housing IO classes with pandas backend and Python engine."""
+
 from modin.engines.base.io import BaseIO
 from modin.backends.pandas.query_compiler import PandasQueryCompiler
 from modin.engines.python.pandas_on_python.frame.data import PandasOnPythonFrame
 
 
 class PandasOnPythonIO(BaseIO):
+    """
+    Class for storing IO functions operating on pandas backend and Python engine.
+
+    Inherits default function implementations from ``BaseIO`` parent class.
+    """
 
     frame_cls = PandasOnPythonFrame
     query_compiler_cls = PandasQueryCompiler

@@ -74,7 +74,9 @@ jobs:
             modin/engines/base/io/__init__.py \
             modin/engines/base/io/file_dispatcher.py \
             modin/experimental/engines/pandas_on_ray \
-            modin/experimental/engines/pyarrow_on_ray
+            modin/experimental/engines/pyarrow_on_ray \
+            modin/pandas/series.py \
+            modin/engines/python
       - run: python scripts/doc_checker.py modin/distributed
       - run: python scripts/doc_checker.py modin/utils.py
       - run: python scripts/doc_checker.py modin/experimental/sklearn
@@ -92,6 +94,7 @@ jobs:
       - run: |
           python scripts/doc_checker.py modin/experimental/pandas/io_exp.py \
             modin/experimental/pandas/numpy_wrap.py modin/experimental/pandas/__init__.py
+      - run: python scripts/doc_checker.py modin/backends/pyarrow
       - run: python scripts/doc_checker.py modin/backends/pandas
 
   lint-flake8:
