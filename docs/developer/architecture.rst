@@ -277,9 +277,9 @@ by documentation for now, the rest is coming soon...).
    │   │   ├─── :doc:`pandas </flow/modin/backends/pandas/index>`
    │   │   |   ├─── :doc:`parsers </flow/modin/backends/pandas/parsers>`
    │   │   │   └─── :doc:`query_compiler </flow/modin/backends/pandas/query_compiler>`
-   │   │   └───pyarrow
-   │   │   |   ├───parsers
-   │   │   │   └───query_compiler
+   │   │   └─── :doc:`pyarrow </flow/modin/backends/pyarrow/index>`
+   │   │   |   ├─── :doc:`parsers </flow/modin/backends/pyarrow/parsers>`
+   │   │   │   └─── :doc:`query_compiler </flow/modin/backends/pyarrow/query_compiler>`
    │   ├───config
    │   ├───data_management
    │   │   ├─── :doc:`factories </flow/modin/data_management/factories>`
