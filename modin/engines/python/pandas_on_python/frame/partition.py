@@ -147,33 +147,6 @@ class PandasOnPythonFramePartition(PandasFramePartition):
         """
         self.drain_call_queue()
 
-    # FIXME: row_indices and col_indices can't be optional - df.iloc[None, None]
-    # will raise ValueError
-    def mask(self, row_indices=None, col_indices=None):
-        """
-        Lazily create a mask that extracts the indices provided.
-
-        Parameters
-        ----------
-        row_indices : list-like, optional
-            The indices for the rows to extract.
-        col_indices : list-like, optional
-            The indices for the columns to extract.
-
-        Returns
-        -------
-        PandasOnPythonFramePartition
-            New ``PandasOnPythonFramePartition`` object.
-        """
-        new_obj = self.add_to_apply_calls(
-            lambda df: pandas.DataFrame(df.iloc[row_indices, col_indices])
-        )
-        if not isinstance(row_indices, slice):
-            new_obj._length_cache = len(row_indices)
-        if not isinstance(col_indices, slice):
-            new_obj._width_cache = len(col_indices)
-        return new_obj
-
     def to_pandas(self):
         """
         Return copy of the ``pandas.Dataframe`` stored in this partition.

@@ -18,6 +18,7 @@ import pandas
 from modin.data_management.utils import length_fn_pandas, width_fn_pandas
 from modin.engines.base.frame.partition import PandasFramePartition
 from modin.engines.ray.utils import handle_ray_task_error
+from modin.pandas.indexing import compute_sliced_len
 
 import ray
 from ray.worker import RayTaskError
@@ -29,6 +30,8 @@ if version.parse(ray.__version__) >= version.parse("1.2.0"):
     from ray.util.client.common import ClientObjectRef
 
     ObjectIDType = (ray.ObjectRef, ClientObjectRef)
+
+compute_sliced_len = ray.remote(compute_sliced_len)
 
 
 class PandasOnRayFramePartition(PandasFramePartition):
@@ -199,9 +202,9 @@ class PandasOnRayFramePartition(PandasFramePartition):
 
         Parameters
         ----------
-        row_indices : list-like
+        row_indices : list-like, slice or label
             The indices for the rows to extract.
-        col_indices : list-like
+        col_indices : list-like, slice or label
             The indices for the columns to extract.
 
         Returns
@@ -209,30 +212,19 @@ class PandasOnRayFramePartition(PandasFramePartition):
         PandasOnRayFramePartition
             A new ``PandasOnRayFramePartition`` object.
         """
-        if (
-            (isinstance(row_indices, slice) and row_indices == slice(None))
-            or (
-                not isinstance(row_indices, slice)
-                and self._length_cache is not None
-                and len(row_indices) == self._length_cache
-            )
-        ) and (
-            (isinstance(col_indices, slice) and col_indices == slice(None))
-            or (
-                not isinstance(col_indices, slice)
-                and self._width_cache is not None
-                and len(col_indices) == self._width_cache
-            )
+        new_obj = super().mask(row_indices, col_indices)
+        if isinstance(row_indices, slice) and isinstance(
+            self._length_cache, ObjectIDType
         ):
-            return self.__copy__()
-
-        new_obj = self.add_to_apply_calls(
-            lambda df: pandas.DataFrame(df.iloc[row_indices, col_indices])
-        )
-        if not isinstance(row_indices, slice):
-            new_obj._length_cache = len(row_indices)
-        if not isinstance(col_indices, slice):
-            new_obj._width_cache = len(col_indices)
+            new_obj._length_cache = compute_sliced_len.remote(
+                row_indices, self._length_cache
+            )
+        if isinstance(col_indices, slice) and isinstance(
+            self._width_cache, ObjectIDType
+        ):
+            new_obj._width_cache = compute_sliced_len.remote(
+                col_indices, self._width_cache
+            )
         return new_obj
 
     @classmethod
