@@ -20,10 +20,10 @@ from modin.distributed.dataframe.pandas import unwrap_partitions, from_partition
 from modin.config import Engine, NPartitions
 from modin.pandas.test.utils import df_equals
 from modin.pandas.indexing import compute_sliced_len
-from modin.data_management.factories.dispatcher import EngineDispatcher
+from modin.data_management.factories.dispatcher import FactoryDispatcher
 
 PartitionClass = (
-    EngineDispatcher.get_engine().io_cls.frame_cls._partition_mgr_cls._partition_class
+    FactoryDispatcher.get_factory().io_cls.frame_cls._partition_mgr_cls._partition_class
 )
 
 if Engine.get() == "Ray":
