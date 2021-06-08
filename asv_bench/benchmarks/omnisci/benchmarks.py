@@ -13,7 +13,6 @@
 
 """General Modin on OmniSci backend benchmarks."""
 
-import modin.pandas as pd
 import numpy as np
 
 from ..utils import (
@@ -301,6 +300,7 @@ class TimeResetIndex:
     params = [UNARY_OP_DATA_SIZE[ASV_DATASET_SIZE], [False, True], [None, "level_1"]]
 
     def setup(self, shape, drop, level):
+        pd = IMPL[ASV_USE_IMPL]
         if not drop or level == "level_1":
             raise NotImplementedError
 
