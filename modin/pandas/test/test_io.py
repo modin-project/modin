@@ -1115,6 +1115,17 @@ class TestCsv:
         for name1, name2 in zip(get_internal_df(read_df).index.names, [None, "a"]):
             assert name1 == name2
 
+    def test_read_csv_empty_frame(
+        self,
+    ):
+        eval_io(
+            fn_name="read_csv",
+            # read_csv kwargs
+            filepath_or_buffer=pytest.csvs_names["test_read_csv_regular"],
+            usecols=["col1"],
+            index_col="col1",
+        )
+
 
 class TestTable:
     def test_read_table(self, make_csv_file):
