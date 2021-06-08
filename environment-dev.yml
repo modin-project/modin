@@ -39,4 +39,4 @@ dependencies:
       - xgboost>=1.3
       - modin-spreadsheet>=0.1.1
       - tqdm
-      - ray>=1.3
+      - ray>=1.4

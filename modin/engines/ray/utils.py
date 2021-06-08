@@ -158,6 +158,7 @@ def initialize_ray(
                 "num_gpus": GpuCount.get(),
                 "include_dashboard": False,
                 "ignore_reinit_error": True,
+                "object_store_memory": object_store_memory,
                 "address": redis_address,
                 "_redis_password": redis_password,
                 "_memory": object_store_memory,

@@ -66,7 +66,7 @@ class Engine(EnvironmentVariable, type=str):
         except ImportError:
             pass
         else:
-            if version.parse(ray.__version__) < version.parse("1.3.0"):
+            if version.parse(ray.__version__) < version.parse("1.4.0"):
                 raise ImportError(
                     "Please `pip install modin[ray]` to install compatible Ray version."
                 )
@@ -187,14 +187,6 @@ class NPartitions(EnvironmentVariable, type=int):
             return GpuCount.get()
         else:
             return CpuCount.get()
-
-
-class RayPlasmaDir(EnvironmentVariable, type=ExactStr):
-    """
-    Path to Plasma storage for Ray
-    """
-
-    varname = "MODIN_ON_RAY_PLASMA_DIR"
 
 
 class IsOutOfCore(EnvironmentVariable, type=bool):
