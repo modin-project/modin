@@ -16,7 +16,7 @@
 from modin.engines.base.frame.axis_partition import PandasFrameAxisPartition
 from .partition import PandasOnDaskFramePartition
 
-from distributed.client import get_client
+from distributed.client import default_client
 from distributed import Future
 from distributed.utils import get_ip
 import pandas
@@ -73,7 +73,7 @@ class PandasOnDaskFrameAxisPartition(PandasFrameAxisPartition):
         list
             A list of distributed.Future.
         """
-        client = get_client()
+        client = default_client()
         axis_result = client.submit(
             deploy_dask_func,
             PandasFrameAxisPartition.deploy_axis_func,
@@ -126,7 +126,7 @@ class PandasOnDaskFrameAxisPartition(PandasFrameAxisPartition):
         list
             A list of distributed.Future.
         """
-        client = get_client()
+        client = default_client()
         axis_result = client.submit(
             deploy_dask_func,
             PandasFrameAxisPartition.deploy_func_between_two_axis_partitions,

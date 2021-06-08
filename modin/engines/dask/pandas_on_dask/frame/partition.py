@@ -18,13 +18,12 @@ import pandas
 from modin.data_management.utils import length_fn_pandas, width_fn_pandas
 from modin.engines.base.frame.partition import PandasFramePartition
 
-from distributed.client import get_client
+from distributed.client import default_client
 from distributed import Future
 from distributed.utils import get_ip
 import cloudpickle as pkl
 from dask.distributed import wait
 
-from distributed.client import _get_global_client
 from modin.pandas.indexing import compute_sliced_len
 
 
@@ -117,10 +116,10 @@ class PandasOnDaskFramePartition(PandasFramePartition):
         """
         func = pkl.dumps(func)
         call_queue = self.call_queue + [[func, kwargs]]
-        future = get_client().submit(
+        future = default_client().submit(
             apply_list_of_funcs, call_queue, self.future, pure=False
         )
-        futures = [get_client().submit(lambda l: l[i], future) for i in range(2)]
+        futures = [default_client().submit(lambda l: l[i], future) for i in range(2)]
         return PandasOnDaskFramePartition(futures[0], ip=futures[1])
 
     def add_to_apply_calls(self, func, **kwargs):
@@ -178,7 +177,7 @@ class PandasOnDaskFramePartition(PandasFramePartition):
             A new ``PandasOnDaskFramePartition`` object.
         """
         new_obj = super().mask(row_indices, col_indices)
-        client = _get_global_client()
+        client = default_client()
         if isinstance(row_indices, slice) and isinstance(self._length_cache, Future):
             new_obj._length_cache = client.submit(
                 compute_sliced_len, row_indices, self._length_cache
@@ -249,7 +248,7 @@ class PandasOnDaskFramePartition(PandasFramePartition):
         PandasOnDaskFramePartition
             A new ``PandasOnDaskFramePartition`` object.
         """
-        client = get_client()
+        client = default_client()
         return cls(client.scatter(obj, hash=False))
 
     @classmethod

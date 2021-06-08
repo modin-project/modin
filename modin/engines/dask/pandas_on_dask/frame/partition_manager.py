@@ -24,7 +24,7 @@ from .partition import PandasOnDaskFramePartition
 from modin.error_message import ErrorMessage
 import pandas
 
-from distributed.client import _get_global_client
+from distributed.client import default_client
 import cloudpickle as pkl
 
 
@@ -107,7 +107,7 @@ class PandasOnDaskFramePartitionManager(PandasFramePartitionManager):
         when you have deleted rows/columns internally, but do not know
         which ones were deleted.
         """
-        client = _get_global_client()
+        client = default_client()
         ErrorMessage.catch_bugs_and_request_email(not callable(index_func))
         func = cls.preprocess_func(index_func)
         if axis == 0:
@@ -155,7 +155,7 @@ class PandasOnDaskFramePartitionManager(PandasFramePartitionManager):
             other = pandas.concat(others, axis=axis ^ 1)
             return apply_func(df, **{other_name: other})
 
-        client = _get_global_client()
+        client = default_client()
         return np.array(
             [
                 [
