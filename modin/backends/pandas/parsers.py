@@ -211,6 +211,17 @@ class PandasCSVParser(PandasParser):
         start = kwargs.pop("start", None)
         end = kwargs.pop("end", None)
         index_col = kwargs.get("index_col", None)
+
+        index_names = kwargs.pop("index_names")
+        column_names = kwargs.pop("column_names")
+
+        index_name_counts = 0
+        if index_col is not None:
+            index_name_counts = len(index_names) if isinstance(index_names, list) else 1
+        kwargs["names"] = [
+            f"col{x}" for x in range(index_name_counts + len(column_names))
+        ]
+
         if start is not None and end is not None:
             # pop "compression" from kwargs because bio is uncompressed
             bio = FileDispatcher.file_open(
@@ -224,6 +235,8 @@ class PandasCSVParser(PandasParser):
             to_read = header + bio.read(end - start)
             bio.close()
             pandas_df = pandas.read_csv(BytesIO(to_read), **kwargs)
+            pandas_df.columns = column_names
+            pandas_df.index.rename(index_names, inplace=True)
         else:
             # This only happens when we are reading with only one worker (Default)
             return pandas.read_csv(fname, **kwargs)
@@ -505,7 +518,7 @@ class PandasExcelParser(PandasParser):
             has_index_names=is_list_like(header) and len(header) > 1,
             skiprows=skiprows,
             usecols=usecols,
-            **kwargs
+            **kwargs,
         )
         # In excel if you create a row with only a border (no values), this parser will
         # interpret that as a row of NaN values. pandas discards these values, so we

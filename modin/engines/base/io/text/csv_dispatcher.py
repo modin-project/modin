@@ -95,16 +95,11 @@ class CSVDispatcher(TextFileDispatcher):
 
         # Now we need to define parameters, which are common for all partitions. These
         # parameters can be `sniffed` from empty dataframes created further
-        if names in [lib.no_default, None]:
-            # When reading the one row df, we assume no `index_col` to get the correct
-            # column names before we build the index. Because we pass `names` in, this
-            # step has to happen without removing the `index_col` otherwise it will not
-            # be assigned correctly
-            names = pandas.read_csv(
-                filepath_or_buffer,
-                **dict(kwargs, usecols=None, nrows=1, skipfooter=0, index_col=None),
-            ).columns
-        elif index_col is None and not kwargs.get("usecols", None):
+        if (
+            names not in [lib.no_default, None]
+            and index_col is None
+            and not kwargs.get("usecols", None)
+        ):
             # When names is set to some list that is smaller than the number of columns
             # in the file, the first columns are built as a hierarchical index.
             empty_pd_df = pandas.read_csv(
@@ -120,6 +115,7 @@ class CSVDispatcher(TextFileDispatcher):
             **dict(kwargs, nrows=1, skipfooter=0, index_col=index_col),
         )
         column_names = pd_df_metadata.columns
+        index = pd_df_metadata.index
 
         # Max number of partitions available
         num_partitions = NPartitions.get()
@@ -136,12 +132,15 @@ class CSVDispatcher(TextFileDispatcher):
             fname=filepath_or_buffer_md,
             num_splits=num_splits,
             header=None,
-            names=names,
             skipfooter=0,
             skiprows=1 if encoding is not None else None,
             nrows=None,
             compression=compression_infered,
             index_col=index_col,
+            index_names=index.names
+            if isinstance(index, pandas.MultiIndex)
+            else index.name,
+            column_names=column_names,
         )
 
         with cls.file_open(filepath_or_buffer_md, "rb", compression_infered) as f:

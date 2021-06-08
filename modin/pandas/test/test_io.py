@@ -1110,6 +1110,18 @@ class TestCsv:
         finally:
             teardown_test_files([unique_filename])
 
+    def test_unnamed_index(self):
+        def get_internal_df(df):
+            partition = read_df._query_compiler._modin_frame._partitions[0][0]
+            return partition.to_pandas()
+
+        path = "modin/pandas/test/data/issue_3119.csv"
+        read_df = pd.read_csv(path, index_col=0)
+        assert get_internal_df(read_df).index.name is None
+        read_df = pd.read_csv(path, index_col=[0, 1])
+        for name1, name2 in zip(get_internal_df(read_df).index.names, [None, "a"]):
+            assert name1 == name2
+
 
 class TestTable:
     def test_read_table(self, make_csv_file):
