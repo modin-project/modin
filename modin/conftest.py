@@ -42,7 +42,7 @@ modin.utils._make_api_url = _saving_make_api_url
 
 import modin  # noqa: E402
 import modin.config  # noqa: E402
-from modin.config import IsExperimental  # noqa: E402
+from modin.config import IsExperimental, TestRayClient  # noqa: E402
 
 from modin.backends import PandasQueryCompiler, BaseQueryCompiler  # noqa: E402
 from modin.engines.python.pandas_on_python.io import PandasOnPythonIO  # noqa: E402
@@ -452,3 +452,32 @@ def TestReadGlobCSVFixture():
 @pytest.fixture
 def get_generated_doc_urls():
     return lambda: _generated_doc_urls
+
+
+def pytest_sessionstart(session):
+    if TestRayClient.get():
+        import ray
+        import subprocess
+
+        port = "50051"
+        # Clean up any extra processes from previous runs
+        subprocess.check_output(["ray", "stop", "--force"])
+        subprocess.check_output(
+            [
+                "ray",
+                "start",
+                "--head",
+                "--ray-client-server-port",
+                port,
+            ]
+        )
+        ray.util.connect(f"localhost:{port}")
+
+
+def pytest_sessionfinish(session):
+    if TestRayClient.get():
+        import ray
+        import subprocess
+
+        ray.shutdown()
+        subprocess.check_output(["ray", "stop", "--force"])
