@@ -24,7 +24,6 @@ from modin.config import (
     CpuCount,
     GpuCount,
     Memory,
-    IsOutOfCore,
     NPartitions,
 )
 
@@ -134,15 +133,6 @@ def initialize_ray(
 """,
             )
             object_store_memory = Memory.get()
-            if IsOutOfCore.get():
-                # We may have already set the memory from the environment variable, we don't
-                # want to overwrite that value if we have.
-                if object_store_memory is None:
-                    # Round down to the nearest Gigabyte.
-                    system_memory = ray._private.utils.get_system_memory()
-                    mem_bytes = system_memory // 10 ** 9 * 10 ** 9
-                    # Default to 8x memory for out of core
-                    object_store_memory = 8 * mem_bytes
             # In case anything failed above, we can still improve the memory for Modin.
             if object_store_memory is None:
                 # Round down to the nearest Gigabyte.
