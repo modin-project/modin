@@ -664,11 +664,30 @@ jobs:
     strategy:
       matrix:
         python-version: ["3.7", "3.8"]
+        test-task:
+          - modin/pandas/test/dataframe/test_default.py
+          - modin/pandas/test/dataframe/test_indexing.py
+          - modin/pandas/test/dataframe/test_iter.py
+          - modin/pandas/test/dataframe/test_join_sort.py
+          # Broken on Ray 1.3+ (Error propagation changes)
+          # - modin/pandas/test/dataframe/test_binary.py
+          # - modin/pandas/test/dataframe/test_map_metadata.py
+          # - modin/pandas/test/dataframe/test_reduction.py
+          # - modin/pandas/test/dataframe/test_udf.py
+          - modin/pandas/test/dataframe/test_window.py
+          - modin/pandas/test/dataframe/test_pickle.py
+          - modin/pandas/test/test_series.py
+          - modin/pandas/test/test_rolling.py
+          - modin/pandas/test/test_concat.py
+          - modin/pandas/test/test_groupby.py
+          - modin/pandas/test/test_reshape.py
+          - modin/pandas/test/test_general.py
+          - modin/pandas/test/test_io.py
     env:
       MODIN_ENGINE: ray
       MODIN_MEMORY: 1000000000
       MODIN_TEST_RAY_CLIENT: "True"
-    name: "test-ray-client (python ${{matrix.python-version}})"
+    name: "test-ray-client"
     steps:
       - uses: actions/checkout@v2
         with:
@@ -688,25 +707,7 @@ jobs:
         if: matrix.python-version == '3.8'
       - name: Install HDF5
         run: sudo apt update && sudo apt install -y libhdf5-dev
-      - run: MODIN_BENCHMARK_MODE=True pytest modin/pandas/test/internals/test_benchmark_mode.py
-      - run: pytest modin/experimental/xgboost/test/test_default.py
-      - run: pytest modin/pandas/test/dataframe/test_default.py
-      - run: pytest modin/pandas/test/dataframe/test_iter.py
-      - run: pytest modin/pandas/test/dataframe/test_join_sort.py
-      # Broken on Ray 1.3+ (Error propagation changes)
-      # - run: pytest modin/pandas/test/dataframe/test_binary.py
-      # - run: pytest modin/pandas/test/dataframe/test_map_metadata.py
-      # - run: pytest modin/pandas/test/dataframe/test_reduction.py
-      # - run: pytest modin/pandas/test/dataframe/test_udf.py
-      - run: python -m pytest modin/pandas/test/test_groupby.py
-      - run: pytest modin/pandas/test/dataframe/test_window.py
-      - run: pytest modin/pandas/test/dataframe/test_pickle.py
-      - run: python -m pytest modin/pandas/test/test_rolling.py
-      - run: python -m pytest modin/pandas/test/test_reshape.py
-      - run: python -m pytest modin/pandas/test/test_general.py
-      - run: python -m pytest modin/pandas/test/test_io.py
-      - run: python -m pytest modin/experimental/pandas/test/test_io_exp.py
-      - run: pip install dfsql && pytest modin/experimental/sql/test/test_sql.py
+      - run: python -m pytest ${{matrix.test-task}}
       - run: |
           curl -o codecov https://codecov.io/bash
           VERSION=$(grep -o 'VERSION=\"[0-9\.]*\"' codecov | cut -d'"' -f2);
@@ -717,4 +718,3 @@ jobs:
               echo 'CORRUPTED CODECOV SCRIPT!!!'
               exit 10
           fi
-        if: matrix.tests == 'everything'
