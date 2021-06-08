@@ -18,8 +18,6 @@ import numpy as np
 
 from ..utils import (
     generate_dataframe,
-    RAND_LOW,
-    RAND_HIGH,
     ASV_USE_IMPL,
     ASV_DATASET_SIZE,
     GROUPBY_NGROUPS,
@@ -33,6 +31,8 @@ from ..utils import (
 from .utils import (
     BINARY_OP_DATA_SIZE,
     UNARY_OP_DATA_SIZE,
+    RAND_LOW,
+    RAND_HIGH,
     trigger_import,
 )
 

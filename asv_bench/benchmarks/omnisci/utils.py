@@ -14,6 +14,9 @@
 """The module contains the functionality that is used when benchmarking Modin commits on OmniSci backend."""
 
 
+RAND_LOW = 0
+RAND_HIGH = 1_000_000_000
+
 BINARY_OP_DATA_SIZE = {
     "big": [
         ((500_000, 20), (1_000_000, 10)),
