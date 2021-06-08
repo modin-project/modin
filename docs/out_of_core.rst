@@ -1,46 +1,28 @@
-Out of Core in Modin (experimental)
-===================================
+Out of Core in Modin
+====================
 
 If you are working with very large files or would like to exceed your memory, you may
 change the primary location of the `DataFrame`_. If you would like to exceed memory, you
-can use your disk as an overflow for the memory. This API is experimental in the context
-of Modin. Please let us know what you think!
-
-Install Modin out of core
--------------------------
-
-Modin now comes with all the dependencies for out of core functionality by default! See
-the :doc:`installation page </installation>` for more information on installing Modin.
+can use your disk as an overflow for the memory.
 
 Starting Modin with out of core enabled
 ---------------------------------------
 
-Out of core is detected from an environment variable set in bash.
+Out of core is now enabled by default for both Ray and Dask engines.
 
-.. code-block:: bash
+Disabling Out of Core
+---------------------
 
-   export MODIN_OUT_OF_CORE=true
+Out of core is enabled by the compute engine selected. To disable it, start your
+preferred compute engine with the appropriate arguments. For example:
 
-We also set up a way to tell Modin how much memory you'd like to use. Currently, this
-only accepts the number of bytes. This can only exceed your memory if you have enabled
-``MODIN_OUT_OF_CORE``.
+.. code-block:: python
 
-[Optional]: Set a limit on the out of core space for Modin
-""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+  import modin.pandas as pd
+  import ray
 
-**Warning: Make sure you have enough space in your disk for however many bytes you**
-**request for your DataFrame**
-
-This limits the amount of memory that Modin can use.
-
-Here is how you set ``MODIN_MEMORY``:
-
-.. code-block:: bash
-
-  export MODIN_MEMORY=200000000000 # Set the number of bytes to 200GB
-
-
-**The default for Modin is 8x the memory on the machine.**
+  ray.init(_plasma_directory="/tmp")  # setting to disable out of core in Ray
+  df = pd.read_csv("some.csv")
 
 Running an example with out of core
 -----------------------------------
@@ -56,7 +38,7 @@ Before you run this, please make sure you follow the instructions listed above.
   big_df = pd.concat([df for _ in range(20)]) # 20x2GB frames
   print(big_df)
   nan_big_df = big_df.isna() # The performance here represents a simple map
-  print(big_df.apply(lambda col: col.sum())) # apply along an entire axis (columns in this case)
+  print(big_df.groupby("col1").count()) # group by on a large dataframe
 
 This example creates a 40GB DataFrame from 20 identical 2GB DataFrames and performs
 various operations on them. Feel free to play around with this code and let us know what

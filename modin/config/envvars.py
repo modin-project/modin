@@ -189,14 +189,6 @@ class NPartitions(EnvironmentVariable, type=int):
             return CpuCount.get()
 
 
-class IsOutOfCore(EnvironmentVariable, type=bool):
-    """
-    Changes primary location of the DataFrame to disk, allowing one to exceed total system memory
-    """
-
-    varname = "MODIN_OUT_OF_CORE"
-
-
 class SocksProxy(EnvironmentVariable, type=ExactStr):
     """
     SOCKS proxy address if it is needed for SSH to work
