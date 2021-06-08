@@ -1915,6 +1915,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         if isinstance(value, BaseQueryCompiler):
             kwargs.pop("value")
             if squeeze_self:
+                # Self is a Series type object
                 if full_axis:
                     value = value.to_pandas().squeeze(axis=1)
 
@@ -1938,18 +1939,21 @@ class PandasQueryCompiler(BaseQueryCompiler):
                     new_modin_frame = self._modin_frame.binary_op(
                         fillna_builder, value._modin_frame, join_type="left"
                     )
-            else:
 
+                return self.__constructor__(new_modin_frame)
+            else:
+                # Self is a DataFrame type object
                 if squeeze_value:
+                    # Value is Series type object
                     value = value.to_pandas().squeeze(axis=1)
 
-                    def fillna_builder(df):
+                    def fillna(df):
                         return df.fillna(value, **kwargs)
 
-                    new_modin_frame = self._modin_frame.map(fillna_builder)
+                    # Continue to end of this function
 
                 else:
-
+                    # Value is a DataFrame type object
                     def fillna_builder(df, r):
                         # Behavior is different for `DataFrame` and `Series` type of `value` argument, so we have to squeeze
                         # to make sure that `Series` object have a `Series` type.
@@ -1958,8 +1962,8 @@ class PandasQueryCompiler(BaseQueryCompiler):
                     new_modin_frame = self._modin_frame.broadcast_apply(
                         0, fillna_builder, value._modin_frame
                     )
+                    return self.__constructor__(new_modin_frame)
 
-            return self.__constructor__(new_modin_frame)
         elif isinstance(value, dict):
             kwargs.pop("value")
 
