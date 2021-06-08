@@ -23,7 +23,7 @@ from modin.pandas.indexing import compute_sliced_len
 from modin.data_management.factories.dispatcher import FactoryDispatcher
 
 PartitionClass = (
-    FactoryDispatcher.get_engine().io_cls.frame_cls._partition_mgr_cls._partition_class
+    FactoryDispatcher.get_factory().io_cls.frame_cls._partition_mgr_cls._partition_class
 )
 
 if Engine.get() == "Ray":
