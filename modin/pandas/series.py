@@ -1018,14 +1018,14 @@ class Series(BasePandasDataset):
                 'you passed a "{0}"'.format(type(value).__name__)
             )
         return super(Series, self)._fillna(
-            True,
-            isinstance(value, Series),
-            value,
-            method,
-            axis,
-            inplace,
-            limit,
-            downcast,
+            squeeze_self=True,
+            squeeze_value=isinstance(value, Series),
+            value=value,
+            method=method,
+            axis=axis,
+            inplace=inplace,
+            limit=limit,
+            downcast=downcast,
         )
 
     def floordiv(
