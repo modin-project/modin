@@ -474,7 +474,7 @@ def pytest_sessionstart(session):
         ray.util.connect(f"localhost:{port}")
 
 
-def pytest_sessionfinish(session):
+def pytest_sessionfinish(session, exitstatus):
     if TestRayClient.get():
         import ray
         import subprocess
