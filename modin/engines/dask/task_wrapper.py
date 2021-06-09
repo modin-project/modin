@@ -13,7 +13,7 @@
 
 """Module houses class responsible for execution of remote operations."""
 
-from distributed.client import _get_global_client
+from distributed.client import default_client
 
 
 class DaskTask:
@@ -38,7 +38,7 @@ class DaskTask:
         list
             The result of ``func`` splitted into parts in accordance with ``num_returns``.
         """
-        client = _get_global_client()
+        client = default_client()
         remote_task_future = client.submit(func, **kwargs)
         return [
             client.submit(lambda l, i: l[i], remote_task_future, i)
@@ -60,5 +60,5 @@ class DaskTask:
         Any
             An object(s) from the distributed memory.
         """
-        client = _get_global_client()
+        client = default_client()
         return client.gather(future)
