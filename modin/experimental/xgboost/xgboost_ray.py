@@ -728,7 +728,7 @@ def _predict(
     booster = ray.put(booster)
 
     predictions = [
-        tuple(actor.predict._remote(args=(booster,), kwargs=kwargs, num_returns=2))
+        tuple(actor.predict.options(num_returns=2).remote(booster, **kwargs))
         for actor in actors
     ]
 
