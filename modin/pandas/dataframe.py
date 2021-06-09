@@ -841,14 +841,14 @@ class DataFrame(BasePandasDataset):
         downcast=None,
     ):
         return super(DataFrame, self)._fillna(
-            False,
-            isinstance(value, Series),
-            value,
-            method,
-            axis,
-            inplace,
-            limit,
-            downcast,
+            squeeze_self=False,
+            squeeze_value=isinstance(value, Series),
+            value=value,
+            method=method,
+            axis=axis,
+            inplace=inplace,
+            limit=limit,
+            downcast=downcast,
         )
 
     def floordiv(
