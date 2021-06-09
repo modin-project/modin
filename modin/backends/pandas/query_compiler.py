@@ -1955,9 +1955,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 else:
                     # Value is a DataFrame type object
                     def fillna_builder(df, r):
-                        # Behavior is different for `DataFrame` and `Series` type of `value` argument, so we have to squeeze
-                        # to make sure that `Series` object have a `Series` type.
-                        return df.fillna(r.squeeze(axis=1), **kwargs)
+                        return df.fillna(r, **kwargs)
 
                     new_modin_frame = self._modin_frame.broadcast_apply(
                         0, fillna_builder, value._modin_frame
