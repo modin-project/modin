@@ -66,7 +66,7 @@ class Engine(EnvironmentVariable, type=str):
         except ImportError:
             pass
         else:
-            if version.parse(ray.__version__) < version.parse("1.0.0"):
+            if version.parse(ray.__version__) < version.parse("1.4.0"):
                 raise ImportError(
                     "Please `pip install modin[ray]` to install compatible Ray version."
                 )
@@ -187,22 +187,6 @@ class NPartitions(EnvironmentVariable, type=int):
             return GpuCount.get()
         else:
             return CpuCount.get()
-
-
-class RayPlasmaDir(EnvironmentVariable, type=ExactStr):
-    """
-    Path to Plasma storage for Ray
-    """
-
-    varname = "MODIN_ON_RAY_PLASMA_DIR"
-
-
-class IsOutOfCore(EnvironmentVariable, type=bool):
-    """
-    Changes primary location of the DataFrame to disk, allowing one to exceed total system memory
-    """
-
-    varname = "MODIN_OUT_OF_CORE"
 
 
 class SocksProxy(EnvironmentVariable, type=ExactStr):
