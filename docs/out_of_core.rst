@@ -24,6 +24,9 @@ preferred compute engine with the appropriate arguments. For example:
   ray.init(_plasma_directory="/tmp")  # setting to disable out of core in Ray
   df = pd.read_csv("some.csv")
 
+If you are using Dask, you have to modify local configuration files. Visit the
+Dask documentation_ on object spilling to see how.
+
 Running an example with out of core
 -----------------------------------
 
@@ -45,3 +48,4 @@ various operations on them. Feel free to play around with this code and let us k
 you think!
 
 .. _Dataframe: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.html
+.. _documentation: https://distributed.dask.org/en/latest/worker.html#memory-management
