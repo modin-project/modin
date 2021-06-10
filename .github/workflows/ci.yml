@@ -665,19 +665,17 @@ jobs:
       matrix:
         python-version: ["3.7", "3.8"]
         test-task:
-          # The following are broken on Ray 1.3+ (Unrelated to ray client)
-          # - modin/pandas/test/dataframe/test_binary.py
-          # - modin/pandas/test/dataframe/test_map_metadata.py
-          # - modin/pandas/test/dataframe/test_reduction.py
-          # - modin/pandas/test/dataframe/test_udf.py
-          # - modin/pandas/test/test_series.py
-          # - modin/experimental/pandas/test/test_io_exp.py
+          - modin/pandas/test/dataframe/test_binary.py
           - modin/pandas/test/dataframe/test_default.py
           - modin/pandas/test/dataframe/test_indexing.py
           - modin/pandas/test/dataframe/test_iter.py
           - modin/pandas/test/dataframe/test_join_sort.py
+          - modin/pandas/test/dataframe/test_map_metadata.py
+          - modin/pandas/test/dataframe/test_reduction.py
+          - modin/pandas/test/dataframe/test_udf.py
           - modin/pandas/test/dataframe/test_window.py
           - modin/pandas/test/dataframe/test_pickle.py
+          - modin/pandas/test/test_series.py
           - modin/pandas/test/test_rolling.py
           - modin/pandas/test/test_concat.py
           - modin/pandas/test/test_groupby.py
