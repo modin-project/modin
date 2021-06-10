@@ -454,30 +454,24 @@ def get_generated_doc_urls():
     return lambda: _generated_doc_urls
 
 
+ray_client_server = None
+
+
 def pytest_sessionstart(session):
     if TestRayClient.get():
         import ray
-        import subprocess
+        import ray.util.client.server.server as ray_server
 
-        port = "50051"
-        # Clean up any extra processes from previous runs
-        subprocess.check_output(["ray", "stop", "--force"])
-        subprocess.check_output(
-            [
-                "ray",
-                "start",
-                "--head",
-                "--ray-client-server-port",
-                port,
-            ]
-        )
-        ray.util.connect(f"localhost:{port}")
+        addr = "localhost:50051"
+        global ray_client_server
+        ray_client_server = ray_server.serve(addr)
+        ray.util.connect(addr)
 
 
 def pytest_sessionfinish(session, exitstatus):
     if TestRayClient.get():
         import ray
-        import subprocess
 
-        ray.shutdown()
-        subprocess.check_output(["ray", "stop", "--force"])
+        ray.util.disconnect()
+        if ray_client_server:
+            ray_client_server.stop(0)
