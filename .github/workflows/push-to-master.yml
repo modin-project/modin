@@ -59,3 +59,55 @@ jobs:
       - name: Docstring URL validity check
         shell: bash -l {0}
         run: python -m pytest modin/test/test_docstring_urls.py
+
+  test-ray-client:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash -l {0}
+    strategy:
+      matrix:
+        python-version: ["3.7", "3.8"]
+        test-task:
+          - modin/pandas/test/dataframe/test_binary.py
+          - modin/pandas/test/dataframe/test_default.py
+          - modin/pandas/test/dataframe/test_indexing.py
+          - modin/pandas/test/dataframe/test_iter.py
+          - modin/pandas/test/dataframe/test_join_sort.py
+          - modin/pandas/test/dataframe/test_map_metadata.py
+          - modin/pandas/test/dataframe/test_reduction.py
+          - modin/pandas/test/dataframe/test_udf.py
+          - modin/pandas/test/dataframe/test_window.py
+          - modin/pandas/test/dataframe/test_pickle.py
+          - modin/pandas/test/test_series.py
+          - modin/pandas/test/test_rolling.py
+          - modin/pandas/test/test_concat.py
+          - modin/pandas/test/test_groupby.py
+          - modin/pandas/test/test_reshape.py
+          - modin/pandas/test/test_general.py
+          - modin/pandas/test/test_io.py
+    env:
+      MODIN_ENGINE: ray
+      MODIN_MEMORY: 1000000000
+      MODIN_TEST_RAY_CLIENT: "True"
+    name: "test-ray-client"
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 1
+      - uses: conda-incubator/setup-miniconda@v2
+        with:
+          activate-environment: modin
+          python-version: ${{matrix.python-version}}
+          channel-priority: strict
+          use-only-tar-bz2: true # IMPORTANT: This needs to be set for caching to work properly!
+      - run: pip install -r requirements-dev.txt
+      # Use a ray master commit that includes the fix here: https://github.com/ray-project/ray/pull/16278
+      # Can be changed after a Ray version > 1.4 is released.
+      - run: pip install https://s3-us-west-2.amazonaws.com/ray-wheels/master/c8e3ed9eec30119092ef966ee7b8982c8954c333/ray-2.0.0.dev0-cp37-cp37m-manylinux2014_x86_64.whl
+        if: matrix.python-version == '3.7'
+      - run: pip install https://s3-us-west-2.amazonaws.com/ray-wheels/master/c8e3ed9eec30119092ef966ee7b8982c8954c333/ray-2.0.0.dev0-cp38-cp38-manylinux2014_x86_64.whl
+        if: matrix.python-version == '3.8'
+      - name: Install HDF5
+        run: sudo apt update && sudo apt install -y libhdf5-dev
+      - run: python -m pytest ${{matrix.test-task}}
