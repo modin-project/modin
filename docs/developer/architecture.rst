@@ -115,6 +115,11 @@ the entire pandas/dataframe API. See `experimental features`_ for more informati
 
    /flow/modin/pandas/base
 
+.. toctree::
+   :caption: modin.pandas.DataFrame API
+
+   /flow/modin/pandas/dataframe
+
 Query Compiler
 """"""""""""""
 
@@ -318,6 +323,7 @@ by documentation for now, the rest is coming soon...).
    │   │   ├───sql
    │   │   └─── :doc:`xgboost </flow/modin/experimental/xgboost>`
    │   ├───pandas
+   │   │   ├─── :doc:`dataframe </flow/modin/pandas/dataframe>`
    │   │   └─── :doc:`series </flow/modin/pandas/series>`
    │   ├───spreadsheet
    │   └───sql
