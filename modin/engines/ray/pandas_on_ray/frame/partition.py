@@ -454,12 +454,14 @@ def apply_list_of_funcs(partition, funcs):  # pragma: no cover
     def deserialize(obj):
         if isinstance(obj, ObjectIDType):
             return ray.get(obj)
-        elif isinstance(obj, tuple) and any(isinstance(o, ObjectIDType) for o in obj):
+        elif isinstance(obj, (tuple, list)) and any(
+            isinstance(o, ObjectIDType) for o in obj
+        ):
             return ray.get(list(obj))
         elif isinstance(obj, dict) and any(
-            isinstance(obj[o], ObjectIDType) for o in obj
+            isinstance(val, ObjectIDType) for val in obj.values()
         ):
-            return ray.get(list(obj.values()))
+            return dict(zip(obj.keys(), ray.get(list(obj.values()))))
         else:
             return obj
 

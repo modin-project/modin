@@ -261,7 +261,7 @@ class PandasOnDaskFramePartition(PandasFramePartition):
         callable
             An object that can be accepted by ``apply``.
         """
-        return default_client().scatter(func, hash=False)
+        return default_client().scatter(func, hash=False, broadcast=True)
 
     @classmethod
     def _length_extraction_fn(cls):
