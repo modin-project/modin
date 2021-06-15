@@ -520,6 +520,11 @@ class TestConcat:
         "b": [40, 50, 60],
         "f": [444, 555, 666],
     }
+    data3 = {
+        "f": [2, 3, 4],
+        "g": [400, 500, 600],
+        "h": [40, 50, 60],
+    }
 
     @pytest.mark.parametrize("join", ["inner", "outer"])
     @pytest.mark.parametrize("sort", bool_arg_values)
@@ -633,6 +638,24 @@ class TestConcat:
         run_and_compare(
             concat,
             data=self.data,
+        )
+
+    @pytest.mark.parametrize("join", ["inner"])
+    @pytest.mark.parametrize("sort", bool_arg_values)
+    @pytest.mark.parametrize("ignore_index", bool_arg_values)
+    def test_concat_join(self, join, sort, ignore_index):
+        def concat(lib, df1, df2, join, sort, ignore_index, **kwargs):
+            return lib.concat(
+                [df1, df2], axis=1, join=join, sort=sort, ignore_index=ignore_index
+            )
+
+        run_and_compare(
+            concat,
+            data=self.data,
+            data2=self.data3,
+            join=join,
+            sort=sort,
+            ignore_index=ignore_index,
         )
 
 

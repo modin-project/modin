@@ -689,6 +689,83 @@ class OmnisciOnRayFrame(PandasFrame):
 
         return new_frame
 
+    def _join_by_index(self, other_modin_frames, how, sort, ignore_index):
+        if how == "outer":
+            raise NotImplementedError("outer join is not supported in OmniSci engine")
+
+        lhs = self._maybe_materialize_rowid()
+        for rhs in other_modin_frames:
+            rhs = rhs._maybe_materialize_rowid()
+            if len(lhs._index_cols) != len(rhs._index_cols):
+                raise NotImplementedError(
+                    "join by indexes with different sizes is not supported"
+                )
+
+            if len(lhs._index_cols) == 1:
+                condition = lhs.ref(lhs._index_cols[0]).eq(rhs.ref(rhs._index_cols[0]))
+            else:
+                condition = OpExpr(
+                    "AND",
+                    [
+                        lhs.ref(lhs_col).eq(rhs.ref(rhs_col))
+                        for lhs_col, rhs_col in zip(lhs._index_cols, rhs._index_cols)
+                    ],
+                    get_dtype(bool),
+                )
+
+            exprs = lhs._index_exprs()
+            new_columns = []
+            for col in lhs.columns:
+                exprs[col] = lhs.ref(col)
+                new_columns.append(col)
+            for col in rhs.columns:
+                # Handle duplicating column names here. When user specifies
+                # suffixes to make a join, actual renaming is done in front-end.
+                new_col_name = col
+                rename_idx = 0
+                while new_col_name in exprs:
+                    new_col_name = f"{col}{rename_idx}"
+                    rename_idx += 1
+                exprs[new_col_name] = rhs.ref(col)
+                new_columns.append(new_col_name)
+
+            op = JoinNode(
+                lhs,
+                rhs,
+                how=how,
+                exprs=exprs,
+                condition=condition,
+            )
+
+            new_columns = Index.__new__(
+                Index, data=new_columns, dtype=self.columns.dtype
+            )
+            lhs = lhs.__constructor__(
+                dtypes=lhs._dtypes_for_exprs(exprs),
+                columns=new_columns,
+                index_cols=lhs._index_cols,
+                op=op,
+                force_execution_mode=self._force_execution_mode,
+            )
+
+        if sort:
+            lhs = lhs.sort_rows(
+                lhs._index_cols,
+                ascending=True,
+                ignore_index=False,
+                na_position="last",
+            )
+
+        lhs = lhs._reset_index_names()
+
+        if ignore_index:
+            new_columns = Index.__new__(
+                Index, data=[i for i in range(len(lhs.columns))], dtype="O"
+            )
+            lhs = lhs._set_columns(new_columns)
+
+        return lhs
+
     def concat(
         self, axis, other_modin_frames, join="outer", sort=False, ignore_index=False
     ):
@@ -702,7 +779,9 @@ class OmnisciOnRayFrame(PandasFrame):
         for frame in other_modin_frames:
             base = base._find_common_projections_base(frame)
             if base is None:
-                raise NotImplementedError("concat requiring join is not supported yet")
+                return self._join_by_index(
+                    other_modin_frames, how=join, sort=sort, ignore_index=ignore_index
+                )
 
         exprs = self._index_exprs()
         new_columns = self.columns.tolist()
@@ -994,6 +1073,11 @@ class OmnisciOnRayFrame(PandasFrame):
             force_execution_mode=self._force_execution_mode,
         )
 
+    def _maybe_materialize_rowid(self):
+        if self._index_cols is None:
+            return self._materialize_rowid()
+        return self
+
     def _materialize_rowid(self):
         exprs = OrderedDict()
         exprs["__index__"] = self.ref("__rowid__")
@@ -1261,6 +1345,11 @@ class OmnisciOnRayFrame(PandasFrame):
                 force_execution_mode=self._force_execution_mode,
             )
 
+    def _reset_index_names(self):
+        if self.has_multiindex():
+            return self.set_index_names([None] * len(self._index_cols))
+        return self.set_index_name(None)
+
     def _set_columns(self, new_columns):
         exprs = self._index_exprs()
         for old, new in zip(self.columns, new_columns):
@@ -1397,7 +1486,7 @@ class OmnisciOnRayFrame(PandasFrame):
 
         if self._index_cols is not None:
             for idx_col in self._index_cols:
-                if re.match(f"__index__\\d+_{col}", idx_col):
+                if col == idx_col or re.match(f"__index__\\d+_{col}", idx_col):
                     return idx_col
 
         raise ValueError(f"Unknown column '{col}'")
