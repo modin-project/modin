@@ -28,7 +28,7 @@ The most efficient way to create Modin ``DataFrame`` is to import data from exte
 storage using the highly efficient Modin IO methods (for example using ``pd.read_csv``,
 see details for Modin IO methods in the :doc:`separate section </flow/modin/engines/base/io>`),
 but even if the data does not originate from a file, any pandas supported data type or
-``pandas.DataFrame`` can be used. Internally, the ``DataFrame`` data is distributed across all
+``pandas.DataFrame`` can be used. Internally, the ``DataFrame`` data is divided into
 partitions, which number along an axis usually corresponds to the number of the user's hardware CPUs. If needed,
 the number of partitions can be changed by setting ``modin.config.NPartitions``.
 
@@ -108,4 +108,4 @@ Let's consider simple example of creation and interacting with Modin ``DataFrame
     [65 rows x 4 columns]
 
 As we show in the example above, Modin ``DataFrame`` can be easily created, and supports any input that pandas ``DataFrame`` supports.
-Also note that tuning of the ``DataFrame`` partitioning can be done by setting of a single config.
+Also note that tuning of the ``DataFrame`` partitioning can be done by just setting a single config.
