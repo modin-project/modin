@@ -33,8 +33,10 @@ if not hasattr(sys.modules["cudf"], "DataFrame"):
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 import modin
-from modin.config.__main__ import export_config_help
-export_config_help(filename=os.path.abspath(os.path.join(os.path.dirname(__file__), 'flow/modin/configs_help.csv')))
+
+configs_file_path = os.path.abspath(os.path.join(os.path.dirname(__file__), 'flow/modin/configs_help.csv'))
+# Export configs help to create configs table in the docs/flow/modin/config.rst
+os.system(f"python -m modin.config -export_path {configs_file_path}")
 
 project = "Modin"
 copyright = "2018-2021, Modin"

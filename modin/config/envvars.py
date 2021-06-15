@@ -11,7 +11,7 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-"""Module houses Modin configs."""
+"""Module houses Modin configs originated from environment variables."""
 
 import os
 import sys
@@ -138,16 +138,14 @@ class RayRedisAddress(EnvironmentVariable, type=ExactStr):
 
 
 class RayRedisPassword(EnvironmentVariable, type=ExactStr):
-    """
-    What password to use for connecting to Redis
-    """
+    """What password to use for connecting to Redis."""
 
     varname = "MODIN_REDIS_PASSWORD"
     default = secrets.token_hex(32)
 
 
 class CpuCount(EnvironmentVariable, type=int):
-    """How many CPU cores to use when initialization of the Modin engine."""
+    """How many CPU cores to use during initialization of the Modin engine."""
 
     varname = "MODIN_CPUS"
 
@@ -207,7 +205,7 @@ class NPartitions(EnvironmentVariable, type=int):
 
         Returns
         -------
-        str
+        int
         """
         if Backend.get() == "Cudf":
             return GpuCount.get()
@@ -254,10 +252,7 @@ class TestDatasetSize(EnvironmentVariable, type=str):
 
 
 class TestRayClient(EnvironmentVariable, type=bool):
-    """
-    Set to true to start and connect ray client before a testing session
-    starts.
-    """
+    """Set to true to start and connect Ray client before a testing session starts."""
 
     varname = "MODIN_TEST_RAY_CLIENT"
     default = False
@@ -314,7 +309,7 @@ class ProgressBar(EnvironmentVariable, type=bool):
 
 
 class BenchmarkMode(EnvironmentVariable, type=bool):
-    """Whether or not to perform computations synchronous."""
+    """Whether or not to perform computations synchronously."""
 
     varname = "MODIN_BENCHMARK_MODE"
     default = False

@@ -15,13 +15,14 @@
 Content of this file should be executed if module `modin.config` is called.
 
 If module is called (using `python -m modin.config`) configs help will be printed.
+Using `-export_path` option configs description can be exported to the external CSV file
+provided with this flag.
 """
 
 from . import *  # noqa: F403, F401
 from .pubsub import Parameter
 import pandas
 import argparse
-import os
 
 
 def print_config_help():
@@ -39,7 +40,7 @@ def export_config_help(filename: str):
     Parameters
     ----------
     filename : str
-        Name of the file to export help messages.
+        Name of the file to export configs data.
     """
     configs = pandas.DataFrame(
         columns=[
@@ -56,7 +57,9 @@ def export_config_help(filename: str):
             data = {
                 "Config Name": obj.__name__,
                 "Env. Variable Name": obj.varname,
-                "Default Value": obj._get_default(),
+                "Default Value": obj._get_default()
+                if obj.__name__ != "RayRedisPassword"
+                else "random string",
                 "Description": obj.__doc__,
                 "Options": obj.choices,
             }
@@ -68,14 +71,15 @@ def export_config_help(filename: str):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "-export_dist",
-        dest="export_dist",
+        "-export_path",
+        dest="export_path",
         type=str,
         required=False,
         default=None,
-        help="File to export configs help.",
+        help="File path to export configs data.",
     )
-    export_dist = parser.parse_args().export_dist
-    if export_dist and not os.path.exists(export_dist):
-        export_config_help(export_dist)
-    print_config_help()
+    export_path = parser.parse_args().export_path
+    if export_path:
+        export_config_help(export_path)
+    else:
+        print_config_help()
