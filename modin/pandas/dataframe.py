@@ -55,8 +55,8 @@ class DataFrame(BasePandasDataset):
     """
     Modin distributed representation of ``pandas.DataFrame``.
 
-    Internally passed data is divided into partitions in order to parallelize
-    computations and utilize the user's hardware as much as possible.
+    Internally, the data can be divided into partitions along both columns and rows
+    in order to parallelize computations and utilize the user's hardware as much as possible.
 
     Inherit common for ``DataFrame``-s and ``Series`` functionality from the
     `BasePandasDataset` class.

@@ -6,16 +6,19 @@ DataFrame Module Overview
 Modin's ``pandas.DataFrame`` API
 ''''''''''''''''''''''''''''''''
 Modin's ``pandas.DataFrame`` API is backed by a distributed object providing an identical
-API to pandas. Internally, the data can be divided into partitions along both columns and rows
-in order to parallelize computations and utilize the user's hardware as much as possible.
-After the user calls some ``DataFrame`` function, this call is internally rewritten
-into a representation that can be processed in parallel by the partitions. These
+API to pandas. After the user calls some ``DataFrame`` function, this call is internally
+rewritten into a representation that can be processed in parallel by the partitions. These
 results can be e.g., reduced to single output, identical to the single threaded
 pandas ``DataFrame`` method output.
 
 ..
     TODO: add link to the docs with detailed description of queries compilation
     and execution ater DOCS-#2996 is merged.
+
+Public API
+----------
+
+.. autoclass:: modin.pandas.dataframe.DataFrame
 
 Usage Guide
 '''''''''''
