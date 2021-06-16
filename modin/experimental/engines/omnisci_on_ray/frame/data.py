@@ -323,12 +323,27 @@ class OmnisciOnRayFrame(PandasFrame):
 
         return new_frame
 
-    def agg(self, agg):
+    def agg(self, agg, **kwargs):
+        """
+        Perform specified aggregation alogn columns.
+
+        Parameters
+        ----------
+        agg : str
+            Name of the aggregation function to perform.
+        **kwargs : dict
+            Additional parameters to pass to the aggregation expression.
+
+        Returns
+        -------
+        OmnisciOnRayFrame
+            New frame containing the result of aggregation.
+        """
         assert isinstance(agg, str)
 
         agg_exprs = OrderedDict()
         for col in self.columns:
-            agg_exprs[col] = AggregateExpr(agg, self.ref(col))
+            agg_exprs[col] = AggregateExpr(agg, self.ref(col), **kwargs)
 
         return self.__constructor__(
             columns=self.columns,
