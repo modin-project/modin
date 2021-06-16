@@ -120,6 +120,11 @@ the entire pandas/dataframe API. See `experimental features`_ for more informati
 
    /flow/modin/pandas/dataframe
 
+.. toctree::
+   :caption: modin.pandas.Series API
+
+   /flow/modin/pandas/series
+
 Query Compiler
 """"""""""""""
 

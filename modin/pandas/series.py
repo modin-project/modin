@@ -87,7 +87,7 @@ class Series(BasePandasDataset):
     """
     Modin distributed representation of `pandas.Series`.
 
-    Internally passed data is divided into partitions in order to parallelize
+    Internally, the data can be divided into partitions in order to parallelize
     computations and utilize the user's hardware as much as possible.
 
     Inherit common for DataFrames and Series functionality from the

@@ -6,9 +6,7 @@ Series Module Overview
 Modin's ``pandas.Series`` API
 '''''''''''''''''''''''''''''
 Modin's ``pandas.Series`` API is backed by a distributed object providing an identical
-API to pandas. Internally, the data is divided into partitions in order to
-parallelize computations and utilize the user's hardware as much as possible.
-After the user calls some ``Series`` function, this call is internally rewritten
+API to pandas. After the user calls some ``Series`` function, this call is internally rewritten
 into a representation that can be processed in parallel by the partitions. These
 results can be e.g., reduced to single output, identical to the single threaded
 pandas ``Series`` method output.
@@ -16,6 +14,11 @@ pandas ``Series`` method output.
 ..
     TODO: add link to the docs with detailed description of queries compilation
     and execution ater DOCS-#2996 is merged.
+
+Public API
+----------
+
+.. autoclass:: modin.pandas.series.Series
 
 Usage Guide
 '''''''''''
