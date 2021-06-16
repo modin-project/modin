@@ -2,7 +2,7 @@
 
 Config Module Overview
 """"""""""""""""""""""
-Using this module the user can tune Modin's behavior in the way he need it. To discover
+Using this module, the user can tune Modin's behavior. To see
 all avaliable configs just run `python -m modin.config`, this command will print all
 Modin configs with descriptions.
 
@@ -43,22 +43,11 @@ API.
     # Checking initially set `Backend` config,
     # which corresponds to `MODIN_BACKEND` environment
     # variable
-    print(modin.config.Backend.get())
+    print(modin.config.Backend.get()) # prints 'Omnisci'
 
     # Checking default value of `NPartitions`
-    print(modin.config.NPartitions.get())
+    print(modin.config.NPartitions.get()) # prints '8'
 
     # Changing value of `NPartitions`
     modin.config.NPartitions.put(16)
-    print(modin.config.NPartitions.get())
-
-    Output:
-
-    # Initially set `Backend` config
-    Omnisci
-    
-    # Default value of `NPartitions`
-    8
-    
-    # Changed value of `NPartitions`
-    16
+    print(modin.config.NPartitions.get()) # prints '16'
