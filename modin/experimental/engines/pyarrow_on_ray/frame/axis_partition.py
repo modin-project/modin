@@ -55,7 +55,7 @@ class PyarrowOnRayFrameAxisPartition(BaseFrameAxisPartition):
         Returns
         -------
         list
-            List with ``RayRemotePartition`` objects.
+            List with ``PyarrowOnRayFramePartition`` objects.
 
         Notes
         -----
@@ -104,7 +104,7 @@ class PyarrowOnRayFrameAxisPartition(BaseFrameAxisPartition):
         Returns
         -------
         list
-            List with ``RayRemotePartition`` objects.
+            List with ``PyarrowOnRayFramePartition`` objects.
 
         Notes
         -----
