@@ -29,15 +29,15 @@ class PyarrowOnRayFramePartition(PandasOnRayFramePartition):
     Parameters
     ----------
     object_id : ray.ObjectRef
-        A reference to ``pandas.DataFrame`` that needs to be wrapped with this class.
+        A reference to ``pyarrow.Table`` that needs to be wrapped with this class.
     length : ray.ObjectRef or int, optional
-        Length or reference to it of wrapped ``pandas.DataFrame``.
+        Length or reference to it of wrapped ``pyarrow.Table``.
     width : ray.ObjectRef or int, optional
-        Width or reference to it of wrapped ``pandas.DataFrame``.
+        Width or reference to it of wrapped ``pyarrow.Table``.
     ip : ray.ObjectRef or str, optional
-        Node IP address or reference to it that holds wrapped ``pandas.DataFrame``.
+        Node IP address or reference to it that holds wrapped ``pyarrow.Table``.
     call_queue : list, optional
-        Call queue that needs to be executed on wrapped ``pandas.DataFrame``.
+        Call queue that needs to be executed on wrapped ``pyarrow.Table``.
     """
 
     def to_pandas(self):
@@ -67,7 +67,7 @@ class PyarrowOnRayFramePartition(PandasOnRayFramePartition):
         Returns
         -------
         PyarrowOnRayFramePartition
-            A ``RayRemotePartition`` object.
+            A ``PyarrowOnRayFramePartition`` object.
         """
         return PyarrowOnRayFramePartition(ray.put(pyarrow.Table.from_pandas(obj)))
 
@@ -101,6 +101,6 @@ class PyarrowOnRayFramePartition(PandasOnRayFramePartition):
         Returns
         -------
         PyarrowOnRayFramePartition
-            A ``RayRemotePartition`` object.
+            A ``PyarrowOnRayFramePartition`` object.
         """
         return cls.put(pandas.DataFrame())

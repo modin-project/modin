@@ -31,7 +31,7 @@ class PyarrowOnRayFramePartitionManager(GenericRayFramePartitionManager):
     classes.
     """
 
-    # This object uses RayRemotePartition objects as the underlying store.
+    # This object uses PyarrowOnRayFramePartition objects as the underlying store.
     _partition_class = PyarrowOnRayFramePartition
     _column_partitions_class = PyarrowOnRayFrameColumnPartition
     _row_partition_class = PyarrowOnRayFrameRowPartition
