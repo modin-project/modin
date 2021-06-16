@@ -5,6 +5,7 @@ Series Module Overview
 
 Modin's ``pandas.Series`` API
 '''''''''''''''''''''''''''''
+
 Modin's ``pandas.Series`` API is backed by a distributed object providing an identical
 API to pandas. After the user calls some ``Series`` function, this call is internally rewritten
 into a representation that can be processed in parallel by the partitions. These
@@ -22,12 +23,13 @@ Public API
 
 Usage Guide
 '''''''''''
+
 The most efficient way to create Modin ``Series`` is to import data from external
 storage using the highly efficient Modin IO methods (for example using ``pd.read_csv``,
 see details for Modin IO methods in the :doc:`separate section </flow/modin/engines/base/io>`),
 but even if the data does not originate from a file, any pandas supported data type or
-``pandas.Series`` can be used. Internally, the ``Series`` data is distributed across all
-partitions, which usually corresponds to the number of the user's hardware CPUs. If needed,
+``pandas.Series`` can be used. Internally, the ``Series`` data is divided into
+partitions, which number along an axis usually corresponds to the number of the user's hardware CPUs. If needed,
 the number of partitions can be changed by setting ``modin.config.NPartitions``.
 
 Let's consider simple example of creation and interacting with Modin ``Series``:
@@ -36,7 +38,7 @@ Let's consider simple example of creation and interacting with Modin ``Series``:
 
     import modin.config
 
-    # This explicitely sets the number of partitions
+    # This explicitly sets the number of partitions
     modin.config.NPartitions.put(4)
 
     import modin.pandas as pd
@@ -103,4 +105,4 @@ Let's consider simple example of creation and interacting with Modin ``Series``:
     [65 rows x 1 columns]
 
 As we show in the example above, Modin ``Series`` can be easily created, and supports any input that pandas ``Series`` supports.
-Also note that tuning of the ``Series`` partitioning can be done by setting of a single config.
+Also note that tuning of the ``Series`` partitioning can be done by just setting a single config.
