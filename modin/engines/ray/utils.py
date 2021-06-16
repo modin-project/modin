@@ -136,7 +136,11 @@ def initialize_ray(
             # In case anything failed above, we can still improve the memory for Modin.
             if object_store_memory is None:
                 # Round down to the nearest Gigabyte.
-                system_memory = ray._private.utils.get_shared_memory_bytes()
+                system_memory = (
+                    ray._private.utils.get_shared_memory_bytes()
+                    if sys.platform == "linux" or sys.platform == "linux2"
+                    else ray._private.utils.get_system_memory()
+                )
                 object_store_memory = int(0.6 * system_memory // 10 ** 9 * 10 ** 9)
                 # If the memory pool is smaller than 2GB, just use the default in ray.
                 if object_store_memory == 0:
