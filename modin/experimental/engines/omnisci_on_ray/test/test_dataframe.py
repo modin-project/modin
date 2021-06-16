@@ -16,6 +16,7 @@ import pandas
 import numpy as np
 import pyarrow
 import pytest
+import re
 
 from modin.config import IsExperimental, Engine, Backend
 
@@ -56,7 +57,7 @@ def run_and_compare(
     force_lazy=True,
     force_arrow_execute=False,
     allow_subqueries=False,
-    **kwargs
+    **kwargs,
 ):
     def run_modin(
         fn,
@@ -66,7 +67,7 @@ def run_and_compare(
         force_arrow_execute,
         allow_subqueries,
         constructor_kwargs,
-        **kwargs
+        **kwargs,
     ):
         kwargs["df1"] = pd.DataFrame(data, **constructor_kwargs)
         kwargs["df2"] = pd.DataFrame(data2, **constructor_kwargs)
@@ -104,7 +105,7 @@ def run_and_compare(
                 force_arrow_execute=force_arrow_execute,
                 allow_subqueries=allow_subqueries,
                 constructor_kwargs=constructor_kwargs,
-                **kwargs
+                **kwargs,
             )
             _ = exp_res.index
     else:
@@ -116,7 +117,7 @@ def run_and_compare(
             force_arrow_execute=force_arrow_execute,
             allow_subqueries=allow_subqueries,
             constructor_kwargs=constructor_kwargs,
-            **kwargs
+            **kwargs,
         )
         df_equals(ref_res, exp_res)
 
@@ -1026,6 +1027,28 @@ class TestAgg:
             sort=sort,
             ascending=ascending,
         )
+
+    @pytest.mark.parametrize("method", ["sum", "mean", "max", "min", "count"])
+    def test_simple_agg_no_default(self, method):
+        def applier(df, **kwargs):
+            if isinstance(df, pd.DataFrame):
+                # At the end of reduction function it does inevitable `transpose`, which
+                # is defaulting to pandas. The following logic check that `transpose` is the only
+                # function that falling back to pandas in the reduction operation flow.
+                with pytest.warns(UserWarning) as warns:
+                    res = getattr(df, method)()
+                assert (
+                    len(warns) == 1
+                ), f"More than one warning were arisen: len(warns) != 1 ({len(warns)} != 1)"
+                message = warns[0].message.args[0]
+                assert (
+                    re.match(r".*transpose.*defaulting to pandas", message) is not None
+                ), f"Expected DataFrame.transpose defaulting to pandas warning, got: {message}"
+            else:
+                res = getattr(df, method)()
+            return res
+
+        run_and_compare(applier, data=self.data, force_lazy=False)
 
 
 class TestMerge:

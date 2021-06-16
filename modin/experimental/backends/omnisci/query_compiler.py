@@ -303,7 +303,7 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
             return getattr(super(), agg)(axis=axis, level=level, **kwargs)
 
         skipna = kwargs.get("skipna", True)
-        if not skipna:
+        if skipna is False:
             return getattr(super(), agg)(axis=axis, level=level, **kwargs)
 
         new_frame = self._modin_frame.agg(agg)
