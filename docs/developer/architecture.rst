@@ -290,7 +290,7 @@ by documentation for now, the rest is coming soon...).
    │   │   └─── :doc:`pyarrow </flow/modin/backends/pyarrow/index>`
    │   │   |   ├─── :doc:`parsers </flow/modin/backends/pyarrow/parsers>`
    │   │   │   └─── :doc:`query_compiler </flow/modin/backends/pyarrow/query_compiler>`
-   │   ├───config
+   │   ├─── :doc:`config </flow/modin/config>`
    │   ├───data_management
    │   │   ├─── :doc:`factories </flow/modin/data_management/factories>`
    │   │   └─── :doc:`functions </flow/modin/data_management/functions>`

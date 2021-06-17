@@ -11,6 +11,8 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
+"""Module houses Modin configs originated from environment variables."""
+
 import os
 import sys
 from textwrap import dedent
@@ -22,18 +24,36 @@ from .pubsub import Parameter, _TYPE_PARAMS, ExactStr, ValueSource
 
 
 class EnvironmentVariable(Parameter, type=str, abstract=True):
-    """
-    Base class for environment variables-based configuration
-    """
+    """Base class for environment variables-based configuration."""
 
     varname: str = None
 
     @classmethod
     def _get_raw_from_config(cls) -> str:
+        """
+        Read the value from environment variable.
+
+        Returns
+        -------
+        str
+            Config raw value.
+
+        Raises
+        ------
+        KeyError
+            If value is absent.
+        """
         return os.environ[cls.varname]
 
     @classmethod
     def get_help(cls) -> str:
+        """
+        Generate user-presentable help for the config.
+
+        Returns
+        -------
+        str
+        """
         help = f"{cls.varname}: {dedent(cls.__doc__ or 'Unknown').strip()}\n\tProvide {_TYPE_PARAMS[cls.type].help}"
         if cls.choices:
             help += f" (valid examples are: {', '.join(str(c) for c in cls.choices)})"
@@ -41,23 +61,26 @@ class EnvironmentVariable(Parameter, type=str, abstract=True):
 
 
 class IsDebug(EnvironmentVariable, type=bool):
-    """
-    Forces Modin engine to be "Python" unless specified by $MODIN_ENGINE
-    """
+    """Force Modin engine to be "Python" unless specified by $MODIN_ENGINE."""
 
     varname = "MODIN_DEBUG"
 
 
 class Engine(EnvironmentVariable, type=str):
-    """
-    Distribution engine to run queries by
-    """
+    """Distribution engine to run queries by."""
 
     varname = "MODIN_ENGINE"
     choices = ("Ray", "Dask", "Python")
 
     @classmethod
     def _get_default(cls):
+        """
+        Get default value of the config.
+
+        Returns
+        -------
+        str
+        """
         if IsDebug.get():
             return "Python"
         try:
@@ -89,9 +112,7 @@ class Engine(EnvironmentVariable, type=str):
 
 
 class Backend(EnvironmentVariable, type=str):
-    """
-    Engine running on a single node of distribution
-    """
+    """Engine to run on a single node of distribution."""
 
     varname = "MODIN_BACKEND"
     default = "Pandas"
@@ -99,79 +120,75 @@ class Backend(EnvironmentVariable, type=str):
 
 
 class IsExperimental(EnvironmentVariable, type=bool):
-    """
-    Turns on experimental features
-    """
+    """Whether to Turn on experimental features."""
 
     varname = "MODIN_EXPERIMENTAL"
 
 
 class IsRayCluster(EnvironmentVariable, type=bool):
-    """
-    True if Modin is running on pre-initialized Ray cluster
-    """
+    """Whether Modin is running on pre-initialized Ray cluster."""
 
     varname = "MODIN_RAY_CLUSTER"
 
 
 class RayRedisAddress(EnvironmentVariable, type=ExactStr):
-    """
-    What Redis address to connect to when running in Ray cluster
-    """
+    """Redis address to connect to when running in Ray cluster."""
 
     varname = "MODIN_REDIS_ADDRESS"
 
 
 class RayRedisPassword(EnvironmentVariable, type=ExactStr):
-    """
-    What password to use for connecting to Redis
-    """
+    """What password to use for connecting to Redis."""
 
     varname = "MODIN_REDIS_PASSWORD"
     default = secrets.token_hex(32)
 
 
 class CpuCount(EnvironmentVariable, type=int):
-    """
-    How many CPU cores to use when initialization of the Modin engine.
-    """
+    """How many CPU cores to use during initialization of the Modin engine."""
 
     varname = "MODIN_CPUS"
 
     @classmethod
     def _get_default(cls):
+        """
+        Get default value of the config.
+
+        Returns
+        -------
+        int
+        """
         import multiprocessing
 
         return multiprocessing.cpu_count()
 
 
 class GpuCount(EnvironmentVariable, type=int):
-    """
-    How may GPU devices to utilize across the whole distribution
-    """
+    """How may GPU devices to utilize across the whole distribution."""
 
     varname = "MODIN_GPUS"
 
 
 class Memory(EnvironmentVariable, type=int):
-    """
-    How much memory give to each Ray worker (in bytes)
-    """
+    """How much memory give to each Ray worker (in bytes)."""
 
     varname = "MODIN_MEMORY"
 
 
 class NPartitions(EnvironmentVariable, type=int):
-    """
-    How many partitions to use for a Modin DataFrame (along each axis)
-    """
+    """How many partitions to use for a Modin DataFrame (along each axis)."""
 
     varname = "MODIN_NPARTITIONS"
 
     @classmethod
     def _put(cls, value):
         """
-        Put specific value if NPartitions wasn't set by a user yet
+        Put specific value if NPartitions wasn't set by a user yet.
+
+        Parameters
+        ----------
+        value : int
+            Config value to set.
 
         Notes
         -----
@@ -183,6 +200,13 @@ class NPartitions(EnvironmentVariable, type=int):
 
     @classmethod
     def _get_default(cls):
+        """
+        Get default value of the config.
+
+        Returns
+        -------
+        int
+        """
         if Backend.get() == "Cudf":
             return GpuCount.get()
         else:
@@ -190,69 +214,52 @@ class NPartitions(EnvironmentVariable, type=int):
 
 
 class SocksProxy(EnvironmentVariable, type=ExactStr):
-    """
-    SOCKS proxy address if it is needed for SSH to work
-    """
+    """SOCKS proxy address if it is needed for SSH to work."""
 
     varname = "MODIN_SOCKS_PROXY"
 
 
 class DoLogRpyc(EnvironmentVariable, type=bool):
-    """
-    Whether to gather RPyC logs (applicable for remote context)
-    """
+    """Whether to gather RPyC logs (applicable for remote context)."""
 
     varname = "MODIN_LOG_RPYC"
 
 
 class DoTraceRpyc(EnvironmentVariable, type=bool):
-    """
-    Whether to trace RPyC calls (applicable for remote context)
-    """
+    """Whether to trace RPyC calls (applicable for remote context)."""
 
     varname = "MODIN_TRACE_RPYC"
 
 
 class OmnisciFragmentSize(EnvironmentVariable, type=int):
-    """
-    How big a fragment in OmniSci should be when creating a table (in rows)
-    """
+    """How big a fragment in OmniSci should be when creating a table (in rows)."""
 
     varname = "MODIN_OMNISCI_FRAGMENT_SIZE"
 
 
 class DoUseCalcite(EnvironmentVariable, type=bool):
-    """
-    Whether to use Calcite for OmniSci queries execution
-    """
+    """Whether to use Calcite for OmniSci queries execution."""
 
     varname = "MODIN_USE_CALCITE"
     default = True
 
 
 class TestDatasetSize(EnvironmentVariable, type=str):
-    """
-    Dataset size for running some tests
-    """
+    """Dataset size for running some tests."""
 
     varname = "MODIN_TEST_DATASET_SIZE"
     choices = ("Small", "Normal", "Big")
 
 
 class TestRayClient(EnvironmentVariable, type=bool):
-    """
-    Set to true to start and connect ray client before a testing session
-    starts.
-    """
+    """Set to true to start and connect Ray client before a testing session starts."""
 
     varname = "MODIN_TEST_RAY_CLIENT"
     default = False
 
 
 class TrackFileLeaks(EnvironmentVariable, type=bool):
-    """
-    Whether to track for open file handles leakage during testing
-    """
+    """Whether to track for open file handles leakage during testing."""
 
     varname = "MODIN_TEST_TRACK_FILE_LEAKS"
     # Turn off tracking on Windows by default because
@@ -262,9 +269,7 @@ class TrackFileLeaks(EnvironmentVariable, type=bool):
 
 
 class AsvImplementation(EnvironmentVariable, type=ExactStr):
-    """
-    Allows to select a library that we will use for testing performance.
-    """
+    """Allows to select a library that we will use for testing performance."""
 
     varname = "MODIN_ASV_USE_IMPL"
     choices = ("modin", "pandas")
@@ -273,59 +278,74 @@ class AsvImplementation(EnvironmentVariable, type=ExactStr):
 
 
 class ProgressBar(EnvironmentVariable, type=bool):
-    """
-    Whether or not to show the progress bar
-    """
+    """Whether or not to show the progress bar."""
 
     varname = "MODIN_PROGRESS_BAR"
     default = False
 
     @classmethod
     def enable(cls):
+        """Enable ``ProgressBar`` feature."""
         cls.put(True)
 
     @classmethod
     def disable(cls):
+        """Disable ``ProgressBar`` feature."""
         cls.put(False)
 
     @classmethod
     def put(cls, value):
+        """
+        Set ``ProgressBar`` value only if synchronous benchmarking is disabled.
+
+        Parameters
+        ----------
+        value : bool
+            Config value to set.
+        """
         if value and BenchmarkMode.get():
             raise ValueError("ProgressBar isn't compatible with BenchmarkMode")
         super().put(value)
 
 
 class BenchmarkMode(EnvironmentVariable, type=bool):
-    """
-    Whether or not to perform computations syncronous.
-    """
+    """Whether or not to perform computations synchronously."""
 
     varname = "MODIN_BENCHMARK_MODE"
     default = False
 
     @classmethod
     def put(cls, value):
+        """
+        Set ``BenchmarkMode`` value only if progress bar feature is disabled.
+
+        Parameters
+        ----------
+        value : bool
+            Config value to set.
+        """
         if value and ProgressBar.get():
             raise ValueError("BenchmarkMode isn't compatible with ProgressBar")
         super().put(value)
 
 
 class PersistentPickle(EnvironmentVariable, type=bool):
-    """
-    When set to off, it allows faster serialization which is only
-    valid in current run (i.e. useless for saving to disk).
-    When set to on, Modin objects could be saved to disk and loaded
-    but serialization/deserialization could take more time.
-    """
+    """Wheather serialization should be persistent."""
 
     varname = "MODIN_PERSISTENT_PICKLE"
+    # When set to off, it allows faster serialization which is only
+    # valid in current run (i.e. useless for saving to disk).
+    # When set to on, Modin objects could be saved to disk and loaded
+    # but serialization/deserialization could take more time.
     default = False
 
 
 def _check_vars():
     """
+    Check validity of environment variables.
+
     Look out for any environment variables that start with "MODIN_" prefix
-    that are unknown - they might be a typo, so warn a user
+    that are unknown - they might be a typo, so warn a user.
     """
     valid_names = {
         obj.varname
