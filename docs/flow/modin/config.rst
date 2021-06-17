@@ -2,12 +2,14 @@
 
 Config Module Overview
 """"""""""""""""""""""
+
 Using this module, the user can tune Modin's behavior. To see
 all avaliable configs just run `python -m modin.config`, this command will print all
 Modin configs with descriptions.
 
 Public API
 ''''''''''
+
 Potentially, the source of configs can be any, but for now only environment
 variables are implemented. Any environment variable originate from
 :class:`~modin.config.envvars.EnvironmentVariable`, which contains most of
@@ -25,6 +27,7 @@ Modin Configs List
 
 Usage Guide
 '''''''''''
+
 See example of interation with Modin configs below, as it can be seen config
 value can be set either by setting the environment variable or by using config
 API.
