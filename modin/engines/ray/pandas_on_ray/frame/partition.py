@@ -102,6 +102,8 @@ class PandasOnRayFramePartition(PandasFramePartition):
         if len(call_queue) > 1:
             result, length, width, ip = apply_list_of_funcs.remote(oid, call_queue)
         else:
+            # We handle `len(call_queue) == 1` in a different way because
+            # this dramatically improves performance.
             func, args, kwargs = call_queue[0]
             result, length, width, ip = apply_func.remote(oid, func, *args, **kwargs)
         return PandasOnRayFramePartition(result, length, width, ip)
@@ -147,6 +149,8 @@ class PandasOnRayFramePartition(PandasFramePartition):
                 self._ip_cache,
             ) = apply_list_of_funcs.remote(oid, call_queue)
         else:
+            # We handle `len(call_queue) == 1` in a different way because
+            # this dramatically improves performance.
             func, args, kwargs = call_queue[0]
             (
                 self.oid,

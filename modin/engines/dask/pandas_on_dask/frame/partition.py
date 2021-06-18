@@ -97,6 +97,8 @@ class PandasOnDaskFramePartition(PandasFramePartition):
                 apply_list_of_funcs, self.future, call_queue, pure=False
             )
         else:
+            # We handle `len(call_queue) == 1` in a different way because
+            # this improves performance a bit.
             func, args, kwargs = call_queue[0]
             future = client.submit(apply_func, self.future, func, *args, **kwargs)
         futures = [
@@ -141,6 +143,8 @@ class PandasOnDaskFramePartition(PandasFramePartition):
                 apply_list_of_funcs, self.future, call_queue, pure=False
             )
         else:
+            # We handle `len(call_queue) == 1` in a different way because
+            # this improves performance a bit.
             func, args, kwargs = call_queue[0]
             future = client.submit(apply_func, self.future, func, *args, **kwargs)
         futures = [
