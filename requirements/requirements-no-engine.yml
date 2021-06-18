@@ -1,7 +1,7 @@
 channels:
   - conda-forge
 dependencies:
-  - pandas==1.2.4
+  - pandas==1.2.5
 # Restrition for numpy upper version is because of #3182
   - numpy>=1.16.5,<=1.20.3
   - pyarrow>=1.0.0
