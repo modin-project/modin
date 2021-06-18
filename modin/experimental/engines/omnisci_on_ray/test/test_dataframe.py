@@ -462,6 +462,34 @@ class TestMultiIndex:
 
         eval_general(pd, pandas, applier)
 
+    @pytest.mark.parametrize("is_multiindex", [True, False])
+    @pytest.mark.parametrize(
+        "column_names", [None, ["level1", None], ["level1", "level2"]]
+    )
+    def test_reset_index_multicolumns(self, is_multiindex, column_names):
+        index = (
+            pandas.MultiIndex.from_tuples(
+                [(i, j, k) for i in range(2) for j in range(3) for k in range(4)],
+                names=["l1", "l2", "l3"],
+            )
+            if is_multiindex
+            else pandas.Index(np.arange(len(self.data["a"])), name="index")
+        )
+        columns = pandas.MultiIndex.from_tuples(
+            [("a", "b"), ("b", "c")], names=column_names
+        )
+        data = np.array(list(self.data.values())).T
+
+        def applier(df, **kwargs):
+            df = df + 1
+            return df.reset_index(drop=False)
+
+        run_and_compare(
+            fn=applier,
+            data=data,
+            constructor_kwargs={"index": index, "columns": columns},
+        )
+
     def test_set_index_name(self):
         index = pandas.Index.__new__(pandas.Index, data=[i for i in range(24)])
 
