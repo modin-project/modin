@@ -566,12 +566,12 @@ class OmnisciOnRayFrame(PandasFrame):
                 new_dtypes.append(other._dtypes[c])
                 exprs[c + suffix] = other.ref(c)
 
-        if len(on) == 1:
-            condition = self.ref(on[0]).eq(other.ref(on[0]))
-        else:
-            condition = OpExpr(
-                "AND", [self.ref(col).eq(other.ref(col)) for col in on], get_dtype(bool)
-            )
+        condition = [self.ref(col).eq(other.ref(col)) for col in on]
+        condition = (
+            condition[0]
+            if len(condition) == 1
+            else OpExpr("AND", condition, get_dtype(bool))
+        )
 
         op = JoinNode(
             self,
@@ -701,23 +701,20 @@ class OmnisciOnRayFrame(PandasFrame):
                     "join by indexes with different sizes is not supported"
                 )
 
-            if len(lhs._index_cols) == 1:
-                condition = lhs.ref(lhs._index_cols[0]).eq(rhs.ref(rhs._index_cols[0]))
-            else:
-                condition = OpExpr(
-                    "AND",
-                    [
-                        lhs.ref(lhs_col).eq(rhs.ref(rhs_col))
-                        for lhs_col, rhs_col in zip(lhs._index_cols, rhs._index_cols)
-                    ],
-                    get_dtype(bool),
-                )
+            condition = [
+                lhs.ref(lhs_col).eq(rhs.ref(rhs_col))
+                for lhs_col, rhs_col in zip(lhs._index_cols, rhs._index_cols)
+            ]
+            condition = (
+                condition[0]
+                if len(condition) == 1
+                else OpExpr("AND", condition, get_dtype(bool))
+            )
 
             exprs = lhs._index_exprs()
-            new_columns = []
+            new_columns = lhs.columns
             for col in lhs.columns:
                 exprs[col] = lhs.ref(col)
-                new_columns.append(col)
             for col in rhs.columns:
                 # Handle duplicating column names here. When user specifies
                 # suffixes to make a join, actual renaming is done in front-end.
