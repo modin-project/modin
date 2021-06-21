@@ -47,7 +47,7 @@ ReadCsvKwargsType = Dict[
 
 
 class ArrowEngineException(Exception):
-    """Exception should raised in the case if Arrow engine specific incompatibilities is found."""
+    """Exception raised in case of Arrow engine-specific incompatibilities are found."""
 
 
 class OmnisciOnRayIO(RayIO, TextFileDispatcher):
@@ -374,8 +374,8 @@ class OmnisciOnRayIO(RayIO, TextFileDispatcher):
         if read_csv_kwargs.get("compression", "infer") != "infer":
             return (
                 False,
-                "read_csv with 'arrow' engine doesn't support compression parameter, compression must be inferred"
-                " automatically (supported compression types are gzip and bz2)",
+                "read_csv with 'arrow' engine doesn't support explicit compression parameter, compression"
+                " must be inferred automatically (supported compression types are gzip and bz2)",
             )
 
         if isinstance(filepath_or_buffer, str):
