@@ -523,7 +523,7 @@ class TestConcat:
     data3 = {
         "f": [2, 3, 4],
         "g": [400, 500, 600],
-        "h": [40, 50, 60],
+        "h": [20, 30, 40],
     }
 
     @pytest.mark.parametrize("join", ["inner", "outer"])
@@ -657,6 +657,40 @@ class TestConcat:
             sort=sort,
             ignore_index=ignore_index,
         )
+
+    def test_concat_index_name(self):
+        df1 = pandas.DataFrame(self.data)
+        df1 = df1.set_index("a")
+        df2 = pandas.DataFrame(self.data3)
+        df2 = df2.set_index("f")
+
+        ref = pandas.concat([df1, df2], axis=1, join="inner")
+        exp = pd.concat([df1, df2], axis=1, join="inner")
+
+        df_equals(ref, exp)
+
+        df2.index.name = "a"
+        ref = pandas.concat([df1, df2], axis=1, join="inner")
+        exp = pd.concat([df1, df2], axis=1, join="inner")
+
+        df_equals(ref, exp)
+
+    def test_concat_index_names(self):
+        df1 = pandas.DataFrame(self.data)
+        df1 = df1.set_index(["a", "b"])
+        df2 = pandas.DataFrame(self.data3)
+        df2 = df2.set_index(["f", "h"])
+
+        ref = pandas.concat([df1, df2], axis=1, join="inner")
+        exp = pd.concat([df1, df2], axis=1, join="inner")
+
+        df_equals(ref, exp)
+
+        df2.index.names = ["a", "b"]
+        ref = pandas.concat([df1, df2], axis=1, join="inner")
+        exp = pd.concat([df1, df2], axis=1, join="inner")
+
+        df_equals(ref, exp)
 
 
 class TestGroupby:

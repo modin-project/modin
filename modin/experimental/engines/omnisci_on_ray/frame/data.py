@@ -694,12 +694,15 @@ class OmnisciOnRayFrame(PandasFrame):
             raise NotImplementedError("outer join is not supported in OmniSci engine")
 
         lhs = self._maybe_materialize_rowid()
+        reset_index_names = False
         for rhs in other_modin_frames:
             rhs = rhs._maybe_materialize_rowid()
             if len(lhs._index_cols) != len(rhs._index_cols):
                 raise NotImplementedError(
                     "join by indexes with different sizes is not supported"
                 )
+
+            reset_index_names = reset_index_names or lhs._index_cols != rhs._index_cols
 
             condition = [
                 lhs.ref(lhs_col).eq(rhs.ref(rhs_col))
@@ -712,7 +715,7 @@ class OmnisciOnRayFrame(PandasFrame):
             )
 
             exprs = lhs._index_exprs()
-            new_columns = lhs.columns
+            new_columns = lhs.columns.to_list()
             for col in lhs.columns:
                 exprs[col] = lhs.ref(col)
             for col in rhs.columns:
@@ -753,7 +756,8 @@ class OmnisciOnRayFrame(PandasFrame):
                 na_position="last",
             )
 
-        lhs = lhs._reset_index_names()
+        if reset_index_names:
+            lhs = lhs._reset_index_names()
 
         if ignore_index:
             new_columns = Index.__new__(
