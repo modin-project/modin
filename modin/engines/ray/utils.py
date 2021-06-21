@@ -156,10 +156,6 @@ def initialize_ray(
             }
             ray.init(**ray_init_kwargs)
 
-        _move_stdlib_ahead_of_site_packages()
-        ray.worker.global_worker.run_function_on_all_workers(
-            _move_stdlib_ahead_of_site_packages
-        )
         if Backend.get() == "Cudf":
             from modin.engines.ray.cudf_on_ray.frame.gpu_manager import GPUManager
             from modin.engines.ray.cudf_on_ray.frame.partition_manager import (
@@ -170,6 +166,10 @@ def initialize_ray(
             if not GPU_MANAGERS:
                 for i in range(GpuCount.get()):
                     GPU_MANAGERS.append(GPUManager.remote(i))
+    _move_stdlib_ahead_of_site_packages()
+    ray.worker.global_worker.run_function_on_all_workers(
+        _move_stdlib_ahead_of_site_packages
+    )
     ray.worker.global_worker.run_function_on_all_workers(_import_pandas)
     num_cpus = int(ray.cluster_resources()["CPU"])
     num_gpus = int(ray.cluster_resources().get("GPU", 0))
