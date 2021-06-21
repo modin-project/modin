@@ -38,7 +38,8 @@ filter and aggregation can be executed in a single data scan.
 
 To utilize this feature and reduce data transformation and transfer
 overheads, we need to implement lazy operations on a dataframe. The
-dataframe with lazy computation is implemented in ``OmnisciOnRayFrame``
+dataframe with lazy computation is implemented in
+:py:class:`~modin.experimental.engines.omnisci_on_ray.frame.data.OmnisciOnRayFrame`
 class.
 
 Lazy operations on a frame build a tree which is later translated into

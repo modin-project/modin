@@ -20,7 +20,7 @@ from collections import OrderedDict
 
 class TransformMapper:
     """
-    A helper class for `InputMapper`.
+    A helper class for ``InputMapper``.
 
     This class is used to map column references to expressions used
     for their computation. This mapper is used to fold expressions
@@ -61,7 +61,7 @@ class TransformMapper:
 
 class FrameMapper:
     """
-    A helper class for `InputMapper`.
+    A helper class for ``InputMapper``.
 
     This class is used to map column references to another frame.
     This mapper is used to replace input frame in expressions.
@@ -102,7 +102,7 @@ class InputMapper:
     Input reference mapper.
 
     This class is used for input translation/replacement in
-    expressions via `BaseExpr.translate_input` method.
+    expressions via ``BaseExpr.translate_input`` method.
 
     Translation is performed using column mappers registered via
     `add_mapper` method. Each input frame can have at most one mapper.
@@ -549,7 +549,7 @@ class TransformNode(DFAlgNode):
 
     def fold(self):
         """
-        Fold two `TransformNode`s.
+        Fold two ``TransformNode``s.
 
         If base of this node is another `TransformNode`, then translate all
         expressions in `expr` to its base.
@@ -565,8 +565,8 @@ class TransformNode(DFAlgNode):
         """
         Check original column expression type.
 
-        Return True if `col` is an `InputRefExpr` expression or originally was
-        an `InputRefExpr` expression before folding.
+        Return True if `col` is an ``InputRefExpr`` expression or originally was
+        an ``InputRefExpr`` expression before folding.
 
         Parameters
         ----------
@@ -837,7 +837,7 @@ class FilterNode(DFAlgNode):
     """
     A node for generic rows filtering.
 
-    For rows filter by row id a `MaskNode` should be preferred.
+    For rows filter by row id a ``MaskNode`` should be preferred.
 
     Parameters
     ----------

@@ -27,7 +27,7 @@ class OmnisciOnRayFrameAxisPartition(PandasFrameAxisPartition):
     """
     Base class for axis partition classes with OmniSci backend and Ray engine.
 
-    Inherits functionality from `PandasFrameAxisPartition` class, that
+    Inherits functionality from ``PandasFrameAxisPartition`` class, that
     contains all of the implementation for these backend and engine.
 
     Parameters
@@ -50,7 +50,7 @@ class OmnisciOnRayFrameColumnPartition(OmnisciOnRayFrameAxisPartition):
     """
     Column partition class with OmniSci backend and Ray engine.
 
-    Inherits functionality from `OmnisciOnRayFrameAxisPartition` class, that
+    Inherits functionality from ``OmnisciOnRayFrameAxisPartition`` class, that
     contains all of the implementation for this class, and this class defines
     the axis to perform the computation over.
 
@@ -67,7 +67,7 @@ class OmnisciOnRayFrameRowPartition(OmnisciOnRayFrameAxisPartition):
     """
     Row partition class with OmniSci backend and Ray engine.
 
-    Inherits functionality from `OmnisciOnRayFrameAxisPartition` class, that
+    Inherits functionality from ``OmnisciOnRayFrameAxisPartition`` class, that
     contains all of the implementation for this class, and this class defines
     the axis to perform the computation over.
 

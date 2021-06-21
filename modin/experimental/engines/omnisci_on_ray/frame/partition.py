@@ -11,7 +11,7 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-"""Module provides a partition class for `OmnisciOnRayFrame` frame."""
+"""Module provides a partition class for ``OmnisciOnRayFrame`` frame."""
 
 import pandas
 
@@ -23,10 +23,10 @@ import ray
 
 class OmnisciOnRayFramePartition(PandasFramePartition):
     """
-    A partition of `OmnisciOnRayFrame` frame.
+    A partition of ``OmnisciOnRayFrame`` frame.
 
-    A partition holds either a `pandas.DataFrame` stored in Ray storage
-    or `pyarrow.Table`
+    A partition holds either a ``pandas.DataFrame`` stored in Ray storage
+    or ``pyarrow.Table``
 
     Parameters
     ----------
@@ -110,7 +110,7 @@ class OmnisciOnRayFramePartition(PandasFramePartition):
     @classmethod
     def put(cls, obj):
         """
-        Create partition from `pandas.DataFrame` or `pandas.Series`.
+        Create partition from ``pandas.DataFrame`` or ``pandas.Series``.
 
         Parameters
         ----------
@@ -129,7 +129,7 @@ class OmnisciOnRayFramePartition(PandasFramePartition):
     @classmethod
     def put_arrow(cls, obj):
         """
-        Create partition from `pyarrow.Table`.
+        Create partition from ``pyarrow.Table``.
 
         Parameters
         ----------

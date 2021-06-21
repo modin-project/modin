@@ -11,7 +11,7 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-"""Module provides a partition manager class for `OmnisciOnRayFrame` frame."""
+"""Module provides a partition manager class for ``OmnisciOnRayFrame`` frame."""
 
 from modin.pandas.utils import is_scalar
 import numpy as np
@@ -36,9 +36,9 @@ import re
 
 class OmnisciOnRayFramePartitionManager(GenericRayFramePartitionManager):
     """
-    Frame manager for `OmnisciOnRayFrame`.
+    Frame manager for ``OmnisciOnRayFrame``.
 
-    This class handles several features of `OmnisciOnRayFrame`:
+    This class handles several features of ``OmnisciOnRayFrame``:
       - frame always has a single partition
       - frame cannot process some data types
       - frame has to use mangling for index labels
@@ -65,7 +65,7 @@ class OmnisciOnRayFramePartitionManager(GenericRayFramePartitionManager):
     @classmethod
     def from_pandas(cls, df, return_dims=False):
         """
-        Create `OmnisciOnRayFrame` from `pandas.DataFrame`.
+        Create ``OmnisciOnRayFrame`` from ``pandas.DataFrame``.
 
         Parameters
         ----------

@@ -11,7 +11,7 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-"""Module provides `OmnisciServer` class."""
+"""Module provides ``OmnisciServer`` class."""
 
 import uuid
 import sys
@@ -207,7 +207,7 @@ class OmnisciServer:
     @classmethod
     def put_pandas_to_omnisci(cls, df, name=None):
         """
-        Import `pandas.DataFrame` to OmniSci engine.
+        Import ``pandas.DataFrame`` to OmniSci engine.
 
         Parameters
         ----------

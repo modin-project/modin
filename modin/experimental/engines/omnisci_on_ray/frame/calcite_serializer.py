@@ -11,7 +11,7 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-"""Module provides `CalciteSerializer` class."""
+"""Module provides ``CalciteSerializer`` class."""
 
 from .expr import (
     BaseExpr,
@@ -40,8 +40,8 @@ class CalciteSerializer:
     """
     Serializer for calcite node sequence.
 
-    CalciteSerializer is used to serialize a sequence of `CalciteBaseNode`
-    based nodes including nested `BaseExpr` based expression trees into
+    ``CalciteSerializer`` is used to serialize a sequence of ``CalciteBaseNode``
+    based nodes including nested ``BaseExpr`` based expression trees into
     a request in JSON format which can be fed to OmniSci.
     """
 
@@ -191,7 +191,7 @@ class CalciteSerializer:
 
     def serialize_expr(self, expr):
         """
-        Serialize `BaseExpr` based expression into a dictionary.
+        Serialize ``BaseExpr`` based expression into a dictionary.
 
         Parameters
         ----------
@@ -220,7 +220,7 @@ class CalciteSerializer:
 
     def serialize_literal(self, literal):
         """
-        Serialize `LiteralExpr` into a dictionary.
+        Serialize ``LiteralExpr`` into a dictionary.
 
         Parameters
         ----------
@@ -332,7 +332,7 @@ class CalciteSerializer:
 
     def serialize_input_idx(self, expr):
         """
-        Serialize `CalciteInputIdxExpr` expression.
+        Serialize ``CalciteInputIdxExpr`` expression.
 
         Parameters
         ----------

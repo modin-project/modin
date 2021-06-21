@@ -12,9 +12,9 @@
 # governing permissions and limitations under the License.
 
 """
-Module houses `OmnisciOnRayIO` class.
+Module houses ``OmnisciOnRayIO`` class.
 
-`OmnisciOnRayIO` is used for storing IO functions implementations with OmniSci backend
+``OmnisciOnRayIO`` is used for storing IO functions implementations with OmniSci backend
 and Ray engine.
 """
 
@@ -62,7 +62,7 @@ class OmnisciOnRayIO(RayIO, TextFileDispatcher):
     """
     Class contains IO functions implementations with OmniSci backend and Ray engine.
 
-    Inherits some common for Ray engine util functions from `RayIO` class.
+    Inherits some common for Ray engine util functions from ``RayIO`` class.
     """
 
     frame_cls = OmnisciOnRayFrame

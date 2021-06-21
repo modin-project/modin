@@ -26,7 +26,7 @@ class CalciteInputRefExpr(BaseExpr):
     """
     Calcite version of input column reference.
 
-    Calcite translation should replace all `InputRefExpr`.
+    Calcite translation should replace all ``InputRefExpr``.
 
     Calcite references columns by their indexes (positions in input table).
     If there are multiple input tables for Calcite node, then a position
@@ -69,7 +69,7 @@ class CalciteInputRefExpr(BaseExpr):
 
 class CalciteInputIdxExpr(BaseExpr):
     """
-    Basically the same as `CalciteInputRefExpr` but with a different serialization.
+    Basically the same as ``CalciteInputRefExpr`` but with a different serialization.
 
     Parameters
     ----------

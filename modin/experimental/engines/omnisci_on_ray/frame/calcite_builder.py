@@ -11,7 +11,7 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-"""Module provides `CalciteBuilder` class."""
+"""Module provides ``CalciteBuilder`` class."""
 
 from .expr import (
     InputRefExpr,
@@ -49,7 +49,7 @@ from pandas.core.dtypes.common import get_dtype
 
 
 class CalciteBuilder:
-    """Translator used to transform `DFAlgNode` tree into a calcite node sequence."""
+    """Translator used to transform ``DFAlgNode`` tree into a calcite node sequence."""
 
     class CompoundAggregate:
         """
@@ -411,7 +411,7 @@ class CalciteBuilder:
 
         def ref(self, frame, col):
             """
-            Translate input column into `CalciteInputRefExpr`.
+            Translate input column into ``CalciteInputRefExpr``.
 
             Parameters
             ----------
@@ -428,7 +428,7 @@ class CalciteBuilder:
 
         def ref_idx(self, frame, col):
             """
-            Translate input column into `CalciteInputIdxExpr`.
+            Translate input column into ``CalciteInputIdxExpr``.
 
             Parameters
             ----------
@@ -457,8 +457,8 @@ class CalciteBuilder:
             """
             Translate an expression.
 
-            Translation is done by replacing `InputRefExpr` with
-            `CalciteInputRefExpr` and `CalciteInputIdxExpr`.
+            Translation is done by replacing ``InputRefExpr`` with
+            ``CalciteInputRefExpr`` and ``CalciteInputIdxExpr``.
 
             Parameters
             ----------
@@ -476,8 +476,8 @@ class CalciteBuilder:
             """
             Translate an expression.
 
-            Translate an expression replacing `InputRefExpr` with `CalciteInputRefExpr`
-            and `CalciteInputIdxExpr`. An expression tree branches with input columns
+            Translate an expression replacing ``InputRefExpr`` with ``CalciteInputRefExpr``
+            and ``CalciteInputIdxExpr``. An expression tree branches with input columns
             are copied into a new tree, other branches are used as is.
 
             Parameters
@@ -485,8 +485,8 @@ class CalciteBuilder:
             expr : BaseExpr
                 An expression to translate.
             ref_idx : bool, default: False
-                If True then translate `InputRefExpr` to `CalciteInputIdxExpr`,
-                use `CalciteInputRefExr` otherwise.
+                If True then translate ``InputRefExpr`` to ``CalciteInputIdxExpr``,
+                use ``CalciteInputRefExr`` otherwise.
 
             Returns
             -------
@@ -589,7 +589,7 @@ class CalciteBuilder:
 
     def build(self, op):
         """
-        Translate a `DFAlgNode` tree into a calcite nodes sequence.
+        Translate a ``DFAlgNode`` tree into a calcite nodes sequence.
 
         Parameters
         ----------
@@ -679,7 +679,7 @@ class CalciteBuilder:
 
     def _ref(self, frame, col):
         """
-        Translate input column into `CalciteInputRefExpr`.
+        Translate input column into ``CalciteInputRefExpr``.
 
         Parameters
         ----------
@@ -696,7 +696,7 @@ class CalciteBuilder:
 
     def _ref_idx(self, frame, col):
         """
-        Translate input column into `CalciteInputIdxExpr`.
+        Translate input column into ``CalciteInputIdxExpr``.
 
         Parameters
         ----------
@@ -715,8 +715,8 @@ class CalciteBuilder:
         """
         Translate expressions.
 
-        Translate expressions replacing `InputRefExpr` with `CalciteInputRefExpr` and
-        `CalciteInputIdxExpr`.
+        Translate expressions replacing ``InputRefExpr`` with ``CalciteInputRefExpr`` and
+        ``CalciteInputIdxExpr``.
 
         Parameters
         ----------
@@ -830,7 +830,7 @@ class CalciteBuilder:
 
     def _process_frame(self, op):
         """
-        Translate `FrameNode` node.
+        Translate ``FrameNode`` node.
 
         Parameters
         ----------
@@ -841,7 +841,7 @@ class CalciteBuilder:
 
     def _process_mask(self, op):
         """
-        Translate `MaskNode` node.
+        Translate ``MaskNode`` node.
 
         Parameters
         ----------
@@ -864,7 +864,7 @@ class CalciteBuilder:
 
     def _process_groupby(self, op):
         """
-        Translate `GroupbyAggNode` node.
+        Translate ``GroupbyAggNode`` node.
 
         Parameters
         ----------
@@ -928,7 +928,7 @@ class CalciteBuilder:
 
     def _process_transform(self, op):
         """
-        Translate `TransformNode` node.
+        Translate ``TransformNode`` node.
 
         Parameters
         ----------
@@ -941,7 +941,7 @@ class CalciteBuilder:
 
     def _process_join(self, op):
         """
-        Translate `JoinNode` node.
+        Translate ``JoinNode`` node.
 
         Parameters
         ----------
@@ -964,7 +964,7 @@ class CalciteBuilder:
 
     def _process_union(self, op):
         """
-        Translate `UnionNode` node.
+        Translate ``UnionNode`` node.
 
         Parameters
         ----------
@@ -975,7 +975,7 @@ class CalciteBuilder:
 
     def _process_sort(self, op):
         """
-        Translate `SortNode` node.
+        Translate ``SortNode`` node.
 
         Parameters
         ----------
@@ -998,7 +998,7 @@ class CalciteBuilder:
 
     def _process_filter(self, op):
         """
-        Translate `FilterNode` node.
+        Translate ``FilterNode`` node.
 
         Parameters
         ----------

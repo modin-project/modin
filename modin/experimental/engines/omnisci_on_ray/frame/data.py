@@ -11,7 +11,7 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-"""Module provides `OmnisciOnRayFrame` class implementing lazy frame."""
+"""Module provides ``OmnisciOnRayFrame`` class implementing lazy frame."""
 
 from modin.engines.base.frame.data import PandasFrame
 from modin.experimental.backends.omnisci.query_compiler import DFAlgQueryCompiler
@@ -84,7 +84,7 @@ class OmnisciOnRayFrame(PandasFrame):
         Column data types.
     op : DFAlgNode, optional
         A tree describing how frame is computed. For materialized frames it
-        is always `FrameNode`.
+        is always ``FrameNode``.
     index_cols : list of str, optional
         A list of columns included into the frame's index. None value means
         a default index (row id is used as an index).
@@ -102,7 +102,7 @@ class OmnisciOnRayFrame(PandasFrame):
         ID of the frame. Used for debug prints only.
     _op : DFAlgNode
         A tree to be used to compute the frame. For materialized frames it is
-        always `FrameNode`.
+        always ``FrameNode``.
     _partitions : numpy.ndarray or None
         Partitions of the frame. For materialized dataframes it holds a single
         partition. None for frames requiring execution.
@@ -1575,7 +1575,7 @@ class OmnisciOnRayFrame(PandasFrame):
 
     def _is_projection(self):
         """
-        Check if frame is a `TranformNode` operation.
+        Check if frame is a ``TranformNode`` operation.
 
         Returns
         -------
@@ -1587,7 +1587,7 @@ class OmnisciOnRayFrame(PandasFrame):
         """
         Materialize lazy frame.
 
-        After this call frame always has `FrameNode` operation.
+        After this call frame always has ``FrameNode`` operation.
         """
         if isinstance(self._op, FrameNode):
             return
