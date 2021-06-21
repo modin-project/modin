@@ -28,6 +28,7 @@ import pyarrow as pa
 import pandas
 from pandas.io.parsers import _validate_usecols_arg
 from pandas._typing import FilePathOrBuffer
+from pandas.io.common import is_url
 
 ReadCsvKwargsType = Dict[
     str,
@@ -344,6 +345,11 @@ class OmnisciOnRayIO(RayIO, TextFileDispatcher):
 
         return usecols_md
 
+    read_csv_unsup_defaults = {}
+    for k, v in inspect.signature(read_csv.__func__).parameters.items():
+        if v.default is not inspect.Parameter.empty and k in unsupported_args:
+            read_csv_unsup_defaults[k] = v.default
+
     @classmethod
     def _read_csv_check_support(
         cls,
@@ -380,8 +386,6 @@ class OmnisciOnRayIO(RayIO, TextFileDispatcher):
 
         if isinstance(filepath_or_buffer, str):
             if not os.path.exists(filepath_or_buffer):
-                from pandas.io.common import is_url
-
                 if cls.file_exists(filepath_or_buffer) or is_url(filepath_or_buffer):
                     return (
                         False,
@@ -400,14 +404,8 @@ class OmnisciOnRayIO(RayIO, TextFileDispatcher):
                     f"Invalid file path or buffer object type: {type(filepath_or_buffer)}"
                 )
 
-        read_csv_signature = inspect.signature(cls.read_csv)
-        read_csv_default_kwargs = {
-            k: v.default
-            for k, v in read_csv_signature.parameters.items()
-            if v.default is not inspect.Parameter.empty
-        }
-        for arg in cls.unsupported_args:
-            if read_csv_kwargs[arg] != read_csv_default_kwargs[arg]:
+        for arg, def_value in cls.read_csv_unsup_defaults.items():
+            if read_csv_kwargs[arg] != def_value:
                 return (
                     False,
                     f"read_csv with 'arrow' engine doesn't support {arg} parameter",
