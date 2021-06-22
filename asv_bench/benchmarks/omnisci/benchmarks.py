@@ -259,7 +259,7 @@ class TimeFillna:
 class TimeValueCountsSeries:
     param_names = ["shape", "ngroups"]
     params = [
-        UNARY_OP_DATA_SIZE[ASV_DATASET_SIZE],
+        SERIES_DATA_SIZE[ASV_DATASET_SIZE],
         GROUPBY_NGROUPS[ASV_DATASET_SIZE],
     ]
 
