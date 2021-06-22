@@ -325,7 +325,7 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
 
     def _agg(self, agg, axis=0, level=None, **kwargs):
         """
-        Perform specified aggregation alogn rows/columns.
+        Perform specified aggregation along rows/columns.
 
         Parameters
         ----------

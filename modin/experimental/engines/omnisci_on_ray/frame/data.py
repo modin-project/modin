@@ -325,7 +325,7 @@ class OmnisciOnRayFrame(PandasFrame):
 
     def agg(self, agg, **kwargs):
         """
-        Perform specified aggregation alogn columns.
+        Perform specified aggregation along columns.
 
         Parameters
         ----------
