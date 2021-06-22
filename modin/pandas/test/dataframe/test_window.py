@@ -136,9 +136,8 @@ def test_ffill(data):
 @pytest.mark.parametrize("axis", axis_values, ids=axis_keys)
 @pytest.mark.parametrize("limit", int_arg_values, ids=int_arg_keys)
 def test_fillna(data, method, axis, limit):
-    # We are not testing when limit is not positive until pandas-27042 gets fixed.
     # We are not testing when axis is over rows until pandas-17399 gets fixed.
-    if limit > 0 and axis != 1 and axis != "columns":
+    if axis != 1 and axis != "columns":
         modin_df = pd.DataFrame(data)
         pandas_df = pandas.DataFrame(data)
 
