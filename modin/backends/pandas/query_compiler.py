@@ -1965,9 +1965,18 @@ class PandasQueryCompiler(BaseQueryCompiler):
         elif isinstance(value, dict):
             kwargs.pop("value")
 
-            def fillna(df):
-                func_dict = {c: value[c] for c in value if c in df.columns}
-                return df.fillna(value=func_dict, **kwargs)
+            if squeeze_self:
+
+                def fillna(df):
+                    return pandas.DataFrame(
+                        df.squeeze(axis=1).fillna(value=value, **kwargs)
+                    )
+
+            else:
+
+                def fillna(df):
+                    func_dict = {c: value[c] for c in value if c in df.columns}
+                    return df.fillna(value=func_dict, **kwargs)
 
         else:
 
