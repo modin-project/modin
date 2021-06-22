@@ -22,7 +22,7 @@ lxml
 openpyxl
 xlrd
 matplotlib<=3.2.2
-sqlalchemy
+sqlalchemy>=1.4.0
 msgpack
 pandas_gbq
 cloudpickle

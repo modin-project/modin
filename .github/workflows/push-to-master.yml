@@ -1,8 +1,5 @@
 name: push-to-master
-on:
-  push:
-    branches:
-      - master
+on: pull_request
 jobs:
   test-ray-master:
     runs-on: ubuntu-latest
