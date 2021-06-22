@@ -714,6 +714,17 @@ class TestGroupby:
 
         run_and_compare(groupby, data=self.data, constructor_kwargs={"index": index})
 
+    def test_groupby_lazy_squeeze(self):
+        def applier(df, **kwargs):
+            return df.groupby("a").sum().squeeze(axis=1)
+
+        run_and_compare(
+            applier,
+            data=self.data,
+            constructor_kwargs={"columns": ["a", "b"]},
+            force_lazy=True,
+        )
+
     taxi_data = {
         "a": [1, 1, 2, 2],
         "b": [11, 21, 12, 11],
@@ -1755,6 +1766,47 @@ class TestUnsupportedColumns:
             assert obj and not bad_cols
         else:
             assert not obj and bad_cols == ["col"]
+
+
+class TestConstructor:
+    @pytest.mark.parametrize(
+        "index",
+        [
+            None,
+            pandas.Index([1, 2, 3]),
+            pandas.MultiIndex.from_tuples([(1, 1), (2, 2), (3, 3)]),
+        ],
+    )
+    def test_shape_hint_detection(self, index):
+        df = pd.DataFrame({"a": [1, 2, 3]}, index=index)
+        assert df._query_compiler._shape_hint == "column"
+
+        transposed_data = df._to_pandas().T.to_dict()
+        df = pd.DataFrame(transposed_data)
+        assert df._query_compiler._shape_hint == "row"
+
+        df = pd.DataFrame({"a": [1, 2, 3], "b": [1, 2, 3]}, index=index)
+        assert df._query_compiler._shape_hint is None
+
+        df = pd.DataFrame({"a": [1]})
+        assert df._query_compiler._shape_hint == "column"
+
+    def test_shape_hint_detection_from_arrow(self):
+        at = pyarrow.Table.from_pydict({"a": [1, 2, 3]})
+        df = pd.utils.from_arrow(at)
+        assert df._query_compiler._shape_hint == "column"
+
+        at = pyarrow.Table.from_pydict({"a": [1], "b": [2], "c": [3]})
+        df = pd.utils.from_arrow(at)
+        assert df._query_compiler._shape_hint == "row"
+
+        at = pyarrow.Table.from_pydict({"a": [1, 2, 3], "b": [1, 2, 3]})
+        df = pd.utils.from_arrow(at)
+        assert df._query_compiler._shape_hint is None
+
+        at = pyarrow.Table.from_pydict({"a": [1]})
+        df = pd.utils.from_arrow(at)
+        assert df._query_compiler._shape_hint == "column"
 
 
 if __name__ == "__main__":
