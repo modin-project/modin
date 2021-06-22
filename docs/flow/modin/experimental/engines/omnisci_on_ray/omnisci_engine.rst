@@ -45,19 +45,23 @@ class.
 Lazy operations on a frame build a tree which is later translated into
 a query executed by OmniSci. We use two types of trees. The first one
 describes operations on frames that map to relational operations like
-projection, union, etc. Nodes in this tree are derived from ``DFAlgNode``
-class. Some of the nodes (e.g. ``TransformNode`` mapped to a projection)
+projection, union, etc. Nodes in this tree are derived from
+:py:class:`~modin.experimental.engines.omnisci_on_ray.frame.df_algebra.DFAlgNode`
+class. Some of the nodes (e.g.
+:py:class:`~modin.experimental.engines.omnisci_on_ray.frame.df_algebra.TransformNode` mapped to a projection)
 need a description of how individual columns are computed. The second
 type of tree is used to describe operations on columns, including
 arithmetic operations, type casts, datetime operations, etc. Nodes
-of this tree are derived from ``BaseExpr`` class.
+of this tree are derived from
+:py:class:`~modin.experimental.engines.omnisci_on_ray.frame.expr.BaseExpr` class.
 
 Partitions
 ----------
 
 Partitioning is used to achieve high parallelism. In the case of OmniSciDB
 based execution parallelism is provided by OmniSciDB execution engine
-and we don't need to manage multiple partitions. ``OmnisciOnRayFrame``
+and we don't need to manage multiple partitions.
+:py:class:`~modin.experimental.engines.omnisci_on_ray.frame.data.OmnisciOnRayFrame`
 always has a single partition.
 
 A partition holds data in either ``pandas.DataFrame`` or ``pyarrow.Table``
@@ -97,20 +101,27 @@ executed by OmniSciDB and also they can be transferred to Calcite server for
 optimizations.
 
 Operations used by Calcite in its intermediate representation are implemented
-in classes derived from ``CalciteBaseNode``. ``CalciteBuilder`` is used to
-translate ``DFAlgNode``-based trees into ``CalciteBaseNode``-based sequences.
-It also translates ``BaseExpr``-based trees by replacing ``InputRefExpr``
-nodes with either ``CalciteInputRefExpr`` or ``CalciteInputIdxExpr``
+in classes derived from
+:py:class:`~modin.experimental.engines.omnisci_on_ray.frame.calcite_algebra.CalciteBaseNode`.
+:py:class:`~modin.experimental.engines.omnisci_on_ray.frame.calcite_builder.CalciteBuilder` is used to
+translate :py:class:`~modin.experimental.engines.omnisci_on_ray.frame.df_algebra.DFAlgNode`-based
+trees into :py:class:`~modin.experimental.engines.omnisci_on_ray.frame.calcite_algebra.CalciteBaseNode`-based sequences.
+It also translates :py:class:`~modin.experimental.engines.omnisci_on_ray.frame.expr.BaseExpr`-based
+trees by replacing :py:class:`~modin.experimental.engines.omnisci_on_ray.frame.expr.InputRefExpr`
+nodes with either :py:class:`~modin.experimental.engines.omnisci_on_ray.frame.calcite_algebra.CalciteInputRefExpr`
+or :py:class:`~modin.experimental.engines.omnisci_on_ray.frame.calcite_algebra.CalciteInputIdxExpr`
 depending on context.
 
-``CalciteSerializer`` is used to serialize the resulting sequence into
+:py:class:`~modin.experimental.engines.omnisci_on_ray.frame.calcite_serializer.CalciteSerializer`
+is used to serialize the resulting sequence into
 JSON format. This JSON becomes a query by simply adding 'execute relalg'
 or 'execute calcite' prefix (the latter is used if we want to use Calcite
 for additional query optimization).
 
 An execution result is a new Arrow table which is used to form a new
 partition. This partition is assigned to the executed frame. The frame's
-operation tree is replaced with ``FrameNode`` operation.
+operation tree is replaced with
+:py:class:`~modin.experimental.engines.omnisci_on_ray.frame.df_algebra.FrameNode` operation.
 
 Column name mangling
 ''''''''''''''''''''
