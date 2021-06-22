@@ -1096,7 +1096,7 @@ class TestMerge:
         "b": [40, 20, 30, 70, 10, 50],
         "d": [4000, 2000, 3000, 7000, 1000, 5000],
     }
-    on_values = ["a", ["a"], ["a", "b"], ["b", "a"]]
+    on_values = ["a", ["a"], ["a", "b"], ["b", "a"], None]
     how_values = ["inner", "left"]
 
     @pytest.mark.parametrize("on", on_values)
@@ -1108,16 +1108,6 @@ class TestMerge:
 
         run_and_compare(
             merge, data=self.data, data2=self.data2, on=on, how=how, sort=sort
-        )
-
-    @pytest.mark.parametrize("how", how_values)
-    @pytest.mark.parametrize("sort", [True, False])
-    def test_default_merge(self, how, sort):
-        def default_merge(lib, df1, df2, how, sort, **kwargs):
-            return df1.merge(df2, how=how, sort=sort)
-
-        run_and_compare(
-            default_merge, data=self.data, data2=self.data2, how=how, sort=sort
         )
 
     h2o_data = {
