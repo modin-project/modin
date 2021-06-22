@@ -91,7 +91,7 @@ class PandasOnDaskFramePartition(PandasFramePartition):
         The keyword arguments are sent as a dictionary.
         """
         client = default_client()
-        call_queue = self.call_queue + [(func, args, kwargs)]
+        call_queue = self.call_queue + [[func, args, kwargs]]
         if len(call_queue) > 1:
             future = client.submit(
                 apply_list_of_funcs, call_queue, self.future, pure=False
@@ -129,7 +129,7 @@ class PandasOnDaskFramePartition(PandasFramePartition):
         The keyword arguments are sent as a dictionary.
         """
         return PandasOnDaskFramePartition(
-            self.future, call_queue=self.call_queue + [(func, args, kwargs)]
+            self.future, call_queue=self.call_queue + [[func, args, kwargs]]
         )
 
     def drain_call_queue(self):
