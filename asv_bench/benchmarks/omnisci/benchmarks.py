@@ -376,3 +376,31 @@ class TimeProperties:
 
     def time_index(self, shape):
         return self.df.index
+
+
+class BaseTimeGroupBy:
+    def setup(self, shape, ngroups=5, groupby_ncols=1):
+        ngroups = translator_groupby_ngroups(ngroups, shape)
+        self.df, self.groupby_columns = generate_dataframe(
+            ASV_USE_IMPL,
+            "int",
+            *shape,
+            RAND_LOW,
+            RAND_HIGH,
+            groupby_ncols,
+            count_groups=ngroups,
+        )
+
+
+class TimeGroupByDefaultAggregations(BaseTimeGroupBy):
+    param_names = ["shape", "ngroups"]
+    params = [
+        UNARY_OP_DATA_SIZE[ASV_DATASET_SIZE],
+        GROUPBY_NGROUPS[ASV_DATASET_SIZE],
+    ]
+
+    def time_groupby_count(self, *args, **kwargs):
+        execute(self.df.groupby(by=self.groupby_columns).count())
+
+    def time_groupby_sum(self, *args, **kwargs):
+        execute(self.df.groupby(by=self.groupby_columns).sum())
