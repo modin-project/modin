@@ -91,10 +91,10 @@ class PandasOnDaskFramePartition(PandasFramePartition):
         The keyword arguments are sent as a dictionary.
         """
         client = default_client()
-        call_queue = self.call_queue + [[func, args, kwargs]]
+        call_queue = self.call_queue + [(func, args, kwargs)]
         if len(call_queue) > 1:
             future = client.submit(
-                apply_list_of_funcs, self.future, call_queue, pure=False
+                apply_list_of_funcs, call_queue, self.future, pure=False
             )
         else:
             # We handle `len(call_queue) == 1` in a different way because
@@ -129,7 +129,7 @@ class PandasOnDaskFramePartition(PandasFramePartition):
         The keyword arguments are sent as a dictionary.
         """
         return PandasOnDaskFramePartition(
-            self.future, call_queue=self.call_queue + [[func, args, kwargs]]
+            self.future, call_queue=self.call_queue + [(func, args, kwargs)]
         )
 
     def drain_call_queue(self):
@@ -140,7 +140,7 @@ class PandasOnDaskFramePartition(PandasFramePartition):
         client = default_client()
         if len(call_queue) > 1:
             future = client.submit(
-                apply_list_of_funcs, self.future, call_queue, pure=False
+                apply_list_of_funcs, call_queue, self.future, pure=False
             )
         else:
             # We handle `len(call_queue) == 1` in a different way because
@@ -378,16 +378,16 @@ def apply_func(partition, func, *args, **kwargs):
     return result, get_ip()
 
 
-def apply_list_of_funcs(partition, funcs):
+def apply_list_of_funcs(funcs, partition):
     """
     Execute all operations stored in the call queue on the partition in a worker process.
 
     Parameters
     ----------
-    partition : pandas.DataFrame
-        A pandas DataFrame the call queue needs to be executed on.
     funcs : list
         A call queue that needs to be executed on the partition.
+    partition : pandas.DataFrame
+        A pandas DataFrame the call queue needs to be executed on.
 
     Returns
     -------

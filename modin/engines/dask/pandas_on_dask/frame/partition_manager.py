@@ -115,9 +115,11 @@ class PandasOnDaskFramePartitionManager(PandasFramePartitionManager):
                 [
                     part.apply(
                         map_func,
-                        *rt_axis_parts[col_idx].list_of_blocks
-                        if axis
-                        else rt_axis_parts[row_idx].list_of_blocks,
+                        *(
+                            rt_axis_parts[col_idx].list_of_blocks
+                            if axis
+                            else rt_axis_parts[row_idx].list_of_blocks
+                        ),
                     )
                     for col_idx, part in enumerate(left[row_idx])
                 ]

@@ -100,7 +100,7 @@ class PandasOnRayFramePartition(PandasFramePartition):
         oid = self.oid
         call_queue = self.call_queue + [(func, args, kwargs)]
         if len(call_queue) > 1:
-            result, length, width, ip = apply_list_of_funcs.remote(oid, call_queue)
+            result, length, width, ip = apply_list_of_funcs.remote(call_queue, oid)
         else:
             # We handle `len(call_queue) == 1` in a different way because
             # this dramatically improves performance.
@@ -147,7 +147,7 @@ class PandasOnRayFramePartition(PandasFramePartition):
                 self._length_cache,
                 self._width_cache,
                 self._ip_cache,
-            ) = apply_list_of_funcs.remote(oid, call_queue)
+            ) = apply_list_of_funcs.remote(call_queue, oid)
         else:
             # We handle `len(call_queue) == 1` in a different way because
             # this dramatically improves performance.
@@ -432,16 +432,16 @@ def apply_func(partition, func, *args, **kwargs):  # pragma: no cover
 
 
 @ray.remote(num_returns=4)
-def apply_list_of_funcs(partition, funcs):  # pragma: no cover
+def apply_list_of_funcs(funcs, partition):  # pragma: no cover
     """
     Execute all operations stored in the call queue on the partition in a worker process.
 
     Parameters
     ----------
-    partition : pandas.DataFrame
-        A pandas DataFrame the call queue needs to be executed on.
     funcs : list
         A call queue that needs to be executed on the partition.
+    partition : pandas.DataFrame
+        A pandas DataFrame the call queue needs to be executed on.
 
     Returns
     -------
@@ -469,30 +469,21 @@ def apply_list_of_funcs(partition, funcs):  # pragma: no cover
         else:
             return obj
 
-    if len(funcs) > 1:
-        for func, args, kwargs in funcs[:-1]:
-            func = deserialize(func)
-            args = deserialize(args)
-            kwargs = deserialize(kwargs)
-            try:
-                partition = func(partition, *args, **kwargs)
-            except ValueError:
-                partition = func(partition.copy(), *args, **kwargs)
-    func, args, kwargs = funcs[-1]
-    func = deserialize(func)
-    args = deserialize(args)
-    kwargs = deserialize(kwargs)
+    for func, args, kwargs in funcs:
+        func = deserialize(func)
+        args = deserialize(args)
+        kwargs = deserialize(kwargs)
+        try:
+            partition = func(partition, *args, **kwargs)
+        # Sometimes Arrow forces us to make a copy of an object before we operate on it. We
+        # don't want the error to propagate to the user, and we want to avoid copying unless
+        # we absolutely have to.
+        except ValueError:
+            partition = func(partition.copy(), *args, **kwargs)
 
-    try:
-        result = func(partition, *args, **kwargs)
-    # Sometimes Arrow forces us to make a copy of an object before we operate on it. We
-    # don't want the error to propagate to the user, and we want to avoid copying unless
-    # we absolutely have to.
-    except ValueError:
-        result = func(partition.copy(), *args, **kwargs)
     return (
-        result,
-        len(result) if hasattr(result, "__len__") else 0,
-        len(result.columns) if hasattr(result, "columns") else 0,
+        partition,
+        len(partition) if hasattr(partition, "__len__") else 0,
+        len(partition.columns) if hasattr(partition, "columns") else 0,
         get_node_ip_address(),
     )
