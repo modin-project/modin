@@ -37,6 +37,15 @@ UNARY_OP_DATA_SIZE = {
     ],
 }
 
+SERIES_DATA_SIZE = {
+    "big": [
+        (10_000_000, 1),
+    ],
+    "small": [
+        (100_000, 1),
+    ],
+}
+
 
 def trigger_import(*dfs):
     from modin.experimental.engines.omnisci_on_ray.frame.omnisci_worker import (

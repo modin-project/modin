@@ -30,6 +30,7 @@ from ..utils import (
 from .utils import (
     BINARY_OP_DATA_SIZE,
     UNARY_OP_DATA_SIZE,
+    SERIES_DATA_SIZE,
     RAND_LOW,
     RAND_HIGH,
     trigger_import,
@@ -97,7 +98,7 @@ class TimeAppend:
         execute(self.df1.append(self.df2))
 
 
-class TimeBinaryOp:
+class TimeBinaryOpDataFrame:
     param_names = ["shape", "binary_op"]
     params = [
         UNARY_OP_DATA_SIZE[ASV_DATASET_SIZE],
@@ -107,15 +108,31 @@ class TimeBinaryOp:
     def setup(self, shape, binary_op):
         self.df1 = generate_dataframe(ASV_USE_IMPL, "int", *shape, RAND_LOW, RAND_HIGH)
         trigger_import(self.df1)
+        self.op = getattr(self.df1, binary_op)
 
     def time_mul_scalar(self, shape, binary_op):
-        execute(self.df1 * 2)
-
-    def time_mul_series(self, shape, binary_op):
-        execute(self.df1["col1"] * self.df1["col2"])
+        execute(self.op(2))
 
     def time_mul_dataframes(self, shape, binary_op):
-        execute(self.df1 * self.df1)
+        execute(self.op(self.df1))
+
+
+class TimeBinaryOpSeries:
+    param_names = ["shape", "binary_op"]
+    params = [
+        SERIES_DATA_SIZE[ASV_DATASET_SIZE],
+        ["mul"],
+    ]
+
+    def setup(self, shape, binary_op):
+        self.series = generate_dataframe(
+            ASV_USE_IMPL, "int", *shape, RAND_LOW, RAND_HIGH
+        )["col0"]
+        trigger_import(self.series)
+        self.op = getattr(self.series, binary_op)
+
+    def time_mul_series(self, shape, binary_op):
+        execute(self.op(self.series))
 
 
 class TimeArithmetic:
