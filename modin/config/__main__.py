@@ -56,7 +56,7 @@ def export_config_help(filename: str):
         if isinstance(obj, type) and issubclass(obj, Parameter) and not obj.is_abstract:
             data = {
                 "Config Name": obj.__name__,
-                "Env. Variable Name": obj.varname,
+                "Env. Variable Name": getattr(obj, "varname", None),
                 "Default Value": obj._get_default()
                 if obj.__name__ != "RayRedisPassword"
                 else "random string",
@@ -71,7 +71,7 @@ def export_config_help(filename: str):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "-export_path",
+        "--export_path",
         dest="export_path",
         type=str,
         required=False,
