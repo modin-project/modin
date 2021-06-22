@@ -1714,31 +1714,50 @@ def test_ffill(data):
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-def test_fillna(data):
+@pytest.mark.parametrize("reindex", [None, 2, -2])
+@pytest.mark.parametrize("limit", [None, 1, 2, 0.5, -1, -2, 1.5])
+def test_fillna(data, reindex, limit):
     modin_series, pandas_series = create_test_series(data)
-    df_equals(modin_series.fillna(0), pandas_series.fillna(0))
-    df_equals(modin_series.fillna(method="bfill"), pandas_series.fillna(method="bfill"))
-    df_equals(modin_series.fillna(method="ffill"), pandas_series.fillna(method="ffill"))
-    df_equals(modin_series.fillna(0, limit=1), pandas_series.fillna(0, limit=1))
+    index = pandas_series.index
+    pandas_replace_series = index.to_series().sample(frac=1)
+    modin_replace_series = pd.Series(pandas_replace_series)
+    replace_dict = pandas_replace_series.to_dict()
 
-    series_data = pandas_series.tolist()
-    count = 0
-    for i, v in enumerate(series_data):
-        if np.isnan(v):
-            series_data[i] = count
-            count += 1
-    modin_replace_series, pandas_replace_series = create_test_series(series_data)
+    if reindex is not None:
+        if reindex > 0:
+            pandas_series = pandas_series[:reindex].reindex(index)
+            modin_series = pd.Series(pandas_series)
+        else:
+            pandas_series = pandas_series[reindex:].reindex(index)
+        # Performing modin_series = modin_series[:2].reindex(index) creates
+        # an usable Series object with only 1 partition instead of 4.
+        # Performing modin_series = modin_series[-2:].reindex(index) creates
+        # an usable Series object with only 1 partition instead of 4.
+        # This is why modin_series is created from pandas_series instead of
+        # performing the same reindexing.
+        modin_series = pd.Series(pandas_series)
+
+    if isinstance(limit, float):
+        limit = int(len(modin_series) * limit)
+    elif limit is not None and limit < 0:
+        limit = len(modin_series) + limit
+
+    df_equals(modin_series.fillna(0, limit=limit), pandas_series.fillna(0, limit=limit))
     df_equals(
-        modin_series.fillna(modin_replace_series),
-        pandas_series.fillna(pandas_replace_series),
+        modin_series.fillna(method="bfill", limit=limit),
+        pandas_series.fillna(method="bfill", limit=limit),
     )
     df_equals(
-        modin_series.fillna(
-            modin_replace_series, limit=count // 2 if count // 2 > 0 else 1
-        ),
-        pandas_series.fillna(
-            pandas_replace_series, limit=count // 2 if count // 2 > 0 else 1
-        ),
+        modin_series.fillna(method="ffill", limit=limit),
+        pandas_series.fillna(method="ffill", limit=limit),
+    )
+    df_equals(
+        modin_series.fillna(modin_replace_series, limit=limit),
+        pandas_series.fillna(pandas_replace_series, limit=limit),
+    )
+    df_equals(
+        modin_series.fillna(replace_dict, limit=limit),
+        pandas_series.fillna(replace_dict, limit=limit),
     )
 
 
