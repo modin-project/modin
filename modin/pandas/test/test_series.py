@@ -1729,12 +1729,8 @@ def test_fillna(data, reindex, limit):
             modin_series = pd.Series(pandas_series)
         else:
             pandas_series = pandas_series[reindex:].reindex(index)
-        # Performing modin_series = modin_series[:2].reindex(index) creates
-        # an usable Series object with only 1 partition instead of 4.
-        # Performing modin_series = modin_series[-2:].reindex(index) creates
-        # an usable Series object with only 1 partition instead of 4.
-        # This is why modin_series is created from pandas_series instead of
-        # performing the same reindexing.
+        # Because of bug #3178 modin Series has to be created from pandas
+        # Series instead of performing the same slice and reindex operations.
         modin_series = pd.Series(pandas_series)
 
     if isinstance(limit, float):
