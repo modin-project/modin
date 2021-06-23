@@ -60,7 +60,8 @@ setup(
     url="https://github.com/modin-project/modin",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    install_requires=["pandas==1.2.4", "packaging", "numpy>=1.16.5"],
+    # Restrition for numpy upper version is because of #3182
+    install_requires=["pandas==1.2.4", "packaging", "numpy>=1.16.5,<=1.20.3"],
     extras_require={
         # can be installed by pip install modin[dask]
         "dask": dask_deps,

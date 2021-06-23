@@ -6,7 +6,8 @@ dependencies:
   - pandas==1.2.4
   - pyarrow==2.0.0
   - libthrift<0.14.1  # ref: modin gh-2840
-  - numpy>=1.16.5
+# Restrition for numpy upper version is because of #3182
+  - numpy>=1.16.5,<=1.20.3
   - pip
   - pytest>=6.0.1
   - pytest-cov>=2.10.1
