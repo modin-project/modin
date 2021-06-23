@@ -1409,7 +1409,6 @@ class Series(BasePandasDataset):
         if min_count > 1:
             return data._reduce_dimension(
                 data._query_compiler.prod_min_count(
-                    squeeze_self=True,
                     axis=axis,
                     skipna=skipna,
                     level=level,
@@ -1420,7 +1419,6 @@ class Series(BasePandasDataset):
             )
         return data._reduce_dimension(
             data._query_compiler.prod(
-                squeeze_self=True,
                 axis=axis,
                 skipna=skipna,
                 level=level,
@@ -1771,7 +1769,6 @@ class Series(BasePandasDataset):
         if min_count > 1:
             return data._reduce_dimension(
                 data._query_compiler.sum_min_count(
-                    squeeze_self=True,
                     axis=axis,
                     skipna=skipna,
                     level=level,
@@ -1782,7 +1779,6 @@ class Series(BasePandasDataset):
             )
         return data._reduce_dimension(
             data._query_compiler.sum(
-                squeeze_self=True,
                 axis=axis,
                 skipna=skipna,
                 level=level,
