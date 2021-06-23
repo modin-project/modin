@@ -21,8 +21,11 @@ local or "remote" NumPy depending on active execution context.
 import sys
 
 _CAUGHT_NUMPY = "numpy" not in sys.modules
+_EXCLUDE_MODULES = []
 try:
     import numpy as real_numpy
+
+    _EXCLUDE_MODULES.append(real_numpy)
 except ImportError:
     pass
 else:
@@ -34,7 +37,7 @@ else:
     import pandas
     import os
 
-    _EXCLUDE_MODULES = [modin, pandas]
+    _EXCLUDE_MODULES.extend([modin, pandas])
     try:
         import rpyc
     except ImportError:
