@@ -47,7 +47,7 @@ RUN conda update -n base -c defaults conda -y && \
     conda create -n modin --yes --no-default-packages && \
     conda activate modin && \
     conda install -c intel/label/modin -c conda-forge -c intel \
-        modin "ray>=1.0.0" "numpy==1.20.0" "scikit-learn<0.24.0" "daal4py>=2021.1" dpcpp_cpp_rt && \
+        modin "ray>=1.0.0" "numpy==1.20.3" "scikit-learn<0.24.0" "daal4py>=2021.1" dpcpp_cpp_rt && \
     conda clean --all --yes
 
 COPY census-omnisci.py "${HOME}/census-omnisci.py"
