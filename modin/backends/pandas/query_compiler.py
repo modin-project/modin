@@ -1964,6 +1964,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         elif isinstance(value, dict):
             if squeeze_self:
 
+                # For Series dict works along the index.
                 def fillna(df):
                     return pandas.DataFrame(
                         df.squeeze(axis=1).fillna(value=value, **kwargs)
@@ -1971,8 +1972,11 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
             else:
 
+                # For DataFrames dict works along columns, all columns have to be present.
                 def fillna(df):
-                    func_dict = {c: value[c] for c in value if c in df.columns}
+                    func_dict = {
+                        col: val for (col, val) in value.items() if col in df.columns
+                    }
                     return df.fillna(value=func_dict, **kwargs)
 
         else:
