@@ -261,7 +261,7 @@ def test_frame_fillna_limit(data, limit):
 
     if isinstance(limit, float):
         limit = int(len(modin_df) * limit)
-    elif limit < 0:
+    if limit is not None and limit < 0:
         limit = len(modin_df) + limit
 
     df_equals(

@@ -1735,7 +1735,7 @@ def test_fillna(data, reindex, limit):
 
     if isinstance(limit, float):
         limit = int(len(modin_series) * limit)
-    elif limit is not None and limit < 0:
+    if limit is not None and limit < 0:
         limit = len(modin_series) + limit
 
     df_equals(modin_series.fillna(0, limit=limit), pandas_series.fillna(0, limit=limit))
