@@ -146,8 +146,8 @@ class OmnisciOnRayFrame(PandasFrame):
     def get_dtype(self, col):
         # If we search for an index column type in a MultiIndex then we need to
         # extend index column names to tuples.
-        if isinstance(self._dtypes, MultiIndex) and not isinstance(col, tuple):
-            return self._dtypes[(col, *([""] * (self._dtypes.nlevels - 1)))]
+        if isinstance(self._dtypes.index, MultiIndex) and not isinstance(col, tuple):
+            return self._dtypes[(col, *([""] * (self._dtypes.index.nlevels - 1)))]
         return self._dtypes[col]
 
     def ref(self, col):
@@ -1231,12 +1231,21 @@ class OmnisciOnRayFrame(PandasFrame):
                     name = f"level_{i}"
                 if name in exprs:
                     raise ValueError(f"cannot insert {name}, already exists")
+                if isinstance(self.columns, MultiIndex) and not isinstance(name, tuple):
+                    name = (name, *([""] * (self.columns.nlevels - 1)))
                 exprs[name] = self.ref(c)
             for c in self.columns:
                 if c in exprs:
                     raise ValueError(f"cannot insert {c}, already exists")
                 exprs[c] = self.ref(c)
-            new_columns = Index.__new__(Index, data=exprs.keys(), dtype="O")
+            new_columns = Index.__new__(
+                Index,
+                data=exprs.keys(),
+                dtype="O",
+                name=self.columns.names
+                if isinstance(self.columns, MultiIndex)
+                else self.columns.name,
+            )
             return self.__constructor__(
                 columns=new_columns,
                 dtypes=self._dtypes_for_exprs(exprs),
