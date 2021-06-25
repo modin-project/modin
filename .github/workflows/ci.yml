@@ -336,6 +336,8 @@ jobs:
       - shell: bash -l {0}
         run: pytest modin/experimental/engines/omnisci_on_ray/test/test_dataframe.py
       - shell: bash -l {0}
+        run: pytest modin/pandas/test/test_io.py::TestCsv
+      - shell: bash -l {0}
         run: |
           curl -o codecov https://codecov.io/bash
           VERSION=$(grep -o 'VERSION=\"[0-9\.]*\"' codecov | cut -d'"' -f2);
