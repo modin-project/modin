@@ -75,7 +75,7 @@ class PandasOnRayFrameAxisPartition(PandasFrameAxisPartition):
         """
         lengths = kwargs.get("_lengths", None)
         return deploy_ray_func.options(
-            num_returns=num_splits * 4 if lengths is None else len(lengths) * 4
+            num_returns=(num_splits if lengths is None else len(lengths)) * 4
         ).remote(
             PandasFrameAxisPartition.deploy_axis_func,
             axis,

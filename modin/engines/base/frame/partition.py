@@ -44,7 +44,7 @@ class PandasFramePartition(ABC):  # pragma: no cover
         """
         pass
 
-    def apply(self, func, **kwargs):
+    def apply(self, func, *args, **kwargs):
         """
         Apply a function to the object wrapped by this partition.
 
@@ -52,6 +52,8 @@ class PandasFramePartition(ABC):  # pragma: no cover
         ----------
         func : callable
             Function to apply.
+        *args : iterable
+            Additional positional arguments to be passed in `func`.
         **kwargs : dict
             Additional keyword arguments to be passed in `func`.
 
@@ -68,7 +70,7 @@ class PandasFramePartition(ABC):  # pragma: no cover
         """
         pass
 
-    def add_to_apply_calls(self, func, **kwargs):
+    def add_to_apply_calls(self, func, *args, **kwargs):
         """
         Add a function to the call queue.
 
@@ -76,6 +78,8 @@ class PandasFramePartition(ABC):  # pragma: no cover
         ----------
         func : callable
             Function to be added to the call queue.
+        *args : iterable
+            Additional positional arguments to be passed in `func`.
         **kwargs : dict
             Additional keyword arguments to be passed in `func`.
 
