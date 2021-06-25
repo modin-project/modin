@@ -21,7 +21,6 @@ local or "remote" NumPy depending on active execution context.
 import sys
 
 _CAUGHT_NUMPY = "numpy" not in sys.modules
-_EXCLUDE_MODULES = []
 try:
     import numpy as real_numpy
 except ImportError:
