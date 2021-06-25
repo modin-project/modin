@@ -1714,12 +1714,47 @@ def test_ffill(data):
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-def test_fillna(data):
+@pytest.mark.parametrize("reindex", [None, 2, -2])
+@pytest.mark.parametrize("limit", [None, 1, 2, 0.5, -1, -2, 1.5])
+def test_fillna(data, reindex, limit):
     modin_series, pandas_series = create_test_series(data)
-    df_equals(modin_series.fillna(0), pandas_series.fillna(0))
-    df_equals(modin_series.fillna(method="bfill"), pandas_series.fillna(method="bfill"))
-    df_equals(modin_series.fillna(method="ffill"), pandas_series.fillna(method="ffill"))
-    df_equals(modin_series.fillna(0, limit=1), pandas_series.fillna(0, limit=1))
+    index = pandas_series.index
+    pandas_replace_series = index.to_series().sample(frac=1)
+    modin_replace_series = pd.Series(pandas_replace_series)
+    replace_dict = pandas_replace_series.to_dict()
+
+    if reindex is not None:
+        if reindex > 0:
+            pandas_series = pandas_series[:reindex].reindex(index)
+            modin_series = pd.Series(pandas_series)
+        else:
+            pandas_series = pandas_series[reindex:].reindex(index)
+        # Because of bug #3178 modin Series has to be created from pandas
+        # Series instead of performing the same slice and reindex operations.
+        modin_series = pd.Series(pandas_series)
+
+    if isinstance(limit, float):
+        limit = int(len(modin_series) * limit)
+    if limit is not None and limit < 0:
+        limit = len(modin_series) + limit
+
+    df_equals(modin_series.fillna(0, limit=limit), pandas_series.fillna(0, limit=limit))
+    df_equals(
+        modin_series.fillna(method="bfill", limit=limit),
+        pandas_series.fillna(method="bfill", limit=limit),
+    )
+    df_equals(
+        modin_series.fillna(method="ffill", limit=limit),
+        pandas_series.fillna(method="ffill", limit=limit),
+    )
+    df_equals(
+        modin_series.fillna(modin_replace_series, limit=limit),
+        pandas_series.fillna(pandas_replace_series, limit=limit),
+    )
+    df_equals(
+        modin_series.fillna(replace_dict, limit=limit),
+        pandas_series.fillna(replace_dict, limit=limit),
+    )
 
 
 @pytest.mark.xfail(reason="Using pandas Series.")

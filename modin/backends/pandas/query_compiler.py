@@ -1816,22 +1816,84 @@ class PandasQueryCompiler(BaseQueryCompiler):
         return self.__constructor__(new_modin_frame).dropna(axis=axis, how="all")
 
     def fillna(self, **kwargs):
+        squeeze_self = kwargs.pop("squeeze_self", False)
+        squeeze_value = kwargs.pop("squeeze_value", False)
         axis = kwargs.get("axis", 0)
-        value = kwargs.get("value")
+        value = kwargs.pop("value")
         method = kwargs.get("method", None)
         limit = kwargs.get("limit", None)
         full_axis = method is not None or limit is not None
-        if isinstance(value, dict):
-            kwargs.pop("value")
+        if isinstance(value, BaseQueryCompiler):
+            if squeeze_self:
+                # Self is a Series type object
+                if full_axis:
+                    value = value.to_pandas().squeeze(axis=1)
 
-            def fillna(df):
-                func_dict = {c: value[c] for c in value if c in df.columns}
-                return df.fillna(value=func_dict, **kwargs)
+                    def fillna_builder(series):
+                        # `limit` parameter works only on `Series` type, so we have to squeeze both objects to get
+                        # correct behavior.
+                        return series.squeeze(axis=1).fillna(value=value, **kwargs)
+
+                    new_modin_frame = self._modin_frame.apply_full_axis(
+                        0, fillna_builder
+                    )
+                else:
+
+                    def fillna_builder(series, value_arg):
+                        # Both arguments for this function are 1-column `DataFrames` which denote `Series` type.
+                        # Because they are both of the same type, it is not necessary to convert either of them into
+                        # `Series` by squeezing since `fillna` works perfectly in the same way on 1-column `DataFrame`
+                        # objects (when `limit` parameter is absent) as it works on two `Series`.
+                        return series.fillna(value=value_arg, **kwargs)
+
+                    new_modin_frame = self._modin_frame.binary_op(
+                        fillna_builder, value._modin_frame, join_type="left"
+                    )
+
+                return self.__constructor__(new_modin_frame)
+            else:
+                # Self is a DataFrame type object
+                if squeeze_value:
+                    # Value is Series type object
+                    value = value.to_pandas().squeeze(axis=1)
+
+                    def fillna(df):
+                        return df.fillna(value=value, **kwargs)
+
+                    # Continue to end of this function
+
+                else:
+                    # Value is a DataFrame type object
+                    def fillna_builder(df, r):
+                        return df.fillna(value=r, **kwargs)
+
+                    new_modin_frame = self._modin_frame.broadcast_apply(
+                        0, fillna_builder, value._modin_frame
+                    )
+                    return self.__constructor__(new_modin_frame)
+
+        elif isinstance(value, dict):
+            if squeeze_self:
+
+                # For Series dict works along the index.
+                def fillna(df):
+                    return pandas.DataFrame(
+                        df.squeeze(axis=1).fillna(value=value, **kwargs)
+                    )
+
+            else:
+
+                # For DataFrames dict works along columns, all columns have to be present.
+                def fillna(df):
+                    func_dict = {
+                        col: val for (col, val) in value.items() if col in df.columns
+                    }
+                    return df.fillna(value=func_dict, **kwargs)
 
         else:
 
             def fillna(df):
-                return df.fillna(**kwargs)
+                return df.fillna(value=value, **kwargs)
 
         if full_axis:
             new_modin_frame = self._modin_frame.fold(axis, fillna)
