@@ -696,6 +696,10 @@ class TestCsv:
         )
 
     # Error Handling parameters tests
+    @pytest.mark.xfail(
+        Engine.get() not in ["Python", "Cloudpython"],
+        reason="read_csv doesn't raise `bad lines` exceptions - issue #2500",
+    )
     @pytest.mark.parametrize("warn_bad_lines", [True, False])
     @pytest.mark.parametrize("error_bad_lines", [True, False])
     def test_read_csv_error_handling(
@@ -704,15 +708,6 @@ class TestCsv:
         warn_bad_lines,
         error_bad_lines,
     ):
-        if (
-            Engine.get() != "Python"
-            and request.config.getoption("--simulate-cloud").lower() != "normal"
-        ):
-            pytest.xfail(
-                "read_csv with Ray engine doesn't \
-                raise `bad lines` exceptions - issue #2500"
-            )
-
         eval_io(
             fn_name="read_csv",
             # read_csv kwargs
