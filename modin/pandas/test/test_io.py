@@ -704,7 +704,6 @@ class TestCsv:
     @pytest.mark.parametrize("error_bad_lines", [True, False])
     def test_read_csv_error_handling(
         self,
-        request,
         warn_bad_lines,
         error_bad_lines,
     ):
