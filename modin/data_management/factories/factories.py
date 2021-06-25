@@ -491,6 +491,15 @@ class ExperimentalPandasOnRayFactory(ExperimentalBaseFactory, PandasOnRayFactory
     def _read_csv_glob(cls, **kwargs):
         return cls.io_cls.read_csv_glob(**kwargs)
 
+    @classmethod
+    @doc(
+        _doc_io_method_raw_template,
+        source="Pickle files",
+        params=_doc_io_method_kwargs_params,
+    )
+    def _read_pickle_distributed(cls, **kwargs):
+        return cls.io_cls.read_pickle_distributed(**kwargs)
+
 
 @doc(_doc_factory_class, backend_name="experimental PandasOnPython")
 class ExperimentalPandasOnPythonFactory(ExperimentalBaseFactory, PandasOnPythonFactory):

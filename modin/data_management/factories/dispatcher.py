@@ -177,6 +177,13 @@ class FactoryDispatcher(object):
         return cls.__factory._read_csv_glob(**kwargs)
 
     @classmethod
+    @_inherit_docstrings(
+        factories.ExperimentalPandasOnRayFactory._read_pickle_distributed
+    )
+    def read_pickle_distributed(cls, **kwargs):
+        return cls.__factory._read_pickle_distributed(**kwargs)
+
+    @classmethod
     @_inherit_docstrings(factories.BaseFactory._read_json)
     def read_json(cls, **kwargs):
         return cls.__factory._read_json(**kwargs)
