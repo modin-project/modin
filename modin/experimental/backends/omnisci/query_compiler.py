@@ -17,7 +17,6 @@ from modin.backends.base.query_compiler import (
     _get_axis as default_axis_getter,
 )
 from modin.backends.pandas.query_compiler import PandasQueryCompiler
-from modin.error_message import ErrorMessage
 
 import pandas
 
@@ -311,16 +310,6 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
     def nunique(self, axis=0, dropna=True):
         if axis != 0 or dropna is False:
             return super().nunique(axis=axis, dropna=dropna)
-        # TODO: check that the OmniSci server is running with the enabled watchdog
-        if "float" in self.dtypes.values:  # and is_watchdog_enabled():
-            ErrorMessage.single_warning(
-                "'DataFrame.nunique' can't be performed fast enough with the OmniSci backend "
-                "because of the columns with the 'float' type, operation will be defaulted to pandas. "
-                "To use OmniSci implementation get rid of 'float' columns (you may drop those or "
-                "round its values to integer)."
-            )
-            return super().nunique(axis=axis, dropna=dropna)
-
         return self._agg("count", distinct=True)
 
     def _agg(self, agg, axis=0, level=None, **kwargs):

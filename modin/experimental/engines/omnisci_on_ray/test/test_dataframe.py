@@ -1136,7 +1136,7 @@ class TestAgg:
                 res = getattr(df, method)()
             return res
 
-        run_and_compare(applier, data=self.int_data, force_lazy=False)
+        run_and_compare(applier, data=self.data, force_lazy=False)
 
     @pytest.mark.parametrize("data", [data, int_data])
     @pytest.mark.parametrize("dropna", bool_arg_values)
