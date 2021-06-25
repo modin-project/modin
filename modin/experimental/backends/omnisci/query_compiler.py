@@ -86,7 +86,7 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
     def __init__(self, frame, shape_hint=None):
         assert frame is not None
         self._modin_frame = frame
-        if len(self._modin_frame.columns) == 1 and shape_hint is None:
+        if shape_hint is None and len(self._modin_frame.columns) == 1:
             shape_hint = "column"
         self._shape_hint = shape_hint
 

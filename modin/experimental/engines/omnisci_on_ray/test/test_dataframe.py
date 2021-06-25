@@ -1788,7 +1788,7 @@ class TestConstructor:
         df = pd.DataFrame({"a": [1, 2, 3], "b": [1, 2, 3]}, index=index)
         assert df._query_compiler._shape_hint is None
 
-        df = pd.DataFrame({"a": [1]})
+        df = pd.DataFrame({"a": [1]}, index=None if index is None else index[:1])
         assert df._query_compiler._shape_hint == "column"
 
     def test_shape_hint_detection_from_arrow(self):
