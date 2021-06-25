@@ -308,7 +308,7 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
         return self._agg("mean", **kwargs)
 
     def nunique(self, axis=0, dropna=True):
-        if axis != 0 or dropna is False:
+        if axis != 0 or not dropna:
             return super().nunique(axis=axis, dropna=dropna)
         return self._agg("count", distinct=True)
 
@@ -344,10 +344,6 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
         # Processed above, so can be omitted
         kwargs.pop("skipna", None)
         kwargs.pop("numeric_only", None)
-        # `squeeze_self` parameter was added to the base query compiler as a workaround
-        # for pandas-issue#41074 which is specific for pandas backends only, this parameter
-        # has no effect for OmniSci backend and so can be omitted.
-        kwargs.pop("squeeze_self", None)
 
         new_frame = self._modin_frame.agg(agg, **kwargs)
         new_frame = new_frame._set_index(
