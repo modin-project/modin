@@ -352,6 +352,8 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
 
     def fillna(
         self,
+        squeeze_self=False,
+        squeeze_value=False,
         value=None,
         method=None,
         axis=None,

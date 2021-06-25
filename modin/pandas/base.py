@@ -1250,8 +1250,10 @@ class BasePandasDataset(object):
 
     pad = ffill
 
-    def fillna(
+    def _fillna(
         self,
+        squeeze_self,
+        squeeze_value,
         value=None,
         method=None,
         axis=None,
@@ -1259,18 +1261,50 @@ class BasePandasDataset(object):
         limit=None,
         downcast=None,
     ):
-        # TODO implement value passed as DataFrame/Series
-        if isinstance(value, BasePandasDataset):
-            new_query_compiler = self._default_to_pandas(
-                "fillna",
-                value=value,
-                method=method,
-                axis=axis,
-                inplace=False,
-                limit=limit,
-                downcast=downcast,
-            )._query_compiler
-            return self._create_or_update_from_compiler(new_query_compiler, inplace)
+        """
+        Fill NA/NaN values using the specified method.
+
+        Parameters
+        ----------
+        squeeze_self : bool
+            If True then self contains a Series object, if False then self contains
+            a DataFrame object.
+        squeeze_value : bool
+            If True then value contains a Series object, if False then value contains
+            a DataFrame object.
+        value : scalar, dict, Series, or DataFrame, default: None
+            Value to use to fill holes (e.g. 0), alternately a
+            dict/Series/DataFrame of values specifying which value to use for
+            each index (for a Series) or column (for a DataFrame).  Values not
+            in the dict/Series/DataFrame will not be filled. This value cannot
+            be a list.
+        method : {'backfill', 'bfill', 'pad', 'ffill', None}, default: None
+            Method to use for filling holes in reindexed Series
+            pad / ffill: propagate last valid observation forward to next valid
+            backfill / bfill: use next valid observation to fill gap.
+        axis : {None, 0, 1}, default: None
+            Axis along which to fill missing values.
+        inplace : bool, default: False
+            If True, fill in-place. Note: this will modify any
+            other views on this object (e.g., a no-copy slice for a column in a
+            DataFrame).
+        limit : int, default: None
+            If method is specified, this is the maximum number of consecutive
+            NaN values to forward/backward fill. In other words, if there is
+            a gap with more than this number of consecutive NaNs, it will only
+            be partially filled. If method is not specified, this is the
+            maximum number of entries along the entire axis where NaNs will be
+            filled. Must be greater than 0 if not None.
+        downcast : dict, default: None
+            A dict of item->dtype of what to downcast if possible,
+            or the string 'infer' which will try to downcast to an appropriate
+            equal type (e.g. float64 to int64 if possible).
+
+        Returns
+        -------
+        Series, DataFrame or None
+            Object with missing values filled or None if ``inplace=True``.
+        """
         inplace = validate_bool_kwarg(inplace, "inplace")
         axis = self._get_axis_number(axis)
         if isinstance(value, (list, tuple)):
@@ -1294,7 +1328,12 @@ class BasePandasDataset(object):
             elif limit <= 0:
                 raise ValueError("Limit must be greater than 0")
 
+        if isinstance(value, BasePandasDataset):
+            value = value._query_compiler
+
         new_query_compiler = self._query_compiler.fillna(
+            squeeze_self=squeeze_self,
+            squeeze_value=squeeze_value,
             value=value,
             method=method,
             axis=axis,

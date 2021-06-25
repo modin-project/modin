@@ -13,7 +13,12 @@
 
 import modin.pandas as pd
 from modin.pandas.utils import from_pandas
-from modin.utils import to_pandas
+
+try:
+    from modin.utils import to_pandas
+except ImportError:
+    # This provides compatibility with older versions of the Modin, allowing us to test old commits.
+    from modin.pandas.utils import to_pandas
 import pandas
 
 from ..utils import (

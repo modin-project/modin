@@ -336,6 +336,8 @@ jobs:
       - shell: bash -l {0}
         run: pytest modin/experimental/engines/omnisci_on_ray/test/test_dataframe.py
       - shell: bash -l {0}
+        run: pytest modin/pandas/test/test_io.py::TestCsv
+      - shell: bash -l {0}
         run: |
           curl -o codecov https://codecov.io/bash
           VERSION=$(grep -o 'VERSION=\"[0-9\.]*\"' codecov | cut -d'"' -f2);
@@ -350,6 +352,9 @@ jobs:
   test-asv-benchmarks:
     needs: [lint-commit, lint-flake8, lint-black, test-api, test-headers]
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash -l {0}
     env:
       MODIN_ENGINE: ray
       MODIN_MEMORY: 1000000000
@@ -361,28 +366,31 @@ jobs:
           fetch-depth: 1
       - uses: conda-incubator/setup-miniconda@v2
         with:
-          activate-environment: modin
-          environment-file: environment-dev.yml
-          python-version: 3.7
-          channel-priority: strict
-          use-only-tar-bz2: true # IMPORTANT: This needs to be set for caching to work properly!
-      - name: Conda environment
-        shell: bash -l {0}
+          auto-activate-base: true
+          activate-environment: ""
+      - name: ASV installation
         run: |
-          conda info
-          conda list
-
+          # FIXME: use the tag or release version of ASV as soon as it appears;
+          # The ability to build a conda environment by specifying yml file has not
+          # yet appeared in the release versions;
+          pip install git+https://github.com/airspeed-velocity/asv.git@ef016e233cb9a0b19d517135104f49e0a3c380e9
       - name: Running benchmarks
-        shell: bash -l {0}
         run: |
-          pip install -e .
+          # ASV correctly creates environments for testing only from the branch
+          # with `master` name
+          git checkout -b master
           cd asv_bench
-          asv check -E existing
+          asv check -v
           git remote add upstream https://github.com/modin-project/modin.git
           git fetch upstream
           if git diff upstream/master --name-only | grep -q "^asv_bench/"; then
               asv machine --yes
-              asv run --quick --show-stderr --python=same --launch-method=spawn | sed "/failed$/ s/^/##[error]/" | tee benchmarks.log
+              asv run --quick --show-stderr --launch-method=spawn -b ^benchmarks -b ^io -b ^scalability \
+                | sed "/failed$/ s/^/##[error]/" | tee benchmarks.log
+              # check omnisci backend
+              MODIN_BACKEND=omnisci MODIN_EXPERIMENTAL=true asv run --quick -b ^omnisci \
+                --show-stderr --launch-method=forkserver --config asv.conf.omnisci.json \
+                | sed "/failed$/ s/^/##[error]/" | tee benchmarks.log
               if grep "failed" benchmarks.log > /dev/null ; then
                   exit 1
               fi
@@ -411,6 +419,9 @@ jobs:
     env:
       MODIN_ENGINE: ${{matrix.engine}}
       MODIN_MEMORY: 1000000000
+      MKL_NUM_THREADS: 1
+      NUMEXPR_NUM_THREADS: 1
+      OMP_NUM_THREADS: 1
     name: test-ubuntu (engine ${{matrix.engine}}, python ${{matrix.python-version}})
     steps:
       - uses: actions/checkout@v2
@@ -514,6 +525,9 @@ jobs:
       MODIN_ENGINE: "python"
       MODIN_EXPERIMENTAL: "True"
       MODIN_MEMORY: 1000000000
+      MKL_NUM_THREADS: 1
+      NUMEXPR_NUM_THREADS: 1
+      OMP_NUM_THREADS: 1
     name: test cloud
     steps:
       - uses: actions/checkout@v2
@@ -576,6 +590,9 @@ jobs:
     env:
       MODIN_ENGINE: ${{matrix.engine}}
       MODIN_MEMORY: 1000000000
+      MKL_NUM_THREADS: 1
+      NUMEXPR_NUM_THREADS: 1
+      OMP_NUM_THREADS: 1
     name: test-windows
     steps:
       - uses: actions/checkout@v2
