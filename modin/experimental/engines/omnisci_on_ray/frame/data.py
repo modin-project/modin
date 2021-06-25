@@ -566,12 +566,7 @@ class OmnisciOnRayFrame(PandasFrame):
                 new_dtypes.append(other._dtypes[c])
                 exprs[c + suffix] = other.ref(c)
 
-        condition = [self.ref(col).eq(other.ref(col)) for col in on]
-        condition = (
-            condition[0]
-            if len(condition) == 1
-            else OpExpr("AND", condition, get_dtype(bool))
-        )
+        condition = self._build_equi_join_condition(other, on, on)
 
         op = JoinNode(
             self,
@@ -595,6 +590,18 @@ class OmnisciOnRayFrame(PandasFrame):
             )
 
         return res
+
+    def _build_equi_join_condition(self, rhs, lhs_cols, rhs_cols):
+        condition = [
+            self.ref(lhs_col).eq(rhs.ref(rhs_col))
+            for lhs_col, rhs_col in zip(lhs_cols, rhs_cols)
+        ]
+        condition = (
+            condition[0]
+            if len(condition) == 1
+            else OpExpr("AND", condition, get_dtype(bool))
+        )
+        return condition
 
     def _index_width(self):
         if self._index_cols is None:
@@ -704,14 +711,8 @@ class OmnisciOnRayFrame(PandasFrame):
 
             reset_index_names = reset_index_names or lhs._index_cols != rhs._index_cols
 
-            condition = [
-                lhs.ref(lhs_col).eq(rhs.ref(rhs_col))
-                for lhs_col, rhs_col in zip(lhs._index_cols, rhs._index_cols)
-            ]
-            condition = (
-                condition[0]
-                if len(condition) == 1
-                else OpExpr("AND", condition, get_dtype(bool))
+            condition = lhs._build_equi_join_condition(
+                rhs, lhs._index_cols, rhs._index_cols
             )
 
             exprs = lhs._index_exprs()
@@ -760,9 +761,7 @@ class OmnisciOnRayFrame(PandasFrame):
             lhs = lhs._reset_index_names()
 
         if ignore_index:
-            new_columns = Index.__new__(
-                Index, data=[i for i in range(len(lhs.columns))], dtype="O"
-            )
+            new_columns = Index.__new__(RangeIndex, data=range(len(lhs.columns)))
             lhs = lhs._set_columns(new_columns)
 
         return lhs
