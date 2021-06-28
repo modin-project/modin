@@ -726,8 +726,8 @@ class TestCsv:
 
     # Error Handling parameters tests
     @pytest.mark.xfail(
-        Engine.get() != "Python" and Backend.get() != "Omnisci",
-        reason="read_csv with Ray engine doen't raise `bad lines` exceptions - issue #2500",
+        Engine.get() not in ["Python", "Cloudpython"] and Backend.get() != "Omnisci",
+        reason="read_csv doesn't raise `bad lines` exceptions - issue #2500",
     )
     @pytest.mark.parametrize("warn_bad_lines", [True, False])
     @pytest.mark.parametrize("error_bad_lines", [True, False])
