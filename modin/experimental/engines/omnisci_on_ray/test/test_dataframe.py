@@ -549,6 +549,11 @@ class TestConcat:
         "b": [40, 50, 60],
         "f": [444, 555, 666],
     }
+    data3 = {
+        "f": [2, 3, 4],
+        "g": [400, 500, 600],
+        "h": [20, 30, 40],
+    }
 
     @pytest.mark.parametrize("join", ["inner", "outer"])
     @pytest.mark.parametrize("sort", bool_arg_values)
@@ -663,6 +668,58 @@ class TestConcat:
             concat,
             data=self.data,
         )
+
+    @pytest.mark.parametrize("join", ["inner"])
+    @pytest.mark.parametrize("sort", bool_arg_values)
+    @pytest.mark.parametrize("ignore_index", bool_arg_values)
+    def test_concat_join(self, join, sort, ignore_index):
+        def concat(lib, df1, df2, join, sort, ignore_index, **kwargs):
+            return lib.concat(
+                [df1, df2], axis=1, join=join, sort=sort, ignore_index=ignore_index
+            )
+
+        run_and_compare(
+            concat,
+            data=self.data,
+            data2=self.data3,
+            join=join,
+            sort=sort,
+            ignore_index=ignore_index,
+        )
+
+    def test_concat_index_name(self):
+        df1 = pandas.DataFrame(self.data)
+        df1 = df1.set_index("a")
+        df2 = pandas.DataFrame(self.data3)
+        df2 = df2.set_index("f")
+
+        ref = pandas.concat([df1, df2], axis=1, join="inner")
+        exp = pd.concat([df1, df2], axis=1, join="inner")
+
+        df_equals(ref, exp)
+
+        df2.index.name = "a"
+        ref = pandas.concat([df1, df2], axis=1, join="inner")
+        exp = pd.concat([df1, df2], axis=1, join="inner")
+
+        df_equals(ref, exp)
+
+    def test_concat_index_names(self):
+        df1 = pandas.DataFrame(self.data)
+        df1 = df1.set_index(["a", "b"])
+        df2 = pandas.DataFrame(self.data3)
+        df2 = df2.set_index(["f", "h"])
+
+        ref = pandas.concat([df1, df2], axis=1, join="inner")
+        exp = pd.concat([df1, df2], axis=1, join="inner")
+
+        df_equals(ref, exp)
+
+        df2.index.names = ["a", "b"]
+        ref = pandas.concat([df1, df2], axis=1, join="inner")
+        exp = pd.concat([df1, df2], axis=1, join="inner")
+
+        df_equals(ref, exp)
 
 
 class TestGroupby:
@@ -1081,32 +1138,28 @@ class TestAgg:
 
 class TestMerge:
     data = {
-        "a": [1, 2, 3],
-        "b": [10, 20, 30],
-        "e": [11, 22, 33],
+        "a": [1, 2, 3, 6, 5, 4],
+        "b": [10, 20, 30, 60, 50, 40],
+        "e": [11, 22, 33, 66, 55, 44],
     }
     data2 = {
-        "a": [4, 2, 3],
-        "b": [40, 20, 30],
-        "d": [4000, 2000, 3000],
+        "a": [4, 2, 3, 7, 1, 5],
+        "b": [40, 20, 30, 70, 10, 50],
+        "d": [4000, 2000, 3000, 7000, 1000, 5000],
     }
-    on_values = ["a", ["a"], ["a", "b"], ["b", "a"]]
+    on_values = ["a", ["a"], ["a", "b"], ["b", "a"], None]
     how_values = ["inner", "left"]
 
     @pytest.mark.parametrize("on", on_values)
     @pytest.mark.parametrize("how", how_values)
-    def test_merge(self, on, how):
-        def merge(lib, df1, df2, on, how):
-            return df1.merge(df2, on=on, how=how)
+    @pytest.mark.parametrize("sort", [True, False])
+    def test_merge(self, on, how, sort):
+        def merge(lib, df1, df2, on, how, sort, **kwargs):
+            return df1.merge(df2, on=on, how=how, sort=sort)
 
-        run_and_compare(merge, data=self.data, data2=self.data2, on=on, how=how)
-
-    @pytest.mark.parametrize("how", how_values)
-    def test_default_merge(self, how):
-        def default_merge(lib, df1, df2, how):
-            return df1.merge(df2, how=how)
-
-        run_and_compare(default_merge, data=self.data, data2=self.data2, how=how)
+        run_and_compare(
+            merge, data=self.data, data2=self.data2, on=on, how=how, sort=sort
+        )
 
     h2o_data = {
         "id1": ["id1", "id10", "id100", "id1000"],

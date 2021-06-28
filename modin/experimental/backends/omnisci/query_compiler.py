@@ -142,7 +142,10 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
         left_index = kwargs.get("left_index", False)
         right_index = kwargs.get("right_index", False)
         """Only non-index joins with explicit 'on' are supported"""
-        if left_index is False and right_index is False and on is not None:
+        if left_index is False and right_index is False:
+            if on is None:
+                on = [c for c in self.columns if c in right.columns]
+
             how = kwargs.get("how", "inner")
             sort = kwargs.get("sort", False)
             suffixes = kwargs.get("suffixes", None)
