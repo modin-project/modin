@@ -6,8 +6,8 @@ dask[complete]>=2.12.0
 distributed>=2.12.0
 ray[default]>=1.4.0
 =======
-dask[complete]==2.21.0
-distributed==2.21.0
+dask[complete]==2.22.0
+distributed==2.22.0
 ray>=1.4.0
 >>>>>>> TEST-#3188: update minimal version of dask and distributed
 psutil==5.6.6

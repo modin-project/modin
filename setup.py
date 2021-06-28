@@ -37,7 +37,7 @@ class ModinDistribution(Distribution):
         return False
 
 
-dask_deps = ["dask==2.21.0", "distributed==2.21.0"]
+dask_deps = ["dask==2.22.0", "distributed==2.22.0"]
 ray_deps = ["ray[default]>=1.4.0", "pyarrow>=1.0"]
 remote_deps = ["rpyc==4.1.5", "cloudpickle", "boto3==1.4.8"]
 spreadsheet_deps = ["modin-spreadsheet>=0.1.0"]

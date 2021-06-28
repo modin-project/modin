@@ -102,9 +102,9 @@ class Engine(EnvironmentVariable, type=str):
             raise ImportError(
                 "Please `pip install modin[ray]` or `modin[dask]` to install an engine"
             )
-        if version.parse(dask.__version__) < version.parse("2.21.0") or version.parse(
+        if version.parse(dask.__version__) < version.parse("2.22.0") or version.parse(
             distributed.__version__
-        ) < version.parse("2.21.0"):
+        ) < version.parse("2.22.0"):
             raise ImportError(
                 "Please `pip install modin[dask]` to install compatible Dask version."
             )
