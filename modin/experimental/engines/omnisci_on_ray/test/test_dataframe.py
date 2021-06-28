@@ -810,6 +810,39 @@ class TestGroupby:
             force_lazy=True,
         )
 
+    @pytest.mark.parametrize("method", ["sum", "size"])
+    def test_groupby_series(self, method):
+        def groupby(df, **kwargs):
+            ser = df[df.columns[0]]
+            return getattr(ser.groupby(ser), method)()
+
+        run_and_compare(groupby, data=self.data)
+
+    def test_groupby_size(self):
+        def groupby(df, **kwargs):
+            return df.groupby("a").size()
+
+        run_and_compare(groupby, data=self.data)
+
+    @pytest.mark.parametrize("by", [["a"], ["a", "b", "c"]])
+    @pytest.mark.parametrize("agg", ["sum", "size"])
+    @pytest.mark.parametrize("as_index", [True, False])
+    def test_groupby_agg_by_col(self, by, agg, as_index):
+        def simple_agg(df, **kwargs):
+            return df.groupby(by, as_index=as_index).agg(agg)
+
+        run_and_compare(simple_agg, data=self.data)
+
+        def dict_agg(df, **kwargs):
+            return df.groupby(by, as_index=as_index).agg({by[0]: agg})
+
+        run_and_compare(dict_agg, data=self.data)
+
+        def dict_agg_all_cols(df, **kwargs):
+            return df.groupby(by, as_index=as_index).agg({col: agg for col in by})
+
+        run_and_compare(dict_agg_all_cols, data=self.data)
+
     taxi_data = {
         "a": [1, 1, 2, 2],
         "b": [11, 21, 12, 11],
@@ -825,11 +858,7 @@ class TestGroupby:
     #       res = df.groupby("cab_type").size() - this should be tested later as well
     def test_taxi_q1(self):
         def taxi_q1(df, **kwargs):
-            # TODO: For now we can't do such groupby by first column since modin use that
-            #      column as aggregation one by default. We don't support such cases at
-            #      at the moment, this will be handled later
-            # ref = df.groupby("a").size()
-            return df.groupby("b").size()
+            return df.groupby("a").size()
 
         run_and_compare(taxi_q1, data=self.taxi_data)
 

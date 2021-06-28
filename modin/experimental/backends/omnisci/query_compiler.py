@@ -213,6 +213,14 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
         -------
         BaseQueryCompiler
         """
+        # Grouping on empty frame or on index level.
+        if len(self.columns) == 0:
+            return super().groupby_size(by, axis, groupby_args, map_args, **kwargs)
+
+        groupby_args = groupby_args.copy()
+        as_index = groupby_args.get("as_index", True)
+        # Setting 'as_index' to True to avoid 'by' and 'agg' columns naming conflict
+        groupby_args["as_index"] = True
         new_frame = self._modin_frame.groupby_agg(
             by,
             axis,
@@ -220,12 +228,12 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
             groupby_args,
             **kwargs,
         )
-        if groupby_args["as_index"]:
+        if as_index:
             shape_hint = "column"
             new_frame = new_frame._set_columns(["__reduced__"])
         else:
             shape_hint = None
-            new_frame = new_frame._set_columns(list(new_frame.columns)[:-1] + ["size"])
+            new_frame = new_frame._set_columns(["size"]).reset_index(drop=False)
         return self.__constructor__(new_frame, shape_hint=shape_hint)
 
     def groupby_sum(self, by, axis, groupby_args, map_args, **kwargs):
