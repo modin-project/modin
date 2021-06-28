@@ -44,6 +44,7 @@ class OmnisciServer:
                 enable_columnar_output=1,
                 enable_lazy_fetch=0,
                 null_div_by_zero=1,
+                enable_watchdog=0,
             )
 
     @classmethod
