@@ -1161,6 +1161,12 @@ class TestMerge:
             merge, data=self.data, data2=self.data2, on=on, how=how, sort=sort
         )
 
+    def test_merge_non_str_column_name(self):
+        def merge(lib, df1, df2, on, **kwargs):
+            return df1.merge(df2, on=on, how="inner")
+
+        run_and_compare(merge, data=[[1, 2], [3, 4]], data2=[[1, 2], [3, 4]], on=1)
+
     h2o_data = {
         "id1": ["id1", "id10", "id100", "id1000"],
         "id2": ["id2", "id20", "id200", "id2000"],

@@ -150,7 +150,6 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
             sort = kwargs.get("sort", False)
             suffixes = kwargs.get("suffixes", None)
             if not isinstance(on, list):
-                assert isinstance(on, str), f"unsupported 'on' value {on}"
                 on = [on]
             return self.__constructor__(
                 self._modin_frame.join(
