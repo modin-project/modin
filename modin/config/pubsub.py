@@ -77,16 +77,16 @@ _TYPE_PARAMS = {
     ),
     dict: TypeDescriptor(
         decode=lambda value: {
-            key.strip(): int(val) if val.strip().isdigit() else val.strip()
+            key: int(val) if val.isdigit() else val
             for key_value in value.split(",")
-            for key, val in [key_value.split("=")]
+            for key, val in [[v.strip() for v in key_value.split("=", maxsplit=1)]]
         },
         normalize=lambda value: value
         if isinstance(value, dict)
         else {
-            key.strip(): int(val) if val.strip().isdigit() else val.strip()
+            key: int(val) if val.isdigit() else val
             for key_value in value.split(",")
-            for key, val in [key_value.split("=")]
+            for key, val in [[v.strip() for v in key_value.split("=", maxsplit=1)]]
         },
         verify=lambda value: isinstance(value, dict) or isinstance(value, str),
         help="a sequence of KEY=VALUE values separated by comma (Example: 'KEY1=VALUE1,KEY2=VALUE2,KEY3=VALUE3')",

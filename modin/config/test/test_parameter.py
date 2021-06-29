@@ -75,9 +75,9 @@ def test_triggers(prefilled_parameter):
         (
             make_prefilled(dict, "key = value"),
             {
-                "KEY1 = VALUE1, KEY2=VALUE2,KEY3=0": {
+                "KEY1 = VALUE1, KEY2=VALUE2=VALUE3,KEY3=0": {
                     "KEY1": "VALUE1",
-                    "KEY2": "VALUE2",
+                    "KEY2": "VALUE2=VALUE3",
                     "KEY3": 0,
                 },
                 "KEY=1": {"KEY": 1},

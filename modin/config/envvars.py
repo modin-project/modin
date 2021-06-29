@@ -57,8 +57,6 @@ class EnvironmentVariable(Parameter, type=str, abstract=True):
         help = f"{cls.varname}: {dedent(cls.__doc__ or 'Unknown').strip()}\n\tProvide {_TYPE_PARAMS[cls.type].help}"
         if cls.choices:
             help += f" (valid examples are: {', '.join(str(c) for c in cls.choices)})"
-        if cls.default is not None:
-            help += f"\nDefault value is: {cls.default}"
         return help
 
 
