@@ -321,7 +321,9 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
         agg : str
             Name of the aggregation function to perform.
         axis : {0, 1}, default: 0
-            Axis to perform aggregation along. 0 is for columns when 1 is for rows.
+            Axis to perform aggregation along. 0 is to apply function against each column,
+            all the columns will be reduced into a single scalar. 1 is to aggregate
+            across rows.
             *Note:* OmniSci backend supports aggregation for 0 axis only, aggregation
             along rows will be defaulted to pandas.
         level : None
