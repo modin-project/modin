@@ -1081,6 +1081,7 @@ class TestAgg:
         "c": [None, 200, None, 400, 500, 600],
         "d": [11, 22, 33, 22, 33, 22],
     }
+    int_data = pandas.DataFrame(data).fillna(0).astype("int").to_dict()
 
     @pytest.mark.parametrize("agg", ["max", "min", "sum", "mean"])
     @pytest.mark.parametrize("skipna", bool_arg_values)
@@ -1113,7 +1114,9 @@ class TestAgg:
             ascending=ascending,
         )
 
-    @pytest.mark.parametrize("method", ["sum", "mean", "max", "min", "count"])
+    @pytest.mark.parametrize(
+        "method", ["sum", "mean", "max", "min", "count", "nunique"]
+    )
     def test_simple_agg_no_default(self, method):
         def applier(df, **kwargs):
             if isinstance(df, pd.DataFrame):
@@ -1134,6 +1137,14 @@ class TestAgg:
             return res
 
         run_and_compare(applier, data=self.data, force_lazy=False)
+
+    @pytest.mark.parametrize("data", [data, int_data])
+    @pytest.mark.parametrize("dropna", bool_arg_values)
+    def test_nunique(self, data, dropna):
+        def applier(df, **kwargs):
+            return df.nunique(dropna=dropna)
+
+        run_and_compare(applier, data=data, force_lazy=False)
 
 
 class TestMerge:
