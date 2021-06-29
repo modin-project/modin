@@ -82,7 +82,7 @@ def test_triggers(prefilled_parameter):
                 },
                 "KEY=1": {"KEY": 1},
             },
-            ["random,string", "random string"],
+            ["key1=some,string", "key1=value1,key2=", "random string"],
         ),
     ],
 )

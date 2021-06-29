@@ -88,7 +88,14 @@ _TYPE_PARAMS = {
             for key_value in value.split(",")
             for key, val in [[v.strip() for v in key_value.split("=", maxsplit=1)]]
         },
-        verify=lambda value: isinstance(value, dict) or isinstance(value, str),
+        verify=lambda value: isinstance(value, dict)
+        or (
+            isinstance(value, str)
+            and all(
+                key_value.find("=") not in (-1, len(key_value) - 1)
+                for key_value in value.split(",")
+            )
+        ),
         help="a sequence of KEY=VALUE values separated by comma (Example: 'KEY1=VALUE1,KEY2=VALUE2,KEY3=VALUE3')",
     ),
 }
