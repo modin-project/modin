@@ -11,6 +11,7 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
+import glob
 import warnings
 
 from modin.engines.base.io.file_dispatcher import FileDispatcher
@@ -21,27 +22,21 @@ class PickleExperimentalDispatcher(FileDispatcher):
     @classmethod
     def _read(cls, filepath_or_buffer, **kwargs):
         """
-        In experimental mode, we can pass a list of files as an input parameter.
+        In experimental mode, we can use `*` in the filename.
 
         Note: the number of partitions is equal to the number of input files.
         """
-        if not isinstance(filepath_or_buffer, (str, list)):
+        if not (isinstance(filepath_or_buffer, str) and "*" in filepath_or_buffer):
             warnings.warn("Defaulting to Modin core implementation")
             return cls.single_worker_read(
                 filepath_or_buffer,
                 **kwargs,
             )
-
-        if isinstance(filepath_or_buffer, list) and not all(
-            map(lambda filepath: isinstance(filepath, str), filepath_or_buffer)
-        ):
-            raise TypeError(
-                f"Only support list[str], passed value: {filepath_or_buffer}"
-            )
+        filepath_or_buffer = glob.glob(filepath_or_buffer)
 
         if len(filepath_or_buffer) == 0:
             raise ValueError(
-                "filepath_or_buffer parameter of read_pickle is empty list"
+                f"There are no files matching the pattern: {filepath_or_buffer}"
             )
 
         partition_ids = []

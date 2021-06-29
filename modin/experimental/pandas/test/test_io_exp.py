@@ -152,8 +152,8 @@ def test_distributed_pickling(compression):
 
     df.to_pickle_distributed(filename_pattern, compression=compression)
 
-    pickle_files = glob.glob(filename_pattern)
-    pickled_df = pd.read_pickle_distributed(pickle_files, compression=compression)
+    pickled_df = pd.read_pickle_distributed(filename_pattern, compression=compression)
     df_equals(pickled_df, df)
 
+    pickle_files = glob.glob(filename_pattern)
     teardown_test_files(pickle_files)
