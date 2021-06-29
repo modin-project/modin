@@ -1,15 +1,9 @@
 pandas==1.2.5
 numpy>=1.16.5
 pyarrow>=1.0.0
-<<<<<<< HEAD
-dask[complete]>=2.12.0
-distributed>=2.12.0
-ray[default]>=1.4.0
-=======
 dask[complete]==2.22.0
 distributed==2.22.0
-ray>=1.4.0
->>>>>>> TEST-#3188: update minimal version of dask and distributed
+ray[default]>=1.4.0
 psutil==5.6.6
 xarray
 Jinja2
