@@ -75,6 +75,22 @@ _TYPE_PARAMS = {
         or (isinstance(value, str) and value.strip().isdigit()),
         help="an integer value",
     ),
+    dict: TypeDescriptor(
+        decode=lambda value: {
+            key.strip(): int(val) if val.strip().isdigit() else val.strip()
+            for key_value in value.split(",")
+            for key, val in [key_value.split("=")]
+        },
+        normalize=lambda value: value
+        if isinstance(value, dict)
+        else {
+            key.strip(): int(val) if val.strip().isdigit() else val.strip()
+            for key_value in value.split(",")
+            for key, val in [key_value.split("=")]
+        },
+        verify=lambda value: isinstance(value, dict) or isinstance(value, str),
+        help="a sequence of KEY=VALUE values separated by comma (Example: 'KEY1=VALUE1,KEY2=VALUE2,KEY3=VALUE3')",
+    ),
 }
 
 # special marker to distinguish unset value from None value

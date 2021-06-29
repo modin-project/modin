@@ -57,6 +57,8 @@ class EnvironmentVariable(Parameter, type=str, abstract=True):
         help = f"{cls.varname}: {dedent(cls.__doc__ or 'Unknown').strip()}\n\tProvide {_TYPE_PARAMS[cls.type].help}"
         if cls.choices:
             help += f" (valid examples are: {', '.join(str(c) for c in cls.choices)})"
+        if cls.default is not None:
+            help += f"\nDefault value is: {cls.default}"
         return help
 
 
@@ -338,6 +340,43 @@ class PersistentPickle(EnvironmentVariable, type=bool):
     # When set to on, Modin objects could be saved to disk and loaded
     # but serialization/deserialization could take more time.
     default = False
+
+
+class OmnisciLaunchParameters(EnvironmentVariable, type=dict):
+    """
+    Additional command line options for the OmniSci engine.
+
+    Please visit OmniSci documentation for the description of available parameters:
+    https://docs.omnisci.com/installation-and-configuration/config-parameters#configuration-parameters-for-omniscidb
+    """
+
+    varname = "MODIN_OMNISCI_LAUNCH_PARAMETERS"
+    default = {
+        "enable_union": 1,
+        "enable_columnar_output": 1,
+        "enable_lazy_fetch": 0,
+        "null_div_by_zero": 1,
+        "enable_watchdog": 0,
+    }
+
+    @classmethod
+    def get(self):
+        """
+        Get the resulted command-line options.
+
+        Decode and merge specified command-line options with the default one.
+
+        Returns
+        -------
+        dict
+            Decoded and verified config value.
+        """
+        custom_parameters = super().get()
+        result = self.default.copy()
+        result.update(
+            {key.replace("-", "_"): value for key, value in custom_parameters.items()}
+        )
+        return result
 
 
 def _check_vars():

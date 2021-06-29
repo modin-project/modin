@@ -72,6 +72,18 @@ def test_triggers(prefilled_parameter):
     [
         (make_prefilled(bool, "false"), {"1": True, False: False}, ["nope", 2]),
         (make_prefilled(int, "10"), {" 15\t": 15, 25: 25}, ["-10", 1.0, "foo"]),
+        (
+            make_prefilled(dict, "key = value"),
+            {
+                "KEY1 = VALUE1, KEY2=VALUE2,KEY3=0": {
+                    "KEY1": "VALUE1",
+                    "KEY2": "VALUE2",
+                    "KEY3": 0,
+                },
+                "KEY=1": {"KEY": 1},
+            },
+            ["random,string", "random string"],
+        ),
     ],
 )
 def test_validation(parameter, good, bad):
@@ -83,7 +95,7 @@ def test_validation(parameter, good, bad):
             parameter.put(inval)
 
 
-@pytest.mark.parametrize("vartype", [bool, int])
+@pytest.mark.parametrize("vartype", [bool, int, dict])
 def test_init_validation(vartype):
     parameter = make_prefilled(vartype, "bad value")
     with pytest.raises(ValueError):
