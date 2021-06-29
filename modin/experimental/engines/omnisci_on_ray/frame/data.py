@@ -884,6 +884,22 @@ class OmnisciOnRayFrame(PandasFrame):
         return res
 
     def _build_equi_join_condition(self, rhs, lhs_cols, rhs_cols):
+        """
+        Build condition for equi-join.
+
+        Parameters
+        ----------
+        rhs : OmnisciOnRayFrame
+            Joined frame.
+        lhs_cols : list
+            Left frame columns to join by.
+        rhs_cols : list
+            Right frame columns to join by.
+
+        Returns
+        -------
+        BaseExpr
+        """
         condition = [
             self.ref(lhs_col).eq(rhs.ref(rhs_col))
             for lhs_col, rhs_col in zip(lhs_cols, rhs_cols)
@@ -1019,6 +1035,25 @@ class OmnisciOnRayFrame(PandasFrame):
         return new_frame
 
     def _join_by_index(self, other_modin_frames, how, sort, ignore_index):
+        """
+        Perform equi-join operation for multiple frames by index columns.
+
+        Parameters
+        ----------
+        other_modin_frames : list of OmnisciOnRayFrame
+            Frames to join with.
+        how : str
+            A type of join.
+        sort : bool
+            Sort the result by join keys.
+        ignore_index : bool
+            If True then reset column index for the resulting frame.
+
+        Returns
+        -------
+        OmnisciOnRayFrame
+            The new frame.
+        """
         if how == "outer":
             raise NotImplementedError("outer join is not supported in OmniSci engine")
 
@@ -1497,6 +1532,14 @@ class OmnisciOnRayFrame(PandasFrame):
         )
 
     def _maybe_materialize_rowid(self):
+        """
+        Materialize virtual 'rowid' column if frame uses it as an index.
+
+        Returns
+        -------
+        OmnisciOnRayFrame
+            The new frame.
+        """
         if self._index_cols is None:
             return self._materialize_rowid()
         return self
@@ -1925,6 +1968,14 @@ class OmnisciOnRayFrame(PandasFrame):
             )
 
     def _reset_index_names(self):
+        """
+        Reset names for all index columns.
+
+        Returns
+        -------
+        OmnisciOnRayFrame
+            The new frame.
+        """
         if self.has_multiindex():
             return self.set_index_names([None] * len(self._index_cols))
         return self.set_index_name(None)
