@@ -15,6 +15,8 @@
 
 import os
 import sys
+import psutil
+import warnings
 
 from modin.config import (
     Backend,
@@ -135,9 +137,24 @@ def initialize_ray(
             object_store_memory = Memory.get()
             # In case anything failed above, we can still improve the memory for Modin.
             if object_store_memory is None:
-                # Round down to the nearest Gigabyte.
-                system_memory = ray._private.utils.get_system_memory()
-                object_store_memory = int(0.6 * system_memory // 10 ** 9 * 10 ** 9)
+                virtual_memory = psutil.virtual_memory().total
+                if sys.platform.startswith("linux"):
+                    shm_fd = os.open("/dev/shm", os.O_RDONLY)
+                    try:
+                        shm_stats = os.fstatvfs(shm_fd)
+                        system_memory = shm_stats.f_bsize * shm_stats.f_bavail
+                        if system_memory / (virtual_memory / 2) < 0.99:
+                            warnings.warn(
+                                f"The size of /dev/shm is too small ({system_memory} bytes). The required size "
+                                f"at least half of RAM ({virtual_memory // 2} bytes). Please, delete files in /dev/shm or "
+                                "increase size of /dev/shm with --shm-size in Docker. Also, you can set "
+                                "the required memory size for each Ray worker in bytes to MODIN_MEMORY environment variable."
+                            )
+                    finally:
+                        os.close(shm_fd)
+                else:
+                    system_memory = virtual_memory
+                object_store_memory = int(0.6 * system_memory // 1e9 * 1e9)
                 # If the memory pool is smaller than 2GB, just use the default in ray.
                 if object_store_memory == 0:
                     object_store_memory = None
