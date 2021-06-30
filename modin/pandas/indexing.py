@@ -153,6 +153,30 @@ def is_integer_slice(x):
     return True
 
 
+def is_range_like(obj):
+    """
+    Check if the object is range-like.
+
+    Objects that are considered range-like have information about the range (start and
+    stop positions, and step) and also have to be iterable. Examples of range-like
+    objects are: Python range, pandas.RangeIndex.
+
+    Parameters
+    ----------
+    obj : object
+
+    Returns
+    -------
+    bool
+    """
+    return (
+        hasattr(obj, "__iter__")
+        and hasattr(obj, "start")
+        and hasattr(obj, "stop")
+        and hasattr(obj, "step")
+    )
+
+
 _ILOC_INT_ONLY_ERROR = """
 Location based indexing can only have [integer, integer slice (START point is
 INCLUDED, END point is EXCLUDED), listlike of integers, boolean array] types.

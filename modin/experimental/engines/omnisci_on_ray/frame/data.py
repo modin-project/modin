@@ -18,6 +18,7 @@ from .partition_manager import OmnisciOnRayFramePartitionManager
 from pandas.core.index import ensure_index, Index, MultiIndex, RangeIndex
 from pandas.core.dtypes.common import get_dtype, is_list_like, is_bool_dtype
 from modin.error_message import ErrorMessage
+from modin.pandas.indexing import is_range_like
 import pandas as pd
 
 from .df_algebra import (
@@ -1214,41 +1215,28 @@ class OmnisciOnRayFrame(PandasFrame):
 
     def _arrow_row_slice(self, row_numeric_idx):
         table = self._execute_arrow()
+
+        if not isinstance(row_numeric_idx, slice) and not is_range_like(
+            row_numeric_idx
+        ):
+            if not isinstance(row_numeric_idx, (pyarrow.Array, np.ndarray, list)):
+                row_numeric_idx = pyarrow.array(row_numeric_idx)
+            return table.take(row_numeric_idx)
+
         if isinstance(row_numeric_idx, slice):
-            start = 0 if row_numeric_idx.start is None else row_numeric_idx.start
-            if start < 0:
-                start = table.num_rows - start
-            end = (
-                table.num_rows if row_numeric_idx.stop is None else row_numeric_idx.stop
-            )
-            if end < 0:
-                end = table.num_rows - end
-            if row_numeric_idx.step is None or row_numeric_idx.step == 1:
-                length = 0 if start >= end else end - start
-                return table.slice(start, length)
-            else:
-                parts = []
-                for i in range(start, end, row_numeric_idx.step):
-                    parts.append(table.slice(i, 1))
-                return pyarrow.concat_tables(parts)
+            row_numeric_idx = range(*row_numeric_idx.indices(table.num_rows))
 
-        start = None
-        end = None
-        parts = []
-        for idx in row_numeric_idx:
-            if start is None:
-                start = idx
-                end = idx
-            elif idx == end + 1:
-                end = idx
-            else:
-                if start:
-                    parts.append(table.slice(start, end - start + 1))
-                start = idx
-                end = idx
-        parts.append(table.slice(start, end - start + 1))
+        start, stop, step = (
+            row_numeric_idx.start,
+            row_numeric_idx.stop,
+            row_numeric_idx.step,
+        )
 
-        return pyarrow.concat_tables(parts)
+        if step == 1:
+            return table.slice(start, len(row_numeric_idx))
+        else:
+            indices = np.arange(start, stop, step)
+            return table.take(indices)
 
     @classmethod
     def _arrow_concat(cls, frames):
