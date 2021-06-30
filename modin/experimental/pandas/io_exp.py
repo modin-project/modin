@@ -279,7 +279,7 @@ def to_pickle_distributed(
 
     Parameters
     ----------
-    filepath_or_buffer : str
+    filepath_or_buffer : str, path object or file-like object
         File path where the pickled object will be stored.
     compression : {{'infer', 'gzip', 'bz2', 'zip', 'xz', None}}, default: 'infer'
         A string representing the compression to use in the output file. By

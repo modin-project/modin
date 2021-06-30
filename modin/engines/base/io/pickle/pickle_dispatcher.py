@@ -32,7 +32,7 @@ class PickleExperimentalDispatcher(FileDispatcher):
                 filepath_or_buffer,
                 **kwargs,
             )
-        filepath_or_buffer = glob.glob(filepath_or_buffer)
+        filepath_or_buffer = sorted(glob.glob(filepath_or_buffer))
 
         if len(filepath_or_buffer) == 0:
             raise ValueError(
@@ -52,7 +52,7 @@ class PickleExperimentalDispatcher(FileDispatcher):
                 cls.parse,
                 3,
                 dict(
-                    filepath=file_name,
+                    fname=file_name,
                     **kwargs,
                 ),
             )
@@ -66,10 +66,10 @@ class PickleExperimentalDispatcher(FileDispatcher):
         # while num_splits is 1, need only one value
         partition_ids = cls.build_partition(partition_ids, lengths, [widths[0]])
 
-        new_index = cls.frame_cls._frame_mgr_cls.get_indices(
+        new_index = cls.frame_cls._partition_mgr_cls.get_indices(
             0, partition_ids, lambda df: df.axes[0]
         )
-        new_columns = cls.frame_cls._frame_mgr_cls.get_indices(
+        new_columns = cls.frame_cls._partition_mgr_cls.get_indices(
             1, partition_ids, lambda df: df.axes[1]
         )
 

@@ -256,9 +256,7 @@ class ExperimentalPandasOnRayIO(PandasOnRayIO):
 
         def func(df, **kw):
             idx = str(kw["partition_idx"])
-            kwargs["filepath_or_buffer"] = kwargs["filepath_or_buffer"].replace(
-                "*", idx
-            )
+            kwargs["path"] = kwargs.pop("filepath_or_buffer").replace("*", idx)
             df.to_pickle(**kwargs)
             return pandas.DataFrame()
 
