@@ -6,8 +6,8 @@ dependencies:
   - numpy>=1.16.5
   - pyarrow>=1.0.0
   - libthrift<0.14.1  # ref: modin gh-2840
-  - dask[complete]>=2.12.0,<=2.19.0
-  - distributed>=2.12.0,<=2.19.0
+  - dask[complete]>=2.22.0
+  - distributed>=2.22.0
   - xarray
   - Jinja2
   - pathlib
@@ -32,7 +32,7 @@ dependencies:
   - coverage<5.0
   - pygithub==1.53
   - rpyc==4.1.5
-  - cloudpickle==1.4.1
+  - cloudpickle
   - boto3
   - pip:
       - xgboost>=1.3

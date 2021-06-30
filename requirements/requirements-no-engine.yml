@@ -27,7 +27,7 @@ dependencies:
   - coverage<5.0
   - pygithub==1.53
   - rpyc==4.1.5
-  - cloudpickle==1.4.1
+  - cloudpickle
   - boto3
   - pip:
       - xgboost>=1.3
