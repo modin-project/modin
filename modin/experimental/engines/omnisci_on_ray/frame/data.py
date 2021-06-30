@@ -570,16 +570,16 @@ class OmnisciOnRayFrame(PandasFrame):
 
         conflicting_cols = set(self.columns) & set(other.columns) - set(on)
         for c in self.columns:
-            suffix = suffixes[0] if c in conflicting_cols else ""
-            new_columns.append(c + suffix)
+            new_name = f"{c}{suffixes[0]}" if c in conflicting_cols else c
+            new_columns.append(new_name)
             new_dtypes.append(self._dtypes[c])
-            exprs[c + suffix] = self.ref(c)
+            exprs[new_name] = self.ref(c)
         for c in other.columns:
             if c not in on:
-                suffix = suffixes[1] if c in conflicting_cols else ""
-                new_columns.append(c + suffix)
+                new_name = f"{c}{suffixes[1]}" if c in conflicting_cols else c
+                new_columns.append(new_name)
                 new_dtypes.append(other._dtypes[c])
-                exprs[c + suffix] = other.ref(c)
+                exprs[new_name] = other.ref(c)
 
         condition = self._build_equi_join_condition(other, on, on)
 
@@ -591,7 +591,7 @@ class OmnisciOnRayFrame(PandasFrame):
             condition=condition,
         )
 
-        new_columns = Index.__new__(Index, data=new_columns, dtype=self.columns.dtype)
+        new_columns = Index.__new__(Index, data=new_columns)
         res = self.__constructor__(
             dtypes=new_dtypes,
             columns=new_columns,
