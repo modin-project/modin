@@ -19,6 +19,7 @@ import matplotlib
 import modin.pandas as pd
 from numpy.testing import assert_array_equal
 from pandas.core.base import SpecificationError
+from modin.utils import get_current_backend
 import sys
 
 from modin.utils import to_pandas
@@ -486,16 +487,7 @@ def test___pow__(data):
 )
 @pytest.mark.parametrize(
     "data",
-    [
-        *test_data_values,
-        pytest.param(
-            "empty",
-            marks=pytest.mark.xfail_backends(
-                ["BaseOnPython"],
-                reason="Empty Series has a missmatched from Pandas dtype.",
-            ),
-        ),
-    ],
+    [*test_data_values, "empty"],
     ids=[*test_data_keys, "empty"],
 )
 def test___repr__(name, dt_index, data):
@@ -509,7 +501,13 @@ def test___repr__(name, dt_index, data):
             "1/1/2000", periods=len(pandas_series.index), freq="T"
         )
         pandas_series.index = modin_series.index = index
-    assert repr(modin_series) == repr(pandas_series)
+
+    if get_current_backend() == "BaseOnPython" and data == "empty":
+        # TODO: Remove this when default `dtype` of empty Series will be `object` in pandas (see #3142).
+        assert modin_series.dtype == np.object
+        assert pandas_series.dtype == np.float64
+    else:
+        assert repr(modin_series) == repr(pandas_series)
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
@@ -1533,12 +1531,14 @@ def test_dropna_inplace(data):
     df_equals(modin_series, pandas_series)
 
 
-@pytest.mark.xfail_backends(
-    ["BaseOnPython"], reason="Empty Series has a missmatched from Pandas dtype."
-)
 def test_dtype_empty():
     modin_series, pandas_series = pd.Series(), pandas.Series()
-    assert modin_series.dtype == pandas_series.dtype
+    if get_current_backend() == "BaseOnPython":
+        # TODO: Remove this when default `dtype` of empty Series will be `object` in pandas (see #3142).
+        assert modin_series.dtype == np.object
+        assert pandas_series.dtype == np.float64
+    else:
+        assert modin_series.dtype == pandas_series.dtype
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
