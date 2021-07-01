@@ -30,6 +30,7 @@ class PickleExperimentalDispatcher(FileDispatcher):
             warnings.warn("Defaulting to Modin core implementation")
             return cls.single_worker_read(
                 filepath_or_buffer,
+                single_worker_read=True,
                 **kwargs,
             )
         filepath_or_buffer = sorted(glob.glob(filepath_or_buffer))

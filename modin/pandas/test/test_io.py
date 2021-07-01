@@ -45,15 +45,11 @@ from .utils import (
     generate_dataframe,
 )
 
-<<<<<<< HEAD
-=======
-from modin.config import Engine, Backend, IsExperimental, NPartitions
-
->>>>>>> 358c3176 (FEAT-#1300: fix)
 if Backend.get() == "Pandas":
     import modin.pandas as pd
 else:
     import modin.experimental.pandas as pd
+from modin.config import NPartitions
 
 NPartitions.put(4)
 

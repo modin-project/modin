@@ -246,11 +246,10 @@ class ExperimentalPandasOnRayIO(PandasOnRayIO):
         **kwargs : dict
             Parameters for ``pandas.to_pickle(**kwargs)``.
         """
-        if (
-            not isinstance(kwargs["filepath_or_buffer"], str)
-            and "*" not in kwargs["filepath_or_buffer"]
-            or not isinstance(qc, PandasQueryCompiler)
-        ):
+        if not (
+            isinstance(kwargs["filepath_or_buffer"], str)
+            and "*" in kwargs["filepath_or_buffer"]
+        ) or not isinstance(qc, PandasQueryCompiler):
             warnings.warn("Defaulting to Modin core implementation")
             return PandasOnRayIO.to_pickle(qc, **kwargs)
 

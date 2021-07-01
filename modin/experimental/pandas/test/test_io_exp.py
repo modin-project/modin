@@ -141,19 +141,20 @@ def test_read_multiple_csv_s3():
     reason=f"{Engine.get()} does not have experimental API",
 )
 @pytest.mark.parametrize("compression", [None, "gzip"])
-def test_distributed_pickling(compression):
+@pytest.mark.parametrize(
+    "filename", ["test_default_to_pickle.pkl", "test_to_pickle*.pkl"]
+)
+def test_distributed_pickling(filename, compression):
     data = test_data["int_data"]
     df = pd.DataFrame(data)
 
     if compression:
-        filename_pattern = "test_to_pickle*.pkl.gz"
-    else:
-        filename_pattern = "test_to_pickle*.pkl"
+        filename = f"{filename}.gz"
 
-    df.to_pickle_distributed(filename_pattern, compression=compression)
+    df.to_pickle_distributed(filename, compression=compression)
 
-    pickled_df = pd.read_pickle_distributed(filename_pattern, compression=compression)
+    pickled_df = pd.read_pickle_distributed(filename, compression=compression)
     df_equals(pickled_df, df)
 
-    pickle_files = glob.glob(filename_pattern)
+    pickle_files = glob.glob(filename)
     teardown_test_files(pickle_files)

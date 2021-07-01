@@ -308,8 +308,10 @@ class PandasPickleExperimentalParser(PandasParser):
     def parse(fname, **kwargs):
         warnings.filterwarnings("ignore")
         num_splits = 1
-
+        single_worker_read = kwargs.pop("single_worker_read", None)
         df = pandas.read_pickle(fname, **kwargs)
+        if single_worker_read:
+            return df
         assert isinstance(
             df, pandas.DataFrame
         ), f"Pickled obj type: [{type(df)}] in [{fname}]; works only with pandas.DataFrame"

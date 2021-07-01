@@ -241,7 +241,7 @@ def read_pickle_distributed(
     filepath_or_buffer : str, path object or file-like object
         File path, URL, or buffer where the pickled object will be loaded from.
         Accept URL. URL is not limited to S3 and GCS.
-    compression : {{'infer', 'gzip', 'bz2', 'zip', 'xz', None}}, default 'infer'
+    compression : {{'infer', 'gzip', 'bz2', 'zip', 'xz', None}}, default: 'infer'
         If 'infer' and 'path_or_url' is path-like, then detect compression from
         the following extensions: '.gz', '.bz2', '.zip', or '.xz' (otherwise no
         compression) If 'infer' and 'path_or_url' is not path-like, then use
@@ -257,7 +257,6 @@ def read_pickle_distributed(
     -------
     unpickled : same type as object stored in file
     """
-
     Engine.subscribe(_update_engine)
     assert IsExperimental.get(), "This only works in experimental mode"
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
