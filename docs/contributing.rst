@@ -110,7 +110,7 @@ General Rules for committers
 
 - Try to keep a PR name as much descriptive as possible
 - Try to keep PRs as small as possible. One PR should be making one semantically atomic change
-- Don't merge own PRs even If you are eligible to do it
+- Don't merge your own PRs even if you are technically able to do it
 
 Development Dependencies
 ------------------------
