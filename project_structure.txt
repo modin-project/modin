@@ -1,0 +1,119 @@
+.modin/
+   .config/
+   .distributed/
+   .pandas/
+   .test/
+   .rest files
+   .core/
+      .io/
+         .column_stores/
+            . # the same as it is now
+         .sql/
+            . # the same as it is now
+         .text/
+            . # the same as it is now
+         .file_dispatcher.py # the same as it is now
+         .io.py # the same as it is now
+      .dispatching/
+         .factories/
+            . # the same as it is now
+      .formats/
+         .base/
+            .query_compiler.py # BaseQueryCompiler
+         .pandas/
+            .base/ # or default (DefaultPandasQueryCompiler)
+               .query_compiler.py # BasePandasQueryCompiler
+            .kernels.py
+            .query_compiler.py # PandasQueryCompiler
+            .parsers.py
+            .utils.py # data_management/utils moved here
+      .execution/
+        .ray/
+           .frame/
+              .dataframe.py # GenericRayDataframe
+              .metadata.py # GenericRayDataframeMetadata
+           .partition_management/ # or `partitioning`
+              .axis_partition.py # GenericRayDataframeAxisPartition
+              .partition_manager.py # GenericRayDataframeManager
+              .partition.py # GenericRayDataframePartition
+           .io/
+              .io.py # GenericRayIO
+           .task_wrapper.py # GenericRayTask
+           .utils.py # init_ray
+        .dask/
+           . # the same as for ray
+        .python/
+           . # the same as for ray
+      .dataframe/  # implementations go here
+         .algebra/
+            .operators/ # dispatching/functions here
+               . # the same as it is in dispatching/functions
+         .implementations/ # all of the implementations go here
+            .base/
+               .frame/
+                  .dataframe.py # BaseDataframe
+                  .metadata.py # BaseDataframeMetaData
+               .partitioning/
+                  .axis_partition.py # BaseDataframeAxisPartition
+                  .partition_manager.py # BaseDataframeManager
+                  .partition.py # BaseDataframePartition
+            .pandas_base/ # make distinct from pandas format
+               .frame/
+                  .dataframe.py # PandasDataframe
+                  .metadata.py # PandasDataframeMetaData
+               .partitioning/
+                  .axis_partition.py # PandasDataframeAxisPartition
+                  .partition_manager.py # PandasDataframeManager
+                  .partition.py # PandasDataframePartition
+            .pandas_on_ray/
+               .frame/
+                  .dataframe.py # PandasOnRayDataframe
+                  .metadata.py # PandasOnRayDataframeMetadata
+               .partition_management/ # or `partitioning`
+                  .axis_partition.py # PandasOnRayDataframeAxisPartition
+                  .partition_manager.py # PandasOnRayDataframeManager
+                  .partition.py # PandasOnRayDataframePartition
+               .io/
+                  .io.py # PandasOnRayIO
+            .pandas_on_dask/
+               . # the same as for pandas_on_ray
+            .pandas_on_python/
+               . # the same as for pandas_on_ray
+   .experimental/
+      ./cloud
+         . # the same as it is now
+      ./pandas
+         . # the same as it is now
+      ./sklearn
+         . # the same as it is now
+      ./sql
+         . # the same as it is now
+     .spreadsheet/
+         . # from modin/spreadsheet
+     ./xgboost
+         . # the same as it is now
+     ./core
+         ./formats
+            ./omnisci
+               .kernels.py
+               .query_compiler.py
+            ./pyarrow
+               .kernels.py
+               .query_compiler.py
+         .dataframes/
+            .omnisci_on_ray/
+               .frame/
+                  .dataframe.py # OmniSciOnRayDataframe
+                  .metadata.py # OmniSciOnRayFrameMetaData
+               .partition_management/ # or `partitioning`
+                  .axis_partition.py # OmniSciOnRayFrameAxisPartition
+                  .partition_manager.py # OmniSciOnRayFrameManager
+                  .partition.py # OmniSciOnRayFramePartition
+            .pyarrow_on_ray/
+               .frame/
+                  .dataframe.py # PyarrowOnRayDataframe
+                  .metadata.py # PyarrowOnRayDataframe
+               .partition_management/ # or `partitioning`
+                  .axis_partition.py # PyarrowOnRayDataframeAxisPartition
+                  .partition_manager.py # PyarrowOnRayDataframeManager
+                  .partition.py # PyarrowOnRayDataframePartition
