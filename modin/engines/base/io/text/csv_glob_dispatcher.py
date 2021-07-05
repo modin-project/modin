@@ -22,7 +22,7 @@ from typing import List, Tuple
 import warnings
 
 import pandas
-from pandas.io.parsers import _validate_usecols_arg
+from pandas.io.parsers.base_parser import ParserBase
 
 from modin.config import NPartitions
 from modin.data_management.utils import compute_chunksize
@@ -128,7 +128,8 @@ class CSVGlobDispatcher(CSVDispatcher):
         column_names = empty_pd_df.columns
         skipfooter = kwargs.get("skipfooter", None)
         skiprows = kwargs.pop("skiprows", None)
-        usecols_md = _validate_usecols_arg(usecols)
+        parser_base = ParserBase(kwargs)
+        usecols_md = parser_base._validate_usecols_arg(usecols)
         if usecols is not None and usecols_md[1] != "integer":
             del kwargs["usecols"]
             all_cols = pandas.read_csv(

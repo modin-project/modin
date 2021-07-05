@@ -24,13 +24,13 @@ from pandas.core.dtypes.common import (
 from pandas.util._validators import validate_bool_kwarg
 from pandas.io.formats.printing import pprint_thing
 from pandas._libs.lib import no_default
-from pandas._typing import Label, StorageOptions
+from pandas._typing import StorageOptions
 
 import itertools
 import functools
 import numpy as np
 import sys
-from typing import IO, Optional, Sequence, Tuple, Union, Mapping, Iterator
+from typing import IO, Optional, Sequence, Tuple, Union, Mapping, Iterator, Hashable
 import warnings
 
 from modin.error_message import ErrorMessage
@@ -2266,7 +2266,7 @@ class DataFrame(BasePandasDataset):
 
     def value_counts(
         self,
-        subset: Optional[Sequence[Label]] = None,
+        subset: [Sequence[Hashable], None] = None,
         normalize: bool = False,
         sort: bool = True,
         ascending: bool = False,

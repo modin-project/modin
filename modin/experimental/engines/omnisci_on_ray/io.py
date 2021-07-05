@@ -26,7 +26,7 @@ from pyarrow.csv import read_csv, ParseOptions, ConvertOptions, ReadOptions
 import pyarrow as pa
 
 import pandas
-from pandas.io.parsers import _validate_usecols_arg
+from pandas.io.parsers.base_parser import ParserBase
 from pandas._typing import FilePathOrBuffer
 from pandas.io.common import is_url
 
@@ -306,7 +306,8 @@ class OmnisciOnRayIO(RayIO, TextFileDispatcher):
         """
         usecols = read_csv_kwargs.get("usecols", None)
         engine = read_csv_kwargs.get("engine", None)
-        usecols_md, usecols_names_dtypes = _validate_usecols_arg(usecols)
+        parser_base = ParserBase(read_csv_kwargs)
+        usecols_md, usecols_names_dtypes = parser_base._validate_usecols_arg(usecols)
         if usecols_md:
             empty_pd_df = pandas.read_csv(
                 **dict(
