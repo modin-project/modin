@@ -331,9 +331,16 @@ def gen_data(
     -------
     dict
         Number of keys - `ncols`, each of them store np.ndarray of `nrows` length.
-        When `data_type`=="str_int" some of the columns will be of string type,
-        when `data_type`=="true_false_int" half of the columns will be filed with
-        string values representing "true" and "false" values.
+
+    Notes
+    -----
+    Returned data type depends on the `data_type` parameter in the next way:
+
+    - `data_type`=="int" - all columns will be contain only integer values
+    - `data_type`=="str_int" some of the columns will be of string type,
+    - `data_type`=="true_false_int" half of the columns will be filed with
+      string values representing "true" and "false" values and another half - with
+      integers.
     """
     if data_type == "int":
         return gen_int_data(nrows, ncols, rand_low, rand_high)
