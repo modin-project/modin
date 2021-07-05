@@ -27,19 +27,7 @@ from ..utils import (
 )
 
 from .utils import UNARY_OP_DATA_SIZE, trigger_import
-
-
-class BaseReadCsv:
-    # test data file can de created only once
-    def setup_cache(self, test_filename="io_test_file"):
-        test_filenames = prepare_io_data(test_filename, "str_int")
-        return test_filenames
-
-    def setup(self, test_filenames, shape, *args, **kwargs):
-        # ray init
-        if ASV_USE_IMPL == "modin":
-            pd.DataFrame([])
-        self.shape_id = get_shape_id(shape)
+from ..io.csv import BaseReadCsv
 
 
 class TimeReadCsvNames:
