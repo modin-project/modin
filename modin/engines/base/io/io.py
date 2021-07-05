@@ -18,6 +18,7 @@ Module houses `BaseIO` class.
 """
 
 import pandas
+import pandas._libs.lib as lib
 from pandas.util._decorators import doc
 from collections import OrderedDict
 from modin.error_message import ErrorMessage
@@ -104,11 +105,18 @@ class BaseIO(object):
         returns=_doc_returns_qc,
     )
     def read_parquet(
-        cls, path, engine, columns, use_nullable_dtypes, **kwargs
+        cls, path, engine, columns, storage_options, use_nullable_dtypes, **kwargs
     ):  # noqa: PR01
         ErrorMessage.default_to_pandas("`read_parquet`")
         return cls.from_pandas(
-            pandas.read_parquet(path, engine, columns, use_nullable_dtypes, **kwargs)
+            pandas.read_parquet(
+                path,
+                engine=engine,
+                columns=columns,
+                storage_options=storage_options,
+                use_nullable_dtypes=use_nullable_dtypes,
+                **kwargs,
+            )
         )
 
     @classmethod
@@ -124,11 +132,11 @@ class BaseIO(object):
         sep=",",
         delimiter=None,
         header="infer",
-        names=None,
+        names=lib.no_default,
         index_col=None,
         usecols=None,
         squeeze=False,
-        prefix=None,
+        prefix=lib.no_default,
         mangle_dupe_cols=True,
         dtype=None,
         engine=None,
@@ -160,9 +168,11 @@ class BaseIO(object):
         escapechar=None,
         comment=None,
         encoding=None,
+        encoding_errors="strict",
         dialect=None,
-        error_bad_lines=True,
-        warn_bad_lines=True,
+        error_bad_lines=None,
+        warn_bad_lines=None,
+        on_bad_lines=None,
         skipfooter=0,
         doublequote=True,
         delim_whitespace=False,
@@ -212,9 +222,11 @@ class BaseIO(object):
             "escapechar": escapechar,
             "comment": comment,
             "encoding": encoding,
+            "encoding_errors": encoding_errors,
             "dialect": dialect,
             "error_bad_lines": error_bad_lines,
             "warn_bad_lines": warn_bad_lines,
+            "on_bad_lines": on_bad_lines,
             "skipfooter": skipfooter,
             "doublequote": doublequote,
             "delim_whitespace": delim_whitespace,
@@ -273,6 +285,7 @@ class BaseIO(object):
         precise_float=False,
         date_unit=None,
         encoding=None,
+        encoding_errors="strict",
         lines=False,
         chunksize=None,
         compression="infer",
@@ -292,6 +305,7 @@ class BaseIO(object):
             "precise_float": precise_float,
             "date_unit": date_unit,
             "encoding": encoding,
+            "encoding_errors": encoding_errors,
             "lines": lines,
             "chunksize": chunksize,
             "compression": compression,
@@ -556,6 +570,7 @@ class BaseIO(object):
         order_categoricals=True,
         chunksize=None,
         iterator=False,
+        compression="infer",
         storage_options=None,
     ):  # noqa: PR01
         ErrorMessage.default_to_pandas("`read_stata`")
@@ -570,6 +585,7 @@ class BaseIO(object):
             "order_categoricals": order_categoricals,
             "chunksize": chunksize,
             "iterator": iterator,
+            "compression": compression,
             "storage_options": storage_options,
         }
         return cls.from_pandas(pandas.read_stata(**kwargs))
@@ -730,6 +746,7 @@ class BaseIO(object):
         params=None,
         parse_dates=None,
         chunksize=None,
+        dtype=None,
     ):  # noqa: PR01
         ErrorMessage.default_to_pandas("`read_sql_query`")
         return cls.from_pandas(
@@ -741,6 +758,7 @@ class BaseIO(object):
                 params=params,
                 parse_dates=parse_dates,
                 chunksize=chunksize,
+                dtype=dtype,
             )
         )
 

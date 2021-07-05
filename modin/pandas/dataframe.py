@@ -102,7 +102,7 @@ class DataFrame(BasePandasDataset):
         index=None,
         columns=None,
         dtype=None,
-        copy=False,
+        copy=None,
         query_compiler=None,
     ):
         Engine.subscribe(_update_engine)
@@ -340,7 +340,9 @@ class DataFrame(BasePandasDataset):
         """
         return DataFrame(query_compiler=self._query_compiler.add_suffix(suffix))
 
-    def applymap(self, func, na_action: Optional[str] = None):  # noqa: PR01, RT01, D200
+    def applymap(
+        self, func, na_action: Optional[str] = None, **kwargs
+    ):  # noqa: PR01, RT01, D200
         """
         Apply a function to a ``DataFrame`` elementwise.
         """
@@ -350,14 +352,14 @@ class DataFrame(BasePandasDataset):
         return DataFrame(query_compiler=self._query_compiler.applymap(func))
 
     def apply(
-        self, func, axis=0, raw=False, result_type=None, args=(), **kwds
+        self, func, axis=0, raw=False, result_type=None, args=(), **kwargs
     ):  # noqa: PR01, RT01, D200
         """
         Apply a function along an axis of the ``DataFrame``.
         """
         axis = self._get_axis_number(axis)
         query_compiler = super(DataFrame, self).apply(
-            func, axis=axis, raw=raw, result_type=result_type, args=args, **kwds
+            func, axis=axis, raw=raw, result_type=result_type, args=args, **kwargs
         )
         if not isinstance(query_compiler, type(self._query_compiler)):
             return query_compiler
@@ -374,7 +376,12 @@ class DataFrame(BasePandasDataset):
                 init_kwargs = {"columns": self.columns}
             return_type = type(
                 getattr(pandas, type(self).__name__)(**init_kwargs).apply(
-                    func, axis=axis, raw=raw, result_type=result_type, args=args, **kwds
+                    func,
+                    axis=axis,
+                    raw=raw,
+                    result_type=result_type,
+                    args=args,
+                    **kwargs,
                 )
             ).__name__
         except Exception:
@@ -1514,6 +1521,7 @@ class DataFrame(BasePandasDataset):
         dropna=True,
         margins_name="All",
         observed=False,
+        sort=True,
     ):  # noqa: PR01, RT01, D200
         """
         Create a spreadsheet-style pivot table as a ``DataFrame``.
@@ -1529,6 +1537,7 @@ class DataFrame(BasePandasDataset):
                 dropna=dropna,
                 margins_name=margins_name,
                 observed=observed,
+                sort=sort,
             )
         )
 
@@ -2230,6 +2239,47 @@ class DataFrame(BasePandasDataset):
             freq=freq, how=how, axis=axis, copy=copy
         )
 
+    def to_xml(
+        self,
+        path_or_buffer=None,
+        index=True,
+        root_name="data",
+        row_name="row",
+        na_rep=None,
+        attr_cols=None,
+        elem_cols=None,
+        namespaces=None,
+        prefix=None,
+        encoding="utf-8",
+        xml_declaration=True,
+        pretty_print=True,
+        parser="lxml",
+        stylesheet=None,
+        compression="infer",
+        storage_options=None,
+    ):
+        return self.__constructor__(
+            query_compiler=self._query_compiler.default_to_pandas(
+                pandas.DataFrame.to_xml,
+                path_or_buffer=path_or_buffer,
+                index=index,
+                root_name=root_name,
+                row_name=row_name,
+                na_rep=na_rep,
+                attr_cols=attr_cols,
+                elem_cols=elem_cols,
+                namespaces=namespaces,
+                prefix=prefix,
+                encoding=encoding,
+                xml_declaration=xml_declaration,
+                pretty_print=pretty_print,
+                parser=parser,
+                stylesheet=stylesheet,
+                compression=compression,
+                storage_options=storage_options,
+            )
+        )
+
     def truediv(
         self, other, axis="columns", level=None, fill_value=None
     ):  # noqa: PR01, RT01, D200
@@ -2266,10 +2316,11 @@ class DataFrame(BasePandasDataset):
 
     def value_counts(
         self,
-        subset: [Sequence[Hashable], None] = None,
+        subset: Sequence[Hashable] = None,
         normalize: bool = False,
         sort: bool = True,
         ascending: bool = False,
+        dropna: bool = True,
     ):  # noqa: PR01, RT01, D200
         """
         Return a ``Series`` containing counts of unique rows in the ``DataFrame``.
@@ -2280,6 +2331,7 @@ class DataFrame(BasePandasDataset):
             normalize=normalize,
             sort=sort,
             ascending=ascending,
+            dropna=dropna,
         )
 
     def where(
@@ -2290,7 +2342,7 @@ class DataFrame(BasePandasDataset):
         axis=None,
         level=None,
         errors="raise",
-        try_cast=False,
+        try_cast=no_default,
     ):  # noqa: PR01, RT01, D200
         """
         Replace values where the condition is False.

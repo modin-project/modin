@@ -183,6 +183,7 @@ from .io import (
     HDFStore,
     json_normalize,
     read_orc,
+    read_xml,
 )
 from .series import Series
 from .general import (

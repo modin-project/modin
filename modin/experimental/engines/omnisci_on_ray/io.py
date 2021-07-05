@@ -26,6 +26,7 @@ from pyarrow.csv import read_csv, ParseOptions, ConvertOptions, ReadOptions
 import pyarrow as pa
 
 import pandas
+import pandas._libs.lib as lib
 from pandas.io.parsers.base_parser import ParserBase
 from pandas._typing import FilePathOrBuffer
 from pandas.io.common import is_url
@@ -153,11 +154,11 @@ class OmnisciOnRayIO(RayIO, TextFileDispatcher):
         sep=",",
         delimiter=None,
         header="infer",
-        names=None,
+        names=lib.no_default,
         index_col=None,
         usecols=None,
         squeeze=False,
-        prefix=None,
+        prefix=lib.no_default,
         mangle_dupe_cols=True,
         dtype=None,
         engine=None,
@@ -189,9 +190,11 @@ class OmnisciOnRayIO(RayIO, TextFileDispatcher):
         escapechar=None,
         comment=None,
         encoding=None,
+        encoding_errors="strict",
         dialect=None,
-        error_bad_lines=True,
-        warn_bad_lines=True,
+        error_bad_lines=None,
+        warn_bad_lines=None,
+        on_bad_lines=None,
         skipfooter=0,
         doublequote=True,
         delim_whitespace=False,

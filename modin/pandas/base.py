@@ -1238,9 +1238,13 @@ class BasePandasDataset(object):
             times=times,
         )
 
-    def expanding(self, min_periods=1, center=None, axis=0):
+    def expanding(self, min_periods=1, center=None, axis=0, method="single"):
         return self._default_to_pandas(
-            "expanding", min_periods=min_periods, center=center, axis=axis
+            "expanding",
+            min_periods=min_periods,
+            center=center,
+            axis=axis,
+            method=method,
         )
 
     def ffill(self, axis=None, inplace=False, limit=None, downcast=None):
@@ -1536,7 +1540,7 @@ class BasePandasDataset(object):
         axis=None,
         level=None,
         errors="raise",
-        try_cast=False,
+        try_cast=no_default,
     ):
         return self._default_to_pandas(
             "mask",
@@ -2006,6 +2010,7 @@ class BasePandasDataset(object):
         on=None,
         axis=0,
         closed=None,
+        method="single",
     ):
         if win_type is not None:
             return Window(
@@ -2017,6 +2022,7 @@ class BasePandasDataset(object):
                 on=on,
                 axis=axis,
                 closed=closed,
+                method=method,
             )
 
         return Rolling(
@@ -2028,6 +2034,7 @@ class BasePandasDataset(object):
             on=on,
             axis=axis,
             closed=closed,
+            method=method,
         )
 
     def round(self, decimals=0, *args, **kwargs):
@@ -2060,6 +2067,7 @@ class BasePandasDataset(object):
         weights=None,
         random_state=None,
         axis=None,
+        ignore_index=False,
     ):
         axis = self._get_axis_number(axis)
         if axis:
@@ -2140,6 +2148,7 @@ class BasePandasDataset(object):
                 weights=weights,
                 random_state=random_state,
                 axis=axis,
+                ignore_index=ignore_index,
             )
         if random_state is not None:
             # Get a random number generator depending on the type of
@@ -3350,6 +3359,7 @@ class Window(object):
         on=None,
         axis=0,
         closed=None,
+        method="single",
     ):
         self._dataframe = dataframe
         self._query_compiler = dataframe._query_compiler
@@ -3361,6 +3371,7 @@ class Window(object):
             on,
             axis,
             closed,
+            method,
         ]
 
     def mean(self, *args, **kwargs):
@@ -3409,6 +3420,7 @@ class Rolling(object):
         on=None,
         axis=0,
         closed=None,
+        method="single",
     ):
         self._dataframe = dataframe
         self._query_compiler = dataframe._query_compiler
@@ -3420,6 +3432,7 @@ class Rolling(object):
             on,
             axis,
             closed,
+            method,
         ]
 
     def count(self):

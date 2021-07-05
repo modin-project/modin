@@ -73,11 +73,11 @@ def read_csv(
     sep=lib.no_default,
     delimiter=None,
     header="infer",
-    names=None,
+    names=lib.no_default,
     index_col=None,
     usecols=None,
     squeeze=False,
-    prefix=None,
+    prefix=lib.no_default,
     mangle_dupe_cols=True,
     dtype=None,
     engine=None,
@@ -109,9 +109,11 @@ def read_csv(
     escapechar=None,
     comment=None,
     encoding=None,
+    encoding_errors="strict",
     dialect=None,
-    error_bad_lines=True,
-    warn_bad_lines=True,
+    error_bad_lines=None,
+    warn_bad_lines=None,
+    on_bad_lines=None,
     skipfooter=0,
     doublequote=True,
     delim_whitespace=False,
@@ -139,11 +141,11 @@ def read_table(
     sep=lib.no_default,
     delimiter=None,
     header="infer",
-    names=None,
+    names=lib.no_default,
     index_col=None,
     usecols=None,
     squeeze=False,
-    prefix=None,
+    prefix=lib.no_default,
     mangle_dupe_cols=True,
     dtype=None,
     engine=None,
@@ -175,9 +177,11 @@ def read_table(
     escapechar=None,
     comment=None,
     encoding=None,
+    encoding_errors="strict",
     dialect=None,
-    error_bad_lines=True,
-    warn_bad_lines=True,
+    error_bad_lines=None,
+    warn_bad_lines=None,
+    on_bad_lines=None,
     skipfooter=0,
     doublequote=True,
     delim_whitespace=False,
@@ -201,6 +205,7 @@ def read_parquet(
     path,
     engine: str = "auto",
     columns=None,
+    storage_options: StorageOptions = None,
     use_nullable_dtypes: bool = False,
     **kwargs,
 ):
@@ -210,8 +215,9 @@ def read_parquet(
     return DataFrame(
         query_compiler=FactoryDispatcher.read_parquet(
             path=path,
-            columns=columns,
             engine=engine,
+            columns=columns,
+            storage_options=storage_options,
             use_nullable_dtypes=use_nullable_dtypes,
             **kwargs,
         )
@@ -231,6 +237,7 @@ def read_json(
     precise_float=False,
     date_unit=None,
     encoding=None,
+    encoding_errors="strict",
     lines=False,
     chunksize=None,
     compression="infer",
@@ -332,7 +339,7 @@ def read_excel(
     thousands=None,
     comment=None,
     skipfooter=0,
-    convert_float=True,
+    convert_float=None,
     mangle_dupe_cols=True,
     storage_options: StorageOptions = None,
 ):
@@ -401,6 +408,7 @@ def read_stata(
     order_categoricals=True,
     chunksize=None,
     iterator=False,
+    compression="infer",
     storage_options: StorageOptions = None,
 ):
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
@@ -519,6 +527,7 @@ def read_sql_query(
     params=None,
     parse_dates=None,
     chunksize=None,
+    dtype=None,
 ):
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
 
@@ -587,6 +596,39 @@ def read_orc(
     ErrorMessage.default_to_pandas("read_orc")
     Engine.subscribe(_update_engine)
     return DataFrame(pandas.read_orc(path, columns, **kwargs))
+
+
+@_inherit_docstrings(pandas.read_xml)
+def read_xml(
+    path_or_buffer,
+    xpath="./*",
+    namespaces=None,
+    elems_only=False,
+    attrs_only=False,
+    names=None,
+    encoding="utf-8",
+    parser="lxml",
+    stylesheet=None,
+    compression="infer",
+    storage_options=None,
+) -> DataFrame:
+    ErrorMessage.default_to_pandas("read_xml")
+    Engine.subscribe(_update_engine)
+    return DataFrame(
+        pandas.read_xml(
+            path_or_buffer,
+            xpath=xpath,
+            namespaces=namespaces,
+            elems_only=elems_only,
+            attrs_only=attrs_only,
+            names=names,
+            encoding=encoding,
+            parser=parser,
+            stylesheet=stylesheet,
+            compression=compression,
+            storage_options=storage_options,
+        )
+    )
 
 
 @_inherit_docstrings(pandas.HDFStore)
