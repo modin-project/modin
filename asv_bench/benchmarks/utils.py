@@ -217,7 +217,28 @@ def gen_str_int_data(nrows: int, ncols: int, rand_low: int, rand_high: int) -> d
     return data
 
 
-def gen_true_false_data(nrows, ncols, true_false_values):
+def gen_true_false_data(nrows: int, ncols: int, true_false_values: list):
+    """
+    Generate data with "true" and "false" values with caching.
+
+    The generated data are saved in the dictionary and on a subsequent call,
+    if the keys match, saved data will be returned. Therefore, we need
+    to carefully monitor the changing of saved data and make its copy if needed.
+
+    Parameters
+    ----------
+    nrows : int
+        Number of rows.
+    ncols : int
+        Number of columns.
+    true_false_values : list
+        List with strings that represent "true" and "false" values.
+
+    Returns
+    -------
+    dict
+        Number of keys - `ncols`, each of them store np.ndarray of `nrows` length.
+    """
     cache_key = ("true_false", nrows, ncols, "_".join(true_false_values))
     if cache_key in data_cache:
         return data_cache[cache_key]
@@ -236,6 +257,31 @@ def gen_true_false_data(nrows, ncols, true_false_values):
 
 
 def gen_true_false_int_data(nrows, ncols, rand_low, rand_high):
+    """
+    Generate int data and string data "true" and "false" values with caching.
+
+    The generated data are saved in the dictionary and on a subsequent call,
+    if the keys match, saved data will be returned. Therefore, we need
+    to carefully monitor the changing of saved data and make its copy if needed.
+
+    Parameters
+    ----------
+    nrows : int
+        Number of rows.
+    ncols : int
+        Number of columns.
+    rand_low : int
+        Low bound for random generator.
+    rand_high : int
+        High bound for random generator.
+
+    Returns
+    -------
+    dict
+        Number of keys - `ncols`, each of them store np.ndarray of `nrows` length.
+        One half of the columns with integer values, another half - with "true" and
+        "false" string values.
+    """
     cache_key = ("true_false_int", nrows, ncols, rand_low, rand_high)
     if cache_key in data_cache:
         return data_cache[cache_key]
@@ -270,7 +316,7 @@ def gen_data(
 
     Parameters
     ----------
-    data_type : {"int", "str_int"}
+    data_type : {"int", "str_int", "true_false_int"}
         Type of data generation.
     nrows : int
         Number of rows.
@@ -285,7 +331,9 @@ def gen_data(
     -------
     dict
         Number of keys - `ncols`, each of them store np.ndarray of `nrows` length.
-        When `data_type`=="str_int" some of the columns will be of string type.
+        When `data_type`=="str_int" some of the columns will be of string type,
+        when `data_type`=="true_false_int" half of the columns will be filed with
+        string values representing "true" and "false" values.
     """
     if data_type == "int":
         return gen_int_data(nrows, ncols, rand_low, rand_high)
@@ -488,7 +536,23 @@ def get_shape_id(shape: tuple) -> str:
     return "_".join([str(element) for element in shape])
 
 
-def prepare_io_data(test_filename, data_type):
+def prepare_io_data(test_filename: str, data_type: str):
+    """
+    Prepare data for IO tests with caching.
+
+    Parameters
+    ----------
+    test_filename : str
+        Unique file identifier that is used to distinguish data
+        for different tests.
+    data_type : {"int", "str_int", "true_false_int"}
+        Type of data generation.
+
+    Returns
+    -------
+    test_filenames : dict
+        Dcitionary that maps dataset shape to the file on disk.
+    """
     test_filenames = {}
     for shape in UNARY_OP_DATA_SIZE[ASV_DATASET_SIZE]:
         shape_id = get_shape_id(shape)
