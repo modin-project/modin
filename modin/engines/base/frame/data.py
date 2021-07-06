@@ -2268,9 +2268,8 @@ class PandasFrame(object):
         new_partitions = self._partition_mgr_cls.lazy_map_partitions(
             self._partitions, lambda df: df.T
         ).T
-        # We convert `self.dtypes.values` to list because of pandas issue #42397
         new_dtypes = pandas.Series(
-            np.full(len(self.index), find_common_type(list(self.dtypes.values))),
+            np.full(len(self.index), find_common_type(self.dtypes.values)),
             index=self.index,
         )
         return self.__constructor__(
