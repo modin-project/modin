@@ -43,6 +43,12 @@ Public API
 .. autoclass:: modin.experimental.engines.omnisci_on_ray.frame.expr.AggregateExpr
   :members:
 
+Utilities
+"""""""""
+
+Public API
+----------
+
 .. autofunction:: modin.experimental.engines.omnisci_on_ray.frame.expr.is_cmp_op
 .. autofunction:: modin.experimental.engines.omnisci_on_ray.frame.expr.build_row_idx_filter_expr
 .. autofunction:: modin.experimental.engines.omnisci_on_ray.frame.expr.build_if_then_else
