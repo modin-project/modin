@@ -674,9 +674,10 @@ def test_to_numeric(data, errors, downcast):
     df_equals(modin_result, pandas_result)
 
 
-def test_to_pandas_indices():
-    data = test_data_values[0]
-
+@pytest.mark.parametrize(
+    "data", [test_data_values[0], []], ids=["test_data_values[0]", "[]"]
+)
+def test_to_pandas_indices(data):
     md_df = pd.DataFrame(data)
     index = pandas.MultiIndex.from_tuples(
         [(i, i * 2) for i in np.arange(len(md_df) + 1)], names=["A", "B"]

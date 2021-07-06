@@ -506,6 +506,7 @@ def test___repr__(name, dt_index, data):
         # TODO: Remove this when default `dtype` of empty Series will be `object` in pandas (see #3142).
         assert modin_series.dtype == np.object
         assert pandas_series.dtype == np.float64
+        df_equals(modin_series.index, pandas_series.index)
     else:
         assert repr(modin_series) == repr(pandas_series)
 
