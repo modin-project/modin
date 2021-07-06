@@ -26,6 +26,7 @@ import io
 import os
 from typing import Union, Sequence, Optional, Tuple
 import pandas
+import pandas._libs.lib as lib
 
 from modin.config import NPartitions
 
@@ -362,7 +363,7 @@ class TextFileDispatcher(FileDispatcher):
     def _define_header_size(
         cls,
         header: Union[int, Sequence[int], str, None] = "infer",
-        names: Optional[Sequence] = None,
+        names: Optional[Sequence] = lib.no_default,
     ) -> int:
         """
         Define the number of rows that are used by header.
@@ -380,7 +381,7 @@ class TextFileDispatcher(FileDispatcher):
             The number of rows that are used by header.
         """
         header_size = 0
-        if header == "infer" and names is None:
+        if header == "infer" and names in [lib.no_default, None]:
             header_size += 1
         elif isinstance(header, int):
             header_size += header + 1

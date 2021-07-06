@@ -23,6 +23,7 @@ import warnings
 
 import pandas
 from pandas.io.parsers.base_parser import ParserBase
+import pandas._libs.lib as lib
 
 from modin.config import NPartitions
 from modin.data_management.utils import compute_chunksize
@@ -97,11 +98,11 @@ class CSVGlobDispatcher(CSVDispatcher):
             return cls.single_worker_read(filepath_or_buffer, **kwargs)
 
         nrows = kwargs.pop("nrows", None)
-        names = kwargs.get("names", None)
+        names = kwargs.get("names", lib.no_default)
         index_col = kwargs.get("index_col", None)
         usecols = kwargs.get("usecols", None)
         encoding = kwargs.get("encoding", None)
-        if names is None:
+        if names in [lib.no_default, None]:
             # For the sake of the empty df, we assume no `index_col` to get the correct
             # column names before we build the index. Because we pass `names` in, this
             # step has to happen without removing the `index_col` otherwise it will not
@@ -165,7 +166,10 @@ class CSVGlobDispatcher(CSVDispatcher):
                 if skiprows is None:
                     skiprows = 0
                 header = kwargs.get("header", "infer")
-                if header == "infer" and kwargs.get("names", None) is None:
+                if header == "infer" and kwargs.get("names", lib.no_default) in [
+                    lib.no_default,
+                    None,
+                ]:
                     skip_header = 1
                 elif isinstance(header, int):
                     skip_header = header + 1

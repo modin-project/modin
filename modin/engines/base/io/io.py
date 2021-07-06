@@ -129,7 +129,7 @@ class BaseIO(object):
     def read_csv(
         cls,
         filepath_or_buffer,
-        sep=",",
+        sep=lib.no_default,
         delimiter=None,
         header="infer",
         names=lib.no_default,
