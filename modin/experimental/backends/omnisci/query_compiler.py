@@ -86,6 +86,8 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
     def __init__(self, frame, shape_hint=None):
         assert frame is not None
         self._modin_frame = frame
+        if shape_hint is None and len(self._modin_frame.columns) == 1:
+            shape_hint = "column"
         self._shape_hint = shape_hint
 
     def finalize():
@@ -97,11 +99,23 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
 
     @classmethod
     def from_pandas(cls, df, data_cls):
-        return cls(data_cls.from_pandas(df))
+        if len(df.columns) == 1:
+            shape_hint = "column"
+        elif len(df) == 1:
+            shape_hint = "row"
+        else:
+            shape_hint = None
+        return cls(data_cls.from_pandas(df), shape_hint=shape_hint)
 
     @classmethod
     def from_arrow(cls, at, data_cls):
-        return cls(data_cls.from_arrow(at))
+        if len(at.columns) == 1:
+            shape_hint = "column"
+        elif len(at) == 1:
+            shape_hint = "row"
+        else:
+            shape_hint = None
+        return cls(data_cls.from_arrow(at), shape_hint=shape_hint)
 
     default_to_pandas = PandasQueryCompiler.default_to_pandas
 
