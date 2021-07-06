@@ -419,7 +419,7 @@ class OmnisciOnRayIO(RayIO, TextFileDispatcher):
                 "Specified a delimiter with both sep and delim_whitespace=True; you can only specify one."
             )
 
-        if names:
+        if names and names != lib.no_default:
             if header not in [None, 0, "infer"]:
                 return (
                     False,
