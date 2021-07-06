@@ -2556,16 +2556,6 @@ class DataFrame(BasePandasDataset):
                 value = value._query_compiler
             self._update_inplace(self._query_compiler.setitem(0, key, value))
 
-    def __hash__(self):
-        """
-        Return hash representation of the ``DataFrame``.
-
-        Returns
-        -------
-        int
-        """
-        return self._default_to_pandas(pandas.DataFrame.__hash__)
-
     def __iter__(self):
         """
         Iterate over info axis.
