@@ -15,7 +15,6 @@
 
 from modin.engines.base.io.text.text_file_dispatcher import TextFileDispatcher
 from modin.data_management.utils import compute_chunksize
-from pandas.io.parsers.base_parser import ParserBase
 import pandas._libs.lib as lib
 import pandas
 from csv import QUOTE_NONE
@@ -107,10 +106,7 @@ class FWFDispatcher(TextFileDispatcher):
         skipfooter = kwargs.get("skipfooter", None)
         skiprows = kwargs.pop("skiprows", None)
         usecols = kwargs.get("usecols", None)
-        usecols_md = (usecols, None)
-        if usecols:
-            parser_base = ParserBase(kwargs)
-            usecols_md = parser_base._validate_usecols_arg(usecols)
+        usecols_md = cls._validate_usecols_arg(usecols)
         if usecols is not None and usecols_md[1] != "integer":
             del kwargs["usecols"]
             all_cols = pandas.read_fwf(

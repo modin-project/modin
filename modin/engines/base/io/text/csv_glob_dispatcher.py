@@ -22,7 +22,6 @@ from typing import List, Tuple
 import warnings
 
 import pandas
-from pandas.io.parsers.base_parser import ParserBase
 import pandas._libs.lib as lib
 
 from modin.config import NPartitions
@@ -129,8 +128,7 @@ class CSVGlobDispatcher(CSVDispatcher):
         column_names = empty_pd_df.columns
         skipfooter = kwargs.get("skipfooter", None)
         skiprows = kwargs.pop("skiprows", None)
-        parser_base = ParserBase(kwargs)
-        usecols_md = parser_base._validate_usecols_arg(usecols)
+        usecols_md = cls._validate_usecols_arg(usecols)
         if usecols is not None and usecols_md[1] != "integer":
             del kwargs["usecols"]
             all_cols = pandas.read_csv(
