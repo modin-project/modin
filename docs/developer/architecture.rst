@@ -320,7 +320,7 @@ by documentation for now, the rest is coming soon...).
    │   │   │   └───omnisci
    │   │   ├───cloud
    │   │   ├───engines
-   │   │   │   ├───omnisci_on_ray
+   │   │   │   ├─── :doc:`omnisci_on_ray </flow/modin/experimental/engines/omnisci_on_ray/frame/index>`
    │   │   │   ├─── :doc:`pandas_on_ray </flow/modin/experimental/engines/pandas_on_ray>`
    │   │   │   └─── :doc:`pyarrow_on_ray </flow/modin/experimental/engines/pyarrow_on_ray>`
    │   │   ├─── :doc:`pandas </flow/modin/experimental/pandas>`

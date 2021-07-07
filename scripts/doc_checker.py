@@ -521,6 +521,12 @@ def monkeypatching():
 
     Docstring._load_obj = staticmethod(load_obj)
 
+    # for testing omnisci-engine docs without `dbe` installation
+    sys.modules["dbe"] = Mock()
+    # enable docs testing on windows
+    sys.getdlopenflags = Mock()
+    sys.setdlopenflags = Mock()
+
 
 def validate(
     paths: List[pathlib.Path], add_ignore: List[str], use_numpydoc: bool

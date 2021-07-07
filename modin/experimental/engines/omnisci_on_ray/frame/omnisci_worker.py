@@ -11,6 +11,8 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
+"""Module provides ``OmnisciServer`` class."""
+
 import uuid
 import sys
 import os
@@ -34,10 +36,17 @@ from modin.config import OmnisciFragmentSize
 
 
 class OmnisciServer:
+    """Wrapper class for OmniSci engine."""
+
     _server = None
 
     @classmethod
     def start_server(cls):
+        """
+        Initialize OmniSci engine.
+
+        Do nothing if it is initiliazed already.
+        """
         if cls._server is None:
             cls._server = PyDbEngine(
                 enable_union=1,
@@ -49,31 +58,81 @@ class OmnisciServer:
 
     @classmethod
     def stop_server(cls):
+        """Destroy OmniSci server if any."""
         if cls._server is not None:
             cls._server.reset()
             cls._server = None
 
     def __init__(self):
+        """Initialize OmniSci engine."""
         self.start_server()
 
     @classmethod
     def executeDDL(cls, query):
+        """
+        Execute DDL SQL query.
+
+        Parameters
+        ----------
+        query : str
+            SQL query.
+        """
         cls._server.executeDDL(query)
 
     @classmethod
     def executeDML(cls, query):
+        """
+        Execute DML SQL query.
+
+        Parameters
+        ----------
+        query : str
+            SQL query.
+
+        Returns
+        -------
+        pyarrow.Table
+            Execution result.
+        """
         r = cls._server.executeDML(query)
         # todo: assert r
         return r
 
     @classmethod
     def executeRA(cls, query):
+        """
+        Execute calcite query.
+
+        Parameters
+        ----------
+        query : str
+            Serialized calcite query.
+
+        Returns
+        -------
+        pyarrow.Table
+            Execution result.
+        """
         r = cls._server.executeRA(query)
         # todo: assert r
         return r
 
     @classmethod
     def _genName(cls, name):
+        """
+        Generate or mangle a table name.
+
+        Parameters
+        ----------
+        name : str or None
+            Table name to mangle or None to generate a unique
+            table name.
+
+        Returns
+        -------
+        str
+            Table name.
+        """
         if not name:
             name = "frame_" + str(uuid.uuid4()).replace("-", "")
         # TODO: reword name in case of caller's mistake
@@ -81,6 +140,21 @@ class OmnisciServer:
 
     @classmethod
     def put_arrow_to_omnisci(cls, table, name=None):
+        """
+        Import Arrow table to OmniSci engine.
+
+        Parameters
+        ----------
+        table : pyarrow.Table
+            A table to import.
+        name : str, optional
+            A table name to use. None to generate a unique name.
+
+        Returns
+        -------
+        str
+            Imported table name.
+        """
         name = cls._genName(name)
 
         # Currently OmniSci doesn't support Arrow table import with
@@ -132,4 +206,19 @@ class OmnisciServer:
 
     @classmethod
     def put_pandas_to_omnisci(cls, df, name=None):
+        """
+        Import ``pandas.DataFrame`` to OmniSci engine.
+
+        Parameters
+        ----------
+        df : pandas.DataFrame
+            A frame to import.
+        name : str, optional
+            A table name to use. None to generate a unique name.
+
+        Returns
+        -------
+        str
+            Imported table name.
+        """
         return cls.put_arrow_to_omnisci(pa.Table.from_pandas(df))
