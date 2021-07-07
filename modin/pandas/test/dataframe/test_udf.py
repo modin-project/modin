@@ -35,7 +35,7 @@ from modin.pandas.test.utils import (
     udf_func_keys,
     test_data,
 )
-from modin.config import NPartitions
+from modin.config import NPartitions, Backend
 
 NPartitions.put(4)
 
@@ -100,6 +100,13 @@ def test_aggregate_error_checking():
         modin_df.aggregate("NOT_EXISTS")
 
 
+@pytest.mark.xfail(
+    Backend.get() == "Pandas",
+    reason="DataFrame.apply(dict) raises an exception because of a bug in its"
+    "implementation for pandas backend, this prevents us from catching the desired"
+    "exception. You can track this bug at:"
+    "https://github.com/modin-project/modin/issues/3221",
+)
 @pytest.mark.parametrize(
     "func",
     agg_func_values + agg_func_except_values,
