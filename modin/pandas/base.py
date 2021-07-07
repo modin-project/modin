@@ -39,6 +39,7 @@ from pandas._typing import (
     TimestampConvertibleTypes,
 )
 import re
+import functools
 from typing import Optional, Union
 import warnings
 import pickle as pkl
@@ -333,6 +334,45 @@ class BasePandasDataset(object):
                 )
         return result
 
+    def _validate_function(self, func, on_invalid=TypeError):
+        """
+        Check the validity of the function which is intended to be applied to the frame.
+
+        Parameters
+        ----------
+        func : object
+        on_invalid : callable(str), default: TypeError
+            Function to call in case invalid `func` is met, `on_invalid` takes an error
+            message as a single argument. If `on_invalid` has an Exception type then it
+            will arise. Raise ``TypeError`` by default.
+            **Note:** This parameter is a hack to concord with pandas error types.
+        """
+
+        def error_raiser(msg, exception=Exception):
+            raise exception(msg)
+
+        if issubclass(on_invalid, Exception):
+            on_invalid = functools.partial(error_raiser, exception=on_invalid)
+
+        if isinstance(func, dict):
+            [self._validate_function(fn) for fn in func.values()]
+            return
+            # We also could validate this, but it may be quite expensive for lazy-frames
+            # all(idx in self.axes[axis] for idx in func.keys())
+
+        if not is_list_like(func):
+            func = [func]
+
+        for fn in func:
+            if isinstance(fn, str):
+                if not (hasattr(self, fn) or hasattr(np, fn)):
+                    on_invalid(f"{fn} is not valid function for {type(self)} object.")
+            elif not callable(fn):
+                on_invalid(
+                    f"One of the passed functions has an invalid type: {type(fn)}: {fn}, "
+                    "only callable or string is acceptable."
+                )
+
     def _binary_op(self, op, other, **kwargs):
         """
         Do binary operation between two datasets.
@@ -580,11 +620,8 @@ class BasePandasDataset(object):
         # Dictionaries have complex behavior because they can be renamed here.
         elif func is None or isinstance(func, dict):
             return self._default_to_pandas("agg", func, *args, **kwargs)
-        elif is_list_like(func) or callable(func):
-            kwargs.pop("is_transform", None)
-            return self.apply(func, axis=_axis, args=args, **kwargs)
-        else:
-            raise TypeError("type {} is not callable".format(type(func)))
+        kwargs.pop("is_transform", None)
+        return self.apply(func, axis=_axis, args=args, **kwargs)
 
     def _string_function(self, func, *args, **kwargs):
         """
@@ -783,6 +820,7 @@ class BasePandasDataset(object):
         args=(),
         **kwds,
     ):
+        self._validate_function(func, on_invalid=AssertionError)
         axis = self._get_axis_number(axis)
         ErrorMessage.non_verified_udf()
         if isinstance(func, str):
@@ -795,19 +833,12 @@ class BasePandasDataset(object):
                 return result._query_compiler
             return result
         elif isinstance(func, dict):
-            if axis == 1:
-                raise TypeError(
-                    "(\"'dict' object is not callable\", "
-                    "'occurred at index {0}'".format(self.index[0])
-                )
             if len(self.columns) != len(set(self.columns)):
                 warnings.warn(
                     "duplicate column names not supported with apply().",
                     FutureWarning,
                     stacklevel=2,
                 )
-        elif not callable(func) and not is_list_like(func):
-            raise TypeError("{} object is not callable".format(type(func)))
         query_compiler = self._query_compiler.apply(
             func,
             axis,
@@ -2757,6 +2788,7 @@ class BasePandasDataset(object):
 
     def transform(self, func, axis=0, *args, **kwargs):
         kwargs["is_transform"] = True
+        self._validate_function(func)
         try:
             result = self.agg(func, axis=axis, *args, **kwargs)
         except TypeError:

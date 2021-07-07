@@ -17,6 +17,7 @@ import pandas
 import matplotlib
 import modin.pandas as pd
 
+from pandas.core.dtypes.common import is_list_like
 from modin.pandas.test.utils import (
     random_state,
     df_equals,
@@ -104,10 +105,18 @@ def test_aggregate_error_checking():
     agg_func_values + agg_func_except_values,
     ids=agg_func_keys + agg_func_except_keys,
 )
-def test_apply_type_error(func):
-    modin_df = pd.DataFrame(test_data["int_data"])
-    with pytest.raises(TypeError):
-        modin_df.apply({"row": func}, axis=1)
+def test_apply_key_error(func):
+    if not (is_list_like(func) or callable(func) or isinstance(func, str)):
+        pytest.xfail(
+            reason="Because index materialization is expensive Modin first"
+            "checks the validity of the function itself and only then the engine level"
+            "checks the validity of the indices. Pandas order of such checks is reversed,"
+            "so we get different errors when both (function and index) are invalid."
+        )
+    eval_general(
+        *create_test_dfs(test_data["int_data"]),
+        lambda df: df.apply({"row": func}, axis=1),
+    )
 
 
 @pytest.mark.parametrize("axis", [0, 1])
@@ -144,6 +153,11 @@ def test_apply_args(axis, args):
     )
 
 
+@pytest.mark.xfail(
+    reason="Modin's 'apply' produces DataFrame instead of Series and so insertion"
+    "of the apply result to the source frame is failed. Issue to track this bug:"
+    "https://github.com/modin-project/modin/issues/3219"
+)
 def test_apply_metadata():
     def add(a, b, c):
         return a + b + c
