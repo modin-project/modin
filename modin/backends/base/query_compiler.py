@@ -1035,7 +1035,14 @@ class BaseQueryCompiler(abc.ABC):
         Returns:
             A new QueryCompiler with new data inserted.
         """
-        return DataFrameDefault.register(pandas.DataFrame.insert, inplace=True)(
+
+        def inserter(df, loc, column, value):
+            if isinstance(value, pandas.DataFrame):
+                value = value.squeeze(axis=1)
+            df.insert(loc, column, value)
+            return df
+
+        return DataFrameDefault.register(inserter)(
             self, loc=loc, column=column, value=value
         )
 
@@ -1488,6 +1495,7 @@ class BaseQueryCompiler(abc.ABC):
         dropna,
         margins_name,
         observed,
+        sort,
     ):
         return DataFrameDefault.register(pandas.DataFrame.pivot_table)(
             self,
@@ -1500,6 +1508,7 @@ class BaseQueryCompiler(abc.ABC):
             dropna=dropna,
             margins_name=margins_name,
             observed=observed,
+            sort=sort,
         )
 
     def get_dummies(self, columns, **kwargs):
