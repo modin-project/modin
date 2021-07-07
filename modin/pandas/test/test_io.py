@@ -725,7 +725,7 @@ class TestCsv:
         )
 
     # Error Handling parameters tests
-    @pytest.mark.xfail(
+    @pytest.mark.skip(
         Engine.get() not in ["Python", "Cloudpython"] and Backend.get() != "Omnisci",
         reason="read_csv doesn't raise `bad lines` exceptions - issue #2500",
     )
