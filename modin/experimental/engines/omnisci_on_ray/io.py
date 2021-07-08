@@ -302,7 +302,9 @@ class OmnisciOnRayIO(RayIO, TextFileDispatcher):
     @classmethod
     def _prepare_pyarrow_usecols(cls, read_csv_kwargs):
         """
-        Define `usecols` parameter in the way pyarrow can process it.
+        Define `usecols` parameter in the way PyArrow can process it.
+
+        Parameters
         ----------
         read_csv_kwargs:
                 read_csv function parameters.
@@ -489,7 +491,6 @@ class OmnisciOnRayIO(RayIO, TextFileDispatcher):
         read_csv_kwargs : dict
             Parameters of `read_csv` function.
         """
-
         delimiter = read_csv_kwargs.get("delimiter", None)
         sep = read_csv_kwargs.get("sep", lib.no_default)
         on_bad_lines = read_csv_kwargs.get("on_bad_lines", "error")
