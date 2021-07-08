@@ -721,13 +721,17 @@ def test_aggregate_numeric_except(request, data, func):
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_aggregate_error_checking(data):
-    modin_series, _ = create_test_series(data)  # noqa: F841
+    modin_series, pandas_series = create_test_series(data)
 
+    assert pandas_series.aggregate("ndim") == 1
     assert modin_series.aggregate("ndim") == 1
     with pytest.warns(UserWarning):
-        modin_series.aggregate("cumproduct")
-    with pytest.raises(ValueError):
-        modin_series.aggregate("NOT_EXISTS")
+        eval_general(
+            modin_series, pandas_series, lambda series: series.aggregate("cumproduct")
+        )
+    eval_general(
+        modin_series, pandas_series, lambda series: series.aggregate("NOT_EXISTS")
+    )
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)

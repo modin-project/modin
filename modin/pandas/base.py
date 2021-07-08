@@ -39,7 +39,6 @@ from pandas._typing import (
     TimestampConvertibleTypes,
 )
 import re
-import functools
 from typing import Optional, Union
 import warnings
 import pickle as pkl
@@ -334,31 +333,32 @@ class BasePandasDataset(object):
                 )
         return result
 
-    def _validate_function(self, func, on_invalid=TypeError):
+    def _validate_function(self, func, on_invalid=None):
         """
         Check the validity of the function which is intended to be applied to the frame.
 
         Parameters
         ----------
         func : object
-        on_invalid : callable(str), default: TypeError
+        on_invalid : callable(str, cls), optional
             Function to call in case invalid `func` is met, `on_invalid` takes an error
-            message as a single argument. If `on_invalid` has an Exception type then it
-            will arise. Raise ``TypeError`` by default.
+            message and an exception type as arguments. If not specified raise an
+            appropriate exception.
             **Note:** This parameter is a hack to concord with pandas error types.
         """
 
         def error_raiser(msg, exception=Exception):
             raise exception(msg)
 
-        if issubclass(on_invalid, Exception):
-            on_invalid = functools.partial(error_raiser, exception=on_invalid)
+        if on_invalid is None:
+            on_invalid = error_raiser
 
         if isinstance(func, dict):
-            [self._validate_function(fn) for fn in func.values()]
+            [self._validate_function(fn, on_invalid) for fn in func.values()]
             return
             # We also could validate this, but it may be quite expensive for lazy-frames
-            # all(idx in self.axes[axis] for idx in func.keys())
+            # if not all(idx in self.axes[axis] for idx in func.keys()):
+            #     error_raiser("Invalid dict keys", KeyError)
 
         if not is_list_like(func):
             func = [func]
@@ -366,11 +366,15 @@ class BasePandasDataset(object):
         for fn in func:
             if isinstance(fn, str):
                 if not (hasattr(self, fn) or hasattr(np, fn)):
-                    on_invalid(f"{fn} is not valid function for {type(self)} object.")
+                    on_invalid(
+                        f"{fn} is not valid function for {type(self)} object.",
+                        AttributeError,
+                    )
             elif not callable(fn):
                 on_invalid(
                     f"One of the passed functions has an invalid type: {type(fn)}: {fn}, "
-                    "only callable or string is acceptable."
+                    "only callable or string is acceptable.",
+                    TypeError,
                 )
 
     def _binary_op(self, op, other, **kwargs):
@@ -820,7 +824,14 @@ class BasePandasDataset(object):
         args=(),
         **kwds,
     ):
-        self._validate_function(func, on_invalid=AssertionError)
+        def error_raiser(msg, exception):
+            """Convert passed exception to the same type as pandas do and raise it."""
+            # HACK: to concord with pandas error types by replacing all of the
+            # TypeErrors to the AssertionErrors
+            exception = exception if exception is not TypeError else AssertionError
+            raise exception(msg)
+
+        self._validate_function(func, on_invalid=error_raiser)
         axis = self._get_axis_number(axis)
         ErrorMessage.non_verified_udf()
         if isinstance(func, str):

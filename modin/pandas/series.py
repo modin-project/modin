@@ -642,12 +642,26 @@ class Series(BasePandasDataset):
         else:
             return Series(query_compiler=query_compiler)
 
+    def aggregate(self, func=None, axis=0, *args, **kwargs):
+        def error_raiser(msg, exception):
+            """Convert passed exception to the same type as pandas do and raise it."""
+            # HACK: to concord with pandas error types by replacing all of the
+            # TypeErrors to the AssertionErrors
+            exception = exception if exception is not TypeError else AssertionError
+            raise exception(msg)
+
+        self._validate_function(func, on_invalid=error_raiser)
+        return super(Series, self).aggregate(func, axis, *args, **kwargs)
+
+    agg = aggregate
+
     def apply(
         self, func, convert_dtype=True, args=(), **kwargs
     ):  # noqa: PR01, RT01, D200
         """
         Invoke function on values of Series.
         """
+        self._validate_function(func)
         # apply and aggregate have slightly different behaviors, so we have to use
         # each one separately to determine the correct return type. In the case of
         # `agg`, the axis is set, but it is not required for the computation, so we use
