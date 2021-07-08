@@ -317,20 +317,29 @@ class TestCSV:
             True,
             False,
             ["col2"],
+            ["c2"],
+            [["col2", "col3"]],
+            {"col23": ["col2", "col3"]},
         ],
     )
+    @pytest.mark.parametrize("names", [None, [f"c{x}" for x in range(1, 7)]])
     def test_read_csv_datetime(
         self,
         engine,
         parse_dates,
+        names,
     ):
 
+        parse_dates_unsupported = isinstance(parse_dates, dict) or (
+            isinstance(parse_dates, list) and isinstance(parse_dates[0], list)
+        )
         eval_io(
             fn_name="read_csv",
-            md_extra_kwargs={"engine": engine},
+            md_extra_kwargs={"engine": None if parse_dates_unsupported else engine},
             # read_csv kwargs
             filepath_or_buffer=pytest.csvs_names["test_read_csv_regular"],
             parse_dates=parse_dates,
+            names=names,
         )
 
     @pytest.mark.parametrize("engine", [None, "arrow"])
