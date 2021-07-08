@@ -480,7 +480,7 @@ class OmnisciOnRayIO(RayIO, TextFileDispatcher):
         read_csv_kwargs: ReadCsvKwargsType,
     ):
         """
-        Validate `read_csv` keyward arguments.
+        Validate `read_csv` keyword arguments.
 
         Should be done to mimic `pandas.read_csv` behavior.
 
@@ -505,7 +505,7 @@ class OmnisciOnRayIO(RayIO, TextFileDispatcher):
             )
 
         if names is not lib.no_default and prefix is not lib.no_default:
-            raise ValueError("Specified named and prefix; you can only specify one.")
+            raise ValueError("Specified names and prefix; you can only specify one.")
 
         # Alias sep -> delimiter.
         if delimiter is None:
@@ -524,4 +524,4 @@ class OmnisciOnRayIO(RayIO, TextFileDispatcher):
                 )
 
         if on_bad_lines not in ["error", "warn", "skip", None]:
-            raise ValueError(f"Argument {on_bad_lines} is invalid for on_bad_lines")
+            raise ValueError(f"Argument {on_bad_lines} is invalid for on_bad_lines.")
