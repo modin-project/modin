@@ -3652,29 +3652,17 @@ def test_str_contains(data, pat, case, na):
 @pytest.mark.parametrize("n", int_arg_values, ids=int_arg_keys)
 @pytest.mark.parametrize("case", bool_arg_values, ids=bool_arg_keys)
 def test_str_replace(data, pat, repl, n, case):
-    modin_series, pandas_series = create_test_series(data)
-
-    try:
-        pandas_result = pandas_series.str.replace(
-            pat, repl, n=n, case=case, regex=False
-        )
-    except Exception as e:
-        with pytest.raises(type(e)):
-            modin_series.str.replace(pat, repl, n=n, case=case, regex=False)
-    else:
-        modin_result = modin_series.str.replace(pat, repl, n=n, case=case, regex=False)
-        df_equals(modin_result, pandas_result)
-
+    eval_general(
+        *create_test_series(data),
+        lambda series: series.str.replace(pat, repl, n=n, case=case, regex=False),
+    )
     # Test regex
-    pat = ",|b"
-    try:
-        pandas_result = pandas_series.str.replace(pat, repl, n=n, case=case, regex=True)
-    except Exception as e:
-        with pytest.raises(type(e)):
-            modin_series.str.replace(pat, repl, n=n, case=case, regex=True)
-    else:
-        modin_result = modin_series.str.replace(pat, repl, n=n, case=case, regex=True)
-        df_equals(modin_result, pandas_result)
+    eval_general(
+        *create_test_series(data),
+        lambda series: series.str.replace(
+            pat=",|b", repl=repl, n=n, case=case, regex=True
+        ),
+    )
 
 
 @pytest.mark.parametrize("data", test_string_data_values, ids=test_string_data_keys)
