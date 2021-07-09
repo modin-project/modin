@@ -16,7 +16,6 @@
 import types
 import re
 
-from collections import OrderedDict
 from textwrap import dedent, indent
 from typing import Union
 
@@ -117,32 +116,29 @@ def format_string(template: str, **kwargs) -> str:
     str
         Formated string.
     """
-    # We want to change indentation only for those values, whose placeholder located
-    # at the beginning of the line, in that case, the placeholder sets an indentation
+    # We want to change indentation only for those values which placeholders are located
+    # at the start of the line, in that case the placeholder sets an indentation
     # that the filling value has to obey.
-    template_lines = template.splitlines()
     # RegExp determining placeholders located at the beginning of the line.
-    regex = r"^[ ^{]*{(\w+)}"
-    to_align = OrderedDict()
-    for line_idx, line in enumerate(template_lines):
+    regex = r"^( *)\{(\w+)\}"
+    for line in template.splitlines():
         if line.strip() == "":
             continue
         match = re.search(regex, line)
         if match is None:
             continue
-        value_key = match.group(1)
-        to_align[value_key] = line_idx
+        nspaces = len(match.group(1))
+        key = match.group(2)
 
-    indents = _get_indents([template_lines[i] for i in to_align.values()])
-    for key, nspaces in zip(to_align.keys(), indents):
         value = kwargs.get(key)
         if not value:
             continue
         value = dedent(value)
 
-        # Since placeholder is located at the beginning of a new line, its already
-        # has '\n' before it, so to avoid double new lines we want to ensure that
-        # the value string doesn't starts with '\n'
+        # Since placeholder is located at the beginning of a new line,
+        # it already has '\n' before it, so to avoid double new lines
+        # we want to discard first '\n' at the value line, the others
+        # leading '\n' considered as a purposed new lines
         if value[0] == "\n":
             value = value[1:]
         # `.splitlines()` doesn't preserve last empty line,
@@ -150,7 +146,10 @@ def format_string(template: str, **kwargs) -> str:
         value_lines = value.splitlines()
         # We're not indenting the first line of the value, since it's already indented
         # properly because of the placeholder indentation.
-        indented_lines = [indent(line, " " * nspaces) for line in value_lines[1:]]
+        indented_lines = [
+            indent(line, " " * nspaces) if line != "\n" else line
+            for line in value_lines[1:]
+        ]
         # If necessary, restoring the last line dropped by `.splitlines()`
         if value[-1] == "\n":
             indented_lines += [" " * nspaces]

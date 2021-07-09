@@ -190,9 +190,11 @@ def test_format_string():
             Placeholder2:
             {new_line_placeholder2}
             Placeholder3:
-            {new_line_placeholder3}Text text:
-                Placeholder4:
-                {new_line_placeholder4}
+            {new_line_placeholder3}
+            Placeholder4:
+            {new_line_placeholder4}Text text:
+                Placeholder5:
+                {new_line_placeholder5}
     """
 
     singleline_value = "Single-line value"
@@ -200,7 +202,8 @@ def test_format_string():
         Some string
             Having different indentation
         From the source one."""
-    multiline_value_new_line = multiline_value + "\n"
+    multiline_value_new_line_at_the_end = multiline_value + "\n"
+    multiline_value_new_line_at_the_begin = "\n" + multiline_value
 
     expected = """
             Source template string that has some Single-line values.
@@ -211,22 +214,28 @@ def test_format_string():
             Placeholder2:
             Single-line value
             Placeholder3:
+            
+            Some string
+                Having different indentation
+            From the source one.
+            Placeholder4:
             Some string
                 Having different indentation
             From the source one.
             Text text:
-                Placeholder4:
+                Placeholder5:
                 Some string
                     Having different indentation
                 From the source one.
-    """
-
+    """  # noqa: W293
     answer = modin.utils.format_string(
         template,
         inline_placeholder=singleline_value,
         new_line_placeholder1=multiline_value,
         new_line_placeholder2=singleline_value,
-        new_line_placeholder3=multiline_value_new_line,
-        new_line_placeholder4=multiline_value,
+        new_line_placeholder3=multiline_value_new_line_at_the_begin,
+        new_line_placeholder4=multiline_value_new_line_at_the_end,
+        new_line_placeholder5=multiline_value,
     )
+    # breakpoint()
     assert answer == expected
