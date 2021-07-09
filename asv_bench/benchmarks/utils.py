@@ -138,10 +138,6 @@ def gen_int_data(nrows: int, ncols: int, rand_low: int, rand_high: int) -> dict:
     """
     Generate int data.
 
-    The generated data are saved in the dictionary and on a subsequent call,
-    if the keys match, saved data will be returned. Therefore, we need
-    to carefully monitor the changing of saved data and make its copy if needed.
-
     Parameters
     ----------
     nrows : int
@@ -173,10 +169,6 @@ def gen_int_data(nrows: int, ncols: int, rand_low: int, rand_high: int) -> dict:
 def gen_str_int_data(nrows: int, ncols: int, rand_low: int, rand_high: int) -> dict:
     """
     Generate int data and string data.
-
-    The generated data are saved in the dictionary and on a subsequent call,
-    if the keys match, saved data will be returned. Therefore, we need
-    to carefully monitor the changing of saved data and make its copy if needed.
 
     Parameters
     ----------
@@ -211,10 +203,6 @@ def gen_true_false_int_data(nrows, ncols, rand_low, rand_high):
     """
     Generate int data and string data "true" and "false" values.
 
-    The generated data are saved in the dictionary and on a subsequent call,
-    if the keys match, saved data will be returned. Therefore, we need
-    to carefully monitor the changing of saved data and make its copy if needed.
-
     Parameters
     ----------
     nrows : int
@@ -238,7 +226,7 @@ def gen_true_false_int_data(nrows, ncols, rand_low, rand_high):
             nrows, ncols, rand_low, rand_high
         )
     )
-    data = gen_int_data(nrows // 2, ncols // 2, rand_low, rand_high).copy()
+    data = gen_int_data(nrows // 2, ncols // 2, rand_low, rand_high)
 
     data_true_false = {
         "tf_col{}".format(i): random_state.choice(
