@@ -23,11 +23,10 @@ from ..utils import (
     ASV_DATASET_SIZE,
     IMPL,
     get_shape_id,
-    prepare_io_data,
 )
 
 from .utils import UNARY_OP_DATA_SIZE, trigger_import
-from ..io.csv import BaseReadCsv
+from ..io.csv import TimeReadCsvTrueFalseValues  # noqa: F401
 
 
 class TimeReadCsvNames:
@@ -51,6 +50,7 @@ class TimeReadCsvNames:
         return cache
 
     def setup(self, cache, shape):
+        self.execute = trigger_import
         # ray init
         if ASV_USE_IMPL == "modin":
             pd.DataFrame([])
@@ -58,30 +58,11 @@ class TimeReadCsvNames:
         self.filename, self.names, self.dtype = cache[file_id]
 
     def time_read_csv_names(self, cache, shape):
-        df = IMPL[ASV_USE_IMPL].read_csv(
-            self.filename,
-            names=self.names,
-            header=0,
-            dtype=self.dtype,
+        self.execute(
+            IMPL[ASV_USE_IMPL].read_csv(
+                self.filename,
+                names=self.names,
+                header=0,
+                dtype=self.dtype,
+            )
         )
-        trigger_import(df)
-
-
-class TimeReadCsvTrueFalseValues(BaseReadCsv):
-    param_names = ["shape"]
-    params = [
-        UNARY_OP_DATA_SIZE[ASV_DATASET_SIZE],
-    ]
-
-    # test data file can de created only once
-    def setup_cache(self, test_filename="io_test_file"):
-        test_filenames = prepare_io_data(test_filename, "true_false_int")
-        return test_filenames
-
-    def time_true_false_values(self, test_filenames, shape):
-        df = IMPL[ASV_USE_IMPL].read_csv(
-            test_filenames[self.shape_id],
-            true_values=["Yes", "true"],
-            false_values=["No", "false"],
-        )
-        trigger_import(df)

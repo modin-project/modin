@@ -26,6 +26,8 @@ from ..utils import (
     get_shape_id,
     prepare_io_data,
 )
+from ..omnisci.utils import trigger_import
+from modin.config import Backend
 
 
 class BaseReadCsv:
@@ -35,6 +37,7 @@ class BaseReadCsv:
         return test_filenames
 
     def setup(self, test_filenames, shape, *args, **kwargs):
+        self.execute = trigger_import if Backend.get == "Omnisci" else execute
         # ray init
         if ASV_USE_IMPL == "modin":
             pd.DataFrame([])
@@ -64,7 +67,7 @@ class TimeReadCsvSkiprows(BaseReadCsv):
         self.skiprows = self.skiprows_mapping[skiprows] if skiprows else None
 
     def time_skiprows(self, test_filenames, shape, skiprows):
-        execute(
+        self.execute(
             IMPL[ASV_USE_IMPL].read_csv(
                 test_filenames[self.shape_id], skiprows=self.skiprows
             )
@@ -83,7 +86,7 @@ class TimeReadCsvTrueFalseValues(BaseReadCsv):
         return test_filenames
 
     def time_true_false_values(self, test_filenames, shape):
-        execute(
+        self.execute(
             IMPL[ASV_USE_IMPL].read_csv(
                 test_filenames[self.shape_id],
                 true_values=["Yes", "true"],
@@ -136,6 +139,7 @@ class TimeReadCsvNamesDtype:
         return cache
 
     def setup(self, cache, shape, names, dtype):
+        self.execute = trigger_import if Backend.get == "Omnisci" else execute
         # ray init
         if ASV_USE_IMPL == "modin":
             pd.DataFrame([])
@@ -151,7 +155,7 @@ class TimeReadCsvNamesDtype:
             self.parse_dates = self._timestamp_columns
 
     def time_read_csv_names_dtype(self, cache, shape, names, dtype):
-        execute(
+        self.execute(
             IMPL[ASV_USE_IMPL].read_csv(
                 self.filename,
                 names=self.names,
