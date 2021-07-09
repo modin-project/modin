@@ -237,5 +237,4 @@ def test_format_string():
         new_line_placeholder4=multiline_value_new_line_at_the_end,
         new_line_placeholder5=multiline_value,
     )
-    # breakpoint()
     assert answer == expected
