@@ -168,14 +168,14 @@ def align_indents(source: str, target: str) -> str:
     Parameters
     ----------
     source : str
-        Source function to align indents with.
+        Source string to align indents with.
     target : str
-        Target function to align indents.
+        Target string to align indents.
 
     Returns
     -------
     str
-        Target function with indents aligned with the source.
+        Target string with indents aligned with the source.
     """
     source_indent = _get_indent(source)
     target = dedent(target)

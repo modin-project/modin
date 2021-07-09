@@ -14,7 +14,7 @@
 """Module contains decorators for documentation of the query compiler methods."""
 
 from functools import partial
-from modin.utils import append_to_docstring, format_string
+from modin.utils import append_to_docstring, format_string, align_indents
 
 
 _one_column_warning = """
@@ -89,7 +89,7 @@ def doc_qc_method(
     Parameters
     ----------
     template : str
-        Method docstring in the NumPy docstyle format. Must contains {params}
+        Method docstring in the NumPy docstyle format. Must contain {params}
         placeholder.
     params : str, optional
         Method parameters in the NumPy docstyle format to substitute
@@ -157,7 +157,7 @@ def doc_binary_method(operation, sign, self_on_right=False, op_type="arithmetic"
     template = """
     Perform element-wise {operation} (``{verbose}``).
 
-    If axes are note equal, first perform frames allignment.
+    If axes are not equal, perform frames alignment first.
 
     Parameters
     ----------
@@ -166,7 +166,7 @@ def doc_binary_method(operation, sign, self_on_right=False, op_type="arithmetic"
     broadcast : bool, default: False
         If `other` is a one-column query compiler, indicates whether it is a Series or not.
         Frames and Series have to be processed differently, however we can't distinguish them
-        at the query compiler level, so this parameter is a hint that passed from a high level API.
+        at the query compiler level, so this parameter is a hint that is passed from a high-level API.
     {extra_params}**kwargs : dict
         Serves the compatibility purpose. Does not affect the result.
 
@@ -181,17 +181,17 @@ def doc_binary_method(operation, sign, self_on_right=False, op_type="arithmetic"
         level : int or label
             In case of MultiIndex match index values on the passed level.
         axis : {{0, 1}}
-            Axis to match indice along for 1D `other` (list or QueryCompiler that represents Series).
+            Axis to match indices along for 1D `other` (list or QueryCompiler that represents Series).
             0 is for index, when 1 is for columns.
         """,
         "arithmetic": """
         level : int or label
             In case of MultiIndex match index values on the passed level.
         axis : {{0, 1}}
-            Axis to match indice along for 1D `other` (list or QueryCompiler that represents Series).
+            Axis to match indices along for 1D `other` (list or QueryCompiler that represents Series).
             0 is for index, when 1 is for columns.
         fill_value : float or None
-            Value to fill missing elements in the result of frame allignment.
+            Value to fill missing elements during frame alignment.
         """,
     }
 
@@ -263,10 +263,11 @@ def doc_reduce_agg(method, refer_to, params=None, extra_params=None):
             Serves the compatibility purpose. Does not affect the result.""",
     }
 
-    params = "".join(
-        [params]
-        + [
-            extra_params_map.get(param, f"{param} : object\n")
+    params += "".join(
+        [
+            align_indents(
+                source=params, target=extra_params_map.get(param, f"\n{param} : object")
+            )
             for param in (extra_params or [])
         ]
     )
@@ -339,7 +340,7 @@ def doc_resample_reduction(result, refer_to, params=None, compatibility_params=T
         Method parameters in the NumPy docstyle format to substitute
         to the docstring template.
     compatibility_params : bool, default: True
-        Whether method takes `*args` and `**kwargs` that does not affect
+        Whether method takes `*args` and `**kwargs` that do not affect
         the result.
 
     Returns
@@ -586,9 +587,9 @@ def doc_window_method(
             - Output QueryCompiler has the same shape and axes labels as the source.
             - Each element is the {result} for the corresponding window.""",
         "udf_aggregation": """
-            - Labels on the specified axis is preserved.
-            - Labels on the opposit of specified axis is MultiIndex, where first level
-              contains preserved labels of this axis and the second level is the function names.
+            - Labels on the specified axis are preserved.
+            - Labels on the opposit of specified axis are MultiIndex, where first level
+              contains preserved labels of this axis and the second level has the function names.
             - Each element of QueryCompiler is the result of corresponding function for the
               corresponding window and column/row.""",
     }
@@ -647,8 +648,8 @@ def doc_groupby_method(result, refer_to, action=None):
     groupby_args : dict
         GroupBy parameters as expected by ``modin.pandas.DataFrame.groupby`` signature.
     map_args : dict
-        Keyword arguments to pass to the reduction function. If GroupBy is implemented with MapReduce
-        approach, passes this arguments at the map phase only.
+        Keyword arguments to pass to the reduction function. If GroupBy is implemented via MapReduce
+        approach, this argument is passed at the map phase only.
     reduce_args : dict, optional
         If GroupBy is implemented with MapReduce approach, specifies arguments to pass to
         the reduction function at the reduce phase, has no effect otherwise.
@@ -664,7 +665,7 @@ def doc_groupby_method(result, refer_to, action=None):
         QueryCompiler containing the result of groupby reduction built by the
         following rules:
 
-        - Labels on the opposit of specified axis is preserved.
+        - Labels on the opposit of specified axis are preserved.
         - If groupby_args["as_index"] is True then labels on the specified axis
           are the group names, otherwise labels would be default: 0, 1 ... n.
         - If groupby_args["as_index"] is False, then first N columns/rows of the frame

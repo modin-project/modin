@@ -998,7 +998,7 @@ class BaseQueryCompiler(abc.ABC):
         extra_params=["**kwargs"],
         params="axis : {{0, 1}}",
     )
-    def prod(self, **kwargs):
+    def prod(self, **kwargs):  # noqa: PR02
         return DataFrameDefault.register(pandas.DataFrame.prod)(self, **kwargs)
 
     @doc_utils.doc_reduce_agg(
@@ -1007,7 +1007,7 @@ class BaseQueryCompiler(abc.ABC):
         extra_params=["**kwargs"],
         params="axis : {{0, 1}}",
     )
-    def sum(self, **kwargs):
+    def sum(self, **kwargs):  # noqa: PR02
         return DataFrameDefault.register(pandas.DataFrame.sum)(self, **kwargs)
 
     @doc_utils.add_refer_to("to_datetime")
@@ -1782,7 +1782,6 @@ class BaseQueryCompiler(abc.ABC):
         BaseQueryCompiler
             New QueryCompiler with all null values filled.
         """
-
         squeeze_self = kwargs.pop("squeeze_self", False)
         squeeze_value = kwargs.pop("squeeze_value", False)
 
