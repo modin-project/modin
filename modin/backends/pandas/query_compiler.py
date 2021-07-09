@@ -2722,7 +2722,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 )
                 internal_by_cols = internal_by_df.columns
 
-                external_by = by.columns.difference(internal_by)
+                external_by = by.columns.difference(internal_by).unique()
                 external_by_df = by[external_by].squeeze(axis=1)
 
                 if isinstance(external_by_df, pandas.DataFrame):

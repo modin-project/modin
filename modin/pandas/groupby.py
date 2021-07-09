@@ -194,41 +194,48 @@ class DataFrameGroupBy(object):
         return 2  # ndim is always 2 for DataFrames
 
     def shift(self, periods=1, freq=None, axis=0, fill_value=None):
-        def _shift(periods, freq, axis, fill_value, is_set_nan_rows=True):
+        def _shift(data, periods, freq, axis, fill_value, is_set_nan_rows=True):
             from .dataframe import DataFrame
 
-            result = self._df.shift(periods, freq, axis, fill_value)
+            result = data.shift(periods, freq, axis, fill_value)
 
             if (
                 is_set_nan_rows
                 and isinstance(self._by, BaseQueryCompiler)
                 and (
                     # Check using `issubset` is effective only in case of MultiIndex
-                    set(self._by.columns).issubset(list(self._df.columns))
+                    set(self._by.columns).issubset(list(data.columns))
                     if isinstance(self._by.columns, pandas.MultiIndex)
                     else len(
                         self._by.columns.unique()
                         .sort_values()
-                        .difference(self._df.columns.unique().sort_values())
+                        .difference(data.columns.unique().sort_values())
                     )
                     == 0
                 )
                 and DataFrame(query_compiler=self._by.isna()).any(axis=None)
             ):
-                mask_nan_rows = self._df[self._by.columns].isna().any(axis=1)
+                mask_nan_rows = data[self._by.columns].isna().any(axis=1)
                 # drop NaN groups
                 result = result.loc[~mask_nan_rows]
             return result
 
         if freq is None and axis == 1 and self._axis == 0:
-            result = _shift(periods, freq, axis, fill_value)
+            no_by_data = (
+                self._df.drop(columns=self._by.columns)
+                if isinstance(self._by, BaseQueryCompiler)
+                else self._df
+            )
+            result = _shift(no_by_data, periods, freq, axis, fill_value)
         elif (
             freq is not None
             and axis == 0
             and self._axis == 0
             and isinstance(self._by, BaseQueryCompiler)
         ):
-            result = _shift(periods, freq, axis, fill_value, is_set_nan_rows=False)
+            result = _shift(
+                self._df, periods, freq, axis, fill_value, is_set_nan_rows=False
+            )
             new_idx_lvl_arrays = np.concatenate(
                 [self._df[self._by.columns].values.T, [list(result.index)]]
             )
