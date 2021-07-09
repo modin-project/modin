@@ -77,7 +77,7 @@ class TimeReadCsvTrueFalseValues(BaseReadCsv):
         UNARY_OP_DATA_SIZE[ASV_DATASET_SIZE],
     ]
 
-    # test data file can de created only once
+    # test data file should be created only once
     def setup_cache(self, test_filename="io_test_file"):
         test_filenames = prepare_io_data(test_filename, "true_false_int")
         return test_filenames

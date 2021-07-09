@@ -335,10 +335,9 @@ def gen_data(
     Notes
     -----
     Returned data type depends on the `data_type` parameter in the next way:
-
-    - `data_type`=="int" - all columns will be contain only integer values
-    - `data_type`=="str_int" some of the columns will be of string type,
-    - `data_type`=="true_false_int" half of the columns will be filed with
+    - `data_type`=="int" - all columns will be contain only integer values;
+    - `data_type`=="str_int" some of the columns will be of string type;
+    - `data_type`=="true_false_int" half of the columns will be filled with
       string values representing "true" and "false" values and another half - with
       integers.
     """
