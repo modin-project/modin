@@ -725,10 +725,20 @@ def test_aggregate_error_checking(data):
 
     assert pandas_series.aggregate("ndim") == 1
     assert modin_series.aggregate("ndim") == 1
-    with pytest.warns(UserWarning):
-        eval_general(
-            modin_series, pandas_series, lambda series: series.aggregate("cumproduct")
-        )
+
+    def user_warning_checker(series, fn):
+        if isinstance(series, pd.Series):
+            with pytest.warns(UserWarning):
+                return fn(series)
+        return fn(series)
+
+    eval_general(
+        modin_series,
+        pandas_series,
+        lambda series: user_warning_checker(
+            series, fn=lambda series: series.aggregate("cumproduct")
+        ),
+    )
     eval_general(
         modin_series, pandas_series, lambda series: series.aggregate("NOT_EXISTS")
     )
