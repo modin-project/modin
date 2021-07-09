@@ -27,15 +27,13 @@ row partitions using the function :py:func:`~modin.distributed.dataframe.pandas.
   :members:
 
 :py:class:`~modin.experimental.xgboost.Booster` inherits original class ``xgboost.Booster`` and
-overrides method ``predict``. The main differences from original class interface for ``predict``
-method are: (1) changing the type of the `data` parameter to :py:class:`~modin.experimental.xgboost.DMatrix`, and (2)
-a new parameter `num_actors`, which specifies the number of actors to run for prediction.
+overrides method ``predict``. The difference from original class interface for ``predict``
+method is changing the type of the `data` parameter to :py:class:`~modin.experimental.xgboost.DMatrix`.
 
 .. autoclass:: modin.experimental.xgboost.Booster
     :members:
 
-:py:func:`~modin.experimental.xgboost.train` function (similar to ``predict`` method of
-:py:class:`~modin.experimental.xgboost.Booster`) has 2 differences from the original ``train`` function - (1) the
+:py:func:`~modin.experimental.xgboost.train` function has 2 differences from the original ``train`` function - (1) the
 data type of `dtrain` parameter is :py:class:`~modin.experimental.xgboost.DMatrix` and (2) a new parameter `num_actors`.
 
 .. autofunction:: modin.experimental.xgboost.train
@@ -44,10 +42,13 @@ Internal execution flow on Ray backend
 ''''''''''''''''''''''''''''''''''''''
 
 Internal functions :py:func:`~modin.experimental.xgboost.xgboost_ray._train` and
-:py:func:`~modin.experimental.xgboost.xgboost_ray._predict` work similar to xgboost. Approximate execution flow of
-internal implementation is the following:
+:py:func:`~modin.experimental.xgboost.xgboost_ray._predict` work similar to xgboost.
 
-1. The data is passed to :py:func:`~modin.experimental.xgboost.xgboost_ray._train`/:py:func:`~modin.experimental.xgboost.xgboost_ray._predict`
+
+Training
+********
+
+1. The data is passed to :py:func:`~modin.experimental.xgboost.xgboost_ray._train`
    function as a :py:class:`~modin.experimental.xgboost.DMatrix` object. Using an iterator of
    :py:class:`~modin.experimental.xgboost.DMatrix`, lists of ``ray.ObjectRef`` with row partitions of Modin DataFrame are exctracted. Example:
 
@@ -58,54 +59,49 @@ internal implementation is the following:
    ..
 
 2. On this step, the parameter `num_actors` is processed. The internal function :py:func:`~modin.experimental.xgboost.xgboost_ray._get_num_actors`
-   examines the value provided by the user and checks if it fits in the set of expected values
-   (int, "default_train", "default_predict").
+   examines the value provided by the user and checks if it fits in the set of expected values (int, None).
 
    * int - `num_actors` won't be changed. This value will be used.
-   * "default_train" - `num_actors` will be computed using condition that 1 actor should use maximum 2 CPUs.
+   * None - `num_actors` will be computed using condition that 1 actor should use maximum 2 CPUs.
      This condition was chosen for using maximum parallel workers with multithreaded XGBoost training (2 threads
      per worker will be used in this case).
-   * "default_predict" - `num_actors` will be computed using condition that 1 actor should use maximum 8 CPUs.
-     This condition was chosen to combine parallelization techniques: parallel actors and parallel threads.
 
-.. note:: `num_actors` parameter is made available for public functions :py:func:`~modin.experimental.xgboost.train` and ``predict``
-  method of :py:class:`~modin.experimental.xgboost.Booster` class to allow fine-tuning for obtaining the best
-  performance in specific use cases.
+.. note:: `num_actors` parameter is made available for public function :py:func:`~modin.experimental.xgboost.train` to allow
+  fine-tuning for obtaining the best performance in specific use cases.
 
-3. ``ray.util.placement_group`` is created to reserve all available Ray resources. After that
-   :py:class:`~modin.experimental.xgboost.xgboost_ray.ModinXGBoostActor` objects are created using resources of the
-   previously created placement group.
+3. :py:class:`~modin.experimental.xgboost.xgboost_ray.ModinXGBoostActor` objects are created.
 
-4. Data (`dtrain` for :py:func:`~modin.experimental.xgboost.xgboost_ray._train`, `data` for
-   :py:func:`~modin.experimental.xgboost.xgboost_ray._predict`) is split between actors evenly. The internal function
+4. Data `dtrain` is split between actors evenly. The internal function
    :py:func:`~modin.experimental.xgboost.xgboost_ray._split_data_across_actors` runs assigning row partitions to actors
    using internal function :py:func:`~modin.experimental.xgboost.xgboost_ray._assign_row_partitions_to_actors`.
-   This function creates a dictionary in the form: `{actor_rank: ([part_i0, part_i3, ..], [0, 3, ..]), ..}` for training,
-   `{actor_rank: [part_i0, part_i1, ..], ..}` for prediction.
+   This function creates a dictionary in the form: `{actor_rank: ([part_i0, part_i3, ..], [0, 3, ..]), ..}`.
 
 .. note:: :py:func:`~modin.experimental.xgboost.xgboost_ray._assign_row_partitions_to_actors` takes into account IP
   addresses of row partitions of `dtrain` data to minimize excess data transfer.
 
-1. For each :py:class:`~modin.experimental.xgboost.xgboost_ray.ModinXGBoostActor` the object methods ``set_train_data`` or ``set_predict_data`` are
-   called remotely. Those methods run by loading row partitions in actor according to the dictionary with partitions
+5. For each :py:class:`~modin.experimental.xgboost.xgboost_ray.ModinXGBoostActor` the object method ``set_train_data`` is
+   called remotely. This method runs loading row partitions in actor according to the dictionary with partitions
    distribution from previous step. When data is passed to the actor, the row partitions are automatically materialized
    (``ray.ObjectRef`` -> ``pandas.DataFrame``).
 
-2. Methods ``train`` or ``predict`` of :py:class:`~modin.experimental.xgboost.xgboost_ray.ModinXGBoostActor` class object are called remotely.
+6. Method ``train`` of :py:class:`~modin.experimental.xgboost.xgboost_ray.ModinXGBoostActor` class object is called remotely. This method
+   runs XGBoost training on local data of actor, connects to ``Rabit Tracker`` for sharing training state between
+   actors and returns dictionary with `booster` and `evaluation results`.
 
-   * ``train``: method runs XGBoost training on local data of actor, connects to ``Rabit Tracker`` for sharing
-     training state between actors and returns dictionary with `booster` and `evaluation results`.
-   * ``predict``: method runs XGBoost prediction on local data of actor and returns IP address of actor and partial
-     prediction (``pandas.DataFrame``).
+7. On the final stage results from actors are returned. `booster` and `evals_result` is returned using ``ray.get``
+   function from remote actor.
 
-3. On the final stage results from actors are returned.
 
-   * ``train``: `booster` and `evals_result` is returned using ``ray.get`` function from remote actor. Placement
-     group which was created on the step 3 is removed to free resources. :py:class:`~modin.experimental.xgboost.Booster`
-     object is created and returned to user. 
-   * ``predict``: using ``ray.wait`` function we wait until all actors finish computing local predictions. Placement group
-     which was created on the step 3 is removed to free resources. ``modin.pandas.DataFrame`` is created from
-     ``ray.ObjectRef`` objects which is returned from actors. Modin DataFrame is returned to user.
+Prediction
+**********
+
+1. The data is passed to :py:func:`~modin.experimental.xgboost.xgboost_ray._predict`
+   function as a :py:class:`~modin.experimental.xgboost.DMatrix` object.
+
+2. The function :py:func:`~modin.experimental.xgboost.xgboost_ray._map_predict` is applied remotely for an each partition
+   of the data to make a partial prediction.
+
+3. Result ``modin.pandas.DataFrame`` is created from ``ray.ObjectRef`` objects, obtained in the previous step.
 
 
 Internal API
@@ -119,3 +115,4 @@ Internal API
 .. autofunction:: modin.experimental.xgboost.xgboost_ray._predict
 .. autofunction:: modin.experimental.xgboost.xgboost_ray._get_num_actors
 .. autofunction:: modin.experimental.xgboost.xgboost_ray._split_data_across_actors
+.. autofunction:: modin.experimental.xgboost.xgboost_ray._map_predict

@@ -54,6 +54,12 @@ class DMatrix(xgb.DMatrix):
         self.data = unwrap_partitions(data, axis=0, get_ip=True)
         self.label = unwrap_partitions(label, axis=0)
 
+        self.data_metainfo = (
+            data.index,
+            data.columns,
+            data._query_compiler._modin_frame._row_lengths,
+        )
+
     def __iter__(self):
         """
         Return unwrapped `self.data` and `self.label`.
@@ -94,23 +100,18 @@ class Booster(xgb.Booster):
     def predict(
         self,
         data: DMatrix,
-        num_actors: Optional[int] = None,
         **kwargs,
     ):
         """
         Run distributed prediction with a trained booster.
 
-        During work it evenly distributes `data` between workers,
-        runs xgb.predict on each worker for subset of `data` and creates
-        Modin DataFrame with prediction results.
+        During work it runs xgb.predict on each worker for row partition of `data`
+        and creates Modin DataFrame with prediction results.
 
         Parameters
         ----------
         data : modin.experimental.xgboost.DMatrix
             Input data used for prediction.
-        num_actors : int, optional
-            Number of actors for prediction. If unspecified, this value will be
-            computed automatically.
         **kwargs : dict
             Other parameters are the same as `xgboost.Booster.predict`.
 
@@ -130,7 +131,7 @@ class Booster(xgb.Booster):
             data, DMatrix
         ), f"Type of `data` is {type(data)}, but expected {DMatrix}."
 
-        result = _predict(self.copy(), data, num_actors, **kwargs)
+        result = _predict(self.copy(), data, **kwargs)
         LOGGER.info("Prediction finished")
 
         return result
