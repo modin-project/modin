@@ -46,7 +46,7 @@ def _get_axis(axis):
 
     Parameters
     ----------
-    axis : {{0, 1}}
+    axis : {0, 1}
         Axis to get labels from.
 
     Returns
@@ -67,7 +67,7 @@ def _set_axis(axis):
 
     Parameters
     ----------
-    axis : {{0, 1}}
+    axis : {0, 1}
         Axis to set labels on.
 
     Returns
@@ -87,7 +87,7 @@ def _set_axis(axis):
 # FIXME: many of the BaseQueryCompiler methods are hiding actual arguments
 # by using *args and **kwargs. They should be spread into actual parameters.
 # Currently actual arguments are placed in the methods docstrings, but since they're
-# not presented in the function's signature it makes linter to raise `PR02: unknow parameters`
+# not presented in the function's signature it makes linter to raise `PR02: unknown parameters`
 # warning. For now, they're silenced by using `noqa` (Modin issue #3108).
 class BaseQueryCompiler(abc.ABC):
     """
@@ -146,7 +146,7 @@ class BaseQueryCompiler(abc.ABC):
         ----------
         prefix : str
             The string to add before each label.
-        axis : {{0, 1}}, default: 1
+        axis : {0, 1}, default: 1
             Axis to add prefix along. 0 is for index and 1 is for columns.
 
         Returns
@@ -169,7 +169,7 @@ class BaseQueryCompiler(abc.ABC):
         ----------
         suffix : str
             The string to add after each label.
-        axis : {{0, 1}}, default: 1
+        axis : {0, 1}, default: 1
             Axis to add suffix along. 0 is for index and 1 is for columns.
 
         Returns
@@ -215,20 +215,20 @@ class BaseQueryCompiler(abc.ABC):
 
         Parameters
         ----------
-        axis : {{0, 1}}
+        axis : {0, 1}
             Axis to concatenate along. 0 is for index and 1 is for columns.
         other : BaseQueryCompiler or list of such
             Objects to concatenate with `self`.
         join : {'outer', 'inner', 'right', 'left'}, default: 'outer'
             Type of join that will be used if indices on the other axis are different.
-            (note: if specified, has to be passed via `kwargs`).
+            (note: if specified, has to be passed as ``join=value``).
         ignore_index : bool, default: False
             If True, do not use the index values along the concatenation axis.
             The resulting axis will be labeled 0, …, n - 1.
-            (note: if specified, has to be passed via `kwargs`).
+            (note: if specified, has to be passed as ``ignore_index=value``).
         sort : bool, default: False
             Whether or not to sort non-concatenation axis.
-            (note: if specified, has to be passed via `kwargs`).
+            (note: if specified, has to be passed as ``sort=value``).
         **kwargs : dict
             Serves the compatibility purpose. Does not affect the result.
 
@@ -268,7 +268,6 @@ class BaseQueryCompiler(abc.ABC):
     @abc.abstractmethod
     def free(self):
         """Trigger a cleanup of this object."""
-        # TODO create a way to clean up this object.
         pass
 
     @abc.abstractmethod
@@ -302,7 +301,8 @@ class BaseQueryCompiler(abc.ABC):
         df : pandas.DataFrame
             The pandas DataFrame to convert from.
         data_cls : type
-            :py:class:`~modin.engines.base.frame.data.BasePandasFrame` class to convert to.
+            :py:class:`~modin.engines.base.frame.data.BasePandasFrame` class
+            (or its descendant) to convert to.
 
         Returns
         -------
@@ -325,7 +325,8 @@ class BaseQueryCompiler(abc.ABC):
         at : Arrow Table
             The Arrow Table to convert from.
         data_cls : type
-            :py:class:`~modin.engines.base.frame.data.BasePandasFrame` class to convert to.
+            :py:class:`~modin.engines.base.frame.data.BasePandasFrame` class
+            (or its descendant) to convert to.
 
         Returns
         -------
@@ -377,15 +378,15 @@ class BaseQueryCompiler(abc.ABC):
         """
         Perform column-wise combine with another QueryCompiler with passed `func`.
 
-        If axes are not equal, perform frames allignment first.
+        If axes are not equal, perform frames alignment first.
 
         Parameters
         ----------
         other : BaseQueryCompiler
             Left operand of the binary operation.
         func : callable(pandas.Series, pandas.Series) -> pandas.Series
-            Function that takes two ``pandas.Series`` with alligned axes
-            and returns one ``pandas.Series`` - the result combination.
+            Function that takes two ``pandas.Series`` with aligned axes
+            and returns one ``pandas.Series`` as resulting combination.
         fill_value : float or None
             Value to fill missing values with after frame alignment occurred.
         overwrite : bool
@@ -408,12 +409,12 @@ class BaseQueryCompiler(abc.ABC):
         """
         Fill null elements of `self` with value in the same location in `other`.
 
-        If axes are not equal, perform frames allignment first.
+        If axes are not equal, perform frames alignment first.
 
         Parameters
         ----------
         other : BaseQueryCompiler
-            Provided frame to use to fill null values.
+            Provided frame to use to fill null values from.
         **kwargs : dict
             Serves the compatibility purpose. Does not affect the result.
 
@@ -475,7 +476,7 @@ class BaseQueryCompiler(abc.ABC):
         Parameters
         ----------
         method : {'pearson', 'kendall', 'spearman'} or callable(pandas.Series, pandas.Series) -> pandas.Series
-            Method of correlation.
+            Correlation method.
         min_periods : int
             Minimum number of observations required per pair of columns
             to have a valid result. If fewer than `min_periods` non-NA values
@@ -510,12 +511,12 @@ class BaseQueryCompiler(abc.ABC):
 
     def dot(self, other, **kwargs):  # noqa: PR02
         """
-        Compute the matrix multiplication of self and other.
+        Compute the matrix multiplication of `self` and `other`.
 
         Parameters
         ----------
         other : BaseQueryCompiler or NumPy array
-            The other query compiler or NumPy array to matrix multiply with self.
+            The other query compiler or NumPy array to matrix multiply with `self`.
         squeeze_self : boolean
             If `self` is a one-column query compiler, indicates whether it represents Series object.
         squeeze_other : boolean
@@ -635,16 +636,16 @@ class BaseQueryCompiler(abc.ABC):
     @doc_utils.add_refer_to("DataFrame.update")
     def df_update(self, other, **kwargs):  # noqa: PR02
         """
-        Update values of self using non-NA values of other at the corresponding positions.
+        Update values of `self` using non-NA values of `other` at the corresponding positions.
 
-        If axes are not equal, perform frames allignment first.
+        If axes are not equal, perform frames alignment first.
 
         Parameters
         ----------
         other : BaseQueryCompiler
             Frame to grab replacement values from.
         join : {"left"}
-            Specify type of join to allign frames if axes are not equal
+            Specify type of join to align frames if axes are not equal
             (note: currently only one type of join is implemented).
         overwrite : bool
             Whether to overwrite every corresponding value of self, or only if it's NAN.
@@ -652,7 +653,7 @@ class BaseQueryCompiler(abc.ABC):
             Function that takes column of the self and return bool mask for values, that
             should be overwriten in the self frame.
         errors : {"raise", "ignore"}
-            If "raise", will raise a ``ValueError`` if self and other both contain
+            If "raise", will raise a ``ValueError`` if `self` and `other` both contain
             non-NA data in the same place.
         **kwargs : dict
             Serves the compatibility purpose. Does not affect the result.
@@ -669,7 +670,7 @@ class BaseQueryCompiler(abc.ABC):
     @doc_utils.add_refer_to("Series.update")
     def series_update(self, other, **kwargs):  # noqa: PR02
         """
-        Update values of self using values of other at the corresponding indices.
+        Update values of `self` using values of `other` at the corresponding indices.
 
         Parameters
         ----------
@@ -700,9 +701,9 @@ class BaseQueryCompiler(abc.ABC):
         ----------
         lower : float or list-like
         upper : float or list-like
-        axis : {{0, 1}}
-        inplace : bool
-            Serves the compatibility purpose. Does not affect the result.
+        axis : {0, 1}
+        inplace : {False}
+            This parameter serves the compatibility purpose. Always has to be False.
         **kwargs : dict
             Serves the compatibility purpose. Does not affect the result.
 
@@ -718,7 +719,7 @@ class BaseQueryCompiler(abc.ABC):
     @doc_utils.add_refer_to("DataFrame.where")
     def where(self, cond, other, **kwargs):  # noqa: PR02
         """
-        Update values of self using values from `other` at positions where `cond` is False.
+        Update values of `self` using values from `other` at positions where `cond` is False.
 
         Parameters
         ----------
@@ -726,7 +727,7 @@ class BaseQueryCompiler(abc.ABC):
             Boolean mask. True - keep the self value, False - replace by `other` value.
         other : BaseQueryCompiler or pandas.Series
             Object to grab replacement values from.
-        axis : {{0, 1}}
+        axis : {0, 1}
             Axis to align frames along if axes of self, `cond` and `other` are not equal.
             0 is for index, when 1 is for columns.
         level : int or label, optional
@@ -748,7 +749,7 @@ class BaseQueryCompiler(abc.ABC):
     @doc_utils.add_refer_to("DataFrame.merge")
     def merge(self, right, **kwargs):  # noqa: PR02
         """
-        Merge QueryCompiler objects with a database-style join.
+        Merge QueryCompiler objects using a database-style join.
 
         Parameters
         ----------
@@ -861,11 +862,11 @@ class BaseQueryCompiler(abc.ABC):
     @doc_utils.add_refer_to("DataFrame.reindex")
     def reindex(self, axis, labels, **kwargs):  # noqa: PR02
         """
-        Allign QueryCompiler data with a new index-labels along specified axis.
+        Align QueryCompiler data with a new index along specified axis.
 
         Parameters
         ----------
-        axis : {{0, 1}}
+        axis : {0, 1}
             Axis to align labels along. 0 is for index, 1 is for columns.
         labels : list-like
             Index-labels to align with.
@@ -895,7 +896,7 @@ class BaseQueryCompiler(abc.ABC):
         Parameters
         ----------
         drop : bool
-            Whether to drop the reseted index or insert it at the begining of the frame.
+            Whether to drop the reset index or insert it at the beginning of the frame.
         level : int or label, optional
             Level to remove from index. Removes all levels by default.
         col_level : int or label
@@ -910,7 +911,7 @@ class BaseQueryCompiler(abc.ABC):
         Returns
         -------
         BaseQueryCompiler
-            QueryCompiler with reseted index.
+            QueryCompiler with reset index.
         """
         return DataFrameDefault.register(pandas.DataFrame.reset_index)(self, **kwargs)
 
@@ -987,7 +988,7 @@ class BaseQueryCompiler(abc.ABC):
         return DataFrameDefault.register(pandas.DataFrame.mean)(self, **kwargs)
 
     @doc_utils.doc_reduce_agg(
-        method="manimum value", refer_to="min", extra_params=["skipna", "**kwargs"]
+        method="minimum value", refer_to="min", extra_params=["skipna", "**kwargs"]
     )
     def min(self, **kwargs):  # noqa: PR02
         return DataFrameDefault.register(pandas.DataFrame.min)(self, **kwargs)
@@ -996,7 +997,7 @@ class BaseQueryCompiler(abc.ABC):
         method="production",
         refer_to="prod",
         extra_params=["**kwargs"],
-        params="axis : {{0, 1}}",
+        params="axis : {0, 1}",
     )
     def prod(self, **kwargs):  # noqa: PR02
         return DataFrameDefault.register(pandas.DataFrame.prod)(self, **kwargs)
@@ -1005,7 +1006,7 @@ class BaseQueryCompiler(abc.ABC):
         method="sum",
         refer_to="sum",
         extra_params=["**kwargs"],
-        params="axis : {{0, 1}}",
+        params="axis : {0, 1}",
     )
     def sum(self, **kwargs):  # noqa: PR02
         return DataFrameDefault.register(pandas.DataFrame.sum)(self, **kwargs)
@@ -1065,9 +1066,6 @@ class BaseQueryCompiler(abc.ABC):
         """
         Get the complex conjugate for every element of self.
 
-        The complex conjugate of a complex number is obtained by changing the sign
-        of its imaginary part. Note that only numeric data is allowed.
-
         Parameters
         ----------
         **kwargs : dict
@@ -1094,7 +1092,7 @@ class BaseQueryCompiler(abc.ABC):
     #   2. Spread **kwargs into actual arguments (Modin issue #3108).
     def isin(self, **kwargs):  # noqa: PR02
         """
-        Check for each element of self whether it's contained in passed values.
+        Check for each element of `self` whether it's contained in passed `values`.
 
         Parameters
         ----------
@@ -1388,7 +1386,7 @@ class BaseQueryCompiler(abc.ABC):
 
         Parameters
         ----------
-        axis : {{0, 1}}, optional
+        axis : {0, 1}, optional
         bool_only : bool, optional
         skipna : bool
         level : int or label
@@ -1412,7 +1410,7 @@ class BaseQueryCompiler(abc.ABC):
 
         Parameters
         ----------
-        axis : {{0, 1}}, optional
+        axis : {0, 1}, optional
         bool_only : bool, optional
         skipna : bool
         level : int or label
@@ -1450,7 +1448,7 @@ class BaseQueryCompiler(abc.ABC):
 
         Parameters
         ----------
-        axis : {{0, 1}}
+        axis : {0, 1}
         skipna : bool
         **kwargs : dict
             Serves the compatibility purpose. Does not affect the result.
@@ -1471,7 +1469,7 @@ class BaseQueryCompiler(abc.ABC):
 
         Parameters
         ----------
-        axis : {{0, 1}}
+        axis : {0, 1}
         skipna : bool
         **kwargs : dict
             Serves the compatibility purpose. Does not affect the result.
@@ -1529,7 +1527,7 @@ class BaseQueryCompiler(abc.ABC):
         method="number of unique values",
         refer_to="nunique",
         params="""
-        axis : {{0, 1}}
+        axis : {0, 1}
         dropna : bool""",
         extra_params=["**kwargs"],
     )
@@ -1541,9 +1539,9 @@ class BaseQueryCompiler(abc.ABC):
         refer_to="quantile",
         params="""
         q : float
-        axis : {{0, 1}}
+        axis : {0, 1}
         numeric_only : bool
-        interpolation : {{"linear", "lower", "higher", "midpoint", "nearest"}}""",
+        interpolation : {"linear", "lower", "higher", "midpoint", "nearest"}""",
         extra_params=["**kwargs"],
     )
     def quantile_for_single_value(self, **kwargs):  # noqa: PR02
@@ -1638,7 +1636,7 @@ class BaseQueryCompiler(abc.ABC):
         Parameters
         ----------
         periods : int
-        axis : {{0, 1}}
+        axis : {0, 1}
         **kwargs : dict
             Serves the compatibility purpose. Does not affect the result.
 
@@ -1657,7 +1655,7 @@ class BaseQueryCompiler(abc.ABC):
 
         Parameters
         ----------
-        axis : {{0, 1}}
+        axis : {0, 1}
         how : {"any", "all"}
         thresh : int, optional
         subset : list of labels
@@ -1681,7 +1679,7 @@ class BaseQueryCompiler(abc.ABC):
         n : int, default: 5
         columns : list of labels, optional
             Column labels to order by.
-            (note: this parameter can be ommited only for a single-column query compilers
+            (note: this parameter can be omited only for a single-column query compilers
             representing Series object, otherwise `columns` has to be specified).
         keep : {"first", "last", "all"}, default: "first"
 
@@ -1706,7 +1704,7 @@ class BaseQueryCompiler(abc.ABC):
         n : int, default: 5
         columns : list of labels, optional
             Column labels to order by.
-            (note: this parameter can be ommited only for a single-column query compilers
+            (note: this parameter can be omited only for a single-column query compilers
             representing Series object, otherwise `columns` has to be specified).
         keep : {"first", "last", "all"}, default: "first"
 
@@ -1747,7 +1745,7 @@ class BaseQueryCompiler(abc.ABC):
 
         Parameters
         ----------
-        axis : {{0, 1}}
+        axis : {0, 1}
         numeric_only : bool
         dropna : bool
         **kwargs : dict
@@ -1769,7 +1767,7 @@ class BaseQueryCompiler(abc.ABC):
         ----------
         value : scalar or dict
         method : {"backfill", "bfill", "pad", "ffill", None}
-        axis : {{0, 1}}
+        axis : {0, 1}
         inplace : {False}
             This parameter serves the compatibility purpose. Always has to be False.
         limit : int, optional
@@ -1823,7 +1821,7 @@ class BaseQueryCompiler(abc.ABC):
 
         Parameters
         ----------
-        axis : {{0, 1}}
+        axis : {0, 1}
         method : {"average", "min", "max", "first", "dense"}
         numeric_only : bool
         na_option : {"keep", "top", "bottom"}
@@ -1847,7 +1845,7 @@ class BaseQueryCompiler(abc.ABC):
 
         Parameters
         ----------
-        axis : {{0, 1}}
+        axis : {0, 1}
         level : int, label or list of such
         ascending : bool
         inplace : bool
@@ -1958,7 +1956,7 @@ class BaseQueryCompiler(abc.ABC):
         refer_to="quantile",
         params="""
         q : list-like
-        axis : {{0, 1}}
+        axis : {0, 1}
         numeric_only : bool
         interpolation : {"linear", "lower", "higher", "midpoint", "nearest"}""",
         extra_params=["**kwargs"],
@@ -1977,7 +1975,7 @@ class BaseQueryCompiler(abc.ABC):
         ----------
         key : BaseQueryCompiler, np.ndarray or list of column labels
             Boolean mask represented by QueryCompiler or ``np.ndarray`` of the same
-            shape as `self`, or enumeratable of columns to pick.
+            shape as `self`, or enumerable of columns to pick.
 
         Returns
         -------
@@ -2104,7 +2102,7 @@ class BaseQueryCompiler(abc.ABC):
         ----------
         func : callable(pandas.Series) -> scalar, str, list or dict of such
             The function to apply to each column or row.
-        axis : {{0, 1}}
+        axis : {0, 1}
             Target axis to apply the function along.
             0 is for index, 1 is for columns.
         *args : iterable
@@ -2357,11 +2355,11 @@ class BaseQueryCompiler(abc.ABC):
         is_multi_by : bool
             If `by` is a QueryCompiler or list of such indicates whether it's
             grouping on multiple columns/rows.
-        axis : {{0, 1}}
+        axis : {0, 1}
             Axis to group and apply aggregation function along.
             0 is for index, when 1 is for columns.
-        agg_func : dict or callable(pandas.core.groupby.DataFrameGroupBy) -> pandas.DataFrame
-            Function to apply to the pandas GroupBy object.
+        agg_func : dict or callable(DataFrameGroupBy) -> DataFrame
+            Function to apply to the GroupBy object.
         agg_args : dict
             Positional arguments to pass to the `agg_func`.
         agg_kwargs : dict
@@ -2537,7 +2535,7 @@ class BaseQueryCompiler(abc.ABC):
 
         Parameters
         ----------
-        axis : {{0, 1}}
+        axis : {0, 1}
             Axis to return labels on.
             0 is for index, when 1 is for columns.
 
@@ -2575,11 +2573,11 @@ class BaseQueryCompiler(abc.ABC):
         """
         Insert rows/columns defined by `value` at the specified position.
 
-        If frames are not aligned along specified axis, perform frames allignment first.
+        If frames are not aligned along specified axis, perform frames alignment first.
 
         Parameters
         ----------
-        axis : {{0, 1}}
+        axis : {0, 1}
             Axis to insert along. 0 means insert rows, when 1 means insert columns.
         loc : int
             Position to insert `value`.
@@ -2621,7 +2619,7 @@ class BaseQueryCompiler(abc.ABC):
 
         Parameters
         ----------
-        axis : {{0, 1}}
+        axis : {0, 1}
             Axis to set `value` along. 0 means set row, 1 means set column.
         key : label
             Row/column label to set `value` in.
@@ -2720,7 +2718,7 @@ class BaseQueryCompiler(abc.ABC):
 
         Parameters
         ----------
-        axis : {{0, 1}}, default: 0
+        axis : {0, 1}, default: 0
             The axis to check (0 - index, 1 - columns).
 
         Returns
@@ -2739,7 +2737,7 @@ class BaseQueryCompiler(abc.ABC):
 
         Parameters
         ----------
-        axis : {{0, 1}}, default: 0
+        axis : {0, 1}, default: 0
             Axis to get index name on.
 
         Returns
@@ -2757,7 +2755,7 @@ class BaseQueryCompiler(abc.ABC):
         ----------
         name : hashable
             New index name.
-        axis : {{0, 1}}, default: 0
+        axis : {0, 1}, default: 0
             Axis to set name along.
         """
         self.get_axis(axis).name = name
@@ -2768,7 +2766,7 @@ class BaseQueryCompiler(abc.ABC):
 
         Parameters
         ----------
-        axis : {{0, 1}}, default: 0
+        axis : {0, 1}, default: 0
             Axis to get index names on.
 
         Returns
@@ -2786,7 +2784,7 @@ class BaseQueryCompiler(abc.ABC):
         ----------
         names : list
             New index names.
-        axis : {{0, 1}}, default: 0
+        axis : {0, 1}, default: 0
             Axis to set names along.
         """
         self.get_axis(axis).names = names
@@ -3224,7 +3222,7 @@ class BaseQueryCompiler(abc.ABC):
             self, resample_args, fill_value
         )
 
-    # FIXME: `resample_backfill` is an alias for `resample_bfill`, on of these method
+    # FIXME: `resample_backfill` is an alias for `resample_bfill`, one of these method
     # should be removed (Modin issue #3107).
     @doc_utils.doc_resample_fillna(method="back-fill", refer_to="backfill")
     def resample_backfill(self, resample_args, limit):
@@ -3246,7 +3244,7 @@ class BaseQueryCompiler(abc.ABC):
             self, resample_args
         )
 
-    # FIXME: `resample_ffill` is an alias for `resample_pad`, on of these method
+    # FIXME: `resample_ffill` is an alias for `resample_pad`, one of these method
     # should be removed (Modin issue #3107).
     @doc_utils.doc_resample_fillna(method="forward-fill", refer_to="ffill")
     def resample_ffill(self, resample_args, limit):
@@ -3254,7 +3252,7 @@ class BaseQueryCompiler(abc.ABC):
             self, resample_args, limit
         )
 
-    # FIXME: we should combine all method all resample fillna methods into `resample_fillna`
+    # FIXME: we should combine all resample fillna methods into `resample_fillna`
     # (Modin issue #3107)
     @doc_utils.doc_resample_fillna(
         method="specified", refer_to="fillna", params="method : str"
@@ -3303,7 +3301,7 @@ class BaseQueryCompiler(abc.ABC):
         refer_to="interpolate",
         params="""
         method : str
-        axis : {{0, 1}}
+        axis : {0, 1}
         limit : int
         inplace : {False}
             This parameter serves the compatibility purpose. Always has to be False.
@@ -3966,7 +3964,7 @@ class BaseQueryCompiler(abc.ABC):
         )
 
     @doc_utils.doc_window_method(
-        result="unibased kurtosis", refer_to="kurt", params="**kwargs : dict"
+        result="unbiased kurtosis", refer_to="kurt", params="**kwargs : dict"
     )
     def rolling_kurt(self, rolling_args, **kwargs):
         return RollingDefault.register(pandas.core.window.rolling.Rolling.kurt)(
@@ -4033,7 +4031,7 @@ class BaseQueryCompiler(abc.ABC):
         )
 
     @doc_utils.doc_window_method(
-        result="unibased skewness", refer_to="skew", params="**kwargs : dict"
+        result="unbiased skewness", refer_to="skew", params="**kwargs : dict"
     )
     def rolling_skew(self, rolling_args, **kwargs):
         return RollingDefault.register(pandas.core.window.rolling.Rolling.skew)(
@@ -4172,7 +4170,7 @@ class BaseQueryCompiler(abc.ABC):
     @doc_utils.doc_reduce_agg(
         method="mean absolute deviation",
         params="""
-        axis : {{0, 1}}
+        axis : {0, 1}
         skipna : bool
         level : None, default: None
             Serves the compatibility purpose. Always has to be None.""",
@@ -4184,7 +4182,7 @@ class BaseQueryCompiler(abc.ABC):
         )
 
     @doc_utils.doc_reduce_agg(
-        method="unibased kurtosis", refer_to="kurt", extra_params=["skipna", "**kwargs"]
+        method="unbiased kurtosis", refer_to="kurt", extra_params=["skipna", "**kwargs"]
     )
     def kurt(self, axis, level=None, numeric_only=None, skipna=True, **kwargs):
         return DataFrameDefault.register(pandas.DataFrame.kurt)(
@@ -4204,7 +4202,7 @@ class BaseQueryCompiler(abc.ABC):
         other : BaseQueryCompiler
             Query compiler to compare with. Have to be the same shape and the same
             labeling as `self`.
-        align_axis : {{0, 1}}
+        align_axis : {0, 1}
         keep_shape : bool
         keep_equal : bool
 

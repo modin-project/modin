@@ -137,8 +137,8 @@ def format_string(template: str, **kwargs) -> str:
 
         # Since placeholder is located at the beginning of a new line,
         # it already has '\n' before it, so to avoid double new lines
-        # we want to discard first '\n' at the value line, the others
-        # leading '\n' considered as a purposed new lines
+        # we want to discard the first leading '\n' at the value line,
+        # the others leading '\n' considered as a purposed new lines
         if value[0] == "\n":
             value = value[1:]
         # `.splitlines()` doesn't preserve last empty line,
