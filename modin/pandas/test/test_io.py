@@ -725,10 +725,6 @@ class TestCsv:
         )
 
     # Error Handling parameters tests
-    @pytest.mark.skip(
-        Engine.get() not in ["Python", "Cloudpython"] and Backend.get() != "Omnisci",
-        reason="read_csv doesn't raise `bad lines` exceptions - issue #2500",
-    )
     @pytest.mark.parametrize("warn_bad_lines", [True, False, None])
     @pytest.mark.parametrize("error_bad_lines", [True, False, None])
     @pytest.mark.parametrize("on_bad_lines", ["error", "warn", "skip", None])
@@ -738,6 +734,17 @@ class TestCsv:
         error_bad_lines,
         on_bad_lines,
     ):
+        # in that case exceptions are raised both by Modin and pandas
+        # and tests pass
+        raise_exception_case = on_bad_lines is not None and (
+            error_bad_lines is not None or warn_bad_lines is not None
+        )
+        if (
+            not raise_exception_case
+            and Engine.get() not in ["Python", "Cloudpython"]
+            and Backend.get() != "Omnisci"
+        ):
+            pytest.xfail("read_csv doesn't raise `bad lines` exceptions - issue #2500")
         eval_io(
             fn_name="read_csv",
             # read_csv kwargs
