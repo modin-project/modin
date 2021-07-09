@@ -74,17 +74,16 @@ class PandasOnRayFrameAxisPartition(PandasFrameAxisPartition):
             A list of ``pandas.DataFrame``-s.
         """
         lengths = kwargs.get("_lengths", None)
-        return deploy_ray_func._remote(
-            args=(
-                PandasFrameAxisPartition.deploy_axis_func,
-                axis,
-                func,
-                num_splits,
-                kwargs,
-                maintain_partitioning,
-            )
-            + tuple(partitions),
-            num_returns=num_splits * 4 if lengths is None else len(lengths) * 4,
+        return deploy_ray_func.options(
+            num_returns=(num_splits if lengths is None else len(lengths)) * 4
+        ).remote(
+            PandasFrameAxisPartition.deploy_axis_func,
+            axis,
+            func,
+            num_splits,
+            kwargs,
+            maintain_partitioning,
+            *partitions,
         )
 
     @classmethod
@@ -117,18 +116,15 @@ class PandasOnRayFrameAxisPartition(PandasFrameAxisPartition):
         list
             A list of ``pandas.DataFrame``-s.
         """
-        return deploy_ray_func._remote(
-            args=(
-                PandasFrameAxisPartition.deploy_func_between_two_axis_partitions,
-                axis,
-                func,
-                num_splits,
-                len_of_left,
-                other_shape,
-                kwargs,
-            )
-            + tuple(partitions),
-            num_returns=num_splits * 4,
+        return deploy_ray_func.options(num_returns=num_splits * 4).remote(
+            PandasFrameAxisPartition.deploy_func_between_two_axis_partitions,
+            axis,
+            func,
+            num_splits,
+            len_of_left,
+            other_shape,
+            kwargs,
+            *partitions,
         )
 
     def _wrap_partitions(self, partitions):

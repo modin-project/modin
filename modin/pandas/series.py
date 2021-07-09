@@ -87,7 +87,7 @@ class Series(BasePandasDataset):
     """
     Modin distributed representation of `pandas.Series`.
 
-    Internally passed data is divided into partitions in order to parallelize
+    Internally, the data can be divided into partitions in order to parallelize
     computations and utilize the user's hardware as much as possible.
 
     Inherit common for DataFrames and Series functionality from the
@@ -1000,6 +1000,34 @@ class Series(BasePandasDataset):
             pandas.Series.factorize, sort=sort, na_sentinel=na_sentinel
         )
 
+    def fillna(
+        self,
+        value=None,
+        method=None,
+        axis=None,
+        inplace=False,
+        limit=None,
+        downcast=None,
+    ):  # noqa: PR01, RT01, D200
+        """
+        Fill NaNs inside of a Series object.
+        """
+        if isinstance(value, BasePandasDataset) and not isinstance(value, Series):
+            raise TypeError(
+                '"value" parameter must be a scalar, dict or Series, but '
+                'you passed a "{0}"'.format(type(value).__name__)
+            )
+        return super(Series, self)._fillna(
+            squeeze_self=True,
+            squeeze_value=isinstance(value, Series),
+            value=value,
+            method=method,
+            axis=axis,
+            inplace=inplace,
+            limit=limit,
+            downcast=downcast,
+        )
+
     def floordiv(
         self, other, level=None, fill_value=None, axis=0
     ):  # noqa: PR01, RT01, D200
@@ -1409,7 +1437,6 @@ class Series(BasePandasDataset):
         if min_count > 1:
             return data._reduce_dimension(
                 data._query_compiler.prod_min_count(
-                    squeeze_self=True,
                     axis=axis,
                     skipna=skipna,
                     level=level,
@@ -1420,7 +1447,6 @@ class Series(BasePandasDataset):
             )
         return data._reduce_dimension(
             data._query_compiler.prod(
-                squeeze_self=True,
                 axis=axis,
                 skipna=skipna,
                 level=level,
@@ -1771,7 +1797,6 @@ class Series(BasePandasDataset):
         if min_count > 1:
             return data._reduce_dimension(
                 data._query_compiler.sum_min_count(
-                    squeeze_self=True,
                     axis=axis,
                     skipna=skipna,
                     level=level,
@@ -1782,7 +1807,6 @@ class Series(BasePandasDataset):
             )
         return data._reduce_dimension(
             data._query_compiler.sum(
-                squeeze_self=True,
                 axis=axis,
                 skipna=skipna,
                 level=level,

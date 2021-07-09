@@ -11,13 +11,4 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-FROM rayproject/ray:nightly
-WORKDIR /home/ray
-COPY ./modin ./modin
-COPY requirements/requirements-no-engine.yml ./requirements-no-engine.yml
-RUN sudo chown ray:users ./modin -R && sudo chown ray:users ./requirements-no-engine.yml
-RUN sudo apt-get update --yes \
-    && sudo apt-get install -y libhdf5-dev
-RUN conda env update -f requirements-no-engine.yml --name base
-
-CMD ["/bin/bash"]
+"""Modin on OmniSci backend benchmarks."""

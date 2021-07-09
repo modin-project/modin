@@ -190,22 +190,21 @@ class ExperimentalPandasOnRayIO(PandasOnRayIO):
                 size = min_size
             start = end + 1
             end = start + size - 1
-            partition_id = _read_sql_with_offset_pandas_on_ray._remote(
-                args=(
-                    partition_column,
-                    start,
-                    end,
-                    num_splits,
-                    query,
-                    con,
-                    index_col,
-                    coerce_float,
-                    params,
-                    parse_dates,
-                    columns,
-                    chunksize,
-                ),
-                num_returns=num_splits + 1,
+            partition_id = _read_sql_with_offset_pandas_on_ray.options(
+                num_returns=num_splits + 1
+            ).remote(
+                partition_column,
+                start,
+                end,
+                num_splits,
+                query,
+                con,
+                index_col,
+                coerce_float,
+                params,
+                parse_dates,
+                columns,
+                chunksize,
             )
             partition_ids.append(
                 [PandasOnRayFramePartition(obj) for obj in partition_id[:-1]]

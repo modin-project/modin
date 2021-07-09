@@ -19,10 +19,10 @@ from modin.error_message import ErrorMessage
 
 def initialize_dask():
     """Initialize Dask environment."""
-    from distributed.client import get_client
+    from distributed.client import default_client
 
     try:
-        client = get_client()
+        client = default_client()
     except ValueError:
         from distributed import Client
 

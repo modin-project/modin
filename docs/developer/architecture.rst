@@ -116,6 +116,16 @@ the entire pandas/dataframe API. See `experimental features`_ for more informati
 
    /flow/modin/pandas/base
 
+.. toctree::
+   :caption: modin.pandas.DataFrame API
+
+   /flow/modin/pandas/dataframe
+
+.. toctree::
+   :caption: modin.pandas.Series API
+
+   /flow/modin/pandas/series
+
 Query Compiler
 """"""""""""""
 
@@ -281,7 +291,7 @@ by documentation for now, the rest is coming soon...).
    │   │   └─── :doc:`pyarrow </flow/modin/backends/pyarrow/index>`
    │   │   |   ├─── :doc:`parsers </flow/modin/backends/pyarrow/parsers>`
    │   │   │   └─── :doc:`query_compiler </flow/modin/backends/pyarrow/query_compiler>`
-   │   ├───config
+   │   ├─── :doc:`config </flow/modin/config>`
    │   ├───data_management
    │   │   ├─── :doc:`factories </flow/modin/data_management/factories>`
    │   │   └─── :doc:`functions </flow/modin/data_management/functions>`
@@ -311,7 +321,7 @@ by documentation for now, the rest is coming soon...).
    │   │   │   └───omnisci
    │   │   ├───cloud
    │   │   ├───engines
-   │   │   │   ├───omnisci_on_ray
+   │   │   │   ├─── :doc:`omnisci_on_ray </flow/modin/experimental/engines/omnisci_on_ray/frame/index>`
    │   │   │   ├─── :doc:`pandas_on_ray </flow/modin/experimental/engines/pandas_on_ray>`
    │   │   │   └─── :doc:`pyarrow_on_ray </flow/modin/experimental/engines/pyarrow_on_ray>`
    │   │   ├─── :doc:`pandas </flow/modin/experimental/pandas>`
@@ -319,6 +329,7 @@ by documentation for now, the rest is coming soon...).
    │   │   ├───sql
    │   │   └─── :doc:`xgboost </flow/modin/experimental/xgboost>`
    │   ├───pandas
+   │   │   ├─── :doc:`dataframe </flow/modin/pandas/dataframe>`
    │   │   └─── :doc:`series </flow/modin/pandas/series>`
    │   ├───spreadsheet
    │   └───sql

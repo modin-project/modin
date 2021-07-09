@@ -16,7 +16,7 @@
 from modin.engines.base.frame.data import PandasFrame
 from .partition_manager import PandasOnDaskFramePartitionManager
 
-from distributed.client import _get_global_client
+from distributed.client import default_client
 
 
 class PandasOnDaskFrame(PandasFrame):
@@ -53,7 +53,7 @@ class PandasOnDaskFrame(PandasFrame):
         list
             A list of row partitions lengths.
         """
-        client = _get_global_client()
+        client = default_client()
         if self._row_lengths_cache is None:
             self._row_lengths_cache = client.gather(
                 [obj.apply(lambda df: len(df)).future for obj in self._partitions.T[0]]
@@ -70,7 +70,7 @@ class PandasOnDaskFrame(PandasFrame):
         list
             A list of column partitions widths.
         """
-        client = _get_global_client()
+        client = default_client()
         if self._column_widths_cache is None:
             self._column_widths_cache = client.gather(
                 [

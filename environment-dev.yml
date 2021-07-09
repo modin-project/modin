@@ -2,12 +2,12 @@ name: modin
 channels:
   - conda-forge
 dependencies:
-  - pandas==1.2.4
+  - pandas==1.2.5
   - numpy>=1.16.5
   - pyarrow>=1.0.0
   - libthrift<0.14.1  # ref: modin gh-2840
-  - dask[complete]>=2.12.0,<=2.19.0
-  - distributed>=2.12.0,<=2.19.0
+  - dask[complete]>=2.22.0
+  - distributed>=2.22.0
   - xarray
   - Jinja2
   - pathlib
@@ -19,7 +19,7 @@ dependencies:
   - openpyxl
   - xlrd
   - matplotlib<=3.2.2
-  - sqlalchemy
+  - sqlalchemy>=1.4.0
   - pandas-gbq
   - pytables
   - msgpack-python
@@ -32,11 +32,11 @@ dependencies:
   - coverage<5.0
   - pygithub==1.53
   - rpyc==4.1.5
-  - cloudpickle==1.4.1
+  - cloudpickle
   - boto3
-  - asv
-  - ray-core>=1.0.0,<1.2.0
   - pip:
       - xgboost>=1.3
       - modin-spreadsheet>=0.1.1
       - tqdm
+      - ray[default]>=1.4
+      - git+https://github.com/airspeed-velocity/asv.git@ef016e233cb9a0b19d517135104f49e0a3c380e9

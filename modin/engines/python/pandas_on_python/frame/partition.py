@@ -68,7 +68,7 @@ class PandasOnPythonFramePartition(PandasFramePartition):
         self.drain_call_queue()
         return self.data.copy()
 
-    def apply(self, func, **kwargs):
+    def apply(self, func, *args, **kwargs):
         """
         Apply a function to the object wrapped by this partition.
 
@@ -76,6 +76,8 @@ class PandasOnPythonFramePartition(PandasFramePartition):
         ----------
         func : callable
             Function to apply.
+        *args : iterable
+            Additional positional arguments to be passed in `func`.
         **kwargs : dict
             Additional keyword arguments to be passed in `func`.
 
@@ -85,15 +87,15 @@ class PandasOnPythonFramePartition(PandasFramePartition):
             New ``PandasOnPythonFramePartition`` object.
         """
 
-        def call_queue_closure(data, call_queues):
+        def call_queue_closure(data, call_queue):
             """
-            Apply callables from `call_queues` on copy of the `data` and return the result.
+            Apply callables from `call_queue` on copy of the `data` and return the result.
 
             Parameters
             ----------
             data : pandas.DataFrame or pandas.Series
                 Data to use for computations.
-            call_queues : array-like
+            call_queue : array-like
                 Array with callables and it's kwargs to be applied to the `data`.
 
             Returns
@@ -101,9 +103,9 @@ class PandasOnPythonFramePartition(PandasFramePartition):
             pandas.DataFrame or pandas.Series
             """
             result = data.copy()
-            for func, kwargs in call_queues:
+            for func, args, kwargs in call_queue:
                 try:
-                    result = func(result, **kwargs)
+                    result = func(result, *args, **kwargs)
                 except Exception as e:
                     self.call_queue = []
                     raise e
@@ -111,9 +113,9 @@ class PandasOnPythonFramePartition(PandasFramePartition):
 
         self.data = call_queue_closure(self.data, self.call_queue)
         self.call_queue = []
-        return PandasOnPythonFramePartition(func(self.data.copy(), **kwargs))
+        return PandasOnPythonFramePartition(func(self.data.copy(), *args, **kwargs))
 
-    def add_to_apply_calls(self, func, **kwargs):
+    def add_to_apply_calls(self, func, *args, **kwargs):
         """
         Add a function to the call queue.
 
@@ -121,6 +123,8 @@ class PandasOnPythonFramePartition(PandasFramePartition):
         ----------
         func : callable
             Function to be added to the call queue.
+        *args : iterable
+            Additional positional arguments to be passed in `func`.
         **kwargs : dict
             Additional keyword arguments to be passed in `func`.
 
@@ -130,7 +134,7 @@ class PandasOnPythonFramePartition(PandasFramePartition):
             New ``PandasOnPythonFramePartition`` object with extended call queue.
         """
         return PandasOnPythonFramePartition(
-            self.data.copy(), call_queue=self.call_queue + [(func, kwargs)]
+            self.data.copy(), call_queue=self.call_queue + [(func, args, kwargs)]
         )
 
     def drain_call_queue(self):

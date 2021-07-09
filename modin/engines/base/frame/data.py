@@ -2226,10 +2226,7 @@ class PandasFrame(object):
         """
         df = self._partition_mgr_cls.to_pandas(self._partitions)
         if df.empty:
-            if len(self.columns) != 0:
-                df = pandas.DataFrame(columns=self.columns)
-            else:
-                df = pandas.DataFrame(columns=self.columns, index=self.index)
+            df = pandas.DataFrame(columns=self.columns, index=self.index)
         else:
             for axis in [0, 1]:
                 ErrorMessage.catch_bugs_and_request_email(

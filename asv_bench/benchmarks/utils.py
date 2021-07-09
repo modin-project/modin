@@ -40,25 +40,29 @@ except ImportError:
     NPARTITIONS = pd.DEFAULT_NPARTITIONS
 
 try:
-    from modin.config import TestDatasetSize, AsvImplementation, Engine
+    from modin.config import TestDatasetSize, AsvImplementation, Engine, Backend
 
     ASV_USE_IMPL = AsvImplementation.get()
     ASV_DATASET_SIZE = TestDatasetSize.get() or "Small"
     ASV_USE_ENGINE = Engine.get()
+    ASV_USE_BACKEND = Backend.get()
 except ImportError:
     # The same benchmarking code can be run for different versions of Modin, so in
     # case of an error importing important variables, we'll just use predefined values
     ASV_USE_IMPL = os.environ.get("MODIN_ASV_USE_IMPL", "modin")
     ASV_DATASET_SIZE = os.environ.get("MODIN_TEST_DATASET_SIZE", "Small")
     ASV_USE_ENGINE = os.environ.get("MODIN_ENGINE", "Ray")
+    ASV_USE_BACKEND = os.environ.get("MODIN_BACKEND", "Pandas")
 
 ASV_USE_IMPL = ASV_USE_IMPL.lower()
 ASV_DATASET_SIZE = ASV_DATASET_SIZE.lower()
 ASV_USE_ENGINE = ASV_USE_ENGINE.lower()
+ASV_USE_BACKEND = ASV_USE_BACKEND.lower()
 
 assert ASV_USE_IMPL in ("modin", "pandas")
 assert ASV_DATASET_SIZE in ("big", "small")
 assert ASV_USE_ENGINE in ("ray", "dask", "python")
+assert ASV_USE_BACKEND in ("pandas", "omnisci", "pyarrow")
 
 BINARY_OP_DATA_SIZE = {
     "big": [
@@ -214,7 +218,11 @@ def gen_str_int_data(nrows: int, ncols: int, rand_low: int, rand_high: int) -> d
 
 
 def gen_data(
-    data_type: str, nrows: int, ncols: int, rand_low: int, rand_high: int
+    data_type: str,
+    nrows: int,
+    ncols: int,
+    rand_low: int,
+    rand_high: int,
 ) -> dict:
     """
     Generate data with caching.
@@ -296,7 +304,7 @@ def generate_dataframe(
 
     Notes
     -----
-    the list of groupby columns names returns when groupby columns are generated
+    The list of groupby columns names returns when groupby columns are generated.
     """
     assert not (
         (groupby_ncols is None) ^ (count_groups is None)
@@ -400,6 +408,9 @@ def execute(df: Union[pd.DataFrame, pandas.DataFrame]):
     df : modin.pandas.DataFrame or pandas.Datarame
     """
     if ASV_USE_IMPL == "modin":
+        if ASV_USE_BACKEND == "omnisci":
+            df._query_compiler._modin_frame._execute()
+            return
         partitions = df._query_compiler._modin_frame._partitions
         all(
             map(

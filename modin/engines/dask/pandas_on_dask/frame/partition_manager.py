@@ -24,54 +24,7 @@ from .partition import PandasOnDaskFramePartition
 from modin.error_message import ErrorMessage
 import pandas
 
-from distributed.client import _get_global_client
-import cloudpickle as pkl
-
-
-def deploy_func(df, apply_func, call_queue_df=None, call_queues_other=None, *others):
-    """
-    Perform `apply_func` for `df` remotely.
-
-    Parameters
-    ----------
-    df : distributed.Future
-        Dataframe to which `apply_func` will be applied.
-        After running function, automaterialization
-        ``distributed.Future``->``pandas.DataFrame`` happens.
-    apply_func : callable
-        The function to apply.
-    call_queue_df : list, default: None
-        The call_queue to be executed on `df`.
-    call_queues_other : list, default: None
-        The call_queue to be executed on `others`.
-    *others : iterable
-        List of other parameters.
-
-    Returns
-    -------
-    The same as returns of `apply_func`.
-    """
-    if call_queue_df is not None and len(call_queue_df) > 0:
-        for call, kwargs in call_queue_df:
-            if isinstance(call, bytes):
-                call = pkl.loads(call)
-            if isinstance(kwargs, bytes):
-                kwargs = pkl.loads(kwargs)
-            df = call(df, **kwargs)
-    new_others = np.empty(shape=len(others), dtype=object)
-    for i, call_queue_other in enumerate(call_queues_other):
-        other = others[i]
-        if call_queue_other is not None and len(call_queue_other) > 0:
-            for call, kwargs in call_queue_other:
-                if isinstance(call, bytes):
-                    call = pkl.loads(call)
-                if isinstance(kwargs, bytes):
-                    kwargs = pkl.loads(kwargs)
-                other = call(other, **kwargs)
-        new_others[i] = other
-    if isinstance(apply_func, bytes):
-        apply_func = pkl.loads(apply_func)
-    return apply_func(df, new_others)
+from distributed.client import default_client
 
 
 class PandasOnDaskFramePartitionManager(PandasFramePartitionManager):
@@ -107,7 +60,7 @@ class PandasOnDaskFramePartitionManager(PandasFramePartitionManager):
         when you have deleted rows/columns internally, but do not know
         which ones were deleted.
         """
-        client = _get_global_client()
+        client = default_client()
         ErrorMessage.catch_bugs_and_request_email(not callable(index_func))
         func = cls.preprocess_func(index_func)
         if axis == 0:
@@ -151,30 +104,22 @@ class PandasOnDaskFramePartitionManager(PandasFramePartitionManager):
             NumPy array of result partition objects.
         """
 
-        def mapper(df, others):
+        def map_func(df, *others):
             other = pandas.concat(others, axis=axis ^ 1)
             return apply_func(df, **{other_name: other})
 
-        client = _get_global_client()
+        map_func = cls.preprocess_func(map_func)
+        rt_axis_parts = cls.axis_partition(right, axis ^ 1)
         return np.array(
             [
                 [
-                    PandasOnDaskFramePartition(
-                        client.submit(
-                            deploy_func,
-                            part.future,
-                            mapper,
-                            part.call_queue,
-                            [obj[col_idx].call_queue for obj in right]
+                    part.apply(
+                        map_func,
+                        *(
+                            rt_axis_parts[col_idx].list_of_blocks
                             if axis
-                            else [obj.call_queue for obj in right[row_idx]],
-                            *(
-                                [obj[col_idx].future for obj in right]
-                                if axis
-                                else [obj.future for obj in right[row_idx]]
-                            ),
-                            pure=False,
-                        )
+                            else rt_axis_parts[row_idx].list_of_blocks
+                        ),
                     )
                     for col_idx, part in enumerate(left[row_idx])
                 ]

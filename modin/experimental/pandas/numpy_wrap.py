@@ -34,7 +34,7 @@ else:
     import pandas
     import os
 
-    _EXCLUDE_MODULES = [modin, pandas]
+    _EXCLUDE_MODULES = [modin, pandas, real_numpy]
     try:
         import rpyc
     except ImportError:

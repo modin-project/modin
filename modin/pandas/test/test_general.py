@@ -644,6 +644,18 @@ def test_to_datetime():
     )
 
 
+def test_to_datetime_inplace_side_effect():
+    # See GH#3063
+    times = list(range(1617993360, 1618193360))
+    values = list(range(215441, 415441))
+    modin_df = pd.DataFrame({"time": times, "value": values})
+    pandas_df = pandas.DataFrame({"time": times, "value": values})
+    df_equals(
+        pd.to_datetime(modin_df["time"], unit="s"),
+        pandas.to_datetime(pandas_df["time"], unit="s"),
+    )
+
+
 @pytest.mark.parametrize(
     "data, errors, downcast",
     [
@@ -662,9 +674,10 @@ def test_to_numeric(data, errors, downcast):
     df_equals(modin_result, pandas_result)
 
 
-def test_to_pandas_indices():
-    data = test_data_values[0]
-
+@pytest.mark.parametrize(
+    "data", [test_data_values[0], []], ids=["test_data_values[0]", "[]"]
+)
+def test_to_pandas_indices(data):
     md_df = pd.DataFrame(data)
     index = pandas.MultiIndex.from_tuples(
         [(i, i * 2) for i in np.arange(len(md_df) + 1)], names=["A", "B"]

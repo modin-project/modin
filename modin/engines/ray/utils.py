@@ -13,9 +13,10 @@
 
 """The module holds utility and initialization routines for Modin on Ray."""
 
-import builtins
 import os
 import sys
+import psutil
+import warnings
 
 from modin.config import (
     Backend,
@@ -25,37 +26,8 @@ from modin.config import (
     CpuCount,
     GpuCount,
     Memory,
-    RayPlasmaDir,
-    IsOutOfCore,
     NPartitions,
 )
-
-
-def handle_ray_task_error(e):
-    """
-    Re-raise remote exception as local built-in exception if possible.
-
-    Parameters
-    ----------
-    e : ray.exceptions.RayTaskError
-        Remote exception as reported by Ray.
-
-    Raises
-    ------
-    Exception
-        Remote exception converted to built-in exception if possible,
-        original exception untouched otherwise.
-    """
-    for s in e.traceback_str.split("\n")[::-1]:
-        if "Error" in s or "Exception" in s:
-            try:
-                raise getattr(builtins, s.split(":")[0])("".join(s.split(":")[1:]))
-            except AttributeError as att_err:
-                if "module" in str(att_err) and builtins.__name__ in str(att_err):
-                    pass
-                else:
-                    raise att_err
-    raise e
 
 
 def _move_stdlib_ahead_of_site_packages(*args):
@@ -149,7 +121,6 @@ def initialize_ray(
                 include_dashboard=False,
                 ignore_reinit_error=True,
                 _redis_password=redis_password,
-                logging_level=100,
             )
         else:
             from modin.error_message import ErrorMessage
@@ -164,31 +135,26 @@ def initialize_ray(
 """,
             )
             object_store_memory = Memory.get()
-            plasma_directory = RayPlasmaDir.get()
-            if IsOutOfCore.get():
-                if plasma_directory is None:
-                    from tempfile import gettempdir
-
-                    plasma_directory = gettempdir()
-                # We may have already set the memory from the environment variable, we don't
-                # want to overwrite that value if we have.
-                if object_store_memory is None:
-                    # Round down to the nearest Gigabyte.
-                    try:
-                        system_memory = ray._private.utils.get_system_memory()
-                    except AttributeError:  # Compatibility with Ray <= 1.2
-                        system_memory = ray.utils.get_system_memory()
-                    mem_bytes = system_memory // 10 ** 9 * 10 ** 9
-                    # Default to 8x memory for out of core
-                    object_store_memory = 8 * mem_bytes
             # In case anything failed above, we can still improve the memory for Modin.
             if object_store_memory is None:
-                # Round down to the nearest Gigabyte.
-                try:
-                    system_memory = ray._private.utils.get_system_memory()
-                except AttributeError:  # Compatibility with Ray <= 1.2
-                    system_memory = ray.utils.get_system_memory()
-                object_store_memory = int(0.6 * system_memory // 10 ** 9 * 10 ** 9)
+                virtual_memory = psutil.virtual_memory().total
+                if sys.platform.startswith("linux"):
+                    shm_fd = os.open("/dev/shm", os.O_RDONLY)
+                    try:
+                        shm_stats = os.fstatvfs(shm_fd)
+                        system_memory = shm_stats.f_bsize * shm_stats.f_bavail
+                        if system_memory / (virtual_memory / 2) < 0.99:
+                            warnings.warn(
+                                f"The size of /dev/shm is too small ({system_memory} bytes). The required size "
+                                f"at least half of RAM ({virtual_memory // 2} bytes). Please, delete files in /dev/shm or "
+                                "increase size of /dev/shm with --shm-size in Docker. Also, you can set "
+                                "the required memory size for each Ray worker in bytes to MODIN_MEMORY environment variable."
+                            )
+                    finally:
+                        os.close(shm_fd)
+                else:
+                    system_memory = virtual_memory
+                object_store_memory = int(0.6 * system_memory // 1e9 * 1e9)
                 # If the memory pool is smaller than 2GB, just use the default in ray.
                 if object_store_memory == 0:
                     object_store_memory = None
@@ -200,27 +166,12 @@ def initialize_ray(
                 "num_gpus": GpuCount.get(),
                 "include_dashboard": False,
                 "ignore_reinit_error": True,
-                "_plasma_directory": plasma_directory,
                 "object_store_memory": object_store_memory,
                 "address": redis_address,
                 "_redis_password": redis_password,
-                "logging_level": 100,
                 "_memory": object_store_memory,
-                "_lru_evict": True,
             }
-            from packaging import version
-
-            # setting of `_lru_evict` parameter raises DeprecationWarning since ray 2.0.0.dev0
-            if version.parse(ray.__version__) >= version.parse("2.0.0.dev0"):
-                ray_init_kwargs.pop("_lru_evict")
             ray.init(**ray_init_kwargs)
-
-        _move_stdlib_ahead_of_site_packages()
-        ray.worker.global_worker.run_function_on_all_workers(
-            _move_stdlib_ahead_of_site_packages
-        )
-
-        ray.worker.global_worker.run_function_on_all_workers(_import_pandas)
 
         if Backend.get() == "Cudf":
             from modin.engines.ray.cudf_on_ray.frame.gpu_manager import GPUManager
@@ -232,7 +183,11 @@ def initialize_ray(
             if not GPU_MANAGERS:
                 for i in range(GpuCount.get()):
                     GPU_MANAGERS.append(GPUManager.remote(i))
-
+    _move_stdlib_ahead_of_site_packages()
+    ray.worker.global_worker.run_function_on_all_workers(
+        _move_stdlib_ahead_of_site_packages
+    )
+    ray.worker.global_worker.run_function_on_all_workers(_import_pandas)
     num_cpus = int(ray.cluster_resources()["CPU"])
     num_gpus = int(ray.cluster_resources().get("GPU", 0))
     if Backend.get() == "Cudf":

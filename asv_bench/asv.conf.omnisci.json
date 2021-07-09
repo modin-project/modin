@@ -1,0 +1,52 @@
+{
+    // The version of the config file format.  Do not change, unless
+    // you know what you are doing.
+    "version": 1,
+
+    // The name of the project being benchmarked
+    "project": "modin",
+
+    // The project's homepage
+    "project_url": "https://modin.readthedocs.io/",
+
+    // The URL or local path of the source code repository for the
+    // project being benchmarked
+    "repo": "..",
+
+    // Customizable commands for building, installing, and
+    // uninstalling the project. See asv.conf.json documentation.
+    //
+    "install_command": ["in-dir={env_dir} python -mpip install {wheel_file}"],
+
+    // The tool to use to create environments.  May be "conda",
+    // "virtualenv" or other value depending on the plugins in use.
+    // If missing or the empty string, the tool will be automatically
+    // determined by looking for tools on the PATH environment
+    // variable.
+    "environment_type": "conda",
+
+    // the base URL to show a commit for the project.
+    "show_commit_url": "https://github.com/modin-project/modin/commit/",
+
+    // The Pythons you'd like to test against.  If not provided, defaults
+    // to the current version of Python used to run `asv`.
+    "pythons": ["3.7"],
+
+    // The list of conda channel names to be searched for benchmark
+    // dependency packages in the specified order
+    "conda_channels": ["conda-forge", "defaults"],
+
+    "conda_environment_file": "../requirements/env_omnisci.yml",
+
+    // The directory (relative to the current directory) to cache the Python
+    // environments in.  If not provided, defaults to "env"
+    "env_dir": ".asv/env",
+
+    // The directory (relative to the current directory) that raw benchmark
+    // results are stored in.  If not provided, defaults to "results".
+    "results_dir": ".asv/results",
+
+    // The directory (relative to the current directory) that the html tree
+    // should be written to.  If not provided, defaults to "html".
+    "html_dir": ".asv/html",
+}

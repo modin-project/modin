@@ -21,7 +21,7 @@ def noop_decorator(*args, **kwargs):
 ray.remote = noop_decorator
 
 # fake modules if they're missing
-for mod_name in ("cudf", "cupy", "pyarrow.gandiva"):
+for mod_name in ("cudf", "cupy", "pyarrow.gandiva", "omniscidbe"):
     try:
         __import__(mod_name)
     except ImportError:
@@ -30,9 +30,19 @@ for mod_name in ("cudf", "cupy", "pyarrow.gandiva"):
         )
 if not hasattr(sys.modules["cudf"], "DataFrame"):
     sys.modules["cudf"].DataFrame = type("DataFrame", (object,), {})
+if not hasattr(sys.modules["omniscidbe"], "PyDbEngine"):
+    sys.modules["omniscidbe"].PyDbEngine = type("PyDbEngine", (object,), {})
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 import modin
+
+from modin.config.__main__ import export_config_help
+
+configs_file_path = os.path.abspath(
+    os.path.join(os.path.dirname(__file__), "flow/modin/configs_help.csv")
+)
+# Export configs help to create configs table in the docs/flow/modin/config.rst
+export_config_help(configs_file_path)
 
 project = "Modin"
 copyright = "2018-2021, Modin"

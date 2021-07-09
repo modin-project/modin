@@ -86,6 +86,8 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
     def __init__(self, frame, shape_hint=None):
         assert frame is not None
         self._modin_frame = frame
+        if shape_hint is None and len(self._modin_frame.columns) == 1:
+            shape_hint = "column"
         self._shape_hint = shape_hint
 
     def finalize():
@@ -97,11 +99,23 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
 
     @classmethod
     def from_pandas(cls, df, data_cls):
-        return cls(data_cls.from_pandas(df))
+        if len(df.columns) == 1:
+            shape_hint = "column"
+        elif len(df) == 1:
+            shape_hint = "row"
+        else:
+            shape_hint = None
+        return cls(data_cls.from_pandas(df), shape_hint=shape_hint)
 
     @classmethod
     def from_arrow(cls, at, data_cls):
-        return cls(data_cls.from_arrow(at))
+        if len(at.columns) == 1:
+            shape_hint = "column"
+        elif len(at) == 1:
+            shape_hint = "row"
+        else:
+            shape_hint = None
+        return cls(data_cls.from_arrow(at), shape_hint=shape_hint)
 
     default_to_pandas = PandasQueryCompiler.default_to_pandas
 
@@ -142,12 +156,14 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
         left_index = kwargs.get("left_index", False)
         right_index = kwargs.get("right_index", False)
         """Only non-index joins with explicit 'on' are supported"""
-        if left_index is False and right_index is False and on is not None:
+        if left_index is False and right_index is False:
+            if on is None:
+                on = [c for c in self.columns if c in right.columns]
+
             how = kwargs.get("how", "inner")
             sort = kwargs.get("sort", False)
             suffixes = kwargs.get("suffixes", None)
             if not isinstance(on, list):
-                assert isinstance(on, str), f"unsupported 'on' value {on}"
                 on = [on]
             return self.__constructor__(
                 self._modin_frame.join(
@@ -293,20 +309,60 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
         return self._agg("min", **kwargs)
 
     def sum(self, **kwargs):
+        min_count = kwargs.pop("min_count")
+        if min_count != 0:
+            return super().sum(
+                min_count=min_count,
+                **kwargs,
+            )
         return self._agg("sum", **kwargs)
 
     def mean(self, **kwargs):
         return self._agg("mean", **kwargs)
 
+    def nunique(self, axis=0, dropna=True):
+        if axis != 0 or not dropna:
+            return super().nunique(axis=axis, dropna=dropna)
+        return self._agg("count", distinct=True)
+
     def _agg(self, agg, axis=0, level=None, **kwargs):
+        """
+        Perform specified aggregation along rows/columns.
+
+        Parameters
+        ----------
+        agg : str
+            Name of the aggregation function to perform.
+        axis : {0, 1}, default: 0
+            Axis to perform aggregation along. 0 is to apply function against each column,
+            all the columns will be reduced into a single scalar. 1 is to aggregate
+            across rows.
+            *Note:* OmniSci backend supports aggregation for 0 axis only, aggregation
+            along rows will be defaulted to pandas.
+        level : None
+            Serves the compatibility purpose, always have to be None.
+        **kwargs : dict
+            Additional parameters to pass to the aggregation function.
+
+        Returns
+        -------
+        DFAlgQueryCompiler
+            New single-column (``axis=1``) or single-row (``axis=0``) query compiler containing
+            the result of aggregation.
+        """
         if level is not None or axis != 0:
             return getattr(super(), agg)(axis=axis, level=level, **kwargs)
 
-        skipna = kwargs.get("skipna", True)
-        if not skipna:
+        # TODO: Do filtering on numeric columns if `numeric_only=True`
+        if (
+            kwargs.get("skipna", True) is not None and not kwargs.get("skipna", True)
+        ) or kwargs.get("numeric_only"):
             return getattr(super(), agg)(axis=axis, level=level, **kwargs)
+        # Processed above, so can be omitted
+        kwargs.pop("skipna", None)
+        kwargs.pop("numeric_only", None)
 
-        new_frame = self._modin_frame.agg(agg)
+        new_frame = self._modin_frame.agg(agg, **kwargs)
         new_frame = new_frame._set_index(
             pandas.Index.__new__(pandas.Index, data=["__reduced__"], dtype="O")
         )
@@ -352,6 +408,8 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
 
     def fillna(
         self,
+        squeeze_self=False,
+        squeeze_value=False,
         value=None,
         method=None,
         axis=None,

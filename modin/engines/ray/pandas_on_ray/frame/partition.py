@@ -17,11 +17,9 @@ import pandas
 
 from modin.data_management.utils import length_fn_pandas, width_fn_pandas
 from modin.engines.base.frame.partition import PandasFramePartition
-from modin.engines.ray.utils import handle_ray_task_error
 from modin.pandas.indexing import compute_sliced_len
 
 import ray
-from ray.worker import RayTaskError
 from ray.services import get_node_ip_address
 from packaging import version
 
@@ -74,12 +72,9 @@ class PandasOnRayFramePartition(PandasFramePartition):
         """
         if len(self.call_queue):
             self.drain_call_queue()
-        try:
-            return ray.get(self.oid)
-        except RayTaskError as e:
-            handle_ray_task_error(e)
+        return ray.get(self.oid)
 
-    def apply(self, func, **kwargs):
+    def apply(self, func, *args, **kwargs):
         """
         Apply a function to the object wrapped by this partition.
 
@@ -87,7 +82,9 @@ class PandasOnRayFramePartition(PandasFramePartition):
         ----------
         func : callable or ray.ObjectRef
             A function to apply.
-        **kwargs
+        *args : iterable
+            Additional positional arguments to be passed in `func`.
+        **kwargs : dict
             Additional keyword arguments to be passed in `func`.
 
         Returns
@@ -101,11 +98,17 @@ class PandasOnRayFramePartition(PandasFramePartition):
         handle it correctly either way. The keyword arguments are sent as a dictionary.
         """
         oid = self.oid
-        call_queue = self.call_queue + [(func, kwargs)]
-        result, length, width, ip = deploy_ray_func.remote(call_queue, oid)
+        call_queue = self.call_queue + [(func, args, kwargs)]
+        if len(call_queue) > 1:
+            result, length, width, ip = apply_list_of_funcs.remote(call_queue, oid)
+        else:
+            # We handle `len(call_queue) == 1` in a different way because
+            # this dramatically improves performance.
+            func, args, kwargs = call_queue[0]
+            result, length, width, ip = apply_func.remote(oid, func, *args, **kwargs)
         return PandasOnRayFramePartition(result, length, width, ip)
 
-    def add_to_apply_calls(self, func, **kwargs):
+    def add_to_apply_calls(self, func, *args, **kwargs):
         """
         Add a function to the call queue.
 
@@ -113,6 +116,8 @@ class PandasOnRayFramePartition(PandasFramePartition):
         ----------
         func : callable or ray.ObjectRef
             Function to be added to the call queue.
+        *args : iterable
+            Additional positional arguments to be passed in `func`.
         **kwargs : dict
             Additional keyword arguments to be passed in `func`.
 
@@ -127,7 +132,7 @@ class PandasOnRayFramePartition(PandasFramePartition):
         handle it correctly either way. The keyword arguments are sent as a dictionary.
         """
         return PandasOnRayFramePartition(
-            self.oid, call_queue=self.call_queue + [(func, kwargs)]
+            self.oid, call_queue=self.call_queue + [(func, args, kwargs)]
         )
 
     def drain_call_queue(self):
@@ -136,21 +141,29 @@ class PandasOnRayFramePartition(PandasFramePartition):
             return
         oid = self.oid
         call_queue = self.call_queue
-        (
-            self.oid,
-            self._length_cache,
-            self._width_cache,
-            self._ip_cache,
-        ) = deploy_ray_func.remote(call_queue, oid)
+        if len(call_queue) > 1:
+            (
+                self.oid,
+                self._length_cache,
+                self._width_cache,
+                self._ip_cache,
+            ) = apply_list_of_funcs.remote(call_queue, oid)
+        else:
+            # We handle `len(call_queue) == 1` in a different way because
+            # this dramatically improves performance.
+            func, args, kwargs = call_queue[0]
+            (
+                self.oid,
+                self._length_cache,
+                self._width_cache,
+                self._ip_cache,
+            ) = apply_func.remote(oid, func, *args, **kwargs)
         self.call_queue = []
 
     def wait(self):
         """Wait completing computations on the object wrapped by the partition."""
         self.drain_call_queue()
-        try:
-            ray.wait([self.oid])
-        except RayTaskError as e:
-            handle_ray_task_error(e)
+        ray.wait([self.oid])
 
     def __copy__(self):
         """
@@ -278,10 +291,7 @@ class PandasOnRayFramePartition(PandasFramePartition):
                     self.oid
                 )
         if isinstance(self._length_cache, ObjectIDType):
-            try:
-                self._length_cache = ray.get(self._length_cache)
-            except RayTaskError as e:
-                handle_ray_task_error(e)
+            self._length_cache = ray.get(self._length_cache)
         return self._length_cache
 
     def width(self):
@@ -301,10 +311,7 @@ class PandasOnRayFramePartition(PandasFramePartition):
                     self.oid
                 )
         if isinstance(self._width_cache, ObjectIDType):
-            try:
-                self._width_cache = ray.get(self._width_cache)
-            except RayTaskError as e:
-                handle_ray_task_error(e)
+            self._width_cache = ray.get(self._width_cache)
         return self._width_cache
 
     def ip(self):
@@ -322,10 +329,7 @@ class PandasOnRayFramePartition(PandasFramePartition):
             else:
                 self._ip_cache = self.apply(lambda df: df)._ip_cache
         if isinstance(self._ip_cache, ObjectIDType):
-            try:
-                self._ip_cache = ray.get(self._ip_cache)
-            except RayTaskError as e:
-                handle_ray_task_error(e)
+            self._ip_cache = ray.get(self._ip_cache)
         return self._ip_cache
 
     @classmethod
@@ -386,13 +390,55 @@ def get_index_and_columns(df):
 
 
 @ray.remote(num_returns=4)
-def deploy_ray_func(call_queue, partition):  # pragma: no cover
+def apply_func(partition, func, *args, **kwargs):  # pragma: no cover
+    """
+    Execute a function on the partition in a worker process.
+
+    Parameters
+    ----------
+    partition : pandas.DataFrame
+        A pandas DataFrame the function needs to be executed on.
+    func : callable
+        Function that needs to be executed on the partition.
+    *args : iterable
+        Additional positional arguments to be passed in `func`.
+    **kwargs : dict
+        Additional keyword arguments to be passed in `func`.
+
+    Returns
+    -------
+    pandas.DataFrame
+        The resulting pandas DataFrame.
+    int
+        The number of rows of the resulting pandas DataFrame.
+    int
+        The number of columns of the resulting pandas DataFrame.
+    str
+        The node IP address of the worker process.
+    """
+    try:
+        result = func(partition, *args, **kwargs)
+    # Sometimes Arrow forces us to make a copy of an object before we operate on it. We
+    # don't want the error to propagate to the user, and we want to avoid copying unless
+    # we absolutely have to.
+    except ValueError:
+        result = func(partition.copy(), *args, **kwargs)
+    return (
+        result,
+        len(result) if hasattr(result, "__len__") else 0,
+        len(result.columns) if hasattr(result, "columns") else 0,
+        get_node_ip_address(),
+    )
+
+
+@ray.remote(num_returns=4)
+def apply_list_of_funcs(funcs, partition):  # pragma: no cover
     """
     Execute all operations stored in the call queue on the partition in a worker process.
 
     Parameters
     ----------
-    call_queue : list
+    funcs : list
         A call queue that needs to be executed on the partition.
     partition : pandas.DataFrame
         A pandas DataFrame the call queue needs to be executed on.
@@ -412,29 +458,32 @@ def deploy_ray_func(call_queue, partition):  # pragma: no cover
     def deserialize(obj):
         if isinstance(obj, ObjectIDType):
             return ray.get(obj)
-        return obj
+        elif isinstance(obj, (tuple, list)) and any(
+            isinstance(o, ObjectIDType) for o in obj
+        ):
+            return ray.get(list(obj))
+        elif isinstance(obj, dict) and any(
+            isinstance(val, ObjectIDType) for val in obj.values()
+        ):
+            return dict(zip(obj.keys(), ray.get(list(obj.values()))))
+        else:
+            return obj
 
-    if len(call_queue) > 1:
-        for func, kwargs in call_queue[:-1]:
-            func = deserialize(func)
-            kwargs = deserialize(kwargs)
-            try:
-                partition = func(partition, **kwargs)
-            except ValueError:
-                partition = func(partition.copy(), **kwargs)
-    func, kwargs = call_queue[-1]
-    func = deserialize(func)
-    kwargs = deserialize(kwargs)
-    try:
-        result = func(partition, **kwargs)
-    # Sometimes Arrow forces us to make a copy of an object before we operate on it. We
-    # don't want the error to propagate to the user, and we want to avoid copying unless
-    # we absolutely have to.
-    except ValueError:
-        result = func(partition.copy(), **kwargs)
+    for func, args, kwargs in funcs:
+        func = deserialize(func)
+        args = deserialize(args)
+        kwargs = deserialize(kwargs)
+        try:
+            partition = func(partition, *args, **kwargs)
+        # Sometimes Arrow forces us to make a copy of an object before we operate on it. We
+        # don't want the error to propagate to the user, and we want to avoid copying unless
+        # we absolutely have to.
+        except ValueError:
+            partition = func(partition.copy(), *args, **kwargs)
+
     return (
-        result,
-        len(result) if hasattr(result, "__len__") else 0,
-        len(result.columns) if hasattr(result, "columns") else 0,
+        partition,
+        len(partition) if hasattr(partition, "__len__") else 0,
+        len(partition.columns) if hasattr(partition, "columns") else 0,
         get_node_ip_address(),
     )

@@ -996,63 +996,19 @@ class BaseQueryCompiler(abc.ABC):
         method="production",
         refer_to="prod",
         extra_params=["**kwargs"],
-        params="""
-        squeeze_self : bool
-            Whether the query compiler represents a Series at the front-end.
-        axis : {{0, 1}}""",
+        params="axis : {{0, 1}}",
     )
-    def prod(self, squeeze_self, axis, **kwargs):
-        # TODO: rework to original implementation after pandas issue #41074 resolves if possible.
-        def map_func(df, **kwargs):
-            """Apply product function to DataFrame or Series in depend on `squeeze_self`."""
-            if squeeze_self:
-                result = df.squeeze(axis=1).prod(**kwargs)
-                if is_scalar(result):
-                    if axis:
-                        return pandas.DataFrame(
-                            [result], index=["__reduced__"], columns=["__reduced__"]
-                        )
-                    else:
-                        return pandas.Series([result], index=[df.columns[0]])
-                else:
-                    return result
-            else:
-                return df.prod(**kwargs)
-
-        return DataFrameDefault.register(
-            map_func,
-        )(self, axis=axis, **kwargs)
+    def prod(self, **kwargs):
+        return DataFrameDefault.register(pandas.DataFrame.prod)(self, **kwargs)
 
     @doc_utils.doc_reduce_agg(
         method="sum",
         refer_to="sum",
         extra_params=["**kwargs"],
-        params="""
-        squeeze_self : bool
-            Whether the query compiler represents a Series at the front-end.
-        axis : {{0, 1}}""",
+        params="axis : {{0, 1}}",
     )
-    def sum(self, squeeze_self, axis, **kwargs):
-        # TODO: rework to original implementation after pandas issue #41074 resolves if possible.
-        def map_func(df, **kwargs):
-            """Apply sum function to DataFrame or Series in depend on `squeeze_self`."""
-            if squeeze_self:
-                result = df.squeeze(axis=1).sum(**kwargs)
-                if is_scalar(result):
-                    if axis:
-                        return pandas.DataFrame(
-                            [result], index=["__reduced__"], columns=["__reduced__"]
-                        )
-                    else:
-                        return pandas.Series([result], index=[df.columns[0]])
-                else:
-                    return result
-            else:
-                return df.sum(**kwargs)
-
-        return DataFrameDefault.register(
-            map_func,
-        )(self, axis=axis, **kwargs)
+    def sum(self, **kwargs):
+        return DataFrameDefault.register(pandas.DataFrame.sum)(self, **kwargs)
 
     @doc_utils.add_refer_to("to_datetime")
     def to_datetime(self, *args, **kwargs):
@@ -1826,7 +1782,18 @@ class BaseQueryCompiler(abc.ABC):
         BaseQueryCompiler
             New QueryCompiler with all null values filled.
         """
-        return DataFrameDefault.register(pandas.DataFrame.fillna)(self, **kwargs)
+
+        squeeze_self = kwargs.pop("squeeze_self", False)
+        squeeze_value = kwargs.pop("squeeze_value", False)
+
+        def fillna(df, value, **kwargs):
+            if squeeze_self:
+                df = df.squeeze(axis=1)
+            if squeeze_value:
+                value = value.squeeze(axis=1)
+            return df.fillna(value, **kwargs)
+
+        return DataFrameDefault.register(fillna)(self, **kwargs)
 
     @doc_utils.add_refer_to("DataFrame.query")
     def query(self, expr, **kwargs):

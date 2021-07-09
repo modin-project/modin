@@ -55,7 +55,7 @@ class PyarrowOnRayFrameAxisPartition(BaseFrameAxisPartition):
         Returns
         -------
         list
-            List with ``RayRemotePartition`` objects.
+            List with ``PyarrowOnRayFramePartition`` objects.
 
         Notes
         -----
@@ -67,10 +67,15 @@ class PyarrowOnRayFrameAxisPartition(BaseFrameAxisPartition):
         if other_axis_partition is not None:
             return [
                 PyarrowOnRayFramePartition(obj)
-                for obj in deploy_ray_func_between_two_axis_partitions._remote(
-                    args=(self.axis, func, num_splits, len(self.list_of_blocks), kwargs)
-                    + tuple(self.list_of_blocks + other_axis_partition.list_of_blocks),
-                    num_returns=num_splits,
+                for obj in deploy_ray_func_between_two_axis_partitions.options(
+                    num_returns=num_splits
+                ).remote(
+                    self.axis,
+                    func,
+                    num_splits,
+                    len(self.list_of_blocks),
+                    kwargs,
+                    *(self.list_of_blocks + other_axis_partition.list_of_blocks),
                 )
             ]
 
@@ -78,7 +83,9 @@ class PyarrowOnRayFrameAxisPartition(BaseFrameAxisPartition):
         args.extend(self.list_of_blocks)
         return [
             PyarrowOnRayFramePartition(obj)
-            for obj in deploy_ray_axis_func._remote(args, num_returns=num_splits)
+            for obj in deploy_ray_axis_func.options(num_returns=num_splits).remote(
+                *args
+            )
         ]
 
     def shuffle(self, func, num_splits=None, **kwargs):
@@ -97,7 +104,7 @@ class PyarrowOnRayFrameAxisPartition(BaseFrameAxisPartition):
         Returns
         -------
         list
-            List with ``RayRemotePartition`` objects.
+            List with ``PyarrowOnRayFramePartition`` objects.
 
         Notes
         -----
@@ -110,7 +117,9 @@ class PyarrowOnRayFrameAxisPartition(BaseFrameAxisPartition):
         args.extend(self.list_of_blocks)
         return [
             PyarrowOnRayFramePartition(obj)
-            for obj in deploy_ray_axis_func._remote(args, num_returns=num_splits)
+            for obj in deploy_ray_axis_func.options(num_returns=num_splits).remote(
+                *args
+            )
         ]
 
 
