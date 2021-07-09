@@ -136,7 +136,7 @@ def simulate_cloud(request):
             (modin.pandas.test.utils, "assert_index_equal"),
             (modin.pandas.test.utils, "assert_series_equal"),
             (modin.pandas.test.utils, "assert_frame_equal"),
-            (modin.pandas.test.utils, "assert_extension_array_equal")
+            (modin.pandas.test.utils, "assert_extension_array_equal"),
         ):
             yield
 
