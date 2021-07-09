@@ -127,16 +127,16 @@ def simulate_cloud(request):
     assert IsExperimental.get(), "Simulated cloud must be started in experimental mode"
 
     from modin.experimental.cloud import create_cluster, get_connection
-    import pandas._testing
-    import pandas._libs.testing as cyx_testing
+    import modin.pandas.test.utils
 
     with create_cluster("local", cluster_type="local"):
         get_connection().teleport(set_experimental_env)(mode)
         with Patcher(
             get_connection(),
-            (pandas._testing, "assert_class_equal"),
-            (pandas._testing, "assert_series_equal"),
-            (cyx_testing, "assert_almost_equal"),
+            (modin.pandas.test.utils, "assert_index_equal"),
+            (modin.pandas.test.utils, "assert_series_equal"),
+            (modin.pandas.test.utils, "assert_frame_equal"),
+            (modin.pandas.test.utils, "assert_extension_array_equal")
         ):
             yield
 
