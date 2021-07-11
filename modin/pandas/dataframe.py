@@ -1313,6 +1313,15 @@ class DataFrame(BasePandasDataset):
         """
         Unpivot a ``DataFrame`` from wide to long format, optionally leaving identifiers set.
         """
+        if id_vars is None:
+            id_vars = []
+        if not is_list_like(id_vars):
+            id_vars = [id_vars]
+        if value_vars is None:
+            value_vars = self.columns.difference(id_vars)
+        if var_name is None:
+            columns_name = self._query_compiler.get_index_name(axis=1)
+            var_name = columns_name if columns_name is not None else "variable"
         return self.__constructor__(
             query_compiler=self._query_compiler.melt(
                 id_vars=id_vars,
@@ -1605,6 +1614,8 @@ class DataFrame(BasePandasDataset):
         Return the product of the values over the requested axis.
         """
         axis = self._get_axis_number(axis)
+        if skipna is None:
+            skipna = True
         if level is not None:
             if (
                 not self._query_compiler.has_multiindex(axis=axis)
@@ -2004,6 +2015,8 @@ class DataFrame(BasePandasDataset):
         Return the sum of the values over the requested axis.
         """
         axis = self._get_axis_number(axis)
+        if skipna is None:
+            skipna = True
         axis_to_apply = self.columns if axis else self.index
         if (
             skipna is not False

@@ -354,9 +354,7 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
             return getattr(super(), agg)(axis=axis, level=level, **kwargs)
 
         # TODO: Do filtering on numeric columns if `numeric_only=True`
-        if (
-            kwargs.get("skipna", True) is not None and not kwargs.get("skipna", True)
-        ) or kwargs.get("numeric_only"):
+        if not kwargs.get("skipna", True) or kwargs.get("numeric_only"):
             return getattr(super(), agg)(axis=axis, level=level, **kwargs)
         # Processed above, so can be omitted
         kwargs.pop("skipna", None)
