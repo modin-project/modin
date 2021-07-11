@@ -316,15 +316,15 @@ jobs:
       - run: python -m pytest -n 2 modin/pandas/test/test_reshape.py --execution=${{ matrix.execution }}
       - run: python -m pytest -n 2 modin/pandas/test/test_general.py --execution=${{ matrix.execution }}
       - run: |
-          curl -o codecov https://codecov.io/bash
-          VERSION=$(grep -o 'VERSION=\"[0-9\.]*\"' codecov | cut -d'"' -f2);
-          curl -o SHA512SUM "https://raw.githubusercontent.com/codecov/codecov-bash/${VERSION}/SHA512SUM"
-          if sha512sum -c --ignore-missing --status SHA512SUM; then
-              bash ./codecov
-          else
-              echo 'CORRUPTED CODECOV SCRIPT!!!'
-              exit 10
-          fi
+          curl https://keybase.io/codecovsecurity/pgp_keys.asc | gpg --import # One-time step
+          curl -Os https://uploader.codecov.io/latest/linux/codecov
+          curl -Os https://uploader.codecov.io/latest/linux/codecov.SHA256SUM
+          curl -Os https://uploader.codecov.io/latest/linux/codecov.SHA256SUM.sig
+          gpg --verify codecov.SHA256SUM.sig codecov.SHA256SUM
+          shasum -a 256 -c codecov.SHA256SUM
+          chmod +x codecov
+          ./codecov
+
 
   test-omnisci:
     needs: [lint-commit, lint-flake8, lint-black, test-api, test-headers]
@@ -357,15 +357,14 @@ jobs:
       - run: pytest modin/experimental/core/execution/native/implementations/omnisci_on_native/test/test_dataframe.py
       - run: pytest modin/pandas/test/test_io.py::TestCsv --verbose
       - run: |
-          curl -o codecov https://codecov.io/bash
-          VERSION=$(grep -o 'VERSION=\"[0-9\.]*\"' codecov | cut -d'"' -f2);
-          curl -o SHA512SUM "https://raw.githubusercontent.com/codecov/codecov-bash/${VERSION}/SHA512SUM"
-          if sha512sum -c --ignore-missing --status SHA512SUM; then
-              bash ./codecov
-          else
-              echo 'CORRUPTED CODECOV SCRIPT!!!'
-              exit 10
-          fi
+          curl https://keybase.io/codecovsecurity/pgp_keys.asc | gpg --import # One-time step
+          curl -Os https://uploader.codecov.io/latest/linux/codecov
+          curl -Os https://uploader.codecov.io/latest/linux/codecov.SHA256SUM
+          curl -Os https://uploader.codecov.io/latest/linux/codecov.SHA256SUM.sig
+          gpg --verify codecov.SHA256SUM.sig codecov.SHA256SUM
+          shasum -a 256 -c codecov.SHA256SUM
+          chmod +x codecov
+          ./codecov
 
   test-asv-benchmarks:
     needs: [lint-commit, lint-flake8, lint-black, test-api, test-headers]
@@ -488,15 +487,14 @@ jobs:
       - run: python -m pytest modin/experimental/pandas/test/test_io_exp.py
       - run: pip install "dfsql>=0.4.2" "pyparsing<=2.4.7" && pytest modin/experimental/sql/test/test_sql.py
       - run: |
-          curl -o codecov https://codecov.io/bash
-          VERSION=$(grep -o 'VERSION=\"[0-9\.]*\"' codecov | cut -d'"' -f2);
-          curl -o SHA512SUM "https://raw.githubusercontent.com/codecov/codecov-bash/${VERSION}/SHA512SUM"
-          if sha512sum -c --ignore-missing --status SHA512SUM; then
-              bash ./codecov
-          else
-              echo 'CORRUPTED CODECOV SCRIPT!!!'
-              exit 10
-          fi
+          curl https://keybase.io/codecovsecurity/pgp_keys.asc | gpg --import # One-time step
+          curl -Os https://uploader.codecov.io/latest/linux/codecov
+          curl -Os https://uploader.codecov.io/latest/linux/codecov.SHA256SUM
+          curl -Os https://uploader.codecov.io/latest/linux/codecov.SHA256SUM.sig
+          gpg --verify codecov.SHA256SUM.sig codecov.SHA256SUM
+          shasum -a 256 -c codecov.SHA256SUM
+          chmod +x codecov
+          ./codecov
 
   test-experimental:
     needs: [lint-commit, lint-flake8, lint-black, test-api, test-headers]
@@ -528,15 +526,14 @@ jobs:
       - run: python -m pytest -n 2 modin/pandas/test/test_series.py
       - run: python -m pytest modin/pandas/test/test_io.py --verbose
       - run: |
-          curl -o codecov https://codecov.io/bash
-          VERSION=$(grep -o 'VERSION=\"[0-9\.]*\"' codecov | cut -d'"' -f2);
-          curl -o SHA512SUM "https://raw.githubusercontent.com/codecov/codecov-bash/${VERSION}/SHA512SUM"
-          if sha512sum -c --ignore-missing --status SHA512SUM; then
-              bash ./codecov
-          else
-              echo 'CORRUPTED CODECOV SCRIPT!!!'
-              exit 10
-          fi
+          curl https://keybase.io/codecovsecurity/pgp_keys.asc | gpg --import # One-time step
+          curl -Os https://uploader.codecov.io/latest/linux/codecov
+          curl -Os https://uploader.codecov.io/latest/linux/codecov.SHA256SUM
+          curl -Os https://uploader.codecov.io/latest/linux/codecov.SHA256SUM.sig
+          gpg --verify codecov.SHA256SUM.sig codecov.SHA256SUM
+          shasum -a 256 -c codecov.SHA256SUM
+          chmod +x codecov
+          ./codecov
 
   test-cloud:
     needs: [lint-commit, lint-flake8, lint-black, test-api, test-headers]
@@ -571,15 +568,14 @@ jobs:
       - # When running without parameters, some of the tests fail
         run: python -m pytest --simulate-cloud=normal modin/pandas/test/dataframe/test_binary.py::test_math_functions[add-rows-scalar]
       - run: |
-          curl -o codecov https://codecov.io/bash
-          VERSION=$(grep -o 'VERSION=\"[0-9\.]*\"' codecov | cut -d'"' -f2);
-          curl -o SHA512SUM "https://raw.githubusercontent.com/codecov/codecov-bash/${VERSION}/SHA512SUM"
-          if sha512sum -c --ignore-missing --status SHA512SUM; then
-              bash ./codecov
-          else
-              echo 'CORRUPTED CODECOV SCRIPT!!!'
-              exit 10
-          fi
+          curl https://keybase.io/codecovsecurity/pgp_keys.asc | gpg --import # One-time step
+          curl -Os https://uploader.codecov.io/latest/linux/codecov
+          curl -Os https://uploader.codecov.io/latest/linux/codecov.SHA256SUM
+          curl -Os https://uploader.codecov.io/latest/linux/codecov.SHA256SUM.sig
+          gpg --verify codecov.SHA256SUM.sig codecov.SHA256SUM
+          shasum -a 256 -c codecov.SHA256SUM
+          chmod +x codecov
+          ./codecov
 
   test-windows:
     needs: [lint-commit, lint-flake8, lint-black, test-api, test-headers]

@@ -77,15 +77,14 @@ jobs:
       - run: python -m pytest -n 2 modin/pandas/test/test_reshape.py --execution=${{ matrix.execution }}
       - run: python -m pytest -n 2 modin/pandas/test/test_general.py --execution=${{ matrix.execution }}
       - run: |
-          curl -o codecov https://codecov.io/bash
-          VERSION=$(grep -o 'VERSION=\"[0-9\.]*\"' codecov | cut -d'"' -f2);
-          curl -o SHA512SUM "https://raw.githubusercontent.com/codecov/codecov-bash/${VERSION}/SHA512SUM"
-          if sha512sum -c --ignore-missing --status SHA512SUM; then
-              bash ./codecov
-          else
-              echo 'CORRUPTED CODECOV SCRIPT!!!'
-              exit 10
-          fi
+          curl https://keybase.io/codecovsecurity/pgp_keys.asc | gpg --import # One-time step
+          curl -Os https://uploader.codecov.io/latest/linux/codecov
+          curl -Os https://uploader.codecov.io/latest/linux/codecov.SHA256SUM
+          curl -Os https://uploader.codecov.io/latest/linux/codecov.SHA256SUM.sig
+          gpg --verify codecov.SHA256SUM.sig codecov.SHA256SUM
+          shasum -a 256 -c codecov.SHA256SUM
+          chmod +x codecov
+          ./codecov
 
   test-omnisci:
     runs-on: ubuntu-latest
@@ -118,15 +117,14 @@ jobs:
       - run: pytest modin/experimental/core/execution/native/implementations/omnisci_on_native/test/test_dataframe.py
       - run: pytest modin/pandas/test/test_io.py::TestCsv
       - run: |
-          curl -o codecov https://codecov.io/bash
-          VERSION=$(grep -o 'VERSION=\"[0-9\.]*\"' codecov | cut -d'"' -f2);
-          curl -o SHA512SUM "https://raw.githubusercontent.com/codecov/codecov-bash/${VERSION}/SHA512SUM"
-          if sha512sum -c --ignore-missing --status SHA512SUM; then
-              bash ./codecov
-          else
-              echo 'CORRUPTED CODECOV SCRIPT!!!'
-              exit 10
-          fi
+          curl https://keybase.io/codecovsecurity/pgp_keys.asc | gpg --import # One-time step
+          curl -Os https://uploader.codecov.io/latest/linux/codecov
+          curl -Os https://uploader.codecov.io/latest/linux/codecov.SHA256SUM
+          curl -Os https://uploader.codecov.io/latest/linux/codecov.SHA256SUM.sig
+          gpg --verify codecov.SHA256SUM.sig codecov.SHA256SUM
+          shasum -a 256 -c codecov.SHA256SUM
+          chmod +x codecov
+          ./codecov
 
   test-all:
     runs-on: ubuntu-latest
@@ -185,15 +183,14 @@ jobs:
       - run: python -m pytest modin/pandas/test/test_io.py
       - run: python -m pytest modin/experimental/pandas/test/test_io_exp.py
       - run: |
-          curl -o codecov https://codecov.io/bash
-          VERSION=$(grep -o 'VERSION=\"[0-9\.]*\"' codecov | cut -d'"' -f2);
-          curl -o SHA512SUM "https://raw.githubusercontent.com/codecov/codecov-bash/${VERSION}/SHA512SUM"
-          if sha512sum -c --ignore-missing --status SHA512SUM; then
-              bash ./codecov
-          else
-              echo 'CORRUPTED CODECOV SCRIPT!!!'
-              exit 10
-          fi
+          curl https://keybase.io/codecovsecurity/pgp_keys.asc | gpg --import # One-time step
+          curl -Os https://uploader.codecov.io/latest/linux/codecov
+          curl -Os https://uploader.codecov.io/latest/linux/codecov.SHA256SUM
+          curl -Os https://uploader.codecov.io/latest/linux/codecov.SHA256SUM.sig
+          gpg --verify codecov.SHA256SUM.sig codecov.SHA256SUM
+          shasum -a 256 -c codecov.SHA256SUM
+          chmod +x codecov
+          ./codecov
 
   test-windows:
     runs-on: windows-latest
