@@ -317,7 +317,7 @@ by documentation for now, the rest is coming soon...).
    │   ├───experimental
    │   ├── :doc:`experimental </flow/modin/experimental/experimental>`
    │   │   ├───backends
-   │   │   │   └───omnisci
+   │   │   │   └─── :doc:`omnisci </flow/modin/experimental/backends/omnisci/index>`
    │   │   ├───cloud
    │   │   ├───engines
    │   │   │   ├─── :doc:`omnisci_on_ray </flow/modin/experimental/engines/omnisci_on_ray/frame/index>`
