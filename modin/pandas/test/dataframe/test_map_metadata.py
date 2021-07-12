@@ -982,7 +982,8 @@ def test_insert(data):
     # Bad inserts
     with pytest.raises(ValueError):  # see pandas issue #42403
         if len(modin_df) == len(modin_df.columns):
-            # Error will not arise if the frame is a square-shaped
+            # Error won't be arisen in pandas if the frame is square-shaped.
+            # See pandas issue #42403 for more.
             modin_df = modin_df.iloc[:, :-1]
             pandas_df = pandas_df.iloc[:, :-1]
         eval_insert(modin_df, pandas_df, col="Bad Column", value=lambda df: df)

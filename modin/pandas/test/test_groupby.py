@@ -1142,7 +1142,8 @@ def eval_shift(modin_groupby, pandas_groupby):
         if pandas_groupby.ndim == 2:
             pandas_groupby.shift(axis=1, fill_value=777)
     except TypeError:
-        pass
+        # Verify that there is no exceptions on our side
+        repr(modin_groupby.shift(axis=1, fill_value=777))
     else:
         eval_general(
             modin_groupby,

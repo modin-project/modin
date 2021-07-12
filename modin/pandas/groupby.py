@@ -221,12 +221,19 @@ class DataFrameGroupBy(object):
             return result
 
         if freq is None and axis == 1 and self._axis == 0:
-            no_by_data = (
-                self._df.drop(columns=self._by.columns)
-                if isinstance(self._by, BaseQueryCompiler)
-                else self._df
-            )
-            result = _shift(no_by_data, periods, freq, axis, fill_value)
+            # 'by' columns should not be taken into account
+            # in this particular case, so drop them
+            if self._drop:
+                internal_by = []
+                for by in self._by if is_list_like(self._by) else [self._by]:
+                    if isinstance(by, str):
+                        internal_by.append(by)
+                    elif isinstance(by, BaseQueryCompiler):
+                        internal_by.extend(by.columns)
+                non_by_data = self._df.drop(columns=internal_by, errors="ignore")
+            else:
+                non_by_data = self._df
+            result = _shift(non_by_data, periods, freq, axis, fill_value)
         elif (
             freq is not None
             and axis == 0
