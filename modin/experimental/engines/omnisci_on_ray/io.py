@@ -33,7 +33,7 @@ from pyarrow.csv import read_csv, ParseOptions, ConvertOptions, ReadOptions
 import pyarrow as pa
 
 import pandas
-from pandas.io.parsers import _validate_usecols_arg
+import pandas._libs.lib as lib
 from pandas._typing import FilePathOrBuffer
 from pandas.io.common import is_url
 
@@ -109,9 +109,11 @@ class OmnisciOnRayIO(RayIO, TextFileDispatcher):
         "escapechar",
         "comment",
         "encoding",
+        "encoding_errors",
         "dialect",
         "error_bad_lines",
         "warn_bad_lines",
+        "on_bad_lines",
         "skipfooter",
         "doublequote",
         "delim_whitespace",
@@ -146,12 +148,14 @@ class OmnisciOnRayIO(RayIO, TextFileDispatcher):
         "iterator",
         "chunksize",
         "encoding",
+        "encoding_errors",
         "lineterminator",
         "dialect",
         "quoting",
         "comment",
         "warn_bad_lines",
         "error_bad_lines",
+        "on_bad_lines",
         "low_memory",
         "memory_map",
         "float_precision",
@@ -165,11 +169,11 @@ class OmnisciOnRayIO(RayIO, TextFileDispatcher):
         sep=",",
         delimiter=None,
         header="infer",
-        names=None,
+        names=lib.no_default,
         index_col=None,
         usecols=None,
         squeeze=False,
-        prefix=None,
+        prefix=lib.no_default,
         mangle_dupe_cols=True,
         dtype=None,
         engine=None,
@@ -201,9 +205,11 @@ class OmnisciOnRayIO(RayIO, TextFileDispatcher):
         escapechar=None,
         comment=None,
         encoding=None,
+        encoding_errors="strict",
         dialect=None,
-        error_bad_lines=True,
-        warn_bad_lines=True,
+        error_bad_lines=None,
+        warn_bad_lines=None,
+        on_bad_lines=None,
         skipfooter=0,
         doublequote=True,
         delim_whitespace=False,
@@ -232,6 +238,8 @@ class OmnisciOnRayIO(RayIO, TextFileDispatcher):
         try:
             if eng in ["pandas", "c"]:
                 return cls._read(**mykwargs)
+
+            cls._validate_read_csv_kwargs(mykwargs)
             use_modin_impl, error_message = cls._read_csv_check_support(
                 mykwargs,
             )
@@ -246,10 +254,10 @@ class OmnisciOnRayIO(RayIO, TextFileDispatcher):
                 for c in parse_dates:
                     column_types[c] = pa.timestamp("s")
 
-            if names and header == 0:
+            if names not in [lib.no_default, None] and header == 0:
                 skiprows = skiprows + 1 if skiprows is not None else 1
 
-            if delimiter is None:
+            if delimiter is None and sep is not lib.no_default:
                 delimiter = sep
 
             usecols_md = cls._prepare_pyarrow_usecols(mykwargs)
@@ -281,7 +289,7 @@ class OmnisciOnRayIO(RayIO, TextFileDispatcher):
                 use_threads=True,
                 block_size=None,
                 skip_rows=skiprows,
-                column_names=names,
+                column_names=names if names is not lib.no_default else None,
                 autogenerate_column_names=None,
             )
 
@@ -347,7 +355,7 @@ class OmnisciOnRayIO(RayIO, TextFileDispatcher):
         """
         usecols = read_csv_kwargs.get("usecols", None)
         engine = read_csv_kwargs.get("engine", None)
-        usecols_md, usecols_names_dtypes = _validate_usecols_arg(usecols)
+        usecols_md, usecols_names_dtypes = cls._validate_usecols_arg(usecols)
         if usecols_md:
             empty_pd_df = pandas.read_csv(
                 **dict(
@@ -456,7 +464,7 @@ class OmnisciOnRayIO(RayIO, TextFileDispatcher):
                 "Specified a delimiter with both sep and delim_whitespace=True; you can only specify one."
             )
 
-        if names:
+        if names and names != lib.no_default:
             if header not in [None, 0, "infer"]:
                 return (
                     False,
@@ -506,3 +514,54 @@ class OmnisciOnRayIO(RayIO, TextFileDispatcher):
             )
 
         return True, None
+
+    @classmethod
+    def _validate_read_csv_kwargs(
+        cls,
+        read_csv_kwargs: ReadCsvKwargsType,
+    ):
+        """
+        Validate `read_csv` keyword arguments.
+
+        Should be done to mimic `pandas.read_csv` behavior.
+
+        Parameters
+        ----------
+        read_csv_kwargs : dict
+            Parameters of `read_csv` function.
+        """
+        delimiter = read_csv_kwargs.get("delimiter", None)
+        sep = read_csv_kwargs.get("sep", lib.no_default)
+        on_bad_lines = read_csv_kwargs.get("on_bad_lines", "error")
+        error_bad_lines = read_csv_kwargs.get("error_bad_lines", None)
+        warn_bad_lines = read_csv_kwargs.get("warn_bad_lines", None)
+        names = read_csv_kwargs.get("names", lib.no_default)
+        prefix = read_csv_kwargs.get("prefix", lib.no_default)
+        delim_whitespace = read_csv_kwargs.get("delim_whitespace", False)
+
+        if delimiter and (sep is not lib.no_default):
+            raise ValueError(
+                "Specified a sep and a delimiter; you can only specify one."
+            )
+
+        if names is not lib.no_default and prefix is not lib.no_default:
+            raise ValueError("Specified names and prefix; you can only specify one.")
+
+        # Alias sep -> delimiter.
+        if delimiter is None:
+            delimiter = sep
+
+        if delim_whitespace and (delimiter is not lib.no_default):
+            raise ValueError(
+                "Specified a delimiter with both sep and "
+                "delim_whitespace=True; you can only specify one."
+            )
+        if on_bad_lines is not None:
+            if error_bad_lines is not None or warn_bad_lines is not None:
+                raise ValueError(
+                    "Both on_bad_lines and error_bad_lines/warn_bad_lines are set. "
+                    "Please only set on_bad_lines."
+                )
+
+        if on_bad_lines not in ["error", "warn", "skip", None]:
+            raise ValueError(f"Argument {on_bad_lines} is invalid for on_bad_lines.")

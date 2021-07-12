@@ -1134,11 +1134,22 @@ def eval_shift(modin_groupby, pandas_groupby):
         pandas_groupby,
         lambda groupby: groupby.shift(periods=-3),
     )
-    eval_general(
-        modin_groupby,
-        pandas_groupby,
-        lambda groupby: groupby.shift(axis=1, fill_value=777),
-    )
+    # pandas introduced a bug in 1.3.0 that breaks shift in the following case,
+    # modin performs correctly, so we can't compare the result with pandas for now.
+    # You can track the pandas bug here:
+    # https://github.com/pandas-dev/pandas/issues/42401
+    try:
+        if pandas_groupby.ndim == 2:
+            pandas_groupby.shift(axis=1, fill_value=777)
+    except TypeError:
+        # Verify that there is no exceptions on our side
+        repr(modin_groupby.shift(axis=1, fill_value=777))
+    else:
+        eval_general(
+            modin_groupby,
+            pandas_groupby,
+            lambda groupby: groupby.shift(axis=1, fill_value=777),
+        )
 
 
 def test_groupby_on_index_values_with_loop():
@@ -1594,8 +1605,8 @@ def test_not_str_by(by, as_index):
     )
 
     modin_groupby_equals_pandas(md_grp, pd_grp)
-    df_equals(md_grp.sum(), pd_grp.sum())
-    df_equals(md_grp.size(), pd_grp.size())
-    df_equals(md_grp.agg(lambda df: df.mean()), pd_grp.agg(lambda df: df.mean()))
-    df_equals(md_grp.dtypes, pd_grp.dtypes)
-    df_equals(md_grp.first(), pd_grp.first())
+    eval_general(md_grp, pd_grp, lambda grp: grp.sum())
+    eval_general(md_grp, pd_grp, lambda grp: grp.size())
+    eval_general(md_grp, pd_grp, lambda grp: grp.agg(lambda df: df.mean()))
+    eval_general(md_grp, pd_grp, lambda grp: grp.dtypes)
+    eval_general(md_grp, pd_grp, lambda grp: grp.first())

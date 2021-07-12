@@ -725,23 +725,33 @@ class TestCsv:
         )
 
     # Error Handling parameters tests
-    @pytest.mark.xfail(
-        Engine.get() not in ["Python", "Cloudpython"] and Backend.get() != "Omnisci",
-        reason="read_csv doesn't raise `bad lines` exceptions - issue #2500",
-    )
-    @pytest.mark.parametrize("warn_bad_lines", [True, False])
-    @pytest.mark.parametrize("error_bad_lines", [True, False])
+    @pytest.mark.parametrize("warn_bad_lines", [True, False, None])
+    @pytest.mark.parametrize("error_bad_lines", [True, False, None])
+    @pytest.mark.parametrize("on_bad_lines", ["error", "warn", "skip", None])
     def test_read_csv_error_handling(
         self,
         warn_bad_lines,
         error_bad_lines,
+        on_bad_lines,
     ):
+        # in that case exceptions are raised both by Modin and pandas
+        # and tests pass
+        raise_exception_case = on_bad_lines is not None and (
+            error_bad_lines is not None or warn_bad_lines is not None
+        )
+        if (
+            not raise_exception_case
+            and Engine.get() not in ["Python", "Cloudpython"]
+            and Backend.get() != "Omnisci"
+        ):
+            pytest.xfail("read_csv doesn't raise `bad lines` exceptions - issue #2500")
         eval_io(
             fn_name="read_csv",
             # read_csv kwargs
             filepath_or_buffer=pytest.csvs_names["test_read_csv_bad_lines"],
             warn_bad_lines=warn_bad_lines,
             error_bad_lines=error_bad_lines,
+            on_bad_lines=on_bad_lines,
         )
 
     # Internal parameters tests
@@ -845,6 +855,7 @@ class TestCsv:
         )
 
     @pytest.mark.parametrize("encoding", [None, "utf-8"])
+    @pytest.mark.parametrize("encoding_errors", ["strict", "ignore"])
     @pytest.mark.parametrize("parse_dates", [False, ["timestamp"]])
     @pytest.mark.parametrize("index_col", [None, 0, 2])
     @pytest.mark.parametrize("header", ["infer", 0])
@@ -856,7 +867,7 @@ class TestCsv:
         ],
     )
     def test_read_csv_parse_dates(
-        self, request, names, header, index_col, parse_dates, encoding
+        self, request, names, header, index_col, parse_dates, encoding, encoding_errors
     ):
         if (
             parse_dates
@@ -880,6 +891,7 @@ class TestCsv:
             index_col=index_col,
             parse_dates=parse_dates,
             encoding=encoding,
+            encoding_errors=encoding_errors,
         )
 
     def test_read_csv_s3(self):

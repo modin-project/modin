@@ -131,7 +131,7 @@ def find_common_type_cat(types):
             sort_categories=all(t.ordered for t in types),
         ).dtype
     else:
-        return find_common_type(types)
+        return find_common_type(list(types))
 
 
 class PandasParser(object):

@@ -2722,7 +2722,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 )
                 internal_by_cols = internal_by_df.columns
 
-                external_by = by.columns.difference(internal_by)
+                external_by = by.columns.difference(internal_by).unique()
                 external_by_df = by[external_by].squeeze(axis=1)
 
                 if isinstance(external_by_df, pandas.DataFrame):
@@ -2930,6 +2930,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         dropna,
         margins_name,
         observed,
+        sort,
     ):
         ErrorMessage.missmatch_with_pandas(
             operation="pivot_table",
@@ -2984,6 +2985,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 dropna=dropna,
                 margins_name=margins_name,
                 observed=observed,
+                sort=sort,
             )
 
             # in that case Pandas transposes the result of `pivot_table`,

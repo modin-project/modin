@@ -13,7 +13,7 @@
 
 import pandas
 
-__pandas_version__ = "1.2.5"
+__pandas_version__ = "1.3.0"
 
 if pandas.__version__ != __pandas_version__:
     import warnings
@@ -183,6 +183,7 @@ from .io import (
     HDFStore,
     json_normalize,
     read_orc,
+    read_xml,
 )
 from .series import Series
 from .general import (

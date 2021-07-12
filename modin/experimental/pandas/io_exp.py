@@ -18,6 +18,8 @@ import pathlib
 from typing import Union, IO, AnyStr, Callable, Optional
 
 import pandas
+import pandas._libs.lib as lib
+from pandas._typing import StorageOptions
 
 from . import DataFrame
 from modin.config import IsExperimental, Engine
@@ -116,14 +118,14 @@ def _make_parser_func(sep: str) -> Callable:
 
     def parser_func(
         filepath_or_buffer: Union[str, pathlib.Path, IO[AnyStr]],
-        sep=sep,
+        sep=lib.no_default,
         delimiter=None,
         header="infer",
-        names=None,
+        names=lib.no_default,
         index_col=None,
         usecols=None,
         squeeze=False,
-        prefix=None,
+        prefix=lib.no_default,
         mangle_dupe_cols=True,
         dtype=None,
         engine=None,
@@ -155,15 +157,18 @@ def _make_parser_func(sep: str) -> Callable:
         escapechar=None,
         comment=None,
         encoding=None,
+        encoding_errors="strict",
         dialect=None,
-        error_bad_lines=True,
-        warn_bad_lines=True,
+        error_bad_lines=None,
+        warn_bad_lines=None,
+        on_bad_lines=None,
         skipfooter=0,
         doublequote=True,
         delim_whitespace=False,
         low_memory=True,
         memory_map=False,
         float_precision=None,
+        storage_options: StorageOptions = None,
     ) -> DataFrame:
         # ISSUE #2408: parse parameter shared with pandas read_csv and read_table and update with provided args
         _pd_read_csv_signature = {

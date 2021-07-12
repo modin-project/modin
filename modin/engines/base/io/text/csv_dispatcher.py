@@ -22,6 +22,7 @@ from csv import QUOTE_NONE, Dialect
 import sys
 from typing import Union, Sequence, Callable, Dict, Tuple
 from pandas._typing import FilePathOrBuffer
+import pandas._libs.lib as lib
 
 from modin.config import NPartitions
 
@@ -70,7 +71,7 @@ class CSVDispatcher(TextFileDispatcher):
             return cls.single_worker_read(filepath_or_buffer, **kwargs)
 
         # Getting frequently used read_csv kwargs
-        names = kwargs.get("names", None)
+        names = kwargs.get("names", lib.no_default)
         index_col = kwargs.get("index_col", None)
         encoding = kwargs.get("encoding", None)
         skiprows = kwargs.get("skiprows")
@@ -94,7 +95,7 @@ class CSVDispatcher(TextFileDispatcher):
 
         # Now we need to define parameters, which are common for all partitions. These
         # parameters can be `sniffed` from empty dataframes created further
-        if names is None:
+        if names in [lib.no_default, None]:
             # When reading the one row df, we assume no `index_col` to get the correct
             # column names before we build the index. Because we pass `names` in, this
             # step has to happen without removing the `index_col` otherwise it will not

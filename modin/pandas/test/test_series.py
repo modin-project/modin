@@ -722,13 +722,27 @@ def test_aggregate_numeric_except(request, data, func):
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_aggregate_error_checking(data):
-    modin_series, _ = create_test_series(data)  # noqa: F841
+    modin_series, pandas_series = create_test_series(data)
 
+    assert pandas_series.aggregate("ndim") == 1
     assert modin_series.aggregate("ndim") == 1
-    with pytest.warns(UserWarning):
-        modin_series.aggregate("cumproduct")
-    with pytest.raises(ValueError):
-        modin_series.aggregate("NOT_EXISTS")
+
+    def user_warning_checker(series, fn):
+        if isinstance(series, pd.Series):
+            with pytest.warns(UserWarning):
+                return fn(series)
+        return fn(series)
+
+    eval_general(
+        modin_series,
+        pandas_series,
+        lambda series: user_warning_checker(
+            series, fn=lambda series: series.aggregate("cumproduct")
+        ),
+    )
+    eval_general(
+        modin_series, pandas_series, lambda series: series.aggregate("NOT_EXISTS")
+    )
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
@@ -3639,29 +3653,17 @@ def test_str_contains(data, pat, case, na):
 @pytest.mark.parametrize("n", int_arg_values, ids=int_arg_keys)
 @pytest.mark.parametrize("case", bool_arg_values, ids=bool_arg_keys)
 def test_str_replace(data, pat, repl, n, case):
-    modin_series, pandas_series = create_test_series(data)
-
-    try:
-        pandas_result = pandas_series.str.replace(
-            pat, repl, n=n, case=case, regex=False
-        )
-    except Exception as e:
-        with pytest.raises(type(e)):
-            modin_series.str.replace(pat, repl, n=n, case=case, regex=False)
-    else:
-        modin_result = modin_series.str.replace(pat, repl, n=n, case=case, regex=False)
-        df_equals(modin_result, pandas_result)
-
+    eval_general(
+        *create_test_series(data),
+        lambda series: series.str.replace(pat, repl, n=n, case=case, regex=False),
+    )
     # Test regex
-    pat = ",|b"
-    try:
-        pandas_result = pandas_series.str.replace(pat, repl, n=n, case=case, regex=True)
-    except Exception as e:
-        with pytest.raises(type(e)):
-            modin_series.str.replace(pat, repl, n=n, case=case, regex=True)
-    else:
-        modin_result = modin_series.str.replace(pat, repl, n=n, case=case, regex=True)
-        df_equals(modin_result, pandas_result)
+    eval_general(
+        *create_test_series(data),
+        lambda series: series.str.replace(
+            pat=",|b", repl=repl, n=n, case=case, regex=True
+        ),
+    )
 
 
 @pytest.mark.parametrize("data", test_string_data_values, ids=test_string_data_keys)

@@ -305,6 +305,7 @@ def pivot_table(
     dropna=True,
     margins_name="All",
     observed=False,
+    sort=True,
 ):
     if not isinstance(data, DataFrame):
         raise ValueError(
@@ -320,6 +321,7 @@ def pivot_table(
         margins=margins,
         dropna=dropna,
         margins_name=margins_name,
+        sort=sort,
     )
 
 
