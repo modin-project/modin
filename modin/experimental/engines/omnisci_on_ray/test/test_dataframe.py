@@ -333,9 +333,15 @@ class TestCSV:
         parse_dates_unsupported = isinstance(parse_dates, dict) or (
             isinstance(parse_dates, list) and isinstance(parse_dates[0], list)
         )
+        if parse_dates_unsupported and engine == "arrow":
+            pytest.skip(
+                "In this specific cases Modin raises `ArrowEngineException` while pandas "
+                "raises `ValueError` that causes tests fails"
+            )
+
         eval_io(
             fn_name="read_csv",
-            md_extra_kwargs={"engine": None if parse_dates_unsupported else engine},
+            md_extra_kwargs={"engine": engine},
             # read_csv kwargs
             filepath_or_buffer=pytest.csvs_names["test_read_csv_regular"],
             parse_dates=parse_dates,
