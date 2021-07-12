@@ -448,11 +448,11 @@ class OmnisciOnRayFrame(PandasFrame):
             # columns are more prioritized.
             agg_cols = self.columns
         else:
-            agg_cols = [col for col in self.columns if col not in by_frame.columns]
+            agg_cols = [col for col in self.columns if col not in groupby_cols]
 
         # Mimic pandas behaviour: pandas does not allow for aggregation to be empty
         # in case of multi-column 'by'.
-        if not as_index and len(agg_cols) == 0 and len(by_frame.columns) > 1:
+        if not as_index and len(agg_cols) == 0 and len(groupby_cols) > 1:
             agg_cols = self.columns
 
         # Create new base where all required columns are computed. We don't allow
