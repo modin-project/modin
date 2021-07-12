@@ -1636,16 +1636,16 @@ class PandasDataframe(object):
             self._partition_mgr_cls.apply_func_to_select_indices_along_full_axis(
                 axis,
                 self._partitions,
-                func,
+                self._build_mapreduce_func(axis, func),
                 dict_indices,
                 keep_remaining=keep_remaining,
             )
         )
         # TODO Infer columns and index from `keep_remaining` and `apply_indices`
         if new_index is None:
-            new_index = self.index if axis == 1 else None
+            new_index = self._compute_axis_labels(0, new_partitions)
         if new_columns is None:
-            new_columns = self.columns if axis == 0 else None
+            new_columns = self._compute_axis_labels(1, new_partitions)
         return self.__constructor__(new_partitions, new_index, new_columns, None, None)
 
     @lazy_metadata_decorator(apply_axis="both")

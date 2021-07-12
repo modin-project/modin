@@ -38,8 +38,9 @@ from modin.pandas.test.utils import (
     bool_arg_keys,
     bool_arg_values,
     arg_keys,
+    generate_multiindex,
 )
-from modin.config import NPartitions, StorageFormat
+from modin.config import NPartitions
 
 NPartitions.put(4)
 
@@ -104,13 +105,6 @@ def test_aggregate_error_checking():
         modin_df.aggregate("NOT_EXISTS")
 
 
-@pytest.mark.xfail(
-    StorageFormat.get() == "Pandas",
-    reason="DataFrame.apply(dict) raises an exception because of a bug in its"
-    "implementation for pandas storage format, this prevents us from catching the desired"
-    "exception. You can track this bug at:"
-    "https://github.com/modin-project/modin/issues/3221",
-)
 @pytest.mark.parametrize(
     "func",
     agg_func_values + agg_func_except_values,
@@ -231,6 +225,57 @@ def test_apply_udf(data, func):
         lambda df, *args, **kwargs: df.apply(func, *args, **kwargs),
         other=lambda df: df,
     )
+
+
+@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+@pytest.mark.parametrize(
+    "func",
+    [
+        pytest.param({0: "sum", 1: "min", -1: "mean"}, id="str_reduction"),
+        pytest.param(
+            {0: "sum", 1: lambda df: df.quantile(), -1: "mean"},
+            id="str+callable_reduction",
+        ),
+        pytest.param(
+            {0: "sum", 1: lambda df: df + 1, -1: "mean"}, id="reduction+aggregation"
+        ),
+        pytest.param({0: "shift", 1: "ffill", -1: "bfill"}, id="str_aggregation"),
+        pytest.param(
+            {0: lambda df: df * 2, 1: lambda df: df + 1, -1: lambda df: df - 1},
+            id="callable_aggregation",
+        ),
+        pytest.param(
+            {0: ("sum", "mean"), -1: "mean"}, id="multiple_reductions_per_column"
+        ),
+        pytest.param(
+            {0: ("sum", "mean"), -1: ("sum", "mean")},
+            id="multiple_reductions_per_column_same",
+        ),
+        pytest.param(
+            {0: ("shift", "ffill"), -1: "bfill"}, id="multiple_aggregations_per_column"
+        ),
+        pytest.param(
+            {0: ("shift", "ffill"), -1: ("shift", "ffill")},
+            id="multiple_aggregations_per_column_same",
+        ),
+        pytest.param(
+            {0: (lambda df: df - 1, lambda df: df + 1), -1: lambda df: df + 1},
+            id="multiple_aggregations_per_column_callable",
+        ),
+    ],
+)
+@pytest.mark.parametrize("is_multiindex", [True, False])
+@pytest.mark.parametrize("axis", [0, 1])
+def test_apply_dict(data, func, is_multiindex, axis):
+    md_df, pd_df = create_test_dfs(data)
+    if is_multiindex:
+        new_axis = generate_multiindex(len(md_df.axes[axis ^ 1]), nlevels=4)
+        if axis == 0:
+            md_df.columns, pd_df.columns = new_axis, new_axis
+        else:
+            md_df.index, pd_df.index = new_axis, new_axis
+    func = {md_df.axes[axis ^ 1][key]: value for key, value in func.items()}
+    eval_general(md_df, pd_df, lambda df: df.apply(func, axis=axis))
 
 
 def test_eval_df_use_case():

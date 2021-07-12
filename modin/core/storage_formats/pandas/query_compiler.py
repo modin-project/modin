@@ -20,6 +20,7 @@ queries for the ``PandasDataframe``.
 
 import numpy as np
 import pandas
+import itertools
 from pandas.core.common import is_bool_indexer
 from pandas.core.indexing import check_bool_indexer
 from pandas.core.indexes.api import ensure_index_from_sequences
@@ -31,6 +32,7 @@ from pandas.core.dtypes.common import (
 from pandas.core.base import DataError
 from collections.abc import Iterable, Container
 from typing import List, Hashable
+from types import BuiltinFunctionType
 import warnings
 
 
@@ -2375,15 +2377,186 @@ class PandasQueryCompiler(BaseQueryCompiler):
         if "axis" not in kwargs:
             kwargs["axis"] = axis
 
-        def dict_apply_builder(df, func_dict={}):
-            # Sometimes `apply` can return a `Series`, but we require that internally
-            # all objects are `DataFrame`s.
-            return pandas.DataFrame(df.apply(func_dict, *args, **kwargs))
+        # Hopefully, this is a full list of non-reduction DataFrame methods that are
+        # available in `apply()`, otherwise labels precomputation would work incorrect:
+        non_reduction_methods = (
+            "bfill",
+            "cummax",
+            "cummin",
+            "cumprod",
+            "cumsum",
+            "ffill",
+            "isna",
+            "isnull",
+            "notna",
+            "notnull",
+            "shift",
+        )
+
+        def is_reduction_aggregation(func):
+            """Return True if all functions in the passed dict are reductions, False if not, None if failed to determine."""
+            for fn in func.values():
+                if not is_list_like(fn):
+                    fn = (fn,)
+                for f in fn:
+                    if isinstance(f, str):
+                        is_reduction = f not in non_reduction_methods
+                    elif isinstance(f, BuiltinFunctionType):
+                        is_reduction = True
+                    else:
+                        # It means that UDF was met and so we can't determine its nature
+                        # TODO: verification of UDFs
+                        is_reduction = None
+                    if not is_reduction:
+                        return is_reduction
+            return True
+
+        def get_fn_name(fn):
+            """Extract name from the passed `fn`."""
+            return getattr(fn, "__name__", str(fn))
+
+        # Inspecting passed functions to try to precompute result's axes labels
+        is_reduction = is_reduction_aggregation(func)
+        is_multiple_functions_per_column = any(is_list_like(fn) for fn in func.values())
+        if is_multiple_functions_per_column:
+            reference_fn = next(iter(func.values()))
+            # TODO: with multiple different aggregations, it's required to align partition's
+            # shape and indices after the aggregation is applied, defaulting to pandas for now.
+            # df.apply(
+            #    {col1: (reduction1, reduction2), col2: reduction3}, axis=0
+            # ):
+            #  |             partition1  |               partition2 |
+            #  | ------------------------+--------------------------|   <--- partition1 and partition2
+            #  |                    col1 |                     col2 |        have unaligned lengths & indices,
+            #  | reduction1   result_1_1 |  reduction3   result_3_2 |        however located in a single row
+            #  | reduction2   result_2_1 |---------------------------
+            #  ---------------------------
+            if any(fn != reference_fn for fn in func.values()):
+                return self.default_to_pandas(
+                    pandas.DataFrame.apply, *args, func=func, **kwargs
+                )
+
+        if is_reduction:
+            if is_multiple_functions_per_column:
+                # When multiple reduction functions per column are specified, the result
+                # is a 2D frame with the functions names at the index and the aggregated
+                # names at the column:
+                # func = {
+                #     col_1: (reduction_1, reduction_2),
+                #     col_2: (reduction_2, reduction_3),
+                # }:
+                #                     col_1        col_2
+                # reduction_1    result_1_1          NaN
+                # reduction_2    result_2_1   result_2_2
+                # reduction_3           NaN   result_3_2
+                new_index = pandas.Index(
+                    get_fn_name(fn) for fn in itertools.chain(*func.values())
+                ).unique()
+                new_columns = pandas.Index(func.keys())
+                new_columns.names = self.get_axis(axis ^ 1).names
+            else:
+                # When each row/column is aggregated with a single reduction function, then
+                # the result is a single-column frame with the aggregated names
+                # at the index and a "__reduced__" label at the column:
+                # func = {
+                #     col_1: reduction_1, col_2: reduction_2
+                # }:
+                #        __reduced__
+                # col_1     result_1
+                # col_2     result_2
+                new_index = ["__reduced__"]
+                new_columns = pandas.Index(func.keys())
+            if axis == 1:
+                new_index, new_columns = new_columns, new_index
+        elif is_reduction is False:
+            original_names = self.get_axis(axis ^ 1).names
+            if is_multiple_functions_per_column:
+                # When multiple aggregation functions per column are specified, the result
+                # is a 2D frame with unchanged indices and a MultiIndex column containing
+                # aggregated labels + aggregation function names at the lowest level:
+                # func = {
+                #     col_1: (aggregation_1, aggregation_2)
+                #     col_2: (aggregation_2, aggregation_3),
+                # }:
+                #                    col_1                           col_2
+                #            aggregation_1   aggregation_2   aggregation_2   aggregation_3
+                # index_1       result_1_1      result_1_2      result_1_3      result_1_4
+                #     ...             ...              ...             ...             ...
+                # index_m       result_m_1      result_m_2      result_m_3      result_m_4
+                # ^
+                # |
+                # original index
+                aggregated_labels = []
+                for key, value in func.items():
+                    if not is_list_like(value):
+                        value = (value,)
+                    for val in value:
+                        aggregated_labels.append(
+                            (*key, get_fn_name(val))
+                            if isinstance(key, tuple)
+                            else (key, get_fn_name(val))
+                        )
+                aggregated_labels = pandas.MultiIndex.from_tuples(
+                    aggregated_labels,
+                    names=(None if original_names is None else (*original_names, None)),
+                )
+            else:
+                # When each row/column is aggregated with a single function, then
+                # the result is a 2D frame with unchanged indices and the aggregated
+                # labels at the columns:
+                # func = {
+                #     col_1: aggregation_1,
+                #     col_2: aggregation_2,
+                # }:
+                #                 col_1        col_2
+                # index_1    result_1_1   result_1_2
+                #     ...           ...          ...
+                # index_m    result_m_1   result_m_2
+                # ^
+                # |
+                # original index
+                aggregated_labels = pandas.Index(func.keys())
+                aggregated_labels.names = original_names
+            new_index, new_columns = (
+                (self.index, aggregated_labels)
+                if axis == 0
+                else (aggregated_labels, self.columns)
+            )
+        else:
+            # Can't precompute axis labels if the aggregation type is unknown
+            new_index, new_columns = None, None
 
         func = {k: wrap_udf_function(v) if callable(v) else v for k, v in func.items()}
+
+        def dict_apply_builder(df, internal_indices):
+            """ "
+            Apply dictionary function to the partition.
+
+            Parameters
+            ----------
+            df : pandas.DataFrame
+                DataFrame held by partition.
+            internal_indices : list of ints
+                Numeric indices of the dictionary labels, that are present in the partition.
+
+            Returns
+            -------
+            pandas.DataFrame
+            """
+            # Filtering the function dict for labels, that are present in this partition
+            partition_func = {
+                col: func[col] for col in df.axes[axis ^ 1][internal_indices]
+            }
+            return df.apply(partition_func, *args, **kwargs)
+
         return self.__constructor__(
             self._modin_frame.apply_full_axis_select_indices(
-                axis, dict_apply_builder, func, keep_remaining=False
+                axis,
+                func=dict_apply_builder,
+                apply_indices=func.keys(),
+                keep_remaining=False,
+                new_index=new_index,
+                new_columns=new_columns,
             )
         )
 
