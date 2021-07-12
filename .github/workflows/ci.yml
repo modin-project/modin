@@ -263,7 +263,7 @@ jobs:
     steps:
       - uses: actions/checkout@v2
         with:
-          fetch-depth: 1
+          fetch-depth: 2
       - uses: conda-incubator/setup-miniconda@v2
         with:
           activate-environment: modin
@@ -319,7 +319,7 @@ jobs:
     steps:
       - uses: actions/checkout@v2
         with:
-          fetch-depth: 1
+          fetch-depth: 2
       - name: Setting up Modin environment
         uses: conda-incubator/setup-miniconda@v2
         with:
@@ -430,7 +430,7 @@ jobs:
     steps:
       - uses: actions/checkout@v2
         with:
-          fetch-depth: 1
+          fetch-depth: 2
       - uses: conda-incubator/setup-miniconda@v2
         with:
           activate-environment: modin
@@ -491,7 +491,7 @@ jobs:
     steps:
       - uses: actions/checkout@v2
         with:
-          fetch-depth: 1
+          fetch-depth: 2
       - uses: conda-incubator/setup-miniconda@v2
         with:
           activate-environment: modin
@@ -536,7 +536,7 @@ jobs:
     steps:
       - uses: actions/checkout@v2
         with:
-          fetch-depth: 1
+          fetch-depth: 2
       - uses: conda-incubator/setup-miniconda@v2
         with:
           activate-environment: modin
@@ -601,7 +601,7 @@ jobs:
     steps:
       - uses: actions/checkout@v2
         with:
-          fetch-depth: 1
+          fetch-depth: 2
       - uses: conda-incubator/setup-miniconda@v2
         with:
           activate-environment: modin
