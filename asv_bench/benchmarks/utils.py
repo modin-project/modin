@@ -267,6 +267,7 @@ def generate_dataframe(
     rand_high: int,
     groupby_ncols: Optional[int] = None,
     count_groups: Optional[int] = None,
+    enable_cache: bool = True,
 ) -> Union[pd.DataFrame, pandas.DataFrame]:
     """
     Generate DataFrame with caching.
@@ -297,6 +298,8 @@ def generate_dataframe(
         in each group every benchmarking time.
     count_groups : int, default: None
         Count of groups in groupby columns.
+    enable_cache : bool, default: True
+        The way to disable caching.
 
     Returns
     -------
@@ -313,19 +316,20 @@ def generate_dataframe(
     if groupby_ncols and count_groups:
         ncols -= groupby_ncols
 
-    cache_key = (
-        impl,
-        data_type,
-        nrows,
-        ncols,
-        rand_low,
-        rand_high,
-        groupby_ncols,
-        count_groups,
-    )
+    if enable_cache:
+        cache_key = (
+            impl,
+            data_type,
+            nrows,
+            ncols,
+            rand_low,
+            rand_high,
+            groupby_ncols,
+            count_groups,
+        )
 
-    if cache_key in dataframes_cache:
-        return dataframes_cache[cache_key]
+        if cache_key in dataframes_cache:
+            return dataframes_cache[cache_key]
 
     logging.info(
         "Allocating {} DataFrame {}: {} rows and {} columns [{}-{}]".format(
@@ -347,10 +351,12 @@ def generate_dataframe(
         assert False
 
     if groupby_ncols and count_groups:
-        dataframes_cache[cache_key] = df, groupby_columns
+        if enable_cache:
+            dataframes_cache[cache_key] = df, groupby_columns
         return df, groupby_columns
 
-    dataframes_cache[cache_key] = df
+    if enable_cache:
+        dataframes_cache[cache_key] = df
     return df
 
 
