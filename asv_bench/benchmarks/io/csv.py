@@ -20,6 +20,7 @@ from ..utils import (
     RAND_HIGH,
     ASV_USE_IMPL,
     ASV_DATASET_SIZE,
+    ASV_USE_BACKEND,
     UNARY_OP_DATA_SIZE,
     IMPL,
     execute,
@@ -69,8 +70,7 @@ class TimeReadCsvSkiprows(BaseReadCsv):
         execute(
             IMPL[ASV_USE_IMPL].read_csv(
                 test_filenames[self.shape_id], skiprows=self.skiprows
-            ),
-            trigger_omnisci_import=True,
+            )
         )
 
 
@@ -94,7 +94,7 @@ class TimeReadCsvTrueFalseValues(BaseReadCsv):
                 true_values=["Yes", "true"],
                 false_values=["No", "false"],
             ),
-            trigger_omnisci_import=True,
+            trigger_omnisci_import=ASV_USE_BACKEND == "omnisci",
         )
 
 
@@ -164,6 +164,5 @@ class TimeReadCsvNamesDtype:
                 header=0,
                 dtype=self.dtype,
                 parse_dates=self.parse_dates,
-            ),
-            trigger_omnisci_import=True,
+            )
         )

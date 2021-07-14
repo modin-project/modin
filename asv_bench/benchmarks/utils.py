@@ -280,7 +280,7 @@ def gen_data(
             data_type, nrows, ncols, rand_low, rand_high
         )
     )
-    data_generator = type_to_generator.get[data_type]
+    data_generator = type_to_generator[data_type]
 
     data = data_generator(nrows, ncols, rand_low, rand_high)
     data_cache[cache_key] = weakdict(data)
@@ -440,7 +440,7 @@ def execute(
     ----------
     dfs : modin.pandas.DataFrame, pandas.Datarame or list
         DataFrame(s) to be executed.
-    trigger_omnisci_import : bool
+    trigger_omnisci_import : bool, default: False
         Whether `dfs` are obtained by import with OmniSci engine.
     """
 
@@ -514,6 +514,8 @@ def prepare_io_data(test_filename: str, data_type: str, shapes: list):
         for different tests.
     data_type : {"int", "str_int", "true_false_int"}
         Type of data generation.
+    shapes : list
+        Data shapes to prepare.
 
     Returns
     -------
