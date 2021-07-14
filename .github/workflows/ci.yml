@@ -105,6 +105,7 @@ jobs:
           python scripts/doc_checker.py \
           modin/experimental/engines/omnisci_on_ray/frame \
           modin/experimental/engines/omnisci_on_ray/io.py
+      - run: python scripts/doc_checker.py modin/experimental/backends/omnisci
 
   lint-flake8:
     name: lint (flake8)
