@@ -318,6 +318,7 @@ by documentation for now, the rest is coming soon...).
    │   ├── :doc:`experimental </flow/modin/experimental/experimental>`
    │   │   ├───backends
    │   │   │   └─── :doc:`omnisci </flow/modin/experimental/backends/omnisci/index>`
+   │   │   │       └─── :doc:`query_compiler </flow/modin/experimental/backends/omnisci/query_compiler>`
    │   │   ├───cloud
    │   │   ├───engines
    │   │   │   ├─── :doc:`omnisci_on_ray </flow/modin/experimental/engines/omnisci_on_ray/frame/index>`

@@ -219,6 +219,8 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
             )
         return self.getitem_column_array(key)
 
+    # Merge
+
     def merge(self, right, **kwargs):
         on = kwargs.get("on", None)
         left_index = kwargs.get("left_index", False)
