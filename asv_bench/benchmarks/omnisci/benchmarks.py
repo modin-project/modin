@@ -407,6 +407,7 @@ class BaseTimeGroupBy:
             groupby_ncols,
             count_groups=ngroups,
         )
+        trigger_import(self.df)
 
 
 class TimeGroupByDefaultAggregations(BaseTimeGroupBy):
@@ -421,3 +422,18 @@ class TimeGroupByDefaultAggregations(BaseTimeGroupBy):
 
     def time_groupby_sum(self, *args, **kwargs):
         execute(self.df.groupby(by=self.groupby_columns).sum())
+
+
+class TimeGroupByMultiColumn(BaseTimeGroupBy):
+    param_names = ["shape", "ngroups", "groupby_ncols"]
+    params = [
+        UNARY_OP_DATA_SIZE[ASV_DATASET_SIZE],
+        GROUPBY_NGROUPS[ASV_DATASET_SIZE],
+        [6],
+    ]
+
+    def time_groupby_agg_mean(self, *args, **kwargs):
+        execute(self.df.groupby(by=self.groupby_columns).agg("mean"))
+
+    def time_groupby_agg_nunique(self, *args, **kwargs):
+        execute(self.df.groupby(by=self.groupby_columns).agg("nunique"))
