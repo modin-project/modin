@@ -33,7 +33,6 @@ from .utils import (
     SERIES_DATA_SIZE,
     RAND_LOW,
     RAND_HIGH,
-    trigger_import,
 )
 
 
@@ -47,7 +46,7 @@ class TimeJoin:
     def setup(self, shape, how):
         self.df1 = generate_dataframe(ASV_USE_IMPL, "int", *shape, RAND_LOW, RAND_HIGH)
         self.df2 = generate_dataframe(ASV_USE_IMPL, "int", *shape, RAND_LOW, RAND_HIGH)
-        trigger_import(self.df1, self.df2)
+        execute([self.df1, self.df2], trigger_omnisci_import=True)
 
     def time_join(self, shape, how):
         # join dataframes on index to get the predictable shape
@@ -68,7 +67,7 @@ class TimeMerge:
         self.df2 = generate_dataframe(
             ASV_USE_IMPL, "int", *shapes[1], RAND_LOW, RAND_HIGH
         )
-        trigger_import(self.df1, self.df2)
+        execute([self.df1, self.df2], trigger_omnisci_import=True)
 
     def time_merge(self, shapes, how):
         # merging dataframes by index is not supported, therefore we merge by column
@@ -92,7 +91,7 @@ class TimeAppend:
         self.df2 = generate_dataframe(
             ASV_USE_IMPL, "int", *shapes[1], RAND_LOW, RAND_HIGH
         )
-        trigger_import(self.df1, self.df2)
+        execute([self.df1, self.df2], trigger_omnisci_import=True)
 
     def time_append(self, shapes):
         execute(self.df1.append(self.df2))
@@ -107,7 +106,7 @@ class TimeBinaryOpDataFrame:
 
     def setup(self, shape, binary_op):
         self.df1 = generate_dataframe(ASV_USE_IMPL, "int", *shape, RAND_LOW, RAND_HIGH)
-        trigger_import(self.df1)
+        execute(self.df1, trigger_omnisci_import=True)
         self.op = getattr(self.df1, binary_op)
 
     def time_mul_scalar(self, shape, binary_op):
@@ -128,7 +127,7 @@ class TimeBinaryOpSeries:
         self.series = generate_dataframe(
             ASV_USE_IMPL, "int", *shape, RAND_LOW, RAND_HIGH
         )["col0"]
-        trigger_import(self.series)
+        execute(self.series, trigger_omnisci_import=True)
         self.op = getattr(self.series, binary_op)
 
     def time_mul_series(self, shape, binary_op):
@@ -143,7 +142,7 @@ class TimeArithmetic:
 
     def setup(self, shape):
         self.df = generate_dataframe(ASV_USE_IMPL, "int", *shape, RAND_LOW, RAND_HIGH)
-        trigger_import(self.df)
+        execute(self.df, trigger_omnisci_import=True)
 
     def time_sum(self, shape):
         execute(self.df.sum())
@@ -171,7 +170,7 @@ class TimeSortValues:
 
     def setup(self, shape, columns_number, ascending_list):
         self.df = generate_dataframe(ASV_USE_IMPL, "int", *shape, RAND_LOW, RAND_HIGH)
-        trigger_import(self.df)
+        execute(self.df, trigger_omnisci_import=True)
         self.columns = random_columns(self.df.columns, columns_number)
         self.ascending = (
             random_booleans(columns_number)
@@ -192,7 +191,7 @@ class TimeDrop:
 
     def setup(self, shape, drop_ncols):
         self.df = generate_dataframe(ASV_USE_IMPL, "int", *shape, RAND_LOW, RAND_HIGH)
-        trigger_import(self.df)
+        execute(self.df, trigger_omnisci_import=True)
         drop_count = (
             int(len(self.df.axes[1]) * drop_ncols)
             if isinstance(drop_ncols, float)
@@ -213,7 +212,7 @@ class TimeHead:
 
     def setup(self, shape, head_count):
         self.df = generate_dataframe(ASV_USE_IMPL, "int", *shape, RAND_LOW, RAND_HIGH)
-        trigger_import(self.df)
+        execute(self.df, trigger_omnisci_import=True)
         self.head_count = (
             int(head_count * len(self.df.index))
             if isinstance(head_count, float)
@@ -236,7 +235,7 @@ class TimeFillna:
         pd = IMPL[ASV_USE_IMPL]
         columns = [f"col{x}" for x in range(shape[1])]
         self.df = pd.DataFrame(np.nan, index=pd.RangeIndex(shape[0]), columns=columns)
-        trigger_import(self.df)
+        execute(self.df, trigger_omnisci_import=True)
 
         value = self.create_fillna_value(value_type, columns)
         limit = int(limit * shape[0]) if limit else None
@@ -275,7 +274,7 @@ class TimeValueCountsSeries:
             count_groups=ngroups,
         )
         self.series = self.df[self.column_names[0]]
-        trigger_import(self.series)
+        execute(self.series, trigger_omnisci_import=True)
 
     def time_value_counts(self, shape, ngroups):
         execute(self.series.value_counts())
@@ -296,7 +295,7 @@ class TimeIndexing:
 
     def setup(self, shape, indexer_type):
         self.df = generate_dataframe(ASV_USE_IMPL, "int", *shape, RAND_LOW, RAND_HIGH)
-        trigger_import(self.df)
+        execute(self.df, trigger_omnisci_import=True)
         self.indexer = {
             "bool": [False, True] * (shape[0] // 2),
             "scalar": shape[0] // 2,
@@ -328,7 +327,7 @@ class TimeResetIndex:
                 names=["level_1", "level_2"],
             )
             self.df.index = index
-        trigger_import(self.df)
+        execute(self.df, trigger_omnisci_import=True)
 
     def time_reset_index(self, shape, drop, level):
         execute(self.df.reset_index(drop=drop, level=level))
@@ -344,7 +343,7 @@ class TimeAstype:
 
     def setup(self, shape, dtype, astype_ncolumns):
         self.df = generate_dataframe(ASV_USE_IMPL, "int", *shape, RAND_LOW, RAND_HIGH)
-        trigger_import(self.df)
+        execute(self.df, trigger_omnisci_import=True)
         self.astype_arg = self.create_astype_arg(dtype, astype_ncolumns)
 
     def time_astype(self, shape, dtype, astype_ncolumns):
@@ -369,7 +368,7 @@ class TimeDescribe:
 
     def setup(self, shape):
         self.df = generate_dataframe(ASV_USE_IMPL, "int", *shape, RAND_LOW, RAND_HIGH)
-        trigger_import(self.df)
+        execute(self.df, trigger_omnisci_import=True)
 
     def time_describe(self, shape):
         execute(self.df.describe())
@@ -383,7 +382,7 @@ class TimeProperties:
 
     def setup(self, shape):
         self.df = generate_dataframe(ASV_USE_IMPL, "int", *shape, RAND_LOW, RAND_HIGH)
-        trigger_import(self.df)
+        execute(self.df, trigger_omnisci_import=True)
 
     def time_shape(self, shape):
         return self.df.shape

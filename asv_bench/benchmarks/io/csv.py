@@ -26,18 +26,17 @@ from ..utils import (
     get_shape_id,
     prepare_io_data,
 )
-from ..omnisci.utils import trigger_import
-from modin.config import Backend
 
 
 class BaseReadCsv:
     # test data file can de created only once
     def setup_cache(self, test_filename="io_test_file"):
-        test_filenames = prepare_io_data(test_filename, "str_int")
+        test_filenames = prepare_io_data(
+            test_filename, "str_int", UNARY_OP_DATA_SIZE[ASV_DATASET_SIZE]
+        )
         return test_filenames
 
     def setup(self, test_filenames, shape, *args, **kwargs):
-        self.execute = trigger_import if Backend.get == "Omnisci" else execute
         # ray init
         if ASV_USE_IMPL == "modin":
             pd.DataFrame([])
@@ -71,7 +70,7 @@ class TimeReadCsvSkiprows(BaseReadCsv):
             IMPL[ASV_USE_IMPL].read_csv(
                 test_filenames[self.shape_id], skiprows=self.skiprows
             ),
-            trigger_omnisci_import=True, 
+            trigger_omnisci_import=True,
         )
 
 
@@ -83,16 +82,19 @@ class TimeReadCsvTrueFalseValues(BaseReadCsv):
 
     # test data file should be created only once
     def setup_cache(self, test_filename="io_test_file"):
-        test_filenames = prepare_io_data(test_filename, "true_false_int")
+        test_filenames = prepare_io_data(
+            test_filename, "true_false_int", UNARY_OP_DATA_SIZE[ASV_DATASET_SIZE]
+        )
         return test_filenames
 
     def time_true_false_values(self, test_filenames, shape):
-        self.execute(
+        execute(
             IMPL[ASV_USE_IMPL].read_csv(
                 test_filenames[self.shape_id],
                 true_values=["Yes", "true"],
                 false_values=["No", "false"],
-            )
+            ),
+            trigger_omnisci_import=True,
         )
 
 
@@ -140,7 +142,6 @@ class TimeReadCsvNamesDtype:
         return cache
 
     def setup(self, cache, shape, names, dtype):
-        self.execute = trigger_import if Backend.get == "Omnisci" else execute
         # ray init
         if ASV_USE_IMPL == "modin":
             pd.DataFrame([])
@@ -156,12 +157,13 @@ class TimeReadCsvNamesDtype:
             self.parse_dates = self._timestamp_columns
 
     def time_read_csv_names_dtype(self, cache, shape, names, dtype):
-        self.execute(
+        execute(
             IMPL[ASV_USE_IMPL].read_csv(
                 self.filename,
                 names=self.names,
                 header=0,
                 dtype=self.dtype,
                 parse_dates=self.parse_dates,
-            )
+            ),
+            trigger_omnisci_import=True,
         )

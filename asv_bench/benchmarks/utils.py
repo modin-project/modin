@@ -439,38 +439,62 @@ def random_booleans(number: int) -> list:
     return list(random_state.choice([True, False], size=number))
 
 
-def execute(df: Union[pd.DataFrame, pandas.DataFrame]):
+def execute(
+    dfs: Union[pd.DataFrame, pandas.DataFrame, list],
+    trigger_omnisci_import: bool = False,
+):
     """
     Make sure the calculations are finished.
 
     Parameters
     ----------
-    df : modin.pandas.DataFrame or pandas.Datarame
+    dfs : modin.pandas.DataFrame, pandas.Datarame or list
+        DataFrame(s) to be executed.
+    trigger_omnisci_import : bool
+        Whether `dfs` are obtained by import with OmniSci engine.
     """
-    if ASV_USE_IMPL == "modin":
-        if ASV_USE_BACKEND == "omnisci":
-            df._query_compiler._modin_frame._execute()
-            return
-        partitions = df._query_compiler._modin_frame._partitions
-        all(
-            map(
-                lambda partition: partition.drain_call_queue() or True,
-                partitions.flatten(),
+
+    def _execute_df(df):
+        if ASV_USE_IMPL == "modin":
+            if ASV_USE_BACKEND == "omnisci":
+                if trigger_omnisci_import:
+                    from modin.experimental.engines.omnisci_on_ray.frame.omnisci_worker import (
+                        OmnisciServer,
+                    )
+
+                    df.shape  # to trigger real execution
+                    df._query_compiler._modin_frame._partitions[0][
+                        0
+                    ].frame_id = OmnisciServer().put_arrow_to_omnisci(
+                        df._query_compiler._modin_frame._partitions[0][0].get()
+                    )  # to trigger real execution
+                else:
+                    df._query_compiler._modin_frame._execute()
+                return
+            partitions = df._query_compiler._modin_frame._partitions
+            all(
+                map(
+                    lambda partition: partition.drain_call_queue() or True,
+                    partitions.flatten(),
+                )
             )
-        )
-        if ASV_USE_ENGINE == "ray":
-            from ray import wait
+            if ASV_USE_ENGINE == "ray":
+                from ray import wait
 
-            all(map(lambda partition: wait([partition.oid]), partitions.flatten()))
-        elif ASV_USE_ENGINE == "dask":
-            from dask.distributed import wait
+                all(map(lambda partition: wait([partition.oid]), partitions.flatten()))
+            elif ASV_USE_ENGINE == "dask":
+                from dask.distributed import wait
 
-            all(map(lambda partition: wait(partition.future), partitions.flatten()))
-        elif ASV_USE_ENGINE == "python":
+                all(map(lambda partition: wait(partition.future), partitions.flatten()))
+            elif ASV_USE_ENGINE == "python":
+                pass
+
+        elif ASV_USE_IMPL == "pandas":
             pass
 
-    elif ASV_USE_IMPL == "pandas":
-        pass
+    dfs = dfs if isinstance(dfs, list) else [dfs]
+    for df in dfs:
+        _execute_df(df)
 
 
 def get_shape_id(shape: tuple) -> str:

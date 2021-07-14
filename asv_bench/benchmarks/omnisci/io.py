@@ -23,9 +23,11 @@ from ..utils import (
     ASV_DATASET_SIZE,
     IMPL,
     get_shape_id,
+    execute,
 )
 
-from .utils import UNARY_OP_DATA_SIZE, trigger_import
+from .utils import UNARY_OP_DATA_SIZE
+
 from ..io.csv import TimeReadCsvTrueFalseValues  # noqa: F401
 
 
@@ -50,7 +52,6 @@ class TimeReadCsvNames:
         return cache
 
     def setup(self, cache, shape):
-        self.execute = trigger_import
         # ray init
         if ASV_USE_IMPL == "modin":
             pd.DataFrame([])
@@ -58,11 +59,12 @@ class TimeReadCsvNames:
         self.filename, self.names, self.dtype = cache[file_id]
 
     def time_read_csv_names(self, cache, shape):
-        self.execute(
+        execute(
             IMPL[ASV_USE_IMPL].read_csv(
                 self.filename,
                 names=self.names,
                 header=0,
                 dtype=self.dtype,
-            )
+            ),
+            trigger_omnisci_import=True,
         )
