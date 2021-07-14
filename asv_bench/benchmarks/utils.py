@@ -154,11 +154,6 @@ def gen_int_data(nrows: int, ncols: int, rand_low: int, rand_high: int) -> dict:
     dict
         Number of keys - `ncols`, each of them store np.ndarray of `nrows` length.
     """
-    logging.info(
-        "Generating int data {} rows and {} columns [{}-{}]".format(
-            nrows, ncols, rand_low, rand_high
-        )
-    )
     data = {
         "col{}".format(i): random_state.randint(rand_low, rand_high, size=(nrows))
         for i in range(ncols)
@@ -187,11 +182,6 @@ def gen_str_int_data(nrows: int, ncols: int, rand_low: int, rand_high: int) -> d
         Number of keys - `ncols`, each of them store np.ndarray of `nrows` length.
         One of the columns with string values.
     """
-    logging.info(
-        "Generating str_int data {} rows and {} columns [{}-{}]".format(
-            nrows, ncols, rand_low, rand_high
-        )
-    )
     data = gen_int_data(nrows, ncols, rand_low, rand_high).copy()
     # convert values in arbitary column to string type
     key = list(data.keys())[0]
@@ -221,11 +211,6 @@ def gen_true_false_int_data(nrows, ncols, rand_low, rand_high):
         One half of the columns with integer values, another half - with "true" and
         "false" string values.
     """
-    logging.info(
-        "Generating true_false_int data {} rows and {} columns [{}-{}]".format(
-            nrows, ncols, rand_low, rand_high
-        )
-    )
     data = gen_int_data(nrows // 2, ncols // 2, rand_low, rand_high)
 
     data_true_false = {
@@ -289,13 +274,18 @@ def gen_data(
         "str_int": gen_str_int_data,
         "true_false_int": gen_true_false_int_data,
     }
-    data_generator = type_to_generator.get(data_type, None)
-    assert data_generator
+    assert data_type in type_to_generator
+    logging.info(
+        "Generating {} data with {} rows and {} columns [{}-{}]".format(
+            data_type, nrows, ncols, rand_low, rand_high
+        )
+    )
+    data_generator = type_to_generator.get[data_type]
 
     data = data_generator(nrows, ncols, rand_low, rand_high)
     data_cache[cache_key] = weakdict(data)
 
-    return data.copy()
+    return data
 
 
 def generate_dataframe(
