@@ -67,10 +67,11 @@ class TimeReadCsvSkiprows(BaseReadCsv):
         self.skiprows = self.skiprows_mapping[skiprows] if skiprows else None
 
     def time_skiprows(self, test_filenames, shape, skiprows):
-        self.execute(
+        execute(
             IMPL[ASV_USE_IMPL].read_csv(
                 test_filenames[self.shape_id], skiprows=self.skiprows
-            )
+            ),
+            trigger_omnisci_import=True, 
         )
 
 

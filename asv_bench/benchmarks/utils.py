@@ -489,7 +489,7 @@ def get_shape_id(shape: tuple) -> str:
     return "_".join([str(element) for element in shape])
 
 
-def prepare_io_data(test_filename: str, data_type: str):
+def prepare_io_data(test_filename: str, data_type: str, shapes: list):
     """
     Prepare data for IO tests with caching.
 
@@ -507,7 +507,7 @@ def prepare_io_data(test_filename: str, data_type: str):
         Dcitionary that maps dataset shape to the file on disk.
     """
     test_filenames = {}
-    for shape in UNARY_OP_DATA_SIZE[ASV_DATASET_SIZE]:
+    for shape in shapes:
         shape_id = get_shape_id(shape)
         test_filenames[shape_id] = f"{test_filename}_{shape_id}.csv"
         df = generate_dataframe("pandas", data_type, *shape, RAND_LOW, RAND_HIGH)
