@@ -106,6 +106,7 @@ jobs:
           python scripts/doc_checker.py \
           modin/experimental/engines/omnisci_on_ray/frame \
           modin/experimental/engines/omnisci_on_ray/io.py
+      - run: python scripts/doc_checker.py modin/experimental/backends/omnisci
 
   lint-flake8:
     name: lint (flake8)
@@ -264,7 +265,7 @@ jobs:
     steps:
       - uses: actions/checkout@v2
         with:
-          fetch-depth: 1
+          fetch-depth: 2
       - uses: conda-incubator/setup-miniconda@v2
         with:
           activate-environment: modin
@@ -320,7 +321,7 @@ jobs:
     steps:
       - uses: actions/checkout@v2
         with:
-          fetch-depth: 1
+          fetch-depth: 2
       - name: Setting up Modin environment
         uses: conda-incubator/setup-miniconda@v2
         with:
@@ -431,7 +432,7 @@ jobs:
     steps:
       - uses: actions/checkout@v2
         with:
-          fetch-depth: 1
+          fetch-depth: 2
       - uses: conda-incubator/setup-miniconda@v2
         with:
           activate-environment: modin
@@ -492,7 +493,7 @@ jobs:
     steps:
       - uses: actions/checkout@v2
         with:
-          fetch-depth: 1
+          fetch-depth: 2
       - uses: conda-incubator/setup-miniconda@v2
         with:
           activate-environment: modin
@@ -537,7 +538,7 @@ jobs:
     steps:
       - uses: actions/checkout@v2
         with:
-          fetch-depth: 1
+          fetch-depth: 2
       - uses: conda-incubator/setup-miniconda@v2
         with:
           activate-environment: modin
@@ -602,7 +603,7 @@ jobs:
     steps:
       - uses: actions/checkout@v2
         with:
-          fetch-depth: 1
+          fetch-depth: 2
       - uses: conda-incubator/setup-miniconda@v2
         with:
           activate-environment: modin

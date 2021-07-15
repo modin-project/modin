@@ -438,18 +438,47 @@ class OmnisciOnRayFrame(PandasFrame):
         if groupby_args["level"] is not None:
             raise NotImplementedError("levels are not supported for groupby")
 
-        groupby_cols = by_frame.columns.tolist()
-        agg_cols = [col for col in self.columns if col not in by_frame.columns]
+        drop = kwargs.get("drop", True)
+        as_index = groupby_args.get("as_index", True)
+        groupby_cols = by_frame.columns
+        if isinstance(agg, dict):
+            agg_cols = agg.keys()
+        elif not drop:
+            # If 'by' data came from a different frame then 'self-aggregation'
+            # columns are more prioritized.
+            agg_cols = self.columns
+        else:
+            agg_cols = [col for col in self.columns if col not in groupby_cols]
+
+        # Mimic pandas behaviour: pandas does not allow for aggregation to be empty
+        # in case of multi-column 'by'.
+        if not as_index and len(agg_cols) == 0 and len(groupby_cols) > 1:
+            agg_cols = self.columns
 
         # Create new base where all required columns are computed. We don't allow
         # complex expressions to be a group key or an aggeregate operand.
         assert isinstance(by_frame._op, TransformNode), "unexpected by_frame"
-        exprs = OrderedDict(((col, by_frame.ref(col)) for col in groupby_cols))
+
+        col_to_delete_template = "__delete_me_{name}"
+
+        def generate_by_name(by):
+            """Generate unuqie name for `by` column in the resulted frame."""
+            if as_index:
+                return f"__index__0_{by}"
+            elif by in agg_cols:
+                # Aggregation columns are more prioritized than the 'by' cols,
+                # so in case of naming conflicts, we drop 'by' cols.
+                return col_to_delete_template.format(name=by)
+            else:
+                return by
+
+        exprs = OrderedDict(
+            ((generate_by_name(col), by_frame.ref(col)) for col in groupby_cols)
+        )
+        groupby_cols = list(exprs.keys())
         exprs.update(((col, self.ref(col)) for col in agg_cols))
         exprs = translate_exprs_to_base(exprs, base)
-        base_cols = Index.__new__(
-            Index, data=list(exprs.keys()), dtype=self.columns.dtype
-        )
+        base_cols = Index.__new__(Index, data=exprs.keys(), dtype=self.columns.dtype)
         base = self.__constructor__(
             columns=base_cols,
             dtypes=self._dtypes_for_exprs(exprs),
@@ -466,12 +495,12 @@ class OmnisciOnRayFrame(PandasFrame):
         # if groupby_args["dropna"]:
         #     base = base.dropna(subset=groupby_cols, how="any")
 
-        if groupby_args["as_index"]:
+        if as_index:
             index_cols = groupby_cols.copy()
         else:
             new_columns = groupby_cols.copy()
 
-        new_dtypes = by_frame._dtypes[groupby_cols].tolist()
+        new_dtypes = base._dtypes[groupby_cols].tolist()
 
         agg_exprs = OrderedDict()
         if isinstance(agg, str):
@@ -500,6 +529,15 @@ class OmnisciOnRayFrame(PandasFrame):
             force_execution_mode=self._force_execution_mode,
         )
 
+        if not as_index:
+            col_to_delete = col_to_delete_template.format(name=".*")
+            filtered_columns = [
+                col
+                for col in new_frame.columns
+                if not (isinstance(col, str) and re.match(col_to_delete, col))
+            ]
+            if len(filtered_columns) != len(new_frame.columns):
+                new_frame = new_frame.mask(col_indices=filtered_columns)
         return new_frame
 
     def agg(self, agg, **kwargs):
@@ -2210,7 +2248,7 @@ class OmnisciOnRayFrame(PandasFrame):
         match = re.search("__index__\\d+_(.*)", col)
         if match:
             name = match.group(1)
-            if name == "__None__":
+            if name in ("__None__", "__reduced__"):
                 return None
             return name
 

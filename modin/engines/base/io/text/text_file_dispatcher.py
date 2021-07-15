@@ -20,12 +20,15 @@ files from `FileDispatcher` class and can be used as base class for dipatchers o
 
 from modin.engines.base.io.file_dispatcher import FileDispatcher
 from modin.data_management.utils import compute_chunksize
+from modin.utils import _inherit_docstrings
 import numpy as np
 import warnings
 import io
 import os
 from typing import Union, Sequence, Optional, Tuple
 import pandas
+import pandas._libs.lib as lib
+from pandas.core.dtypes.common import is_list_like
 
 from modin.config import NPartitions
 
@@ -362,7 +365,7 @@ class TextFileDispatcher(FileDispatcher):
     def _define_header_size(
         cls,
         header: Union[int, Sequence[int], str, None] = "infer",
-        names: Optional[Sequence] = None,
+        names: Optional[Sequence] = lib.no_default,
     ) -> int:
         """
         Define the number of rows that are used by header.
@@ -380,7 +383,7 @@ class TextFileDispatcher(FileDispatcher):
             The number of rows that are used by header.
         """
         header_size = 0
-        if header == "infer" and names is None:
+        if header == "infer" and names in [lib.no_default, None]:
             header_size += 1
         elif isinstance(header, int):
             header_size += header + 1
@@ -473,3 +476,27 @@ class TextFileDispatcher(FileDispatcher):
             dtypes_ids.append(partition_id[-1])
 
         return partition_ids, index_ids, dtypes_ids
+
+    @classmethod
+    @_inherit_docstrings(pandas.io.parsers.base_parser.ParserBase._validate_usecols_arg)
+    def _validate_usecols_arg(cls, usecols):
+        msg = (
+            "'usecols' must either be list-like of all strings, all unicode, "
+            "all integers or a callable."
+        )
+        if usecols is not None:
+            if callable(usecols):
+                return usecols, None
+
+            if not is_list_like(usecols):
+                raise ValueError(msg)
+
+            usecols_dtype = lib.infer_dtype(usecols, skipna=False)
+
+            if usecols_dtype not in ("empty", "integer", "string"):
+                raise ValueError(msg)
+
+            usecols = set(usecols)
+
+            return usecols, usecols_dtype
+        return usecols, None

@@ -11,20 +11,41 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
+"""
+Module contains ``DFAlgQueryCompiler`` class.
+
+``DFAlgQueryCompiler`` is used for lazy DataFrame Algebra based engine.
+"""
+
 from modin.backends.base.query_compiler import (
     BaseQueryCompiler,
     _set_axis as default_axis_setter,
     _get_axis as default_axis_getter,
 )
 from modin.backends.pandas.query_compiler import PandasQueryCompiler
-
+from modin.utils import (
+    _inherit_docstrings,
+)
 import pandas
 
 from pandas.core.common import is_bool_indexer
 from pandas.core.dtypes.common import is_list_like
+from functools import wraps
 
 
 def is_inoperable(value):
+    """
+    Check if value cannot be processed by OmniSci engine.
+
+    Parameters
+    ----------
+    value : any
+        A value to check.
+
+    Returns
+    -------
+    bool
+    """
     if isinstance(value, (tuple, list)):
         result = False
         for val in value:
@@ -40,6 +61,25 @@ def is_inoperable(value):
 
 
 def build_method_wrapper(name, method):
+    """
+    Build method wrapper to handle inoperable data types.
+
+    Wrapper calls the original method if all its arguments can be processed
+    by OmniSci engine and ``BaseQueryCompiler`` otherwise.
+
+    Parameters
+    ----------
+    name : str
+        ``BaseQueryCompiler`` method name to fallback to.
+    method : callable
+        A method to wrap.
+
+    Returns
+    -------
+    callable
+    """
+
+    @wraps(method)
     def method_wrapper(self, *args, **kwargs):
         if is_inoperable([self, args, kwargs]):
             return getattr(BaseQueryCompiler, name)(self, *args, **kwargs)
@@ -49,6 +89,16 @@ def build_method_wrapper(name, method):
 
 
 def bind_wrappers(cls):
+    """
+    Wrap class methods.
+
+    Decorator allows to fallback to ``BaseQueryCompiler`` when unsupported
+    data types are used in a frame.
+
+    Returns
+    -------
+    class
+    """
     exclude = set(
         [
             "__init__",
@@ -77,9 +127,29 @@ def bind_wrappers(cls):
 
 
 @bind_wrappers
+@_inherit_docstrings(BaseQueryCompiler)
 class DFAlgQueryCompiler(BaseQueryCompiler):
-    """This class implements the logic necessary for operating on partitions
-    with a lazy DataFrame Algebra based backend."""
+    """
+    Query compiler for the OmniSci backend.
+
+    This class doesn't perform much processing and mostly forwards calls to
+    :py:class:`~modin.experimental.engines.omnisci_on_ray.frame.data.OmnisciOnRayFrame`
+    for lazy execution trees build.
+
+    Parameters
+    ----------
+    frame : OmnisciOnRayFrame
+        Modin Frame to query with the compiled queries.
+    shape_hint : {"row", "column", None}, default: None
+        Shape hint for frames known to be a column or a row, otherwise None.
+
+    Attributes
+    ----------
+    _modin_frame : OmnisciOnRayFrame
+        Modin Frame to query with the compiled queries.
+    _shape_hint : {"row", "column", None}
+        Shape hint for frames known to be a column or a row, otherwise None.
+    """
 
     lazy_execution = True
 
@@ -190,29 +260,14 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
         map_args,
         **kwargs,
     ):
-        """Perform a groupby size.
+        # Grouping on empty frame or on index level.
+        if len(self.columns) == 0:
+            return super().groupby_size(by, axis, groupby_args, map_args, **kwargs)
 
-        Parameters
-        ----------
-        by : BaseQueryCompiler
-            The query compiler object to groupby.
-        axis : 0 or 1
-            The axis to groupby. Must be 0 currently.
-        groupby_args : dict
-            The arguments for the groupby component.
-        map_args : dict
-            The arguments for the `map_func`.
-        reduce_args : dict
-            The arguments for `reduce_func`.
-        numeric_only : bool
-            Whether to drop non-numeric columns.
-        drop : bool
-            Whether the data in `by` was dropped.
-
-        Returns
-        -------
-        BaseQueryCompiler
-        """
+        groupby_args = groupby_args.copy()
+        as_index = groupby_args.get("as_index", True)
+        # Setting 'as_index' to True to avoid 'by' and 'agg' columns naming conflict
+        groupby_args["as_index"] = True
         new_frame = self._modin_frame.groupby_agg(
             by,
             axis,
@@ -220,63 +275,21 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
             groupby_args,
             **kwargs,
         )
-        if groupby_args["as_index"]:
+        if as_index:
             shape_hint = "column"
             new_frame = new_frame._set_columns(["__reduced__"])
         else:
             shape_hint = None
-            new_frame = new_frame._set_columns(list(new_frame.columns)[:-1] + ["size"])
+            new_frame = new_frame._set_columns(["size"]).reset_index(drop=False)
         return self.__constructor__(new_frame, shape_hint=shape_hint)
 
     def groupby_sum(self, by, axis, groupby_args, map_args, **kwargs):
-        """Groupby with sum aggregation.
-
-        Parameters
-        ----------
-        by
-            The column value to group by. This can come in the form of a query compiler
-        axis : (0 or 1)
-            The axis the group by
-        groupby_args : dict of {"str": value}
-            The arguments for groupby. These can include 'level', 'sort', 'as_index',
-            'group_keys', and 'squeeze'.
-        kwargs
-            The keyword arguments for the sum operation
-
-        Returns
-        -------
-        QueryCompiler
-            A new QueryCompiler
-        """
         new_frame = self._modin_frame.groupby_agg(
             by, axis, "sum", groupby_args, **kwargs
         )
         return self.__constructor__(new_frame)
 
     def groupby_count(self, by, axis, groupby_args, map_args, **kwargs):
-        """Perform a groupby count.
-
-        Parameters
-        ----------
-        by : BaseQueryCompiler
-            The query compiler object to groupby.
-        axis : 0 or 1
-            The axis to groupby. Must be 0 currently.
-        groupby_args : dict
-            The arguments for the groupby component.
-        map_args : dict
-            The arguments for the `map_func`.
-        reduce_args : dict
-            The arguments for `reduce_func`.
-        numeric_only : bool
-            Whether to drop non-numeric columns.
-        drop : bool
-            Whether the data in `by` was dropped.
-
-        Returns
-        -------
-        QueryCompiler
-        """
         new_frame = self._modin_frame.groupby_agg(
             by, axis, "count", groupby_args, **kwargs
         )
@@ -339,7 +352,7 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
             across rows.
             *Note:* OmniSci backend supports aggregation for 0 axis only, aggregation
             along rows will be defaulted to pandas.
-        level : None
+        level : None, default: None
             Serves the compatibility purpose, always have to be None.
         **kwargs : dict
             Additional parameters to pass to the aggregation function.
@@ -354,9 +367,7 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
             return getattr(super(), agg)(axis=axis, level=level, **kwargs)
 
         # TODO: Do filtering on numeric columns if `numeric_only=True`
-        if (
-            kwargs.get("skipna", True) is not None and not kwargs.get("skipna", True)
-        ) or kwargs.get("numeric_only"):
+        if not kwargs.get("skipna", True) or kwargs.get("numeric_only"):
             return getattr(super(), agg)(axis=axis, level=level, **kwargs)
         # Processed above, so can be omitted
         kwargs.pop("skipna", None)
@@ -385,26 +396,58 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
         return self.__constructor__(new_frame, shape_hint="column")
 
     def _get_index(self):
+        """
+        Return frame's index.
+
+        Returns
+        -------
+        pandas.Index
+        """
         if self._modin_frame._has_unsupported_data:
             return default_axis_getter(0)(self)
         return self._modin_frame.index
 
     def _set_index(self, index):
+        """
+        Set new index.
+
+        Parameters
+        ----------
+        index : pandas.Index
+            A new index.
+        """
         if self._modin_frame._has_unsupported_data:
-            return default_axis_setter(0)(self, index)
-        default_axis_setter(0)(self, index)
-        # NotImplementedError: OmnisciOnRayFrame._set_index is not yet suported
-        # self._modin_frame.index = index
+            default_axis_setter(0)(self, index)
+        else:
+            default_axis_setter(0)(self, index)
+            # NotImplementedError: OmnisciOnRayFrame._set_index is not yet suported
+            # self._modin_frame.index = index
 
     def _get_columns(self):
+        """
+        Return frame's columns.
+
+        Returns
+        -------
+        pandas.Index
+        """
         if self._modin_frame._has_unsupported_data:
             return default_axis_getter(1)(self)
         return self._modin_frame.columns
 
     def _set_columns(self, columns):
+        """
+        Set new columns.
+
+        Parameters
+        ----------
+        columns : list-like
+            New columns.
+        """
         if self._modin_frame._has_unsupported_data:
-            return default_axis_setter(1)(self, columns)
-        self._modin_frame = self._modin_frame._set_columns(columns)
+            default_axis_setter(1)(self, columns)
+        else:
+            self._modin_frame = self._modin_frame._set_columns(columns)
 
     def fillna(
         self,
@@ -428,15 +471,6 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
         return self.__constructor__(new_frame, self._shape_hint)
 
     def concat(self, axis, other, **kwargs):
-        """Concatenates two objects together.
-
-        Args:
-            axis: The axis index object to join (0 for columns, 1 for index).
-            other: The other_index to concat with.
-
-        Returns:
-            Concatenated objects.
-        """
         if not isinstance(other, list):
             other = [other]
         assert all(
@@ -455,15 +489,6 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
         return self.__constructor__(new_modin_frame)
 
     def drop(self, index=None, columns=None):
-        """Remove row data for target index and columns.
-
-        Args:
-            index: Target index to drop.
-            columns: Target columns to drop.
-
-        Returns:
-            A new QueryCompiler.
-        """
         assert index is None, "Only column drop is supported"
         return self.__constructor__(
             self._modin_frame.mask(
@@ -472,11 +497,6 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
         )
 
     def dropna(self, axis=0, how="any", thresh=None, subset=None):
-        """Returns a new QueryCompiler with null values dropped along given axis.
-
-        Return:
-            a new QueryCompiler
-        """
         if thresh is not None or axis != 0:
             return super().dropna(axis=axis, how=how, thresh=thresh, subset=subset)
 
@@ -488,26 +508,33 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
         )
 
     def dt_year(self):
-        """Extract year from Datetime info
-
-        Returns:
-            A new QueryCompiler.
-        """
         return self.__constructor__(
             self._modin_frame.dt_extract("year"), self._shape_hint
         )
 
     def dt_month(self):
-        """Extract month from Datetime info
-
-        Returns:
-            A new QueryCompiler.
-        """
         return self.__constructor__(
             self._modin_frame.dt_extract("month"), self._shape_hint
         )
 
     def _bin_op(self, other, op_name, **kwargs):
+        """
+        Perform a binary operation on a frame.
+
+        Parameters
+        ----------
+        other : any
+            The second operand.
+        op_name : str
+            Operation name.
+        **kwargs : dict
+            Keyword args.
+
+        Returns
+        -------
+        DFAlgQueryCompiler
+            A new query compiler.
+        """
         level = kwargs.get("level", None)
         if level is not None:
             return getattr(super(), op_name)(other=other, op_name=op_name, **kwargs)
@@ -572,29 +599,11 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
         )
 
     def astype(self, col_dtypes, **kwargs):
-        """Converts columns dtypes to given dtypes.
-
-        Args:
-            col_dtypes: Dictionary of {col: dtype,...} where col is the column
-                name and dtype is a numpy dtype.
-
-        Returns:
-            DataFrame with updated dtypes.
-        """
         return self.__constructor__(
             self._modin_frame.astype(col_dtypes), self._shape_hint
         )
 
     def setitem(self, axis, key, value):
-        """Set the column defined by `key` to the `value` provided.
-
-        Args:
-            key: The column name to set.
-            value: The value to set the column to.
-
-        Returns:
-             A new QueryCompiler
-        """
         if axis == 1 or not isinstance(value, type(self)):
             return super().setitem(axis=axis, key=key, value=value)
 
@@ -608,16 +617,6 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
     _setitem = PandasQueryCompiler._setitem
 
     def insert(self, loc, column, value):
-        """Insert new column data.
-
-        Args:
-            loc: Insertion index.
-            column: Column labels to insert.
-            value: Dtype object values to insert.
-
-        Returns:
-            A new DFAlgQueryCompiler with new data inserted.
-        """
         if isinstance(value, type(self)):
             value.columns = [column]
             try:
@@ -633,20 +632,6 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
         return self.__constructor__(self._modin_frame.insert(loc, column, value))
 
     def sort_rows_by_column_values(self, columns, ascending=True, **kwargs):
-        """Reorder the rows based on the lexicographic order of the given columns.
-
-        Parameters
-        ----------
-        columns : scalar or list of scalar
-            The column or columns to sort by
-        ascending : bool
-            Sort in ascending order (True) or descending order (False)
-
-        Returns
-        -------
-        DFAlgQueryCompiler
-            A new query compiler that contains result of the sort
-        """
         ignore_index = kwargs.get("ignore_index", False)
         na_position = kwargs.get("na_position", "last")
         return self.__constructor__(
@@ -655,17 +640,6 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
         )
 
     def columnarize(self):
-        """
-        Transposes this QueryCompiler if it has a single row but multiple columns.
-
-        This method should be called for QueryCompilers representing a Series object,
-        i.e. self.is_series_like() should be True.
-
-        Returns
-        -------
-        BaseQueryCompiler
-            Transposed new QueryCompiler or self.
-        """
         if self._shape_hint == "column":
             assert len(self.columns) == 1, "wrong shape hint"
             return self
@@ -687,7 +661,6 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
         return self
 
     def is_series_like(self):
-        """Return True if QueryCompiler has a single column or row"""
         if self._shape_hint is not None:
             return True
         return len(self.columns) == 1 or len(self.index) == 1
@@ -696,19 +669,6 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
         return self.__constructor__(self._modin_frame.cat_codes(), self._shape_hint)
 
     def has_multiindex(self, axis=0):
-        """
-        Check if specified axis is indexed by MultiIndex.
-
-        Parameters
-        ----------
-        axis : 0 or 1, default 0
-            The axis to check (0 - index, 1 - columns).
-
-        Returns
-        -------
-        bool
-            True if index at specified axis is MultiIndex and False otherwise.
-        """
         if axis == 0:
             return self._modin_frame.has_multiindex()
         assert axis == 1

@@ -333,6 +333,50 @@ class BasePandasDataset(object):
                 )
         return result
 
+    def _validate_function(self, func, on_invalid=None):
+        """
+        Check the validity of the function which is intended to be applied to the frame.
+
+        Parameters
+        ----------
+        func : object
+        on_invalid : callable(str, cls), optional
+            Function to call in case invalid `func` is met, `on_invalid` takes an error
+            message and an exception type as arguments. If not specified raise an
+            appropriate exception.
+            **Note:** This parameter is a hack to concord with pandas error types.
+        """
+
+        def error_raiser(msg, exception=Exception):
+            raise exception(msg)
+
+        if on_invalid is None:
+            on_invalid = error_raiser
+
+        if isinstance(func, dict):
+            [self._validate_function(fn, on_invalid) for fn in func.values()]
+            return
+            # We also could validate this, but it may be quite expensive for lazy-frames
+            # if not all(idx in self.axes[axis] for idx in func.keys()):
+            #     error_raiser("Invalid dict keys", KeyError)
+
+        if not is_list_like(func):
+            func = [func]
+
+        for fn in func:
+            if isinstance(fn, str):
+                if not (hasattr(self, fn) or hasattr(np, fn)):
+                    on_invalid(
+                        f"{fn} is not valid function for {type(self)} object.",
+                        AttributeError,
+                    )
+            elif not callable(fn):
+                on_invalid(
+                    f"One of the passed functions has an invalid type: {type(fn)}: {fn}, "
+                    "only callable or string is acceptable.",
+                    TypeError,
+                )
+
     def _binary_op(self, op, other, **kwargs):
         """
         Do binary operation between two datasets.
@@ -580,11 +624,8 @@ class BasePandasDataset(object):
         # Dictionaries have complex behavior because they can be renamed here.
         elif func is None or isinstance(func, dict):
             return self._default_to_pandas("agg", func, *args, **kwargs)
-        elif is_list_like(func) or callable(func):
-            kwargs.pop("is_transform", None)
-            return self.apply(func, axis=_axis, args=args, **kwargs)
-        else:
-            raise TypeError("type {} is not callable".format(type(func)))
+        kwargs.pop("is_transform", None)
+        return self.apply(func, axis=_axis, args=args, **kwargs)
 
     def _string_function(self, func, *args, **kwargs):
         """
@@ -785,6 +826,14 @@ class BasePandasDataset(object):
         args=(),
         **kwds,
     ):
+        def error_raiser(msg, exception):
+            """Convert passed exception to the same type as pandas do and raise it."""
+            # HACK: to concord with pandas error types by replacing all of the
+            # TypeErrors to the AssertionErrors
+            exception = exception if exception is not TypeError else AssertionError
+            raise exception(msg)
+
+        self._validate_function(func, on_invalid=error_raiser)
         axis = self._get_axis_number(axis)
         ErrorMessage.non_verified_udf()
         if isinstance(func, str):
@@ -797,19 +846,12 @@ class BasePandasDataset(object):
                 return result._query_compiler
             return result
         elif isinstance(func, dict):
-            if axis == 1:
-                raise TypeError(
-                    "(\"'dict' object is not callable\", "
-                    "'occurred at index {0}'".format(self.index[0])
-                )
             if len(self.columns) != len(set(self.columns)):
                 warnings.warn(
                     "duplicate column names not supported with apply().",
                     FutureWarning,
                     stacklevel=2,
                 )
-        elif not callable(func) and not is_list_like(func):
-            raise TypeError("{} object is not callable".format(type(func)))
         query_compiler = self._query_compiler.apply(
             func,
             axis,
@@ -1250,9 +1292,13 @@ class BasePandasDataset(object):
             times=times,
         )
 
-    def expanding(self, min_periods=1, center=None, axis=0):
+    def expanding(self, min_periods=1, center=None, axis=0, method="single"):
         return self._default_to_pandas(
-            "expanding", min_periods=min_periods, center=center, axis=axis
+            "expanding",
+            min_periods=min_periods,
+            center=center,
+            axis=axis,
+            method=method,
         )
 
     def ffill(self, axis=None, inplace=False, limit=None, downcast=None):
@@ -1473,6 +1519,8 @@ class BasePandasDataset(object):
 
     def kurt(self, axis=None, skipna=None, level=None, numeric_only=None, **kwargs):
         axis = self._get_axis_number(axis)
+        if skipna is None:
+            skipna = True
         if level is not None:
             func_kwargs = {
                 "skipna": skipna,
@@ -1525,7 +1573,8 @@ class BasePandasDataset(object):
 
     def mad(self, axis=None, skipna=None, level=None):
         axis = self._get_axis_number(axis)
-
+        if skipna is None:
+            skipna = True
         if level is not None:
             if (
                 not self._query_compiler.has_multiindex(axis=axis)
@@ -1548,7 +1597,7 @@ class BasePandasDataset(object):
         axis=None,
         level=None,
         errors="raise",
-        try_cast=False,
+        try_cast=no_default,
     ):
         return self._default_to_pandas(
             "mask",
@@ -1562,6 +1611,8 @@ class BasePandasDataset(object):
         )
 
     def max(self, axis=None, skipna=None, level=None, numeric_only=None, **kwargs):
+        if skipna is None:
+            skipna = True
         if level is not None:
             return self._default_to_pandas(
                 "max",
@@ -1621,6 +1672,8 @@ class BasePandasDataset(object):
             `DataFrame` - self is DataFrame and level is specified.
         """
         axis = self._get_axis_number(axis)
+        if skipna is None:
+            skipna = True
         if level is not None:
             return self._default_to_pandas(
                 op_name,
@@ -1671,6 +1724,8 @@ class BasePandasDataset(object):
         )
 
     def min(self, axis=None, skipna=None, level=None, numeric_only=None, **kwargs):
+        if skipna is None:
+            skipna = True
         if level is not None:
             return self._default_to_pandas(
                 "min",
@@ -2018,6 +2073,7 @@ class BasePandasDataset(object):
         on=None,
         axis=0,
         closed=None,
+        method="single",
     ):
         if win_type is not None:
             return Window(
@@ -2029,6 +2085,7 @@ class BasePandasDataset(object):
                 on=on,
                 axis=axis,
                 closed=closed,
+                method=method,
             )
 
         return Rolling(
@@ -2040,6 +2097,7 @@ class BasePandasDataset(object):
             on=on,
             axis=axis,
             closed=closed,
+            method=method,
         )
 
     def round(self, decimals=0, *args, **kwargs):
@@ -2074,6 +2132,7 @@ class BasePandasDataset(object):
         weights=None,
         random_state=None,
         axis=None,
+        ignore_index=False,
     ):
         axis = self._get_axis_number(axis)
         if axis:
@@ -2154,6 +2213,7 @@ class BasePandasDataset(object):
                 weights=weights,
                 random_state=random_state,
                 axis=axis,
+                ignore_index=ignore_index,
             )
         if random_state is not None:
             # Get a random number generator depending on the type of
@@ -2762,10 +2822,13 @@ class BasePandasDataset(object):
 
     def transform(self, func, axis=0, *args, **kwargs):
         kwargs["is_transform"] = True
+        self._validate_function(func)
         try:
             result = self.agg(func, axis=axis, *args, **kwargs)
-        except Exception:
-            raise ValueError("Transform function failed")
+        except TypeError:
+            raise
+        except Exception as err:
+            raise ValueError("Transform function failed") from err
         try:
             assert len(result) == len(self)
         except Exception:
@@ -2859,6 +2922,16 @@ class BasePandasDataset(object):
             return self._getitem_slice(indexer)
         else:
             return self._getitem(key)
+
+    def __hash__(self):
+        """
+        Raise an exception when calling hash on non-hashable ``DataFrame`` or ``Series`` objects.
+
+        Raises
+        ------
+        TypeError
+        """
+        raise TypeError(f"unhashable type: '{type(self).__name__}'")
 
     def _setitem_slice(self, key: slice, value):
         """
@@ -3366,6 +3439,7 @@ class Window(object):
         on=None,
         axis=0,
         closed=None,
+        method="single",
     ):
         self._dataframe = dataframe
         self._query_compiler = dataframe._query_compiler
@@ -3377,6 +3451,7 @@ class Window(object):
             on,
             axis,
             closed,
+            method,
         ]
 
     def mean(self, *args, **kwargs):
@@ -3425,6 +3500,7 @@ class Rolling(object):
         on=None,
         axis=0,
         closed=None,
+        method="single",
     ):
         self._dataframe = dataframe
         self._query_compiler = dataframe._query_compiler
@@ -3436,6 +3512,7 @@ class Rolling(object):
             on,
             axis,
             closed,
+            method,
         ]
 
     def count(self):

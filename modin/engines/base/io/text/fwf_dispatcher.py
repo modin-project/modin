@@ -15,7 +15,7 @@
 
 from modin.engines.base.io.text.text_file_dispatcher import TextFileDispatcher
 from modin.data_management.utils import compute_chunksize
-from pandas.io.parsers import _validate_usecols_arg
+import pandas._libs.lib as lib
 import pandas
 from csv import QUOTE_NONE
 import sys
@@ -88,9 +88,9 @@ class FWFDispatcher(TextFileDispatcher):
         if skiprows is not None and not isinstance(skiprows, int):
             return cls.single_worker_read(filepath_or_buffer, **kwargs)
         nrows = kwargs.pop("nrows", None)
-        names = kwargs.get("names", None)
+        names = kwargs.get("names", lib.no_default)
         index_col = kwargs.get("index_col", None)
-        if names is None:
+        if names in [lib.no_default, None]:
             # For the sake of the empty df, we assume no `index_col` to get the correct
             # column names before we build the index. Because we pass `names` in, this
             # step has to happen without removing the `index_col` otherwise it will not
@@ -106,7 +106,7 @@ class FWFDispatcher(TextFileDispatcher):
         skipfooter = kwargs.get("skipfooter", None)
         skiprows = kwargs.pop("skiprows", None)
         usecols = kwargs.get("usecols", None)
-        usecols_md = _validate_usecols_arg(usecols)
+        usecols_md = cls._validate_usecols_arg(usecols)
         if usecols is not None and usecols_md[1] != "integer":
             del kwargs["usecols"]
             all_cols = pandas.read_fwf(
@@ -136,7 +136,10 @@ class FWFDispatcher(TextFileDispatcher):
                 if skiprows is None:
                     skiprows = 0
                 header = kwargs.get("header", "infer")
-                if header == "infer" and kwargs.get("names", None) is None:
+                if header == "infer" and kwargs.get("names", lib.no_default) in [
+                    lib.no_default,
+                    None,
+                ]:
                     skiprows += 1
                 elif isinstance(header, int):
                     skiprows += header + 1
@@ -196,7 +199,10 @@ class FWFDispatcher(TextFileDispatcher):
             row_lengths = cls.materialize(index_ids)
             new_index = pandas.RangeIndex(sum(row_lengths))
             # pandas has a really weird edge case here.
-            if kwargs.get("names", None) is not None and skiprows > 1:
+            if (
+                kwargs.get("names", lib.no_default) not in [lib.no_default, None]
+                and skiprows > 1
+            ):
                 new_index = pandas.RangeIndex(
                     skiprows - 1, new_index.stop + skiprows - 1
                 )

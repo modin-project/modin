@@ -2059,7 +2059,14 @@ class BaseQueryCompiler(abc.ABC):
         BaseQueryCompiler
             QueryCompiler with new column inserted.
         """
-        return DataFrameDefault.register(pandas.DataFrame.insert, inplace=True)(
+
+        def inserter(df, loc, column, value):
+            if isinstance(value, pandas.DataFrame):
+                value = value.squeeze(axis=1)
+            df.insert(loc, column, value)
+            return df
+
+        return DataFrameDefault.register(inserter)(
             self, loc=loc, column=column, value=value
         )
 
@@ -2443,6 +2450,7 @@ class BaseQueryCompiler(abc.ABC):
         dropna,
         margins_name,
         observed,
+        sort,
     ):
         """
         Create a spreadsheet-style pivot table from underlying data.
@@ -2474,6 +2482,7 @@ class BaseQueryCompiler(abc.ABC):
             dropna=dropna,
             margins_name=margins_name,
             observed=observed,
+            sort=sort,
         )
 
     @doc_utils.add_refer_to("get_dummies")
