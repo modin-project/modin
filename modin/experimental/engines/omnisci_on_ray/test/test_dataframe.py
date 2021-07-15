@@ -346,7 +346,7 @@ class TestCSV:
         eval_io(
             fn_name="read_csv",
             md_extra_kwargs={"engine": engine},
-            check_exception_type=False if skip_exc_type_check else True,
+            check_exception_type=not skip_exc_type_check,
             raising_exceptions=None if skip_exc_type_check else io_ops_bad_exc,
             # read_csv kwargs
             filepath_or_buffer=pytest.csvs_names["test_read_csv_regular"],
