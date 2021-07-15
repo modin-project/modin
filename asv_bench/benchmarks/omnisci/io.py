@@ -23,7 +23,7 @@ from ..utils import (
     ASV_DATASET_SIZE,
     IMPL,
     get_shape_id,
-    execute,
+    trigger_import,
 )
 
 from .utils import UNARY_OP_DATA_SIZE
@@ -59,12 +59,10 @@ class TimeReadCsvNames:
         self.filename, self.names, self.dtype = cache[file_id]
 
     def time_read_csv_names(self, cache, shape):
-        execute(
-            IMPL[ASV_USE_IMPL].read_csv(
-                self.filename,
-                names=self.names,
-                header=0,
-                dtype=self.dtype,
-            ),
-            trigger_omnisci_import=True,
+        df = IMPL[ASV_USE_IMPL].read_csv(
+            self.filename,
+            names=self.names,
+            header=0,
+            dtype=self.dtype,
         )
+        trigger_import(df)

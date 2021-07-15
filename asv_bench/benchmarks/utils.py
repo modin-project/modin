@@ -429,62 +429,73 @@ def random_booleans(number: int) -> list:
     return list(random_state.choice([True, False], size=number))
 
 
+def trigger_import(*dfs):
+    """
+    Trigger import execution for DataFrames obtained by OmniSci engine.
+
+    Parameters
+    ----------
+    *dfs : iterable
+        DataFrames to trigger import.
+    """
+    assert ASV_USE_BACKEND == "omnisci"
+
+    from modin.experimental.engines.omnisci_on_ray.frame.omnisci_worker import (
+        OmnisciServer,
+    )
+
+    for df in dfs:
+        if ASV_USE_IMPL == "modin":
+            df.shape  # to trigger real execution
+            df._query_compiler._modin_frame._partitions[0][
+                0
+            ].frame_id = OmnisciServer().put_arrow_to_omnisci(
+                df._query_compiler._modin_frame._partitions[0][0].get()
+            )  # to trigger real execution
+        elif ASV_USE_IMPL == "pandas":
+            pass
+
+
 def execute(
-    dfs: Union[pd.DataFrame, pandas.DataFrame, list],
-    trigger_omnisci_import: bool = False,
+    df: Union[pd.DataFrame, pandas.DataFrame], trigger_omnisci_import: bool = False
 ):
     """
     Make sure the calculations are finished.
 
     Parameters
     ----------
-    dfs : modin.pandas.DataFrame, pandas.Datarame or list
-        DataFrame(s) to be executed.
+    df : modin.pandas.DataFrame or pandas.Datarame
+        DataFrame to be executed.
     trigger_omnisci_import : bool, default: False
-        Whether `dfs` are obtained by import with OmniSci engine.
+        Whether `df` are obtained by import with OmniSci engine.
     """
-
-    def _execute_df(df):
-        if ASV_USE_IMPL == "modin":
-            if ASV_USE_BACKEND == "omnisci":
-                if trigger_omnisci_import:
-                    from modin.experimental.engines.omnisci_on_ray.frame.omnisci_worker import (
-                        OmnisciServer,
-                    )
-
-                    df.shape  # to trigger real execution
-                    df._query_compiler._modin_frame._partitions[0][
-                        0
-                    ].frame_id = OmnisciServer().put_arrow_to_omnisci(
-                        df._query_compiler._modin_frame._partitions[0][0].get()
-                    )  # to trigger real execution
-                else:
-                    df._query_compiler._modin_frame._execute()
-                return
-            partitions = df._query_compiler._modin_frame._partitions
-            all(
-                map(
-                    lambda partition: partition.drain_call_queue() or True,
-                    partitions.flatten(),
-                )
+    if trigger_omnisci_import:
+        trigger_import(df)
+        return
+    if ASV_USE_IMPL == "modin":
+        if ASV_USE_BACKEND == "omnisci":
+            df._query_compiler._modin_frame._execute()
+            return
+        partitions = df._query_compiler._modin_frame._partitions
+        all(
+            map(
+                lambda partition: partition.drain_call_queue() or True,
+                partitions.flatten(),
             )
-            if ASV_USE_ENGINE == "ray":
-                from ray import wait
+        )
+        if ASV_USE_ENGINE == "ray":
+            from ray import wait
 
-                all(map(lambda partition: wait([partition.oid]), partitions.flatten()))
-            elif ASV_USE_ENGINE == "dask":
-                from dask.distributed import wait
+            all(map(lambda partition: wait([partition.oid]), partitions.flatten()))
+        elif ASV_USE_ENGINE == "dask":
+            from dask.distributed import wait
 
-                all(map(lambda partition: wait(partition.future), partitions.flatten()))
-            elif ASV_USE_ENGINE == "python":
-                pass
-
-        elif ASV_USE_IMPL == "pandas":
+            all(map(lambda partition: wait(partition.future), partitions.flatten()))
+        elif ASV_USE_ENGINE == "python":
             pass
 
-    dfs = dfs if isinstance(dfs, list) else [dfs]
-    for df in dfs:
-        _execute_df(df)
+    elif ASV_USE_IMPL == "pandas":
+        pass
 
 
 def get_shape_id(shape: tuple) -> str:
