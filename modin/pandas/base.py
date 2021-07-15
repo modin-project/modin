@@ -1507,6 +1507,8 @@ class BasePandasDataset(object):
 
     def kurt(self, axis=None, skipna=None, level=None, numeric_only=None, **kwargs):
         axis = self._get_axis_number(axis)
+        if skipna is None:
+            skipna = True
         if level is not None:
             func_kwargs = {
                 "skipna": skipna,
@@ -1559,7 +1561,8 @@ class BasePandasDataset(object):
 
     def mad(self, axis=None, skipna=None, level=None):
         axis = self._get_axis_number(axis)
-
+        if skipna is None:
+            skipna = True
         if level is not None:
             if (
                 not self._query_compiler.has_multiindex(axis=axis)
@@ -1596,6 +1599,8 @@ class BasePandasDataset(object):
         )
 
     def max(self, axis=None, skipna=None, level=None, numeric_only=None, **kwargs):
+        if skipna is None:
+            skipna = True
         if level is not None:
             return self._default_to_pandas(
                 "max",
@@ -1655,6 +1660,8 @@ class BasePandasDataset(object):
             `DataFrame` - self is DataFrame and level is specified.
         """
         axis = self._get_axis_number(axis)
+        if skipna is None:
+            skipna = True
         if level is not None:
             return self._default_to_pandas(
                 op_name,
@@ -1705,6 +1712,8 @@ class BasePandasDataset(object):
         )
 
     def min(self, axis=None, skipna=None, level=None, numeric_only=None, **kwargs):
+        if skipna is None:
+            skipna = True
         if level is not None:
             return self._default_to_pandas(
                 "min",
