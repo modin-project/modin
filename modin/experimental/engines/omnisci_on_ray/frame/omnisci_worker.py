@@ -32,7 +32,7 @@ except ModuleNotFoundError:  # fallback for older omniscidbe4py package naming
 if sys.platform == "linux":
     sys.setdlopenflags(prev)
 
-from modin.config import OmnisciFragmentSize
+from modin.config import OmnisciFragmentSize, OmnisciLaunchParameters
 
 
 class OmnisciServer:
@@ -48,13 +48,7 @@ class OmnisciServer:
         Do nothing if it is initiliazed already.
         """
         if cls._server is None:
-            cls._server = PyDbEngine(
-                enable_union=1,
-                enable_columnar_output=1,
-                enable_lazy_fetch=0,
-                null_div_by_zero=1,
-                enable_watchdog=0,
-            )
+            cls._server = PyDbEngine(**OmnisciLaunchParameters.get())
 
     @classmethod
     def stop_server(cls):
