@@ -1679,7 +1679,7 @@ class BaseQueryCompiler(abc.ABC):
         n : int, default: 5
         columns : list of labels, optional
             Column labels to order by.
-            (note: this parameter can be omited only for a single-column query compilers
+            (note: this parameter can be omitted only for a single-column query compilers
             representing Series object, otherwise `columns` has to be specified).
         keep : {"first", "last", "all"}, default: "first"
 
@@ -1704,7 +1704,7 @@ class BaseQueryCompiler(abc.ABC):
         n : int, default: 5
         columns : list of labels, optional
             Column labels to order by.
-            (note: this parameter can be omited only for a single-column query compilers
+            (note: this parameter can be omitted only for a single-column query compilers
             representing Series object, otherwise `columns` has to be specified).
         keep : {"first", "last", "all"}, default: "first"
 
