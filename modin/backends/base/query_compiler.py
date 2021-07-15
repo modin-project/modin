@@ -2466,6 +2466,7 @@ class BaseQueryCompiler(abc.ABC):
         dropna : bool
         margins_name : str
         observed : bool
+        sort : bool
 
         Returns
         -------
