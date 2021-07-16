@@ -88,8 +88,8 @@ class GroupBy:
         """
         inplace_args = [] if func is None else [func]
 
-        def inplace_applyier(grp, **func_kwargs):
-            return key(grp, *inplace_args, **func_kwargs)
+        def inplace_applyier(grp, *func_args, **func_kwargs):
+            return key(grp, *inplace_args, *func_args, **func_kwargs)
 
         return inplace_applyier
 
@@ -116,14 +116,14 @@ class GroupBy:
 
         Notes
         -----
-        There is two ways of how groupby aggregation can be invoked:
+        There are two ways of how groupby aggregation can be invoked:
             1. Explicitly with query compiler method: `qc.groupby_sum()`.
             2. By passing aggregation function as an argument: `qc.groupby_agg("sum")`.
         Both are going to produce the same result, however in the first case actual aggregation
         function can be extracted from the method name, while for the second only from the method arguments.
         """
         if "agg_func" in kwargs:
-            return kwargs["agg_func"]
+            return cls.inplace_applyier_builder(key, kwargs["agg_func"])
         elif "func_dict" in kwargs:
             return cls.inplace_applyier_builder(key, kwargs["func_dict"])
         else:
@@ -149,23 +149,19 @@ class GroupBy:
         def fn(
             df,
             by,
-            groupby_args,
+            axis,
+            groupby_kwargs,
             agg_args,
-            axis=0,
-            is_multi_by=None,
+            agg_kwargs,
             drop=False,
-            **kwargs
+            **kwargs,
         ):
             """Group DataFrame and apply aggregation function to each group."""
             by = cls.validate_by(by)
 
-            grp = df.groupby(by, axis=axis, **groupby_args)
+            grp = df.groupby(by, axis=axis, **groupby_kwargs)
             agg_func = cls.get_func(grp, key, **kwargs)
-            result = (
-                grp.agg(agg_func, **agg_args)
-                if isinstance(agg_func, dict)
-                else agg_func(grp, **agg_args)
-            )
+            result = agg_func(grp, *agg_args, **agg_kwargs)
 
             return result
 
@@ -189,24 +185,18 @@ class GroupBy:
         """
 
         def fn(
-            df,
-            by,
-            axis,
-            groupby_args,
-            map_args,
-            numeric_only=True,
-            drop=False,
-            **kwargs
+            df, by, axis, groupby_kwargs, agg_args, agg_kwargs, drop=False, **kwargs
         ):
             """Group DataFrame and apply aggregation function to each group."""
             if not isinstance(by, (pandas.Series, pandas.DataFrame)):
                 by = cls.validate_by(by)
-                return agg_func(
-                    df.groupby(by=by, axis=axis, **groupby_args), **map_args
+                grp = df.groupby(by, axis=axis, **groupby_kwargs)
+                grp_agg_func = cls.get_func(grp, agg_func, **kwargs)
+                return grp_agg_func(
+                    grp,
+                    *agg_args,
+                    **agg_kwargs,
                 )
-
-            if numeric_only:
-                df = df.select_dtypes(include="number")
 
             if isinstance(by, pandas.DataFrame):
                 by = by.squeeze(axis=1)
@@ -221,12 +211,13 @@ class GroupBy:
                 df = pandas.concat([df] + [by[[o for o in by if o not in df]]], axis=1)
                 by = list(by.columns)
 
-            groupby_args = groupby_args.copy()
-            as_index = groupby_args.pop("as_index", True)
-            groupby_args["as_index"] = True
+            groupby_kwargs = groupby_kwargs.copy()
+            as_index = groupby_kwargs.pop("as_index", True)
+            groupby_kwargs["as_index"] = True
 
-            grp = df.groupby(by, axis=axis, **groupby_args)
-            result = agg_func(grp, **map_args)
+            grp = df.groupby(by, axis=axis, **groupby_kwargs)
+            func = cls.get_func(grp, agg_func, **kwargs)
+            result = func(grp, *agg_args, **agg_kwargs)
 
             if isinstance(result, pandas.Series):
                 result = result.to_frame()
