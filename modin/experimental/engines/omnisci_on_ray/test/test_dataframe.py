@@ -779,6 +779,17 @@ class TestGroupby:
 
         run_and_compare(groupby, data=self.data)
 
+    def test_groupby_agg_default_to_pandas(self):
+        def lambda_func(df, **kwargs):
+            return df.groupby("a").agg(lambda df: (df.mean() - df.sum()) // 2)
+
+        run_and_compare(lambda_func, data=self.data, force_lazy=False)
+
+        def not_implemented_func(df, **kwargs):
+            return df.groupby("a").agg("cumprod")
+
+        run_and_compare(lambda_func, data=self.data, force_lazy=False)
+
     @pytest.mark.xfail(
         reason="Function specified as a string should be passed into backend API, but currently it is transformed into a lambda"
     )
