@@ -238,7 +238,7 @@ class TimeFillna:
         self.df = pd.DataFrame(np.nan, index=pd.RangeIndex(shape[0]), columns=columns)
         trigger_import(self.df)
 
-        value = self.create_fillna_value(value_type, shape)
+        value = self.create_fillna_value(value_type, columns)
         limit = int(limit * shape[0]) if limit else None
         self.kw = {"value": value, "limit": limit}
 
@@ -246,11 +246,11 @@ class TimeFillna:
         execute(self.df.fillna(**self.kw))
 
     @staticmethod
-    def create_fillna_value(value_type: str, shape: tuple):
+    def create_fillna_value(value_type: str, columns: list):
         if value_type == "scalar":
             value = 18.19
         elif value_type == "dict":
-            value = {k: k * 1.23 for k in range(shape[0])}
+            value = {k: i * 1.23 for i, k in enumerate(columns)}
         else:
             assert False
         return value
