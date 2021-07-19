@@ -425,6 +425,7 @@ class OmnisciOnRayIO(RayIO, TextFileDispatcher):
         engine = read_csv_kwargs.get("engine", None)
         skiprows = read_csv_kwargs.get("skiprows", None)
         delimiter = read_csv_kwargs.get("delimiter", None)
+        parse_dates = read_csv_kwargs.get("parse_dates", False)
 
         if read_csv_kwargs.get("compression", "infer") != "infer":
             return (
@@ -464,6 +465,15 @@ class OmnisciOnRayIO(RayIO, TextFileDispatcher):
                 "Specified a delimiter with both sep and delim_whitespace=True; you can only specify one."
             )
 
+        parse_dates_unsupported = isinstance(parse_dates, dict) or (
+            isinstance(parse_dates, list) and isinstance(parse_dates[0], list)
+        )
+        if parse_dates_unsupported:
+            return (
+                False,
+                "read_csv with 'arrow' engine supports only bool and "
+                "flattened lists 'parse_dates' parameter",
+            )
         if names and names != lib.no_default:
             if header not in [None, 0, "infer"]:
                 return (
@@ -471,6 +481,8 @@ class OmnisciOnRayIO(RayIO, TextFileDispatcher):
                     "read_csv with 'arrow' engine and provided 'names' parameter supports only 0, None and "
                     "'infer' header values",
                 )
+            if isinstance(parse_dates, list) and not set(parse_dates).issubset(names):
+                raise ValueError("Missing column provided to 'parse_dates'")
 
             empty_pandas_df = pandas.read_csv(
                 **dict(
@@ -481,6 +493,7 @@ class OmnisciOnRayIO(RayIO, TextFileDispatcher):
                     usecols=None,
                     index_col=None,
                     names=None,
+                    parse_dates=None,
                     engine=None if engine == "arrow" else engine,
                 ),
             )
@@ -498,6 +511,20 @@ class OmnisciOnRayIO(RayIO, TextFileDispatcher):
                     "read_csv with 'arrow' engine without 'names' parameter provided supports only 0 and 'infer' "
                     "header values",
                 )
+            if isinstance(parse_dates, list):
+                empty_pandas_df = pandas.read_csv(
+                    **dict(
+                        read_csv_kwargs,
+                        nrows=0,
+                        skiprows=None,
+                        skipfooter=0,
+                        usecols=None,
+                        index_col=None,
+                        engine=None if engine == "arrow" else engine,
+                    ),
+                )
+                if not set(parse_dates).issubset(empty_pandas_df.columns):
+                    raise ValueError("Missing column provided to 'parse_dates'")
 
         if not read_csv_kwargs.get("skip_blank_lines", True):
             # in some corner cases empty lines are handled as '',

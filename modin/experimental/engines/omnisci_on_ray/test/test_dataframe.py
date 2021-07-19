@@ -19,6 +19,7 @@ import pytest
 import re
 
 from modin.config import IsExperimental, Engine, Backend
+from modin.pandas.test.utils import io_ops_bad_exc
 
 IsExperimental.put(True)
 Engine.put("ray")
@@ -317,20 +318,40 @@ class TestCSV:
             True,
             False,
             ["col2"],
+            ["c2"],
+            [["col2", "col3"]],
+            {"col23": ["col2", "col3"]},
         ],
     )
+    @pytest.mark.parametrize("names", [None, [f"c{x}" for x in range(1, 7)]])
     def test_read_csv_datetime(
         self,
         engine,
         parse_dates,
+        names,
     ):
+
+        parse_dates_unsupported = isinstance(parse_dates, dict) or (
+            isinstance(parse_dates, list) and isinstance(parse_dates[0], list)
+        )
+        if parse_dates_unsupported and engine == "arrow" and not names:
+            pytest.skip(
+                "In these cases Modin raises `ArrowEngineException` while pandas "
+                "doesn't raise any exceptions that causes tests fails"
+            )
+        # In these cases Modin raises `ArrowEngineException` while pandas
+        # raises `ValueError`, so skipping exception type checking
+        skip_exc_type_check = parse_dates_unsupported and engine == "arrow"
 
         eval_io(
             fn_name="read_csv",
             md_extra_kwargs={"engine": engine},
+            check_exception_type=not skip_exc_type_check,
+            raising_exceptions=None if skip_exc_type_check else io_ops_bad_exc,
             # read_csv kwargs
             filepath_or_buffer=pytest.csvs_names["test_read_csv_regular"],
             parse_dates=parse_dates,
+            names=names,
         )
 
     @pytest.mark.parametrize("engine", [None, "arrow"])
