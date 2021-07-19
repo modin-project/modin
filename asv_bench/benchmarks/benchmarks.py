@@ -376,27 +376,18 @@ class TimeHead:
         execute(self.df.head(self.head_count))
 
 
-class TimeFillna:
-    param_names = ["self_type", "value_type", "shape", "limit", "inplace"]
+class TimeFillnaSeries:
+    param_names = ["value_type", "shape", "limit"]
     params = [
-        ["DataFrame", "Series"],
-        ["scalar", "dict", "DataFrame", "Series"],
+        ["scalar", "dict", "Series"],
         UNARY_OP_DATA_SIZE[ASV_DATASET_SIZE],
         [None, 0.8],
-        [False, True],
     ]
 
-    def setup(self, self_type, value_type, shape, limit, inplace):
+    def setup(self, value_type, shape, limit):
         pd = IMPL[ASV_USE_IMPL]
-        columns = [f"col{x}" for x in range(shape[1])]
-        if self_type == "DataFrame":
-            self.dataset = pd.DataFrame(
-                np.nan, index=pd.RangeIndex(shape[0]), columns=columns
-            )
-        elif self_type == "Series":
-            self.dataset = pd.Series(np.nan, index=pd.RangeIndex(shape[0]))
-        else:
-            assert False
+        self.dataset = pd.Series(np.nan, index=pd.RangeIndex(shape[0]))
+
         if value_type == "scalar":
             self.value = 18.19
         elif value_type == "dict":
@@ -405,9 +396,43 @@ class TimeFillna:
             self.value = pd.Series(
                 [k * 1.23 for k in range(shape[0])], index=pd.RangeIndex(shape[0])
             )
+        else:
+            assert False
+        limit = int(limit * shape[0]) if limit else None
+        self.kw = {"value": self.value, "limit": limit}
+
+    def time_fillna(self, value_type, shape, limit):
+        execute(self.dataset.fillna(**self.kw))
+
+    def time_fillna_inplace(self, value_type, shape, limit):
+        self.dataset.fillna(inplace=True, **self.kw)
+        execute(self.dataset)
+
+
+class TimeFillnaDataFrame:
+    param_names = ["value_type", "shape", "limit", "inplace"]
+    params = [
+        ["scalar", "dict", "DataFrame", "Series"],
+        UNARY_OP_DATA_SIZE[ASV_DATASET_SIZE],
+        [None, 0.8],
+    ]
+
+    def setup(self, value_type, shape, limit):
+        pd = IMPL[ASV_USE_IMPL]
+        columns = [f"col{x}" for x in range(shape[1])]
+        self.dataset = pd.DataFrame(
+            np.nan, index=pd.RangeIndex(shape[0]), columns=columns
+        )
+
+        if value_type == "scalar":
+            self.value = 18.19
+        elif value_type == "dict":
+            self.value = {k: i * 1.23 for i, k in enumerate(columns)}
+        elif value_type == "Series":
+            self.value = pd.Series(
+                [i * 1.23 for i in range(len(columns))], index=columns
+            )
         elif value_type == "DataFrame":
-            if self_type == "Series":
-                raise NotImplementedError
             self.value = pd.DataFrame(
                 {
                     k: [i + j * 1.23 for j in range(shape[0])]
@@ -418,15 +443,15 @@ class TimeFillna:
             )
         else:
             assert False
-        self.limit = int(limit * shape[0]) if limit else None
+        limit = int(limit * shape[0]) if limit else None
+        self.kw = {"value": self.value, "limit": limit}
 
-    def time_fillna(self, self_type, value_type, shape, limit, inplace):
-        kw = {"value": self.value, "limit": self.limit, "inplace": inplace}
-        if inplace:
-            self.dataset.fillna(**kw)
-            execute(self.dataset)
-        else:
-            execute(self.dataset.fillna(**kw))
+    def time_fillna(self, value_type, shape, limit):
+        execute(self.dataset.fillna(**self.kw))
+
+    def time_fillna_inplace(self, value_type, shape, limit):
+        self.dataset.fillna(inplace=True, **self.kw)
+        execute(self.dataset)
 
 
 class BaseTimeValueCounts:
