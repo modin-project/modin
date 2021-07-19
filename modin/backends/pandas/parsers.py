@@ -210,41 +210,27 @@ class PandasCSVParser(PandasParser):
         num_splits = kwargs.pop("num_splits", None)
         start = kwargs.pop("start", None)
         end = kwargs.pop("end", None)
-        index_col = kwargs.get("index_col", None)
-
-        index_names = kwargs.pop("index_names")
-        column_names = kwargs.pop("column_names")
-
-        index_name_counts = 0
-        if index_col is not None:
-            index_name_counts = len(index_names) if isinstance(index_names, list) else 1
-        kwargs["names"] = [
-            f"col{x}" for x in range(index_name_counts + len(column_names))
-        ]
-
+        header_size = kwargs.pop("header_size", None)
         if start is not None and end is not None:
             # pop "compression" from kwargs because bio is uncompressed
             bio = FileDispatcher.file_open(
                 fname, "rb", kwargs.pop("compression", "infer")
             )
-            if kwargs.get("encoding", None) is not None:
-                header = b"" + bio.readline()
-            else:
-                header = b""
+            header = b""
+            for _ in range(header_size):
+                header += bio.readline()
             bio.seek(start)
             to_read = header + bio.read(end - start)
             bio.close()
             pandas_df = pandas.read_csv(BytesIO(to_read), **kwargs)
-            pandas_df.columns = column_names
-            pandas_df.index.rename(index_names, inplace=True)
         else:
             # This only happens when we are reading with only one worker (Default)
             return pandas.read_csv(fname, **kwargs)
-        if index_col is not None:
-            index = pandas_df.index
-        else:
-            # The lengths will become the RangeIndex
-            index = len(pandas_df)
+        index = (
+            pandas_df.index
+            if not isinstance(pandas_df.index, pandas.RangeIndex)
+            else len(pandas_df)
+        )
         return _split_result_for_readers(1, num_splits, pandas_df) + [
             index,
             pandas_df.dtypes,
@@ -518,7 +504,7 @@ class PandasExcelParser(PandasParser):
             has_index_names=is_list_like(header) and len(header) > 1,
             skiprows=skiprows,
             usecols=usecols,
-            **kwargs,
+            **kwargs
         )
         # In excel if you create a row with only a border (no values), this parser will
         # interpret that as a row of NaN values. pandas discards these values, so we
