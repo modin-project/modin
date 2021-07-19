@@ -472,7 +472,7 @@ class OmnisciOnRayIO(RayIO, TextFileDispatcher):
             return (
                 False,
                 "read_csv with 'arrow' engine supports only bool and "
-                "flattened lists `parse_dates` parameter",
+                "flattened lists 'parse_dates' parameter",
             )
         if names and names != lib.no_default:
             if header not in [None, 0, "infer"]:
