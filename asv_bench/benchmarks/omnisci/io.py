@@ -23,9 +23,12 @@ from ..utils import (
     ASV_DATASET_SIZE,
     IMPL,
     get_shape_id,
+    trigger_import,
 )
 
-from .utils import UNARY_OP_DATA_SIZE, trigger_import
+from .utils import UNARY_OP_DATA_SIZE
+
+from ..io.csv import TimeReadCsvTrueFalseValues  # noqa: F401
 
 
 class TimeReadCsvNames:

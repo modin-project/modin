@@ -217,6 +217,54 @@ def gen_str_int_data(nrows: int, ncols: int, rand_low: int, rand_high: int) -> d
     return data
 
 
+def gen_true_false_int_data(nrows, ncols, rand_low, rand_high):
+    """
+    Generate int data and string data "true" and "false" values with caching.
+
+    The generated data are saved in the dictionary and on a subsequent call,
+    if the keys match, saved data will be returned. Therefore, we need
+    to carefully monitor the changing of saved data and make its copy if needed.
+
+    Parameters
+    ----------
+    nrows : int
+        Number of rows.
+    ncols : int
+        Number of columns.
+    rand_low : int
+        Low bound for random generator.
+    rand_high : int
+        High bound for random generator.
+
+    Returns
+    -------
+    dict
+        Number of keys - `ncols`, each of them store np.ndarray of `nrows` length.
+        One half of the columns with integer values, another half - with "true" and
+        "false" string values.
+    """
+    cache_key = ("true_false_int", nrows, ncols, rand_low, rand_high)
+    if cache_key in data_cache:
+        return data_cache[cache_key]
+
+    logging.info(
+        "Generating true_false_int data {} rows and {} columns [{}-{}]".format(
+            nrows, ncols, rand_low, rand_high
+        )
+    )
+    data = gen_int_data(nrows // 2, ncols // 2, rand_low, rand_high)
+
+    data_true_false = {
+        "tf_col{}".format(i): random_state.choice(
+            ["Yes", "true", "No", "false"], size=(nrows - nrows // 2)
+        )
+        for i in range(ncols - ncols // 2)
+    }
+    data.update(data_true_false)
+    data_cache[cache_key] = weakdict(data)
+    return data
+
+
 def gen_data(
     data_type: str,
     nrows: int,
@@ -233,7 +281,7 @@ def gen_data(
 
     Parameters
     ----------
-    data_type : {"int", "str_int"}
+    data_type : {"int", "str_int", "true_false_int"}
         Type of data generation.
     nrows : int
         Number of rows.
@@ -248,14 +296,27 @@ def gen_data(
     -------
     dict
         Number of keys - `ncols`, each of them store np.ndarray of `nrows` length.
-        When `data_type`=="str_int" some of the columns will be of string type.
+
+    Notes
+    -----
+    Returned data type depends on the `data_type` parameter in the next way:
+    - `data_type`=="int" - all columns will be contain only integer values;
+    - `data_type`=="str_int" some of the columns will be of string type;
+    - `data_type`=="true_false_int" half of the columns will be filled with
+      string values representing "true" and "false" values and another half - with
+      integers.
     """
-    if data_type == "int":
-        return gen_int_data(nrows, ncols, rand_low, rand_high)
-    elif data_type == "str_int":
-        return gen_str_int_data(nrows, ncols, rand_low, rand_high)
-    else:
-        assert False
+    type_to_generator = {
+        "int": gen_int_data,
+        "str_int": gen_str_int_data,
+        "true_false_int": gen_true_false_int_data,
+    }
+    assert data_type in type_to_generator
+    data_generator = type_to_generator[data_type]
+
+    data = data_generator(nrows, ncols, rand_low, rand_high)
+
+    return data
 
 
 def generate_dataframe(
@@ -399,14 +460,49 @@ def random_booleans(number: int) -> list:
     return list(random_state.choice([True, False], size=number))
 
 
-def execute(df: Union[pd.DataFrame, pandas.DataFrame]):
+def trigger_import(*dfs):
+    """
+    Trigger import execution for DataFrames obtained by OmniSci engine.
+
+    Parameters
+    ----------
+    *dfs : iterable
+        DataFrames to trigger import.
+    """
+    assert ASV_USE_BACKEND == "omnisci"
+
+    from modin.experimental.engines.omnisci_on_ray.frame.omnisci_worker import (
+        OmnisciServer,
+    )
+
+    for df in dfs:
+        if ASV_USE_IMPL == "modin":
+            df.shape  # to trigger real execution
+            df._query_compiler._modin_frame._partitions[0][
+                0
+            ].frame_id = OmnisciServer().put_arrow_to_omnisci(
+                df._query_compiler._modin_frame._partitions[0][0].get()
+            )  # to trigger real execution
+        elif ASV_USE_IMPL == "pandas":
+            pass
+
+
+def execute(
+    df: Union[pd.DataFrame, pandas.DataFrame], trigger_omnisci_import: bool = False
+):
     """
     Make sure the calculations are finished.
 
     Parameters
     ----------
     df : modin.pandas.DataFrame or pandas.Datarame
+        DataFrame to be executed.
+    trigger_omnisci_import : bool, default: False
+        Whether `df` are obtained by import with OmniSci engine.
     """
+    if trigger_omnisci_import:
+        trigger_import(df)
+        return
     if ASV_USE_IMPL == "modin":
         if ASV_USE_BACKEND == "omnisci":
             df._query_compiler._modin_frame._execute()
@@ -447,3 +543,32 @@ def get_shape_id(shape: tuple) -> str:
     str
     """
     return "_".join([str(element) for element in shape])
+
+
+def prepare_io_data(test_filename: str, data_type: str, shapes: list):
+    """
+    Prepare data for IO tests with caching.
+
+    Parameters
+    ----------
+    test_filename : str
+        Unique file identifier that is used to distinguish data
+        for different tests.
+    data_type : {"int", "str_int", "true_false_int"}
+        Type of data generation.
+    shapes : list
+        Data shapes to prepare.
+
+    Returns
+    -------
+    test_filenames : dict
+        Dictionary that maps dataset shape to the file on disk.
+    """
+    test_filenames = {}
+    for shape in shapes:
+        shape_id = get_shape_id(shape)
+        test_filenames[shape_id] = f"{test_filename}_{shape_id}.csv"
+        df = generate_dataframe("pandas", data_type, *shape, RAND_LOW, RAND_HIGH)
+        df.to_csv(test_filenames[shape_id], index=False)
+
+    return test_filenames

@@ -25,6 +25,7 @@ from ..utils import (
     translator_groupby_ngroups,
     random_columns,
     random_booleans,
+    trigger_import,
 )
 
 from .utils import (
@@ -33,7 +34,6 @@ from .utils import (
     SERIES_DATA_SIZE,
     RAND_LOW,
     RAND_HIGH,
-    trigger_import,
 )
 
 
