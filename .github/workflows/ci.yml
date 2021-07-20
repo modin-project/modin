@@ -388,7 +388,7 @@ jobs:
           asv check -v
           git remote add upstream https://github.com/modin-project/modin.git
           git fetch upstream
-          if [ "test" = "test" ]; then
+          if git diff upstream/master --name-only | grep -q "^asv_bench/"; then
               asv machine --yes
 
               # check Modin on Ray
