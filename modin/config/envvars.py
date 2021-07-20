@@ -277,6 +277,13 @@ class AsvImplementation(EnvironmentVariable, type=ExactStr):
     default = "modin"
 
 
+class AsvDataSizeConfig(EnvironmentVariable, type=ExactStr):
+    """Allows to override default size of data (shapes)."""
+
+    varname = "MODIN_ASV_DATASIZE_CONFIG"
+    default = None
+
+
 class ProgressBar(EnvironmentVariable, type=bool):
     """Whether or not to show the progress bar."""
 

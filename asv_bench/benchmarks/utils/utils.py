@@ -20,6 +20,7 @@ the performance results, hence some utility functions are duplicated here.
 """
 
 import os
+import json
 import logging
 import modin.pandas as pd
 import pandas
@@ -622,3 +623,46 @@ def prepare_io_data(test_filename: str, data_type: str, shapes: list):
         df.to_csv(test_filenames[shape_id], index=False)
 
     return test_filenames
+
+
+CONFIG_FROM_FILE = None
+
+
+def get_benchmark_shapes(bench_id: str, default: list):
+    """
+    Get custom benchmark shapes from a json file stored in MODIN_ASV_DATASIZE_CONFIG.
+
+    If `bench_id` benchmark is not found in the file, then the default value will
+    be used.
+
+    Parameters
+    ----------
+    bench_id : str
+        Unique benchmark identifier that is used to get shapes.
+    default : list
+        Default shapes.
+
+    Returns
+    -------
+    list
+        Benchmark shapes.
+    """
+    try:
+        from modin.config import AsvDataSizeConfig
+
+        filename = AsvDataSizeConfig.get()
+    except ImportError:
+        filename = os.environ.get("MODIN_ASV_DATASIZE_CONFIG", None)
+
+    if filename:
+        global CONFIG_FROM_FILE
+        if not CONFIG_FROM_FILE:
+            # should be json
+            with open(filename) as _f:
+                CONFIG_FROM_FILE = json.load(_f)
+        if bench_id in CONFIG_FROM_FILE:
+            # convert strings to tuples;
+            # example: "omnisci.TimeReadCsvNames": ["(5555, 55)", "(3333, 33)"]
+            shapes = [eval(shape) for shape in CONFIG_FROM_FILE[bench_id]]
+            return shapes
+    return default

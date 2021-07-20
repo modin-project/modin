@@ -14,7 +14,7 @@
 import modin.pandas as pd
 import numpy as np
 
-from ..utils import (
+from ..utils.utils import (
     generate_dataframe,
     RAND_LOW,
     RAND_HIGH,
@@ -26,6 +26,7 @@ from ..utils import (
     execute,
     get_shape_id,
     prepare_io_data,
+    get_benchmark_shapes,
 )
 
 
@@ -53,7 +54,9 @@ class TimeReadCsvSkiprows(BaseReadCsv):
 
     param_names = ["shape", "skiprows"]
     params = [
-        UNARY_OP_DATA_SIZE[ASV_DATASET_SIZE],
+        get_benchmark_shapes(
+            "TimeReadCsvSkiprows", UNARY_OP_DATA_SIZE[ASV_DATASET_SIZE]
+        ),
         [
             None,
             "lambda_even_rows",
@@ -77,7 +80,9 @@ class TimeReadCsvSkiprows(BaseReadCsv):
 class TimeReadCsvTrueFalseValues(BaseReadCsv):
     param_names = ["shape"]
     params = [
-        UNARY_OP_DATA_SIZE[ASV_DATASET_SIZE],
+        get_benchmark_shapes(
+            "TimeReadCsvTrueFalseValues", UNARY_OP_DATA_SIZE[ASV_DATASET_SIZE]
+        ),
     ]
 
     # test data file should be created only once
@@ -104,7 +109,9 @@ class TimeReadCsvNamesDtype:
 
     param_names = ["shape", "names", "dtype"]
     params = [
-        UNARY_OP_DATA_SIZE[ASV_DATASET_SIZE],
+        get_benchmark_shapes(
+            "TimeReadCsvNamesDtype", UNARY_OP_DATA_SIZE[ASV_DATASET_SIZE]
+        ),
         ["array-like"],
         _dtypes_params,
     ]

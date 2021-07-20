@@ -22,7 +22,7 @@
 import modin.pandas as pd
 import numpy as np
 
-from .utils import (
+from .utils.utils import (
     generate_dataframe,
     gen_nan_data,
     RAND_LOW,
@@ -39,6 +39,7 @@ from .utils import (
     IMPL,
     execute,
     translator_groupby_ngroups,
+    get_benchmark_shapes,
 )
 
 
@@ -59,7 +60,9 @@ class BaseTimeGroupBy:
 class TimeGroupByMultiColumn(BaseTimeGroupBy):
     param_names = ["shape", "ngroups", "groupby_ncols"]
     params = [
-        UNARY_OP_DATA_SIZE[ASV_DATASET_SIZE],
+        get_benchmark_shapes(
+            "TimeGroupByMultiColumn", UNARY_OP_DATA_SIZE[ASV_DATASET_SIZE]
+        ),
         GROUPBY_NGROUPS[ASV_DATASET_SIZE],
         [6],
     ]
@@ -74,7 +77,9 @@ class TimeGroupByMultiColumn(BaseTimeGroupBy):
 class TimeGroupByDefaultAggregations(BaseTimeGroupBy):
     param_names = ["shape", "ngroups"]
     params = [
-        UNARY_OP_DATA_SIZE[ASV_DATASET_SIZE],
+        get_benchmark_shapes(
+            "TimeGroupByDefaultAggregations", UNARY_OP_DATA_SIZE[ASV_DATASET_SIZE]
+        ),
         GROUPBY_NGROUPS[ASV_DATASET_SIZE],
     ]
 
@@ -94,7 +99,9 @@ class TimeGroupByDefaultAggregations(BaseTimeGroupBy):
 class TimeGroupByDictionaryAggregation(BaseTimeGroupBy):
     param_names = ["shape", "ngroups", "operation_type"]
     params = [
-        UNARY_OP_DATA_SIZE[ASV_DATASET_SIZE],
+        get_benchmark_shapes(
+            "TimeGroupByDictionaryAggregation", UNARY_OP_DATA_SIZE[ASV_DATASET_SIZE]
+        ),
         GROUPBY_NGROUPS[ASV_DATASET_SIZE],
         ["reduction", "aggregation"],
     ]
@@ -118,7 +125,7 @@ class TimeGroupByDictionaryAggregation(BaseTimeGroupBy):
 class TimeJoin:
     param_names = ["shapes", "how", "sort"]
     params = [
-        BINARY_OP_DATA_SIZE[ASV_DATASET_SIZE],
+        get_benchmark_shapes("TimeJoin", BINARY_OP_DATA_SIZE[ASV_DATASET_SIZE]),
         ["left", "inner"],
         [False],
     ]
@@ -139,7 +146,7 @@ class TimeJoin:
 class TimeMerge:
     param_names = ["shapes", "how", "sort"]
     params = [
-        BINARY_OP_DATA_SIZE[ASV_DATASET_SIZE],
+        get_benchmark_shapes("TimeMerge", BINARY_OP_DATA_SIZE[ASV_DATASET_SIZE]),
         ["left", "inner"],
         [False],
     ]
@@ -164,7 +171,7 @@ class TimeMerge:
 class TimeConcat:
     param_names = ["shapes", "how", "axis"]
     params = [
-        BINARY_OP_DATA_SIZE[ASV_DATASET_SIZE],
+        get_benchmark_shapes("TimeConcat", BINARY_OP_DATA_SIZE[ASV_DATASET_SIZE]),
         ["inner"],
         [0, 1],
     ]
@@ -184,7 +191,7 @@ class TimeConcat:
 class TimeAppend:
     param_names = ["shapes", "sort"]
     params = [
-        BINARY_OP_DATA_SIZE[ASV_DATASET_SIZE],
+        get_benchmark_shapes("TimeAppend", BINARY_OP_DATA_SIZE[ASV_DATASET_SIZE]),
         [False, True],
     ]
 
@@ -205,7 +212,7 @@ class TimeAppend:
 class TimeBinaryOp:
     param_names = ["shapes", "binary_op", "axis"]
     params = [
-        BINARY_OP_DATA_SIZE[ASV_DATASET_SIZE],
+        get_benchmark_shapes("TimeBinaryOp", BINARY_OP_DATA_SIZE[ASV_DATASET_SIZE]),
         ["mul"],
         [0, 1],
     ]
@@ -259,7 +266,7 @@ class BaseTimeSetItem:
 
 class TimeSetItem(BaseTimeSetItem):
     params = [
-        UNARY_OP_DATA_SIZE[ASV_DATASET_SIZE],
+        get_benchmark_shapes("TimeSetItem", UNARY_OP_DATA_SIZE[ASV_DATASET_SIZE]),
         [1],
         ["zero", "middle", "last"],
         [True, False],
@@ -276,7 +283,7 @@ class TimeSetItem(BaseTimeSetItem):
 
 class TimeInsert(BaseTimeSetItem):
     params = [
-        UNARY_OP_DATA_SIZE[ASV_DATASET_SIZE],
+        get_benchmark_shapes("TimeInsert", UNARY_OP_DATA_SIZE[ASV_DATASET_SIZE]),
         [1],
         ["zero", "middle", "last"],
         [True, False],
@@ -294,7 +301,7 @@ class TimeInsert(BaseTimeSetItem):
 class TimeArithmetic:
     param_names = ["shape", "axis"]
     params = [
-        UNARY_OP_DATA_SIZE[ASV_DATASET_SIZE],
+        get_benchmark_shapes("TimeArithmetic", UNARY_OP_DATA_SIZE[ASV_DATASET_SIZE]),
         [0, 1],
     ]
 
@@ -320,7 +327,7 @@ class TimeArithmetic:
 class TimeSortValues:
     param_names = ["shape", "columns_number", "ascending_list"]
     params = [
-        UNARY_OP_DATA_SIZE[ASV_DATASET_SIZE],
+        get_benchmark_shapes("TimeSortValues", UNARY_OP_DATA_SIZE[ASV_DATASET_SIZE]),
         [1, 2, 10, 100],
         [False, True],
     ]
@@ -341,7 +348,7 @@ class TimeSortValues:
 class TimeDrop:
     param_names = ["shape", "axis", "drop_ncols"]
     params = [
-        UNARY_OP_DATA_SIZE[ASV_DATASET_SIZE],
+        get_benchmark_shapes("TimeDrop", UNARY_OP_DATA_SIZE[ASV_DATASET_SIZE]),
         [0, 1],
         [1, 0.8],
     ]
@@ -362,7 +369,7 @@ class TimeDrop:
 class TimeHead:
     param_names = ["shape", "head_count"]
     params = [
-        UNARY_OP_DATA_SIZE[ASV_DATASET_SIZE],
+        get_benchmark_shapes("TimeHead", UNARY_OP_DATA_SIZE[ASV_DATASET_SIZE]),
         [5, 0.8],
     ]
 
@@ -382,7 +389,7 @@ class TimeFillnaSeries:
     param_names = ["value_type", "shape", "limit"]
     params = [
         ["scalar", "dict", "Series"],
-        SERIES_DATA_SIZE[ASV_DATASET_SIZE],
+        get_benchmark_shapes("TimeFillnaSeries", SERIES_DATA_SIZE[ASV_DATASET_SIZE]),
         [None, 0.8],
     ]
 
@@ -471,7 +478,9 @@ class BaseTimeValueCounts:
 class TimeValueCountsFrame(BaseTimeValueCounts):
     param_names = ["shape", "ngroups", "subset"]
     params = [
-        UNARY_OP_DATA_SIZE[ASV_DATASET_SIZE],
+        get_benchmark_shapes(
+            "TimeValueCountsFrame", UNARY_OP_DATA_SIZE[ASV_DATASET_SIZE]
+        ),
         GROUPBY_NGROUPS[ASV_DATASET_SIZE],
         [2, 10],
     ]
@@ -483,7 +492,9 @@ class TimeValueCountsFrame(BaseTimeValueCounts):
 class TimeValueCountsSeries(BaseTimeValueCounts):
     param_names = ["shape", "ngroups", "bins"]
     params = [
-        UNARY_OP_DATA_SIZE[ASV_DATASET_SIZE],
+        get_benchmark_shapes(
+            "TimeValueCountsSeries", UNARY_OP_DATA_SIZE[ASV_DATASET_SIZE]
+        ),
         GROUPBY_NGROUPS[ASV_DATASET_SIZE],
         [None, 3],
     ]
@@ -499,7 +510,7 @@ class TimeValueCountsSeries(BaseTimeValueCounts):
 class TimeIndexing:
     param_names = ["shape", "indexer_type"]
     params = [
-        UNARY_OP_DATA_SIZE[ASV_DATASET_SIZE],
+        get_benchmark_shapes("TimeIndexing", UNARY_OP_DATA_SIZE[ASV_DATASET_SIZE]),
         [
             "scalar",
             "bool",
@@ -531,7 +542,9 @@ class TimeIndexing:
 
 class TimeMultiIndexing:
     param_names = ["shape"]
-    params = [UNARY_OP_DATA_SIZE[ASV_DATASET_SIZE]]
+    params = [
+        get_benchmark_shapes("TimeMultiIndexing", UNARY_OP_DATA_SIZE[ASV_DATASET_SIZE])
+    ]
 
     def setup(self, shape):
         df = generate_dataframe(ASV_USE_IMPL, "int", *shape, RAND_LOW, RAND_HIGH)
@@ -557,7 +570,11 @@ class TimeMultiIndexing:
 
 class TimeResetIndex:
     param_names = ["shape", "drop", "level"]
-    params = [UNARY_OP_DATA_SIZE[ASV_DATASET_SIZE], [False, True], [None, "level_1"]]
+    params = [
+        get_benchmark_shapes("TimeResetIndex", UNARY_OP_DATA_SIZE[ASV_DATASET_SIZE]),
+        [False, True],
+        [None, "level_1"],
+    ]
 
     def setup(self, shape, drop, level):
         self.df = generate_dataframe(ASV_USE_IMPL, "int", *shape, RAND_LOW, RAND_HIGH)
@@ -576,7 +593,7 @@ class TimeResetIndex:
 class TimeAstype:
     param_names = ["shape", "dtype", "astype_ncolumns"]
     params = [
-        UNARY_OP_DATA_SIZE[ASV_DATASET_SIZE],
+        get_benchmark_shapes("TimeAstype", UNARY_OP_DATA_SIZE[ASV_DATASET_SIZE]),
         ["float64", "category"],
         ["one", "all"],
     ]
@@ -597,7 +614,7 @@ class TimeAstype:
 class TimeDescribe:
     param_names = ["shape"]
     params = [
-        UNARY_OP_DATA_SIZE[ASV_DATASET_SIZE],
+        get_benchmark_shapes("TimeDescribe", UNARY_OP_DATA_SIZE[ASV_DATASET_SIZE]),
     ]
 
     def setup(self, shape):
@@ -610,7 +627,7 @@ class TimeDescribe:
 class TimeProperties:
     param_names = ["shape"]
     params = [
-        UNARY_OP_DATA_SIZE[ASV_DATASET_SIZE],
+        get_benchmark_shapes("TimeProperties", UNARY_OP_DATA_SIZE[ASV_DATASET_SIZE]),
     ]
 
     def setup(self, shape):

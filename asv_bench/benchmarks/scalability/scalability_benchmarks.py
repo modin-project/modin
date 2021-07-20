@@ -21,7 +21,7 @@ except ImportError:
     from modin.pandas.utils import to_pandas
 import pandas
 
-from ..utils import (
+from ..utils.utils import (
     gen_data,
     generate_dataframe,
     RAND_LOW,
@@ -29,13 +29,14 @@ from ..utils import (
     ASV_DATASET_SIZE,
     UNARY_OP_DATA_SIZE,
     execute,
+    get_benchmark_shapes,
 )
 
 
 class TimeFromPandas:
     param_names = ["shape", "cpus"]
     params = [
-        UNARY_OP_DATA_SIZE[ASV_DATASET_SIZE],
+        get_benchmark_shapes("TimeFromPandas", UNARY_OP_DATA_SIZE[ASV_DATASET_SIZE]),
         [4, 16, 32],
     ]
 
@@ -54,7 +55,7 @@ class TimeFromPandas:
 class TimeToPandas:
     param_names = ["shape", "cpus"]
     params = [
-        UNARY_OP_DATA_SIZE[ASV_DATASET_SIZE],
+        get_benchmark_shapes("TimeToPandas", UNARY_OP_DATA_SIZE[ASV_DATASET_SIZE]),
         [4, 16, 32],
     ]
 
