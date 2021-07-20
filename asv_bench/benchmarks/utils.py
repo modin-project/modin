@@ -531,7 +531,7 @@ def prepare_io_data(test_filename: str, data_type: str, shapes: list):
     Returns
     -------
     test_filenames : dict
-        Dcitionary that maps dataset shape to the file on disk.
+        Dictionary that maps dataset shape to the file on disk.
     """
     test_filenames = {}
     for shape in shapes:
