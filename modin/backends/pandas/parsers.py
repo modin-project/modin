@@ -217,6 +217,13 @@ class PandasCSVParser(PandasParser):
                 fname, "rb", kwargs.pop("compression", "infer")
             )
             header = b""
+            # In this case we beware that fisrt line can contain BOM, so
+            # adding this line to the `header` for reading and then skip it
+            if kwargs.get("encoding", None) is not None and header_size == 0:
+                header += bio.readline()
+                # `skiprows` can be only None here, so don't check it's type
+                # and just set to 1
+                kwargs["skiprows"] = 1
             for _ in range(header_size):
                 header += bio.readline()
             bio.seek(start)
