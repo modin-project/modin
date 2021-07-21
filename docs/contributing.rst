@@ -16,11 +16,11 @@ Also, feel free to join the discussions on the `developer mailing list`_.
 Certificate of Origin
 ---------------------
 
-To keep a clear track of who did what, we use a `sign-off` procedure (same requirements 
-for using the signed-off-by process as the Linux kernel has 
-https://www.kernel.org/doc/html/v4.17/process/submitting-patches.html) on patches or pull 
-requests that are being sent. The sign-off is a simple line at the end of the explanation 
-for the patch, which certifies that you wrote it or otherwise have the right to pass it 
+To keep a clear track of who did what, we use a `sign-off` procedure (same requirements
+for using the signed-off-by process as the Linux kernel has
+https://www.kernel.org/doc/html/v4.17/process/submitting-patches.html) on patches or pull
+requests that are being sent. The sign-off is a simple line at the end of the explanation
+for the patch, which certifies that you wrote it or otherwise have the right to pass it
 on as an open-source patch. The rules are pretty simple: if you can certify the below:
 
 CERTIFICATE OF ORIGIN V 1.1
@@ -105,10 +105,17 @@ because it links commits to their issues.
 
 The commit message should follow a colon (:) and be descriptive and succinct.
 
+General Rules for committers
+----------------------------
+
+- Try to write a PR name as descriptive as possible.
+- Try to keep PRs as small as possible. One PR should be making one semantically atomic change.
+- Don't merge your own PRs even if you are technically able to do it.
+
 Development Dependencies
 ------------------------
 
-We recommend doing development in a virtualenv or conda environment, though this decision 
+We recommend doing development in a virtualenv or conda environment, though this decision
 is ultimately yours. You will want to run the following in order to install all of the required
 dependencies for running the tests and formatting the code:
 
