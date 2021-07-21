@@ -71,6 +71,7 @@ Component View
    ../flow/modin/engines/ray/cudf_on_ray/frame/index
    ../flow/modin/engines/dask/pandas_on_dask/frame/index
    ../flow/modin/experimental/index
+   ../flow/modin/backends/index
    ../flow/modin/engines/python/pandas_on_python/frame/index
 
 
@@ -281,9 +282,9 @@ by documentation for now, the rest is coming soon...).
    ├───docs
    ├───examples
    ├───modin
-   │   ├───backends
+   │   ├─── :doc:`backends </flow/modin/backends/index>`
    │   │   ├───base
-   │   │   │   └───query_compiler
+   │   │   │   └─── :doc:`query_compiler </flow/modin/backends/base/query_compiler>`
    │   │   ├─── :doc:`pandas </flow/modin/backends/pandas/index>`
    │   │   |   ├─── :doc:`parsers </flow/modin/backends/pandas/parsers>`
    │   │   │   └─── :doc:`query_compiler </flow/modin/backends/pandas/query_compiler>`

@@ -99,6 +99,7 @@ jobs:
       - run: |
           python scripts/doc_checker.py modin/experimental/pandas/io_exp.py \
             modin/experimental/pandas/numpy_wrap.py modin/experimental/pandas/__init__.py
+      - run: python scripts/doc_checker.py modin/backends/base
       - run: python scripts/doc_checker.py modin/backends/pyarrow
       - run: python scripts/doc_checker.py modin/backends/pandas
       - run: |

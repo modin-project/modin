@@ -743,6 +743,8 @@ class BasePandasDataset(object):
                 raise ValueError("Must specify 'axis' when aggregating by level")
             else:
                 result = self._reduce_dimension(
+                    # FIXME: Judging by pandas docs `**kwargs` serves only compatibility
+                    # purpose and does not affect the result, we shouldn't pass them to the query compiler.
                     self._query_compiler.all(
                         axis=0,
                         bool_only=bool_only,
@@ -980,6 +982,8 @@ class BasePandasDataset(object):
             lower = None
         if upper is not None and np.any(np.isnan(upper)):
             upper = None
+        # FIXME: Judging by pandas docs `*args` and `**kwargs` serves only compatibility
+        # purpose and does not affect the result, we shouldn't pass them to the query compiler.
         new_query_compiler = self._query_compiler.clip(
             lower=lower, upper=upper, axis=axis, inplace=inplace, *args, **kwargs
         )
@@ -1019,6 +1023,8 @@ class BasePandasDataset(object):
         if axis == 1:
             self._validate_dtypes(numeric_only=True)
         return self.__constructor__(
+            # FIXME: Judging by pandas docs `*args` and `**kwargs` serves only compatibility
+            # purpose and does not affect the result, we shouldn't pass them to the query compiler.
             query_compiler=self._query_compiler.cummax(
                 axis=axis, skipna=skipna, **kwargs
             )
@@ -1029,6 +1035,8 @@ class BasePandasDataset(object):
         if axis == 1:
             self._validate_dtypes(numeric_only=True)
         return self.__constructor__(
+            # FIXME: Judging by pandas docs `*args` and `**kwargs` serves only compatibility
+            # purpose and does not affect the result, we shouldn't pass them to the query compiler.
             query_compiler=self._query_compiler.cummin(
                 axis=axis, skipna=skipna, **kwargs
             )
@@ -1038,6 +1046,8 @@ class BasePandasDataset(object):
         axis = self._get_axis_number(axis)
         self._validate_dtypes(numeric_only=True)
         return self.__constructor__(
+            # FIXME: Judging by pandas docs `**kwargs` serves only compatibility
+            # purpose and does not affect the result, we shouldn't pass them to the query compiler.
             query_compiler=self._query_compiler.cumprod(
                 axis=axis, skipna=skipna, **kwargs
             )
@@ -1047,6 +1057,8 @@ class BasePandasDataset(object):
         axis = self._get_axis_number(axis)
         self._validate_dtypes(numeric_only=True)
         return self.__constructor__(
+            # FIXME: Judging by pandas docs `*args` and `**kwargs` serves only compatibility
+            # purpose and does not affect the result, we shouldn't pass them to the query compiler.
             query_compiler=self._query_compiler.cumsum(
                 axis=axis, skipna=skipna, **kwargs
             )
@@ -2089,6 +2101,8 @@ class BasePandasDataset(object):
         )
 
     def round(self, decimals=0, *args, **kwargs):
+        # FIXME: Judging by pandas docs `*args` and `**kwargs` serves only compatibility
+        # purpose and does not affect the result, we shouldn't pass them to the query compiler.
         return self.__constructor__(
             query_compiler=self._query_compiler.round(decimals=decimals, **kwargs)
         )
@@ -3060,6 +3074,8 @@ class Resampler(object):
         self._dataframe = dataframe
         self._query_compiler = dataframe._query_compiler
         axis = self._dataframe._get_axis_number(axis)
+        # FIXME: this should be converted into a dict to ensure simplicity
+        # of handling resample parameters at the backend level.
         self.resample_args = [
             rule,
             axis,
