@@ -233,8 +233,7 @@ class CSVDispatcher(TextFileDispatcher):
             Partitions rows lengths.
         """
         index_objs = cls.materialize(index_ids)
-        simple_idx = isinstance(index_objs[0], int) if len(index_objs) > 0 else True
-        if simple_idx:
+        if len(index_objs) == 0 or isinstance(index_objs[0], int):
             row_lengths = index_objs
             new_index = pandas.RangeIndex(sum(index_objs))
         else:
