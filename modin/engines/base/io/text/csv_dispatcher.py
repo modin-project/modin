@@ -202,10 +202,6 @@ class CSVDispatcher(TextFileDispatcher):
         if skiprows is not None and not isinstance(skiprows, int):
             return False
 
-        # can't pickle dialect object to the worker process
-        if read_csv_kwargs.get("dialect", None) is not None:
-            return False
-
         return True
 
     @classmethod

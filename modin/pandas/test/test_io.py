@@ -641,6 +641,10 @@ class TestCsv:
             pytest.xfail(
                 "read_csv with Ray engine fails with some 'escapechar' parameters - issue #2494"
             )
+        elif Engine.get() != "Python" and dialect:
+            pytest.xfail(
+                "read_csv with Ray engine fails with `dialect` parameter - issue #2508"
+            )
 
         unique_filename = get_unique_filename()
         if dialect:
