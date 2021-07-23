@@ -19,12 +19,13 @@ from functools import partial
 import modin.pandas as pd
 from modin.experimental.engines.omnisci_on_ray.frame.omnisci_worker import OmnisciServer
 
+import pandas
 import numpy as np
 import xgboost as xgb
 
-import daal4py.sklearn as sklearn
+import sklearnex
 
-sklearn.patch_sklearn()
+sklearnex.patch_sklearn()
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import LabelEncoder
 
@@ -118,7 +119,7 @@ def multi_weighted_logloss(y_true, y_preds, classes, class_weights):
     multi logloss for PLAsTiCC challenge
     """
     y_p = y_preds.reshape(y_true.shape[0], len(classes), order="F")
-    y_ohe = pd.get_dummies(y_true)
+    y_ohe = pandas.get_dummies(y_true)
     y_p = np.clip(a=y_p, a_min=1e-15, a_max=1 - 1e-15)
     y_p_log = np.log(y_p)
     y_log_ones = np.sum(y_ohe.values * y_p_log, axis=0)
