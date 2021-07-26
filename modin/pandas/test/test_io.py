@@ -15,6 +15,7 @@ import pytest
 import numpy as np
 import pandas
 from pandas.errors import ParserWarning
+import pandas._libs.lib as lib
 from collections import OrderedDict
 from modin.config import TestDatasetSize, Engine, Backend, IsExperimental
 from modin.utils import to_pandas
@@ -250,15 +251,11 @@ class TestCsv:
         )
 
     # Column and Index Locations and Names tests
-    @pytest.mark.skipif(
-        Engine.get() != "Python" and Backend.get() != "Omnisci",
-        reason="many parameters combiantions fails: issue #2312, #2307",
-    )
     @pytest.mark.parametrize("header", ["infer", None, 0])
     @pytest.mark.parametrize("index_col", [None, "col1"])
     @pytest.mark.parametrize("prefix", [None, "_", "col"])
     @pytest.mark.parametrize(
-        "names", [None, ["col1"], ["c1", "c2", "c3", "c4", "c5", "c6", "c7"]]
+        "names", [lib.no_default, ["col1"], ["c1", "c2", "c3", "c4", "c5", "c6", "c7"]]
     )
     @pytest.mark.parametrize(
         "usecols", [None, ["col1"], ["col1", "col2", "col6"], [0, 1, 5]]
@@ -278,6 +275,8 @@ class TestCsv:
             pytest.xfail(
                 reason="The reason of tests fail in `cloud` mode is unknown for now - issue #2340"
             )
+        if names is lib.no_default:
+            pytest.skip("some parameters combiantions fails: issue #2312")
         eval_io(
             fn_name="read_csv",
             # read_csv kwargs
@@ -773,12 +772,6 @@ class TestCsv:
         memory_map,
         float_precision,
     ):
-        if Engine.get() != "Python" and delimiter == " ":
-            pytest.xfail(
-                "read_csv with Ray engine doesn't \
-                raise exceptions while Pandas raises - issue #2320"
-            )
-
         # In this case raised TypeError: cannot use a string pattern on a bytes-like object,
         # so TypeError should be excluded from raising_exceptions list in order to check, that
         # the same exceptions are raised by Pandas and Modin
@@ -1109,6 +1102,18 @@ class TestCsv:
                 df_equals(df_modin, df_pandas)
         finally:
             teardown_test_files([unique_filename])
+
+    def test_unnamed_index(self):
+        def get_internal_df(df):
+            partition = read_df._query_compiler._modin_frame._partitions[0][0]
+            return partition.to_pandas()
+
+        path = "modin/pandas/test/data/issue_3119.csv"
+        read_df = pd.read_csv(path, index_col=0)
+        assert get_internal_df(read_df).index.name is None
+        read_df = pd.read_csv(path, index_col=[0, 1])
+        for name1, name2 in zip(get_internal_df(read_df).index.names, [None, "a"]):
+            assert name1 == name2
 
 
 class TestTable:
