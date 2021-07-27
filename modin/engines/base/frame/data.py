@@ -413,6 +413,41 @@ class PandasFrame(object):
                 axis is not None and axis not in [0, 1]
             )
 
+    def synchronize_dtypes(self, dtypes: dict):
+        """
+        Synchronize partitions dtypes by applying `astype` function with the given `dtypes`
+        to the `self._partitions` lazily.
+
+        Adds `astype` function to call-queue of each partition from `self._partitions`.
+
+        Parameters
+        ----------
+        dtypes : dict
+            Types to synchronize partitions data.
+        """
+
+        def apply_astype(df, dtype):
+            if isinstance(dtype, dict):
+                df_dtypes = df.dtypes
+                df_cols = df.columns
+                assert all([col in df_cols for col in dtype])
+                if all([df_dtypes[col] == dtype[col] for col in dtype]):
+                    return df
+            return df.astype(dtype)
+
+        self._partitions = np.array(
+            [
+                [
+                    self._partitions[i][j].add_to_apply_calls(
+                        apply_astype,
+                        dtype=dtypes,
+                    )
+                    for j in range(len(self._partitions[i]))
+                ]
+                for i in range(len(self._partitions))
+            ]
+        )
+
     def mask(
         self,
         row_indices=None,

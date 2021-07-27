@@ -301,15 +301,20 @@ class CSVDispatcher(TextFileDispatcher):
         # reported dtypes from differing rows can be different based on the inference in
         # the limited data seen by each worker. We use pandas to compute the exact dtype
         # over the whole column for each column. The index is set below.
-        dtypes = cls.get_dtypes(dtypes_ids) if len(dtypes_ids) > 0 else None
+        dtypes_combined, dtypes_astype = (
+            cls.get_dtypes(dtypes_ids, check_homogeneity=True)
+            if len(dtypes_ids) > 0
+            else (None, None)
+        )
+
         # Compose modin partitions from `partition_ids`
         partition_ids = cls.build_partition(partition_ids, row_lengths, column_widths)
 
         # Set the index for the dtypes to the column names
-        if isinstance(dtypes, pandas.Series):
-            dtypes.index = column_names
+        if isinstance(dtypes_combined, pandas.Series):
+            dtypes_combined.index = column_names
         else:
-            dtypes = pandas.Series(dtypes, index=column_names)
+            dtypes_combined = pandas.Series(dtypes_combined, index=column_names)
 
         new_frame = cls.frame_cls(
             partition_ids,
@@ -317,7 +322,7 @@ class CSVDispatcher(TextFileDispatcher):
             column_names,
             row_lengths,
             column_widths,
-            dtypes=dtypes,
+            dtypes=dtypes_combined,
         )
         new_query_compiler = cls.query_compiler_cls(new_frame)
         skipfooter = kwargs.get("skipfooter", None)
@@ -358,6 +363,8 @@ class CSVDispatcher(TextFileDispatcher):
             return new_query_compiler[new_query_compiler.columns[0]]
         if index_col is None:
             new_query_compiler._modin_frame.synchronize_labels(axis=0)
+        if dtypes_astype:
+            new_query_compiler._modin_frame.synchronize_dtypes(dtypes_astype)
 
         return new_query_compiler
 

@@ -254,7 +254,7 @@ class TestCsv:
     # Column and Index Locations and Names tests
     @pytest.mark.parametrize("header", ["infer", None, 0])
     @pytest.mark.parametrize("index_col", [None, "col1"])
-    @pytest.mark.parametrize("prefix", [None, "_", "col"])
+    @pytest.mark.parametrize("prefix", [lib.no_default, "_", "col"])
     @pytest.mark.parametrize(
         "names", [lib.no_default, ["col1"], ["c1", "c2", "c3", "c4", "c5", "c6", "c7"]]
     )
@@ -271,12 +271,23 @@ class TestCsv:
         usecols,
         skip_blank_lines,
     ):
-        if names is lib.no_default:
-            pytest.skip("some parameters combiantions fails: issue #2312")
         if header in ["infer", None] and names is not lib.no_default:
             pytest.skip(
                 "Heterogeneous data in a column is not cast to a common type: issue #3346"
             )
+        # Cases we can't handle because of heterogeneous data, so reading it as str
+        # to avoid types mistakes
+        failed_cases = (
+            header is None and names is lib.no_default and usecols in [None, [0, 1, 5]]
+        ) or names == usecols
+        het_index = (
+            names is not lib.no_default
+            and header in ["infer", None]
+            and index_col
+            and names == usecols
+        )
+        if het_index:
+            pytest.xfail("msg")
         eval_io(
             fn_name="read_csv",
             # read_csv kwargs
@@ -287,6 +298,7 @@ class TestCsv:
             names=names,
             usecols=usecols,
             skip_blank_lines=skip_blank_lines,
+            dtype="str" if failed_cases else None,
         )
 
     @pytest.mark.parametrize("usecols", [lambda col_name: col_name in ["a", "b", "e"]])
