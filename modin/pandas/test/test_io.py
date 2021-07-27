@@ -1117,7 +1117,12 @@ class TestCsv:
 
     def test_read_csv_empty_frame(
         self,
+        request,
     ):
+        if request.config.getoption("--simulate-cloud").lower() != "off":
+            pytest.xfail(
+                reason="The reason of tests fail in `cloud` mode is unknown for now - issue #2340"
+            )
         eval_io(
             fn_name="read_csv",
             # read_csv kwargs
