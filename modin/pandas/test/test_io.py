@@ -1159,6 +1159,22 @@ class TestCsv:
             index_col="col1",
         )
 
+    @pytest.mark.parametrize("add_nans", [False])
+    def test_read_csv_heterogeneous_data(self, add_nans):
+        unique_filename = get_unique_filename()
+
+        partition_data = "".join(
+            [str(x) + "\n" if (x + 1) % 2 == 0 else str(x) + "," for x in range(32)]
+        )
+        partition_data = partition_data + "\n" if add_nans else partition_data
+
+        str_heterogeneous_data = "col1,col2\n" + "some,text\n"
+        for _ in range(NPartitions.get()):
+            str_heterogeneous_data += partition_data
+        eval_io_from_str(
+            str_heterogeneous_data, unique_filename, skip_blank_lines=not add_nans
+        )
+
 
 class TestTable:
     def test_read_table(self, make_csv_file):
