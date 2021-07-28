@@ -107,8 +107,7 @@ class CSVDispatcher(TextFileDispatcher):
         # Max number of partitions available
         num_partitions = NPartitions.get()
         # This is the number of splits for the columns
-        cols_number = len(column_names)
-        num_splits = min(cols_number if cols_number else 1, num_partitions)
+        num_splits = min(len(column_names) or 1, num_partitions)
         # Metadata definition
         column_widths, num_splits = cls._define_metadata(
             pd_df_metadata, num_splits, column_names
