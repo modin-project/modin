@@ -2066,7 +2066,7 @@ class BaseQueryCompiler(abc.ABC):
             df.insert(loc, column, value)
             return df
 
-        return DataFrameDefault.register(inserter)(
+        return DataFrameDefault.register(inserter, inplace=True)(
             self, loc=loc, column=column, value=value
         )
 

@@ -1113,13 +1113,9 @@ class DataFrame(BasePandasDataset):
         Insert column into ``DataFrame`` at specified location.
         """
         if isinstance(value, (DataFrame, pandas.DataFrame)):
-            # DataFrame considered as an array-like objects and so value have to be
-            # retrieved via DataFrame.__iter__ which iterates on the frame column names.
-            # This behavior may be changed in the future, you can follow the changes here:
-            # https://github.com/pandas-dev/pandas/issues/42403
-            value = value.columns
-            if len(value) == 1:
-                value = value[0]
+            if len(value.columns) != 1:
+                raise ValueError("Wrong number of items passed 2, placement implies 1")
+            value = value.squeeze(axis=1)
 
         if not self._query_compiler.lazy_execution and len(self.index) == 0:
             if not hasattr(value, "index"):
