@@ -59,6 +59,8 @@ def compute_chunksize(df, num_splits, default_block_size=32, axis=None):
         If axis is 1 or 0, returns an integer number of rows/columns to split the
         DataFrame. If axis is None, returns a tuple containing both.
     """
+    # `num_splits` should be a non-zero value
+    num_splits = num_splits if num_splits > 0 else 1
     if axis == 0 or axis is None:
         row_chunksize = get_default_chunksize(len(df.index), num_splits)
         # Take the min of the default and the memory-usage chunksize first to avoid a
