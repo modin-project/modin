@@ -49,9 +49,9 @@ of the targets:
 
 .. code-block:: bash
 
-   pip install modin[ray] # Install Modin dependencies and Ray to run on Ray
-   pip install modin[dask] # Install Modin dependencies and Dask to run on Dask
-   pip install modin[all] # Install all of the above
+   pip install "modin[ray]" # Install Modin dependencies and Ray to run on Ray
+   pip install "modin[dask]" # Install Modin dependencies and Dask to run on Dask
+   pip install "modin[all]" # Install all of the above
 
 Modin will automatically detect which engine you have installed and use that for
 scheduling computation!

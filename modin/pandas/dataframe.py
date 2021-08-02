@@ -534,6 +534,8 @@ class DataFrame(BasePandasDataset):
         """
         Transpose index and columns.
         """
+        # FIXME: Judging by pandas docs `*args` serves only compatibility purpose
+        # and does not affect the result, we shouldn't pass it to the query compiler.
         return DataFrame(query_compiler=self._query_compiler.transpose(*args))
 
     T = property(transpose)

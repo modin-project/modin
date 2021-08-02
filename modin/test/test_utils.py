@@ -14,6 +14,8 @@
 import pytest
 import modin.utils
 
+from textwrap import dedent, indent
+
 
 # Note: classes below are used for purely testing purposes - they
 # simulate real-world use cases for _inherit_docstring
@@ -129,3 +131,110 @@ def test_doc_inherit_prop_builder():
 
     assert Parent().prop == "Parent"
     assert Child().prop == "Child"
+
+
+@pytest.mark.parametrize(
+    "source_doc,to_append,expected",
+    [
+        (
+            "One-line doc.",
+            "One-line message.",
+            "One-line doc.One-line message.",
+        ),
+        (
+            """
+            Regular doc-string
+                With the setted indent style.
+            """,
+            """
+                    Doc-string having different indents
+                        in comparison with the regular one.
+            """,
+            """
+            Regular doc-string
+                With the setted indent style.
+
+            Doc-string having different indents
+                in comparison with the regular one.
+            """,
+        ),
+    ],
+)
+def test_append_to_docstring(source_doc, to_append, expected):
+    def source_fn():
+        pass
+
+    source_fn.__doc__ = source_doc
+    result_fn = modin.utils.append_to_docstring(to_append)(source_fn)
+
+    answer = dedent(result_fn.__doc__)
+    expected = dedent(expected)
+
+    assert answer == expected
+
+
+def test_align_indents():
+    source = """
+    Source string that sets
+        the indent pattern."""
+    target = indent(source, " " * 5)
+    result = modin.utils.align_indents(source, target)
+    assert source == result
+
+
+def test_format_string():
+    template = """
+            Source template string that has some {inline_placeholder}s.
+            Placeholder1:
+            {new_line_placeholder1}
+            Placeholder2:
+            {new_line_placeholder2}
+            Placeholder3:
+            {new_line_placeholder3}
+            Placeholder4:
+            {new_line_placeholder4}Text text:
+                Placeholder5:
+                {new_line_placeholder5}
+    """
+
+    singleline_value = "Single-line value"
+    multiline_value = """
+        Some string
+            Having different indentation
+        From the source one."""
+    multiline_value_new_line_at_the_end = multiline_value + "\n"
+    multiline_value_new_line_at_the_begin = "\n" + multiline_value
+
+    expected = """
+            Source template string that has some Single-line values.
+            Placeholder1:
+            Some string
+                Having different indentation
+            From the source one.
+            Placeholder2:
+            Single-line value
+            Placeholder3:
+            
+            Some string
+                Having different indentation
+            From the source one.
+            Placeholder4:
+            Some string
+                Having different indentation
+            From the source one.
+            Text text:
+                Placeholder5:
+                Some string
+                    Having different indentation
+                From the source one.
+    """  # noqa: W293
+    answer = modin.utils.format_string(
+        template,
+        inline_placeholder=singleline_value,
+        new_line_placeholder1=multiline_value,
+        new_line_placeholder2=singleline_value,
+        new_line_placeholder3=multiline_value_new_line_at_the_begin,
+        new_line_placeholder4=multiline_value_new_line_at_the_end,
+        new_line_placeholder5=multiline_value,
+    )
+    assert answer == expected
