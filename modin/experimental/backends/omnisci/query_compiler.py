@@ -90,7 +90,7 @@ def build_method_wrapper(name, method):
         default_method = getattr(BaseQueryCompiler, name, None)
         if is_inoperable([self, args, kwargs]):
             if default_method is None:
-                raise NotImplementedError("Frame contains data of unsupported types")
+                raise NotImplementedError("Frame contains data of unsupported types.")
             return default_method(self, *args, **kwargs)
         try:
             return method(self, *args, **kwargs)
@@ -327,7 +327,7 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
         # TODO: handle `is_multi_by`, `agg_args`, `drop` args
         if callable(agg_func):
             raise NotImplementedError(
-                "Python callable is not a valid aggregation function for OmniSci backend"
+                "Python callable is not a valid aggregation function for OmniSci backend."
             )
         new_frame = self._modin_frame.groupby_agg(
             by, axis, agg_func, groupby_kwargs, **agg_kwargs
@@ -347,7 +347,7 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
         min_count = kwargs.pop("min_count")
         if min_count != 0:
             raise NotImplementedError(
-                f"OmniSci' sum does not support such set of parameters: min_count={min_count}"
+                f"OmniSci's sum does not support such set of parameters: min_count={min_count}."
             )
         return self._agg("sum", **kwargs)
 
@@ -357,7 +357,7 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
     def nunique(self, axis=0, dropna=True):
         if axis != 0 or not dropna:
             raise NotImplementedError(
-                f"OmniSci' nunique does not support such set of parameters: axis={axis}, dropna={dropna}"
+                f"OmniSci's nunique does not support such set of parameters: axis={axis}, dropna={dropna}."
             )
         return self._agg("count", distinct=True)
 
@@ -388,13 +388,13 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
         """
         if level is not None or axis != 0:
             raise NotImplementedError(
-                "OmniSci' aggregation functions does not support 'level' and 'axis' parameters"
+                "OmniSci's aggregation functions does not support 'level' and 'axis' parameters."
             )
 
         # TODO: Do filtering on numeric columns if `numeric_only=True`
         if not kwargs.get("skipna", True) or kwargs.get("numeric_only"):
             raise NotImplementedError(
-                "OmniSci' aggregation functions does not support 'skipna' and 'numeric_only' parameters"
+                "OmniSci's aggregation functions does not support 'skipna' and 'numeric_only' parameters."
             )
         # Processed above, so can be omitted
         kwargs.pop("skipna", None)
@@ -416,7 +416,7 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
 
         if bins or normalize:
             raise NotImplementedError(
-                "OmniSci' 'value_counts' does not support 'bins' and 'normalize' parameters"
+                "OmniSci's 'value_counts' does not support 'bins' and 'normalize' parameters."
             )
 
         new_frame = self._modin_frame.value_counts(
@@ -528,7 +528,7 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
     def dropna(self, axis=0, how="any", thresh=None, subset=None):
         if thresh is not None or axis != 0:
             raise NotImplementedError(
-                "OmniSci' dropna does not support 'thresh' and 'axis' parameters"
+                "OmniSci's dropna does not support 'thresh' and 'axis' parameters."
             )
 
         if subset is None:
@@ -621,7 +621,7 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
         level = kwargs.get("level", None)
         if level is not None:
             raise NotImplementedError(
-                "OmniSci' reset_index does not support 'level' parameter"
+                "OmniSci's reset_index does not support 'level' parameter."
             )
 
         drop = kwargs.get("drop", False)
@@ -639,7 +639,7 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
     def setitem(self, axis, key, value):
         if axis == 1 or not isinstance(value, type(self)):
             raise NotImplementedError(
-                f"OmniSci' setitem does not support such set of parameters: axis={axis}, value={value}"
+                f"OmniSci's setitem does not support such set of parameters: axis={axis}, value={value}."
             )
         return self._setitem(axis, key, value)
 
@@ -652,7 +652,7 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
 
         if is_list_like(value):
             raise NotImplementedError(
-                "OmniSci' insert does not support list-like values"
+                "OmniSci's insert does not support list-like values."
             )
 
         return self.__constructor__(self._modin_frame.insert(loc, column, value))
