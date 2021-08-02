@@ -1115,14 +1115,13 @@ class TestCsv:
         for name1, name2 in zip(get_internal_df(read_df).index.names, [None, "a"]):
             assert name1 == name2
 
+    @pytest.mark.xfail(
+        condition="config.getoption('--simulate-cloud').lower() != 'off'",
+        reason="The reason of tests fail in `cloud` mode is unknown for now - issue #2340",
+    )
     def test_read_csv_empty_frame(
         self,
-        request,
     ):
-        if request.config.getoption("--simulate-cloud").lower() != "off":
-            pytest.xfail(
-                reason="The reason of tests fail in `cloud` mode is unknown for now - issue #2340"
-            )
         eval_io(
             fn_name="read_csv",
             # read_csv kwargs
