@@ -66,12 +66,12 @@ def build_method_wrapper(name, method):
     Build method wrapper to handle inoperable data types.
 
     Wrapper calls the original method if all its arguments can be processed
-    by OmniSci engine and ``BaseQueryCompiler`` otherwise.
+    by OmniSci engine and fallback to parent's method otherwise.
 
     Parameters
     ----------
     name : str
-        ``BaseQueryCompiler`` method name to fallback to.
+        Parent's method name to fallback to.
     method : callable
         A method to wrap.
 
@@ -82,16 +82,16 @@ def build_method_wrapper(name, method):
 
     @wraps(method)
     def method_wrapper(self, *args, **kwargs):
-        # If the method wasn't found in the 'BaseQueryCompiler' that means,
+        # If the method wasn't found in the parent query compiler that means,
         # that we're calling one that is OmniSci backend-specific, if we intend
         # to fallback to pandas on 'NotImplementedError' then the call of this
-        # private method is the cause of some public QC method, that will catch
-        # arisen here exception and do fallback properly
-        default_method = getattr(BaseQueryCompiler, name, None)
+        # private method is caused by some public QC method, so we catch
+        # the exception here and do fallback properly
+        default_method = getattr(super(type(self), self), name, None)
         if is_inoperable([self, args, kwargs]):
             if default_method is None:
                 raise NotImplementedError("Frame contains data of unsupported types.")
-            return default_method(self, *args, **kwargs)
+            return default_method(*args, **kwargs)
         try:
             return method(self, *args, **kwargs)
         # Defaulting to pandas if `NotImplementedError` was arisen
@@ -99,7 +99,7 @@ def build_method_wrapper(name, method):
             if default_method is None:
                 raise e
             ErrorMessage.default_to_pandas(message=str(e))
-            return default_method(self, *args, **kwargs)
+            return default_method(*args, **kwargs)
 
     return method_wrapper
 
@@ -108,7 +108,7 @@ def bind_wrappers(cls):
     """
     Wrap class methods.
 
-    Decorator allows to fallback to ``BaseQueryCompiler`` when unsupported
+    Decorator allows to fallback to the parent query compiler methods when unsupported
     data types are used in a frame.
 
     Returns
