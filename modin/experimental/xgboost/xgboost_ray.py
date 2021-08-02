@@ -295,15 +295,15 @@ def _get_num_actors(num_actors):
     """
     min_cpus_per_node = _get_min_cpus_per_node()
     if num_actors == "default_train":
-        num_actors_per_node = max(1, int(min_cpus_per_node // 16))
+        num_actors_per_node = max(1, int(min_cpus_per_node // 2))
         return num_actors_per_node * len(ray.nodes())
     elif num_actors == "default_predict":
-        num_actors_per_node = max(1, int(min_cpus_per_node // 16))
+        num_actors_per_node = max(1, int(min_cpus_per_node // 8))
         return num_actors_per_node * len(ray.nodes())
     elif isinstance(num_actors, int):
         assert (
             num_actors % len(ray.nodes()) == 0
-        ), "`num_actors` must be a multiple to number of nodes in Rau cluster."
+        ), "`num_actors` must be a multiple to number of nodes in Ray cluster."
         return num_actors
     else:
         raise RuntimeError(
@@ -710,8 +710,6 @@ def _predict(
         tuple(actor.predict.options(num_returns=2).remote(booster, **kwargs))
         for _, actor in actors
     ]
-
-    # ray.wait([part for _, part in predictions], num_returns=len(predictions))
 
     result = from_partitions(predictions, 0)
     LOGGER.info(f"Prediction time: {time.time() - s} s")
