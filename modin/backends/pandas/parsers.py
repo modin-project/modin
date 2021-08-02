@@ -48,6 +48,7 @@ from pandas.core.dtypes.concat import union_categoricals
 from pandas.io.common import infer_compression
 from pandas.util._decorators import doc
 import warnings
+import ray
 
 from modin.engines.base.io import FileDispatcher
 from modin.data_management.utils import split_result_of_axis_func_pandas
@@ -161,10 +162,13 @@ class PandasParser(object):
 
         Parameters
         ----------
-        dtypes_ids : list
-            Array with references to the partitions dtypes objects.
+        dtypes_ids : list of dtypes or of ray.ObjectRef
+            Array with references to the partitions dtypes objects or
+            dtypes themselfes.
         check_homogeneity : bool, default: False
             Whether or not to check data homogeneity.
+            If data is not homogeneous return dict columns and types
+            it should be casted.
 
         Returns
         -------
@@ -172,24 +176,43 @@ class PandasParser(object):
             pandas.Series where index is columns names and values are
             columns dtypes.
         """
-        partitions_dtypes = cls.materialize(dtypes_ids)
-        if all([len(dtype) == 0 for dtype in partitions_dtypes]):
-            to_return = (None, None) if check_homogeneity else None
-            return to_return
-        combined_dtypes = pandas.concat(partitions_dtypes, axis=1).apply(
-            lambda row: find_common_type_cat(row.values, handle_object_types=True),
-            axis=1,
+        to_matirialize = isinstance(dtypes_ids[0], ray.ObjectRef)
+        partitions_dtypes = (
+            cls.materialize(dtypes_ids) if to_matirialize else dtypes_ids
         )
-        if check_homogeneity:
-            dtypes_to_change = {}
-            for idx in combined_dtypes.index:
-                if any(
-                    part_dtype.loc[idx] != combined_dtypes.loc[idx]
-                    for part_dtype in partitions_dtypes
-                ):
-                    dtypes_to_change[idx] = combined_dtypes.loc[idx]
-            return combined_dtypes.squeeze(axis=0), dtypes_to_change
-        return combined_dtypes.squeeze(axis=0)
+
+        # Case when array of dtypes is given
+        if not to_matirialize and not isinstance(dtypes_ids[0], pandas.Series):
+            combined_dtypes = find_common_type_cat(dtypes_ids, handle_object_types=True)
+            if check_homogeneity:
+                dtypes_to_change = (
+                    combined_dtypes
+                    if any(dtype != combined_dtypes for dtype in dtypes_ids)
+                    else None
+                )
+        # Case of empty frame is read
+        elif all([len(dtype) == 0 for dtype in partitions_dtypes]):
+            combined_dtypes, dtypes_to_change = (None, None)
+        else:
+            combined_dtypes = pandas.concat(partitions_dtypes, axis=1).apply(
+                lambda row: find_common_type_cat(row.values, handle_object_types=True),
+                axis=1,
+            )
+            if check_homogeneity:
+                dtypes_to_change = {}
+                for idx in combined_dtypes.index:
+                    if any(
+                        part_dtype.loc[idx] != combined_dtypes.loc[idx]
+                        for part_dtype in partitions_dtypes
+                    ):
+                        dtypes_to_change[idx] = combined_dtypes.loc[idx]
+            combined_dtypes = combined_dtypes.squeeze(axis=0)
+
+        return (
+            (combined_dtypes, dtypes_to_change)
+            if check_homogeneity
+            else combined_dtypes
+        )
 
     @classmethod
     def single_worker_read(cls, fname, **kwargs):

@@ -151,7 +151,6 @@ class CSVDispatcher(TextFileDispatcher):
         partition_ids, index_ids, dtypes_ids = cls._launch_tasks(
             splits, **partition_kwargs
         )
-
         new_query_compiler = cls._get_new_qc(
             partition_ids=partition_ids,
             index_ids=index_ids,
@@ -241,12 +240,37 @@ class CSVDispatcher(TextFileDispatcher):
         """
         index_objs = cls.materialize(index_ids)
         if len(index_objs) == 0 or isinstance(index_objs[0], int):
+            # Case when index is simple `pandas.RangeIndex`
             row_lengths = index_objs
             new_index = pandas.RangeIndex(sum(index_objs))
         else:
+            # Case when index is `pandas.Index` or `pandas.MultiIndex`
+            is_mi = isinstance(index_objs[0], pandas.MultiIndex)
+
+            index_dtypes = [idx.dtypes if is_mi else idx.dtype for idx in index_objs]
+            index_dtypes_combined, index_dtypes_astype = cls.get_dtypes(
+                index_dtypes, check_homogeneity=True
+            )
+
             row_lengths = [len(o) for o in index_objs]
             new_index = index_objs[0].append(index_objs[1:])
             new_index.name = index_name
+
+            if index_dtypes_astype:
+                if is_mi:
+                    index_dtypes_astype = {
+                        index_dtypes_combined.index.get_loc(key): value
+                        for key, value in index_dtypes_astype.items()
+                    }
+                    new_levels = {
+                        lev_name: new_index.levels[lev_name].astype(lev_type)
+                        for lev_name, lev_type in index_dtypes_astype.items()
+                    }
+                    new_index = new_index.set_levels(
+                        new_levels.values(), level=new_levels.keys()
+                    )
+                else:
+                    new_index = new_index.astype(index_dtypes_astype)
 
         return new_index, row_lengths
 
@@ -301,7 +325,7 @@ class CSVDispatcher(TextFileDispatcher):
         # reported dtypes from differing rows can be different based on the inference in
         # the limited data seen by each worker. We use pandas to compute the exact dtype
         # over the whole column for each column. The index is set below.
-        dtypes_combined, dtypes_astype = (
+        data_dtypes_combined, data_dtypes_astype = (
             cls.get_dtypes(dtypes_ids, check_homogeneity=True)
             if len(dtypes_ids) > 0
             else (None, None)
@@ -311,18 +335,19 @@ class CSVDispatcher(TextFileDispatcher):
         partition_ids = cls.build_partition(partition_ids, row_lengths, column_widths)
 
         # Set the index for the dtypes to the column names
-        if isinstance(dtypes_combined, pandas.Series):
-            dtypes_combined.index = column_names
+        if isinstance(data_dtypes_combined, pandas.Series):
+            data_dtypes_combined.index = column_names
         else:
-            dtypes_combined = pandas.Series(dtypes_combined, index=column_names)
-
+            data_dtypes_combined = pandas.Series(
+                data_dtypes_combined, index=column_names
+            )
         new_frame = cls.frame_cls(
             partition_ids,
             new_index,
             column_names,
             row_lengths,
             column_widths,
-            dtypes=dtypes_combined,
+            dtypes=data_dtypes_combined,
         )
         new_query_compiler = cls.query_compiler_cls(new_frame)
         skipfooter = kwargs.get("skipfooter", None)
@@ -363,8 +388,8 @@ class CSVDispatcher(TextFileDispatcher):
             return new_query_compiler[new_query_compiler.columns[0]]
         if index_col is None:
             new_query_compiler._modin_frame.synchronize_labels(axis=0)
-        if dtypes_astype:
-            new_query_compiler._modin_frame.synchronize_dtypes(dtypes_astype)
+        if data_dtypes_astype:
+            new_query_compiler._modin_frame.synchronize_dtypes(data_dtypes_astype)
 
         return new_query_compiler
 

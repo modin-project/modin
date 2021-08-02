@@ -271,23 +271,32 @@ class TestCsv:
         usecols,
         skip_blank_lines,
     ):
-        if header in ["infer", None] and names is not lib.no_default:
-            pytest.skip(
-                "Heterogeneous data in a column is not cast to a common type: issue #3346"
-            )
-        # Cases we can't handle because of heterogeneous data, so reading it as str
-        # to avoid types mistakes
+        # Cases we can't handle because of heterogeneous data (integer data is read as float because of NaNs),
+        # so reading it as str to avoid types mistakes
         failed_cases = (
-            header is None and names is lib.no_default and usecols in [None, [0, 1, 5]]
-        ) or names == usecols
-        het_index = (
-            names is not lib.no_default
-            and header in ["infer", None]
-            and index_col
-            and names == usecols
+            (
+                header is None
+                and names is lib.no_default
+                and usecols in [None, [0, 1, 5]]
+            )
+            or prefix is lib.no_default
+            and header != 0
+            and (names is not lib.no_default and usecols in [["col1"], None])
         )
-        if het_index:
-            pytest.xfail("msg")
+        # Cases when index can be read as float because of nans and
+        # add decimal digits to the integer values
+        xfailed_tests = (
+            prefix is lib.no_default
+            and header != 0
+            and (
+                not skip_blank_lines
+                and usecols == ["col1"]
+                and names == ["col1"]
+                and index_col == "col1"
+            )
+        )
+        if xfailed_tests:
+            pytest.xfail(reason="msg")
         eval_io(
             fn_name="read_csv",
             # read_csv kwargs
