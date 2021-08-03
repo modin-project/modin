@@ -248,10 +248,11 @@ def _get_min_cpus_per_node():
     int
         Min number of CPUs per node.
     """
-    min_node_cpus = min(
+    # TODO: max_node_cpus -> min_node_cpus
+    max_node_cpus = min(
         node.get("Resources", {}).get("CPU", 0.0) for node in ray.nodes()
     )
-    return min_node_cpus if min_node_cpus > 0.0 else _get_cluster_cpus()
+    return max_node_cpus if max_node_cpus > 0.0 else _get_cluster_cpus()
 
 
 def _get_cpus_per_actor(num_actors):
@@ -306,9 +307,7 @@ def _get_num_actors(num_actors):
         ), "`num_actors` must be a multiple to number of nodes in Ray cluster."
         return num_actors
     else:
-        raise RuntimeError(
-            "`num_actors` must be int, 'default_train', 'default_predict' or 'None'"
-        )
+        RuntimeError("`num_actors` must be int or None")
 
 
 def create_actors(num_actors):
