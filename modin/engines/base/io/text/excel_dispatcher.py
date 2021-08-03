@@ -160,7 +160,7 @@ class ExcelDispatcher(TextFileDispatcher):
 
             # Compute partition metadata upfront so it is uniform for all partitions
             chunk_size = max(1, (total_bytes - f.tell()) // num_partitions)
-            num_splits = min(len(column_names), num_partitions)
+            num_splits = min(len(column_names) or 1, num_partitions)
             kwargs["fname"] = io
             # Skiprows will be used to inform a partition how many rows come before it.
             kwargs["skiprows"] = 0

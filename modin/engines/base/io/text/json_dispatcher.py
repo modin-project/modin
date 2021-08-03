@@ -64,7 +64,7 @@ class JSONDispatcher(TextFileDispatcher):
 
         with cls.file_open(path_or_buf, "rb", kwargs.get("compression", "infer")) as f:
             num_partitions = NPartitions.get()
-            num_splits = min(len(columns), num_partitions)
+            num_splits = min(len(columns) or 1, num_partitions)
 
             partition_ids = []
             index_ids = []

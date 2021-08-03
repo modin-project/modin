@@ -154,7 +154,7 @@ class FWFDispatcher(TextFileDispatcher):
             # Max number of partitions available
             num_partitions = NPartitions.get()
             # This is the number of splits for the columns
-            num_splits = min(len(column_names), num_partitions)
+            num_splits = min(len(column_names) or 1, num_partitions)
             # Metadata
             column_chunksize = compute_chunksize(empty_pd_df, num_splits, axis=1)
             if column_chunksize > len(column_names):

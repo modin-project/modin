@@ -1922,6 +1922,22 @@ class TestFwf:
         finally:
             teardown_test_files([unique_filename])
 
+    def test_read_fwf_empty_frame(self):
+        kwargs = {
+            "usecols": [0],
+            "index_col": 0,
+        }
+        unique_filename = get_unique_filename(extension="txt")
+        try:
+            setup_fwf_file(filename=unique_filename)
+
+            modin_df = pd.read_fwf(unique_filename, **kwargs)
+            pandas_df = pandas.read_fwf(unique_filename, **kwargs)
+
+            df_equals(modin_df, pandas_df)
+        finally:
+            teardown_test_files([unique_filename])
+
 
 class TestGbq:
     @pytest.mark.xfail(reason="Need to verify GBQ access")
