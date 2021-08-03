@@ -334,7 +334,7 @@ def create_actors(num_actors):
     actors = [
         (
             node_ip.split("node:")[-1],
-            ModinXGBoostActor.options(resources={node_ip: 0.01}).remote(
+            ModinXGBoostActor.options(num_cpus=0.01, resources={node_ip: 0.01}).remote(
                 i, nthread=num_cpus_per_actor
             ),
         )
@@ -609,7 +609,6 @@ def _train(
 
     assert len(X_row_parts) == len(y_row_parts), "Unaligned train data"
 
-    print(f'num_cpus: {ray.cluster_resources()["CPU"]}')
     if ray.cluster_resources()["CPU"] < 2:
         wait_computations(X_row_parts, y_row_parts)
 

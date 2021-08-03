@@ -119,9 +119,8 @@ jobs:
         with:
           python-version: "3.7.x"
           architecture: "x64"
-      # Temporary for debug purposes
-      # - run: pip install flake8 flake8-print
-      # - run: flake8 --enable=T modin/ asv_bench/benchmarks scripts/doc_checker.py
+      - run: pip install flake8 flake8-print
+      - run: flake8 --enable=T modin/ asv_bench/benchmarks scripts/doc_checker.py
 
   test-api:
     runs-on: ubuntu-latest
@@ -454,7 +453,7 @@ jobs:
         run: sudo apt update && sudo apt install -y libhdf5-dev
       - run: MODIN_BENCHMARK_MODE=True pytest modin/pandas/test/internals/test_benchmark_mode.py
       - run: pytest -n 2 modin/experimental/xgboost/test/test_default.py
-      - run: pytest -s modin/experimental/xgboost/test/test_xgboost.py
+      - run: pytest -n 2 modin/experimental/xgboost/test/test_xgboost.py
         if: matrix.engine == 'ray'
       - run: pytest -n 2 modin/pandas/test/dataframe/test_binary.py
       - run: pytest -n 2 modin/pandas/test/dataframe/test_default.py
