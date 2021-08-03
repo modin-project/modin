@@ -322,15 +322,15 @@ def create_actors(num_actors):
 
     Returns
     -------
-    tuple
-        Pair of actors list and placement group of actors.
+    list
+        List of pairs (ip, actor).
     """
     num_cpus_per_actor = _get_cpus_per_actor(num_actors)
-    nodes_ips = [
-        key for key, _ in ray.cluster_resources().items() if key.startswith("node:")
+    node_ips = [
+        key for key in ray.cluster_resources().keys() if key.startswith("node:")
     ]
-    num_actors_per_node = num_actors // len(nodes_ips)
-    actors_ips = [ip for ip in nodes_ips for _ in range(num_actors_per_node)]
+    num_actors_per_node = num_actors // len(node_ips)
+    actors_ips = [ip for ip in node_ips for _ in range(num_actors_per_node)]
 
     actors = [
         (
