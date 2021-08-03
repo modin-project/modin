@@ -13,11 +13,14 @@
 
 """General Modin on OmniSci backend benchmarks."""
 
-from ..utils.utils import (
+import numpy as np
+
+from ..utils import (
     generate_dataframe,
     gen_nan_data,
+    RAND_LOW,
+    RAND_HIGH,
     ASV_USE_IMPL,
-    ASV_DATASET_SIZE,
     GROUPBY_NGROUPS,
     IMPL,
     execute,
@@ -28,19 +31,11 @@ from ..utils.utils import (
     get_benchmark_shapes,
 )
 
-from .utils import (
-    BINARY_OP_DATA_SIZE,
-    UNARY_OP_DATA_SIZE,
-    SERIES_DATA_SIZE,
-    RAND_LOW,
-    RAND_HIGH,
-)
-
 
 class TimeJoin:
     param_names = ["shape", "how"]
     params = [
-        get_benchmark_shapes("omisci.TimeJoin", UNARY_OP_DATA_SIZE[ASV_DATASET_SIZE]),
+        get_benchmark_shapes("omnisci.TimeJoin"),
         ["left", "inner"],
     ]
 
@@ -57,7 +52,7 @@ class TimeJoin:
 class TimeMerge:
     param_names = ["shapes", "how"]
     params = [
-        get_benchmark_shapes("omisci.TimeMerge", BINARY_OP_DATA_SIZE[ASV_DATASET_SIZE]),
+        get_benchmark_shapes("omnisci.TimeMerge"),
         ["left"],
     ]
 
@@ -81,11 +76,7 @@ class TimeMerge:
 
 class TimeAppend:
     param_names = ["shapes"]
-    params = [
-        get_benchmark_shapes(
-            "omisci.TimeAppend", BINARY_OP_DATA_SIZE[ASV_DATASET_SIZE]
-        ),
-    ]
+    params = [get_benchmark_shapes("omnisci.TimeAppend")]
 
     def setup(self, shapes):
         self.df1 = generate_dataframe(
@@ -103,9 +94,7 @@ class TimeAppend:
 class TimeBinaryOpDataFrame:
     param_names = ["shape", "binary_op"]
     params = [
-        get_benchmark_shapes(
-            "omisci.TimeBinaryOpDataFrame", UNARY_OP_DATA_SIZE[ASV_DATASET_SIZE]
-        ),
+        get_benchmark_shapes("omnisci.TimeBinaryOpDataFrame"),
         ["mul"],
     ]
 
@@ -124,9 +113,7 @@ class TimeBinaryOpDataFrame:
 class TimeBinaryOpSeries:
     param_names = ["shape", "binary_op"]
     params = [
-        get_benchmark_shapes(
-            "omisci.TimeBinaryOpSeries", SERIES_DATA_SIZE[ASV_DATASET_SIZE]
-        ),
+        get_benchmark_shapes("omnisci.TimeBinaryOpSeries"),
         ["mul"],
     ]
 
@@ -143,11 +130,7 @@ class TimeBinaryOpSeries:
 
 class TimeArithmetic:
     param_names = ["shape"]
-    params = [
-        get_benchmark_shapes(
-            "omisci.TimeArithmetic", UNARY_OP_DATA_SIZE[ASV_DATASET_SIZE]
-        ),
-    ]
+    params = [get_benchmark_shapes("omnisci.TimeArithmetic")]
 
     def setup(self, shape):
         self.df = generate_dataframe(ASV_USE_IMPL, "int", *shape, RAND_LOW, RAND_HIGH)
@@ -172,9 +155,7 @@ class TimeArithmetic:
 class TimeSortValues:
     param_names = ["shape", "columns_number", "ascending_list"]
     params = [
-        get_benchmark_shapes(
-            "omisci.TimeSortValues", UNARY_OP_DATA_SIZE[ASV_DATASET_SIZE]
-        ),
+        get_benchmark_shapes("omnisci.TimeSortValues"),
         [1, 5],
         [False, True],
     ]
@@ -196,7 +177,7 @@ class TimeSortValues:
 class TimeDrop:
     param_names = ["shape", "drop_ncols"]
     params = [
-        get_benchmark_shapes("omisci.TimeDrop", UNARY_OP_DATA_SIZE[ASV_DATASET_SIZE]),
+        get_benchmark_shapes("omnisci.TimeDrop"),
         [1, 0.8],
     ]
 
@@ -217,7 +198,7 @@ class TimeDrop:
 class TimeHead:
     param_names = ["shape", "head_count"]
     params = [
-        get_benchmark_shapes("omisci.TimeHead", UNARY_OP_DATA_SIZE[ASV_DATASET_SIZE]),
+        get_benchmark_shapes("omnisci.TimeHead"),
         [5, 0.8],
     ]
 
@@ -238,7 +219,7 @@ class TimeFillna:
     param_names = ["value_type", "shape", "limit"]
     params = [
         ["scalar", "dict"],
-        get_benchmark_shapes("omisci.TimeFillna", UNARY_OP_DATA_SIZE[ASV_DATASET_SIZE]),
+        get_benchmark_shapes("omnisci.TimeFillna"),
         [None],
     ]
 
@@ -268,10 +249,8 @@ class TimeFillna:
 class TimeValueCountsSeries:
     param_names = ["shape", "ngroups"]
     params = [
-        get_benchmark_shapes(
-            "omisci.TimeValueCountsSeries", SERIES_DATA_SIZE[ASV_DATASET_SIZE]
-        ),
-        GROUPBY_NGROUPS[ASV_DATASET_SIZE],
+        get_benchmark_shapes("omnisci.TimeValueCountsSeries"),
+        GROUPBY_NGROUPS,
     ]
 
     def setup(self, shape, ngroups):
@@ -295,9 +274,7 @@ class TimeValueCountsSeries:
 class TimeIndexing:
     param_names = ["shape", "indexer_type"]
     params = [
-        get_benchmark_shapes(
-            "omisci.TimeIndexing", UNARY_OP_DATA_SIZE[ASV_DATASET_SIZE]
-        ),
+        get_benchmark_shapes("omnisci.TimeIndexing"),
         [
             "scalar",
             "bool",
@@ -328,9 +305,7 @@ class TimeIndexing:
 class TimeResetIndex:
     param_names = ["shape", "drop", "level"]
     params = [
-        get_benchmark_shapes(
-            "omisci.TimeResetIndex", UNARY_OP_DATA_SIZE[ASV_DATASET_SIZE]
-        ),
+        get_benchmark_shapes("omnisci.TimeResetIndex"),
         [False, True],
         [None, "level_1"],
     ]
@@ -356,7 +331,7 @@ class TimeResetIndex:
 class TimeAstype:
     param_names = ["shape", "dtype", "astype_ncolumns"]
     params = [
-        get_benchmark_shapes("omisci.TimeAstype", UNARY_OP_DATA_SIZE[ASV_DATASET_SIZE]),
+        get_benchmark_shapes("omnisci.TimeAstype"),
         ["float64"],
         ["one", "all"],
     ]
@@ -382,11 +357,7 @@ class TimeAstype:
 
 class TimeDescribe:
     param_names = ["shape"]
-    params = [
-        get_benchmark_shapes(
-            "omisci.TimeDescribe", UNARY_OP_DATA_SIZE[ASV_DATASET_SIZE]
-        ),
-    ]
+    params = [get_benchmark_shapes("omnisci.TimeDescribe")]
 
     def setup(self, shape):
         self.df = generate_dataframe(ASV_USE_IMPL, "int", *shape, RAND_LOW, RAND_HIGH)
@@ -398,11 +369,7 @@ class TimeDescribe:
 
 class TimeProperties:
     param_names = ["shape"]
-    params = [
-        get_benchmark_shapes(
-            "omisci.TimeProperties", UNARY_OP_DATA_SIZE[ASV_DATASET_SIZE]
-        ),
-    ]
+    params = [get_benchmark_shapes("omnisci.TimeProperties")]
 
     def setup(self, shape):
         self.df = generate_dataframe(ASV_USE_IMPL, "int", *shape, RAND_LOW, RAND_HIGH)
@@ -436,11 +403,8 @@ class BaseTimeGroupBy:
 class TimeGroupByDefaultAggregations(BaseTimeGroupBy):
     param_names = ["shape", "ngroups"]
     params = [
-        get_benchmark_shapes(
-            "omisci.TimeGroupByDefaultAggregations",
-            UNARY_OP_DATA_SIZE[ASV_DATASET_SIZE],
-        ),
-        GROUPBY_NGROUPS[ASV_DATASET_SIZE],
+        get_benchmark_shapes("omnisci.TimeGroupByDefaultAggregations"),
+        GROUPBY_NGROUPS,
     ]
 
     def time_groupby_count(self, *args, **kwargs):

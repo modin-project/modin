@@ -15,34 +15,29 @@
 
 import modin.pandas as pd
 
-from ..utils.utils import (
+from ..utils import (
     generate_dataframe,
     RAND_LOW,
     RAND_HIGH,
     ASV_USE_IMPL,
-    ASV_DATASET_SIZE,
     IMPL,
     get_shape_id,
     trigger_import,
     get_benchmark_shapes,
 )
 
-from .utils import UNARY_OP_DATA_SIZE
-
 from ..io.csv import TimeReadCsvTrueFalseValues  # noqa: F401
 
 
 class TimeReadCsvNames:
-    _shapes = get_benchmark_shapes(
-        "omnisci.TimeReadCsvNames", UNARY_OP_DATA_SIZE[ASV_DATASET_SIZE]
-    )
+    shapes = get_benchmark_shapes("omnisci.TimeReadCsvNames")
     param_names = ["shape"]
-    params = [_shapes]
+    params = [shapes]
 
     def setup_cache(self, test_filename="io_test_file_csv_names"):
         # filenames with a metadata of saved dataframes
         cache = {}
-        for shape in self._shapes:
+        for shape in self.shapes:
             df = generate_dataframe("pandas", "int", *shape, RAND_LOW, RAND_HIGH)
             file_id = get_shape_id(shape)
             cache[file_id] = (
