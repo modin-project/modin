@@ -1158,6 +1158,22 @@ class TestTable:
 
         df_equals(modin_df, pandas_df)
 
+    @pytest.mark.xfail(
+        condition="config.getoption('--simulate-cloud').lower() != 'off'",
+        reason="The reason of tests fail in `cloud` mode is unknown for now - issue #2340",
+    )
+    def test_read_table_empty_frame(self, make_csv_file):
+        unique_filename = get_unique_filename()
+        make_csv_file(filename=unique_filename, delimiter="\t")
+
+        eval_io(
+            fn_name="read_table",
+            # read_table kwargs
+            filepath_or_buffer=unique_filename,
+            usecols=["col1"],
+            index_col="col1",
+        )
+
 
 class TestParquet:
     @pytest.mark.parametrize("columns", [None, ["col1"]])
