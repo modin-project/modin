@@ -609,6 +609,7 @@ def _train(
 
     assert len(X_row_parts) == len(y_row_parts), "Unaligned train data"
 
+    print(f'num_cpus: {ray.cluster_resources()["CPU"]}')
     if ray.cluster_resources()["CPU"] < 2:
         wait_computations(X_row_parts, y_row_parts)
 
