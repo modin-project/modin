@@ -35,7 +35,7 @@ from .utils import RabitContext, RabitContextManager
 LOGGER = logging.getLogger("[modin.xgboost]")
 
 
-@ray.remote
+@ray.remote(num_cpus=0)
 class ModinXGBoostActor:
     """
     Ray actor-class runs training/prediction on remote workers.
@@ -334,7 +334,7 @@ def create_actors(num_actors):
     actors = [
         (
             node_ip.split("node:")[-1],
-            ModinXGBoostActor.options(num_cpus=0.01, resources={node_ip: 0.01}).remote(
+            ModinXGBoostActor.options(resources={node_ip: 0.01}).remote(
                 i, nthread=num_cpus_per_actor
             ),
         )
@@ -547,21 +547,6 @@ def _assign_row_partitions_to_actors(
     return row_parts_by_ranks
 
 
-def wait_computations(parts_ips_refs, parts_refs=[]):
-    """
-    Wait until `parts_ips_refs` and `parts_refs` are finished.
-
-    Parameters
-    ----------
-    parts_ips_refs : list
-        List of pairs (``ray.ObjectRef``, ``ray.ObjectRef``) to be waited.
-    parts_refs : list, optional
-        List of ``ray.ObjectRef`` to be waited.
-    """
-    refs_to_be_waited = list(sum(parts_ips_refs, ())) + parts_refs
-    ray.wait(refs_to_be_waited, num_returns=len(refs_to_be_waited))
-
-
 def _train(
     dtrain,
     num_actors,
@@ -608,9 +593,6 @@ def _train(
     X_row_parts, y_row_parts = dtrain
 
     assert len(X_row_parts) == len(y_row_parts), "Unaligned train data"
-
-    if ray.cluster_resources()["CPU"] < 2:
-        wait_computations(X_row_parts, y_row_parts)
 
     num_actors = _get_num_actors(
         num_actors if isinstance(num_actors, int) else "default_train"
@@ -700,9 +682,6 @@ def _predict(
 
     X_row_parts, _ = data
 
-    if ray.cluster_resources()["CPU"] < 2:
-        wait_computations(X_row_parts)
-
     num_actors = _get_num_actors(
         num_actors if isinstance(num_actors, int) else "default_predict"
     )
@@ -730,10 +709,6 @@ def _predict(
         tuple(actor.predict.options(num_returns=2).remote(booster, **kwargs))
         for _, actor in actors
     ]
-    if ray.cluster_resources()["CPU"] < 2:
-        wait_computations(predictions)
-        for _, actor in actors:
-            ray.kill(actor)
 
     result = from_partitions(predictions, 0)
     LOGGER.info(f"Prediction time: {time.time() - s} s")
