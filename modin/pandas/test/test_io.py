@@ -1548,6 +1548,26 @@ class TestExcel:
         finally:
             teardown_test_files([unique_filename_modin, unique_filename_pandas])
 
+    @pytest.mark.xfail(
+        Engine.get() != "Python", reason="Test fails because of issue 3305"
+    )
+    @check_file_leaks
+    def test_read_excel_empty_frame(self):
+        unique_filename = get_unique_filename(extension="xlsx")
+        try:
+            setup_excel_file(filename=unique_filename)
+
+            eval_io(
+                fn_name="read_excel",
+                modin_warning=UserWarning,
+                # read_excel kwargs
+                io=unique_filename,
+                usecols=[0],
+                index_col=0,
+            )
+        finally:
+            teardown_test_files([unique_filename])
+
 
 class TestHdf:
     @pytest.mark.parametrize("format", [None, "table"])
