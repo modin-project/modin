@@ -1168,20 +1168,40 @@ class TestCsv:
             index_col="col1",
         )
 
-    @pytest.mark.parametrize("add_nans", [False])
-    def test_read_csv_heterogeneous_data(self, add_nans):
+    @pytest.mark.parametrize("entity_to_check", ["data", "index"])
+    @pytest.mark.parametrize("add_nans", [True, False])
+    def test_read_csv_heterogeneous_data(self, add_nans, entity_to_check):
         unique_filename = get_unique_filename()
 
+        if entity_to_check == "data":
+            kwargs = {
+                # Relaxing check since strict check fails
+                "check_only_dtypes": add_nans,
+                "skip_blank_lines": not add_nans,
+            }
+        elif entity_to_check == "index":
+            kwargs = {
+                "usecols": [0],
+                "index_col": 0,
+            }
+
+        # partition_data: '0,1\n2,3\n ...'
         partition_data = "".join(
             [str(x) + "\n" if (x + 1) % 2 == 0 else str(x) + "," for x in range(32)]
         )
+
+        # with skip_blank_lines=False blank lines will be handled as NaNs,
+        # which in turn forces partition dtype to be np.dtype('float64')
+        # if string data is not present
         partition_data = partition_data + "\n" if add_nans else partition_data
 
         str_heterogeneous_data = "col1,col2\n" + "some,text\n"
         for _ in range(NPartitions.get()):
             str_heterogeneous_data += partition_data
         eval_io_from_str(
-            str_heterogeneous_data, unique_filename, skip_blank_lines=not add_nans
+            str_heterogeneous_data,
+            unique_filename,
+            **kwargs,
         )
 
 

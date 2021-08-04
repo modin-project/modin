@@ -669,6 +669,7 @@ def eval_general(
     raising_exceptions=None,
     check_kwargs_callable=True,
     md_extra_kwargs=None,
+    check_only_dtypes=False,
     **kwargs,
 ):
     if raising_exceptions:
@@ -721,7 +722,18 @@ def eval_general(
     values = execute_callable(
         operation, md_kwargs=md_kwargs, pd_kwargs=pd_kwargs, inplace=__inplace__
     )
-    if values is not None:
+    if check_only_dtypes:
+        partitions = values[0]._query_compiler._modin_frame._partitions
+        first_partitions_dtypes = [part.get().dtypes for part in partitions[0]]
+        for row_parts in partitions:
+            for part_num, part in enumerate(row_parts):
+                parts_dtypes_eq = all(
+                    [part.get().dtypes.equals(first_partitions_dtypes[part_num])]
+                )
+                assert parts_dtypes_eq, "Partitions dtypes are different."
+        md_pandas_eq = values[1].dtypes.equals(pandas.concat(first_partitions_dtypes))
+        assert md_pandas_eq, "Modin and pandas output results types are different."
+    elif values is not None:
         comparator(*values)
 
 

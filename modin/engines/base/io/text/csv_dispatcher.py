@@ -151,6 +151,7 @@ class CSVDispatcher(TextFileDispatcher):
         partition_ids, index_ids, dtypes_ids = cls._launch_tasks(
             splits, **partition_kwargs
         )
+
         new_query_compiler = cls._get_new_qc(
             partition_ids=partition_ids,
             index_ids=index_ids,
@@ -237,10 +238,15 @@ class CSVDispatcher(TextFileDispatcher):
             Index that should be passed to the new_frame constructor.
         row_lengths : list
             Partitions rows lengths.
+        need_labels_sync : bool
+            Wheather labels in partitions should be synchronized with
+            label of query compiler.
         """
+        need_labels_sync = False
         index_objs = cls.materialize(index_ids)
         if len(index_objs) == 0 or isinstance(index_objs[0], int):
             # Case when index is simple `pandas.RangeIndex`
+            need_labels_sync = True
             row_lengths = index_objs
             new_index = pandas.RangeIndex(sum(index_objs))
         else:
@@ -257,6 +263,7 @@ class CSVDispatcher(TextFileDispatcher):
             new_index.name = index_name
 
             if index_dtypes_astype:
+                need_labels_sync = True
                 if is_mi:
                     index_dtypes_astype = {
                         index_dtypes_combined.index.get_loc(key): value
@@ -272,7 +279,7 @@ class CSVDispatcher(TextFileDispatcher):
                 else:
                     new_index = new_index.astype(index_dtypes_astype)
 
-        return new_index, row_lengths
+        return new_index, row_lengths, need_labels_sync
 
     @classmethod
     def _get_new_qc(
@@ -320,7 +327,9 @@ class CSVDispatcher(TextFileDispatcher):
         new_query_compiler : BaseQueryCompiler
             New query compiler, created from `new_frame`.
         """
-        new_index, row_lengths = cls._define_index(index_ids, index_name)
+        new_index, row_lengths, need_labels_sync = cls._define_index(
+            index_ids, index_name
+        )
         # Compute dtypes by getting collecting and combining all of the partitions. The
         # reported dtypes from differing rows can be different based on the inference in
         # the limited data seen by each worker. We use pandas to compute the exact dtype
@@ -386,7 +395,7 @@ class CSVDispatcher(TextFileDispatcher):
                 )
         if kwargs.get("squeeze", False) and len(new_query_compiler.columns) == 1:
             return new_query_compiler[new_query_compiler.columns[0]]
-        if index_col is None:
+        if need_labels_sync:
             new_query_compiler._modin_frame.synchronize_labels(axis=0)
         if data_dtypes_astype:
             new_query_compiler._modin_frame.synchronize_dtypes(data_dtypes_astype)
