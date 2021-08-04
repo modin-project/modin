@@ -170,6 +170,7 @@ and lots of other useful information.**
 
    UsingPandasonRay/index
    UsingPandasonDask/index
+   UsingOmnisci/index
    UsingPyarrowonRay/index
 
 .. toctree::

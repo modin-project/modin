@@ -262,6 +262,9 @@ documentation page on :doc:`contributing </contributing>`.
 - :doc:`Pandas on Dask </UsingPandasonDask/index>`
     - Uses the `Dask Futures`_ execution framework.
     - The compute kernel/in-memory format is a pandas DataFrame.
+- :doc:`Omnisci </UsingOmnisci/index>`
+    - Uses OmniSciDB as an engine.
+    - The compute kernel/in-memory format is a pyarrow Table or pandas DataFrame when defaulting to pandas.
 - :doc:`Pyarrow on Ray </UsingPyarrowonRay/index>` (experimental)
     - Uses the Ray_ execution framework.
     - The compute kernel/in-memory format is a pyarrow Table.
