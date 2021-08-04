@@ -396,7 +396,6 @@ class TextFileDispatcher(FileDispatcher):
     def _define_metadata(
         cls,
         df: pandas.DataFrame,
-        num_splits: int,
         column_names: ColumnNamesTypes,
     ) -> Tuple[list, int]:
         """
@@ -406,8 +405,6 @@ class TextFileDispatcher(FileDispatcher):
         ----------
         df : pandas.DataFrame
             The DataFrame to split.
-        num_splits : int
-            The maximum number of splits to separate the DataFrame into.
         column_names : ColumnNamesTypes
             Column names of df.
 
@@ -417,8 +414,10 @@ class TextFileDispatcher(FileDispatcher):
             Column width to use during new frame creation (number of
             columns for each partition).
         num_splits : int
-            Updated `num_splits` parameter.
+            The maximum number of splits to separate the DataFrame into.
         """
+        # This is the number of splits for the columns
+        num_splits = min(len(column_names) or 1, NPartitions.get())
         column_chunksize = compute_chunksize(df, num_splits, axis=1)
         if column_chunksize > len(column_names):
             column_widths = [len(column_names)]

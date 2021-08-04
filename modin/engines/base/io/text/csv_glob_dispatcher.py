@@ -25,7 +25,6 @@ import pandas
 import pandas._libs.lib as lib
 
 from modin.config import NPartitions
-from modin.data_management.utils import compute_chunksize
 from modin.engines.base.io.file_dispatcher import S3_ADDRESS_REGEX
 from modin.engines.base.io.text.csv_dispatcher import CSVDispatcher
 
@@ -181,26 +180,7 @@ class CSVGlobDispatcher(CSVDispatcher):
             partition_ids = []
             index_ids = []
             dtypes_ids = []
-            # Max number of partitions available
-            num_partitions = NPartitions.get()
-            # This is the number of splits for the columns
-            num_splits = min(len(column_names) or 1, num_partitions)
-            # Metadata
-            column_chunksize = compute_chunksize(empty_pd_df, num_splits, axis=1)
-            if column_chunksize > len(column_names):
-                column_widths = [len(column_names)]
-                # This prevents us from unnecessarily serializing a bunch of empty
-                # objects.
-                num_splits = 1
-            else:
-                column_widths = [
-                    column_chunksize
-                    if len(column_names) > (column_chunksize * (i + 1))
-                    else 0
-                    if len(column_names) < (column_chunksize * i)
-                    else len(column_names) - (column_chunksize * i)
-                    for i in range(num_splits)
-                ]
+            column_widths, num_splits = cls._define_metadata(empty_pd_df, column_names)
 
             args = {
                 "num_splits": num_splits,
@@ -210,7 +190,7 @@ class CSVGlobDispatcher(CSVDispatcher):
             splits = cls.partitioned_file(
                 files,
                 glob_filepaths,
-                num_partitions=num_partitions,
+                num_partitions=NPartitions.get(),
                 nrows=nrows,
                 skiprows=skiprows,
                 skip_header=skip_header,

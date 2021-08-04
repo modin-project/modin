@@ -19,8 +19,10 @@ from io import BytesIO
 import pandas
 import numpy as np
 from csv import QUOTE_NONE
+from typing import Tuple
 
 from modin.config import NPartitions
+from .text_file_dispatcher import ColumnNamesTypes
 
 
 class JSONDispatcher(TextFileDispatcher):
@@ -63,33 +65,17 @@ class JSONDispatcher(TextFileDispatcher):
         empty_pd_df = pandas.DataFrame(columns=columns)
 
         with cls.file_open(path_or_buf, "rb", kwargs.get("compression", "infer")) as f:
-            num_partitions = NPartitions.get()
-            num_splits = min(len(columns) or 1, num_partitions)
-
             partition_ids = []
             index_ids = []
             dtypes_ids = []
 
-            column_chunksize = compute_chunksize(empty_pd_df, num_splits, axis=1)
-            if column_chunksize > len(columns):
-                column_widths = [len(columns)]
-                num_splits = 1
-            else:
-                column_widths = []
-                for i in range(num_splits):
-                    if len(columns) > (column_chunksize * i):
-                        if len(columns) > (column_chunksize * (i + 1)):
-                            column_widths.append(column_chunksize)
-                        else:
-                            column_widths.append(len(columns) - (column_chunksize * i))
-                    else:
-                        column_widths.append(0)
+            column_widths, num_splits = cls._define_metadata(empty_pd_df, columns)
 
             args = {"fname": path_or_buf, "num_splits": num_splits, **kwargs}
 
             splits = cls.partitioned_file(
                 f,
-                num_partitions=num_partitions,
+                num_partitions=NPartitions.get(),
                 is_quoting=(args.get("quoting", "") != QUOTE_NONE),
             )
             for start, end in splits:
@@ -122,3 +108,47 @@ class JSONDispatcher(TextFileDispatcher):
         )
         new_frame.synchronize_labels(axis=0)
         return cls.query_compiler_cls(new_frame)
+
+    @classmethod
+    def _define_metadata(
+        cls,
+        df: pandas.DataFrame,
+        column_names: ColumnNamesTypes,
+    ) -> Tuple[list, int]:
+        """
+        Define partitioning metadata.
+
+        Parameters
+        ----------
+        df : pandas.DataFrame
+            The DataFrame to split.
+        column_names : ColumnNamesTypes
+            Column names of df.
+
+        Returns
+        -------
+        column_widths : list
+            Column width to use during new frame creation (number of
+            columns for each partition).
+        num_splits : int
+            The maximum number of splits to separate the DataFrame into.
+        """
+        # This is the number of splits for the columns
+        num_splits = min(len(column_names) or 1, NPartitions.get())
+        column_chunksize = compute_chunksize(df, num_splits, axis=1)
+
+        if column_chunksize > len(column_names):
+            column_widths = [len(column_names)]
+            num_splits = 1
+        else:
+            column_widths = []
+            for i in range(num_splits):
+                if len(column_names) > (column_chunksize * i):
+                    if len(column_names) > (column_chunksize * (i + 1)):
+                        column_widths.append(column_chunksize)
+                    else:
+                        column_widths.append(len(column_names) - (column_chunksize * i))
+                else:
+                    column_widths.append(0)
+
+        return column_widths, num_splits
