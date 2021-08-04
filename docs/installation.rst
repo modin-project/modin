@@ -62,9 +62,9 @@ it is possible to install modin with chosen engine(s) alongside. Current options
 +---------------------------------+---------------------------+
 | **Package name in conda-forge** | **Engine(s)**             |
 +---------------------------------+---------------------------+
-| modin                           | Dask                      |
+| modin                           | Dask_                     |
 +---------------------------------+---------------------------+
-| modin-all                       | Dask, Ray, OmniSci_       |
+| modin-all                       | Dask, Ray_, OmniSci_      |
 +---------------------------------+---------------------------+
 | modin-dask                      | Dask                      |
 +---------------------------------+---------------------------+
