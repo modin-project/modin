@@ -56,8 +56,8 @@ or for different functionalities of Modin. Here is a list of dependency sets for
 Installing with conda
 ---------------------
 
-Modin releases can be installed using ``Miniconda`` from conda-forge channel. Starting from 0.10.1
-it is possible to install modin with chosen engine(s). Current options are:
+Modin releases can be installed using ``conda`` from conda-forge channel. Starting from 0.10.1
+it is possible to install modin with chosen engine(s) alongside. Current options are:
 
 +---------------------------------+---------------------------+
 | **Package name in conda-forge** | **Engine(s)**             |
