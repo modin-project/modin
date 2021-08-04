@@ -27,7 +27,6 @@ from collections import defaultdict
 import xgboost as xgb
 import ray
 from ray.services import get_node_ip_address
-from ray.util.placement_group import placement_group, remove_placement_group
 import pandas
 
 from modin.distributed.dataframe.pandas import from_partitions
@@ -36,7 +35,7 @@ from .utils import RabitContext, RabitContextManager
 LOGGER = logging.getLogger("[modin.xgboost]")
 
 
-@ray.remote
+@ray.remote(num_cpus=0)
 class ModinXGBoostActor:
     """
     Ray actor-class runs training/prediction on remote workers.
@@ -303,38 +302,12 @@ def _get_num_actors(num_actors):
         num_actors_per_node = max(1, int(min_cpus_per_node // 8))
         return num_actors_per_node * len(ray.nodes())
     elif isinstance(num_actors, int):
+        assert (
+            num_actors % len(ray.nodes()) == 0
+        ), "`num_actors` must be a multiple to number of nodes in Ray cluster."
         return num_actors
     else:
         RuntimeError("`num_actors` must be int or None")
-
-
-def _create_placement_group(num_cpus_per_actor, num_actors):
-    """
-    Create Ray placement group to grab resources.
-
-    Parameters
-    ----------
-    num_cpus_per_actor : int
-        Number of CPUs per actor.
-    num_actors : int
-        Number of actors.
-
-    Returns
-    -------
-    ray.util.PlacementGroup
-        Placement group with grabbed resources.
-    """
-    cpu_bundle = {"CPU": num_cpus_per_actor}
-    bundles = [cpu_bundle for _ in range(num_actors)]
-
-    pg = placement_group(bundles, strategy="SPREAD")
-
-    ready, _ = ray.wait([pg.ready()], timeout=100)
-
-    if ready is None:
-        raise TimeoutError("Placement group creation timeout.")
-
-    return pg
 
 
 def create_actors(num_actors):
@@ -348,18 +321,26 @@ def create_actors(num_actors):
 
     Returns
     -------
-    tuple
-        Pair of actors list and placement group of actors.
+    list
+        List of pairs (ip, actor).
     """
     num_cpus_per_actor = _get_cpus_per_actor(num_actors)
-    pg = _create_placement_group(num_cpus_per_actor, num_actors)
-    actors = [
-        ModinXGBoostActor.options(
-            num_cpus=num_cpus_per_actor, placement_group=pg
-        ).remote(i, nthread=num_cpus_per_actor)
-        for i in range(num_actors)
+    node_ips = [
+        key for key in ray.cluster_resources().keys() if key.startswith("node:")
     ]
-    return actors, pg
+    num_actors_per_node = num_actors // len(node_ips)
+    actors_ips = [ip for ip in node_ips for _ in range(num_actors_per_node)]
+
+    actors = [
+        (
+            node_ip.split("node:")[-1],
+            ModinXGBoostActor.options(resources={node_ip: 0.01}).remote(
+                i, nthread=num_cpus_per_actor
+            ),
+        )
+        for i, node_ip in enumerate(actors_ips)
+    ]
+    return actors
 
 
 def _split_data_across_actors(
@@ -394,7 +375,7 @@ def _split_data_across_actors(
             data_for_aligning=X_parts_by_actors,
         )
 
-    for rank, actor in enumerate(actors):
+    for rank, (_, actor) in enumerate(actors):
         X_parts = X_parts_by_actors[rank] if is_predict else X_parts_by_actors[rank][0]
         if y_parts is None:
             set_func(actor, *X_parts)
@@ -445,10 +426,7 @@ def _assign_row_partitions_to_actors(
 
             # Group actors which are one the same ip
             actor_ips = defaultdict(list)
-
-            for rank, ip in enumerate(
-                ray.get([actor.get_ip.remote() for actor in actors])
-            ):
+            for rank, (ip, _) in enumerate(actors):
                 actor_ips[ip].append(rank)
 
             # Get distribution of parts between nodes ({ip:[(part, position),..],..})
@@ -623,7 +601,7 @@ def _train(
     if num_actors > len(X_row_parts):
         num_actors = len(X_row_parts)
 
-    actors, pg = create_actors(num_actors)
+    actors = create_actors(num_actors)
 
     add_as_eval_method = None
     if evals:
@@ -660,12 +638,12 @@ def _train(
 
         # Train
         fut = [
-            actor.train.remote(rabit_args, params, *args, **kwargs) for actor in actors
+            actor.train.remote(rabit_args, params, *args, **kwargs)
+            for _, actor in actors
         ]
         # All results should be the same because of Rabit tracking. So we just
         # return the first one.
         result = ray.get(fut[0])
-        remove_placement_group(pg)
         LOGGER.info(f"Training time: {time.time() - s} s")
         return result
 
@@ -712,7 +690,7 @@ def _predict(
         num_actors = len(X_row_parts)
 
     # Create remote actors
-    actors, pg = create_actors(num_actors)
+    actors = create_actors(num_actors)
 
     # Split data across workers
     _split_data_across_actors(
@@ -729,11 +707,8 @@ def _predict(
 
     predictions = [
         tuple(actor.predict.options(num_returns=2).remote(booster, **kwargs))
-        for actor in actors
+        for _, actor in actors
     ]
-
-    ray.wait([part for _, part in predictions], num_returns=len(predictions))
-    remove_placement_group(pg)
 
     result = from_partitions(predictions, 0)
     LOGGER.info(f"Prediction time: {time.time() - s} s")
