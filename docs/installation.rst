@@ -98,7 +98,7 @@ Using Intel\ |reg| Distribution of Modin
 """""""""""""""""""""""""""""""""""""""
 
 With ``conda`` it is possible to install special version of Modin, part of Intel\ |reg| oneAPI AI Analytics Toolkit.
-This version of Modin powered by :doc:`OmniSci</UsingOmnisci/index>` engine that contains a bunch of
+This version of Modin is powered by :doc:`OmniSci</UsingOmnisci/index>` engine that contains a bunch of
 optimizations for Intel hardware. All details can be found on `Intel Distribution of Modin`_ page.
 
 Installing from the GitHub master branch
