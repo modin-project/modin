@@ -75,12 +75,15 @@ class JSONDispatcher(TextFileDispatcher):
                 column_widths = [len(columns)]
                 num_splits = 1
             else:
-                column_widths = [
-                    column_chunksize
-                    if i != num_splits - 1
-                    else len(columns) - (column_chunksize * (num_splits - 1))
-                    for i in range(num_splits)
-                ]
+                column_widths = []
+                for i in range(num_splits):
+                    if len(columns) > (column_chunksize * i):
+                        if len(columns) > (column_chunksize * (i + 1)):
+                            column_widths.append(column_chunksize)
+                        else:
+                            column_widths.append(len(columns) - (column_chunksize * i))
+                    else:
+                        column_widths.append(0)
 
             args = {"fname": path_or_buf, "num_splits": num_splits, **kwargs}
 

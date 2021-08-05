@@ -92,12 +92,12 @@ def setup_json_file(filename, row_size=NROWS, force=True):
         df.to_json(filename)
 
 
-def setup_json_lines_file(filename, row_size=NROWS, force=True):
+def setup_json_lines_file(filename, row_size=NROWS, col_size=2, force=True):
     if os.path.exists(filename) and not force:
         pass
     else:
         df = pandas.DataFrame(
-            {"col1": np.arange(row_size), "col2": np.arange(row_size)}
+            {f"col{x + 1}": np.arange(row_size) for x in range(col_size)}
         )
         df.to_json(filename, lines=True, orient="records")
 
@@ -1352,6 +1352,26 @@ class TestJson:
                 buf.seek(0)
                 df_modin = pd.read_json(buf)
                 df_equals(df_pandas, df_modin)
+        finally:
+            teardown_test_files([unique_filename])
+
+    def test_read_json_metadata(self):
+        unique_filename = get_unique_filename(extension="json")
+        try:
+            setup_json_lines_file(unique_filename, col_size=80)
+
+            # `lines=True` is for triggering Modin implementation,
+            # `orient="records"` should be set if `lines=True`
+            df = pd.read_json(unique_filename, lines=True, orient="records")
+            parts_width_cached = df._query_compiler._modin_frame._column_widths_cache
+            num_splits = len(df._query_compiler._modin_frame._partitions[0])
+            parts_width_actual = [
+                len(df._query_compiler._modin_frame._partitions[0][i].get().columns)
+                for i in range(num_splits)
+            ]
+
+            assert parts_width_cached == parts_width_actual
+
         finally:
             teardown_test_files([unique_filename])
 
