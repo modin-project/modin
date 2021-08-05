@@ -2,9 +2,9 @@ Installation
 ============
 
 There are a couple of ways to install Modin. Most users will want to install with
-``pip``, but some users may want to build from the master branch on the `GitHub repo`_.
-The master branch has the most recent patches, but may be less stable than a release
-installed from ``pip``.
+``pip`` or using ``conda`` tool, but some users may want to build from the master branch
+on the `GitHub repo`_. The master branch has the most recent patches, but may be less
+stable than a release installed from ``pip`` or ``conda``.
 
 Installing with pip
 -------------------
@@ -52,6 +52,44 @@ or for different functionalities of Modin. Here is a list of dependency sets for
 .. code-block:: bash
 
   pip install "modin[dask]" # If you want to use the Dask backend
+
+Installing with conda
+---------------------
+
+Modin releases can be installed using ``conda`` from conda-forge channel. Starting from 0.10.1
+it is possible to install modin with chosen engine(s) alongside. Current options are:
+
++---------------------------------+---------------------------+
+| **Package name in conda-forge** | **Engine(s)**             |
++---------------------------------+---------------------------+
+| modin                           | Dask_                     |
++---------------------------------+---------------------------+
+| modin-all                       | Dask, Ray_, OmniSci_      |
++---------------------------------+---------------------------+
+| modin-dask                      | Dask                      |
++---------------------------------+---------------------------+
+| modin-ray                       | Ray                       |
++---------------------------------+---------------------------+
+| modin-omnisci                   | OmniSci                   |
++---------------------------------+---------------------------+
+
+So for installing Dask and Ray engines into conda environment following command should be used:
+
+.. code-block:: bash
+
+  conda install -c conda-forge modin-ray modin-dask
+
+All set of engines could be available in conda environment by specifying
+
+.. code-block:: bash
+
+  conda install -c conda-forge modin-all
+
+or explicitly
+
+.. code-block:: bash
+
+  conda install -c conda-forge modin-ray modin-dask modin-omnisci
 
 Installing from the GitHub master branch
 ----------------------------------------
@@ -112,3 +150,4 @@ Once cloned, ``cd`` into the ``modin`` directory and use ``pip`` to install:
 .. _WSL: https://docs.microsoft.com/en-us/windows/wsl/install-win10
 .. _Ray: http://ray.readthedocs.io
 .. _Dask: https://github.com/dask/dask
+.. _OmniSci: https://www.omnisci.com/platform/omniscidb
