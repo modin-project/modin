@@ -26,6 +26,7 @@ from modin.backends.pandas.query_compiler import PandasQueryCompiler
 from modin.utils import (
     _inherit_docstrings,
 )
+from modin.error_message import ErrorMessage
 import pandas
 
 from pandas.core.common import is_bool_indexer
@@ -65,12 +66,12 @@ def build_method_wrapper(name, method):
     Build method wrapper to handle inoperable data types.
 
     Wrapper calls the original method if all its arguments can be processed
-    by OmniSci engine and ``BaseQueryCompiler`` otherwise.
+    by OmniSci engine and fallback to parent's method otherwise.
 
     Parameters
     ----------
     name : str
-        ``BaseQueryCompiler`` method name to fallback to.
+        Parent's method name to fallback to.
     method : callable
         A method to wrap.
 
@@ -81,9 +82,24 @@ def build_method_wrapper(name, method):
 
     @wraps(method)
     def method_wrapper(self, *args, **kwargs):
+        # If the method wasn't found in the parent query compiler that means,
+        # that we're calling one that is OmniSci backend-specific, if we intend
+        # to fallback to pandas on 'NotImplementedError' then the call of this
+        # private method is caused by some public QC method, so we catch
+        # the exception here and do fallback properly
+        default_method = getattr(super(type(self), self), name, None)
         if is_inoperable([self, args, kwargs]):
-            return getattr(BaseQueryCompiler, name)(self, *args, **kwargs)
-        return method(self, *args, **kwargs)
+            if default_method is None:
+                raise NotImplementedError("Frame contains data of unsupported types.")
+            return default_method(*args, **kwargs)
+        try:
+            return method(self, *args, **kwargs)
+        # Defaulting to pandas if `NotImplementedError` was arisen
+        except NotImplementedError as e:
+            if default_method is None:
+                raise e
+            ErrorMessage.default_to_pandas(message=str(e))
+            return default_method(*args, **kwargs)
 
     return method_wrapper
 
@@ -92,7 +108,7 @@ def bind_wrappers(cls):
     """
     Wrap class methods.
 
-    Decorator allows to fallback to ``BaseQueryCompiler`` when unsupported
+    Decorator allows to fallback to the parent query compiler methods when unsupported
     data types are used in a frame.
 
     Returns
@@ -262,7 +278,9 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
     ):
         # Grouping on empty frame or on index level.
         if len(self.columns) == 0:
-            return super().groupby_size(by, axis, groupby_args, map_args, **kwargs)
+            raise NotImplementedError(
+                "Grouping on empty frame or on index level is not yet implemented."
+            )
 
         groupby_args = groupby_args.copy()
         as_index = groupby_args.get("as_index", True)
@@ -307,6 +325,10 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
         drop=False,
     ):
         # TODO: handle `is_multi_by`, `agg_args`, `drop` args
+        if callable(agg_func):
+            raise NotImplementedError(
+                "Python callable is not a valid aggregation function for OmniSci backend."
+            )
         new_frame = self._modin_frame.groupby_agg(
             by, axis, agg_func, groupby_kwargs, **agg_kwargs
         )
@@ -324,9 +346,8 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
     def sum(self, **kwargs):
         min_count = kwargs.pop("min_count")
         if min_count != 0:
-            return super().sum(
-                min_count=min_count,
-                **kwargs,
+            raise NotImplementedError(
+                f"OmniSci's sum does not support such set of parameters: min_count={min_count}."
             )
         return self._agg("sum", **kwargs)
 
@@ -335,7 +356,9 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
 
     def nunique(self, axis=0, dropna=True):
         if axis != 0 or not dropna:
-            return super().nunique(axis=axis, dropna=dropna)
+            raise NotImplementedError(
+                f"OmniSci's nunique does not support such set of parameters: axis={axis}, dropna={dropna}."
+            )
         return self._agg("count", distinct=True)
 
     def _agg(self, agg, axis=0, level=None, **kwargs):
@@ -364,11 +387,15 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
             the result of aggregation.
         """
         if level is not None or axis != 0:
-            return getattr(super(), agg)(axis=axis, level=level, **kwargs)
+            raise NotImplementedError(
+                "OmniSci's aggregation functions does not support 'level' and 'axis' parameters."
+            )
 
         # TODO: Do filtering on numeric columns if `numeric_only=True`
         if not kwargs.get("skipna", True) or kwargs.get("numeric_only"):
-            return getattr(super(), agg)(axis=axis, level=level, **kwargs)
+            raise NotImplementedError(
+                "OmniSci's aggregation functions does not support 'skipna' and 'numeric_only' parameters."
+            )
         # Processed above, so can be omitted
         kwargs.pop("skipna", None)
         kwargs.pop("numeric_only", None)
@@ -388,7 +415,9 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
         dropna = kwargs.get("dropna", True)
 
         if bins or normalize:
-            return super().value_count(**kwargs)
+            raise NotImplementedError(
+                "OmniSci's 'value_counts' does not support 'bins' and 'normalize' parameters."
+            )
 
         new_frame = self._modin_frame.value_counts(
             columns=subset, dropna=dropna, sort=sort, ascending=ascending
@@ -498,7 +527,9 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
 
     def dropna(self, axis=0, how="any", thresh=None, subset=None):
         if thresh is not None or axis != 0:
-            return super().dropna(axis=axis, how=how, thresh=thresh, subset=subset)
+            raise NotImplementedError(
+                "OmniSci's dropna does not support 'thresh' and 'axis' parameters."
+            )
 
         if subset is None:
             subset = self.columns
@@ -589,7 +620,9 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
     def reset_index(self, **kwargs):
         level = kwargs.get("level", None)
         if level is not None:
-            return super().reset_index(**kwargs)
+            raise NotImplementedError(
+                "OmniSci's reset_index does not support 'level' parameter."
+            )
 
         drop = kwargs.get("drop", False)
         shape_hint = self._shape_hint if drop else None
@@ -605,29 +638,22 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
 
     def setitem(self, axis, key, value):
         if axis == 1 or not isinstance(value, type(self)):
-            return super().setitem(axis=axis, key=key, value=value)
-
-        try:
-            result = self._setitem(axis, key, value)
-        # OmniSci engine does not yet support cases when `value` is not a subframe of `self`.
-        except NotImplementedError:
-            result = super().setitem(axis=axis, key=key, value=value)
-        return result
+            raise NotImplementedError(
+                f"OmniSci's setitem does not support such set of parameters: axis={axis}, value={value}."
+            )
+        return self._setitem(axis, key, value)
 
     _setitem = PandasQueryCompiler._setitem
 
     def insert(self, loc, column, value):
         if isinstance(value, type(self)):
             value.columns = [column]
-            try:
-                result = self.insert_item(axis=1, loc=loc, value=value)
-            # OmniSci engine does not yet support cases when `value` is not a subframe of `self`.
-            except NotImplementedError:
-                result = super().insert(loc=loc, column=column, value=value)
-            return result
+            return self.insert_item(axis=1, loc=loc, value=value)
 
         if is_list_like(value):
-            return super().insert(loc=loc, column=column, value=value)
+            raise NotImplementedError(
+                "OmniSci's insert does not support list-like values."
+            )
 
         return self.__constructor__(self._modin_frame.insert(loc, column, value))
 
