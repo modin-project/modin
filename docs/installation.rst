@@ -12,7 +12,8 @@ Installing with pip
 Stable version
 """"""""""""""
 
-Modin can be installed with pip both on Linux and Windows. To install the most recent stable release run the following:
+Modin can be installed with pip both on Linux and Windows. Also MacOS is supported for Dask_ engine (see below). 
+To install the most recent stable release run the following:
 
 .. code-block:: bash
 
@@ -62,19 +63,19 @@ Using conda-forge channel
 Modin releases can be installed using ``conda`` from conda-forge channel. Starting from 0.10.1
 it is possible to install modin with chosen engine(s) alongside. Current options are:
 
-+---------------------------------+---------------------------+----------------------+
-| **Package name in conda-forge** | **Engine(s)**             | **Supported OSs**    |
-+---------------------------------+---------------------------+----------------------+
-| modin                           | Dask_                     |   Linux, Windows     |
-+---------------------------------+---------------------------+----------------------+
-| modin-dask                      | Dask                      |   Linux, Windows     |
-+---------------------------------+---------------------------+----------------------+
-| modin-ray                       | Ray_                      |   Linux, Windows     |
-+---------------------------------+---------------------------+----------------------+
-| modin-omnisci                   | OmniSci_                  |      Linux           |
-+---------------------------------+---------------------------+----------------------+
-| modin-all                       | Dask, Ray, OmniSci        |      Linux           |
-+---------------------------------+---------------------------+----------------------+
++---------------------------------+---------------------------+-----------------------------+
+| **Package name in conda-forge** | **Engine(s)**             | **Supported OSs**           |
++---------------------------------+---------------------------+-----------------------------+
+| modin                           | Dask_                     |   Linux, Windows, MacOS     |
++---------------------------------+---------------------------+-----------------------------+
+| modin-dask                      | Dask                      |   Linux, Windows, MacOS     |
++---------------------------------+---------------------------+-----------------------------+
+| modin-ray                       | Ray_                      |       Linux, Windows        |
++---------------------------------+---------------------------+-----------------------------+
+| modin-omnisci                   | OmniSci_                  |          Linux              |
++---------------------------------+---------------------------+-----------------------------+
+| modin-all                       | Dask, Ray, OmniSci        |          Linux              |
++---------------------------------+---------------------------+-----------------------------+
 
 So for installing Dask and Ray engines into conda environment following command should be used:
 
