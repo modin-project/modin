@@ -11,15 +11,16 @@ To enable this engine you could set the following environment variables:
 
    export MODIN_ENGINE=ray
    export MODIN_BACKEND=omnisci
+   export MODIN_EXPERIMENTAL=true
 
 or turn it on in source code:
 
 .. code-block:: python
 
-   import modin.experimental.pandas as pd
    import modin.config as cfg
    cfg.Engine.put('ray')
    cfg.Backend.put('omnisci')
+   cfg.IsExperimental.put(True)
 
 
 .. _OmnisciDB: https://www.omnisci.com/platform/omniscidb
