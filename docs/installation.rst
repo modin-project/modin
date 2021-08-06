@@ -1,7 +1,7 @@
 Installation
 ============
 
-There are a couple of ways to install Modin. Most users will want to install with
+There are several ways to install Modin. Most users will want to install with
 ``pip`` or using ``conda`` tool, but some users may want to build from the master branch
 on the `GitHub repo`_. The master branch has the most recent patches, but may be less
 stable than a release installed from ``pip`` or ``conda``.
@@ -12,7 +12,8 @@ Installing with pip
 Stable version
 """"""""""""""
 
-Modin can be installed with pip both on Linux and Windows. Also MacOS is supported for Dask_ engine (see below). 
+Modin can be installed with ``pip`` on Linux, Windows and MacOS. 2 engines are available for those platforms:
+:doc:`Ray</UsingPandasonRay/index>` and :doc:`Dask</UsingPandasonDask/index>`
 To install the most recent stable release run the following:
 
 .. code-block:: bash
@@ -118,8 +119,9 @@ that these changes have not made it into a release and may not be completely sta
 Windows
 -------
 
-All Modin engines except :doc:`OmniSci</UsingOmnisci/index>` are available both on Windows and Linux as mentioned above. It is also possible to use
-Windows Subsystem For Linux (WSL_), but this is generally not recommended due to the limitations
+All Modin engines except :doc:`OmniSci</UsingOmnisci/index>` are available both on Windows and Linux as mentioned above.
+Default engine on Windows is :doc:`Ray</UsingPandasonRay/index>`.
+It is also possible to use Windows Subsystem For Linux (WSL_), but this is generally not recommended due to the limitations
 and poor performance of Ray on WSL, a roughly 2-3x cost. 
 
 Building Modin from Source
