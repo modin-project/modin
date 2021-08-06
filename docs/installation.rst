@@ -56,6 +56,9 @@ or for different functionalities of Modin. Here is a list of dependency sets for
 Installing with conda
 ---------------------
 
+Using conda-forge channel
+"""""""""""""""""""""""""
+
 Modin releases can be installed using ``conda`` from conda-forge channel. Starting from 0.10.1
 it is possible to install modin with chosen engine(s) alongside. Current options are:
 
@@ -90,6 +93,13 @@ or explicitly
 .. code-block:: bash
 
   conda install -c conda-forge modin-ray modin-dask modin-omnisci
+
+Using Intel\ |reg| Distribution of Modin
+"""""""""""""""""""""""""""""""""""""""
+
+With ``conda`` it is also possible to install Intel Distribution of Modin, a special version of Modin 
+that is part of Intel\ |reg| oneAPI AI Analytics Toolkit. This version of Modin is powered by :doc:`OmniSci</UsingOmnisci/index>` 
+engine that contains a bunch of optimizations for Intel hardware. More details can be found on `Intel Distribution of Modin`_ page.
 
 Installing from the GitHub master branch
 ----------------------------------------
@@ -151,3 +161,5 @@ Once cloned, ``cd`` into the ``modin`` directory and use ``pip`` to install:
 .. _Ray: http://ray.readthedocs.io
 .. _Dask: https://github.com/dask/dask
 .. _OmniSci: https://www.omnisci.com/platform/omniscidb
+.. _`Intel Distribution of Modin`: https://software.intel.com/content/www/us/en/develop/tools/oneapi/components/distribution-of-modin.html#gs.86stqv
+.. |reg|    unicode:: U+000AE .. REGISTERED SIGN
