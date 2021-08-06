@@ -23,7 +23,7 @@ def apply_pathes():
                 # Note that protocol=-1 will only work between python
                 # interpreters of the same version.
                 res = netref.pickle.loads(
-                    netref.syncreq(self, netref.consts.HANDLE_PICKLE, -1)
+                    netref.syncreq(self, netref.consts.HANDLE_PICKLE, pickle.HIGHEST_PROTOCOL)
                 )
 
                 if dtype is not None:
