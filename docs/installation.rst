@@ -1,7 +1,7 @@
 Installation
 ============
 
-There are a couple of ways to install Modin. Most users will want to install with
+There are several ways to install Modin. Most users will want to install with
 ``pip`` or using ``conda`` tool, but some users may want to build from the master branch
 on the `GitHub repo`_. The master branch has the most recent patches, but may be less
 stable than a release installed from ``pip`` or ``conda``.
@@ -12,7 +12,9 @@ Installing with pip
 Stable version
 """"""""""""""
 
-Modin can be installed with pip. To install the most recent stable release run the following:
+Modin can be installed with ``pip`` on Linux, Windows and MacOS. 2 engines are available for those platforms:
+:doc:`Ray</UsingPandasonRay/index>` and :doc:`Dask</UsingPandasonDask/index>`
+To install the most recent stable release run the following:
 
 .. code-block:: bash
 
@@ -62,19 +64,19 @@ Using conda-forge channel
 Modin releases can be installed using ``conda`` from conda-forge channel. Starting from 0.10.1
 it is possible to install modin with chosen engine(s) alongside. Current options are:
 
-+---------------------------------+---------------------------+
-| **Package name in conda-forge** | **Engine(s)**             |
-+---------------------------------+---------------------------+
-| modin                           | Dask_                     |
-+---------------------------------+---------------------------+
-| modin-all                       | Dask, Ray_, OmniSci_      |
-+---------------------------------+---------------------------+
-| modin-dask                      | Dask                      |
-+---------------------------------+---------------------------+
-| modin-ray                       | Ray                       |
-+---------------------------------+---------------------------+
-| modin-omnisci                   | OmniSci                   |
-+---------------------------------+---------------------------+
++---------------------------------+---------------------------+-----------------------------+
+| **Package name in conda-forge** | **Engine(s)**             | **Supported OSs**           |
++---------------------------------+---------------------------+-----------------------------+
+| modin                           | Dask_                     |   Linux, Windows, MacOS     |
++---------------------------------+---------------------------+-----------------------------+
+| modin-dask                      | Dask                      |   Linux, Windows, MacOS     |
++---------------------------------+---------------------------+-----------------------------+
+| modin-ray                       | Ray_                      |       Linux, Windows        |
++---------------------------------+---------------------------+-----------------------------+
+| modin-omnisci                   | OmniSci_                  |          Linux              |
++---------------------------------+---------------------------+-----------------------------+
+| modin-all                       | Dask, Ray, OmniSci        |          Linux              |
++---------------------------------+---------------------------+-----------------------------+
 
 So for installing Dask and Ray engines into conda environment following command should be used:
 
@@ -117,17 +119,10 @@ that these changes have not made it into a release and may not be completely sta
 Windows
 -------
 
-For installation on Windows, we recommend using the Dask_ Engine. Ray does not support Windows,
-so it will not be possible to install ``modin[ray]`` or ``modin[all]``. It is possible to use
-Windows Subsystem For Linux (WSL_), but this is generally not recommended due to the limitations
-and poor performance of Ray on WSL, a roughly 2-3x cost. To install with the Dask_ engine, run the
-following using ``pip``:
-
-.. code-block:: bash
-
-    pip install modin[dask]
-
-You may already have a recent version of Dask_ installed, in which case you can simply ``pip install modin``.
+All Modin engines except :doc:`OmniSci</UsingOmnisci/index>` are available both on Windows and Linux as mentioned above.
+Default engine on Windows is :doc:`Ray</UsingPandasonRay/index>`.
+It is also possible to use Windows Subsystem For Linux (WSL_), but this is generally not recommended due to the limitations
+and poor performance of Ray on WSL, a roughly 2-3x cost. 
 
 Building Modin from Source
 --------------------------
