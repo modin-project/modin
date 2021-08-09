@@ -558,7 +558,7 @@ jobs:
           conda info
           conda list
       - shell: bash -l {0}
-        run: python -m pytest --simulate-cloud=normal modin/pandas/test/test_io.py::TestCsv
+        run: python -m pytest --simulate-cloud=normal modin/pandas/test/test_io.py
       - shell: bash -l {0}
       # When running without parameters, some of the tests fail
         run: python -m pytest --simulate-cloud=normal modin/pandas/test/dataframe/test_binary.py::test_math_functions[add-rows-scalar]
