@@ -1987,9 +1987,9 @@ class Series(BasePandasDataset):
         Return a Series containing counts of unique values.
         """
         if bins is not None:
-            # Potentially we could implement `cut` function from Pandas API, which
+            # Potentially we could implement `cut` function from pandas API, which
             # bins values into intervals, and then we can just count them as regular values.
-            # TODO: new_self = Series(pd.cut(self, bins, include_lowest=True), dtype="interval")
+            # TODO #1333: new_self = Series(pd.cut(self, bins, include_lowest=True), dtype="interval")
             return self._default_to_pandas(
                 pandas.Series.value_counts,
                 normalize=normalize,
@@ -2005,7 +2005,7 @@ class Series(BasePandasDataset):
             ascending=ascending,
             dropna=dropna,
         )
-        # Pandas sets output index names to None because the Series name already contains it
+        # pandas sets output index names to None because the Series name already contains it
         counted_values._query_compiler.set_index_name(None)
         return counted_values
 

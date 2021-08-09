@@ -1174,7 +1174,7 @@ class TestAgg:
             data, columns=cols if is_list_like(cols) else [cols]
         ).isna().any(axis=None):
             pytest.xfail(
-                reason="'dropna' parameter is forcibly disabled in OmniSci' GroupBy"
+                reason="'dropna' parameter is forcibly disabled in OmniSci's GroupBy"
                 "due to performance issues, you can track this problem at:"
                 "https://github.com/modin-project/modin/issues/2896"
             )
