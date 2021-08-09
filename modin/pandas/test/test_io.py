@@ -830,16 +830,8 @@ class TestCsv:
         ],
     )
     def test_read_csv_parse_dates(
-        self, request, names, header, index_col, parse_dates, encoding, encoding_errors
+        self, names, header, index_col, parse_dates, encoding, encoding_errors
     ):
-        if (
-            parse_dates
-            and request.config.getoption("--simulate-cloud").lower() != "off"
-        ):
-            pytest.xfail(
-                reason="The reason of tests fail in `cloud` mode is unknown for now - issue #2340"
-            )
-
         if names is not None and header == "infer":
             pytest.xfail(
                 "read_csv with Ray engine works incorrectly with date data and names parameter provided - issue #2509"
@@ -1048,12 +1040,19 @@ class TestCsv:
 
         df_equals(modin_df, pandas_df)
 
-    @pytest.mark.parametrize("read_mode", [
-        "r",
-        pytest.param("rb", marks=pytest.mark.xfail(
-            condition="config.getoption('--simulate-cloud').lower() != 'off'",
-            reason='Cannot pickle file handles. See comments in PR #2625')), 
-    ])
+    @pytest.mark.parametrize(
+        "read_mode",
+        [
+            "r",
+            pytest.param(
+                "rb",
+                marks=pytest.mark.xfail(
+                    condition="config.getoption('--simulate-cloud').lower() != 'off'",
+                    reason="Cannot pickle file handles. See comments in PR #2625",
+                ),
+            ),
+        ],
+    )
     def test_read_csv_file_handle(self, read_mode, make_csv_file):
 
         unique_filename = get_unique_filename()
@@ -1376,12 +1375,19 @@ class TestJson:
             modin_obj=modin_df, pandas_obj=pandas_df, fn="to_json", extension="json"
         )
 
-    @pytest.mark.parametrize("read_mode", [
-        "r", 
-        pytest.param("rb", marks=pytest.mark.xfail(
-            condition="config.getoption('--simulate-cloud').lower() != 'off'",
-            reason="Cannot pickle file handles. See comments in PR #2625"))
-    ])
+    @pytest.mark.parametrize(
+        "read_mode",
+        [
+            "r",
+            pytest.param(
+                "rb",
+                marks=pytest.mark.xfail(
+                    condition="config.getoption('--simulate-cloud').lower() != 'off'",
+                    reason="Cannot pickle file handles. See comments in PR #2625",
+                ),
+            ),
+        ],
+    )
     def test_read_json_file_handle(self, read_mode):
         unique_filename = get_unique_filename(extension="json")
         try:
@@ -1974,12 +1980,19 @@ class TestFwf:
         finally:
             teardown_test_files([unique_filename])
 
-    @pytest.mark.parametrize("read_mode", [
-        "r", 
-        pytest.param("rb", marks=pytest.mark.xfail(
-            condition="config.getoption('--simulate-cloud').lower() != 'off'",
-            reason="Cannot pickle file handles. See comments in PR #2625"))
-    ])
+    @pytest.mark.parametrize(
+        "read_mode",
+        [
+            "r",
+            pytest.param(
+                "rb",
+                marks=pytest.mark.xfail(
+                    condition="config.getoption('--simulate-cloud').lower() != 'off'",
+                    reason="Cannot pickle file handles. See comments in PR #2625",
+                ),
+            ),
+        ],
+    )
     def test_read_fwf_file_handle(self, read_mode):
         unique_filename = get_unique_filename(extension="txt")
         try:
