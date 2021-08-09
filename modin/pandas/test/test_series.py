@@ -3388,23 +3388,31 @@ def test_update(data, other_data):
     df_equals(modin_series, pandas_series)
 
 
+@pytest.mark.parametrize("sort", [True, False])
 @pytest.mark.parametrize("normalize, bins, dropna", [(True, 3, False)])
-def test_value_counts(normalize, bins, dropna):
+def test_value_counts(sort, normalize, bins, dropna):
+    def sort_sensetive_comparator(df1, df2):
+        return (
+            df_equals_with_non_stable_indices(df1, df2)
+            if sort
+            else df_equals(df1.sort_index(), df2.sort_index())
+        )
+
     # We sort indices for Modin and pandas result because of issue #1650
     eval_general(
         *create_test_series(test_data_values[0]),
-        lambda df: df.value_counts(normalize=normalize, ascending=False),
-        comparator=df_equals_with_non_stable_indices,
+        lambda df: df.value_counts(sort=sort, normalize=normalize, ascending=False),
+        comparator=sort_sensetive_comparator,
     )
     eval_general(
         *create_test_series(test_data_values[0]),
-        lambda df: df.value_counts(bins=bins, ascending=False),
-        comparator=df_equals_with_non_stable_indices,
+        lambda df: df.value_counts(sort=sort, bins=bins, ascending=False),
+        comparator=sort_sensetive_comparator,
     )
     eval_general(
         *create_test_series(test_data_values[0]),
-        lambda df: df.value_counts(dropna=dropna, ascending=True),
-        comparator=df_equals_with_non_stable_indices,
+        lambda df: df.value_counts(sort=sort, dropna=dropna, ascending=True),
+        comparator=sort_sensetive_comparator,
     )
 
     # from issue #2365
@@ -3412,13 +3420,13 @@ def test_value_counts(normalize, bins, dropna):
     arr[::10] = np.nan
     eval_general(
         *create_test_series(arr),
-        lambda df: df.value_counts(dropna=False, ascending=True),
-        comparator=df_equals_with_non_stable_indices,
+        lambda df: df.value_counts(sort=sort, dropna=False, ascending=True),
+        comparator=sort_sensetive_comparator,
     )
     eval_general(
         *create_test_series(arr),
-        lambda df: df.value_counts(dropna=False, ascending=False),
-        comparator=df_equals_with_non_stable_indices,
+        lambda df: df.value_counts(sort=sort, dropna=False, ascending=False),
+        comparator=sort_sensetive_comparator,
     )
 
 

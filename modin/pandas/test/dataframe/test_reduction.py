@@ -388,4 +388,4 @@ def test_value_counts(subset_len, sort):
         # https://github.com/modin-project/modin/issues/1650
         df_equals_with_non_stable_indices(md_res, pd_res)
     else:
-        df_equals(md_res, pd_res)
+        df_equals(md_res.sort_index(), pd_res.sort_index())
