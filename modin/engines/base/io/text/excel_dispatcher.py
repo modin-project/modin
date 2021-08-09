@@ -18,7 +18,6 @@ import re
 import sys
 import warnings
 
-from modin.data_management.utils import compute_chunksize
 from modin.engines.base.io.text.text_file_dispatcher import TextFileDispatcher
 from modin.config import NPartitions
 
@@ -121,7 +120,6 @@ class ExcelDispatcher(TextFileDispatcher):
             f = BytesIO(f.read())
             total_bytes = cls.file_size(f)
 
-            num_partitions = NPartitions.get()
             # Read some bytes from the sheet so we can extract the XML header and first
             # line. We need to make sure we get the first line of the data as well
             # because that is where the column names are. The header information will
@@ -159,8 +157,10 @@ class ExcelDispatcher(TextFileDispatcher):
                 column_names = df.columns
 
             # Compute partition metadata upfront so it is uniform for all partitions
-            chunk_size = max(1, (total_bytes - f.tell()) // num_partitions)
-            num_splits = min(len(column_names), num_partitions)
+            chunk_size = max(1, (total_bytes - f.tell()) // NPartitions.get())
+            column_widths, num_splits = cls._define_metadata(
+                pandas.DataFrame(columns=column_names), column_names
+            )
             kwargs["fname"] = io
             # Skiprows will be used to inform a partition how many rows come before it.
             kwargs["skiprows"] = 0
@@ -169,24 +169,6 @@ class ExcelDispatcher(TextFileDispatcher):
             index_ids = []
             dtypes_ids = []
 
-            # Compute column metadata
-            column_chunksize = compute_chunksize(
-                pandas.DataFrame(columns=column_names), num_splits, axis=1
-            )
-            if column_chunksize > len(column_names):
-                column_widths = [len(column_names)]
-                # This prevents us from unnecessarily serializing a bunch of empty
-                # objects.
-                num_splits = 1
-            else:
-                column_widths = [
-                    column_chunksize
-                    if len(column_names) > (column_chunksize * (i + 1))
-                    else 0
-                    if len(column_names) < (column_chunksize * i)
-                    else len(column_names) - (column_chunksize * i)
-                    for i in range(num_splits)
-                ]
             kwargs["num_splits"] = num_splits
 
             while f.tell() < total_bytes:

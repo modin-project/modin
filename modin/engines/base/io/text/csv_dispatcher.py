@@ -103,15 +103,7 @@ class CSVDispatcher(TextFileDispatcher):
             **dict(kwargs, nrows=1, skipfooter=0, index_col=index_col),
         )
         column_names = pd_df_metadata.columns
-
-        # Max number of partitions available
-        num_partitions = NPartitions.get()
-        # This is the number of splits for the columns
-        num_splits = min(len(column_names), num_partitions)
-        # Metadata definition
-        column_widths, num_splits = cls._define_metadata(
-            pd_df_metadata, num_splits, column_names
-        )
+        column_widths, num_splits = cls._define_metadata(pd_df_metadata, column_names)
 
         # kwargs that will be passed to the workers
         partition_kwargs = dict(
@@ -129,7 +121,7 @@ class CSVDispatcher(TextFileDispatcher):
         with cls.file_open(filepath_or_buffer_md, "rb", compression_infered) as f:
             splits = cls.partitioned_file(
                 f,
-                num_partitions=num_partitions,
+                num_partitions=NPartitions.get(),
                 nrows=kwargs.get("nrows", None),
                 skiprows=skiprows,
                 quotechar=quotechar,

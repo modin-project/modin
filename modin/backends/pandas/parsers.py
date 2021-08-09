@@ -153,8 +153,11 @@ class PandasParser(object):
             pandas.Series where index is columns names and values are
             columns dtypes.
         """
+        partitions_dtypes = cls.materialize(dtypes_ids)
+        if all([len(dtype) == 0 for dtype in partitions_dtypes]):
+            return None
         return (
-            pandas.concat(cls.materialize(dtypes_ids), axis=1)
+            pandas.concat(partitions_dtypes, axis=1)
             .apply(lambda row: find_common_type_cat(row.values), axis=1)
             .squeeze(axis=0)
         )

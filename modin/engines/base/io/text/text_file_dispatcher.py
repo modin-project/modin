@@ -396,7 +396,6 @@ class TextFileDispatcher(FileDispatcher):
     def _define_metadata(
         cls,
         df: pandas.DataFrame,
-        num_splits: int,
         column_names: ColumnNamesTypes,
     ) -> Tuple[list, int]:
         """
@@ -406,8 +405,6 @@ class TextFileDispatcher(FileDispatcher):
         ----------
         df : pandas.DataFrame
             The DataFrame to split.
-        num_splits : int
-            The maximum number of splits to separate the DataFrame into.
         column_names : ColumnNamesTypes
             Column names of df.
 
@@ -417,8 +414,10 @@ class TextFileDispatcher(FileDispatcher):
             Column width to use during new frame creation (number of
             columns for each partition).
         num_splits : int
-            Updated `num_splits` parameter.
+            The maximum number of splits to separate the DataFrame into.
         """
+        # This is the number of splits for the columns
+        num_splits = min(len(column_names) or 1, NPartitions.get())
         column_chunksize = compute_chunksize(df, num_splits, axis=1)
         if column_chunksize > len(column_names):
             column_widths = [len(column_names)]
@@ -429,15 +428,14 @@ class TextFileDispatcher(FileDispatcher):
             # split columns into chunks with maximal size column_chunksize, for example
             # if num_splits == 4, len(column_names) == 80 and column_chunksize == 32,
             # column_widths will be [32, 32, 16, 0]
-            column_widths = []
-            for i in range(num_splits):
-                if len(column_names) > (column_chunksize * i):
-                    if len(column_names) > (column_chunksize * (i + 1)):
-                        column_widths.append(column_chunksize)
-                    else:
-                        column_widths.append(len(column_names) - (column_chunksize * i))
-                else:
-                    column_widths.append(0)
+            column_widths = [
+                column_chunksize
+                if len(column_names) > (column_chunksize * (i + 1))
+                else 0
+                if len(column_names) < (column_chunksize * i)
+                else len(column_names) - (column_chunksize * i)
+                for i in range(num_splits)
+            ]
 
         return column_widths, num_splits
 

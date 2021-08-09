@@ -1115,6 +1115,21 @@ class TestCsv:
         for name1, name2 in zip(get_internal_df(read_df).index.names, [None, "a"]):
             assert name1 == name2
 
+    @pytest.mark.xfail(
+        condition="config.getoption('--simulate-cloud').lower() != 'off'",
+        reason="The reason of tests fail in `cloud` mode is unknown for now - issue #2340",
+    )
+    def test_read_csv_empty_frame(
+        self,
+    ):
+        eval_io(
+            fn_name="read_csv",
+            # read_csv kwargs
+            filepath_or_buffer=pytest.csvs_names["test_read_csv_regular"],
+            usecols=["col1"],
+            index_col="col1",
+        )
+
 
 class TestTable:
     def test_read_table(self, make_csv_file):
@@ -1142,6 +1157,22 @@ class TestTable:
         modin_df = wrapped_read_table(unique_filename, method="modin")
 
         df_equals(modin_df, pandas_df)
+
+    @pytest.mark.xfail(
+        condition="config.getoption('--simulate-cloud').lower() != 'off'",
+        reason="The reason of tests fail in `cloud` mode is unknown for now - issue #2340",
+    )
+    def test_read_table_empty_frame(self, make_csv_file):
+        unique_filename = get_unique_filename()
+        make_csv_file(filename=unique_filename, delimiter="\t")
+
+        eval_io(
+            fn_name="read_table",
+            # read_table kwargs
+            filepath_or_buffer=unique_filename,
+            usecols=["col1"],
+            index_col="col1",
+        )
 
 
 class TestParquet:
@@ -1517,6 +1548,26 @@ class TestExcel:
         finally:
             teardown_test_files([unique_filename_modin, unique_filename_pandas])
 
+    @pytest.mark.xfail(
+        Engine.get() != "Python", reason="Test fails because of issue 3305"
+    )
+    @check_file_leaks
+    def test_read_excel_empty_frame(self):
+        unique_filename = get_unique_filename(extension="xlsx")
+        try:
+            setup_excel_file(filename=unique_filename)
+
+            eval_io(
+                fn_name="read_excel",
+                modin_warning=UserWarning,
+                # read_excel kwargs
+                io=unique_filename,
+                usecols=[0],
+                index_col=0,
+            )
+        finally:
+            teardown_test_files([unique_filename])
+
 
 class TestHdf:
     @pytest.mark.parametrize("format", [None, "table"])
@@ -1888,6 +1939,22 @@ class TestFwf:
                 buffer.seek(0)
                 df_modin = pd.read_fwf(buffer)
                 df_equals(df_modin, df_pandas)
+        finally:
+            teardown_test_files([unique_filename])
+
+    def test_read_fwf_empty_frame(self):
+        kwargs = {
+            "usecols": [0],
+            "index_col": 0,
+        }
+        unique_filename = get_unique_filename(extension="txt")
+        try:
+            setup_fwf_file(filename=unique_filename)
+
+            modin_df = pd.read_fwf(unique_filename, **kwargs)
+            pandas_df = pandas.read_fwf(unique_filename, **kwargs)
+
+            df_equals(modin_df, pandas_df)
         finally:
             teardown_test_files([unique_filename])
 

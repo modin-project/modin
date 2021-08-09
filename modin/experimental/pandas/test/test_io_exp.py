@@ -99,6 +99,17 @@ class TestCsvGlob:
 
         df_equals(modin_df, pandas_df)
 
+    def test_read_csv_empty_frame(self):
+        kwargs = {
+            "usecols": [0],
+            "index_col": 0,
+        }
+
+        modin_df = pd.read_csv_glob(pytest.files[0], **kwargs)
+        pandas_df = pandas.read_csv(pytest.files[0], **kwargs)
+
+        df_equals(modin_df, pandas_df)
+
 
 @pytest.mark.skipif(
     Engine.get() != "Ray", reason="Currently only support Ray engine for glob paths."
