@@ -24,6 +24,11 @@ from . import get_connection
 from .meta_magic import _LOCAL_ATTRS, RemoteMeta, _KNOWN_DUALS
 from modin.config import DoTraceRpyc
 
+from .rpyc_patches import apply_pathes
+
+
+apply_pathes()
+
 
 def _batch_loads(items):
     return tuple(pickle.loads(item) for item in items)
@@ -209,11 +214,7 @@ class WrappingConnection(rpyc.Connection):
                         return res
                 return orig_getattribute(this, name)
 
-            def __array__(this):
-                return pickle.loads(self._remote_pickled_array(this))
-
             cls.__getattribute__ = __getattribute__
-            cls.__array__ = __array__
         return result
 
     def _netref_factory(self, id_pack):
