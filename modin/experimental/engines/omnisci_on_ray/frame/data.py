@@ -540,7 +540,7 @@ class OmnisciOnRayFrame(PandasFrame):
                 new_frame = new_frame.mask(col_indices=filtered_columns)
         return new_frame
 
-    def agg(self, agg, **kwargs):
+    def agg(self, agg):
         """
         Perform specified aggregation along columns.
 
@@ -548,8 +548,6 @@ class OmnisciOnRayFrame(PandasFrame):
         ----------
         agg : str
             Name of the aggregation function to perform.
-        **kwargs : dict
-            Additional parameters to pass to the aggregation expression.
 
         Returns
         -------
@@ -560,7 +558,7 @@ class OmnisciOnRayFrame(PandasFrame):
 
         agg_exprs = OrderedDict()
         for col in self.columns:
-            agg_exprs[col] = AggregateExpr(agg, self.ref(col), **kwargs)
+            agg_exprs[col] = AggregateExpr(agg, self.ref(col))
 
         return self.__constructor__(
             columns=self.columns,

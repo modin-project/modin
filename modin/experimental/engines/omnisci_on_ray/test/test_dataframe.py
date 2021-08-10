@@ -745,9 +745,9 @@ class TestConcat:
 
 class TestGroupby:
     data = {
-        "a": [1, 1, 2, 2, 2],
-        "b": [11, 21, 12, 22, 32],
-        "c": [101, 201, 102, 202, 302],
+        "a": [1, 1, 2, 2, 2, 1],
+        "b": [11, 21, 12, 22, 32, 11],
+        "c": [101, 201, 202, 202, 302, 302],
     }
     cols_value = ["a", ["a", "b"]]
 
@@ -788,17 +788,12 @@ class TestGroupby:
             groupby_sum, data=self.data, cols=cols, as_index=as_index, force_lazy=False
         )
 
-    def test_groupby_agg_count(self):
-        def groupby(df, **kwargs):
-            return df.groupby("a").agg({"b": "count"})
+    @pytest.mark.parametrize("agg", ["count", "size", "nunique"])
+    def test_groupby_agg(self, agg):
+        def groupby(df, agg, **kwargs):
+            return df.groupby("a").agg({"b": agg})
 
-        run_and_compare(groupby, data=self.data)
-
-    def test_groupby_agg_size(self):
-        def groupby(df, **kwargs):
-            return df.groupby("a").agg({"b": "size"})
-
-        run_and_compare(groupby, data=self.data)
+        run_and_compare(groupby, data=self.data, agg=agg)
 
     def test_groupby_agg_default_to_pandas(self):
         def lambda_func(df, **kwargs):

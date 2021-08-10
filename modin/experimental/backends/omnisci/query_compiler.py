@@ -359,7 +359,7 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
             raise NotImplementedError(
                 f"OmniSci's nunique does not support such set of parameters: axis={axis}, dropna={dropna}."
             )
-        return self._agg("count", distinct=True)
+        return self._agg("nunique")
 
     def _agg(self, agg, axis=0, level=None, **kwargs):
         """
@@ -400,7 +400,7 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
         kwargs.pop("skipna", None)
         kwargs.pop("numeric_only", None)
 
-        new_frame = self._modin_frame.agg(agg, **kwargs)
+        new_frame = self._modin_frame.agg(agg)
         new_frame = new_frame._set_index(
             pandas.Index.__new__(pandas.Index, data=["__reduced__"], dtype="O")
         )
