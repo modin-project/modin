@@ -1081,7 +1081,7 @@ class TestCsv:
 
     @pytest.mark.xfail(
         condition="config.getoption('--simulate-cloud').lower() != 'off'",
-        reason="The reason of tests fail in `cloud` mode is unknown for now - issue #3264",
+        reason="The reason of tests fail in `cloud` mode is unknown for now - issue #2340",
     )
     def test_read_csv_empty_frame(
         self,
@@ -1124,7 +1124,7 @@ class TestTable:
 
     @pytest.mark.xfail(
         condition="config.getoption('--simulate-cloud').lower() != 'off'",
-        reason="The reason of tests fail in `cloud` mode is unknown for now - issue #3264",
+        reason="The reason of tests fail in `cloud` mode is unknown for now - issue #2340",
     )
     def test_read_table_empty_frame(self, make_csv_file):
         unique_filename = get_unique_filename()
@@ -1543,7 +1543,7 @@ class TestExcel:
 
     @pytest.mark.xfail(
         condition="config.getoption('--simulate-cloud').lower() != 'off'",
-        reason="The reason of tests fail in `cloud` mode is unknown for now - issue #3284",
+        reason="TypeError: Expected list, got type - issue #3284",
     )
     def test_ExcelFile(self):
         unique_filename = get_unique_filename(extension="xlsx")
@@ -2155,7 +2155,7 @@ class TestPickle:
 
 @pytest.mark.xfail(
     condition="config.getoption('--simulate-cloud').lower() != 'off'",
-    reason="The reason of tests fail in `cloud` mode is unknown for now - issue #2340",
+    reason="The reason of tests fail in `cloud` mode is unknown for now - issue #3264",
 )
 def test_from_arrow():
     _, pandas_df = create_test_dfs(TEST_DATA)
@@ -2165,7 +2165,7 @@ def test_from_arrow():
 
 @pytest.mark.xfail(
     condition="config.getoption('--simulate-cloud').lower() != 'off'",
-    reason="The reason of tests fail in `cloud` mode is unknown for now - issue #3296",
+    reason="The reason of tests fail in `cloud` mode is unknown for now - issue #3264",
 )
 def test_to_dense():
     modin_df, pandas_df = create_test_dfs({"col1": pandas.SparseArray([0, 1, 0])})
