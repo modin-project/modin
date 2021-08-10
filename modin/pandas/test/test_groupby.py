@@ -15,6 +15,7 @@ import pytest
 import pandas
 import numpy as np
 import modin.pandas as pd
+from pandas.core.dtypes.common import is_list_like
 from modin.utils import try_cast_to_pandas, get_current_backend
 from modin.pandas.utils import from_pandas, is_scalar
 from .utils import (
@@ -220,6 +221,7 @@ def test_mixed_dtypes_groupby(as_index):
             modin_groupby, pandas_groupby, lambda df: df.take(), is_default=True
         )
         eval___getattr__(modin_groupby, pandas_groupby, "col2")
+        eval___getitem__(modin_groupby, pandas_groupby)
         eval_groups(modin_groupby, pandas_groupby)
 
 
@@ -441,6 +443,7 @@ def test_simple_row_groupby(by, as_index, col1_category):
     ):
         # Not yet supported for non-original-column-from-dataframe Series in by:
         eval___getattr__(modin_groupby, pandas_groupby, "col3")
+        eval___getitem__(modin_groupby, pandas_groupby)
     eval_groups(modin_groupby, pandas_groupby)
 
 
@@ -566,6 +569,7 @@ def test_single_group_row_groupby():
     eval_quantile(modin_groupby, pandas_groupby)
     eval_general(modin_groupby, pandas_groupby, lambda df: df.take(), is_default=True)
     eval___getattr__(modin_groupby, pandas_groupby, "col2")
+    eval___getitem__(modin_groupby, pandas_groupby)
     eval_groups(modin_groupby, pandas_groupby)
 
 
@@ -841,7 +845,6 @@ def test_series_groupby(by, as_index_series_or_dataframe):
         modin_groupby = modin_series.groupby(by, as_index=as_index)
         if as_index_series_or_dataframe == 2:
             modin_groupby = modin_groupby["col1"]
-
         modin_groupby_equals_pandas(modin_groupby, pandas_groupby)
         eval_ngroups(modin_groupby, pandas_groupby)
         eval_shift(modin_groupby, pandas_groupby)
@@ -1113,6 +1116,79 @@ def eval___getattr__(modin_groupby, pandas_groupby, item):
     )
 
 
+def eval___getitem__(md_grp, pd_grp, additional_tests=None):
+    if isinstance(md_grp, pd.groupby.SeriesGroupBy):
+        return
+
+    additional_tests = (
+        tuple()
+        if additional_tests is None
+        else additional_tests
+        if is_list_like(additional_tests)
+        else (additional_tests,)
+    )
+
+    def comparator(df1, df2):
+        if df1.ndim == 2:
+            df_equals(df1.sort_index(axis=1), df2.sort_index(axis=1))
+        else:
+            df_equals(df1, df2)
+
+    def test_function(md_grp, pd_grp, selection_cols):
+        modin_groupby_equals_pandas(md_grp, pd_grp)
+        eval_general(md_grp, pd_grp, lambda grp: grp.count(), comparator=comparator)
+        eval_general(md_grp, pd_grp, lambda grp: grp.mean(), comparator=comparator)
+        eval_general(
+            md_grp, pd_grp, lambda grp: grp.agg(["mean"]), comparator=comparator
+        )
+        eval_general(
+            md_grp,
+            pd_grp,
+            lambda grp: grp.agg(["mean", "count"]),
+            comparator=comparator,
+        )
+        eval_general(
+            md_grp,
+            pd_grp,
+            lambda grp: grp.sum()
+            if not isinstance(grp, pd.groupby.DataFrameGroupBy)
+            else grp._default_to_pandas(lambda df: df.sum()),
+            comparator=comparator,
+        )
+        for test in additional_tests:
+            eval_general(md_grp, pd_grp, test, comparator=comparator)
+
+    all_columns = md_grp._df.columns.tolist()
+
+    md_slice, pd_slice = md_grp[all_columns], pd_grp[all_columns]
+    test_function(md_slice, pd_slice, all_columns)
+
+    half_columns = all_columns[: len(all_columns) // 2]
+
+    md_slice, pd_slice = md_grp[half_columns], pd_grp[half_columns]
+    test_function(md_slice, pd_slice, half_columns)
+
+    non_by_items = md_grp._df.columns.difference(md_grp._get_internal_by()).tolist()
+
+    if len(non_by_items) == 0:
+        return
+
+    single_item = non_by_items[0]
+
+    md_slice, pd_slice = md_grp[single_item], pd_grp[single_item]
+    test_function(md_slice, pd_slice, [single_item])
+
+    if len(non_by_items) == 1:
+        return
+
+    multiple_items = non_by_items[:2]
+    md_slice, pd_slice = md_grp[multiple_items], pd_grp[multiple_items]
+    test_function(md_slice, pd_slice, multiple_items)
+
+    md_slice, pd_slice = md_grp[non_by_items], pd_grp[non_by_items]
+    test_function(md_slice, pd_slice, non_by_items)
+
+
 def eval_groups(modin_groupby, pandas_groupby):
     for k, v in modin_groupby.groups.items():
         assert v.equals(pandas_groupby.groups[k])
@@ -1145,11 +1221,15 @@ def eval_shift(modin_groupby, pandas_groupby):
         # Verify that there is no exceptions on our side
         repr(modin_groupby.shift(axis=1, fill_value=777))
     else:
-        eval_general(
-            modin_groupby,
-            pandas_groupby,
-            lambda groupby: groupby.shift(axis=1, fill_value=777),
-        )
+        # Modin does not raise an exception when trying to call any function
+        # with 'axis=1' against SeriesGroupByObject.
+        # TODO: create an issue and add its id here
+        if pandas_groupby.ndim == 2:
+            eval_general(
+                modin_groupby,
+                pandas_groupby,
+                lambda groupby: groupby.shift(axis=1, fill_value=777),
+            )
 
 
 def test_groupby_on_index_values_with_loop():
@@ -1525,7 +1605,7 @@ def test_unknown_groupby(columns):
         lambda df: df.sum(),
         lambda df: df.size(),
         lambda df: df.quantile(),
-        lambda df: df.dtypes,
+        lambda df: df.dtypes if "DataFrame" in str(df) else df.dtype,
         lambda df: df.apply(lambda df: df.sum()),
         pytest.param(
             lambda df: df.apply(lambda df: pandas.Series([1, 2, 3, 4])),
@@ -1579,6 +1659,7 @@ def test_multi_column_groupby_different_partitions(
         by, as_index=as_index
     )
     eval_general(md_grp, pd_grp, func_to_apply)
+    eval___getitem__(md_grp, pd_grp, additional_tests=func_to_apply)
 
 
 @pytest.mark.parametrize(

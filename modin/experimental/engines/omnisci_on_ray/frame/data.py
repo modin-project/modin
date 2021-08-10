@@ -381,7 +381,7 @@ class OmnisciOnRayFrame(PandasFrame):
         """
         return [expr._dtype for expr in exprs.values()]
 
-    def groupby_agg(self, by, axis, agg, groupby_args, **kwargs):
+    def groupby_agg(self, by, axis, agg, groupby_args, selection=None, **kwargs):
         """
         Groupby with aggregation operation.
 
@@ -443,6 +443,8 @@ class OmnisciOnRayFrame(PandasFrame):
         groupby_cols = by_frame.columns
         if isinstance(agg, dict):
             agg_cols = agg.keys()
+        elif selection is not None:
+            agg_cols = selection
         elif not drop:
             # If 'by' data came from a different frame then 'self-aggregation'
             # columns are more prioritized.

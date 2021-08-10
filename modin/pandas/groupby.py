@@ -50,6 +50,7 @@ class DataFrameGroupBy(object):
         squeeze,
         idx_name,
         drop,
+        selection=None,
         **kwargs,
     ):
         self._axis = axis
@@ -59,6 +60,7 @@ class DataFrameGroupBy(object):
         self._columns = self._query_compiler.columns
         self._by = by
         self._drop = drop
+        self._selection = selection
 
         if (
             level is None
@@ -306,6 +308,17 @@ class DataFrameGroupBy(object):
     def backfill(self, limit=None):
         return self.bfill(limit)
 
+    def _get_internal_by(self):
+        internal_by = []
+        if self._drop:
+            for by in self._by if is_list_like(self._by) else [self._by]:
+                if isinstance(by, str):
+                    internal_by.append(by)
+                elif isinstance(by, BaseQueryCompiler):
+                    internal_by.extend(by.columns)
+            internal_by = self._df.columns.intersection(internal_by).tolist()
+        return internal_by
+
     def __getitem__(self, key):
         """
         Implement indexing operation on a DataFrameGroupBy object.
@@ -325,37 +338,30 @@ class DataFrameGroupBy(object):
         NotImplementedError
             Column lookups on GroupBy with arbitrary Series in by is not yet supported.
         """
+        if self._selection is not None:
+            raise IndexError(f"Column(s) {self._selection} already selected")
+
         kwargs = {**self._kwargs.copy(), "squeeze": self._squeeze}
         # Most of time indexing DataFrameGroupBy results in another DataFrameGroupBy object unless circumstances are
         # special in which case SeriesGroupBy has to be returned. Such circumstances are when key equals to a single
         # column name and is not a list of column names or list of one column name.
-        make_dataframe = True
-        if self._drop and self._as_index:
-            if not isinstance(key, list):
-                key = [key]
+        if isinstance(key, list):
+            make_dataframe = True
+        else:
+            if self._as_index:
                 kwargs["squeeze"] = True
                 make_dataframe = False
-        # When `as_index` is False, pandas will always convert to a `DataFrame`, we
-        # convert to a list here so that the result will be a `DataFrame`.
-        elif not self._as_index and not isinstance(key, list):
-            # Sometimes `__getitem__` doesn't only get the item, it also gets the `by`
-            # column. This logic is here to ensure that we also get the `by` data so
-            # that it is there for `as_index=False`.
-            if (
-                isinstance(self._by, type(self._query_compiler))
-                and all(c in self._columns for c in self._by.columns)
-                and self._drop
-            ):
-                key = list(self._by.columns) + [key]
             else:
-                key = [key]
-        if isinstance(key, list) and (make_dataframe or not self._as_index):
+                make_dataframe = True
+            key = [key]
+        if make_dataframe:
             return DataFrameGroupBy(
-                self._df[key],
+                self._df,
                 self._by,
                 self._axis,
                 idx_name=self._idx_name,
                 drop=self._drop,
+                selection=key,
                 **kwargs,
             )
         if (
@@ -368,11 +374,12 @@ class DataFrameGroupBy(object):
                 " is not yet supported."
             )
         return SeriesGroupBy(
-            self._df[key],
+            self._df,
             self._by,
             self._axis,
             idx_name=self._idx_name,
             drop=False,
+            selection=key,
             **kwargs,
         )
 
@@ -423,11 +430,34 @@ class DataFrameGroupBy(object):
                 func, **kwargs
             )
             func_dict = {col: try_get_str_func(fn) for col, fn in func_dict.items()}
+            if any(
+                i
+                not in (
+                    self._df.columns if self._selection is None else self._selection
+                )
+                for i in func_dict.keys()
+            ):
+                # If we're dealing with 2D aggregation and renaming aggregation is met then
+                # it's proper to raise a `KeyError`, otherwise, it's `SpecificationError` case
+                # (following pandas exceptions notation)
+                if (
+                    self.ndim == 2
+                    if self._selection is None
+                    else len(self._selection) > 1
+                ) and (
+                    relabeling_required
+                    or any(
+                        is_list_like(func)
+                        for func in func_dict.values()
+                        if is_list_like(func)
+                    )
+                ):
+                    raise KeyError("Non existed column provided to the aggregation")
+                else:
+                    from pandas.core.base import SpecificationError
 
-            if any(i not in self._df.columns for i in func_dict.keys()):
-                from pandas.core.base import SpecificationError
+                    raise SpecificationError("nested renamer is not supported")
 
-                raise SpecificationError("nested renamer is not supported")
             if func is None:
                 kwargs = {}
             func = func_dict
@@ -539,6 +569,7 @@ class DataFrameGroupBy(object):
             drop=False,
             idx_name=None,
             squeeze=self._squeeze,
+            selection=self._selection,
             **self._kwargs,
         )
         result = work_object._wrap_aggregation(
@@ -555,8 +586,14 @@ class DataFrameGroupBy(object):
                 if "__reduced__" in result.columns
                 else result
             )
-        elif isinstance(self._df, Series):
-            result.name = self._df.name
+        elif self.ndim == 1:
+            result.name = (
+                self._df.name
+                if isinstance(self._df, Series)
+                else self._selection[0]
+                if self._selection is not None
+                else None
+            )
         else:
             result.name = None
         return result.fillna(0)
@@ -647,6 +684,7 @@ class DataFrameGroupBy(object):
             idx_name=self._idx_name,
             drop=self._drop,
             squeeze=self._squeeze,
+            selection=self._selection,
             **new_groupby_kwargs,
         )
         result = work_object._apply_agg_function(lambda df: df.fillna(**kwargs))
@@ -878,14 +916,23 @@ class DataFrameGroupBy(object):
         """
         if self._axis != 0:
             return self._default_to_pandas(default_func, **kwargs)
-        # For aggregations, pandas behavior does this for the result.
-        # For other operations it does not, so we wait until there is an aggregation to
-        # actually perform this operation.
-        if not self._is_multi_by and drop and self._drop and self._as_index:
-            groupby_qc = self._query_compiler.drop(columns=self._by.columns)
-        else:
-            groupby_qc = self._query_compiler
 
+        internal_by = self._get_internal_by()
+        selection = self._selection
+        # Category by-columns are more prioritized than the aggregated ones,
+        # so dropping intersection from the selection
+        if (
+            self._is_multi_by
+            and selection is not None
+            and not self._as_index
+            and any(
+                isinstance(dtype, pandas.CategoricalDtype)
+                for dtype in self._df.dtypes[internal_by]
+            )
+        ):
+            selection = [col for col in selection if col not in internal_by]
+
+        groupby_qc = self._query_compiler
         result = type(self._df)(
             query_compiler=qc_method(
                 groupby_qc,
@@ -896,10 +943,11 @@ class DataFrameGroupBy(object):
                 reduce_args=kwargs,
                 numeric_only=numeric_only,
                 drop=self._drop,
+                selection=selection,
             )
         )
         if self._squeeze:
-            return result.squeeze()
+            return result.squeeze(axis=1)
         return result
 
     def _apply_agg_function(self, f, *args, **kwargs):
@@ -924,6 +972,19 @@ class DataFrameGroupBy(object):
             f, dict
         ), "'{0}' object is not callable and not a dict".format(type(f))
 
+        internal_by = self._get_internal_by()
+        selection = self._selection
+        if (
+            self._is_multi_by
+            and selection is not None
+            and not self._as_index
+            and any(
+                isinstance(dtype, pandas.CategoricalDtype)
+                for dtype in self._df.dtypes[internal_by]
+            )
+        ):
+            selection = [col for col in selection if col not in internal_by]
+
         new_manager = self._query_compiler.groupby_agg(
             by=self._by,
             is_multi_by=self._is_multi_by,
@@ -933,6 +994,7 @@ class DataFrameGroupBy(object):
             agg_kwargs=kwargs,
             groupby_kwargs=self._kwargs,
             drop=self._drop,
+            selection=selection,
         )
         if self._idx_name is not None and self._as_index:
             new_manager.set_index_name(self._idx_name)
@@ -940,7 +1002,7 @@ class DataFrameGroupBy(object):
         if result._query_compiler.get_index_name() == "__reduced__":
             result._query_compiler.set_index_name(None)
         if self._squeeze:
-            return result.squeeze()
+            return result.squeeze(axis=1)
         return result
 
     def _default_to_pandas(self, f, *args, **kwargs):
@@ -974,10 +1036,16 @@ class DataFrameGroupBy(object):
         by = try_cast_to_pandas(by, squeeze=True)
 
         def groupby_on_multiple_columns(df, *args, **kwargs):
+            grp = df.groupby(
+                by=by, axis=self._axis, squeeze=self._squeeze, **self._kwargs
+            )
+            if self._selection is not None:
+                selecton = (
+                    self._selection[0] if len(self._selection) == 1 else self._selection
+                )
+                grp = grp[selecton]
             return f(
-                df.groupby(
-                    by=by, axis=self._axis, squeeze=self._squeeze, **self._kwargs
-                ),
+                grp,
                 *args,
                 **kwargs,
             )
@@ -987,6 +1055,8 @@ class DataFrameGroupBy(object):
 
 @_inherit_docstrings(pandas.core.groupby.SeriesGroupBy)
 class SeriesGroupBy(DataFrameGroupBy):
+    dtype = DataFrameGroupBy.dtypes
+
     @property
     def ndim(self):
         """
@@ -1019,8 +1089,13 @@ class SeriesGroupBy(DataFrameGroupBy):
                 (
                     k,
                     Series(
-                        query_compiler=self._query_compiler.getitem_row_array(
-                            self._index.get_indexer_for(self._index_grouped[k].unique())
+                        query_compiler=self._query_compiler.view(
+                            index=self._index.get_indexer_for(
+                                self._index_grouped[k].unique()
+                            ),
+                            columns=None
+                            if self._selection is None
+                            else self._df.columns.get_indexer_for(self._selection),
                         )
                     ),
                 )
@@ -1031,9 +1106,12 @@ class SeriesGroupBy(DataFrameGroupBy):
                 (
                     k,
                     Series(
-                        query_compiler=self._query_compiler.getitem_column_array(
+                        index=None
+                        if self._selection is None
+                        else self._index.get_indexer_for(self._selection),
+                        columns=self._df.columns.get_indexer_for(
                             self._index_grouped[k].unique()
-                        )
+                        ),
                     ),
                 )
                 for k in (sorted(group_ids) if self._sort else group_ids)

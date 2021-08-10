@@ -2157,6 +2157,7 @@ class BaseQueryCompiler(abc.ABC):
         reduce_args=None,
         numeric_only=True,
         drop=False,
+        selection=None,
     ):
         return GroupByDefault.register(pandas.core.groupby.DataFrameGroupBy.count)(
             self,
@@ -2167,6 +2168,7 @@ class BaseQueryCompiler(abc.ABC):
             reduce_args=reduce_args,
             numeric_only=numeric_only,
             drop=drop,
+            selection=selection,
         )
 
     @doc_utils.doc_groupby_method(
@@ -2183,6 +2185,7 @@ class BaseQueryCompiler(abc.ABC):
         reduce_args=None,
         numeric_only=True,
         drop=False,
+        selection=None,
     ):
         return GroupByDefault.register(pandas.core.groupby.DataFrameGroupBy.any)(
             self,
@@ -2193,6 +2196,7 @@ class BaseQueryCompiler(abc.ABC):
             reduce_args=reduce_args,
             numeric_only=numeric_only,
             drop=drop,
+            selection=selection,
         )
 
     @doc_utils.doc_groupby_method(
@@ -2207,6 +2211,7 @@ class BaseQueryCompiler(abc.ABC):
         reduce_args=None,
         numeric_only=True,
         drop=False,
+        selection=None,
     ):
         return GroupByDefault.register(pandas.core.groupby.DataFrameGroupBy.min)(
             self,
@@ -2217,6 +2222,7 @@ class BaseQueryCompiler(abc.ABC):
             reduce_args=reduce_args,
             numeric_only=numeric_only,
             drop=drop,
+            selection=selection,
         )
 
     @doc_utils.doc_groupby_method(result="product", refer_to="prod")
@@ -2229,6 +2235,7 @@ class BaseQueryCompiler(abc.ABC):
         reduce_args=None,
         numeric_only=True,
         drop=False,
+        selection=None,
     ):
         return GroupByDefault.register(pandas.core.groupby.DataFrameGroupBy.prod)(
             self,
@@ -2239,6 +2246,7 @@ class BaseQueryCompiler(abc.ABC):
             reduce_args=reduce_args,
             numeric_only=numeric_only,
             drop=drop,
+            selection=selection,
         )
 
     @doc_utils.doc_groupby_method(
@@ -2253,6 +2261,7 @@ class BaseQueryCompiler(abc.ABC):
         reduce_args=None,
         numeric_only=True,
         drop=False,
+        selection=None,
     ):
         return GroupByDefault.register(pandas.core.groupby.DataFrameGroupBy.max)(
             self,
@@ -2263,6 +2272,7 @@ class BaseQueryCompiler(abc.ABC):
             reduce_args=reduce_args,
             numeric_only=numeric_only,
             drop=drop,
+            selection=selection,
         )
 
     @doc_utils.doc_groupby_method(
@@ -2279,6 +2289,7 @@ class BaseQueryCompiler(abc.ABC):
         reduce_args=None,
         numeric_only=True,
         drop=False,
+        selection=None,
     ):
         return GroupByDefault.register(pandas.core.groupby.DataFrameGroupBy.all)(
             self,
@@ -2289,6 +2300,7 @@ class BaseQueryCompiler(abc.ABC):
             reduce_args=reduce_args,
             numeric_only=numeric_only,
             drop=drop,
+            selection=selection,
         )
 
     @doc_utils.doc_groupby_method(result="sum", refer_to="sum")
@@ -2301,6 +2313,7 @@ class BaseQueryCompiler(abc.ABC):
         reduce_args=None,
         numeric_only=True,
         drop=False,
+        selection=None,
     ):
         return GroupByDefault.register(pandas.core.groupby.DataFrameGroupBy.sum)(
             self,
@@ -2311,6 +2324,7 @@ class BaseQueryCompiler(abc.ABC):
             reduce_args=reduce_args,
             numeric_only=numeric_only,
             drop=drop,
+            selection=selection,
         )
 
     @doc_utils.doc_groupby_method(
@@ -2327,6 +2341,7 @@ class BaseQueryCompiler(abc.ABC):
         reduce_args=None,
         numeric_only=True,
         drop=False,
+        selection=None,
     ):
         return GroupByDefault.register(pandas.core.groupby.DataFrameGroupBy.size)(
             self,
@@ -2337,6 +2352,7 @@ class BaseQueryCompiler(abc.ABC):
             reduce_args=reduce_args,
             numeric_only=numeric_only,
             drop=drop,
+            selection=selection,
             method="size",
         )
 
@@ -2351,6 +2367,7 @@ class BaseQueryCompiler(abc.ABC):
         agg_kwargs,
         groupby_kwargs,
         drop=False,
+        selection=None,
     ):
         """
         Group QueryCompiler data and apply passed aggregation function.
@@ -2396,6 +2413,7 @@ class BaseQueryCompiler(abc.ABC):
             groupby_args=groupby_kwargs,
             agg_args=agg_kwargs,
             drop=drop,
+            selection=selection,
         )
 
     # END Manual Partitioning methods
@@ -2571,8 +2589,8 @@ class BaseQueryCompiler(abc.ABC):
         BaseQueryCompiler
             New masked QueryCompiler.
         """
-        index = [] if index is None else index
-        columns = [] if columns is None else columns
+        index = slice(None) if index is None else index
+        columns = slice(None) if columns is None else columns
 
         def applyier(df):
             return df.iloc[index, columns]

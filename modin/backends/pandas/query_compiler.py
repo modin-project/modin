@@ -2500,7 +2500,15 @@ class PandasQueryCompiler(BaseQueryCompiler):
     groupby_sum = GroupbyReduceFunction.register("sum")
 
     def groupby_size(
-        self, by, axis, groupby_args, map_args, reduce_args, numeric_only, drop
+        self,
+        by,
+        axis,
+        groupby_args,
+        map_args,
+        reduce_args,
+        numeric_only,
+        drop,
+        selection=None,
     ):
         result = self._groupby_dict_reduce(
             by=by,
@@ -2510,6 +2518,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             agg_kwargs={},
             groupby_kwargs=groupby_args,
             drop=drop,
+            selection=None,
             method="size",
             default_to_pandas_func=lambda grp: grp.size(),
         )
@@ -2531,6 +2540,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         agg_kwargs,
         groupby_kwargs,
         drop=False,
+        selection=None,
         **kwargs,
     ):
         """
@@ -2607,6 +2617,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             map_args=agg_kwargs,
             reduce_args=agg_kwargs,
             numeric_only=False,
+            selection=None,
             drop=drop,
         )
 
@@ -2620,6 +2631,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         agg_kwargs,
         groupby_kwargs,
         drop=False,
+        selection=None,
     ):
         def is_reduce_fn(fn, deep_level=0):
             """Check whether all functions which is defined by `fn` can be implemented via MapReduce approach."""
@@ -2644,7 +2656,14 @@ class PandasQueryCompiler(BaseQueryCompiler):
             is_reduce_fn(x) for x in agg_func.values()
         ):
             return self._groupby_dict_reduce(
-                by, axis, agg_func, agg_args, agg_kwargs, groupby_kwargs, drop
+                by,
+                axis,
+                agg_func,
+                agg_args,
+                agg_kwargs,
+                groupby_kwargs,
+                drop,
+                selection,
             )
 
         if callable(agg_func):
@@ -2740,6 +2759,9 @@ class PandasQueryCompiler(BaseQueryCompiler):
             def compute_groupby(df, drop=False, partition_idx=0):
                 """Compute groupby aggregation for a single partition."""
                 grouped_df = df.groupby(by=by, axis=axis, **groupby_kwargs)
+                if selection is not None:
+                    intersection = df.columns.intersection(selection)
+                    grouped_df = grouped_df[intersection]
                 try:
                     if isinstance(agg_func, dict):
                         # Filter our keys that don't exist in this partition. This happens when some columns
@@ -2828,6 +2850,9 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 if len(result.columns) > 1:
                     result.drop(columns=cols_to_drop, inplace=True)
 
+                if result.empty and not as_index and len(result) > 0:
+                    result.index = []
+
                 return result
 
             try:
@@ -2837,7 +2862,15 @@ class PandasQueryCompiler(BaseQueryCompiler):
             except (ValueError, KeyError):
                 return compute_groupby(df.copy(), drop, partition_idx)
 
-        apply_indices = list(agg_func.keys()) if isinstance(agg_func, dict) else None
+        apply_indices = None
+        if isinstance(agg_func, dict):
+            apply_indices = tuple(agg_func.keys())
+        if selection is not None:
+            apply_indices = (
+                selection
+                if apply_indices is None
+                else tuple(set((*apply_indices, *selection)))
+            )
 
         new_modin_frame = self._modin_frame.broadcast_apply_full_axis(
             axis=axis,
@@ -2864,6 +2897,9 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 )
             except Exception as e:
                 raise type(e)("No numeric types to aggregate.")
+            else:
+                if len(internal_by) == 0 and as_index:
+                    raise TypeError("No numeric types to aggregate.")
 
         return result
 

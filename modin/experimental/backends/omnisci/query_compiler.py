@@ -323,6 +323,7 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
         agg_kwargs,
         groupby_kwargs,
         drop=False,
+        selection=None,
     ):
         # TODO: handle `is_multi_by`, `agg_args`, `drop` args
         if callable(agg_func):
@@ -330,7 +331,7 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
                 "Python callable is not a valid aggregation function for OmniSci backend."
             )
         new_frame = self._modin_frame.groupby_agg(
-            by, axis, agg_func, groupby_kwargs, **agg_kwargs
+            by, axis, agg_func, groupby_kwargs, selection=selection, **agg_kwargs
         )
         return self.__constructor__(new_frame)
 

@@ -81,6 +81,7 @@ class GroupbyReduceFunction(MapReduceFunction):
         map_func=None,
         map_args=None,
         drop=False,
+        selection=None,
     ):
         """
         Execute Map phase of GroupbyReduce.
@@ -120,6 +121,8 @@ class GroupbyReduceFunction(MapReduceFunction):
         # right index and placing columns in the correct order.
         groupby_args["as_index"] = True
         groupby_args["observed"] = True
+        if selection is not None:
+            selection = df.columns.intersection(selection)
         if other is not None:
             # Other is a broadcasted partition that represents 'by' columns
             # Concatenate it with 'df' to group on its columns names
@@ -135,9 +138,10 @@ class GroupbyReduceFunction(MapReduceFunction):
             by_part = by
 
         apply_func = cls.try_filter_dict(map_func, df)
-        result = apply_func(
-            df.groupby(by=by_part, axis=axis, **groupby_args), **map_args
-        )
+        grp = df.groupby(by=by_part, axis=axis, **groupby_args)
+        if selection is not None:
+            grp = grp[selection]
+        result = apply_func(grp, **map_args)
         # Result could not always be a frame, so wrapping it into DataFrame
         return pandas.DataFrame(result)
 
@@ -156,6 +160,7 @@ class GroupbyReduceFunction(MapReduceFunction):
         reduce_func=None,
         reduce_args=None,
         drop=False,
+        selection=None,
         method=None,
     ):
         """
@@ -192,8 +197,11 @@ class GroupbyReduceFunction(MapReduceFunction):
         # there is a bug in pandas with intersection that forces us to do so:
         # https://github.com/pandas-dev/pandas/issues/39699
         by_part = pandas.Index(df.index.names)
-        if drop and len(df.columns.intersection(by_part)) > 0:
-            df.drop(columns=by_part, errors="ignore", inplace=True)
+        to_drop = df.columns.intersection(by_part)
+        if selection is not None:
+            to_drop = to_drop.difference(selection)
+        if drop and len(to_drop) > 0:
+            df.drop(columns=to_drop, errors="ignore", inplace=True)
 
         groupby_args = groupby_args.copy()
         as_index = groupby_args["as_index"]
@@ -210,6 +218,17 @@ class GroupbyReduceFunction(MapReduceFunction):
 
         if not as_index:
             insert_levels = partition_idx == 0 and (drop or method == "size")
+            if insert_levels:
+                lvls_to_drop = [
+                    i
+                    for i, name in enumerate(result.index.names)
+                    if name
+                    in (result.columns.values if selection is None else selection)
+                ]
+                if len(lvls_to_drop) == result.index.nlevels:
+                    insert_levels = False
+                else:
+                    result.index = result.index.droplevel(lvls_to_drop)
             result.reset_index(drop=not insert_levels, inplace=True)
         # Result could not always be a frame, so wrapping it into DataFrame
         return pandas.DataFrame(result)
@@ -227,6 +246,7 @@ class GroupbyReduceFunction(MapReduceFunction):
         reduce_args,
         numeric_only=True,
         drop=False,
+        selection=None,
         method=None,
         default_to_pandas_func=None,
     ):
@@ -278,11 +298,14 @@ class GroupbyReduceFunction(MapReduceFunction):
                     if isinstance(map_func, dict)
                     else map_func
                 )
-            return query_compiler.default_to_pandas(
-                lambda df: default_to_pandas_func(
-                    df.groupby(by=by, axis=axis, **groupby_args), **map_args
-                )
-            )
+
+            def default_to_pandas(df):
+                grp = df.groupby(by=by, axis=axis, **groupby_args)
+                if selection is not None:
+                    grp = grp[selection]
+                return default_to_pandas_func(grp, **map_args)
+
+            return query_compiler.default_to_pandas(default_to_pandas)
         assert axis == 0, "Can only groupby reduce with axis=0"
 
         if numeric_only:
@@ -301,6 +324,7 @@ class GroupbyReduceFunction(MapReduceFunction):
             reduce_func=reduce_func,
             reduce_args=reduce_args,
             drop=drop,
+            selection=selection,
             method=method,
         )
 
@@ -308,7 +332,15 @@ class GroupbyReduceFunction(MapReduceFunction):
         # `self` partition in a way determined by engine (modin_frame.groupby_reduce)
         # Otherwise `by` was already bound to the Map function in `build_map_reduce_functions`.
         broadcastable_by = getattr(by, "_modin_frame", None)
-        apply_indices = list(map_func.keys()) if isinstance(map_func, dict) else None
+        apply_indices = None
+        if isinstance(map_func, dict):
+            apply_indices = tuple(map_func.keys())
+        if selection is not None:
+            apply_indices = (
+                selection
+                if apply_indices is None
+                else tuple(set((*apply_indices, *selection)))
+            )
         new_modin_frame = qc._modin_frame.groupby_reduce(
             axis, broadcastable_by, map_fn, reduce_fn, apply_indices=apply_indices
         )
@@ -354,6 +386,7 @@ class GroupbyReduceFunction(MapReduceFunction):
         reduce_func,
         reduce_args,
         drop,
+        selection=None,
         method=None,
     ):
         """
@@ -403,6 +436,7 @@ class GroupbyReduceFunction(MapReduceFunction):
                     map_func=map_func,
                     map_args=map_args,
                     drop=drop,
+                    selection=selection,
                     **kwargs,
                 )
 
@@ -424,6 +458,7 @@ class GroupbyReduceFunction(MapReduceFunction):
                     reduce_args=reduce_args,
                     drop=drop,
                     method=method,
+                    selection=selection,
                     **call_kwargs,
                 )
 

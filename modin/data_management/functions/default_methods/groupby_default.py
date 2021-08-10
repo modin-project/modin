@@ -14,8 +14,10 @@
 """Module houses default GroupBy functions builder class."""
 
 from .default import DefaultMethod
+from modin.utils import hashable
 
 import pandas
+from pandas.core.dtypes.common import is_list_like
 
 
 # FIXME: there is no sence of keeping `GroupBy` and `GroupByDefault` logic in a different
@@ -128,6 +130,15 @@ class GroupBy:
         else:
             return cls.inplace_applyier_builder(key)
 
+    @staticmethod
+    def is_external_by(df, axis, by):
+        if not is_list_like(by) or isinstance(by, (pandas.DataFrame, pandas.Series)):
+            return False
+        return all(
+            not (hashable(current_by) and current_by in df.axes[axis ^ 1])
+            for current_by in by
+        )
+
     @classmethod
     def build_aggregate_method(cls, key):
         """
@@ -153,18 +164,33 @@ class GroupBy:
             axis=0,
             is_multi_by=None,
             drop=False,
+            selection=None,
             **kwargs
         ):
             """Group DataFrame and apply aggregation function to each group."""
             by = cls.validate_by(by)
 
             grp = df.groupby(by, axis=axis, **groupby_args)
+
+            if selection is not None:
+                grp = grp[selection]
+
             agg_func = cls.get_func(grp, key, **kwargs)
             result = (
                 grp.agg(agg_func, **agg_args)
                 if isinstance(agg_func, dict)
                 else agg_func(grp, **agg_args)
             )
+            if (
+                result.empty
+                and selection is not None
+                and len(selection) == 1
+                and not (
+                    cls.is_external_by(df, axis, by)
+                    and not groupby_args.get("as_index", True)
+                )
+            ):
+                raise TypeError("No numeric types to aggregate.")
 
             return result
 
@@ -195,14 +221,16 @@ class GroupBy:
             map_args,
             numeric_only=True,
             drop=False,
+            selection=None,
             **kwargs
         ):
             """Group DataFrame and apply aggregation function to each group."""
             if not isinstance(by, (pandas.Series, pandas.DataFrame)):
                 by = cls.validate_by(by)
-                return agg_func(
-                    df.groupby(by=by, axis=axis, **groupby_args), **map_args
-                )
+                grp = df.groupby(by=by, axis=axis, **groupby_args)
+                if selection is not None:
+                    grp = grp[selection]
+                return agg_func(grp, **map_args)
 
             if numeric_only:
                 df = df.select_dtypes(include="number")
@@ -224,6 +252,9 @@ class GroupBy:
             groupby_args["as_index"] = True
 
             grp = df.groupby(by, axis=axis, **groupby_args)
+            if selection is not None:
+                grp = grp[selection]
+
             result = agg_func(grp, **map_args)
 
             if isinstance(result, pandas.Series):
@@ -232,10 +263,19 @@ class GroupBy:
             if not as_index:
                 if (
                     len(result.index.names) == 1 and result.index.names[0] is None
-                ) or all([name in result.columns for name in result.index.names]):
+                ) or all(name in result.columns.values for name in result.index.names):
                     drop = False
                 elif kwargs.get("method") == "size":
                     drop = True
+                lvls_to_drop = [
+                    i
+                    for i, name in enumerate(result.index.names)
+                    if name in result.columns.values
+                ]
+                if len(lvls_to_drop) == result.index.nlevels:
+                    drop = False
+                else:
+                    result.index = result.index.droplevel(lvls_to_drop)
                 result = result.reset_index(drop=not drop)
 
             if result.index.name == "__reduced__":
