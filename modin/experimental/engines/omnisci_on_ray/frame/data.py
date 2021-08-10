@@ -847,7 +847,15 @@ class OmnisciOnRayFrame(PandasFrame):
             force_execution_mode=self._force_execution_mode,
         )
 
-    def join(self, other, how="inner", on=None, sort=False, suffixes=("_x", "_y")):
+    def join(
+        self,
+        other,
+        how="inner",
+        left_on=None,
+        right_on=None,
+        sort=False,
+        suffixes=("_x", "_y"),
+    ):
         """
         Join operation.
 
@@ -857,8 +865,10 @@ class OmnisciOnRayFrame(PandasFrame):
             A frame to join with.
         how : str, default: "inner"
             A type of join.
-        on : list of str, optional
-            A list of columns to join on.
+        left_on : list of str, optional
+            A list of columns for the left frame to join on.
+        right_on : list of str, optional
+            A list of columns for the right frame to join on.
         sort : bool, default: False
             Sort the result by join keys.
         suffixes : list-like of str, default: ("_x", "_y")
@@ -871,32 +881,37 @@ class OmnisciOnRayFrame(PandasFrame):
             The new frame.
         """
         assert (
-            on is not None
-        ), "Merge with unspecified 'on' parameter is not supported in the engine"
+            left_on is not None and right_on is not None
+        ), "Merge with unspecified 'left_on' or 'right_on' parameter is not supported in the engine"
+        assert len(left_on) == len(
+            right_on
+        ), "'left_on' and 'right_on' lengths don't match"
 
-        for col in on:
-            assert (
-                col in self.columns and col in other.columns
-            ), "Only cases when both frames contain key column are supported"
+        for col in left_on:
+            assert col in self.columns, f"'left_on' references unknown column {col}"
+        for col in right_on:
+            assert col in other.columns, f"'right_on' references unknown column {col}"
 
         new_columns = []
         new_dtypes = []
         exprs = OrderedDict()
 
-        conflicting_cols = set(self.columns) & set(other.columns) - set(on)
+        left_conflicts = set(self.columns) & (set(other.columns) - set(right_on))
+        right_conflicts = set(other.columns) & (set(self.columns) - set(left_on))
+        conflicting_cols = left_conflicts | right_conflicts
         for c in self.columns:
             new_name = f"{c}{suffixes[0]}" if c in conflicting_cols else c
             new_columns.append(new_name)
             new_dtypes.append(self._dtypes[c])
             exprs[new_name] = self.ref(c)
         for c in other.columns:
-            if c not in on:
+            if c not in left_on or c not in right_on:
                 new_name = f"{c}{suffixes[1]}" if c in conflicting_cols else c
                 new_columns.append(new_name)
                 new_dtypes.append(other._dtypes[c])
                 exprs[new_name] = other.ref(c)
 
-        condition = self._build_equi_join_condition(other, on, on)
+        condition = self._build_equi_join_condition(other, left_on, right_on)
 
         op = JoinNode(
             self,
@@ -916,7 +931,7 @@ class OmnisciOnRayFrame(PandasFrame):
 
         if sort:
             res = res.sort_rows(
-                on, ascending=True, ignore_index=True, na_position="last"
+                left_on, ascending=True, ignore_index=True, na_position="last"
             )
 
         return res
