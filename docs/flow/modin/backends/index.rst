@@ -44,7 +44,7 @@ High-level module overview
 This module houses submodules of all of the stable query compilers:
 
 ..
-    TODO: Insert link for <cuDF module> when it will be added (issue #3323)
+    TODO: Insert a link to <cuDF module> when it is added (issue #3323)
 
 - :doc:`Base module <base/query_compiler>` contains an abstract query compiler class which defines common API.
 - :doc:`Pandas module <pandas/index>` contains query compiler and text parsers for pandas backend.
