@@ -27,7 +27,7 @@ responsible for dispatching calls of IO functions to their actual implementation
 underlying IO module. For more information about IO module visit :doc:`related doc </flow/modin/engines/base/io>`.
 
 Factory Dispatcher
-'''''''''''''''''
+''''''''''''''''''
 The ``modin.data_management.factories.dispatcher.FactoryDispatcher`` class provides public methods whose interface corresponds to
 pandas IO functions, the only difference is that they return `QueryCompiler` of the
 selected backend instead of DataFrame. ``FactoryDispatcher`` is responsible for routing

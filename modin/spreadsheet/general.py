@@ -110,7 +110,7 @@ def from_dataframe(
 
     The first group of options are SlickGrid "grid options" which are
     described in the `SlickGrid documentation
-    <https://github.com/mleibman/SlickGrid/wiki/Grid-Options>`_.
+    <https://github.com/mleibman/SlickGrid/wiki/Grid-Options>`__.
 
     The second group of option are options that were added specifically
     for modin-spreadsheet and therefore are not documented in the SlickGrid documentation.
@@ -148,7 +148,7 @@ def from_dataframe(
 
     The first group of options are SlickGrid "column options" which are
     described in the `SlickGrid documentation
-    <https://github.com/mleibman/SlickGrid/wiki/Column-Options>`_.
+    <https://github.com/mleibman/SlickGrid/wiki/Column-Options>`__.
 
     The ``editable`` option was added specifically for modin-spreadsheet and therefore is
     not documented in the SlickGrid documentation.  This option specifies

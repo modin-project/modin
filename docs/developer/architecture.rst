@@ -318,9 +318,8 @@ by documentation for now, the rest is coming soon...).
    │   │       │   └─── :doc:`io </flow/modin/engines/ray/cudf_on_ray/io>`
    │   │       └───pandas_on_ray
    │   │           └─── :doc:`frame </flow/modin/engines/ray/pandas_on_ray/frame/index>`
-   │   ├───experimental
    │   ├── :doc:`experimental </flow/modin/experimental/experimental>`
-   │   │   ├───backends
+   │   │   ├─── :doc:`backends </flow/modin/experimental/backends/index>`
    │   │   │   └─── :doc:`omnisci </flow/modin/experimental/backends/omnisci/index>`
    │   │   │       └─── :doc:`query_compiler </flow/modin/experimental/backends/omnisci/query_compiler>`
    │   │   ├───cloud

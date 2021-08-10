@@ -24,7 +24,7 @@ class TransformMapper:
 
     This class is used to map column references to expressions used
     for their computation. This mapper is used to fold expressions
-    from multiple `TransformNode`s into a single expression.
+    from multiple ``TransformNode``-s into a single expression.
 
     Parameters
     ----------
@@ -549,7 +549,7 @@ class TransformNode(DFAlgNode):
 
     def fold(self):
         """
-        Fold two ``TransformNode``s.
+        Fold two ``TransformNode``-s.
 
         If base of this node is another `TransformNode`, then translate all
         expressions in `expr` to its base.
