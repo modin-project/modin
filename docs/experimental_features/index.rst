@@ -42,7 +42,7 @@ Read about Modin Dataframe support for SQL queries in this recent `blog post`_. 
 Distributed XGBoost on Modin
 ----------------------------
 Modin provides an implementation of distributed XGBoost machine learning algorithm on Modin DataFrames. See our
-:doc:`Distributed XGBoost on Modin documentation </experimental_features/modin_xgboost>` for details about installation and usage and
+:doc:`Distributed XGBoost on Modin documentation </experimental_features/modin_xgboost>` for details about installation and usage, as well as
 :doc:`Modin XGBoost architecture documentation </flow/modin/experimental/xgboost>` for information about implementation and
 internal execution flow.
 
