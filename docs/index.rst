@@ -127,7 +127,6 @@ and lots of other useful information.**
 
    using_modin
    out_of_core
-   modin_xgboost
 
 .. toctree::
    :caption: Examples
@@ -141,6 +140,7 @@ and lots of other useful information.**
    experimental_features/modin_sql
    experimental_features/spreadsheets_api
    experimental_features/progress_bar
+   experimental_features/modin_xgboost
 
 .. toctree::
    :caption: How is Modin different from ...?
