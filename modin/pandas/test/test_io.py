@@ -2069,7 +2069,7 @@ class TestStata:
 class TestFeather:
     @pytest.mark.xfail(
         condition="config.getoption('--simulate-cloud').lower() != 'off'",
-        reason="The reason of tests fail in `cloud` mode is unknown for now - issue #2340",
+        reason="The reason of tests fail in `cloud` mode is unknown for now - issue #3264",
     )
     def test_read_feather(self):
         unique_filename = get_unique_filename(extension="feather")
@@ -2086,7 +2086,7 @@ class TestFeather:
 
     @pytest.mark.xfail(
         condition="config.getoption('--simulate-cloud').lower() != 'off'",
-        reason="The reason of tests fail in `cloud` mode is unknown for now - issue #2340",
+        reason="The reason of tests fail in `cloud` mode is unknown for now - issue #3264",
     )
     def test_to_feather(self):
         modin_df, pandas_df = create_test_dfs(TEST_DATA)
@@ -2134,7 +2134,7 @@ class TestPickle:
 
     @pytest.mark.xfail(
         condition="config.getoption('--simulate-cloud').lower() != 'off'",
-        reason="There is no point in reading from local files.",
+        reason="There is no point in writing to local files.",
     )
     def test_to_pickle(self):
         modin_df, pandas_df = create_test_dfs(TEST_DATA)
