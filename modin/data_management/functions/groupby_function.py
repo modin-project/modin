@@ -110,6 +110,9 @@ class GroupbyReduceFunction(MapReduceFunction):
             Arguments which will be passed to `map_func`.
         drop : bool, default: False
             Indicates whether or not by-data came from the `self` frame.
+        selection : list of labels, optional
+            Set of columns to apply aggregation on, by default aggregation is applied
+            to all of the available columns.
 
         Returns
         -------
@@ -185,6 +188,9 @@ class GroupbyReduceFunction(MapReduceFunction):
             Arguments which will be passed to `reduce_func`.
         drop : bool, default: False
             Indicates whether or not by-data came from the `self` frame.
+        selection : list of labels, optional
+            Set of columns to apply aggregation on, by default aggregation is applied
+            to all of the available columns.
         method : str, optional
             Name of the groupby function. This is a hint to be able to do special casing.
 
@@ -276,6 +282,9 @@ class GroupbyReduceFunction(MapReduceFunction):
             Whether or not to drop non-numeric columns before executing GroupBy.
         drop : bool, default: False
             Indicates whether or not by-data came from the `self` frame.
+        selection : list of labels, optional
+            Set of columns to apply aggregation on, by default aggregation is applied
+            to all of the available columns.
         method : str, optional
             Name of the GroupBy aggregation function. This is a hint to be able to do special casing.
         default_to_pandas_func : callable(pandas.DataFrameGroupBy) -> pandas.DataFrame, optional
@@ -335,12 +344,8 @@ class GroupbyReduceFunction(MapReduceFunction):
         apply_indices = None
         if isinstance(map_func, dict):
             apply_indices = tuple(map_func.keys())
-        if selection is not None:
-            apply_indices = (
-                selection
-                if apply_indices is None
-                else tuple(set((*apply_indices, *selection)))
-            )
+        if selection is not None and apply_indices is None:
+            apply_indices = selection
         new_modin_frame = qc._modin_frame.groupby_reduce(
             axis, broadcastable_by, map_fn, reduce_fn, apply_indices=apply_indices
         )
@@ -411,6 +416,9 @@ class GroupbyReduceFunction(MapReduceFunction):
             Arguments which will be passed to `reduce_func`.
         drop : bool, default: False
             Indicates whether or not by-data came from the `self` frame.
+        selection : list of labels, optional
+            Set of columns to apply aggregation on, by default aggregation is applied
+            to all of the available columns.
         method : str, optional
             Name of the GroupBy aggregation function. This is a hint to be able to do special casing.
 
@@ -424,6 +432,11 @@ class GroupbyReduceFunction(MapReduceFunction):
         # implicit broadcastion via passing it as an function argument.
         if hasattr(by, "_modin_frame"):
             by = None
+
+        # If columns to aggregate are already set by dictionary function
+        # then 'selection' doesn't make sense
+        if isinstance(map_func, dict):
+            selection = None
 
         def _map(df, other=None, **kwargs):
             def wrapper(df, other=None):

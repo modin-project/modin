@@ -132,6 +132,27 @@ class GroupBy:
 
     @staticmethod
     def is_external_by(df, axis, by):
+        """
+        Check whether passed `by` is external.
+
+        Parameters
+        ----------
+        df : pandas.DataFrame
+            Source DataFrame to group.
+        axis : {0, 1}
+            Grouping axis.
+        by : object
+            Object to determine groups for the GroupBy.
+
+        Returns
+        -------
+        bool
+
+        Notes
+        -----
+        External 'by' means such kind of 'by' that does not belong to the source
+        frame anyhow.
+        """
         if not is_list_like(by) or isinstance(by, (pandas.DataFrame, pandas.Series)):
             return False
         return all(

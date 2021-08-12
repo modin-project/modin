@@ -2518,7 +2518,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             agg_kwargs={},
             groupby_kwargs=groupby_args,
             drop=drop,
-            selection=None,
+            selection=selection,
             method="size",
             default_to_pandas_func=lambda grp: grp.size(),
         )
@@ -2540,7 +2540,6 @@ class PandasQueryCompiler(BaseQueryCompiler):
         agg_kwargs,
         groupby_kwargs,
         drop=False,
-        selection=None,
         **kwargs,
     ):
         """
@@ -2617,7 +2616,6 @@ class PandasQueryCompiler(BaseQueryCompiler):
             map_args=agg_kwargs,
             reduce_args=agg_kwargs,
             numeric_only=False,
-            selection=None,
             drop=drop,
         )
 
@@ -2663,11 +2661,15 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 agg_kwargs,
                 groupby_kwargs,
                 drop,
-                selection,
+                selection=selection,
             )
 
         if callable(agg_func):
             agg_func = wrap_udf_function(agg_func)
+        # If columns to aggregate are already set by dictionary function
+        # then 'selection' doesn't make sense
+        if isinstance(agg_func, dict):
+            selection = None
 
         # since we're going to modify `groupby_kwargs` dict in a `groupby_agg_builder`,
         # we want to copy it to not propagate these changes into source dict, in case
@@ -2865,12 +2867,8 @@ class PandasQueryCompiler(BaseQueryCompiler):
         apply_indices = None
         if isinstance(agg_func, dict):
             apply_indices = tuple(agg_func.keys())
-        if selection is not None:
-            apply_indices = (
-                selection
-                if apply_indices is None
-                else tuple(set((*apply_indices, *selection)))
-            )
+        if selection is not None and apply_indices is None:
+            apply_indices = selection
 
         new_modin_frame = self._modin_frame.broadcast_apply_full_axis(
             axis=axis,

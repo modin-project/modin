@@ -395,6 +395,9 @@ class OmnisciOnRayFrame(PandasFrame):
             Aggregates to compute.
         groupby_args : dict
             Additional groupby args.
+        selection : list of labels, optional
+            Set of columns to apply aggregation on, by default aggregation is applied
+            to all of the available columns.
         **kwargs : dict
             Keyword args. Currently ignored.
 

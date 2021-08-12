@@ -309,6 +309,13 @@ class DataFrameGroupBy(object):
         return self.bfill(limit)
 
     def _get_internal_by(self):
+        """
+        Get only those components of 'by' that are column labels of the source frame.
+
+        Returns
+        -------
+        list of labels
+        """
         internal_by = []
         if self._drop:
             for by in self._by if is_list_like(self._by) else [self._by]:
