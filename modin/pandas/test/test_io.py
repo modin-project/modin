@@ -1175,7 +1175,7 @@ class TestParquet:
     @pytest.mark.parametrize("columns", [None, ["col1"]])
     @pytest.mark.xfail(
         condition="config.getoption('--simulate-cloud').lower() != 'off'",
-        reason="The reason of tests fail in `cloud` mode is unknown for now - issue #2340",
+        reason="The reason of tests fail in `cloud` mode is unknown for now - issue #3264",
     )
     def test_read_parquet_partitioned_directory(self, make_parquet_file, columns):
         unique_filename = get_unique_filename(extension=None)
@@ -1190,7 +1190,7 @@ class TestParquet:
 
     @pytest.mark.xfail(
         condition="config.getoption('--simulate-cloud').lower() != 'off'",
-        reason="The reason of tests fail in `cloud` mode is unknown for now - issue #2340",
+        reason="The reason of tests fail in `cloud` mode is unknown for now - issue #3264",
     )
     def test_read_parquet_pandas_index(self):
         # Ensure modin can read parquet files written by pandas with a non-RangeIndex object
@@ -1219,7 +1219,7 @@ class TestParquet:
 
     @pytest.mark.xfail(
         condition="config.getoption('--simulate-cloud').lower() != 'off'",
-        reason="The reason of tests fail in `cloud` mode is unknown for now - issue #2340",
+        reason="The reason of tests fail in `cloud` mode is unknown for now - issue #3264",
     )
     def test_read_parquet_pandas_index_partitioned(self):
         # Ensure modin can read parquet files written by pandas with a non-RangeIndex object
@@ -1312,7 +1312,7 @@ class TestParquet:
 
     @pytest.mark.xfail(
         condition="config.getoption('--simulate-cloud').lower() != 'off'",
-        reason="The reason of tests fail in `cloud` mode is unknown for now - issue #2340",
+        reason="The reason of tests fail in `cloud` mode is unknown for now - issue #3264",
     )
     def test_read_parquet_2462(self):
         test_df = pd.DataFrame(
