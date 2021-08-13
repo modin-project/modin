@@ -54,7 +54,7 @@ class DMatrix(xgb.DMatrix):
         self.data = unwrap_partitions(data, axis=0, get_ip=True)
         self.label = unwrap_partitions(label, axis=0)
 
-        self.data_metainfo = (
+        self.metadata = (
             data.index,
             data.columns,
             data._query_compiler._modin_frame._row_lengths,
@@ -105,7 +105,7 @@ class Booster(xgb.Booster):
         """
         Run distributed prediction with a trained booster.
 
-        During work it runs xgb.predict on each worker for row partition of `data`
+        During execution it runs ``xgb.predict`` on each worker for subset of `data`
         and creates Modin DataFrame with prediction results.
 
         Parameters
@@ -113,7 +113,7 @@ class Booster(xgb.Booster):
         data : modin.experimental.xgboost.DMatrix
             Input data used for prediction.
         **kwargs : dict
-            Other parameters are the same as `xgboost.Booster.predict`.
+            Other parameters are the same as for ``xgboost.Booster.predict``.
 
         Returns
         -------
@@ -189,7 +189,7 @@ def train(
     assert isinstance(
         dtrain, DMatrix
     ), f"Type of `dtrain` is {type(dtrain)}, but expected {DMatrix}."
-    result = _train(dtrain, num_actors, params, *args, evals=evals, **kwargs)
+    result = _train(dtrain, params, *args, num_actors=num_actors, evals=evals, **kwargs)
     if isinstance(evals_result, dict):
         evals_result.update(result["history"])
 

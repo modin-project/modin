@@ -217,17 +217,15 @@ def _get_cpus_per_actor(num_actors):
     return cpus_per_actor
 
 
-def _get_num_actors(num_actors):
+def _get_num_actors(num_actors=None):
     """
     Get number of actors to create.
 
-    In case `num_actors` is None, integer number of actors
-    will be computed by condition 2 CPUs per 1 actor.
-
     Parameters
     ----------
-    num_actors : int or None
-        Desired number of actors.
+    num_actors : int, optional
+        Desired number of actors. If is None, integer number of actors
+        will be computed by condition 2 CPUs per 1 actor.
 
     Returns
     -------
@@ -450,9 +448,9 @@ def _assign_row_partitions_to_actors(
 
 def _train(
     dtrain,
-    num_actors,
     params: Dict,
     *args,
+    num_actors=None,
     evals=(),
     **kwargs,
 ):
@@ -469,13 +467,13 @@ def _train(
     ----------
     dtrain : modin.experimental.DMatrix
         Data to be trained against.
-    num_actors : int, optional
-        Number of actors for training. If unspecified, this value will be
-        computed automatically.
     params : dict
         Booster params.
     *args : iterable
         Other parameters for `xgboost.train`.
+    num_actors : int, optional
+        Number of actors for training. If unspecified, this value will be
+        computed automatically.
     evals : list of pairs (modin.experimental.xgboost.DMatrix, str), default: empty
         List of validation sets for which metrics will be evaluated during training.
         Validation metrics will help us track the performance of the model.
@@ -561,7 +559,7 @@ def _map_predict(booster, part, columns, **kwargs):
     columns : list or ray.ObjectRef
         Columns for the result.
     **kwargs : dict
-        Other parameters are the same as `xgboost.Booster.predict`.
+        Other parameters are the same as for ``xgboost.Booster.predict``.
 
     Returns
     -------
@@ -585,7 +583,7 @@ def _predict(
     """
     Run distributed prediction with a trained booster on Ray backend.
 
-    During work it runs xgb.predict on each worker for row partition of `data`
+    During execution it runs ``xgb.predict`` on each worker for subset of `data`
     and creates Modin DataFrame with prediction results.
 
     Parameters
@@ -595,7 +593,7 @@ def _predict(
     data : modin.experimental.xgboost.DMatrix
         Input data used for prediction.
     **kwargs : dict
-        Other parameters are the same as `xgboost.Booster.predict`.
+        Other parameters are the same as for ``xgboost.Booster.predict``.
 
     Returns
     -------
@@ -604,8 +602,8 @@ def _predict(
     """
     s = time.time()
 
-    # Get metainfo from dmatrix
-    input_index, input_columns, row_lengths = data.data_metainfo
+    # Get metadata from DMatrix
+    input_index, input_columns, row_lengths = data.metadata
 
     # Infer columns of result
     def _get_num_columns(booster, n_features, **kwargs):

@@ -59,12 +59,9 @@ Training
    ..
 
 2. On this step, the parameter `num_actors` is processed. The internal function :py:func:`~modin.experimental.xgboost.xgboost_ray._get_num_actors`
-   examines the value provided by the user and checks if it fits in the set of expected values (int, None).
-
-   * int - `num_actors` won't be changed. This value will be used.
-   * None - `num_actors` will be computed using condition that 1 actor should use maximum 2 CPUs.
-     This condition was chosen for using maximum parallel workers with multithreaded XGBoost training (2 threads
-     per worker will be used in this case).
+   examines the value provided by the user. In case the value wasn't provided, the `num_actors` will be computed using condition that 1 actor should use maximum 2 CPUs.
+   This condition was chosen for using maximum parallel workers with multithreaded XGBoost training (2 threads
+   per worker will be used in this case).
 
 .. note:: `num_actors` parameter is made available for public function :py:func:`~modin.experimental.xgboost.train` to allow
   fine-tuning for obtaining the best performance in specific use cases.
@@ -98,7 +95,7 @@ Prediction
 1. The data is passed to :py:func:`~modin.experimental.xgboost.xgboost_ray._predict`
    function as a :py:class:`~modin.experimental.xgboost.DMatrix` object.
 
-2. The function :py:func:`~modin.experimental.xgboost.xgboost_ray._map_predict` is applied remotely for an each partition
+2. The function :py:func:`~modin.experimental.xgboost.xgboost_ray._map_predict` is applied remotely for each partition
    of the data to make a partial prediction.
 
 3. Result ``modin.pandas.DataFrame`` is created from ``ray.ObjectRef`` objects, obtained in the previous step.
