@@ -432,6 +432,9 @@ class TimeGroupByMultiColumn(BaseTimeGroupBy):
         [6],
     ]
 
+    def time_groupby_sum(self, *args, **kwargs):
+        execute(self.df.groupby(by=self.groupby_columns).sum())
+
     def time_groupby_agg_mean(self, *args, **kwargs):
         execute(self.df.groupby(by=self.groupby_columns).agg("mean"))
 
