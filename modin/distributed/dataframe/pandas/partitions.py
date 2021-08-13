@@ -89,7 +89,9 @@ def unwrap_partitions(api_layer_object, axis=None, get_ip=False):
         ]
 
 
-def from_partitions(partitions, axis):
+def from_partitions(
+    partitions, axis, index=None, columns=None, row_lengths=None, column_widths=None
+):
     """
     Create DataFrame from remote partitions.
 
@@ -106,6 +108,16 @@ def from_partitions(partitions, axis):
         * ``axis=0`` if you want to create DataFrame from row partitions
         * ``axis=1`` if you want to create DataFrame from column partitions
         * ``axis=None`` if you want to create DataFrame from 2D list of partitions
+    index : sequence, optional
+        The index for the DataFrame. Is computed if not provided.
+    columns : sequence, optional
+        The columns for the DataFrame. Is computed if not provided.
+    row_lengths : list, optional
+        The length of each partition in the rows. The "height" of
+        each of the block partitions. Is computed if not provided.
+    column_widths : list, optional
+        The width of each partition in the columns. The "width" of
+        each of the block partitions. Is computed if not provided.
 
     Returns
     -------
@@ -158,9 +170,20 @@ def from_partitions(partitions, axis):
         raise ValueError(
             f"Got unacceptable value of axis {axis}. Possible values are {0}, {1} or {None}."
         )
+    if index is None:
+        index = partition_mgr_class.get_indices(0, parts, lambda df: df.axes[0])
 
-    index = partition_mgr_class.get_indices(0, parts, lambda df: df.axes[0])
-    columns = partition_mgr_class.get_indices(1, parts, lambda df: df.axes[1])
+    if columns is None:
+        columns = partition_mgr_class.get_indices(1, parts, lambda df: df.axes[1])
+
     return DataFrame(
-        query_compiler=PandasQueryCompiler(partition_frame_class(parts, index, columns))
+        query_compiler=PandasQueryCompiler(
+            partition_frame_class(
+                parts,
+                index,
+                columns,
+                row_lengths=row_lengths,
+                column_widths=column_widths,
+            )
+        )
     )
