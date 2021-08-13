@@ -7,21 +7,25 @@ Please note that this feature is experimental and behavior or interfaces could b
 Prerequisites
 """""""""""""
 
-  * Sign up with a cloud provider and get credentials file. Note that we supported only AWS currently, more are planned.
-  (For AWS, on credentials file format see https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-files.html#cli-configure-files-where)
+Sign up with a cloud provider and get credentials file. Note that we supported only AWS currently, more are planned.
+(`AWS credentials file format`_)
 
 Setup environment
 """""""""""""""""
-pip install modin[remote] - which install the following dependencies:
-  * RPyC - https://github.com/tomerfiliba-org/rpyc
-  Allows to perform remote procedure calls.
-  * Cloudpickle - https://github.com/cloudpipe/cloudpickle
-  Allows pickling of functions and classes, which is used in our distributed runtime.
-  * Boto3 - https://github.com/boto/boto3
-  Allows to create and setup AWS cloud machines. Optional library for Ray Autoscaler.
 
-It also needs Ray Autoscaler component, which is implicitly installed with Ray (note that Ray from ``conda`` is now missing that component!).
-More information in https://docs.ray.io/en/releases-0.8.2/autoscaling.html#automatic-cluster-setup.
+.. code-block:: shell
+
+  pip install modin[remote]
+
+This command install the following dependencies:
+
+  * `RPyC`_ - allows to perform remote procedure calls.
+  * `Cloudpickle`_ - allows pickling of functions and classes, which is used in our distributed runtime.
+  * `Boto3`_ - allows to create and setup AWS cloud machines. Optional library for Ray Autoscaler.
+
+Notes:
+  * It also needs Ray Autoscaler component, which is implicitly installed with Ray (note that Ray from ``conda`` is now missing that component!).
+    More information in `Ray docs`_.
 
 Architecture
 """"""""""""
@@ -65,4 +69,10 @@ Usage examples
       remote_df = pd.DataFrame([1, 2, 3, 4])
       print(len(remote_df))  # len() is executed remotely
 
-Some more examples can be found in `examples\cluster` folder.
+Some more examples can be found in ``examples/cluster`` folder.
+
+.. _`RPyC`: https://github.com/tomerfiliba-org/rpyc
+.. _`Cloudpickle`: https://github.com/cloudpipe/cloudpickle
+.. _`Boto3`: https://github.com/boto/boto3
+.. _`AWS credentials file format`: https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-files.html#cli-configure-files-where
+.. _`Ray docs`: https://docs.ray.io/en/releases-0.8.2/autoscaling.html#automatic-cluster-setup
