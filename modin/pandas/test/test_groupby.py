@@ -1417,17 +1417,22 @@ def test_dict_agg_rename_mi_columns(as_index, by_length, agg_fns):
     md_df.columns, pd_df.columns = mi_columns, mi_columns
 
     by = list(md_df.columns[:by_length])
-    agg_cols = list(md_df.columns[by_length : by_length + 3])
+    list_of_agg_cols = [
+        md_df.columns[by_length : by_length + 3],
+        md_df.columns[: by_length + 3],
+    ]
 
-    agg_dict = {
-        f"custom-{i}" + str(agg_fns[i % len(agg_fns)]): (col, agg_fns[i % len(agg_fns)])
-        for i, col in enumerate(agg_cols)
-    }
+    for agg_cols in list_of_agg_cols:
+        agg_dict = {
+            f"custom-{i}"
+            + str(agg_fns[i % len(agg_fns)]): (col, agg_fns[i % len(agg_fns)])
+            for i, col in enumerate(agg_cols)
+        }
 
-    md_res = md_df.groupby(by, as_index=as_index).agg(**agg_dict)
-    pd_res = pd_df.groupby(by, as_index=as_index).agg(**agg_dict)
+        md_res = md_df.groupby(by, as_index=as_index).agg(**agg_dict)
+        pd_res = pd_df.groupby(by, as_index=as_index).agg(**agg_dict)
 
-    df_equals(md_res, pd_res)
+        df_equals(md_res, pd_res)
 
 
 @pytest.mark.parametrize(

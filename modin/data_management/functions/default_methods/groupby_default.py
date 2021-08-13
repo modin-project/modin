@@ -282,22 +282,25 @@ class GroupBy:
                 result = result.to_frame()
 
             if not as_index:
-                if (
-                    len(result.index.names) == 1 and result.index.names[0] is None
-                ) or all(name in result.columns.values for name in result.index.names):
-                    drop = False
-                elif kwargs.get("method") == "size":
-                    drop = True
-                lvls_to_drop = [
-                    i
-                    for i, name in enumerate(result.index.names)
-                    if name in result.columns.values
-                ]
-                if len(lvls_to_drop) == result.index.nlevels:
-                    drop = False
+                method = kwargs.get("method")
+                internal_by = (
+                    [by.name]
+                    if (drop or method == "size") and isinstance(by, pandas.Series)
+                    else by
+                )
+                if drop or method == "size":
+                    drop, lvls_to_drop = GroupByDefault.handle_as_index(
+                        result.columns,
+                        result.index.names,
+                        internal_by,
+                        selection=selection,
+                        method=method,
+                    )
+                    if len(lvls_to_drop) > 0:
+                        result.index = result.index.droplevel(lvls_to_drop)
                 else:
-                    result.index = result.index.droplevel(lvls_to_drop)
-                result = result.reset_index(drop=not drop)
+                    drop = True
+                result = result.reset_index(drop=drop)
 
             if result.index.name == "__reduced__":
                 result.index.name = None
@@ -357,3 +360,50 @@ class GroupByDefault(DefaultMethod):
             aggregation.
         """
         return cls.call(GroupBy.build_groupby(func), fn_name=func.__name__, **kwargs)
+
+    @staticmethod
+    def handle_as_index(
+        result_cols, result_index_names, internal_by_cols, selection=None, method=None
+    ):  # TODO: add docstring
+        # We want to insert such internal-by-cols which are not presented
+        # in the result in order to not create naming conflicts
+        if not isinstance(internal_by_cols, pandas.Index):
+            if not is_list_like(internal_by_cols):
+                internal_by_cols = [internal_by_cols]
+            internal_by_cols = pandas.Index(internal_by_cols)
+
+        internal_by_cols = (
+            internal_by_cols[~internal_by_cols.str.match(r"__reduced__.*", na=False)]
+            if hasattr(internal_by_cols, "str")
+            else internal_by_cols
+        )
+
+        cols_to_insert = (
+            internal_by_cols.difference(result_cols)
+            if internal_by_cols.nlevels == result_cols.nlevels
+            else internal_by_cols.copy()
+        )
+
+        drop = False
+        lvls_to_drop = [
+            i
+            for i, name in enumerate(result_index_names)
+            if (
+                (name not in cols_to_insert)
+                if selection is None or method == "size"
+                else (name in selection)
+            )
+        ]
+        if len(lvls_to_drop) == len(result_index_names):
+            drop = True
+            lvls_to_drop = []
+
+        if (len(result_index_names) == 1 and result_index_names[0] is None) or all(
+            name in result_cols.values for name in result_index_names
+        ):
+            drop = True
+
+        if method == "size":
+            drop = False
+
+        return drop, lvls_to_drop

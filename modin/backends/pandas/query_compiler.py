@@ -51,6 +51,7 @@ from modin.data_management.functions import (
     GroupbyReduceFunction,
     groupby_reduce_functions,
 )
+from modin.data_management.functions.default_methods import GroupByDefault
 
 
 def _get_axis(axis):
@@ -2677,6 +2678,12 @@ class PandasQueryCompiler(BaseQueryCompiler):
         groupby_kwargs = groupby_kwargs.copy()
 
         as_index = groupby_kwargs.get("as_index", True)
+        # Note:
+        # - internal_by is such 'by' objects that represent some column of the source frame,
+        #   these columns have to be presented in each partition, to ensure that, such columns
+        #   will be inserted in each partition during broadcasting
+        # - external_by - is a 'by' that represents data that came from outside of the source frame,
+        #   this data will not be inserted into partitions although it could be broadcasted to them
         if isinstance(by, type(self)):
             # `drop` parameter indicates whether or not 'by' data came
             # from the `self` frame:
@@ -2785,51 +2792,17 @@ class PandasQueryCompiler(BaseQueryCompiler):
                     )
 
                 result_cols = result.columns
+                # Dropping inserted `internal_by` columns to not duplicate them among partitions
                 result.drop(columns=missmatched_cols, inplace=True, errors="ignore")
 
                 if not as_index:
-                    keep_index_levels = len(by) > 1 and any(
-                        isinstance(x, pandas.CategoricalDtype)
-                        for x in df[internal_by_cols].dtypes
-                    )
-
-                    if internal_by_cols.nlevels != result_cols.nlevels:
-                        cols_to_insert = (
-                            pandas.Index([])
-                            if keep_index_levels
-                            else internal_by_cols.copy()
-                        )
-                    else:
-                        cols_to_insert = (
-                            internal_by_cols.intersection(result_cols)
-                            if keep_index_levels
-                            else internal_by_cols.difference(result_cols)
-                        )
-
-                    if keep_index_levels:
-                        result.drop(
-                            columns=cols_to_insert, inplace=True, errors="ignore"
-                        )
-
                     drop = True
                     if partition_idx == 0:
-                        drop = False
-                        if not keep_index_levels:
-                            lvls_to_drop = [
-                                i
-                                for i, name in enumerate(result.index.names)
-                                if name not in cols_to_insert
-                            ]
-                            if len(lvls_to_drop) == result.index.nlevels:
-                                drop = True
-                            else:
-                                result.index = result.index.droplevel(lvls_to_drop)
-
-                    if (
-                        not isinstance(result.index, pandas.MultiIndex)
-                        and result.index.name is None
-                    ):
-                        drop = True
+                        drop, lvls_to_drop = GroupByDefault.handle_as_index(
+                            result_cols, result.index.names, internal_by_cols
+                        )
+                        if len(lvls_to_drop) > 0:
+                            result.index = result.index.droplevel(lvls_to_drop)
 
                     result.reset_index(drop=drop, inplace=True)
 

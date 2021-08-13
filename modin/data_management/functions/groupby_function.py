@@ -16,6 +16,7 @@
 import pandas
 
 from .mapreducefunction import MapReduceFunction
+from .default_methods import GroupByDefault
 from modin.utils import try_cast_to_pandas, hashable
 
 
@@ -223,19 +224,19 @@ class GroupbyReduceFunction(MapReduceFunction):
         result = apply_func(df.groupby(axis=axis, **groupby_args), **reduce_args)
 
         if not as_index:
-            insert_levels = partition_idx == 0 and (drop or method == "size")
-            if insert_levels:
-                lvls_to_drop = [
-                    i
-                    for i, name in enumerate(result.index.names)
-                    if name
-                    in (result.columns.values if selection is None else selection)
-                ]
-                if len(lvls_to_drop) == result.index.nlevels:
-                    insert_levels = False
-                else:
+            if partition_idx == 0 and (drop or method == "size"):
+                drop, lvls_to_drop = GroupByDefault.handle_as_index(
+                    result.columns,
+                    result.index.names,
+                    by_part,
+                    selection=selection,
+                    method=method,
+                )
+                if len(lvls_to_drop) > 0:
                     result.index = result.index.droplevel(lvls_to_drop)
-            result.reset_index(drop=not insert_levels, inplace=True)
+            else:
+                drop = True
+            result = result.reset_index(drop=drop)
         # Result could not always be a frame, so wrapping it into DataFrame
         return pandas.DataFrame(result)
 

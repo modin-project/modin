@@ -930,14 +930,17 @@ class DataFrameGroupBy(object):
         # so dropping intersection from the selection
         if (
             self._is_multi_by
-            and selection is not None
             and not self._as_index
             and any(
                 isinstance(dtype, pandas.CategoricalDtype)
                 for dtype in self._df.dtypes[internal_by]
             )
         ):
-            selection = [col for col in selection if col not in internal_by]
+            selection = [
+                col
+                for col in (self._df.columns if selection is None else selection)
+                if col not in internal_by
+            ]
 
         groupby_qc = self._query_compiler
         result = type(self._df)(
@@ -983,14 +986,17 @@ class DataFrameGroupBy(object):
         selection = self._selection
         if (
             self._is_multi_by
-            and selection is not None
             and not self._as_index
             and any(
                 isinstance(dtype, pandas.CategoricalDtype)
                 for dtype in self._df.dtypes[internal_by]
             )
         ):
-            selection = [col for col in selection if col not in internal_by]
+            selection = [
+                col
+                for col in (self._df.columns if selection is None else selection)
+                if col not in internal_by
+            ]
 
         new_manager = self._query_compiler.groupby_agg(
             by=self._by,
