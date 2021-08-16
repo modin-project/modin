@@ -95,6 +95,11 @@ def from_partitions(
     """
     Create DataFrame from remote partitions.
 
+    Notes
+    -----
+    Pass `index`, `columns`, `row_lengths` and `column_widths` to avoid triggering
+    extra computations of the metadata.
+
     Parameters
     ----------
     partitions : list
