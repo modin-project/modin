@@ -23,28 +23,28 @@ RAND_HIGH = 1_000_000_000 if ASV_USE_BACKEND == "omnisci" else 100
 
 BINARY_OP_DATA_SIZE = {
     "big": [
-        ((5000, 5000), (5000, 5000)),
+        [[5000, 5000], [5000, 5000]],
         # the case extremely inefficient
-        # ((20, 500_000), (10, 1_000_000)),
-        ((500_000, 20), (1_000_000, 10)),
+        # [[20, 500_000], [10, 1_000_000]],
+        [[500_000, 20], [1_000_000, 10]],
     ],
     "small": [
-        ((250, 250), (250, 250)),
-        ((20, 10_000), (10, 25_000)),
-        ((10_000, 20), (25_000, 10)),
+        [[250, 250], [250, 250]],
+        [[20, 10_000], [10, 25_000]],
+        [[10_000, 20], [25_000, 10]],
     ],
 }
 UNARY_OP_DATA_SIZE = {
     "big": [
-        (5000, 5000),
+        [5000, 5000],
         # the case extremely inefficient
-        # (10, 1_000_000),
-        (1_000_000, 10),
+        # [10, 1_000_000],
+        [1_000_000, 10],
     ],
     "small": [
-        (250, 250),
-        (10, 10_000),
-        (10_000, 10),
+        [250, 250],
+        [10, 10_000],
+        [10_000, 10],
     ],
 }
 SERIES_DATA_SIZE = {
@@ -59,26 +59,26 @@ SERIES_DATA_SIZE = {
 
 OMNISCI_BINARY_OP_DATA_SIZE = {
     "big": [
-        ((500_000, 20), (1_000_000, 10)),
+        [[500_000, 20], [1_000_000, 10]],
     ],
     "small": [
-        ((10_000, 20), (25_000, 10)),
+        [[10_000, 20], [25_000, 10]],
     ],
 }
 OMNISCI_UNARY_OP_DATA_SIZE = {
     "big": [
-        (1_000_000, 10),
+        [1_000_000, 10],
     ],
     "small": [
-        (10_000, 10),
+        [10_000, 10],
     ],
 }
 OMNISCI_SERIES_DATA_SIZE = {
     "big": [
-        (10_000_000, 1),
+        [10_000_000, 1],
     ],
     "small": [
-        (100_000, 1),
+        [100_000, 1],
     ],
 }
 
@@ -216,8 +216,6 @@ def get_benchmark_shapes(bench_id: str):
                 CONFIG_FROM_FILE = json.load(_f)
 
     if CONFIG_FROM_FILE and bench_id in CONFIG_FROM_FILE:
-        # convert strings to tuples;
-        # example: "omnisci.TimeReadCsvNames": ["(5555, 55)", "(3333, 33)"]
-        shapes = [eval(shape) for shape in CONFIG_FROM_FILE[bench_id]]
-        return shapes
+        # example: "omnisci.TimeReadCsvNames": [[5555, 55], [3333, 33]]
+        return CONFIG_FROM_FILE[bench_id]
     return DEFAULT_CONFIG[bench_id]

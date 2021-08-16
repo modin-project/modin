@@ -24,9 +24,20 @@ from modin.config import AsvDataSizeConfig
     "asv_config_content, result",
     [
         (
-            '{"TimeJoin": ["((10, 10), (15,15))", "((11, 11), (13, 13))"], \
-                "TimeMerge": ["((11, 11), (13, 13))"]}',
-            [[((10, 10), (15, 15)), ((11, 11), (13, 13))], [((11, 11), (13, 13))]],
+            '{"TimeJoin": [[[10, 10], [15, 15]], [[11, 11], [13, 13]]], \
+                "TimeGroupBy": [[11, 11], [13, 13]]}',
+            [
+                [
+                    # binary shapes
+                    [[10, 10], [15, 15]],
+                    [[11, 11], [13, 13]]
+                ],
+                [
+                    # unary shapes
+                    [11, 11],
+                    [13, 13]
+                ],
+            ],
         ),
     ],
 )
@@ -35,15 +46,15 @@ def test_get_benchmark_shapes(monkeypatch, asv_config_content, result):
     AsvDataSizeConfig.put("mock_filename")
     with patch("builtins.open", mock_open(read_data=asv_config_content)):
         assert result[0] == get_benchmark_shapes("TimeJoin")
-        assert result[1] == get_benchmark_shapes("TimeMerge")
+        assert result[1] == get_benchmark_shapes("TimeGroupBy")
 
 
 @pytest.mark.parametrize(
     "asv_config_content, result",
     [
         (
-            '{"TimeJoin": ["((10, 10), (15,15))"]',
-            [(100, 100)],
+            '{"TimeJoin": [[[10, 10], [15, 15]]]',
+            [[100, 100]],
         ),
     ],
 )
