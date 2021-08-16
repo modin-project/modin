@@ -44,6 +44,7 @@ __all__ = [
     "execute",
     "get_shape_id",
     "gen_data",
+    "gen_nan_data",
     "generate_dataframe",
     "prepare_io_data",
     "random_string",

@@ -13,8 +13,6 @@
 
 """General Modin on OmniSci backend benchmarks."""
 
-import numpy as np
-
 from ..utils import (
     generate_dataframe,
     gen_nan_data,
@@ -417,8 +415,8 @@ class TimeGroupByDefaultAggregations(BaseTimeGroupBy):
 class TimeGroupByMultiColumn(BaseTimeGroupBy):
     param_names = ["shape", "ngroups", "groupby_ncols"]
     params = [
-        UNARY_OP_DATA_SIZE[ASV_DATASET_SIZE],
-        GROUPBY_NGROUPS[ASV_DATASET_SIZE],
+        get_benchmark_shapes("omnisci.TimeGroupByMultiColumn"),
+        GROUPBY_NGROUPS,
         [6],
     ]
 

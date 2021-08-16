@@ -149,6 +149,7 @@ _DEFAULT_CONFIG_T = [
             "omnisci.TimeDescribe",
             "omnisci.TimeProperties",
             "omnisci.TimeGroupByDefaultAggregations",
+            "omnisci.TimeGroupByMultiColumn",
             # OmniSci backend IO benchmarks
             "omnisci.TimeReadCsvNames",
         ],

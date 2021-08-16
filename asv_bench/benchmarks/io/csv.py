@@ -29,6 +29,13 @@ from ..utils import (
 
 
 class BaseReadCsv:
+    # test data file should be created only once
+    def setup_cache(self, test_filename="io_test_file"):
+        test_filenames = prepare_io_data(
+            test_filename, self.data_type, get_benchmark_shapes(self.__class__.__name__)
+        )
+        return test_filenames
+
     def setup(self, test_filenames, shape, *args, **kwargs):
         # ray init
         if ASV_USE_IMPL == "modin":
@@ -43,6 +50,7 @@ class TimeReadCsvSkiprows(BaseReadCsv):
         "range_uniform": np.arange(1, shapes[0][0] // 10),
         "range_step2": np.arange(1, shapes[0][0], 2),
     }
+    data_type = "str_int"
 
     param_names = ["shape", "skiprows"]
     params = [
@@ -54,10 +62,6 @@ class TimeReadCsvSkiprows(BaseReadCsv):
             "range_step2",
         ],
     ]
-
-    def setup_cache(self, test_filename="io_test_file"):
-        test_filenames = prepare_io_data(test_filename, "str_int", self.shapes)
-        return test_filenames
 
     def setup(self, test_filenames, shape, skiprows):
         super().setup(test_filenames, shape, skiprows)
@@ -72,14 +76,10 @@ class TimeReadCsvSkiprows(BaseReadCsv):
 
 
 class TimeReadCsvTrueFalseValues(BaseReadCsv):
-    shapes = get_benchmark_shapes("TimeReadCsvTrueFalseValues")
-    param_names = ["shape"]
-    params = [shapes]
+    data_type = "true_false_int"
 
-    # test data file should be created only once
-    def setup_cache(self, test_filename="io_test_file"):
-        test_filenames = prepare_io_data(test_filename, "true_false_int", self.shapes)
-        return test_filenames
+    param_names = ["shape"]
+    params = [get_benchmark_shapes("TimeReadCsvTrueFalseValues")]
 
     def time_true_false_values(self, test_filenames, shape):
         execute(
