@@ -189,7 +189,13 @@ class PandasFramePartitionManager(ABC):
 
     @classmethod
     def groupby_reduce(
-        cls, axis, partitions, by, map_func, reduce_func, apply_indices=None
+        cls,
+        axis,
+        partitions,
+        by,
+        map_func,
+        reduce_func,
+        selection=None,
     ):
         """
         Groupby data using the `map_func` provided along the `axis` over the `partitions` then reduce using `reduce_func`.
@@ -214,9 +220,16 @@ class PandasFramePartitionManager(ABC):
         NumPy array
             Partitions with applied groupby.
         """
-        if apply_indices is not None:
+        partitions_kwargs = None
+        if selection is not None:
+            partition_indices = list(selection.keys())
             partitions = (
-                partitions[apply_indices] if axis else partitions[:, apply_indices]
+                partitions[partition_indices]
+                if axis
+                else partitions[:, partition_indices]
+            )
+            partitions_kwargs = tuple(
+                {"partition_selection": labels} for labels in selection.values()
             )
 
         if by is not None:
@@ -225,8 +238,13 @@ class PandasFramePartitionManager(ABC):
             )
         else:
             mapped_partitions = cls.map_partitions(partitions, map_func)
+
         return cls.map_axis_partitions(
-            axis, mapped_partitions, reduce_func, enumerate_partitions=True
+            axis,
+            mapped_partitions,
+            reduce_func,
+            enumerate_partitions=True,
+            partitions_kwargs=partitions_kwargs,
         )
 
     @classmethod
@@ -379,6 +397,8 @@ class PandasFramePartitionManager(ABC):
         apply_indices=None,
         enumerate_partitions=False,
         lengths=None,
+        partitions_kwargs=None,
+        **kwargs,
     ):
         """
         Broadcast the `right` partitions to `left` and apply `apply_func` along full `axis`.
@@ -435,13 +455,14 @@ class PandasFramePartitionManager(ABC):
 
         if apply_indices is None:
             apply_indices = np.arange(len(left_partitions))
-
+        # breakpoint()
         result_blocks = np.array(
             [
                 left_partitions[i].apply(
                     preprocessed_map_func,
                     **kw,
                     **({"partition_idx": idx} if enumerate_partitions else {}),
+                    **(partitions_kwargs[i] if partitions_kwargs is not None else {}),
                 )
                 for idx, i in enumerate(apply_indices)
             ]
@@ -512,6 +533,7 @@ class PandasFramePartitionManager(ABC):
         keep_partitioning=False,
         lengths=None,
         enumerate_partitions=False,
+        **kwargs,
     ):
         """
         Apply `map_func` to every partition in `partitions` along given `axis`.
@@ -551,6 +573,7 @@ class PandasFramePartitionManager(ABC):
             right=None,
             lengths=lengths,
             enumerate_partitions=enumerate_partitions,
+            **kwargs,
         )
 
     @classmethod

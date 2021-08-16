@@ -135,6 +135,7 @@ class DataFrameGroupBy(object):
             type(self._query_compiler).groupby_any,
             lambda df, **kwargs: df.any(**kwargs),
             numeric_only=False,
+            selection=self._get_non_by_selection(),
             **kwargs,
         )
 
@@ -265,7 +266,9 @@ class DataFrameGroupBy(object):
         return self._default_to_pandas(lambda df: df.nth(n, dropna=dropna))
 
     def cumsum(self, axis=0, *args, **kwargs):
-        result = self._apply_agg_function(lambda df: df.cumsum(axis, *args, **kwargs))
+        result = self._apply_agg_function(
+            lambda df: df.cumsum(axis, *args, **kwargs), selection=self._selection
+        )
         # pandas does not name the index on cumsum
         result._query_compiler.set_index_name(None)
         return result
@@ -283,7 +286,9 @@ class DataFrameGroupBy(object):
         )
 
     def cummax(self, axis=0, **kwargs):
-        result = self._apply_agg_function(lambda df: df.cummax(axis, **kwargs))
+        result = self._apply_agg_function(
+            lambda df: df.cummax(axis, **kwargs), selection=self._selection
+        )
         # pandas does not name the index on cummax
         result._query_compiler.set_index_name(None)
         return result
@@ -325,6 +330,13 @@ class DataFrameGroupBy(object):
                     internal_by.extend(by.columns)
             internal_by = self._df.columns.intersection(internal_by).tolist()
         return internal_by
+
+    def _get_non_by_selection(self):
+        selection = self._selection
+        if selection is not None:
+            internal_by = self._get_internal_by()
+            selection = [col for col in self._selection if col not in internal_by]
+        return selection
 
     def __getitem__(self, key):
         """
@@ -391,7 +403,9 @@ class DataFrameGroupBy(object):
         )
 
     def cummin(self, axis=0, **kwargs):
-        result = self._apply_agg_function(lambda df: df.cummin(axis=axis, **kwargs))
+        result = self._apply_agg_function(
+            lambda df: df.cummin(axis=axis, **kwargs), selection=self._selection
+        )
         # pandas does not name the index on cummin
         result._query_compiler.set_index_name(None)
         return result
@@ -521,7 +535,9 @@ class DataFrameGroupBy(object):
         return self._default_to_pandas(lambda df: df.mad(**kwargs))
 
     def rank(self, **kwargs):
-        result = self._apply_agg_function(lambda df: df.rank(**kwargs))
+        result = self._apply_agg_function(
+            lambda df: df.rank(**kwargs), selection=self._selection
+        )
         # pandas does not name the index on rank
         result._query_compiler.set_index_name(None)
         return result
@@ -555,6 +571,7 @@ class DataFrameGroupBy(object):
             type(self._query_compiler).groupby_all,
             lambda df, **kwargs: df.all(**kwargs),
             numeric_only=False,
+            selection=self._get_non_by_selection(),
             **kwargs,
         )
 
@@ -647,7 +664,9 @@ class DataFrameGroupBy(object):
         return self._default_to_pandas(lambda df: df.ngroup(ascending))
 
     def nunique(self, dropna=True):
-        return self._apply_agg_function(lambda df: df.nunique(dropna))
+        return self._apply_agg_function(
+            lambda df: df.nunique(dropna), selection=self._selection
+        )
 
     def resample(self, rule, *args, **kwargs):
         return self._default_to_pandas(lambda df: df.resample(rule, *args, **kwargs))
@@ -659,7 +678,9 @@ class DataFrameGroupBy(object):
         return self._default_to_pandas(lambda df: df.head(n))
 
     def cumprod(self, axis=0, *args, **kwargs):
-        result = self._apply_agg_function(lambda df: df.cumprod(axis, *args, **kwargs))
+        result = self._apply_agg_function(
+            lambda df: df.cumprod(axis, *args, **kwargs), selection=self._selection
+        )
         # pandas does not name the index on cumprod
         result._query_compiler.set_index_name(None)
         return result
@@ -735,10 +756,22 @@ class DataFrameGroupBy(object):
         return self._default_to_pandas(lambda df: df.hist())
 
     def quantile(self, q=0.5, **kwargs):
+        selection = self._get_non_by_selection()
+
+        dtypes = (
+            pandas.Series(self._df.dtypes)
+            if not isinstance(self._df.dtypes, pandas.Series)
+            else (self._df.dtypes if selection is None else self._df.dtypes[selection])
+        )
+        if dtypes.map(lambda x: x == np.dtype("O")).all():
+            raise TypeError("'quantile' cannot be performed against 'object' dtypes!")
+
         if is_list_like(q):
             return self._default_to_pandas(lambda df: df.quantile(q=q, **kwargs))
 
-        return self._apply_agg_function(lambda df: df.quantile(q, **kwargs))
+        return self._apply_agg_function(
+            lambda df: df.quantile(q, **kwargs), selection=selection
+        )
 
     def diff(self):
         return self._default_to_pandas(lambda df: df.diff())
@@ -898,7 +931,13 @@ class DataFrameGroupBy(object):
         return self._index_grouped_cache
 
     def _wrap_aggregation(
-        self, qc_method, default_func, drop=True, numeric_only=True, **kwargs
+        self,
+        qc_method,
+        default_func,
+        drop=True,
+        numeric_only=True,
+        selection=None,
+        **kwargs,
     ):
         """
         Perform common metadata transformations and apply groupby functions.
@@ -924,23 +963,24 @@ class DataFrameGroupBy(object):
         if self._axis != 0:
             return self._default_to_pandas(default_func, **kwargs)
 
-        internal_by = self._get_internal_by()
-        selection = self._selection
-        # Category by-columns are more prioritized than the aggregated ones,
-        # so dropping intersection from the selection
-        if (
-            self._is_multi_by
-            and not self._as_index
-            and any(
-                isinstance(dtype, pandas.CategoricalDtype)
-                for dtype in self._df.dtypes[internal_by]
-            )
-        ):
-            selection = [
-                col
-                for col in (self._df.columns if selection is None else selection)
-                if col not in internal_by
-            ]
+        if selection is None:
+            internal_by = self._get_internal_by()
+            selection = self._selection
+            # Category by-columns are more prioritized than the aggregated ones,
+            # so dropping intersection from the selection
+            if (
+                self._is_multi_by
+                and not self._as_index
+                and any(
+                    isinstance(dtype, pandas.CategoricalDtype)
+                    for dtype in self._df.dtypes[internal_by]
+                )
+            ):
+                selection = [
+                    col
+                    for col in (self._df.columns if selection is None else selection)
+                    if col not in internal_by
+                ]
 
         groupby_qc = self._query_compiler
         result = type(self._df)(
@@ -960,7 +1000,7 @@ class DataFrameGroupBy(object):
             return result.squeeze(axis=1)
         return result
 
-    def _apply_agg_function(self, f, *args, **kwargs):
+    def _apply_agg_function(self, f, selection=None, *args, **kwargs):
         """
         Perform aggregation and combine stages based on a given function.
 
@@ -982,21 +1022,22 @@ class DataFrameGroupBy(object):
             f, dict
         ), "'{0}' object is not callable and not a dict".format(type(f))
 
-        internal_by = self._get_internal_by()
-        selection = self._selection
-        if (
-            self._is_multi_by
-            and not self._as_index
-            and any(
-                isinstance(dtype, pandas.CategoricalDtype)
-                for dtype in self._df.dtypes[internal_by]
-            )
-        ):
-            selection = [
-                col
-                for col in (self._df.columns if selection is None else selection)
-                if col not in internal_by
-            ]
+        if selection is None:
+            internal_by = self._get_internal_by()
+            selection = self._selection
+            if (
+                self._is_multi_by
+                and not self._as_index
+                and any(
+                    isinstance(dtype, pandas.CategoricalDtype)
+                    for dtype in self._df.dtypes[internal_by]
+                )
+            ):
+                selection = [
+                    col
+                    for col in (self._df.columns if selection is None else selection)
+                    if col not in internal_by
+                ]
 
         new_manager = self._query_compiler.groupby_agg(
             by=self._by,

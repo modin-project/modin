@@ -1129,6 +1129,8 @@ def eval___getitem__(md_grp, pd_grp, additional_tests=None):
     )
 
     def comparator(df1, df2):
+        if df1.empty and df2.empty:
+            return
         if df1.ndim == 2:
             df_equals(df1.sort_index(axis=1), df2.sort_index(axis=1))
         else:
@@ -1136,20 +1138,52 @@ def eval___getitem__(md_grp, pd_grp, additional_tests=None):
 
     def test_function(md_grp, pd_grp, selection_cols):
         modin_groupby_equals_pandas(md_grp, pd_grp)
+        # Non-numeric aggregation test, MapReduce
         eval_general(md_grp, pd_grp, lambda grp: grp.count(), comparator=comparator)
+        eval_general(md_grp, pd_grp, lambda grp: grp.any(), comparator=comparator)
+        eval_general(md_grp, pd_grp, lambda grp: grp.min(), comparator=comparator)
+        # Numeric aggregation test, MapReduce
+        eval_general(md_grp, pd_grp, lambda grp: grp.sum(), comparator=comparator)
+        eval_general(md_grp, pd_grp, lambda grp: grp.prod(), comparator=comparator)
+        # Non-numeric aggregation test, FullAxisFunction
+        eval_general(
+            md_grp,
+            pd_grp,
+            lambda grp: grp.nunique(),
+            comparator=comparator,
+            # Pandas raising exception when 'by' contains categorical key and `as_index=False`
+            # because of the bug: https://github.com/pandas-dev/pandas/issues/36698
+            # Modin correctly processes the result, that's why there's `check_exception_type=None` in some cases
+            check_exception_type=None
+            if (
+                any(
+                    isinstance(dtype, pandas.CategoricalDtype)
+                    for dtype in md_grp._df.dtypes
+                )
+                and not md_grp._as_index
+            )
+            else True,
+        )
+        # Numeric aggregation test, FullAxisFunction
         eval_general(md_grp, pd_grp, lambda grp: grp.mean(), comparator=comparator)
+        eval_general(md_grp, pd_grp, lambda grp: grp.quantile(), comparator=comparator)
+        eval_general(md_grp, pd_grp, lambda grp: grp.cumprod(), comparator=comparator)
+        # Pseudo-list aggregation test
         eval_general(
             md_grp, pd_grp, lambda grp: grp.agg(["mean"]), comparator=comparator
         )
+        # List aggregation test
         eval_general(
             md_grp,
             pd_grp,
             lambda grp: grp.agg(["mean", "count"]),
             comparator=comparator,
         )
+        # Explicit default-to-pandas test
         eval_general(
             md_grp,
             pd_grp,
+            # Defaulting to pandas only for Modin groupby objects
             lambda grp: grp.sum()
             if not isinstance(grp, pd.groupby.DataFrameGroupBy)
             else grp._default_to_pandas(lambda df: df.sum()),
@@ -1663,6 +1697,7 @@ def test_multi_column_groupby_different_partitions(
     md_grp, pd_grp = md_df.groupby(by, as_index=as_index), pd_df.groupby(
         by, as_index=as_index
     )
+
     eval_general(md_grp, pd_grp, func_to_apply)
     eval___getitem__(md_grp, pd_grp, additional_tests=func_to_apply)
 

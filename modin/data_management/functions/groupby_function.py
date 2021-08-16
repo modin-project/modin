@@ -14,6 +14,7 @@
 """Module houses GroupBy functions builder class."""
 
 import pandas
+from pandas.core.dtypes.common import is_numeric_dtype
 
 from .mapreducefunction import MapReduceFunction
 from .default_methods import GroupByDefault
@@ -123,17 +124,23 @@ class GroupbyReduceFunction(MapReduceFunction):
         # Set `as_index` to True to track the metadata of the grouping object
         # It is used to make sure that between phases we are constructing the
         # right index and placing columns in the correct order.
+        as_index = groupby_args.get("as_index", True)
         groupby_args["as_index"] = True
         groupby_args["observed"] = True
-        if selection is not None:
-            selection = df.columns.intersection(selection)
+        partition_selection = (
+            selection if selection is None else df.columns.intersection(selection)
+        )
+
+        missmatched_cols = pandas.Index([])
         if other is not None:
             # Other is a broadcasted partition that represents 'by' columns
             # Concatenate it with 'df' to group on its columns names
-            other = other.squeeze(axis=axis ^ 1)
+            if not drop:
+                other = other.squeeze(axis=axis ^ 1)
             if isinstance(other, pandas.DataFrame):
+                missmatched_cols = other.columns.difference(df.columns)
                 df = pandas.concat(
-                    [df] + [other[[o for o in other if o not in df]]],
+                    [df] + [other[missmatched_cols]],
                     axis=1,
                 )
                 other = list(other.columns)
@@ -143,8 +150,12 @@ class GroupbyReduceFunction(MapReduceFunction):
 
         apply_func = cls.try_filter_dict(map_func, df)
         grp = df.groupby(by=by_part, axis=axis, **groupby_args)
-        if selection is not None:
-            grp = grp[selection]
+        if partition_selection is not None:
+            grp = grp[
+                partition_selection[0]
+                if len(partition_selection) == 1 and as_index
+                else partition_selection
+            ]
         result = apply_func(grp, **map_args)
         # Result could not always be a frame, so wrapping it into DataFrame
         return pandas.DataFrame(result)
@@ -166,6 +177,7 @@ class GroupbyReduceFunction(MapReduceFunction):
         drop=False,
         selection=None,
         method=None,
+        partition_selection=None,
     ):
         """
         Execute Reduce phase of GroupbyReduce.
@@ -221,7 +233,22 @@ class GroupbyReduceFunction(MapReduceFunction):
         groupby_args["level"] = list(range(len(df.index.names)))
 
         apply_func = cls.try_filter_dict(reduce_func, df)
-        result = apply_func(df.groupby(axis=axis, **groupby_args), **reduce_args)
+        grp = df.groupby(axis=axis, **groupby_args)
+        if (
+            as_index
+            and partition_selection is not None
+            and not isinstance(reduce_func, dict)
+        ):
+            current_partition_selection = df.columns.intersection(partition_selection)
+            grp = grp[
+                current_partition_selection[0]
+                if len(current_partition_selection) == 1
+                else current_partition_selection
+            ]
+        result = apply_func(grp, **reduce_args)
+
+        if isinstance(result, pandas.Series):
+            result = result.to_frame()
 
         if not as_index:
             if partition_idx == 0 and (drop or method == "size"):
@@ -230,6 +257,7 @@ class GroupbyReduceFunction(MapReduceFunction):
                     result.index.names,
                     by_part,
                     selection=selection,
+                    partition_selection=partition_selection,
                     method=method,
                 )
                 if len(lvls_to_drop) > 0:
@@ -237,6 +265,10 @@ class GroupbyReduceFunction(MapReduceFunction):
             else:
                 drop = True
             result = result.reset_index(drop=drop)
+
+        if result.empty and not as_index and len(result) > 0:
+            result.index = []
+
         # Result could not always be a frame, so wrapping it into DataFrame
         return pandas.DataFrame(result)
 
@@ -312,7 +344,7 @@ class GroupbyReduceFunction(MapReduceFunction):
             def default_to_pandas(df):
                 grp = df.groupby(by=by, axis=axis, **groupby_args)
                 if selection is not None:
-                    grp = grp[selection]
+                    grp = grp[selection[0] if len(selection) == 1 else selection]
                 return default_to_pandas_func(grp, **map_args)
 
             return query_compiler.default_to_pandas(default_to_pandas)
@@ -320,7 +352,12 @@ class GroupbyReduceFunction(MapReduceFunction):
 
         if numeric_only:
             qc = query_compiler.getitem_column_array(
-                query_compiler._modin_frame.numeric_columns(True)
+                tuple(
+                    col
+                    for col, dtype in query_compiler.dtypes.items()
+                    if is_numeric_dtype(dtype)
+                    or (selection is not None and col in selection)
+                )
             )
         else:
             qc = query_compiler
@@ -348,10 +385,27 @@ class GroupbyReduceFunction(MapReduceFunction):
         if selection is not None and apply_indices is None:
             apply_indices = selection
         new_modin_frame = qc._modin_frame.groupby_reduce(
-            axis, broadcastable_by, map_fn, reduce_fn, apply_indices=apply_indices
+            axis, broadcastable_by, map_fn, reduce_fn, selection=apply_indices
         )
 
         result = query_compiler.__constructor__(new_modin_frame)
+        if len(result.columns) == 0 and len(query_compiler.columns) != 0:
+            # determening type of raised exception by applying `aggfunc`
+            # to empty DataFrame
+            try:
+                pandas.DataFrame(index=[1], columns=[1]).groupby(level=0).agg(
+                    map_func
+                ) if isinstance(map_func, dict) else map_func(
+                    pandas.DataFrame(index=[1], columns=[1]).groupby(level=0)
+                )
+            except Exception as e:
+                raise type(e)("No numeric types to aggregate.")
+            else:
+                if (not drop or broadcastable_by is None) and groupby_args.get(
+                    "as_index", True
+                ):
+                    raise TypeError("No numeric types to aggregate.")
+
         if result.index.name == "__reduced__":
             result.index.name = None
         return result

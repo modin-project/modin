@@ -363,10 +363,24 @@ class GroupByDefault(DefaultMethod):
 
     @staticmethod
     def handle_as_index(
-        result_cols, result_index_names, internal_by_cols, selection=None, method=None
+        result_cols,
+        result_index_names,
+        internal_by_cols,
+        selection=None,
+        partition_selection=None,
+        method=None,
     ):  # TODO: add docstring
         # We want to insert such internal-by-cols which are not presented
         # in the result in order to not create naming conflicts
+        if selection is not None:
+            if partition_selection is None:
+                partition_selection = selection
+            if len(result_cols) != len(partition_selection):
+                cols_failed_to_select = pandas.Index(partition_selection).difference(
+                    result_cols
+                )
+                selection = pandas.Index(selection).difference(cols_failed_to_select)
+
         if not isinstance(internal_by_cols, pandas.Index):
             if not is_list_like(internal_by_cols):
                 internal_by_cols = [internal_by_cols]

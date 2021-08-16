@@ -2734,6 +2734,10 @@ class PandasQueryCompiler(BaseQueryCompiler):
             # right index and placing columns in the correct order.
             groupby_kwargs["as_index"] = True
 
+            partition_selection = (
+                selection if selection is None else df.columns.intersection(selection)
+            )
+
             internal_by_cols = pandas.Index([])
             missmatched_cols = pandas.Index([])
             if by is not None:
@@ -2768,9 +2772,8 @@ class PandasQueryCompiler(BaseQueryCompiler):
             def compute_groupby(df, drop=False, partition_idx=0):
                 """Compute groupby aggregation for a single partition."""
                 grouped_df = df.groupby(by=by, axis=axis, **groupby_kwargs)
-                if selection is not None:
-                    intersection = df.columns.intersection(selection)
-                    grouped_df = grouped_df[intersection]
+                if partition_selection is not None:
+                    grouped_df = grouped_df[partition_selection]
                 try:
                     if isinstance(agg_func, dict):
                         # Filter our keys that don't exist in this partition. This happens when some columns
@@ -2796,13 +2799,18 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 result.drop(columns=missmatched_cols, inplace=True, errors="ignore")
 
                 if not as_index:
-                    drop = True
-                    if partition_idx == 0:
+                    if partition_idx == 0 and drop:
                         drop, lvls_to_drop = GroupByDefault.handle_as_index(
-                            result_cols, result.index.names, internal_by_cols
+                            result_cols,
+                            result.index.names,
+                            internal_by_cols,
+                            selection=selection,
+                            partition_selection=partition_selection,
                         )
                         if len(lvls_to_drop) > 0:
                             result.index = result.index.droplevel(lvls_to_drop)
+                    else:
+                        drop = True
 
                     result.reset_index(drop=drop, inplace=True)
 
@@ -2856,6 +2864,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
         # that means that exception in `compute_groupby` was raised
         # in every partition, so we also should raise it
+        # breakpoint()
         if len(result.columns) == 0 and len(self.columns) != 0:
             # determening type of raised exception by applying `aggfunc`
             # to empty DataFrame

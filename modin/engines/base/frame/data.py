@@ -2084,7 +2084,7 @@ class PandasFrame(object):
         reduce_func,
         new_index=None,
         new_columns=None,
-        apply_indices=None,
+        selection=None,
     ):
         """
         Groupby another Modin DataFrame dataframe and aggregate the result.
@@ -2105,7 +2105,7 @@ class PandasFrame(object):
         new_columns : pandas.Index, optional
             Columns of the result. We may know this in advance,
             and if not provided it must be computed.
-        apply_indices : list-like, default: None
+        selection : list-like, default: None
             Indices of `axis ^ 1` to apply groupby over.
 
         Returns
@@ -2115,14 +2115,34 @@ class PandasFrame(object):
         """
         by_parts = by if by is None else by._partitions
 
-        if apply_indices is not None:
-            numeric_indices = self.axes[axis ^ 1].get_indexer_for(apply_indices)
-            apply_indices = list(
-                self._get_dict_of_block_index(axis ^ 1, numeric_indices).keys()
+        per_partition_selection, apply_indices = None, None
+        if selection is not None:
+            numeric_indices = self.axes[axis ^ 1].get_indexer_for(selection)
+            apply_indices = self._get_dict_of_block_index(axis ^ 1, numeric_indices)
+
+            sorted_selection = np.array(selection)[np.argsort(numeric_indices)]
+            internal_ids = np.cumsum(
+                (0,) + tuple((len(val) for val in apply_indices.values()))
+            )
+            per_partition_selection = OrderedDict(
+                tuple(
+                    (
+                        partition_idx,
+                        sorted_selection[internal_ids[i] : internal_ids[i + 1]],
+                    )
+                    for i, partition_idx in zip(
+                        range(len(internal_ids) - 1), apply_indices.keys()
+                    )
+                )
             )
 
         new_partitions = self._partition_mgr_cls.groupby_reduce(
-            axis, self._partitions, by_parts, map_func, reduce_func, apply_indices
+            axis,
+            self._partitions,
+            by_parts,
+            map_func,
+            reduce_func,
+            selection=per_partition_selection,
         )
         new_axes = [
             self._compute_axis_labels(i, new_partitions)
