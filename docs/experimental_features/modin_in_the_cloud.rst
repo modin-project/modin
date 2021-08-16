@@ -75,4 +75,4 @@ Some more examples can be found in ``examples/cluster`` folder.
 .. _`Cloudpickle`: https://github.com/cloudpipe/cloudpickle
 .. _`Boto3`: https://github.com/boto/boto3
 .. _`AWS credentials file format`: https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-files.html#cli-configure-files-where
-.. _`Ray docs`: https://docs.ray.io/en/releases-0.8.2/autoscaling.html#automatic-cluster-setup
+.. _`Ray docs`: https://docs.ray.io/en/releases-1.5.2/cluster/guide.html#autoscaling-with-ray
