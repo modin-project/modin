@@ -95,11 +95,6 @@ def from_partitions(
     """
     Create DataFrame from remote partitions.
 
-    Notes
-    -----
-    Pass `index`, `columns`, `row_lengths` and `column_widths` to avoid triggering
-    extra computations of the metadata.
-
     Parameters
     ----------
     partitions : list
@@ -128,6 +123,11 @@ def from_partitions(
     -------
     modin.pandas.DataFrame
         DataFrame instance created from remote partitions.
+
+    Notes
+    -----
+    Pass `index`, `columns`, `row_lengths` and `column_widths` to avoid triggering
+    extra computations of the metadata.
     """
     from modin.data_management.factories.dispatcher import FactoryDispatcher
 
