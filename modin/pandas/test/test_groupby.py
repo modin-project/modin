@@ -221,7 +221,8 @@ def test_mixed_dtypes_groupby(as_index):
             modin_groupby, pandas_groupby, lambda df: df.take(), is_default=True
         )
         eval___getattr__(modin_groupby, pandas_groupby, "col2")
-        eval___getitem__(modin_groupby, pandas_groupby)
+        if get_current_backend() != "BaseOnPython":
+            eval___getitem__(modin_groupby, pandas_groupby)
         eval_groups(modin_groupby, pandas_groupby)
 
 

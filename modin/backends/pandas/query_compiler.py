@@ -2864,7 +2864,6 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
         # that means that exception in `compute_groupby` was raised
         # in every partition, so we also should raise it
-        # breakpoint()
         if len(result.columns) == 0 and len(self.columns) != 0:
             # determening type of raised exception by applying `aggfunc`
             # to empty DataFrame

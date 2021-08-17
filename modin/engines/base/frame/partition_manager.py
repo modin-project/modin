@@ -455,7 +455,7 @@ class PandasFramePartitionManager(ABC):
 
         if apply_indices is None:
             apply_indices = np.arange(len(left_partitions))
-        # breakpoint()
+
         result_blocks = np.array(
             [
                 left_partitions[i].apply(

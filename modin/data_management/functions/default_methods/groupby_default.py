@@ -17,7 +17,7 @@ from .default import DefaultMethod
 from modin.utils import hashable
 
 import pandas
-from pandas.core.dtypes.common import is_list_like
+from pandas.core.dtypes.common import is_list_like, is_numeric_dtype
 
 
 # FIXME: there is no sence of keeping `GroupBy` and `GroupByDefault` logic in a different
@@ -202,14 +202,12 @@ class GroupBy:
                 if isinstance(agg_func, dict)
                 else agg_func(grp, **agg_args)
             )
+
             if (
                 result.empty
+                and groupby_args.get("as_index", True)
                 and selection is not None
                 and len(selection) == 1
-                and not (
-                    cls.is_external_by(df, axis, by)
-                    and not groupby_args.get("as_index", True)
-                )
             ):
                 raise TypeError("No numeric types to aggregate.")
 
@@ -251,10 +249,25 @@ class GroupBy:
                 grp = df.groupby(by=by, axis=axis, **groupby_args)
                 if selection is not None:
                     grp = grp[selection]
-                return agg_func(grp, **map_args)
+                result = agg_func(grp, **map_args)
+                if (
+                    result.empty
+                    and groupby_args.get("as_index", True)
+                    and selection is not None
+                    and len(selection) == 1
+                ):
+                    raise TypeError("No numeric types to aggregate.")
+                return result
 
             if numeric_only:
-                df = df.select_dtypes(include="number")
+                df = df[
+                    (
+                        col
+                        for col, dtype in df.dtypes.items()
+                        if is_numeric_dtype(dtype)
+                        or (selection is not None and col in selection)
+                    )
+                ]
 
             by = by.squeeze(axis=1)
             if (
@@ -301,6 +314,14 @@ class GroupBy:
                 else:
                     drop = True
                 result = result.reset_index(drop=drop)
+
+            if (
+                result.empty
+                and groupby_args.get("as_index", True)
+                and selection is not None
+                and len(selection) == 1
+            ):
+                raise TypeError("No numeric types to aggregate.")
 
             if result.index.name == "__reduced__":
                 result.index.name = None
