@@ -466,6 +466,29 @@ def df_categories_equals(df1, df2):
         )
 
 
+def assert_empty_frame_equal(df1, df2):
+    """
+    Test if df1 and df2 are empty.
+
+    Parameters
+    ----------
+    df1: pandas.DataFrame or pandas.Series
+    df2: pandas.DataFrame or pandas.Series
+
+    Raises
+    ------
+    AssertionEror
+        If check fails.
+    """
+
+    if (df1.empty and not df2.empty) or (df2.empty and not df1.empty):
+        assert False, "One of the passed frames is empty, when other isn't"
+    elif df1.empty and df2.empty and type(df1) != type(df2):
+        assert (
+            False
+        ), f"Empty frames have different types: {type(df1)} != {type(df2)}"
+
+
 def df_equals(df1, df2):
     """Tests if df1 and df2 are equal.
 
@@ -516,12 +539,7 @@ def df_equals(df1, df2):
         df2 = to_pandas(df2)
 
     if isinstance(df1, pandas.DataFrame) and isinstance(df2, pandas.DataFrame):
-        if (df1.empty and not df2.empty) or (df2.empty and not df1.empty):
-            assert False, "One of the passed frames is empty, when other isn't"
-        elif df1.empty and df2.empty and type(df1) != type(df2):
-            assert (
-                False
-            ), f"Empty frames have different types: {type(df1)} != {type(df2)}"
+        assert_empty_frame_equal(df1, df2)
 
     if isinstance(df1, pandas.DataFrame) and isinstance(df2, pandas.DataFrame):
         assert_frame_equal(
@@ -711,7 +729,7 @@ def eval_general(
 
 def eval_io(
     fn_name,
-    comparator=df_equals,
+    comparator=None,
     cast_to_str=False,
     check_exception_type=True,
     raising_exceptions=io_ops_bad_exc,
@@ -727,8 +745,8 @@ def eval_io(
     ----------
     fn_name: str
         I/O operation name ("read_csv" for example).
-    comparator: obj
-        Function to perform comparison.
+    comparator: obj, optional
+        Function to perform comparison. `df_equals` by default.
     cast_to_str: bool
         There could be some missmatches in dtypes, so we're
         casting the whole frame to `str` before comparison.
@@ -757,6 +775,7 @@ def eval_io(
             pd,
             pandas,
             applyier,
+            comparator=df_equals if comparator is None else comparator,
             check_exception_type=check_exception_type,
             raising_exceptions=raising_exceptions,
             check_kwargs_callable=check_kwargs_callable,
