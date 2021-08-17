@@ -2336,20 +2336,15 @@ class BasePandasDataset(object):
 
         if freq is None:
             if axis == "index" or axis == 0:
-                if periods > 0:
-                    dropped_df = self.drop(self.index[-periods:])
-                    new_frame = filled_df.append(dropped_df, ignore_index=True)
-                    new_frame.index = self.index.copy()
-                    if isinstance(self, DataFrame):
-                        new_frame.columns = self.columns.copy()
-                    return new_frame
-                else:
-                    dropped_df = self.drop(self.index[:-periods])
-                    new_frame = dropped_df.append(filled_df, ignore_index=True)
-                    new_frame.index = self.index.copy()
-                    if isinstance(self, DataFrame):
-                        new_frame.columns = self.columns.copy()
-                    return new_frame
+                new_frame = (
+                    filled_df.append(self.iloc[:-periods], ignore_index=True)
+                    if periods > 0
+                    else self.iloc[-periods:].append(filled_df, ignore_index=True)
+                )
+                new_frame.index = self.index.copy()
+                if isinstance(self, DataFrame):
+                    new_frame.columns = self.columns.copy()
+                return new_frame
             else:
                 if not isinstance(self, DataFrame):
                     raise ValueError(
@@ -2358,16 +2353,13 @@ class BasePandasDataset(object):
                 res_columns = self.columns
                 from .general import concat
 
-                if periods > 0:
-                    dropped_df = self.drop(self.columns[-periods:], axis="columns")
-                    new_frame = concat([filled_df, dropped_df], axis="columns")
-                    new_frame.columns = res_columns
-                    return new_frame
-                else:
-                    dropped_df = self.drop(self.columns[:-periods], axis="columns")
-                    new_frame = concat([dropped_df, filled_df], axis="columns")
-                    new_frame.columns = res_columns
-                    return new_frame
+                new_frame = (
+                    concat([filled_df, self.iloc[:, :-periods]], axis="columns")
+                    if periods > 0
+                    else concat([self.iloc[:, -periods:], filled_df], axis="columns")
+                )
+                new_frame.columns = res_columns
+                return new_frame
         else:
             return self.tshift(periods, freq)
 
