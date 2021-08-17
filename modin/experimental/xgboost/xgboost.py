@@ -21,6 +21,7 @@ import xgboost as xgb
 from modin.config import Engine
 from modin.distributed.dataframe.pandas import unwrap_partitions
 import modin.pandas as pd
+import numpy as np
 
 LOGGER = logging.getLogger("[modin.xgboost]")
 
@@ -43,16 +44,64 @@ class DMatrix(xgb.DMatrix):
     Currently DMatrix supports only `data` and `label` parameters.
     """
 
-    def __init__(self, data, label):
+    def __init__(
+        self,
+        data,
+        label=None,
+        *args,
+        weight=None,
+        base_margin=None,
+        missing: Optional[float] = None,
+        silent=False,
+        feature_names=None,
+        feature_types=None,
+        nthread: Optional[int] = None,
+        group=None,
+        qid=None,
+        label_lower_bound=None,
+        label_upper_bound=None,
+        feature_weights=None,
+        enable_categorical: bool = False,
+        **kwargs,
+    ):
         assert isinstance(
             data, pd.DataFrame
         ), f"Type of `data` is {type(data)}, but expected {pd.DataFrame}."
-        assert isinstance(
-            label, (pd.DataFrame, pd.Series)
-        ), f"Type of `data` is {type(label)}, but expected {pd.DataFrame} or {pd.Series}."
+        if label is not None:
+            assert isinstance(
+                label, (pd.DataFrame, pd.Series)
+            ), f"Type of `label` is {type(label)}, but expected {pd.DataFrame} or {pd.Series}."
+        self.label = unwrap_partitions(label, axis=0) if label is not None else label
+        self.label_ = label
+        if weight is not None:
+            assert isinstance(
+                weight, (pd.DataFrame, pd.Series)
+            ), f"Type of `weight` is {type(weight)}, but expected {pd.DataFrame} or {pd.Series}."
+            self.weight = unwrap_partitions(weight, axis=0)
+
+        if len(data.shape) != 2:
+            raise ValueError("Expecting 2 dimensional, got: ", data.shape)
+
+        self.rows = data.shape[0]
+        self.cols = data.shape[1]
+
+        for i in range(self.cols):
+            if data.dtypes[i] == "object":
+                raise ValueError("Cannot work with object dtype")
 
         self.data = unwrap_partitions(data, axis=0, get_ip=True)
-        self.label = unwrap_partitions(label, axis=0)
+        self.data_ = data
+
+        self.missing = missing if missing is not None else np.nan
+        self.nthread = nthread if nthread is not None else -1
+        self.handle = None
+
+        self.silent = silent
+
+        if feature_names is not None:
+            self.feature_names = feature_names
+        if feature_types is not None:
+            self.feature_types = feature_types
 
     def __iter__(self):
         """
@@ -69,6 +118,75 @@ class DMatrix(xgb.DMatrix):
         """
         yield self.data
         yield self.label
+
+    def num_row(self):
+        """Get the number of rows in the DMatrix.
+        Returns
+        -------
+        number of rows : int
+        """
+        return self.rows
+
+    def num_col(self):
+        """Get the number of columns (features) in the DMatrix.
+        Returns
+        -------
+        number of columns : int
+        """
+        return self.cols
+
+    def get_label(self):
+        """Get the label of the DMatrix.
+        Returns
+        -------
+        label : array
+        """
+        return self.label_
+
+    def set_base_margin(self, base_margin):
+        """Set base margin of booster to start from."""
+        self.base_margin = base_margin
+
+    def slice(self, rindex):
+        res_list = self.data_[rindex]
+        res = DMatrix(pd.DataFrame([float(i) for i in res_list]))
+        return res
+
+    def set_info(
+        self,
+        *,
+        label=None,
+        weight=None,
+        base_margin=None,
+        group=None,
+        qid=None,
+        label_lower_bound=None,
+        label_upper_bound=None,
+        feature_names=None,
+        feature_types=None,
+        feature_weights=None,
+    ):
+
+        if label is not None:
+            self.label = label
+        if weight is not None:
+            self.weight
+        if base_margin is not None:
+            self.set_base_margin(base_margin)
+        if group is not None:
+            self.group = group
+        if qid is not None:
+            self.qid = qid
+        if label_lower_bound is not None:
+            self.label_lower_bound = label_lower_bound
+        if label_upper_bound is not None:
+            self.label_upper_bound = label_upper_bound
+        if feature_names is not None:
+            self.feature_names = feature_names
+        if feature_types is not None:
+            self.feature_types = feature_types
+        if feature_weights is not None:
+            feature_weights = feature_weights
 
 
 class Booster(xgb.Booster):
