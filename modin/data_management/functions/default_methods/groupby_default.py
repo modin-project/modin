@@ -14,7 +14,6 @@
 """Module houses default GroupBy functions builder class."""
 
 from .default import DefaultMethod
-from modin.utils import hashable
 
 import pandas
 from pandas.core.dtypes.common import is_list_like, is_numeric_dtype
@@ -129,36 +128,6 @@ class GroupBy:
             return cls.inplace_applyier_builder(key, kwargs["func_dict"])
         else:
             return cls.inplace_applyier_builder(key)
-
-    @staticmethod
-    def is_external_by(df, axis, by):
-        """
-        Check whether passed `by` is external.
-
-        Parameters
-        ----------
-        df : pandas.DataFrame
-            Source DataFrame to group.
-        axis : {0, 1}
-            Grouping axis.
-        by : object
-            Object to determine groups for the GroupBy.
-
-        Returns
-        -------
-        bool
-
-        Notes
-        -----
-        External 'by' means such kind of 'by' that does not belong to the source
-        frame anyhow.
-        """
-        if not is_list_like(by) or isinstance(by, (pandas.DataFrame, pandas.Series)):
-            return False
-        return all(
-            not (hashable(current_by) and current_by in df.axes[axis ^ 1])
-            for current_by in by
-        )
 
     @classmethod
     def build_aggregate_method(cls, key):

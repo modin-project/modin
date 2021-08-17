@@ -614,9 +614,7 @@ class DataFrameGroupBy(object):
             result.name = (
                 self._df.name
                 if isinstance(self._df, Series)
-                else self._selection[0]
-                if self._selection is not None
-                else None
+                else (self._selection[0] if self._selection is not None else None)
             )
         else:
             result.name = None

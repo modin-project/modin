@@ -222,11 +222,9 @@ class PandasFramePartitionManager(ABC):
         """
         partitions_kwargs = None
         if selection is not None:
-            partition_indices = list(selection.keys())
+            parts_to_select = list(selection.keys())
             partitions = (
-                partitions[partition_indices]
-                if axis
-                else partitions[:, partition_indices]
+                partitions[parts_to_select] if axis else partitions[:, parts_to_select]
             )
             partitions_kwargs = tuple(
                 {"partition_selection": labels} for labels in selection.values()
@@ -398,7 +396,6 @@ class PandasFramePartitionManager(ABC):
         enumerate_partitions=False,
         lengths=None,
         partitions_kwargs=None,
-        **kwargs,
     ):
         """
         Broadcast the `right` partitions to `left` and apply `apply_func` along full `axis`.
@@ -533,7 +530,7 @@ class PandasFramePartitionManager(ABC):
         keep_partitioning=False,
         lengths=None,
         enumerate_partitions=False,
-        **kwargs,
+        partitions_kwargs=None,
     ):
         """
         Apply `map_func` to every partition in `partitions` along given `axis`.
@@ -573,7 +570,7 @@ class PandasFramePartitionManager(ABC):
             right=None,
             lengths=lengths,
             enumerate_partitions=enumerate_partitions,
-            **kwargs,
+            partitions_kwargs=partitions_kwargs,
         )
 
     @classmethod

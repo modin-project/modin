@@ -131,16 +131,14 @@ class GroupbyReduceFunction(MapReduceFunction):
             selection if selection is None else df.columns.intersection(selection)
         )
 
-        missmatched_cols = pandas.Index([])
         if other is not None:
             # Other is a broadcasted partition that represents 'by' columns
             # Concatenate it with 'df' to group on its columns names
             if not drop:
                 other = other.squeeze(axis=axis ^ 1)
             if isinstance(other, pandas.DataFrame):
-                missmatched_cols = other.columns.difference(df.columns)
                 df = pandas.concat(
-                    [df] + [other[missmatched_cols]],
+                    [df, other[other.columns.difference(df.columns)]],
                     axis=1,
                 )
                 other = list(other.columns)
@@ -265,9 +263,6 @@ class GroupbyReduceFunction(MapReduceFunction):
             else:
                 drop = True
             result = result.reset_index(drop=drop)
-
-        if result.empty and not as_index and len(result) > 0:
-            result.index = []
 
         # Result could not always be a frame, so wrapping it into DataFrame
         return pandas.DataFrame(result)

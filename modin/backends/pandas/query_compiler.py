@@ -2833,9 +2833,6 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 if len(result.columns) > 1:
                     result.drop(columns=cols_to_drop, inplace=True)
 
-                if result.empty and not as_index and len(result) > 0:
-                    result.index = []
-
                 return result
 
             try:
