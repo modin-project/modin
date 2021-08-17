@@ -1079,13 +1079,7 @@ class TestCsv:
         for name1, name2 in zip(get_internal_df(read_df).index.names, [None, "a"]):
             assert name1 == name2
 
-    @pytest.mark.xfail(
-        condition="config.getoption('--simulate-cloud').lower() != 'off'",
-        reason="The reason of tests fail in `cloud` mode is unknown for now - issue #2340",
-    )
-    def test_read_csv_empty_frame(
-        self,
-    ):
+    def test_read_csv_empty_frame(self):
         eval_io(
             fn_name="read_csv",
             # read_csv kwargs
@@ -1122,10 +1116,6 @@ class TestTable:
 
         df_equals(modin_df, pandas_df)
 
-    @pytest.mark.xfail(
-        condition="config.getoption('--simulate-cloud').lower() != 'off'",
-        reason="The reason of tests fail in `cloud` mode is unknown for now - issue #2340",
-    )
     def test_read_table_empty_frame(self, make_csv_file):
         unique_filename = get_unique_filename()
         make_csv_file(filename=unique_filename, delimiter="\t")
@@ -2006,10 +1996,6 @@ class TestFwf:
         finally:
             teardown_test_files([unique_filename])
 
-    @pytest.mark.xfail(
-        condition="config.getoption('--simulate-cloud').lower() != 'off'",
-        reason="The reason of tests fail in `cloud` mode is unknown for now - issue #3264",
-    )
     def test_read_fwf_empty_frame(self):
         kwargs = {
             "usecols": [0],
