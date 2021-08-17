@@ -2353,13 +2353,16 @@ class BasePandasDataset(object):
                 res_columns = self.columns
                 from .general import concat
 
-                new_frame = (
-                    concat([filled_df, self.iloc[:, :-periods]], axis="columns")
-                    if periods > 0
-                    else concat([self.iloc[:, -periods:], filled_df], axis="columns")
-                )
-                new_frame.columns = res_columns
-                return new_frame
+                if periods > 0:
+                    dropped_df = self.drop(self.columns[-periods:], axis="columns")
+                    new_frame = concat([filled_df, dropped_df], axis="columns")
+                    new_frame.columns = res_columns
+                    return new_frame
+                else:
+                    dropped_df = self.drop(self.columns[:-periods], axis="columns")
+                    new_frame = concat([dropped_df, filled_df], axis="columns")
+                    new_frame.columns = res_columns
+                    return new_frame
         else:
             return self.tshift(periods, freq)
 
