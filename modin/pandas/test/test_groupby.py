@@ -316,6 +316,7 @@ def test_simple_row_groupby(by, as_index, col1_category):
 
     modin_groupby_equals_pandas(modin_groupby, pandas_groupby)
     eval_ngroups(modin_groupby, pandas_groupby)
+
     eval_shift(modin_groupby, pandas_groupby)
     eval_general(modin_groupby, pandas_groupby, lambda df: df.ffill(), is_default=True)
     eval_general(
@@ -1137,7 +1138,9 @@ def eval___getitem__(md_grp, pd_grp, additional_tests=None):
         else:
             df_equals(df1, df2)
 
-    def test_function(md_grp, pd_grp, selection_cols):
+    def test_function(md_grp, pd_grp, selection):
+        md_grp, pd_grp = md_grp[selection], pd_grp[selection]
+
         modin_groupby_equals_pandas(md_grp, pd_grp)
         # Non-numeric aggregation test, MapReduce
         eval_general(md_grp, pd_grp, lambda grp: grp.count(), comparator=comparator)
@@ -1193,35 +1196,26 @@ def eval___getitem__(md_grp, pd_grp, additional_tests=None):
         for test in additional_tests:
             eval_general(md_grp, pd_grp, test, comparator=comparator)
 
-    all_columns = md_grp._df.columns.tolist()
-
-    md_slice, pd_slice = md_grp[all_columns], pd_grp[all_columns]
-    test_function(md_slice, pd_slice, all_columns)
+    all_columns = md_grp._df.columns
+    test_function(md_grp, pd_grp, all_columns)
 
     half_columns = all_columns[: len(all_columns) // 2]
+    test_function(md_grp, pd_grp, half_columns)
 
-    md_slice, pd_slice = md_grp[half_columns], pd_grp[half_columns]
-    test_function(md_slice, pd_slice, half_columns)
-
-    non_by_items = md_grp._df.columns.difference(md_grp._get_internal_by()).tolist()
+    non_by_items = all_columns.difference(md_grp._get_internal_by()).tolist()
 
     if len(non_by_items) == 0:
         return
 
     single_item = non_by_items[0]
-
-    md_slice, pd_slice = md_grp[single_item], pd_grp[single_item]
-    test_function(md_slice, pd_slice, [single_item])
+    test_function(md_grp, pd_grp, single_item)
 
     if len(non_by_items) == 1:
         return
 
     multiple_items = non_by_items[:2]
-    md_slice, pd_slice = md_grp[multiple_items], pd_grp[multiple_items]
-    test_function(md_slice, pd_slice, multiple_items)
-
-    md_slice, pd_slice = md_grp[non_by_items], pd_grp[non_by_items]
-    test_function(md_slice, pd_slice, non_by_items)
+    test_function(md_grp, pd_grp, multiple_items)
+    test_function(md_grp, pd_grp, non_by_items)
 
 
 def eval_groups(modin_groupby, pandas_groupby):

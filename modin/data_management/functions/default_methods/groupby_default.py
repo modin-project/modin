@@ -16,7 +16,7 @@
 from .default import DefaultMethod
 
 import pandas
-from pandas.core.dtypes.common import is_list_like, is_numeric_dtype
+from pandas.core.dtypes.common import is_list_like
 
 
 # FIXME: there is no sence of keeping `GroupBy` and `GroupByDefault` logic in a different
@@ -163,6 +163,7 @@ class GroupBy:
             grp = df.groupby(by, axis=axis, **groupby_args)
 
             if selection is not None:
+                selection = selection if is_list_like(selection) else (selection,)
                 grp = grp[selection]
 
             agg_func = cls.get_func(grp, key, **kwargs)
@@ -213,6 +214,8 @@ class GroupBy:
             **kwargs
         ):
             """Group DataFrame and apply aggregation function to each group."""
+            if selection is not None:
+                selection = selection if is_list_like(selection) else (selection,)
             if not isinstance(by, (pandas.Series, pandas.DataFrame)):
                 by = cls.validate_by(by)
                 grp = df.groupby(by=by, axis=axis, **groupby_args)
@@ -228,15 +231,8 @@ class GroupBy:
                     raise TypeError("No numeric types to aggregate.")
                 return result
 
-            if numeric_only:
-                df = df[
-                    (
-                        col
-                        for col, dtype in df.dtypes.items()
-                        if is_numeric_dtype(dtype)
-                        or (selection is not None and col in selection)
-                    )
-                ]
+            if numeric_only and selection is None:
+                df = df.select_dtypes(include="number")
 
             by = by.squeeze(axis=1)
             if (
@@ -363,8 +359,14 @@ class GroupByDefault(DefaultMethod):
         # We want to insert such internal-by-cols which are not presented
         # in the result in order to not create naming conflicts
         if selection is not None:
+            selection = selection if is_list_like(selection) else (selection,)
             if partition_selection is None:
                 partition_selection = selection
+            partition_selection = (
+                partition_selection
+                if is_list_like(partition_selection)
+                else (partition_selection,)
+            )
             if len(result_cols) != len(partition_selection):
                 cols_failed_to_select = pandas.Index(partition_selection).difference(
                     result_cols

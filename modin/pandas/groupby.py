@@ -302,10 +302,17 @@ class DataFrameGroupBy(object):
     def dtypes(self):
         if self._axis == 1:
             raise ValueError("Cannot call dtypes on groupby with axis=1")
+
+        def dtypes_getter(grp):
+            try:
+                return grp.dtypes
+            except AttributeError:
+                return grp.dtype
+
         if not self._as_index:
-            return self.apply(lambda df: df.dtypes)
+            return self.apply(dtypes_getter)
         else:
-            return self._apply_agg_function(lambda df: df.dtypes)
+            return self._apply_agg_function(dtypes_getter)
 
     def first(self, **kwargs):
         return self._default_to_pandas(lambda df: df.first(**kwargs))
@@ -335,7 +342,9 @@ class DataFrameGroupBy(object):
         selection = self._selection
         if selection is not None:
             internal_by = self._get_internal_by()
-            selection = [col for col in self._selection if col not in internal_by]
+            selection = [col for col in self._selection_list if col not in internal_by]
+            if self.ndim == 1:
+                selection = selection[0]
         return selection
 
     def __getitem__(self, key):
@@ -364,7 +373,7 @@ class DataFrameGroupBy(object):
         # Most of time indexing DataFrameGroupBy results in another DataFrameGroupBy object unless circumstances are
         # special in which case SeriesGroupBy has to be returned. Such circumstances are when key equals to a single
         # column name and is not a list of column names or list of one column name.
-        if isinstance(key, list):
+        if is_list_like(key):
             make_dataframe = True
         else:
             if self._as_index:
@@ -372,7 +381,7 @@ class DataFrameGroupBy(object):
                 make_dataframe = False
             else:
                 make_dataframe = True
-            key = [key]
+                key = [key]
         if make_dataframe:
             return DataFrameGroupBy(
                 self._df,
@@ -454,7 +463,9 @@ class DataFrameGroupBy(object):
             if any(
                 i
                 not in (
-                    self._df.columns if self._selection is None else self._selection
+                    self._df.columns
+                    if self._selection is None
+                    else self._selection_list
                 )
                 for i in func_dict.keys()
             ):
@@ -464,7 +475,7 @@ class DataFrameGroupBy(object):
                 if (
                     self.ndim == 2
                     if self._selection is None
-                    else len(self._selection) > 1
+                    else len(self._selection_list) > 1
                 ) and (
                     relabeling_required
                     or any(
@@ -614,7 +625,7 @@ class DataFrameGroupBy(object):
             result.name = (
                 self._df.name
                 if isinstance(self._df, Series)
-                else (self._selection[0] if self._selection is not None else None)
+                else (self._selection_list[0] if self._selection is not None else None)
             )
         else:
             result.name = None
@@ -756,11 +767,9 @@ class DataFrameGroupBy(object):
     def quantile(self, q=0.5, **kwargs):
         selection = self._get_non_by_selection()
 
-        dtypes = (
-            pandas.Series(self._df.dtypes)
-            if not isinstance(self._df.dtypes, pandas.Series)
-            else (self._df.dtypes if selection is None else self._df.dtypes[selection])
-        )
+        dtypes = self._df.dtypes if selection is None else self._df.dtypes[selection]
+        if not isinstance(dtypes, pandas.Series):
+            dtypes = pandas.Series(dtypes)
         if dtypes.map(lambda x: x == np.dtype("O")).all():
             raise TypeError("'quantile' cannot be performed against 'object' dtypes!")
 
@@ -812,6 +821,12 @@ class DataFrameGroupBy(object):
             Value of as_index parameter used to create DataFrameGroupBy object.
         """
         return self._kwargs.get("as_index")
+
+    @property
+    def _selection_list(self):
+        if self._selection is None:
+            return []
+        return self._selection if is_list_like(self._selection) else [self._selection]
 
     @property
     def _iter(self):
@@ -964,8 +979,6 @@ class DataFrameGroupBy(object):
         if selection is None:
             internal_by = self._get_internal_by()
             selection = self._selection
-            # Category by-columns are more prioritized than the aggregated ones,
-            # so dropping intersection from the selection
             if (
                 self._is_multi_by
                 and not self._as_index
@@ -976,9 +989,18 @@ class DataFrameGroupBy(object):
             ):
                 selection = [
                     col
-                    for col in (self._df.columns if selection is None else selection)
+                    for col in (
+                        self._df.columns
+                        if self._selection is None
+                        else self._selection_list
+                    )
                     if col not in internal_by
                 ]
+                if self.ndim == 1:
+                    assert (
+                        len(selection) == 1
+                    ), f"Single-dimensional object has non-single dimensional selection: {selection}."
+                    selection = selection[0]
 
         groupby_qc = self._query_compiler
         result = type(self._df)(
@@ -1033,9 +1055,18 @@ class DataFrameGroupBy(object):
             ):
                 selection = [
                     col
-                    for col in (self._df.columns if selection is None else selection)
+                    for col in (
+                        self._df.columns
+                        if self._selection is None
+                        else self._selection_list
+                    )
                     if col not in internal_by
                 ]
+                if self.ndim == 1:
+                    assert (
+                        len(selection) == 1
+                    ), f"Single-dimensional object has non-single dimensional selection: {selection}."
+                    selection = selection[0]
 
         new_manager = self._query_compiler.groupby_agg(
             by=self._by,
@@ -1092,10 +1123,11 @@ class DataFrameGroupBy(object):
                 by=by, axis=self._axis, squeeze=self._squeeze, **self._kwargs
             )
             if self._selection is not None:
-                selecton = (
-                    self._selection[0] if len(self._selection) == 1 else self._selection
-                )
-                grp = grp[selecton]
+                grp = grp[
+                    self._selection_list[0]
+                    if len(self._selection_list) == 1
+                    else self._selection_list
+                ]
             return f(
                 grp,
                 *args,
@@ -1147,7 +1179,7 @@ class SeriesGroupBy(DataFrameGroupBy):
                             ),
                             columns=None
                             if self._selection is None
-                            else self._df.columns.get_indexer_for(self._selection),
+                            else self._df.columns.get_indexer_for(self._selection_list),
                         )
                     ),
                 )
@@ -1160,7 +1192,7 @@ class SeriesGroupBy(DataFrameGroupBy):
                     Series(
                         index=None
                         if self._selection is None
-                        else self._index.get_indexer_for(self._selection),
+                        else self._index.get_indexer_for(self._selection_list),
                         columns=self._df.columns.get_indexer_for(
                             self._index_grouped[k].unique()
                         ),

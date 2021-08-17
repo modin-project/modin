@@ -2735,7 +2735,13 @@ class PandasQueryCompiler(BaseQueryCompiler):
             groupby_kwargs["as_index"] = True
 
             partition_selection = (
-                selection if selection is None else df.columns.intersection(selection)
+                selection
+                if selection is None
+                else (
+                    df.columns.intersection(selection)
+                    if is_list_like(selection)
+                    else selection
+                )
             )
 
             internal_by_cols = pandas.Index([])
@@ -2846,7 +2852,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         if isinstance(agg_func, dict):
             apply_indices = tuple(agg_func.keys())
         if selection is not None and apply_indices is None:
-            apply_indices = selection
+            apply_indices = selection if is_list_like(selection) else (selection,)
 
         new_modin_frame = self._modin_frame.broadcast_apply_full_axis(
             axis=axis,
