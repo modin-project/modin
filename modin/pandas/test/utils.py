@@ -729,7 +729,7 @@ def eval_general(
 
 def eval_io(
     fn_name,
-    comparator=None,
+    comparator=df_equals,
     cast_to_str=False,
     check_exception_type=True,
     raising_exceptions=io_ops_bad_exc,
@@ -745,8 +745,8 @@ def eval_io(
     ----------
     fn_name: str
         I/O operation name ("read_csv" for example).
-    comparator: obj, optional
-        Function to perform comparison. `df_equals` by default.
+    comparator: obj
+        Function to perform comparison.
     cast_to_str: bool
         There could be some missmatches in dtypes, so we're
         casting the whole frame to `str` before comparison.
@@ -775,7 +775,6 @@ def eval_io(
             pd,
             pandas,
             applyier,
-            comparator=df_equals if comparator is None else comparator,
             check_exception_type=check_exception_type,
             raising_exceptions=raising_exceptions,
             check_kwargs_callable=check_kwargs_callable,
