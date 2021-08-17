@@ -1415,6 +1415,34 @@ class TestMerge:
 
         run_and_compare(merge, data=self.dt_data1, data2=self.dt_data2)
 
+    left_data = {"a": [1, 2, 3, 4], "b": [10, 20, 30, 40], "c": [11, 12, 13, 14]}
+    right_data = {"c": [1, 2, 3, 4], "b": [10, 20, 30, 40], "d": [100, 200, 300, 400]}
+
+    @pytest.mark.parametrize("how", how_values)
+    @pytest.mark.parametrize(
+        "left_on, right_on", [["a", "c"], [["a", "b"], ["c", "b"]]]
+    )
+    def test_merge_left_right_on(self, how, left_on, right_on):
+        def merge(df1, df2, how, left_on, right_on, **kwargs):
+            return df1.merge(df2, how=how, left_on=left_on, right_on=right_on)
+
+        run_and_compare(
+            merge,
+            data=self.left_data,
+            data2=self.right_data,
+            how=how,
+            left_on=left_on,
+            right_on=right_on,
+        )
+        run_and_compare(
+            merge,
+            data=self.right_data,
+            data2=self.left_data,
+            how=how,
+            left_on=right_on,
+            right_on=left_on,
+        )
+
 
 class TestBinaryOp:
     data = {
