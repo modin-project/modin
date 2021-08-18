@@ -272,6 +272,10 @@ class TestCsv:
     ):
         if names is lib.no_default:
             pytest.skip("some parameters combiantions fails: issue #2312")
+        if header in ["infer", None] and names is not lib.no_default:
+            pytest.skip(
+                "the column stores heterogeneous data that is not converted to a common type"
+            )
         eval_io(
             fn_name="read_csv",
             # read_csv kwargs
