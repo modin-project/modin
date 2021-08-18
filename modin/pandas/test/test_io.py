@@ -274,7 +274,7 @@ class TestCsv:
             pytest.skip("some parameters combiantions fails: issue #2312")
         if header in ["infer", None] and names is not lib.no_default:
             pytest.skip(
-                "the column stores heterogeneous data that is not converted to a common type"
+                "Heterogeneous data in a column is not cast to a common type: issue #3346"
             )
         eval_io(
             fn_name="read_csv",
