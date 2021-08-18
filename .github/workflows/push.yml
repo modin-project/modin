@@ -93,9 +93,8 @@ jobs:
       run:
         shell: bash -l {0}
     env:
-      MODIN_MEMORY: 1000000000
       MODIN_EXPERIMENTAL: "True"
-      MODIN_ENGINE: "ray"
+      MODIN_ENGINE: "native"
       MODIN_BACKEND: "omnisci"
     name: Test OmniSci backend, Python 3.7
     steps:
@@ -115,9 +114,9 @@ jobs:
           conda list
       - name: Install HDF5
         run: sudo apt update && sudo apt install -y libhdf5-dev
-      - run: pytest modin/experimental/engines/omnisci_on_ray/test/test_dataframe.py
-      - run: pytest modin/pandas/test/test_io.py::TestCsv
-      - run: |
+        run: pytest modin/experimental/engines/omnisci_on_native/test/test_dataframe.py
+        run: pytest modin/pandas/test/test_io.py::TestCsv
+        run: |
           curl -o codecov https://codecov.io/bash
           VERSION=$(grep -o 'VERSION=\"[0-9\.]*\"' codecov | cut -d'"' -f2);
           curl -o SHA512SUM "https://raw.githubusercontent.com/codecov/codecov-bash/${VERSION}/SHA512SUM"

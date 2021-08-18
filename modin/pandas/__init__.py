@@ -106,16 +106,20 @@ def _update_engine(publisher: Parameter):
     from modin.config import Backend, CpuCount
 
     if publisher.get() == "Ray":
-        from modin.engines.ray.utils import initialize_ray
+        if _is_first_update.get("Ray", True):
+            from modin.engines.ray.utils import initialize_ray
 
-        # With OmniSci backend there is only a single worker per node
+            initialize_ray()
+    elif publisher.get() == "Native":
+        # With OmniSci engine there is only a single worker per node
         # and we allow it to work on all cores.
         if Backend.get() == "Omnisci":
             CpuCount.put(1)
             os.environ["OMP_NUM_THREADS"] = str(multiprocessing.cpu_count())
-        if _is_first_update.get("Ray", True):
-            initialize_ray()
-
+        else:
+            raise ValueError(
+                f"Backend should be 'Omnisci' with 'Native' engine, but provided {Backend.get()}."
+            )
     elif publisher.get() == "Dask":
         if _is_first_update.get("Dask", True):
             from modin.engines.dask.utils import initialize_dask

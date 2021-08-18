@@ -22,7 +22,7 @@ from modin.config import IsExperimental, Engine, Backend
 from modin.pandas.test.utils import io_ops_bad_exc
 
 IsExperimental.put(True)
-Engine.put("ray")
+Engine.put("native")
 Backend.put("omnisci")
 
 import modin.pandas as pd
@@ -37,8 +37,8 @@ from modin.pandas.test.utils import (
     eval_io,
 )
 
-from modin.experimental.engines.omnisci_on_ray.frame.partition_manager import (
-    OmnisciOnRayFramePartitionManager,
+from modin.experimental.engines.omnisci_on_native.frame.partition_manager import (
+    OmnisciOnNativeFramePartitionManager,
 )
 
 
@@ -768,7 +768,7 @@ class TestGroupby:
         run_and_compare(groupby_count, data=self.data, cols=cols, as_index=as_index)
 
     @pytest.mark.xfail(
-        reason="Currently mean() passes a lambda into backend which cannot be executed on omnisci backend"
+        reason="Currently mean() passes a lambda into backend which cannot be executed on omnisci engine"
     )
     @pytest.mark.parametrize("cols", cols_value)
     @pytest.mark.parametrize("as_index", bool_arg_values)
@@ -1921,7 +1921,7 @@ class TestDropna:
     @pytest.mark.parametrize("dropna", [True, False])
     def test_dropna_groupby(self, by, dropna):
         def applier(df, *args, **kwargs):
-            # OmniSci backend preserves NaNs at the result of groupby,
+            # OmniSci engine preserves NaNs at the result of groupby,
             # so replacing NaNs with '0' to match with Pandas.
             # https://github.com/modin-project/modin/issues/2878
             return df.groupby(by=by, dropna=dropna).sum().fillna(0)
@@ -1941,7 +1941,7 @@ class TestUnsupportedColumns:
     )
     def test_unsupported_columns(self, data, is_good):
         pandas_df = pandas.DataFrame({"col": data})
-        obj, bad_cols = OmnisciOnRayFramePartitionManager._get_unsupported_cols(
+        obj, bad_cols = OmnisciOnNativeFramePartitionManager._get_unsupported_cols(
             pandas_df
         )
         if is_good:
