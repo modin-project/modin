@@ -109,7 +109,7 @@ jobs:
         with:
           activate-environment: modin_on_omnisci
           environment-file: requirements/env_omnisci.yml
-          channel-priority: strict
+          python-version: 3.7
           use-only-tar-bz2: true # IMPORTANT: This needs to be set for caching to work properly!
       - name: Conda environment
         shell: bash -l {0}
