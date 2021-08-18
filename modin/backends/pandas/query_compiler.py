@@ -51,7 +51,6 @@ from modin.data_management.functions import (
     GroupbyReduceFunction,
     groupby_reduce_functions,
 )
-from modin.data_management.functions.default_methods import GroupByDefault
 
 
 def _get_axis(axis):
@@ -2805,7 +2804,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 result.drop(columns=missmatched_cols, inplace=True, errors="ignore")
 
                 if not as_index:
-                    drop, lvls_to_drop = GroupByDefault.handle_as_index(
+                    drop, lvls_to_drop = GroupbyReduceFunction.handle_as_index(
                         result_cols,
                         result.index.names,
                         internal_by_cols,
@@ -2817,25 +2816,14 @@ class PandasQueryCompiler(BaseQueryCompiler):
                     if len(lvls_to_drop) > 0:
                         result.index = result.index.droplevel(lvls_to_drop)
                     result.reset_index(drop=drop, inplace=True)
-
-                new_index_names = [
-                    None
-                    if isinstance(name, str) and name.startswith("__reduced__")
-                    else name
-                    for name in result.index.names
-                ]
-
-                cols_to_drop = (
-                    result.columns[result.columns.str.match(r"__reduced__.*", na=False)]
-                    if hasattr(result.columns, "str")
-                    else []
-                )
-
-                result.index.names = new_index_names
-
-                # Not dropping columns if result is Series
-                if len(result.columns) > 1:
-                    result.drop(columns=cols_to_drop, inplace=True)
+                else:
+                    new_index_names = [
+                        None
+                        if isinstance(name, str) and name.startswith("__reduced__")
+                        else name
+                        for name in result.index.names
+                    ]
+                    result.index.names = new_index_names
 
                 return result
 

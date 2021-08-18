@@ -615,7 +615,7 @@ class DataFrameGroupBy(object):
             drop=False,
             idx_name=None,
             squeeze=self._squeeze,
-            selection=self._selection,
+            selection=None,
             **self._kwargs,
         )
         result = work_object._wrap_aggregation(

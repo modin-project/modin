@@ -17,7 +17,6 @@ import pandas
 from pandas.core.dtypes.common import is_list_like
 
 from .mapreducefunction import MapReduceFunction
-from .default_methods import GroupByDefault
 from modin.utils import try_cast_to_pandas, hashable
 
 
@@ -255,7 +254,7 @@ class GroupbyReduceFunction(MapReduceFunction):
             result = result.to_frame()
 
         if not as_index:
-            drop, lvls_to_drop = GroupByDefault.handle_as_index(
+            drop, lvls_to_drop = cls.handle_as_index(
                 result.columns,
                 result.index.names,
                 by_part,
@@ -534,6 +533,123 @@ class GroupbyReduceFunction(MapReduceFunction):
             return result
 
         return _map, _reduce
+
+    @staticmethod
+    def handle_as_index(
+        result_cols,
+        result_index_names,
+        internal_by_cols,
+        selection=None,
+        partition_selection=None,
+        partition_idx=0,
+        drop=True,
+        method=None,
+    ):
+        """
+        Help to handle ``as_index=False`` parameter for the GroupBy result.
+
+        This function resolve naming conflicts of the index levels to insert and the column labels
+        for the GroupBy result. The logic of this function assumes that the initial GroupBy result
+        was computed as ``as_index=True``.
+
+        Parameters
+        ----------
+        result_cols : pandas.Index
+            Columns of the GroupBy result.
+        result_index_names : list-like
+            Index names of the GroupBy result.
+        internal_by_cols : list-like
+            Internal 'by' columns.
+        selection : label or list of labels, optional
+            Set of columns to which aggregation was applied. If not specified
+            assuming that aggregation was applied to all of the available columns.
+        partition_selection : label or list of labels, optional
+            Set of columns at this particular partition to which aggregation was applied.
+            If not specified assuming that aggregation at this partition was applied
+            to all of the columns listed in the `selection` parameter.
+        partition_idx : int, default: 0
+            Positional index of the current partition.
+        drop : bool, default: True
+            Indicates whether or not all of the `by` data came from the same frame.
+        method : str, optional
+            Name of the groupby function. This is a hint to be able to do special casing.
+            Note: this parameter is a legacy from the ``groupby_size`` implementation,
+            it's a hacky one and probably will be removed in the future.
+
+        Returns
+        -------
+        drop : bool
+            Indicates whether to drop all index levels (True) or insert them into the
+            resulting columns (False).
+        lvls_to_drop : list of ints
+            Contains numeric indices of the levels of the result index to drop as intersected.
+
+        Examples
+        --------
+        >>> groupby_result = compute_groupby_without_processing_as_index_parameter()
+        >>> if not as_index:
+        >>>     drop, lvls_to_drop = handle_as_index(**extract_required_params(groupby_result))
+        >>>     if len(lvls_to_drop) > 0:
+        >>>         groupby_result.index = groupby_result.index.droplevel(lvls_to_drop)
+        >>>     groupby_result_with_processed_as_index_parameter = groupby_result.reset_index(drop=drop)
+        >>> else:
+        >>>     groupby_result_with_processed_as_index_parameter = groupby_result
+        """
+        if partition_idx != 0 or (not drop and method != "size"):
+            return True, []
+
+        if method == "size":
+            return False, []
+
+        if selection is not None:
+            selection = selection if is_list_like(selection) else (selection,)
+            if partition_selection is None:
+                partition_selection = selection
+            partition_selection = (
+                partition_selection
+                if is_list_like(partition_selection)
+                else (partition_selection,)
+            )
+            if len(result_cols) != len(partition_selection):
+                cols_failed_to_select = pandas.Index(partition_selection).difference(
+                    result_cols
+                )
+                # If some of the selected 'by' columns were dropped as non-suitable for
+                # the current aggregation it's allowed to insert them back. Dropping
+                # them from the selection to be able to do so:
+                selection = pandas.Index(selection).difference(cols_failed_to_select)
+
+        if not isinstance(internal_by_cols, pandas.Index):
+            if not is_list_like(internal_by_cols):
+                internal_by_cols = [internal_by_cols]
+            internal_by_cols = pandas.Index(internal_by_cols)
+
+        internal_by_cols = (
+            internal_by_cols[~internal_by_cols.str.match(r"__reduced__.*", na=False)]
+            if hasattr(internal_by_cols, "str")
+            else internal_by_cols
+        )
+
+        # We want to insert such internal-by-cols that are not presented
+        # in the result in order to not create naming conflicts
+        cols_to_insert = (
+            internal_by_cols.copy()
+            if selection is None and internal_by_cols.nlevels != result_cols.nlevels
+            else internal_by_cols.difference(
+                result_cols if selection is None else selection
+            )
+        )
+
+        lvls_to_drop = [
+            i for i, name in enumerate(result_index_names) if name not in cols_to_insert
+        ]
+
+        drop = False
+        if len(lvls_to_drop) == len(result_index_names):
+            drop = True
+            lvls_to_drop = []
+
+        return drop, lvls_to_drop
 
 
 # This dict is a map for function names and their equivalents in MapReduce

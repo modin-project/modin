@@ -14,6 +14,7 @@
 """Module houses default GroupBy functions builder class."""
 
 from .default import DefaultMethod
+from modin.data_management.functions import GroupbyReduceFunction
 
 import pandas
 from pandas.core.dtypes.common import is_list_like
@@ -266,7 +267,7 @@ class GroupBy:
                     if (drop or method == "size") and isinstance(by, pandas.Series)
                     else by
                 )
-                drop, lvls_to_drop = GroupByDefault.handle_as_index(
+                drop, lvls_to_drop = GroupbyReduceFunction.handle_as_index(
                     result.columns,
                     result.index.names,
                     internal_by,
@@ -344,123 +345,3 @@ class GroupByDefault(DefaultMethod):
             aggregation.
         """
         return cls.call(GroupBy.build_groupby(func), fn_name=func.__name__, **kwargs)
-
-    @staticmethod
-    def handle_as_index(
-        result_cols,
-        result_index_names,
-        internal_by_cols,
-        selection=None,
-        partition_selection=None,
-        partition_idx=0,
-        drop=True,
-        method=None,
-    ):
-        """
-        Help to handle ``as_index=False`` parameter for the GroupBy result.
-
-        This function resolve naming conflicts of the index levels to insert and the column labels
-        for the GroupBy result. The logic of this function assumes that the initial GroupBy result
-        was computed as ``as_index=True``.
-
-        Parameters
-        ----------
-        result_cols : pandas.Index
-            Columns of the GroupBy result.
-        result_index_names : list-like
-            Index names of the GroupBy result.
-        internal_by_cols : list-like
-            Internal 'by' columns.
-        selection : label or list of labels, optional
-            Set of columns to which aggregation was applied. If not specified
-            assuming that aggregation was applied to all of the available columns.
-        partition_selection : label or list of labels, optional
-            Set of columns at this particular partition to which aggregation was applied.
-            If not specified assuming that aggregation at this partition was applied
-            to all of the columns listed in the `selection` parameter.
-        partition_idx : int, default: 0
-            Positional index of the current partition.
-        drop : bool, default: True
-            Indicates whether or not all of the `by` data came from the same frame.
-        method : str, optional
-            Name of the groupby function. This is a hint to be able to do special casing.
-
-        Returns
-        -------
-        drop : bool
-            Indicates whether to drop all index levels (True) or insert them into the
-            resulting columns (False).
-        lvls_to_drop : list of ints
-            Contains numeric indices of the levels of the result index to drop as intersected.
-
-        Examples
-        --------
-        >>> groupby_result = compute_groupby_without_processing_as_index_parameter()
-        >>> if not as_index:
-        >>>     drop, lvls_to_drop = handle_as_index(**extract_required_params(groupby_result))
-        >>>     if len(lvls_to_drop) > 0:
-        >>>         groupby_result.index = groupby_result.index.droplevel(lvls_to_drop)
-        >>>     groupby_result_with_processed_as_index_parameter = groupby_result.reset_index(drop=drop)
-        >>> else:
-        >>>     groupby_result_with_processed_as_index_parameter = groupby_result
-        """
-        if partition_idx != 0 or (not drop and method != "size"):
-            return True, []
-
-        # We want to insert such internal-by-cols which are not presented
-        # in the result in order to not create naming conflicts
-        if selection is not None:
-            selection = selection if is_list_like(selection) else (selection,)
-            if partition_selection is None:
-                partition_selection = selection
-            partition_selection = (
-                partition_selection
-                if is_list_like(partition_selection)
-                else (partition_selection,)
-            )
-            if len(result_cols) != len(partition_selection):
-                cols_failed_to_select = pandas.Index(partition_selection).difference(
-                    result_cols
-                )
-                selection = pandas.Index(selection).difference(cols_failed_to_select)
-
-        if not isinstance(internal_by_cols, pandas.Index):
-            if not is_list_like(internal_by_cols):
-                internal_by_cols = [internal_by_cols]
-            internal_by_cols = pandas.Index(internal_by_cols)
-
-        internal_by_cols = (
-            internal_by_cols[~internal_by_cols.str.match(r"__reduced__.*", na=False)]
-            if hasattr(internal_by_cols, "str")
-            else internal_by_cols
-        )
-
-        cols_to_insert = (
-            internal_by_cols.difference(result_cols)
-            if internal_by_cols.nlevels == result_cols.nlevels
-            else internal_by_cols.copy()
-        )
-
-        drop = False
-        lvls_to_drop = [
-            i
-            for i, name in enumerate(result_index_names)
-            if (
-                (name not in cols_to_insert)
-                if selection is None or method == "size"
-                else (name in selection)
-            )
-        ]
-        if len(lvls_to_drop) == len(result_index_names):
-            drop = True
-            lvls_to_drop = []
-
-        if (len(result_index_names) == 1 and result_index_names[0] is None) or all(
-            name in result_cols.values for name in result_index_names
-        ):
-            drop = True
-
-        if method == "size":
-            drop = False
-
-        return drop, lvls_to_drop
