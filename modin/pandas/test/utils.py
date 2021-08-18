@@ -472,12 +472,12 @@ def assert_empty_frame_equal(df1, df2):
 
     Parameters
     ----------
-    df1: pandas.DataFrame or pandas.Series
-    df2: pandas.DataFrame or pandas.Series
+    df1 : pandas.DataFrame or pandas.Series
+    df2 : pandas.DataFrame or pandas.Series
 
     Raises
     ------
-    AssertionEror
+    AssertionError
         If check fails.
     """
 
