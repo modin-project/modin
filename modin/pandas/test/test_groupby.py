@@ -34,6 +34,7 @@ NPartitions.put(4)
 
 
 def modin_groupby_equals_pandas(modin_groupby, pandas_groupby):
+    assert modin_groupby.ndim == pandas_groupby.ndim
     for g1, g2 in zip(modin_groupby, pandas_groupby):
         assert g1[0] == g2[0]
         df_equals(g1[1], g2[1])

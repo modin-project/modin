@@ -859,19 +859,31 @@ class TestGroupby:
     @pytest.mark.parametrize("by", [["a"], ["a", "b", "c"]])
     @pytest.mark.parametrize("agg", ["sum", "size"])
     @pytest.mark.parametrize("as_index", [True, False])
-    def test_groupby_agg_by_col(self, by, agg, as_index):
+    @pytest.mark.parametrize(
+        "selection", [None, ["a"], ["b"], ["b", "c"], ["a", "b", "c"]]
+    )
+    def test_groupby_agg_by_col(self, by, agg, as_index, selection):
         def simple_agg(df, **kwargs):
-            return df.groupby(by, as_index=as_index).agg(agg)
+            grp = df.groupby(by, as_index=as_index)
+            if selection is not None:
+                grp = grp[selection]
+            return grp.agg(agg)
 
         run_and_compare(simple_agg, data=self.data)
 
         def dict_agg(df, **kwargs):
-            return df.groupby(by, as_index=as_index).agg({by[0]: agg})
+            grp = df.groupby(by, as_index=as_index)
+            if selection is not None:
+                grp = grp[selection]
+            return grp.agg({by[0]: agg})
 
         run_and_compare(dict_agg, data=self.data)
 
         def dict_agg_all_cols(df, **kwargs):
-            return df.groupby(by, as_index=as_index).agg({col: agg for col in by})
+            grp = df.groupby(by, as_index=as_index)
+            if selection is not None:
+                grp = grp[selection]
+            return grp.agg({col: agg for col in by})
 
         run_and_compare(dict_agg_all_cols, data=self.data)
 

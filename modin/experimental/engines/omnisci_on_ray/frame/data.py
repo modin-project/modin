@@ -395,7 +395,7 @@ class OmnisciOnRayFrame(PandasFrame):
             Aggregates to compute.
         groupby_args : dict
             Additional groupby args.
-        selection : list of labels, optional
+        selection : label or list of labels, optional
             Set of columns to apply aggregation on, by default aggregation is applied
             to all of the available columns.
         **kwargs : dict
@@ -406,6 +406,8 @@ class OmnisciOnRayFrame(PandasFrame):
         OmnisciOnRayFrame
             The new frame.
         """
+        if selection is not None and not is_list_like(selection):
+            selection = (selection,)
         # Currently we only expect 'by' to be a projection of the same frame.
         # If 'by' holds a list of columns/series, then we create such projection
         # to re-use code.

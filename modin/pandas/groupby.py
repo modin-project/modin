@@ -52,6 +52,7 @@ class DataFrameGroupBy(object):
         idx_name,
         drop,
         selection=None,
+        ndim=2,
         **kwargs,
     ):
         self._axis = axis
@@ -62,6 +63,7 @@ class DataFrameGroupBy(object):
         self._by = by
         self._drop = drop
         self._selection = selection
+        self._ndim = ndim
 
         if (
             level is None
@@ -184,18 +186,17 @@ class DataFrameGroupBy(object):
     @property
     def ndim(self):
         """
-        Return 2.
+        Return the number of dimensions of the source DataFrame.
 
         Returns
         -------
         int
-            Returns 2.
 
         Notes
         -----
         Deprecated and removed in pandas and will be likely removed in Modin.
         """
-        return 2  # ndim is always 2 for DataFrames
+        return self._ndim
 
     def shift(self, periods=1, freq=None, axis=0, fill_value=None):
         def _shift(data, periods, freq, axis, fill_value, is_set_nan_rows=True):
@@ -460,6 +461,7 @@ class DataFrameGroupBy(object):
                 kwargs["squeeze"] = True
                 make_dataframe = False
             else:
+                kwargs["ndim"] = 1
                 make_dataframe = True
                 key = [key]
         if make_dataframe:
@@ -549,23 +551,14 @@ class DataFrameGroupBy(object):
                 )
                 for i in func_dict.keys()
             ):
-                # If we're dealing with 2D aggregation and renaming aggregation is met then
-                # it's proper to raise a `KeyError`, otherwise, it's `SpecificationError` case
-                # (following pandas exceptions notation)
-                if (
-                    self.ndim == 2
-                    if self._selection is None
-                    else len(self._selection_list) > 1
-                ) and (
-                    relabeling_required
-                    or any(
-                        is_list_like(func)
-                        for func in func_dict.values()
-                        if is_list_like(func)
-                    )
-                ):
+                if self.ndim == 2:
                     raise KeyError("Non existed column provided to the aggregation")
-                else:
+                # Pandas allows non-renaming aggregation for a single-dimensional groupby
+                elif relabeling_required or any(
+                    is_list_like(func)
+                    for func in func_dict.values()
+                    if is_list_like(func)
+                ):
                     from pandas.core.base import SpecificationError
 
                     raise SpecificationError("nested renamer is not supported")
@@ -702,7 +695,7 @@ class DataFrameGroupBy(object):
                 if "__reduced__" in result.columns
                 else result
             )
-        elif self.ndim == 1:
+        elif isinstance(self, SeriesGroupBy):
             result.name = (
                 self._df.name
                 if isinstance(self._df, Series)
@@ -803,6 +796,7 @@ class DataFrameGroupBy(object):
             drop=self._drop,
             squeeze=self._squeeze,
             selection=self._selection,
+            ndim=self.ndim,
             **new_groupby_kwargs,
         )
         result = work_object._apply_agg_function(lambda df: df.fillna(**kwargs))
@@ -1172,9 +1166,7 @@ class DataFrameGroupBy(object):
             )
             if self._selection is not None:
                 grp = grp[
-                    self._selection_list[0]
-                    if len(self._selection_list) == 1
-                    else self._selection_list
+                    self._selection_list[0] if self.ndim == 1 else self._selection_list
                 ]
             return f(
                 grp,
