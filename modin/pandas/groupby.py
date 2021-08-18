@@ -543,13 +543,13 @@ class DataFrameGroupBy(object):
             )
             func_dict = {col: try_get_str_func(fn) for col, fn in func_dict.items()}
             if any(
-                i
+                col
                 not in (
                     self._df.columns
                     if self._selection is None
                     else self._selection_list
                 )
-                for i in func_dict.keys()
+                for col in func_dict.keys()
             ):
                 if self.ndim == 2:
                     raise KeyError("Non existed column provided to the aggregation")
@@ -1064,10 +1064,9 @@ class DataFrameGroupBy(object):
         if selection is None:
             selection = self._non_conflict_selection
 
-        groupby_qc = self._query_compiler
         result = type(self._df)(
             query_compiler=qc_method(
-                groupby_qc,
+                self._query_compiler,
                 by=self._by,
                 axis=self._axis,
                 groupby_args=self._kwargs,
