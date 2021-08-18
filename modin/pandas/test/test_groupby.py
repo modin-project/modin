@@ -1202,7 +1202,7 @@ def eval___getitem__(md_grp, pd_grp, additional_tests=None):
     half_columns = all_columns[: len(all_columns) // 2]
     test_function(md_grp, pd_grp, half_columns)
 
-    non_by_items = all_columns.difference(md_grp._get_internal_by()).tolist()
+    non_by_items = all_columns.difference(md_grp._internal_by).tolist()
 
     if len(non_by_items) == 0:
         return

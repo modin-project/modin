@@ -19,6 +19,7 @@ import pandas.core.groupby
 from pandas.core.dtypes.common import is_list_like
 from pandas.core.aggregation import reconstruct_func
 import pandas.core.common as com
+from pandas._libs.lib import no_default
 from types import BuiltinFunctionType
 from collections.abc import Iterable
 
@@ -135,7 +136,7 @@ class DataFrameGroupBy(object):
             type(self._query_compiler).groupby_any,
             lambda df, **kwargs: df.any(**kwargs),
             numeric_only=False,
-            selection=self._get_non_by_selection(),
+            selection=self._non_by_selection,
             **kwargs,
         )
 
@@ -320,7 +321,12 @@ class DataFrameGroupBy(object):
     def backfill(self, limit=None):
         return self.bfill(limit)
 
-    def _get_internal_by(self):
+    _internal_by_cache = no_default
+
+    # TODO: since python 3.9:
+    # @cached_property
+    @property
+    def _internal_by(self):
         """
         Get only those components of 'by' that are column labels of the source frame.
 
@@ -328,6 +334,9 @@ class DataFrameGroupBy(object):
         -------
         list of labels
         """
+        if self._internal_by_cache is not no_default:
+            return self._internal_by_cache
+
         internal_by = []
         if self._drop:
             for by in self._by if is_list_like(self._by) else [self._by]:
@@ -336,26 +345,86 @@ class DataFrameGroupBy(object):
                 elif isinstance(by, BaseQueryCompiler):
                     internal_by.extend(by.columns)
             internal_by = self._df.columns.intersection(internal_by).tolist()
+
+        self._internal_by_cache = internal_by
         return internal_by
 
-    def _get_non_by_selection(self):
+    _non_by_selection_cache = no_default
+
+    # TODO: since python 3.9:
+    # @cached_property
+    @property
+    def _non_by_selection(self):
         """
-        Filter selection from the `by` columns in it.
+        Get selection filtered from the `by` columns in it.
 
         Returns
         -------
         same type as ``self._selection``
             ``self._selection`` without `by` columns in it.
         """
+        if self._non_by_selection_cache is not no_default:
+            return self._non_by_selection_cache
         selection = self._selection
         if selection is not None:
-            internal_by = self._get_internal_by()
+            internal_by = self._internal_by
             selection = [col for col in self._selection_list if col not in internal_by]
             if self.ndim == 1:
                 assert (
                     len(selection) == 1 or len(selection) == 0
                 ), f"Single-dimensional object has non-single dimensional selection: {selection}."
                 selection = selection[0] if len(selection) == 1 else []
+
+        self._non_by_selection_cache = selection
+        return selection
+
+    _non_conflict_selection_cache = no_default
+
+    # TODO: since python 3.9:
+    # @cached_property
+    @property
+    def _non_conflict_selection(self):
+        """
+        Get conflicts-free selection.
+
+        Default pandas behavior is to keep 'by' columns non-aggregated if they're categorical
+        and there's a naming conflict of aggregated and the non-aggregated ones. So this function
+        actually drops intersections of 'by' columns and the `selection` if ``as_index=False`` and
+        'by' is categorical.
+
+        Returns
+        -------
+        same type as ``self._selection``
+        """
+        if self._non_conflict_selection_cache is not no_default:
+            return self._non_conflict_selection_cache
+
+        internal_by = self._internal_by
+        selection = self._selection
+        if (
+            self._is_multi_by
+            and not self._as_index
+            and any(
+                isinstance(dtype, pandas.CategoricalDtype)
+                for dtype in self._df.dtypes[internal_by]
+            )
+        ):
+            selection = [
+                col
+                for col in (
+                    self._df.columns
+                    if self._selection is None
+                    else self._selection_list
+                )
+                if col not in internal_by
+            ]
+            if self.ndim == 1:
+                assert (
+                    len(selection) == 1 or len(selection) == 0
+                ), f"Single-dimensional object has non-single dimensional selection: {selection}."
+                selection = selection[0] if len(selection) == 1 else []
+
+        self._non_conflict_selection_cache = selection
         return selection
 
     def __getitem__(self, key):
@@ -593,7 +662,7 @@ class DataFrameGroupBy(object):
             type(self._query_compiler).groupby_all,
             lambda df, **kwargs: df.all(**kwargs),
             numeric_only=False,
-            selection=self._get_non_by_selection(),
+            selection=self._non_by_selection,
             **kwargs,
         )
 
@@ -615,6 +684,7 @@ class DataFrameGroupBy(object):
             drop=False,
             idx_name=None,
             squeeze=self._squeeze,
+            # `groupby.size()` doesn't take `selection` into account
             selection=None,
             **self._kwargs,
         )
@@ -776,7 +846,7 @@ class DataFrameGroupBy(object):
         return self._default_to_pandas(lambda df: df.hist())
 
     def quantile(self, q=0.5, **kwargs):
-        selection = self._get_non_by_selection()
+        selection = self._non_by_selection
 
         dtypes = self._df.dtypes if selection is None else self._df.dtypes[selection]
         if not isinstance(dtypes, pandas.Series):
@@ -998,30 +1068,7 @@ class DataFrameGroupBy(object):
             return self._default_to_pandas(default_func, **kwargs)
 
         if selection is None:
-            internal_by = self._get_internal_by()
-            selection = self._selection
-            if (
-                self._is_multi_by
-                and not self._as_index
-                and any(
-                    isinstance(dtype, pandas.CategoricalDtype)
-                    for dtype in self._df.dtypes[internal_by]
-                )
-            ):
-                selection = [
-                    col
-                    for col in (
-                        self._df.columns
-                        if self._selection is None
-                        else self._selection_list
-                    )
-                    if col not in internal_by
-                ]
-                if self.ndim == 1:
-                    assert (
-                        len(selection) == 1
-                    ), f"Single-dimensional object has non-single dimensional selection: {selection}."
-                    selection = selection[0]
+            selection = self._non_conflict_selection
 
         groupby_qc = self._query_compiler
         result = type(self._df)(
@@ -1067,30 +1114,7 @@ class DataFrameGroupBy(object):
         ), "'{0}' object is not callable and not a dict".format(type(f))
 
         if selection is None:
-            internal_by = self._get_internal_by()
-            selection = self._selection
-            if (
-                self._is_multi_by
-                and not self._as_index
-                and any(
-                    isinstance(dtype, pandas.CategoricalDtype)
-                    for dtype in self._df.dtypes[internal_by]
-                )
-            ):
-                selection = [
-                    col
-                    for col in (
-                        self._df.columns
-                        if self._selection is None
-                        else self._selection_list
-                    )
-                    if col not in internal_by
-                ]
-                if self.ndim == 1:
-                    assert (
-                        len(selection) == 1
-                    ), f"Single-dimensional object has non-single dimensional selection: {selection}."
-                    selection = selection[0]
+            selection = self._non_conflict_selection
 
         new_manager = self._query_compiler.groupby_agg(
             by=self._by,
