@@ -127,7 +127,7 @@ def from_partitions(
     Notes
     -----
     Pass `index`, `columns`, `row_lengths` and `column_widths` to avoid triggering
-    extra computations of the metadata.
+    extra computations of the metadata when creating a DataFrame.
     """
     from modin.data_management.factories.dispatcher import FactoryDispatcher
 
