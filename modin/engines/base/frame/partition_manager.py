@@ -220,15 +220,21 @@ class PandasFramePartitionManager(ABC):
         NumPy array
             Partitions with applied groupby.
         """
-        partitions_kwargs = None
+        reduce_func_proxy = reduce_func
         if selection is not None:
             parts_to_select = list(selection.keys())
+            partitions_selections = list(selection.values())
             partitions = (
                 partitions[parts_to_select] if axis else partitions[:, parts_to_select]
             )
-            partitions_kwargs = tuple(
-                {"partition_selection": labels} for labels in selection.values()
-            )
+
+            def reduce_func_proxy(*args, partition_idx=0, **kwargs):
+                return reduce_func(
+                    *args,
+                    partition_idx=partition_idx,
+                    partition_selection=partitions_selections[partition_idx],
+                    **kwargs,
+                )
 
         if by is not None:
             mapped_partitions = cls.broadcast_apply(
@@ -240,9 +246,8 @@ class PandasFramePartitionManager(ABC):
         return cls.map_axis_partitions(
             axis,
             mapped_partitions,
-            reduce_func,
+            reduce_func_proxy,
             enumerate_partitions=True,
-            partitions_kwargs=partitions_kwargs,
         )
 
     @classmethod
@@ -395,7 +400,6 @@ class PandasFramePartitionManager(ABC):
         apply_indices=None,
         enumerate_partitions=False,
         lengths=None,
-        partitions_kwargs=None,
     ):
         """
         Broadcast the `right` partitions to `left` and apply `apply_func` along full `axis`.
@@ -459,7 +463,6 @@ class PandasFramePartitionManager(ABC):
                     preprocessed_map_func,
                     **kw,
                     **({"partition_idx": idx} if enumerate_partitions else {}),
-                    **(partitions_kwargs[i] if partitions_kwargs is not None else {}),
                 )
                 for idx, i in enumerate(apply_indices)
             ]
@@ -530,7 +533,6 @@ class PandasFramePartitionManager(ABC):
         keep_partitioning=False,
         lengths=None,
         enumerate_partitions=False,
-        partitions_kwargs=None,
     ):
         """
         Apply `map_func` to every partition in `partitions` along given `axis`.
@@ -570,7 +572,6 @@ class PandasFramePartitionManager(ABC):
             right=None,
             lengths=lengths,
             enumerate_partitions=enumerate_partitions,
-            partitions_kwargs=partitions_kwargs,
         )
 
     @classmethod
