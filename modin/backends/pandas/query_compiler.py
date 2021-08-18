@@ -2805,19 +2805,17 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 result.drop(columns=missmatched_cols, inplace=True, errors="ignore")
 
                 if not as_index:
-                    if partition_idx == 0 and drop:
-                        drop, lvls_to_drop = GroupByDefault.handle_as_index(
-                            result_cols,
-                            result.index.names,
-                            internal_by_cols,
-                            selection=selection,
-                            partition_selection=partition_selection,
-                        )
-                        if len(lvls_to_drop) > 0:
-                            result.index = result.index.droplevel(lvls_to_drop)
-                    else:
-                        drop = True
-
+                    drop, lvls_to_drop = GroupByDefault.handle_as_index(
+                        result_cols,
+                        result.index.names,
+                        internal_by_cols,
+                        selection=selection,
+                        partition_selection=partition_selection,
+                        partition_idx=partition_idx,
+                        drop=drop,
+                    )
+                    if len(lvls_to_drop) > 0:
+                        result.index = result.index.droplevel(lvls_to_drop)
                     result.reset_index(drop=drop, inplace=True)
 
                 new_index_names = [

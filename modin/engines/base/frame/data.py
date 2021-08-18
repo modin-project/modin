@@ -2105,8 +2105,9 @@ class PandasFrame(object):
         new_columns : pandas.Index, optional
             Columns of the result. We may know this in advance,
             and if not provided it must be computed.
-        selection : list-like, default: None
-            Indices of `axis ^ 1` to apply groupby over.
+        selection : list of labels, optional
+            Indices of `axis ^ 1` to apply groupby over. If not specified
+            apply to all of the available indices.
 
         Returns
         -------
@@ -2115,7 +2116,7 @@ class PandasFrame(object):
         """
         by_parts = by if by is None else by._partitions
 
-        per_partition_selection, apply_indices = None, None
+        per_partition_selection = None
         if selection is not None:
             numeric_indices = self.axes[axis ^ 1].get_indexer_for(selection)
             apply_indices = self._get_dict_of_block_index(axis ^ 1, numeric_indices)

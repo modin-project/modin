@@ -339,12 +339,23 @@ class DataFrameGroupBy(object):
         return internal_by
 
     def _get_non_by_selection(self):
+        """
+        Filter selection from the `by` columns in it.
+
+        Returns
+        -------
+        same type as ``self._selection``
+            ``self._selection`` without `by` columns in it.
+        """
         selection = self._selection
         if selection is not None:
             internal_by = self._get_internal_by()
             selection = [col for col in self._selection_list if col not in internal_by]
             if self.ndim == 1:
-                selection = selection[0]
+                assert (
+                    len(selection) == 1 or len(selection) == 0
+                ), f"Single-dimensional object has non-single dimensional selection: {selection}."
+                selection = selection[0] if len(selection) == 1 else []
         return selection
 
     def __getitem__(self, key):
@@ -824,6 +835,13 @@ class DataFrameGroupBy(object):
 
     @property
     def _selection_list(self):
+        """
+        Get list of selected columns.
+
+        Returns
+        -------
+        list
+        """
         if self._selection is None:
             return []
         return self._selection if is_list_like(self._selection) else [self._selection]
@@ -965,6 +983,9 @@ class DataFrameGroupBy(object):
             Whether or not to the grouping columns should be dropped on this operation.
         numeric_only : bool, default: True
             True for numeric only computations, False otherwise.
+        selection : label or list of labels, optional
+            Set of columns to apply aggregation on. If not specified will be infered
+            based on ``self._selection``.
         **kwargs : dict
             The keyword arguments to be passed to the calling function.
 
@@ -1028,6 +1049,9 @@ class DataFrameGroupBy(object):
         ----------
         f : callable
             The function to apply to each group.
+        selection : label or list of labels, optional
+            Set of columns to apply aggregation on. If not specified will be infered
+            based on ``self._selection``.
         *args : list
             Extra positional arguments to pass to `f`.
         **kwargs : dict

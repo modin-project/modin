@@ -212,8 +212,10 @@ class PandasFramePartitionManager(ABC):
             Map function.
         reduce_func : callable,
             Reduce function.
-        apply_indices : list of ints, default: None
-            Indices of `axis ^ 1` to apply function over.
+        selection : dict[int] -> list of labels, default: None
+            Set of indices/columns to apply aggregation on, where the dictionary indices
+            are numeric indices of partitions to apply and the values are the indices/columns
+            to apply in this particular partitions.
 
         Returns
         -------
@@ -229,6 +231,7 @@ class PandasFramePartitionManager(ABC):
             )
 
             def reduce_func_proxy(*args, partition_idx=0, **kwargs):
+                """Pass `selection` for this particular partition to the reduction function based on the partition index."""
                 return reduce_func(
                     *args,
                     partition_idx=partition_idx,

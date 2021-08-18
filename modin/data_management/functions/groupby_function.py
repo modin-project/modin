@@ -112,7 +112,7 @@ class GroupbyReduceFunction(MapReduceFunction):
             Arguments which will be passed to `map_func`.
         drop : bool, default: False
             Indicates whether or not by-data came from the `self` frame.
-        selection : list of labels, optional
+        selection : label or list of labels, optional
             Set of columns to apply aggregation on, by default aggregation is applied
             to all of the available columns.
 
@@ -175,8 +175,8 @@ class GroupbyReduceFunction(MapReduceFunction):
         reduce_args=None,
         drop=False,
         selection=None,
-        method=None,
         partition_selection=None,
+        method=None,
     ):
         """
         Execute Reduce phase of GroupbyReduce.
@@ -200,9 +200,13 @@ class GroupbyReduceFunction(MapReduceFunction):
             Arguments which will be passed to `reduce_func`.
         drop : bool, default: False
             Indicates whether or not by-data came from the `self` frame.
-        selection : list of labels, optional
+        selection : label or list of labels, optional
             Set of columns to apply aggregation on, by default aggregation is applied
             to all of the available columns.
+        partition_selection : list of labels, optional
+            Set of columns at this particular partition to which aggregation was applied
+            at the Map phase. If not specified assuming that aggregation at this partition
+            was applied  to all of the columns listed in the `selection` parameter.
         method : str, optional
             Name of the groupby function. This is a hint to be able to do special casing.
 
@@ -251,19 +255,18 @@ class GroupbyReduceFunction(MapReduceFunction):
             result = result.to_frame()
 
         if not as_index:
-            if partition_idx == 0 and (drop or method == "size"):
-                drop, lvls_to_drop = GroupByDefault.handle_as_index(
-                    result.columns,
-                    result.index.names,
-                    by_part,
-                    selection=selection,
-                    partition_selection=partition_selection,
-                    method=method,
-                )
-                if len(lvls_to_drop) > 0:
-                    result.index = result.index.droplevel(lvls_to_drop)
-            else:
-                drop = True
+            drop, lvls_to_drop = GroupByDefault.handle_as_index(
+                result.columns,
+                result.index.names,
+                by_part,
+                selection=selection,
+                partition_selection=partition_selection,
+                partition_idx=partition_idx,
+                drop=drop,
+                method=method,
+            )
+            if len(lvls_to_drop) > 0:
+                result.index = result.index.droplevel(lvls_to_drop)
             result = result.reset_index(drop=drop)
 
         # Result could not always be a frame, so wrapping it into DataFrame

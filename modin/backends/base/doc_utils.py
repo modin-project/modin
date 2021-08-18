@@ -658,7 +658,7 @@ def doc_groupby_method(result, refer_to, action=None):
     drop : bool, default: False
         If `by` is a QueryCompiler indicates whether or not by-data came
         from the `self`.
-    selection : list of labels, optional
+    selection : label or list of labels, optional
         Set of columns to apply aggregation on, by default aggregation is applied
         to all of the available columns.
 
