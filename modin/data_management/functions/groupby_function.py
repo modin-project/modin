@@ -205,7 +205,7 @@ class GroupbyReduceFunction(MapReduceFunction):
         partition_selection : list of labels, optional
             Set of columns at this particular partition to which aggregation was applied
             at the Map phase. If not specified assuming that aggregation at this partition
-            was applied  to all of the columns listed in the `selection` parameter.
+            was applied to all of the columns listed in the `selection` parameter.
         method : str, optional
             Name of the groupby function. This is a hint to be able to do special casing.
 
@@ -595,9 +595,17 @@ class GroupbyReduceFunction(MapReduceFunction):
         >>> else:
         >>>     groupby_result_with_processed_as_index_parameter = groupby_result
         """
+        # 1. We insert by-columns to the result at the beginning of the frame and so
+        #    only to the first partition, if partition_idx != 0 we just dropping the index
+        # 2. We don't insert by-columns to the result if by-data came from a different
+        #    frame (drop is False), there's only one exception for this rule when method is "size",
+        #    so if (drop is False) and method is not "size" we just drop the index.
         if partition_idx != 0 or (not drop and method != "size"):
             return True, []
 
+        # If the method is "size" then the result contains only one unique named column
+        # and we don't have to worry about any naming conflicts, so inserting all of
+        # the "by" into the result (just a fast-path)
         if method == "size":
             return False, []
 

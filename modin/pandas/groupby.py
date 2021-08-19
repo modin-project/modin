@@ -371,8 +371,9 @@ class DataFrameGroupBy(object):
             internal_by = self._internal_by
             selection = [col for col in self._selection_list if col not in internal_by]
             if self.ndim == 1:
-                assert (
-                    len(selection) == 1 or len(selection) == 0
+                assert len(selection) in (
+                    0,
+                    1,
                 ), f"Single-dimensional object has non-single dimensional selection: {selection}."
                 selection = selection[0] if len(selection) == 1 else []
 
@@ -420,8 +421,9 @@ class DataFrameGroupBy(object):
                 if col not in internal_by
             ]
             if self.ndim == 1:
-                assert (
-                    len(selection) == 1 or len(selection) == 0
+                assert len(selection) in (
+                    0,
+                    1,
                 ), f"Single-dimensional object has non-single dimensional selection: {selection}."
                 selection = selection[0] if len(selection) == 1 else []
 
