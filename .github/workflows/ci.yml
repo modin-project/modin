@@ -125,6 +125,10 @@ jobs:
   test-api:
     runs-on: ubuntu-latest
     name: test api
+    defaults:
+      run:
+        # `shell: bash -l {0}` - special way to activate modin environment
+        shell: bash -l {0}
     steps:
       - uses: actions/checkout@v2
         with:
@@ -137,22 +141,21 @@ jobs:
           channel-priority: strict
           use-only-tar-bz2: true # IMPORTANT: This needs to be set for caching to work properly!
       - name: Conda environment
-        # `shell: bash -l {0}` - special way to activate modin environment
-        shell: bash -l {0}
         run: |
           conda info
           conda list
       - run: sudo apt update && sudo apt install -y libhdf5-dev
       - name: Api tests
-        shell: bash -l {0}
         run: python -m pytest modin/pandas/test/test_api.py
       - name: Backends Api tests
-        shell: bash -l {0}
         run: python -m pytest modin/test/test_backends_api.py
 
   test-headers:
     runs-on: ubuntu-latest
     name: test-headers
+    defaults:
+      run:
+        shell: bash -l {0}
     steps:
       - uses: actions/checkout@v2
         with:
@@ -165,17 +168,18 @@ jobs:
           channel-priority: strict
           use-only-tar-bz2: true # IMPORTANT: This needs to be set for caching to work properly!
       - name: Conda environment
-        shell: bash -l {0}
         run: |
           conda info
           conda list
       - name: Headers tests
-        shell: bash -l {0}
         run: python -m pytest modin/test/test_headers.py
 
   test-clean-install-ubuntu:
     needs: [lint-commit, lint-flake8, lint-black, test-api, test-headers]
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash -l {0}
     name: test-clean-install-ubuntu
     steps:
       - uses: actions/checkout@v2
@@ -186,7 +190,6 @@ jobs:
           python-version: "3.7.x"
           architecture: "x64"
       - name: Clean install and run
-        shell: bash -l {0}
         run: |
           python -m pip install -e .[all]
           MODIN_ENGINE=dask python -c "import modin.pandas as pd; print(pd.DataFrame([1,2,3]))"
@@ -195,6 +198,9 @@ jobs:
   test-clean-install-windows:
     needs: [ lint-commit, lint-flake8, lint-black, test-api, test-headers ]
     runs-on: windows-latest
+    defaults:
+      run:
+        shell: bash -l {0}
     name: test-clean-install-windows
     steps:
       - uses: actions/checkout@v2
@@ -205,7 +211,6 @@ jobs:
           python-version: "3.7.x"
           architecture: "x64"
       - name: Clean install and run
-        shell: bash -l {0}
         run: |
           python -m pip install -e .[all]
           MODIN_ENGINE=dask python -c "import modin.pandas as pd; print(pd.DataFrame([1,2,3]))"
@@ -214,6 +219,9 @@ jobs:
   test-internals:
     needs: [lint-commit, lint-flake8, lint-black, test-api, test-headers]
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash -l {0}
     name: test-internals
     steps:
       - uses: actions/checkout@v2
@@ -227,27 +235,18 @@ jobs:
           channel-priority: strict
           use-only-tar-bz2: true # IMPORTANT: This needs to be set for caching to work properly!
       - name: Conda environment
-        shell: bash -l {0}
         run: |
           conda info
           conda list
       - name: Internals tests
-        shell: bash -l {0}
         run: python -m pytest modin/data_management/factories/test/test_dispatcher.py modin/experimental/cloud/test/test_cloud.py
-      - shell: bash -l {0}
-        run: python -m pytest modin/config/test
-      - shell: bash -l {0}
-        run: python -m pytest modin/test/test_envvar_catcher.py
-      - shell: bash -l {0}
-        run: python -m pytest modin/test/backends/base/test_internals.py
-      - shell: bash -l {0}
-        run: python -m pytest modin/test/backends/pandas/test_internals.py
-      - shell: bash -l {0}
-        run: python -m pytest modin/test/test_envvar_npartitions.py
-      - shell: bash -l {0}
-        run: python -m pytest -n 2 modin/test/test_partition_api.py
-      - shell: bash -l {0}
-        run: python -m pytest modin/test/test_utils.py
+      - run: python -m pytest modin/config/test
+      - run: python -m pytest modin/test/test_envvar_catcher.py
+      - run: python -m pytest modin/test/backends/base/test_internals.py
+      - run: python -m pytest modin/test/backends/pandas/test_internals.py
+      - run: python -m pytest modin/test/test_envvar_npartitions.py
+      - run: python -m pytest -n 2 modin/test/test_partition_api.py
+      - run: python -m pytest modin/test/test_utils.py
 
   test-defaults:
     needs: [lint-commit, lint-flake8, lint-black, test-api, test-headers]
@@ -274,7 +273,6 @@ jobs:
           channel-priority: strict
           use-only-tar-bz2: true # IMPORTANT: This needs to be set for caching to work properly!
       - name: Conda environment
-        shell: bash -l {0}
         run: |
           conda info
           conda list
@@ -312,6 +310,9 @@ jobs:
   test-omnisci:
     needs: [lint-commit, lint-flake8, lint-black, test-api, test-headers]
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash -l {0}
     env:
       MODIN_MEMORY: 1000000000
       MODIN_EXPERIMENTAL: "True"
@@ -330,20 +331,15 @@ jobs:
           python-version: 3.7
           use-only-tar-bz2: true # IMPORTANT: This needs to be set for caching to work properly!
       - name: Conda environment
-        shell: bash -l {0}
         run: |
           conda info
           conda list
       - name: Install HDF5
         run: sudo apt update && sudo apt install -y libhdf5-dev
-      - shell: bash -l {0}
-        run: MODIN_BENCHMARK_MODE=True pytest modin/pandas/test/internals/test_benchmark_mode.py
-      - shell: bash -l {0}
-        run: pytest modin/experimental/engines/omnisci_on_ray/test/test_dataframe.py
-      - shell: bash -l {0}
-        run: pytest modin/pandas/test/test_io.py::TestCsv
-      - shell: bash -l {0}
-        run: |
+      - run: MODIN_BENCHMARK_MODE=True pytest modin/pandas/test/internals/test_benchmark_mode.py
+      - run: pytest modin/experimental/engines/omnisci_on_ray/test/test_dataframe.py
+      - run: pytest modin/pandas/test/test_io.py::TestCsv
+      - run: |
           curl -o codecov https://codecov.io/bash
           VERSION=$(grep -o 'VERSION=\"[0-9\.]*\"' codecov | cut -d'"' -f2);
           curl -o SHA512SUM "https://raw.githubusercontent.com/codecov/codecov-bash/${VERSION}/SHA512SUM"
@@ -444,7 +440,6 @@ jobs:
           channel-priority: strict
           use-only-tar-bz2: true # IMPORTANT: This needs to be set for caching to work properly!
       - name: Conda environment
-        shell: bash -l {0}
         run: |
           conda info
           conda list
@@ -490,6 +485,9 @@ jobs:
   test-experimental:
     needs: [lint-commit, lint-flake8, lint-black, test-api, test-headers]
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash -l {0}
     env:
       MODIN_ENGINE: "python"
       MODIN_EXPERIMENTAL: "True"
@@ -507,18 +505,13 @@ jobs:
           channel-priority: strict
           use-only-tar-bz2: true # IMPORTANT: This needs to be set for caching to work properly!
       - name: Conda environment
-        shell: bash -l {0}
         run: |
           conda info
           conda list
-      - shell: bash -l {0}
-        run: python -m pytest -n 2 modin/pandas/test/dataframe/test_map_metadata.py
-      - shell: bash -l {0}
-        run: python -m pytest -n 2 modin/pandas/test/test_series.py
-      - shell: bash -l {0}
-        run: python -m pytest modin/pandas/test/test_io.py
-      - shell: bash -l {0}
-        run: |
+      - run: python -m pytest -n 2 modin/pandas/test/dataframe/test_map_metadata.py
+      - run: python -m pytest -n 2 modin/pandas/test/test_series.py
+      - run: python -m pytest modin/pandas/test/test_io.py
+      - run: |
           curl -o codecov https://codecov.io/bash
           VERSION=$(grep -o 'VERSION=\"[0-9\.]*\"' codecov | cut -d'"' -f2);
           curl -o SHA512SUM "https://raw.githubusercontent.com/codecov/codecov-bash/${VERSION}/SHA512SUM"
@@ -532,6 +525,9 @@ jobs:
   test-cloud:
     needs: [lint-commit, lint-flake8, lint-black, test-api, test-headers]
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash -l {0}
     env:
       MODIN_ENGINE: "python"
       MODIN_EXPERIMENTAL: "True"
@@ -552,17 +548,13 @@ jobs:
           channel-priority: strict
           use-only-tar-bz2: true # IMPORTANT: This needs to be set for caching to work properly!
       - name: Conda environment
-        shell: bash -l {0}
         run: |
           conda info
           conda list
-      - shell: bash -l {0}
-        run: python -m pytest --simulate-cloud=normal modin/pandas/test/test_io.py
-      - shell: bash -l {0}
-      # When running without parameters, some of the tests fail
+      - run: python -m pytest --simulate-cloud=normal modin/pandas/test/test_io.py
+      - # When running without parameters, some of the tests fail
         run: python -m pytest --simulate-cloud=normal modin/pandas/test/dataframe/test_binary.py::test_math_functions[add-rows-scalar]
-      - shell: bash -l {0}
-        run: |
+      - run: |
           curl -o codecov https://codecov.io/bash
           VERSION=$(grep -o 'VERSION=\"[0-9\.]*\"' codecov | cut -d'"' -f2);
           curl -o SHA512SUM "https://raw.githubusercontent.com/codecov/codecov-bash/${VERSION}/SHA512SUM"
@@ -635,6 +627,9 @@ jobs:
   test-pyarrow:
     needs: [lint-commit, lint-flake8, lint-black, test-api, test-headers]
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash -l {0}
     strategy:
       matrix:
         python-version: ["3.7", "3.8"]
@@ -654,17 +649,18 @@ jobs:
           channel-priority: strict
           use-only-tar-bz2: true # IMPORTANT: This needs to be set for caching to work properly!
       - name: Conda environment
-        shell: bash -l {0}
         run: |
           conda info
           conda list
       - run: sudo apt update && sudo apt install -y libhdf5-dev
-      - shell: bash -l {0}
-        run: python -m pytest modin/pandas/test/test_io.py::TestCsv
+      - run: python -m pytest modin/pandas/test/test_io.py::TestCsv
 
   test-spreadsheet:
     needs: [ lint-commit, lint-flake8, lint-black, test-api, test-headers ]
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash -l {0}
     strategy:
       matrix:
         python-version: [ "3.7", "3.8" ]
@@ -684,9 +680,7 @@ jobs:
           channel-priority: strict
           use-only-tar-bz2: true # IMPORTANT: This needs to be set for caching to work properly!
       - name: Conda environment
-        shell: bash -l {0}
         run: |
           conda info
           conda list
-      - shell: bash -l {0}
-        run: python -m pytest modin/spreadsheet/test/test_general.py
+      - run: python -m pytest modin/spreadsheet/test/test_general.py
