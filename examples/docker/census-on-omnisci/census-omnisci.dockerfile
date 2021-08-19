@@ -46,9 +46,7 @@ RUN conda update -n base -c defaults conda -y && \
     conda config --set channel_priority strict && \
     conda create -n modin --yes --no-default-packages && \
     conda activate modin && \
-    conda install -c intel/label/modintest -c conda-forge \
-        "omniscidbe4py>=v5.5.0" scikit-learn scikit-learn-intelex && \
-    pip install modin[ray] && \
+    conda install -c conda-forge modin-omnisci scikit-learn scikit-learn-intelex && \
     conda clean --all --yes
 
 COPY census-omnisci.py "${HOME}/census-omnisci.py"
