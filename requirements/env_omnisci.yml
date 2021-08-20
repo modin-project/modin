@@ -3,7 +3,7 @@ channels:
   - intel/label/modintest
   - conda-forge
 dependencies:
-  - pandas==1.3.1
+  - pandas==1.3.2
   - pyarrow==2.0.0
   - libthrift<0.14.1  # ref: modin gh-2840
   - numpy>=1.16.5
