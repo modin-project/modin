@@ -347,8 +347,6 @@ def test_simple_row_groupby(by, as_index, col1_category):
         is_default=True,
     )
 
-    # Workaround for Pandas bug #34656. Recreate groupby object for Pandas
-    pandas_groupby = pandas_df.groupby(by=pandas_by, as_index=as_index)
     apply_functions = [
         lambda df: df.sum(),
         lambda df: pandas.Series([1, 2, 3, 4], name="result"),
@@ -1240,26 +1238,15 @@ def eval_shift(modin_groupby, pandas_groupby):
         pandas_groupby,
         lambda groupby: groupby.shift(periods=-3),
     )
-    # pandas introduced a bug in 1.3.0 that breaks shift in the following case,
-    # modin performs correctly, so we can't compare the result with pandas for now.
-    # You can track the pandas bug here:
-    # https://github.com/pandas-dev/pandas/issues/42401
-    try:
-        if pandas_groupby.ndim == 2:
-            pandas_groupby.shift(axis=1, fill_value=777)
-    except TypeError:
-        # Verify that there is no exceptions on our side
-        repr(modin_groupby.shift(axis=1, fill_value=777))
-    else:
-        # Modin does not raise an exception when trying to call any function
-        # with 'axis=1' against SeriesGroupByObject.
-        # TODO: create an issue and add its id here
-        if pandas_groupby.ndim == 2:
-            eval_general(
-                modin_groupby,
-                pandas_groupby,
-                lambda groupby: groupby.shift(axis=1, fill_value=777),
-            )
+    # Modin does not raise an exception when trying to call any function
+    # with 'axis=1' against SeriesGroupByObject.
+    # TODO: create an issue and add its id here
+    if pandas_groupby.ndim == 2:
+        eval_general(
+            modin_groupby,
+            pandas_groupby,
+            lambda groupby: groupby.shift(axis=1, fill_value=777),
+        )
 
 
 def test_groupby_on_index_values_with_loop():

@@ -65,6 +65,7 @@ instance/
 
 # Sphinx documentation
 docs/_build/
+docs/flow/modin/configs_help.csv
 
 # PyBuilder
 target/

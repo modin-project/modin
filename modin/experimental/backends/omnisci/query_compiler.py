@@ -239,23 +239,32 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
 
     def merge(self, right, **kwargs):
         on = kwargs.get("on", None)
+        left_on = kwargs.get("left_on", None)
+        right_on = kwargs.get("right_on", None)
         left_index = kwargs.get("left_index", False)
         right_index = kwargs.get("right_index", False)
         """Only non-index joins with explicit 'on' are supported"""
         if left_index is False and right_index is False:
-            if on is None:
-                on = [c for c in self.columns if c in right.columns]
+            if left_on is None and right_on is None:
+                if on is None:
+                    on = [c for c in self.columns if c in right.columns]
+                left_on = on
+                right_on = on
+
+            if not isinstance(left_on, list):
+                left_on = [left_on]
+            if not isinstance(right_on, list):
+                right_on = [right_on]
 
             how = kwargs.get("how", "inner")
             sort = kwargs.get("sort", False)
             suffixes = kwargs.get("suffixes", None)
-            if not isinstance(on, list):
-                on = [on]
             return self.__constructor__(
                 self._modin_frame.join(
                     right._modin_frame,
                     how=how,
-                    on=on,
+                    left_on=left_on,
+                    right_on=right_on,
                     sort=sort,
                     suffixes=suffixes,
                 )
@@ -360,7 +369,7 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
             raise NotImplementedError(
                 f"OmniSci's nunique does not support such set of parameters: axis={axis}, dropna={dropna}."
             )
-        return self._agg("count", distinct=True)
+        return self._agg("nunique")
 
     def _agg(self, agg, axis=0, level=None, **kwargs):
         """
@@ -401,7 +410,7 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
         kwargs.pop("skipna", None)
         kwargs.pop("numeric_only", None)
 
-        new_frame = self._modin_frame.agg(agg, **kwargs)
+        new_frame = self._modin_frame.agg(agg)
         new_frame = new_frame._set_index(
             pandas.Index.__new__(pandas.Index, data=["__reduced__"], dtype="O")
         )

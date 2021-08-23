@@ -745,9 +745,9 @@ class TestConcat:
 
 class TestGroupby:
     data = {
-        "a": [1, 1, 2, 2, 2],
-        "b": [11, 21, 12, 22, 32],
-        "c": [101, 201, 102, 202, 302],
+        "a": [1, 1, 2, 2, 2, 1],
+        "b": [11, 21, 12, 22, 32, 11],
+        "c": [101, 201, 202, 202, 302, 302],
     }
     cols_value = ["a", ["a", "b"]]
 
@@ -788,17 +788,12 @@ class TestGroupby:
             groupby_sum, data=self.data, cols=cols, as_index=as_index, force_lazy=False
         )
 
-    def test_groupby_agg_count(self):
-        def groupby(df, **kwargs):
-            return df.groupby("a").agg({"b": "count"})
+    @pytest.mark.parametrize("agg", ["count", "size", "nunique"])
+    def test_groupby_agg(self, agg):
+        def groupby(df, agg, **kwargs):
+            return df.groupby("a").agg({"b": agg})
 
-        run_and_compare(groupby, data=self.data)
-
-    def test_groupby_agg_size(self):
-        def groupby(df, **kwargs):
-            return df.groupby("a").agg({"b": "size"})
-
-        run_and_compare(groupby, data=self.data)
+        run_and_compare(groupby, data=self.data, agg=agg)
 
     def test_groupby_agg_default_to_pandas(self):
         def lambda_func(df, **kwargs):
@@ -1431,6 +1426,34 @@ class TestMerge:
             return res
 
         run_and_compare(merge, data=self.dt_data1, data2=self.dt_data2)
+
+    left_data = {"a": [1, 2, 3, 4], "b": [10, 20, 30, 40], "c": [11, 12, 13, 14]}
+    right_data = {"c": [1, 2, 3, 4], "b": [10, 20, 30, 40], "d": [100, 200, 300, 400]}
+
+    @pytest.mark.parametrize("how", how_values)
+    @pytest.mark.parametrize(
+        "left_on, right_on", [["a", "c"], [["a", "b"], ["c", "b"]]]
+    )
+    def test_merge_left_right_on(self, how, left_on, right_on):
+        def merge(df1, df2, how, left_on, right_on, **kwargs):
+            return df1.merge(df2, how=how, left_on=left_on, right_on=right_on)
+
+        run_and_compare(
+            merge,
+            data=self.left_data,
+            data2=self.right_data,
+            how=how,
+            left_on=left_on,
+            right_on=right_on,
+        )
+        run_and_compare(
+            merge,
+            data=self.right_data,
+            data2=self.left_data,
+            how=how,
+            left_on=right_on,
+            right_on=left_on,
+        )
 
 
 class TestBinaryOp:

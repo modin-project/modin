@@ -263,7 +263,6 @@ class TestCsv:
     @pytest.mark.parametrize("skip_blank_lines", [True, False])
     def test_read_csv_col_handling(
         self,
-        request,
         header,
         index_col,
         prefix,
@@ -271,12 +270,12 @@ class TestCsv:
         usecols,
         skip_blank_lines,
     ):
-        if request.config.getoption("--simulate-cloud").lower() != "off":
-            pytest.xfail(
-                reason="The reason of tests fail in `cloud` mode is unknown for now - issue #2340"
-            )
         if names is lib.no_default:
             pytest.skip("some parameters combiantions fails: issue #2312")
+        if header in ["infer", None] and names is not lib.no_default:
+            pytest.skip(
+                "Heterogeneous data in a column is not cast to a common type: issue #3346"
+            )
         eval_io(
             fn_name="read_csv",
             # read_csv kwargs
@@ -313,16 +312,11 @@ class TestCsv:
     @pytest.mark.parametrize("skipfooter", [0, 10])
     def test_read_csv_parsing_1(
         self,
-        request,
         dtype,
         engine,
         converters,
         skipfooter,
     ):
-        if request.config.getoption("--simulate-cloud").lower() != "off":
-            pytest.xfail(
-                reason="The reason of tests fail in `cloud` mode is unknown for now - issue #2340"
-            )
 
         if dtype:
             dtype = {
@@ -353,7 +347,6 @@ class TestCsv:
     @pytest.mark.parametrize("names", [["c1", "c2", "c3", "c4"], None])
     def test_read_csv_parsing_2(
         self,
-        request,
         true_values,
         false_values,
         skiprows,
@@ -380,10 +373,6 @@ class TestCsv:
         if xfail_case_2:
             pytest.xfail(
                 "read_csv fails because of duplicated columns names - issue #3080"
-            )
-        if request.config.getoption("--simulate-cloud").lower() != "off":
-            pytest.xfail(
-                reason="The reason of tests fail in `cloud` mode is unknown for now - issue #2340"
             )
 
         eval_io(
@@ -433,7 +422,7 @@ class TestCsv:
     def test_read_csv_squeeze(self, request, test_case):
         if request.config.getoption("--simulate-cloud").lower() != "off":
             pytest.xfail(
-                reason="The reason of tests fail in `cloud` mode is unknown for now - issue #2340"
+                reason="Error EOFError: stream has been closed in `modin in the cloud` mode - issue #3329"
             )
         unique_filename = get_unique_filename()
 
@@ -498,7 +487,6 @@ class TestCsv:
     @pytest.mark.parametrize("cache_dates", [True, False])
     def test_read_csv_datetime(
         self,
-        request,
         parse_dates,
         infer_datetime_format,
         keep_date_col,
@@ -506,11 +494,6 @@ class TestCsv:
         dayfirst,
         cache_dates,
     ):
-        if request.config.getoption("--simulate-cloud").lower() != "off":
-            pytest.xfail(
-                reason="The reason of tests fail in `cloud` mode is unknown for now - issue #2340"
-            )
-
         if (
             Backend.get() == "Omnisci"
             and isinstance(parse_dates, list)
@@ -623,7 +606,6 @@ class TestCsv:
     @pytest.mark.parametrize("dialect", ["test_csv_dialect", None])
     def test_read_csv_file_format(
         self,
-        request,
         make_csv_file,
         thousands,
         decimal,
@@ -631,11 +613,7 @@ class TestCsv:
         escapechar,
         dialect,
     ):
-        if request.config.getoption("--simulate-cloud").lower() != "off":
-            pytest.xfail(
-                reason="The reason of tests fail in `cloud` mode is unknown for now - issue #2340"
-            )
-        elif Engine.get() != "Python" and lineterminator == "x":
+        if Engine.get() != "Python" and lineterminator == "x":
             pytest.xfail("read_csv with Ray engine outputs empty frame - issue #2493")
         elif Engine.get() != "Python" and escapechar:
             pytest.xfail(
@@ -834,11 +812,7 @@ class TestCsv:
 
         eval_io_from_str(csv_bad_quotes, unique_filename, nrows=nrows)
 
-    def test_read_csv_categories(self, request):
-        if request.config.getoption("--simulate-cloud").lower() != "off":
-            pytest.xfail(
-                reason="The reason of tests fail in `cloud` mode is unknown for now - issue #2340"
-            )
+    def test_read_csv_categories(self):
         eval_io(
             fn_name="read_csv",
             # read_csv kwargs
@@ -860,16 +834,8 @@ class TestCsv:
         ],
     )
     def test_read_csv_parse_dates(
-        self, request, names, header, index_col, parse_dates, encoding, encoding_errors
+        self, names, header, index_col, parse_dates, encoding, encoding_errors
     ):
-        if (
-            parse_dates
-            and request.config.getoption("--simulate-cloud").lower() != "off"
-        ):
-            pytest.xfail(
-                reason="The reason of tests fail in `cloud` mode is unknown for now - issue #2340"
-            )
-
         if names is not None and header == "infer":
             pytest.xfail(
                 "read_csv with Ray engine works incorrectly with date data and names parameter provided - issue #2509"
@@ -912,11 +878,11 @@ class TestCsv:
             skiprows=skiprows,
         )
 
-    def test_read_csv_default_to_pandas(self, request):
-        if request.config.getoption("--simulate-cloud").lower() != "off":
-            pytest.xfail(
-                reason="The reason of tests fail in `cloud` mode is unknown for now - issue #2340"
-            )
+    @pytest.mark.xfail(
+        condition="config.getoption('--simulate-cloud').lower() != 'off'",
+        reason="The reason of tests fail in `cloud` mode is unknown for now - issue #2340",
+    )
+    def test_read_csv_default_to_pandas(self):
         with pytest.warns(UserWarning):
             # This tests that we default to pandas on a buffer
             from io import StringIO
@@ -931,11 +897,11 @@ class TestCsv:
                 skiprows=lambda x: x in [0, 2],
             )
 
-    def test_read_csv_default_to_pandas_url(self, request):
-        if request.config.getoption("--simulate-cloud").lower() != "off":
-            pytest.xfail(
-                reason="The reason of tests fail in `cloud` mode is unknown for now - issue #2340"
-            )
+    @pytest.mark.xfail(
+        condition="config.getoption('--simulate-cloud').lower() != 'off'",
+        reason="The reason of tests fail in `cloud` mode is unknown for now - issue #2340",
+    )
+    def test_read_csv_default_to_pandas_url(self):
         # We haven't implemented read_csv from https, but if it's implemented, then this needs to change
         eval_io(
             fn_name="read_csv",
@@ -956,11 +922,7 @@ class TestCsv:
             cast_to_str=Backend.get() != "Omnisci",
         )
 
-    def test_read_csv_sep_none(self, request):
-        if request.config.getoption("--simulate-cloud").lower() != "off":
-            pytest.xfail(
-                reason="The reason of tests fail in `cloud` mode is unknown for now - issue #2340"
-            )
+    def test_read_csv_sep_none(self):
         eval_io(
             fn_name="read_csv",
             modin_warning=ParserWarning,
@@ -969,11 +931,11 @@ class TestCsv:
             sep=None,
         )
 
-    def test_read_csv_incorrect_data(self, request):
-        if request.config.getoption("--simulate-cloud").lower() != "off":
-            pytest.xfail(
-                reason="The reason of tests fail in `cloud` mode is unknown for now - issue #2340"
-            )
+    @pytest.mark.xfail(
+        condition="config.getoption('--simulate-cloud').lower() != 'off'",
+        reason="The reason of tests fail in `cloud` mode is unknown for now - issue #2340",
+    )
+    def test_read_csv_incorrect_data(self):
         eval_io(
             fn_name="read_csv",
             # read_csv kwargs
@@ -989,11 +951,7 @@ class TestCsv:
             {"names": [3, 1, 2, 5], "usecols": [4, 1, 3, 2]},
         ],
     )
-    def test_read_csv_names_neq_num_cols(self, request, kwargs):
-        if request.config.getoption("--simulate-cloud").lower() != "off":
-            pytest.xfail(
-                reason="The reason of tests fail in `cloud` mode is unknown for now - issue #2340"
-            )
+    def test_read_csv_names_neq_num_cols(self, kwargs):
         eval_io(
             fn_name="read_csv",
             # read_csv kwargs
@@ -1018,11 +976,11 @@ class TestCsv:
     )
     @pytest.mark.parametrize("header", [False, True])
     @pytest.mark.parametrize("mode", ["w", "wb+"])
-    def test_to_csv(self, request, header, mode):
-        if request.config.getoption("--simulate-cloud").lower() != "off":
-            pytest.xfail(
-                reason="The reason of tests fail in `cloud` mode is unknown for now - issue #2340"
-            )
+    @pytest.mark.xfail(
+        condition="config.getoption('--simulate-cloud').lower() != 'off'",
+        reason="The reason of tests fail in `cloud` mode is unknown for now - issue #2340",
+    )
+    def test_to_csv(self, header, mode):
 
         pandas_df = generate_dataframe()
         modin_df = pd.DataFrame(pandas_df)
@@ -1040,11 +998,11 @@ class TestCsv:
         Backend.get() == "Omnisci",
         reason="to_csv is not implemented with OmniSci backend yet - issue #3082",
     )
-    def test_dataframe_to_csv(self, request):
-        if request.config.getoption("--simulate-cloud").lower() != "off":
-            pytest.xfail(
-                reason="The reason of tests fail in `cloud` mode is unknown for now - issue #2340"
-            )
+    @pytest.mark.xfail(
+        condition="config.getoption('--simulate-cloud').lower() != 'off'",
+        reason="The reason of tests fail in `cloud` mode is unknown for now - issue #2340",
+    )
+    def test_dataframe_to_csv(self):
         pandas_df = pandas.read_csv(pytest.csvs_names["test_read_csv_regular"])
         modin_df = pd.DataFrame(pandas_df)
         eval_to_file(
@@ -1055,11 +1013,11 @@ class TestCsv:
         Backend.get() == "Omnisci",
         reason="to_csv is not implemented with OmniSci backend yet - issue #3082",
     )
-    def test_series_to_csv(self, request):
-        if request.config.getoption("--simulate-cloud").lower() != "off":
-            pytest.xfail(
-                reason="The reason of tests fail in `cloud` mode is unknown for now - issue #2340"
-            )
+    @pytest.mark.xfail(
+        condition="config.getoption('--simulate-cloud').lower() != 'off'",
+        reason="The reason of tests fail in `cloud` mode is unknown for now - issue #2340",
+    )
+    def test_series_to_csv(self):
         pandas_s = pandas.read_csv(
             pytest.csvs_names["test_read_csv_regular"], usecols=["col1"]
         ).squeeze()
@@ -1086,10 +1044,20 @@ class TestCsv:
 
         df_equals(modin_df, pandas_df)
 
-    @pytest.mark.parametrize("read_mode", ["r", "rb"])
-    def test_read_csv_file_handle(self, request, read_mode, make_csv_file):
-        if request.config.getoption("--simulate-cloud").lower() != "off":
-            pytest.xfail("Cannot pickle file handles. See comments in PR #2625")
+    @pytest.mark.parametrize(
+        "read_mode",
+        [
+            "r",
+            pytest.param(
+                "rb",
+                marks=pytest.mark.xfail(
+                    condition="config.getoption('--simulate-cloud').lower() != 'off'",
+                    reason="Cannot pickle file handles. See comments in PR #2625",
+                ),
+            ),
+        ],
+    )
+    def test_read_csv_file_handle(self, read_mode, make_csv_file):
 
         unique_filename = get_unique_filename()
         make_csv_file(filename=unique_filename)
@@ -1115,13 +1083,7 @@ class TestCsv:
         for name1, name2 in zip(get_internal_df(read_df).index.names, [None, "a"]):
             assert name1 == name2
 
-    @pytest.mark.xfail(
-        condition="config.getoption('--simulate-cloud').lower() != 'off'",
-        reason="The reason of tests fail in `cloud` mode is unknown for now - issue #2340",
-    )
-    def test_read_csv_empty_frame(
-        self,
-    ):
+    def test_read_csv_empty_frame(self):
         eval_io(
             fn_name="read_csv",
             # read_csv kwargs
@@ -1158,10 +1120,6 @@ class TestTable:
 
         df_equals(modin_df, pandas_df)
 
-    @pytest.mark.xfail(
-        condition="config.getoption('--simulate-cloud').lower() != 'off'",
-        reason="The reason of tests fail in `cloud` mode is unknown for now - issue #2340",
-    )
     def test_read_table_empty_frame(self, make_csv_file):
         unique_filename = get_unique_filename()
         make_csv_file(filename=unique_filename, delimiter="\t")
@@ -1177,6 +1135,10 @@ class TestTable:
 
 class TestParquet:
     @pytest.mark.parametrize("columns", [None, ["col1"]])
+    @pytest.mark.xfail(
+        condition="config.getoption('--simulate-cloud').lower() != 'off'",
+        reason="The reason of tests fail in `cloud` mode is unknown for now - issue #3264",
+    )
     def test_read_parquet(self, make_parquet_file, columns):
         unique_filename = get_unique_filename(extension="parquet")
         make_parquet_file(filename=unique_filename)
@@ -1189,6 +1151,10 @@ class TestParquet:
         )
 
     @pytest.mark.parametrize("columns", [None, ["col1"]])
+    @pytest.mark.xfail(
+        condition="config.getoption('--simulate-cloud').lower() != 'off'",
+        reason="The reason of tests fail in `cloud` mode is unknown for now - issue #3264",
+    )
     def test_read_parquet_directory(self, make_parquet_file, columns):  #
 
         unique_filename = get_unique_filename(extension=None)
@@ -1201,6 +1167,10 @@ class TestParquet:
         )
 
     @pytest.mark.parametrize("columns", [None, ["col1"]])
+    @pytest.mark.xfail(
+        condition="config.getoption('--simulate-cloud').lower() != 'off'",
+        reason="The reason of tests fail in `cloud` mode is unknown for now - issue #3264",
+    )
     def test_read_parquet_partitioned_directory(self, make_parquet_file, columns):
         unique_filename = get_unique_filename(extension=None)
         make_parquet_file(filename=unique_filename, partitioned_columns=["col1"])
@@ -1212,6 +1182,10 @@ class TestParquet:
             columns=columns,
         )
 
+    @pytest.mark.xfail(
+        condition="config.getoption('--simulate-cloud').lower() != 'off'",
+        reason="The reason of tests fail in `cloud` mode is unknown for now - issue #3264",
+    )
     def test_read_parquet_pandas_index(self):
         # Ensure modin can read parquet files written by pandas with a non-RangeIndex object
         unique_filename = get_unique_filename(extension="parquet")
@@ -1237,6 +1211,10 @@ class TestParquet:
         finally:
             os.remove(unique_filename)
 
+    @pytest.mark.xfail(
+        condition="config.getoption('--simulate-cloud').lower() != 'off'",
+        reason="The reason of tests fail in `cloud` mode is unknown for now - issue #3264",
+    )
     def test_read_parquet_pandas_index_partitioned(self):
         # Ensure modin can read parquet files written by pandas with a non-RangeIndex object
         unique_filename = get_unique_filename(extension="parquet")
@@ -1257,6 +1235,10 @@ class TestParquet:
         finally:
             shutil.rmtree(unique_filename)
 
+    @pytest.mark.xfail(
+        condition="config.getoption('--simulate-cloud').lower() != 'off'",
+        reason="The reason of tests fail in `cloud` mode is unknown for now - issue #3264",
+    )
     def test_read_parquet_hdfs(self):
         eval_io(
             fn_name="read_parquet",
@@ -1283,6 +1265,10 @@ class TestParquet:
         modin_df_s3 = pd.read_parquet(dataset_url)
         df_equals(pandas_df, modin_df_s3)
 
+    @pytest.mark.xfail(
+        condition="config.getoption('--simulate-cloud').lower() != 'off'",
+        reason="The reason of tests fail in `cloud` mode is unknown for now - issue #3264",
+    )
     def test_read_parquet_without_metadata(self):
         """Test that Modin can read parquet files not written by pandas."""
         from pyarrow import csv
@@ -1305,6 +1291,10 @@ class TestParquet:
 
         df_equals(pd.read_parquet(parquet_fname), pandas.read_parquet(parquet_fname))
 
+    @pytest.mark.xfail(
+        condition="config.getoption('--simulate-cloud').lower() != 'off'",
+        reason="The reason of tests fail in `cloud` mode is unknown for now - issue #3264",
+    )
     def test_to_parquet(self):
         modin_df, pandas_df = create_test_dfs(TEST_DATA)
         eval_to_file(
@@ -1314,6 +1304,10 @@ class TestParquet:
             extension="parquet",
         )
 
+    @pytest.mark.xfail(
+        condition="config.getoption('--simulate-cloud').lower() != 'off'",
+        reason="The reason of tests fail in `cloud` mode is unknown for now - issue #3264",
+    )
     def test_read_parquet_2462(self):
         test_df = pd.DataFrame(
             {
@@ -1357,6 +1351,10 @@ class TestJson:
         "data",
         [json_short_string, json_short_bytes, json_long_string, json_long_bytes],
     )
+    @pytest.mark.xfail(
+        condition="config.getoption('--simulate-cloud').lower() != 'off'",
+        reason="The reason of tests fail in `cloud` mode is unknown for now - issue #3264",
+    )
     def test_read_json_string_bytes(self, data):
         with pytest.warns(UserWarning):
             modin_df = pd.read_json(data)
@@ -1371,10 +1369,20 @@ class TestJson:
             modin_obj=modin_df, pandas_obj=pandas_df, fn="to_json", extension="json"
         )
 
-    @pytest.mark.parametrize("read_mode", ["r", "rb"])
-    def test_read_json_file_handle(self, request, read_mode):
-        if request.config.getoption("--simulate-cloud").lower() != "off":
-            pytest.xfail("Cannot pickle file handles. See comments in PR #2625")
+    @pytest.mark.parametrize(
+        "read_mode",
+        [
+            "r",
+            pytest.param(
+                "rb",
+                marks=pytest.mark.xfail(
+                    condition="config.getoption('--simulate-cloud').lower() != 'off'",
+                    reason="Cannot pickle file handles. See comments in PR #2625",
+                ),
+            ),
+        ],
+    )
+    def test_read_json_file_handle(self, read_mode):
         unique_filename = get_unique_filename(extension="json")
         try:
             setup_json_file(filename=unique_filename)
@@ -1386,6 +1394,10 @@ class TestJson:
         finally:
             teardown_test_files([unique_filename])
 
+    @pytest.mark.xfail(
+        condition="config.getoption('--simulate-cloud').lower() != 'off'",
+        reason="The reason of tests fail in `cloud` mode is unknown for now - issue #3264",
+    )
     def test_read_json_metadata(self):
         unique_filename = get_unique_filename(extension="json")
         try:
@@ -1422,6 +1434,10 @@ class TestExcel:
             teardown_test_files([unique_filename])
 
     @check_file_leaks
+    @pytest.mark.xfail(
+        condition="config.getoption('--simulate-cloud').lower() != 'off'",
+        reason="The reason of tests fail in `cloud` mode is unknown for now - issue #3264",
+    )
     def test_read_excel_engine(self):
         unique_filename = get_unique_filename(extension="xlsx")
         try:
@@ -1437,6 +1453,10 @@ class TestExcel:
             teardown_test_files([unique_filename])
 
     @check_file_leaks
+    @pytest.mark.xfail(
+        condition="config.getoption('--simulate-cloud').lower() != 'off'",
+        reason="The reason of tests fail in `cloud` mode is unknown for now - issue #3264",
+    )
     def test_read_excel_index_col(self):
         unique_filename = get_unique_filename(extension="xlsx")
         try:
@@ -1453,6 +1473,10 @@ class TestExcel:
             teardown_test_files([unique_filename])
 
     @check_file_leaks
+    @pytest.mark.xfail(
+        condition="config.getoption('--simulate-cloud').lower() != 'off'",
+        reason="The reason of tests fail in `cloud` mode is unknown for now - issue #3264",
+    )
     def test_read_excel_all_sheets(self):
         unique_filename = get_unique_filename(extension="xlsx")
         try:
@@ -1511,6 +1535,10 @@ class TestExcel:
             sheet_name=sheet_name,
         )
 
+    @pytest.mark.xfail(
+        condition="config.getoption('--simulate-cloud').lower() != 'off'",
+        reason="TypeError: Expected list, got type - issue #3284",
+    )
     def test_ExcelFile(self):
         unique_filename = get_unique_filename(extension="xlsx")
         try:
@@ -1552,6 +1580,10 @@ class TestExcel:
         Engine.get() != "Python", reason="Test fails because of issue 3305"
     )
     @check_file_leaks
+    @pytest.mark.xfail(
+        condition="config.getoption('--simulate-cloud').lower() != 'off'",
+        reason="The reason of tests fail in `cloud` mode is unknown for now - issue #3264",
+    )
     def test_read_excel_empty_frame(self):
         unique_filename = get_unique_filename(extension="xlsx")
         try:
@@ -1571,6 +1603,10 @@ class TestExcel:
 
 class TestHdf:
     @pytest.mark.parametrize("format", [None, "table"])
+    @pytest.mark.xfail(
+        condition="config.getoption('--simulate-cloud').lower() != 'off'",
+        reason="The reason of tests fail in `cloud` mode is unknown for now - issue #3264",
+    )
     def test_read_hdf(self, format):
         unique_filename = get_unique_filename(extension="hdf")
         try:
@@ -1584,6 +1620,10 @@ class TestHdf:
         finally:
             teardown_test_files([unique_filename])
 
+    @pytest.mark.xfail(
+        condition="config.getoption('--simulate-cloud').lower() != 'off'",
+        reason="The reason of tests fail in `cloud` mode is unknown for now - issue #3264",
+    )
     def test_HDFStore(self):
         try:
             unique_filename_modin = get_unique_filename(extension="hdf")
@@ -1618,6 +1658,10 @@ class TestHdf:
 
 
 class TestSql:
+    @pytest.mark.xfail(
+        condition="config.getoption('--simulate-cloud').lower() != 'off'",
+        reason="The reason of tests fail in `cloud` mode is unknown for now - issue #3264",
+    )
     def test_read_sql(self, make_sql_connection):
         filename = get_unique_filename(extension="db")
         table = "test_read_sql"
@@ -1663,6 +1707,10 @@ class TestSql:
             con=conn,
         )
 
+    @pytest.mark.xfail(
+        condition="config.getoption('--simulate-cloud').lower() != 'off'",
+        reason="The reason of tests fail in `cloud` mode is unknown for now - issue #3264",
+    )
     def test_read_sql_with_chunksize(self, make_sql_connection):
         filename = get_unique_filename(extension="db")
         table = "test_read_sql_with_chunksize"
@@ -1926,10 +1974,20 @@ class TestFwf:
         finally:
             teardown_test_files([unique_filename])
 
-    @pytest.mark.parametrize("read_mode", ["r", "rb"])
-    def test_read_fwf_file_handle(self, request, read_mode):
-        if request.config.getoption("--simulate-cloud").lower() != "off":
-            pytest.xfail("Cannot pickle file handles. See comments in PR #2625")
+    @pytest.mark.parametrize(
+        "read_mode",
+        [
+            "r",
+            pytest.param(
+                "rb",
+                marks=pytest.mark.xfail(
+                    condition="config.getoption('--simulate-cloud').lower() != 'off'",
+                    reason="Cannot pickle file handles. See comments in PR #2625",
+                ),
+            ),
+        ],
+    )
+    def test_read_fwf_file_handle(self, read_mode):
         unique_filename = get_unique_filename(extension="txt")
         try:
             setup_fwf_file(filename=unique_filename)
@@ -1999,6 +2057,10 @@ class TestStata:
 
 
 class TestFeather:
+    @pytest.mark.xfail(
+        condition="config.getoption('--simulate-cloud').lower() != 'off'",
+        reason="The reason of tests fail in `cloud` mode is unknown for now - issue #3264",
+    )
     def test_read_feather(self):
         unique_filename = get_unique_filename(extension="feather")
         try:
@@ -2012,6 +2074,10 @@ class TestFeather:
         finally:
             teardown_test_files([unique_filename])
 
+    @pytest.mark.xfail(
+        condition="config.getoption('--simulate-cloud').lower() != 'off'",
+        reason="The reason of tests fail in `cloud` mode is unknown for now - issue #3264",
+    )
     def test_to_feather(self):
         modin_df, pandas_df = create_test_dfs(TEST_DATA)
         eval_to_file(
@@ -2056,6 +2122,10 @@ class TestPickle:
         finally:
             teardown_test_files([unique_filename])
 
+    @pytest.mark.xfail(
+        condition="config.getoption('--simulate-cloud').lower() != 'off'",
+        reason="There is no point in writing to local files.",
+    )
     def test_to_pickle(self):
         modin_df, pandas_df = create_test_dfs(TEST_DATA)
         eval_to_file(
@@ -2073,12 +2143,20 @@ class TestPickle:
             teardown_test_files([unique_filename_modin, unique_filename_pandas])
 
 
+@pytest.mark.xfail(
+    condition="config.getoption('--simulate-cloud').lower() != 'off'",
+    reason="The reason of tests fail in `cloud` mode is unknown for now - issue #3264",
+)
 def test_from_arrow():
     _, pandas_df = create_test_dfs(TEST_DATA)
     modin_df = from_arrow(pa.Table.from_pandas(pandas_df))
     df_equals(modin_df, pandas_df)
 
 
+@pytest.mark.xfail(
+    condition="config.getoption('--simulate-cloud').lower() != 'off'",
+    reason="The reason of tests fail in `cloud` mode is unknown for now - issue #3264",
+)
 def test_to_dense():
     modin_df, pandas_df = create_test_dfs({"col1": pandas.SparseArray([0, 1, 0])})
     df_equals(modin_df.sparse.to_dense(), pandas_df.sparse.to_dense())

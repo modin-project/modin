@@ -39,6 +39,13 @@ SQL on Modin Dataframes
 
 Read about Modin Dataframe support for SQL queries in this recent `blog post`_. Check out the `Modin SQL documentation`_ as well!
 
+Distributed XGBoost on Modin
+----------------------------
+Modin provides an implementation of distributed XGBoost machine learning algorithm on Modin DataFrames. See our
+:doc:`Distributed XGBoost on Modin documentation </experimental_features/modin_xgboost>` for details about installation and usage, as well as
+:doc:`Modin XGBoost architecture documentation </flow/modin/experimental/xgboost>` for information about implementation and
+internal execution flow.
+
 .. _`blog post`: https://medium.com/riselab/why-every-data-scientist-using-pandas-needs-modin-bringing-sql-to-dataframes-3b216b29a7c0
 .. _`Modin SQL documentation`: modin_sql.html
 .. _`Modin Spreadsheet API documentation`: spreadsheets_api.html

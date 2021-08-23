@@ -97,7 +97,7 @@ or explicitly
   conda install -c conda-forge modin-ray modin-dask modin-omnisci
 
 Using Intel\ |reg| Distribution of Modin
-"""""""""""""""""""""""""""""""""""""""
+""""""""""""""""""""""""""""""""""""""""
 
 With ``conda`` it is also possible to install Intel Distribution of Modin, a special version of Modin 
 that is part of Intel\ |reg| oneAPI AI Analytics Toolkit. This version of Modin is powered by :doc:`OmniSci</UsingOmnisci/index>` 

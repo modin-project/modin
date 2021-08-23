@@ -326,9 +326,8 @@ jobs:
         uses: conda-incubator/setup-miniconda@v2
         with:
           activate-environment: modin_on_omnisci
-          python-version: 3.7
           environment-file: requirements/env_omnisci.yml
-          channel-priority: strict
+          python-version: 3.7
           use-only-tar-bz2: true # IMPORTANT: This needs to be set for caching to work properly!
       - name: Conda environment
         shell: bash -l {0}
@@ -558,7 +557,7 @@ jobs:
           conda info
           conda list
       - shell: bash -l {0}
-        run: python -m pytest --simulate-cloud=normal modin/pandas/test/test_io.py::TestCsv
+        run: python -m pytest --simulate-cloud=normal modin/pandas/test/test_io.py
       - shell: bash -l {0}
       # When running without parameters, some of the tests fail
         run: python -m pytest --simulate-cloud=normal modin/pandas/test/dataframe/test_binary.py::test_math_functions[add-rows-scalar]

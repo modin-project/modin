@@ -562,17 +562,12 @@ class OmnisciOnRayIO(RayIO, TextFileDispatcher):
         on_bad_lines = read_csv_kwargs.get("on_bad_lines", "error")
         error_bad_lines = read_csv_kwargs.get("error_bad_lines", None)
         warn_bad_lines = read_csv_kwargs.get("warn_bad_lines", None)
-        names = read_csv_kwargs.get("names", lib.no_default)
-        prefix = read_csv_kwargs.get("prefix", lib.no_default)
         delim_whitespace = read_csv_kwargs.get("delim_whitespace", False)
 
         if delimiter and (sep is not lib.no_default):
             raise ValueError(
                 "Specified a sep and a delimiter; you can only specify one."
             )
-
-        if names is not lib.no_default and prefix is not lib.no_default:
-            raise ValueError("Specified names and prefix; you can only specify one.")
 
         # Alias sep -> delimiter.
         if delimiter is None:
