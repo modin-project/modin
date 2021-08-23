@@ -410,7 +410,7 @@ class TimeFillnaSeries:
 
 
 class TimeFillnaDataFrame:
-    param_names = ["value_type", "shape", "limit", "inplace"]
+    param_names = ["value_type", "shape", "limit"]
     params = [
         ["scalar", "dict", "DataFrame", "Series"],
         UNARY_OP_DATA_SIZE[ASV_DATASET_SIZE],
