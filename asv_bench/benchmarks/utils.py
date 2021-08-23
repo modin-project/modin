@@ -143,9 +143,7 @@ data_cache = dict()
 dataframes_cache = dict()
 
 
-def gen_nan_data(
-    impl: str, nrows: int, ncols: int, data_type: str = "DataFrame"
-) -> dict:
+def gen_nan_data(impl: str, nrows: int, ncols: int) -> dict:
     """
     Generate nan data with caching.
 
@@ -162,17 +160,13 @@ def gen_nan_data(
         Number of rows.
     ncols : int
         Number of columns.
-    data_type : str
-        DataFrame or Series.
 
     Returns
     -------
     modin.pandas.DataFrame or pandas.DataFrame or modin.pandas.Series or pandas.Series
         Shape - (nrows, ncols).
     """
-    assert data_type in ("DataFrame", "Series")
-
-    cache_key = (impl, nrows, ncols, data_type)
+    cache_key = (impl, nrows, ncols)
     if cache_key in data_cache:
         return data_cache[cache_key]
 
@@ -185,11 +179,10 @@ def gen_nan_data(
     else:
         assert False
 
-    if data_type == "DataFrame":
+    if ncols > 1:
         columns = [f"col{x}" for x in range(ncols)]
         data = module.DataFrame(np.nan, index=pd.RangeIndex(nrows), columns=columns)
-    elif data_type == "Series":
-        assert ncols == 1
+    elif ncols == 1:
         data = module.Series(np.nan, index=pd.RangeIndex(nrows))
     else:
         assert False

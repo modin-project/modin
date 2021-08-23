@@ -388,7 +388,7 @@ class TimeFillnaSeries:
 
     def setup(self, value_type, shape, limit):
         pd = IMPL[ASV_USE_IMPL]
-        self.dataset = gen_nan_data(ASV_USE_IMPL, *shape, data_type="Series")
+        self.dataset = gen_nan_data(ASV_USE_IMPL, *shape)
 
         if value_type == "scalar":
             self.value = 18.19
@@ -421,7 +421,7 @@ class TimeFillnaDataFrame:
 
     def setup(self, value_type, shape, limit):
         pd = IMPL[ASV_USE_IMPL]
-        self.dataset = gen_nan_data(ASV_USE_IMPL, *shape, data_type="DataFrame")
+        self.dataset = gen_nan_data(ASV_USE_IMPL, *shape)
         columns = self.dataset.columns
 
         if value_type == "scalar":
