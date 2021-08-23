@@ -2542,15 +2542,12 @@ class DataFrame(BasePandasDataset):
                     key = DataFrame(key, columns=self.columns)
                 return self.mask(key, value, inplace=True)
 
-            def setitem_unhashable_key(df):
-                # Arrow makes memory-mapped objects immutable, so copy will allow them
-                # to be mutable again.
-                df = df.copy(True)
+            def setitem_unhashable_key(df, value):
                 df[key] = value
                 return df
 
             return self._update_inplace(
-                self._default_to_pandas(setitem_unhashable_key)._query_compiler
+                self._default_to_pandas(setitem_unhashable_key, value)._query_compiler
             )
         if is_list_like(value):
             if isinstance(value, (pandas.DataFrame, DataFrame)):

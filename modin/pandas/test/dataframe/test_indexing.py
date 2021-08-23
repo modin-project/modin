@@ -1616,6 +1616,16 @@ def test_setitem_on_empty_df(data, value, convert_to_series, new_col_id):
     eval_general(modin_df, pandas_df, applyier)
 
 
+def test___setitem__unhashable_list():
+    # from #3258 and #3291
+    cols = ["a", "b"]
+    modin_df = pd.DataFrame([[0, 0]], columns=cols)
+    modin_df[cols] = modin_df[cols]
+    pandas_df = pandas.DataFrame([[0, 0]], columns=cols)
+    pandas_df[cols] = pandas_df[cols]
+    df_equals(modin_df, pandas_df)
+
+
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test___len__(data):
     modin_df = pd.DataFrame(data)
