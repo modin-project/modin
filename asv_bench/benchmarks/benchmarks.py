@@ -24,6 +24,7 @@ import numpy as np
 
 from .utils import (
     generate_dataframe,
+    gen_nan_data,
     RAND_LOW,
     RAND_HIGH,
     random_string,
@@ -33,6 +34,7 @@ from .utils import (
     ASV_DATASET_SIZE,
     BINARY_OP_DATA_SIZE,
     UNARY_OP_DATA_SIZE,
+    SERIES_DATA_SIZE,
     GROUPBY_NGROUPS,
     IMPL,
     execute,
@@ -380,13 +382,13 @@ class TimeFillnaSeries:
     param_names = ["value_type", "shape", "limit"]
     params = [
         ["scalar", "dict", "Series"],
-        UNARY_OP_DATA_SIZE[ASV_DATASET_SIZE],
+        SERIES_DATA_SIZE[ASV_DATASET_SIZE],
         [None, 0.8],
     ]
 
     def setup(self, value_type, shape, limit):
         pd = IMPL[ASV_USE_IMPL]
-        self.dataset = pd.Series(np.nan, index=pd.RangeIndex(shape[0]))
+        self.dataset = gen_nan_data(ASV_USE_IMPL, *shape, data_type="Series")
 
         if value_type == "scalar":
             self.value = 18.19
@@ -419,10 +421,8 @@ class TimeFillnaDataFrame:
 
     def setup(self, value_type, shape, limit):
         pd = IMPL[ASV_USE_IMPL]
-        columns = [f"col{x}" for x in range(shape[1])]
-        self.dataset = pd.DataFrame(
-            np.nan, index=pd.RangeIndex(shape[0]), columns=columns
-        )
+        self.dataset = gen_nan_data(ASV_USE_IMPL, *shape, data_type="DataFrame")
+        columns = self.dataset.columns
 
         if value_type == "scalar":
             self.value = 18.19

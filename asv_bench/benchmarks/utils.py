@@ -92,6 +92,15 @@ UNARY_OP_DATA_SIZE = {
     ],
 }
 
+SERIES_DATA_SIZE = {
+    "big": [
+        (10_000_000, 1),
+    ],
+    "small": [
+        (100_000, 1),
+    ],
+}
+
 GROUPBY_NGROUPS = {
     "big": [100, "huge_amount_groups"],
     "small": [5],
@@ -132,6 +141,61 @@ class weakdict(dict):  # noqa: GL08
 
 data_cache = dict()
 dataframes_cache = dict()
+
+
+def gen_nan_data(
+    impl: str, nrows: int, ncols: int, data_type: str = "DataFrame"
+) -> dict:
+    """
+    Generate nan data with caching.
+
+    The generated data are saved in the dictionary and on a subsequent call,
+    if the keys match, saved data will be returned. Therefore, we need
+    to carefully monitor the changing of saved data and make its copy if needed.
+
+    Parameters
+    ----------
+    impl : str
+        Implementation used to create the dataframe;
+        supported implemetations: {"modin", "pandas"}.
+    nrows : int
+        Number of rows.
+    ncols : int
+        Number of columns.
+    data_type : str
+        DataFrame or Series.
+
+    Returns
+    -------
+    modin.pandas.DataFrame or pandas.DataFrame or modin.pandas.Series or pandas.Series
+        Shape - (nrows, ncols).
+    """
+    assert data_type in ("DataFrame", "Series")
+
+    cache_key = (impl, nrows, ncols, data_type)
+    if cache_key in data_cache:
+        return data_cache[cache_key]
+
+    logging.info("Generating nan data {} rows and {} columns".format(nrows, ncols))
+
+    if impl == "modin":
+        module = pd
+    elif impl == "pandas":
+        module = pandas
+    else:
+        assert False
+
+    if data_type == "DataFrame":
+        columns = [f"col{x}" for x in range(ncols)]
+        data = module.DataFrame(np.nan, index=pd.RangeIndex(nrows), columns=columns)
+    elif data_type == "Series":
+        assert ncols == 1
+        data = module.Series(np.nan, index=pd.RangeIndex(nrows))
+    else:
+        assert False
+
+    data_cache[cache_key] = data
+    return data
 
 
 def gen_int_data(nrows: int, ncols: int, rand_low: int, rand_high: int) -> dict:
