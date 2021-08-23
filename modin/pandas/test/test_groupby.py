@@ -1141,6 +1141,13 @@ def eval___getitem__(md_grp, pd_grp, additional_tests=None):
         md_grp, pd_grp = md_grp[selection], pd_grp[selection]
 
         assert md_grp.ndim == pd_grp.ndim
+        assert (
+            isinstance(md_grp, pd.groupby.DataFrameGroupBy)
+            and isinstance(pd_grp, pandas.core.groupby.DataFrameGroupBy)
+        ) or (
+            isinstance(md_grp, pd.groupby.SeriesGroupBy)
+            and isinstance(pd_grp, pandas.core.groupby.SeriesGroupBy)
+        ), f"Diffirent types of GroupBy objects.\nModin: {type(md_grp)}, Pandas: {type(pd_grp)}"
         # Non-numeric aggregation test, MapReduce
         eval_general(md_grp, pd_grp, lambda grp: grp.count(), comparator=comparator)
         eval_general(md_grp, pd_grp, lambda grp: grp.any(), comparator=comparator)

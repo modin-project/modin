@@ -441,17 +441,19 @@ class DataFrameGroupBy(object):
             raise IndexError(f"Column(s) {self._selection} already selected")
 
         kwargs = {**self._kwargs.copy(), "squeeze": self._squeeze}
-        # Most of time indexing DataFrameGroupBy results in another DataFrameGroupBy object unless circumstances are
-        # special in which case SeriesGroupBy has to be returned. Such circumstances are when key equals to a single
-        # column name and is not a list of column names or list of one column name.
+        # The rules of type deduction for the resulted object is the following:
+        #   1. If `key` is a list-like or `as_index is False`, then the resulted object is a DataFrameGroupBy
+        #   2. Otherwise, the resulted object is SeriesGroupBy
         if is_list_like(key):
             make_dataframe = True
         else:
+            # If `key` is not list-like then the selected object is always a single-dimensional
+            # (going by pandas notation)
+            kwargs["ndim"] = 1
             if self._as_index:
                 kwargs["squeeze"] = True
                 make_dataframe = False
             else:
-                kwargs["ndim"] = 1
                 make_dataframe = True
                 key = [key]
         if make_dataframe:
