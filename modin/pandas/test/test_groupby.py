@@ -1140,7 +1140,7 @@ def eval___getitem__(md_grp, pd_grp, additional_tests=None):
     def test_function(md_grp, pd_grp, selection):
         md_grp, pd_grp = md_grp[selection], pd_grp[selection]
 
-        modin_groupby_equals_pandas(md_grp, pd_grp)
+        assert md_grp.ndim == pd_grp.ndim
         # Non-numeric aggregation test, MapReduce
         eval_general(md_grp, pd_grp, lambda grp: grp.count(), comparator=comparator)
         eval_general(md_grp, pd_grp, lambda grp: grp.any(), comparator=comparator)
@@ -1681,7 +1681,28 @@ def test_multi_column_groupby_different_partitions(
         by, as_index=as_index
     )
     eval_general(md_grp, pd_grp, func_to_apply)
-    eval___getitem__(md_grp, pd_grp, additional_tests=func_to_apply)
+
+
+@pytest.mark.parametrize("as_index", [True, False])
+@pytest.mark.parametrize("by_length", [1, 2])
+@pytest.mark.parametrize(
+    "categorical_by",
+    [pytest.param(True, marks=pytest.mark.skip("See modin issue #2513")), False],
+)
+def test_selection_different_partitions(as_index, by_length, categorical_by):
+    data = test_data_values[0]
+    md_df, pd_df = create_test_dfs(data)
+
+    by = [pd_df.columns[-i if i % 2 else i] for i in range(by_length)]
+
+    if categorical_by:
+        md_df = md_df.astype({by[0]: "category"})
+        pd_df = pd_df.astype({by[0]: "category"})
+
+    md_grp, pd_grp = md_df.groupby(by, as_index=as_index), pd_df.groupby(
+        by, as_index=as_index
+    )
+    eval___getitem__(md_grp, pd_grp)
 
 
 @pytest.mark.parametrize(
