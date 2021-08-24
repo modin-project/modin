@@ -153,6 +153,32 @@ def test_from_partitions(axis, index, columns, row_lengths, column_widths):
     df_equals(expected_df, actual_df)
 
 
+@pytest.mark.parametrize("columns", ["original_col", "new_col"])
+@pytest.mark.parametrize("index", ["original_idx", "new_idx"])
+@pytest.mark.parametrize("axis", [None, 0, 1])
+def test_from_partitions_not_matched_labels(axis, index, columns):
+    num_rows = 2 ** 16
+    num_cols = 2 ** 8
+    expected_df = pd.DataFrame(np.random.randint(0, 100, size=(num_rows, num_cols)))
+    partitions = unwrap_partitions(expected_df, axis=axis)
+
+    index = (
+        expected_df.index
+        if index == "original_idx"
+        else [f"row{i}" for i in expected_df.index]
+    )
+    columns = (
+        expected_df.columns
+        if columns == "original_col"
+        else [f"col{i}" for i in expected_df.columns]
+    )
+
+    expected_df.index = index
+    expected_df.columns = columns
+    actual_df = from_partitions(partitions, axis=axis, index=index, columns=columns)
+    df_equals(expected_df, actual_df)
+
+
 @pytest.mark.parametrize("row_indices", [[0, 2], slice(None)])
 @pytest.mark.parametrize("col_indices", [[0, 2], slice(None)])
 @pytest.mark.parametrize("is_length_future", [False, True])

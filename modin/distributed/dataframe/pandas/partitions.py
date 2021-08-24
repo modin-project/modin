@@ -175,20 +175,25 @@ def from_partitions(
         raise ValueError(
             f"Got unacceptable value of axis {axis}. Possible values are {0}, {1} or {None}."
         )
+
+    sync_labels_on = None
     if index is None:
+        sync_labels_on = 1
         index = partition_mgr_class.get_indices(0, parts, lambda df: df.axes[0])
 
     if columns is None:
+        sync_labels_on = 0 if sync_labels_on is None else -1
         columns = partition_mgr_class.get_indices(1, parts, lambda df: df.axes[1])
 
-    return DataFrame(
-        query_compiler=PandasQueryCompiler(
-            partition_frame_class(
-                parts,
-                index,
-                columns,
-                row_lengths=row_lengths,
-                column_widths=column_widths,
-            )
-        )
+    frame = partition_frame_class(
+        parts,
+        index,
+        columns,
+        row_lengths=row_lengths,
+        column_widths=column_widths,
     )
+
+    if sync_labels_on != -1:
+        frame.synchronize_labels(axis=sync_labels_on)
+
+    return DataFrame(query_compiler=PandasQueryCompiler(frame))
