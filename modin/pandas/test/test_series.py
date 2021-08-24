@@ -3504,6 +3504,19 @@ def test_where():
     assert all(to_pandas(modin_result) == pandas_result)
 
 
+@pytest.mark.parametrize("data", test_string_data_values, ids=test_string_data_keys)
+@pytest.mark.parametrize(
+    "key",
+    [0, slice(0, len(test_string_data_values) / 2)],
+    ids=["single_key", "slice_key"],
+)
+def test_str___getitem__(data, key):
+    modin_series, pandas_series = create_test_series(data)
+    modin_result = modin_series.str[key]
+    pandas_result = pandas_series.str[key]
+    df_equals(modin_result, pandas_result)
+
+
 # Test str operations
 def test_str_cat():
     data = ["abC|DeF,Hik", "gSaf,qWer|Gre", "asd3,4sad|", np.NaN]

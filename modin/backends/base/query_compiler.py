@@ -3884,6 +3884,10 @@ class BaseQueryCompiler(abc.ABC):
     def str_zfill(self, width):
         return StrDefault.register(pandas.Series.str.zfill)(self, width)
 
+    @doc_utils.doc_str_method(refer_to="__getitem__", params="key : object")
+    def str___getitem__(self, key):
+        return StrDefault.register(pandas.Series.str.__getitem__)(self, key)
+
     # End of Str methods
 
     # Rolling methods
