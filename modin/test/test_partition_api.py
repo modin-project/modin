@@ -156,7 +156,7 @@ def test_from_partitions(axis, index, columns, row_lengths, column_widths):
 @pytest.mark.parametrize("columns", ["original_col", "new_col"])
 @pytest.mark.parametrize("index", ["original_idx", "new_idx"])
 @pytest.mark.parametrize("axis", [None, 0, 1])
-def test_from_partitions_not_matched_labels(axis, index, columns):
+def test_from_partitions_mismatched_labels(axis, index, columns):
     num_rows = 2 ** 16
     num_cols = 2 ** 8
     expected_df = pd.DataFrame(np.random.randint(0, 100, size=(num_rows, num_cols)))
