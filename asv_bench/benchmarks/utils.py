@@ -154,7 +154,7 @@ def gen_nan_data(impl: str, nrows: int, ncols: int) -> dict:
     Parameters
     ----------
     impl : str
-        Implementation used to create the dataframe;
+        Implementation used to create the DataFrame or Series;
         supported implemetations: {"modin", "pandas"}.
     nrows : int
         Number of rows.
@@ -164,7 +164,7 @@ def gen_nan_data(impl: str, nrows: int, ncols: int) -> dict:
     Returns
     -------
     modin.pandas.DataFrame or pandas.DataFrame or modin.pandas.Series or pandas.Series
-        Shape - (nrows, ncols).
+        DataFrame or Series with shape (nrows, ncols) or (nrows,), respectively.
     """
     cache_key = (impl, nrows, ncols)
     if cache_key in data_cache:
@@ -178,7 +178,7 @@ def gen_nan_data(impl: str, nrows: int, ncols: int) -> dict:
     elif ncols == 1:
         data = IMPL[impl].Series(np.nan, index=pd.RangeIndex(nrows))
     else:
-        assert False
+        assert False, "Number of columns (ncols) should be >= 1"
 
     data_cache[cache_key] = data
     return data
