@@ -172,18 +172,11 @@ def gen_nan_data(impl: str, nrows: int, ncols: int) -> dict:
 
     logging.info("Generating nan data {} rows and {} columns".format(nrows, ncols))
 
-    if impl == "modin":
-        module = pd
-    elif impl == "pandas":
-        module = pandas
-    else:
-        assert False
-
     if ncols > 1:
         columns = [f"col{x}" for x in range(ncols)]
-        data = module.DataFrame(np.nan, index=pd.RangeIndex(nrows), columns=columns)
+        data = IMPL[impl].DataFrame(np.nan, index=pd.RangeIndex(nrows), columns=columns)
     elif ncols == 1:
-        data = module.Series(np.nan, index=pd.RangeIndex(nrows))
+        data = IMPL[impl].Series(np.nan, index=pd.RangeIndex(nrows))
     else:
         assert False
 
