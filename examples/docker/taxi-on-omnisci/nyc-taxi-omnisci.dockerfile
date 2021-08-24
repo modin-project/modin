@@ -47,8 +47,7 @@ RUN conda update -n base -c defaults conda -y && \
     conda config --set channel_priority strict && \
     conda create -n modin --yes --no-default-packages && \
     conda activate modin && \
-    conda install -c intel/label/modintest -c conda-forge "omniscidbe4py>=v5.5.0" && \
-    pip install "modin[ray]==0.10.0" && \
+    conda install -c conda-forge modin-omnisci && \
     conda clean --all --yes
 
 COPY nyc-taxi-omnisci.py "${HOME}/nyc-taxi-omnisci.py"
