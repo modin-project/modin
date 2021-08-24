@@ -388,7 +388,7 @@ class TimeFillnaSeries:
 
     def setup(self, value_type, shape, limit):
         pd = IMPL[ASV_USE_IMPL]
-        self.dataset = gen_nan_data(ASV_USE_IMPL, *shape)
+        self.series = gen_nan_data(ASV_USE_IMPL, *shape)
 
         if value_type == "scalar":
             self.value = 18.19
@@ -404,11 +404,11 @@ class TimeFillnaSeries:
         self.kw = {"value": self.value, "limit": limit}
 
     def time_fillna(self, value_type, shape, limit):
-        execute(self.dataset.fillna(**self.kw))
+        execute(self.series.fillna(**self.kw))
 
     def time_fillna_inplace(self, value_type, shape, limit):
-        self.dataset.fillna(inplace=True, **self.kw)
-        execute(self.dataset)
+        self.series.fillna(inplace=True, **self.kw)
+        execute(self.series)
 
 
 class TimeFillnaDataFrame:
@@ -421,8 +421,8 @@ class TimeFillnaDataFrame:
 
     def setup(self, value_type, shape, limit):
         pd = IMPL[ASV_USE_IMPL]
-        self.dataset = gen_nan_data(ASV_USE_IMPL, *shape)
-        columns = self.dataset.columns
+        self.df = gen_nan_data(ASV_USE_IMPL, *shape)
+        columns = self.df.columns
 
         if value_type == "scalar":
             self.value = 18.19
@@ -447,11 +447,11 @@ class TimeFillnaDataFrame:
         self.kw = {"value": self.value, "limit": limit}
 
     def time_fillna(self, value_type, shape, limit):
-        execute(self.dataset.fillna(**self.kw))
+        execute(self.df.fillna(**self.kw))
 
     def time_fillna_inplace(self, value_type, shape, limit):
-        self.dataset.fillna(inplace=True, **self.kw)
-        execute(self.dataset)
+        self.df.fillna(inplace=True, **self.kw)
+        execute(self.df)
 
 
 class BaseTimeValueCounts:

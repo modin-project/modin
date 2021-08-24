@@ -13,10 +13,9 @@
 
 """General Modin on OmniSci backend benchmarks."""
 
-import numpy as np
-
 from ..utils import (
     generate_dataframe,
+    gen_nan_data,
     ASV_USE_IMPL,
     ASV_DATASET_SIZE,
     GROUPBY_NGROUPS,
@@ -233,9 +232,8 @@ class TimeFillna:
     ]
 
     def setup(self, value_type, shape, limit):
-        pd = IMPL[ASV_USE_IMPL]
-        columns = [f"col{x}" for x in range(shape[1])]
-        self.df = pd.DataFrame(np.nan, index=pd.RangeIndex(shape[0]), columns=columns)
+        self.df = gen_nan_data(ASV_USE_IMPL, *shape)
+        columns = self.df.columns
         trigger_import(self.df)
 
         value = self.create_fillna_value(value_type, columns)
