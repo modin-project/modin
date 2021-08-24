@@ -1245,15 +1245,11 @@ def eval_shift(modin_groupby, pandas_groupby):
         pandas_groupby,
         lambda groupby: groupby.shift(periods=-3),
     )
-    # Modin does not raise an exception when trying to call any function
-    # with 'axis=1' against SeriesGroupByObject.
-    # TODO: create an issue and add its id here
-    if pandas_groupby.ndim == 2:
-        eval_general(
-            modin_groupby,
-            pandas_groupby,
-            lambda groupby: groupby.shift(axis=1, fill_value=777),
-        )
+    eval_general(
+        modin_groupby,
+        pandas_groupby,
+        lambda groupby: groupby.shift(axis=1, fill_value=777),
+    )
 
 
 def test_groupby_on_index_values_with_loop():

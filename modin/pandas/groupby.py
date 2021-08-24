@@ -226,7 +226,7 @@ class DataFrameGroupBy(object):
             return result
 
         if freq is None and axis == 1 and self._axis == 0:
-            result = _shift(self._df, periods, freq, axis, fill_value)
+            result = _shift(self._selected_obj, periods, freq, axis, fill_value)
         elif (
             freq is not None
             and axis == 0
@@ -234,7 +234,12 @@ class DataFrameGroupBy(object):
             and isinstance(self._by, BaseQueryCompiler)
         ):
             result = _shift(
-                self._df, periods, freq, axis, fill_value, is_set_nan_rows=False
+                self._selected_obj,
+                periods,
+                freq,
+                axis,
+                fill_value,
+                is_set_nan_rows=False,
             )
             new_idx_lvl_arrays = np.concatenate(
                 [self._df[self._by.columns].values.T, [list(result.index)]]
@@ -417,6 +422,26 @@ class DataFrameGroupBy(object):
 
         self._non_conflict_selection_cache = selection
         return selection
+
+    @property
+    def _selected_obj(self):
+        """
+        Get subset of the source frame selected for aggregation.
+
+        Returns
+        -------
+        DataFrame or Series
+        """
+        selection = self._selection
+        if selection is None:
+            return self._df
+        if is_list_like(selection) and self.ndim == 1:
+            assert len(selection) in (
+                0,
+                1,
+            ), f"Single-dimensional object has non-single dimensional selection: {selection}."
+            selection = selection[0] if len(selection) > 0 else []
+        return self._df[selection]
 
     def __getitem__(self, key):
         """
