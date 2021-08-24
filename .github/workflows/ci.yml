@@ -341,7 +341,7 @@ jobs:
       - shell: bash -l {0}
         run: pytest modin/experimental/engines/omnisci_on_ray/test/test_dataframe.py
       - shell: bash -l {0}
-        run: pytest modin/pandas/test/test_io.py::TestCsv
+        run: pytest modin/pandas/test/test_io.py::TestCsv --verbose
       - shell: bash -l {0}
         run: |
           curl -o codecov https://codecov.io/bash
@@ -473,7 +473,7 @@ jobs:
       - run: python -m pytest -n 2 modin/pandas/test/test_groupby.py
       - run: python -m pytest -n 2 modin/pandas/test/test_reshape.py
       - run: python -m pytest -n 2 modin/pandas/test/test_general.py
-      - run: python -m pytest modin/pandas/test/test_io.py
+      - run: python -m pytest modin/pandas/test/test_io.py --verbose
       - run: python -m pytest modin/experimental/pandas/test/test_io_exp.py
       - run: pip install dfsql "mindsdb_sql<=0.0.12" && pytest modin/experimental/sql/test/test_sql.py
       - run: |
@@ -516,7 +516,7 @@ jobs:
       - shell: bash -l {0}
         run: python -m pytest -n 2 modin/pandas/test/test_series.py
       - shell: bash -l {0}
-        run: python -m pytest modin/pandas/test/test_io.py
+        run: python -m pytest modin/pandas/test/test_io.py --verbose
       - shell: bash -l {0}
         run: |
           curl -o codecov https://codecov.io/bash
@@ -557,7 +557,7 @@ jobs:
           conda info
           conda list
       - shell: bash -l {0}
-        run: python -m pytest --simulate-cloud=normal modin/pandas/test/test_io.py
+        run: python -m pytest --simulate-cloud=normal modin/pandas/test/test_io.py --verbose
       - shell: bash -l {0}
       # When running without parameters, some of the tests fail
         run: python -m pytest --simulate-cloud=normal modin/pandas/test/dataframe/test_binary.py::test_math_functions[add-rows-scalar]
@@ -627,7 +627,7 @@ jobs:
       - run: python -m pytest ${{matrix.test-task}}
         if: matrix.test-task != 'modin/pandas/test/test_io.py'
       - timeout-minutes: 30
-        run: python -m pytest modin/pandas/test/test_io.py
+        run: python -m pytest modin/pandas/test/test_io.py --verbose
         if: matrix.test-task == 'modin/pandas/test/test_io.py'
       - run: choco install codecov
       - run: codecov -f ./coverage.xml
@@ -660,7 +660,7 @@ jobs:
           conda list
       - run: sudo apt update && sudo apt install -y libhdf5-dev
       - shell: bash -l {0}
-        run: python -m pytest modin/pandas/test/test_io.py::TestCsv
+        run: python -m pytest modin/pandas/test/test_io.py::TestCsv --verbose
 
   test-spreadsheet:
     needs: [ lint-commit, lint-flake8, lint-black, test-api, test-headers ]
