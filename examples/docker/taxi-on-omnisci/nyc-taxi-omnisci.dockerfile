@@ -41,8 +41,6 @@ RUN wget -nv https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.
     rm -f /tmp/miniconda3.sh && \
     echo ". '${CONDA_DIR}/etc/profile.d/conda.sh'" >> "${HOME}/.profile"
 
-# modin==0.10.1 comes with an error: https://github.com/modin-project/modin/issues/3215
-# TODO: update modin version after a new version is released
 RUN conda update -n base -c defaults conda -y && \
     conda config --set channel_priority strict && \
     conda create -n modin --yes --no-default-packages && \
