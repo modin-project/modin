@@ -92,6 +92,15 @@ UNARY_OP_DATA_SIZE = {
     ],
 }
 
+SERIES_DATA_SIZE = {
+    "big": [
+        (100_000, 1),
+    ],
+    "small": [
+        (10_000, 1),
+    ],
+}
+
 GROUPBY_NGROUPS = {
     "big": [100, "huge_amount_groups"],
     "small": [5],
@@ -132,6 +141,47 @@ class weakdict(dict):  # noqa: GL08
 
 data_cache = dict()
 dataframes_cache = dict()
+
+
+def gen_nan_data(impl: str, nrows: int, ncols: int) -> dict:
+    """
+    Generate nan data with caching.
+
+    The generated data are saved in the dictionary and on a subsequent call,
+    if the keys match, saved data will be returned. Therefore, we need
+    to carefully monitor the changing of saved data and make its copy if needed.
+
+    Parameters
+    ----------
+    impl : str
+        Implementation used to create the DataFrame or Series;
+        supported implemetations: {"modin", "pandas"}.
+    nrows : int
+        Number of rows.
+    ncols : int
+        Number of columns.
+
+    Returns
+    -------
+    modin.pandas.DataFrame or pandas.DataFrame or modin.pandas.Series or pandas.Series
+        DataFrame or Series with shape (nrows, ncols) or (nrows,), respectively.
+    """
+    cache_key = (impl, nrows, ncols)
+    if cache_key in data_cache:
+        return data_cache[cache_key]
+
+    logging.info("Generating nan data {} rows and {} columns".format(nrows, ncols))
+
+    if ncols > 1:
+        columns = [f"col{x}" for x in range(ncols)]
+        data = IMPL[impl].DataFrame(np.nan, index=pd.RangeIndex(nrows), columns=columns)
+    elif ncols == 1:
+        data = IMPL[impl].Series(np.nan, index=pd.RangeIndex(nrows))
+    else:
+        assert False, "Number of columns (ncols) should be >= 1"
+
+    data_cache[cache_key] = data
+    return data
 
 
 def gen_int_data(nrows: int, ncols: int, rand_low: int, rand_high: int) -> dict:
