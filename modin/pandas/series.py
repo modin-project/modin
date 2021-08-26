@@ -1335,14 +1335,10 @@ class Series(BasePandasDataset):
             if abs(periods) >= len(self.index):
                 return Series(dtype=self.dtype)
             else:
-                if periods > 0:
-                    new_index = self.index.drop(labels=self.index[:periods])
-                    new_df = self.drop(self.index[-periods:])
-                else:
-                    new_index = self.index.drop(labels=self.index[periods:])
-                    new_df = self.drop(self.index[:-periods])
-
-                new_df.index = new_index
+                new_df = self.iloc[:-periods] if periods > 0 else self.iloc[-periods:]
+                new_df.index = (
+                    self.index[periods:] if periods > 0 else self.index[:periods]
+                )
                 return new_df
         else:
             raise ValueError(

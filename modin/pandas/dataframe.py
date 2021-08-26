@@ -1473,27 +1473,21 @@ class DataFrame(BasePandasDataset):
             if abs(periods) >= len(self.index):
                 return DataFrame(columns=self.columns)
             else:
-                if periods > 0:
-                    new_index = self.index.drop(labels=self.index[:periods])
-                    new_df = self.drop(self.index[-periods:])
-                else:
-                    new_index = self.index.drop(labels=self.index[periods:])
-                    new_df = self.drop(self.index[:-periods])
-
-                new_df.index = new_index
+                new_df = self.iloc[:-periods] if periods > 0 else self.iloc[-periods:]
+                new_df.index = (
+                    self.index[periods:] if periods > 0 else self.index[:periods]
+                )
                 return new_df
         else:
             if abs(periods) >= len(self.columns):
                 return DataFrame(index=self.index)
             else:
-                if periods > 0:
-                    new_columns = self.columns.drop(labels=self.columns[:periods])
-                    new_df = self.drop(self.columns[-periods:], axis="columns")
-                else:
-                    new_columns = self.columns.drop(labels=self.columns[periods:])
-                    new_df = self.drop(self.columns[:-periods], axis="columns")
-
-                new_df.columns = new_columns
+                new_df = (
+                    self.iloc[:, :-periods] if periods > 0 else self.iloc[:, -periods:]
+                )
+                new_df.columns = (
+                    self.columns[periods:] if periods > 0 else self.columns[:periods]
+                )
                 return new_df
 
     def unstack(self, level=-1, fill_value=None):  # noqa: PR01, RT01, D200
