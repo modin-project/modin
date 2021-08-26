@@ -16,6 +16,7 @@ import numpy as np
 import pandas
 from pandas.errors import ParserWarning
 import pandas._libs.lib as lib
+from pandas.core.dtypes.common import is_list_like
 from collections import OrderedDict
 from modin.config import TestDatasetSize, Engine, Backend, IsExperimental
 from modin.utils import to_pandas
@@ -361,13 +362,10 @@ class TestCsv:
         ],
     )
     @pytest.mark.parametrize("encoding", ["latin1", "windows-1251", None])
-    @pytest.mark.xfail(
-        condition="config.getoption('--simulate-cloud').lower() != 'off'",
-        reason="The reason of tests fail in `cloud` mode is unknown for now - issue #2340",
-    )
     def test_read_csv_parsing_2(
         self,
         make_csv_file,
+        request,
         header,
         skiprows,
         nrows,
@@ -384,6 +382,12 @@ class TestCsv:
         if xfail_case:
             pytest.xfail(
                 "read_csv fails because of duplicated columns names - issue #3080"
+            )
+        if request.config.getoption(
+            "--simulate-cloud"
+        ).lower() != "off" and is_list_like(skiprows):
+            pytest.xfail(
+                reason="The reason of tests fail in `cloud` mode is unknown for now - issue #2340"
             )
         if encoding:
             unique_filename = get_unique_filename()
@@ -420,10 +424,6 @@ class TestCsv:
     @pytest.mark.parametrize("false_values", [["No"], ["No", "false"], None])
     @pytest.mark.parametrize("skipfooter", [0, 10])
     @pytest.mark.parametrize("nrows", [35, None])
-    @pytest.mark.xfail(
-        condition="config.getoption('--simulate-cloud').lower() != 'off'",
-        reason="The reason of tests fail in `cloud` mode is unknown for now - issue #2340",
-    )
     def test_read_csv_parsing_3(
         self,
         true_values,
