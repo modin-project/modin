@@ -11,11 +11,12 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
+import glob
 import pandas
 import pytest
 import modin.experimental.pandas as pd
 from modin.config import Engine
-from modin.pandas.test.utils import df_equals
+from modin.pandas.test.utils import df_equals, teardown_test_files, test_data
 
 
 @pytest.mark.skipif(
@@ -133,3 +134,27 @@ def test_read_multiple_csv_s3():
     modin_df = modin_df.reset_index(drop=True)
 
     df_equals(modin_df, pandas_df)
+
+
+@pytest.mark.skipif(
+    not Engine.get() == "Ray",
+    reason=f"{Engine.get()} does not have experimental API",
+)
+@pytest.mark.parametrize("compression", [None, "gzip"])
+@pytest.mark.parametrize(
+    "filename", ["test_default_to_pickle.pkl", "test_to_pickle*.pkl"]
+)
+def test_distributed_pickling(filename, compression):
+    data = test_data["int_data"]
+    df = pd.DataFrame(data)
+
+    if compression:
+        filename = f"{filename}.gz"
+
+    df.to_pickle_distributed(filename, compression=compression)
+
+    pickled_df = pd.read_pickle_distributed(filename, compression=compression)
+    df_equals(pickled_df, df)
+
+    pickle_files = glob.glob(filename)
+    teardown_test_files(pickle_files)

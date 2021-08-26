@@ -26,7 +26,7 @@ import pandas._libs.lib as lib
 import pathlib
 import re
 from collections import OrderedDict
-from pandas._typing import FilePathOrBuffer, StorageOptions
+from pandas._typing import CompressionOptions, FilePathOrBuffer, StorageOptions
 from typing import Union, IO, AnyStr, Sequence, Dict, List, Optional, Any
 
 from modin.error_message import ErrorMessage
@@ -550,8 +550,8 @@ def read_spss(
 @_inherit_docstrings(pandas.to_pickle)
 def to_pickle(
     obj: Any,
-    filepath_or_buffer: Union[str, pathlib.Path],
-    compression: Optional[str] = "infer",
+    filepath_or_buffer: FilePathOrBuffer,
+    compression: CompressionOptions = "infer",
     protocol: int = pickle.HIGHEST_PROTOCOL,
     storage_options: StorageOptions = None,
 ):
@@ -561,7 +561,11 @@ def to_pickle(
     if isinstance(obj, DataFrame):
         obj = obj._query_compiler
     return FactoryDispatcher.to_pickle(
-        obj, filepath_or_buffer, compression=compression, protocol=protocol
+        obj,
+        filepath_or_buffer=filepath_or_buffer,
+        compression=compression,
+        protocol=protocol,
+        storage_options=storage_options,
     )
 
 
