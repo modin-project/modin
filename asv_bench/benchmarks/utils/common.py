@@ -196,6 +196,46 @@ def gen_str_int_data(nrows: int, ncols: int, rand_low: int, rand_high: int) -> d
     data_cache[cache_key] = weakdict(data)
     return data
 
+def gen_het_data(nrows: int, ncols: int, rand_low: int, rand_high: int) -> dict:
+    """
+    Generate heterogeneous data with caching.
+
+    The generated data are saved in the dictionary and on a subsequent call,
+    if the keys match, saved data will be returned. Therefore, we need
+    to carefully monitor the changing of saved data and make its copy if needed.
+
+    Parameters
+    ----------
+    nrows : int
+        Number of rows.
+    ncols : int
+        Number of columns.
+    rand_low : int
+        Low bound for random generator.
+    rand_high : int
+        High bound for random generator.
+
+    Returns
+    -------
+    dict
+        Number of keys - `ncols`, each of them store np.ndarray of `nrows` length.
+    """
+    cache_key = ("het", nrows, ncols, rand_low, rand_high)
+    if cache_key in data_cache:
+        return data_cache[cache_key]
+
+    logging.info(
+        "Generating heterogeneous data {} rows and {} columns [{}-{}]".format(
+            nrows, ncols, rand_low, rand_high
+        )
+    )
+    data = {
+        "col{}".format(i): np.append(random_state.randint(rand_low, rand_high, size=(nrows // 2)), random_state.choice(["some", "text", "values"], size=(nrows - nrows // 2)))
+        for i in range(ncols)
+    }
+    data_cache[cache_key] = weakdict(data)
+    return data
+
 
 def gen_true_false_int_data(nrows, ncols, rand_low, rand_high):
     """
@@ -290,6 +330,7 @@ def gen_data(
         "int": gen_int_data,
         "str_int": gen_str_int_data,
         "true_false_int": gen_true_false_int_data,
+        "heterogeneous": gen_het_data,
     }
     assert data_type in type_to_generator
     data_generator = type_to_generator[data_type]

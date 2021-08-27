@@ -161,3 +161,18 @@ class TimeReadCsvNamesDtype:
                 parse_dates=self.parse_dates,
             )
         )
+
+
+class TimeReadCsvHetData(BaseReadCsv):
+    data_type = "heterogeneous"
+
+    param_names = ["shape"]
+    params = [get_benchmark_shapes("TimeReadCsvHetData")]
+
+    def time_het_data(self, test_filenames, shape):
+        execute(
+            IMPL[ASV_USE_IMPL].read_csv(
+                test_filenames[self.shape_id],
+            ),
+            trigger_omnisci_import=ASV_USE_BACKEND == "omnisci",
+        )

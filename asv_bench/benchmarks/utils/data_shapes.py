@@ -130,6 +130,7 @@ _DEFAULT_CONFIG_T = [
             "TimeReadCsvSkiprows",
             "TimeReadCsvTrueFalseValues",
             "TimeReadCsvNamesDtype",
+            "TimeReadCsvHetData",
             # Scalability benchmarks
             "TimeFromPandas",
             "TimeToPandas",
