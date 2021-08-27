@@ -3,6 +3,9 @@ on: push
 jobs:
   test-internals:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash -l {0}
     name: test-internals
     steps:
       - uses: actions/checkout@v2
@@ -16,23 +19,16 @@ jobs:
           channel-priority: strict
           use-only-tar-bz2: true # IMPORTANT: This needs to be set for caching to work properly!
       - name: Conda environment
-        shell: bash -l {0}
         run: |
           conda info
           conda list
       - name: Internals tests
-        shell: bash -l {0}
         run: python -m pytest modin/data_management/factories/test/test_dispatcher.py modin/experimental/cloud/test/test_cloud.py
-      - shell: bash -l {0}
-        run: python -m pytest modin/config/test
-      - shell: bash -l {0}
-        run: python -m pytest modin/test/test_envvar_catcher.py
-      - shell: bash -l {0}
-        run: python -m pytest modin/test/backends/pandas/test_internals.py
-      - shell: bash -l {0}
-        run: python -m pytest modin/test/test_envvar_npartitions.py
-      - shell: bash -l {0}
-        run: python -m pytest modin/test/test_partition_api.py
+      - run: python -m pytest modin/config/test
+      - run: python -m pytest modin/test/test_envvar_catcher.py
+      - run: python -m pytest modin/test/backends/pandas/test_internals.py
+      - run: python -m pytest modin/test/test_envvar_npartitions.py
+      - run: python -m pytest modin/test/test_partition_api.py
 
   test-defaults:
     runs-on: ubuntu-latest
@@ -58,7 +54,6 @@ jobs:
           channel-priority: strict
           use-only-tar-bz2: true # IMPORTANT: This needs to be set for caching to work properly!
       - name: Conda environment
-        shell: bash -l {0}
         run: |
           conda info
           conda list
@@ -94,6 +89,9 @@ jobs:
 
   test-omnisci:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash -l {0}
     env:
       MODIN_MEMORY: 1000000000
       MODIN_EXPERIMENTAL: "True"
@@ -112,18 +110,14 @@ jobs:
           python-version: 3.7
           use-only-tar-bz2: true # IMPORTANT: This needs to be set for caching to work properly!
       - name: Conda environment
-        shell: bash -l {0}
         run: |
           conda info
           conda list
       - name: Install HDF5
         run: sudo apt update && sudo apt install -y libhdf5-dev
-      - shell: bash -l {0}
-        run: pytest modin/experimental/engines/omnisci_on_ray/test/test_dataframe.py
-      - shell: bash -l {0}
-        run: pytest modin/pandas/test/test_io.py::TestCsv
-      - shell: bash -l {0}
-        run: |
+      - run: pytest modin/experimental/engines/omnisci_on_ray/test/test_dataframe.py
+      - run: pytest modin/pandas/test/test_io.py::TestCsv
+      - run: |
           curl -o codecov https://codecov.io/bash
           VERSION=$(grep -o 'VERSION=\"[0-9\.]*\"' codecov | cut -d'"' -f2);
           curl -o SHA512SUM "https://raw.githubusercontent.com/codecov/codecov-bash/${VERSION}/SHA512SUM"
@@ -159,7 +153,6 @@ jobs:
           channel-priority: strict
           use-only-tar-bz2: true # IMPORTANT: This needs to be set for caching to work properly!
       - name: Conda environment
-        shell: bash -l {0}
         run: |
           conda info
           conda list
@@ -257,6 +250,9 @@ jobs:
 
   test-pyarrow:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash -l {0}
     strategy:
       matrix:
         python-version: ["3.7", "3.8"]
@@ -276,16 +272,17 @@ jobs:
           channel-priority: strict
           use-only-tar-bz2: true # IMPORTANT: This needs to be set for caching to work properly!
       - name: Conda environment
-        shell: bash -l {0}
         run: |
           conda info
           conda list
       - run: sudo apt update && sudo apt install -y libhdf5-dev
-      - shell: bash -l {0}
-        run: python -m pytest modin/pandas/test/test_io.py::TestCsv
+      - run: python -m pytest modin/pandas/test/test_io.py::TestCsv
 
   test-spreadsheet:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash -l {0}
     strategy:
       matrix:
         python-version: [ "3.7", "3.8" ]
@@ -305,9 +302,7 @@ jobs:
           channel-priority: strict
           use-only-tar-bz2: true # IMPORTANT: This needs to be set for caching to work properly!
       - name: Conda environment
-        shell: bash -l {0}
         run: |
           conda info
           conda list
-      - shell: bash -l {0}
-        run: python -m pytest modin/spreadsheet/test/test_general.py
+      - run: python -m pytest modin/spreadsheet/test/test_general.py
