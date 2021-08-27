@@ -42,7 +42,7 @@ from modin.config import AsvDataSizeConfig
     ],
 )
 @patch.object(data_shapes, "CONFIG_FROM_FILE", new=None)
-def test_get_benchmark_shapes(monkeypatch, asv_config_content, result):
+def test_get_benchmark_shapes(asv_config_content, result):
     AsvDataSizeConfig.put("mock_filename")
     with patch("builtins.open", mock_open(read_data=asv_config_content)):
         assert result[0] == get_benchmark_shapes("TimeJoin")
