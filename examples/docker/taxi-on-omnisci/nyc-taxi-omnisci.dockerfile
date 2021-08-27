@@ -45,7 +45,7 @@ RUN conda update -n base -c defaults conda -y && \
     conda config --set channel_priority strict && \
     conda create -n modin --yes --no-default-packages && \
     conda activate modin && \
-    conda install -c intel/label/modin -c conda-forge modin "ray>=1.0.0" "numpy==1.20.3" && \
+    conda install -c conda-forge modin-omnisci && \
     conda clean --all --yes
 
 COPY nyc-taxi-omnisci.py "${HOME}/nyc-taxi-omnisci.py"

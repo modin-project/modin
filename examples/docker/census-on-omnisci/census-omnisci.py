@@ -18,9 +18,9 @@ import modin.pandas as pd
 from modin.experimental.engines.omnisci_on_ray.frame.omnisci_worker import OmnisciServer
 
 from sklearn import config_context
-import daal4py.sklearn as sklearn
+import sklearnex
 
-sklearn.patch_sklearn()
+sklearnex.patch_sklearn()
 from sklearn.model_selection import train_test_split
 import sklearn.linear_model as lm
 import numpy as np
