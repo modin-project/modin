@@ -448,6 +448,7 @@ class PandasFramePartitionManager(ABC):
             # signaling that the partition with id==0 can be written to the file
             queue.put(0)
             kw["queue"] = queue
+            kw["count_parts"] = len(apply_indices)
 
         result_blocks = np.array(
             [

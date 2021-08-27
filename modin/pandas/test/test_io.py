@@ -217,7 +217,8 @@ def eval_to_file(modin_obj, pandas_obj, fn, extension, **fn_kwargs):
     finally:
         teardown_test_files([unique_filename_modin, unique_filename_pandas])
 
-
+import time
+import ray
 @pytest.mark.usefixtures("TestReadCSVFixture")
 @pytest.mark.skipif(
     IsExperimental.get() and Backend.get() == "Pyarrow",
@@ -226,10 +227,17 @@ def eval_to_file(modin_obj, pandas_obj, fn, extension, **fn_kwargs):
 class TestCsv:
     def test_just_test(self):
         for i in range(8):
-            pd.DataFrame([1, 2, 3, 4]).to_csv("initial-data.csv", index=False)
+            print("to_csv")
+            print(ray.available_resources())
+            pd.DataFrame(np.zeros((128, 128))).to_csv("initial-data.csv", index=False)
+            print("read_csv")
             df = pd.read_csv("initial-data.csv")
+            print("isnull, axis=1")
             df.index[df.isnull().all(axis=1)].values.tolist()
+            print("isnull, axis=0")
             df.columns[df.isnull().all(axis=0)].values.tolist()
+            print(ray.available_resources())
+
 
     # delimiter tests
     @pytest.mark.parametrize("sep", [None, "_", ",", ".", "\n"])

@@ -18,6 +18,7 @@ import pandas
 
 from modin.engines.base.io import BaseIO
 from ray import wait
+import ray
 
 
 class RayIO(BaseIO):
@@ -173,6 +174,9 @@ class RayIO(BaseIO):
 
             # signal that the next process can start writing to the file
             queue.put(get_value + 1)
+            if get_value + 1 == kw["count_parts"]:
+                print("shutdown")
+                queue.shutdown()
 
             # used for synchronization purposes
             return pandas.DataFrame()
