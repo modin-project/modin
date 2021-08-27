@@ -427,6 +427,9 @@ class StringMethods(object):
     def isdecimal(self):
         return Series(query_compiler=self._query_compiler.str_isdecimal())
 
+    def __getitem__(self, key):
+        return Series(query_compiler=self._query_compiler.str___getitem__(key))
+
     def _default_to_pandas(self, op, *args, **kwargs):
         """
         Convert `self` to pandas type and call a pandas str.`op` on it.
