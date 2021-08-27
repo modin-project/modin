@@ -218,9 +218,9 @@ def test_xgb_with_multiclass_classification_datasets(data, num_actors, modin_typ
     "num_actors",
     [
         1,
-        pytest.param(num_cpus, marks=pytest.mark.skip),
-        pytest.param(None, marks=pytest.mark.skip),
-        pytest.param(modin.config.NPartitions.get() + 1, marks=pytest.mark.skip),
+        num_cpus,
+        None,
+        modin.config.NPartitions.get() + 1,
     ],
 )
 @pytest.mark.parametrize(
