@@ -259,7 +259,7 @@ class BaseTimeValueCounts:
         trigger_import(self.df)
 
 
-class TimeValueCountsFrame(BaseTimeValueCounts):
+class TimeValueCountsDataFrame(BaseTimeValueCounts):
     param_names = ["shape", "ngroups", "subset"]
     params = [
         UNARY_OP_DATA_SIZE[ASV_DATASET_SIZE],
