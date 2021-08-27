@@ -141,6 +141,7 @@ and lots of other useful information.**
    experimental_features/spreadsheets_api
    experimental_features/progress_bar
    experimental_features/modin_xgboost
+   experimental_features/modin_in_the_cloud
 
 .. toctree::
    :caption: How is Modin different from ...?
