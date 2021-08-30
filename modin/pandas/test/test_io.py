@@ -1636,11 +1636,13 @@ class TestHdf:
             modin_store["foo"] = modin_df
             pandas_store["foo"] = pandas_df
 
-            assert assert_files_eq(unique_filename_modin, unique_filename_pandas)
             modin_df = modin_store.get("foo")
             pandas_df = pandas_store.get("foo")
             df_equals(modin_df, pandas_df)
 
+            modin_store.close()
+            pandas_store.close()
+            assert assert_files_eq(unique_filename_modin, unique_filename_pandas)
             assert isinstance(modin_store, pd.HDFStore)
 
             handle, hdf_file = tempfile.mkstemp(suffix=".hdf5", prefix="test_read")
