@@ -1625,9 +1625,10 @@ class TestHdf:
         reason="The reason of tests fail in `cloud` mode is unknown for now - issue #3264",
     )
     def test_HDFStore(self):
+        hdf_file = None
+        unique_filename_modin = get_unique_filename(extension="hdf")
+        unique_filename_pandas = get_unique_filename(extension="hdf")
         try:
-            unique_filename_modin = get_unique_filename(extension="hdf")
-            unique_filename_pandas = get_unique_filename(extension="hdf")
             modin_store = pd.HDFStore(unique_filename_modin)
             pandas_store = pandas.HDFStore(unique_filename_pandas)
 
@@ -1655,7 +1656,8 @@ class TestHdf:
             pandas_df = pandas.read_hdf(hdf_file, key="data/df1", mode="r")
             df_equals(modin_df, pandas_df)
         finally:
-            os.unlink(hdf_file)
+            if hdf_file:
+                os.unlink(hdf_file)
             teardown_test_files([unique_filename_modin, unique_filename_pandas])
 
 
