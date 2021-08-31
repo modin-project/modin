@@ -174,14 +174,6 @@ class GroupBy:
                 else agg_func(grp, **agg_args)
             )
 
-            if (
-                result.empty
-                and groupby_args.get("as_index", True)
-                and selection is not None
-                and len(selection) == 1
-            ):
-                raise TypeError("No numeric types to aggregate.")
-
             return result
 
         return fn
@@ -223,13 +215,6 @@ class GroupBy:
                 if selection is not None:
                     grp = grp[selection]
                 result = agg_func(grp, **map_args)
-                if (
-                    result.empty
-                    and groupby_args.get("as_index", True)
-                    and selection is not None
-                    and len(selection) == 1
-                ):
-                    raise TypeError("No numeric types to aggregate.")
                 return result
 
             if numeric_only and selection is None:
@@ -278,14 +263,6 @@ class GroupBy:
                 if len(lvls_to_drop) > 0:
                     result.index = result.index.droplevel(lvls_to_drop)
                 result = result.reset_index(drop=drop)
-
-            if (
-                result.empty
-                and groupby_args.get("as_index", True)
-                and selection is not None
-                and len(selection) == 1
-            ):
-                raise TypeError("No numeric types to aggregate.")
 
             if result.index.name == "__reduced__":
                 result.index.name = None
@@ -344,4 +321,17 @@ class GroupByDefault(DefaultMethod):
             Functiom that takes query compiler and defaults to pandas to do GroupBy
             aggregation.
         """
-        return cls.call(GroupBy.build_groupby(func), fn_name=func.__name__, **kwargs)
+        groupby_func = GroupBy.build_groupby(func)
+
+        def groupby_wrapper(*args, **kwargs):
+            result = groupby_func(*args, **kwargs)
+            # In the case of empty aggregation, pandas uses the same index and columns objects
+            # as the source frame. Front-end is going to modify the resulted indices, so we're
+            # doing a copy here to not propagate further changes to the source frame
+            if isinstance(result, (pandas.DataFrame, pandas.Series)) and result.empty:
+                result.index = result.index.copy()
+                if isinstance(result, pandas.DataFrame):
+                    result.columns = result.columns.copy()
+            return result
+
+        return cls.call(groupby_wrapper, fn_name=func.__name__, **kwargs)

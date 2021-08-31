@@ -186,15 +186,11 @@ class DataFrameGroupBy(object):
     @property
     def ndim(self):
         """
-        Return the number of dimensions of the source DataFrame.
+        Return the number of dimensions of the source object (DataFrame or Series).
 
         Returns
         -------
         int
-
-        Notes
-        -----
-        Deprecated and removed in pandas and will be likely removed in Modin.
         """
         return self._ndim
 
@@ -583,6 +579,8 @@ class DataFrameGroupBy(object):
             if func is None:
                 kwargs = {}
             func = func_dict
+            # If `func` is a dict then the actual selection is done by the dict's keys.
+            kwargs["selection"] = None
         elif is_list_like(func):
             return self._default_to_pandas(
                 lambda df, *args, **kwargs: df.aggregate(func, *args, **kwargs),
@@ -923,9 +921,12 @@ class DataFrameGroupBy(object):
         -------
         list
         """
-        if self._selection is None:
+        selection = self._selection
+        if selection is None:
             return []
-        return self._selection if is_list_like(self._selection) else [self._selection]
+        if is_list_like(selection) and not isinstance(selection, list):
+            selection = list(selection)
+        return selection if isinstance(selection, list) else [self._selection]
 
     @property
     def _iter(self):
@@ -1048,7 +1049,7 @@ class DataFrameGroupBy(object):
         default_func,
         drop=True,
         numeric_only=True,
-        selection=None,
+        selection=no_default,
         **kwargs,
     ):
         """
@@ -1078,7 +1079,7 @@ class DataFrameGroupBy(object):
         if self._axis != 0:
             return self._default_to_pandas(default_func, **kwargs)
 
-        if selection is None:
+        if selection is no_default:
             selection = self._non_conflict_selection
 
         result = type(self._df)(
@@ -1094,11 +1095,13 @@ class DataFrameGroupBy(object):
                 selection=selection,
             )
         )
+        self._verify_aggregation_result(result, default_func)
+
         if self._squeeze:
             return result.squeeze(axis=1)
         return result
 
-    def _apply_agg_function(self, f, selection=None, *args, **kwargs):
+    def _apply_agg_function(self, f, selection=no_default, *args, **kwargs):
         """
         Perform aggregation and combine stages based on a given function.
 
@@ -1123,7 +1126,7 @@ class DataFrameGroupBy(object):
             f, dict
         ), "'{0}' object is not callable and not a dict".format(type(f))
 
-        if selection is None:
+        if selection is no_default:
             selection = self._non_conflict_selection
 
         new_manager = self._query_compiler.groupby_agg(
@@ -1140,11 +1143,43 @@ class DataFrameGroupBy(object):
         if self._idx_name is not None and self._as_index:
             new_manager.set_index_name(self._idx_name)
         result = type(self._df)(query_compiler=new_manager)
+        self._verify_aggregation_result(result, f)
+
         if result._query_compiler.get_index_name() == "__reduced__":
             result._query_compiler.set_index_name(None)
         if self._squeeze:
             return result.squeeze(axis=1)
         return result
+
+    def _verify_aggregation_result(self, result, agg_func):
+        """
+        Verify GroupBy result and raise an exception if aggregation wasn't successful.
+
+        Parameters
+        ----------
+        result : BaseQueryCompiler, DataFrame or Series,
+            Result of GroupBy aggregation.
+        agg_func : callable or dict,
+            Aggregation function which was applied to the GroupBy object to get the `result`.
+        """
+        # that means that `agg_func` arisen an exception for every aggregated column
+        if result.empty and not self._df.empty:
+            # determening type of raised exception by applying `agg_func`
+            # to empty DataFrame
+            try:
+                pandas.DataFrame(index=[1], columns=[1]).agg(agg_func) if isinstance(
+                    agg_func, dict
+                ) else agg_func(
+                    pandas.DataFrame(index=[1], columns=[1]).groupby(level=0)
+                )
+            except Exception as e:
+                raise type(e)("No numeric types to aggregate.")
+            else:
+                # Raising general `TypeError` if the resulted frame is completly empty:
+                #   1. `as_index=True` so there's no 'by' data to insert to the resulted columns
+                #   2. All of the 'by' were external, so there's no 'by' data to show at the index levels
+                if len(self._internal_by) == 0 and self._as_index:
+                    raise TypeError("No numeric types to aggregate.")
 
     def _default_to_pandas(self, f, *args, **kwargs):
         """
@@ -1206,10 +1241,6 @@ class SeriesGroupBy(DataFrameGroupBy):
         -------
         int
             Returns 1.
-
-        Notes
-        -----
-        Deprecated and removed in pandas and will be likely removed in Modin.
         """
         return 1  # ndim is always 1 for Series
 
@@ -1224,21 +1255,10 @@ class SeriesGroupBy(DataFrameGroupBy):
             Generator expression of GroupBy object broken down into tuples for iteration.
         """
         group_ids = self._index_grouped.keys()
+        selected_obj = self._selected_obj
         if self._axis == 0:
             return (
-                (
-                    k,
-                    Series(
-                        query_compiler=self._query_compiler.view(
-                            index=self._index.get_indexer_for(
-                                self._index_grouped[k].unique()
-                            ),
-                            columns=None
-                            if self._selection is None
-                            else self._df.columns.get_indexer_for(self._selection_list),
-                        )
-                    ),
-                )
+                (k, selected_obj.iloc[self._index_grouped[k].unique()])
                 for k in (sorted(group_ids) if self._sort else group_ids)
             )
         else:
@@ -1246,12 +1266,9 @@ class SeriesGroupBy(DataFrameGroupBy):
                 (
                     k,
                     Series(
-                        index=None
-                        if self._selection is None
-                        else self._index.get_indexer_for(self._selection_list),
-                        columns=self._df.columns.get_indexer_for(
+                        query_compiler=selected_obj._query_compiler.getitem_column_array(
                             self._index_grouped[k].unique()
-                        ),
+                        )
                     ),
                 )
                 for k in (sorted(group_ids) if self._sort else group_ids)

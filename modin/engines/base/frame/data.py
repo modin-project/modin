@@ -2120,19 +2120,32 @@ class PandasFrame(object):
         if selection is not None:
             numeric_indices = self.axes[axis ^ 1].get_indexer_for(selection)
             apply_indices = self._get_dict_of_block_index(axis ^ 1, numeric_indices)
-
+            # Amount of columns and their order might change during groupby phases
+            # (map and reduce), so the reduce phase may obtain the `selection` with
+            # the "expired" numerical indices. To avoid that, the following code
+            # computes labels-based selection for each partition based on
+            # numerical-indices-based `apply_indices`.
+            # If `selection` is in the frame's order, then the selection for k-th partition is:
+            #   selection[
+            #       sum(len(apply_indices[i]) for i in range(k)):
+            #       sum(len(apply_indices[i]) for i in range(k+1))
+            #   ]
+            # To ensure the frame's order of selection we reorder it according
+            # to the sorted numerical indices:
             sorted_selection = np.array(selection)[np.argsort(numeric_indices)]
-            internal_ids = np.cumsum(
+            # Computing a sequence of partial sums, that indicates partition's
+            # bounds in the reordered selection:
+            internal_indices = np.cumsum(
                 (0,) + tuple((len(val) for val in apply_indices.values()))
             )
             per_partition_selection = OrderedDict(
                 tuple(
                     (
                         partition_idx,
-                        sorted_selection[internal_ids[i] : internal_ids[i + 1]],
+                        sorted_selection[internal_indices[i] : internal_indices[i + 1]],
                     )
                     for i, partition_idx in zip(
-                        range(len(internal_ids) - 1), apply_indices.keys()
+                        range(len(internal_indices) - 1), apply_indices.keys()
                     )
                 )
             )

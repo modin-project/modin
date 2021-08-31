@@ -129,6 +129,9 @@ class GroupbyReduceFunction(MapReduceFunction):
             selection
             if selection is None
             else (
+                # If `selection` is not a list then the only possible partition to which
+                # kernel function could be applied is the one containing the single
+                # selected column, so we don't need to compute the potentially expensive intersection
                 df.columns.intersection(selection)
                 if is_list_like(selection)
                 else selection
@@ -206,6 +209,8 @@ class GroupbyReduceFunction(MapReduceFunction):
             Set of columns at this particular partition to which aggregation was applied
             at the Map phase. If not specified assuming that aggregation at this partition
             was applied to all of the columns listed in the `selection` parameter.
+            **Note:** in the natural execution flow, this parameter is computed automatically
+            at the partition manager and is passed to this function if `selection` is specified.
         method : str, optional
             Name of the groupby function. This is a hint to be able to do special casing.
 
@@ -349,6 +354,8 @@ class GroupbyReduceFunction(MapReduceFunction):
             return query_compiler.default_to_pandas(groupby_reduce)
         assert axis == 0, "Can only groupby reduce with axis=0"
 
+        # If columns are explicitly selected for aggregation we mustn't drop
+        # them as non-suitable for numeric aggregation
         if numeric_only and selection is None:
             qc = query_compiler.getitem_column_array(
                 query_compiler._modin_frame.numeric_columns(include_bool=True)
@@ -383,22 +390,6 @@ class GroupbyReduceFunction(MapReduceFunction):
         )
 
         result = query_compiler.__constructor__(new_modin_frame)
-        if len(result.columns) == 0 and len(query_compiler.columns) != 0:
-            # determening type of raised exception by applying `aggfunc`
-            # to empty DataFrame
-            try:
-                pandas.DataFrame(index=[1], columns=[1]).groupby(level=0).agg(
-                    map_func
-                ) if isinstance(map_func, dict) else map_func(
-                    pandas.DataFrame(index=[1], columns=[1]).groupby(level=0)
-                )
-            except Exception as e:
-                raise type(e)("No numeric types to aggregate.")
-            else:
-                if (not drop or broadcastable_by is None) and groupby_args.get(
-                    "as_index", True
-                ):
-                    raise TypeError("No numeric types to aggregate.")
 
         if result.index.name == "__reduced__":
             result.index.name = None
@@ -482,10 +473,10 @@ class GroupbyReduceFunction(MapReduceFunction):
         if hasattr(by, "_modin_frame"):
             by = None
 
-        # If columns to aggregate are already set by dictionary function
-        # then 'selection' doesn't make sense
         if isinstance(map_func, dict):
-            selection = None
+            assert (
+                selection is None
+            ), "Can't handle 'selection' and dictionary aggregation at the same time."
 
         def _map(df, other=None, **kwargs):
             def wrapper(df, other=None):

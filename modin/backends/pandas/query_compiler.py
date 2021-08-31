@@ -2666,10 +2666,11 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
         if callable(agg_func):
             agg_func = wrap_udf_function(agg_func)
-        # If columns to aggregate are already set by dictionary function
-        # then 'selection' doesn't make sense
+
         if isinstance(agg_func, dict):
-            selection = None
+            assert (
+                selection is None
+            ), "Can't handle 'selection' and dictionary aggregation at the same time."
 
         # since we're going to modify `groupby_kwargs` dict in a `groupby_agg_builder`,
         # we want to copy it to not propagate these changes into source dict, in case
@@ -2737,6 +2738,9 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 selection
                 if selection is None
                 else (
+                    # If `selection` is not a list then the only possible partition to which
+                    # kernel function could be applied is the one containing the single
+                    # selected column, so we don't need to compute the potentially expensive intersection
                     df.columns.intersection(selection)
                     if is_list_like(selection)
                     else selection
@@ -2850,25 +2854,6 @@ class PandasQueryCompiler(BaseQueryCompiler):
             enumerate_partitions=True,
         )
         result = self.__constructor__(new_modin_frame)
-
-        # that means that exception in `compute_groupby` was raised
-        # in every partition, so we also should raise it
-        if len(result.columns) == 0 and len(self.columns) != 0:
-            # determening type of raised exception by applying `aggfunc`
-            # to empty DataFrame
-            try:
-                pandas.DataFrame(index=[1], columns=[1]).agg(agg_func) if isinstance(
-                    agg_func, dict
-                ) else agg_func(
-                    pandas.DataFrame(index=[1], columns=[1]).groupby(level=0),
-                    **agg_kwargs,
-                )
-            except Exception as e:
-                raise type(e)("No numeric types to aggregate.")
-            else:
-                if len(internal_by) == 0 and as_index:
-                    raise TypeError("No numeric types to aggregate.")
-
         return result
 
     # END Manual Partitioning methods

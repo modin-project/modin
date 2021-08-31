@@ -317,7 +317,6 @@ def test_simple_row_groupby(by, as_index, col1_category):
 
     modin_groupby_equals_pandas(modin_groupby, pandas_groupby)
     eval_ngroups(modin_groupby, pandas_groupby)
-
     eval_shift(modin_groupby, pandas_groupby)
     eval_general(modin_groupby, pandas_groupby, lambda df: df.ffill(), is_default=True)
     eval_general(
@@ -846,6 +845,7 @@ def test_series_groupby(by, as_index_series_or_dataframe):
         modin_groupby = modin_series.groupby(by, as_index=as_index)
         if as_index_series_or_dataframe == 2:
             modin_groupby = modin_groupby["col1"]
+
         modin_groupby_equals_pandas(modin_groupby, pandas_groupby)
         eval_ngroups(modin_groupby, pandas_groupby)
         eval_shift(modin_groupby, pandas_groupby)
@@ -1139,15 +1139,8 @@ def eval___getitem__(md_grp, pd_grp, additional_tests=None):
 
     def test_function(md_grp, pd_grp, selection):
         md_grp, pd_grp = md_grp[selection], pd_grp[selection]
+        modin_groupby_equals_pandas(md_grp, pd_grp)
 
-        assert md_grp.ndim == pd_grp.ndim
-        assert (
-            isinstance(md_grp, pd.groupby.DataFrameGroupBy)
-            and isinstance(pd_grp, pandas.core.groupby.DataFrameGroupBy)
-        ) or (
-            isinstance(md_grp, pd.groupby.SeriesGroupBy)
-            and isinstance(pd_grp, pandas.core.groupby.SeriesGroupBy)
-        ), f"Diffirent types of GroupBy objects.\nModin: {type(md_grp)}, Pandas: {type(pd_grp)}"
         # Non-numeric aggregation test, MapReduce
         eval_general(md_grp, pd_grp, lambda grp: grp.count(), comparator=comparator)
         eval_general(md_grp, pd_grp, lambda grp: grp.any(), comparator=comparator)
