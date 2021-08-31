@@ -3388,10 +3388,13 @@ def test_update(data, other_data):
     df_equals(modin_series, pandas_series)
 
 
-@pytest.mark.parametrize("sort", [True, False])
-@pytest.mark.parametrize("normalize, bins, dropna", [(True, 3, False)])
-def test_value_counts(sort, normalize, bins, dropna):
-    def sort_sensetive_comparator(df1, df2):
+@pytest.mark.parametrize("sort", bool_arg_values, ids=bool_arg_keys)
+@pytest.mark.parametrize("normalize", bool_arg_values, ids=bool_arg_keys)
+@pytest.mark.parametrize("bins", [3, None])
+@pytest.mark.parametrize("dropna", bool_arg_values, ids=bool_arg_keys)
+@pytest.mark.parametrize("ascending", bool_arg_values, ids=bool_arg_keys)
+def test_value_counts(sort, normalize, bins, dropna, ascending):
+    def sort_sensitive_comparator(df1, df2):
         return (
             df_equals_with_non_stable_indices(df1, df2)
             if sort
@@ -3401,18 +3404,18 @@ def test_value_counts(sort, normalize, bins, dropna):
     # We sort indices for Modin and pandas result because of issue #1650
     eval_general(
         *create_test_series(test_data_values[0]),
-        lambda df: df.value_counts(sort=sort, normalize=normalize, ascending=False),
-        comparator=sort_sensetive_comparator,
-    )
-    eval_general(
-        *create_test_series(test_data_values[0]),
-        lambda df: df.value_counts(sort=sort, bins=bins, ascending=False),
-        comparator=sort_sensetive_comparator,
-    )
-    eval_general(
-        *create_test_series(test_data_values[0]),
-        lambda df: df.value_counts(sort=sort, dropna=dropna, ascending=True),
-        comparator=sort_sensetive_comparator,
+        lambda df: df.value_counts(
+            sort=sort,
+            bins=bins,
+            normalize=normalize,
+            dropna=dropna,
+            ascending=ascending,
+        ),
+        comparator=sort_sensitive_comparator,
+        # Modin's `sort_values` does not validate `ascending` type and so
+        # does not raise an exception when it isn't a bool, when pandas do so,
+        # visit modin-issue#3388 for more info.
+        check_exception_type=None if sort and ascending is None else True,
     )
 
     # from issue #2365
@@ -3420,13 +3423,18 @@ def test_value_counts(sort, normalize, bins, dropna):
     arr[::10] = np.nan
     eval_general(
         *create_test_series(arr),
-        lambda df: df.value_counts(sort=sort, dropna=False, ascending=True),
-        comparator=sort_sensetive_comparator,
-    )
-    eval_general(
-        *create_test_series(arr),
-        lambda df: df.value_counts(sort=sort, dropna=False, ascending=False),
-        comparator=sort_sensetive_comparator,
+        lambda df: df.value_counts(
+            sort=sort,
+            bins=bins,
+            normalize=normalize,
+            dropna=dropna,
+            ascending=ascending,
+        ),
+        comparator=sort_sensitive_comparator,
+        # Modin's `sort_values` does not validate `ascending` type and so
+        # does not raise an exception when it isn't a bool, when pandas do so,
+        # visit modin-issue#3388 for more info.
+        check_exception_type=None if sort and ascending is None else True,
     )
 
 

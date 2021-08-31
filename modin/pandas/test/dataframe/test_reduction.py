@@ -364,28 +364,46 @@ def test_reduction_specific(fn, numeric_only, axis):
     )
 
 
-@pytest.mark.parametrize("sort", [True, False])
 @pytest.mark.parametrize("subset_len", [1, 2])
-def test_value_counts(subset_len, sort):
+@pytest.mark.parametrize("sort", bool_arg_values, ids=bool_arg_keys)
+@pytest.mark.parametrize("normalize", bool_arg_values, ids=bool_arg_keys)
+@pytest.mark.parametrize("dropna", bool_arg_values, ids=bool_arg_keys)
+@pytest.mark.parametrize("ascending", bool_arg_values, ids=bool_arg_keys)
+def test_value_counts(subset_len, sort, normalize, dropna, ascending):
+    def comparator(md_res, pd_res):
+        if subset_len == 1:
+            # 'pandas.DataFrame.value_counts' always returns frames with MultiIndex,
+            # even when 'subset_len == 1' it returns MultiIndex with 'nlevels == 1'.
+            # This behavior is expensive to mimic, so Modin 'value_counts' returns frame
+            # with non-multi index in that case. That's why we flatten indices here.
+            assert md_res.index.nlevels == pd_res.index.nlevels == 1
+            for df in [md_res, pd_res]:
+                df.index = df.index.get_level_values(0)
+
+        if sort:
+            # We sort indices for the result because of:
+            # https://github.com/modin-project/modin/issues/1650
+            df_equals_with_non_stable_indices(md_res, pd_res)
+        else:
+            df_equals(md_res.sort_index(), pd_res.sort_index())
+
     data = test_data_values[0]
     md_df, pd_df = create_test_dfs(data)
     subset = [pd_df.columns[i * ((-1) ** i)] for i in range(subset_len)]
 
-    md_res = md_df.value_counts(subset=subset, sort=sort)
-    pd_res = pd_df.value_counts(subset=subset, sort=sort)
-
-    if subset_len == 1:
-        # 'pandas.DataFrame.value_counts' always returns frames with MultiIndex,
-        # even when 'subset_len == 1' it returns MultiIndex with 'nlevels == 1'.
-        # This behavior is expensive to mimic, so Modin 'value_counts' returns frame
-        # with non-multi index in that case. That's why we flatten indices here.
-        assert md_res.index.nlevels == pd_res.index.nlevels == 1
-        for df in [md_res, pd_res]:
-            df.index = df.index.get_level_values(0)
-
-    if sort:
-        # We sort indices for the result because of:
-        # https://github.com/modin-project/modin/issues/1650
-        df_equals_with_non_stable_indices(md_res, pd_res)
-    else:
-        df_equals(md_res.sort_index(), pd_res.sort_index())
+    eval_general(
+        md_df,
+        pd_df,
+        lambda df: df.value_counts(
+            subset=subset,
+            sort=sort,
+            normalize=normalize,
+            dropna=dropna,
+            ascending=ascending,
+        ),
+        comparator=comparator,
+        # Modin's `sort_values` does not validate `ascending` type and so
+        # does not raise an exception when it isn't a bool, when pandas do so,
+        # visit modin-issue#3388 for more info.
+        check_exception_type=None if sort and ascending is None else True,
+    )
