@@ -13,7 +13,7 @@
 
 """Module houses utility function to initialize Dask environment."""
 
-from modin.config import CpuCount, NPartitions
+from modin.config import CpuCount, Memory, NPartitions
 from modin.error_message import ErrorMessage
 
 
@@ -35,7 +35,10 @@ def initialize_dask():
     client = Client()
 """,
         )
-        client = Client(n_workers=CpuCount.get())
+        num_cpus = CpuCount.get()
+        memory_limit = Memory.get()
+        worker_memory_limit = memory_limit // num_cpus if memory_limit else "auto"
+        client = Client(n_workers=num_cpus, memory_limit=worker_memory_limit)
 
     num_cpus = len(client.ncores())
     NPartitions._put(num_cpus)

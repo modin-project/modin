@@ -170,7 +170,7 @@ class GpuCount(EnvironmentVariable, type=int):
 
 
 class Memory(EnvironmentVariable, type=int):
-    """How much memory give to each Ray worker (in bytes)."""
+    """How much memory give to each Ray/Dask worker (in bytes)."""
 
     varname = "MODIN_MEMORY"
 
