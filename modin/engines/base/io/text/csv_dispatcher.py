@@ -18,11 +18,13 @@ from modin.engines.base.io.text.text_file_dispatcher import (
     ColumnNamesTypes,
 )
 import pandas
+from pandas.core.dtypes.common import is_list_like
 from csv import QUOTE_NONE, Dialect
 import sys
 from typing import Union, Sequence, Callable, Dict, Tuple
 from pandas._typing import FilePathOrBuffer
 import pandas._libs.lib as lib
+import numpy as np
 
 from modin.config import NPartitions
 
@@ -55,6 +57,13 @@ class CSVDispatcher(TextFileDispatcher):
         -------
         new_query_compiler : BaseQueryCompiler
             Query compiler with imported data for further processing.
+
+        Notes
+        -----
+        `skiprows` is handled diferently based on the parameter type because of
+        performance reasons. If `skiprows` is integer - rows will be skipped during
+        data file partitioning and wouldn't be actually read. If `skiprows` is array
+        or callable - full data file will be read and only then rows will be dropped.
         """
         filepath_or_buffer_md = (
             cls.get_path(filepath_or_buffer)
@@ -64,17 +73,29 @@ class CSVDispatcher(TextFileDispatcher):
         compression_infered = cls.infer_compression(
             filepath_or_buffer, kwargs.get("compression")
         )
-        use_modin_impl = cls._read_csv_check_support(
-            filepath_or_buffer, kwargs, compression_infered
-        )
-        if not use_modin_impl:
-            return cls.single_worker_read(filepath_or_buffer, **kwargs)
-
         # Getting frequently used read_csv kwargs
         names = kwargs.get("names", lib.no_default)
         index_col = kwargs.get("index_col", None)
         encoding = kwargs.get("encoding", None)
         skiprows = kwargs.get("skiprows", None)
+        header = kwargs.get("header", "infer")
+        # Define header size for further skipping (Header can be skipped because header
+        # information will be obtained further from empty_df, so no need to handle it
+        # by workers)
+        header_size = cls._define_header_size(
+            header,
+            names,
+        )
+        skiprows_md, pre_reading = cls._manage_skiprows_parameter(skiprows, header_size)
+        should_handle_skiprows = skiprows_md is not None and not isinstance(
+            skiprows_md, int
+        )
+
+        use_modin_impl = cls._read_csv_check_support(
+            filepath_or_buffer, kwargs, compression_infered
+        )
+        if not use_modin_impl:
+            return cls.single_worker_read(filepath_or_buffer, **kwargs)
 
         is_quoting = kwargs.get("quoting", "") != QUOTE_NONE
         quotechar = kwargs.get("quotechar", '"').encode(
@@ -90,13 +111,9 @@ class CSVDispatcher(TextFileDispatcher):
         # information will be obtained further from empty_df, so no need to handle it
         # by workers)
         header_size = cls._define_header_size(
-            kwargs.get("header", "infer"),
+            header,
             names,
         )
-        # Since skiprows can be only integer here (non-integer skiprows trigger fallback
-        # to pandas implementation for now) we can process header_size and skiprows
-        # simultaneously
-        skiprows = skiprows + header_size if skiprows else header_size
 
         pd_df_metadata = pandas.read_csv(
             filepath_or_buffer,
@@ -112,6 +129,7 @@ class CSVDispatcher(TextFileDispatcher):
             num_splits=num_splits,
             header_size=header_size if not pass_names else 0,
             names=names if not pass_names else column_names,
+            header=header if not pass_names else "infer",
             skipfooter=0,
             skiprows=None,
             nrows=None,
@@ -122,10 +140,12 @@ class CSVDispatcher(TextFileDispatcher):
             splits = cls.partitioned_file(
                 f,
                 num_partitions=NPartitions.get(),
-                nrows=kwargs.get("nrows", None),
-                skiprows=skiprows,
+                nrows=kwargs.get("nrows", None) if not should_handle_skiprows else None,
+                skiprows=skiprows_md if not should_handle_skiprows else None,
                 quotechar=quotechar,
                 is_quoting=is_quoting,
+                header_size=header_size,
+                pre_reading=pre_reading,
             )
 
         partition_ids, index_ids, dtypes_ids = cls._launch_tasks(
@@ -140,9 +160,12 @@ class CSVDispatcher(TextFileDispatcher):
             index_name=pd_df_metadata.index.name,
             column_widths=column_widths,
             column_names=column_names,
+            skiprows_md=skiprows_md if should_handle_skiprows else None,
+            header_size=header_size,
             squeeze=kwargs.get("squeeze", False),
             skipfooter=kwargs.get("skipfooter", None),
             parse_dates=kwargs.get("parse_dates", False),
+            nrows=kwargs.get("nrows", None) if should_handle_skiprows else None,
         )
         return new_query_compiler
 
@@ -190,10 +213,6 @@ class CSVDispatcher(TextFileDispatcher):
         if read_csv_kwargs.get("chunksize") is not None:
             return False
 
-        skiprows = read_csv_kwargs.get("skiprows")
-        if skiprows is not None and not isinstance(skiprows, int):
-            return False
-
         return True
 
     @classmethod
@@ -203,7 +222,7 @@ class CSVDispatcher(TextFileDispatcher):
         index_name: str,
     ) -> Tuple[IndexColType, list]:
         """
-        Compute the resulting DataFrame index and index lengths for each or partitions.
+        Compute the resulting DataFrame index and index lengths for each of partitions.
 
         Parameters
         ----------
@@ -241,6 +260,8 @@ class CSVDispatcher(TextFileDispatcher):
         index_name: str,
         column_widths: list,
         column_names: ColumnNamesTypes,
+        skiprows_md: Union[Sequence, callable, None] = None,
+        header_size: int = None,
         **kwargs,
     ):
         """
@@ -263,6 +284,10 @@ class CSVDispatcher(TextFileDispatcher):
             Number of columns in each partition.
         column_names : ColumnNamesTypes
             Array with columns names.
+        skiprows_md : array-like or callable, optional
+            Specifies rows to skip.
+        header_size : int, default: 0
+            Number of rows, that occupied by header.
         **kwargs : dict
             Parameters of `read_csv` function needed for postprocessing.
 
@@ -300,9 +325,84 @@ class CSVDispatcher(TextFileDispatcher):
             new_query_compiler = new_query_compiler.drop(
                 new_query_compiler.index[-skipfooter:]
             )
+        if skiprows_md is not None:
+            # skip rows that passed as array or callable
+            nrows = kwargs.get("nrows", None)
+            index_range = pandas.RangeIndex(len(new_query_compiler.index))
+            if is_list_like(skiprows_md):
+                new_query_compiler = new_query_compiler.view(
+                    index=index_range.delete(skiprows_md - header_size)
+                )
+            elif callable(skiprows_md):
+                mod_index = skiprows_md(index_range + header_size)
+                mod_index = (
+                    mod_index
+                    if isinstance(mod_index, np.ndarray)
+                    else mod_index.to_numpy("bool")
+                )
+                view_idx = index_range[~mod_index]
+                new_query_compiler = new_query_compiler.view(index=view_idx)
+            else:
+                raise TypeError(
+                    f"Not acceptable type of `skiprows` parameter: {type(skiprows_md)}"
+                )
+
+            if not isinstance(new_query_compiler.index, pandas.MultiIndex):
+                new_query_compiler = new_query_compiler.reset_index(drop=True)
+
+            if nrows:
+                new_query_compiler = new_query_compiler.view(
+                    pandas.RangeIndex(len(new_query_compiler.index))[:nrows]
+                )
         if kwargs.get("squeeze", False) and len(new_query_compiler.columns) == 1:
             return new_query_compiler[new_query_compiler.columns[0]]
         if index_col is None:
             new_query_compiler._modin_frame.synchronize_labels(axis=0)
 
         return new_query_compiler
+
+    @classmethod
+    def _manage_skiprows_parameter(
+        cls,
+        skiprows: Union[int, Sequence[int], Callable, None] = None,
+        header_size: int = 0,
+    ) -> Tuple[Union[int, Sequence, Callable], bool, int]:
+        """
+        Manage read_csv `skiprows` parameter.
+
+        Change `skiprows` parameter in the way Modin could more optimally
+        process it. If `skiprows` is an array, this array will be sorted and
+        then, if array is uniformly distributed, `skiprows` will be "squashed"
+        into integer value and `pre_reading` parameter will be set if needed
+        (in this case fastpath can be done).
+
+        Parameters
+        ----------
+        skiprows : int, array or callable, optional
+                Original skiprows parameter of read_csv function.
+        header_size : int, default: 0
+                Number of rows that are used by header.
+
+        Returns
+        -------
+        skiprows : int, array or callable
+                Updated skiprows parameter.
+        pre_reading : int
+                The number of rows that should be read before data file
+                splitting for further reading (the number of rows for
+                the first partition).
+        """
+        pre_reading = 0
+        uniform_skiprows = False
+        if is_list_like(skiprows):
+            skiprows = np.sort(skiprows)
+            if np.all(np.diff(skiprows) == 1):
+                uniform_skiprows = True
+
+        if uniform_skiprows:
+            pre_reading = max(0, skiprows[0] - header_size)
+            skiprows = len(skiprows)
+        elif skiprows is None:
+            skiprows = 0
+
+        return skiprows, pre_reading
