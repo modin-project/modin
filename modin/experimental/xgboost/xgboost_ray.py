@@ -39,7 +39,7 @@ LOGGER = logging.getLogger("[modin.xgboost]")
 @ray.remote(num_cpus=0)
 class ModinXGBoostActor:
     """
-    Ray actor-class runs training on remote workers.
+    Ray actor-class runs training on the remote worker.
 
     Parameters
     ----------
@@ -548,7 +548,7 @@ def _train(
 @ray.remote
 def _map_predict(booster, part, columns, **kwargs):
     """
-    Run prediction on remote worker.
+    Run prediction on a remote worker.
 
     Parameters
     ----------

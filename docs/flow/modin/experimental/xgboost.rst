@@ -59,7 +59,7 @@ Training
    ..
 
 2. On this step, the parameter `num_actors` is processed. The internal function :py:func:`~modin.experimental.xgboost.xgboost_ray._get_num_actors`
-   examines the value provided by the user. In case the value wasn't provided, the `num_actors` will be computed using condition that 1 actor should use maximum 2 CPUs.
+   examines the value provided by the user. In case the value isn't provided, the `num_actors` will be computed using condition that 1 actor should use maximum 2 CPUs.
    This condition was chosen for using maximum parallel workers with multithreaded XGBoost training (2 threads
    per worker will be used in this case).
 
@@ -76,16 +76,16 @@ Training
 .. note:: :py:func:`~modin.experimental.xgboost.xgboost_ray._assign_row_partitions_to_actors` takes into account IP
   addresses of row partitions of `dtrain` data to minimize excess data transfer.
 
-5. For each :py:class:`~modin.experimental.xgboost.xgboost_ray.ModinXGBoostActor` the object method ``set_train_data`` is
+5. For each :py:class:`~modin.experimental.xgboost.xgboost_ray.ModinXGBoostActor` object ``set_train_data`` method is
    called remotely. This method runs loading row partitions in actor according to the dictionary with partitions
    distribution from previous step. When data is passed to the actor, the row partitions are automatically materialized
    (``ray.ObjectRef`` -> ``pandas.DataFrame``).
 
-6. Method ``train`` of :py:class:`~modin.experimental.xgboost.xgboost_ray.ModinXGBoostActor` class object is called remotely. This method
+6. ``train`` method of :py:class:`~modin.experimental.xgboost.xgboost_ray.ModinXGBoostActor` class object is called remotely. This method
    runs XGBoost training on local data of actor, connects to ``Rabit Tracker`` for sharing training state between
    actors and returns dictionary with `booster` and `evaluation results`.
 
-7. On the final stage results from actors are returned. `booster` and `evals_result` is returned using ``ray.get``
+7. At the final stage results from actors are returned. `booster` and `evals_result` are returned using ``ray.get``
    function from remote actor.
 
 
@@ -95,7 +95,7 @@ Prediction
 1. The data is passed to :py:func:`~modin.experimental.xgboost.xgboost_ray._predict`
    function as a :py:class:`~modin.experimental.xgboost.DMatrix` object.
 
-2. The function :py:func:`~modin.experimental.xgboost.xgboost_ray._map_predict` is applied remotely for each partition
+2. :py:func:`~modin.experimental.xgboost.xgboost_ray._map_predict` function is applied remotely for each partition
    of the data to make a partial prediction.
 
 3. Result ``modin.pandas.DataFrame`` is created from ``ray.ObjectRef`` objects, obtained in the previous step.
