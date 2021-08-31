@@ -1162,8 +1162,10 @@ class DataFrameGroupBy(object):
         agg_func : callable or dict,
             Aggregation function which was applied to the GroupBy object to get the `result`.
         """
+        if not isinstance(result, BaseQueryCompiler):
+            result = result._query_compiler
         # that means that `agg_func` arisen an exception for every aggregated column
-        if result.empty and not self._df.empty:
+        if len(result.columns) == 0 and len(self._query_compiler.columns) != 0:
             # determening type of raised exception by applying `agg_func`
             # to empty DataFrame
             try:
