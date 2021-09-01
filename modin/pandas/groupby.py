@@ -457,6 +457,15 @@ class DataFrameGroupBy(object):
         ------
         NotImplementedError
             Column lookups on GroupBy with arbitrary Series in by is not yet supported.
+        IndexError
+            If this GroupBy object already has a selection.
+
+        Notes
+        -----
+        Unlike pandas, modin always selects columns in the same order as they're located
+        in the source frame, discarding the order provided to the `__getitem__`. If the
+        order is matters, you can reindex GroupBy result with the selection:
+        ``result.reindex(columns=result.columns[:result.shape[1] - len(selection)].tolist() + selection)``
         """
         if self._selection is not None:
             raise IndexError(f"Column(s) {self._selection} already selected")
