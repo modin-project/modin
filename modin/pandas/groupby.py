@@ -462,7 +462,7 @@ class DataFrameGroupBy(object):
 
         Notes
         -----
-        Unlike pandas, modin always selects columns in the same order as they're located
+        Unlike pandas, Modin always selects columns in the same order as they're located
         in the source frame, discarding the order provided to the `__getitem__`. If the
         order is matters, you can reindex GroupBy result with the selection:
         ``result.reindex(columns=result.columns[:result.shape[1] - len(selection)].tolist() + selection)``
