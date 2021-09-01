@@ -262,8 +262,8 @@ class BaseTimeValueCounts:
 class TimeValueCountsDataFrame(BaseTimeValueCounts):
     param_names = ["shape", "ngroups", "subset"]
     params = [
-        UNARY_OP_DATA_SIZE[ASV_DATASET_SIZE],
-        GROUPBY_NGROUPS[ASV_DATASET_SIZE],
+        get_benchmark_shapes("omnisci.TimeValueCountsDataFrame"),
+        GROUPBY_NGROUPS,
         [2, 10],
     ]
 
@@ -274,8 +274,8 @@ class TimeValueCountsDataFrame(BaseTimeValueCounts):
 class TimeValueCountsSeries(BaseTimeValueCounts):
     param_names = ["shape", "ngroups"]
     params = [
-        SERIES_DATA_SIZE[ASV_DATASET_SIZE],
-        GROUPBY_NGROUPS[ASV_DATASET_SIZE],
+        get_benchmark_shapes("omnisci.TimeValueCountsSeries"),
+        GROUPBY_NGROUPS,
     ]
 
     def setup(self, shape, ngroups):
