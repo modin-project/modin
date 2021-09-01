@@ -764,18 +764,16 @@ def test_resample_specific(rule, closed, label, on, level):
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-@pytest.mark.parametrize("index", ["default", "ndarray"])
+@pytest.mark.parametrize("index", ["default", "ndarray", "has_duplicates"])
 @pytest.mark.parametrize("axis", [0, 1])
 @pytest.mark.parametrize("periods", [0, 1, -1, 10, -10, 1000000000, -1000000000])
-def test_shift(data, index, axis, periods):
-    if index == "default":
-        modin_df = pd.DataFrame(data)
-        pandas_df = pandas.DataFrame(data)
-    elif index == "ndarray":
+def test_shift_slice_shift(data, index, axis, periods):
+    modin_df, pandas_df = create_test_dfs(data)
+    if index == "ndarray":
         data_column_length = len(data[next(iter(data))])
-        index_data = np.arange(2, data_column_length + 2)
-        modin_df = pd.DataFrame(data, index=index_data)
-        pandas_df = pandas.DataFrame(data, index=index_data)
+        modin_df.index = pandas_df.index = np.arange(2, data_column_length + 2)
+    elif index == "has_duplicates":
+        modin_df.index = pandas_df.index = list(modin_df.index[:-3]) + [0, 1, 2]
 
     df_equals(
         modin_df.shift(periods=periods, axis=axis),
@@ -785,22 +783,6 @@ def test_shift(data, index, axis, periods):
         modin_df.shift(periods=periods, axis=axis, fill_value=777),
         pandas_df.shift(periods=periods, axis=axis, fill_value=777),
     )
-
-
-@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-@pytest.mark.parametrize("index", ["default", "ndarray"])
-@pytest.mark.parametrize("axis", [0, 1])
-@pytest.mark.parametrize("periods", [0, 1, -1, 10, -10, 1000000000, -1000000000])
-def test_slice_shift(data, index, axis, periods):
-    if index == "default":
-        modin_df = pd.DataFrame(data)
-        pandas_df = pandas.DataFrame(data)
-    elif index == "ndarray":
-        data_column_length = len(data[next(iter(data))])
-        index_data = np.arange(2, data_column_length + 2)
-        modin_df = pd.DataFrame(data, index=index_data)
-        pandas_df = pandas.DataFrame(data, index=index_data)
-
     df_equals(
         modin_df.slice_shift(periods=periods, axis=axis),
         pandas_df.slice_shift(periods=periods, axis=axis),

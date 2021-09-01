@@ -1394,6 +1394,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
     str_upper = MapFunction.register(_str_map("upper"), dtypes="copy")
     str_wrap = MapFunction.register(_str_map("wrap"), dtypes="copy")
     str_zfill = MapFunction.register(_str_map("zfill"), dtypes="copy")
+    str___getitem__ = MapFunction.register(_str_map("__getitem__"), dtypes="copy")
 
     # END String map partitions operations
 

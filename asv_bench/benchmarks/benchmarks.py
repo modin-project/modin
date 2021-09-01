@@ -24,19 +24,18 @@ import numpy as np
 
 from .utils import (
     generate_dataframe,
+    gen_nan_data,
     RAND_LOW,
     RAND_HIGH,
     random_string,
     random_columns,
     random_booleans,
     ASV_USE_IMPL,
-    ASV_DATASET_SIZE,
-    BINARY_OP_DATA_SIZE,
-    UNARY_OP_DATA_SIZE,
     GROUPBY_NGROUPS,
     IMPL,
     execute,
     translator_groupby_ngroups,
+    get_benchmark_shapes,
 )
 
 
@@ -57,8 +56,8 @@ class BaseTimeGroupBy:
 class TimeGroupByMultiColumn(BaseTimeGroupBy):
     param_names = ["shape", "ngroups", "groupby_ncols"]
     params = [
-        UNARY_OP_DATA_SIZE[ASV_DATASET_SIZE],
-        GROUPBY_NGROUPS[ASV_DATASET_SIZE],
+        get_benchmark_shapes("TimeGroupByMultiColumn"),
+        GROUPBY_NGROUPS,
         [6],
     ]
 
@@ -72,8 +71,8 @@ class TimeGroupByMultiColumn(BaseTimeGroupBy):
 class TimeGroupByDefaultAggregations(BaseTimeGroupBy):
     param_names = ["shape", "ngroups"]
     params = [
-        UNARY_OP_DATA_SIZE[ASV_DATASET_SIZE],
-        GROUPBY_NGROUPS[ASV_DATASET_SIZE],
+        get_benchmark_shapes("TimeGroupByDefaultAggregations"),
+        GROUPBY_NGROUPS,
     ]
 
     def time_groupby_count(self, *args, **kwargs):
@@ -92,8 +91,8 @@ class TimeGroupByDefaultAggregations(BaseTimeGroupBy):
 class TimeGroupByDictionaryAggregation(BaseTimeGroupBy):
     param_names = ["shape", "ngroups", "operation_type"]
     params = [
-        UNARY_OP_DATA_SIZE[ASV_DATASET_SIZE],
-        GROUPBY_NGROUPS[ASV_DATASET_SIZE],
+        get_benchmark_shapes("TimeGroupByDictionaryAggregation"),
+        GROUPBY_NGROUPS,
         ["reduction", "aggregation"],
     ]
     operations = {
@@ -116,7 +115,7 @@ class TimeGroupByDictionaryAggregation(BaseTimeGroupBy):
 class TimeJoin:
     param_names = ["shapes", "how", "sort"]
     params = [
-        BINARY_OP_DATA_SIZE[ASV_DATASET_SIZE],
+        get_benchmark_shapes("TimeJoin"),
         ["left", "inner"],
         [False],
     ]
@@ -137,7 +136,7 @@ class TimeJoin:
 class TimeMerge:
     param_names = ["shapes", "how", "sort"]
     params = [
-        BINARY_OP_DATA_SIZE[ASV_DATASET_SIZE],
+        get_benchmark_shapes("TimeMerge"),
         ["left", "inner"],
         [False],
     ]
@@ -162,7 +161,7 @@ class TimeMerge:
 class TimeConcat:
     param_names = ["shapes", "how", "axis"]
     params = [
-        BINARY_OP_DATA_SIZE[ASV_DATASET_SIZE],
+        get_benchmark_shapes("TimeConcat"),
         ["inner"],
         [0, 1],
     ]
@@ -182,7 +181,7 @@ class TimeConcat:
 class TimeAppend:
     param_names = ["shapes", "sort"]
     params = [
-        BINARY_OP_DATA_SIZE[ASV_DATASET_SIZE],
+        get_benchmark_shapes("TimeAppend"),
         [False, True],
     ]
 
@@ -203,7 +202,7 @@ class TimeAppend:
 class TimeBinaryOp:
     param_names = ["shapes", "binary_op", "axis"]
     params = [
-        BINARY_OP_DATA_SIZE[ASV_DATASET_SIZE],
+        get_benchmark_shapes("TimeBinaryOp"),
         ["mul"],
         [0, 1],
     ]
@@ -257,7 +256,7 @@ class BaseTimeSetItem:
 
 class TimeSetItem(BaseTimeSetItem):
     params = [
-        UNARY_OP_DATA_SIZE[ASV_DATASET_SIZE],
+        get_benchmark_shapes("TimeSetItem"),
         [1],
         ["zero", "middle", "last"],
         [True, False],
@@ -274,7 +273,7 @@ class TimeSetItem(BaseTimeSetItem):
 
 class TimeInsert(BaseTimeSetItem):
     params = [
-        UNARY_OP_DATA_SIZE[ASV_DATASET_SIZE],
+        get_benchmark_shapes("TimeInsert"),
         [1],
         ["zero", "middle", "last"],
         [True, False],
@@ -292,7 +291,7 @@ class TimeInsert(BaseTimeSetItem):
 class TimeArithmetic:
     param_names = ["shape", "axis"]
     params = [
-        UNARY_OP_DATA_SIZE[ASV_DATASET_SIZE],
+        get_benchmark_shapes("TimeArithmetic"),
         [0, 1],
     ]
 
@@ -318,7 +317,7 @@ class TimeArithmetic:
 class TimeSortValues:
     param_names = ["shape", "columns_number", "ascending_list"]
     params = [
-        UNARY_OP_DATA_SIZE[ASV_DATASET_SIZE],
+        get_benchmark_shapes("TimeSortValues"),
         [1, 2, 10, 100],
         [False, True],
     ]
@@ -339,7 +338,7 @@ class TimeSortValues:
 class TimeDrop:
     param_names = ["shape", "axis", "drop_ncols"]
     params = [
-        UNARY_OP_DATA_SIZE[ASV_DATASET_SIZE],
+        get_benchmark_shapes("TimeDrop"),
         [0, 1],
         [1, 0.8],
     ]
@@ -360,7 +359,7 @@ class TimeDrop:
 class TimeHead:
     param_names = ["shape", "head_count"]
     params = [
-        UNARY_OP_DATA_SIZE[ASV_DATASET_SIZE],
+        get_benchmark_shapes("TimeHead"),
         [5, 0.8],
     ]
 
@@ -376,27 +375,18 @@ class TimeHead:
         execute(self.df.head(self.head_count))
 
 
-class TimeFillna:
-    param_names = ["self_type", "value_type", "shape", "limit", "inplace"]
+class TimeFillnaSeries:
+    param_names = ["value_type", "shape", "limit"]
     params = [
-        ["DataFrame", "Series"],
-        ["scalar", "dict", "DataFrame", "Series"],
-        UNARY_OP_DATA_SIZE[ASV_DATASET_SIZE],
+        ["scalar", "dict", "Series"],
+        get_benchmark_shapes("TimeFillnaSeries"),
         [None, 0.8],
-        [False, True],
     ]
 
-    def setup(self, self_type, value_type, shape, limit, inplace):
+    def setup(self, value_type, shape, limit):
         pd = IMPL[ASV_USE_IMPL]
-        columns = [f"col{x}" for x in range(shape[1])]
-        if self_type == "DataFrame":
-            self.dataset = pd.DataFrame(
-                np.nan, index=pd.RangeIndex(shape[0]), columns=columns
-            )
-        elif self_type == "Series":
-            self.dataset = pd.Series(np.nan, index=pd.RangeIndex(shape[0]))
-        else:
-            assert False
+        self.series = gen_nan_data(ASV_USE_IMPL, *shape)
+
         if value_type == "scalar":
             self.value = 18.19
         elif value_type == "dict":
@@ -405,9 +395,41 @@ class TimeFillna:
             self.value = pd.Series(
                 [k * 1.23 for k in range(shape[0])], index=pd.RangeIndex(shape[0])
             )
+        else:
+            assert False
+        limit = int(limit * shape[0]) if limit else None
+        self.kw = {"value": self.value, "limit": limit}
+
+    def time_fillna(self, value_type, shape, limit):
+        execute(self.series.fillna(**self.kw))
+
+    def time_fillna_inplace(self, value_type, shape, limit):
+        self.series.fillna(inplace=True, **self.kw)
+        execute(self.series)
+
+
+class TimeFillnaDataFrame:
+    param_names = ["value_type", "shape", "limit"]
+    params = [
+        ["scalar", "dict", "DataFrame", "Series"],
+        get_benchmark_shapes("TimeFillnaDataFrame"),
+        [None, 0.8],
+    ]
+
+    def setup(self, value_type, shape, limit):
+        pd = IMPL[ASV_USE_IMPL]
+        self.df = gen_nan_data(ASV_USE_IMPL, *shape)
+        columns = self.df.columns
+
+        if value_type == "scalar":
+            self.value = 18.19
+        elif value_type == "dict":
+            self.value = {k: i * 1.23 for i, k in enumerate(columns)}
+        elif value_type == "Series":
+            self.value = pd.Series(
+                [i * 1.23 for i in range(len(columns))], index=columns
+            )
         elif value_type == "DataFrame":
-            if self_type == "Series":
-                raise NotImplementedError
             self.value = pd.DataFrame(
                 {
                     k: [i + j * 1.23 for j in range(shape[0])]
@@ -418,15 +440,15 @@ class TimeFillna:
             )
         else:
             assert False
-        self.limit = int(limit * shape[0]) if limit else None
+        limit = int(limit * shape[0]) if limit else None
+        self.kw = {"value": self.value, "limit": limit}
 
-    def time_fillna(self, self_type, value_type, shape, limit, inplace):
-        kw = {"value": self.value, "limit": self.limit, "inplace": inplace}
-        if inplace:
-            self.dataset.fillna(**kw)
-            execute(self.dataset)
-        else:
-            execute(self.dataset.fillna(**kw))
+    def time_fillna(self, value_type, shape, limit):
+        execute(self.df.fillna(**self.kw))
+
+    def time_fillna_inplace(self, value_type, shape, limit):
+        self.df.fillna(inplace=True, **self.kw)
+        execute(self.df)
 
 
 class BaseTimeValueCounts:
@@ -446,8 +468,8 @@ class BaseTimeValueCounts:
 class TimeValueCountsFrame(BaseTimeValueCounts):
     param_names = ["shape", "ngroups", "subset"]
     params = [
-        UNARY_OP_DATA_SIZE[ASV_DATASET_SIZE],
-        GROUPBY_NGROUPS[ASV_DATASET_SIZE],
+        get_benchmark_shapes("TimeValueCountsFrame"),
+        GROUPBY_NGROUPS,
         [2, 10],
     ]
 
@@ -458,8 +480,8 @@ class TimeValueCountsFrame(BaseTimeValueCounts):
 class TimeValueCountsSeries(BaseTimeValueCounts):
     param_names = ["shape", "ngroups", "bins"]
     params = [
-        UNARY_OP_DATA_SIZE[ASV_DATASET_SIZE],
-        GROUPBY_NGROUPS[ASV_DATASET_SIZE],
+        get_benchmark_shapes("TimeValueCountsSeries"),
+        GROUPBY_NGROUPS,
         [None, 3],
     ]
 
@@ -474,7 +496,7 @@ class TimeValueCountsSeries(BaseTimeValueCounts):
 class TimeIndexing:
     param_names = ["shape", "indexer_type"]
     params = [
-        UNARY_OP_DATA_SIZE[ASV_DATASET_SIZE],
+        get_benchmark_shapes("TimeIndexing"),
         [
             "scalar",
             "bool",
@@ -506,7 +528,7 @@ class TimeIndexing:
 
 class TimeMultiIndexing:
     param_names = ["shape"]
-    params = [UNARY_OP_DATA_SIZE[ASV_DATASET_SIZE]]
+    params = [get_benchmark_shapes("TimeMultiIndexing")]
 
     def setup(self, shape):
         df = generate_dataframe(ASV_USE_IMPL, "int", *shape, RAND_LOW, RAND_HIGH)
@@ -532,7 +554,11 @@ class TimeMultiIndexing:
 
 class TimeResetIndex:
     param_names = ["shape", "drop", "level"]
-    params = [UNARY_OP_DATA_SIZE[ASV_DATASET_SIZE], [False, True], [None, "level_1"]]
+    params = [
+        get_benchmark_shapes("TimeResetIndex"),
+        [False, True],
+        [None, "level_1"],
+    ]
 
     def setup(self, shape, drop, level):
         self.df = generate_dataframe(ASV_USE_IMPL, "int", *shape, RAND_LOW, RAND_HIGH)
@@ -551,7 +577,7 @@ class TimeResetIndex:
 class TimeAstype:
     param_names = ["shape", "dtype", "astype_ncolumns"]
     params = [
-        UNARY_OP_DATA_SIZE[ASV_DATASET_SIZE],
+        get_benchmark_shapes("TimeAstype"),
         ["float64", "category"],
         ["one", "all"],
     ]
@@ -572,7 +598,7 @@ class TimeAstype:
 class TimeDescribe:
     param_names = ["shape"]
     params = [
-        UNARY_OP_DATA_SIZE[ASV_DATASET_SIZE],
+        get_benchmark_shapes("TimeDescribe"),
     ]
 
     def setup(self, shape):
@@ -585,7 +611,7 @@ class TimeDescribe:
 class TimeProperties:
     param_names = ["shape"]
     params = [
-        UNARY_OP_DATA_SIZE[ASV_DATASET_SIZE],
+        get_benchmark_shapes("TimeProperties"),
     ]
 
     def setup(self, shape):

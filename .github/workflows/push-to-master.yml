@@ -8,6 +8,7 @@ jobs:
     runs-on: ubuntu-latest
     defaults:
       run:
+        # `shell: bash -l {0}` - special way to activate modin environment
         shell: bash -l {0}
     steps:
       - uses: actions/checkout@v2
@@ -50,6 +51,9 @@ jobs:
 
   test-docs:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash -l {0}
     name: test docs
     steps:
       - uses: actions/checkout@v2
@@ -63,14 +67,11 @@ jobs:
           channel-priority: strict
           use-only-tar-bz2: true # IMPORTANT: This needs to be set for caching to work properly!
       - name: Conda environment
-        # `shell: bash -l {0}` - special way to activate modin environment
-        shell: bash -l {0}
         run: |
           conda info
           conda list
       - run: sudo apt update && sudo apt install -y libhdf5-dev
       - name: Docstring URL validity check
-        shell: bash -l {0}
         run: python -m pytest modin/test/test_docstring_urls.py
 
   test-ray-client:

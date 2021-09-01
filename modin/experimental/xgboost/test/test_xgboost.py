@@ -104,7 +104,7 @@ def test_xgb_with_binary_classification_datasets(data, num_actors, modin_type_y)
             )
 
     predictions = bst.predict(xgb_dmatrix)
-    modin_predictions = modin_bst.predict(mxgb_dmatrix, num_actors=num_actors)
+    modin_predictions = modin_bst.predict(mxgb_dmatrix)
 
     preds = pd.DataFrame(predictions).apply(lambda x: round(x))
     modin_preds = modin_predictions.apply(lambda x: round(x))
@@ -197,7 +197,7 @@ def test_xgb_with_multiclass_classification_datasets(data, num_actors, modin_typ
         )
 
     predictions = bst.predict(xgb_dmatrix)
-    modin_predictions = modin_bst.predict(mxgb_dmatrix, num_actors=num_actors)
+    modin_predictions = modin_bst.predict(mxgb_dmatrix)
 
     array_preds = np.asarray([np.argmax(line) for line in predictions])
     modin_array_preds = np.asarray(
@@ -280,7 +280,7 @@ def test_xgb_with_regression_datasets(data, num_actors, modin_type_y):
             )
 
     predictions = bst.predict(train_xgb_dmatrix)
-    modin_predictions = modin_bst.predict(train_mxgb_dmatrix, num_actors=num_actors)
+    modin_predictions = modin_bst.predict(train_mxgb_dmatrix)
 
     val = mean_squared_error(y_train, predictions)
     modin_val = mean_squared_error(y_train, modin_predictions)

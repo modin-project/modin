@@ -1,5 +1,5 @@
-Distributed XGBoost on Modin (experimental)
-===========================================
+Distributed XGBoost on Modin
+============================
 
 Modin provides an implementation of distributed XGBoost machine learning 
 algorithm on Modin DataFrames. Please note that this feature is experimental and behavior or 

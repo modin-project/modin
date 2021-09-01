@@ -12,33 +12,3 @@
 # governing permissions and limitations under the License.
 
 """The module contains the functionality that is used when benchmarking Modin commits on OmniSci backend."""
-
-RAND_LOW = 0
-RAND_HIGH = 1_000_000_000
-
-BINARY_OP_DATA_SIZE = {
-    "big": [
-        ((500_000, 20), (1_000_000, 10)),
-    ],
-    "small": [
-        ((10_000, 20), (25_000, 10)),
-    ],
-}
-
-UNARY_OP_DATA_SIZE = {
-    "big": [
-        (1_000_000, 10),
-    ],
-    "small": [
-        (10_000, 10),
-    ],
-}
-
-SERIES_DATA_SIZE = {
-    "big": [
-        (10_000_000, 1),
-    ],
-    "small": [
-        (100_000, 1),
-    ],
-}

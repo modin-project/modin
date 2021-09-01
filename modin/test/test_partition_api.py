@@ -102,11 +102,35 @@ def test_unwrap_partitions(axis):
                 )
 
 
+@pytest.mark.parametrize("column_widths", [None, "column_widths"])
+@pytest.mark.parametrize("row_lengths", [None, "row_lengths"])
+@pytest.mark.parametrize("columns", [None, "columns"])
+@pytest.mark.parametrize("index", [None, "index"])
 @pytest.mark.parametrize("axis", [None, 0, 1])
-def test_from_partitions(axis):
-    data = np.random.randint(0, 100, size=(2 ** 16, 2 ** 8))
+def test_from_partitions(axis, index, columns, row_lengths, column_widths):
+    num_rows = 2 ** 16
+    num_cols = 2 ** 8
+    data = np.random.randint(0, 100, size=(num_rows, num_cols))
     df1, df2 = pandas.DataFrame(data), pandas.DataFrame(data)
     expected_df = pandas.concat([df1, df2], axis=1 if axis is None else axis)
+
+    index = expected_df.index if index == "index" else None
+    columns = expected_df.columns if columns == "columns" else None
+    row_lengths = (
+        None
+        if row_lengths is None
+        else [num_rows, num_rows]
+        if axis == 0
+        else [num_rows]
+    )
+    column_widths = (
+        None
+        if column_widths is None
+        else [num_cols]
+        if axis == 0
+        else [num_cols, num_cols]
+    )
+
     if Engine.get() == "Ray":
         if axis is None:
             futures = [[ray.put(df1), ray.put(df2)]]
@@ -118,7 +142,40 @@ def test_from_partitions(axis):
             futures = [client.scatter([df1, df2], hash=False)]
         else:
             futures = client.scatter([df1, df2], hash=False)
-    actual_df = from_partitions(futures, axis)
+    actual_df = from_partitions(
+        futures,
+        axis,
+        index=index,
+        columns=columns,
+        row_lengths=row_lengths,
+        column_widths=column_widths,
+    )
+    df_equals(expected_df, actual_df)
+
+
+@pytest.mark.parametrize("columns", ["original_col", "new_col"])
+@pytest.mark.parametrize("index", ["original_idx", "new_idx"])
+@pytest.mark.parametrize("axis", [None, 0, 1])
+def test_from_partitions_mismatched_labels(axis, index, columns):
+    num_rows = 2 ** 16
+    num_cols = 2 ** 8
+    expected_df = pd.DataFrame(np.random.randint(0, 100, size=(num_rows, num_cols)))
+    partitions = unwrap_partitions(expected_df, axis=axis)
+
+    index = (
+        expected_df.index
+        if index == "original_idx"
+        else [f"row{i}" for i in expected_df.index]
+    )
+    columns = (
+        expected_df.columns
+        if columns == "original_col"
+        else [f"col{i}" for i in expected_df.columns]
+    )
+
+    expected_df.index = index
+    expected_df.columns = columns
+    actual_df = from_partitions(partitions, axis=axis, index=index, columns=columns)
     df_equals(expected_df, actual_df)
 
 

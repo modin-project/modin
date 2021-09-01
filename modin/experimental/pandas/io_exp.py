@@ -15,11 +15,12 @@
 
 import inspect
 import pathlib
+import pickle
 from typing import Union, IO, AnyStr, Callable, Optional
 
 import pandas
 import pandas._libs.lib as lib
-from pandas._typing import StorageOptions
+from pandas._typing import CompressionOptions, FilePathOrBuffer, StorageOptions
 
 from . import DataFrame
 from modin.config import IsExperimental, Engine
@@ -64,9 +65,9 @@ def read_sql(
     params : list, tuple or dict, optional
         List of parameters to pass to execute method. The syntax used to pass
         parameters is database driver dependent. Check your database driver
-        documentation for which of the five syntax styles, described in PEP 249’s
+        documentation for which of the five syntax styles, described in PEP 249's
         paramstyle, is supported. Eg. for psycopg2, uses %(name)s so use params=
-        {‘name’ : ‘value’}.
+        {'name' : 'value'}.
     parse_dates : list or dict, optional
         - List of column names to parse as dates.
         - Dict of ``{column_name: format string}`` where format string is
@@ -220,3 +221,98 @@ def _read(**kwargs) -> DataFrame:
 
 
 read_csv_glob = _make_parser_func(sep=",")
+
+
+def read_pickle_distributed(
+    filepath_or_buffer: FilePathOrBuffer,
+    compression: Optional[str] = "infer",
+    storage_options: StorageOptions = None,
+):
+    """
+    Load pickled pandas object from files.
+
+    In experimental mode, we can use `*` in the filename. The files must contain
+    parts of one dataframe, which can be obtained, for example, by
+    `to_pickle_distributed` function.
+    Note: the number of partitions is equal to the number of input files.
+
+    Parameters
+    ----------
+    filepath_or_buffer : str, path object or file-like object
+        File path, URL, or buffer where the pickled object will be loaded from.
+        Accept URL. URL is not limited to S3 and GCS.
+    compression : {{'infer', 'gzip', 'bz2', 'zip', 'xz', None}}, default: 'infer'
+        If 'infer' and 'path_or_url' is path-like, then detect compression from
+        the following extensions: '.gz', '.bz2', '.zip', or '.xz' (otherwise no
+        compression) If 'infer' and 'path_or_url' is not path-like, then use
+        None (= no decompression).
+    storage_options : dict, optional
+        Extra options that make sense for a particular storage connection, e.g.
+        host, port, username, password, etc., if using a URL that will be parsed by
+        fsspec, e.g., starting "s3://", "gcs://". An error will be raised if providing
+        this argument with a non-fsspec URL. See the fsspec and backend storage
+        implementation docs for the set of allowed keys and values.
+
+    Returns
+    -------
+    unpickled : same type as object stored in file
+    """
+    Engine.subscribe(_update_engine)
+    assert IsExperimental.get(), "This only works in experimental mode"
+    _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
+    return DataFrame(query_compiler=FactoryDispatcher.read_pickle_distributed(**kwargs))
+
+
+def to_pickle_distributed(
+    self,
+    filepath_or_buffer: FilePathOrBuffer,
+    compression: CompressionOptions = "infer",
+    protocol: int = pickle.HIGHEST_PROTOCOL,
+    storage_options: StorageOptions = None,
+):
+    """
+    Pickle (serialize) object to file.
+
+    If `*` in the filename all partitions are written to their own separate file,
+    otherwise default pandas implementation is used.
+
+    Parameters
+    ----------
+    filepath_or_buffer : str, path object or file-like object
+        File path where the pickled object will be stored.
+    compression : {{'infer', 'gzip', 'bz2', 'zip', 'xz', None}}, default: 'infer'
+        A string representing the compression to use in the output file. By
+        default, infers from the file extension in specified path.
+        Compression mode may be any of the following possible
+        values: {{'infer', 'gzip', 'bz2', 'zip', 'xz', None}}. If compression
+        mode is 'infer' and path_or_buf is path-like, then detect
+        compression mode from the following extensions:
+        '.gz', '.bz2', '.zip' or '.xz'. (otherwise no compression).
+        If dict given and mode is 'zip' or inferred as 'zip', other entries
+        passed as additional compression options.
+    protocol : int, default: pickle.HIGHEST_PROTOCOL
+        Int which indicates which protocol should be used by the pickler,
+        default HIGHEST_PROTOCOL (see [1]_ paragraph 12.1.2). The possible
+        values are 0, 1, 2, 3, 4, 5. A negative value for the protocol
+        parameter is equivalent to setting its value to HIGHEST_PROTOCOL.
+        .. [1] https://docs.python.org/3/library/pickle.html.
+    storage_options : dict, optional
+        Extra options that make sense for a particular storage connection, e.g.
+        host, port, username, password, etc., if using a URL that will be parsed by
+        fsspec, e.g., starting "s3://", "gcs://". An error will be raised if providing
+        this argument with a non-fsspec URL. See the fsspec and backend storage
+        implementation docs for the set of allowed keys and values.
+    """
+    from modin.data_management.factories.dispatcher import FactoryDispatcher
+
+    obj = self
+    Engine.subscribe(_update_engine)
+    if isinstance(self, DataFrame):
+        obj = self._query_compiler
+    FactoryDispatcher.to_pickle_distributed(
+        obj,
+        filepath_or_buffer=filepath_or_buffer,
+        compression=compression,
+        protocol=protocol,
+        storage_options=storage_options,
+    )

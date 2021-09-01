@@ -19,21 +19,20 @@ from ..utils import (
     RAND_LOW,
     RAND_HIGH,
     ASV_USE_IMPL,
-    ASV_DATASET_SIZE,
     ASV_USE_BACKEND,
-    UNARY_OP_DATA_SIZE,
     IMPL,
     execute,
     get_shape_id,
     prepare_io_data,
+    get_benchmark_shapes,
 )
 
 
 class BaseReadCsv:
-    # test data file can de created only once
+    # test data file should be created only once
     def setup_cache(self, test_filename="io_test_file"):
         test_filenames = prepare_io_data(
-            test_filename, "str_int", UNARY_OP_DATA_SIZE[ASV_DATASET_SIZE]
+            test_filename, self.data_type, get_benchmark_shapes(self.__class__.__name__)
         )
         return test_filenames
 
@@ -45,15 +44,17 @@ class BaseReadCsv:
 
 
 class TimeReadCsvSkiprows(BaseReadCsv):
+    shapes = get_benchmark_shapes("TimeReadCsvSkiprows")
     skiprows_mapping = {
         "lambda_even_rows": lambda x: x % 2,
-        "range_uniform": np.arange(1, UNARY_OP_DATA_SIZE[ASV_DATASET_SIZE][0][0] // 10),
-        "range_step2": np.arange(1, UNARY_OP_DATA_SIZE[ASV_DATASET_SIZE][0][0], 2),
+        "range_uniform": np.arange(1, shapes[0][0] // 10),
+        "range_step2": np.arange(1, shapes[0][0], 2),
     }
+    data_type = "str_int"
 
     param_names = ["shape", "skiprows"]
     params = [
-        UNARY_OP_DATA_SIZE[ASV_DATASET_SIZE],
+        shapes,
         [
             None,
             "lambda_even_rows",
@@ -75,17 +76,10 @@ class TimeReadCsvSkiprows(BaseReadCsv):
 
 
 class TimeReadCsvTrueFalseValues(BaseReadCsv):
-    param_names = ["shape"]
-    params = [
-        UNARY_OP_DATA_SIZE[ASV_DATASET_SIZE],
-    ]
+    data_type = "true_false_int"
 
-    # test data file should be created only once
-    def setup_cache(self, test_filename="io_test_file"):
-        test_filenames = prepare_io_data(
-            test_filename, "true_false_int", UNARY_OP_DATA_SIZE[ASV_DATASET_SIZE]
-        )
-        return test_filenames
+    param_names = ["shape"]
+    params = [get_benchmark_shapes("TimeReadCsvTrueFalseValues")]
 
     def time_true_false_values(self, test_filenames, shape):
         execute(
@@ -99,12 +93,13 @@ class TimeReadCsvTrueFalseValues(BaseReadCsv):
 
 
 class TimeReadCsvNamesDtype:
+    shapes = get_benchmark_shapes("TimeReadCsvNamesDtype")
     _dtypes_params = ["Int64", "Int64_Timestamp"]
     _timestamp_columns = ["col1", "col2"]
 
     param_names = ["shape", "names", "dtype"]
     params = [
-        UNARY_OP_DATA_SIZE[ASV_DATASET_SIZE],
+        shapes,
         ["array-like"],
         _dtypes_params,
     ]
@@ -126,7 +121,7 @@ class TimeReadCsvNamesDtype:
     def setup_cache(self, test_filename="io_test_file_csv_names_dtype"):
         # filenames with a metadata of saved dataframes
         cache = {}
-        for shape in UNARY_OP_DATA_SIZE[ASV_DATASET_SIZE]:
+        for shape in self.shapes:
             for dtype in self._dtypes_params:
                 df = generate_dataframe("pandas", "int", *shape, RAND_LOW, RAND_HIGH)
                 if dtype == "Int64_Timestamp":

@@ -20,27 +20,24 @@ from ..utils import (
     RAND_LOW,
     RAND_HIGH,
     ASV_USE_IMPL,
-    ASV_DATASET_SIZE,
     IMPL,
     get_shape_id,
     trigger_import,
+    get_benchmark_shapes,
 )
-
-from .utils import UNARY_OP_DATA_SIZE
 
 from ..io.csv import TimeReadCsvTrueFalseValues  # noqa: F401
 
 
 class TimeReadCsvNames:
+    shapes = get_benchmark_shapes("omnisci.TimeReadCsvNames")
     param_names = ["shape"]
-    params = [
-        UNARY_OP_DATA_SIZE[ASV_DATASET_SIZE],
-    ]
+    params = [shapes]
 
     def setup_cache(self, test_filename="io_test_file_csv_names"):
         # filenames with a metadata of saved dataframes
         cache = {}
-        for shape in UNARY_OP_DATA_SIZE[ASV_DATASET_SIZE]:
+        for shape in self.shapes:
             df = generate_dataframe("pandas", "int", *shape, RAND_LOW, RAND_HIGH)
             file_id = get_shape_id(shape)
             cache[file_id] = (

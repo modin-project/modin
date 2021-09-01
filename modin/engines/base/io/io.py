@@ -17,14 +17,18 @@ Module houses `BaseIO` class.
 `BaseIO` is base class for IO classes, that stores IO functions.
 """
 
+import pickle
+from collections import OrderedDict
+from typing import Any, Optional
+
 import pandas
 import pandas._libs.lib as lib
+from pandas._typing import CompressionOptions, FilePathOrBuffer, StorageOptions
 from pandas.util._decorators import doc
-from collections import OrderedDict
+
 from modin.error_message import ErrorMessage
 from modin.backends.base.query_compiler import BaseQueryCompiler
 from modin.utils import _inherit_docstrings
-from typing import Optional
 
 _doc_default_io_method = """
 {summary} using pandas.
@@ -811,23 +815,25 @@ class BaseIO(object):
     @_inherit_docstrings(
         pandas.DataFrame.to_pickle, apilink="pandas.DataFrame.to_pickle"
     )
-    def to_pickle(cls, obj, path, compression="infer", protocol=4):  # noqa: PR01
-        """
-        Pickle (serialize) object to file using pandas.
-
-        For parameters description please refer to pandas API.
-        """
-        if protocol == 4:
-            protocol = -1
+    def to_pickle(
+        cls,
+        obj: Any,
+        filepath_or_buffer: FilePathOrBuffer,
+        compression: CompressionOptions = "infer",
+        protocol: int = pickle.HIGHEST_PROTOCOL,
+        storage_options: StorageOptions = None,
+    ):  # noqa: PR01
         ErrorMessage.default_to_pandas("`to_pickle`")
         if isinstance(obj, BaseQueryCompiler):
-            return pandas.to_pickle(
-                obj.to_pandas(), path, compression=compression, protocol=protocol
-            )
-        else:
-            return pandas.to_pickle(
-                obj, path, compression=compression, protocol=protocol
-            )
+            obj = obj.to_pandas()
+
+        return pandas.to_pickle(
+            obj,
+            filepath_or_buffer=filepath_or_buffer,
+            compression=compression,
+            protocol=protocol,
+            storage_options=storage_options,
+        )
 
     @classmethod
     @_inherit_docstrings(pandas.DataFrame.to_csv, apilink="pandas.DataFrame.to_csv")

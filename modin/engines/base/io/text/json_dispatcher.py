@@ -14,11 +14,9 @@
 """Module houses `JSONDispatcher` class, that is used for reading `.json` files."""
 
 from modin.engines.base.io.text.text_file_dispatcher import TextFileDispatcher
-from modin.data_management.utils import compute_chunksize
 from io import BytesIO
 import pandas
 import numpy as np
-from csv import QUOTE_NONE
 
 from modin.config import NPartitions
 
@@ -63,31 +61,17 @@ class JSONDispatcher(TextFileDispatcher):
         empty_pd_df = pandas.DataFrame(columns=columns)
 
         with cls.file_open(path_or_buf, "rb", kwargs.get("compression", "infer")) as f:
-            num_partitions = NPartitions.get()
-            num_splits = min(len(columns), num_partitions)
-
             partition_ids = []
             index_ids = []
             dtypes_ids = []
 
-            column_chunksize = compute_chunksize(empty_pd_df, num_splits, axis=1)
-            if column_chunksize > len(columns):
-                column_widths = [len(columns)]
-                num_splits = 1
-            else:
-                column_widths = [
-                    column_chunksize
-                    if i != num_splits - 1
-                    else len(columns) - (column_chunksize * (num_splits - 1))
-                    for i in range(num_splits)
-                ]
+            column_widths, num_splits = cls._define_metadata(empty_pd_df, columns)
 
             args = {"fname": path_or_buf, "num_splits": num_splits, **kwargs}
 
             splits = cls.partitioned_file(
                 f,
-                num_partitions=num_partitions,
-                is_quoting=(args.get("quoting", "") != QUOTE_NONE),
+                num_partitions=NPartitions.get(),
             )
             for start, end in splits:
                 args.update({"start": start, "end": end})

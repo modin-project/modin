@@ -2917,16 +2917,6 @@ def test_shape(data):
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-def test_shift(data):
-    modin_series, pandas_series = create_test_series(data)
-    df_equals(modin_series.shift(), pandas_series.shift())
-    df_equals(modin_series.shift(fill_value=777), pandas_series.shift(fill_value=777))
-    df_equals(modin_series.shift(periods=7), pandas_series.shift(periods=7))
-    df_equals(modin_series.shift(periods=-3), pandas_series.shift(periods=-3))
-    eval_general(modin_series, pandas_series, lambda df: df.shift(axis=1))
-
-
-@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_size(data):
     modin_series, pandas_series = create_test_series(data)
     assert modin_series.size == pandas_series.size
@@ -2942,18 +2932,29 @@ def test_skew(data, skipna):
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-@pytest.mark.parametrize("index", ["default", "ndarray"])
+@pytest.mark.parametrize("index", ["default", "ndarray", "has_duplicates"])
 @pytest.mark.parametrize("periods", [0, 1, -1, 10, -10, 1000000000, -1000000000])
-def test_slice_shift(data, index, periods):
-    if index == "default":
-        modin_series, pandas_series = create_test_series(data)
-    elif index == "ndarray":
-        modin_series, pandas_series = create_test_series(data)
+def test_shift_slice_shift(data, index, periods):
+    modin_series, pandas_series = create_test_series(data)
+    if index == "ndarray":
         data_column_length = len(data[next(iter(data))])
-        index_data = np.arange(2, data_column_length + 2)
-        modin_series.index = index_data
-        pandas_series.index = index_data
+        modin_series.index = pandas_series.index = np.arange(2, data_column_length + 2)
+    elif index == "has_duplicates":
+        modin_series.index = pandas_series.index = list(modin_series.index[:-3]) + [
+            0,
+            1,
+            2,
+        ]
 
+    df_equals(
+        modin_series.shift(periods=periods),
+        pandas_series.shift(periods=periods),
+    )
+    df_equals(
+        modin_series.shift(periods=periods, fill_value=777),
+        pandas_series.shift(periods=periods, fill_value=777),
+    )
+    eval_general(modin_series, pandas_series, lambda df: df.shift(axis=1))
     df_equals(
         modin_series.slice_shift(periods=periods),
         pandas_series.slice_shift(periods=periods),
@@ -3502,6 +3503,19 @@ def test_where():
     pandas_result = pandas_series.where(pandas_series < 2, True)
     modin_result = modin_series.where(modin_series < 2, True)
     assert all(to_pandas(modin_result) == pandas_result)
+
+
+@pytest.mark.parametrize("data", test_string_data_values, ids=test_string_data_keys)
+@pytest.mark.parametrize(
+    "key",
+    [0, slice(0, len(test_string_data_values) / 2)],
+    ids=["single_key", "slice_key"],
+)
+def test_str___getitem__(data, key):
+    modin_series, pandas_series = create_test_series(data)
+    modin_result = modin_series.str[key]
+    pandas_result = pandas_series.str[key]
+    df_equals(modin_result, pandas_result)
 
 
 # Test str operations

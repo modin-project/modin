@@ -2042,7 +2042,7 @@ class BaseQueryCompiler(abc.ABC):
             df.insert(loc, column, value)
             return df
 
-        return DataFrameDefault.register(inserter)(
+        return DataFrameDefault.register(inserter, inplace=True)(
             self, loc=loc, column=column, value=value
         )
 
@@ -3859,6 +3859,10 @@ class BaseQueryCompiler(abc.ABC):
     @doc_utils.doc_str_method(refer_to="zfill", params="width : int")
     def str_zfill(self, width):
         return StrDefault.register(pandas.Series.str.zfill)(self, width)
+
+    @doc_utils.doc_str_method(refer_to="__getitem__", params="key : object")
+    def str___getitem__(self, key):
+        return StrDefault.register(pandas.Series.str.__getitem__)(self, key)
 
     # End of Str methods
 

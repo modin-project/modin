@@ -33,7 +33,9 @@ from pandas.core.indexing import convert_to_index_sliceable
 from pandas.util._validators import validate_bool_kwarg, validate_percentile
 from pandas._libs.lib import no_default
 from pandas._typing import (
+    CompressionOptions,
     IndexKeyFunc,
+    FilePathOrBuffer,
     StorageOptions,
     TimedeltaConvertibleTypes,
     TimestampConvertibleTypes,
@@ -2336,20 +2338,15 @@ class BasePandasDataset(object):
 
         if freq is None:
             if axis == "index" or axis == 0:
-                if periods > 0:
-                    dropped_df = self.drop(self.index[-periods:])
-                    new_frame = filled_df.append(dropped_df, ignore_index=True)
-                    new_frame.index = self.index.copy()
-                    if isinstance(self, DataFrame):
-                        new_frame.columns = self.columns.copy()
-                    return new_frame
-                else:
-                    dropped_df = self.drop(self.index[:-periods])
-                    new_frame = dropped_df.append(filled_df, ignore_index=True)
-                    new_frame.index = self.index.copy()
-                    if isinstance(self, DataFrame):
-                        new_frame.columns = self.columns.copy()
-                    return new_frame
+                new_frame = (
+                    filled_df.append(self.iloc[:-periods], ignore_index=True)
+                    if periods > 0
+                    else self.iloc[-periods:].append(filled_df, ignore_index=True)
+                )
+                new_frame.index = self.index.copy()
+                if isinstance(self, DataFrame):
+                    new_frame.columns = self.columns.copy()
+                return new_frame
             else:
                 if not isinstance(self, DataFrame):
                     raise ValueError(
@@ -2695,13 +2692,15 @@ class BasePandasDataset(object):
 
     def to_pickle(
         self,
-        path,
-        compression="infer",
-        protocol=pkl.HIGHEST_PROTOCOL,
+        path: FilePathOrBuffer,
+        compression: CompressionOptions = "infer",
+        protocol: int = pkl.HIGHEST_PROTOCOL,
         storage_options: StorageOptions = None,
     ):  # pragma: no cover
-        return self._default_to_pandas(
-            "to_pickle",
+        from modin.pandas.io import to_pickle
+
+        to_pickle(
+            self,
             path,
             compression=compression,
             protocol=protocol,

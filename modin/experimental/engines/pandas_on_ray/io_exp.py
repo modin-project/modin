@@ -22,10 +22,14 @@ import numpy as np
 import pandas
 import warnings
 
-from modin.backends.pandas.parsers import _split_result_for_readers, PandasCSVGlobParser
+from modin.backends.pandas.parsers import (
+    _split_result_for_readers,
+    PandasCSVGlobParser,
+    PandasPickleExperimentalParser,
+)
 from modin.backends.pandas.query_compiler import PandasQueryCompiler
 from modin.engines.ray.pandas_on_ray.io import PandasOnRayIO
-from modin.engines.base.io import CSVGlobDispatcher
+from modin.engines.base.io import CSVGlobDispatcher, PickleExperimentalDispatcher
 from modin.engines.ray.pandas_on_ray.frame.data import PandasOnRayFrame
 from modin.engines.ray.pandas_on_ray.frame.partition import PandasOnRayFramePartition
 from modin.engines.ray.task_wrapper import RayTask
@@ -88,6 +92,11 @@ class ExperimentalPandasOnRayIO(PandasOnRayIO):
     )
     read_csv_glob = type(
         "", (RayTask, PandasCSVGlobParser, CSVGlobDispatcher), build_args
+    )._read
+    read_pickle_distributed = type(
+        "",
+        (RayTask, PandasPickleExperimentalParser, PickleExperimentalDispatcher),
+        build_args,
     )._read
     read_parquet_remote_task = _read_parquet_columns
 
@@ -216,6 +225,44 @@ class ExperimentalPandasOnRayIO(PandasOnRayIO):
         )
         new_query_compiler._modin_frame.synchronize_labels(axis=0)
         return new_query_compiler
+
+    @classmethod
+    def to_pickle_distributed(cls, qc, **kwargs):
+        """
+        When `*` in the filename all partitions are written to their own separate file.
+
+        The filenames is determined as follows:
+        - if `*` in the filename then it will be replaced by the increasing sequence 0, 1, 2, …
+        - if `*` is not the filename, then will be used default implementation.
+
+        Examples #1: 4 partitions and input filename="partition*.pkl.gz", then filenames will be:
+        `partition0.pkl.gz`, `partition1.pkl.gz`, `partition2.pkl.gz`, `partition3.pkl.gz`.
+
+        Parameters
+        ----------
+        qc : BaseQueryCompiler
+            The query compiler of the Modin dataframe that we want
+            to run ``to_pickle_distributed`` on.
+        **kwargs : dict
+            Parameters for ``pandas.to_pickle(**kwargs)``.
+        """
+        if not (
+            isinstance(kwargs["filepath_or_buffer"], str)
+            and "*" in kwargs["filepath_or_buffer"]
+        ) or not isinstance(qc, PandasQueryCompiler):
+            warnings.warn("Defaulting to Modin core implementation")
+            return PandasOnRayIO.to_pickle(qc, **kwargs)
+
+        def func(df, **kw):
+            idx = str(kw["partition_idx"])
+            kwargs["path"] = kwargs.pop("filepath_or_buffer").replace("*", idx)
+            df.to_pickle(**kwargs)
+            return pandas.DataFrame()
+
+        result = qc._modin_frame.broadcast_apply_full_axis(
+            1, func, other=None, new_index=[], new_columns=[], enumerate_partitions=True
+        )
+        result.to_pandas()
 
 
 # Ray functions are not detected by codecov (thus pragma: no cover)

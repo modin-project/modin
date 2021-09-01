@@ -25,6 +25,7 @@ from modin.engines.base.io.column_stores.parquet_dispatcher import ParquetDispat
 from modin.engines.base.io.column_stores.hdf_dispatcher import HDFDispatcher
 from modin.engines.base.io.column_stores.feather_dispatcher import FeatherDispatcher
 from modin.engines.base.io.sql.sql_dispatcher import SQLDispatcher
+from modin.engines.base.io.pickle.pickle_dispatcher import PickleExperimentalDispatcher
 
 __all__ = [
     "BaseIO",
@@ -39,4 +40,5 @@ __all__ = [
     "FeatherDispatcher",
     "SQLDispatcher",
     "ExcelDispatcher",
+    "PickleExperimentalDispatcher",
 ]

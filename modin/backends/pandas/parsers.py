@@ -153,8 +153,11 @@ class PandasParser(object):
             pandas.Series where index is columns names and values are
             columns dtypes.
         """
+        partitions_dtypes = cls.materialize(dtypes_ids)
+        if all([len(dtype) == 0 for dtype in partitions_dtypes]):
+            return None
         return (
-            pandas.concat(cls.materialize(dtypes_ids), axis=1)
+            pandas.concat(partitions_dtypes, axis=1)
             .apply(lambda row: find_common_type_cat(row.values), axis=1)
             .squeeze(axis=0)
         )
@@ -296,6 +299,27 @@ class PandasCSVGlobParser(PandasCSVParser):
             index,
             pandas_df.dtypes,
         ]
+
+
+@doc(_doc_pandas_parser_class, data_type="pickled pandas objects")
+class PandasPickleExperimentalParser(PandasParser):
+    @staticmethod
+    @doc(_doc_parse_func, parameters=_doc_parse_parameters_common)
+    def parse(fname, **kwargs):
+        warnings.filterwarnings("ignore")
+        num_splits = 1
+        single_worker_read = kwargs.pop("single_worker_read", None)
+        df = pandas.read_pickle(fname, **kwargs)
+        if single_worker_read:
+            return df
+        assert isinstance(
+            df, pandas.DataFrame
+        ), f"Pickled obj type: [{type(df)}] in [{fname}]; works only with pandas.DataFrame"
+
+        length = len(df)
+        width = len(df.columns)
+
+        return _split_result_for_readers(1, num_splits, df) + [length, width]
 
 
 @doc(_doc_pandas_parser_class, data_type="tables with fixed-width formatted lines")
@@ -511,7 +535,7 @@ class PandasExcelParser(PandasParser):
             has_index_names=is_list_like(header) and len(header) > 1,
             skiprows=skiprows,
             usecols=usecols,
-            **kwargs
+            **kwargs,
         )
         # In excel if you create a row with only a border (no values), this parser will
         # interpret that as a row of NaN values. pandas discards these values, so we

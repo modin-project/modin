@@ -22,9 +22,9 @@ from modin.experimental.engines.omnisci_on_ray.frame.omnisci_worker import Omnis
 import numpy as np
 import xgboost as xgb
 
-import daal4py.sklearn as sklearn
+import sklearnex
 
-sklearn.patch_sklearn()
+sklearnex.patch_sklearn()
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import LabelEncoder
 

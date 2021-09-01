@@ -743,11 +743,17 @@ class AggregateExpr(BaseExpr):
     """
 
     def __init__(self, agg, op, distinct=False, dtype=None):
-        self.agg = agg
+        if agg == "nunique":
+            self.agg = "count"
+            self.distinct = True
+        else:
+            self.agg = agg
+            self.distinct = distinct
         self.operands = [op]
-        self._dtype = dtype if dtype else _agg_dtype(agg, op._dtype if op else None)
+        self._dtype = (
+            dtype if dtype else _agg_dtype(self.agg, op._dtype if op else None)
+        )
         assert self._dtype is not None
-        self.distinct = distinct
 
     def copy(self):
         """

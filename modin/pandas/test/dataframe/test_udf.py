@@ -160,11 +160,6 @@ def test_apply_args(axis, args):
     )
 
 
-@pytest.mark.xfail(
-    reason="Modin's 'apply' produces DataFrame instead of Series and so insertion"
-    "of the apply result to the source frame is failed. Issue to track this bug:"
-    "https://github.com/modin-project/modin/issues/3219"
-)
 def test_apply_metadata():
     def add(a, b, c):
         return a + b + c

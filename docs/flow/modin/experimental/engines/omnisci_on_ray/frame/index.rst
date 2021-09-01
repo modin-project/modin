@@ -1,3 +1,5 @@
+:orphan:
+
 OmniSciOnRay Frame Implementation
 =================================
 
@@ -36,7 +38,7 @@ class.
     partition
     axis_partition
     partition_manager
-    omnisci_engine
+    ../omnisci_engine
     df_algebra
     expr
     calcite_algebra

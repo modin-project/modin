@@ -19,7 +19,6 @@ benchmarking old commits, the utilities changed, which in turn can unexpectedly 
 the performance results, hence some utility functions are duplicated here.
 """
 
-import os
 import logging
 import modin.pandas as pd
 import pandas
@@ -27,75 +26,15 @@ import numpy as np
 import uuid
 from typing import Optional, Union
 
-RAND_LOW = 0
-RAND_HIGH = 100
+from .compatibility import (
+    ASV_USE_IMPL,
+    ASV_DATASET_SIZE,
+    ASV_USE_ENGINE,
+    ASV_USE_BACKEND,
+)
+from .data_shapes import RAND_LOW, RAND_HIGH
+
 random_state = np.random.RandomState(seed=42)
-
-
-try:
-    from modin.config import NPartitions
-
-    NPARTITIONS = NPartitions.get()
-except ImportError:
-    NPARTITIONS = pd.DEFAULT_NPARTITIONS
-
-try:
-    from modin.config import TestDatasetSize, AsvImplementation, Engine, Backend
-
-    ASV_USE_IMPL = AsvImplementation.get()
-    ASV_DATASET_SIZE = TestDatasetSize.get() or "Small"
-    ASV_USE_ENGINE = Engine.get()
-    ASV_USE_BACKEND = Backend.get()
-except ImportError:
-    # The same benchmarking code can be run for different versions of Modin, so in
-    # case of an error importing important variables, we'll just use predefined values
-    ASV_USE_IMPL = os.environ.get("MODIN_ASV_USE_IMPL", "modin")
-    ASV_DATASET_SIZE = os.environ.get("MODIN_TEST_DATASET_SIZE", "Small")
-    ASV_USE_ENGINE = os.environ.get("MODIN_ENGINE", "Ray")
-    ASV_USE_BACKEND = os.environ.get("MODIN_BACKEND", "Pandas")
-
-ASV_USE_IMPL = ASV_USE_IMPL.lower()
-ASV_DATASET_SIZE = ASV_DATASET_SIZE.lower()
-ASV_USE_ENGINE = ASV_USE_ENGINE.lower()
-ASV_USE_BACKEND = ASV_USE_BACKEND.lower()
-
-assert ASV_USE_IMPL in ("modin", "pandas")
-assert ASV_DATASET_SIZE in ("big", "small")
-assert ASV_USE_ENGINE in ("ray", "dask", "python")
-assert ASV_USE_BACKEND in ("pandas", "omnisci", "pyarrow")
-
-BINARY_OP_DATA_SIZE = {
-    "big": [
-        ((5000, 5000), (5000, 5000)),
-        # the case extremely inefficient
-        # ((20, 500_000), (10, 1_000_000)),
-        ((500_000, 20), (1_000_000, 10)),
-    ],
-    "small": [
-        ((250, 250), (250, 250)),
-        ((20, 10_000), (10, 25_000)),
-        ((10_000, 20), (25_000, 10)),
-    ],
-}
-
-UNARY_OP_DATA_SIZE = {
-    "big": [
-        (5000, 5000),
-        # the case extremely inefficient
-        # (10, 1_000_000),
-        (1_000_000, 10),
-    ],
-    "small": [
-        (250, 250),
-        (10, 10_000),
-        (10_000, 10),
-    ],
-}
-
-GROUPBY_NGROUPS = {
-    "big": [100, "huge_amount_groups"],
-    "small": [5],
-}
 
 IMPL = {
     "modin": pd,
@@ -132,6 +71,47 @@ class weakdict(dict):  # noqa: GL08
 
 data_cache = dict()
 dataframes_cache = dict()
+
+
+def gen_nan_data(impl: str, nrows: int, ncols: int) -> dict:
+    """
+    Generate nan data with caching.
+
+    The generated data are saved in the dictionary and on a subsequent call,
+    if the keys match, saved data will be returned. Therefore, we need
+    to carefully monitor the changing of saved data and make its copy if needed.
+
+    Parameters
+    ----------
+    impl : str
+        Implementation used to create the DataFrame or Series;
+        supported implemetations: {"modin", "pandas"}.
+    nrows : int
+        Number of rows.
+    ncols : int
+        Number of columns.
+
+    Returns
+    -------
+    modin.pandas.DataFrame or pandas.DataFrame or modin.pandas.Series or pandas.Series
+        DataFrame or Series with shape (nrows, ncols) or (nrows,), respectively.
+    """
+    cache_key = (impl, nrows, ncols)
+    if cache_key in data_cache:
+        return data_cache[cache_key]
+
+    logging.info("Generating nan data {} rows and {} columns".format(nrows, ncols))
+
+    if ncols > 1:
+        columns = [f"col{x}" for x in range(ncols)]
+        data = IMPL[impl].DataFrame(np.nan, index=pd.RangeIndex(nrows), columns=columns)
+    elif ncols == 1:
+        data = IMPL[impl].Series(np.nan, index=pd.RangeIndex(nrows))
+    else:
+        assert False, "Number of columns (ncols) should be >= 1"
+
+    data_cache[cache_key] = data
+    return data
 
 
 def gen_int_data(nrows: int, ncols: int, rand_low: int, rand_high: int) -> dict:

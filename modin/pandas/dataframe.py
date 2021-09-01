@@ -1113,13 +1113,11 @@ class DataFrame(BasePandasDataset):
         Insert column into ``DataFrame`` at specified location.
         """
         if isinstance(value, (DataFrame, pandas.DataFrame)):
-            # DataFrame considered as an array-like objects and so value have to be
-            # retrieved via DataFrame.__iter__ which iterates on the frame column names.
-            # This behavior may be changed in the future, you can follow the changes here:
-            # https://github.com/pandas-dev/pandas/issues/42403
-            value = value.columns
-            if len(value) == 1:
-                value = value[0]
+            if len(value.columns) != 1:
+                raise ValueError(
+                    f"Wrong number of items passed {len(value.columns)}, placement implies 1"
+                )
+            value = value.squeeze(axis=1)
 
         if not self._query_compiler.lazy_execution and len(self.index) == 0:
             if not hasattr(value, "index"):
@@ -1475,27 +1473,21 @@ class DataFrame(BasePandasDataset):
             if abs(periods) >= len(self.index):
                 return DataFrame(columns=self.columns)
             else:
-                if periods > 0:
-                    new_index = self.index.drop(labels=self.index[:periods])
-                    new_df = self.drop(self.index[-periods:])
-                else:
-                    new_index = self.index.drop(labels=self.index[periods:])
-                    new_df = self.drop(self.index[:-periods])
-
-                new_df.index = new_index
+                new_df = self.iloc[:-periods] if periods > 0 else self.iloc[-periods:]
+                new_df.index = (
+                    self.index[periods:] if periods > 0 else self.index[:periods]
+                )
                 return new_df
         else:
             if abs(periods) >= len(self.columns):
                 return DataFrame(index=self.index)
             else:
-                if periods > 0:
-                    new_columns = self.columns.drop(labels=self.columns[:periods])
-                    new_df = self.drop(self.columns[-periods:], axis="columns")
-                else:
-                    new_columns = self.columns.drop(labels=self.columns[periods:])
-                    new_df = self.drop(self.columns[:-periods], axis="columns")
-
-                new_df.columns = new_columns
+                new_df = (
+                    self.iloc[:, :-periods] if periods > 0 else self.iloc[:, -periods:]
+                )
+                new_df.columns = (
+                    self.columns[periods:] if periods > 0 else self.columns[:periods]
+                )
                 return new_df
 
     def unstack(self, level=-1, fill_value=None):  # noqa: PR01, RT01, D200
@@ -2524,15 +2516,12 @@ class DataFrame(BasePandasDataset):
                     key = DataFrame(key, columns=self.columns)
                 return self.mask(key, value, inplace=True)
 
-            def setitem_unhashable_key(df):
-                # Arrow makes memory-mapped objects immutable, so copy will allow them
-                # to be mutable again.
-                df = df.copy(True)
+            def setitem_unhashable_key(df, value):
                 df[key] = value
                 return df
 
             return self._update_inplace(
-                self._default_to_pandas(setitem_unhashable_key)._query_compiler
+                self._default_to_pandas(setitem_unhashable_key, value)._query_compiler
             )
         if is_list_like(value):
             if isinstance(value, (pandas.DataFrame, DataFrame)):
