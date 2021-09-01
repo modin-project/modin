@@ -330,8 +330,17 @@ class CSVDispatcher(TextFileDispatcher):
             nrows = kwargs.get("nrows", None)
             index_range = pandas.RangeIndex(len(new_query_compiler.index))
             if is_list_like(skiprows_md):
+                skiprows_md = skiprows_md - header_size
+                index_max = index_range.stop - 1
+                if skiprows_md[-1] > index_max:
+                    # cut off `skiprows` values, which are outside of index
+                    # boundaries
+                    skiprows_md = skiprows_md[
+                        : skiprows_md.searchsorted(index_max, side="right")
+                    ]
+
                 new_query_compiler = new_query_compiler.view(
-                    index=index_range.delete(skiprows_md - header_size)
+                    index=index_range.delete(skiprows_md)
                 )
             elif callable(skiprows_md):
                 mod_index = skiprows_md(index_range + header_size)

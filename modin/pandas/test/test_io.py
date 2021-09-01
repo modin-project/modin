@@ -18,7 +18,7 @@ from pandas.errors import ParserWarning
 import pandas._libs.lib as lib
 from pandas.core.dtypes.common import is_list_like
 from collections import OrderedDict
-from modin.config import TestDatasetSize, Engine, Backend, IsExperimental
+from modin.config import Engine, Backend, IsExperimental
 from modin.utils import to_pandas
 from modin.pandas.utils import from_arrow
 import pyarrow as pa
@@ -44,6 +44,7 @@ from .utils import (
     COMP_TO_EXT,
     teardown_test_files,
     generate_dataframe,
+    NROWS,
 )
 
 if Backend.get() == "Pandas":
@@ -59,9 +60,6 @@ DATASET_SIZE_DICT = {
     "Normal": 2000,
     "Big": 20000,
 }
-
-# Number of rows in the test file
-NROWS = DATASET_SIZE_DICT.get(TestDatasetSize.get(), DATASET_SIZE_DICT["Small"])
 
 TEST_DATA = {
     "col1": [0, 1, 2, 3],
@@ -1145,6 +1143,23 @@ class TestCsv:
             filepath_or_buffer=pytest.csvs_names["test_read_csv_regular"],
             usecols=["col1"],
             index_col="col1",
+        )
+
+    @pytest.mark.parametrize(
+        "skiprows",
+        [
+            lambda x: True,
+            np.arange(10, 2 * NROWS, 2),
+            np.arange(10, 2 * NROWS - 1, 2),
+        ],
+    )
+    def test_read_csv_incorrect_skiprows(self, skiprows):
+        eval_io(
+            fn_name="read_csv",
+            check_kwargs_callable=not callable(skiprows),
+            # read_csv kwargs
+            filepath_or_buffer=pytest.csvs_names["test_read_csv_regular"],
+            skiprows=skiprows,
         )
 
 
