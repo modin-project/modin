@@ -1672,11 +1672,41 @@ class DataFrame(BasePandasDataset):
     product = prod
     radd = add
 
+    def _update_var_dicts_in_kwargs(self, expr, **kwargs):
+        import re
+
+        frame = sys._getframe()
+        try:
+            f_locals = frame.f_back.f_back.f_locals
+            f_globals = frame.f_back.f_back.f_globals
+        finally:
+            del frame
+        local_names = re.findall(r"@([\w]*)", expr)
+        local_dict = {}
+        global_dict = {}
+
+        for name in local_names:
+            if name in f_locals:
+                local_dict[name] = f_locals[name]
+            elif name in f_globals:
+                global_dict[name] = f_globals[name]
+
+        if local_dict:
+            if kwargs.get("local_dict"):
+                local_dict.update(kwargs["local_dict"])
+            kwargs["local_dict"] = local_dict
+        if global_dict:
+            if kwargs.get("global_dict"):
+                global_dict.update(kwargs.get("global_dict"))
+            kwargs["global_dict"] = global_dict
+        return kwargs
+
     def query(self, expr, inplace=False, **kwargs):  # noqa: PR01, RT01, D200
         """
         Query the columns of a ``DataFrame`` with a boolean expression.
         """
         ErrorMessage.non_verified_udf()
+        kwargs = self._update_var_dicts_in_kwargs(expr, **kwargs)
         self._validate_eval_query(expr, **kwargs)
         inplace = validate_bool_kwarg(inplace, "inplace")
         new_query_compiler = self._query_compiler.query(expr, **kwargs)
@@ -2854,9 +2884,6 @@ class DataFrame(BasePandasDataset):
         """
         if isinstance(expr, str) and expr == "":
             raise ValueError("expr cannot be an empty string")
-
-        if isinstance(expr, str) and "@" in expr:
-            ErrorMessage.not_implemented("Local variables not yet supported in eval.")
 
         if isinstance(expr, str) and "not" in expr:
             if "parser" in kwargs and kwargs["parser"] == "python":
