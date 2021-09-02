@@ -289,12 +289,6 @@ def test_query(data, funcs):
     modin_df = pd.DataFrame(data)
     pandas_df = pandas.DataFrame(data)
 
-    with pytest.raises(ValueError):
-        modin_df.query("")
-    with pytest.raises(NotImplementedError):
-        x = 2  # noqa F841
-        modin_df.query("col1 < @x")
-
     try:
         pandas_result = pandas_df.query(funcs)
     except Exception as e:
@@ -303,6 +297,21 @@ def test_query(data, funcs):
     else:
         modin_result = modin_df.query(funcs)
         df_equals(modin_result, pandas_result)
+
+
+@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test_query_with_local_vars(data):
+    modin_df = pd.DataFrame(data)
+    pandas_df = pandas.DataFrame(data)
+    x = 2  # noqa F841
+    df_equals(modin_df.query("col1 < @x"), pandas_df.query("col1 < @x"))
+
+
+def test_empty_query():
+    modin_df = pd.DataFrame([1, 2, 3, 4, 5])
+
+    with pytest.raises(ValueError):
+        modin_df.query("")
 
 
 def test_query_after_insert():
