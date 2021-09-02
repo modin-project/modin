@@ -11,16 +11,23 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-FROM ubuntu:18.04
-ENV http_proxy ${http_proxy}
-ENV https_proxy ${https_proxy}
-ENV no_proxy ${no_proxy}
-ENV MODIN_BACKEND "omnisci"
-ENV MODIN_EXPERIMENTAL "true"
+# Build image from this dockerfile like this:
+# docker build -t modin-omnisci:latest .
 
-RUN apt-get update --yes && apt-get upgrade --yes \
-    && apt-get install wget --yes && \
+FROM ubuntu:20.04
+
+# Proxy settings
+ENV http_proxy=${http_proxy}
+ENV https_proxy=${https_proxy}
+ENV no_proxy=${no_proxy}
+
+RUN apt-get update --yes \
+    && apt-get install wget less git --yes && \
     rm -rf /var/lib/apt/lists/*
+
+# Modin settings
+ENV MODIN_BACKEND="omnisci"
+ENV MODIN_EXPERIMENTAL="true"
 
 ENV USER modin
 ENV UID 1000
@@ -32,25 +39,37 @@ RUN adduser --disabled-password \
     --home $HOME \
     $USER
 
-ENV CONDA_DIR ${HOME}/miniconda
-
-SHELL ["/bin/bash", "--login", "-c"]
+# Conda settings
+ENV CONDA_DIR=${HOME}/miniconda
+ENV CONDA_ENV_NAME=modin-omnisci
+ENV PATH="${CONDA_DIR}/bin:${PATH}"
 
 RUN wget -nv https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O /tmp/miniconda3.sh && \
     bash /tmp/miniconda3.sh -b -p "${CONDA_DIR}" -f -u && \
     "${CONDA_DIR}/bin/conda" init bash && \
-    rm -f /tmp/miniconda3.sh && \
-    echo ". '${CONDA_DIR}/etc/profile.d/conda.sh'" >> "${HOME}/.profile"
+    rm -f /tmp/miniconda3.sh
 
 RUN conda update -n base -c defaults conda -y && \
-    conda config --set channel_priority strict && \
-    conda create -n modin --yes --no-default-packages && \
-    conda activate modin && \
-    conda install -c conda-forge modin-omnisci scikit-learn scikit-learn-intelex && \
+    conda create -n ${CONDA_ENV_NAME} --yes -c conda-forge modin-omnisci scikit-learn scikit-learn-intelex xgboost && \
     conda clean --all --yes
 
-COPY census-omnisci.py "${HOME}/census-omnisci.py"
-RUN mkdir /dataset
-RUN echo 'conda activate modin && python -u ${HOME}/census-omnisci.py $*' > /entrypoint.sh
+# Activate ${CONDA_ENV_NAME} for interative shells
+RUN echo "source ${CONDA_DIR}/bin/activate ${CONDA_ENV_NAME}" >> "${HOME}/.bashrc"
+# Activate ${CONDA_ENV_NAME} for non-interative shells
+RUN sed -e 's,\(^[[:space:]]\+[*]) return;;$\),# \1,' -i "${HOME}/.bashrc"
+ENV BASH_ENV="${HOME}/.bashrc"
 
-ENTRYPOINT ["/bin/bash", "--login", "/entrypoint.sh"]
+# Set up benchmark scripts
+COPY nyc-taxi-omnisci.py "${HOME}"
+COPY census-omnisci.py "${HOME}"
+COPY plasticc-omnisci.py "${HOME}"
+RUN mkdir /dataset
+WORKDIR ${HOME}
+
+# Clean up proxy settings to publish on Docker Hub
+ENV http_proxy=
+ENV https_proxy=
+ENV no_proxy=
+
+# Set entrypoint with arguments expansion
+ENTRYPOINT ["/bin/bash", "-c", "exec $0 $*"]

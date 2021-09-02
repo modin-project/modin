@@ -11,11 +11,11 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-import os
+import sys
 import time
 import modin.pandas as pd
 
-def read():
+def read(filename):
     columns_names = [
         "trip_id", "vendor_id", "pickup_datetime", "dropoff_datetime", "store_and_fwd_flag",
         "rate_code_id", "pickup_longitude", "pickup_latitude", "dropoff_longitude", "dropoff_latitude",
@@ -30,7 +30,7 @@ def read():
         "dropoff_ntaname", "dropoff_puma",
     ]
     parse_dates=["pickup_datetime", "dropoff_datetime"]
-    return pd.read_csv(os.path.expanduser('~/trips_data.csv'), names=columns_names,
+    return pd.read_csv(filename, names=columns_names,
                 header=None, parse_dates=parse_dates)
 
 def q1(df):
@@ -58,7 +58,12 @@ def measure(name, func, *args, **kw):
     return res
 
 def main():
-    df = measure('Reading', read)
+    if len(sys.argv) != 2:
+        print(
+            f"USAGE: docker run --rm -v /path/to/dataset:/dataset python nyc-taxi.py <data file name starting with /dataset>"
+        )
+        return
+    df = measure("Reading", read, sys.argv[1])
     measure('Q1', q1, df)
     measure('Q2', q2, df)
     measure('Q3', q3, df.copy())
