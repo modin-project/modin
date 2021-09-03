@@ -427,13 +427,22 @@ class PandasFrame(object):
         """
 
         def apply_astype(df, dtype):
+            dtype_part = dtype
             if isinstance(dtype, dict):
                 df_dtypes = df.dtypes
                 df_cols = df.columns
-                assert all([col in df_cols for col in dtype])
-                if all([df_dtypes[col] == dtype[col] for col in dtype]):
+                dtype_part = {}
+                astype_is_needed = False
+                for col_dtype in dtype:
+                    if (
+                        col_dtype in df_cols
+                        and df_dtypes[col_dtype] != dtype[col_dtype]
+                    ):
+                        dtype_part.update({col_dtype: dtype[col_dtype]})
+                        astype_is_needed = True
+                if not astype_is_needed:
                     return df
-            return df.astype(dtype)
+            return df.astype(dtype_part)
 
         self._partitions = np.array(
             [

@@ -198,14 +198,20 @@ class PandasParser(object):
                 lambda row: find_common_type_cat(row.values, handle_object_types=True),
                 axis=1,
             )
+            dtypes_to_change = {}
             if check_homogeneity:
-                dtypes_to_change = {}
-                for idx in combined_dtypes.index:
-                    if any(
-                        part_dtype.loc[idx] != combined_dtypes.loc[idx]
-                        for part_dtype in partitions_dtypes
-                    ):
-                        dtypes_to_change[idx] = combined_dtypes.loc[idx]
+                is_homogeneous = True
+                for part_dtype in partitions_dtypes:
+                    if not combined_dtypes.equals(part_dtype):
+                        is_homogeneous = False
+                        break
+                if not is_homogeneous:
+                    for idx in combined_dtypes.index:
+                        if any(
+                            part_dtype.loc[idx] != combined_dtypes.loc[idx]
+                            for part_dtype in partitions_dtypes
+                        ):
+                            dtypes_to_change[idx] = combined_dtypes.loc[idx]
             combined_dtypes = combined_dtypes.squeeze(axis=0)
 
         return (
