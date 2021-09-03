@@ -819,12 +819,43 @@ class DataFrame(BasePandasDataset):
             pandas.DataFrame.explode, column, ignore_index=ignore_index
         )
 
+    def _update_var_dicts_in_kwargs(self, expr, **kwargs):
+        # TODO: add docs
+        import re
+
+        frame = sys._getframe()
+        try:
+            f_locals = frame.f_back.f_back.f_locals
+            f_globals = frame.f_back.f_back.f_globals
+        finally:
+            del frame
+        local_names = re.findall(r"@([\w]*)", expr)
+        local_dict = {}
+        global_dict = {}
+
+        for name in local_names:
+            if name in f_locals:
+                local_dict[name] = f_locals[name]
+            elif name in f_globals:
+                global_dict[name] = f_globals[name]
+
+        if local_dict:
+            if kwargs.get("local_dict"):
+                local_dict.update(kwargs["local_dict"])
+            kwargs["local_dict"] = local_dict
+        if global_dict:
+            if kwargs.get("global_dict"):
+                global_dict.update(kwargs.get("global_dict"))
+            kwargs["global_dict"] = global_dict
+        return kwargs
+
     def eval(self, expr, inplace=False, **kwargs):  # noqa: PR01, RT01, D200
         """
         Evaluate a string describing operations on ``DataFrame`` columns.
         """
         self._validate_eval_query(expr, **kwargs)
         inplace = validate_bool_kwarg(inplace, "inplace")
+        kwargs = self._update_var_dicts_in_kwargs(expr, **kwargs)
         new_query_compiler = self._query_compiler.eval(expr, **kwargs)
         return_type = type(
             pandas.DataFrame(columns=self.columns)
@@ -1671,36 +1702,6 @@ class DataFrame(BasePandasDataset):
 
     product = prod
     radd = add
-
-    def _update_var_dicts_in_kwargs(self, expr, **kwargs):
-        # TODO: add docs
-        import re
-
-        frame = sys._getframe()
-        try:
-            f_locals = frame.f_back.f_back.f_locals
-            f_globals = frame.f_back.f_back.f_globals
-        finally:
-            del frame
-        local_names = re.findall(r"@([\w]*)", expr)
-        local_dict = {}
-        global_dict = {}
-
-        for name in local_names:
-            if name in f_locals:
-                local_dict[name] = f_locals[name]
-            elif name in f_globals:
-                global_dict[name] = f_globals[name]
-
-        if local_dict:
-            if kwargs.get("local_dict"):
-                local_dict.update(kwargs["local_dict"])
-            kwargs["local_dict"] = local_dict
-        if global_dict:
-            if kwargs.get("global_dict"):
-                global_dict.update(kwargs.get("global_dict"))
-            kwargs["global_dict"] = global_dict
-        return kwargs
 
     def query(self, expr, inplace=False, **kwargs):  # noqa: PR01, RT01, D200
         """
