@@ -15,29 +15,76 @@ import sys
 import time
 import modin.pandas as pd
 
+
 def read(filename):
     columns_names = [
-        "trip_id", "vendor_id", "pickup_datetime", "dropoff_datetime", "store_and_fwd_flag",
-        "rate_code_id", "pickup_longitude", "pickup_latitude", "dropoff_longitude", "dropoff_latitude",
-        "passenger_count", "trip_distance", "fare_amount", "extra", "mta_tax", "tip_amount",
-        "tolls_amount", "ehail_fee", "improvement_surcharge", "total_amount", "payment_type",
-        "trip_type", "pickup", "dropoff", "cab_type", "precipitation", "snow_depth", "snowfall",
-        "max_temperature", "min_temperature", "average_wind_speed", "pickup_nyct2010_gid",
-        "pickup_ctlabel", "pickup_borocode", "pickup_boroname", "pickup_ct2010",
-        "pickup_boroct2010", "pickup_cdeligibil", "pickup_ntacode", "pickup_ntaname", "pickup_puma",
-        "dropoff_nyct2010_gid", "dropoff_ctlabel", "dropoff_borocode", "dropoff_boroname",
-        "dropoff_ct2010", "dropoff_boroct2010", "dropoff_cdeligibil", "dropoff_ntacode",
-        "dropoff_ntaname", "dropoff_puma",
+        "trip_id",
+        "vendor_id",
+        "pickup_datetime",
+        "dropoff_datetime",
+        "store_and_fwd_flag",
+        "rate_code_id",
+        "pickup_longitude",
+        "pickup_latitude",
+        "dropoff_longitude",
+        "dropoff_latitude",
+        "passenger_count",
+        "trip_distance",
+        "fare_amount",
+        "extra",
+        "mta_tax",
+        "tip_amount",
+        "tolls_amount",
+        "ehail_fee",
+        "improvement_surcharge",
+        "total_amount",
+        "payment_type",
+        "trip_type",
+        "pickup",
+        "dropoff",
+        "cab_type",
+        "precipitation",
+        "snow_depth",
+        "snowfall",
+        "max_temperature",
+        "min_temperature",
+        "average_wind_speed",
+        "pickup_nyct2010_gid",
+        "pickup_ctlabel",
+        "pickup_borocode",
+        "pickup_boroname",
+        "pickup_ct2010",
+        "pickup_boroct2010",
+        "pickup_cdeligibil",
+        "pickup_ntacode",
+        "pickup_ntaname",
+        "pickup_puma",
+        "dropoff_nyct2010_gid",
+        "dropoff_ctlabel",
+        "dropoff_borocode",
+        "dropoff_boroname",
+        "dropoff_ct2010",
+        "dropoff_boroct2010",
+        "dropoff_cdeligibil",
+        "dropoff_ntacode",
+        "dropoff_ntaname",
+        "dropoff_puma",
     ]
-    parse_dates=["pickup_datetime", "dropoff_datetime"]
-    return pd.read_csv(filename, names=columns_names,
-                header=None, parse_dates=parse_dates)
+    parse_dates = ["pickup_datetime", "dropoff_datetime"]
+    return pd.read_csv(
+        filename, names=columns_names, header=None, parse_dates=parse_dates
+    )
+
 
 def q1(df):
     return df.groupby("cab_type")["cab_type"].count()
 
+
 def q2(df):
-    return df.groupby("passenger_count", as_index=False).mean()[["passenger_count", "total_amount"]]
+    return df.groupby("passenger_count", as_index=False).mean()[
+        ["passenger_count", "total_amount"]
+    ]
+
 
 def q3(df):
     df["pickup_datetime"] = df["pickup_datetime"].dt.year
@@ -47,15 +94,21 @@ def q3(df):
 def q4(df):
     df["pickup_datetime"] = df["pickup_datetime"].dt.year
     df["trip_distance"] = df["trip_distance"].astype("int64")
-    return df.groupby(["passenger_count", "pickup_datetime", "trip_distance"])  \
-            .size().reset_index().sort_values(by=["pickup_datetime", 0], ascending=[True, False])
+    return (
+        df.groupby(["passenger_count", "pickup_datetime", "trip_distance"])
+        .size()
+        .reset_index()
+        .sort_values(by=["pickup_datetime", 0], ascending=[True, False])
+    )
+
 
 def measure(name, func, *args, **kw):
     t0 = time.time()
     res = func(*args, **kw)
     t1 = time.time()
-    print(f'{name}: {t1 - t0} sec')
+    print(f"{name}: {t1 - t0} sec")
     return res
+
 
 def main():
     if len(sys.argv) != 2:
@@ -64,11 +117,11 @@ def main():
         )
         return
     df = measure("Reading", read, sys.argv[1])
-    measure('Q1', q1, df)
-    measure('Q2', q2, df)
-    measure('Q3', q3, df.copy())
-    measure('Q4', q4, df.copy())
+    measure("Q1", q1, df)
+    measure("Q2", q2, df)
+    measure("Q3", q3, df.copy())
+    measure("Q4", q4, df.copy())
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     main()
-
