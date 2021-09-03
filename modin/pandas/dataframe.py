@@ -820,7 +820,21 @@ class DataFrame(BasePandasDataset):
         )
 
     def _update_var_dicts_in_kwargs(self, expr, **kwargs):
-        # TODO: add docs
+        """
+        Copy variables with "@" prefix in `local_dict` and `global_dict`.
+
+        Parameters
+        ----------
+        expr : str
+            The expression string to search variables with "@" prefix.
+        **kwargs : dict
+            See the documentation for eval() for complete details on the keyword arguments accepted by query().
+
+        Returns
+        -------
+        kwargs : dict
+            Dict with updated `local_dict` and `global_dict` keys.
+        """
         import re
 
         frame = sys._getframe()
