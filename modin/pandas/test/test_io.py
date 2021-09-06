@@ -313,6 +313,7 @@ class TestCsv:
             names=names,
             usecols=usecols,
             skip_blank_lines=skip_blank_lines,
+            # Set dtype parameter as suggested in the documentation
             dtype="str" if failed_cases else None,
         )
 
