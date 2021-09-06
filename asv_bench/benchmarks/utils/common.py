@@ -196,6 +196,7 @@ def gen_str_int_data(nrows: int, ncols: int, rand_low: int, rand_high: int) -> d
     data_cache[cache_key] = weakdict(data)
     return data
 
+
 def gen_het_data(nrows: int, ncols: int, rand_low: int, rand_high: int) -> dict:
     """
     Generate heterogeneous data with caching.
@@ -230,7 +231,10 @@ def gen_het_data(nrows: int, ncols: int, rand_low: int, rand_high: int) -> dict:
         )
     )
     data = {
-        "col{}".format(i): np.append(random_state.randint(rand_low, rand_high, size=(nrows // 2)), random_state.choice(["some", "text", "values"], size=(nrows - nrows // 2)))
+        "col{}".format(i): np.append(
+            random_state.randint(rand_low, rand_high, size=(nrows // 2)),
+            random_state.choice(["some", "text", "values"], size=(nrows - nrows // 2)),
+        )
         for i in range(ncols)
     }
     data_cache[cache_key] = weakdict(data)

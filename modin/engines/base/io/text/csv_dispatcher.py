@@ -256,7 +256,7 @@ class CSVDispatcher(TextFileDispatcher):
 
             index_dtypes = [idx.dtypes if is_mi else idx.dtype for idx in index_objs]
             index_dtypes_combined, index_dtypes_astype = cls.get_dtypes(
-                index_dtypes, check_homogeneity=True
+                index_dtypes, check_homogeneity=True, need_materialization=False
             )
 
             row_lengths = [len(o) for o in index_objs]

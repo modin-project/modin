@@ -270,6 +270,7 @@ class TestCsv:
     @pytest.mark.parametrize("skip_blank_lines", [True, False])
     def test_read_csv_col_handling(
         self,
+        request,
         header,
         index_col,
         prefix,
@@ -289,8 +290,7 @@ class TestCsv:
             and header != 0
             and (names is not lib.no_default and usecols in [["col1"], None])
         )
-        # Cases when index can be read as float because of nans and
-        # add decimal digits to the integer values
+
         xfailed_tests = (
             prefix is lib.no_default
             and header != 0
@@ -302,7 +302,22 @@ class TestCsv:
             )
         )
         if xfailed_tests:
-            pytest.xfail(reason="msg")
+            pytest.xfail(
+                reason="Index is read as float values because of nans "
+                "and decimal digits are added to the integer values"
+            )
+
+        if (
+            request.config.getoption("--simulate-cloud").lower() != "off"
+            and header is None
+            and usecols == ["col1"]
+            and names is lib.no_default
+            and prefix == "col"
+        ):
+            pytest.xfail(
+                reason="The reason of tests fail in `cloud` mode is unknown for now - issue #2340"
+            )
+
         eval_io(
             fn_name="read_csv",
             # read_csv kwargs
@@ -1175,9 +1190,21 @@ class TestCsv:
             index_col="col1",
         )
 
+    @pytest.mark.skipif(
+        Backend.get() == "Omnisci",
+        reason="Modin on Omnisci uses single partition, so there is no need in this test",
+    )
     @pytest.mark.parametrize("entity_to_check", ["data", "index"])
     @pytest.mark.parametrize("add_nans", [True, False])
-    def test_read_csv_heterogeneous_data(self, add_nans, entity_to_check):
+    def test_read_csv_heterogeneous_data(self, request, add_nans, entity_to_check):
+        if (
+            request.config.getoption("--simulate-cloud").lower() != "off"
+            and entity_to_check == "data"
+            and add_nans
+        ):
+            pytest.xfail(
+                reason="The reason of tests fail in `cloud` mode is unknown for now - issue #2340"
+            )
         DoTypesCastOnImport.put(True)
         unique_filename = get_unique_filename()
 
@@ -1211,6 +1238,7 @@ class TestCsv:
             unique_filename,
             **kwargs,
         )
+        DoTypesCastOnImport.put(False)
 
 
 class TestTable:

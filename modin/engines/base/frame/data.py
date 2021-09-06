@@ -415,8 +415,7 @@ class PandasFrame(object):
 
     def synchronize_dtypes(self, dtypes: dict):
         """
-        Synchronize partitions dtypes by applying `astype` function with the given `dtypes`
-        to the `self._partitions` lazily.
+        Synchronize partitions dtypes lazily.
 
         Adds `astype` function to call-queue of each partition from `self._partitions`.
 

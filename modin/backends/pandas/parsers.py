@@ -48,7 +48,6 @@ from pandas.core.dtypes.concat import union_categoricals
 from pandas.io.common import infer_compression
 from pandas.util._decorators import doc
 import warnings
-import ray
 
 from modin.engines.base.io import FileDispatcher
 from modin.data_management.utils import split_result_of_axis_func_pandas
@@ -156,7 +155,7 @@ class PandasParser(object):
     """Base class for parser classes with pandas backend."""
 
     @classmethod
-    def get_dtypes(cls, dtypes_ids, check_homogeneity=False):
+    def get_dtypes(cls, dtypes_ids, check_homogeneity=False, need_materialization=True):
         """
         Get common for all partitions dtype for each of the columns.
 
@@ -169,6 +168,8 @@ class PandasParser(object):
             Whether or not to check data homogeneity.
             If data is not homogeneous return dict columns and types
             it should be casted.
+        need_materialization : bool, default: True
+            Whether `dtypes_ids` needs to be materialized.
 
         Returns
         -------
@@ -176,13 +177,12 @@ class PandasParser(object):
             pandas.Series where index is columns names and values are
             columns dtypes.
         """
-        to_matirialize = isinstance(dtypes_ids[0], ray.ObjectRef)
         partitions_dtypes = (
-            cls.materialize(dtypes_ids) if to_matirialize else dtypes_ids
+            cls.materialize(dtypes_ids) if need_materialization else dtypes_ids
         )
 
         # Case when array of dtypes is given
-        if not to_matirialize and not isinstance(dtypes_ids[0], pandas.Series):
+        if not need_materialization and not isinstance(dtypes_ids[0], pandas.Series):
             combined_dtypes = find_common_type_cat(dtypes_ids, handle_object_types=True)
             if check_homogeneity:
                 dtypes_to_change = (
