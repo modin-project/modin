@@ -384,6 +384,13 @@ class OmnisciLaunchParameters(EnvironmentVariable, type=dict):
         return result
 
 
+class DoTypesCastOnImport(EnvironmentVariable, type=bool):
+    """Whether to perform data type casting between partitions during data import."""
+
+    varname = "MODIN_DO_TYPES_CAST"
+    default = False
+
+
 def _check_vars():
     """
     Check validity of environment variables.

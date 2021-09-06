@@ -26,7 +26,8 @@ from pandas._typing import FilePathOrBuffer
 import pandas._libs.lib as lib
 import numpy as np
 
-from modin.config import NPartitions
+from modin.config import NPartitions, DoTypesCastOnImport
+from modin.error_message import ErrorMessage
 
 ReadCsvKwargsType = Dict[
     str, Union[str, int, bool, dict, object, Sequence, Callable, Dialect, None]
@@ -398,7 +399,13 @@ class CSVDispatcher(TextFileDispatcher):
         if need_labels_sync:
             new_query_compiler._modin_frame.synchronize_labels(axis=0)
         if data_dtypes_astype:
-            new_query_compiler._modin_frame.synchronize_dtypes(data_dtypes_astype)
+            if DoTypesCastOnImport.get():
+                new_query_compiler._modin_frame.synchronize_dtypes(data_dtypes_astype)
+            else:
+                ErrorMessage.missmatch_with_pandas(
+                    operation="read_csv",
+                    message="Data types of partitions are different",
+                )
 
         return new_query_compiler
 

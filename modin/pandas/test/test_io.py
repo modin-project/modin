@@ -18,7 +18,13 @@ from pandas.errors import ParserWarning
 import pandas._libs.lib as lib
 from pandas.core.dtypes.common import is_list_like
 from collections import OrderedDict
-from modin.config import TestDatasetSize, Engine, Backend, IsExperimental
+from modin.config import (
+    TestDatasetSize,
+    Engine,
+    Backend,
+    IsExperimental,
+    DoTypesCastOnImport,
+)
 from modin.utils import to_pandas
 from modin.pandas.utils import from_arrow
 import pyarrow as pa
@@ -1171,6 +1177,7 @@ class TestCsv:
     @pytest.mark.parametrize("entity_to_check", ["data", "index"])
     @pytest.mark.parametrize("add_nans", [True, False])
     def test_read_csv_heterogeneous_data(self, add_nans, entity_to_check):
+        DoTypesCastOnImport.put(True)
         unique_filename = get_unique_filename()
 
         if entity_to_check == "data":
