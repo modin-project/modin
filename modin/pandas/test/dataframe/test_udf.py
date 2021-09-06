@@ -231,12 +231,11 @@ TEST_VAR = 2
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-def test_eval_with_local_and_global_var(data):
-    modin_df = pd.DataFrame(data)
-    pandas_df = pandas.DataFrame(data)
-    x = 2  # noqa F841
-    df_equals(modin_df.query("col1 < @x"), pandas_df.query("col1 < @x"))
-    df_equals(modin_df.query("col1 < @TEST_VAR"), pandas_df.query("col1 < @TEST_VAR"))
+@pytest.mark.parametrize("local_var", [2])
+def test_eval_with_local_and_global_var(data, local_var):
+    modin_df, pandas_df = pd.DataFrame(data), pandas.DataFrame(data)
+    for expr in ("col1 + @local_var", "col1 + @TEST_VAR"):
+        df_equals(modin_df.eval(expr), pandas_df.eval(expr))
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
@@ -315,12 +314,11 @@ TEST_VAR = 2
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-def test_query_with_local_and_global_var(data):
-    modin_df = pd.DataFrame(data)
-    pandas_df = pandas.DataFrame(data)
-    x = 2  # noqa F841
-    df_equals(modin_df.query("col1 < @x"), pandas_df.query("col1 < @x"))
-    df_equals(modin_df.query("col1 < @TEST_VAR"), pandas_df.query("col1 < @TEST_VAR"))
+@pytest.mark.parametrize("local_var", [2])
+def test_query_with_local_and_global_var(data, local_var):
+    modin_df, pandas_df = pd.DataFrame(data), pandas.DataFrame(data)
+    for expr in ("col1 < @local_var", "col1 < @TEST_VAR"):
+        df_equals(modin_df.query(expr), pandas_df.query(expr))
 
 
 def test_empty_query():
