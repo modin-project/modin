@@ -49,9 +49,11 @@ RUN conda update -n base -c defaults conda -y && \
     conda create -n ${CONDA_ENV_NAME} --yes -c conda-forge modin-ray ray-dashboard scikit-learn scikit-learn-intelex xgboost && \
     conda clean --all --yes
 
-# Activate ${CONDA_ENV_NAME} for interative shells
+# Activate ${CONDA_ENV_NAME} for interactive shells
 RUN echo "source ${CONDA_DIR}/bin/activate ${CONDA_ENV_NAME}" >> "${HOME}/.bashrc"
-# Activate ${CONDA_ENV_NAME} for non-interative shells
+# Activate ${CONDA_ENV_NAME} for non-interactive shells
+# The following line comments out line that prevents ~/.bashrc execution in
+# non-interactive mode.
 RUN sed -e 's,\(^[[:space:]]\+[*]) return;;$\),# \1,' -i "${HOME}/.bashrc"
 ENV BASH_ENV="${HOME}/.bashrc"
 
