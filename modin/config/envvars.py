@@ -175,7 +175,7 @@ class Memory(EnvironmentVariable, type=int):
 
     Notes
     -----
-    * In Ray case: the amount of memory to start the plasma object store with.
+    * In Ray case: the amount of memory to start the Plasma object store with.
     * In Dask case: the amount of memory that is given to each worker depending on CPUs used.
     """
 
