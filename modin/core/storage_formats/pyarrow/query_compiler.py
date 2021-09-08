@@ -262,7 +262,7 @@ class PyarrowQueryCompiler(PandasQueryCompiler):
         # it is no longer needed to wrap function to apply.
         func = self._prepare_method(query_builder, **kwargs)
         # FIXME: `PandasQueryCompiler._map_across_full_axis` was removed in #721.
-        # This method call should be replaced to its equivalent from `data_management.function`
+        # This method call should be replaced to its equivalent from `operators.function`
         new_data = self._map_across_full_axis(1, func)
         # Query removes rows, so we need to update the index
         new_index = self._compute_index(0, new_data, False)

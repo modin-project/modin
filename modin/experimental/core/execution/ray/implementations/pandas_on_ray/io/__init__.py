@@ -13,7 +13,7 @@
 
 """Base IO classes optimized for pandas on Ray execution."""
 
-from modin.experimental.core.execution.ray.implementations.pandas_on_ray.io import (
+from .io import (
     ExperimentalPandasOnRayIO,
 )
 

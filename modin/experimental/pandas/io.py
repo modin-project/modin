@@ -24,7 +24,7 @@ from pandas._typing import CompressionOptions, FilePathOrBuffer, StorageOptions
 
 from . import DataFrame
 from modin.config import IsExperimental, Engine
-from modin.data_management.factories.dispatcher import FactoryDispatcher
+from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
 from ...pandas import _update_engine
 
 
@@ -303,7 +303,7 @@ def to_pickle_distributed(
         this argument with a non-fsspec URL. See the fsspec and backend storage
         implementation docs for the set of allowed keys and values.
     """
-    from modin.data_management.factories.dispatcher import FactoryDispatcher
+    from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
 
     obj = self
     Engine.subscribe(_update_engine)

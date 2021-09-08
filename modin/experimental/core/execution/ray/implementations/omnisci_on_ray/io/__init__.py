@@ -11,9 +11,9 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-"""Base IO classes optimized for omnisci on Ray execution."""
+"""Base IO classes optimized for OmniSci on Ray execution."""
 
-from modin.experimental.core.execution.ray.implementations.omnisci_on_ray.io import (
+from .io import (
     OmnisciOnRayIO,
 )
 
