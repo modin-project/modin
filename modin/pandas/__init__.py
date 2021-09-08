@@ -111,10 +111,9 @@ def _update_engine(publisher: Parameter):
 
             initialize_ray()
     elif publisher.get() == "Native":
-        # With OmniSci engine there is only a single worker per node
+        # With OmniSci backend there is only a single worker per node
         # and we allow it to work on all cores.
         if Backend.get() == "Omnisci":
-            CpuCount.put(1)
             os.environ["OMP_NUM_THREADS"] = str(multiprocessing.cpu_count())
         else:
             raise ValueError(

@@ -87,10 +87,7 @@ class OmnisciOnNativeFramePartition(PandasFramePartition):
         """
         if self.arrow_table is not None:
             return self.arrow_table
-        elif self.pandas_df is not None:
-            return self.pandas_df
-        else:
-            return None
+        return self.pandas_df
 
     @classmethod
     def put(cls, obj):
@@ -122,10 +119,7 @@ class OmnisciOnNativeFramePartition(PandasFramePartition):
         """
         if self.arrow_table is not None:
             return self.arrow_table.to_pandas()
-        elif self.pandas_df is not None:
-            return self.pandas_df
-        else:
-            return None
+        return self.pandas_df
 
     @classmethod
     def put_arrow(cls, obj):

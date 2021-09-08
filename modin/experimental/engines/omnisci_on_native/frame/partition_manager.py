@@ -38,7 +38,7 @@ class OmnisciOnNativeFramePartitionManager(PandasFramePartitionManager):
       - frame always has a single partition
       - frame cannot process some data types
       - frame has to use mangling for index labels
-      - frame uses OmniSci engine for execution
+      - frame uses OmniSci backend for execution
     """
 
     _partition_class = OmnisciOnNativeFramePartition
@@ -205,7 +205,7 @@ class OmnisciOnNativeFramePartitionManager(PandasFramePartitionManager):
     @classmethod
     def run_exec_plan(cls, plan, index_cols, dtypes, columns):
         """
-        Run execution plan in OmniSci engine to materialize frame.
+        Run execution plan in OmniSci backend to materialize frame.
 
         Parameters
         ----------

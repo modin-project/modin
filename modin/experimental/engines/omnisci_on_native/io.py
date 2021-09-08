@@ -14,8 +14,7 @@
 """
 Module houses ``OmnisciOnNativeIO`` class.
 
-``OmnisciOnNativeIO`` is used for storing IO functions implementations with Arrow backend
-and OmniSci engine.
+``OmnisciOnNativeIO`` is used for storing IO functions implementations with OmniSci backend and Native engine.
 """
 
 from csv import Dialect
@@ -60,9 +59,9 @@ class ArrowEngineException(Exception):
 
 class OmnisciOnNativeIO(BaseIO, TextFileDispatcher):
     """
-    Class contains IO functions implementations with Arrow backend and OmniSci engine.
+    Class contains IO functions implementations with OmniSci backend and Native engine.
 
-    Inherits some common for OmniSci engine util functions from ``OmnisciIO`` class.
+    Inherits some common for OmniSci engine util functions from ``BaseIO`` class.
     """
 
     frame_cls = OmnisciOnNativeFrame
