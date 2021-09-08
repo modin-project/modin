@@ -40,14 +40,19 @@ ENV CONDA_DIR=${HOME}/miniconda
 ENV CONDA_ENV_NAME=modin-ray
 ENV PATH="${CONDA_DIR}/bin:${PATH}"
 
-RUN wget -nv https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O /tmp/miniconda3.sh && \
-    bash /tmp/miniconda3.sh -b -p "${CONDA_DIR}" -f -u && \
-    "${CONDA_DIR}/bin/conda" init bash && \
-    rm -f /tmp/miniconda3.sh
+RUN wget -nv https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O /tmp/miniconda3.sh \
+    && bash /tmp/miniconda3.sh -b -p "${CONDA_DIR}" -f -u \
+    && "${CONDA_DIR}/bin/conda" init bash \
+    && rm -f /tmp/miniconda3.sh
 
-RUN conda update -n base -c defaults conda -y && \
-    conda create -n ${CONDA_ENV_NAME} --yes -c conda-forge modin-ray ray-dashboard scikit-learn scikit-learn-intelex xgboost && \
-    conda clean --all --yes
+RUN conda update -n base -c defaults conda -y \
+    && conda create -n ${CONDA_ENV_NAME} --yes -c conda-forge \
+        modin-ray \
+        ray-dashboard \
+        scikit-learn \
+        scikit-learn-intelex \
+        xgboost \
+    && conda clean --all --yes
 
 # Activate ${CONDA_ENV_NAME} for interactive shells
 RUN echo "source ${CONDA_DIR}/bin/activate ${CONDA_ENV_NAME}" >> "${HOME}/.bashrc"
