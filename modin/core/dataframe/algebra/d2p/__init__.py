@@ -11,7 +11,7 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-"""d2p module provides templates for a query compiler default-to-pandas methods."""
+"""Module d2p provides templates for a query compiler default-to-pandas methods."""
 
 from modin.core.dataframe.algebra.d2p.dataframe_default import DataFrameDefault
 from modin.core.dataframe.algebra.d2p.datetime_default import DateTimeDefault
