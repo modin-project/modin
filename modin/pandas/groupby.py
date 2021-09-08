@@ -30,7 +30,7 @@ from modin.utils import (
     hashable,
     wrap_into_list,
 )
-from modin.backends.base.query_compiler import BaseQueryCompiler
+from modin.core.storage_formats.base.query_compiler import BaseQueryCompiler
 from modin.config import IsExperimental
 from .series import Series
 from .utils import is_label

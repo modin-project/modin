@@ -13,10 +13,10 @@
 
 """Package holds implementations of key IO classes using bunch of cuDF and Ray."""
 
-from modin.core.execution.ray.implementations.cudf_on_ray.io.text.csv_dispatcher import (
+from .text.csv_dispatcher import (
     cuDFCSVDispatcher,
 )
-from modin.core.execution.ray.implementations.cudf_on_ray.io import cuDFOnRayIO
+from .io import cuDFOnRayIO
 
 
 __all__ = [

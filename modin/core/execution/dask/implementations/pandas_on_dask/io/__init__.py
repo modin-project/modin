@@ -13,7 +13,7 @@
 
 """Key base classes to making efficient scale of data with ``Dask`` as an execution engine."""
 
-from modin.core.execution.dask.implementations.pandas_on_dask.io import PandasOnDaskIO
+from .io import PandasOnDaskIO
 
 __all__ = [
     "PandasOnDaskIO",

@@ -13,19 +13,19 @@
 
 """IO functions implementations."""
 
-from modin.core.io import BaseIO
-from modin.core.io.text.csv_dispatcher import CSVDispatcher
-from modin.core.io.text.csv_glob_dispatcher import CSVGlobDispatcher
-from modin.core.io.text.fwf_dispatcher import FWFDispatcher
-from modin.core.io.text.json_dispatcher import JSONDispatcher
-from modin.core.io.text.excel_dispatcher import ExcelDispatcher
-from modin.core.io.file_dispatcher import FileDispatcher
-from modin.core.io.text.text_file_dispatcher import TextFileDispatcher
-from modin.core.io.column_stores.parquet_dispatcher import ParquetDispatcher
-from modin.core.io.column_stores.hdf_dispatcher import HDFDispatcher
-from modin.core.io.column_stores.feather_dispatcher import FeatherDispatcher
-from modin.core.io.sql.sql_dispatcher import SQLDispatcher
-from modin.core.io.pickle.pickle_dispatcher import PickleExperimentalDispatcher
+from .io import BaseIO
+from .text.csv_dispatcher import CSVDispatcher
+from .text.csv_glob_dispatcher import CSVGlobDispatcher
+from .text.fwf_dispatcher import FWFDispatcher
+from .text.json_dispatcher import JSONDispatcher
+from .text.excel_dispatcher import ExcelDispatcher
+from .file_dispatcher import FileDispatcher
+from .text.text_file_dispatcher import TextFileDispatcher
+from .column_stores.parquet_dispatcher import ParquetDispatcher
+from .column_stores.hdf_dispatcher import HDFDispatcher
+from .column_stores.feather_dispatcher import FeatherDispatcher
+from .sql.sql_dispatcher import SQLDispatcher
+from .pickle.pickle_dispatcher import PickleExperimentalDispatcher
 
 __all__ = [
     "BaseIO",

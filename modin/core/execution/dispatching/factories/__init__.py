@@ -13,7 +13,7 @@
 
 """Factories responsible for dispatching to specific execution."""
 
-from modin.core.execution.dispatching import factories
+from . import factories
 
 
 def _get_remote_engines():

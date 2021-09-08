@@ -13,7 +13,7 @@
 
 """Functionality implementations with pandas backend and Python engine."""
 
-from modin.core.execution.python.implementations.pandas_on_python.io import (
+from .io import (
     PandasOnPythonIO,
 )
 

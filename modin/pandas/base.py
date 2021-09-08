@@ -2528,7 +2528,9 @@ class BasePandasDataset(object):
         }
         new_query_compiler = self._query_compiler
 
-        from modin.data_management.factories.dispatcher import FactoryDispatcher
+        from modin.core.execution.dispatching.factories.dispatcher import (
+            FactoryDispatcher,
+        )
 
         return FactoryDispatcher.to_csv(new_query_compiler, **kwargs)
 
@@ -2772,7 +2774,9 @@ class BasePandasDataset(object):
             # so pandas._to_sql will not write the index to the database as well
             index = False
 
-        from modin.data_management.factories.dispatcher import FactoryDispatcher
+        from modin.core.execution.dispatching.factories.dispatcher import (
+            FactoryDispatcher,
+        )
 
         FactoryDispatcher.to_sql(
             new_query_compiler,
