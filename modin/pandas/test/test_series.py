@@ -3396,13 +3396,13 @@ def test_update(data, other_data):
 @pytest.mark.parametrize("ascending", bool_arg_values, ids=bool_arg_keys)
 def test_value_counts(sort, normalize, bins, dropna, ascending):
     def sort_sensitive_comparator(df1, df2):
+        # We sort indices for Modin and pandas result because of issue #1650
         return (
             df_equals_with_non_stable_indices(df1, df2)
             if sort
             else df_equals(df1.sort_index(), df2.sort_index())
         )
 
-    # We sort indices for Modin and pandas result because of issue #1650
     eval_general(
         *create_test_series(test_data_values[0]),
         lambda df: df.value_counts(

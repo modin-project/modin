@@ -389,7 +389,8 @@ def test_value_counts(subset_len, sort, normalize, dropna, ascending):
 
     data = test_data_values[0]
     md_df, pd_df = create_test_dfs(data)
-    subset = [pd_df.columns[i * ((-1) ** i)] for i in range(subset_len)]
+    # We're picking columns with different index signs to involve columns from different partitions
+    subset = [pd_df.columns[-i if i % 2 else i] for i in range(subset_len)]
 
     eval_general(
         md_df,
