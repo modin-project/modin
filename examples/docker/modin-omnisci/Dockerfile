@@ -22,8 +22,8 @@ ENV https_proxy=${https_proxy}
 ENV no_proxy=${no_proxy}
 
 RUN apt-get update --yes \
-    && apt-get install wget --yes && \
-    rm -rf /var/lib/apt/lists/*
+    && apt-get install wget --yes \
+    && rm -rf /var/lib/apt/lists/*
 
 # Modin settings
 ENV MODIN_BACKEND="omnisci"
