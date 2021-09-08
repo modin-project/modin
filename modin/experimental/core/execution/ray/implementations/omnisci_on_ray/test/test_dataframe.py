@@ -37,7 +37,7 @@ from modin.pandas.test.utils import (
     eval_io,
 )
 
-from modin.experimental.engines.omnisci_on_ray.frame.partition_manager import (
+from modin.experimental.core.execution.ray.implementations.omnisci_on_ray.partitioning.partition_manager import (
     OmnisciOnRayFramePartitionManager,
 )
 

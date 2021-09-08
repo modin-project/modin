@@ -11,7 +11,7 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-"""Base IO classes optimized for pyarrow on Ray execution."""
+"""Base IO classes optimized for PyArrow on Ray execution."""
 
 from .io import PyarrowOnRayIO
 

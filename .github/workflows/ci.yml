@@ -667,6 +667,7 @@ jobs:
         python-version: [ "3.7", "3.8" ]
         engine: ["ray", "dask"]
     env:
+      MODIN_EXPERIMENTAL: "True"
       MODIN_ENGINE: ${{matrix.engine}}
     name: test-spreadsheet (engine ${{matrix.engine}}, python ${{matrix.python-version}})
     steps:
