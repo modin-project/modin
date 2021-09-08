@@ -44,13 +44,13 @@ import modin  # noqa: E402
 import modin.config  # noqa: E402
 from modin.config import IsExperimental, TestRayClient  # noqa: E402
 
-from modin.core.storage_formats import (
+from modin.core.storage_formats import (  # noqa: E402
     PandasQueryCompiler,
     BaseQueryCompiler,
-)  # noqa: E402
-from modin.core.execution.python.implementations.pandas_on_python.io import (
+)
+from modin.core.execution.python.implementations.pandas_on_python.io import (  # noqa: E402
     PandasOnPythonIO,
-)  # noqa: E402
+)
 from modin.core.execution.dispatching.factories import factories  # noqa: E402
 from modin.utils import get_current_backend  # noqa: E402
 from modin.pandas.test.utils import (  # noqa: E402
