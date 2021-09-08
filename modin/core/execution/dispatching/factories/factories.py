@@ -521,6 +521,11 @@ class ExperimentalPandasOnRayFactory(ExperimentalBaseFactory, PandasOnRayFactory
         return cls.io_cls.to_pickle_distributed(*args, **kwargs)
 
 
+@doc(_doc_factory_class, backend_name="experimental PandasOnDask")
+class ExperimentalPandasOnDaskFactory(ExperimentalBaseFactory, PandasOnDaskFactory):
+    pass
+
+
 @doc(_doc_factory_class, backend_name="experimental PandasOnPython")
 class ExperimentalPandasOnPythonFactory(ExperimentalBaseFactory, PandasOnPythonFactory):
     pass
