@@ -11,4 +11,4 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-"""Key base classes to making efficient scale of data with ``Python`` as an execution engine."""
+"""Modin's functionality related to Python execution engine."""

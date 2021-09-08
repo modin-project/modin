@@ -11,4 +11,4 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-"""Package holds implementations of key classes using bunch of cuDF and Ray."""
+"""Modin's functionality related to Ray execution engine and optimized for cuDF storage format."""

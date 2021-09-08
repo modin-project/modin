@@ -11,4 +11,4 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-"""Base Modin Dataframe classes designed for pandas storage format."""
+"""Base Modin Dataframe classes optimized for pandas storage format."""

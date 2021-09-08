@@ -11,4 +11,4 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-"""Modin's functionality related to Ray execution engine for specific storage format implementations."""
+"""Modin's functionality related to Ray execution engine and optimized for specific storage formats."""

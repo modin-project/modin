@@ -11,4 +11,4 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-"""Experimental functionality implementations with PyArrow backend and Ray engine."""
+"""Experimental Modin's functionality related to Ray execution engine and optimized for pyarrow storage format."""

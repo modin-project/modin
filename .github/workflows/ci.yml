@@ -55,8 +55,8 @@ jobs:
             modin/pandas/series_utils.py modin/pandas/general.py \
             modin/pandas/plotting.py modin/pandas/utils.py \
             modin/pandas/iterator.py modin/pandas/indexing.py \
-      - run: python scripts/doc_checker.py modin/engines/base/frame
-      - run: python scripts/doc_checker.py modin/engines/dask
+      - run: python scripts/doc_checker.py modin/core/dataframe
+      - run: python scripts/doc_checker.py modin/core/execution/dask
       - run: |
           python scripts/doc_checker.py \
             modin/pandas/accessor.py modin/pandas/general.py \
@@ -65,18 +65,18 @@ jobs:
             modin/pandas/series_utils.py modin/pandas/utils.py \
             modin/pandas/base.py \
             modin/pandas/io.py modin/engines/base/io/io.py \
-            modin/engines/base/frame asv_bench/benchmarks/utils \
+            asv_bench/benchmarks/utils \
             asv_bench/benchmarks/__init__.py asv_bench/benchmarks/io/__init__.py \
             asv_bench/benchmarks/scalability/__init__.py \
-            modin/engines/base/io/column_stores \
-            modin/engines/base/io/sql \
-            modin/engines/base/io/text \
-            modin/engines/base/io/__init__.py \
-            modin/engines/base/io/file_dispatcher.py \
-            modin/experimental/engines/pandas_on_ray \
-            modin/experimental/engines/pyarrow_on_ray \
+            modin/core/io/column_stores \
+            modin/core/io/sql \
+            modin/core/io/text \
+            modin/core/io/__init__.py \
+            modin/core/io/file_dispatcher.py \
+            modin/experimental/core/execution/ray/implementations/pandas_on_ray \
+            modin/experimental/core/execution/ray/implementations/pyarrow_on_ray \
             modin/pandas/series.py \
-            modin/engines/python \
+            modin/core/execution/python \
             modin/pandas/dataframe.py \
             modin/config/__init__.py \
             modin/config/__main__.py \
@@ -89,24 +89,23 @@ jobs:
           python scripts/doc_checker.py modin/experimental/xgboost/__init__.py \
             modin/experimental/xgboost/utils.py modin/experimental/xgboost/xgboost.py \
             modin/experimental/xgboost/xgboost_ray.py
-      - run: python scripts/doc_checker.py modin/engines/ray
+      - run: python scripts/doc_checker.py modin/core/execution/ray
       - run: |
-          python scripts/doc_checker.py modin/data_management/functions \
-            modin/data_management/factories/factories.py                \
-            modin/data_management/factories/dispatcher.py               \
-            modin/data_management/utils.py
+          python scripts/doc_checker.py modin/core/execution/dispatching/factories/factories.py \
+            modin/core/execution/dispatching/factories/dispatcher.py                            \
       - run: python scripts/doc_checker.py scripts/doc_checker.py
       - run: |
-          python scripts/doc_checker.py modin/experimental/pandas/io_exp.py \
+          python scripts/doc_checker.py modin/experimental/pandas/io.py \
             modin/experimental/pandas/numpy_wrap.py modin/experimental/pandas/__init__.py
-      - run: python scripts/doc_checker.py modin/backends/base
-      - run: python scripts/doc_checker.py modin/backends/pyarrow
-      - run: python scripts/doc_checker.py modin/backends/pandas
+      - run: python scripts/doc_checker.py modin/core/storage_formats/base
+      - run: python scripts/doc_checker.py modin/core/storage_formats/pyarrow
+      - run: python scripts/doc_checker.py modin/core/storage_formats/pandas
       - run: |
           python scripts/doc_checker.py \
-          modin/experimental/engines/omnisci_on_ray/frame \
-          modin/experimental/engines/omnisci_on_ray/io.py
-      - run: python scripts/doc_checker.py modin/experimental/backends/omnisci
+          modin/experimental/core/execution/ray/implementations/omnisci_on_ray/dataframe \
+          modin/experimental/core/execution/ray/implementations/omnisci_on_ray/io \
+          modin/experimental/core/execution/ray/implementations/omnisci_on_ray/partitioning \
+      - run: python scripts/doc_checker.py modin/experimental/core/storage_formats/omnisci
 
   lint-flake8:
     name: lint (flake8)
@@ -239,11 +238,11 @@ jobs:
           conda info
           conda list
       - name: Internals tests
-        run: python -m pytest modin/data_management/factories/test/test_dispatcher.py modin/experimental/cloud/test/test_cloud.py
+        run: python -m pytest modin/core/execution/dispatching/factories/test/test_dispatcher.py modin/experimental/cloud/test/test_cloud.py
       - run: python -m pytest modin/config/test
       - run: python -m pytest modin/test/test_envvar_catcher.py
-      - run: python -m pytest modin/test/backends/base/test_internals.py
-      - run: python -m pytest modin/test/backends/pandas/test_internals.py
+      - run: python -m pytest modin/test/storage_formats/base/test_internals.py
+      - run: python -m pytest modin/test/storage_formats/pandas/test_internals.py
       - run: python -m pytest modin/test/test_envvar_npartitions.py
       - run: python -m pytest -n 2 modin/test/test_partition_api.py
       - run: python -m pytest modin/test/test_utils.py
@@ -280,7 +279,7 @@ jobs:
       - name: Install HDF5
         run: sudo apt update && sudo apt install -y libhdf5-dev
       - run: pytest modin/experimental/xgboost/test/test_default.py --backend=${{ matrix.backend }}
-      - run: python -m pytest -n 2 modin/test/backends/base/test_internals.py --backend=${{ matrix.backend }}
+      - run: python -m pytest -n 2 modin/test/storage_formats/base/test_internals.py --backend=${{ matrix.backend }}
       - run: pytest -n 2 modin/pandas/test/dataframe/test_binary.py --backend=${{ matrix.backend }}
       - run: pytest -n 2 modin/pandas/test/dataframe/test_default.py --backend=${{ matrix.backend }}
       - run: pytest -n 2 modin/pandas/test/dataframe/test_indexing.py --backend=${{ matrix.backend }}
@@ -338,7 +337,7 @@ jobs:
       - name: Install HDF5
         run: sudo apt update && sudo apt install -y libhdf5-dev
       - run: MODIN_BENCHMARK_MODE=True pytest modin/pandas/test/internals/test_benchmark_mode.py
-      - run: pytest modin/experimental/engines/omnisci_on_ray/test/test_dataframe.py
+      - run: pytest modin/experimental/core/execution/ray/implementations/omnisci_on_ray/test/test_dataframe.py
       - run: pytest modin/pandas/test/test_io.py::TestCsv
       - run: |
           curl -o codecov https://codecov.io/bash
@@ -684,4 +683,4 @@ jobs:
         run: |
           conda info
           conda list
-      - run: python -m pytest modin/spreadsheet/test/test_general.py
+      - run: python -m pytest modin/experimental/spreadsheet/test/test_general.py

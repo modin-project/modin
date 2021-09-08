@@ -11,4 +11,4 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-"""Frame functionality implementations with pandas backend and Python engine."""
+"""Modin's functionality related to Python execution engine and optimized for pandas storage format."""

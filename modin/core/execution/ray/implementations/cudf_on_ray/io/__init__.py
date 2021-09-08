@@ -11,7 +11,7 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-"""Package holds implementations of key IO classes using bunch of cuDF and Ray."""
+"""Base IO classes optimized for cuDF on Ray execution."""
 
 from .text.csv_dispatcher import (
     cuDFCSVDispatcher,

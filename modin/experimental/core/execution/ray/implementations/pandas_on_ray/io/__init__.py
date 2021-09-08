@@ -11,7 +11,7 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-"""Experimental functionality implementations with pandas backend and Ray engine."""
+"""Base IO classes optimized for pandas on Ray execution."""
 
 from modin.experimental.core.execution.ray.implementations.pandas_on_ray.io import (
     ExperimentalPandasOnRayIO,

@@ -23,11 +23,15 @@ from typing import Union, Sequence, Callable, Dict, Tuple
 import inspect
 import os
 
-from modin.experimental.backends.omnisci.query_compiler import DFAlgQueryCompiler
-from modin.engines.ray.generic.io import RayIO
-from modin.experimental.engines.omnisci_on_ray.frame.data import OmnisciOnRayFrame
+from modin.experimental.core.storage_formats.omnisci.query_compiler import (
+    DFAlgQueryCompiler,
+)
+from modin.core.execution.ray.generic.io import RayIO
+from modin.experimental.core.execution.ray.implementations.omnisci_on_ray.dataframe.dataframe import (
+    OmnisciOnRayFrame,
+)
 from modin.error_message import ErrorMessage
-from modin.engines.base.io.text.text_file_dispatcher import TextFileDispatcher
+from modin.core.io.text.text_file_dispatcher import TextFileDispatcher
 
 from pyarrow.csv import read_csv, ParseOptions, ConvertOptions, ReadOptions
 import pyarrow as pa
