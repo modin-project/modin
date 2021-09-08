@@ -1,29 +1,6 @@
 .modin/
-   .config/
-   .distributed/
-   .pandas/
-   .test/
-   .rest files
+   # left `core` folder only since it mostly has changes
    .core/
-      .storage_formats/
-         .base/
-            .query_compiler.py # BaseQueryCompiler
-         .pandas/
-            .base/ # or default (DefaultPandasQueryCompiler)
-               .query_compiler.py # DefaultPandasQueryCompiler
-            .kernels.py
-            .query_compiler.py # PandasQueryCompiler
-            .parsers.py
-            .utils.py # data_management/utils moved here
-      .io/
-         .column_stores/
-            . # the same as it is now
-         .sql/
-            . # the same as it is now
-         .text/
-            . # the same as it is now
-         .file_dispatcher.py # the same as it is now
-         .io.py # the same as it is now
       .dataframe/
          .algebra/
             ./d2p
@@ -35,67 +12,48 @@
                .explode.py
                .groupby.py
                .etc.
-         .execution/
-            .ray/
-               .generic/
-                  .dataframe/
-                     .dataframe.py # GenericRayDataframe
-                     .metadata.py # GenericRayDataframeMetadata
-                  .partition_management/
-                     .axis_partition.py # GenericRayDataframeAxisPartition
-                     .partition_manager.py # GenericRayDataframeManager
-                     .partition.py # GenericRayDataframePartition
-                  .io/
-                     .io.py # GenericRayIO
-                  .task_wrapper.py # GenericRayTask
-                  .utils.py # init_ray
-               .implementations/
-                  .pandas_on_ray/
-                     . # the same as it is now
-            .dask/
-               . # the same as it is for ray
-            .python/
-               . # the same as it is for ray
-            .dispatching/
-               .factories/
+         .base/ # will contain base (abstract) classes
+         .pandas/ # contains PandasDataframe classes
+      .io/
+         .column_stores/
+            . # the same as it is now
+         .sql/
+            . # the same as it is now
+         .text/
+            . # the same as it is now
+         .file_dispatcher.py
+         .io.py
+      .storage_formats/
+         .base/
+            .query_compiler.py # BaseQueryCompiler
+         .pandas/
+            .base/ # or default (DefaultPandasQueryCompiler)
+               .query_compiler.py # DefaultPandasQueryCompiler
+            .kernels.py
+            .query_compiler.py # PandasQueryCompiler
+            .parsers.py
+            .utils.py # data_management/utils moved here
+      .execution/
+         .ray/
+            .common/
+               .task_wrapper.py # RayTask
+               .utils.py # init_ray
+            .generic/
+               .dataframe/
+                  .dataframe.py # GenericRayDataframe
+               .partition_management/
+                  .axis_partition.py # GenericRayDataframeAxisPartition
+                  .partition_manager.py # GenericRayDataframeManager
+                  .partition.py # GenericRayDataframePartition
+               .io/
+                  .io.py # GenericRayIO
+            .implementations/
+               .pandas_on_ray/
                   . # the same as it is now
-   .experimental/
-      ./cloud
-         . # the same as it is now
-      ./pandas
-         . # the same as it is now
-      ./sklearn
-         . # the same as it is now
-      ./sql
-         . # the same as it is now
-     .spreadsheet/
-         . # from modin/spreadsheet
-     ./xgboost
-         . # the same as it is now
-     ./core
-         .storage_formats/
-            .omnisci/
-               .kernels.py
-               .query_compiler.py
-            .pyarrow/
-               .kernels.py
-               .query_compiler.py
-         .dataframe/
-            .execution/
-               .ray/
-                  .omnisci_on_ray/ # this should go to omnisci_on_native in execution/native folder after #3352 is merged
-                     .dataframe/
-                        .dataframe.py # OmniSciOnRayDataframe
-                        .metadata.py # OmniSciOnRayFrameMetaData
-                     .partition_management/
-                        .axis_partition.py # OmniSciOnRayFrameAxisPartition
-                        .partition_manager.py # OmniSciOnRayFrameManager
-                        .partition.py # OmniSciOnRayFramePartition
-                  .pyarrow_on_ray/
-                     .frame/
-                        .dataframe.py # PyarrowOnRayDataframe
-                        .metadata.py # PyarrowOnRayDataframe
-                     .partition_management/ # or `partitioning`
-                        .axis_partition.py # PyarrowOnRayDataframeAxisPartition
-                        .partition_manager.py # PyarrowOnRayDataframeManager
-                        .partition.py # PyarrowOnRayDataframePartition
+         .dask/
+            . # the same as it is for ray
+         .python/
+            . # the same as it is for ray
+         .dispatching/
+            .factories/
+               . # the same as it is now

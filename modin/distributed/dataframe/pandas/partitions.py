@@ -15,7 +15,7 @@
 
 import numpy as np
 
-from modin.backends.pandas.query_compiler import PandasQueryCompiler
+from modin.core.storage_formats.pandas.query_compiler import PandasQueryCompiler
 from modin.pandas.dataframe import DataFrame
 
 
@@ -129,7 +129,7 @@ def from_partitions(
     Pass `index`, `columns`, `row_lengths` and `column_widths` to avoid triggering
     extra computations of the metadata when creating a DataFrame.
     """
-    from modin.data_management.factories.dispatcher import FactoryDispatcher
+    from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
 
     factory = FactoryDispatcher.get_factory()
 
