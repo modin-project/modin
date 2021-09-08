@@ -20,9 +20,7 @@ These classes are intended to perform operations on the data rows and columns.
 from modin.core.dataframe.pandas.partitioning.axis_partition import (
     PandasFrameAxisPartition,
 )
-from modin.experimental.core.execution.ray.implementations.omnisci_on_ray.partitioning.partition import (
-    OmnisciOnRayFramePartition,
-)
+from .partition import OmnisciOnRayFramePartition
 
 import ray
 

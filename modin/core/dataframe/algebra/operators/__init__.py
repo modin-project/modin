@@ -13,13 +13,13 @@
 
 """Operators module provides template for a query compiler methods for a set of common operations."""
 
-from modin.core.dataframe.algebra.operators.function import Function
-from modin.core.dataframe.algebra.operators.mapfunction import MapFunction
-from modin.core.dataframe.algebra.operators.mapreducefunction import MapReduceFunction
-from modin.core.dataframe.algebra.operators.reductionfunction import ReductionFunction
-from modin.core.dataframe.algebra.operators.foldfunction import FoldFunction
-from modin.core.dataframe.algebra.operators.binary_function import BinaryFunction
-from modin.core.dataframe.algebra.operators.groupby_function import (
+from .function import Function
+from .mapfunction import MapFunction
+from .mapreducefunction import MapReduceFunction
+from .reductionfunction import ReductionFunction
+from .foldfunction import FoldFunction
+from .binary_function import BinaryFunction
+from .groupby_function import (
     GroupbyReduceFunction,
     groupby_reduce_functions,
 )

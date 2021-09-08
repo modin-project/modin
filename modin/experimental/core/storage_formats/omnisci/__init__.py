@@ -12,3 +12,7 @@
 # governing permissions and limitations under the License.
 
 """The module represents the query compiler level for the OmniSci backend."""
+
+from .query_compiler import DFAlgQueryCompiler
+
+__all__ = ["DFAlgQueryCompiler"]

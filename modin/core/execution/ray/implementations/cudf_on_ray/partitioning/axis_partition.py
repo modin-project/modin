@@ -16,9 +16,7 @@
 import cudf
 import ray
 
-from modin.core.execution.ray.implementations.cudf_on_ray.partitioning.partition import (
-    cuDFOnRayFramePartition,
-)
+from .partition import cuDFOnRayFramePartition
 
 
 class cuDFOnRayFrameAxisPartition(object):

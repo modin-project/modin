@@ -13,7 +13,7 @@
 
 """Module houses default binary functions builder class."""
 
-from modin.core.dataframe.algebra.d2p.any_default import AnyDefault
+from .any_default import AnyDefault
 
 import pandas
 from pandas.core.dtypes.common import is_list_like

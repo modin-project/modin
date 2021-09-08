@@ -15,7 +15,7 @@
 
 import pandas
 
-from modin.core.dataframe.algebra.operators.mapreducefunction import MapReduceFunction
+from .mapreducefunction import MapReduceFunction
 from modin.utils import try_cast_to_pandas, hashable
 
 

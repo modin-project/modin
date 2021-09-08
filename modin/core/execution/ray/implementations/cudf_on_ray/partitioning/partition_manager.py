@@ -16,13 +16,11 @@
 import numpy as np
 import ray
 
-from modin.core.execution.ray.implementations.cudf_on_ray.partitioning.axis_partition import (
+from .axis_partition import (
     cuDFOnRayFrameColumnPartition,
     cuDFOnRayFrameRowPartition,
 )
-from modin.core.execution.ray.implementations.cudf_on_ray.partitioning.partition import (
-    cuDFOnRayFramePartition,
-)
+from .partition import cuDFOnRayFramePartition
 
 from modin.core.storage_formats.pandas.utils import split_result_of_axis_func_pandas
 from modin.config import GpuCount

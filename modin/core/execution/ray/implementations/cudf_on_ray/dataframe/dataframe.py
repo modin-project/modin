@@ -16,10 +16,10 @@
 import numpy as np
 import ray
 
-from modin.core.execution.ray.implementations.cudf_on_ray.partitioning.partition import (
+from ..partitioning.partition import (
     cuDFOnRayFramePartition,
 )
-from modin.core.execution.ray.implementations.cudf_on_ray.partitioning.partition_manager import (
+from ..partitioning.partition_manager import (
     cuDFOnRayFramePartitionManager,
 )
 

@@ -16,9 +16,7 @@
 from modin.core.dataframe.pandas.partitioning.axis_partition import (
     PandasFrameAxisPartition,
 )
-from modin.core.execution.dask.implementations.pandas_on_dask.partitioning.partition import (
-    PandasOnDaskFramePartition,
-)
+from .partition import PandasOnDaskFramePartition
 
 from distributed.client import default_client
 from distributed import Future

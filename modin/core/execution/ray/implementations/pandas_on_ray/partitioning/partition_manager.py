@@ -21,16 +21,14 @@ from modin.config import ProgressBar
 from modin.core.execution.ray.generic.partitioning.partition_manager import (
     GenericRayFramePartitionManager,
 )
-from modin.core.execution.ray.implementations.pandas_on_ray.partitioning.axis_partition import (
+from .axis_partition import (
     PandasOnRayFrameColumnPartition,
     PandasOnRayFrameRowPartition,
 )
-from modin.core.execution.ray.implementations.pandas_on_ray.partitioning.partition import (
+from .partition import (
     PandasOnRayFramePartition,
 )
-from modin.core.execution.ray.implementations.pandas_on_ray.modin_aqp import (
-    call_progress_bar,
-)
+from ..modin_aqp import call_progress_bar
 from modin.error_message import ErrorMessage
 import pandas
 

@@ -20,7 +20,7 @@ Module contains class ``PyarrowOnRayFrame``.
 import pandas
 from pandas.core.dtypes.cast import find_common_type
 
-from modin.experimental.core.execution.ray.implementations.pyarrow_on_ray.partitioning.partition_manager import (
+from ..partitioning.partition_manager import (
     PyarrowOnRayFramePartitionManager,
 )
 from modin.core.dataframe.pandas.dataframe.dataframe import PandasFrame

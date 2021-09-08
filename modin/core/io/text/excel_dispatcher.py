@@ -66,7 +66,7 @@ class ExcelDispatcher(TextFileDispatcher):
         from openpyxl.worksheet.worksheet import Worksheet
         from openpyxl.worksheet._reader import WorksheetReader
         from openpyxl.reader.excel import ExcelReader
-        from modin.backends.pandas.parsers import PandasExcelParser
+        from modin.core.storage_formats.pandas.parsers import PandasExcelParser
 
         sheet_name = kwargs.get("sheet_name", 0)
         if sheet_name is None or isinstance(sheet_name, list):

@@ -16,13 +16,11 @@
 from modin.core.dataframe.pandas.partitioning.partition_manager import (
     PandasFramePartitionManager,
 )
-from modin.core.execution.python.implementations.pandas_on_python.partitioning.axis_partition import (
+from .axis_partition import (
     PandasOnPythonFrameColumnPartition,
     PandasOnPythonFrameRowPartition,
 )
-from modin.core.execution.python.implementations.pandas_on_python.partitioning.partition import (
-    PandasOnPythonFramePartition,
-)
+from .partition import PandasOnPythonFramePartition
 
 
 class PandasOnPythonFramePartitionManager(PandasFramePartitionManager):

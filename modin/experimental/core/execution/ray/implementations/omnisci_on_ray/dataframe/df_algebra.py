@@ -14,9 +14,7 @@
 """Module provides classes for lazy DataFrame algebra operations."""
 
 import abc
-from modin.experimental.core.execution.ray.implementations.omnisci_on_ray.dataframe.expr import (
-    InputRefExpr,
-)
+from .expr import InputRefExpr
 from collections import OrderedDict
 
 

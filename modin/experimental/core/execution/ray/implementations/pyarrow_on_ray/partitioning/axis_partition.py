@@ -16,9 +16,7 @@
 from modin.core.dataframe.pandas.partitioning.axis_partition import (
     BaseFrameAxisPartition,
 )
-from modin.experimental.core.execution.ray.implementations.pyarrow_on_ray.partitioning.partition import (
-    PyarrowOnRayFramePartition,
-)
+from .partition import PyarrowOnRayFramePartition
 
 import ray
 import pyarrow

@@ -13,12 +13,12 @@
 
 """Modin's functionality related to storage formats supported."""
 
-from modin.core.storage_formats.base import BaseQueryCompiler
-from modin.core.storage_formats.pandas import PandasQueryCompiler
+from .base import BaseQueryCompiler
+from .pandas import PandasQueryCompiler
 
 __all__ = ["BaseQueryCompiler", "PandasQueryCompiler"]
 try:
-    from modin.core.storage_formats.pyarrow import PyarrowQueryCompiler  # noqa: F401
+    from .pyarrow import PyarrowQueryCompiler  # noqa: F401
 except ImportError:
     pass
 else:

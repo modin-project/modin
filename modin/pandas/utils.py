@@ -150,7 +150,7 @@ def is_label(obj, label, axis=0):
 
     Parameters
     ----------
-    obj : modin.pandas.DataFrame, modin.pandas.Series or modin.backends.base.BaseQueryCompiler
+    obj : modin.pandas.DataFrame, modin.pandas.Series or modin.core.storage_formats.base.BaseQueryCompiler
         Object to check.
     label : object
         Label name to check.

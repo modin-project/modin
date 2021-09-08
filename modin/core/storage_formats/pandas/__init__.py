@@ -13,6 +13,6 @@
 
 """The module represents the query compiler level for the pandas backend."""
 
-from modin.core.storage_formats.pandas.query_compiler import PandasQueryCompiler
+from .query_compiler import PandasQueryCompiler
 
 __all__ = ["PandasQueryCompiler"]

@@ -13,7 +13,7 @@
 
 """Module houses default applied-on-category functions builder class."""
 
-from modin.core.dataframe.algebra.d2p.series_default import SeriesDefault
+from .series_default import SeriesDefault
 
 
 class CatDefault(SeriesDefault):

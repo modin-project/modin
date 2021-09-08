@@ -15,7 +15,7 @@
 
 import pandas
 
-from modin.core.execution.ray.implementations.pandas_on_ray.partitioning.partition_manager import (
+from ..partitioning.partition_manager import (
     PandasOnRayFramePartitionManager,
 )
 from modin.core.dataframe.pandas.dataframe.dataframe import PandasFrame

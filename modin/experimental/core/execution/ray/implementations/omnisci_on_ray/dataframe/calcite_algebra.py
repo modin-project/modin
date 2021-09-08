@@ -19,9 +19,7 @@ OmniSci engine.
 """
 
 import abc
-from modin.experimental.core.execution.ray.implementations.omnisci_on_ray.dataframe.expr import (
-    BaseExpr,
-)
+from .expr import BaseExpr
 
 
 class CalciteInputRefExpr(BaseExpr):

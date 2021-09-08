@@ -15,7 +15,7 @@
 
 """Module houses default functions builder class."""
 
-from modin.core.dataframe.algebra.d2p.default import DefaultMethod
+from .default import DefaultMethod
 
 
 class ObjTypeDeterminer:

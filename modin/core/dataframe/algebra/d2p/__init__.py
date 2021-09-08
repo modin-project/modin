@@ -13,17 +13,17 @@
 
 """Module d2p provides templates for a query compiler default-to-pandas methods."""
 
-from modin.core.dataframe.algebra.d2p.dataframe_default import DataFrameDefault
-from modin.core.dataframe.algebra.d2p.datetime_default import DateTimeDefault
-from modin.core.dataframe.algebra.d2p.series_default import SeriesDefault
-from modin.core.dataframe.algebra.d2p.str_default import StrDefault
-from modin.core.dataframe.algebra.d2p.binary_default import BinaryDefault
-from modin.core.dataframe.algebra.d2p.any_default import AnyDefault
-from modin.core.dataframe.algebra.d2p.resample_default import ResampleDefault
-from modin.core.dataframe.algebra.d2p.rolling_default import RollingDefault
-from modin.core.dataframe.algebra.d2p.default import DefaultMethod
-from modin.core.dataframe.algebra.d2p.cat_default import CatDefault
-from modin.core.dataframe.algebra.d2p.groupby_default import GroupByDefault
+from .dataframe_default import DataFrameDefault
+from .datetime_default import DateTimeDefault
+from .series_default import SeriesDefault
+from .str_default import StrDefault
+from .binary_default import BinaryDefault
+from .any_default import AnyDefault
+from .resample_default import ResampleDefault
+from .rolling_default import RollingDefault
+from .default import DefaultMethod
+from .cat_default import CatDefault
+from .groupby_default import GroupByDefault
 
 __all__ = [
     "DataFrameDefault",

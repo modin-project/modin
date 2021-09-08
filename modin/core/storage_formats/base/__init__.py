@@ -13,6 +13,6 @@
 
 """The module represents the base query compiler that defines the common query compiler API."""
 
-from modin.core.storage_formats.base.query_compiler import BaseQueryCompiler
+from .query_compiler import BaseQueryCompiler
 
 __all__ = ["BaseQueryCompiler"]

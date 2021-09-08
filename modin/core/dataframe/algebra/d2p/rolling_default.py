@@ -13,7 +13,7 @@
 
 """Module houses default Rolling functions builder class."""
 
-from modin.core.dataframe.algebra.d2p.default import DefaultMethod
+from .default import DefaultMethod
 
 
 # FIXME: there is no sence of keeping `Rolling` and `RollingDefault` logic in a different

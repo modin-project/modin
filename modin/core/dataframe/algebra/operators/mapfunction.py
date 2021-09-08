@@ -13,7 +13,7 @@
 
 """Module houses Map functions builder class."""
 
-from modin.core.dataframe.algebra.operators.function import Function
+from .function import Function
 
 
 class MapFunction(Function):

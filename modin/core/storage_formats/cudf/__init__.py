@@ -13,6 +13,6 @@
 
 """The module represents the query compiler level for the cuDF backend."""
 
-from modin.core.storage_formats.cudf.query_compiler import cuDFQueryCompiler
+from .query_compiler import cuDFQueryCompiler
 
 __all__ = ["cuDFQueryCompiler"]

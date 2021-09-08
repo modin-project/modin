@@ -15,7 +15,7 @@
 
 # FIXME: This whole module is duplicating the logic of `default.py` and should be removed.
 
-from modin.core.dataframe.algebra.d2p.default import DefaultMethod
+from .default import DefaultMethod
 from modin.utils import _inherit_docstrings
 
 import pandas

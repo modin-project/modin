@@ -18,9 +18,7 @@ import pandas
 from modin.core.dataframe.pandas.partitioning.axis_partition import (
     PandasFrameAxisPartition,
 )
-from modin.core.execution.python.implementations.pandas_on_python.partitioning.partition import (
-    PandasOnPythonFramePartition,
-)
+from .partition import PandasOnPythonFramePartition
 
 
 class PandasOnPythonFrameAxisPartition(PandasFrameAxisPartition):

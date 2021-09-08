@@ -18,9 +18,7 @@ import pandas
 from modin.core.dataframe.pandas.partitioning.axis_partition import (
     PandasFrameAxisPartition,
 )
-from modin.core.execution.ray.implementations.pandas_on_ray.partitioning.partition import (
-    PandasOnRayFramePartition,
-)
+from .partition import PandasOnRayFramePartition
 
 import ray
 from ray.services import get_node_ip_address

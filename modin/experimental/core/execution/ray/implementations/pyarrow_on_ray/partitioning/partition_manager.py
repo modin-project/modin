@@ -16,11 +16,11 @@
 from modin.core.execution.ray.generic.partitioning.partition_manager import (
     GenericRayFramePartitionManager,
 )
-from modin.experimental.core.execution.ray.implementations.pyarrow_on_ray.partitioning.axis_partition import (
+from .axis_partition import (
     PyarrowOnRayFrameColumnPartition,
     PyarrowOnRayFrameRowPartition,
 )
-from modin.experimental.core.execution.ray.implementations.pyarrow_on_ray.partitioning.partition import (
+from .partition import (
     PyarrowOnRayFramePartition,
 )
 

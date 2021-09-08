@@ -13,13 +13,13 @@
 
 """Module provides ``CalciteSerializer`` class."""
 
-from modin.experimental.core.execution.ray.implementations.omnisci_on_ray.dataframe.expr import (
+from .expr import (
     BaseExpr,
     LiteralExpr,
     OpExpr,
     AggregateExpr,
 )
-from modin.experimental.core.execution.ray.implementations.omnisci_on_ray.dataframe.calcite_algebra import (
+from .calcite_algebra import (
     CalciteBaseNode,
     CalciteInputRefExpr,
     CalciteInputIdxExpr,

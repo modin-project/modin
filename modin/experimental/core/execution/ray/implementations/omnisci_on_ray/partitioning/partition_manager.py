@@ -23,16 +23,16 @@ from .axis_partition import (
     OmnisciOnRayFrameColumnPartition,
     OmnisciOnRayFrameRowPartition,
 )
-from modin.experimental.core.execution.ray.implementations.omnisci_on_ray.partitioning.partition import (
+from ..partitioning.partition import (
     OmnisciOnRayFramePartition,
 )
-from modin.experimental.core.execution.ray.implementations.omnisci_on_ray.dataframe.omnisci_worker import (
+from ..dataframe.omnisci_worker import (
     OmnisciServer,
 )
-from modin.experimental.core.execution.ray.implementations.omnisci_on_ray.dataframe.calcite_builder import (
+from ..dataframe.calcite_builder import (
     CalciteBuilder,
 )
-from modin.experimental.core.execution.ray.implementations.omnisci_on_ray.dataframe.calcite_serializer import (
+from ..dataframe.calcite_serializer import (
     CalciteSerializer,
 )
 from modin.config import DoUseCalcite

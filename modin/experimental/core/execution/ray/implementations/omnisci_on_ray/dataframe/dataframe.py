@@ -17,7 +17,7 @@ from modin.core.dataframe.pandas.dataframe.dataframe import PandasFrame
 from modin.experimental.core.storage_formats.omnisci.query_compiler import (
     DFAlgQueryCompiler,
 )
-from modin.experimental.core.execution.ray.implementations.omnisci_on_ray.partitioning.partition_manager import (
+from ..partitioning.partition_manager import (
     OmnisciOnRayFramePartitionManager,
 )
 

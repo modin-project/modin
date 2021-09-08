@@ -13,14 +13,14 @@
 
 """Module provides ``CalciteBuilder`` class."""
 
-from modin.experimental.core.execution.ray.implementations.omnisci_on_ray.dataframe.expr import (
+from .expr import (
     InputRefExpr,
     LiteralExpr,
     AggregateExpr,
     build_if_then_else,
     build_row_idx_filter_expr,
 )
-from modin.experimental.core.execution.ray.implementations.omnisci_on_ray.dataframe.calcite_algebra import (
+from .calcite_algebra import (
     CalciteBaseNode,
     CalciteInputRefExpr,
     CalciteInputIdxExpr,
@@ -33,7 +33,7 @@ from modin.experimental.core.execution.ray.implementations.omnisci_on_ray.datafr
     CalciteJoinNode,
     CalciteUnionNode,
 )
-from modin.experimental.core.execution.ray.implementations.omnisci_on_ray.dataframe.df_algebra import (
+from .df_algebra import (
     FrameNode,
     MaskNode,
     GroupbyAggNode,

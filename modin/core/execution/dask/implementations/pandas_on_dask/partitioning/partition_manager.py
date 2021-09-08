@@ -18,13 +18,11 @@ import numpy as np
 from modin.core.dataframe.pandas.partitioning.partition_manager import (
     PandasFramePartitionManager,
 )
-from modin.core.execution.dask.implementations.pandas_on_dask.partitioning.axis_partition import (
+from .axis_partition import (
     PandasOnDaskFrameColumnPartition,
     PandasOnDaskFrameRowPartition,
 )
-from modin.core.execution.dask.implementations.pandas_on_dask.partitioning.partition import (
-    PandasOnDaskFramePartition,
-)
+from .partition import PandasOnDaskFramePartition
 from modin.error_message import ErrorMessage
 import pandas
 

@@ -16,7 +16,7 @@
 import numpy as np
 import pandas
 
-from modin.core.dataframe.algebra.operators.function import Function
+from .function import Function
 
 
 class BinaryFunction(Function):
