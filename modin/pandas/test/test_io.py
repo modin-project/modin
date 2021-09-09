@@ -1147,6 +1147,28 @@ class TestCsv:
             index_col="col1",
         )
 
+    @pytest.mark.parametrize(
+        "skiprows",
+        [
+            [x for x in range(10)],
+            [x + 5 for x in range(15)],
+            [x for x in range(10) if x % 2 == 0],
+            [x + 5 for x in range(15) if x % 2 == 0],
+            lambda x: x % 2,
+        ],
+    )
+    @pytest.mark.parametrize("header", ["infer", None, 0, 1, 5, 6, 150])
+    def test_read_csv_skiprows_corner_cases(self, skiprows, header):
+        eval_io(
+            fn_name="read_csv",
+            check_kwargs_callable=not callable(skiprows),
+            # read_csv kwargs
+            filepath_or_buffer=pytest.csvs_names["test_read_csv_regular"],
+            skiprows=skiprows,
+            header=header,
+            dtype="str",  # to avoid issues with heterogeneous data
+        )
+
 
 class TestTable:
     def test_read_table(self, make_csv_file):
