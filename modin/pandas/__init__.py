@@ -113,8 +113,8 @@ def _update_engine(publisher: Parameter):
     elif publisher.get() == "Native":
         # With OmniSci backend there is only a single worker per node
         # and we allow it to work on all cores.
-        if Backend.get() == "Omnisci":
-            os.environ["OMP_NUM_THREADS"] = str(multiprocessing.cpu_count())
+        if Backend.get() == "OmniSci":
+            os.environ["OMP_NUM_THREADS"] = str(CpuCount.get())
         else:
             raise ValueError(
                 f"Backend should be 'Omnisci' with 'Native' engine, but provided {Backend.get()}."
@@ -153,6 +153,10 @@ def _update_engine(publisher: Parameter):
         from modin.experimental.cloud import get_connection
 
         get_connection().modules["modin"].set_backends("Python")
+    elif publisher.get() == "Cloudnative":
+        from modin.experimental.cloud import get_connection
+
+        get_connection().modules["modin"].set_backends("OmniSci")
 
     elif publisher.get() not in _NOINIT_ENGINES:
         raise ImportError("Unrecognized execution engine: {}.".format(publisher.get()))

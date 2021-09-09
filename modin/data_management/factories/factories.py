@@ -599,3 +599,8 @@ class ExperimentalOmnisciOnNativeFactory(BaseFactory):
         from modin.experimental.engines.omnisci_on_native.io import OmnisciOnNativeIO
 
         cls.io_cls = OmnisciOnNativeIO
+
+
+@doc(_doc_factory_class, backend_name="experimental remote OmnisciOnRay")
+class ExperimentalOmnisciOnCloudnativeFactory(ExperimentalRemoteFactory):
+    wrapped_factory = ExperimentalOmnisciOnNativeFactory
