@@ -428,6 +428,7 @@ def make_proxy_cls(
 
         def __init__(self, *a, __remote_end__=None, **kw):
             if __remote_end__ is None:
+                a, kw = get_connection().deliver(a, kw)
                 __remote_end__ = remote_cls(*a, **kw)
             while True:
                 # unwrap the object if it's a wrapper
