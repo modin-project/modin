@@ -19,7 +19,7 @@ Module contains class ``BaseQueryCompiler``.
 
 import abc
 
-from modin.core.dataframe.algebra.d2p import (
+from modin.core.dataframe.algebra.default2pandas import (
     DataFrameDefault,
     SeriesDefault,
     DateTimeDefault,
