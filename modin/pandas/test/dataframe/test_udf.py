@@ -235,7 +235,8 @@ TEST_VAR = 2
 @pytest.mark.parametrize("local_var", [2])
 def test_eval_and_query_with_local_and_global_var(method, data, local_var):
     modin_df, pandas_df = pd.DataFrame(data), pandas.DataFrame(data)
-    for expr in ("col1 + @local_var", "col1 + @TEST_VAR"):
+    op = "+" if method == "eval" else "<"
+    for expr in (f"col1 {op} @local_var", f"col1 {op} @TEST_VAR"):
         df_equals(getattr(modin_df, method)(expr), getattr(pandas_df, method)(expr))
 
 

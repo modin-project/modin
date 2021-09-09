@@ -863,7 +863,7 @@ class DataFrame(BasePandasDataset):
         """
         self._validate_eval_query(expr, **kwargs)
         inplace = validate_bool_kwarg(inplace, "inplace")
-        self._update_var_dicts_in_kwargs(expr, **kwargs)
+        self._update_var_dicts_in_kwargs(expr, kwargs)
         new_query_compiler = self._query_compiler.eval(expr, **kwargs)
         return_type = type(
             pandas.DataFrame(columns=self.columns)
