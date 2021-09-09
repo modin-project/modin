@@ -26,6 +26,7 @@ from pandas.io.formats.printing import pprint_thing
 from pandas._libs.lib import no_default
 from pandas._typing import StorageOptions
 
+import re
 import itertools
 import functools
 import numpy as np
@@ -821,7 +822,7 @@ class DataFrame(BasePandasDataset):
 
     def _update_var_dicts_in_kwargs(self, expr, **kwargs):
         """
-        Copy variables with "@" prefix in `local_dict` and `global_dict`.
+        Copy variables with "@" prefix in `local_dict` and `global_dict` keys of kwargs.
 
         Parameters
         ----------
@@ -829,29 +830,25 @@ class DataFrame(BasePandasDataset):
             The expression string to search variables with "@" prefix.
         **kwargs : dict
             See the documentation for eval() for complete details on the keyword arguments accepted by query().
-
-        Returns
-        -------
-        kwargs : dict
-            Dict with updated `local_dict` and `global_dict` keys.
         """
-        import re
-
+        if "@" not in expr:
+            return
         frame = sys._getframe()
         try:
             f_locals = frame.f_back.f_back.f_locals
             f_globals = frame.f_back.f_back.f_globals
         finally:
             del frame
-        local_names = re.findall(r"@([\w]*)", expr)
+        local_names = set(re.findall(r"@([\w]+)", expr))
         local_dict = {}
         global_dict = {}
 
         for name in local_names:
-            if name in f_locals:
-                local_dict[name] = f_locals[name]
-            elif name in f_globals:
-                global_dict[name] = f_globals[name]
+            for dct_out, dct_in in ((local_dict, f_locals), (global_dict, f_globals)):
+                try:
+                    dct_out[name] = dct_in[name]
+                except KeyError:
+                    pass
 
         if local_dict:
             if kwargs.get("local_dict"):
@@ -861,7 +858,7 @@ class DataFrame(BasePandasDataset):
             if kwargs.get("global_dict"):
                 global_dict.update(kwargs.get("global_dict"))
             kwargs["global_dict"] = global_dict
-        return kwargs
+        return
 
     def eval(self, expr, inplace=False, **kwargs):  # noqa: PR01, RT01, D200
         """
@@ -869,7 +866,7 @@ class DataFrame(BasePandasDataset):
         """
         self._validate_eval_query(expr, **kwargs)
         inplace = validate_bool_kwarg(inplace, "inplace")
-        kwargs = self._update_var_dicts_in_kwargs(expr, **kwargs)
+        self._update_var_dicts_in_kwargs(expr, **kwargs)
         new_query_compiler = self._query_compiler.eval(expr, **kwargs)
         return_type = type(
             pandas.DataFrame(columns=self.columns)
@@ -1722,7 +1719,7 @@ class DataFrame(BasePandasDataset):
         Query the columns of a ``DataFrame`` with a boolean expression.
         """
         ErrorMessage.non_verified_udf()
-        kwargs = self._update_var_dicts_in_kwargs(expr, **kwargs)
+        self._update_var_dicts_in_kwargs(expr, **kwargs)
         self._validate_eval_query(expr, **kwargs)
         inplace = validate_bool_kwarg(inplace, "inplace")
         new_query_compiler = self._query_compiler.query(expr, **kwargs)

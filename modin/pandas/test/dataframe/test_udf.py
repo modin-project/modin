@@ -230,12 +230,13 @@ def test_eval_df_arithmetic_subexpression():
 TEST_VAR = 2
 
 
+@pytest.mark.parametrize("method", ["query", "eval"])
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 @pytest.mark.parametrize("local_var", [2])
-def test_eval_with_local_and_global_var(data, local_var):
+def test_eval_and_query_with_local_and_global_var(method, data, local_var):
     modin_df, pandas_df = pd.DataFrame(data), pandas.DataFrame(data)
     for expr in ("col1 + @local_var", "col1 + @TEST_VAR"):
-        df_equals(modin_df.eval(expr), pandas_df.eval(expr))
+        df_equals(getattr(modin_df, method)(expr), getattr(pandas_df, method)(expr))
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
@@ -308,17 +309,6 @@ def test_query(data, funcs):
     else:
         modin_result = modin_df.query(funcs)
         df_equals(modin_result, pandas_result)
-
-
-TEST_VAR = 2
-
-
-@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-@pytest.mark.parametrize("local_var", [2])
-def test_query_with_local_and_global_var(data, local_var):
-    modin_df, pandas_df = pd.DataFrame(data), pandas.DataFrame(data)
-    for expr in ("col1 < @local_var", "col1 < @TEST_VAR"):
-        df_equals(modin_df.query(expr), pandas_df.query(expr))
 
 
 def test_empty_query():
