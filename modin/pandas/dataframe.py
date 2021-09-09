@@ -820,7 +820,7 @@ class DataFrame(BasePandasDataset):
             pandas.DataFrame.explode, column, ignore_index=ignore_index
         )
 
-    def _update_var_dicts_in_kwargs(self, expr, **kwargs):
+    def _update_var_dicts_in_kwargs(self, expr, kwargs):
         """
         Copy variables with "@" prefix in `local_dict` and `global_dict` keys of kwargs.
 
@@ -828,7 +828,7 @@ class DataFrame(BasePandasDataset):
         ----------
         expr : str
             The expression string to search variables with "@" prefix.
-        **kwargs : dict
+        kwargs : dict
             See the documentation for eval() for complete details on the keyword arguments accepted by query().
         """
         if "@" not in expr:
@@ -851,14 +851,11 @@ class DataFrame(BasePandasDataset):
                     pass
 
         if local_dict:
-            if kwargs.get("local_dict"):
-                local_dict.update(kwargs["local_dict"])
+            local_dict.update(kwargs.get("local_dict") or {})
             kwargs["local_dict"] = local_dict
         if global_dict:
-            if kwargs.get("global_dict"):
-                global_dict.update(kwargs.get("global_dict"))
+            global_dict.update(kwargs.get("global_dict") or {})
             kwargs["global_dict"] = global_dict
-        return
 
     def eval(self, expr, inplace=False, **kwargs):  # noqa: PR01, RT01, D200
         """
@@ -1719,7 +1716,7 @@ class DataFrame(BasePandasDataset):
         Query the columns of a ``DataFrame`` with a boolean expression.
         """
         ErrorMessage.non_verified_udf()
-        self._update_var_dicts_in_kwargs(expr, **kwargs)
+        self._update_var_dicts_in_kwargs(expr, kwargs)
         self._validate_eval_query(expr, **kwargs)
         inplace = validate_bool_kwarg(inplace, "inplace")
         new_query_compiler = self._query_compiler.query(expr, **kwargs)
