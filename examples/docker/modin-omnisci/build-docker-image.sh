@@ -26,7 +26,7 @@ To run the benchmark execute:
 
 CENSUS BENCHMARK
 User is responsible for preparing the dataset.
-It can be downloaded by link:
+It can be downloaded from the following link:
 https://rapidsai-data.s3.us-east-2.amazonaws.com/datasets/ipums_education2income_1970-2010.csv.gz
 To run the benchmark execute:
 \tdocker run --rm -v /path/to/dataset:/dataset python census-omnisci.py <name of file starting with /dataset>
