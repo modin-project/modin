@@ -156,7 +156,10 @@ def _update_engine(publisher: Parameter):
     elif publisher.get() == "Cloudnative":
         from modin.experimental.cloud import get_connection
 
-        get_connection().modules["modin"].set_backends("OmniSci")
+        assert (
+            Backend.get() == "OmniSci"
+        ), f"Backend should be 'Omnisci' with 'Cloudnative' engine, but provided {Backend.get()}."
+        get_connection().modules["modin"].set_backends("Native", "OmniSci")
 
     elif publisher.get() not in _NOINIT_ENGINES:
         raise ImportError("Unrecognized execution engine: {}.".format(publisher.get()))
