@@ -599,17 +599,6 @@ class PandasParquetParser(PandasParser):
     def parse(fname, **kwargs):
         num_splits = kwargs.pop("num_splits", None)
         columns = kwargs.get("columns", None)
-        if fname.startswith("s3://"):
-            from botocore.exceptions import NoCredentialsError
-            import s3fs
-
-            try:
-                fs = s3fs.S3FileSystem()
-                fname = fs.open(fname)
-            except NoCredentialsError:
-                fs = s3fs.S3FileSystem(anon=True)
-                fname = fs.open(fname)
-
         if num_splits is None:
             return pandas.read_parquet(fname, **kwargs)
         kwargs["use_pandas_metadata"] = True

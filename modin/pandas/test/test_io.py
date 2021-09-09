@@ -1301,24 +1301,21 @@ class TestParquet:
             path="modin/pandas/test/data/hdfs.parquet",
         )
 
+    @pytest.mark.parametrize("path_type", ["url", "object"])
     @pytest.mark.xfail(
-        Engine.get() == "Python",
-        reason="S3-like path doesn't support in pandas with anonymous credentials. See issue #2301.",
+        condition="config.getoption('--simulate-cloud').lower() != 'off'",
+        reason="The reason of tests fail in `cloud` mode is unknown for now - issue #3264",
     )
-    def test_read_parquet_s3(self):
-        import s3fs
-
-        # Pandas currently supports only default credentials for boto therefore
-        # we use S3FileSystem with `anon=True` for  to make testing possible.
+    def test_read_parquet_s3(self, path_type):
         dataset_url = "s3://aws-roda-hcls-datalake/chembl_27/chembl_27_public_tissue_dictionary/part-00000-66508102-96fa-4fd9-a0fd-5bc072a74293-c000.snappy.parquet"
-        fs = s3fs.S3FileSystem(anon=True)
-        pandas_df = pandas.read_parquet(fs.open(dataset_url, "rb"))
-        modin_df_s3fs = pd.read_parquet(fs.open(dataset_url, "rb"))
-        df_equals(pandas_df, modin_df_s3fs)
+        if path_type == "object":
+            import s3fs
 
-        # Modin supports default and anonymous credentials and resolves this internally.
-        modin_df_s3 = pd.read_parquet(dataset_url)
-        df_equals(pandas_df, modin_df_s3)
+            fs = s3fs.S3FileSystem(anon=True)
+            with fs.open(dataset_url, "rb") as file_obj:
+                eval_io("read_parquet", path=file_obj)
+        else:
+            eval_io("read_parquet", path=dataset_url, storage_options={"anon": True})
 
     @pytest.mark.xfail(
         condition="config.getoption('--simulate-cloud').lower() != 'off'",
