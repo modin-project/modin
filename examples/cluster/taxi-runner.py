@@ -14,6 +14,12 @@
 
 # pip install git+https://github.com/intel-ai/ibis.git@develop
 # pip install braceexpand
+# pip install -e .[remote]
+# pip install -e .[ray]
+# conda install pyomniscidbe s3fs -c conda-forge
+# setup Socks proxy
+# setup default VPC - one field in actions
+
 
 # NOTE: expects https://github.com/intel-ai/omniscripts checked out and in PYTHONPATH
 
@@ -33,11 +39,11 @@ if USE_OMNISCI:
     cluster_params["cluster_type"] = "omnisci"
 test_cluster = create_cluster(
     "aws",
-    "aws_credentials",
+    credentials=None,
     cluster_name="rayscale-test",
-    region="eu-north-1",
-    zone="eu-north-1b",
-    image="ami-00e1e82d7d4ca80d3",
+    region="eu-central-1",
+    zone="eu-central-1b",
+    image="ami-05f7491af5eef733a",
     **cluster_params,
 )
 with test_cluster:
