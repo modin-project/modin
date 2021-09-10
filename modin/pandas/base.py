@@ -2887,6 +2887,12 @@ class BasePandasDataset(object):
             counted_values.sort_values(ascending=ascending, inplace=True)
         if normalize:
             counted_values = counted_values / counted_values.sum()
+        # TODO: uncomment when strict compability mode will be implemented:
+        # https://github.com/modin-project/modin/issues/3411
+        # if STRICT_COMPABILITY and not isinstance(counted_values.index, MultiIndex):
+        #     counted_values.index = pandas.MultiIndex.from_arrays(
+        #         [counted_values.index], names=counted_values.index.names
+        #     )
         return counted_values
 
     def var(

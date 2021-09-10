@@ -1258,18 +1258,16 @@ def sort_index_for_equal_values(df, ascending=True):
         # GroupBy is very inconsistent about when it's doing this, so that's
         # why this clumsy if-statement is used.
         res.index = res.index.droplevel(0)
-    # GroupBy discards original index names, so restoring them here
-    if hasattr(df, "name"):
-        res.name = df.name
+    # GroupBy overwrites original index names with 'by', so the following line restores original names
     res.index.names = df.index.names
     return res
 
 
 def df_equals_with_non_stable_indices(df1, df2):
     """Assert equality of two frames regardless of the index order for equal values."""
-    df1, df2 = map(try_cast_to_pandas, [df1, df2])
+    df1, df2 = map(try_cast_to_pandas, (df1, df2))
     np.testing.assert_array_equal(df1.values, df2.values)
-    sorted1, sorted2 = map(sort_index_for_equal_values, [df1, df2])
+    sorted1, sorted2 = map(sort_index_for_equal_values, (df1, df2))
     df_equals(sorted1, sorted2)
 
 
