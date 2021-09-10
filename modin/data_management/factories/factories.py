@@ -601,6 +601,6 @@ class ExperimentalOmnisciOnNativeFactory(BaseFactory):
         cls.io_cls = OmnisciOnNativeIO
 
 
-@doc(_doc_factory_class, backend_name="experimental remote OmnisciOnRay")
+@doc(_doc_factory_class, backend_name="experimental remote OmnisciOnNative")
 class ExperimentalOmnisciOnCloudnativeFactory(ExperimentalRemoteFactory):
     wrapped_factory = ExperimentalOmnisciOnNativeFactory

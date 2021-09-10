@@ -118,7 +118,7 @@ class OmnisciOnNativeFramePartition(PandasFramePartition):
             The partition that is ready to be used.
         """
         if self.arrow_table is not None:
-            return self.arrow_table.to_pandas()
+            return self.arrow_table
         return self.pandas_df
 
     @classmethod
