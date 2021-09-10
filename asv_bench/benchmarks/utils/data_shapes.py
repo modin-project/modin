@@ -30,7 +30,6 @@ BINARY_OP_DATA_SIZE = {
     ],
     "small": [
         [[250, 250], [250, 250]],
-        [[20, 10_000], [10, 25_000]],
         [[10_000, 20], [25_000, 10]],
     ],
 }
@@ -43,16 +42,15 @@ UNARY_OP_DATA_SIZE = {
     ],
     "small": [
         [250, 250],
-        [10, 10_000],
         [10_000, 10],
     ],
 }
 SERIES_DATA_SIZE = {
     "big": [
-        (100_000, 1),
+        [100_000, 1],
     ],
     "small": [
-        (10_000, 1),
+        [10_000, 1],
     ],
 }
 
@@ -150,6 +148,7 @@ _DEFAULT_CONFIG_T = [
             "omnisci.TimeProperties",
             "omnisci.TimeGroupByDefaultAggregations",
             "omnisci.TimeGroupByMultiColumn",
+            "omnisci.TimeValueCountsDataFrame",
             # OmniSci backend IO benchmarks
             "omnisci.TimeReadCsvNames",
         ],

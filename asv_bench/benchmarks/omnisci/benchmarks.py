@@ -244,7 +244,34 @@ class TimeFillna:
         return value
 
 
-class TimeValueCountsSeries:
+class BaseTimeValueCounts:
+    def setup(self, shape, ngroups=5, subset=1):
+        ngroups = translator_groupby_ngroups(ngroups, shape)
+        self.df, self.subset = generate_dataframe(
+            ASV_USE_IMPL,
+            "int",
+            *shape,
+            RAND_LOW,
+            RAND_HIGH,
+            groupby_ncols=subset,
+            count_groups=ngroups,
+        )
+        trigger_import(self.df)
+
+
+class TimeValueCountsDataFrame(BaseTimeValueCounts):
+    param_names = ["shape", "ngroups", "subset"]
+    params = [
+        get_benchmark_shapes("omnisci.TimeValueCountsDataFrame"),
+        GROUPBY_NGROUPS,
+        [2, 10],
+    ]
+
+    def time_value_counts(self, *args, **kwargs):
+        execute(self.df.value_counts(subset=self.subset))
+
+
+class TimeValueCountsSeries(BaseTimeValueCounts):
     param_names = ["shape", "ngroups"]
     params = [
         get_benchmark_shapes("omnisci.TimeValueCountsSeries"),
@@ -252,17 +279,8 @@ class TimeValueCountsSeries:
     ]
 
     def setup(self, shape, ngroups):
-        ngroups = translator_groupby_ngroups(ngroups, shape)
-        self.df, self.column_names = generate_dataframe(
-            ASV_USE_IMPL,
-            "int",
-            *shape,
-            RAND_LOW,
-            RAND_HIGH,
-            groupby_ncols=1,
-            count_groups=ngroups,
-        )
-        self.series = self.df[self.column_names[0]]
+        super().setup(shape, ngroups, subset=1)
+        self.series = self.df[self.subset[0]]
         trigger_import(self.series)
 
     def time_value_counts(self, shape, ngroups):

@@ -170,7 +170,14 @@ class GpuCount(EnvironmentVariable, type=int):
 
 
 class Memory(EnvironmentVariable, type=int):
-    """How much memory give to each Ray worker (in bytes)."""
+    """
+    How much memory (in bytes) give to an execution engine.
+
+    Notes
+    -----
+    * In Ray case: the amount of memory to start the Plasma object store with.
+    * In Dask case: the amount of memory that is given to each worker depending on CPUs used.
+    """
 
     varname = "MODIN_MEMORY"
 
