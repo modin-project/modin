@@ -15,7 +15,7 @@ import os
 import sys
 import time
 import modin.pandas as pd
-from modin.experimental.engines.omnisci_on_ray.frame.omnisci_worker import OmnisciServer
+from modin.experimental.engines.omnisci_on_native.frame.omnisci_worker import OmnisciServer
 
 from sklearn import config_context
 import sklearnex
