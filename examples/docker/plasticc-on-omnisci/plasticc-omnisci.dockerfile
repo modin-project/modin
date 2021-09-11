@@ -15,6 +15,7 @@ FROM ubuntu:18.04
 ENV http_proxy ${http_proxy}
 ENV https_proxy ${https_proxy}
 ENV no_proxy ${no_proxy}
+ENV MODIN_ENGINE "native"
 ENV MODIN_BACKEND "omnisci"
 ENV MODIN_EXPERIMENTAL "true"
 
