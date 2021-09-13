@@ -334,7 +334,15 @@ class CSVDispatcher(TextFileDispatcher):
                     index=index_range.delete(skiprows_md)
                 )
             elif callable(skiprows_md):
-                mod_index = index_range.map(skiprows_md)
+                try:
+                    # dicrect `skiprows_md` is more efficient than using of
+                    # map method, but in some cases it can work incorrectly, e.g.
+                    # when `skiprows_md` contains `in` operator
+                    mod_index = skiprows_md(index_range)
+                    assert is_list_like(mod_index)
+                except Exception:
+                    mod_index = index_range.map(skiprows_md)
+
                 mod_index = (
                     mod_index
                     if isinstance(mod_index, np.ndarray)
