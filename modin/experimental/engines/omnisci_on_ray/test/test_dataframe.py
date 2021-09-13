@@ -20,6 +20,7 @@ import re
 
 from modin.config import IsExperimental, Engine, Backend
 from modin.pandas.test.utils import io_ops_bad_exc
+from .utils import eval_io, trigger_import, set_execution_mode, run_and_compare
 
 IsExperimental.put(True)
 Engine.put("ray")
@@ -34,93 +35,11 @@ from modin.pandas.test.utils import (
     test_data_keys,
     generate_multiindex,
     eval_general,
-    eval_io,
 )
 
 from modin.experimental.engines.omnisci_on_ray.frame.partition_manager import (
     OmnisciOnRayFramePartitionManager,
 )
-
-
-def set_execution_mode(frame, mode, recursive=False):
-    if isinstance(frame, (pd.Series, pd.DataFrame)):
-        frame = frame._query_compiler._modin_frame
-    frame._force_execution_mode = mode
-    if recursive and hasattr(frame._op, "input"):
-        for child in frame._op.input:
-            set_execution_mode(child, mode, True)
-
-
-def run_and_compare(
-    fn,
-    data,
-    data2=None,
-    force_lazy=True,
-    force_arrow_execute=False,
-    allow_subqueries=False,
-    **kwargs,
-):
-    def run_modin(
-        fn,
-        data,
-        data2,
-        force_lazy,
-        force_arrow_execute,
-        allow_subqueries,
-        constructor_kwargs,
-        **kwargs,
-    ):
-        kwargs["df1"] = pd.DataFrame(data, **constructor_kwargs)
-        kwargs["df2"] = pd.DataFrame(data2, **constructor_kwargs)
-        kwargs["df"] = kwargs["df1"]
-
-        if force_lazy:
-            set_execution_mode(kwargs["df1"], "lazy")
-            set_execution_mode(kwargs["df2"], "lazy")
-        elif force_arrow_execute:
-            set_execution_mode(kwargs["df1"], "arrow")
-            set_execution_mode(kwargs["df2"], "arrow")
-
-        exp_res = fn(lib=pd, **kwargs)
-
-        if force_arrow_execute:
-            set_execution_mode(exp_res, "arrow", allow_subqueries)
-        elif force_lazy:
-            set_execution_mode(exp_res, None, allow_subqueries)
-
-        return exp_res
-
-    constructor_kwargs = kwargs.pop("constructor_kwargs", {})
-    try:
-        kwargs["df1"] = pandas.DataFrame(data, **constructor_kwargs)
-        kwargs["df2"] = pandas.DataFrame(data2, **constructor_kwargs)
-        kwargs["df"] = kwargs["df1"]
-        ref_res = fn(lib=pandas, **kwargs)
-    except Exception as e:
-        with pytest.raises(type(e)):
-            exp_res = run_modin(
-                fn=fn,
-                data=data,
-                data2=data2,
-                force_lazy=force_lazy,
-                force_arrow_execute=force_arrow_execute,
-                allow_subqueries=allow_subqueries,
-                constructor_kwargs=constructor_kwargs,
-                **kwargs,
-            )
-            _ = exp_res.index
-    else:
-        exp_res = run_modin(
-            fn=fn,
-            data=data,
-            data2=data2,
-            force_lazy=force_lazy,
-            force_arrow_execute=force_arrow_execute,
-            allow_subqueries=allow_subqueries,
-            constructor_kwargs=constructor_kwargs,
-            **kwargs,
-        )
-        df_equals(ref_res, exp_res)
 
 
 @pytest.mark.usefixtures("TestReadCSVFixture")
@@ -173,9 +92,13 @@ class TestCSV:
             {"dtype": {"a": "int32", "e": "string"}},
             {"dtype": {"a": np.dtype("int32"), "b": np.dtype("int64"), "e": "string"}},
         ):
-            rp = pandas.read_csv(csv_file, **kwargs)
-            rm = to_pandas(pd.read_csv(csv_file, engine="arrow", **kwargs))
-            df_equals(rp, rm)
+            eval_io(
+                fn_name="read_csv",
+                md_extra_kwargs={"engine": "arrow"},
+                # read_csv kwargs
+                filepath_or_buffer=csv_file,
+                **kwargs,
+            )
 
     def test_housing_csv(self):
         csv_file = os.path.join(self.root, "examples/data/boston_housing.csv")
@@ -186,11 +109,13 @@ class TestCSV:
                 "dtype": self.boston_housing_dtypes,
             },
         ):
-            rp = pandas.read_csv(csv_file, **kwargs)
-            rm = to_pandas(pd.read_csv(csv_file, engine="arrow", **kwargs))
-            assert rp is not None
-            assert rm is not None
-            # TODO: df_equals(rp, rm)  #  needs inexact comparison
+            eval_io(
+                fn_name="read_csv",
+                md_extra_kwargs={"engine": "arrow"},
+                # read_csv kwargs
+                filepath_or_buffer=csv_file,
+                **kwargs,
+            )
 
     def test_time_parsing(self):
         csv_file = os.path.join(
@@ -213,9 +138,16 @@ class TestCSV:
                 "dtype": {"symbol": "string"},
             },
         ):
-            rp = pandas.read_csv(csv_file, **kwargs)
-            rm = to_pandas(pd.read_csv(csv_file, engine="arrow", **kwargs))
-            df_equals(rm["timestamp"].dt.year, rp["timestamp"].dt.year)
+            eval_io(
+                fn_name="read_csv",
+                md_extra_kwargs={"engine": "arrow"},
+                comparator=lambda df1, df2: df_equals(
+                    df1["timestamp"].dt.year, df2["timestamp"].dt.year
+                ),
+                # read_csv kwargs
+                filepath_or_buffer=csv_file,
+                **kwargs,
+            )
 
     def test_csv_fillna(self):
         csv_file = os.path.join(self.root, "examples/data/boston_housing.csv")
@@ -226,11 +158,16 @@ class TestCSV:
                 "dtype": self.boston_housing_dtypes,
             },
         ):
-            rp = pandas.read_csv(csv_file, **kwargs)
-            rp = rp["CRIM"].fillna(1000)
-            rm = pd.read_csv(csv_file, engine="arrow", **kwargs)
-            rm = rm["CRIM"].fillna(1000)
-            df_equals(rp, rm)
+            eval_io(
+                fn_name="read_csv",
+                md_extra_kwargs={"engine": "arrow"},
+                comparator=lambda df1, df2: df_equals(
+                    df1["CRIM"].fillna(1000), df2["CRIM"].fillna(1000)
+                ),
+                # read_csv kwargs
+                filepath_or_buffer=csv_file,
+                **kwargs,
+            )
 
     @pytest.mark.parametrize("null_dtype", ["category", "float64"])
     def test_null_col(self, null_dtype):
@@ -251,6 +188,7 @@ class TestCSV:
             dtype={"a": "int64", "b": "int64", "c": null_dtype},
             skiprows=1,
         )
+        trigger_import(exp)
         exp["a"] = exp["a"] + exp["b"]
 
         # df_equals cannot compare empty categories
@@ -270,6 +208,7 @@ class TestCSV:
         exp1 = pandas.read_csv(csv_file)
         exp2 = pandas.read_csv(csv_file)
         exp = pd.concat([exp1, exp2])
+        trigger_import(exp)
 
         df_equals(ref, exp)
 
@@ -277,24 +216,23 @@ class TestCSV:
     @pytest.mark.parametrize("header", [None, 0])
     def test_from_csv(self, header, names):
         csv_file = os.path.join(self.root, "modin/pandas/test/data", "test_usecols.csv")
-        kwargs = {
-            "header": header,
-            "names": names,
-        }
-
-        pandas_df = pandas.read_csv(csv_file, **kwargs)
-        modin_df = pd.read_csv(csv_file, **kwargs)
-
-        df_equals(modin_df, pandas_df)
+        eval_io(
+            fn_name="read_csv",
+            # read_csv kwargs
+            filepath_or_buffer=csv_file,
+            header=header,
+            names=names,
+        )
 
     @pytest.mark.parametrize("kwargs", [{"sep": "|"}, {"delimiter": "|"}])
     def test_sep_delimiter(self, kwargs):
         csv_file = os.path.join(self.root, "modin/pandas/test/data", "test_delim.csv")
-
-        pandas_df = pandas.read_csv(csv_file, **kwargs)
-        modin_df = pd.read_csv(csv_file, **kwargs)
-
-        df_equals(modin_df, pandas_df)
+        eval_io(
+            fn_name="read_csv",
+            # read_csv kwargs
+            filepath_or_buffer=csv_file,
+            **kwargs,
+        )
 
     @pytest.mark.skip(reason="https://github.com/modin-project/modin/issues/2174")
     def test_float32(self):
@@ -305,7 +243,9 @@ class TestCSV:
 
         pandas_df = pandas.read_csv(csv_file, **kwargs)
         pandas_df["a"] = pandas_df["a"] + pandas_df["b"]
+
         modin_df = pd.read_csv(csv_file, **kwargs, engine="arrow")
+        trigger_import(modin_df)
         modin_df["a"] = modin_df["a"] + modin_df["b"]
 
         df_equals(modin_df, pandas_df)
