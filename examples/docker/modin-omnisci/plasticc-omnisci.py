@@ -11,7 +11,6 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-import os
 import sys
 import time
 from collections import OrderedDict
@@ -253,7 +252,7 @@ def ml(train_final, test_final):
 def main():
     if len(sys.argv) != 5:
         print(
-            f"USAGE: docker run --rm -v /path/to/dataset:/dataset plasticc-omnisci <training set file name in /path/to/dataset> <test set file name in /path/to/dataset> <training set metadata file name in /path/to/dataset> <test set metadata file name in /path/to/dataset>"
+            f"USAGE: docker run --rm -v /path/to/dataset:/dataset python plasticc-omnisci.py <training set file name startin with /dataset> <test set file name starting with /dataset> <training set metadata file name starting with /dataset> <test set metadata file name starting with /dataset>"
         )
         return
 
@@ -262,10 +261,10 @@ def main():
     train, train_meta, test, test_meta = measure(
         "Reading",
         read,
-        os.path.join("/dataset", sys.argv[1]),
-        os.path.join("/dataset", sys.argv[2]),
-        os.path.join("/dataset", sys.argv[3]),
-        os.path.join("/dataset", sys.argv[4]),
+        sys.argv[1],
+        sys.argv[2],
+        sys.argv[3],
+        sys.argv[4],
         dtypes,
         meta_dtypes,
     )

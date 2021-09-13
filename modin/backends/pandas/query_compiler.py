@@ -1957,8 +1957,8 @@ class PandasQueryCompiler(BaseQueryCompiler):
         return result.transpose() if axis == 1 else result
 
     def query(self, expr, **kwargs):
-        def query_builder(df, **kwargs):
-            return df.query(expr, inplace=False, **kwargs)
+        def query_builder(df, **modin_internal_kwargs):
+            return df.query(expr, inplace=False, **kwargs, **modin_internal_kwargs)
 
         return self.__constructor__(
             self._modin_frame.filter_full_axis(1, query_builder)

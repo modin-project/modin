@@ -47,10 +47,10 @@ UNARY_OP_DATA_SIZE = {
 }
 SERIES_DATA_SIZE = {
     "big": [
-        (100_000, 1),
+        [100_000, 1],
     ],
     "small": [
-        (10_000, 1),
+        [10_000, 1],
     ],
 }
 
@@ -80,22 +80,6 @@ OMNISCI_SERIES_DATA_SIZE = {
     ],
 }
 
-BINARY_SHAPES = (
-    OMNISCI_BINARY_OP_DATA_SIZE[ASV_DATASET_SIZE]
-    if ASV_USE_BACKEND == "omnisci"
-    else BINARY_OP_DATA_SIZE[ASV_DATASET_SIZE]
-)
-UNARY_SHAPES = (
-    OMNISCI_UNARY_OP_DATA_SIZE[ASV_DATASET_SIZE]
-    if ASV_USE_BACKEND == "omnisci"
-    else UNARY_OP_DATA_SIZE[ASV_DATASET_SIZE]
-)
-SERIES_SHAPES = (
-    OMNISCI_SERIES_DATA_SIZE[ASV_DATASET_SIZE]
-    if ASV_USE_BACKEND == "omnisci"
-    else SERIES_DATA_SIZE[ASV_DATASET_SIZE]
-)
-
 DEFAULT_GROUPBY_NGROUPS = {
     "big": [100, "huge_amount_groups"],
     "small": [5],
@@ -104,7 +88,7 @@ GROUPBY_NGROUPS = DEFAULT_GROUPBY_NGROUPS[ASV_DATASET_SIZE]
 
 _DEFAULT_CONFIG_T = [
     (
-        UNARY_SHAPES,
+        UNARY_OP_DATA_SIZE[ASV_DATASET_SIZE],
         [
             # Pandas backend benchmarks
             "TimeGroupByMultiColumn",
@@ -133,7 +117,32 @@ _DEFAULT_CONFIG_T = [
             # Scalability benchmarks
             "TimeFromPandas",
             "TimeToPandas",
-            # OmniSci backend benchmarks
+        ],
+    ),
+    (
+        BINARY_OP_DATA_SIZE[ASV_DATASET_SIZE],
+        [
+            # Pandas backend benchmarks
+            "TimeJoin",
+            "TimeMerge",
+            "TimeConcat",
+            "TimeAppend",
+            "TimeBinaryOp",
+        ],
+    ),
+    (
+        SERIES_DATA_SIZE[ASV_DATASET_SIZE],
+        [
+            # Pandas backend benchmarks
+            "TimeFillnaSeries",
+        ],
+    ),
+]
+
+_DEFAULT_OMNISCI_CONFIG_T = [
+    (
+        OMNISCI_UNARY_OP_DATA_SIZE[ASV_DATASET_SIZE],
+        [
             "omnisci.TimeJoin",
             "omnisci.TimeBinaryOpDataFrame",
             "omnisci.TimeArithmetic",
@@ -149,38 +158,28 @@ _DEFAULT_CONFIG_T = [
             "omnisci.TimeGroupByDefaultAggregations",
             "omnisci.TimeGroupByMultiColumn",
             "omnisci.TimeValueCountsDataFrame",
-            # OmniSci backend IO benchmarks
             "omnisci.TimeReadCsvNames",
         ],
     ),
     (
-        BINARY_SHAPES,
+        OMNISCI_BINARY_OP_DATA_SIZE[ASV_DATASET_SIZE],
         [
-            # Pandas backend benchmarks
-            "TimeJoin",
-            "TimeMerge",
-            "TimeConcat",
-            "TimeAppend",
-            "TimeBinaryOp",
-            # OmniSci backend benchmarks
             "omnisci.TimeMerge",
             "omnisci.TimeAppend",
         ],
     ),
     (
-        SERIES_SHAPES,
+        OMNISCI_SERIES_DATA_SIZE[ASV_DATASET_SIZE],
         [
-            # Pandas backend benchmarks
-            "TimeFillnaSeries",
-            # OmniSci backend benchmarks
             "omnisci.TimeBinaryOpSeries",
             "omnisci.TimeValueCountsSeries",
         ],
     ),
 ]
 DEFAULT_CONFIG = {}
-for _shape, _names in _DEFAULT_CONFIG_T:
-    DEFAULT_CONFIG.update({_name: _shape for _name in _names})
+for config in (_DEFAULT_CONFIG_T, _DEFAULT_OMNISCI_CONFIG_T):
+    for _shape, _names in config:
+        DEFAULT_CONFIG.update({_name: _shape for _name in _names})
 
 CONFIG_FROM_FILE = None
 

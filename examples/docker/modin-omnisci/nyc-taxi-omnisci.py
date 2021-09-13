@@ -11,7 +11,6 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-import os
 import sys
 import time
 import modin.pandas as pd
@@ -196,10 +195,10 @@ def measure(name, func, *args, **kw):
 def main():
     if len(sys.argv) != 2:
         print(
-            f"USAGE: docker run --rm -v /path/to/dataset:/dataset nyc-taxi-omnisci <data file name in /path/to/dataset>"
+            f"USAGE: docker run --rm -v /path/to/dataset:/dataset python nyc-taxi-omnisci.py <data file name starting with /dataset>"
         )
         return
-    df = measure("Reading", read, os.path.join("/dataset", sys.argv[1]))
+    df = measure("Reading", read, sys.argv[1])
     measure("Q1", q1_omnisci, df)
     measure("Q2", q2_omnisci, df)
     measure("Q3", q3_omnisci, df.copy())
