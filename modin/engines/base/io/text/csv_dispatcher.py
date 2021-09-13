@@ -17,6 +17,7 @@ from modin.engines.base.io.text.text_file_dispatcher import (
     TextFileDispatcher,
     ColumnNamesTypes,
 )
+from modin.error_message import ErrorMessage
 import pandas
 from pandas.core.dtypes.common import is_list_like
 from csv import QUOTE_NONE, Dialect
@@ -90,10 +91,13 @@ class CSVDispatcher(TextFileDispatcher):
             skiprows_md,
             pre_reading,
             skiprows_partitioning,
+            need_fallback_impl,
         ) = cls._manage_skiprows_parameter(skiprows, header_size)
         should_handle_skiprows = skiprows_md is not None and not isinstance(
             skiprows_md, int
         )
+        if need_fallback_impl:
+            return cls.single_worker_read(filepath_or_buffer, **kwargs)
 
         use_modin_impl = cls._read_csv_check_support(
             filepath_or_buffer, kwargs, compression_infered
@@ -386,7 +390,13 @@ class CSVDispatcher(TextFileDispatcher):
         skiprows_partitioning : int
             The number of rows that should be skipped virtually (skipped during
             data file partitioning).
+        need_fallback_impl : bool
+            Whether pandas implementation should be used. If `need_fallback_impl`
+            is True, `skiprows` and `header` parameters most probably are set
+            incorrectly.
         """
+        need_fallback_impl = False
+        rows_limit = 1e6
         pre_reading = 0
         skiprows_partitioning = 0
         skiprows_md = 0
@@ -432,6 +442,14 @@ class CSVDispatcher(TextFileDispatcher):
                     rows_read += 1
 
                 row_id += 1
+                if row_id > rows_limit:
+                    need_fallback_impl = True
+                    ErrorMessage.single_warning(
+                        f"Header line/lines weren't found after {int(rows_limit)} lines scanning, "
+                        "please check correctness of `header` and `skiprows` parameters. "
+                        "Import operation will be defaulted to pandas!"
+                    )
+                    break
 
             skiprows_partitioning = rows_skipped
 
@@ -439,9 +457,9 @@ class CSVDispatcher(TextFileDispatcher):
                 return skiprows(x + rows_skipped + header_size)
 
             skiprows_md = skiprows_func
-        else:
+        elif skiprows is not None:
             raise TypeError(
-                f"Not acceptable type of `skiprows` parameter: {type(skiprows_md)}"
+                f"Not acceptable type of `skiprows` parameter: {type(skiprows)}"
             )
 
-        return skiprows_md, pre_reading, skiprows_partitioning
+        return skiprows_md, pre_reading, skiprows_partitioning, need_fallback_impl

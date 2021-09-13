@@ -698,7 +698,6 @@ def eval_general(
                     ), f"not acceptable exception type: {md_e.value}"
         else:
             md_result = fn(modin_df, **md_kwargs)
-            # import pdb; pdb.set_trace()
             return (md_result, pd_result) if not inplace else (modin_df, pandas_df)
 
     for key, value in kwargs.items():

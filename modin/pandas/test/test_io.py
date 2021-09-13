@@ -1155,9 +1155,12 @@ class TestCsv:
             [x for x in range(10) if x % 2 == 0],
             [x + 5 for x in range(15) if x % 2 == 0],
             lambda x: x % 2,
+            lambda x: x > 20,
+            lambda x: x < 20,
+            lambda x: True,
         ],
     )
-    @pytest.mark.parametrize("header", ["infer", None, 0, 1, 5, 6, 150])
+    @pytest.mark.parametrize("header", ["infer", None, 0, 1, 150])
     def test_read_csv_skiprows_corner_cases(self, skiprows, header):
         eval_io(
             fn_name="read_csv",
