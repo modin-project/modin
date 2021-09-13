@@ -20,7 +20,7 @@ import re
 
 from modin.config import IsExperimental, Engine, Backend
 from modin.pandas.test.utils import io_ops_bad_exc
-from .utils import eval_io, trigger_import, set_execution_mode, run_and_compare
+from .utils import eval_io, try_trigger_import, set_execution_mode, run_and_compare
 
 IsExperimental.put(True)
 Engine.put("ray")
@@ -188,12 +188,12 @@ class TestCSV:
             dtype={"a": "int64", "b": "int64", "c": null_dtype},
             skiprows=1,
         )
-        trigger_import(exp)
         exp["a"] = exp["a"] + exp["b"]
 
         # df_equals cannot compare empty categories
         if null_dtype == "category":
             ref["c"] = ref["c"].astype("string")
+            try_trigger_import(exp)
             exp = to_pandas(exp)
             exp["c"] = exp["c"].astype("string")
 
@@ -208,7 +208,7 @@ class TestCSV:
         exp1 = pandas.read_csv(csv_file)
         exp2 = pandas.read_csv(csv_file)
         exp = pd.concat([exp1, exp2])
-        trigger_import(exp)
+        try_trigger_import(exp)
 
         df_equals(ref, exp)
 
@@ -245,8 +245,8 @@ class TestCSV:
         pandas_df["a"] = pandas_df["a"] + pandas_df["b"]
 
         modin_df = pd.read_csv(csv_file, **kwargs, engine="arrow")
-        trigger_import(modin_df)
         modin_df["a"] = modin_df["a"] + modin_df["b"]
+        try_trigger_import(modin_df)
 
         df_equals(modin_df, pandas_df)
 

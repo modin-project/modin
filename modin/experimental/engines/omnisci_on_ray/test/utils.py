@@ -45,10 +45,7 @@ def eval_io(
 
     def omnisci_comparator(df1, df2):
         """Evaluate equality comparison of the passed frames after importing the Modin's one to OmniSci."""
-        if isinstance(df1, (pd.DataFrame, pd.Series)):
-            trigger_import(df1)
-        if isinstance(df2, (pd.DataFrame, pd.Series)):
-            trigger_import(df2)
+        try_trigger_import(df1, df2)
         return comparator(df1, df2)
 
     general_eval_io(
@@ -65,9 +62,9 @@ def eval_io(
     )
 
 
-def trigger_import(*dfs):
+def try_trigger_import(*dfs):
     """
-    Trigger import execution for DataFrames obtained by OmniSci engine.
+    Trigger import execution for DataFrames obtained by OmniSci engine if already not.
 
     Parameters
     ----------
@@ -79,8 +76,13 @@ def trigger_import(*dfs):
     )
 
     for df in dfs:
+        if not isinstance(df, (pd.DataFrame, pd.Series)):
+            continue
         df.shape  # to trigger real execution
-        frame = df._query_compiler._modin_frame._partitions[0][0].get()
+        partition = df._query_compiler._modin_frame._partitions[0][0]
+        if partition.frame_id is not None:
+            continue
+        frame = partition.get()
         if isinstance(frame, (pandas.DataFrame, pandas.Series)):
             frame_id = OmnisciServer().put_pandas_to_omnisci(frame)
         elif isinstance(frame, pa.Table):
@@ -89,7 +91,7 @@ def trigger_import(*dfs):
             raise TypeError(
                 f"Unexpected storage format, expected pandas.DataFrame or pyarrow.Table, got: {type(frame)}."
             )
-        df._query_compiler._modin_frame._partitions[0][0].frame_id = frame_id
+        partition.frame_id = frame_id
 
 
 def set_execution_mode(frame, mode, recursive=False):
