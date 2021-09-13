@@ -26,7 +26,6 @@ RUN apt-get update --yes \
     && rm -rf /var/lib/apt/lists/*
 
 # Modin settings
-ENV MODIN_ENGINE "native"
 ENV MODIN_BACKEND="omnisci"
 ENV MODIN_EXPERIMENTAL="true"
 
