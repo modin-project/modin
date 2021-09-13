@@ -334,7 +334,7 @@ class CSVDispatcher(TextFileDispatcher):
                     index=index_range.delete(skiprows_md)
                 )
             elif callable(skiprows_md):
-                mod_index = skiprows_md(index_range)
+                mod_index = index_range.map(skiprows_md)
                 mod_index = (
                     mod_index
                     if isinstance(mod_index, np.ndarray)

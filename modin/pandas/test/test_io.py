@@ -1158,6 +1158,7 @@ class TestCsv:
             lambda x: x > 20,
             lambda x: x < 20,
             lambda x: True,
+            lambda x: x in [0, 20],
         ],
     )
     @pytest.mark.parametrize("header", ["infer", None, 0, 1, 150])
