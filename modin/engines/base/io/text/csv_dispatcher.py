@@ -380,6 +380,11 @@ class CSVDispatcher(TextFileDispatcher):
         into integer value and `pre_reading` parameter will be set if needed
         (in this case fastpath can be done).
 
+        Additionally function is responsible for definition of number of rows that
+        should be skipped during data file partitioning (`skiprows_partitioning`
+        parameter) since it can depend on `skiprows` and `header` parameters
+        interconnections.
+
         Parameters
         ----------
         skiprows : int, array or callable, optional
@@ -404,6 +409,9 @@ class CSVDispatcher(TextFileDispatcher):
             incorrectly.
         """
         need_fallback_impl = False
+        # rows number that should be read during header line/lines look up before
+        # operation termination. Added to avoid infinite loop because of incorrect
+        # setting of `skiprows` and `header` parameters.
         rows_limit = 1e6
         pre_reading = 0
         skiprows_partitioning = 0
@@ -413,7 +421,10 @@ class CSVDispatcher(TextFileDispatcher):
         elif is_list_like(skiprows):
             skiprows_md = np.sort(skiprows)
             if np.all(np.diff(skiprows_md) == 1):
-                # `skiprows` is uniformly distributed array
+                # `skiprows` is uniformly distributed array.
+                # If there is a gap between the first row for skipping and
+                # the last line of the header, then assign to read this gap first
+                # during data file partitioning
                 pre_reading = (
                     skiprows_md[0] - header_size if skiprows_md[0] > header_size else 0
                 )
@@ -422,6 +433,10 @@ class CSVDispatcher(TextFileDispatcher):
             elif skiprows_md[0] > header_size:
                 skiprows_md = skiprows_md - header_size
             else:
+                # case when header rows and rows for skipping have intersection.
+                # Starting from the first row for skipping (rows before this rows
+                # will be used/skipped by header) iterate over rows numbers to define
+                # it's status (read or skipped)
                 skiprows_len = len(skiprows)
                 rows_read = skiprows_md[0]
                 row_id = skiprows_md[0]
@@ -437,12 +452,16 @@ class CSVDispatcher(TextFileDispatcher):
                 skiprows_partitioning = rows_skipped
                 skiprows_md = skiprows_md[rows_skipped:]
                 if len(skiprows_md):
+                    # shift `skiprows` values since `rows_skipped` and `header_size` rows
+                    # wouldn't be actually read and shouldn't took into account for rows skipping
+                    # afterwards
                     skiprows_md = skiprows_md - rows_skipped - header_size
 
         elif callable(skiprows):
             row_id = 0
             rows_read = 0
             rows_skipped = 0
+            # use the same approach as for list-like non-uniform `skiprows`
             while rows_read < header_size:
                 if skiprows(row_id):
                     rows_skipped += 1
