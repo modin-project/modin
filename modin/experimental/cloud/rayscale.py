@@ -151,7 +151,12 @@ class RayCluster(BaseCluster):
         res = self._update_conda_requirements(config["setup_commands"][0])
         config["setup_commands"][0] = res
 
-        return bootstrap_config(config)
+        old_setup_commands = config["setup_commands"]
+        old_head_setup_commands = config["head_setup_commands"]
+        bootstraped_config = bootstrap_config(config)
+        bootstraped_config["setup_commands"] = old_setup_commands
+        bootstraped_config["head_setup_commands"] = old_head_setup_commands
+        return bootstraped_config
 
     def _conda_requirements(self):
         import shlex
