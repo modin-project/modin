@@ -246,11 +246,13 @@ class OmnisciOnNativeIO(BaseIO, TextFileDispatcher):
             if not use_modin_impl:
                 raise ArrowEngineException(error_message)
 
+            # TODO: potentially do this only in a strict compatibility mode as this may
+            # really harm performance for wide frames
+            # if STRICT_COMPATIBILITY:
             column_names = pandas.read_csv(
                 **dict(
                     mykwargs,
                     nrows=0,
-                    skiprows=None,
                     skipfooter=0,
                     engine=None if eng == "arrow" else engine,
                 ),
@@ -274,6 +276,9 @@ class OmnisciOnNativeIO(BaseIO, TextFileDispatcher):
             if parse_dates is not None:
                 # Deducing columns which potentially have a timestamp data-type to prohibit for
                 # Arrow to infer their types by explicitly setting them to string.
+                # TODO: potentially do this only in a strict compatibility mode as this may
+                # really harm performance for wide frames
+                # if STRICT_COMPATIBILITY:
                 datetime_columns = (
                     pandas.read_csv(
                         **dict(

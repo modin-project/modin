@@ -654,14 +654,18 @@ class TestConcat:
             df3 = df1.copy()
             df4 = df2.copy()
             return lib.concat([df1, df2, df3, df4])
-        
+
         def sort_comparator(df1, df2):
             """Sort and verify equality of the passed frames."""
             # We sort values because order of rows in the 'union all' result is inconsistent in OmniSci
-            df1, df2 = map(lambda df: try_cast_to_pandas(df).sort_values(df.columns[0]), (df1, df2))
+            df1, df2 = map(
+                lambda df: try_cast_to_pandas(df).sort_values(df.columns[0]), (df1, df2)
+            )
             return df_equals(df1, df2)
 
-        run_and_compare(concat, data=self.data, data2=self.data2, comparator=comparator)
+        run_and_compare(
+            concat, data=self.data, data2=self.data2, comparator=sort_comparator
+        )
 
     def test_concat_agg(self):
         def concat(lib, df1, df2):

@@ -161,10 +161,3 @@ class TimeReadCsvNamesDtype:
                 parse_dates=self.parse_dates,
             )
         )
-
-    def time_read_csv_auto_dtypes(self, *args):
-        execute(
-            IMPL[ASV_USE_IMPL].read_csv(
-                self.filename,
-            )
-        )
