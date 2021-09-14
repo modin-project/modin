@@ -113,7 +113,7 @@ class Engine(EnvironmentVariable, type=str):
         except ImportError:
             try:
                 import dbe  # noqa
-            except ValueError:
+            except ImportError:
                 pass
             else:
                 return "Native"
