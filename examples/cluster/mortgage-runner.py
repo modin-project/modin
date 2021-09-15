@@ -17,21 +17,25 @@
 
 # NOTE: expects https://github.com/intel-ai/omniscripts checked out and in PYTHONPATH
 
-# the following import turns on experimental mode in Modin,
-# including enabling running things in remote cloud
-import modin.experimental.pandas as pd  # noqa: F401
-from modin.experimental.cloud import create_cluster
+from modin.config import IsExperimental
 
-from mortgage import run_benchmark
+IsExperimental.put(True)
+
+from modin.experimental.cloud import create_cluster
 
 test_cluster = create_cluster(
     "aws",
     "aws_credentials",
     cluster_name="rayscale-test",
-    region="eu-north-1",
-    zone="eu-north-1b",
-    image="ami-00e1e82d7d4ca80d3",
+    region="eu-central-1",
+    zone="eu-central-1b",
+    image="ami-05f7491af5eef733a",
 )
+with test_cluster:
+    # the following import turns on experimental mode in Modin,
+    # including enabling running things in remote cloud
+    import modin.experimental.pandas as pd  # noqa: F401
+    from mortgage import run_benchmark
 with test_cluster:
 
     parameters = {
