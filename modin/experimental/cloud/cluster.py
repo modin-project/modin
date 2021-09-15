@@ -18,6 +18,8 @@ import atexit
 import warnings
 
 from modin import set_backends
+from modin.utils import Engine
+from modin.pandas import _update_engine
 
 from .base import ConnectionDetails
 from .connection import Connection
@@ -192,6 +194,7 @@ class BaseCluster:
         self.spawn(wait=True)  # make sure cluster is ready
         self.connection.activate()
         self.old_backends = set_backends(self.target_engine, self.target_partition)
+        Engine.subscribe(_update_engine)
         return self
 
     def __exit__(self, *a, **kw):

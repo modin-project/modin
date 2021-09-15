@@ -90,7 +90,7 @@ from pandas import (
 import os
 import multiprocessing
 
-from modin.config import Engine, Parameter
+from modin.config import Engine, IsExperimental, Parameter
 
 # Set this so that Pandas doesn't try to multithread by itself
 os.environ["OMP_NUM_THREADS"] = "1"
@@ -136,6 +136,9 @@ def _update_engine(publisher: Parameter):
                 from ray import ray_constants
                 import modin
                 from modin.engines.ray.utils import initialize_ray
+
+                if partition == "Omnisci":
+                    IsExperimental.put(True)
 
                 modin.set_backends("Ray", partition)
                 initialize_ray(

@@ -57,6 +57,18 @@ with test_cluster:
             ["wget", remote_data_file, "-O", data_file]
         )
 
+        # Workaround for omniscripts trigger
+        import modin.experimental.engines.omnisci_on_ray.frame.omnisci_worker
+
+        OmnisciServer = (
+            get_connection()
+            .modules["modin.experimental.engines.omnisci_on_ray.frame.omnisci_worker"]
+            .OmnisciServer
+        )
+        modin.experimental.engines.omnisci_on_ray.frame.omnisci_worker.OmnisciServer = (
+            OmnisciServer
+        )
+
         # Omniscripts check for files being present when given local file paths,
         # so replace "glob" there with a remote one
         import utils.utils
