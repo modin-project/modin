@@ -198,7 +198,7 @@ class RayCluster(BaseCluster):
         from modin import __version__
 
         # for example: 0.8.0+116.g5e50eef.dirty
-        return f"modin=={__version__.split('+')[0]}"
+        return f"modin-all=={__version__.split('+')[0]}"
 
     @staticmethod
     def __save_config(config):
