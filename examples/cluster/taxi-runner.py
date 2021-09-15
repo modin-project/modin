@@ -14,12 +14,6 @@
 
 # pip install git+https://github.com/intel-ai/ibis.git@develop
 # pip install braceexpand
-# pip install -e .[remote]
-# pip install -e .[ray]
-# conda install pyomniscidbe s3fs -c conda-forge
-# setup Socks proxy
-# setup default VPC - one field in actions
-
 
 # NOTE: expects https://github.com/intel-ai/omniscripts checked out and in PYTHONPATH
 
