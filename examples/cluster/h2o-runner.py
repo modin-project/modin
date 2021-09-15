@@ -28,9 +28,9 @@ test_cluster = create_cluster(
     "aws",
     "aws_credentials",
     cluster_name="rayscale-test",
-    region="eu-north-1",
-    zone="eu-north-1b",
-    image="ami-00e1e82d7d4ca80d3",
+    region="eu-central-1",
+    zone="eu-central-1b",
+    image="ami-05f7491af5eef733a",
 )
 with test_cluster:
     parameters = {
