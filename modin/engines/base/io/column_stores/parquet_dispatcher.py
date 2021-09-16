@@ -55,12 +55,11 @@ class ParquetDispatcher(ColumnStoreDispatcher):
         ParquetFile API is used. Please refer to the documentation here
         https://arrow.apache.org/docs/python/parquet.html
         """
-        from pyarrow.parquet import ParquetFile, ParquetDataset
+        from pyarrow.parquet import ParquetDataset
         from modin.pandas.io import PQ_INDEX_REGEX
 
         if isinstance(path, str) and os.path.isdir(path):
             partitioned_columns = set()
-            directory = True
             # We do a tree walk of the path directory because partitioned
             # parquet directories have a unique column at each directory level.
             # Thus, we can use os.walk(), which does a dfs search, to walk
@@ -79,58 +78,22 @@ class ParquetDispatcher(ColumnStoreDispatcher):
                 return cls.single_worker_read(
                     path, engine=engine, columns=columns, **kwargs
                 )
-        else:
-            directory = False
+
         if not columns:
-            import s3fs
+            import fsspec.core
+            from pandas.io.common import is_fsspec_url
 
-            if directory:
-                # Path of the sample file that we will read to get the remaining columns
-                pd = ParquetDataset(path)
-                meta = pd.metadata
-                column_names = pd.schema.to_arrow_schema().names
-            elif isinstance(path, str) and path.startswith("hdfs://"):
-                import fsspec.core
+            fs, path_ = (
+                fsspec.core.url_to_fs(path, **(kwargs.get("storage_options") or {}))
+                if is_fsspec_url(path)
+                else (None, path)
+            )
 
-                fs, path = fsspec.core.url_to_fs(path)
-                pd = ParquetDataset(path, filesystem=fs)
-                meta = pd.metadata
-                column_names = pd.schema.to_arrow_schema().names
-            elif isinstance(path, s3fs.S3File) or (
-                isinstance(path, str) and path.startswith("s3://")
-            ):
-                from botocore.exceptions import NoCredentialsError
+            dataset = ParquetDataset(path_, filesystem=fs, use_legacy_dataset=False)
+            column_names = dataset.schema.names
 
-                if isinstance(path, s3fs.S3File):
-                    bucket_path = path.url().split(".s3.amazonaws.com")
-                    path = "s3://" + bucket_path[0].split("://")[1] + bucket_path[1]
-                try:
-                    fs = s3fs.S3FileSystem()
-                    pd = ParquetDataset(path, filesystem=fs)
-                except NoCredentialsError:
-                    fs = s3fs.S3FileSystem(anon=True)
-                    pd = ParquetDataset(path, filesystem=fs)
-                meta = pd.metadata
-                column_names = pd.schema.to_arrow_schema().names
-            else:
-                meta = ParquetFile(path).metadata
-                column_names = meta.schema.to_arrow_schema().names
-
-            if meta is not None and meta.metadata is not None:
-                pandas_metadata = meta.metadata.get(b"pandas", None)
-                if pandas_metadata is not None:
-                    import json
-
-                    # This is how we convert the metadata from pyarrow to a python
-                    # dictionary, from which we then get the index columns.
-                    # We use these to filter out from the columns in the metadata since
-                    # the pyarrow storage has no concept of row labels/index.
-                    # This ensures that our metadata lines up with the partitions without
-                    # extra communication steps once we have done all the remote
-                    # computation.
-                    index_columns = json.loads(pandas_metadata.decode("utf8")).get(
-                        "index_columns", []
-                    )
-                    column_names = [c for c in column_names if c not in index_columns]
+            if dataset.schema.pandas_metadata is not None:
+                index_columns = dataset.schema.pandas_metadata.get("index_columns", [])
+                column_names = [c for c in column_names if c not in index_columns]
             columns = [name for name in column_names if not PQ_INDEX_REGEX.match(name)]
         return cls.build_query_compiler(path, columns, **kwargs)
