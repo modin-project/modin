@@ -11,11 +11,11 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-"""Module provides ``OmnisciOnRayFrame`` class implementing lazy frame."""
+"""Module provides ``OmnisciOnNativeFrame`` class implementing lazy frame."""
 
 from modin.engines.base.frame.data import PandasFrame
 from modin.experimental.backends.omnisci.query_compiler import DFAlgQueryCompiler
-from .partition_manager import OmnisciOnRayFramePartitionManager
+from .partition_manager import OmnisciOnNativeFramePartitionManager
 
 from pandas.core.index import ensure_index, Index, MultiIndex, RangeIndex
 from pandas.core.dtypes.common import get_dtype, is_list_like, is_bool_dtype
@@ -52,17 +52,17 @@ import pyarrow
 import re
 
 
-class OmnisciOnRayFrame(PandasFrame):
+class OmnisciOnNativeFrame(PandasFrame):
     """
-    Lazy dataframe based on Arrow table representation and embedded OmniSci engine.
+    Lazy dataframe based on Arrow table representation and embedded OmniSci backend.
 
     Currently, materialized dataframe always has a single partition. This partition
     can hold either Arrow table or pandas dataframe.
 
     Operations on a dataframe are not instantly executed and build an operations
     tree instead. When frame's data is accessed this tree is transformed into
-    a query which is executed in OmniSci engine. In case of simple transformations
-    Arrow API can be used instead of OmniSci engine.
+    a query which is executed in OmniSci backend. In case of simple transformations
+    Arrow API can be used instead of OmniSci backend.
 
     Since frames are used as an input for other frames, all operations produce
     new frames and are not executed in-place.
@@ -94,7 +94,7 @@ class OmnisciOnRayFrame(PandasFrame):
     force_execution_mode : str or None
         Used by tests to control frame's execution process.
     has_unsupported_data : bool
-        True for frames holding data not supported by Arrow or OmniSci engine.
+        True for frames holding data not supported by Arrow or OmniSci backend.
 
     Attributes
     ----------
@@ -116,7 +116,7 @@ class OmnisciOnRayFrame(PandasFrame):
     _index_cache : pandas.Index or None
         Materialized index of the frame or None when index is not materialized.
     _has_unsupported_data : bool
-        True for frames holding data not supported by Arrow or OmniSci engine.
+        True for frames holding data not supported by Arrow or OmniSci backend.
         Operations on such frames are not allowed and should be defaulted
         to pandas instead.
     _dtypes : pandas.Series
@@ -132,7 +132,7 @@ class OmnisciOnRayFrame(PandasFrame):
     """
 
     _query_compiler_cls = DFAlgQueryCompiler
-    _partition_mgr_cls = OmnisciOnRayFramePartitionManager
+    _partition_mgr_cls = OmnisciOnNativeFramePartitionManager
 
     _next_id = [1]
 
@@ -286,7 +286,7 @@ class OmnisciOnRayFrame(PandasFrame):
 
         Returns
         -------
-        OmnisciOnRayFrame
+        OmnisciOnNativeFrame
             The new frame.
         """
         base = self
@@ -400,7 +400,7 @@ class OmnisciOnRayFrame(PandasFrame):
 
         Returns
         -------
-        OmnisciOnRayFrame
+        OmnisciOnNativeFrame
             The new frame.
         """
         # Currently we only expect 'by' to be a projection of the same frame.
@@ -551,7 +551,7 @@ class OmnisciOnRayFrame(PandasFrame):
 
         Returns
         -------
-        OmnisciOnRayFrame
+        OmnisciOnNativeFrame
             New frame containing the result of aggregation.
         """
         assert isinstance(agg, str)
@@ -588,7 +588,7 @@ class OmnisciOnRayFrame(PandasFrame):
 
         Returns
         -------
-        OmnisciOnRayFrame
+        OmnisciOnNativeFrame
             The new frame.
         """
         if axis != 0:
@@ -652,7 +652,7 @@ class OmnisciOnRayFrame(PandasFrame):
 
         Returns
         -------
-        OmnisciOnRayFrame
+        OmnisciOnNativeFrame
             The new frame.
         """
         how_to_merge = {"any": "AND", "all": "OR"}
@@ -690,7 +690,7 @@ class OmnisciOnRayFrame(PandasFrame):
 
         Returns
         -------
-        OmnisciOnRayFrame
+        OmnisciOnNativeFrame
             The new frame.
         """
         exprs = self._index_exprs()
@@ -719,7 +719,7 @@ class OmnisciOnRayFrame(PandasFrame):
 
         Returns
         -------
-        OmnisciOnRayFrame
+        OmnisciOnNativeFrame
             The new frame.
         """
         columns = col_dtypes.keys()
@@ -776,7 +776,7 @@ class OmnisciOnRayFrame(PandasFrame):
 
         Parameters
         ----------
-        other : OmnisciOnRayFrame
+        other : OmnisciOnNativeFrame
             A frame to join with.
         how : str, default: "inner"
             A type of join.
@@ -792,7 +792,7 @@ class OmnisciOnRayFrame(PandasFrame):
 
         Returns
         -------
-        OmnisciOnRayFrame
+        OmnisciOnNativeFrame
             The new frame.
         """
         assert (
@@ -857,7 +857,7 @@ class OmnisciOnRayFrame(PandasFrame):
 
         Parameters
         ----------
-        rhs : OmnisciOnRayFrame
+        rhs : OmnisciOnNativeFrame
             Joined frame.
         lhs_cols : list
             Left frame columns to join by.
@@ -901,7 +901,7 @@ class OmnisciOnRayFrame(PandasFrame):
         ----------
         axis : {0, 1}
             Should be 0.
-        other_modin_frames : list of OmnisciOnRayFrame
+        other_modin_frames : list of OmnisciOnNativeFrame
             Frames to concat.
         join : {"outer", "inner"}, default: "outer"
             How to handle columns with mismatched names.
@@ -914,7 +914,7 @@ class OmnisciOnRayFrame(PandasFrame):
 
         Returns
         -------
-        OmnisciOnRayFrame
+        OmnisciOnNativeFrame
             The new frame.
         """
         # determine output columns
@@ -1008,7 +1008,7 @@ class OmnisciOnRayFrame(PandasFrame):
 
         Parameters
         ----------
-        other_modin_frames : list of OmnisciOnRayFrame
+        other_modin_frames : list of OmnisciOnNativeFrame
             Frames to join with.
         how : str
             A type of join.
@@ -1019,11 +1019,11 @@ class OmnisciOnRayFrame(PandasFrame):
 
         Returns
         -------
-        OmnisciOnRayFrame
+        OmnisciOnNativeFrame
             The new frame.
         """
         if how == "outer":
-            raise NotImplementedError("outer join is not supported in OmniSci engine")
+            raise NotImplementedError("outer join is not supported in OmniSci backend")
 
         lhs = self._maybe_materialize_rowid()
         reset_index_names = False
@@ -1101,7 +1101,7 @@ class OmnisciOnRayFrame(PandasFrame):
         ----------
         axis : 0 or 1
             The axis to concatenate along.
-        other_modin_frames : list of OmnisciOnRayFrame
+        other_modin_frames : list of OmnisciOnNativeFrame
             Frames to concat.
         join : {"outer", "inner"}, default: "outer"
             How to handle mismatched indexes on other axis.
@@ -1113,7 +1113,7 @@ class OmnisciOnRayFrame(PandasFrame):
 
         Returns
         -------
-        OmnisciOnRayFrame
+        OmnisciOnNativeFrame
             The new frame.
         """
         if not other_modin_frames:
@@ -1163,7 +1163,7 @@ class OmnisciOnRayFrame(PandasFrame):
 
         Parameters
         ----------
-        other : scalar, list-like, or OmnisciOnRayFrame
+        other : scalar, list-like, or OmnisciOnNativeFrame
             The second operand.
         op_name : str
             An operation to perform.
@@ -1172,7 +1172,7 @@ class OmnisciOnRayFrame(PandasFrame):
 
         Returns
         -------
-        OmnisciOnRayFrame
+        OmnisciOnNativeFrame
             The new frame.
         """
         if isinstance(other, (int, float, str)):
@@ -1261,7 +1261,7 @@ class OmnisciOnRayFrame(PandasFrame):
 
         Returns
         -------
-        OmnisciOnRayFrame
+        OmnisciOnNativeFrame
             The new frame.
         """
         assert column not in self._table_cols
@@ -1294,7 +1294,7 @@ class OmnisciOnRayFrame(PandasFrame):
 
         Returns
         -------
-        OmnisciOnRayFrame
+        OmnisciOnNativeFrame
             The new frame.
         """
         assert len(self.columns) == 1
@@ -1334,7 +1334,7 @@ class OmnisciOnRayFrame(PandasFrame):
 
         Returns
         -------
-        OmnisciOnRayFrame
+        OmnisciOnNativeFrame
             The new frame.
         """
         if na_position != "first" and na_position != "last":
@@ -1436,12 +1436,12 @@ class OmnisciOnRayFrame(PandasFrame):
 
         Parameters
         ----------
-        key : OmnisciOnRayFrame
+        key : OmnisciOnNativeFrame
             A frame with a single bool data column used as a filter.
 
         Returns
         -------
-        OmnisciOnRayFrame
+        OmnisciOnNativeFrame
             The new frame.
         """
         if not isinstance(key, type(self)):
@@ -1505,7 +1505,7 @@ class OmnisciOnRayFrame(PandasFrame):
 
         Returns
         -------
-        OmnisciOnRayFrame
+        OmnisciOnNativeFrame
             The new frame.
         """
         if self._index_cols is None:
@@ -1521,7 +1521,7 @@ class OmnisciOnRayFrame(PandasFrame):
 
         Returns
         -------
-        OmnisciOnRayFrame
+        OmnisciOnNativeFrame
             The new frame.
         """
         exprs = OrderedDict()
@@ -1563,12 +1563,12 @@ class OmnisciOnRayFrame(PandasFrame):
 
         Parameters
         ----------
-        rhs : OmnisciOnRayFrame
+        rhs : OmnisciOnNativeFrame
             The second frame.
 
         Returns
         -------
-        OmnisciOnRayFrame
+        OmnisciOnNativeFrame
             The found common projection base or None.
         """
         bases = {self}
@@ -1769,7 +1769,7 @@ class OmnisciOnRayFrame(PandasFrame):
 
         Parameters
         ----------
-        frames : list of OmnisciOnRayFrame
+        frames : list of OmnisciOnNativeFrame
             Frames to concat.
 
         Returns
@@ -1837,12 +1837,12 @@ class OmnisciOnRayFrame(PandasFrame):
 
         Returns
         -------
-        OmnisciOnRayFrame
+        OmnisciOnNativeFrame
             The new frame.
         """
         if not isinstance(new_index, (Index, MultiIndex)):
             raise NotImplementedError(
-                "OmnisciOnRayFrame._set_index is not yet suported"
+                "OmnisciOnNativeFrame._set_index is not yet suported"
             )
 
         self._execute()
@@ -1851,7 +1851,7 @@ class OmnisciOnRayFrame(PandasFrame):
         obj = self._partitions[0][0].get()
         if isinstance(obj, pd.DataFrame):
             raise NotImplementedError(
-                "OmnisciOnRayFrame._set_index is not yet suported"
+                "OmnisciOnNativeFrame._set_index is not yet suported"
             )
         else:
             assert isinstance(obj, pyarrow.Table)
@@ -1885,7 +1885,7 @@ class OmnisciOnRayFrame(PandasFrame):
 
         Returns
         -------
-        OmnisciOnRayFrame
+        OmnisciOnNativeFrame
             The new frame.
         """
         if drop:
@@ -1941,7 +1941,7 @@ class OmnisciOnRayFrame(PandasFrame):
 
         Returns
         -------
-        OmnisciOnRayFrame
+        OmnisciOnNativeFrame
             The new frame.
         """
         if self.has_multiindex():
@@ -1959,7 +1959,7 @@ class OmnisciOnRayFrame(PandasFrame):
 
         Returns
         -------
-        OmnisciOnRayFrame
+        OmnisciOnNativeFrame
             The new frame.
         """
         exprs = self._index_exprs()
@@ -1981,7 +1981,7 @@ class OmnisciOnRayFrame(PandasFrame):
         -------
         pandas.Index
         """
-        return super(OmnisciOnRayFrame, self)._get_columns()
+        return super(OmnisciOnNativeFrame, self)._get_columns()
 
     columns = property(_get_columns)
     index = property(_get_index)
@@ -2030,7 +2030,7 @@ class OmnisciOnRayFrame(PandasFrame):
 
         Returns
         -------
-        OmnisciOnRayFrame
+        OmnisciOnNativeFrame
             The new frame.
         """
         if self.has_multiindex():
@@ -2082,7 +2082,7 @@ class OmnisciOnRayFrame(PandasFrame):
 
         Returns
         -------
-        OmnisciOnRayFrame
+        OmnisciOnNativeFrame
             The new frame.
         """
         if not self.has_multiindex():
@@ -2220,7 +2220,7 @@ class OmnisciOnRayFrame(PandasFrame):
 
         Returns
         -------
-        OmnisciOnRayFrame
+        OmnisciOnNativeFrame
             The new frame.
         """
         new_index = df.index
@@ -2312,7 +2312,7 @@ class OmnisciOnRayFrame(PandasFrame):
 
         Returns
         -------
-        OmnisciOnRayFrame
+        OmnisciOnNativeFrame
             The new frame.
         """
         (

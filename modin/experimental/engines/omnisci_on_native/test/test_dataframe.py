@@ -23,7 +23,7 @@ from modin.pandas.test.utils import io_ops_bad_exc
 from pandas.core.dtypes.common import is_list_like
 
 IsExperimental.put(True)
-Engine.put("ray")
+Engine.put("native")
 Backend.put("omnisci")
 
 import modin.pandas as pd
@@ -39,8 +39,8 @@ from modin.pandas.test.utils import (
     df_equals_with_non_stable_indices,
 )
 
-from modin.experimental.engines.omnisci_on_ray.frame.partition_manager import (
-    OmnisciOnRayFramePartitionManager,
+from modin.experimental.engines.omnisci_on_native.frame.partition_manager import (
+    OmnisciOnNativeFramePartitionManager,
 )
 
 
@@ -1958,7 +1958,7 @@ class TestUnsupportedColumns:
     )
     def test_unsupported_columns(self, data, is_good):
         pandas_df = pandas.DataFrame({"col": data})
-        obj, bad_cols = OmnisciOnRayFramePartitionManager._get_unsupported_cols(
+        obj, bad_cols = OmnisciOnNativeFramePartitionManager._get_unsupported_cols(
             pandas_df
         )
         if is_good:

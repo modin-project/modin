@@ -52,6 +52,7 @@ RUN cd "$modin_dir" \
     && pip install -e . --no-deps
 
 # setup environments for modin on omnisci engine work
+ENV MODIN_ENGINE "native"
 ENV MODIN_BACKEND "omnisci"
 ENV MODIN_EXPERIMENTAL "true"
 
