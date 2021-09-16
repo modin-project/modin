@@ -71,7 +71,7 @@ def try_trigger_import(*dfs):
     *dfs : iterable
         DataFrames to trigger import.
     """
-    from modin.experimental.engines.omnisci_on_ray.frame.omnisci_worker import (
+    from modin.experimental.engines.omnisci_on_native.frame.omnisci_worker import (
         OmnisciServer,
     )
 
@@ -79,6 +79,8 @@ def try_trigger_import(*dfs):
         if not isinstance(df, (pd.DataFrame, pd.Series)):
             continue
         df.shape  # to trigger real execution
+        if df.empty:
+            continue
         partition = df._query_compiler._modin_frame._partitions[0][0]
         if partition.frame_id is not None:
             continue

@@ -35,7 +35,6 @@ from .utils import (
     json_short_bytes,
     json_long_string,
     json_long_bytes,
-    eval_io,
     get_unique_filename,
     io_ops_bad_exc,
     eval_io_from_str,
@@ -45,6 +44,11 @@ from .utils import (
     teardown_test_files,
     generate_dataframe,
 )
+
+if Backend.get() == "Omnisci":
+    from modin.experimental.engines.omnisci_on_native.test.utils import eval_io
+else:
+    from .utils import eval_io
 
 if Backend.get() == "Pandas":
     import modin.pandas as pd
