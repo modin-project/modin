@@ -12,10 +12,9 @@
 # governing permissions and limitations under the License.
 
 """
-Module houses ``OmnisciOnRayIO`` class.
+Module houses ``OmnisciOnNativeIO`` class.
 
-``OmnisciOnRayIO`` is used for storing IO functions implementations with OmniSci backend
-and Ray engine.
+``OmnisciOnNativeIO`` is used for storing IO functions implementations with OmniSci backend and Native engine.
 """
 
 from csv import Dialect
@@ -24,8 +23,8 @@ import inspect
 import os
 
 from modin.experimental.backends.omnisci.query_compiler import DFAlgQueryCompiler
-from modin.engines.ray.generic.io import RayIO
-from modin.experimental.engines.omnisci_on_ray.frame.data import OmnisciOnRayFrame
+from modin.engines.base.io import BaseIO
+from modin.experimental.engines.omnisci_on_native.frame.data import OmnisciOnNativeFrame
 from modin.error_message import ErrorMessage
 from modin.engines.base.io.text.text_file_dispatcher import TextFileDispatcher
 
@@ -58,14 +57,14 @@ class ArrowEngineException(Exception):
     """Exception raised in case of Arrow engine-specific incompatibilities are found."""
 
 
-class OmnisciOnRayIO(RayIO, TextFileDispatcher):
+class OmnisciOnNativeIO(BaseIO, TextFileDispatcher):
     """
-    Class contains IO functions implementations with OmniSci backend and Ray engine.
+    Class contains IO functions implementations with OmniSci backend and Native engine.
 
-    Inherits some common for Ray engine util functions from ``RayIO`` class.
+    Inherits some common for OmniSci engine util functions from ``BaseIO`` class.
     """
 
-    frame_cls = OmnisciOnRayFrame
+    frame_cls = OmnisciOnNativeFrame
     query_compiler_cls = DFAlgQueryCompiler
 
     arg_keys = [

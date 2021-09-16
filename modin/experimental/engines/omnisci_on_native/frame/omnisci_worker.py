@@ -36,14 +36,14 @@ from modin.config import OmnisciFragmentSize, OmnisciLaunchParameters
 
 
 class OmnisciServer:
-    """Wrapper class for OmniSci engine."""
+    """Wrapper class for OmniSci backend."""
 
     _server = None
 
     @classmethod
     def start_server(cls):
         """
-        Initialize OmniSci engine.
+        Initialize OmniSci server.
 
         Do nothing if it is initiliazed already.
         """
@@ -58,7 +58,7 @@ class OmnisciServer:
             cls._server = None
 
     def __init__(self):
-        """Initialize OmniSci engine."""
+        """Initialize OmniSci backend."""
         self.start_server()
 
     @classmethod
@@ -135,7 +135,7 @@ class OmnisciServer:
     @classmethod
     def put_arrow_to_omnisci(cls, table, name=None):
         """
-        Import Arrow table to OmniSci engine.
+        Import Arrow table to OmniSci backend.
 
         Parameters
         ----------
@@ -201,7 +201,7 @@ class OmnisciServer:
     @classmethod
     def put_pandas_to_omnisci(cls, df, name=None):
         """
-        Import ``pandas.DataFrame`` to OmniSci engine.
+        Import ``pandas.DataFrame`` to OmniSci backend.
 
         Parameters
         ----------

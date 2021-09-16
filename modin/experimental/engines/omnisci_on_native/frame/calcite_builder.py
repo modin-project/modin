@@ -615,7 +615,7 @@ class CalciteBuilder:
 
         Parameters
         ----------
-        frame : OmnisciOnRayFrame
+        frame : OmnisciOnNativeFrame
             An input frame for a projection.
 
         Returns
