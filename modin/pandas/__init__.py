@@ -330,4 +330,4 @@ __all__ = [
     "api",
 ]
 
-del pandas, Engine, Parameter
+del pandas, Engine, IsExperimental, Parameter
