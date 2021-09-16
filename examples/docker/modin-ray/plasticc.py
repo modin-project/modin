@@ -11,13 +11,11 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-import os
 import sys
 import time
 from collections import OrderedDict
 from functools import partial
 import modin.pandas as pd
-from modin.experimental.engines.omnisci_on_ray.frame.omnisci_worker import OmnisciServer
 
 import numpy as np
 import xgboost as xgb
@@ -62,12 +60,6 @@ def create_dtypes():
         [(columns_names[i], meta_dtypes[i]) for i in range(len(meta_dtypes))]
     )
     return dtypes, meta_dtypes
-
-
-def trigger_read_op(dfs: tuple):
-    for df in dfs:
-        df.shape  # to trigger real execution
-    return dfs
 
 
 def ravel_column_names(cols):
@@ -162,7 +154,6 @@ def read(
     meta_dtypes["target"] = target
 
     dfs = (train, train_meta, test, test_meta)
-    trigger_read_op(dfs)
     return dfs
 
 
@@ -202,7 +193,6 @@ def etl(df, df_meta):
 
     df_meta = df_meta.merge(agg_df, on="object_id", how="left")
 
-    df_meta.shape  # to trigger real execution
     return df_meta
 
 
@@ -253,7 +243,7 @@ def ml(train_final, test_final):
 def main():
     if len(sys.argv) != 5:
         print(
-            f"USAGE: docker run --rm -v /path/to/dataset:/dataset plasticc-omnisci <training set file name in /path/to/dataset> <test set file name in /path/to/dataset> <training set metadata file name in /path/to/dataset> <test set metadata file name in /path/to/dataset>"
+            f"USAGE: docker run --rm -v /path/to/dataset:/dataset python plasticc.py <training set file name startin with /dataset> <test set file name starting with /dataset> <training set metadata file name starting with /dataset> <test set metadata file name starting with /dataset>"
         )
         return
 
@@ -262,10 +252,10 @@ def main():
     train, train_meta, test, test_meta = measure(
         "Reading",
         read,
-        os.path.join("/dataset", sys.argv[1]),
-        os.path.join("/dataset", sys.argv[2]),
-        os.path.join("/dataset", sys.argv[3]),
-        os.path.join("/dataset", sys.argv[4]),
+        sys.argv[1],
+        sys.argv[2],
+        sys.argv[3],
+        sys.argv[4],
         dtypes,
         meta_dtypes,
     )

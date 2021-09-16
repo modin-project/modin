@@ -589,16 +589,18 @@ class ExperimentalPandasOnCloudpythonFactory(ExperimentalRemoteFactory):
     wrapped_factory = PandasOnPythonFactory
 
 
-@doc(_doc_factory_class, backend_name="experimental OmnisciOnRay")
-class ExperimentalOmnisciOnRayFactory(BaseFactory):
+@doc(_doc_factory_class, backend_name="experimental OmnisciOnNative")
+class ExperimentalOmnisciOnNativeFactory(BaseFactory):
     @classmethod
-    @doc(_doc_factory_prepare_method, io_module_name="experimental ``OmnisciOnRayIO``")
+    @doc(
+        _doc_factory_prepare_method, io_module_name="experimental ``OmnisciOnNativeIO``"
+    )
     def prepare(cls):
-        from modin.experimental.engines.omnisci_on_ray.io import OmnisciOnRayIO
+        from modin.experimental.engines.omnisci_on_native.io import OmnisciOnNativeIO
 
-        cls.io_cls = OmnisciOnRayIO
+        cls.io_cls = OmnisciOnNativeIO
 
 
-@doc(_doc_factory_class, backend_name="experimental remote OmnisciOnRay")
-class ExperimentalOmnisciOnCloudrayFactory(ExperimentalRemoteFactory):
-    wrapped_factory = ExperimentalOmnisciOnRayFactory
+@doc(_doc_factory_class, backend_name="experimental remote OmnisciOnNative")
+class ExperimentalOmnisciOnCloudnativeFactory(ExperimentalRemoteFactory):
+    wrapped_factory = ExperimentalOmnisciOnNativeFactory

@@ -70,7 +70,7 @@ class Engine(EnvironmentVariable, type=str):
     """Distribution engine to run queries by."""
 
     varname = "MODIN_ENGINE"
-    choices = ("Ray", "Dask", "Python")
+    choices = ("Ray", "Dask", "Python", "Native")
 
     @classmethod
     def _get_default(cls):
@@ -99,16 +99,29 @@ class Engine(EnvironmentVariable, type=str):
             import distributed
 
         except ImportError:
-            raise ImportError(
-                "Please `pip install modin[ray]` or `modin[dask]` to install an engine"
-            )
-        if version.parse(dask.__version__) < version.parse("2.22.0") or version.parse(
-            distributed.__version__
-        ) < version.parse("2.22.0"):
-            raise ImportError(
-                "Please `pip install modin[dask]` to install compatible Dask version."
-            )
-        return "Dask"
+            pass
+        else:
+            if version.parse(dask.__version__) < version.parse(
+                "2.22.0"
+            ) or version.parse(distributed.__version__) < version.parse("2.22.0"):
+                raise ImportError(
+                    "Please `pip install modin[dask]` to install compatible Dask version."
+                )
+            return "Dask"
+        try:
+            import omniscidbe  # noqa
+        except ImportError:
+            try:
+                import dbe  # noqa
+            except ImportError:
+                pass
+            else:
+                return "Native"
+        else:
+            return "Native"
+        raise ImportError(
+            "Please refer to installation documentation page to install an engine"
+        )
 
 
 class Backend(EnvironmentVariable, type=str):

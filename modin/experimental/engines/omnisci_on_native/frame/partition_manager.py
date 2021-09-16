@@ -11,19 +11,15 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-"""Module provides a partition manager class for ``OmnisciOnRayFrame`` frame."""
+"""Module provides a partition manager class for ``OmnisciOnNativeFrame`` frame."""
 
 from modin.pandas.utils import is_scalar
 import numpy as np
 
-from modin.engines.ray.generic.frame.partition_manager import (
-    GenericRayFramePartitionManager,
+from modin.engines.base.frame.partition_manager import (
+    PandasFramePartitionManager,
 )
-from .axis_partition import (
-    OmnisciOnRayFrameColumnPartition,
-    OmnisciOnRayFrameRowPartition,
-)
-from .partition import OmnisciOnRayFramePartition
+from .partition import OmnisciOnNativeFramePartition
 from .omnisci_worker import OmnisciServer
 from .calcite_builder import CalciteBuilder
 from .calcite_serializer import CalciteSerializer
@@ -34,27 +30,25 @@ import pandas
 import re
 
 
-class OmnisciOnRayFramePartitionManager(GenericRayFramePartitionManager):
+class OmnisciOnNativeFramePartitionManager(PandasFramePartitionManager):
     """
-    Frame manager for ``OmnisciOnRayFrame``.
+    Frame manager for ``OmnisciOnNativeFrame``.
 
-    This class handles several features of ``OmnisciOnRayFrame``:
+    This class handles several features of ``OmnisciOnNativeFrame``:
       - frame always has a single partition
       - frame cannot process some data types
       - frame has to use mangling for index labels
-      - frame uses OmniSci engine for execution
+      - frame uses OmniSci backend for execution
     """
 
-    _partition_class = OmnisciOnRayFramePartition
-    _column_partitions_class = OmnisciOnRayFrameColumnPartition
-    _row_partition_class = OmnisciOnRayFrameRowPartition
+    _partition_class = OmnisciOnNativeFramePartition
 
     @classmethod
     def _compute_num_partitions(cls):
         """
         Return a number of partitions a frame should be split to.
 
-        `OmnisciOnRayFrame` always has a single partition.
+        `OmnisciOnNativeFrame` always has a single partition.
 
         Returns
         -------
@@ -65,7 +59,7 @@ class OmnisciOnRayFramePartitionManager(GenericRayFramePartitionManager):
     @classmethod
     def from_pandas(cls, df, return_dims=False):
         """
-        Create ``OmnisciOnRayFrame`` from ``pandas.DataFrame``.
+        Create ``OmnisciOnNativeFrame`` from ``pandas.DataFrame``.
 
         Parameters
         ----------
@@ -211,7 +205,7 @@ class OmnisciOnRayFramePartitionManager(GenericRayFramePartitionManager):
     @classmethod
     def run_exec_plan(cls, plan, index_cols, dtypes, columns):
         """
-        Run execution plan in OmniSci engine to materialize frame.
+        Run execution plan in OmniSci backend to materialize frame.
 
         Parameters
         ----------
@@ -236,7 +230,7 @@ class OmnisciOnRayFramePartitionManager(GenericRayFramePartitionManager):
         for frame in frames:
             if frame._partitions.size != 1:
                 raise NotImplementedError(
-                    "OmnisciOnRay engine doesn't suport partitioned frames"
+                    "OmnisciOnNative engine doesn't suport partitioned frames"
                 )
             for p in frame._partitions.flatten():
                 if p.frame_id is None:

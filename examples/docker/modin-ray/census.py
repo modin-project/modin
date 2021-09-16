@@ -11,11 +11,9 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-import os
 import sys
 import time
 import modin.pandas as pd
-from modin.experimental.engines.omnisci_on_ray.frame.omnisci_worker import OmnisciServer
 
 from sklearn import config_context
 import sklearnex
@@ -130,12 +128,6 @@ def read(filename):
         skiprows=1,
     )
 
-    df.shape  # to trigger real execution
-    df._query_compiler._modin_frame._partitions[0][
-        0
-    ].frame_id = OmnisciServer().put_arrow_to_omnisci(
-        df._query_compiler._modin_frame._partitions[0][0].get()
-    )  # to trigger real execution
     return df
 
 
@@ -181,11 +173,6 @@ def etl(df):
 
     y = df["EDUC"]
     X = df.drop(columns=["EDUC", "CPI99"])
-
-    # to trigger real execution
-    df.shape
-    y.shape
-    X.shape
 
     return (df, X, y)
 
@@ -252,7 +239,7 @@ def measure(name, func, *args, **kw):
 def main():
     if len(sys.argv) != 2:
         print(
-            f"USAGE: docker run --rm -v /path/to/dataset:/dataset census-omnisci <data file name in /path/to/dataset>"
+            f"USAGE: docker run --rm -v /path/to/dataset:/dataset python census.py <data file name starting with /dataset>"
         )
         return
     # ML specific
@@ -260,7 +247,7 @@ def main():
     TEST_SIZE = 0.1
     RANDOM_STATE = 777
 
-    df = measure("Reading", read, os.path.join("/dataset", sys.argv[1]))
+    df = measure("Reading", read, sys.argv[1])
     _, X, y = measure("ETL", etl, df)
     measure(
         "ML", ml, X, y, random_state=RANDOM_STATE, n_runs=N_RUNS, test_size=TEST_SIZE

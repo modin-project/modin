@@ -45,5 +45,5 @@ ASV_USE_BACKEND = ASV_USE_BACKEND.lower()
 
 assert ASV_USE_IMPL in ("modin", "pandas")
 assert ASV_DATASET_SIZE in ("big", "small")
-assert ASV_USE_ENGINE in ("ray", "dask", "python")
+assert ASV_USE_ENGINE in ("ray", "dask", "python", "native")
 assert ASV_USE_BACKEND in ("pandas", "omnisci", "pyarrow")
