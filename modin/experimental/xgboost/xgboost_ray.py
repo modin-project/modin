@@ -23,6 +23,7 @@ import logging
 from typing import Dict, List
 import math
 from collections import defaultdict
+import warnings
 
 import numpy as np
 import xgboost as xgb
@@ -497,6 +498,19 @@ def _train(
 
     if num_actors > len(X_row_parts):
         num_actors = len(X_row_parts)
+
+    if evals:
+        min_num_parts = num_actors
+        for (eval_X, _), eval_method in evals:
+            if len(eval_X) < min_num_parts:
+                min_num_parts = len(eval_X)
+                method_name = eval_method
+
+        if num_actors != min_num_parts:
+            num_actors = min_num_parts
+            warnings.warn(
+                f"`num_actors` is set to {num_actors}, because `evals` data with name `{method_name}` has only {num_actors} partition(s)."
+            )
 
     actors = create_actors(num_actors)
 
