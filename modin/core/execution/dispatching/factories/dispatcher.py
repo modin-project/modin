@@ -289,6 +289,11 @@ class FactoryDispatcher(object):
         return cls.__factory._to_pickle_distributed(*args, **kwargs)
 
     @classmethod
+    @_inherit_docstrings(factories.ExperimentalPandasOnRayFactory._read_custom_text)
+    def read_custom_text(cls, **kwargs):
+        return cls.__factory._read_custom_text(**kwargs)
+
+    @classmethod
     @_inherit_docstrings(factories.BaseFactory._to_csv)
     def to_csv(cls, *args, **kwargs):
         return cls.__factory._to_csv(*args, **kwargs)

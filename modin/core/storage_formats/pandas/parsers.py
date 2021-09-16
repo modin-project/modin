@@ -386,6 +386,37 @@ class PandasPickleExperimentalParser(PandasParser):
         return _split_result_for_readers(1, num_splits, df) + [length, width]
 
 
+@doc(_doc_pandas_parser_class, data_type="custom text")
+class CustomTextExperimentalParser(PandasParser):
+    @staticmethod
+    @doc(_doc_parse_func, parameters=_doc_parse_parameters_common)
+    def parse(fname, **kwargs):
+        num_splits = kwargs.pop("num_splits", None)
+        start = kwargs.pop("start", None)
+        end = kwargs.pop("end", None)
+        columns = kwargs.pop("columns", None)
+        custom_parser = kwargs.pop("custom_parser", None)
+
+        assert start is not None and end is not None
+        assert columns is not None and custom_parser is not None
+
+        # pop "compression" from kwargs because bio is uncompressed
+        with OpenFile(fname, "rb", kwargs.pop("compression", "infer")) as bio:
+            bio.seek(start)
+            to_read = bio.read(end - start)
+
+        pandas_df = custom_parser(BytesIO(to_read), **kwargs)
+
+        if not pandas_df.columns.equals(columns):
+            raise NotImplementedError("Columns must be the same across all rows.")
+        partition_columns = pandas_df.columns
+        return _split_result_for_readers(1, num_splits, pandas_df) + [
+            len(pandas_df),
+            pandas_df.dtypes,
+            partition_columns,
+        ]
+
+
 @doc(_doc_pandas_parser_class, data_type="tables with fixed-width formatted lines")
 class PandasFWFParser(PandasParser):
     @staticmethod
