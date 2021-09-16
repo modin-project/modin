@@ -27,7 +27,7 @@ from collections import defaultdict
 import numpy as np
 import xgboost as xgb
 import ray
-from ray.services import get_node_ip_address
+from ray.util import get_node_ip_address
 import pandas
 
 from modin.distributed.dataframe.pandas import from_partitions
