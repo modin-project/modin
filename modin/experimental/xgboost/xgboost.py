@@ -25,7 +25,7 @@ import modin.pandas as pd
 LOGGER = logging.getLogger("[modin.xgboost]")
 
 
-class DMatrix(xgb.DMatrix):
+class DMatrix:
     """
     DMatrix holds references to partitions of Modin DataFrame.
 
