@@ -303,7 +303,7 @@ class CSVDispatcher(TextFileDispatcher):
         # the limited data seen by each worker. We use pandas to compute the exact dtype
         # over the whole column for each column. The index is set below.
         dtypes, is_data_homogeneous = (
-            cls.get_dtypes(dtypes_ids, check_homogeneity=True)
+            cls.get_dtypes_check_homogen(dtypes_ids)
             if len(dtypes_ids) > 0
             else (None, None)
         )

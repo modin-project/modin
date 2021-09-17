@@ -138,7 +138,7 @@ class PandasParser(object):
     """Base class for parser classes with pandas backend."""
 
     @classmethod
-    def get_dtypes(cls, dtypes_ids, check_homogeneity=False):
+    def get_dtypes(cls, dtypes_ids):
         """
         Get common for all partitions dtype for each of the columns.
 
@@ -146,16 +146,39 @@ class PandasParser(object):
         ----------
         dtypes_ids : list
             Array with references to the partitions dtypes objects.
-        check_homogeneity : bool, default: False
-            Whether or not to check data homogeneity.
-            If data is not homogeneous return dict columns and types
-            it should be casted.
 
         Returns
         -------
         pandas.Series
             pandas.Series where index is columns names and values are
             columns dtypes.
+        """
+        partitions_dtypes = cls.materialize(dtypes_ids)
+        if all([len(dtype) == 0 for dtype in partitions_dtypes]):
+            return None
+        return (
+            pandas.concat(partitions_dtypes, axis=1)
+            .apply(lambda row: find_common_type_cat(row.values), axis=1)
+            .squeeze(axis=0)
+        )
+
+    @classmethod
+    def get_dtypes_check_homogen(cls, dtypes_ids):
+        """
+        Get common for all partitions dtype for each of the columns and check data homogeneity.
+
+        Parameters
+        ----------
+        dtypes_ids : list
+            Array with references to the partitions dtypes objects.
+
+        Returns
+        -------
+        pandas.Series or None
+            pandas.Series where index is columns names and values are
+            columns dtypes or None.
+        is_data_homogeneous : bool
+            Indicates whether imported data is homogeneous.
         """
         is_data_homogeneous = True
         # each element in `partitions_dtypes` is a Series, where index is
@@ -164,7 +187,7 @@ class PandasParser(object):
         partitions_dtypes = cls.materialize(dtypes_ids)
 
         if all([len(dtype) == 0 for dtype in partitions_dtypes]):
-            return None
+            return None, True
 
         # concat all elements of `partitions_dtypes` and find common dtype
         # for each of the column among all partitions
@@ -172,18 +195,12 @@ class PandasParser(object):
             lambda row: find_common_type_cat(row.values),
             axis=1,
         )
-        if check_homogeneity:
-            for part_dtype in partitions_dtypes:
-                if not combined_dtypes.equals(part_dtype):
-                    is_data_homogeneous = False
-                    break
-        combined_dtypes = combined_dtypes.squeeze(axis=0)
+        for part_dtype in partitions_dtypes:
+            if not combined_dtypes.equals(part_dtype):
+                is_data_homogeneous = False
+                break
 
-        return (
-            (combined_dtypes, is_data_homogeneous)
-            if check_homogeneity
-            else combined_dtypes
-        )
+        return combined_dtypes, is_data_homogeneous
 
     @classmethod
     def single_worker_read(cls, fname, **kwargs):
