@@ -196,6 +196,13 @@ class OmnisciServer:
 
         cls._server.importArrowTable(name, table, fragment_size=fragment_size)
 
+        import psutil
+
+        memory_usage = psutil.virtual_memory()
+        print(  # noqa
+            f"RAM used: {memory_usage.used / (2 ** 30)}gb ({memory_usage.percent}%)"
+        )
+
         return name
 
     @classmethod
