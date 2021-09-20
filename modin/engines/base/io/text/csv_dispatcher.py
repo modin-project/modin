@@ -307,6 +307,13 @@ class CSVDispatcher(TextFileDispatcher):
             if len(dtypes_ids) > 0
             else (None, None)
         )
+        if not is_data_homogeneous:
+            ErrorMessage.missmatch_with_pandas(
+                operation="read_csv",
+                message="Data types of partitions are different! "
+                "Please refer to the troubleshooting section of the Modin documentation "
+                "to fix this issue",
+            )
         # Compose modin partitions from `partition_ids`
         partition_ids = cls.build_partition(partition_ids, row_lengths, column_widths)
 
@@ -363,13 +370,6 @@ class CSVDispatcher(TextFileDispatcher):
             return new_query_compiler[new_query_compiler.columns[0]]
         if index_col is None:
             new_query_compiler._modin_frame.synchronize_labels(axis=0)
-        if not is_data_homogeneous:
-            ErrorMessage.missmatch_with_pandas(
-                operation="read_csv",
-                message="Data types of partitions are different! "
-                "Please refer to the troubleshooting section of the Modin documentation "
-                "to fix this issue",
-            )
 
         return new_query_compiler
 
