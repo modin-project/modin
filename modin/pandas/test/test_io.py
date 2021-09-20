@@ -90,26 +90,6 @@ def assert_files_eq(path1, path2):
             return False
 
 
-def setup_json_file(filename, row_size=NROWS, force=True):
-    if os.path.exists(filename) and not force:
-        pass
-    else:
-        df = pandas.DataFrame(
-            {"col1": np.arange(row_size), "col2": np.arange(row_size)}
-        )
-        df.to_json(filename)
-
-
-def setup_json_lines_file(filename, row_size=NROWS, col_size=2, force=True):
-    if os.path.exists(filename) and not force:
-        pass
-    else:
-        df = pandas.DataFrame(
-            {f"col{x + 1}": np.arange(row_size) for x in range(col_size)}
-        )
-        df.to_json(filename, lines=True, orient="records")
-
-
 def setup_html_file(filename, row_size=NROWS, force=True):
     if os.path.exists(filename) and not force:
         pass
@@ -1394,18 +1374,15 @@ class TestParquet:
 
 class TestJson:
     @pytest.mark.parametrize("lines", [False, True])
-    def test_read_json(self, lines):
+    def test_read_json(self, make_json_file, lines):
         unique_filename = get_unique_filename(extension="json")
-        try:
-            setup_json_file(filename=unique_filename)
-            eval_io(
-                fn_name="read_json",
-                # read_json kwargs
-                path_or_buf=unique_filename,
-                lines=lines,
-            )
-        finally:
-            teardown_test_files([unique_filename])
+        make_json_file(filename=unique_filename, lines=lines)
+        eval_io(
+            fn_name="read_json",
+            # read_json kwargs
+            path_or_buf=unique_filename,
+            lines=lines,
+        )
 
     def test_read_json_categories(self):
         eval_io(
@@ -1450,41 +1427,34 @@ class TestJson:
             ),
         ],
     )
-    def test_read_json_file_handle(self, read_mode):
+    def test_read_json_file_handle(self, make_json_file, read_mode):
         unique_filename = get_unique_filename(extension="json")
-        try:
-            setup_json_file(filename=unique_filename)
-            with open(unique_filename, mode=read_mode) as buf:
-                df_pandas = pandas.read_json(buf)
-                buf.seek(0)
-                df_modin = pd.read_json(buf)
-                df_equals(df_pandas, df_modin)
-        finally:
-            teardown_test_files([unique_filename])
+        make_json_file(filename=unique_filename)
+        with open(unique_filename, mode=read_mode) as buf:
+            df_pandas = pandas.read_json(buf)
+            buf.seek(0)
+            df_modin = pd.read_json(buf)
+            df_equals(df_pandas, df_modin)
 
     @pytest.mark.xfail(
         condition="config.getoption('--simulate-cloud').lower() != 'off'",
         reason="The reason of tests fail in `cloud` mode is unknown for now - issue #3264",
     )
-    def test_read_json_metadata(self):
+    def test_read_json_metadata(self, make_json_file):
         unique_filename = get_unique_filename(extension="json")
-        try:
-            setup_json_lines_file(unique_filename, col_size=80)
+        make_json_file(unique_filename, ncols=80, lines=True)
 
-            # `lines=True` is for triggering Modin implementation,
-            # `orient="records"` should be set if `lines=True`
-            df = pd.read_json(unique_filename, lines=True, orient="records")
-            parts_width_cached = df._query_compiler._modin_frame._column_widths_cache
-            num_splits = len(df._query_compiler._modin_frame._partitions[0])
-            parts_width_actual = [
-                len(df._query_compiler._modin_frame._partitions[0][i].get().columns)
-                for i in range(num_splits)
-            ]
+        # `lines=True` is for triggering Modin implementation,
+        # `orient="records"` should be set if `lines=True`
+        df = pd.read_json(unique_filename, lines=True, orient="records")
+        parts_width_cached = df._query_compiler._modin_frame._column_widths_cache
+        num_splits = len(df._query_compiler._modin_frame._partitions[0])
+        parts_width_actual = [
+            len(df._query_compiler._modin_frame._partitions[0][i].get().columns)
+            for i in range(num_splits)
+        ]
 
-            assert parts_width_cached == parts_width_actual
-
-        finally:
-            teardown_test_files([unique_filename])
+        assert parts_width_cached == parts_width_actual
 
 
 class TestExcel:

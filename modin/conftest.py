@@ -343,6 +343,34 @@ def make_csv_file():
 
 
 @pytest.fixture
+def make_json_file():
+    """
+    Pytest fixture factory that makes temp json files for testing.
+
+    Yields:
+        Function that generates json files
+    """
+    filenames = []
+
+    def _make_json_file(filename, nrows=NROWS, ncols=2, lines=False, force=True):
+        if force or not os.path.exists(filename):
+            df = pandas.DataFrame(
+                {f"col{x + 1}": np.arange(nrows) for x in range(ncols)}
+            )
+            if lines:
+                df.to_json(filename, lines=True, orient="records")
+            else:
+                df.to_json(filename)
+            filenames.append(filename)
+
+    # Return function that generates json files
+    yield _make_json_file
+
+    # Delete json files that were created
+    teardown_test_files(filenames)
+
+
+@pytest.fixture
 def make_parquet_file():
     """Pytest fixture factory that makes a parquet file/dir for testing.
 
