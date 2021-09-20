@@ -421,6 +421,31 @@ def make_excel_file():
 
 
 @pytest.fixture
+def make_feather_file():
+    """
+    Pytest fixture factory that makes temp feather files for testing.
+
+    Yields:
+        Function that generates feather files
+    """
+    filenames = []
+
+    def _make_feather_file(filename, nrows=NROWS, ncols=2, force=True):
+        if force or not os.path.exists(filename):
+            df = pandas.DataFrame(
+                {f"col{x + 1}": np.arange(nrows) for x in range(ncols)}
+            )
+            df.to_feather(filename)
+            filenames.append(filename)
+
+    # Return function that generates feather files
+    yield _make_feather_file
+
+    # Delete feather files that were created
+    teardown_test_files(filenames)
+
+
+@pytest.fixture
 def make_parquet_file():
     """Pytest fixture factory that makes a parquet file/dir for testing.
 

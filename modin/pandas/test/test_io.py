@@ -95,16 +95,6 @@ def setup_clipboard(row_size=NROWS):
     df.to_clipboard()
 
 
-def setup_feather_file(filename, row_size=NROWS, ncols=2, force=True):
-    if os.path.exists(filename) and not force:
-        pass
-    else:
-        df = pandas.DataFrame(
-            {f"col{x + 1}": np.arange(row_size) for x in range(ncols)}
-        )
-        df.to_feather(filename)
-
-
 def setup_hdf_file(filename, row_size=NROWS, force=True, format=None):
     if os.path.exists(filename) and not force:
         pass
@@ -2077,8 +2067,9 @@ class TestFeather:
         condition="config.getoption('--simulate-cloud').lower() != 'off'",
         reason="The reason of tests fail in `cloud` mode is unknown for now - issue #3264",
     )
-    def test_read_feather(self):
+    def test_read_feather(self, make_feather_file):
         unique_filename = get_unique_filename(extension="feather")
+<<<<<<< HEAD
         try:
             # change the number of columns only if you know what you are doing;
             # for details see https://github.com/modin-project/modin/pull/3465
@@ -2091,6 +2082,14 @@ class TestFeather:
             )
         finally:
             teardown_test_files([unique_filename])
+=======
+        make_feather_file(filename=unique_filename)
+        eval_io(
+            fn_name="read_feather",
+            # read_feather kwargs
+            path=unique_filename,
+        )
+>>>>>>> 1f923a90 (REFACTOR-#3454: add make_feather_file fixture)
 
     @pytest.mark.xfail(
         condition="config.getoption('--simulate-cloud').lower() != 'off'",
