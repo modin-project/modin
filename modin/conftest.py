@@ -470,6 +470,9 @@ def make_stata_file():
     teardown_test_files(filenames)
 
 
+# TODO: add fixtures for setup_hdf_file, setup_pickle_file, setup_fwf_file
+
+
 @pytest.fixture
 def make_parquet_file():
     """Pytest fixture factory that makes a parquet file/dir for testing.
@@ -481,7 +484,8 @@ def make_parquet_file():
 
     def _make_parquet_file(
         filename,
-        row_size=NROWS,
+        nrows=NROWS,
+        ncols=2,
         force=True,
         directory=False,
         partitioned_columns=[],
@@ -490,32 +494,32 @@ def make_parquet_file():
 
         Args:
             filename: The name of test file, that should be created.
-            row_size: Number of rows for the dataframe.
+            nrows: Number of rows for the dataframe.
+            ncols: TODO: add docstring
             force: Create a new file/directory even if one already exists.
             directory: Create a partitioned directory using pyarrow.
             partitioned_columns: Create a partitioned directory using pandas.
             Will be ignored if directory=True.
         """
-        df = pandas.DataFrame(
-            {"col1": np.arange(row_size), "col2": np.arange(row_size)}
-        )
-        if os.path.exists(filename) and not force:
-            pass
-        elif directory:
-            if os.path.exists(filename):
-                shutil.rmtree(filename)
+        if force or not os.path.exists(filename):
+            df = pandas.DataFrame(
+                {f"col{x + 1}": np.arange(nrows) for x in range(ncols)}
+            )
+            if directory:
+                # ???
+                if os.path.exists(filename):
+                    shutil.rmtree(filename)
+                else:
+                    os.mkdir(filename)
+                table = pa.Table.from_pandas(df)
+                pq.write_to_dataset(table, root_path=filename)
+            elif len(partitioned_columns) > 0:
+                df.to_parquet(filename, partition_cols=partitioned_columns)
             else:
-                os.mkdir(filename)
-            table = pa.Table.from_pandas(df)
-            pq.write_to_dataset(table, root_path=filename)
-        elif len(partitioned_columns) > 0:
-            df.to_parquet(filename, partition_cols=partitioned_columns)
-        else:
-            df.to_parquet(filename)
+                df.to_parquet(filename)
+            filenames.append(filename)
 
-        filenames.append(filename)
-
-    # Return function that generates csv files
+    # Return function that generates parquet files
     yield _make_parquet_file
 
     # Delete parquet file that was created
