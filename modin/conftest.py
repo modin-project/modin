@@ -371,6 +371,31 @@ def make_json_file():
 
 
 @pytest.fixture
+def make_html_file():
+    """
+    Pytest fixture factory that makes temp html files for testing.
+
+    Yields:
+        Function that generates html files
+    """
+    filenames = []
+
+    def _make_html_file(filename, nrows=NROWS, ncols=2, force=True):
+        if force or not os.path.exists(filename):
+            df = pandas.DataFrame(
+                {f"col{x + 1}": np.arange(nrows) for x in range(ncols)}
+            )
+            df.to_html(filename)
+            filenames.append(filename)
+
+    # Return function that generates html files
+    yield _make_html_file
+
+    # Delete html files that were created
+    teardown_test_files(filenames)
+
+
+@pytest.fixture
 def make_parquet_file():
     """Pytest fixture factory that makes a parquet file/dir for testing.
 

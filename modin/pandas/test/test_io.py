@@ -90,16 +90,6 @@ def assert_files_eq(path1, path2):
             return False
 
 
-def setup_html_file(filename, row_size=NROWS, force=True):
-    if os.path.exists(filename) and not force:
-        pass
-    else:
-        df = pandas.DataFrame(
-            {"col1": np.arange(row_size), "col2": np.arange(row_size)}
-        )
-        df.to_html(filename)
-
-
 def setup_clipboard(row_size=NROWS):
     df = pandas.DataFrame({"col1": np.arange(row_size), "col2": np.arange(row_size)})
     df.to_clipboard()
@@ -1806,13 +1796,10 @@ class TestSql:
 
 class TestHtml:
     @pytest.mark.xfail(reason="read_html is not yet implemented properly - issue #1296")
-    def test_read_html(self):
+    def test_read_html(self, make_html_file):
         unique_filename = get_unique_filename(extension="html")
-        try:
-            setup_html_file(filename=unique_filename)
-            eval_io(fn_name="read_html", io=unique_filename)
-        finally:
-            teardown_test_files([unique_filename])
+        make_html_file(filename=unique_filename)
+        eval_io(fn_name="read_html", io=unique_filename)
 
     def test_to_html(self):
         modin_df, pandas_df = create_test_dfs(TEST_DATA)
