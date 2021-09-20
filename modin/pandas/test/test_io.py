@@ -105,16 +105,6 @@ def setup_hdf_file(filename, row_size=NROWS, force=True, format=None):
         df.to_hdf(filename, key="df", format=format)
 
 
-def setup_stata_file(filename, row_size=NROWS, force=True):
-    if os.path.exists(filename) and not force:
-        pass
-    else:
-        df = pandas.DataFrame(
-            {"col1": np.arange(row_size), "col2": np.arange(row_size)}
-        )
-        df.to_stata(filename)
-
-
 def setup_pickle_file(filename, row_size=NROWS, force=True):
     if os.path.exists(filename) and not force:
         pass
@@ -2043,17 +2033,14 @@ class TestGbq:
 
 
 class TestStata:
-    def test_read_stata(self):
+    def test_read_stata(self, make_stata_file):
         unique_filename = get_unique_filename(extension="stata")
-        try:
-            setup_stata_file(filename=unique_filename)
-            eval_io(
-                fn_name="read_stata",
-                # read_stata kwargs
-                filepath_or_buffer=unique_filename,
-            )
-        finally:
-            teardown_test_files([unique_filename])
+        make_stata_file(filename=unique_filename)
+        eval_io(
+            fn_name="read_stata",
+            # read_stata kwargs
+            filepath_or_buffer=unique_filename,
+        )
 
     def test_to_stata(self):
         modin_df, pandas_df = create_test_dfs(TEST_DATA)

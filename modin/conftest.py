@@ -446,6 +446,31 @@ def make_feather_file():
 
 
 @pytest.fixture
+def make_stata_file():
+    """
+    Pytest fixture factory that makes temp stata files for testing.
+
+    Yields:
+        Function that generates stata files
+    """
+    filenames = []
+
+    def _make_stata_file(filename, nrows=NROWS, ncols=2, force=True):
+        if force or not os.path.exists(filename):
+            df = pandas.DataFrame(
+                {f"col{x + 1}": np.arange(nrows) for x in range(ncols)}
+            )
+            df.to_stata(filename)
+            filenames.append(filename)
+
+    # Return function that generates stata files
+    yield _make_stata_file
+
+    # Delete stata files that were created
+    teardown_test_files(filenames)
+
+
+@pytest.fixture
 def make_parquet_file():
     """Pytest fixture factory that makes a parquet file/dir for testing.
 
