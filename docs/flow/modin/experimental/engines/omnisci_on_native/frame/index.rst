@@ -3,12 +3,11 @@
 OmnisciOnNative Frame Implementation
 =================================
 
-Modin implements ``Frame``, ``PartitionManager``, ``AxisPartition`` and ``Partition`` classes
+Modin implements ``Frame``, ``PartitionManager`` and ``Partition`` classes
 specific for ``OmnisciOnNative`` backend:
 
 * :doc:`Frame <data>`
 * :doc:`Partition <partition>`
-* :doc:`AxisPartition <axis_partition>`
 * :doc:`PartitionManager <partition_manager>`
 
 Overview of OmniSci embedded engine usage can be accessed in the related section:
