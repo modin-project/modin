@@ -95,16 +95,6 @@ def setup_clipboard(row_size=NROWS):
     df.to_clipboard()
 
 
-def setup_excel_file(filename, row_size=NROWS, force=True):
-    if os.path.exists(filename) and not force:
-        pass
-    else:
-        df = pandas.DataFrame(
-            {"col1": np.arange(row_size), "col2": np.arange(row_size)}
-        )
-        df.to_excel(filename)
-
-
 def setup_feather_file(filename, row_size=NROWS, ncols=2, force=True):
     if os.path.exists(filename) and not force:
         pass
@@ -1449,79 +1439,65 @@ class TestJson:
 
 class TestExcel:
     @check_file_leaks
-    def test_read_excel(self):
+    def test_read_excel(self, make_excel_file):
         unique_filename = get_unique_filename(extension="xlsx")
-        try:
-            setup_excel_file(filename=unique_filename)
-            eval_io(
-                fn_name="read_excel",
-                # read_excel kwargs
-                io=unique_filename,
-            )
-        finally:
-            teardown_test_files([unique_filename])
+        make_excel_file(filename=unique_filename)
+        eval_io(
+            fn_name="read_excel",
+            # read_excel kwargs
+            io=unique_filename,
+        )
 
     @check_file_leaks
     @pytest.mark.xfail(
         condition="config.getoption('--simulate-cloud').lower() != 'off'",
         reason="The reason of tests fail in `cloud` mode is unknown for now - issue #3264",
     )
-    def test_read_excel_engine(self):
+    def test_read_excel_engine(self, make_excel_file):
         unique_filename = get_unique_filename(extension="xlsx")
-        try:
-            setup_excel_file(filename=unique_filename)
-            eval_io(
-                fn_name="read_excel",
-                modin_warning=UserWarning,
-                # read_excel kwargs
-                io=unique_filename,
-                engine="openpyxl",
-            )
-        finally:
-            teardown_test_files([unique_filename])
+        make_excel_file(filename=unique_filename)
+        eval_io(
+            fn_name="read_excel",
+            modin_warning=UserWarning,
+            # read_excel kwargs
+            io=unique_filename,
+            engine="openpyxl",
+        )
 
     @check_file_leaks
     @pytest.mark.xfail(
         condition="config.getoption('--simulate-cloud').lower() != 'off'",
         reason="The reason of tests fail in `cloud` mode is unknown for now - issue #3264",
     )
-    def test_read_excel_index_col(self):
+    def test_read_excel_index_col(self, make_excel_file):
         unique_filename = get_unique_filename(extension="xlsx")
-        try:
-            setup_excel_file(filename=unique_filename)
-
-            eval_io(
-                fn_name="read_excel",
-                modin_warning=UserWarning,
-                # read_excel kwargs
-                io=unique_filename,
-                index_col=0,
-            )
-        finally:
-            teardown_test_files([unique_filename])
+        make_excel_file(filename=unique_filename)
+        eval_io(
+            fn_name="read_excel",
+            modin_warning=UserWarning,
+            # read_excel kwargs
+            io=unique_filename,
+            index_col=0,
+        )
 
     @check_file_leaks
     @pytest.mark.xfail(
         condition="config.getoption('--simulate-cloud').lower() != 'off'",
         reason="The reason of tests fail in `cloud` mode is unknown for now - issue #3264",
     )
-    def test_read_excel_all_sheets(self):
+    def test_read_excel_all_sheets(self, make_excel_file):
         unique_filename = get_unique_filename(extension="xlsx")
-        try:
-            setup_excel_file(filename=unique_filename)
+        make_excel_file(filename=unique_filename)
 
-            pandas_df = pandas.read_excel(unique_filename, sheet_name=None)
-            modin_df = pd.read_excel(unique_filename, sheet_name=None)
+        pandas_df = pandas.read_excel(unique_filename, sheet_name=None)
+        modin_df = pd.read_excel(unique_filename, sheet_name=None)
 
-            assert isinstance(pandas_df, (OrderedDict, dict))
-            assert isinstance(modin_df, type(pandas_df))
+        assert isinstance(pandas_df, (OrderedDict, dict))
+        assert isinstance(modin_df, type(pandas_df))
+        assert pandas_df.keys() == modin_df.keys()
 
-            assert pandas_df.keys() == modin_df.keys()
-
-            for key in pandas_df.keys():
-                df_equals(modin_df.get(key), pandas_df.get(key))
-        finally:
-            teardown_test_files([unique_filename])
+        for key in pandas_df.keys():
+            df_equals(modin_df.get(key), pandas_df.get(key))
 
     @pytest.mark.xfail(
         Engine.get() != "Python",
@@ -1567,22 +1543,19 @@ class TestExcel:
         condition="config.getoption('--simulate-cloud').lower() != 'off'",
         reason="TypeError: Expected list, got type - issue #3284",
     )
-    def test_ExcelFile(self):
+    def test_ExcelFile(self, make_excel_file):
         unique_filename = get_unique_filename(extension="xlsx")
-        try:
-            setup_excel_file(filename=unique_filename)
+        make_excel_file(filename=unique_filename)
 
-            modin_excel_file = pd.ExcelFile(unique_filename)
-            pandas_excel_file = pandas.ExcelFile(unique_filename)
+        modin_excel_file = pd.ExcelFile(unique_filename)
+        pandas_excel_file = pandas.ExcelFile(unique_filename)
 
-            df_equals(modin_excel_file.parse(), pandas_excel_file.parse())
+        df_equals(modin_excel_file.parse(), pandas_excel_file.parse())
 
-            assert modin_excel_file.io == unique_filename
-            assert isinstance(modin_excel_file, pd.ExcelFile)
-            modin_excel_file.close()
-            pandas_excel_file.close()
-        finally:
-            teardown_test_files([unique_filename])
+        assert modin_excel_file.io == unique_filename
+        assert isinstance(modin_excel_file, pd.ExcelFile)
+        modin_excel_file.close()
+        pandas_excel_file.close()
 
     @pytest.mark.xfail(strict=False, reason="Flaky test, defaults to pandas")
     def test_to_excel(self):
@@ -1612,21 +1585,17 @@ class TestExcel:
         condition="config.getoption('--simulate-cloud').lower() != 'off'",
         reason="The reason of tests fail in `cloud` mode is unknown for now - issue #3264",
     )
-    def test_read_excel_empty_frame(self):
+    def test_read_excel_empty_frame(self, make_excel_file):
         unique_filename = get_unique_filename(extension="xlsx")
-        try:
-            setup_excel_file(filename=unique_filename)
-
-            eval_io(
-                fn_name="read_excel",
-                modin_warning=UserWarning,
-                # read_excel kwargs
-                io=unique_filename,
-                usecols=[0],
-                index_col=0,
-            )
-        finally:
-            teardown_test_files([unique_filename])
+        make_excel_file(filename=unique_filename)
+        eval_io(
+            fn_name="read_excel",
+            modin_warning=UserWarning,
+            # read_excel kwargs
+            io=unique_filename,
+            usecols=[0],
+            index_col=0,
+        )
 
 
 class TestHdf:

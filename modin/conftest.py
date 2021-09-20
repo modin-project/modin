@@ -396,6 +396,31 @@ def make_html_file():
 
 
 @pytest.fixture
+def make_excel_file():
+    """
+    Pytest fixture factory that makes temp excel files for testing.
+
+    Yields:
+        Function that generates excel files
+    """
+    filenames = []
+
+    def _make_excel_file(filename, nrows=NROWS, ncols=2, force=True):
+        if force or not os.path.exists(filename):
+            df = pandas.DataFrame(
+                {f"col{x + 1}": np.arange(nrows) for x in range(ncols)}
+            )
+            df.to_excel(filename)
+            filenames.append(filename)
+
+    # Return function that generates excel files
+    yield _make_excel_file
+
+    # Delete excel files that were created
+    teardown_test_files(filenames)
+
+
+@pytest.fixture
 def make_parquet_file():
     """Pytest fixture factory that makes a parquet file/dir for testing.
 
