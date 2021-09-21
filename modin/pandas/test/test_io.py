@@ -1159,7 +1159,13 @@ class TestCsv:
             lambda x: x < 20,
             lambda x: True,
             lambda x: x in [0, 20],
-            lambda x: x << 10,
+            pytest.param(
+                lambda x: x << 10,
+                marks=pytest.mark.skipif(
+                    condition="config.getoption('--simulate-cloud').lower() != 'off'",
+                    reason="The reason of tests fail in `cloud` mode is unknown for now - issue #2340",
+                ),
+            ),
         ],
     )
     @pytest.mark.parametrize("header", ["infer", None, 0, 1, 150])
