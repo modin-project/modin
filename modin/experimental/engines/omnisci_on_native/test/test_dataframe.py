@@ -36,7 +36,7 @@ from modin.pandas.test.utils import (
     test_data_keys,
     generate_multiindex,
     eval_general,
-    df_equals_with_non_stable_indices
+    df_equals_with_non_stable_indices,
 )
 
 from modin.experimental.engines.omnisci_on_native.frame.partition_manager import (
