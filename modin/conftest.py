@@ -15,6 +15,7 @@ import os
 import sys
 import pytest
 import pandas
+from pandas.util._decorators import doc
 import numpy as np
 import pyarrow as pa
 import pyarrow.parquet as pq
@@ -285,6 +286,14 @@ def pytest_runtest_call(item):
             )
 
 
+_doc_pytest_fixture = """
+Pytest fixture factory that makes temp {file_type} files for testing.
+
+Yields:
+    Function that generates {file_type} files
+"""
+
+
 @pytest.fixture(scope="class")
 def TestReadCSVFixture():
     filenames = []
@@ -329,11 +338,8 @@ def TestReadCSVFixture():
 
 
 @pytest.fixture
+@doc(_doc_pytest_fixture, file_type="csv")
 def make_csv_file():
-    """Pytest fixture factory that makes temp csv files for testing.
-    Yields:
-        Function that generates csv files
-    """
     filenames = []
 
     yield _make_csv_file(filenames)
@@ -397,57 +403,32 @@ def make_default_file(file_type: str):
 
 
 @pytest.fixture
+@doc(_doc_pytest_fixture, file_type="json")
 def make_json_file():
-    """
-    Pytest fixture factory that makes temp json files for testing.
-
-    Yields:
-        Function that generates json files
-    """
     yield next(make_default_file(file_type="json"))
 
 
 @pytest.fixture
+@doc(_doc_pytest_fixture, file_type="html")
 def make_html_file():
-    """
-    Pytest fixture factory that makes temp html files for testing.
-
-    Yields:
-        Function that generates html files
-    """
     yield next(make_default_file(file_type="html"))
 
 
 @pytest.fixture
+@doc(_doc_pytest_fixture, file_type="excel")
 def make_excel_file():
-    """
-    Pytest fixture factory that makes temp excel files for testing.
-
-    Yields:
-        Function that generates excel files
-    """
     yield next(make_default_file(file_type="excel"))
 
 
 @pytest.fixture
+@doc(_doc_pytest_fixture, file_type="feather")
 def make_feather_file():
-    """
-    Pytest fixture factory that makes temp feather files for testing.
-
-    Yields:
-        Function that generates feather files
-    """
     yield next(make_default_file(file_type="feather"))
 
 
 @pytest.fixture
+@doc(_doc_pytest_fixture, file_type="stata")
 def make_stata_file():
-    """
-    Pytest fixture factory that makes temp stata files for testing.
-
-    Yields:
-        Function that generates stata files
-    """
     yield next(make_default_file(file_type="stata"))
 
 
