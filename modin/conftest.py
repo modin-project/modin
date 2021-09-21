@@ -403,6 +403,12 @@ def make_default_file(file_type: str):
             create_and_call(filenames, filename, force, nrows, ncols, "to_hdf", func_kw)
 
         func = _make_hdf_file
+    elif file_type == "pickle":
+
+        def _make_pickle_file(filename, nrows=NROWS, ncols=2, force=True):
+            create_and_call(filenames, filename, force, nrows, ncols, "to_pickle")
+
+        func = _make_pickle_file
 
     yield func
 
@@ -443,6 +449,12 @@ def make_stata_file():
 @doc(_doc_pytest_fixture, file_type="hdf")
 def make_hdf_file():
     yield next(make_default_file(file_type="hdf"))
+
+
+@pytest.fixture
+@doc(_doc_pytest_fixture, file_type="pickle")
+def make_pickle_file():
+    yield next(make_default_file(file_type="pickle"))
 
 
 # TODO: add fixtures for setup_hdf_file, setup_pickle_file, setup_fwf_file

@@ -95,16 +95,6 @@ def setup_clipboard(row_size=NROWS):
     df.to_clipboard()
 
 
-def setup_pickle_file(filename, row_size=NROWS, force=True):
-    if os.path.exists(filename) and not force:
-        pass
-    else:
-        df = pandas.DataFrame(
-            {"col1": np.arange(row_size), "col2": np.arange(row_size)}
-        )
-        df.to_pickle(filename)
-
-
 def setup_fwf_file(filename, force=True, fwf_data=None):
     if not force and os.path.exists(filename):
         return
@@ -2100,18 +2090,14 @@ class TestClipboard:
 
 
 class TestPickle:
-    def test_read_pickle(self):
+    def test_read_pickle(self, make_pickle_file):
         unique_filename = get_unique_filename(extension="pkl")
-        try:
-            setup_pickle_file(filename=unique_filename)
-
-            eval_io(
-                fn_name="read_pickle",
-                # read_pickle kwargs
-                filepath_or_buffer=unique_filename,
-            )
-        finally:
-            teardown_test_files([unique_filename])
+        make_pickle_file(filename=unique_filename)
+        eval_io(
+            fn_name="read_pickle",
+            # read_pickle kwargs
+            filepath_or_buffer=unique_filename,
+        )
 
     @pytest.mark.xfail(
         condition="config.getoption('--simulate-cloud').lower() != 'off'",
