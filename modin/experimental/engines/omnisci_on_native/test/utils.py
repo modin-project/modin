@@ -129,6 +129,7 @@ def run_and_compare(
     force_lazy=True,
     force_arrow_execute=False,
     allow_subqueries=False,
+    comparator=df_equals,
     **kwargs,
 ):
     def run_modin(
@@ -191,4 +192,4 @@ def run_and_compare(
             constructor_kwargs=constructor_kwargs,
             **kwargs,
         )
-        df_equals(ref_res, exp_res)
+        comparator(ref_res, exp_res)

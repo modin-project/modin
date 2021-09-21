@@ -31,7 +31,7 @@ import itertools
 import functools
 import numpy as np
 import sys
-from typing import IO, Optional, Sequence, Tuple, Union, Mapping, Iterator, Hashable
+from typing import IO, Optional, Tuple, Union, Mapping, Iterator
 import warnings
 
 from modin.error_message import ErrorMessage
@@ -2364,26 +2364,6 @@ class DataFrame(BasePandasDataset):
             errors=errors,
         )
         self._update_inplace(new_query_compiler=query_compiler)
-
-    def value_counts(
-        self,
-        subset: Sequence[Hashable] = None,
-        normalize: bool = False,
-        sort: bool = True,
-        ascending: bool = False,
-        dropna: bool = True,
-    ):  # noqa: PR01, RT01, D200
-        """
-        Return a ``Series`` containing counts of unique rows in the ``DataFrame``.
-        """
-        return self._default_to_pandas(
-            "value_counts",
-            subset=subset,
-            normalize=normalize,
-            sort=sort,
-            ascending=ascending,
-            dropna=dropna,
-        )
 
     def where(
         self,

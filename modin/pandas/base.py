@@ -41,7 +41,7 @@ from pandas._typing import (
     TimestampConvertibleTypes,
 )
 import re
-from typing import Optional, Union
+from typing import Optional, Union, Sequence, Hashable
 import warnings
 import pickle as pkl
 
@@ -2862,6 +2862,38 @@ class BasePandasDataset(object):
             .index
         )
         return self.set_axis(labels=new_labels, axis=axis, inplace=not copy)
+
+    # TODO: uncomment the following lines when #3331 issue will be closed
+    # @prepend_to_notes(
+    #     """
+    #     In comparison with pandas, Modin's ``value_counts`` returns Series with ``MultiIndex``
+    #     only if multiple columns were passed via the `subset` parameter, otherwise, the resulted
+    #     Series's index will be a regular single dimensional ``Index``.
+    #     """
+    # )
+    # @_inherit_docstrings(pandas.DataFrame.value_counts, apilink="pandas.DataFrame.value_counts")
+    def value_counts(
+        self,
+        subset: Sequence[Hashable] = None,
+        normalize: bool = False,
+        sort: bool = True,
+        ascending: bool = False,
+        dropna: bool = True,
+    ):
+        if subset is None:
+            subset = self._query_compiler.columns
+        counted_values = self.groupby(by=subset, sort=False, dropna=dropna).size()
+        if sort:
+            counted_values.sort_values(ascending=ascending, inplace=True)
+        if normalize:
+            counted_values = counted_values / counted_values.sum()
+        # TODO: uncomment when strict compability mode will be implemented:
+        # https://github.com/modin-project/modin/issues/3411
+        # if STRICT_COMPABILITY and not isinstance(counted_values.index, MultiIndex):
+        #     counted_values.index = pandas.MultiIndex.from_arrays(
+        #         [counted_values.index], names=counted_values.index.names
+        #     )
+        return counted_values
 
     def var(
         self, axis=None, skipna=None, level=None, ddof=1, numeric_only=None, **kwargs

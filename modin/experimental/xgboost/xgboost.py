@@ -25,7 +25,7 @@ import modin.pandas as pd
 LOGGER = logging.getLogger("[modin.xgboost]")
 
 
-class DMatrix(xgb.DMatrix):
+class DMatrix:
     """
     DMatrix holds references to partitions of Modin DataFrame.
 
@@ -35,7 +35,7 @@ class DMatrix(xgb.DMatrix):
     ----------
     data : modin.pandas.DataFrame
         Data source of DMatrix.
-    label : modin.pandas.DataFrame or modin.pandas.Series
+    label : modin.pandas.DataFrame or modin.pandas.Series, optional
         Labels used for training.
 
     Notes
@@ -43,16 +43,20 @@ class DMatrix(xgb.DMatrix):
     Currently DMatrix supports only `data` and `label` parameters.
     """
 
-    def __init__(self, data, label):
+    def __init__(self, data, label=None):
         assert isinstance(
             data, pd.DataFrame
         ), f"Type of `data` is {type(data)}, but expected {pd.DataFrame}."
-        assert isinstance(
-            label, (pd.DataFrame, pd.Series)
-        ), f"Type of `data` is {type(label)}, but expected {pd.DataFrame} or {pd.Series}."
+
+        if label is not None:
+            assert isinstance(
+                label, (pd.DataFrame, pd.Series)
+            ), f"Type of `data` is {type(label)}, but expected {pd.DataFrame} or {pd.Series}."
+            self.label = unwrap_partitions(label, axis=0)
+        else:
+            self.label = None
 
         self.data = unwrap_partitions(data, axis=0, get_ip=True)
-        self.label = unwrap_partitions(label, axis=0)
 
         self.metadata = (
             data.index,

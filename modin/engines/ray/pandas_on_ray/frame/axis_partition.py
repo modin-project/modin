@@ -19,7 +19,7 @@ from modin.engines.base.frame.axis_partition import PandasFrameAxisPartition
 from .partition import PandasOnRayFramePartition
 
 import ray
-from ray.services import get_node_ip_address
+from ray.util import get_node_ip_address
 
 
 class PandasOnRayFrameAxisPartition(PandasFrameAxisPartition):
