@@ -396,6 +396,13 @@ def make_default_file(file_type: str):
             create_and_call(filenames, filename, force, nrows, ncols, "to_stata")
 
         func = _make_stata_file
+    elif file_type == "hdf":
+
+        def _make_hdf_file(filename, row_size=NROWS, ncols=2, force=True, format=None):
+            func_kw = {"key": df, "format": format}
+            create_and_call(filenames, filename, force, nrows, ncols, "to_hdf", func_kw)
+
+        func = _make_hdf_file
 
     yield func
 
@@ -430,6 +437,12 @@ def make_feather_file():
 @doc(_doc_pytest_fixture, file_type="stata")
 def make_stata_file():
     yield next(make_default_file(file_type="stata"))
+
+
+@pytest.fixture
+@doc(_doc_pytest_fixture, file_type="hdf")
+def make_hdf_file():
+    yield next(make_default_file(file_type="hdf"))
 
 
 # TODO: add fixtures for setup_hdf_file, setup_pickle_file, setup_fwf_file

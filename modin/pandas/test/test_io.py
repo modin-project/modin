@@ -95,16 +95,6 @@ def setup_clipboard(row_size=NROWS):
     df.to_clipboard()
 
 
-def setup_hdf_file(filename, row_size=NROWS, force=True, format=None):
-    if os.path.exists(filename) and not force:
-        pass
-    else:
-        df = pandas.DataFrame(
-            {"col1": np.arange(row_size), "col2": np.arange(row_size)}
-        )
-        df.to_hdf(filename, key="df", format=format)
-
-
 def setup_pickle_file(filename, row_size=NROWS, force=True):
     if os.path.exists(filename) and not force:
         pass
@@ -1584,18 +1574,15 @@ class TestHdf:
         condition="config.getoption('--simulate-cloud').lower() != 'off'",
         reason="The reason of tests fail in `cloud` mode is unknown for now - issue #3264",
     )
-    def test_read_hdf(self, format):
+    def test_read_hdf(self, make_hdf_file, format):
         unique_filename = get_unique_filename(extension="hdf")
-        try:
-            setup_hdf_file(filename=unique_filename, format=format)
-            eval_io(
-                fn_name="read_hdf",
-                # read_hdf kwargs
-                path_or_buf=unique_filename,
-                key="df",
-            )
-        finally:
-            teardown_test_files([unique_filename])
+        make_hdf_file(filename=unique_filename, format=format)
+        eval_io(
+            fn_name="read_hdf",
+            # read_hdf kwargs
+            path_or_buf=unique_filename,
+            key="df",
+        )
 
     @pytest.mark.xfail(
         condition="config.getoption('--simulate-cloud').lower() != 'off'",
