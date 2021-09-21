@@ -20,7 +20,7 @@ import re
 
 from modin.config import IsExperimental, Engine, Backend
 from modin.pandas.test.utils import io_ops_bad_exc
-from .utils import eval_io, try_trigger_import, set_execution_mode, run_and_compare
+from .utils import eval_io, ForceOmnisciImport, set_execution_mode, run_and_compare
 
 IsExperimental.put(True)
 Engine.put("native")
@@ -193,8 +193,8 @@ class TestCSV:
         # df_equals cannot compare empty categories
         if null_dtype == "category":
             ref["c"] = ref["c"].astype("string")
-            try_trigger_import(exp)
-            exp = to_pandas(exp)
+            with ForceOmnisciImport(exp):
+                exp = to_pandas(exp)
             exp["c"] = exp["c"].astype("string")
 
         df_equals(ref, exp)
@@ -208,9 +208,8 @@ class TestCSV:
         exp1 = pandas.read_csv(csv_file)
         exp2 = pandas.read_csv(csv_file)
         exp = pd.concat([exp1, exp2])
-        try_trigger_import(exp)
-
-        df_equals(ref, exp)
+        with ForceOmnisciImport(exp):
+            df_equals(ref, exp)
 
     @pytest.mark.parametrize("names", [None, ["a", "b", "c", "d", "e"]])
     @pytest.mark.parametrize("header", [None, 0])
@@ -246,9 +245,8 @@ class TestCSV:
 
         modin_df = pd.read_csv(csv_file, **kwargs, engine="arrow")
         modin_df["a"] = modin_df["a"] + modin_df["b"]
-        try_trigger_import(modin_df)
-
-        df_equals(modin_df, pandas_df)
+        with ForceOmnisciImport(modin_df):
+            df_equals(modin_df, pandas_df)
 
     # Datetime Handling tests
     @pytest.mark.parametrize("engine", [None, "arrow"])

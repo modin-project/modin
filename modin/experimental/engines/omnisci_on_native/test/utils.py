@@ -22,6 +22,10 @@ from modin.pandas.test.utils import (
     eval_io as general_eval_io,
 )
 
+from modin.experimental.engines.omnisci_on_native.frame.omnisci_worker import (
+    OmnisciServer,
+)
+
 
 def eval_io(
     fn_name,
@@ -45,8 +49,8 @@ def eval_io(
 
     def omnisci_comparator(df1, df2):
         """Evaluate equality comparison of the passed frames after importing the Modin's one to OmniSci."""
-        try_trigger_import(df1, df2)
-        return comparator(df1, df2)
+        with ForceOmnisciImport(df1, df2):
+            comparator(df1, df2)
 
     general_eval_io(
         fn_name,
@@ -62,38 +66,51 @@ def eval_io(
     )
 
 
-def try_trigger_import(*dfs):
+class ForceOmnisciImport:
     """
-    Trigger import execution for DataFrames obtained by OmniSci engine if already not.
+    Trigger import execution for Modin DataFrames obtained by OmniSci engine if already not.
+
+    When using as a context class also cleans up imported tables at the end of the context.
 
     Parameters
     ----------
     *dfs : iterable
         DataFrames to trigger import.
     """
-    from modin.experimental.engines.omnisci_on_native.frame.omnisci_worker import (
-        OmnisciServer,
-    )
 
-    for df in dfs:
-        if not isinstance(df, (pd.DataFrame, pd.Series)):
-            continue
-        df.shape  # to trigger real execution
-        if df.empty:
-            continue
-        partition = df._query_compiler._modin_frame._partitions[0][0]
-        if partition.frame_id is not None:
-            continue
-        frame = partition.get()
-        if isinstance(frame, (pandas.DataFrame, pandas.Series)):
-            frame_id = OmnisciServer().put_pandas_to_omnisci(frame)
-        elif isinstance(frame, pa.Table):
-            frame_id = OmnisciServer().put_arrow_to_omnisci(frame)
-        else:
-            raise TypeError(
-                f"Unexpected storage format, expected pandas.DataFrame or pyarrow.Table, got: {type(frame)}."
-            )
-        partition.frame_id = frame_id
+    def __init__(self, *dfs):
+        self._imported_frames = []
+        for df in dfs:
+            if not isinstance(df, (pd.DataFrame, pd.Series)):
+                continue
+            df.shape  # to trigger real execution
+            if df.empty:
+                continue
+            partition = df._query_compiler._modin_frame._partitions[0][0]
+            if partition.frame_id is not None:
+                continue
+            frame = partition.get()
+            if isinstance(frame, (pandas.DataFrame, pandas.Series)):
+                frame_id = OmnisciServer().put_pandas_to_omnisci(frame)
+            elif isinstance(frame, pa.Table):
+                frame_id = OmnisciServer().put_arrow_to_omnisci(frame)
+            else:
+                raise TypeError(
+                    f"Unexpected storage format, expected pandas.DataFrame or pyarrow.Table, got: {type(frame)}."
+                )
+            partition.frame_id = frame_id
+            self._imported_frames.append((df, frame_id))
+
+    def __enter__(self, *dfs):
+        pass
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        for df, frame_id in self._imported_frames:
+            actual_frame_id = df._query_compiler._modin_frame._partitions[0][0].frame_id
+            OmnisciServer().executeDDL(f"DROP TABLE IF EXISTS {frame_id}")
+            if actual_frame_id == frame_id:
+                df._query_compiler._modin_frame._partitions[0][0].frame_id = None
+        self._imported_frames = []
 
 
 def set_execution_mode(frame, mode, recursive=False):
