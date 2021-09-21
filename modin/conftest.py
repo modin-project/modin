@@ -342,6 +342,60 @@ def make_csv_file():
     teardown_test_files(filenames)
 
 
+def create_and_call(filenames, filename, force, nrows, ncols, func: str, func_kw=None):
+    if force or not os.path.exists(filename):
+        df = pandas.DataFrame({f"col{x + 1}": np.arange(nrows) for x in range(ncols)})
+        getattr(df, func)(filename, **func_kw if func_kw else {})
+        filenames.append(filename)
+
+
+def make_default_file(file_type: str):
+    filenames = []
+    func = None
+
+    if file_type == "json":
+
+        def _make_json_file(filename, nrows=NROWS, ncols=2, lines=False, force=True):
+            func_kw = {"lines": lines, "orient": "records"} if lines else {}
+            create_and_call(
+                filenames, filename, force, nrows, ncols, "to_json", func_kw
+            )
+
+        func = _make_json_file
+
+    elif file_type == "html":
+
+        def _make_html_file(filename, nrows=NROWS, ncols=2, force=True):
+            create_and_call(filenames, filename, force, nrows, ncols, "to_html")
+
+        func = _make_html_file
+
+    elif file_type == "excel":
+
+        def _make_excel_file(filename, nrows=NROWS, ncols=2, force=True):
+            create_and_call(filenames, filename, force, nrows, ncols, "to_excel")
+
+        func = _make_excel_file
+
+    elif file_type == "feather":
+
+        def _make_feather_file(filename, nrows=NROWS, ncols=2, force=True):
+            create_and_call(filenames, filename, force, nrows, ncols, "to_feather")
+
+        func = _make_feather_file
+
+    elif file_type == "stata":
+
+        def _make_stata_file(filename, nrows=NROWS, ncols=2, force=True):
+            create_and_call(filenames, filename, force, nrows, ncols, "to_stata")
+
+        func = _make_stata_file
+
+    yield func
+
+    teardown_test_files(filenames)
+
+
 @pytest.fixture
 def make_json_file():
     """
@@ -350,24 +404,7 @@ def make_json_file():
     Yields:
         Function that generates json files
     """
-    filenames = []
-
-    def _make_json_file(filename, nrows=NROWS, ncols=2, lines=False, force=True):
-        if force or not os.path.exists(filename):
-            df = pandas.DataFrame(
-                {f"col{x + 1}": np.arange(nrows) for x in range(ncols)}
-            )
-            if lines:
-                df.to_json(filename, lines=True, orient="records")
-            else:
-                df.to_json(filename)
-            filenames.append(filename)
-
-    # Return function that generates json files
-    yield _make_json_file
-
-    # Delete json files that were created
-    teardown_test_files(filenames)
+    yield next(make_default_file(file_type="json"))
 
 
 @pytest.fixture
@@ -378,21 +415,7 @@ def make_html_file():
     Yields:
         Function that generates html files
     """
-    filenames = []
-
-    def _make_html_file(filename, nrows=NROWS, ncols=2, force=True):
-        if force or not os.path.exists(filename):
-            df = pandas.DataFrame(
-                {f"col{x + 1}": np.arange(nrows) for x in range(ncols)}
-            )
-            df.to_html(filename)
-            filenames.append(filename)
-
-    # Return function that generates html files
-    yield _make_html_file
-
-    # Delete html files that were created
-    teardown_test_files(filenames)
+    yield next(make_default_file(file_type="html"))
 
 
 @pytest.fixture
@@ -403,21 +426,7 @@ def make_excel_file():
     Yields:
         Function that generates excel files
     """
-    filenames = []
-
-    def _make_excel_file(filename, nrows=NROWS, ncols=2, force=True):
-        if force or not os.path.exists(filename):
-            df = pandas.DataFrame(
-                {f"col{x + 1}": np.arange(nrows) for x in range(ncols)}
-            )
-            df.to_excel(filename)
-            filenames.append(filename)
-
-    # Return function that generates excel files
-    yield _make_excel_file
-
-    # Delete excel files that were created
-    teardown_test_files(filenames)
+    yield next(make_default_file(file_type="excel"))
 
 
 @pytest.fixture
@@ -428,21 +437,7 @@ def make_feather_file():
     Yields:
         Function that generates feather files
     """
-    filenames = []
-
-    def _make_feather_file(filename, nrows=NROWS, ncols=2, force=True):
-        if force or not os.path.exists(filename):
-            df = pandas.DataFrame(
-                {f"col{x + 1}": np.arange(nrows) for x in range(ncols)}
-            )
-            df.to_feather(filename)
-            filenames.append(filename)
-
-    # Return function that generates feather files
-    yield _make_feather_file
-
-    # Delete feather files that were created
-    teardown_test_files(filenames)
+    yield next(make_default_file(file_type="feather"))
 
 
 @pytest.fixture
@@ -453,21 +448,7 @@ def make_stata_file():
     Yields:
         Function that generates stata files
     """
-    filenames = []
-
-    def _make_stata_file(filename, nrows=NROWS, ncols=2, force=True):
-        if force or not os.path.exists(filename):
-            df = pandas.DataFrame(
-                {f"col{x + 1}": np.arange(nrows) for x in range(ncols)}
-            )
-            df.to_stata(filename)
-            filenames.append(filename)
-
-    # Return function that generates stata files
-    yield _make_stata_file
-
-    # Delete stata files that were created
-    teardown_test_files(filenames)
+    yield next(make_default_file(file_type="stata"))
 
 
 # TODO: add fixtures for setup_hdf_file, setup_pickle_file, setup_fwf_file
