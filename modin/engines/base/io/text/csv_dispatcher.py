@@ -340,7 +340,10 @@ class CSVDispatcher(TextFileDispatcher):
                     # when `skiprows_md` contains `in` operator
                     mod_index = skiprows_md(index_range)
                     assert is_list_like(mod_index)
-                except Exception:
+                except (ValueError, TypeError, AssertionError):
+                    # ValueError can be raised if `skiprows` callable contain membersip operator
+                    # TypeError is raised if `skiprows` callable contain bitwise operator
+                    # AssertionError is raised if unexpected behavior was detected
                     mod_index = index_range.map(skiprows_md)
 
                 mod_index = (
