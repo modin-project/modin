@@ -153,9 +153,8 @@ class PandasParser(object):
             pandas.Series where index is columns names and values are
             columns dtypes.
         """
-        # each element in `partitions_dtypes` is a Series, where index is
-        # a column name and value is dtype of this coulumn in the concreate
-        # partition
+        # each element in `partitions_dtypes` is a Series, where column names are
+        # used as index and types of columns for different partitions are used as values
         partitions_dtypes = cls.materialize(dtypes_ids)
         if all([len(dtype) == 0 for dtype in partitions_dtypes]):
             return None
