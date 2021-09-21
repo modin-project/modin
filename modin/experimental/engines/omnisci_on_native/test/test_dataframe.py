@@ -20,6 +20,7 @@ import re
 
 from modin.config import IsExperimental, Engine, Backend
 from modin.pandas.test.utils import io_ops_bad_exc
+from pandas.core.dtypes.common import is_list_like
 
 IsExperimental.put(True)
 Engine.put("native")
@@ -35,6 +36,7 @@ from modin.pandas.test.utils import (
     generate_multiindex,
     eval_general,
     eval_io,
+    df_equals_with_non_stable_indices,
 )
 
 from modin.experimental.engines.omnisci_on_native.frame.partition_manager import (
@@ -58,6 +60,7 @@ def run_and_compare(
     force_lazy=True,
     force_arrow_execute=False,
     allow_subqueries=False,
+    comparator=df_equals,
     **kwargs,
 ):
     def run_modin(
@@ -120,7 +123,7 @@ def run_and_compare(
             constructor_kwargs=constructor_kwargs,
             **kwargs,
         )
-        df_equals(ref_res, exp_res)
+        comparator(ref_res, exp_res)
 
 
 @pytest.mark.usefixtures("TestReadCSVFixture")
@@ -1164,21 +1167,35 @@ class TestAgg:
 
         run_and_compare(apply, data=self.data, force_lazy=False)
 
-    @pytest.mark.parametrize("cols", ["a", "d"])
+    @pytest.mark.parametrize("data", [data, int_data], ids=["nan_data", "int_data"])
+    @pytest.mark.parametrize("cols", ["a", "d", ["a", "d"]])
     @pytest.mark.parametrize("dropna", [True, False])
     @pytest.mark.parametrize("sort", [True])
     @pytest.mark.parametrize("ascending", [True, False])
-    def test_value_counts(self, cols, dropna, sort, ascending):
+    def test_value_counts(self, data, cols, dropna, sort, ascending):
         def value_counts(df, cols, dropna, sort, ascending, **kwargs):
             return df[cols].value_counts(dropna=dropna, sort=sort, ascending=ascending)
 
+        if dropna and pandas.DataFrame(
+            data, columns=cols if is_list_like(cols) else [cols]
+        ).isna().any(axis=None):
+            pytest.xfail(
+                reason="'dropna' parameter is forcibly disabled in OmniSci's GroupBy"
+                "due to performance issues, you can track this problem at:"
+                "https://github.com/modin-project/modin/issues/2896"
+            )
+
+        # Custom comparator is required because pandas is inconsistent about
+        # the order of equal values, we can't match this behaviour. For more details:
+        # https://github.com/modin-project/modin/issues/1650
         run_and_compare(
             value_counts,
-            data=self.data,
+            data=data,
             cols=cols,
             dropna=dropna,
             sort=sort,
             ascending=ascending,
+            comparator=df_equals_with_non_stable_indices,
         )
 
     @pytest.mark.parametrize(

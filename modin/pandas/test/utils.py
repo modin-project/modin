@@ -22,7 +22,7 @@ from pandas.testing import (
     assert_extension_array_equal,
 )
 import modin.pandas as pd
-from modin.utils import to_pandas
+from modin.utils import to_pandas, try_cast_to_pandas
 from modin.config import TestDatasetSize, TrackFileLeaks
 from io import BytesIO
 import os
@@ -1244,21 +1244,31 @@ def teardown_test_files(test_paths: list):
         teardown_test_file(path)
 
 
-def sort_index_for_equal_values(series, ascending=False):
-    if series.index.dtype == np.float64:
+def sort_index_for_equal_values(df, ascending=True):
+    """Sort `df` indices of equal rows."""
+    if df.index.dtype == np.float64:
         # HACK: workaround for pandas bug:
         # https://github.com/pandas-dev/pandas/issues/34455
-        series.index = series.index.astype("str")
-    res = series.groupby(series, sort=False).apply(
+        df.index = df.index.astype("str")
+    res = df.groupby(by=df if df.ndim == 1 else df.columns, sort=False).apply(
         lambda df: df.sort_index(ascending=ascending)
     )
-    if res.index.nlevels > series.index.nlevels:
+    if res.index.nlevels > df.index.nlevels:
         # Sometimes GroupBy adds an extra level with 'by' to the result index.
         # GroupBy is very inconsistent about when it's doing this, so that's
         # why this clumsy if-statement is used.
         res.index = res.index.droplevel(0)
-    res.name = series.name
+    # GroupBy overwrites original index names with 'by', so the following line restores original names
+    res.index.names = df.index.names
     return res
+
+
+def df_equals_with_non_stable_indices(df1, df2):
+    """Assert equality of two frames regardless of the index order for equal values."""
+    df1, df2 = map(try_cast_to_pandas, (df1, df2))
+    np.testing.assert_array_equal(df1.values, df2.values)
+    sorted1, sorted2 = map(sort_index_for_equal_values, (df1, df2))
+    df_equals(sorted1, sorted2)
 
 
 def rotate_decimal_digits_or_symbols(value):
