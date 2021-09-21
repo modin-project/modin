@@ -153,41 +153,12 @@ class PandasParser(object):
             pandas.Series where index is columns names and values are
             columns dtypes.
         """
-        partitions_dtypes = cls.materialize(dtypes_ids)
-        if all([len(dtype) == 0 for dtype in partitions_dtypes]):
-            return None
-        return (
-            pandas.concat(partitions_dtypes, axis=1)
-            .apply(lambda row: find_common_type_cat(row.values), axis=1)
-            .squeeze(axis=0)
-        )
-
-    @classmethod
-    def get_dtypes_check_homogen(cls, dtypes_ids):
-        """
-        Get common for all partitions dtype for each of the columns and check data homogeneity.
-
-        Parameters
-        ----------
-        dtypes_ids : list
-            Array with references to the partitions dtypes objects.
-
-        Returns
-        -------
-        pandas.Series or None
-            pandas.Series where index is columns names and values are
-            columns dtypes or None.
-        is_data_homogeneous : bool
-            Indicates whether imported data is homogeneous.
-        """
-        is_data_homogeneous = True
         # each element in `partitions_dtypes` is a Series, where index is
         # a column name and value is dtype of this coulumn in the concreate
         # partition
         partitions_dtypes = cls.materialize(dtypes_ids)
-
         if all([len(dtype) == 0 for dtype in partitions_dtypes]):
-            return None, True
+            return None
 
         # concat all elements of `partitions_dtypes` and find common dtype
         # for each of the column among all partitions
@@ -195,12 +166,18 @@ class PandasParser(object):
             lambda row: find_common_type_cat(row.values),
             axis=1,
         )
+
         for part_dtype in partitions_dtypes:
             if not combined_dtypes.equals(part_dtype):
-                is_data_homogeneous = False
+                ErrorMessage.missmatch_with_pandas(
+                    operation="read_csv",
+                    message="Data types of partitions are different! "
+                    "Please refer to the troubleshooting section of the Modin documentation "
+                    "to fix this issue",
+                )
                 break
 
-        return combined_dtypes, is_data_homogeneous
+        return combined_dtypes.squeeze(axis=0)
 
     @classmethod
     def single_worker_read(cls, fname, **kwargs):

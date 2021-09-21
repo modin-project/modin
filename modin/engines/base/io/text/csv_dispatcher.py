@@ -17,7 +17,6 @@ from modin.engines.base.io.text.text_file_dispatcher import (
     TextFileDispatcher,
     ColumnNamesTypes,
 )
-from modin.error_message import ErrorMessage
 import pandas
 from pandas.core.dtypes.common import is_list_like
 from csv import QUOTE_NONE, Dialect
@@ -302,18 +301,7 @@ class CSVDispatcher(TextFileDispatcher):
         # reported dtypes from differing rows can be different based on the inference in
         # the limited data seen by each worker. We use pandas to compute the exact dtype
         # over the whole column for each column. The index is set below.
-        dtypes, is_data_homogeneous = (
-            cls.get_dtypes_check_homogen(dtypes_ids)
-            if len(dtypes_ids) > 0
-            else (None, None)
-        )
-        if not is_data_homogeneous:
-            ErrorMessage.missmatch_with_pandas(
-                operation="read_csv",
-                message="Data types of partitions are different! "
-                "Please refer to the troubleshooting section of the Modin documentation "
-                "to fix this issue",
-            )
+        dtypes = cls.get_dtypes(dtypes_ids) if len(dtypes_ids) > 0 else None
         # Compose modin partitions from `partition_ids`
         partition_ids = cls.build_partition(partition_ids, row_lengths, column_widths)
 
