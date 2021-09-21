@@ -1023,14 +1023,11 @@ class TestCsv:
         unique_filename = get_unique_filename()
         make_csv_file(filename=unique_filename)
 
-        try:
-            with open(unique_filename, mode=read_mode) as buffer:
-                df_pandas = pandas.read_csv(buffer)
-                buffer.seek(0)
-                df_modin = pd.read_csv(buffer)
-                df_equals(df_modin, df_pandas)
-        finally:
-            teardown_test_files([unique_filename])
+        with open(unique_filename, mode=read_mode) as buffer:
+            df_pandas = pandas.read_csv(buffer)
+            buffer.seek(0)
+            df_modin = pd.read_csv(buffer)
+            df_equals(df_modin, df_pandas)
 
     def test_unnamed_index(self):
         def get_internal_df(df):
