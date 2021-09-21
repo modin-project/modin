@@ -26,6 +26,7 @@ import os
 import shutil
 import sqlalchemy as sa
 import csv
+import psutil
 import tempfile
 
 from .utils import (
@@ -956,6 +957,13 @@ class TestCsv:
                 StringIO(open(pytest.csvs_names["test_read_csv_regular"], "r").read())
             )
 
+    @pytest.mark.skipif(
+        condition=(
+            Backend.get() == "Omnisci"
+            and psutil.virtual_memory().available < 17 * 2 ** 30
+        ),
+        reason="It takes about ~17Gb of RAM for Omnisci to import table from this test because of too many (~1000) string columns in it.",
+    )
     @pytest.mark.xfail(
         condition="config.getoption('--simulate-cloud').lower() != 'off'",
         reason="The reason of tests fail in `cloud` mode is unknown for now - issue #2340",
