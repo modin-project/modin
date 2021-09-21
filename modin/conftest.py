@@ -398,8 +398,8 @@ def make_default_file(file_type: str):
         func = _make_stata_file
     elif file_type == "hdf":
 
-        def _make_hdf_file(filename, row_size=NROWS, ncols=2, force=True, format=None):
-            func_kw = {"key": df, "format": format}
+        def _make_hdf_file(filename, nrows=NROWS, ncols=2, force=True, format=None):
+            func_kw = {"key": "df", "format": format}
             create_and_call(filenames, filename, force, nrows, ncols, "to_hdf", func_kw)
 
         func = _make_hdf_file
@@ -409,6 +409,18 @@ def make_default_file(file_type: str):
             create_and_call(filenames, filename, force, nrows, ncols, "to_pickle")
 
         func = _make_pickle_file
+    elif file_type == "fwf":
+
+        def _make_fwf_file(filename, nrows=NROWS, ncols=2, force=True, fwf_data=None):
+            if force or not os.path.exists(filename):
+                if fwf_data is None:
+                    with open("modin/pandas/test/data/test_data.fwf", "r") as fwf_file:
+                        fwf_data = fwf_file.read()
+                with open(filename, "w") as f:
+                    f.write(fwf_data)
+                filenames.append(filename)
+
+        func = _make_fwf_file
 
     yield func
 
@@ -457,7 +469,10 @@ def make_pickle_file():
     yield next(make_default_file(file_type="pickle"))
 
 
-# TODO: add fixtures for setup_hdf_file, setup_pickle_file, setup_fwf_file
+@pytest.fixture
+@doc(_doc_pytest_fixture, file_type="fwf")
+def make_fwf_file():
+    yield next(make_default_file(file_type="fwf"))
 
 
 @pytest.fixture

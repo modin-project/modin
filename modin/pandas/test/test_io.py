@@ -95,18 +95,6 @@ def setup_clipboard(row_size=NROWS):
     df.to_clipboard()
 
 
-def setup_fwf_file(filename, force=True, fwf_data=None):
-    if not force and os.path.exists(filename):
-        return
-
-    if fwf_data is None:
-        with open("modin/pandas/test/data/test_data.fwf", "r") as fwf_file:
-            fwf_data = fwf_file.read()
-
-    with open(filename, "w") as f:
-        f.write(fwf_data)
-
-
 def eval_to_file(modin_obj, pandas_obj, fn, extension, **fn_kwargs):
     """Helper function to test `to_<extension>` methods.
 
@@ -1718,7 +1706,7 @@ class TestHtml:
 
 
 class TestFwf:
-    def test_fwf_file(self):
+    def test_fwf_file(self, make_fwf_file):
         fwf_data = (
             "id8141  360.242940  149.910199 11950.7\n"
             "id1594  444.953632  166.985655 11788.4\n"
@@ -1728,16 +1716,11 @@ class TestFwf:
         )
 
         unique_filename = get_unique_filename(extension="txt")
-        try:
-            setup_fwf_file(filename=unique_filename, fwf_data=fwf_data)
+        make_fwf_file(filename=unique_filename, fwf_data=fwf_data)
 
-            colspecs = [(0, 6), (8, 20), (21, 33), (34, 43)]
-            df = pd.read_fwf(
-                unique_filename, colspecs=colspecs, header=None, index_col=0
-            )
-            assert isinstance(df, pd.DataFrame)
-        finally:
-            teardown_test_files([unique_filename])
+        colspecs = [(0, 6), (8, 20), (21, 33), (34, 43)]
+        df = pd.read_fwf(unique_filename, colspecs=colspecs, header=None, index_col=0)
+        assert isinstance(df, pd.DataFrame)
 
     @pytest.mark.parametrize(
         "kwargs",
@@ -1770,20 +1753,17 @@ class TestFwf:
             },
         ],
     )
-    def test_fwf_file_colspecs_widths(self, kwargs):
+    def test_fwf_file_colspecs_widths(self, make_fwf_file, kwargs):
         unique_filename = get_unique_filename(extension="txt")
-        try:
-            setup_fwf_file(filename=unique_filename)
+        make_fwf_file(filename=unique_filename)
 
-            modin_df = pd.read_fwf(unique_filename, **kwargs)
-            pandas_df = pd.read_fwf(unique_filename, **kwargs)
+        modin_df = pd.read_fwf(unique_filename, **kwargs)
+        pandas_df = pd.read_fwf(unique_filename, **kwargs)
 
-            df_equals(modin_df, pandas_df)
-        finally:
-            teardown_test_files([unique_filename])
+        df_equals(modin_df, pandas_df)
 
     @pytest.mark.parametrize("usecols", [["a"], ["a", "b", "d"], [0, 1, 3]])
-    def test_fwf_file_usecols(self, usecols):
+    def test_fwf_file_usecols(self, make_fwf_file, usecols):
         fwf_data = (
             "a       b           c          d\n"
             "id8141  360.242940  149.910199 11950.7\n"
@@ -1794,76 +1774,66 @@ class TestFwf:
         )
 
         unique_filename = get_unique_filename(extension="txt")
-        try:
-            setup_fwf_file(filename=unique_filename, fwf_data=fwf_data)
+        make_fwf_file(filename=unique_filename, fwf_data=fwf_data)
+        eval_io(
+            fn_name="read_fwf",
+            # read_fwf kwargs
+            filepath_or_buffer=unique_filename,
+            usecols=usecols,
+        )
 
-            eval_io(
-                fn_name="read_fwf",
-                # read_fwf kwargs
-                filepath_or_buffer=unique_filename,
-                usecols=usecols,
-            )
-        finally:
-            teardown_test_files([unique_filename])
-
-    def test_fwf_file_chunksize(self):
+    def test_fwf_file_chunksize(self, make_fwf_file):
         unique_filename = get_unique_filename(extension="txt")
-        try:
-            setup_fwf_file(filename=unique_filename)
+        make_fwf_file(filename=unique_filename)
 
-            # Tests __next__ and correctness of reader as an iterator
-            rdf_reader = pd.read_fwf(unique_filename, chunksize=5)
-            pd_reader = pandas.read_fwf(unique_filename, chunksize=5)
+        # Tests __next__ and correctness of reader as an iterator
+        rdf_reader = pd.read_fwf(unique_filename, chunksize=5)
+        pd_reader = pandas.read_fwf(unique_filename, chunksize=5)
 
-            for modin_df, pd_df in zip(rdf_reader, pd_reader):
-                df_equals(modin_df, pd_df)
-
-            # Tests that get_chunk works correctly
-            rdf_reader = pd.read_fwf(unique_filename, chunksize=1)
-            pd_reader = pandas.read_fwf(unique_filename, chunksize=1)
-
-            modin_df = rdf_reader.get_chunk(1)
-            pd_df = pd_reader.get_chunk(1)
-
+        for modin_df, pd_df in zip(rdf_reader, pd_reader):
             df_equals(modin_df, pd_df)
 
-            # Tests that read works correctly
-            rdf_reader = pd.read_fwf(unique_filename, chunksize=1)
-            pd_reader = pandas.read_fwf(unique_filename, chunksize=1)
+        # Tests that get_chunk works correctly
+        rdf_reader = pd.read_fwf(unique_filename, chunksize=1)
+        pd_reader = pandas.read_fwf(unique_filename, chunksize=1)
 
-            modin_df = rdf_reader.read()
-            pd_df = pd_reader.read()
+        modin_df = rdf_reader.get_chunk(1)
+        pd_df = pd_reader.get_chunk(1)
 
-            df_equals(modin_df, pd_df)
-        finally:
-            teardown_test_files([unique_filename])
+        df_equals(modin_df, pd_df)
+
+        # Tests that read works correctly
+        rdf_reader = pd.read_fwf(unique_filename, chunksize=1)
+        pd_reader = pandas.read_fwf(unique_filename, chunksize=1)
+
+        modin_df = rdf_reader.read()
+        pd_df = pd_reader.read()
+
+        df_equals(modin_df, pd_df)
 
     @pytest.mark.parametrize("nrows", [13, None])
-    def test_fwf_file_skiprows(self, nrows):
+    def test_fwf_file_skiprows(self, make_fwf_file, nrows):
         unique_filename = get_unique_filename(extension="txt")
-        try:
-            setup_fwf_file(filename=unique_filename)
+        make_fwf_file(filename=unique_filename)
 
-            eval_io(
-                fn_name="read_fwf",
-                # read_fwf kwargs
-                filepath_or_buffer=unique_filename,
-                skiprows=2,
-                nrows=nrows,
-            )
+        eval_io(
+            fn_name="read_fwf",
+            # read_fwf kwargs
+            filepath_or_buffer=unique_filename,
+            skiprows=2,
+            nrows=nrows,
+        )
 
-            eval_io(
-                fn_name="read_fwf",
-                # read_fwf kwargs
-                filepath_or_buffer=unique_filename,
-                usecols=[0, 4, 7],
-                skiprows=[2, 5],
-                nrows=nrows,
-            )
-        finally:
-            teardown_test_files([unique_filename])
+        eval_io(
+            fn_name="read_fwf",
+            # read_fwf kwargs
+            filepath_or_buffer=unique_filename,
+            usecols=[0, 4, 7],
+            skiprows=[2, 5],
+            nrows=nrows,
+        )
 
-    def test_fwf_file_index_col(self):
+    def test_fwf_file_index_col(self, make_fwf_file):
         fwf_data = (
             "a       b           c          d\n"
             "id8141  360.242940  149.910199 11950.7\n"
@@ -1874,32 +1844,25 @@ class TestFwf:
         )
 
         unique_filename = get_unique_filename(extension="txt")
-        try:
-            setup_fwf_file(filename=unique_filename, fwf_data=fwf_data)
-            eval_io(
-                fn_name="read_fwf",
-                # read_fwf kwargs
-                filepath_or_buffer=unique_filename,
-                index_col="c",
-            )
-        finally:
-            teardown_test_files([unique_filename])
+        make_fwf_file(filename=unique_filename, fwf_data=fwf_data)
+        eval_io(
+            fn_name="read_fwf",
+            # read_fwf kwargs
+            filepath_or_buffer=unique_filename,
+            index_col="c",
+        )
 
-    def test_fwf_file_skipfooter(self):
+    def test_fwf_file_skipfooter(self, make_fwf_file):
         unique_filename = get_unique_filename(extension="txt")
-        try:
-            setup_fwf_file(filename=unique_filename)
+        make_fwf_file(filename=unique_filename)
+        eval_io(
+            fn_name="read_fwf",
+            # read_fwf kwargs
+            filepath_or_buffer=unique_filename,
+            skipfooter=2,
+        )
 
-            eval_io(
-                fn_name="read_fwf",
-                # read_fwf kwargs
-                filepath_or_buffer=unique_filename,
-                skipfooter=2,
-            )
-        finally:
-            teardown_test_files([unique_filename])
-
-    def test_fwf_file_parse_dates(self):
+    def test_fwf_file_parse_dates(self, make_fwf_file):
         dates = pandas.date_range("2000", freq="h", periods=10)
         fwf_data = "col1 col2        col3 col4"
         for i in range(10, 20):
@@ -1910,24 +1873,21 @@ class TestFwf:
                 col4=str(dates[i - 10].time()),
             )
         unique_filename = get_unique_filename(extension="txt")
-        try:
-            setup_fwf_file(filename=unique_filename, fwf_data=fwf_data)
+        make_fwf_file(filename=unique_filename, fwf_data=fwf_data)
 
-            eval_io(
-                fn_name="read_fwf",
-                # read_fwf kwargs
-                filepath_or_buffer=unique_filename,
-                parse_dates=[["col2", "col4"]],
-            )
+        eval_io(
+            fn_name="read_fwf",
+            # read_fwf kwargs
+            filepath_or_buffer=unique_filename,
+            parse_dates=[["col2", "col4"]],
+        )
 
-            eval_io(
-                fn_name="read_fwf",
-                # read_fwf kwargs
-                filepath_or_buffer=unique_filename,
-                parse_dates={"time": ["col2", "col4"]},
-            )
-        finally:
-            teardown_test_files([unique_filename])
+        eval_io(
+            fn_name="read_fwf",
+            # read_fwf kwargs
+            filepath_or_buffer=unique_filename,
+            parse_dates={"time": ["col2", "col4"]},
+        )
 
     @pytest.mark.parametrize(
         "read_mode",
@@ -1942,34 +1902,28 @@ class TestFwf:
             ),
         ],
     )
-    def test_read_fwf_file_handle(self, read_mode):
+    def test_read_fwf_file_handle(self, make_fwf_file, read_mode):
         unique_filename = get_unique_filename(extension="txt")
-        try:
-            setup_fwf_file(filename=unique_filename)
+        make_fwf_file(filename=unique_filename)
 
-            with open(unique_filename, mode=read_mode) as buffer:
-                df_pandas = pandas.read_fwf(buffer)
-                buffer.seek(0)
-                df_modin = pd.read_fwf(buffer)
-                df_equals(df_modin, df_pandas)
-        finally:
-            teardown_test_files([unique_filename])
+        with open(unique_filename, mode=read_mode) as buffer:
+            df_pandas = pandas.read_fwf(buffer)
+            buffer.seek(0)
+            df_modin = pd.read_fwf(buffer)
+            df_equals(df_modin, df_pandas)
 
-    def test_read_fwf_empty_frame(self):
+    def test_read_fwf_empty_frame(self, make_fwf_file):
         kwargs = {
             "usecols": [0],
             "index_col": 0,
         }
         unique_filename = get_unique_filename(extension="txt")
-        try:
-            setup_fwf_file(filename=unique_filename)
+        make_fwf_file(filename=unique_filename)
 
-            modin_df = pd.read_fwf(unique_filename, **kwargs)
-            pandas_df = pandas.read_fwf(unique_filename, **kwargs)
+        modin_df = pd.read_fwf(unique_filename, **kwargs)
+        pandas_df = pandas.read_fwf(unique_filename, **kwargs)
 
-            df_equals(modin_df, pandas_df)
-        finally:
-            teardown_test_files([unique_filename])
+        df_equals(modin_df, pandas_df)
 
 
 class TestGbq:
