@@ -1709,6 +1709,15 @@ class TestBinaryOp:
 
         run_and_compare(cmp, data=data, cmp_fn=cmp_fn, value=value)
 
+    @pytest.mark.xfail(
+        reason="Requires fix in OmniSci: https://github.com/intel-ai/omniscidb/pull/178"
+    )
+    def test_filter_empty_result(self):
+        def filter(df, **kwargs):
+            return df[df.a < 0]
+
+        run_and_compare(filter, data=self.cmp_data)
+
 
 class TestDateTime:
     datetime_data = {
