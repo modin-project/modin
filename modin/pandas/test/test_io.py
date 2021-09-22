@@ -26,7 +26,6 @@ import os
 import shutil
 import sqlalchemy as sa
 import csv
-import psutil
 import tempfile
 
 from .utils import (
@@ -957,13 +956,6 @@ class TestCsv:
                 StringIO(open(pytest.csvs_names["test_read_csv_regular"], "r").read())
             )
 
-    @pytest.mark.skipif(
-        condition=(
-            Backend.get() == "Omnisci"
-            and psutil.virtual_memory().available < 17 * 2 ** 30
-        ),
-        reason="It takes about ~17Gb of RAM for Omnisci to import table from this test because of too many (~1000) string columns in it.",
-    )
     @pytest.mark.xfail(
         condition="config.getoption('--simulate-cloud').lower() != 'off'",
         reason="The reason of tests fail in `cloud` mode is unknown for now - issue #2340",
@@ -975,6 +967,10 @@ class TestCsv:
             modin_warning=UserWarning,
             # read_csv kwargs
             filepath_or_buffer="https://raw.githubusercontent.com/modin-project/modin/master/modin/pandas/test/data/blah.csv",
+            # It takes about ~17Gb of RAM for Omnisci to import the whole table from this test
+            # because of too many (~1000) string columns in it. Taking a subset of columns
+            # to be able to run this test on low-RAM machines.
+            usecols=[0, 1, 2, 3] if Backend.get() == "Omnisci" else None,
         )
 
     @pytest.mark.parametrize("nrows", [21, 5, None])
