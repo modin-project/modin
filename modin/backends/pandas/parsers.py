@@ -163,23 +163,20 @@ class PandasParser(object):
         combined_part_dtypes = pandas.concat(partitions_dtypes, axis=1)
         frame_dtypes = combined_part_dtypes.iloc[:, 0]
 
-        for part_dtype_col in combined_part_dtypes.columns:
-            if not combined_part_dtypes[part_dtype_col].equals(frame_dtypes):
-                ErrorMessage.missmatch_with_pandas(
-                    operation="read_*",
-                    message="Data types of partitions are different! "
-                    "Please refer to the troubleshooting section of the Modin documentation "
-                    "to fix this issue",
-                )
+        if not combined_part_dtypes.eq(frame_dtypes, axis=0).all(axis=None):
+            ErrorMessage.missmatch_with_pandas(
+                operation="read_*",
+                message="Data types of partitions are different! "
+                "Please refer to the troubleshooting section of the Modin documentation "
+                "to fix this issue",
+            )
 
-                # concat all elements of `partitions_dtypes` and find common dtype
-                # for each of the column among all partitions
-                frame_dtypes = combined_part_dtypes.apply(
-                    lambda row: find_common_type_cat(row.values),
-                    axis=1,
-                ).squeeze(axis=0)
-
-                break
+            # concat all elements of `partitions_dtypes` and find common dtype
+            # for each of the column among all partitions
+            frame_dtypes = combined_part_dtypes.apply(
+                lambda row: find_common_type_cat(row.values),
+                axis=1,
+            ).squeeze(axis=0)
 
         return frame_dtypes
 
