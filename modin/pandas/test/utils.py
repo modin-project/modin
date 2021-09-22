@@ -1287,6 +1287,17 @@ def make_default_file(file_type: str):
     filenames = []
 
     def _create_file(filenames, filename, force, nrows, ncols, func: str, func_kw=None):
+        """
+        Helper function that creates a dataframe before writing it to a file.
+
+        Eliminates the duplicate code that is needed before of output functions calls.
+
+        Notes
+        -----
+        Importantly, names of created files are added to `filenames` variable for
+        their further automatic deletion. Without this step, files created by
+        `pytest` fixtures will not be deleted.
+        """
         if force or not os.path.exists(filename):
             df = pandas.DataFrame(
                 {f"col{x + 1}": np.arange(nrows) for x in range(ncols)}
