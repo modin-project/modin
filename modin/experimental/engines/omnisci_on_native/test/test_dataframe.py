@@ -42,6 +42,7 @@ from modin.pandas.test.utils import (
 from modin.experimental.engines.omnisci_on_native.frame.partition_manager import (
     OmnisciOnNativeFramePartitionManager,
 )
+from modin.experimental.engines.omnisci_on_native.frame.df_algebra import FrameNode
 
 
 def set_execution_mode(frame, mode, recursive=False):
@@ -872,6 +873,32 @@ class TestGroupby:
             return df.groupby(by, as_index=as_index).agg({col: agg for col in by})
 
         run_and_compare(dict_agg_all_cols, data=self.data)
+
+    # modin-issue#3461
+    def test_groupby_pure_by(self):
+        data = [1, 1, 2, 2]
+        md_ser, pd_ser = pd.Series(data), pandas.Series(data)
+
+        set_execution_mode(md_ser, "lazy")
+        md_res = md_ser.groupby(md_ser).sum()
+        set_execution_mode(md_res, None)
+
+        pd_res = pd_ser.groupby(pd_ser).sum()
+        df_equals(md_res, pd_res)
+
+        md_ser, pd_ser = pd.Series(data), pandas.Series(data)
+
+        md_ser._query_compiler._modin_frame._execute()
+        assert isinstance(
+            md_ser._query_compiler._modin_frame._op, FrameNode
+        ), "Triggering execution of the Modin frame supposed to set 'FrameNode' as a frame's op"
+
+        set_execution_mode(md_ser, "lazy")
+        md_res = md_ser.groupby(md_ser).sum()
+        set_execution_mode(md_res, None)
+
+        pd_res = pd_ser.groupby(pd_ser).sum()
+        df_equals(md_res, pd_res)
 
     taxi_data = {
         "a": [1, 1, 2, 2],
