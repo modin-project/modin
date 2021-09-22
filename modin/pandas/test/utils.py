@@ -1280,3 +1280,46 @@ def rotate_decimal_digits_or_symbols(value):
         tens = value // 10
         ones = value % 10
         return tens + ones * 10
+
+
+def make_default_file(file_type: str):
+    """Helper function for pytest fixtures."""
+    filenames = []
+
+    def _create_file(filenames, filename, force, nrows, ncols, func: str, func_kw=None):
+        if force or not os.path.exists(filename):
+            df = pandas.DataFrame(
+                {f"col{x + 1}": np.arange(nrows) for x in range(ncols)}
+            )
+            getattr(df, func)(filename, **func_kw if func_kw else {})
+            filenames.append(filename)
+
+    def _make_default_file(filename, nrows=NROWS, ncols=2, force=True, **kwargs):
+        if file_type == "json":
+            lines = kwargs.get("lines")
+            func_kw = {"lines": lines, "orient": "records"} if lines else {}
+            _create_file(filenames, filename, force, nrows, ncols, "to_json", func_kw)
+        elif file_type == "html":
+            _create_file(filenames, filename, force, nrows, ncols, "to_html")
+        elif file_type == "excel":
+            _create_file(filenames, filename, force, nrows, ncols, "to_excel")
+        elif file_type == "feather":
+            _create_file(filenames, filename, force, nrows, ncols, "to_feather")
+        elif file_type == "stata":
+            _create_file(filenames, filename, force, nrows, ncols, "to_stata")
+        elif file_type == "hdf":
+            func_kw = {"key": "df", "format": kwargs.get("format")}
+            _create_file(filenames, filename, force, nrows, ncols, "to_hdf", func_kw)
+        elif file_type == "pickle":
+            _create_file(filenames, filename, force, nrows, ncols, "to_pickle")
+        elif file_type == "fwf":
+            if force or not os.path.exists(filename):
+                fwf_data = kwargs.get("fwf_data")
+                if fwf_data is None:
+                    with open("modin/pandas/test/data/test_data.fwf", "r") as fwf_file:
+                        fwf_data = fwf_file.read()
+                with open(filename, "w") as f:
+                    f.write(fwf_data)
+                filenames.append(filename)
+
+    return _make_default_file, filenames

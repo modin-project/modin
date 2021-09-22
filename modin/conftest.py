@@ -52,6 +52,7 @@ from modin.utils import get_current_backend  # noqa: E402
 from modin.pandas.test.utils import (  # noqa: E402
     _make_csv_file,
     get_unique_filename,
+    make_default_file,
     teardown_test_files,
     NROWS,
     IO_OPS_DATA_DIR,
@@ -348,131 +349,68 @@ def make_csv_file():
     teardown_test_files(filenames)
 
 
-def create_and_call(filenames, filename, force, nrows, ncols, func: str, func_kw=None):
-    if force or not os.path.exists(filename):
-        df = pandas.DataFrame({f"col{x + 1}": np.arange(nrows) for x in range(ncols)})
-        getattr(df, func)(filename, **func_kw if func_kw else {})
-        filenames.append(filename)
-
-
-def make_default_file(file_type: str):
-    filenames = []
-    func = None
-
-    if file_type == "json":
-
-        def _make_json_file(filename, nrows=NROWS, ncols=2, lines=False, force=True):
-            func_kw = {"lines": lines, "orient": "records"} if lines else {}
-            create_and_call(
-                filenames, filename, force, nrows, ncols, "to_json", func_kw
-            )
-
-        func = _make_json_file
-
-    elif file_type == "html":
-
-        def _make_html_file(filename, nrows=NROWS, ncols=2, force=True):
-            create_and_call(filenames, filename, force, nrows, ncols, "to_html")
-
-        func = _make_html_file
-
-    elif file_type == "excel":
-
-        def _make_excel_file(filename, nrows=NROWS, ncols=2, force=True):
-            create_and_call(filenames, filename, force, nrows, ncols, "to_excel")
-
-        func = _make_excel_file
-
-    elif file_type == "feather":
-
-        def _make_feather_file(filename, nrows=NROWS, ncols=2, force=True):
-            create_and_call(filenames, filename, force, nrows, ncols, "to_feather")
-
-        func = _make_feather_file
-
-    elif file_type == "stata":
-
-        def _make_stata_file(filename, nrows=NROWS, ncols=2, force=True):
-            create_and_call(filenames, filename, force, nrows, ncols, "to_stata")
-
-        func = _make_stata_file
-    elif file_type == "hdf":
-
-        def _make_hdf_file(filename, nrows=NROWS, ncols=2, force=True, format=None):
-            func_kw = {"key": "df", "format": format}
-            create_and_call(filenames, filename, force, nrows, ncols, "to_hdf", func_kw)
-
-        func = _make_hdf_file
-    elif file_type == "pickle":
-
-        def _make_pickle_file(filename, nrows=NROWS, ncols=2, force=True):
-            create_and_call(filenames, filename, force, nrows, ncols, "to_pickle")
-
-        func = _make_pickle_file
-    elif file_type == "fwf":
-
-        def _make_fwf_file(filename, nrows=NROWS, ncols=2, force=True, fwf_data=None):
-            if force or not os.path.exists(filename):
-                if fwf_data is None:
-                    with open("modin/pandas/test/data/test_data.fwf", "r") as fwf_file:
-                        fwf_data = fwf_file.read()
-                with open(filename, "w") as f:
-                    f.write(fwf_data)
-                filenames.append(filename)
-
-        func = _make_fwf_file
-
-    yield func
-
-    teardown_test_files(filenames)
-
-
 @pytest.fixture
 @doc(_doc_pytest_fixture, file_type="json")
 def make_json_file():
-    yield next(make_default_file(file_type="json"))
+    func, filenames = make_default_file(file_type="json")
+    yield func
+    teardown_test_files(filenames)
 
 
 @pytest.fixture
 @doc(_doc_pytest_fixture, file_type="html")
 def make_html_file():
-    yield next(make_default_file(file_type="html"))
+    func, filenames = make_default_file(file_type="html")
+    yield func
+    teardown_test_files(filenames)
 
 
 @pytest.fixture
 @doc(_doc_pytest_fixture, file_type="excel")
 def make_excel_file():
-    yield next(make_default_file(file_type="excel"))
+    func, filenames = make_default_file(file_type="excel")
+    yield func
+    teardown_test_files(filenames)
 
 
 @pytest.fixture
 @doc(_doc_pytest_fixture, file_type="feather")
 def make_feather_file():
-    yield next(make_default_file(file_type="feather"))
+    func, filenames = make_default_file(file_type="feather")
+    yield func
+    teardown_test_files(filenames)
 
 
 @pytest.fixture
 @doc(_doc_pytest_fixture, file_type="stata")
 def make_stata_file():
-    yield next(make_default_file(file_type="stata"))
+    func, filenames = make_default_file(file_type="stata")
+    yield func
+    teardown_test_files(filenames)
 
 
 @pytest.fixture
 @doc(_doc_pytest_fixture, file_type="hdf")
 def make_hdf_file():
-    yield next(make_default_file(file_type="hdf"))
+    func, filenames = make_default_file(file_type="hdf")
+    yield func
+    teardown_test_files(filenames)
 
 
 @pytest.fixture
 @doc(_doc_pytest_fixture, file_type="pickle")
 def make_pickle_file():
-    yield next(make_default_file(file_type="pickle"))
+    func, filenames = make_default_file(file_type="pickle")
+    yield func
+    teardown_test_files(filenames)
 
 
 @pytest.fixture
 @doc(_doc_pytest_fixture, file_type="fwf")
 def make_fwf_file():
-    yield next(make_default_file(file_type="fwf"))
+    func, filenames = make_default_file(file_type="fwf")
+    yield func
+    teardown_test_files(filenames)
 
 
 @pytest.fixture
