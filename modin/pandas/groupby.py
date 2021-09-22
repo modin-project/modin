@@ -18,6 +18,7 @@ import pandas
 import pandas.core.groupby
 from pandas.core.dtypes.common import is_list_like
 from pandas.core.aggregation import reconstruct_func
+from pandas._libs.lib import no_default
 import pandas.core.common as com
 from types import BuiltinFunctionType
 from collections.abc import Iterable
@@ -31,6 +32,7 @@ from modin.utils import (
     wrap_into_list,
 )
 from modin.backends.base.query_compiler import BaseQueryCompiler
+from modin.data_management.functions.default_methods.groupby_default import GroupBy
 from modin.config import IsExperimental
 from .series import Series
 from .utils import is_label
@@ -294,6 +296,33 @@ class DataFrameGroupBy(object):
     def backfill(self, limit=None):
         return self.bfill(limit)
 
+    _internal_by_cache = no_default
+
+    # TODO: since python 3.9:
+    # @cached_property
+    @property
+    def _internal_by(self):
+        """
+        Get only those components of 'by' that are column labels of the source frame.
+        Returns
+        -------
+        list of labels
+        """
+        if self._internal_by_cache is not no_default:
+            return self._internal_by_cache
+
+        internal_by = []
+        if self._drop:
+            for by in self._by if is_list_like(self._by) else [self._by]:
+                if isinstance(by, str):
+                    internal_by.append(by)
+                elif isinstance(by, BaseQueryCompiler):
+                    internal_by.extend(by.columns)
+            internal_by = self._df.columns.intersection(internal_by).tolist()
+
+        self._internal_by_cache = internal_by
+        return internal_by
+
     def __getitem__(self, key):
         """
         Implement indexing operation on a DataFrameGroupBy object.
@@ -326,18 +355,10 @@ class DataFrameGroupBy(object):
         # When `as_index` is False, pandas will always convert to a `DataFrame`, we
         # convert to a list here so that the result will be a `DataFrame`.
         elif not self._as_index and not isinstance(key, list):
-            # Sometimes `__getitem__` doesn't only get the item, it also gets the `by`
-            # column. This logic is here to ensure that we also get the `by` data so
-            # that it is there for `as_index=False`.
-            if (
-                isinstance(self._by, type(self._query_compiler))
-                and all(c in self._columns for c in self._by.columns)
-                and self._drop
-            ):
-                key = list(self._by.columns) + [key]
-            else:
-                key = [key]
+            key = [key]
         if isinstance(key, list) and (make_dataframe or not self._as_index):
+            cols_to_grab = self._internal_by + key
+            key = [col for col in self._df.columns if col in cols_to_grab]
             return DataFrameGroupBy(
                 self._df[key],
                 self._by,
@@ -954,14 +975,17 @@ class DataFrameGroupBy(object):
             and len(self._by.columns) == 1
         ):
             by = self._by.columns[0] if self._drop else self._by.to_pandas().squeeze()
-        elif isinstance(self._by, type(self._query_compiler)):
+        elif self._drop and isinstance(self._by, type(self._query_compiler)):
             by = list(self._by.columns)
         else:
             by = self._by
 
         by = try_cast_to_pandas(by, squeeze=True)
+        by = GroupBy.validate_by(by)
 
         def groupby_on_multiple_columns(df, *args, **kwargs):
+            if isinstance(self, SeriesGroupBy) and isinstance(df, pandas.DataFrame):
+                df = df.squeeze(axis=1)
             return f(
                 df.groupby(
                     by=by, axis=self._axis, squeeze=self._squeeze, **self._kwargs

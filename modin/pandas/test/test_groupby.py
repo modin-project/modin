@@ -439,6 +439,14 @@ def test_simple_row_groupby(by, as_index, col1_category):
     ):
         # Not yet supported for non-original-column-from-dataframe Series in by:
         eval___getattr__(modin_groupby, pandas_groupby, "col3")
+        eval__getitem__(modin_groupby, pandas_groupby, "col3")
+
+    non_by_cols = (
+        [col for col in pandas_df.columns[1:] if col not in modin_groupby._internal_by]
+        if isinstance(by, list)
+        else ["col3", "col4"]
+    )
+    eval__getitem__(modin_groupby, pandas_groupby, non_by_cols)
     eval_groups(modin_groupby, pandas_groupby)
 
 
@@ -1111,6 +1119,55 @@ def eval___getattr__(modin_groupby, pandas_groupby, item):
     )
 
 
+def eval__getitem__(md_grp, pd_grp, item):
+    eval_general(
+        md_grp,
+        pd_grp,
+        lambda grp: grp[item].mean(),
+        comparator=build_types_asserter(df_equals),
+    )
+    eval_general(
+        md_grp,
+        pd_grp,
+        lambda grp: grp[item].count(),
+        comparator=build_types_asserter(df_equals),
+    )
+
+    def build_list_agg(fns):
+        def test(grp):
+            res = grp[item].agg(fns)
+            if res.ndim == 2:
+                # Modin's frame has an extra level in the result. Alligning columns to compare.
+                res = res.set_axis(fns, axis=1)
+            return res
+
+        return test
+
+    # issue-#3252
+    eval_general(
+        md_grp,
+        pd_grp,
+        build_list_agg(["mean"]),
+        comparator=build_types_asserter(df_equals),
+    )
+    eval_general(
+        md_grp,
+        pd_grp,
+        build_list_agg(["mean", "count"]),
+        comparator=build_types_asserter(df_equals),
+    )
+    # Explicit default-to-pandas test
+    eval_general(
+        md_grp,
+        pd_grp,
+        # Defaulting to pandas only for Modin groupby objects
+        lambda grp: grp[item].sum()
+        if not isinstance(grp, pd.groupby.DataFrameGroupBy)
+        else grp[item]._default_to_pandas(lambda df: df.sum()),
+        comparator=build_types_asserter(df_equals),
+    )
+
+
 def eval_groups(modin_groupby, pandas_groupby):
     for k, v in modin_groupby.groups.items():
         assert v.equals(pandas_groupby.groups[k])
@@ -1566,6 +1623,8 @@ def test_multi_column_groupby_different_partitions(
         by, as_index=as_index
     )
     eval_general(md_grp, pd_grp, func_to_apply)
+    eval__getitem__(md_grp, pd_grp, md_df.columns[2])
+    eval__getitem__(md_grp, pd_grp, [md_df.columns[2], md_df.columns[3]])
 
 
 @pytest.mark.parametrize(
