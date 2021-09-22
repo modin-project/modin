@@ -539,6 +539,11 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
             self._modin_frame.dt_extract("month"), self._shape_hint
         )
 
+    def dt_day(self):
+        return self.__constructor__(
+            self._modin_frame.dt_extract("day"), self._shape_hint
+        )
+
     def _bin_op(self, other, op_name, **kwargs):
         """
         Perform a binary operation on a frame.
