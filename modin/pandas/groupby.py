@@ -304,6 +304,7 @@ class DataFrameGroupBy(object):
     def _internal_by(self):
         """
         Get only those components of 'by' that are column labels of the source frame.
+
         Returns
         -------
         list of labels

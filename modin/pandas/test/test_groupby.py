@@ -1623,8 +1623,8 @@ def test_multi_column_groupby_different_partitions(
         by, as_index=as_index
     )
     eval_general(md_grp, pd_grp, func_to_apply)
-    eval__getitem__(md_grp, pd_grp, md_df.columns[2])
-    eval__getitem__(md_grp, pd_grp, [md_df.columns[2], md_df.columns[3]])
+    eval__getitem__(md_grp, pd_grp, md_df.columns[1])
+    eval__getitem__(md_grp, pd_grp, [md_df.columns[1], md_df.columns[2]])
 
 
 @pytest.mark.parametrize(
