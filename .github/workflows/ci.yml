@@ -103,9 +103,9 @@ jobs:
       - run: python scripts/doc_checker.py modin/core/storage_formats/pandas
       - run: |
           python scripts/doc_checker.py \
-          modin/experimental/core/execution/ray/implementations/omnisci_on_ray/dataframe \
-          modin/experimental/core/execution/ray/implementations/omnisci_on_ray/io \
-          modin/experimental/core/execution/ray/implementations/omnisci_on_ray/partitioning \
+            modin/experimental/core/execution/native/implementations/omnisci_on_native/dataframe \
+            modin/experimental/core/execution/native/implementations/omnisci_on_native/io \
+            modin/experimental/core/execution/native/implementations/omnisci_on_native/partitioning \
       - run: python scripts/doc_checker.py modin/experimental/core/storage_formats/omnisci
 
   lint-flake8:
@@ -315,9 +315,8 @@ jobs:
       run:
         shell: bash -l {0}
     env:
-      MODIN_MEMORY: 1000000000
       MODIN_EXPERIMENTAL: "True"
-      MODIN_ENGINE: "ray"
+      MODIN_ENGINE: "native"
       MODIN_BACKEND: "omnisci"
     name: Test OmniSci backend, Python 3.7
     steps:
@@ -338,8 +337,8 @@ jobs:
       - name: Install HDF5
         run: sudo apt update && sudo apt install -y libhdf5-dev
       - run: MODIN_BENCHMARK_MODE=True pytest modin/pandas/test/internals/test_benchmark_mode.py
-      - run: pytest modin/experimental/core/execution/ray/implementations/omnisci_on_ray/test/test_dataframe.py
-      - run: pytest modin/pandas/test/test_io.py::TestCsv
+      - run: pytest modin/experimental/core/execution/native/implementations/omnisci_on_native/test/test_dataframe.py
+      - run: pytest modin/pandas/test/test_io.py::TestCsv --verbose
       - run: |
           curl -o codecov https://codecov.io/bash
           VERSION=$(grep -o 'VERSION=\"[0-9\.]*\"' codecov | cut -d'"' -f2);
@@ -397,7 +396,7 @@ jobs:
                 -b ^benchmarks -b ^io -b ^scalability | tee benchmarks.log
 
               # check Modin on OmniSci
-              MODIN_BACKEND=omnisci MODIN_EXPERIMENTAL=true asv run --quick --strict --show-stderr \
+              MODIN_ENGINE=native MODIN_BACKEND=omnisci MODIN_EXPERIMENTAL=true asv run --quick --strict --show-stderr \
                 --launch-method=forkserver --config asv.conf.omnisci.json \
                 -b ^omnisci | tee benchmarks.log
           else
@@ -469,7 +468,7 @@ jobs:
       - run: python -m pytest -n 2 modin/pandas/test/test_groupby.py
       - run: python -m pytest -n 2 modin/pandas/test/test_reshape.py
       - run: python -m pytest -n 2 modin/pandas/test/test_general.py
-      - run: python -m pytest modin/pandas/test/test_io.py
+      - run: python -m pytest modin/pandas/test/test_io.py --verbose
       - run: python -m pytest modin/experimental/pandas/test/test_io_exp.py
       - run: pip install dfsql "mindsdb_sql<=0.0.12" && pytest modin/experimental/sql/test/test_sql.py
       - run: |
@@ -511,7 +510,7 @@ jobs:
           conda list
       - run: python -m pytest -n 2 modin/pandas/test/dataframe/test_map_metadata.py
       - run: python -m pytest -n 2 modin/pandas/test/test_series.py
-      - run: python -m pytest modin/pandas/test/test_io.py
+      - run: python -m pytest modin/pandas/test/test_io.py --verbose
       - run: |
           curl -o codecov https://codecov.io/bash
           VERSION=$(grep -o 'VERSION=\"[0-9\.]*\"' codecov | cut -d'"' -f2);
@@ -552,7 +551,7 @@ jobs:
         run: |
           conda info
           conda list
-      - run: python -m pytest --simulate-cloud=normal modin/pandas/test/test_io.py
+      - run: python -m pytest --simulate-cloud=normal modin/pandas/test/test_io.py --verbose
       - # When running without parameters, some of the tests fail
         run: python -m pytest --simulate-cloud=normal modin/pandas/test/dataframe/test_binary.py::test_math_functions[add-rows-scalar]
       - run: |
@@ -620,7 +619,7 @@ jobs:
       - run: python -m pytest ${{matrix.test-task}}
         if: matrix.test-task != 'modin/pandas/test/test_io.py'
       - timeout-minutes: 30
-        run: python -m pytest modin/pandas/test/test_io.py
+        run: python -m pytest modin/pandas/test/test_io.py --verbose
         if: matrix.test-task == 'modin/pandas/test/test_io.py'
       - run: choco install codecov
       - run: codecov -f ./coverage.xml
@@ -654,7 +653,7 @@ jobs:
           conda info
           conda list
       - run: sudo apt update && sudo apt install -y libhdf5-dev
-      - run: python -m pytest modin/pandas/test/test_io.py::TestCsv
+      - run: python -m pytest modin/pandas/test/test_io.py::TestCsv --verbose
 
   test-spreadsheet:
     needs: [ lint-commit, lint-flake8, lint-black, test-api, test-headers ]

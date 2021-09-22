@@ -20,7 +20,7 @@ from modin.core.dataframe.pandas.partitioning.partition import PandasFramePartit
 from modin.pandas.indexing import compute_sliced_len
 
 import ray
-from ray.services import get_node_ip_address
+from ray.util import get_node_ip_address
 from packaging import version
 
 ObjectIDType = ray.ObjectRef

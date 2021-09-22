@@ -9,7 +9,7 @@ To enable this engine you could set the following environment variables:
 
 .. code-block:: bash
 
-   export MODIN_ENGINE=ray
+   export MODIN_ENGINE=native
    export MODIN_BACKEND=omnisci
    export MODIN_EXPERIMENTAL=true
 
@@ -18,7 +18,7 @@ or turn it on in source code:
 .. code-block:: python
 
    import modin.config as cfg
-   cfg.Engine.put('ray')
+   cfg.Engine.put('native')
    cfg.Backend.put('omnisci')
    cfg.IsExperimental.put(True)
 

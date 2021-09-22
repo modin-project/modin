@@ -1293,30 +1293,6 @@ class BaseQueryCompiler(abc.ABC):
 
     # END Abstract map partitions operations
 
-    @doc_utils.add_one_column_warning
-    @doc_utils.add_refer_to("Series.value_counts")
-    def value_counts(self, **kwargs):  # noqa: PR02
-        """
-        Count unique values of one-column `self`.
-
-        Parameters
-        ----------
-        normalize : bool
-        sort : bool
-        ascending : bool
-        bins : int, optional
-        dropna : bool
-        **kwargs : dict
-            Serves the compatibility purpose. Does not affect the result.
-
-        Returns
-        -------
-        BaseQueryCompiler
-            One-column QueryCompiler which index labels is a unique elements of `self`
-            and each row contains the number of times corresponding value was met in the `self`.
-        """
-        return SeriesDefault.register(pandas.Series.value_counts)(self, **kwargs)
-
     @doc_utils.add_refer_to("DataFrame.stack")
     def stack(self, level, dropna):
         """

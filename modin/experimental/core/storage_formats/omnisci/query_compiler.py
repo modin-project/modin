@@ -149,19 +149,19 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
     Query compiler for the OmniSci backend.
 
     This class doesn't perform much processing and mostly forwards calls to
-    :py:class:`~modin.experimental.engines.omnisci_on_ray.frame.data.OmnisciOnRayFrame`
+    :py:class:`~modin.experimental.engines.omnisci_on_native.frame.data.OmnisciOnNativeFrame`
     for lazy execution trees build.
 
     Parameters
     ----------
-    frame : OmnisciOnRayFrame
+    frame : OmnisciOnNativeFrame
         Modin Frame to query with the compiled queries.
     shape_hint : {"row", "column", None}, default: None
         Shape hint for frames known to be a column or a row, otherwise None.
 
     Attributes
     ----------
-    _modin_frame : OmnisciOnRayFrame
+    _modin_frame : OmnisciOnNativeFrame
         Modin Frame to query with the compiled queries.
     _shape_hint : {"row", "column", None}
         Shape hint for frames known to be a column or a row, otherwise None.
@@ -415,24 +415,6 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
         )
         return self.__constructor__(new_frame, shape_hint="row")
 
-    def value_counts(self, **kwargs):
-        subset = kwargs.get("subset", None)
-        normalize = kwargs.get("normalize", False)
-        sort = kwargs.get("sort", True)
-        ascending = kwargs.get("ascending", False)
-        bins = kwargs.get("bins", False)
-        dropna = kwargs.get("dropna", True)
-
-        if bins or normalize:
-            raise NotImplementedError(
-                "OmniSci's 'value_counts' does not support 'bins' and 'normalize' parameters."
-            )
-
-        new_frame = self._modin_frame.value_counts(
-            columns=subset, dropna=dropna, sort=sort, ascending=ascending
-        )
-        return self.__constructor__(new_frame, shape_hint="column")
-
     def _get_index(self):
         """
         Return frame's index.
@@ -458,7 +440,7 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
             default_axis_setter(0)(self, index)
         else:
             default_axis_setter(0)(self, index)
-            # NotImplementedError: OmnisciOnRayFrame._set_index is not yet suported
+            # NotImplementedError: OmnisciOnNativeFrame._set_index is not yet suported
             # self._modin_frame.index = index
 
     def _get_columns(self):
@@ -555,6 +537,11 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
     def dt_month(self):
         return self.__constructor__(
             self._modin_frame.dt_extract("month"), self._shape_hint
+        )
+
+    def dt_day(self):
+        return self.__constructor__(
+            self._modin_frame.dt_extract("day"), self._shape_hint
         )
 
     def _bin_op(self, other, op_name, **kwargs):

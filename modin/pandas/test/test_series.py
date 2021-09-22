@@ -67,7 +67,7 @@ from .utils import (
     test_data_categorical_keys,
     generate_multiindex,
     test_data_diff_dtype,
-    sort_index_for_equal_values,
+    df_equals_with_non_stable_indices,
 )
 from modin.config import NPartitions
 
@@ -3389,54 +3389,54 @@ def test_update(data, other_data):
     df_equals(modin_series, pandas_series)
 
 
-@pytest.mark.parametrize("normalize, bins, dropna", [(True, 3, False)])
-def test_value_counts(normalize, bins, dropna):
-    # We sort indices for Modin and pandas result because of issue #1650
-    modin_series, pandas_series = create_test_series(test_data_values[0])
+@pytest.mark.parametrize("sort", bool_arg_values, ids=bool_arg_keys)
+@pytest.mark.parametrize("normalize", bool_arg_values, ids=bool_arg_keys)
+@pytest.mark.parametrize("bins", [3, None])
+@pytest.mark.parametrize("dropna", bool_arg_values, ids=bool_arg_keys)
+@pytest.mark.parametrize("ascending", bool_arg_values, ids=bool_arg_keys)
+def test_value_counts(sort, normalize, bins, dropna, ascending):
+    def sort_sensitive_comparator(df1, df2):
+        # We sort indices for Modin and pandas result because of issue #1650
+        return (
+            df_equals_with_non_stable_indices(df1, df2)
+            if sort
+            else df_equals(df1.sort_index(), df2.sort_index())
+        )
 
-    modin_result = sort_index_for_equal_values(
-        modin_series.value_counts(normalize=normalize, ascending=False), False
+    eval_general(
+        *create_test_series(test_data_values[0]),
+        lambda df: df.value_counts(
+            sort=sort,
+            bins=bins,
+            normalize=normalize,
+            dropna=dropna,
+            ascending=ascending,
+        ),
+        comparator=sort_sensitive_comparator,
+        # Modin's `sort_values` does not validate `ascending` type and so
+        # does not raise an exception when it isn't a bool, when pandas do so,
+        # visit modin-issue#3388 for more info.
+        check_exception_type=None if sort and ascending is None else True,
     )
-    pandas_result = sort_index_for_equal_values(
-        pandas_series.value_counts(normalize=normalize, ascending=False), False
-    )
-    df_equals(modin_result, pandas_result)
-
-    modin_result = sort_index_for_equal_values(
-        modin_series.value_counts(bins=bins, ascending=False), False
-    )
-    pandas_result = sort_index_for_equal_values(
-        pandas_series.value_counts(bins=bins, ascending=False), False
-    )
-    df_equals(modin_result, pandas_result)
-
-    modin_result = sort_index_for_equal_values(
-        modin_series.value_counts(dropna=dropna, ascending=True), True
-    )
-    pandas_result = sort_index_for_equal_values(
-        pandas_series.value_counts(dropna=dropna, ascending=True), True
-    )
-    df_equals(modin_result, pandas_result)
 
     # from issue #2365
     arr = np.random.rand(2 ** 6)
     arr[::10] = np.nan
-    modin_series, pandas_series = create_test_series(arr)
-    modin_result = sort_index_for_equal_values(
-        modin_series.value_counts(dropna=False, ascending=True), True
+    eval_general(
+        *create_test_series(arr),
+        lambda df: df.value_counts(
+            sort=sort,
+            bins=bins,
+            normalize=normalize,
+            dropna=dropna,
+            ascending=ascending,
+        ),
+        comparator=sort_sensitive_comparator,
+        # Modin's `sort_values` does not validate `ascending` type and so
+        # does not raise an exception when it isn't a bool, when pandas do so,
+        # visit modin-issue#3388 for more info.
+        check_exception_type=None if sort and ascending is None else True,
     )
-    pandas_result = sort_index_for_equal_values(
-        pandas_series.value_counts(dropna=False, ascending=True), True
-    )
-    df_equals(modin_result, pandas_result)
-
-    modin_result = sort_index_for_equal_values(
-        modin_series.value_counts(dropna=False, ascending=False), False
-    )
-    pandas_result = sort_index_for_equal_values(
-        pandas_series.value_counts(dropna=False, ascending=False), False
-    )
-    df_equals(modin_result, pandas_result)
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)

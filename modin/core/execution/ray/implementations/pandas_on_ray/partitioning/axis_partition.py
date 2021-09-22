@@ -21,7 +21,7 @@ from modin.core.dataframe.pandas.partitioning.axis_partition import (
 from .partition import PandasOnRayFramePartition
 
 import ray
-from ray.services import get_node_ip_address
+from ray.util import get_node_ip_address
 
 
 class PandasOnRayFrameAxisPartition(PandasFrameAxisPartition):
