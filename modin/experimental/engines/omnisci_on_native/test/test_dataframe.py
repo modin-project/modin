@@ -140,16 +140,13 @@ class TestCSV:
                 "dtype": {"symbol": "string"},
             },
         ):
-            eval_io(
-                fn_name="read_csv",
-                md_extra_kwargs={"engine": "arrow"},
-                comparator=lambda df1, df2: df_equals(
-                    df1["timestamp"].dt.year, df2["timestamp"].dt.year
-                ),
-                # read_csv kwargs
-                filepath_or_buffer=csv_file,
-                **kwargs,
-            )
+            rp = pandas.read_csv(csv_file, **kwargs)
+            rm = pd.read_csv(csv_file, engine="arrow", **kwargs)
+            with ForceOmnisciImport(rm):
+                rm = to_pandas(rm)
+                df_equals(rm["timestamp"].dt.year, rp["timestamp"].dt.year)
+                df_equals(rm["timestamp"].dt.month, rp["timestamp"].dt.month)
+                df_equals(rm["timestamp"].dt.day, rp["timestamp"].dt.day)
 
     def test_csv_fillna(self):
         csv_file = os.path.join(self.root, "examples/data/boston_housing.csv")
@@ -1667,6 +1664,12 @@ class TestDateTime:
             return df["c"].dt.month
 
         run_and_compare(dt_month, data=self.datetime_data)
+
+    def test_dt_day(self):
+        def dt_day(df, **kwargs):
+            return df["c"].dt.day
+
+        run_and_compare(dt_day, data=self.datetime_data)
 
 
 class TestCategory:
