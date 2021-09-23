@@ -101,8 +101,8 @@ class ForceOmnisciImport:
             partition.frame_id = frame_id
             self._imported_frames.append((df, frame_id))
 
-    def __enter__(self, *dfs):
-        pass
+    def __enter__(self):
+        return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         for df, frame_id in self._imported_frames:
@@ -114,6 +114,25 @@ class ForceOmnisciImport:
 
 
 def set_execution_mode(frame, mode, recursive=False):
+    """
+    Enable execution mode assertions for the passed frame.
+
+    Enabled execution mode checks mean, that the frame raises an AssertionError
+    if the execution flow is out of the scope of the selected mode.
+
+    Parameters
+    ----------
+    frame : DataFrame or Series
+        Modin frame to set execution mode at.
+    mode : {None, "lazy", "arrow"}
+        Execution mode to set:
+            - "lazy": only delayed computations.
+            - "arrow": only computations via Pyarrow.
+            - None: allow any type of computations.
+    recursive : bool, default: False
+        Whether to set the specified execution mode for every frame
+        in the delayed computation tree.
+    """
     if isinstance(frame, (pd.Series, pd.DataFrame)):
         frame = frame._query_compiler._modin_frame
     frame._force_execution_mode = mode
@@ -132,6 +151,8 @@ def run_and_compare(
     comparator=df_equals,
     **kwargs,
 ):
+    """Verify equality of the results of the passed function executed against pandas and modin frame."""
+
     def run_modin(
         fn,
         data,
