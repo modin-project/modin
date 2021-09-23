@@ -1239,12 +1239,17 @@ class TestParquet:
                 "C": ["c"] * 2000,
             }
         )
-        pandas_df.to_csv(csv_fname, index=False)
-        # read into pyarrow table and write it to a parquet file
-        t = csv.read_csv(csv_fname)
-        parquet.write_table(t, parquet_fname)
+        try:
+            pandas_df.to_csv(csv_fname, index=False)
+            # read into pyarrow table and write it to a parquet file
+            t = csv.read_csv(csv_fname)
+            parquet.write_table(t, parquet_fname)
 
-        df_equals(pd.read_parquet(parquet_fname), pandas.read_parquet(parquet_fname))
+            df_equals(
+                pd.read_parquet(parquet_fname), pandas.read_parquet(parquet_fname)
+            )
+        finally:
+            teardown_test_files([parquet_fname, csv_fname])
 
     @pytest.mark.xfail(
         condition="config.getoption('--simulate-cloud').lower() != 'off'",
