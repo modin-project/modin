@@ -29,7 +29,6 @@ from pandas.util._decorators import doc
 from modin.error_message import ErrorMessage
 from modin.backends.base.query_compiler import BaseQueryCompiler
 from modin.utils import _inherit_docstrings
-from modin.pandas.io import HDFStore
 
 _doc_default_io_method = """
 {summary} using pandas.
@@ -519,6 +518,8 @@ class BaseIO(object):
         chunksize=None,
         **kwargs,
     ):  # noqa: PR01
+        from modin.pandas.io import HDFStore
+
         ErrorMessage.default_to_pandas("`read_hdf`")
         modin_store = isinstance(path_or_buf, HDFStore)
         if modin_store:
