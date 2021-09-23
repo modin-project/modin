@@ -2025,5 +2025,33 @@ class TestConstructor:
         assert df._query_compiler._shape_hint == "column"
 
 
+class TestArrowExecution:
+    data1 = {
+        "a": [1, 2, 3],
+        "b": [3, 4, 5],
+        "c": [6, 7, 8],
+    }
+    data2 = {
+        "a": [1, 2, 3],
+        "d": [3, 4, 5],
+        "e": [6, 7, 8],
+    }
+
+    def test_drop_rename_concat(self):
+        def drop_rename_concat(df1, df2, lib, **kwargs):
+            df1 = df1.rename(columns={"a": "new_a", "c": "new_b"})
+            df1 = df1.drop(columns="b")
+            df2 = df2.rename(columns={"a": "new_a", "d": "new_b"})
+            df2 = df2.drop(columns="e")
+            return lib.concat([df1, df2], ignore_index=True)
+
+        run_and_compare(
+            drop_rename_concat,
+            data=self.data1,
+            data2=self.data2,
+            force_arrow_execute=True,
+        )
+
+
 if __name__ == "__main__":
     pytest.main(["-v", __file__])

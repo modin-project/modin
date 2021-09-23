@@ -1675,7 +1675,11 @@ class OmnisciOnNativeFrame(PandasFrame):
                 self._op.row_indices is None and self._op.input[0]._can_execute_arrow()
             )
         elif isinstance(self._op, TransformNode):
-            return self._op.is_drop() and self._op.input[0]._can_execute_arrow()
+            return (
+                not self._uses_rowid
+                and self._op.is_simple_select()
+                and self._op.input[0]._can_execute_arrow()
+            )
         elif isinstance(self._op, UnionNode):
             return all(frame._can_execute_arrow() for frame in self._op.input)
         else:
@@ -1699,20 +1703,20 @@ class OmnisciOnNativeFrame(PandasFrame):
         elif isinstance(self._op, MaskNode):
             return self._op.input[0]._arrow_row_slice(self._op.row_numeric_idx)
         elif isinstance(self._op, TransformNode):
-            return self._op.input[0]._arrow_col_slice(set(self._op.exprs.keys()))
+            return self._op.input[0]._arrow_select(self._op.exprs)
         elif isinstance(self._op, UnionNode):
             return self._arrow_concat(self._op.input)
         else:
             raise RuntimeError(f"Unexpected op ({type(self._op)}) in _execute_arrow")
 
-    def _arrow_col_slice(self, new_columns):
+    def _arrow_select(self, exprs):
         """
         Perform column selection on the frame using Arrow API.
 
         Parameters
         ----------
-        new_columns : list of str
-            Columns to select.
+        exprs : dict
+            Select expressions.
 
         Returns
         -------
@@ -1720,9 +1724,21 @@ class OmnisciOnNativeFrame(PandasFrame):
             The resulting table.
         """
         table = self._execute_arrow()
-        return table.drop(
-            [f"F_{col}" for col in self._table_cols if col not in new_columns]
-        )
+        schema = table.schema
+
+        new_fields = []
+        new_columns = []
+
+        for col, expr in exprs.items():
+            field = schema.field(f"F_{expr.column}")
+            if col != expr.column:
+                field = field.with_name(f"F_{col}")
+            new_fields.append(field)
+            new_columns.append(table.column(f"F_{expr.column}"))
+
+        new_schema = pyarrow.schema(new_fields)
+
+        return pyarrow.Table.from_arrays(new_columns, schema=new_schema)
 
     def _arrow_row_slice(self, row_numeric_idx):
         """

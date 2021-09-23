@@ -591,29 +591,18 @@ class TransformNode(DFAlgNode):
         """
         return TransformNode(self.input[0], self.exprs, self.keep_index)
 
-    def is_drop(self):
+    def is_simple_select(self):
         """
-        Check if transform node is a simple drop of columns.
+        Check if transform node is a simple selection.
 
-        Zero or more columns may be dropped. Remaining columns should
-        preserve original columns order.
+        Simple selection can only use InputRefExpr expressions.
 
         Returns
         -------
         bool
-            True for drop transformation and False otherwise.
+            True for simple select and False otherwise.
         """
-        col_iter = iter(self.input[0]._table_cols)
-        try:
-            for col, expr in self.exprs.items():
-                if not isinstance(expr, InputRefExpr) or expr.column != col:
-                    return False
-                while next(col_iter) != col:
-                    pass
-        except StopIteration:
-            return False
-
-        return True
+        return all(isinstance(expr, InputRefExpr) for expr in self.exprs.values())
 
     def _prints(self, prefix):
         """
