@@ -435,7 +435,7 @@ def make_parquet_file():
         Args:
             filename: The name of test file, that should be created.
             nrows: Number of rows for the dataframe.
-            ncols: TODO: add docstring
+            ncols: Number of cols for the dataframe.
             force: Create a new file/directory even if one already exists.
             directory: Create a partitioned directory using pyarrow.
             partitioned_columns: Create a partitioned directory using pandas.
@@ -446,7 +446,6 @@ def make_parquet_file():
                 {f"col{x + 1}": np.arange(nrows) for x in range(ncols)}
             )
             if directory:
-                # ???
                 if os.path.exists(filename):
                     shutil.rmtree(filename)
                 else:

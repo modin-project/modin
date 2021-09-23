@@ -1971,27 +1971,12 @@ class TestFeather:
     )
     def test_read_feather(self, make_feather_file):
         unique_filename = get_unique_filename(extension="feather")
-<<<<<<< HEAD
-        try:
-            # change the number of columns only if you know what you are doing;
-            # for details see https://github.com/modin-project/modin/pull/3465
-            setup_feather_file(filename=unique_filename, ncols=8)
-
-            eval_io(
-                fn_name="read_feather",
-                # read_feather kwargs
-                path=unique_filename,
-            )
-        finally:
-            teardown_test_files([unique_filename])
-=======
         make_feather_file(filename=unique_filename)
         eval_io(
             fn_name="read_feather",
             # read_feather kwargs
             path=unique_filename,
         )
->>>>>>> 1f923a90 (REFACTOR-#3454: add make_feather_file fixture)
 
     @pytest.mark.xfail(
         condition="config.getoption('--simulate-cloud').lower() != 'off'",
