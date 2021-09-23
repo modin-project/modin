@@ -128,12 +128,12 @@ def setup_excel_file(filename, row_size=NROWS, force=True):
         df.to_excel(filename)
 
 
-def setup_feather_file(filename, row_size=NROWS, force=True):
+def setup_feather_file(filename, row_size=NROWS, ncols=2, force=True):
     if os.path.exists(filename) and not force:
         pass
     else:
         df = pandas.DataFrame(
-            {"col1": np.arange(row_size), "col2": np.arange(row_size)}
+            {f"col{x + 1}": np.arange(row_size) for x in range(ncols)}
         )
         df.to_feather(filename)
 
@@ -2120,7 +2120,9 @@ class TestFeather:
     def test_read_feather(self):
         unique_filename = get_unique_filename(extension="feather")
         try:
-            setup_feather_file(filename=unique_filename)
+            # change the number of columns only if you know what you are doing;
+            # for details see https://github.com/modin-project/modin/pull/3465
+            setup_feather_file(filename=unique_filename, ncols=8)
 
             eval_io(
                 fn_name="read_feather",
