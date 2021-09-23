@@ -33,7 +33,7 @@ if USE_OMNISCI:
     cluster_params["cluster_type"] = "omnisci"
 test_cluster = create_cluster(
     "aws",
-    credentials=None,
+    "aws_credentials",
     cluster_name="rayscale-test",
     region="eu-central-1",
     zone="eu-central-1b",
