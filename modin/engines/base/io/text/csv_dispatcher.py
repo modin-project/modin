@@ -334,24 +334,13 @@ class CSVDispatcher(TextFileDispatcher):
                     index=index_range.delete(skiprows_md)
                 )
             elif callable(skiprows_md):
-                try:
-                    # dicrect `skiprows_md` is more efficient than using of
-                    # map method, but in some cases it can work incorrectly, e.g.
-                    # when `skiprows_md` contains `in` operator
-                    mod_index = skiprows_md(index_range)
-                    assert is_list_like(mod_index)
-                except (ValueError, TypeError, AssertionError):
-                    # ValueError can be raised if `skiprows` callable contain membersip operator
-                    # TypeError is raised if `skiprows` callable contain bitwise operator
-                    # AssertionError is raised if unexpected behavior was detected
-                    mod_index = index_range.map(skiprows_md)
-
-                mod_index = (
-                    mod_index
-                    if isinstance(mod_index, np.ndarray)
-                    else mod_index.to_numpy("bool")
+                skip_mask = cls._get_skip_mask(index_range, skiprows_md)
+                skip_mask = (
+                    skip_mask
+                    if isinstance(skip_mask, np.ndarray)
+                    else skip_mask.to_numpy("bool")
                 )
-                view_idx = index_range[~mod_index]
+                view_idx = index_range[~skip_mask]
                 new_query_compiler = new_query_compiler.view(index=view_idx)
 
             if not isinstance(new_query_compiler.index, pandas.MultiIndex):
@@ -383,11 +372,6 @@ class CSVDispatcher(TextFileDispatcher):
         into integer value and `pre_reading` parameter will be set if needed
         (in this case fastpath can be done).
 
-        Additionally function is responsible for definition of number of rows that
-        should be skipped during data file partitioning (`skiprows_partitioning`
-        parameter) since it can depend on `skiprows` and `header` parameters
-        interconnections.
-
         Parameters
         ----------
         skiprows : int, array or callable, optional
@@ -408,14 +392,9 @@ class CSVDispatcher(TextFileDispatcher):
             data file partitioning).
         need_fallback_impl : bool
             Whether pandas implementation should be used. If `need_fallback_impl`
-            is True, `skiprows` and `header` parameters most probably are set
-            incorrectly.
+            is True, `skiprows` and `header` parameters values have intersecions.
         """
         need_fallback_impl = False
-        # rows number that should be read during header line/lines look up before
-        # operation termination. Added to avoid infinite loop because of incorrect
-        # setting of `skiprows` and `header` parameters.
-        rows_limit = 1e6
         pre_reading = 0
         skiprows_partitioning = 0
         skiprows_md = 0
@@ -436,60 +415,56 @@ class CSVDispatcher(TextFileDispatcher):
             elif skiprows_md[0] > header_size:
                 skiprows_md = skiprows_md - header_size
             else:
-                # case when header rows and rows for skipping have intersection.
-                # Starting from the first row for skipping (rows before this rows
-                # will be used/skipped by header) iterate over rows numbers to define
-                # it's status (read or skipped)
-                skiprows_len = len(skiprows)
-                rows_read = skiprows_md[0]
-                row_id = skiprows_md[0]
-                rows_skipped = 0
-                while rows_read < header_size and rows_skipped < skiprows_len:
-                    if row_id == skiprows[rows_skipped]:
-                        rows_skipped += 1
-                    else:
-                        rows_read += 1
-
-                    row_id += 1
-
-                skiprows_partitioning = rows_skipped
-                skiprows_md = skiprows_md[rows_skipped:]
-                if len(skiprows_md):
-                    # shift `skiprows` values since `rows_skipped` and `header_size` rows
-                    # wouldn't be actually read and shouldn't took into account for rows skipping
-                    # afterwards
-                    skiprows_md = skiprows_md - rows_skipped - header_size
-
+                need_fallback_impl = True
         elif callable(skiprows):
-            row_id = 0
-            rows_read = 0
-            rows_skipped = 0
-            # use the same approach as for list-like non-uniform `skiprows`
-            while rows_read < header_size:
-                if skiprows(row_id):
-                    rows_skipped += 1
-                else:
-                    rows_read += 1
+            skip_mask = cls._get_skip_mask(pandas.RangeIndex(header_size), skiprows)
+            if any(map(bool, skip_mask)):
+                need_fallback_impl = True
+            else:
 
-                row_id += 1
-                if row_id > rows_limit:
-                    need_fallback_impl = True
-                    ErrorMessage.single_warning(
-                        f"Header line/lines weren't found after {int(rows_limit)} lines scanning, "
-                        "please check correctness of `header` and `skiprows` parameters. "
-                        "Import operation will be defaulted to pandas!"
-                    )
-                    break
+                def skiprows_func(x):
+                    return skiprows(x + header_size)
 
-            skiprows_partitioning = rows_skipped
-
-            def skiprows_func(x):
-                return skiprows(x + rows_skipped + header_size)
-
-            skiprows_md = skiprows_func
+                skiprows_md = skiprows_func
         elif skiprows is not None:
             raise TypeError(
                 f"Not acceptable type of `skiprows` parameter: {type(skiprows)}"
             )
 
+        if need_fallback_impl:
+            ErrorMessage.single_warning(
+                "Values of `header` and `skiprows` parameters have intersections. "
+                "This case doesn't supported by Modin, so pandas implementation will be used!"
+            )
+
         return skiprows_md, pre_reading, skiprows_partitioning, need_fallback_impl
+
+    @classmethod
+    def _get_skip_mask(cls, rows_index: pandas.Index, skiprows: Callable):
+        """
+        Get mask of skipped by `skiprows` rows.
+
+        Parameters
+        ----------
+        rows_index : pandas.Index
+            Rows index to get mask for.
+        skiprows : Callable
+            Callable to check whether row index should be skipped.
+
+        Returns
+        -------
+        pandas.Index
+        """
+        try:
+            # dicrect `skiprows_md` is more efficient than using of
+            # map method, but in some cases it can work incorrectly, e.g.
+            # when `skiprows_md` contains `in` operator
+            mask = skiprows(rows_index)
+            assert is_list_like(mask)
+        except (ValueError, TypeError, AssertionError):
+            # ValueError can be raised if `skiprows` callable contain membersip operator
+            # TypeError is raised if `skiprows` callable contain bitwise operator
+            # AssertionError is raised if unexpected behavior was detected
+            mask = rows_index.map(skiprows)
+
+        return mask
