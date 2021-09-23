@@ -29,6 +29,7 @@ from pandas.util._decorators import doc
 from modin.error_message import ErrorMessage
 from modin.backends.base.query_compiler import BaseQueryCompiler
 from modin.utils import _inherit_docstrings
+from modin.pandas.io import HDFStore
 
 _doc_default_io_method = """
 {summary} using pandas.
@@ -519,21 +520,26 @@ class BaseIO(object):
         **kwargs,
     ):  # noqa: PR01
         ErrorMessage.default_to_pandas("`read_hdf`")
-        return cls.from_pandas(
-            pandas.read_hdf(
-                path_or_buf,
-                key=key,
-                mode=mode,
-                columns=columns,
-                errors=errors,
-                where=where,
-                start=start,
-                stop=stop,
-                iterator=iterator,
-                chunksize=chunksize,
-                **kwargs,
-            )
+        modin_store = isinstance(path_or_buf, HDFStore)
+        if modin_store:
+            path_or_buf._return_modin_dataframe = False
+        df = pandas.read_hdf(
+            path_or_buf,
+            key=key,
+            mode=mode,
+            columns=columns,
+            errors=errors,
+            where=where,
+            start=start,
+            stop=stop,
+            iterator=iterator,
+            chunksize=chunksize,
+            **kwargs,
         )
+        if modin_store:
+            path_or_buf._return_modin_dataframe = True
+
+        return cls.from_pandas(df)
 
     @classmethod
     @_inherit_docstrings(pandas.read_feather, apilink="pandas.read_feather")
