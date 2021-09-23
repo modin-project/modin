@@ -1712,6 +1712,24 @@ class TestHdf:
                 os.unlink(hdf_file)
             teardown_test_files([unique_filename_modin, unique_filename_pandas])
 
+    @pytest.mark.xfail(
+        condition="config.getoption('--simulate-cloud').lower() != 'off'",
+        reason="The reason of tests fail in `cloud` mode is unknown for now - issue #3264",
+    )
+    def test_HDFStore_in_read_hdf(self):
+        filename = get_unique_filename(extension="hdf")
+        dfin = pd.DataFrame(np.random.rand(8, 8))
+        try:
+            dfin.to_hdf(filename, "/key")
+
+            with pd.HDFStore(filename) as h:
+                modin_df = pd.read_hdf(h, "/key")
+            with pandas.HDFStore(filename) as h:
+                pandas_df = pandas.read_hdf(h, "/key")
+            df_equals(modin_df, pandas_df)
+        finally:
+            teardown_test_files([filename])
+
 
 class TestSql:
     @pytest.mark.xfail(
