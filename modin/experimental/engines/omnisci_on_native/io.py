@@ -294,7 +294,7 @@ class OmnisciOnNativeIO(BaseIO, TextFileDispatcher):
                 )
 
             if is_list_like(parse_dates):
-                parse_dates_labels = tuple(
+                parse_dates_labels = frozenset(
                     column_names[col] if isinstance(col, int) else col
                     for col in parse_dates
                 )
@@ -314,7 +314,7 @@ class OmnisciOnNativeIO(BaseIO, TextFileDispatcher):
                 index_col_labels = ()
                 if index_col is not None:
                     index_col = index_col if is_list_like(index_col) else (index_col,)
-                    index_col_labels = tuple(
+                    index_col_labels = frozenset(
                         column_names[col] if isinstance(col, int) else col
                         for col in index_col
                     )
