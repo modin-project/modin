@@ -173,6 +173,8 @@ class OmnisciServer:
             # OmniSci doesn't support importing Arrow's date type:
             # https://github.com/omnisci/omniscidb/issues/678
             elif pa.types.is_date(field.type):
+                # Arrow's date is the number of days since the UNIX-epoch, so we can convert it
+                # to a timestamp[s] (number of seconds since the UNIX-epoch) without losing precision
                 new_field = pa.field(
                     field.name, pa.timestamp("s"), field.nullable, field.metadata
                 )
