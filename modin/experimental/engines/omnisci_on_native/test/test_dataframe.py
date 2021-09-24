@@ -1720,6 +1720,16 @@ class TestBinaryOp:
 
         run_and_compare(filter, data=self.cmp_data)
 
+    def test_complex_filter(self):
+        def filter_and(df, **kwargs):
+            return df[(df.a < 5) & (df.b > 20)]
+
+        def filter_or(df, **kwargs):
+            return df[(df.a < 3) | (df.b > 40)]
+
+        run_and_compare(filter_and, data=self.cmp_data)
+        run_and_compare(filter_or, data=self.cmp_data)
+
 
 class TestDateTime:
     datetime_data = {
