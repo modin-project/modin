@@ -879,15 +879,10 @@ class TestGroupby:
     # modin-issue#3461
     def test_groupby_pure_by(self):
         data = [1, 1, 2, 2]
-        md_ser, pd_ser = pd.Series(data), pandas.Series(data)
+        # Test when 'by' is a 'TransformNode'
+        run_and_compare(lambda df: df.groupby(df).sum(), data=data, force_lazy=True)
 
-        set_execution_mode(md_ser, "lazy")
-        md_res = md_ser.groupby(md_ser).sum()
-        set_execution_mode(md_res, None)
-
-        pd_res = pd_ser.groupby(pd_ser).sum()
-        df_equals(md_res, pd_res)
-
+        # Test when 'by' is a 'FrameNode'
         md_ser, pd_ser = pd.Series(data), pandas.Series(data)
 
         md_ser._query_compiler._modin_frame._execute()
