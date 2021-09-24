@@ -220,6 +220,8 @@ class TestCSV:
             rp = pandas.read_csv(csv_file, **kwargs)
             rm = to_pandas(pd.read_csv(csv_file, engine="arrow", **kwargs))
             df_equals(rm["timestamp"].dt.year, rp["timestamp"].dt.year)
+            df_equals(rm["timestamp"].dt.month, rp["timestamp"].dt.month)
+            df_equals(rm["timestamp"].dt.day, rp["timestamp"].dt.day)
 
     def test_csv_fillna(self):
         csv_file = os.path.join(self.root, "examples/data/boston_housing.csv")
@@ -1757,6 +1759,12 @@ class TestDateTime:
             return df["c"].dt.month
 
         run_and_compare(dt_month, data=self.datetime_data)
+
+    def test_dt_day(self):
+        def dt_day(df, **kwargs):
+            return df["c"].dt.day
+
+        run_and_compare(dt_day, data=self.datetime_data)
 
 
 class TestCategory:
