@@ -324,7 +324,7 @@ by documentation for now, the rest is coming soon...).
    │   │   │       └─── :doc:`query_compiler </flow/modin/experimental/backends/omnisci/query_compiler>`
    │   │   ├───cloud
    │   │   ├───engines
-   │   │   │   ├─── :doc:`omnisci_on_ray </flow/modin/experimental/engines/omnisci_on_ray/frame/index>`
+   │   │   │   ├─── :doc:`omnisci_on_native </flow/modin/experimental/engines/omnisci_on_native/frame/index>`
    │   │   │   ├─── :doc:`pandas_on_ray </flow/modin/experimental/engines/pandas_on_ray>`
    │   │   │   └─── :doc:`pyarrow_on_ray </flow/modin/experimental/engines/pyarrow_on_ray>`
    │   │   ├─── :doc:`pandas </flow/modin/experimental/pandas>`
