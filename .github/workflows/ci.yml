@@ -1,5 +1,5 @@
 name: ci
-on: pull_request
+on: push
 jobs:
   lint-commit:
     name: lint (commit)
