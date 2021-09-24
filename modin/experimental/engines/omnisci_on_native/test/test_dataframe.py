@@ -1711,6 +1711,12 @@ class TestBinaryOp:
 
         run_and_compare(cmp, data=data, cmp_fn=cmp_fn, value=value)
 
+    def test_filter_dtypes(self):
+        def filter(df, **kwargs):
+            return df[df.a < 4].dtypes
+
+        run_and_compare(filter, data=self.cmp_data)
+
     @pytest.mark.xfail(
         reason="Requires fix in OmniSci: https://github.com/intel-ai/omniscidb/pull/178"
     )

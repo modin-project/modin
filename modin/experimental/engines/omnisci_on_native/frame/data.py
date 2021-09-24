@@ -2002,6 +2002,20 @@ class OmnisciOnNativeFrame(PandasFrame):
     columns = property(_get_columns)
     index = property(_get_index)
 
+    @property
+    def dtypes(self):
+        """
+        Return column data types.
+
+        Returns
+        -------
+        pandas.Series
+            A pandas Series containing the data types for this dataframe.
+        """
+        if self._index_cols is not None:
+            return self._dtypes[len(self._index_cols) :]
+        return self._dtypes
+
     def has_multiindex(self):
         """
         Check for multi-index usage.
