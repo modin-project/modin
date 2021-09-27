@@ -13,7 +13,9 @@
 
 import pytest
 import modin.pandas as pd
+from modin.utils import try_cast_to_pandas
 import pandas
+from pandas.api.types import is_datetime64_any_dtype
 import pyarrow as pa
 
 from modin.pandas.test.utils import (
@@ -50,6 +52,9 @@ def eval_io(
     def omnisci_comparator(df1, df2):
         """Evaluate equality comparison of the passed frames after importing the Modin's one to OmniSci."""
         with ForceOmnisciImport(df1, df2):
+            # Aligning DateTime dtypes because of the bug related to the `parse_dates` parameter:
+            # https://github.com/modin-project/modin/issues/3485
+            df1, df2 = align_datetime_dtypes(df1, df2)
             comparator(df1, df2)
 
     general_eval_io(
@@ -64,6 +69,41 @@ def eval_io(
         *args,
         **kwargs,
     )
+
+
+def align_datetime_dtypes(*dfs):
+    """
+    Make all of the passed frames have DateTime dtype for the same columns.
+
+    Cast column type of the certain frame to the DateTime type if any frame in
+    the `dfs` sequence has DateTime type for this column.
+
+    Parameters
+    ----------
+    *dfs : iterable of DataFrames
+        DataFrames to align DateTime dtypes.
+
+    Notes
+    -----
+    Passed Modin frames may be casted to pandas in the result.
+    """
+    datetime_cols = {}
+    for df in dfs:
+        for col, dtype in df.dtypes.items():
+            # If we already decided to cast this column to DateTime no more actions are needed
+            if col not in datetime_cols and is_datetime64_any_dtype(dtype):
+                datetime_cols[col] = dtype
+
+    casted_dfs = (
+        # OmniSci has difficulties with casting to certain dtypes (i.e. datetime64),
+        # so casting it to pandas before doing 'astype'
+        tuple(try_cast_to_pandas(df).astype(datetime_cols) for df in dfs)
+        # This is required so we don't try to cast empty OmniSci frames to pandas:
+        # https://github.com/modin-project/modin/issues/3428
+        if len(datetime_cols)
+        else dfs
+    )
+    return casted_dfs
 
 
 class ForceOmnisciImport:
