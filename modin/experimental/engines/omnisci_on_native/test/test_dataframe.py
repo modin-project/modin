@@ -2000,6 +2000,12 @@ class TestArrowExecution:
             force_arrow_execute=True,
         )
 
+    def test_empty_transform(self):
+        def apply(df, **kwargs):
+            return df + 1
+
+        run_and_compare(apply, data={}, force_arrow_execute=True)
+
 
 if __name__ == "__main__":
     pytest.main(["-v", __file__])
