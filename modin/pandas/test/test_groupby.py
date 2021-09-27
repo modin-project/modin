@@ -439,14 +439,14 @@ def test_simple_row_groupby(by, as_index, col1_category):
     ):
         # Not yet supported for non-original-column-from-dataframe Series in by:
         eval___getattr__(modin_groupby, pandas_groupby, "col3")
-        eval__getitem__(modin_groupby, pandas_groupby, "col3")
+        eval___getitem__(modin_groupby, pandas_groupby, "col3")
 
     non_by_cols = (
         [col for col in pandas_df.columns[1:] if col not in modin_groupby._internal_by]
         if isinstance(by, list)
         else ["col3", "col4"]
     )
-    eval__getitem__(modin_groupby, pandas_groupby, non_by_cols)
+    eval___getitem__(modin_groupby, pandas_groupby, non_by_cols)
     eval_groups(modin_groupby, pandas_groupby)
 
 
@@ -1119,7 +1119,7 @@ def eval___getattr__(modin_groupby, pandas_groupby, item):
     )
 
 
-def eval__getitem__(md_grp, pd_grp, item):
+def eval___getitem__(md_grp, pd_grp, item):
     eval_general(
         md_grp,
         pd_grp,
@@ -1623,8 +1623,8 @@ def test_multi_column_groupby_different_partitions(
         by, as_index=as_index
     )
     eval_general(md_grp, pd_grp, func_to_apply)
-    eval__getitem__(md_grp, pd_grp, md_df.columns[1])
-    eval__getitem__(md_grp, pd_grp, [md_df.columns[1], md_df.columns[2]])
+    eval___getitem__(md_grp, pd_grp, md_df.columns[1])
+    eval___getitem__(md_grp, pd_grp, [md_df.columns[1], md_df.columns[2]])
 
 
 @pytest.mark.parametrize(

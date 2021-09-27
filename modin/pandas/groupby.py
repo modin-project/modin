@@ -307,19 +307,19 @@ class DataFrameGroupBy(object):
 
         Returns
         -------
-        list of labels
+        tuple of labels
         """
         if self._internal_by_cache is not no_default:
             return self._internal_by_cache
 
         internal_by = []
         if self._drop:
-            for by in self._by if is_list_like(self._by) else [self._by]:
+            for by in self._by if is_list_like(self._by) else (self._by,):
                 if isinstance(by, str):
                     internal_by.append(by)
                 elif isinstance(by, BaseQueryCompiler):
                     internal_by.extend(by.columns)
-            internal_by = self._df.columns.intersection(internal_by).tolist()
+            internal_by = tuple(self._df.columns.intersection(internal_by))
 
         self._internal_by_cache = internal_by
         return internal_by
@@ -976,12 +976,16 @@ class DataFrameGroupBy(object):
             and len(self._by.columns) == 1
         ):
             by = self._by.columns[0] if self._drop else self._by.to_pandas().squeeze()
+        # converting QC 'by' to a list of column labels only if this 'by' comes from the self (if drop is True)
         elif self._drop and isinstance(self._by, type(self._query_compiler)):
             by = list(self._by.columns)
         else:
             by = self._by
 
         by = try_cast_to_pandas(by, squeeze=True)
+        # Since 'by' may be a 2D query compiler holding columns to group by,
+        # to_pandas will also produce a pandas DataFrame containing them.
+        # So splitting 2D 'by' into a list of 1D Series using 'GroupBy.validate_by':
         by = GroupBy.validate_by(by)
 
         def groupby_on_multiple_columns(df, *args, **kwargs):
