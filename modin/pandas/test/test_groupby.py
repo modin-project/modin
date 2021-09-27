@@ -15,7 +15,7 @@ import pytest
 import pandas
 import numpy as np
 import modin.pandas as pd
-from modin.utils import try_cast_to_pandas, get_current_backend
+from modin.utils import try_cast_to_pandas, get_current_backend, hashable
 from modin.pandas.utils import from_pandas, is_scalar
 from .utils import (
     df_equals,
@@ -1497,6 +1497,37 @@ def test_mixed_columns(columns):
     df2 = pd.concat([df2])
     exp = df2.groupby(get_columns(df2)).size()
     df_equals(ref, exp)
+
+
+@pytest.mark.parametrize(
+    # When True, use (df[name] + 1), otherwise just use name
+    "columns",
+    [
+        [(True, "a"), (True, "b"), (True, "c")],
+        [(True, "a"), (True, "b")],
+        [(False, "a"), (False, "b"), (True, "c")],
+        [(False, "a"), (True, "c")],
+        [(False, "a"), (True, "c"), (False, [1, 1, 2])],
+        [(False, "a"), (False, "b"), (False, "c")],
+        [(False, "a"), (False, "b"), (False, "c"), (False, [1, 1, 2])],
+    ],
+)
+def test_internal_by_detection(columns):
+    def get_columns(df):
+        return [(df[name] + 1) if lookup else name for (lookup, name) in columns]
+
+    data = {"a": [1, 1, 2], "b": [11, 11, 22], "c": [111, 111, 222]}
+
+    md_df = pd.DataFrame(data)
+    by = get_columns(md_df)
+    md_grp = md_df.groupby(by)
+
+    ref = frozenset(
+        col for is_lookup, col in columns if not is_lookup and hashable(col)
+    )
+    exp = frozenset(md_grp._internal_by)
+
+    assert ref == exp
 
 
 @pytest.mark.parametrize(

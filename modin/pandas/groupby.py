@@ -312,14 +312,16 @@ class DataFrameGroupBy(object):
         if self._internal_by_cache is not no_default:
             return self._internal_by_cache
 
-        internal_by = []
+        internal_by = tuple()
         if self._drop:
-            for by in self._by if is_list_like(self._by) else (self._by,):
-                if isinstance(by, str):
-                    internal_by.append(by)
-                elif isinstance(by, BaseQueryCompiler):
-                    internal_by.extend(by.columns)
-            internal_by = tuple(self._df.columns.intersection(internal_by))
+            if is_list_like(self._by):
+                internal_by = tuple(by for by in self._by if isinstance(by, str))
+            else:
+                ErrorMessage.catch_bugs_and_request_email(
+                    failure_condition=not isinstance(self._by, BaseQueryCompiler),
+                    extra_log=f"When 'drop' is True, 'by' must be either list-like or a QueryCompiler, met: {type(self._by)}.",
+                )
+                internal_by = tuple(self._by.columns)
 
         self._internal_by_cache = internal_by
         return internal_by
@@ -358,7 +360,7 @@ class DataFrameGroupBy(object):
         elif not self._as_index and not isinstance(key, list):
             key = [key]
         if isinstance(key, list) and (make_dataframe or not self._as_index):
-            cols_to_grab = self._internal_by + key
+            cols_to_grab = list(self._internal_by) + key
             key = [col for col in self._df.columns if col in cols_to_grab]
             return DataFrameGroupBy(
                 self._df[key],
