@@ -346,21 +346,19 @@ class DataFrameGroupBy(object):
             Column lookups on GroupBy with arbitrary Series in by is not yet supported.
         """
         kwargs = {**self._kwargs.copy(), "squeeze": self._squeeze}
-        # Most of time indexing DataFrameGroupBy results in another DataFrameGroupBy object unless circumstances are
-        # special in which case SeriesGroupBy has to be returned. Such circumstances are when key equals to a single
-        # column name and is not a list of column names or list of one column name.
-        make_dataframe = True
-        if self._drop and self._as_index:
-            if not isinstance(key, list):
-                key = [key]
-                kwargs["squeeze"] = True
+        # The rules of type deduction for the resulted object is the following:
+        #   1. If `key` is a list-like or `as_index is False`, then the resulted object is a DataFrameGroupBy
+        #   2. Otherwise, the resulted object is SeriesGroupBy
+        if is_list_like(key):
+            make_dataframe = True
+        else:
+            if self._as_index:
                 make_dataframe = False
-        # When `as_index` is False, pandas will always convert to a `DataFrame`, we
-        # convert to a list here so that the result will be a `DataFrame`.
-        elif not self._as_index and not isinstance(key, list):
-            key = [key]
-        if isinstance(key, list) and (make_dataframe or not self._as_index):
-            cols_to_grab = list(self._internal_by) + key
+            else:
+                make_dataframe = True
+                key = [key]
+        if make_dataframe:
+            cols_to_grab = self._internal_by + tuple(key)
             key = [col for col in self._df.columns if col in cols_to_grab]
             return DataFrameGroupBy(
                 self._df[key],
@@ -991,8 +989,6 @@ class DataFrameGroupBy(object):
         by = GroupBy.validate_by(by)
 
         def groupby_on_multiple_columns(df, *args, **kwargs):
-            if isinstance(self, SeriesGroupBy) and isinstance(df, pandas.DataFrame):
-                df = df.squeeze(axis=1)
             return f(
                 df.groupby(
                     by=by, axis=self._axis, squeeze=self._squeeze, **self._kwargs
