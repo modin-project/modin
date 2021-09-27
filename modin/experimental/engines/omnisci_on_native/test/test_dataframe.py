@@ -896,6 +896,13 @@ class TestGroupby:
 
         run_and_compare(df_astype, data=self.taxi_data)
 
+    def test_df_indexed_astype(self):
+        def df_astype(df, **kwargs):
+            df = df.groupby("a").agg({"b": "sum"})
+            return df.astype({"b": "float"})
+
+        run_and_compare(df_astype, data=self.taxi_data)
+
     @pytest.mark.parametrize("as_index", bool_arg_values)
     def test_taxi_q4(self, as_index):
         def taxi_q4(df, **kwargs):
