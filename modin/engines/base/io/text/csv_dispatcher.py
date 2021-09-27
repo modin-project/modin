@@ -86,7 +86,11 @@ class CSVDispatcher(TextFileDispatcher):
             header,
             names,
         )
-        skiprows_md, pre_reading = cls._manage_skiprows_parameter(skiprows, header_size)
+        (
+            skiprows_md,
+            pre_reading,
+            skiprows_partitioning,
+        ) = cls._manage_skiprows_parameter(skiprows, header_size)
         should_handle_skiprows = skiprows_md is not None and not isinstance(
             skiprows_md, int
         )
@@ -105,14 +109,6 @@ class CSVDispatcher(TextFileDispatcher):
         # to the workers to match pandas output
         pass_names = names in [None, lib.no_default] and (
             skiprows is not None or kwargs.get("skipfooter", 0) != 0
-        )
-
-        # Define header size for further skipping (Header can be skipped because header
-        # information will be obtained further from empty_df, so no need to handle it
-        # by workers)
-        header_size = cls._define_header_size(
-            header,
-            names,
         )
 
         pd_df_metadata = pandas.read_csv(
@@ -141,7 +137,7 @@ class CSVDispatcher(TextFileDispatcher):
                 f,
                 num_partitions=NPartitions.get(),
                 nrows=kwargs.get("nrows", None) if not should_handle_skiprows else None,
-                skiprows=skiprows_md if not should_handle_skiprows else None,
+                skiprows=skiprows_partitioning,
                 quotechar=quotechar,
                 is_quoting=is_quoting,
                 header_size=header_size,
@@ -331,10 +327,10 @@ class CSVDispatcher(TextFileDispatcher):
             index_range = pandas.RangeIndex(len(new_query_compiler.index))
             if is_list_like(skiprows_md):
                 new_query_compiler = new_query_compiler.view(
-                    index=index_range.delete(skiprows_md - header_size)
+                    index=index_range.delete(skiprows_md)
                 )
             elif callable(skiprows_md):
-                mod_index = skiprows_md(index_range + header_size)
+                mod_index = skiprows_md(index_range)
                 mod_index = (
                     mod_index
                     if isinstance(mod_index, np.ndarray)
@@ -379,30 +375,50 @@ class CSVDispatcher(TextFileDispatcher):
         Parameters
         ----------
         skiprows : int, array or callable, optional
-                Original skiprows parameter of read_csv function.
+            Original skiprows parameter of read_csv function.
         header_size : int, default: 0
-                Number of rows that are used by header.
+            Number of rows that are used by header.
 
         Returns
         -------
-        skiprows : int, array or callable
-                Updated skiprows parameter.
+        skiprows_md : int, array or callable
+            Updated skiprows parameter.
         pre_reading : int
-                The number of rows that should be read before data file
-                splitting for further reading (the number of rows for
-                the first partition).
+            The number of rows that should be read before data file
+            splitting for further reading (the number of rows for
+            the first partition).
+        skiprows_partitioning : int
+            The number of rows that should be skipped virtually (skipped during
+            data file partitioning).
         """
         pre_reading = 0
-        uniform_skiprows = False
-        if is_list_like(skiprows):
-            skiprows = np.sort(skiprows)
-            if np.all(np.diff(skiprows) == 1):
-                uniform_skiprows = True
+        skiprows_partitioning = 0
+        skiprows_md = 0
+        if isinstance(skiprows, int):
+            skiprows_partitioning = skiprows
+        elif is_list_like(skiprows):
+            skiprows_md = np.sort(skiprows)
+            if np.all(np.diff(skiprows_md) == 1):
+                # `skiprows` is uniformly distributed array.
+                # If there is a gap between the first row for skipping and
+                # the last line of the header, then assign to read this gap first
+                # during data file partitioning
+                pre_reading = (
+                    skiprows_md[0] - header_size if skiprows_md[0] > header_size else 0
+                )
+                skiprows_partitioning = len(skiprows_md)
+                skiprows_md = 0
+            else:
+                skiprows_md = skiprows_md - header_size
+        elif callable(skiprows):
 
-        if uniform_skiprows:
-            pre_reading = max(0, skiprows[0] - header_size)
-            skiprows = len(skiprows)
-        elif skiprows is None:
-            skiprows = 0
+            def skiprows_func(x):
+                return skiprows(x + header_size)
 
-        return skiprows, pre_reading
+            skiprows_md = skiprows_func
+        elif skiprows is not None:
+            raise TypeError(
+                f"Not acceptable type of `skiprows` parameter: {type(skiprows)}"
+            )
+
+        return skiprows_md, pre_reading, skiprows_partitioning
