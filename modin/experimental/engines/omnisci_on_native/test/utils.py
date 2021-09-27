@@ -88,11 +88,14 @@ def align_datetime_dtypes(*dfs):
     Passed Modin frames may be casted to pandas in the result.
     """
     datetime_cols = {}
-    for df_dtypes in zip(*tuple(df.dtypes.items() for df in dfs)):
-        for col, dtype in df_dtypes:
+    for df in dfs:
+        for col, dtype in df.dtypes.items():
+            # If we already decided to cast this column to DateTime no more actions are needed
+            if col in datetime_cols:
+                continue
             if is_datetime64_any_dtype(dtype):
                 datetime_cols[col] = dtype
-                break
+
     casted_dfs = (
         # OmniSci has difficulties with casting to certain dtypes (i.e. datetime64),
         # so casting it to pandas before doing 'astype'
