@@ -46,7 +46,10 @@ from .utils import (
 )
 
 if Backend.get() == "Omnisci":
-    from modin.experimental.engines.omnisci_on_native.test.utils import eval_io
+    from modin.experimental.engines.omnisci_on_native.test.utils import (
+        eval_io,
+        align_datetime_dtypes,
+    )
 else:
     from .utils import eval_io
 
@@ -1104,6 +1107,11 @@ class TestCsv:
         modin_df = wrapped_read_csv(
             pytest.csvs_names["test_read_csv_regular"], method="modin"
         )
+
+        if Backend.get() == "Omnisci":
+            # Aligning DateTime dtypes because of the bug related to the `parse_dates` parameter:
+            # https://github.com/modin-project/modin/issues/3485
+            modin_df, pandas_df = align_datetime_dtypes(modin_df, pandas_df)
 
         df_equals(modin_df, pandas_df)
 
