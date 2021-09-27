@@ -723,12 +723,12 @@ class OmnisciOnNativeFrame(PandasFrame):
             The new frame.
         """
         columns = col_dtypes.keys()
-        new_dtypes = self.dtypes.copy()
+        new_dtypes = self._dtypes.copy()
         for column in columns:
             dtype = col_dtypes[column]
             if (
-                not isinstance(dtype, type(self.dtypes[column]))
-                or dtype != self.dtypes[column]
+                not isinstance(dtype, type(self._dtypes[column]))
+                or dtype != self._dtypes[column]
             ):
                 # Update the new dtype series to the proper pandas dtype
                 try:
