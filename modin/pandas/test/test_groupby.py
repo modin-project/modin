@@ -1138,6 +1138,7 @@ def eval___getitem__(md_grp, pd_grp, item):
             res = grp[item].agg(fns)
             if res.ndim == 2:
                 # Modin's frame has an extra level in the result. Alligning columns to compare.
+                # https://github.com/modin-project/modin/issues/3490
                 res = res.set_axis(fns, axis=1)
             return res
 
