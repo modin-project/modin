@@ -603,28 +603,33 @@ class OmnisciOnNativeFrame(PandasFrame):
         if method is not None:
             raise NotImplementedError("fillna doesn't support method yet")
 
-        exprs = self._index_exprs()
-        if isinstance(value, dict):
-            for col in self.columns:
-                col_expr = self.ref(col)
-                if col in value:
-                    value_expr = LiteralExpr(value[col])
+        try:
+            exprs = self._index_exprs()
+            if isinstance(value, dict):
+                for col in self.columns:
+                    col_expr = self.ref(col)
+                    if col in value:
+                        value_expr = LiteralExpr(value[col])
+                        res_type = _get_common_dtype(value_expr._dtype, col_expr._dtype)
+                        exprs[col] = build_if_then_else(
+                            col_expr.is_null(), value_expr, col_expr, res_type
+                        )
+                    else:
+                        exprs[col] = col_expr
+            elif np.isscalar(value):
+                value_expr = LiteralExpr(value)
+                for col in self.columns:
+                    col_expr = self.ref(col)
                     res_type = _get_common_dtype(value_expr._dtype, col_expr._dtype)
                     exprs[col] = build_if_then_else(
                         col_expr.is_null(), value_expr, col_expr, res_type
                     )
-                else:
-                    exprs[col] = col_expr
-        elif np.isscalar(value):
-            value_expr = LiteralExpr(value)
-            for col in self.columns:
-                col_expr = self.ref(col)
-                res_type = _get_common_dtype(value_expr._dtype, col_expr._dtype)
-                exprs[col] = build_if_then_else(
-                    col_expr.is_null(), value_expr, col_expr, res_type
-                )
-        else:
-            raise NotImplementedError("unsupported value for fillna")
+            else:
+                raise NotImplementedError("unsupported value for fillna")
+        except TypeError:
+            raise NotImplementedError(
+                "Heterogenous data is not supported in OmniSci backend"
+            )
 
         new_op = TransformNode(self, exprs)
         dtypes = self._dtypes_for_exprs(exprs)

@@ -1864,6 +1864,12 @@ class TestBadData:
             applier, data=self.bad_for_omnisci, data2=self.ok_data, force_lazy=False
         )
 
+    def test_heterogenous_fillna(self):
+        def fillna(df, **kwargs):
+            return df["d"].fillna("a")
+
+        run_and_compare(fillna, data=self.ok_data, force_lazy=False)
+
 
 class TestDropna:
     data = {
