@@ -103,6 +103,26 @@ def is_cmp_op(op):
     return op in _cmp_ops
 
 
+_logical_ops = {"and", "or"}
+
+
+def is_logical_op(op):
+    """
+    Check if operation is a logical one.
+
+    Parameters
+    ----------
+    op : str
+        Operation to check.
+
+    Returns
+    -------
+    bool
+        True for logical operations and False otherwise.
+    """
+    return op in _logical_ops
+
+
 class BaseExpr(abc.ABC):
     """
     An abstract base class for expression tree node.
@@ -133,6 +153,8 @@ class BaseExpr(abc.ABC):
         "le": "<=",
         "lt": "<",
         "ne": "<>",
+        "and": "AND",
+        "or": "OR",
     }
 
     preserve_dtype_math_ops = {"add", "sub", "mul", "mod", "floordiv", "pow"}
@@ -461,6 +483,8 @@ class BaseExpr(abc.ABC):
         elif op_name in self.promote_to_float_math_ops:
             return get_dtype(float)
         elif is_cmp_op(op_name):
+            return get_dtype(bool)
+        elif is_logical_op(op_name):
             return get_dtype(bool)
         else:
             raise NotImplementedError(f"unsupported binary operation {op_name}")
