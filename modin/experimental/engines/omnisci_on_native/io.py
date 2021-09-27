@@ -35,7 +35,6 @@ import pandas
 import pandas._libs.lib as lib
 from pandas._typing import FilePathOrBuffer
 from pandas.io.common import is_url
-from pandas.core.dtypes.common import is_list_like
 
 ReadCsvKwargsType = Dict[
     str,
@@ -245,82 +244,14 @@ class OmnisciOnNativeIO(BaseIO, TextFileDispatcher):
             )
             if not use_modin_impl:
                 raise ArrowEngineException(error_message)
-
-            # TODO: potentially do this only in a strict compatibility mode as this may
-            # really harm performance for wide frames
-            # if STRICT_COMPATIBILITY:
-            column_names = pandas.read_csv(
-                **dict(
-                    mykwargs,
-                    nrows=0,
-                    skipfooter=0,
-                    engine=None if eng == "arrow" else engine,
-                ),
-            ).columns.tolist()
-
             if isinstance(dtype, dict):
                 column_types = {c: cls._dtype_to_arrow(t) for c, t in dtype.items()}
             else:
-                column_types = (
-                    {c: cls._dtype_to_arrow(dtype) for c in column_names}
-                    if dtype is not None
-                    # if dtype is not specified let Arrow infer column dtypes
-                    else {}
-                )
+                column_types = cls._dtype_to_arrow(dtype)
 
-            # By default Arrow's read_csv tries to infer types for all of the columns,
-            # including date-time ones. Pandas on the opposite does not parse date
-            # columns unless it's explicitly requested via the 'parse_dates' parameter.
-            # Aligning these differences requires passing explicit type-scheme to Arrow
-            # which includes proper types for datetime-like columns.
-            if parse_dates is not None:
-                # Deducing columns which potentially have a timestamp data-type to prohibit for
-                # Arrow to infer their types by explicitly setting them to string.
-                # TODO: potentially do this only in a strict compatibility mode as this may
-                # really harm performance for wide frames
-                # if STRICT_COMPATIBILITY:
-                datetime_columns = (
-                    pandas.read_csv(
-                        **dict(
-                            mykwargs,
-                            nrows=1,
-                            parse_dates=column_names,
-                            dtype=None,
-                            engine=None if eng == "arrow" else engine,
-                        ),
-                    )
-                    .select_dtypes("datetime")
-                    .columns
-                )
-
-            if is_list_like(parse_dates):
-                parse_dates_labels = frozenset(
-                    column_names[col] if isinstance(col, int) else col
-                    for col in parse_dates
-                )
-                for col in datetime_columns:
-                    if col not in parse_dates_labels:
-                        column_types[col] = pa.string()
-
-                for col in parse_dates_labels:
-                    # 'parse_dates' parameter means to try to parse specific columns into timestamps,
-                    # if it couldn't be done treat this column as a string. Setting explicit timestamp
-                    # type for such column will trigger a parse error in Arrow if the column content
-                    # is not a date/time. Deleting such columns from 'column_types' allows Arrow to
-                    # infer dtypes (treat as timestamp if it's possible or as a string otherwise)
-                    # and so behave like pandas.
-                    column_types.pop(col, None)
-            elif isinstance(parse_dates, bool):
-                index_col_labels = ()
-                if index_col is not None:
-                    index_col = index_col if is_list_like(index_col) else (index_col,)
-                    index_col_labels = frozenset(
-                        column_names[col] if isinstance(col, int) else col
-                        for col in index_col
-                    )
-                for col in datetime_columns:
-                    if not (parse_dates and col in index_col_labels):
-                        column_types[col] = pa.string()
+            if (type(parse_dates) is list) and type(column_types) is dict:
+                for c in parse_dates:
+                    column_types[c] = pa.timestamp("s")
 
             if names not in [lib.no_default, None] and header == 0:
                 skiprows = skiprows + 1 if skiprows is not None else 1
@@ -344,6 +275,9 @@ class OmnisciOnNativeIO(BaseIO, TextFileDispatcher):
                 null_values=None,
                 true_values=None,
                 false_values=None,
+                # timestamp fields should be handled as strings if parse_dates
+                # didn't passed explicitly as an array or a dict
+                timestamp_parsers=[""] if isinstance(parse_dates, bool) else None,
                 strings_can_be_null=None,
                 include_columns=usecols_md,
                 include_missing_columns=None,
