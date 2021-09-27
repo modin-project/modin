@@ -91,9 +91,7 @@ def align_datetime_dtypes(*dfs):
     for df in dfs:
         for col, dtype in df.dtypes.items():
             # If we already decided to cast this column to DateTime no more actions are needed
-            if col in datetime_cols:
-                continue
-            if is_datetime64_any_dtype(dtype):
+            if col not in datetime_cols and is_datetime64_any_dtype(dtype):
                 datetime_cols[col] = dtype
 
     casted_dfs = (
