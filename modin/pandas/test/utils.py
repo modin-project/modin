@@ -773,6 +773,7 @@ def eval_io(
             pd,
             pandas,
             applyier,
+            comparator=comparator,
             check_exception_type=check_exception_type,
             raising_exceptions=raising_exceptions,
             check_kwargs_callable=check_kwargs_callable,

@@ -1,19 +1,18 @@
 :orphan:
 
-OmniSciOnRay Frame Implementation
+OmnisciOnNative Frame Implementation
 =================================
 
-Modin implements ``Frame``, ``PartitionManager``, ``AxisPartition`` and ``Partition`` classes
-specific for ``OmniSciOnRay`` backend:
+Modin implements ``Frame``, ``PartitionManager`` and ``Partition`` classes
+specific for ``OmnisciOnNative`` backend:
 
 * :doc:`Frame <data>`
 * :doc:`Partition <partition>`
-* :doc:`AxisPartition <axis_partition>`
 * :doc:`PartitionManager <partition_manager>`
 
 Overview of OmniSci embedded engine usage can be accessed in the related section:
 
-* :doc:`OmniSci Engine </flow/modin/experimental/engines/omnisci_on_ray/omnisci_engine>`
+* :doc:`OmniSci Engine </flow/modin/experimental/engines/omnisci_on_native/omnisci_engine>`
 
 To support lazy execution Modin uses two types of trees. Operations on frames are described
 by ``DFAlgNode`` based trees. Scalar computations are described by ``BaseExpr`` based tree.

@@ -20,6 +20,7 @@ import re
 
 from modin.config import IsExperimental, Engine, Backend
 from modin.pandas.test.utils import io_ops_bad_exc
+from .utils import eval_io, ForceOmnisciImport, set_execution_mode, run_and_compare
 from pandas.core.dtypes.common import is_list_like
 
 IsExperimental.put(True)
@@ -35,95 +36,12 @@ from modin.pandas.test.utils import (
     test_data_keys,
     generate_multiindex,
     eval_general,
-    eval_io,
     df_equals_with_non_stable_indices,
 )
 
 from modin.experimental.engines.omnisci_on_native.frame.partition_manager import (
     OmnisciOnNativeFramePartitionManager,
 )
-
-
-def set_execution_mode(frame, mode, recursive=False):
-    if isinstance(frame, (pd.Series, pd.DataFrame)):
-        frame = frame._query_compiler._modin_frame
-    frame._force_execution_mode = mode
-    if recursive and hasattr(frame._op, "input"):
-        for child in frame._op.input:
-            set_execution_mode(child, mode, True)
-
-
-def run_and_compare(
-    fn,
-    data,
-    data2=None,
-    force_lazy=True,
-    force_arrow_execute=False,
-    allow_subqueries=False,
-    comparator=df_equals,
-    **kwargs,
-):
-    def run_modin(
-        fn,
-        data,
-        data2,
-        force_lazy,
-        force_arrow_execute,
-        allow_subqueries,
-        constructor_kwargs,
-        **kwargs,
-    ):
-        kwargs["df1"] = pd.DataFrame(data, **constructor_kwargs)
-        kwargs["df2"] = pd.DataFrame(data2, **constructor_kwargs)
-        kwargs["df"] = kwargs["df1"]
-
-        if force_lazy:
-            set_execution_mode(kwargs["df1"], "lazy")
-            set_execution_mode(kwargs["df2"], "lazy")
-        elif force_arrow_execute:
-            set_execution_mode(kwargs["df1"], "arrow")
-            set_execution_mode(kwargs["df2"], "arrow")
-
-        exp_res = fn(lib=pd, **kwargs)
-
-        if force_arrow_execute:
-            set_execution_mode(exp_res, "arrow", allow_subqueries)
-        elif force_lazy:
-            set_execution_mode(exp_res, None, allow_subqueries)
-
-        return exp_res
-
-    constructor_kwargs = kwargs.pop("constructor_kwargs", {})
-    try:
-        kwargs["df1"] = pandas.DataFrame(data, **constructor_kwargs)
-        kwargs["df2"] = pandas.DataFrame(data2, **constructor_kwargs)
-        kwargs["df"] = kwargs["df1"]
-        ref_res = fn(lib=pandas, **kwargs)
-    except Exception as e:
-        with pytest.raises(type(e)):
-            exp_res = run_modin(
-                fn=fn,
-                data=data,
-                data2=data2,
-                force_lazy=force_lazy,
-                force_arrow_execute=force_arrow_execute,
-                allow_subqueries=allow_subqueries,
-                constructor_kwargs=constructor_kwargs,
-                **kwargs,
-            )
-            _ = exp_res.index
-    else:
-        exp_res = run_modin(
-            fn=fn,
-            data=data,
-            data2=data2,
-            force_lazy=force_lazy,
-            force_arrow_execute=force_arrow_execute,
-            allow_subqueries=allow_subqueries,
-            constructor_kwargs=constructor_kwargs,
-            **kwargs,
-        )
-        comparator(ref_res, exp_res)
 
 
 @pytest.mark.usefixtures("TestReadCSVFixture")
@@ -176,9 +94,13 @@ class TestCSV:
             {"dtype": {"a": "int32", "e": "string"}},
             {"dtype": {"a": np.dtype("int32"), "b": np.dtype("int64"), "e": "string"}},
         ):
-            rp = pandas.read_csv(csv_file, **kwargs)
-            rm = to_pandas(pd.read_csv(csv_file, engine="arrow", **kwargs))
-            df_equals(rp, rm)
+            eval_io(
+                fn_name="read_csv",
+                md_extra_kwargs={"engine": "arrow"},
+                # read_csv kwargs
+                filepath_or_buffer=csv_file,
+                **kwargs,
+            )
 
     def test_housing_csv(self):
         csv_file = os.path.join(self.root, "examples/data/boston_housing.csv")
@@ -189,11 +111,13 @@ class TestCSV:
                 "dtype": self.boston_housing_dtypes,
             },
         ):
-            rp = pandas.read_csv(csv_file, **kwargs)
-            rm = to_pandas(pd.read_csv(csv_file, engine="arrow", **kwargs))
-            assert rp is not None
-            assert rm is not None
-            # TODO: df_equals(rp, rm)  #  needs inexact comparison
+            eval_io(
+                fn_name="read_csv",
+                md_extra_kwargs={"engine": "arrow"},
+                # read_csv kwargs
+                filepath_or_buffer=csv_file,
+                **kwargs,
+            )
 
     def test_time_parsing(self):
         csv_file = os.path.join(
@@ -217,8 +141,12 @@ class TestCSV:
             },
         ):
             rp = pandas.read_csv(csv_file, **kwargs)
-            rm = to_pandas(pd.read_csv(csv_file, engine="arrow", **kwargs))
-            df_equals(rm["timestamp"].dt.year, rp["timestamp"].dt.year)
+            rm = pd.read_csv(csv_file, engine="arrow", **kwargs)
+            with ForceOmnisciImport(rm):
+                rm = to_pandas(rm)
+                df_equals(rm["timestamp"].dt.year, rp["timestamp"].dt.year)
+                df_equals(rm["timestamp"].dt.month, rp["timestamp"].dt.month)
+                df_equals(rm["timestamp"].dt.day, rp["timestamp"].dt.day)
 
     def test_csv_fillna(self):
         csv_file = os.path.join(self.root, "examples/data/boston_housing.csv")
@@ -229,11 +157,16 @@ class TestCSV:
                 "dtype": self.boston_housing_dtypes,
             },
         ):
-            rp = pandas.read_csv(csv_file, **kwargs)
-            rp = rp["CRIM"].fillna(1000)
-            rm = pd.read_csv(csv_file, engine="arrow", **kwargs)
-            rm = rm["CRIM"].fillna(1000)
-            df_equals(rp, rm)
+            eval_io(
+                fn_name="read_csv",
+                md_extra_kwargs={"engine": "arrow"},
+                comparator=lambda df1, df2: df_equals(
+                    df1["CRIM"].fillna(1000), df2["CRIM"].fillna(1000)
+                ),
+                # read_csv kwargs
+                filepath_or_buffer=csv_file,
+                **kwargs,
+            )
 
     @pytest.mark.parametrize("null_dtype", ["category", "float64"])
     def test_null_col(self, null_dtype):
@@ -259,7 +192,8 @@ class TestCSV:
         # df_equals cannot compare empty categories
         if null_dtype == "category":
             ref["c"] = ref["c"].astype("string")
-            exp = to_pandas(exp)
+            with ForceOmnisciImport(exp):
+                exp = to_pandas(exp)
             exp["c"] = exp["c"].astype("string")
 
         df_equals(ref, exp)
@@ -273,31 +207,30 @@ class TestCSV:
         exp1 = pandas.read_csv(csv_file)
         exp2 = pandas.read_csv(csv_file)
         exp = pd.concat([exp1, exp2])
-
-        df_equals(ref, exp)
+        with ForceOmnisciImport(exp):
+            df_equals(ref, exp)
 
     @pytest.mark.parametrize("names", [None, ["a", "b", "c", "d", "e"]])
     @pytest.mark.parametrize("header", [None, 0])
     def test_from_csv(self, header, names):
         csv_file = os.path.join(self.root, "modin/pandas/test/data", "test_usecols.csv")
-        kwargs = {
-            "header": header,
-            "names": names,
-        }
-
-        pandas_df = pandas.read_csv(csv_file, **kwargs)
-        modin_df = pd.read_csv(csv_file, **kwargs)
-
-        df_equals(modin_df, pandas_df)
+        eval_io(
+            fn_name="read_csv",
+            # read_csv kwargs
+            filepath_or_buffer=csv_file,
+            header=header,
+            names=names,
+        )
 
     @pytest.mark.parametrize("kwargs", [{"sep": "|"}, {"delimiter": "|"}])
     def test_sep_delimiter(self, kwargs):
         csv_file = os.path.join(self.root, "modin/pandas/test/data", "test_delim.csv")
-
-        pandas_df = pandas.read_csv(csv_file, **kwargs)
-        modin_df = pd.read_csv(csv_file, **kwargs)
-
-        df_equals(modin_df, pandas_df)
+        eval_io(
+            fn_name="read_csv",
+            # read_csv kwargs
+            filepath_or_buffer=csv_file,
+            **kwargs,
+        )
 
     @pytest.mark.skip(reason="https://github.com/modin-project/modin/issues/2174")
     def test_float32(self):
@@ -308,10 +241,11 @@ class TestCSV:
 
         pandas_df = pandas.read_csv(csv_file, **kwargs)
         pandas_df["a"] = pandas_df["a"] + pandas_df["b"]
+
         modin_df = pd.read_csv(csv_file, **kwargs, engine="arrow")
         modin_df["a"] = modin_df["a"] + modin_df["b"]
-
-        df_equals(modin_df, pandas_df)
+        with ForceOmnisciImport(modin_df):
+            df_equals(modin_df, pandas_df)
 
     # Datetime Handling tests
     @pytest.mark.parametrize("engine", [None, "arrow"])
@@ -1709,6 +1643,31 @@ class TestBinaryOp:
 
         run_and_compare(cmp, data=data, cmp_fn=cmp_fn, value=value)
 
+    def test_filter_dtypes(self):
+        def filter(df, **kwargs):
+            return df[df.a < 4].dtypes
+
+        run_and_compare(filter, data=self.cmp_data)
+
+    @pytest.mark.xfail(
+        reason="Requires fix in OmniSci: https://github.com/intel-ai/omniscidb/pull/178"
+    )
+    def test_filter_empty_result(self):
+        def filter(df, **kwargs):
+            return df[df.a < 0]
+
+        run_and_compare(filter, data=self.cmp_data)
+
+    def test_complex_filter(self):
+        def filter_and(df, **kwargs):
+            return df[(df.a < 5) & (df.b > 20)]
+
+        def filter_or(df, **kwargs):
+            return df[(df.a < 3) | (df.b > 40)]
+
+        run_and_compare(filter_and, data=self.cmp_data)
+        run_and_compare(filter_or, data=self.cmp_data)
+
 
 class TestDateTime:
     datetime_data = {
@@ -1730,6 +1689,12 @@ class TestDateTime:
             return df["c"].dt.month
 
         run_and_compare(dt_month, data=self.datetime_data)
+
+    def test_dt_day(self):
+        def dt_day(df, **kwargs):
+            return df["c"].dt.day
+
+        run_and_compare(dt_day, data=self.datetime_data)
 
 
 class TestCategory:
@@ -2006,6 +1971,34 @@ class TestConstructor:
         at = pyarrow.Table.from_pydict({"a": [1]})
         df = pd.utils.from_arrow(at)
         assert df._query_compiler._shape_hint == "column"
+
+
+class TestArrowExecution:
+    data1 = {
+        "a": [1, 2, 3],
+        "b": [3, 4, 5],
+        "c": [6, 7, 8],
+    }
+    data2 = {
+        "a": [1, 2, 3],
+        "d": [3, 4, 5],
+        "e": [6, 7, 8],
+    }
+
+    def test_drop_rename_concat(self):
+        def drop_rename_concat(df1, df2, lib, **kwargs):
+            df1 = df1.rename(columns={"a": "new_a", "c": "new_b"})
+            df1 = df1.drop(columns="b")
+            df2 = df2.rename(columns={"a": "new_a", "d": "new_b"})
+            df2 = df2.drop(columns="e")
+            return lib.concat([df1, df2], ignore_index=True)
+
+        run_and_compare(
+            drop_rename_concat,
+            data=self.data1,
+            data2=self.data2,
+            force_arrow_execute=True,
+        )
 
 
 if __name__ == "__main__":

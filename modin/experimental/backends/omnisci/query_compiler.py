@@ -218,11 +218,8 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
 
     def getitem_array(self, key):
         if isinstance(key, type(self)):
-            try:
-                new_modin_frame = self._modin_frame.filter(key._modin_frame)
-                return self.__constructor__(new_modin_frame, self._shape_hint)
-            except NotImplementedError:
-                key = key.to_pandas()
+            new_modin_frame = self._modin_frame.filter(key._modin_frame)
+            return self.__constructor__(new_modin_frame, self._shape_hint)
 
         if is_bool_indexer(key):
             return self.default_to_pandas(lambda df: df[key])
@@ -539,6 +536,11 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
             self._modin_frame.dt_extract("month"), self._shape_hint
         )
 
+    def dt_day(self):
+        return self.__constructor__(
+            self._modin_frame.dt_extract("day"), self._shape_hint
+        )
+
     def _bin_op(self, other, op_name, **kwargs):
         """
         Perform a binary operation on a frame.
@@ -607,6 +609,12 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
 
     def ne(self, other, **kwargs):
         return self._bin_op(other, "ne", **kwargs)
+
+    def __and__(self, other, **kwargs):
+        return self._bin_op(other, "and", **kwargs)
+
+    def __or__(self, other, **kwargs):
+        return self._bin_op(other, "or", **kwargs)
 
     def reset_index(self, **kwargs):
         level = kwargs.get("level", None)
