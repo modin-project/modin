@@ -35,7 +35,6 @@ from .utils import (
     json_short_bytes,
     json_long_string,
     json_long_bytes,
-    eval_io,
     get_unique_filename,
     io_ops_bad_exc,
     eval_io_from_str,
@@ -45,6 +44,11 @@ from .utils import (
     teardown_test_files,
     generate_dataframe,
 )
+
+if Backend.get() == "Omnisci":
+    from modin.experimental.engines.omnisci_on_native.test.utils import eval_io
+else:
+    from .utils import eval_io
 
 if Backend.get() == "Pandas":
     import modin.pandas as pd
@@ -963,6 +967,10 @@ class TestCsv:
             modin_warning=UserWarning,
             # read_csv kwargs
             filepath_or_buffer="https://raw.githubusercontent.com/modin-project/modin/master/modin/pandas/test/data/blah.csv",
+            # It takes about ~17Gb of RAM for Omnisci to import the whole table from this test
+            # because of too many (~1000) string columns in it. Taking a subset of columns
+            # to be able to run this test on low-RAM machines.
+            usecols=[0, 1, 2, 3] if Backend.get() == "Omnisci" else None,
         )
 
     @pytest.mark.parametrize("nrows", [21, 5, None])
