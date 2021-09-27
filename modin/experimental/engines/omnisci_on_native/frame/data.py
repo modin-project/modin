@@ -457,7 +457,13 @@ class OmnisciOnNativeFrame(PandasFrame):
 
         # Create new base where all required columns are computed. We don't allow
         # complex expressions to be a group key or an aggeregate operand.
-        assert isinstance(by_frame._op, TransformNode), "unexpected by_frame"
+        allowed_nodes = (FrameNode, TransformNode)
+        if not isinstance(by_frame._op, allowed_nodes):
+            raise NotImplementedError(
+                "OmniSci doesn't allow complex expression to be a group key. "
+                f"The only allowed frame nodes are: {tuple(o.__name__ for o in allowed_nodes)}, "
+                f"met '{type(by_frame._op).__name__}'."
+            )
 
         col_to_delete_template = "__delete_me_{name}"
 
