@@ -11,25 +11,28 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-"""Module houses default applied-on-str functions builder class."""
+"""Module houses default Series functions builder class."""
 
-from .series_default import SeriesDefault
+from .any import AnyDefault
 
 
-class StrDefault(SeriesDefault):
-    """Builder for default-to-pandas methods which is executed under `str` accessor."""
+class SeriesDefault(AnyDefault):
+    """Builder for default-to-pandas methods which is executed under Series."""
+
+    OBJECT_TYPE = "Series"
 
     @classmethod
     def frame_wrapper(cls, df):
         """
-        Get `str` accessor of the passed frame.
+        Squeeze passed DataFrame to be able to process Series-specific functions on it.
 
         Parameters
         ----------
         df : pandas.DataFrame
+            One-column DataFrame to squeeze.
 
         Returns
         -------
-        pandas.core.strings.accessor.StringMethods
+        pandas.Series
         """
-        return df.squeeze(axis=1).str
+        return df.squeeze(axis=1)

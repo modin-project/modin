@@ -13,7 +13,7 @@
 
 """Module houses default binary functions builder class."""
 
-from .any_default import AnyDefault
+from .any import AnyDefault
 
 import pandas
 from pandas.core.dtypes.common import is_list_like

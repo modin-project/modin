@@ -13,7 +13,7 @@
 
 """Module houses default applied-on-datetime functions builder class."""
 
-from .series_default import SeriesDefault
+from .series import SeriesDefault
 
 
 class DateTimeDefault(SeriesDefault):
