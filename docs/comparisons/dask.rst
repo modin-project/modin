@@ -17,11 +17,12 @@ Dask DataFrame
 """"""""""""""
 
 Dask is currently missing multiple APIs from pandas that Modin has implemented. Of note:
-Dask does not implement ``iloc``, ``MultiIndex``, ``apply(axis=0)``, ``quantile``,
-``median``, and more. Some of these APIs cannot be implemented efficiently or at all
-given the architecture design tradeoffs made in Dask's implementation, and others simply
-require engineering effort. ``iloc``, for example, can be implemented, but it would be
-inefficient, and ``apply(axis=0)`` cannot be implemented at all in Dask's architecture.
+Dask does not implement ``iloc``, ``MultiIndex``, ``apply(axis=0)``, ``quantile``
+(approximate quantile is available), ``median``, and more. Some of these APIs cannot be
+implemented efficiently or at all given the architecture design tradeoffs made in Dask's
+implementation, and others simply require engineering effort. ``iloc``, for example, can
+be implemented, but it would be inefficient, and ``apply(axis=0)`` cannot be implemented
+at all in Dask's architecture.
 
 Dask DataFrames API is also different from the pandas API in that it is lazy and needs
 ``.compute()`` calls to materialize the DataFrame. This makes the API less convenient
