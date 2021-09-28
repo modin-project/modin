@@ -85,6 +85,7 @@ from pandas import (
     datetime,
     NamedAgg,
     NA,
+    api,
 )
 import os
 import multiprocessing
@@ -323,6 +324,7 @@ __all__ = [
     "value_counts",
     "datetime",
     "NamedAgg",
+    "api",
 ]
 
 del pandas, Engine, Parameter
