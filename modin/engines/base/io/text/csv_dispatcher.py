@@ -416,9 +416,5 @@ class CSVDispatcher(TextFileDispatcher):
                 return skiprows(x + header_size)
 
             skiprows_md = skiprows_func
-        elif skiprows is not None:
-            raise TypeError(
-                f"Not acceptable type of `skiprows` parameter: {type(skiprows)}"
-            )
 
         return skiprows_md, pre_reading, skiprows_partitioning
