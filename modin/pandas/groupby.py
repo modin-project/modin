@@ -358,7 +358,8 @@ class DataFrameGroupBy(object):
                 make_dataframe = True
                 key = [key]
         if make_dataframe:
-            if len(frozenset(self._internal_by).intersection(key)) != 0:
+            internal_by = frozenset(self._internal_by)
+            if len(internal_by.intersection(key)) != 0:
                 ErrorMessage.missmatch_with_pandas(
                     operation="GroupBy.__getitem__",
                     message=(
@@ -369,7 +370,7 @@ class DataFrameGroupBy(object):
                         "df.groupby(df['by_column'].copy())['by_column']"
                     ),
                 )
-            cols_to_grab = self._internal_by + tuple(key)
+            cols_to_grab = internal_by.union(key)
             key = [col for col in self._df.columns if col in cols_to_grab]
             return DataFrameGroupBy(
                 self._df[key],
