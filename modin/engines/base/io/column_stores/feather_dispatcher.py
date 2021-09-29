@@ -56,4 +56,6 @@ class FeatherDispatcher(ColumnStoreDispatcher):
             from pyarrow.feather import read_feather
 
             df = read_feather(path)
-        return cls.build_query_compiler(path, df.columns, use_threads=False)
+            # pyarrow.feather.read_feather doesn't support columns as pandas.Index
+            columns = list(df.columns)
+        return cls.build_query_compiler(path, columns, use_threads=False)
