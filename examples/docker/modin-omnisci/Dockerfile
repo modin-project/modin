@@ -28,6 +28,7 @@ RUN apt-get update --yes \
 # Modin settings
 ENV MODIN_BACKEND="omnisci"
 ENV MODIN_EXPERIMENTAL="true"
+ENV MODIN_ENGINE="native"
 
 ENV USER modin
 ENV UID 1000
