@@ -32,9 +32,10 @@ https://github.com/ray-project/ray/pull/1955#issuecomment-386781826
 import numpy as np
 import pandas
 from pandas.api.types import is_list_like, is_bool
-from pandas.core.dtypes.common import is_integer
+from pandas.core.dtypes.common import is_integer, is_bool_dtype, is_integer_dtype
 from pandas.core.indexing import IndexingError
 from modin.error_message import ErrorMessage
+from itertools import compress
 
 from .dataframe import DataFrame
 from .series import Series
@@ -126,7 +127,19 @@ def is_boolean_array(x):
     bool
         True if argument is an array of bool, False otherwise.
     """
+    if isinstance(x, (np.ndarray, Series, pandas.Series)):
+        return is_bool_dtype(x.dtype)
+    elif isinstance(x, (DataFrame, pandas.DataFrame)):
+        return all(map(is_bool_dtype, x.dtypes))
     return is_list_like(x) and all(map(is_bool, x))
+
+
+def is_integer_array(x):  # noqa
+    if isinstance(x, (np.ndarray, Series, pandas.Series)):
+        return is_integer_dtype(x.dtype)
+    elif isinstance(x, (DataFrame, pandas.DataFrame)):
+        return all(map(is_integer_dtype, x.dtypes))
+    return is_list_like(x) and all(map(is_integer, x))
 
 
 def is_integer_slice(x):
@@ -173,6 +186,30 @@ def is_range_like(obj):
         and hasattr(obj, "stop")
         and hasattr(obj, "step")
     )
+
+
+def boolean_mask_to_numeric(indexer):
+    """
+    Convert boolean mask to numeric indices.
+
+    Parameters
+    ----------
+    indexer : list-like of booleans
+
+    Returns
+    -------
+    np.ndarray of ints
+        Numerical positions of ``True`` elements in the passed `indexer`.
+    """
+    if isinstance(indexer, (np.ndarray, pandas.Series)):
+        return np.where(indexer)[0]
+    else:
+        return np.fromiter(
+            # `itertools.compress` masks `data` with the `selectors` mask,
+            # works about ~10% faster than a pure list comprehension
+            compress(data=range(len(indexer)), selectors=indexer),
+            dtype=np.int64,
+        )
 
 
 _ILOC_INT_ONLY_ERROR = """
@@ -552,11 +589,6 @@ class _LocIndexer(_LocationIndexerBase):
                 return self.df.iloc[:, slice(*result_slice)]
 
         row_lookup, col_lookup = self._compute_lookup(row_loc, col_loc)
-        if any(i == -1 for i in row_lookup) or any(i == -1 for i in col_lookup):
-            raise KeyError(
-                "Passing list-likes to .loc or [] with any missing labels is no longer "
-                "supported, see https://pandas.pydata.org/pandas-docs/stable/user_guide/indexing.html#deprecate-loc-reindex-listlike"
-            )
         result = super(_LocIndexer, self).__getitem__(row_lookup, col_lookup, ndim)
         if isinstance(result, Series):
             result._parent = self.df
@@ -564,7 +596,10 @@ class _LocIndexer(_LocationIndexerBase):
         col_loc_as_list = [col_loc] if self.col_scalar else col_loc
         row_loc_as_list = [row_loc] if self.row_scalar else row_loc
         # Pandas drops the levels that are in the `loc`, so we have to as well.
-        if hasattr(result, "index") and isinstance(result.index, pandas.MultiIndex):
+        if (
+            isinstance(result, (Series, DataFrame))
+            and result._query_compiler.has_multiindex()
+        ):
             if (
                 isinstance(result, Series)
                 and not isinstance(col_loc_as_list, slice)
@@ -583,7 +618,7 @@ class _LocIndexer(_LocationIndexerBase):
         if (
             hasattr(result, "columns")
             and not isinstance(col_loc_as_list, slice)
-            and isinstance(result.columns, pandas.MultiIndex)
+            and result._query_compiler.has_multiindex(axis=1)
             and all(
                 col_loc_as_list[i] in result.columns.levels[i]
                 for i in range(len(col_loc_as_list))
@@ -689,49 +724,70 @@ class _LocIndexer(_LocationIndexerBase):
 
         Returns
         -------
-        row_lookup : numpy.ndarray
+        row_lookup : slice(None) if full axis grab, pandas.RangeIndex if repetition is detected, numpy.ndarray otherwise
             List of index labels.
-        col_lookup : numpy.ndarray
+        col_lookup : slice(None) if full axis grab, pandas.RangeIndex if repetition is detected, numpy.ndarray otherwise
             List of columns labels.
-        """
-        row_loc = [row_loc] if is_scalar(row_loc) else row_loc
-        col_loc = [col_loc] if is_scalar(col_loc) else col_loc
-        if is_list_like(row_loc) and len(row_loc) == 1:
-            if (
-                isinstance(self.qc.index.values[0], np.datetime64)
-                and type(row_loc[0]) != np.datetime64
-            ):
-                row_loc = [pandas.to_datetime(row_loc[0])]
 
-        if isinstance(row_loc, slice):
-            row_lookup = self.qc.index.get_indexer_for(
-                self.qc.index.to_series().loc[row_loc]
-            )
-        elif self.qc.has_multiindex():
-            if isinstance(row_loc, pandas.MultiIndex):
-                row_lookup = self.qc.index.get_indexer_for(row_loc)
+        Notes
+        -----
+        Usage of `slice(None)` as a resulting lookup is a hack to pass information about
+        full-axis grab without computing actual indices that triggers lazy computations.
+        Ideally, this API should get rid of using slices as indexers and either use a
+        common ``Indexer`` object or range and ``np.ndarray`` only.
+        """
+        lookups = []
+        for axis, axis_loc in enumerate((row_loc, col_loc)):
+            if is_scalar(axis_loc):
+                axis_loc = np.array([axis_loc])
+            if isinstance(axis_loc, slice) or is_range_like(axis_loc):
+                if isinstance(axis_loc, slice) and axis_loc == slice(None):
+                    axis_lookup = axis_loc
+                else:
+                    axis_lookup = self.qc.get_axis(axis).slice_indexer(
+                        axis_loc.start, axis_loc.stop, axis_loc.step
+                    )
+                    axis_lookup = pandas.RangeIndex(
+                        axis_lookup.start,
+                        axis_lookup.stop,
+                        axis_lookup.step,
+                    )
+            elif self.qc.has_multiindex(axis):
+                # `Index.get_locs` raise an IndexError by itself if missing labels were provided,
+                # we don't have to do missing-check in the received `axis_lookup`.
+                if isinstance(axis_loc, pandas.MultiIndex):
+                    axis_lookup = self.qc.get_axis(axis).get_indexer_for(axis_loc)
+                else:
+                    axis_lookup = self.qc.get_axis(axis).get_locs(axis_loc)
+            elif is_boolean_array(axis_loc):
+                axis_lookup = boolean_mask_to_numeric(axis_loc)
             else:
-                row_lookup = self.qc.index.get_locs(row_loc)
-        elif is_boolean_array(row_loc):
-            # If passed in a list of booleans, we return the index of the true values
-            row_lookup = [i for i, row_val in enumerate(row_loc) if row_val]
-        else:
-            row_lookup = self.qc.index.get_indexer_for(row_loc)
-        if isinstance(col_loc, slice):
-            col_lookup = self.qc.columns.get_indexer_for(
-                self.qc.columns.to_series().loc[col_loc]
-            )
-        elif self.qc.has_multiindex(axis=1):
-            if isinstance(col_loc, pandas.MultiIndex):
-                col_lookup = self.qc.columns.get_indexer_for(col_loc)
-            else:
-                col_lookup = self.qc.columns.get_locs(col_loc)
-        elif is_boolean_array(col_loc):
-            # If passed in a list of booleans, we return the index of the true values
-            col_lookup = [i for i, col_val in enumerate(col_loc) if col_val]
-        else:
-            col_lookup = self.qc.columns.get_indexer_for(col_loc)
-        return row_lookup, col_lookup
+                if is_list_like(axis_loc) and not isinstance(
+                    axis_loc, (np.ndarray, pandas.Index)
+                ):
+                    # Although we lose some time here on converting to numpy, `Index.get_indexer_for` works
+                    # much faster with numpy arrays than with python lists. `Index.get_indexer_for` speedup
+                    # covers the loss we gain here.
+                    axis_loc = np.array(axis_loc)
+                axis_lookup = self.qc.get_axis(axis).get_indexer_for(axis_loc)
+                # `Index.get_indexer_for` set -1 index for missing labels, we have to verify whether
+                # there are any -1 in the received indexer to raise a KeyError here at the front-end.
+                missing_mask = axis_lookup < 0
+                if missing_mask.any():
+                    missing_labels = (
+                        # Converting `axis_loc` to maskable `np.array` to not fail
+                        # on masking non-maskable list-like
+                        np.array(axis_loc)[missing_mask]
+                        if is_list_like(axis_loc)
+                        else axis_loc
+                    )
+                    raise KeyError(f"Missing labels were provided: {missing_labels}")
+
+            if isinstance(axis_lookup, pandas.Index) and not is_range_like(axis_lookup):
+                axis_lookup = axis_lookup.values
+
+            lookups.append(axis_lookup)
+        return lookups
 
 
 class _iLocIndexer(_LocationIndexerBase):
@@ -808,7 +864,7 @@ class _iLocIndexer(_LocationIndexerBase):
             ),
         )
 
-    def _compute_lookup(self, row_loc, col_loc):
+    def _compute_lookup(self, row_loc, col_loc):  # noqa
         """
         Compute index and column labels from index and column integer locators.
 
@@ -833,11 +889,11 @@ class _iLocIndexer(_LocationIndexerBase):
         Ideally, this API should get rid of using slices as indexers and either use a
         common ``Indexer`` object or range and ``np.ndarray`` only.
         """
-        row_loc = [row_loc] if is_scalar(row_loc) else row_loc
-        col_loc = [col_loc] if is_scalar(col_loc) else col_loc
         lookups = []
         for axis, axis_loc in enumerate((row_loc, col_loc)):
-            if isinstance(axis_loc, slice) and axis_loc.step is None:
+            if is_scalar(axis_loc):
+                axis_loc = np.array([axis_loc])
+            if isinstance(axis_loc, slice):
                 axis_lookup = (
                     axis_loc
                     if axis_loc == slice(None)
@@ -845,17 +901,35 @@ class _iLocIndexer(_LocationIndexerBase):
                         *axis_loc.indices(len(self.qc.get_axis(axis)))
                     )
                 )
-            else:
-                axis_lookup = (
-                    pandas.RangeIndex(len(self.qc.get_axis(axis)))
-                    .to_series()
-                    .iloc[axis_loc]
-                    .index
+            elif is_range_like(axis_loc):
+                axis_lookup = pandas.RangeIndex(
+                    axis_loc.start, axis_loc.stop, axis_loc.step
                 )
+            elif is_boolean_array(axis_loc):
+                axis_lookup = boolean_mask_to_numeric(axis_loc)
+            else:
+                if isinstance(axis_loc, pandas.Index):
+                    axis_loc = axis_loc.values
+                elif is_list_like(axis_loc) and not isinstance(axis_loc, np.ndarray):
+                    # Although we lose some time here on converting to numpy, `Index.__getitem__` works
+                    # much faster with numpy arrays than python lists. `Index.__getitem__` speedup
+                    # covers the loss we gain here.
+                    axis_loc = np.array(axis_loc)
+                # Relatively fast check allows us to not trigger Index computation
+                # if there're no negative indices and so they're not depend on the Index length
+                if isinstance(axis_loc, np.ndarray) and not (axis_loc < 0).any():
+                    axis_lookup = axis_loc
+                else:
+                    axis_lookup = pandas.RangeIndex(len(self.qc.get_axis(axis)))[
+                        axis_loc
+                    ]
+
+            if isinstance(axis_lookup, pandas.Index) and not is_range_like(axis_lookup):
+                axis_lookup = axis_lookup.values
             lookups.append(axis_lookup)
         return lookups
 
-    def _check_dtypes(self, locator):
+    def _check_dtypes(self, locator):  # noqa
         """
         Check that `locator` is an integer scalar, integer slice, integer list or array of booleans.
 
@@ -871,8 +945,8 @@ class _iLocIndexer(_LocationIndexerBase):
         """
         is_int = is_integer(locator)
         is_int_slice = is_integer_slice(locator)
-        is_int_list = is_list_like(locator) and all(map(is_integer, locator))
+        is_int_arr = is_integer_array(locator)
         is_bool_arr = is_boolean_array(locator)
 
-        if not any([is_int, is_int_slice, is_int_list, is_bool_arr]):
+        if not any([is_int, is_int_slice, is_int_arr, is_bool_arr]):
             raise ValueError(_ILOC_INT_ONLY_ERROR)
