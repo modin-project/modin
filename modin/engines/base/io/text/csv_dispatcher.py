@@ -367,22 +367,42 @@ class CSVDispatcher(TextFileDispatcher):
         Manage read_csv `skiprows` parameter.
 
         Change `skiprows` parameter in the way Modin could more optimally
-        process it. If `skiprows` is an array, this array will be sorted and
-        then, if array is uniformly distributed, `skiprows` will be "squashed"
-        into integer value and `pre_reading` parameter will be set if needed
-        (in this case fastpath can be done).
+        process it. `csv_dispatcher` have two mechanisms of rows skipping:
+
+        1) During file partitioning (setting of file limits that should be read
+        by each partition) exact rows can be excluded from partitioning scope,
+        thus they won't be read at all and can be considered as skipped. This is
+        the most effective way of rows skipping (since it doesn't require any
+        actual data reading and postprocessing), but in this case `skiprows`
+        parameter can be an integer only. When it possible Modin always uses
+        this approach by setting of `skiprows_partitioning` return value.
+
+        2) Rows for skipping can be dropped after full dataset import. This is
+        more expensive way since it requires extra IO work and postprocessing
+        afterwards, but `skiprows` parameter can be of any non-integer type
+        supported by `pandas.read_csv` `skiprows` parameter.
+
+        In some cases, if `skiprows` is uniformly distributed array (e.g. [1,2,3]),
+        `skiprows` can be "squashed" and represented as integer to make a fastpath.
+        If there is a gap between the first row for skipping and the last line of
+        the header (that will be skipped too), then assign to read this gap first
+        (assign the first partition to read these rows be setting of `pre_reading`
+        return value). See `Examples` section for details.
 
         Parameters
         ----------
         skiprows : int, array or callable, optional
-            Original skiprows parameter of read_csv function.
+            Original `skiprows` parameter of read_csv function.
         header_size : int, default: 0
             Number of rows that are used by header.
 
         Returns
         -------
         skiprows_md : int, array or callable
-            Updated skiprows parameter.
+            Updated skiprows parameter. If `skiprows` is an array, this
+            array will be sorted and. Also parameter will be aligned to
+            actual data in the `query_compiler` (which, for example,
+            doesn't contain header rows)
         pre_reading : int
             The number of rows that should be read before data file
             splitting for further reading (the number of rows for
@@ -390,6 +410,21 @@ class CSVDispatcher(TextFileDispatcher):
         skiprows_partitioning : int
             The number of rows that should be skipped virtually (skipped during
             data file partitioning).
+
+        Examples
+        --------
+        Let's consider case when `header` = "infer" and `skiprows`=[3,4,5]. In
+        this specific case fastpath can be done, so `pre_reading` = 2 and
+        `skiprows_partitioning` = 3 will be set, see rows assignement below:
+
+        0 - header line (will be skipped during partitioning)
+        1 - pre_reading
+        2 - pre_reading
+        3 - skiprows_partitioning
+        4 - skiprows_partitioning
+        5 - skiprows_partitioning
+        6 - data to partition
+        7 - data to partition
         """
         pre_reading = 0
         skiprows_partitioning = 0
