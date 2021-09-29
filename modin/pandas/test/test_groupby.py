@@ -440,14 +440,40 @@ def test_simple_row_groupby(by, as_index, col1_category):
         # Not yet supported for non-original-column-from-dataframe Series in by:
         eval___getattr__(modin_groupby, pandas_groupby, "col3")
         eval___getitem__(modin_groupby, pandas_groupby, "col3")
-
+    eval_groups(modin_groupby, pandas_groupby)
+    # Intersection of the selection and 'by' columns is not yet supported
     non_by_cols = (
+        # Potential selection starts only from the second column, because the first may
+        # be categorical in this test, which is not yet supported
         [col for col in pandas_df.columns[1:] if col not in modin_groupby._internal_by]
         if isinstance(by, list)
         else ["col3", "col4"]
     )
     eval___getitem__(modin_groupby, pandas_groupby, non_by_cols)
-    eval_groups(modin_groupby, pandas_groupby)
+    # When GroupBy.__getitem__ meets an intersection of the selection and 'by' columns
+    # it throws a warning with the suggested workaround. The following code tests
+    # that this workaround works as expected.
+    if len(modin_groupby._internal_by) != 0:
+        if not isinstance(by, list):
+            by = [by]
+        by_from_workaround = [
+            modin_df[getattr(col, "name", col)].copy()
+            if (hashable(col) and col in modin_groupby._internal_by)
+            or isinstance(col, GetColumn)
+            else col
+            for col in by
+        ]
+        # GroupBy result with 'as_index=False' depends on the 'by' origin, since we forcibly changed
+        # the origin of 'by' for modin by doing a copy, set 'as_index=True' to compare results.
+        modin_groupby = modin_df.groupby(
+            maybe_get_columns(modin_df, by_from_workaround), as_index=True
+        )
+        pandas_groupby = pandas_df.groupby(pandas_by, as_index=True)
+        eval___getitem__(
+            modin_groupby,
+            pandas_groupby,
+            list(modin_groupby._internal_by) + non_by_cols[:1],
+        )
 
 
 def test_single_group_row_groupby():

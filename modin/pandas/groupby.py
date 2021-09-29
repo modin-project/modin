@@ -358,6 +358,17 @@ class DataFrameGroupBy(object):
                 make_dataframe = True
                 key = [key]
         if make_dataframe:
+            if len(frozenset(self._internal_by).intersection(key)) != 0:
+                ErrorMessage.missmatch_with_pandas(
+                    operation="GroupBy.__getitem__",
+                    message=(
+                        "intersection of the selection and 'by' columns is not yet supported, "
+                        "to achieve the desired result rewrite the original code from:\n"
+                        "df.groupby('by_column')['by_column']\n"
+                        "to the:\n"
+                        "df.groupby(df['by_column'].copy())['by_column']"
+                    ),
+                )
             cols_to_grab = self._internal_by + tuple(key)
             key = [col for col in self._df.columns if col in cols_to_grab]
             return DataFrameGroupBy(
