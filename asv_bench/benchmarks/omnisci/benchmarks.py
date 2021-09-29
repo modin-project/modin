@@ -51,24 +51,31 @@ class TimeMerge:
     param_names = ["shapes", "how"]
     params = [
         get_benchmark_shapes("omnisci.TimeMerge"),
-        ["left"],
+        ["left", "inner"],
     ]
 
     def setup(self, shapes, how):
-        self.df1 = generate_dataframe(
-            ASV_USE_IMPL, "int", *shapes[0], RAND_LOW, RAND_HIGH
-        )
-        self.df2 = generate_dataframe(
-            ASV_USE_IMPL, "int", *shapes[1], RAND_LOW, RAND_HIGH
-        )
-        trigger_import(self.df1, self.df2)
+        gen_unique_key = how == "inner"
+        self.dfs = [None, None]
+        for i in range(len(self.dfs)):
+            self.dfs[i] = generate_dataframe(
+                ASV_USE_IMPL,
+                "int",
+                *shapes[i],
+                RAND_LOW,
+                RAND_HIGH,
+                gen_unique_key=gen_unique_key,
+            )
+        trigger_import(*self.dfs)
 
     def time_merge(self, shapes, how):
         # merging dataframes by index is not supported, therefore we merge by column
         # with arbitrary values, which leads to an unpredictable form of the operation result;
         # it's need to get the predictable shape to get consistent performance results
         execute(
-            self.df1.merge(self.df2, on="col1", how=how, suffixes=("left_", "right_"))
+            self.dfs[0].merge(
+                self.dfs[1], on="col1", how=how, suffixes=("left_", "right_")
+            )
         )
 
 
