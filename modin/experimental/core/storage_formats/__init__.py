@@ -11,4 +11,4 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-"""Experimental Modin's functionality related to storage formats supported."""
+"""Experimental functionality related to storage formats supported."""

@@ -11,7 +11,7 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-"""The module represents the query compiler level for the OmniSci backend."""
+"""Experimental query compiler for the OmniSci backend."""
 
 from .query_compiler import DFAlgQueryCompiler
 
