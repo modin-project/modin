@@ -380,7 +380,8 @@ class CSVDispatcher(TextFileDispatcher):
         2) Rows for skipping can be dropped after full dataset import. This is
         more expensive way since it requires extra IO work and postprocessing
         afterwards, but `skiprows` parameter can be of any non-integer type
-        supported by `pandas.read_csv` `skiprows` parameter.
+        supported by `pandas.read_csv` `skiprows` parameter. These rows is
+        specified by setting of `skiprows_md` return value.
 
         In some cases, if `skiprows` is uniformly distributed array (e.g. [1,2,3]),
         `skiprows` can be "squashed" and represented as integer to make a fastpath.
@@ -413,18 +414,28 @@ class CSVDispatcher(TextFileDispatcher):
 
         Examples
         --------
-        Let's consider case when `header` = "infer" and `skiprows`=[3,4,5]. In
-        this specific case fastpath can be done, so `pre_reading` = 2 and
-        `skiprows_partitioning` = 3 will be set, see rows assignement below:
+        Let's consider case when `header`="infer" and `skiprows`=[3,4,5]. In
+        this specific case fastpath can be done since `skiprows` is uniformly
+        distributed array, so we can "squash" it to integer and set
+        `skiprows_partitioning`=3. But if no additional action will be done,
+        these three rows will be skipped right after header line, that corresponds
+        to `skiprows`=[1,2,3]. Now, to avoid this discrepancy, we need to assign
+        the first partition to read data between header line and the first
+        row for skipping by setting of `pre_reading` parameter, so setting
+        `pre_reading`=2. During data file partitiong, these lines will be assigned
+        for reading for the first partition, and then file position will be set at
+        the beginning of rows that should be skipped by `skiprows_partitioning`.
+        After skipping of these rows, the rest data will be divided between the
+        rest of partitions, see rows assignement below:
 
-        0 - header line (will be skipped during partitioning)
-        1 - pre_reading
-        2 - pre_reading
-        3 - skiprows_partitioning
-        4 - skiprows_partitioning
-        5 - skiprows_partitioning
-        6 - data to partition
-        7 - data to partition
+        0 - header line (skip during partitioning)
+        1 - pre_reading (assign to read by the first partition)
+        2 - pre_reading (assign to read by the first partition)
+        3 - skiprows_partitioning (skip during partitioning)
+        4 - skiprows_partitioning (skip during partitioning)
+        5 - skiprows_partitioning (skip during partitioning)
+        6 - data to partition (divide between the rest of partitions)
+        7 - data to partition (divide between the rest of partitions)
         """
         pre_reading = 0
         skiprows_partitioning = 0
@@ -435,9 +446,6 @@ class CSVDispatcher(TextFileDispatcher):
             skiprows_md = np.sort(skiprows)
             if np.all(np.diff(skiprows_md) == 1):
                 # `skiprows` is uniformly distributed array.
-                # If there is a gap between the first row for skipping and
-                # the last line of the header, then assign to read this gap first
-                # during data file partitioning
                 pre_reading = (
                     skiprows_md[0] - header_size if skiprows_md[0] > header_size else 0
                 )
