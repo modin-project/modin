@@ -1707,7 +1707,7 @@ class OmnisciOnNativeFrame(PandasFrame):
         """
         if isinstance(self._op, FrameNode):
             if self._partitions.size == 0:
-                return pyarrow.Table()
+                return pyarrow.Table.from_pandas(pd.DataFrame({}))
             else:
                 assert self._partitions.size == 1
                 return self._partitions[0][0].get()
@@ -2408,6 +2408,8 @@ class OmnisciOnNativeFrame(PandasFrame):
         -------
         bool
         """
+        if len(index) == 0:
+            return True
         if isinstance(index, pd.RangeIndex):
             return index.start == 0 and index.step == 1
         if not isinstance(index, pd.Int64Index):
