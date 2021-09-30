@@ -56,15 +56,17 @@ class TimeMerge:
 
     def setup(self, shapes, how):
         gen_unique_key = how == "inner"
-        self.dfs = [None, None]
-        for i in range(len(self.dfs)):
-            self.dfs[i] = generate_dataframe(
-                ASV_USE_IMPL,
-                "int",
-                *shapes[i],
-                RAND_LOW,
-                RAND_HIGH,
-                gen_unique_key=gen_unique_key,
+        self.dfs = []
+        for shape in shapes:
+            self.dfs.append(
+                generate_dataframe(
+                    ASV_USE_IMPL,
+                    "int",
+                    *shape,
+                    RAND_LOW,
+                    RAND_HIGH,
+                    gen_unique_key=gen_unique_key,
+                )
             )
         trigger_import(*self.dfs)
 
