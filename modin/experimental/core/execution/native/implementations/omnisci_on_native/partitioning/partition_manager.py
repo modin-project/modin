@@ -260,7 +260,7 @@ class OmnisciOnNativeFramePartitionManager(PandasFramePartitionManager):
         curs = omniSession.executeRA(cmd_prefix + calcite_json)
         assert curs
         rb = curs.getArrowRecordBatch()
-        assert rb
+        assert rb is not None
         at = pyarrow.Table.from_batches([rb])
 
         res = np.empty((1, 1), dtype=np.dtype(object))

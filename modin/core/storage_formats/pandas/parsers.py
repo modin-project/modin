@@ -149,18 +149,36 @@ class PandasParser(object):
 
         Returns
         -------
-        pandas.Series
-            pandas.Series where index is columns names and values are
-            columns dtypes.
+        frame_dtypes : pandas.Series or dtype
+            Resulting dtype or pandas.Series where column names are used as
+            index and types of columns are used as values for full resulting
+            frame.
         """
+        # each element in `partitions_dtypes` is a Series, where column names are
+        # used as index and types of columns for different partitions are used as values
         partitions_dtypes = cls.materialize(dtypes_ids)
         if all([len(dtype) == 0 for dtype in partitions_dtypes]):
             return None
-        return (
-            pandas.concat(partitions_dtypes, axis=1)
-            .apply(lambda row: find_common_type_cat(row.values), axis=1)
-            .squeeze(axis=0)
-        )
+
+        combined_part_dtypes = pandas.concat(partitions_dtypes, axis=1)
+        frame_dtypes = combined_part_dtypes.iloc[:, 0]
+
+        if not combined_part_dtypes.eq(frame_dtypes, axis=0).all(axis=None):
+            ErrorMessage.missmatch_with_pandas(
+                operation="read_*",
+                message="Data types of partitions are different! "
+                "Please refer to the troubleshooting section of the Modin documentation "
+                "to fix this issue",
+            )
+
+            # concat all elements of `partitions_dtypes` and find common dtype
+            # for each of the column among all partitions
+            frame_dtypes = combined_part_dtypes.apply(
+                lambda row: find_common_type_cat(row.values),
+                axis=1,
+            ).squeeze(axis=0)
+
+        return frame_dtypes
 
     @classmethod
     def single_worker_read(cls, fname, **kwargs):

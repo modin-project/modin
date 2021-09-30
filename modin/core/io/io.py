@@ -357,8 +357,6 @@ class BaseIO(object):
                 configuration=configuration,
                 credentials=credentials,
                 use_bqstorage_api=use_bqstorage_api,
-                private_key=private_key,
-                verbose=verbose,
                 progress_bar_type=progress_bar_type,
                 max_results=max_results,
             )

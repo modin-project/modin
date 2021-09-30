@@ -132,10 +132,67 @@ class OmnisciServer:
         # TODO: reword name in case of caller's mistake
         return name
 
+    @staticmethod
+    def cast_to_compatible_types(table):
+        """
+        Cast PyArrow table to be fully compatible with OmniSci.
+
+        Parameters
+        ----------
+        table : pyarrow.Table
+            Source table.
+
+        Returns
+        -------
+        pyarrow.Table
+            Table with fully compatible types with OmniSci.
+        """
+        schema = table.schema
+        new_schema = schema
+        need_cast = False
+        new_cols = {}
+        for i, field in enumerate(schema):
+            # Currently OmniSci doesn't support Arrow table import with
+            # dictionary columns. Here we cast dictionaries until support
+            # is in place.
+            # https://github.com/modin-project/modin/issues/1738
+            if pa.types.is_dictionary(field.type):
+                # Conversion for dictionary of null type to string is not supported
+                # in Arrow. Build new column for this case for now.
+                if pa.types.is_null(field.type.value_type):
+                    mask = np.full(table.num_rows, True, dtype=bool)
+                    new_col_data = np.empty(table.num_rows, dtype=str)
+                    new_col = pa.array(new_col_data, pa.string(), mask)
+                    new_cols[i] = new_col
+                else:
+                    need_cast = True
+                new_field = pa.field(
+                    field.name, pa.string(), field.nullable, field.metadata
+                )
+                new_schema = new_schema.set(i, new_field)
+            # OmniSci doesn't support importing Arrow's date type:
+            # https://github.com/omnisci/omniscidb/issues/678
+            elif pa.types.is_date(field.type):
+                # Arrow's date is the number of days since the UNIX-epoch, so we can convert it
+                # to a timestamp[s] (number of seconds since the UNIX-epoch) without losing precision
+                new_field = pa.field(
+                    field.name, pa.timestamp("s"), field.nullable, field.metadata
+                )
+                new_schema = new_schema.set(i, new_field)
+                need_cast = True
+
+        for i, col in new_cols.items():
+            table = table.set_column(i, new_schema[i], col)
+
+        if need_cast:
+            table = table.cast(new_schema)
+
+        return table
+
     @classmethod
     def put_arrow_to_omnisci(cls, table, name=None):
         """
-        Import Arrow table to OmniSci backend.
+        Import Arrow table to OmniSci engine.
 
         Parameters
         ----------
@@ -151,37 +208,7 @@ class OmnisciServer:
         """
         name = cls._genName(name)
 
-        # Currently OmniSci doesn't support Arrow table import with
-        # dictionary columns. Here we cast dictionaries until support
-        # is in place.
-        # https://github.com/modin-project/modin/issues/1738
-        schema = table.schema
-        new_schema = schema
-        need_cast = False
-        new_cols = {}
-        for i, field in enumerate(schema):
-            if pa.types.is_dictionary(field.type):
-                # Conversion for dictionary of null type to string is not supported
-                # in Arrow. Build new column for this case for now.
-                if pa.types.is_null(field.type.value_type):
-                    mask_vals = np.full(table.num_rows, True, dtype=bool)
-                    mask = pa.array(mask_vals)
-                    new_col_data = np.empty(table.num_rows, dtype=str)
-                    new_col = pa.array(new_col_data, pa.string(), mask)
-                    new_cols[i] = new_col
-                else:
-                    need_cast = True
-                new_field = pa.field(
-                    field.name, pa.string(), field.nullable, field.metadata
-                )
-                new_schema = new_schema.set(i, new_field)
-
-        for i, col in new_cols.items():
-            table = table.set_column(i, new_schema[i], col)
-
-        if need_cast:
-            table = table.cast(new_schema)
-
+        table = cls.cast_to_compatible_types(table)
         fragment_size = OmnisciFragmentSize.get()
         if fragment_size is None:
             cpu_count = os.cpu_count()

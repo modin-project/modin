@@ -109,10 +109,10 @@ class Engine(EnvironmentVariable, type=str):
                 )
             return "Dask"
         try:
-            import omniscidbe  # noqa
-        except ImportError:
+            from omniscidbe import PyDbEngine  # noqa
+        except ModuleNotFoundError:
             try:
-                import dbe  # noqa
+                from dbe import PyDbEngine  # noqa
             except ImportError:
                 pass
             else:

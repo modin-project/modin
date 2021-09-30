@@ -461,7 +461,13 @@ class OmnisciOnNativeFrame(PandasFrame):
 
         # Create new base where all required columns are computed. We don't allow
         # complex expressions to be a group key or an aggeregate operand.
-        assert isinstance(by_frame._op, TransformNode), "unexpected by_frame"
+        allowed_nodes = (FrameNode, TransformNode)
+        if not isinstance(by_frame._op, allowed_nodes):
+            raise NotImplementedError(
+                "OmniSci doesn't allow complex expression to be a group key. "
+                f"The only allowed frame nodes are: {tuple(o.__name__ for o in allowed_nodes)}, "
+                f"met '{type(by_frame._op).__name__}'."
+            )
 
         col_to_delete_template = "__delete_me_{name}"
 
@@ -607,28 +613,33 @@ class OmnisciOnNativeFrame(PandasFrame):
         if method is not None:
             raise NotImplementedError("fillna doesn't support method yet")
 
-        exprs = self._index_exprs()
-        if isinstance(value, dict):
-            for col in self.columns:
-                col_expr = self.ref(col)
-                if col in value:
-                    value_expr = LiteralExpr(value[col])
+        try:
+            exprs = self._index_exprs()
+            if isinstance(value, dict):
+                for col in self.columns:
+                    col_expr = self.ref(col)
+                    if col in value:
+                        value_expr = LiteralExpr(value[col])
+                        res_type = _get_common_dtype(value_expr._dtype, col_expr._dtype)
+                        exprs[col] = build_if_then_else(
+                            col_expr.is_null(), value_expr, col_expr, res_type
+                        )
+                    else:
+                        exprs[col] = col_expr
+            elif np.isscalar(value):
+                value_expr = LiteralExpr(value)
+                for col in self.columns:
+                    col_expr = self.ref(col)
                     res_type = _get_common_dtype(value_expr._dtype, col_expr._dtype)
                     exprs[col] = build_if_then_else(
                         col_expr.is_null(), value_expr, col_expr, res_type
                     )
-                else:
-                    exprs[col] = col_expr
-        elif np.isscalar(value):
-            value_expr = LiteralExpr(value)
-            for col in self.columns:
-                col_expr = self.ref(col)
-                res_type = _get_common_dtype(value_expr._dtype, col_expr._dtype)
-                exprs[col] = build_if_then_else(
-                    col_expr.is_null(), value_expr, col_expr, res_type
-                )
-        else:
-            raise NotImplementedError("unsupported value for fillna")
+            else:
+                raise NotImplementedError("unsupported value for fillna")
+        except TypeError:
+            raise NotImplementedError(
+                "Heterogenous data is not supported in OmniSci backend"
+            )
 
         new_op = TransformNode(self, exprs)
         dtypes = self._dtypes_for_exprs(exprs)
@@ -727,12 +738,12 @@ class OmnisciOnNativeFrame(PandasFrame):
             The new frame.
         """
         columns = col_dtypes.keys()
-        new_dtypes = self.dtypes.copy()
+        new_dtypes = self._dtypes.copy()
         for column in columns:
             dtype = col_dtypes[column]
             if (
-                not isinstance(dtype, type(self.dtypes[column]))
-                or dtype != self.dtypes[column]
+                not isinstance(dtype, type(self._dtypes[column]))
+                or dtype != self._dtypes[column]
             ):
                 # Update the new dtype series to the proper pandas dtype
                 try:
@@ -1679,7 +1690,11 @@ class OmnisciOnNativeFrame(PandasFrame):
                 self._op.row_indices is None and self._op.input[0]._can_execute_arrow()
             )
         elif isinstance(self._op, TransformNode):
-            return self._op.is_drop() and self._op.input[0]._can_execute_arrow()
+            return (
+                not self._uses_rowid
+                and self._op.is_simple_select()
+                and self._op.input[0]._can_execute_arrow()
+            )
         elif isinstance(self._op, UnionNode):
             return all(frame._can_execute_arrow() for frame in self._op.input)
         else:
@@ -1696,27 +1711,27 @@ class OmnisciOnNativeFrame(PandasFrame):
         """
         if isinstance(self._op, FrameNode):
             if self._partitions.size == 0:
-                return pyarrow.Table()
+                return pyarrow.Table.from_pandas(pd.DataFrame({}))
             else:
                 assert self._partitions.size == 1
                 return self._partitions[0][0].get()
         elif isinstance(self._op, MaskNode):
             return self._op.input[0]._arrow_row_slice(self._op.row_numeric_idx)
         elif isinstance(self._op, TransformNode):
-            return self._op.input[0]._arrow_col_slice(set(self._op.exprs.keys()))
+            return self._op.input[0]._arrow_select(self._op.exprs)
         elif isinstance(self._op, UnionNode):
             return self._arrow_concat(self._op.input)
         else:
             raise RuntimeError(f"Unexpected op ({type(self._op)}) in _execute_arrow")
 
-    def _arrow_col_slice(self, new_columns):
+    def _arrow_select(self, exprs):
         """
         Perform column selection on the frame using Arrow API.
 
         Parameters
         ----------
-        new_columns : list of str
-            Columns to select.
+        exprs : dict
+            Select expressions.
 
         Returns
         -------
@@ -1724,9 +1739,21 @@ class OmnisciOnNativeFrame(PandasFrame):
             The resulting table.
         """
         table = self._execute_arrow()
-        return table.drop(
-            [f"F_{col}" for col in self._table_cols if col not in new_columns]
-        )
+        schema = table.schema
+
+        new_fields = []
+        new_columns = []
+
+        for col, expr in exprs.items():
+            field = schema.field(f"F_{expr.column}")
+            if col != expr.column:
+                field = field.with_name(f"F_{col}")
+            new_fields.append(field)
+            new_columns.append(table.column(f"F_{expr.column}"))
+
+        new_schema = pyarrow.schema(new_fields)
+
+        return pyarrow.Table.from_arrays(new_columns, schema=new_schema)
 
     def _arrow_row_slice(self, row_numeric_idx):
         """
@@ -1989,6 +2016,20 @@ class OmnisciOnNativeFrame(PandasFrame):
 
     columns = property(_get_columns)
     index = property(_get_index)
+
+    @property
+    def dtypes(self):
+        """
+        Return column data types.
+
+        Returns
+        -------
+        pandas.Series
+            A pandas Series containing the data types for this dataframe.
+        """
+        if self._index_cols is not None:
+            return self._dtypes[len(self._index_cols) :]
+        return self._dtypes
 
     def has_multiindex(self):
         """
@@ -2371,6 +2412,8 @@ class OmnisciOnNativeFrame(PandasFrame):
         -------
         bool
         """
+        if len(index) == 0:
+            return True
         if isinstance(index, pd.RangeIndex):
             return index.start == 0 and index.step == 1
         if not isinstance(index, pd.Int64Index):

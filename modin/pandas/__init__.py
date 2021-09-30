@@ -13,7 +13,7 @@
 
 import pandas
 
-__pandas_version__ = "1.3.2"
+__pandas_version__ = "1.3.3"
 
 if pandas.__version__ != __pandas_version__:
     import warnings
@@ -85,6 +85,7 @@ from pandas import (
     datetime,
     NamedAgg,
     NA,
+    api,
 )
 import os
 import multiprocessing
@@ -323,6 +324,7 @@ __all__ = [
     "value_counts",
     "datetime",
     "NamedAgg",
+    "api",
 ]
 
 del pandas, Engine, Parameter
