@@ -38,10 +38,12 @@ from modin.pandas.test.utils import (
     eval_general,
     df_equals_with_non_stable_indices,
 )
+from modin.utils import try_cast_to_pandas
 
 from modin.experimental.engines.omnisci_on_native.frame.partition_manager import (
     OmnisciOnNativeFramePartitionManager,
 )
+from modin.experimental.engines.omnisci_on_native.frame.df_algebra import FrameNode
 
 
 @pytest.mark.usefixtures("TestReadCSVFixture")
@@ -588,7 +590,17 @@ class TestConcat:
             df4 = df2.copy()
             return lib.concat([df1, df2, df3, df4])
 
-        run_and_compare(concat, data=self.data, data2=self.data2)
+        def sort_comparator(df1, df2):
+            """Sort and verify equality of the passed frames."""
+            # We sort values because order of rows in the 'union all' result is inconsistent in OmniSci
+            df1, df2 = (
+                try_cast_to_pandas(df).sort_values(df.columns[0]) for df in (df1, df2)
+            )
+            return df_equals(df1, df2)
+
+        run_and_compare(
+            concat, data=self.data, data2=self.data2, comparator=sort_comparator
+        )
 
     def test_concat_agg(self):
         def concat(lib, df1, df2):
@@ -807,6 +819,27 @@ class TestGroupby:
 
         run_and_compare(dict_agg_all_cols, data=self.data)
 
+    # modin-issue#3461
+    def test_groupby_pure_by(self):
+        data = [1, 1, 2, 2]
+        # Test when 'by' is a 'TransformNode'
+        run_and_compare(lambda df: df.groupby(df).sum(), data=data, force_lazy=True)
+
+        # Test when 'by' is a 'FrameNode'
+        md_ser, pd_ser = pd.Series(data), pandas.Series(data)
+
+        md_ser._query_compiler._modin_frame._execute()
+        assert isinstance(
+            md_ser._query_compiler._modin_frame._op, FrameNode
+        ), "Triggering execution of the Modin frame supposed to set 'FrameNode' as a frame's op"
+
+        set_execution_mode(md_ser, "lazy")
+        md_res = md_ser.groupby(md_ser).sum()
+        set_execution_mode(md_res, None)
+
+        pd_res = pd_ser.groupby(pd_ser).sum()
+        df_equals(md_res, pd_res)
+
     taxi_data = {
         "a": [1, 1, 2, 2],
         "b": [11, 21, 12, 11],
@@ -860,6 +893,13 @@ class TestGroupby:
     def test_df_astype(self):
         def df_astype(df, **kwargs):
             return df.astype({"b": "float", "d": "int"})
+
+        run_and_compare(df_astype, data=self.taxi_data)
+
+    def test_df_indexed_astype(self):
+        def df_astype(df, **kwargs):
+            df = df.groupby("a").agg({"b": "sum"})
+            return df.astype({"b": "float"})
 
         run_and_compare(df_astype, data=self.taxi_data)
 
@@ -1864,6 +1904,12 @@ class TestBadData:
             applier, data=self.bad_for_omnisci, data2=self.ok_data, force_lazy=False
         )
 
+    def test_heterogenous_fillna(self):
+        def fillna(df, **kwargs):
+            return df["d"].fillna("a")
+
+        run_and_compare(fillna, data=self.ok_data, force_lazy=False)
+
 
 class TestDropna:
     data = {
@@ -1999,6 +2045,12 @@ class TestArrowExecution:
             data2=self.data2,
             force_arrow_execute=True,
         )
+
+    def test_empty_transform(self):
+        def apply(df, **kwargs):
+            return df + 1
+
+        run_and_compare(apply, data={}, force_arrow_execute=True)
 
 
 if __name__ == "__main__":

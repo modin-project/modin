@@ -457,7 +457,13 @@ class OmnisciOnNativeFrame(PandasFrame):
 
         # Create new base where all required columns are computed. We don't allow
         # complex expressions to be a group key or an aggeregate operand.
-        assert isinstance(by_frame._op, TransformNode), "unexpected by_frame"
+        allowed_nodes = (FrameNode, TransformNode)
+        if not isinstance(by_frame._op, allowed_nodes):
+            raise NotImplementedError(
+                "OmniSci doesn't allow complex expression to be a group key. "
+                f"The only allowed frame nodes are: {tuple(o.__name__ for o in allowed_nodes)}, "
+                f"met '{type(by_frame._op).__name__}'."
+            )
 
         col_to_delete_template = "__delete_me_{name}"
 
@@ -603,28 +609,33 @@ class OmnisciOnNativeFrame(PandasFrame):
         if method is not None:
             raise NotImplementedError("fillna doesn't support method yet")
 
-        exprs = self._index_exprs()
-        if isinstance(value, dict):
-            for col in self.columns:
-                col_expr = self.ref(col)
-                if col in value:
-                    value_expr = LiteralExpr(value[col])
+        try:
+            exprs = self._index_exprs()
+            if isinstance(value, dict):
+                for col in self.columns:
+                    col_expr = self.ref(col)
+                    if col in value:
+                        value_expr = LiteralExpr(value[col])
+                        res_type = _get_common_dtype(value_expr._dtype, col_expr._dtype)
+                        exprs[col] = build_if_then_else(
+                            col_expr.is_null(), value_expr, col_expr, res_type
+                        )
+                    else:
+                        exprs[col] = col_expr
+            elif np.isscalar(value):
+                value_expr = LiteralExpr(value)
+                for col in self.columns:
+                    col_expr = self.ref(col)
                     res_type = _get_common_dtype(value_expr._dtype, col_expr._dtype)
                     exprs[col] = build_if_then_else(
                         col_expr.is_null(), value_expr, col_expr, res_type
                     )
-                else:
-                    exprs[col] = col_expr
-        elif np.isscalar(value):
-            value_expr = LiteralExpr(value)
-            for col in self.columns:
-                col_expr = self.ref(col)
-                res_type = _get_common_dtype(value_expr._dtype, col_expr._dtype)
-                exprs[col] = build_if_then_else(
-                    col_expr.is_null(), value_expr, col_expr, res_type
-                )
-        else:
-            raise NotImplementedError("unsupported value for fillna")
+            else:
+                raise NotImplementedError("unsupported value for fillna")
+        except TypeError:
+            raise NotImplementedError(
+                "Heterogenous data is not supported in OmniSci backend"
+            )
 
         new_op = TransformNode(self, exprs)
         dtypes = self._dtypes_for_exprs(exprs)
@@ -723,12 +734,12 @@ class OmnisciOnNativeFrame(PandasFrame):
             The new frame.
         """
         columns = col_dtypes.keys()
-        new_dtypes = self.dtypes.copy()
+        new_dtypes = self._dtypes.copy()
         for column in columns:
             dtype = col_dtypes[column]
             if (
-                not isinstance(dtype, type(self.dtypes[column]))
-                or dtype != self.dtypes[column]
+                not isinstance(dtype, type(self._dtypes[column]))
+                or dtype != self._dtypes[column]
             ):
                 # Update the new dtype series to the proper pandas dtype
                 try:
@@ -1696,7 +1707,7 @@ class OmnisciOnNativeFrame(PandasFrame):
         """
         if isinstance(self._op, FrameNode):
             if self._partitions.size == 0:
-                return pyarrow.Table()
+                return pyarrow.Table.from_pandas(pd.DataFrame({}))
             else:
                 assert self._partitions.size == 1
                 return self._partitions[0][0].get()
@@ -2397,6 +2408,8 @@ class OmnisciOnNativeFrame(PandasFrame):
         -------
         bool
         """
+        if len(index) == 0:
+            return True
         if isinstance(index, pd.RangeIndex):
             return index.start == 0 and index.step == 1
         if not isinstance(index, pd.Int64Index):
