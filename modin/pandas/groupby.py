@@ -345,10 +345,22 @@ class DataFrameGroupBy(object):
         NotImplementedError
             Column lookups on GroupBy with arbitrary Series in by is not yet supported.
         """
-        kwargs = {**self._kwargs.copy(), "squeeze": self._squeeze}
+        # These parameters are common for building the resulted Series or DataFrame groupby object
+        kwargs = {
+            **self._kwargs.copy(),
+            "by": self._by,
+            "axis": self._axis,
+            "idx_name": self._idx_name,
+            "squeeze": self._squeeze,
+        }
         # The rules of type deduction for the resulted object is the following:
         #   1. If `key` is a list-like or `as_index is False`, then the resulted object is a DataFrameGroupBy
         #   2. Otherwise, the resulted object is SeriesGroupBy
+        #   3. Result type does not depend on the `by` origin
+        # Examples:
+        #   - drop: any, as_index: any, __getitem__(key: list_like) -> DataFrameGroupBy
+        #   - drop: any, as_index: False, __getitem__(key: any) -> DataFrameGroupBy
+        #   - drop: any, as_index: True, __getitem__(key: label) -> SeriesGroupBy
         if is_list_like(key):
             make_dataframe = True
         else:
@@ -374,9 +386,6 @@ class DataFrameGroupBy(object):
             key = [col for col in self._df.columns if col in cols_to_grab]
             return DataFrameGroupBy(
                 self._df[key],
-                self._by,
-                self._axis,
-                idx_name=self._idx_name,
                 drop=self._drop,
                 **kwargs,
             )
@@ -391,9 +400,6 @@ class DataFrameGroupBy(object):
             )
         return SeriesGroupBy(
             self._df[key],
-            self._by,
-            self._axis,
-            idx_name=self._idx_name,
             drop=False,
             **kwargs,
         )
