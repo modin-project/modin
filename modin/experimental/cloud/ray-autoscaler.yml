@@ -73,6 +73,7 @@ head_node:
         - DeviceName: /dev/sda1
           Ebs:
               VolumeSize: 40
+    SecurityGroupIds: [sg-0790d73053117d1b0]
 
     # NetworkInterfaces:
     #     - AssociatePublicIpAddress: True
@@ -90,6 +91,7 @@ worker_nodes:
         - DeviceName: /dev/sda1
           Ebs:
               VolumeSize: 40
+    SecurityGroupIds: [sg-0790d73053117d1b0]
     # Run workers on spot by default. Comment this out to use on-demand.
     # InstanceMarketOptions:
     #    MarketType: spot
@@ -120,7 +122,7 @@ setup_commands:
         source ~/.bashrc
         conda create --name modin --yes
         conda activate modin
-        conda install --yes -c conda-forge {{CONDA_PACKAGES}}
+        conda install --yes -c conda-forge --override-channels {{CONDA_PACKAGES}}
 
         pip install cloudpickle rpyc==4.1.5
         # ray now executes "ray stop" which expects "ray" to be in $PATH

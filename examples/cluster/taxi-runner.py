@@ -41,7 +41,7 @@ test_cluster = create_cluster(
     **cluster_params,
 )
 with test_cluster:
-    data_file = "https://modin-datasets.s3.amazonaws.com/trips_data.csv"
+    data_file = "https://modin-datasets.s3.amazonaws.com/cloud/trips_xaa.csv"
     if USE_OMNISCI:
         # Workaround for GH#2099
         from modin.experimental.cloud import get_connection
@@ -52,14 +52,14 @@ with test_cluster:
         )
 
         # Workaround for omniscripts trigger
-        import modin.experimental.engines.omnisci_on_ray.frame.omnisci_worker
+        import modin.experimental.engines.omnisci_on_native.frame.omnisci_worker
 
         OmnisciServer = (
             get_connection()
-            .modules["modin.experimental.engines.omnisci_on_ray.frame.omnisci_worker"]
+            .modules["modin.experimental.engines.omnisci_on_native.frame.omnisci_worker"]
             .OmnisciServer
         )
-        modin.experimental.engines.omnisci_on_ray.frame.omnisci_worker.OmnisciServer = (
+        modin.experimental.engines.omnisci_on_native.frame.omnisci_worker.OmnisciServer = (
             OmnisciServer
         )
 
@@ -71,7 +71,7 @@ with test_cluster:
 
     parameters = {
         "data_file": data_file,
-        # "data_file": "s3://modin-datasets/trips_data.csv",
+        # "data_file": "s3://modin-datasets/cloud/trips_xaa.csv",
         "dfiles_num": 1,
         "validation": False,
         "no_ibis": True,

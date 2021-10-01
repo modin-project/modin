@@ -137,11 +137,6 @@ def _update_engine(publisher: Parameter):
                 import modin
                 from modin.engines.ray.utils import initialize_ray
 
-                if partition == "Omnisci":
-                    from modin.config import IsExperimental
-
-                    IsExperimental.put(True)
-
                 modin.set_backends("Ray", partition)
                 initialize_ray(
                     override_is_cluster=True,
@@ -165,6 +160,7 @@ def _update_engine(publisher: Parameter):
         assert (
             Backend.get() == "Omnisci"
         ), f"Backend should be 'Omnisci' with 'Cloudnative' engine, but provided {Backend.get()}."
+        get_connection().modules["modin.config"].IsExperimental.put(True)
         get_connection().modules["modin"].set_backends("Native", "OmniSci")
 
     elif publisher.get() not in _NOINIT_ENGINES:
