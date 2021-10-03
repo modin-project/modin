@@ -15,7 +15,7 @@ import pytest
 import pandas
 import numpy as np
 import modin.pandas as pd
-from modin.utils import try_cast_to_pandas, get_current_backend
+from modin.utils import try_cast_to_pandas, get_current_backend, hashable
 from modin.pandas.utils import from_pandas, is_scalar
 from .utils import (
     df_equals,
@@ -439,7 +439,41 @@ def test_simple_row_groupby(by, as_index, col1_category):
     ):
         # Not yet supported for non-original-column-from-dataframe Series in by:
         eval___getattr__(modin_groupby, pandas_groupby, "col3")
+        eval___getitem__(modin_groupby, pandas_groupby, "col3")
     eval_groups(modin_groupby, pandas_groupby)
+    # Intersection of the selection and 'by' columns is not yet supported
+    non_by_cols = (
+        # Potential selection starts only from the second column, because the first may
+        # be categorical in this test, which is not yet supported
+        [col for col in pandas_df.columns[1:] if col not in modin_groupby._internal_by]
+        if isinstance(by, list)
+        else ["col3", "col4"]
+    )
+    eval___getitem__(modin_groupby, pandas_groupby, non_by_cols)
+    # When GroupBy.__getitem__ meets an intersection of the selection and 'by' columns
+    # it throws a warning with the suggested workaround. The following code tests
+    # that this workaround works as expected.
+    if len(modin_groupby._internal_by) != 0:
+        if not isinstance(by, list):
+            by = [by]
+        by_from_workaround = [
+            modin_df[getattr(col, "name", col)].copy()
+            if (hashable(col) and col in modin_groupby._internal_by)
+            or isinstance(col, GetColumn)
+            else col
+            for col in by
+        ]
+        # GroupBy result with 'as_index=False' depends on the 'by' origin, since we forcibly changed
+        # the origin of 'by' for modin by doing a copy, set 'as_index=True' to compare results.
+        modin_groupby = modin_df.groupby(
+            maybe_get_columns(modin_df, by_from_workaround), as_index=True
+        )
+        pandas_groupby = pandas_df.groupby(pandas_by, as_index=True)
+        eval___getitem__(
+            modin_groupby,
+            pandas_groupby,
+            list(modin_groupby._internal_by) + non_by_cols[:1],
+        )
 
 
 def test_single_group_row_groupby():
@@ -1111,6 +1145,56 @@ def eval___getattr__(modin_groupby, pandas_groupby, item):
     )
 
 
+def eval___getitem__(md_grp, pd_grp, item):
+    eval_general(
+        md_grp,
+        pd_grp,
+        lambda grp: grp[item].mean(),
+        comparator=build_types_asserter(df_equals),
+    )
+    eval_general(
+        md_grp,
+        pd_grp,
+        lambda grp: grp[item].count(),
+        comparator=build_types_asserter(df_equals),
+    )
+
+    def build_list_agg(fns):
+        def test(grp):
+            res = grp[item].agg(fns)
+            if res.ndim == 2:
+                # Modin's frame has an extra level in the result. Alligning columns to compare.
+                # https://github.com/modin-project/modin/issues/3490
+                res = res.set_axis(fns, axis=1)
+            return res
+
+        return test
+
+    # issue-#3252
+    eval_general(
+        md_grp,
+        pd_grp,
+        build_list_agg(["mean"]),
+        comparator=build_types_asserter(df_equals),
+    )
+    eval_general(
+        md_grp,
+        pd_grp,
+        build_list_agg(["mean", "count"]),
+        comparator=build_types_asserter(df_equals),
+    )
+    # Explicit default-to-pandas test
+    eval_general(
+        md_grp,
+        pd_grp,
+        # Defaulting to pandas only for Modin groupby objects
+        lambda grp: grp[item].sum()
+        if not isinstance(grp, pd.groupby.DataFrameGroupBy)
+        else grp[item]._default_to_pandas(lambda df: df.sum()),
+        comparator=build_types_asserter(df_equals),
+    )
+
+
 def eval_groups(modin_groupby, pandas_groupby):
     for k, v in modin_groupby.groups.items():
         assert v.equals(pandas_groupby.groups[k])
@@ -1451,6 +1535,37 @@ def test_mixed_columns(columns):
         [(False, "a"), (False, "b"), (True, "c")],
         [(False, "a"), (True, "c")],
         [(False, "a"), (True, "c"), (False, [1, 1, 2])],
+        [(False, "a"), (False, "b"), (False, "c")],
+        [(False, "a"), (False, "b"), (False, "c"), (False, [1, 1, 2])],
+    ],
+)
+def test_internal_by_detection(columns):
+    def get_columns(df):
+        return [(df[name] + 1) if lookup else name for (lookup, name) in columns]
+
+    data = {"a": [1, 1, 2], "b": [11, 11, 22], "c": [111, 111, 222]}
+
+    md_df = pd.DataFrame(data)
+    by = get_columns(md_df)
+    md_grp = md_df.groupby(by)
+
+    ref = frozenset(
+        col for is_lookup, col in columns if not is_lookup and hashable(col)
+    )
+    exp = frozenset(md_grp._internal_by)
+
+    assert ref == exp
+
+
+@pytest.mark.parametrize(
+    # When True, use (df[name] + 1), otherwise just use name
+    "columns",
+    [
+        [(True, "a"), (True, "b"), (True, "c")],
+        [(True, "a"), (True, "b")],
+        [(False, "a"), (False, "b"), (True, "c")],
+        [(False, "a"), (True, "c")],
+        [(False, "a"), (True, "c"), (False, [1, 1, 2])],
     ],
 )
 @pytest.mark.parametrize("as_index", [True, False])
@@ -1566,6 +1681,8 @@ def test_multi_column_groupby_different_partitions(
         by, as_index=as_index
     )
     eval_general(md_grp, pd_grp, func_to_apply)
+    eval___getitem__(md_grp, pd_grp, md_df.columns[1])
+    eval___getitem__(md_grp, pd_grp, [md_df.columns[1], md_df.columns[2]])
 
 
 @pytest.mark.parametrize(

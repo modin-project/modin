@@ -2360,7 +2360,8 @@ class BaseQueryCompiler(abc.ABC):
         """
         if isinstance(by, type(self)) and len(by.columns) == 1:
             by = by.columns[0] if drop else by.to_pandas().squeeze()
-        elif isinstance(by, type(self)):
+        # converting QC 'by' to a list of column labels only if this 'by' comes from the self (if drop is True)
+        elif drop and isinstance(by, type(self)):
             by = list(by.columns)
 
         return GroupByDefault.register(pandas.core.groupby.DataFrameGroupBy.aggregate)(
