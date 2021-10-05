@@ -284,6 +284,7 @@ def test_loc(data):
     df_equals(modin_df.loc[0], pandas_df.loc[0])
     df_equals(modin_df.loc[1:, key1], pandas_df.loc[1:, key1])
     df_equals(modin_df.loc[1:2, key1], pandas_df.loc[1:2, key1])
+    df_equals(modin_df.loc[:, key1], pandas_df.loc[:, key1])
 
     # DataFrame
     df_equals(modin_df.loc[[1, 2]], pandas_df.loc[[1, 2]])
