@@ -187,6 +187,7 @@ Modin is making a copy of of the DataFrame. This behavior diverges from Pandas.
 This will be fixed in future releases.
 """
 
+
 def _compute_ndim(row_loc, col_loc):
     """
     Compute the number of dimensions of result from locators.
@@ -486,6 +487,7 @@ class _LocationIndexerBase(object):
         row_loc = row_loc(self.df) if callable(row_loc) else row_loc
         col_loc = col_loc(self.df) if callable(col_loc) else col_loc
         return row_loc, col_loc, _compute_ndim(row_loc, col_loc)
+
 
 class _LocIndexer(_LocationIndexerBase):
     """
