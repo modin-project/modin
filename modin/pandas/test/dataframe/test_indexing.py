@@ -184,7 +184,7 @@ def test_iloc(request, data):
     pandas_df = pandas.DataFrame(data)
 
     if not name_contains(request.node.name, ["empty_data"]):
-        # Scaler
+        # Scalar
         np.testing.assert_equal(modin_df.iloc[0, 1], pandas_df.iloc[0, 1])
 
         # Series
@@ -277,7 +277,7 @@ def test_loc(data):
 
     key1 = modin_df.columns[0]
     key2 = modin_df.columns[1]
-    # Scaler
+    # Scalar
     df_equals(modin_df.loc[0, key1], pandas_df.loc[0, key1])
 
     # Series

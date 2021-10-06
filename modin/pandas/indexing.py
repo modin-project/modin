@@ -40,9 +40,6 @@ from .series import Series
 from .utils import is_scalar
 
 
-# TODO: rename "scaler" to scalar everywhere in this file
-
-
 def is_slice(x):
     """
     Check that argument is an instance of slice.
@@ -209,9 +206,9 @@ def _parse_tuple(tup):
         List of column locators.
     ndim : {0, 1, 2}
         Number of dimensions of located dataset.
-    row_scaler : bool
+    row_scalar : bool
         True if `row_loc` is a scalar, False otherwise.
-    col_scaler : bool
+    col_scalar : bool
         True if `col_loc` is a scalar, False otherwise.
     """
     row_loc, col_loc = slice(None), slice(None)
@@ -226,12 +223,12 @@ def _parse_tuple(tup):
         row_loc = tup
 
     ndim = _compute_ndim(row_loc, col_loc)
-    row_scaler = is_scalar(row_loc)
-    col_scaler = is_scalar(col_loc)
-    row_loc = [row_loc] if row_scaler else row_loc
-    col_loc = [col_loc] if col_scaler else col_loc
+    row_scalar = is_scalar(row_loc)
+    col_scalar = is_scalar(col_loc)
+    row_loc = [row_loc] if row_scalar else row_loc
+    col_loc = [col_loc] if col_scalar else col_loc
 
-    return row_loc, col_loc, ndim, row_scaler, col_scaler
+    return row_loc, col_loc, ndim, row_scalar, col_scalar
 
 
 def _compute_ndim(row_loc, col_loc):
@@ -250,12 +247,12 @@ def _compute_ndim(row_loc, col_loc):
     {0, 1, 2}
         Number of dimensions in located dataset.
     """
-    row_scaler = is_scalar(row_loc) or is_tuple(row_loc)
-    col_scaler = is_scalar(col_loc) or is_tuple(col_loc)
+    row_scalar = is_scalar(row_loc) or is_tuple(row_loc)
+    col_scalar = is_scalar(col_loc) or is_tuple(col_loc)
 
-    if row_scaler and col_scaler:
+    if row_scalar and col_scalar:
         ndim = 0
-    elif row_scaler ^ col_scaler:
+    elif row_scalar ^ col_scalar:
         ndim = 1
     else:
         ndim = 2
@@ -276,8 +273,8 @@ class _LocationIndexerBase(object):
     def __init__(self, modin_df):
         self.df = modin_df
         self.qc = modin_df._query_compiler
-        self.row_scaler = False
-        self.col_scaler = False
+        self.row_scalar = False
+        self.col_scalar = False
 
     def __getitem__(self, row_lookup, col_lookup, ndim):
         """
@@ -300,7 +297,7 @@ class _LocationIndexerBase(object):
         qc_view = self.qc.view(row_lookup, col_lookup)
         if ndim == 2:
             return self.df.__constructor__(query_compiler=qc_view)
-        if isinstance(self.df, Series) and not self.row_scaler:
+        if isinstance(self.df, Series) and not self.row_scalar:
             return self.df.__constructor__(query_compiler=qc_view)
         if isinstance(self.df, Series):
             axis = 0
@@ -309,9 +306,9 @@ class _LocationIndexerBase(object):
         else:
             axis = (
                 None
-                if self.col_scaler and self.row_scaler
+                if self.col_scalar and self.row_scalar
                 else 1
-                if self.col_scaler
+                if self.col_scalar
                 else 0
             )
         return self.df.__constructor__(query_compiler=qc_view).squeeze(axis=axis)
@@ -446,7 +443,7 @@ class _LocationIndexerBase(object):
         new_qc = self.qc.write_items(row_lookup, col_lookup, item)
         self.df._create_or_update_from_compiler(new_qc, inplace=True)
 
-    def _determine_setitem_axis(self, row_lookup, col_lookup, row_scaler, col_scaler):
+    def _determine_setitem_axis(self, row_lookup, col_lookup, row_scalar, col_scalar):
         """
         Determine an axis along which we should do an assignment.
 
@@ -456,9 +453,9 @@ class _LocationIndexerBase(object):
             Indexer for rows.
         col_lookup : slice or list
             Indexer for columns.
-        row_scaler : bool
+        row_scalar : bool
             Whether indexer for rows is scalar or not.
-        col_scaler : bool
+        col_scalar : bool
             Whether indexer for columns is scalar or not.
 
         Returns
@@ -473,7 +470,7 @@ class _LocationIndexerBase(object):
         axis = None: assignment along both axes
         """
         if self.df.shape == (1, 1):
-            return None if not (row_scaler ^ col_scaler) else 1 if row_scaler else 0
+            return None if not (row_scalar ^ col_scalar) else 1 if row_scalar else 0
 
         def get_axis(axis):
             return self.qc.index if axis == 0 else self.qc.columns
@@ -528,7 +525,7 @@ class _LocIndexer(_LocationIndexerBase):
         """
         if callable(key):
             return self.__getitem__(key(self.df))
-        row_loc, col_loc, ndim, self.row_scaler, self.col_scaler = _parse_tuple(key)
+        row_loc, col_loc, ndim, self.row_scalar, self.col_scalar = _parse_tuple(key)
         if isinstance(row_loc, slice) and row_loc == slice(None):
             # If we're only slicing columns, handle the case with `__getitem__`
             if not isinstance(col_loc, slice):
@@ -600,7 +597,7 @@ class _LocIndexer(_LocationIndexerBase):
         --------
         pandas.DataFrame.loc
         """
-        row_loc, col_loc, _, row_scaler, col_scaler = _parse_tuple(key)
+        row_loc, col_loc, _, row_scalar, col_scalar = _parse_tuple(key)
         if isinstance(row_loc, list) and len(row_loc) == 1:
             if row_loc[0] not in self.qc.index:
                 index = self.qc.index.insert(len(self.qc.index), row_loc[0])
@@ -623,7 +620,7 @@ class _LocIndexer(_LocationIndexerBase):
                 col_lookup,
                 item,
                 axis=self._determine_setitem_axis(
-                    row_lookup, col_lookup, row_scaler, col_scaler
+                    row_lookup, col_lookup, row_scalar, col_scalar
                 ),
             )
 
@@ -746,7 +743,7 @@ class _iLocIndexer(_LocationIndexerBase):
         """
         if callable(key):
             return self.__getitem__(key(self.df))
-        row_loc, col_loc, ndim, self.row_scaler, self.col_scaler = _parse_tuple(key)
+        row_loc, col_loc, ndim, self.row_scalar, self.col_scalar = _parse_tuple(key)
         self._check_dtypes(row_loc)
         self._check_dtypes(col_loc)
 
@@ -772,7 +769,7 @@ class _iLocIndexer(_LocationIndexerBase):
         --------
         pandas.DataFrame.iloc
         """
-        row_loc, col_loc, _, row_scaler, col_scaler = _parse_tuple(key)
+        row_loc, col_loc, _, row_scalar, col_scalar = _parse_tuple(key)
         self._check_dtypes(row_loc)
         self._check_dtypes(col_loc)
 
@@ -782,7 +779,7 @@ class _iLocIndexer(_LocationIndexerBase):
             col_lookup,
             item,
             axis=self._determine_setitem_axis(
-                row_lookup, col_lookup, row_scaler, col_scaler
+                row_lookup, col_lookup, row_scalar, col_scalar
             ),
         )
 

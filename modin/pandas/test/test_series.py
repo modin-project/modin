@@ -1888,7 +1888,7 @@ def test_iloc(request, data):
     modin_series, pandas_series = create_test_series(data)
 
     if not name_contains(request.node.name, ["empty_data"]):
-        # Scaler
+        # Scalar
         np.testing.assert_equal(modin_series.iloc[0], pandas_series.iloc[0])
 
         # Series
