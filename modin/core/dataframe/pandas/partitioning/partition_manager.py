@@ -1170,10 +1170,14 @@ class PandasFramePartitionManager(ABC):
             The partitions to which the `func` will apply.
         func : callable
             The function to apply.
-        row_partitions_list : list
-            List of row partitions.
-        col_partitions_list : list
-            List of column partitions.
+        row_partitions_list : iterable of tuples
+            Iterable of tuples, containing 2 values:
+                1. Integer row partition index.
+                2. Internal row indexer of this partition.
+        col_partitions_list : iterable of tuples
+            Iterable of tuples, containing 2 values:
+                1. Integer column partition index.
+                2. Internal column indexer of this partition.
         item_to_distribute : item, default: None
             The item to split up so it can be applied over both axes.
 
@@ -1190,6 +1194,17 @@ class PandasFramePartitionManager(ABC):
         """
         partition_copy = partitions.copy()
         row_position_counter = 0
+
+        def compute_offset(internal_idx, remote_part, axis):
+            """Compute indexer length along the specified axis for the passed partition."""
+            if isinstance(internal_idx, slice):
+                internal_idx = range(
+                    *internal_idx.indices(
+                        remote_part.width() if axis == 1 else remote_part.length()
+                    )
+                )
+            return len(internal_idx)
+
         for row_idx, row_values in enumerate(row_partitions_list):
             row_blk_idx, row_internal_idx = row_values
             col_position_counter = 0
@@ -1197,12 +1212,13 @@ class PandasFramePartitionManager(ABC):
                 col_blk_idx, col_internal_idx = col_values
                 remote_part = partition_copy[row_blk_idx, col_blk_idx]
 
+                row_offset = compute_offset(row_internal_idx, remote_part, axis=0)
+                col_offset = compute_offset(col_internal_idx, remote_part, axis=1)
+
                 if item_to_distribute is not None:
                     item = item_to_distribute[
-                        row_position_counter : row_position_counter
-                        + len(row_internal_idx),
-                        col_position_counter : col_position_counter
-                        + len(col_internal_idx),
+                        row_position_counter : row_position_counter + row_offset,
+                        col_position_counter : col_position_counter + col_offset,
                     ]
                     item = {"item": item}
                 else:
@@ -1214,8 +1230,8 @@ class PandasFramePartitionManager(ABC):
                     **item,
                 )
                 partition_copy[row_blk_idx, col_blk_idx] = block_result
-                col_position_counter += len(col_internal_idx)
-            row_position_counter += len(row_internal_idx)
+                col_position_counter += col_offset
+            row_position_counter += row_offset
         return partition_copy
 
     @classmethod

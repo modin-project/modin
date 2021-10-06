@@ -2548,8 +2548,8 @@ class BaseQueryCompiler(abc.ABC):
         BaseQueryCompiler
             New masked QueryCompiler.
         """
-        index = [] if index is None else index
-        columns = [] if columns is None else columns
+        index = slice(None) if index is None else index
+        columns = slice(None) if columns is None else columns
 
         def applyier(df):
             return df.iloc[index, columns]
