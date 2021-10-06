@@ -203,9 +203,9 @@ def _parse_tuple(tup):
 
     Returns
     -------
-    row_loc : list
+    row_loc : scalar or list
         Row locator(s) as a scalar or List.
-    col_list : list
+    col_list : scalar or list
         Column locator(s) as a scalar or List.
     ndim : {0, 1, 2}
         Number of dimensions of located dataset.
