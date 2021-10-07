@@ -18,6 +18,7 @@ Module houses `FileDispatcher` class.
 for direct files processing.
 """
 
+import fsspec
 import os
 import re
 from modin.config import Backend
@@ -143,61 +144,19 @@ class FileDispatcher:
         mode : str, default: "rb"
             String, which defines which mode file should be open.
         compression : str, default: "infer"
-            File compression name (acceptable values are "gzip", "bz2", "xz" and "zip").
+            File compression name.
 
         Returns
         -------
-        file-like
-            file-like object of the `file_path`.
+        fsspec.core.OpenFile
+            OpenFile of the `file_path`.
         """
-        if isinstance(file_path, str):
-            match = S3_ADDRESS_REGEX.search(file_path)
-            if match is not None:
-                if file_path[0] == "S":
-                    file_path = "{}{}".format("s", file_path[1:])
-                import s3fs as S3FS
-                from botocore.exceptions import NoCredentialsError
+        from botocore.exceptions import NoCredentialsError
 
-                s3fs = S3FS.S3FileSystem(anon=False)
-                try:
-                    return s3fs.open(file_path)
-                except NoCredentialsError:
-                    s3fs = S3FS.S3FileSystem(anon=True)
-                    return s3fs.open(file_path)
-            elif compression == "gzip":
-                import gzip
-
-                return gzip.open(file_path, mode=mode)
-            elif compression == "bz2":
-                import bz2
-
-                return bz2.BZ2File(file_path, mode=mode)
-            elif compression == "xz":
-                import lzma
-
-                return lzma.LZMAFile(file_path, mode=mode)
-            elif compression == "zip":
-                import zipfile
-
-                zf = zipfile.ZipFile(file_path, mode=mode.replace("b", ""))
-                if zf.mode == "w":
-                    return zf
-                elif zf.mode == "r":
-                    zip_names = zf.namelist()
-                    if len(zip_names) == 1:
-                        f = zf.open(zip_names.pop())
-                        return f
-                    elif len(zip_names) == 0:
-                        raise ValueError(
-                            "Zero files found in ZIP file {}".format(file_path)
-                        )
-                    else:
-                        raise ValueError(
-                            "Multiple files found in ZIP file."
-                            " Only one file per ZIP: {}".format(zip_names)
-                        )
-
-        return open(file_path, mode=mode)
+        try:
+            return fsspec.open(file_path, mode, compression, anon=True)
+        except NoCredentialsError:
+            return fsspec.open(file_path, mode, compression, anon=False)
 
     @classmethod
     def file_size(cls, f):

@@ -108,10 +108,11 @@ class FWFDispatcher(TextFileDispatcher):
         usecols_md = cls._validate_usecols_arg(usecols)
         if usecols is not None and usecols_md[1] != "integer":
             del kwargs["usecols"]
-            all_cols = pandas.read_fwf(
-                cls.file_open(filepath_or_buffer, "rb"),
-                **dict(kwargs, nrows=0, skipfooter=0),
-            ).columns
+            with cls.file_open(filepath_or_buffer, "rb") as f:
+                all_cols = pandas.read_fwf(
+                    f,
+                    **dict(kwargs, nrows=0, skipfooter=0),
+                ).columns
             usecols = all_cols.get_indexer_for(list(usecols_md[0]))
         parse_dates = kwargs.pop("parse_dates", False)
         partition_kwargs = dict(
