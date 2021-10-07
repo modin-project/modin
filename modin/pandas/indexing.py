@@ -185,52 +185,6 @@ This will be fixed in future releases.
 """
 
 
-def _parse_tuple(tup):
-    """
-    Unpack the user input for getitem and setitem and compute ndim.
-
-    loc[a] -> ([a], :), 1D
-    loc[[a,b],] -> ([a,b], :),
-    loc[a,b] -> ([a], [b]), 0D
-
-    Parameters
-    ----------
-    tup : tuple
-        User input to unpack.
-
-    Returns
-    -------
-    row_loc : list
-        List of row locators.
-    col_list : list
-        List of column locators.
-    ndim : {0, 1, 2}
-        Number of dimensions of located dataset.
-    row_scalar : bool
-        True if `row_loc` is a scalar, False otherwise.
-    col_scalar : bool
-        True if `col_loc` is a scalar, False otherwise.
-    """
-    row_loc, col_loc = slice(None), slice(None)
-
-    if is_tuple(tup):
-        row_loc = tup[0]
-        if len(tup) == 2:
-            col_loc = tup[1]
-        if len(tup) > 2:
-            raise IndexingError("Too many indexers")
-    else:
-        row_loc = tup
-
-    ndim = _compute_ndim(row_loc, col_loc)
-    row_scalar = is_scalar(row_loc)
-    col_scalar = is_scalar(col_loc)
-    row_loc = [row_loc] if row_scalar else row_loc
-    col_loc = [col_loc] if col_scalar else col_loc
-
-    return row_loc, col_loc, ndim, row_scalar, col_scalar
-
-
 def _compute_ndim(row_loc, col_loc):
     """
     Compute the number of dimensions of result from locators.
@@ -494,6 +448,53 @@ class _LocationIndexerBase(object):
             axis = None
         return axis
 
+    def _parse_row_and_column_locators(self, tup):
+        """
+        Unpack the user input for getitem and setitem and compute ndim.
+
+        loc[a] -> ([a], :), 1D
+        loc[[a,b],] -> ([a,b], :),
+        loc[a,b] -> ([a], [b]), 0D
+
+        Parameters
+        ----------
+        tup : tuple
+            User input to unpack.
+
+        Returns
+        -------
+        row_loc : list
+            List of row locators.
+        col_list : list
+            List of column locators.
+        ndim : {0, 1, 2}
+            Number of dimensions of located dataset.
+        row_scaler : bool
+            True if `row_loc` is a scalar, False otherwise.
+        col_scaler : bool
+            True if `col_loc` is a scalar, False otherwise.
+        """
+        row_loc, col_loc = slice(None), slice(None)
+
+        if is_tuple(tup):
+            row_loc = tup[0]
+            if len(tup) == 2:
+                col_loc = tup[1]
+            if len(tup) > 2:
+                raise IndexingError("Too many indexers")
+        else:
+            row_loc = tup
+
+        row_loc = row_loc(self.df) if callable(row_loc) else row_loc
+        col_loc = col_loc(self.df) if callable(col_loc) else col_loc
+        ndim = _compute_ndim(row_loc, col_loc)
+        row_scaler = is_scalar(row_loc)
+        col_scaler = is_scalar(col_loc)
+        row_loc = [row_loc] if row_scaler else row_loc
+        col_loc = [col_loc] if col_scaler else col_loc
+
+        return row_loc, col_loc, ndim, row_scaler, col_scaler
+
 
 class _LocIndexer(_LocationIndexerBase):
     """
@@ -511,7 +512,7 @@ class _LocIndexer(_LocationIndexerBase):
 
         Parameters
         ----------
-        key : callable or tuple
+        key : callable, scalar, or tuple
             The global row index to retrieve data from.
 
         Returns
@@ -523,9 +524,13 @@ class _LocIndexer(_LocationIndexerBase):
         --------
         pandas.DataFrame.loc
         """
-        if callable(key):
-            return self.__getitem__(key(self.df))
-        row_loc, col_loc, ndim, self.row_scalar, self.col_scalar = _parse_tuple(key)
+        (
+            row_loc,
+            col_loc,
+            ndim,
+            self.row_scalar,
+            self.col_scalar,
+        ) = self._parse_row_and_column_locators(key)
         if isinstance(row_loc, slice) and row_loc == slice(None):
             # If we're only slicing columns, handle the case with `__getitem__`
             if not isinstance(col_loc, slice):
@@ -597,7 +602,13 @@ class _LocIndexer(_LocationIndexerBase):
         --------
         pandas.DataFrame.loc
         """
-        row_loc, col_loc, _, row_scalar, col_scalar = _parse_tuple(key)
+        (
+            row_loc,
+            col_loc,
+            _,
+            row_scalar,
+            col_scalar,
+        ) = self._parse_row_and_column_locators(key)
         if isinstance(row_loc, list) and len(row_loc) == 1:
             if row_loc[0] not in self.qc.index:
                 index = self.qc.index.insert(len(self.qc.index), row_loc[0])
@@ -741,9 +752,13 @@ class _iLocIndexer(_LocationIndexerBase):
         --------
         pandas.DataFrame.iloc
         """
-        if callable(key):
-            return self.__getitem__(key(self.df))
-        row_loc, col_loc, ndim, self.row_scalar, self.col_scalar = _parse_tuple(key)
+        (
+            row_loc,
+            col_loc,
+            ndim,
+            self.row_scalar,
+            self.col_scalar,
+        ) = self._parse_row_and_column_locators(key)
         self._check_dtypes(row_loc)
         self._check_dtypes(col_loc)
 
@@ -769,7 +784,13 @@ class _iLocIndexer(_LocationIndexerBase):
         --------
         pandas.DataFrame.iloc
         """
-        row_loc, col_loc, _, row_scalar, col_scalar = _parse_tuple(key)
+        (
+            row_loc,
+            col_loc,
+            _,
+            row_scalar,
+            col_scalar,
+        ) = self._parse_row_and_column_locators(key)
         self._check_dtypes(row_loc)
         self._check_dtypes(col_loc)
 
