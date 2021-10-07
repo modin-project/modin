@@ -1293,6 +1293,52 @@ def test_groupby_multiindex(groupby_kwargs):
     df_equals(md_grp.first(), pd_grp.first())
 
 
+@pytest.mark.parametrize("dropna", [(True), (False)])
+@pytest.mark.parametrize(
+    "groupby_kwargs",
+    [
+        pytest.param({"level": 1, "axis": 1}, id="level_idx_axis=1"),
+        pytest.param({"level": 1}, id="level_idx"),
+        pytest.param({"level": [1, "four"]}, id="level_idx+name"),
+        pytest.param({"by": "four"}, id="level_name"),
+        pytest.param({"by": ["one", "two"]}, id="level_name_multi_by"),
+        pytest.param({"by": ["item0", "one", "two"]}, id="col_name+level_name"),
+    ],
+)
+def test_groupby_with_kwarg_dropna(groupby_kwargs, dropna):
+    frame_data = np.random.randint(0, 100, size=(2 ** 6, 2 ** 4))
+    frame_data.ravel()[
+        np.random.choice(frame_data.size, 2 ** 4, replace=False)
+    ] = np.nan
+
+    modin_df = pd.DataFrame(frame_data)
+    pandas_df = pandas.DataFrame(frame_data)
+
+    new_index = pandas.Index([f"item{i}" for i in range(len(pandas_df))])
+    new_columns = pandas.MultiIndex.from_tuples(
+        [(i // 4, i // 2, i) for i in modin_df.columns], names=["four", "two", "one"]
+    )
+    modin_df.columns = new_columns
+    modin_df.index = new_index
+    pandas_df.columns = new_columns
+    pandas_df.index = new_index
+
+    if groupby_kwargs.get("axis", 0) == 0:
+        modin_df = modin_df.T
+        pandas_df = pandas_df.T
+
+    md_grp, pd_grp = modin_df.groupby(
+        **groupby_kwargs, dropna=dropna
+    ), pandas_df.groupby(**groupby_kwargs, dropna=dropna)
+    modin_groupby_equals_pandas(md_grp, pd_grp)
+    df_equals(md_grp.sum(), pd_grp.sum())
+    df_equals(md_grp.size(), pd_grp.size())
+    # Grouping on level works incorrect in case of aggregation:
+    # https://github.com/modin-project/modin/issues/2912
+    # df_equals(md_grp.quantile(), pd_grp.quantile())
+    df_equals(md_grp.first(), pd_grp.first())
+
+
 @pytest.mark.parametrize("groupby_axis", [0, 1])
 @pytest.mark.parametrize("shift_axis", [0, 1])
 def test_shift_freq(groupby_axis, shift_axis):

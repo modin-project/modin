@@ -858,7 +858,9 @@ class DataFrameGroupBy(object):
                     by = try_cast_to_pandas(by, squeeze=True)
                     pandas_df = self._df._to_pandas()
                 by = wrap_into_list(by, level)
-                self._index_grouped_cache = pandas_df.groupby(by=by).groups
+                self._index_grouped_cache = pandas_df.groupby(
+                    by=by, **self._kwargs
+                ).groups
             else:
                 if isinstance(self._by, type(self._query_compiler)):
                     by = self._by.to_pandas().squeeze().values
@@ -875,9 +877,11 @@ class DataFrameGroupBy(object):
                 else:
                     by = self._by
                 if self._axis == 0:
-                    self._index_grouped_cache = self._index.groupby(by)
+                    self._index_grouped_cache = self._index.groupby(by, **self._kwargs)
                 else:
-                    self._index_grouped_cache = self._columns.groupby(by)
+                    self._index_grouped_cache = self._columns.groupby(
+                        by, **self._kwargs
+                    )
         return self._index_grouped_cache
 
     def _wrap_aggregation(
