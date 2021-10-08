@@ -21,7 +21,7 @@ from collections import OrderedDict
 import numpy as np
 import pandas
 from pandas.core.indexes.api import ensure_index, Index, RangeIndex
-from pandas.core.dtypes.common import is_numeric_dtype
+from pandas.core.dtypes.common import is_numeric_dtype, is_list_like
 from typing import List, Hashable
 
 from modin.core.storage_formats.pandas.query_compiler import PandasQueryCompiler
@@ -447,19 +447,23 @@ class PandasFrame(object):
         If both `row_indices` and `row_numeric_idx` are set, `row_indices` will be used.
         The same rule applied to `col_indices` and `col_numeric_idx`.
         """
-        # Check on all possible ranges
-        if (
-            is_range_like(row_numeric_idx)
-            and row_numeric_idx.step == 1
-            and len(row_numeric_idx) == len(self.index)
-        ):
-            row_numeric_idx = None
-        if (
-            is_range_like(col_numeric_idx)
-            and col_numeric_idx.step == 1
-            and len(col_numeric_idx) == len(self.columns)
-        ):
-            col_numeric_idx = None
+        indexers = []
+        for axis, indexer in enumerate((row_numeric_idx, col_numeric_idx)):
+            if is_range_like(indexer):
+                if indexer.step == 1 and len(indexer) == len(self.axes[axis]):
+                    indexer = None
+                if indexer is not None and not isinstance(indexer, pandas.RangeIndex):
+                    indexer = pandas.RangeIndex(
+                        indexer.start, indexer.stop, indexer.step
+                    )
+            else:
+                ErrorMessage.catch_bugs_and_request_email(
+                    failure_condition=not (is_list_like(indexer) or indexer is None),
+                    extra_log=f"Mask takes only list-like numeric indexers, received: {type(indexer)}",
+                )
+            indexers.append(indexer)
+        row_numeric_idx, col_numeric_idx = indexers
+
         if (
             row_indices is None
             and row_numeric_idx is None
