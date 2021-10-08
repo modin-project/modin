@@ -252,7 +252,7 @@ def test_at(data):
     pandas_df = pandas.DataFrame(data)
 
     key1 = modin_df.columns[0]
-    # Scaler
+    # Scalar
     df_equals(modin_df.at[0, key1], pandas_df.at[0, key1])
 
     # Series
