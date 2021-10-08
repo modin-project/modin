@@ -154,9 +154,9 @@ class FileDispatcher:
         from botocore.exceptions import NoCredentialsError
 
         try:
-            return fsspec.open(file_path, mode, compression, anon=True)
-        except NoCredentialsError:
             return fsspec.open(file_path, mode, compression, anon=False)
+        except NoCredentialsError:
+            return fsspec.open(file_path, mode, compression, anon=True)
 
     @classmethod
     def file_size(cls, f):
