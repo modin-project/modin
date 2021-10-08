@@ -453,6 +453,8 @@ class PandasFrame(object):
                 if indexer.step == 1 and len(indexer) == len(self.axes[axis]):
                     indexer = None
                 if indexer is not None and not isinstance(indexer, pandas.RangeIndex):
+                    # Pure python's range is not fully compatible with a list of ints,
+                    # converting it to `pandas.RangeIndex` that is compatible.
                     indexer = pandas.RangeIndex(
                         indexer.start, indexer.stop, indexer.step
                     )
