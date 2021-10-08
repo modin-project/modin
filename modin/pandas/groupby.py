@@ -33,6 +33,7 @@ from modin.utils import (
 )
 from modin.core.storage_formats.base.query_compiler import BaseQueryCompiler
 from modin.core.dataframe.algebra.default2pandas.groupby import GroupBy
+from pandas.core.dtypes.common import is_datetime64_any_dtype
 from modin.config import IsExperimental
 from .series import Series
 from .utils import is_label
@@ -128,7 +129,46 @@ class DataFrameGroupBy(object):
         return self._default_to_pandas(lambda df: df.sem(ddof=ddof))
 
     def mean(self, *args, **kwargs):
-        return self._apply_agg_function(lambda df: df.mean(*args, **kwargs))
+        fallback = False
+        converted_columns = {}
+        if not kwargs.get("numeric_only", False):
+            for col, dt in self._df.dtypes.items():
+                if is_datetime64_any_dtype(dt):
+                    if self._df[col].hasnans:
+                        fallback = True
+                        break
+                    else:
+                        converted_columns[col] = dt
+        if fallback:
+            # We cannot use map-reduce approach because non-numeric columns are present and
+            # are requested to be processed. It happens because in map-reduce we use "sum"
+            # aggregation which always drops non-numeric columns unconditionally, no matter
+            # what arguments are specified. It is different from how "mean" handles non-numeric
+            # columns (in particular datetime types). We could use a workaround to convert
+            # datetime to int64 but it works only when NaNs aren't present in datetime columns.
+            # NaNs converted to int64 produce wrong results and have to be handled differently,
+            # so we have to resort to less efficient approach of broadcast full axis in
+            # _apply_agg_function.
+            result = self._apply_agg_function(lambda df: df.mean(*args, **kwargs))
+        else:
+            if len(converted_columns) > 0:
+                # Convert all datetime64 types to int64 to allow pandas "sum" to work.
+                self._df = self._df.astype(
+                    {col: "int64" for col in converted_columns.keys()}
+                )
+                self._query_compiler = self._df._query_compiler
+            result = self._wrap_aggregation(
+                type(self._query_compiler).groupby_mean,
+                lambda df, **kwargs: df.mean(*args, **kwargs),
+                numeric_only=False,
+                **kwargs,
+            )
+            if len(converted_columns) > 0:
+                # Convert int64 types back to datetime64 types in result.
+                result = result.astype(
+                    {col: dt for col, dt in converted_columns.items()}
+                )
+        return result
 
     def any(self, **kwargs):
         return self._wrap_aggregation(

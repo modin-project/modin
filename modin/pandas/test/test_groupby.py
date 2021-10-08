@@ -1466,6 +1466,37 @@ def test_agg_exceptions(operation):
     eval_aggregation(*create_test_dfs(data), operation=operation)
 
 
+def test_mean_agg_datetime():
+    N = 200
+    fill_data = [
+        (
+            "date_column",
+            [
+                np.datetime64("2000"),
+                np.datetime64("2010"),
+                np.datetime64("2011"),
+                np.datetime64("2011-06-15T00:00"),
+                np.datetime64("2009-01-01"),
+            ]
+            * (N // 5),
+        ),
+    ]
+
+    data1 = {
+        "column_to_by": ["foo", "bar", "baz", "qux"] * (N // 4),
+    }
+
+    data2 = {
+        f"{key}{i}": value
+        for key, value in fill_data
+        for i in range(N // len(fill_data))
+    }
+
+    data = {**data1, **data2}
+
+    eval_aggregation(*create_test_dfs(data), operation="mean")
+
+
 @pytest.mark.skip(
     "Pandas raises a ValueError on empty dictionary aggregation since 1.2.0"
     "It's unclear is that was made on purpose or it is a bug. That question"

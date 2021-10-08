@@ -2491,6 +2491,24 @@ class PandasQueryCompiler(BaseQueryCompiler):
     groupby_prod = GroupByReduce.register("prod")
     groupby_sum = GroupByReduce.register("sum")
 
+    def _mean_agg_map(dfgb, **kwargs):
+        kwargs["min_count"] = 1
+        result = dfgb.sum(**kwargs)
+        result["__mean_agg_size_column__"] = dfgb.size()
+        return result
+
+    def _mean_agg_reduce(dfgb, **kwargs):
+        kwargs["min_count"] = 1
+        result = dfgb.sum(**kwargs)
+        result = result.div(result["__mean_agg_size_column__"], axis=0)
+        return result.drop("__mean_agg_size_column__", axis=1)
+
+    groupby_mean = GroupbyReduceFunction.register(
+        _mean_agg_map,
+        _mean_agg_reduce,
+        default_to_pandas_func=lambda dfgb, **kwargs: dfgb.mean(**kwargs),
+    )
+
     def groupby_size(
         self, by, axis, groupby_args, map_args, reduce_args, numeric_only, drop
     ):
