@@ -1315,10 +1315,11 @@ def make_default_file(file_type: str):
         "stata": "stata",
         "pickle": "pkl",
     }
+    extension = file_type_to_extension[file_type]
 
     def _make_default_file(filename=None, nrows=NROWS, ncols=2, force=True, **kwargs):
         if filename is None:
-            filename = get_unique_filename(extension=file_type_to_extension[file_type])
+            filename = get_unique_filename(extension=extension)
 
         if file_type == "json":
             lines = kwargs.get("lines")

@@ -349,68 +349,21 @@ def make_csv_file():
     teardown_test_files(filenames)
 
 
-@pytest.fixture
-@doc(_doc_pytest_fixture, file_type="json")
-def make_json_file():
-    func, filenames = make_default_file(file_type="json")
-    yield func
-    teardown_test_files(filenames)
+def create_fixture(file_type):
+    @doc(_doc_pytest_fixture, file_type=file_type)
+    def fixture():
+        func, filenames = make_default_file(file_type=file_type)
+        yield func
+        teardown_test_files(filenames)
+
+    return fixture
 
 
-@pytest.fixture
-@doc(_doc_pytest_fixture, file_type="html")
-def make_html_file():
-    func, filenames = make_default_file(file_type="html")
-    yield func
-    teardown_test_files(filenames)
+for file_type in ("json", "html", "excel", "feather", "stata", "hdf", "pickle", "fwf"):
 
-
-@pytest.fixture
-@doc(_doc_pytest_fixture, file_type="excel")
-def make_excel_file():
-    func, filenames = make_default_file(file_type="excel")
-    yield func
-    teardown_test_files(filenames)
-
-
-@pytest.fixture
-@doc(_doc_pytest_fixture, file_type="feather")
-def make_feather_file():
-    func, filenames = make_default_file(file_type="feather")
-    yield func
-    teardown_test_files(filenames)
-
-
-@pytest.fixture
-@doc(_doc_pytest_fixture, file_type="stata")
-def make_stata_file():
-    func, filenames = make_default_file(file_type="stata")
-    yield func
-    teardown_test_files(filenames)
-
-
-@pytest.fixture
-@doc(_doc_pytest_fixture, file_type="hdf")
-def make_hdf_file():
-    func, filenames = make_default_file(file_type="hdf")
-    yield func
-    teardown_test_files(filenames)
-
-
-@pytest.fixture
-@doc(_doc_pytest_fixture, file_type="pickle")
-def make_pickle_file():
-    func, filenames = make_default_file(file_type="pickle")
-    yield func
-    teardown_test_files(filenames)
-
-
-@pytest.fixture
-@doc(_doc_pytest_fixture, file_type="fwf")
-def make_fwf_file():
-    func, filenames = make_default_file(file_type="fwf")
-    yield func
-    teardown_test_files(filenames)
+    fixture = create_fixture(file_type)
+    fixture.__name__ = f"make_{file_type}_file"
+    globals()[fixture.__name__] = pytest.fixture(fixture)
 
 
 @pytest.fixture
