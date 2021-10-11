@@ -16,6 +16,7 @@
 import pandas
 
 from .mapreducefunction import MapReduceFunction
+from .default_methods.groupby_default import GroupBy
 from modin.utils import try_cast_to_pandas, hashable
 
 
@@ -272,6 +273,10 @@ class GroupbyReduceFunction(MapReduceFunction):
             or isinstance(by, pandas.Grouper)
         ):
             by = try_cast_to_pandas(by, squeeze=True)
+            # Since 'by' may be a 2D query compiler holding columns to group by,
+            # to_pandas will also produce a pandas DataFrame containing them.
+            # So splitting 2D 'by' into a list of 1D Series using 'GroupBy.validate_by':
+            by = GroupBy.validate_by(by)
             if default_to_pandas_func is None:
                 default_to_pandas_func = (
                     (lambda grp: grp.agg(map_func))

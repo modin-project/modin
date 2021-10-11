@@ -633,6 +633,8 @@ def read_xml(
 
 @_inherit_docstrings(pandas.HDFStore)
 class HDFStore(pandas.HDFStore):
+    _return_modin_dataframe = True
+
     def __getattribute__(self, item):
         default_behaviors = ["__init__", "__class__"]
         method = super(HDFStore, self).__getattribute__(item)
@@ -671,7 +673,9 @@ class HDFStore(pandas.HDFStore):
                         for k, v in kwargs.items()
                     }
                     obj = super(HDFStore, self).__getattribute__(item)(*args, **kwargs)
-                    if isinstance(obj, pandas.DataFrame):
+                    if self._return_modin_dataframe and isinstance(
+                        obj, pandas.DataFrame
+                    ):
                         return DataFrame(obj)
                     return obj
 

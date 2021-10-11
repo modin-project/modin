@@ -308,6 +308,7 @@ def generate_dataframe(
     rand_high: int,
     groupby_ncols: Optional[int] = None,
     count_groups: Optional[int] = None,
+    gen_unique_key: bool = False,
 ) -> Union[pd.DataFrame, pandas.DataFrame]:
     """
     Generate DataFrame with caching.
@@ -338,6 +339,8 @@ def generate_dataframe(
         in each group every benchmarking time.
     count_groups : int, default: None
         Count of groups in groupby columns.
+    gen_unique_key : bool, default: False
+        Generate `col1` column where all elements are unique.
 
     Returns
     -------
@@ -363,6 +366,7 @@ def generate_dataframe(
         rand_high,
         groupby_ncols,
         count_groups,
+        gen_unique_key,
     )
 
     if cache_key in dataframes_cache:
@@ -379,6 +383,9 @@ def generate_dataframe(
         groupby_columns = [f"groupby_col{x}" for x in range(groupby_ncols)]
         for groupby_col in groupby_columns:
             data[groupby_col] = np.tile(np.arange(count_groups), nrows // count_groups)
+
+    if gen_unique_key:
+        data["col1"] = np.arange(nrows)
 
     if impl == "modin":
         df = pd.DataFrame(data)

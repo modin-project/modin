@@ -18,6 +18,7 @@ import pandas
 import pandas.core.groupby
 from pandas.core.dtypes.common import is_list_like
 from pandas.core.aggregation import reconstruct_func
+from pandas._libs.lib import no_default
 import pandas.core.common as com
 from types import BuiltinFunctionType
 from collections.abc import Iterable
@@ -31,6 +32,7 @@ from modin.utils import (
     wrap_into_list,
 )
 from modin.core.storage_formats.base.query_compiler import BaseQueryCompiler
+from modin.core.dataframe.algebra.default2pandas.groupby import GroupBy
 from modin.config import IsExperimental
 from .series import Series
 from .utils import is_label
@@ -294,6 +296,36 @@ class DataFrameGroupBy(object):
     def backfill(self, limit=None):
         return self.bfill(limit)
 
+    _internal_by_cache = no_default
+
+    # TODO: since python 3.9:
+    # @cached_property
+    @property
+    def _internal_by(self):
+        """
+        Get only those components of 'by' that are column labels of the source frame.
+
+        Returns
+        -------
+        tuple of labels
+        """
+        if self._internal_by_cache is not no_default:
+            return self._internal_by_cache
+
+        internal_by = tuple()
+        if self._drop:
+            if is_list_like(self._by):
+                internal_by = tuple(by for by in self._by if isinstance(by, str))
+            else:
+                ErrorMessage.catch_bugs_and_request_email(
+                    failure_condition=not isinstance(self._by, BaseQueryCompiler),
+                    extra_log=f"When 'drop' is True, 'by' must be either list-like or a QueryCompiler, met: {type(self._by)}.",
+                )
+                internal_by = tuple(self._by.columns)
+
+        self._internal_by_cache = internal_by
+        return internal_by
+
     def __getitem__(self, key):
         """
         Implement indexing operation on a DataFrameGroupBy object.
@@ -313,36 +345,47 @@ class DataFrameGroupBy(object):
         NotImplementedError
             Column lookups on GroupBy with arbitrary Series in by is not yet supported.
         """
-        kwargs = {**self._kwargs.copy(), "squeeze": self._squeeze}
-        # Most of time indexing DataFrameGroupBy results in another DataFrameGroupBy object unless circumstances are
-        # special in which case SeriesGroupBy has to be returned. Such circumstances are when key equals to a single
-        # column name and is not a list of column names or list of one column name.
-        make_dataframe = True
-        if self._drop and self._as_index:
-            if not isinstance(key, list):
-                key = [key]
-                kwargs["squeeze"] = True
+        # These parameters are common for building the resulted Series or DataFrame groupby object
+        kwargs = {
+            **self._kwargs.copy(),
+            "by": self._by,
+            "axis": self._axis,
+            "idx_name": self._idx_name,
+            "squeeze": self._squeeze,
+        }
+        # The rules of type deduction for the resulted object is the following:
+        #   1. If `key` is a list-like or `as_index is False`, then the resulted object is a DataFrameGroupBy
+        #   2. Otherwise, the resulted object is SeriesGroupBy
+        #   3. Result type does not depend on the `by` origin
+        # Examples:
+        #   - drop: any, as_index: any, __getitem__(key: list_like) -> DataFrameGroupBy
+        #   - drop: any, as_index: False, __getitem__(key: any) -> DataFrameGroupBy
+        #   - drop: any, as_index: True, __getitem__(key: label) -> SeriesGroupBy
+        if is_list_like(key):
+            make_dataframe = True
+        else:
+            if self._as_index:
                 make_dataframe = False
-        # When `as_index` is False, pandas will always convert to a `DataFrame`, we
-        # convert to a list here so that the result will be a `DataFrame`.
-        elif not self._as_index and not isinstance(key, list):
-            # Sometimes `__getitem__` doesn't only get the item, it also gets the `by`
-            # column. This logic is here to ensure that we also get the `by` data so
-            # that it is there for `as_index=False`.
-            if (
-                isinstance(self._by, type(self._query_compiler))
-                and all(c in self._columns for c in self._by.columns)
-                and self._drop
-            ):
-                key = list(self._by.columns) + [key]
             else:
+                make_dataframe = True
                 key = [key]
-        if isinstance(key, list) and (make_dataframe or not self._as_index):
+        if make_dataframe:
+            internal_by = frozenset(self._internal_by)
+            if len(internal_by.intersection(key)) != 0:
+                ErrorMessage.missmatch_with_pandas(
+                    operation="GroupBy.__getitem__",
+                    message=(
+                        "intersection of the selection and 'by' columns is not yet supported, "
+                        "to achieve the desired result rewrite the original code from:\n"
+                        "df.groupby('by_column')['by_column']\n"
+                        "to the:\n"
+                        "df.groupby(df['by_column'].copy())['by_column']"
+                    ),
+                )
+            cols_to_grab = internal_by.union(key)
+            key = [col for col in self._df.columns if col in cols_to_grab]
             return DataFrameGroupBy(
                 self._df[key],
-                self._by,
-                self._axis,
-                idx_name=self._idx_name,
                 drop=self._drop,
                 **kwargs,
             )
@@ -357,9 +400,6 @@ class DataFrameGroupBy(object):
             )
         return SeriesGroupBy(
             self._df[key],
-            self._by,
-            self._axis,
-            idx_name=self._idx_name,
             drop=False,
             **kwargs,
         )
@@ -954,12 +994,17 @@ class DataFrameGroupBy(object):
             and len(self._by.columns) == 1
         ):
             by = self._by.columns[0] if self._drop else self._by.to_pandas().squeeze()
-        elif isinstance(self._by, type(self._query_compiler)):
+        # converting QC 'by' to a list of column labels only if this 'by' comes from the self (if drop is True)
+        elif self._drop and isinstance(self._by, type(self._query_compiler)):
             by = list(self._by.columns)
         else:
             by = self._by
 
         by = try_cast_to_pandas(by, squeeze=True)
+        # Since 'by' may be a 2D query compiler holding columns to group by,
+        # to_pandas will also produce a pandas DataFrame containing them.
+        # So splitting 2D 'by' into a list of 1D Series using 'GroupBy.validate_by':
+        by = GroupBy.validate_by(by)
 
         def groupby_on_multiple_columns(df, *args, **kwargs):
             return f(
