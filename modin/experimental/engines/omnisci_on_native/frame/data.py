@@ -17,7 +17,7 @@ from modin.engines.base.frame.data import PandasFrame
 from modin.experimental.backends.omnisci.query_compiler import DFAlgQueryCompiler
 from .partition_manager import OmnisciOnNativeFramePartitionManager
 
-from pandas.core.index import ensure_index, Index, MultiIndex, RangeIndex
+from pandas.core.indexes.api import ensure_index, Index, MultiIndex, RangeIndex
 from pandas.core.dtypes.common import get_dtype, is_list_like, is_bool_dtype
 from modin.error_message import ErrorMessage
 from modin.pandas.indexing import is_range_like
