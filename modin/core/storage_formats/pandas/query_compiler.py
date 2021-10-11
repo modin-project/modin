@@ -42,7 +42,7 @@ from modin.utils import (
     hashable,
     _inherit_docstrings,
 )
-from modin.core.dataframe.algebra.operators import (
+from modin.core.dataframe.algebra import (
     FoldFunction,
     MapFunction,
     MapReduceFunction,
@@ -2543,8 +2543,8 @@ class PandasQueryCompiler(BaseQueryCompiler):
             0 is for index, when 1 is for columns.
         agg_func : dict(label) -> str
             Dictionary that maps row/column labels to the function names.
-            **Note:** specified functions have to be supported by ``modin.core.dataframe.algebra.operators.GroupbyReduceFunction``.
-            Supported functions are listed in the ``modin.core.dataframe.algebra.operators.GroupbyReduceFunction.groupby_reduce_functions``
+            **Note:** specified functions have to be supported by ``modin.core.dataframe.algebra.GroupbyReduceFunction``.
+            Supported functions are listed in the ``modin.core.dataframe.algebra.GroupbyReduceFunction.groupby_reduce_functions``
             dictionary.
         agg_args : list
             Serves the compatibility purpose. Does not affect the result.
@@ -2556,7 +2556,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             If `by` is a QueryCompiler indicates whether or not by-data came
             from the `self`.
         **kwargs : dict
-            Additional parameters to pass to the ``modin.core.dataframe.algebra.operators.GroupbyReduceFunction.register``.
+            Additional parameters to pass to the ``modin.core.dataframe.algebra.GroupbyReduceFunction.register``.
 
         Returns
         -------

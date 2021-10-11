@@ -16,7 +16,7 @@
 import pandas
 
 from .mapreducefunction import MapReduceFunction
-from .default_methods.groupby_default import GroupBy
+from .default2pandas.groupby import GroupBy
 from modin.utils import try_cast_to_pandas, hashable
 
 
