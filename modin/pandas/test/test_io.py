@@ -1469,12 +1469,13 @@ class TestExcel:
         modin_excel_file = pd.ExcelFile(unique_filename)
         pandas_excel_file = pandas.ExcelFile(unique_filename)
 
-        df_equals(modin_excel_file.parse(), pandas_excel_file.parse())
-
-        assert modin_excel_file.io == unique_filename
-        assert isinstance(modin_excel_file, pd.ExcelFile)
-        modin_excel_file.close()
-        pandas_excel_file.close()
+        try:
+            df_equals(modin_excel_file.parse(), pandas_excel_file.parse())
+            assert modin_excel_file.io == unique_filename
+            assert isinstance(modin_excel_file, pd.ExcelFile)
+        finally:
+            modin_excel_file.close()
+            pandas_excel_file.close()
 
     @pytest.mark.xfail(strict=False, reason="Flaky test, defaults to pandas")
     def test_to_excel(self):
