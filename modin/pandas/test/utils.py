@@ -1305,7 +1305,21 @@ def make_default_file(file_type: str):
             getattr(df, func)(filename, **func_kw if func_kw else {})
             filenames.append(filename)
 
-    def _make_default_file(filename, nrows=NROWS, ncols=2, force=True, **kwargs):
+    file_type_to_extension = {
+        "json": "json",
+        "excel": "xlsx",
+        "hdf": "hdf",
+        "html": "html",
+        "fwf": "txt",
+        "feather": "feather",
+        "stata": "stata",
+        "pickle": "pkl",
+    }
+
+    def _make_default_file(filename=None, nrows=NROWS, ncols=2, force=True, **kwargs):
+        if filename is None:
+            filename = get_unique_filename(extension=file_type_to_extension[file_type])
+
         if file_type == "json":
             lines = kwargs.get("lines")
             func_kw = {"lines": lines, "orient": "records"} if lines else {}
@@ -1326,4 +1340,6 @@ def make_default_file(file_type: str):
                 filenames.append(filename)
         else:
             raise ValueError(f"Unsupported file type: {file_type}")
+        return filename
+
     return _make_default_file, filenames
