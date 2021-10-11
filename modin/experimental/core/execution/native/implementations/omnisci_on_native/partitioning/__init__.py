@@ -11,4 +11,4 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-"""Base Modin Dataframe classes related to its repartitioning and optimized for OmniSci on Native execution."""
+"""Base Modin Dataframe classes related to its partitioning and optimized for OmniSci on Native execution."""

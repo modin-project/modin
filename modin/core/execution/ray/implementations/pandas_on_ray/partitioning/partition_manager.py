@@ -28,7 +28,7 @@ from .axis_partition import (
 from .partition import (
     PandasOnRayFramePartition,
 )
-from ..modin_aqp import call_progress_bar
+from modin.core.execution.ray.generic.modin_aqp import call_progress_bar
 from modin.error_message import ErrorMessage
 import pandas
 

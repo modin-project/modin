@@ -27,7 +27,7 @@ from modin.error_message import ErrorMessage
 from modin.pandas.indexing import is_range_like
 import pandas as pd
 
-from .df_algebra import (
+from ..df_algebra import (
     MaskNode,
     FrameNode,
     GroupbyAggNode,
@@ -39,7 +39,7 @@ from .df_algebra import (
     translate_exprs_to_base,
     replace_frame_in_exprs,
 )
-from .expr import (
+from ..expr import (
     AggregateExpr,
     InputRefExpr,
     LiteralExpr,

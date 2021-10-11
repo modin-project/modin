@@ -22,13 +22,13 @@ from modin.core.dataframe.pandas.partitioning.partition_manager import (
 from ..partitioning.partition import (
     OmnisciOnNativeFramePartition,
 )
-from ..dataframe.omnisci_worker import (
+from ..omnisci_worker import (
     OmnisciServer,
 )
-from ..dataframe.calcite_builder import (
+from ..calcite_builder import (
     CalciteBuilder,
 )
-from ..dataframe.calcite_serializer import (
+from ..calcite_serializer import (
     CalciteSerializer,
 )
 from modin.config import DoUseCalcite

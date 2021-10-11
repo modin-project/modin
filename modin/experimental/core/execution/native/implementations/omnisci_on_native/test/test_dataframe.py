@@ -27,6 +27,7 @@ IsExperimental.put(True)
 Engine.put("native")
 Backend.put("omnisci")
 
+import modin
 import modin.pandas as pd
 from modin.pandas.test.utils import (
     df_equals,
@@ -48,7 +49,7 @@ from modin.experimental.engines.omnisci_on_native.frame.df_algebra import FrameN
 
 @pytest.mark.usefixtures("TestReadCSVFixture")
 class TestCSV:
-    root = os.path.abspath(__file__ + "/.." * 9)  # root of modin repo
+    root = os.path.dirname(os.path.abspath(modin.__file__))  # root of modin repo
 
     boston_housing_names = [
         "index",
