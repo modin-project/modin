@@ -149,7 +149,7 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
     Query compiler for the OmniSci backend.
 
     This class doesn't perform much processing and mostly forwards calls to
-    :py:class:`~modin.experimental.engines.omnisci_on_native.frame.data.OmnisciOnNativeFrame`
+    :py:class:`~modin.experimental.core.execution.native.implementations.omnisci_on_native.dataframe.dataframe.OmnisciOnNativeFrame`
     for lazy execution trees build.
 
     Parameters
