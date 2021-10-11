@@ -616,6 +616,7 @@ class PandasParquetParser(PandasParser):
     def parse(fname, **kwargs):
         num_splits = kwargs.pop("num_splits", None)
         columns = kwargs.get("columns", None)
+        micro_partition_size = kwargs.pop("micro_partitions", 0)
         if num_splits is None:
             return pandas.read_parquet(fname, **kwargs)
         kwargs["use_pandas_metadata"] = True
@@ -628,7 +629,20 @@ class PandasParquetParser(PandasParser):
         if columns is not None:
             df = df[columns]
         # Append the length of the index here to build it externally
-        return _split_result_for_readers(0, num_splits, df) + [idx, df.dtypes]
+        if micro_partition_size > 0:
+            # TODO make splitting into micro-partitions more extensible; not sure if we should add logic in _split_result_for_readers
+            return (
+                [df.iloc[:micro_partition_size]]
+                + _split_result_for_readers(
+                    0,
+                    num_splits - 2,
+                    df.iloc[micro_partition_size:-micro_partition_size],
+                )
+                + [df.iloc[-micro_partition_size:]]
+                + [idx, df.dtypes]
+            )
+        else:
+            return _split_result_for_readers(0, num_splits, df) + [idx, df.dtypes]
 
 
 @doc(_doc_pandas_parser_class, data_type="HDF data")

@@ -24,7 +24,7 @@ import pandas
 
 from modin.core.storage_formats.pandas.utils import compute_chunksize
 from modin.core.io.file_dispatcher import FileDispatcher
-from modin.config import NPartitions
+from modin.config import NPartitions, MicroPartitions
 
 
 class ColumnStoreDispatcher(FileDispatcher):
@@ -63,6 +63,7 @@ class ColumnStoreDispatcher(FileDispatcher):
                         fname=fname,
                         columns=cols,
                         num_splits=NPartitions.get(),
+                        micro_partitions=MicroPartitions.get(),
                         **kwargs,
                     ),
                 )
@@ -134,12 +135,26 @@ class ColumnStoreDispatcher(FileDispatcher):
         if index_chunksize > index_len:
             row_lengths = [index_len] + [0 for _ in range(num_partitions - 1)]
         else:
-            row_lengths = [
-                index_chunksize
-                if i != num_partitions - 1
-                else index_len - (index_chunksize * (num_partitions - 1))
-                for i in range(num_partitions)
-            ]
+            micro_partition_size = MicroPartitions.get()
+            if micro_partition_size > 0:
+                index_len -= micro_partition_size * 2
+                num_partitions -= 2  # need 2 micro_partitions for head and tail
+                row_lengths = [
+                    index_chunksize
+                    if i != num_partitions - 1
+                    else index_len - (index_chunksize * (num_partitions - 1))
+                    for i in range(num_partitions)
+                ]
+                row_lengths = (
+                    [micro_partition_size] + row_lengths + [micro_partition_size]
+                )
+            else:
+                row_lengths = [
+                    index_chunksize
+                    if i != num_partitions - 1
+                    else index_len - (index_chunksize * (num_partitions - 1))
+                    for i in range(num_partitions)
+                ]
         return index, row_lengths
 
     @classmethod
