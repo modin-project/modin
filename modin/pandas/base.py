@@ -2958,15 +2958,7 @@ class BasePandasDataset(object):
         else:
             return self._getitem(key)
 
-    def __hash__(self):
-        """
-        Raise an exception when calling hash on non-hashable ``DataFrame`` or ``Series`` objects.
-
-        Raises
-        ------
-        TypeError
-        """
-        raise TypeError(f"unhashable type: '{type(self).__name__}'")
+    __hash__ = None
 
     def _setitem_slice(self, key: slice, value):
         """

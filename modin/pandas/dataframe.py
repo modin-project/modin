@@ -1307,11 +1307,6 @@ class DataFrame(BasePandasDataset):
             )
             other = [other]
         else:
-            # This constraint carried over from Pandas.
-            if on is not None:
-                raise ValueError(
-                    "Joining multiple DataFrames only supported for joining on index"
-                )
             new_columns = (
                 pandas.DataFrame(columns=self.columns)
                 .join(
