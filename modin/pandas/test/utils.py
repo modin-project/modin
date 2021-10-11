@@ -1310,19 +1310,11 @@ def make_default_file(file_type: str):
             lines = kwargs.get("lines")
             func_kw = {"lines": lines, "orient": "records"} if lines else {}
             _create_file(filenames, filename, force, nrows, ncols, "to_json", func_kw)
-        elif file_type == "html":
-            _create_file(filenames, filename, force, nrows, ncols, "to_html")
-        elif file_type == "excel":
-            _create_file(filenames, filename, force, nrows, ncols, "to_excel")
-        elif file_type == "feather":
-            _create_file(filenames, filename, force, nrows, ncols, "to_feather")
-        elif file_type == "stata":
-            _create_file(filenames, filename, force, nrows, ncols, "to_stata")
+        elif file_type in ("html", "excel", "feather", "stata", "pickle"):
+            _create_file(filenames, filename, force, nrows, ncols, f"to_{file_type}")
         elif file_type == "hdf":
             func_kw = {"key": "df", "format": kwargs.get("format")}
             _create_file(filenames, filename, force, nrows, ncols, "to_hdf", func_kw)
-        elif file_type == "pickle":
-            _create_file(filenames, filename, force, nrows, ncols, "to_pickle")
         elif file_type == "fwf":
             if force or not os.path.exists(filename):
                 fwf_data = kwargs.get("fwf_data")
@@ -1332,5 +1324,6 @@ def make_default_file(file_type: str):
                 with open(filename, "w") as f:
                     f.write(fwf_data)
                 filenames.append(filename)
-
+        else:
+            raise ValueError(f"Unsupported file type: {file_type}")
     return _make_default_file, filenames

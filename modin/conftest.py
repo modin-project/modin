@@ -449,7 +449,7 @@ def make_parquet_file():
                 if os.path.exists(filename):
                     shutil.rmtree(filename)
                 else:
-                    os.mkdir(filename)
+                    os.makedirs(filename)
                 table = pa.Table.from_pandas(df)
                 pq.write_to_dataset(table, root_path=filename)
             elif len(partitioned_columns) > 0:
