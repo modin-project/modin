@@ -24,7 +24,7 @@ from modin.pandas.test.utils import (
     eval_io as general_eval_io,
 )
 
-from modin.experimental.engines.omnisci_on_native.frame.omnisci_worker import (
+from modin.experimental.core.execution.native.implementations.omnisci_on_native.omnisci_worker import (
     OmnisciServer,
 )
 

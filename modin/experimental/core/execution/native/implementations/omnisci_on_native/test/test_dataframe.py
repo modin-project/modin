@@ -27,7 +27,6 @@ IsExperimental.put(True)
 Engine.put("native")
 Backend.put("omnisci")
 
-import modin
 import modin.pandas as pd
 from modin.pandas.test.utils import (
     df_equals,
@@ -44,12 +43,18 @@ from modin.utils import try_cast_to_pandas
 from modin.experimental.core.execution.native.implementations.omnisci_on_native.partitioning.partition_manager import (
     OmnisciOnNativeFramePartitionManager,
 )
-from modin.experimental.engines.omnisci_on_native.frame.df_algebra import FrameNode
+from modin.experimental.core.execution.native.implementations.omnisci_on_native.df_algebra import (
+    FrameNode,
+)
 
 
 @pytest.mark.usefixtures("TestReadCSVFixture")
 class TestCSV:
-    root = os.path.dirname(os.path.abspath(modin.__file__))  # root of modin repo
+    from modin import __file__ as modin_root
+
+    root = os.path.dirname(
+        os.path.dirname(os.path.abspath(modin_root)) + ".."
+    )  # root of modin repo
 
     boston_housing_names = [
         "index",
