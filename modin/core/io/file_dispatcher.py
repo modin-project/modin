@@ -71,7 +71,6 @@ class File:
         ----------
         fsspec.core.OpenFile
             The opened file.
-
         """
         from botocore.exceptions import NoCredentialsError
 
@@ -89,6 +88,11 @@ class File:
     def __exit__(self, *args):
         """
         Close the file.
+
+        Arguments
+        ----------
+        *args: any type
+            Variable positional arguments, all unused.
         """
         self.file.close()
 
