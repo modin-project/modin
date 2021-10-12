@@ -72,7 +72,7 @@ class File:
         fsspec.core.OpenFile
             The opened file.
 
-        """        
+        """
         from botocore.exceptions import NoCredentialsError
 
         try:
@@ -89,7 +89,7 @@ class File:
     def __exit__(self, *args):
         """
         Close the file.
-        """        
+        """
         self.file.close()
 
 
