@@ -50,6 +50,7 @@ from pandas.util._decorators import doc
 import warnings
 
 from modin.core.io import FileDispatcher
+from modin.core.io.file_dispatcher import OpenFile
 from modin.core.storage_formats.pandas.utils import split_result_of_axis_func_pandas
 from modin.error_message import ErrorMessage
 
@@ -234,9 +235,7 @@ class PandasCSVParser(PandasParser):
         header_size = kwargs.pop("header_size", None)
         if start is not None and end is not None:
             # pop "compression" from kwargs because bio is uncompressed
-            with FileDispatcher.file_open(
-                fname, "rb", kwargs.pop("compression", "infer")
-            ) as bio:
+            with File(fname, "rb", kwargs.pop("compression", "infer")) as bio:
                 header = b""
                 # In this case we beware that fisrt line can contain BOM, so
                 # adding this line to the `header` for reading and then skip it
@@ -283,9 +282,7 @@ class PandasCSVGlobParser(PandasCSVParser):
         for fname, start, end in chunks:
             if start is not None and end is not None:
                 # pop "compression" from kwargs because bio is uncompressed
-                with FileDispatcher.file_open(
-                    fname, "rb", kwargs.pop("compression", "infer")
-                ) as bio:
+                with File(fname, "rb", kwargs.pop("compression", "infer")) as bio:
                     if kwargs.get("encoding", None) is not None:
                         header = b"" + bio.readline()
                     else:
@@ -349,9 +346,7 @@ class PandasFWFParser(PandasParser):
         index_col = kwargs.get("index_col", None)
         if start is not None and end is not None:
             # pop "compression" from kwargs because bio is uncompressed
-            with FileDispatcher.file_open(
-                fname, "rb", kwargs.pop("compression", "infer")
-            ) as bio:
+            with File(fname, "rb", kwargs.pop("compression", "infer")) as bio:
                 if kwargs.get("encoding", None) is not None:
                     header = b"" + bio.readline()
                 else:
@@ -586,9 +581,7 @@ class PandasJSONParser(PandasParser):
         end = kwargs.pop("end", None)
         if start is not None and end is not None:
             # pop "compression" from kwargs because bio is uncompressed
-            with FileDispatcher.file_open(
-                fname, "rb", kwargs.pop("compression", "infer")
-            ) as bio:
+            with File(fname, "rb", kwargs.pop("compression", "infer")) as bio:
                 bio.seek(start)
                 to_read = b"" + bio.read(end - start)
             columns = kwargs.pop("columns")

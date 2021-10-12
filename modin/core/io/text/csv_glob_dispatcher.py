@@ -25,6 +25,7 @@ import pandas
 import pandas._libs.lib as lib
 
 from modin.config import NPartitions
+from modin.core.io.file_dispatcher import OpenFile
 from modin.core.io.file_dispatcher import S3_ADDRESS_REGEX
 from modin.core.io.text.csv_dispatcher import CSVDispatcher
 
@@ -131,7 +132,7 @@ class CSVGlobDispatcher(CSVDispatcher):
         if usecols is not None and usecols_md[1] != "integer":
             del kwargs["usecols"]
             all_cols = pandas.read_csv(
-                cls.file_open(filepath_or_buffer, "rb"),
+                File(filepath_or_buffer, "rb"),
                 **dict(kwargs, nrows=0, skipfooter=0),
             ).columns
             usecols = all_cols.get_indexer_for(list(usecols_md[0]))
@@ -153,7 +154,7 @@ class CSVGlobDispatcher(CSVDispatcher):
 
         with ExitStack() as stack:
             files = [
-                stack.enter_context(cls.file_open(fname, "rb", compression_type))
+                stack.enter_context(File(fname, "rb", compression_type))
                 for fname in glob_filepaths
             ]
 

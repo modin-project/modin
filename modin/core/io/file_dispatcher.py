@@ -28,6 +28,59 @@ S3_ADDRESS_REGEX = re.compile("[sS]3://(.*?)/(.*)")
 NOT_IMPLEMENTED_MESSAGE = "Implement in children classes!"
 
 
+class File:
+    """
+    File is a context manager for an input file.
+
+    File uses fsspec to open files on __enter__. On __exit__, it closes the
+    fsspec file. This class exists to encapsulate the special behavior in
+    __enter__ around anon=False and anon=True for s3 buckets.
+
+    Parameters
+    ----------
+    file_path : str
+        String that represents the path to the file (paths to S3 buckets
+        are also acceptable).
+    mode : str, default: "rb"
+        String, which defines which mode file should be open.
+    compression : str, default: "infer"
+        File compression name.
+
+    Attributes
+    ----------
+    file_path : str
+        String that represents the path to the file
+    mode : str
+        String that defines which mode the file should be opened in.
+    compression : str
+        File compression name.
+    file : fsspec.core.OpenFile
+        The opened file.
+    """
+
+    def __init__(self, file_path, mode="rb", compression="infer"):
+        self.file_path = file_path
+        self.mode = mode
+        self.compression = compression
+
+    def __enter__(self):
+        from botocore.exceptions import NoCredentialsError
+
+        try:
+            self.file = fsspec.open(
+                self.file_path, self.mode, self.compression, anon=False
+            )
+            return self.file.open()
+        except NoCredentialsError:
+            self.file = fsspec.open(
+                self.file_path, self.mode, self.compression, anon=True
+            )
+            return self.file.open()
+
+    def __exit__(self, *args):
+        self.file.close()
+
+
 class FileDispatcher:
     """
     Class handles util functions for reading data from different kinds of files.
@@ -130,33 +183,6 @@ class FileDispatcher:
             return file_path
         else:
             return os.path.abspath(file_path)
-
-    @classmethod
-    def file_open(cls, file_path, mode="rb", compression="infer"):
-        """
-        Get the file handle from `file_path`.
-
-        Parameters
-        ----------
-        file_path : str
-            String that represents the path to the file (paths to S3 buckets
-            are also acceptable).
-        mode : str, default: "rb"
-            String, which defines which mode file should be open.
-        compression : str, default: "infer"
-            File compression name.
-
-        Returns
-        -------
-        fsspec.core.OpenFile
-            OpenFile of the `file_path`.
-        """
-        from botocore.exceptions import NoCredentialsError
-
-        try:
-            return fsspec.open(file_path, mode, compression, anon=False)
-        except NoCredentialsError:
-            return fsspec.open(file_path, mode, compression, anon=True)
 
     @classmethod
     def file_size(cls, f):

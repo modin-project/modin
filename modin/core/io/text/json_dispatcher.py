@@ -13,6 +13,7 @@
 
 """Module houses `JSONDispatcher` class, that is used for reading `.json` files."""
 
+from modin.core.io.file_dispatcher import OpenFile
 from modin.core.io.text.text_file_dispatcher import TextFileDispatcher
 from io import BytesIO
 import pandas
@@ -54,12 +55,12 @@ class JSONDispatcher(TextFileDispatcher):
             return cls.single_worker_read(path_or_buf, **kwargs)
         if not kwargs.get("lines", False):
             return cls.single_worker_read(path_or_buf, **kwargs)
-        with cls.file_open(path_or_buf, "rb") as f:
+        with File(path_or_buf, "rb") as f:
             columns = pandas.read_json(BytesIO(b"" + f.readline()), lines=True).columns
         kwargs["columns"] = columns
         empty_pd_df = pandas.DataFrame(columns=columns)
 
-        with cls.file_open(path_or_buf, "rb", kwargs.get("compression", "infer")) as f:
+        with File(path_or_buf, "rb", kwargs.get("compression", "infer")) as f:
             partition_ids = []
             index_ids = []
             dtypes_ids = []

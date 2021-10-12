@@ -13,6 +13,7 @@
 
 """Module houses `CSVDispatcher` class, that is used for reading `.csv` files."""
 
+from modin.core.io.file_dispatcher import OpenFile
 from modin.core.io.text.text_file_dispatcher import (
     TextFileDispatcher,
     ColumnNamesTypes,
@@ -132,7 +133,7 @@ class CSVDispatcher(TextFileDispatcher):
             compression=compression_infered,
         )
 
-        with cls.file_open(filepath_or_buffer_md, "rb", compression_infered) as f:
+        with File(filepath_or_buffer_md, "rb", compression_infered) as f:
             splits = cls.partitioned_file(
                 f,
                 num_partitions=NPartitions.get(),
