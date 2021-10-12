@@ -68,7 +68,7 @@ class File:
         Open the file with fsspec and return the opened file.
 
         Returns
-        ----------
+        -------
         fsspec.core.OpenFile
             The opened file.
         """
@@ -89,9 +89,9 @@ class File:
         """
         Close the file.
 
-        Arguments
+        Parameters
         ----------
-        *args: any type
+        *args : any type
             Variable positional arguments, all unused.
         """
         self.file.close()
