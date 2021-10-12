@@ -463,16 +463,12 @@ class _LocationIndexerBase(object):
 
         Returns
         -------
-        row_loc : list
-            List of row locators.
-        col_list : list
-            List of column locators.
+        row_loc : scalar or list
+            Row locator(s) as a scalar or List.
+        col_list : scalar or list
+            Column locator(s) as a scalar or List.
         ndim : {0, 1, 2}
             Number of dimensions of located dataset.
-        row_scaler : bool
-            True if `row_loc` is a scalar, False otherwise.
-        col_scaler : bool
-            True if `col_loc` is a scalar, False otherwise.
         """
         row_loc, col_loc = slice(None), slice(None)
 
@@ -487,13 +483,7 @@ class _LocationIndexerBase(object):
 
         row_loc = row_loc(self.df) if callable(row_loc) else row_loc
         col_loc = col_loc(self.df) if callable(col_loc) else col_loc
-        ndim = _compute_ndim(row_loc, col_loc)
-        row_scaler = is_scalar(row_loc)
-        col_scaler = is_scalar(col_loc)
-        row_loc = [row_loc] if row_scaler else row_loc
-        col_loc = [col_loc] if col_scaler else col_loc
-
-        return row_loc, col_loc, ndim, row_scaler, col_scaler
+        return row_loc, col_loc, _compute_ndim(row_loc, col_loc)
 
 
 class _LocIndexer(_LocationIndexerBase):
@@ -524,13 +514,9 @@ class _LocIndexer(_LocationIndexerBase):
         --------
         pandas.DataFrame.loc
         """
-        (
-            row_loc,
-            col_loc,
-            ndim,
-            self.row_scalar,
-            self.col_scalar,
-        ) = self._parse_row_and_column_locators(key)
+        row_loc, col_loc, ndim = self._parse_row_and_column_locators(key)
+        self.row_scalar = is_scalar(row_loc)
+        self.col_scalar = is_scalar(col_loc)
         if isinstance(row_loc, slice) and row_loc == slice(None):
             # If we're only slicing columns, handle the case with `__getitem__`
             if not isinstance(col_loc, slice):
@@ -553,29 +539,35 @@ class _LocIndexer(_LocationIndexerBase):
         if isinstance(result, Series):
             result._parent = self.df
             result._parent_axis = 0
+        col_loc_as_list = [col_loc] if self.col_scalar else col_loc
+        row_loc_as_list = [row_loc] if self.row_scalar else row_loc
         # Pandas drops the levels that are in the `loc`, so we have to as well.
         if hasattr(result, "index") and isinstance(result.index, pandas.MultiIndex):
             if (
                 isinstance(result, Series)
-                and not isinstance(col_loc, slice)
+                and not isinstance(col_loc_as_list, slice)
                 and all(
-                    col_loc[i] in result.index.levels[i] for i in range(len(col_loc))
+                    col_loc_as_list[i] in result.index.levels[i]
+                    for i in range(len(col_loc_as_list))
                 )
             ):
-                result.index = result.index.droplevel(list(range(len(col_loc))))
-            elif not isinstance(row_loc, slice) and all(
-                not isinstance(row_loc[i], slice)
-                and row_loc[i] in result.index.levels[i]
-                for i in range(len(row_loc))
+                result.index = result.index.droplevel(list(range(len(col_loc_as_list))))
+            elif not isinstance(row_loc_as_list, slice) and all(
+                not isinstance(row_loc_as_list[i], slice)
+                and row_loc_as_list[i] in result.index.levels[i]
+                for i in range(len(row_loc_as_list))
             ):
-                result.index = result.index.droplevel(list(range(len(row_loc))))
+                result.index = result.index.droplevel(list(range(len(row_loc_as_list))))
         if (
             hasattr(result, "columns")
-            and not isinstance(col_loc, slice)
+            and not isinstance(col_loc_as_list, slice)
             and isinstance(result.columns, pandas.MultiIndex)
-            and all(col_loc[i] in result.columns.levels[i] for i in range(len(col_loc)))
+            and all(
+                col_loc_as_list[i] in result.columns.levels[i]
+                for i in range(len(col_loc_as_list))
+            )
         ):
-            result.columns = result.columns.droplevel(list(range(len(col_loc))))
+            result.columns = result.columns.droplevel(list(range(len(col_loc_as_list))))
         # This is done for cases where the index passed in has other state, like a
         # frequency in the case of DateTimeIndex.
         if (
@@ -602,13 +594,7 @@ class _LocIndexer(_LocationIndexerBase):
         --------
         pandas.DataFrame.loc
         """
-        (
-            row_loc,
-            col_loc,
-            _,
-            row_scalar,
-            col_scalar,
-        ) = self._parse_row_and_column_locators(key)
+        row_loc, col_loc, _ = self._parse_row_and_column_locators(key)
         if isinstance(row_loc, list) and len(row_loc) == 1:
             if row_loc[0] not in self.qc.index:
                 index = self.qc.index.insert(len(self.qc.index), row_loc[0])
@@ -631,7 +617,7 @@ class _LocIndexer(_LocationIndexerBase):
                 col_lookup,
                 item,
                 axis=self._determine_setitem_axis(
-                    row_lookup, col_lookup, row_scalar, col_scalar
+                    row_lookup, col_lookup, is_scalar(row_loc), is_scalar(col_loc)
                 ),
             )
 
@@ -674,9 +660,9 @@ class _LocIndexer(_LocationIndexerBase):
 
         Parameters
         ----------
-        row_loc : slice, list, array or tuple
+        row_loc : scalar, slice, list, array or tuple
             Row locator.
-        col_loc : slice, list, array or tuple
+        col_loc : scalar, slice, list, array or tuple
             Columns locator.
 
         Returns
@@ -686,6 +672,8 @@ class _LocIndexer(_LocationIndexerBase):
         col_lookup : numpy.ndarray
             List of columns labels.
         """
+        row_loc = [row_loc] if is_scalar(row_loc) else row_loc
+        col_loc = [col_loc] if is_scalar(col_loc) else col_loc
         if is_list_like(row_loc) and len(row_loc) == 1:
             if (
                 isinstance(self.qc.index.values[0], np.datetime64)
@@ -752,13 +740,9 @@ class _iLocIndexer(_LocationIndexerBase):
         --------
         pandas.DataFrame.iloc
         """
-        (
-            row_loc,
-            col_loc,
-            ndim,
-            self.row_scalar,
-            self.col_scalar,
-        ) = self._parse_row_and_column_locators(key)
+        row_loc, col_loc, ndim = self._parse_row_and_column_locators(key)
+        self.row_scalar = is_scalar(row_loc)
+        self.col_scalar = is_scalar(col_loc)
         self._check_dtypes(row_loc)
         self._check_dtypes(col_loc)
 
@@ -784,13 +768,9 @@ class _iLocIndexer(_LocationIndexerBase):
         --------
         pandas.DataFrame.iloc
         """
-        (
-            row_loc,
-            col_loc,
-            _,
-            row_scalar,
-            col_scalar,
-        ) = self._parse_row_and_column_locators(key)
+        row_loc, col_loc, _ = self._parse_row_and_column_locators(key)
+        row_scalar = is_scalar(row_loc)
+        col_scalar = is_scalar(col_loc)
         self._check_dtypes(row_loc)
         self._check_dtypes(col_loc)
 
@@ -822,6 +802,8 @@ class _iLocIndexer(_LocationIndexerBase):
         col_lookup : numpy.ndarray
             List of columns labels.
         """
+        row_loc = [row_loc] if is_scalar(row_loc) else row_loc
+        col_loc = [col_loc] if is_scalar(col_loc) else col_loc
         if (
             not isinstance(row_loc, slice)
             or isinstance(row_loc, slice)
