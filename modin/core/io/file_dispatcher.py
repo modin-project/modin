@@ -28,11 +28,11 @@ S3_ADDRESS_REGEX = re.compile("[sS]3://(.*?)/(.*)")
 NOT_IMPLEMENTED_MESSAGE = "Implement in children classes!"
 
 
-class File:
+class OpenFile:
     """
-    File is a context manager for an input file.
+    OpenFile is a context manager for an input file.
 
-    File uses fsspec to open files on __enter__. On __exit__, it closes the
+    OpenFile uses fsspec to open files on __enter__. On __exit__, it closes the
     fsspec file. This class exists to encapsulate the special behavior in
     __enter__ around anon=False and anon=True for s3 buckets.
 

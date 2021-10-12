@@ -132,7 +132,7 @@ class CSVGlobDispatcher(CSVDispatcher):
         if usecols is not None and usecols_md[1] != "integer":
             del kwargs["usecols"]
             all_cols = pandas.read_csv(
-                File(filepath_or_buffer, "rb"),
+                OpenFile(filepath_or_buffer, "rb"),
                 **dict(kwargs, nrows=0, skipfooter=0),
             ).columns
             usecols = all_cols.get_indexer_for(list(usecols_md[0]))
@@ -154,7 +154,7 @@ class CSVGlobDispatcher(CSVDispatcher):
 
         with ExitStack() as stack:
             files = [
-                stack.enter_context(File(fname, "rb", compression_type))
+                stack.enter_context(OpenFile(fname, "rb", compression_type))
                 for fname in glob_filepaths
             ]
 

@@ -20,7 +20,6 @@ from pandas.core.dtypes.concat import union_categoricals
 from pandas.io.common import infer_compression
 import warnings
 
-from modin.core.io import FileDispatcher
 from modin.core.io.file_dispatcher import OpenFile
 from modin.core.execution.ray.implementations.cudf_on_ray.partitioning.partition_manager import (
     GPU_MANAGERS,
@@ -107,7 +106,7 @@ class cuDFCSVParser(cuDFParser):
             put_func = cls.frame_partition_cls.put
 
             # pop "compression" from kwargs because bio is uncompressed
-            with File(fname, "rb", kwargs.pop("compression", "infer")) as bio:
+            with OpenFile(fname, "rb", kwargs.pop("compression", "infer")) as bio:
                 if kwargs.get("encoding", None) is not None:
                     header = b"" + bio.readline()
                 else:

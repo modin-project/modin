@@ -109,7 +109,7 @@ class FWFDispatcher(TextFileDispatcher):
         usecols_md = cls._validate_usecols_arg(usecols)
         if usecols is not None and usecols_md[1] != "integer":
             del kwargs["usecols"]
-            with File(filepath_or_buffer, "rb") as f:
+            with OpenFile(filepath_or_buffer, "rb") as f:
                 all_cols = pandas.read_fwf(
                     f,
                     **dict(kwargs, nrows=0, skipfooter=0),
@@ -130,7 +130,7 @@ class FWFDispatcher(TextFileDispatcher):
             encoding if encoding is not None else "UTF-8"
         )
         is_quoting = kwargs.get("quoting", "") != QUOTE_NONE
-        with File(filepath_or_buffer, "rb", compression_type) as f:
+        with OpenFile(filepath_or_buffer, "rb", compression_type) as f:
             # Skip the header since we already have the header information and skip the
             # rows we are told to skip.
             if isinstance(skiprows, int) or skiprows is None:

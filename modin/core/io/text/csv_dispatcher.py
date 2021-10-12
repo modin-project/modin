@@ -133,7 +133,7 @@ class CSVDispatcher(TextFileDispatcher):
             compression=compression_infered,
         )
 
-        with File(filepath_or_buffer_md, "rb", compression_infered) as f:
+        with OpenFile(filepath_or_buffer_md, "rb", compression_infered) as f:
             splits = cls.partitioned_file(
                 f,
                 num_partitions=NPartitions.get(),
