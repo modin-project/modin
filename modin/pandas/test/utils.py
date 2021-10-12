@@ -1306,16 +1306,11 @@ def make_default_file(file_type: str):
             filenames.append(filename)
 
     file_type_to_extension = {
-        "json": "json",
         "excel": "xlsx",
-        "hdf": "hdf",
-        "html": "html",
         "fwf": "txt",
-        "feather": "feather",
-        "stata": "stata",
         "pickle": "pkl",
     }
-    extension = file_type_to_extension[file_type]
+    extension = file_type_to_extension.get(file_type, file_type)
 
     def _make_default_file(filename=None, nrows=NROWS, ncols=2, force=True, **kwargs):
         if filename is None:
