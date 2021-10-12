@@ -107,14 +107,13 @@ class cuDFCSVParser(cuDFParser):
             put_func = cls.frame_partition_cls.put
 
             # pop "compression" from kwargs because bio is uncompressed
-            bio = File(fname, "rb", kwargs.pop("compression", "infer"))
-            if kwargs.get("encoding", None) is not None:
-                header = b"" + bio.readline()
-            else:
-                header = b""
-            bio.seek(start)
-            to_read = header + bio.read(end - start)
-            bio.close()
+            with File(fname, "rb", kwargs.pop("compression", "infer")) as bio:
+                if kwargs.get("encoding", None) is not None:
+                    header = b"" + bio.readline()
+                else:
+                    header = b""
+                bio.seek(start)
+                to_read = header + bio.read(end - start)
             pandas_df = pandas.read_csv(BytesIO(to_read), **kwargs)
         else:
             # This only happens when we are reading with only one worker (Default)
