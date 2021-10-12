@@ -28,7 +28,6 @@ try:
         create_or_update_cluster,
         teardown_cluster,
         get_head_node_ip,
-        bootstrap_config,
     )
 except ModuleNotFoundError:
     # for ray==1.0.0
@@ -36,7 +35,6 @@ except ModuleNotFoundError:
         create_or_update_cluster,
         teardown_cluster,
         get_head_node_ip,
-        _bootstrap_config as bootstrap_config,
     )
 
 from .base import (
@@ -150,13 +148,7 @@ class RayCluster(BaseCluster):
         # this change only first set defining the remote environment
         res = self._update_conda_requirements(config["setup_commands"][0])
         config["setup_commands"][0] = res
-
-        old_setup_commands = config["setup_commands"]
-        old_head_setup_commands = config["head_setup_commands"]
-        bootstraped_config = bootstrap_config(config)
-        bootstraped_config["setup_commands"] = old_setup_commands
-        bootstraped_config["head_setup_commands"] = old_head_setup_commands
-        return bootstraped_config
+        return config
 
     def _conda_requirements(self):
         import shlex
@@ -213,15 +205,13 @@ class RayCluster(BaseCluster):
 
     def __do_spawn(self):
         try:
-            create_or_update_cluster(
+            self.config = create_or_update_cluster(
                 self.config_file,
                 no_restart=False,
                 restart_only=False,
                 no_config_cache=False,
             )
-            # need to re-load the config, as create_or_update_cluster() modifies it
-            with open(self.config_file) as inp:
-                self.config = yaml.safe_load(inp.read())
+            self.config_file = self.__save_config(self.config)
             self.ready = True
         except BaseException as ex:
             self.spawner.exc = CannotSpawnCluster(

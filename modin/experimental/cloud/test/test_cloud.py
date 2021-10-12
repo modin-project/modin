@@ -20,20 +20,8 @@ from modin.experimental.cloud.rayscale import (
     create_or_update_cluster,
     teardown_cluster,
     get_head_node_ip,
-    bootstrap_config,
 )
 from modin.experimental.cloud.cluster import Provider
-
-
-@pytest.fixture
-def make_bootstrap_config_mock():
-    def bootstrap_config_mock(config, *args, **kwargs):
-        signature(bootstrap_config).bind(config, *args, **kwargs)
-        config["auth"]["ssh_user"] = "modin"
-        config["auth"]["ssh_private_key"] = "X" * 20
-        return config
-
-    return bootstrap_config_mock
 
 
 @pytest.fixture
@@ -51,28 +39,26 @@ def make_teardown_cluster_mock():
 
 
 @pytest.fixture
-def make_create_or_update_cluster_mock():
-    return lambda *args, **kw: signature(create_or_update_cluster).bind(*args, **kw)
-
-
-@pytest.fixture
-def make_ray_cluster(make_bootstrap_config_mock):
+def make_ray_cluster():
     def ray_cluster(conda_packages=None):
-        with mock.patch(
-            "modin.experimental.cloud.rayscale.bootstrap_config",
-            make_bootstrap_config_mock,
-        ):
-            ray_cluster = RayCluster(
-                Provider(name="aws"),
-                add_conda_packages=conda_packages,
-            )
-        return ray_cluster
+        cluster = RayCluster(
+            Provider(name="aws"),
+            add_conda_packages=conda_packages,
+        )
+        cluster.config["auth"]["ssh_user"] = "modin"
+        cluster.config["auth"]["ssh_private_key"] = "X" * 20
+        return cluster
 
     return ray_cluster
 
 
-def test_bootstrap_config(make_ray_cluster):
-    make_ray_cluster()
+@pytest.fixture
+def make_create_or_update_cluster_mock(make_ray_cluster):
+    def make_create_or_update_cluster(*args, **kwargs):
+        signature(create_or_update_cluster).bind(*args, **kwargs)
+        return make_ray_cluster().config
+
+    return make_create_or_update_cluster
 
 
 def test_get_head_node_ip(make_ray_cluster, make_get_head_node_ip_mock):
@@ -139,4 +125,4 @@ def test_update_conda_requirements(
         for package in user_packages:
             assert package in setup_commands_result
     else:
-        assert "modin=" in setup_commands_result
+        assert "modin-all=" in setup_commands_result

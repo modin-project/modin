@@ -36,7 +36,6 @@ with test_cluster:
     # including enabling running things in remote cloud
     import modin.experimental.pandas as pd  # noqa: F401
     from mortgage import run_benchmark
-with test_cluster:
 
     parameters = {
         "data_file": "https://modin-datasets.s3.amazonaws.com/mortgage",
