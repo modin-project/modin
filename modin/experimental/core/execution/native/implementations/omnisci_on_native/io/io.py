@@ -133,8 +133,6 @@ class OmnisciOnNativeIO(BaseIO, TextFileDispatcher):
         "prefix",
         "converters",
         "skipfooter",
-        "true_values",
-        "false_values",
         "nrows",
         "skipinitialspace",
         "squeeze",
@@ -277,8 +275,13 @@ class OmnisciOnNativeIO(BaseIO, TextFileDispatcher):
                 check_utf8=None,
                 column_types=column_types,
                 null_values=None,
-                true_values=None,
-                false_values=None,
+                # we need to add default true/false_values like Pandas does
+                true_values=true_values + ["TRUE", "True", "true"]
+                if true_values is not None
+                else true_values,
+                false_values=false_values + ["False", "FALSE", "false"]
+                if false_values is not None
+                else false_values,
                 # timestamp fields should be handled as strings if parse_dates
                 # didn't passed explicitly as an array or a dict
                 timestamp_parsers=[""] if isinstance(parse_dates, bool) else None,
