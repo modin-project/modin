@@ -64,6 +64,15 @@ class File:
         self.compression = compression
 
     def __enter__(self):
+        """
+        Open the file with fsspec and return the opened file.
+
+        Returns
+        ----------
+        fsspec.core.OpenFile
+            The opened file.
+
+        """        
         from botocore.exceptions import NoCredentialsError
 
         try:
@@ -78,6 +87,9 @@ class File:
             return self.file.open()
 
     def __exit__(self, *args):
+        """
+        Close the file.
+        """        
         self.file.close()
 
 
