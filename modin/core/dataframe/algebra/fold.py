@@ -11,41 +11,39 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-"""Module houses Reduction functions builder class."""
+"""Module houses Fold functions builder class."""
 
-from .function import Function
+from .operator import Operator
 
 
-class ReductionFunction(Function):
-    """Builder class for Reduction functions."""
+class Fold(Operator):
+    """Builder class for Fold functions."""
 
     @classmethod
-    def call(cls, reduction_function, axis=None):
+    def call(cls, fold_function, axis=None):
         """
-        Build Reduction function that will be performed across rows/columns.
-
-        It's used if `func` reduces the dimension of partitions in contrast to `FoldFunction`.
+        Build Fold function that will be performed across rows/columns.
 
         Parameters
         ----------
-        reduction_function : callable(pandas.DataFrame) -> pandas.Series
-            Source function.
+        fold_function : callable(pandas.DataFrame) -> pandas.DataFrame
+            Function to apply across rows/columns.
         axis : int, optional
-            Axis to apply function along.
+            Specifies axis to apply function along.
 
         Returns
         -------
         callable
-            Function that takes query compiler and executes Reduction function.
+            Function that takes query compiler and executes Fold function.
         """
 
         def caller(query_compiler, *args, **kwargs):
-            """Execute Reduction function against passed query compiler."""
+            """Execute Fold function against passed query compiler."""
             _axis = kwargs.get("axis") if axis is None else axis
             return query_compiler.__constructor__(
-                query_compiler._modin_frame.fold_reduce(
+                query_compiler._modin_frame.fold(
                     cls.validate_axis(_axis),
-                    lambda x: reduction_function(x, *args, **kwargs),
+                    lambda x: fold_function(x, *args, **kwargs),
                 )
             )
 

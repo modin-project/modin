@@ -17,10 +17,10 @@ import numpy as np
 import ray
 
 from .axis_partition import (
-    cuDFOnRayFrameColumnPartition,
-    cuDFOnRayFrameRowPartition,
+    cuDFOnRayDataframeColumnPartition,
+    cuDFOnRayDataframeRowPartition,
 )
-from .partition import cuDFOnRayFramePartition
+from .partition import cuDFOnRayDataframePartition
 
 from modin.core.storage_formats.pandas.utils import split_result_of_axis_func_pandas
 from modin.config import GpuCount
@@ -40,9 +40,9 @@ def func(df, other, apply_func):
 
     Parameters
     ----------
-    df : cuDFOnRayFramePartition
+    df : cuDFOnRayDataframePartition
         Object to be processed.
-    other : cuDFOnRayFramePartition
+    other : cuDFOnRayDataframePartition
         Object to be processed.
     apply_func : callable
         Function to apply.
@@ -56,12 +56,12 @@ def func(df, other, apply_func):
     return apply_func(ray.get(df.get.remote()), ray.get(other.get.remote()))
 
 
-class cuDFOnRayFramePartitionManager(GenericRayFramePartitionManager):
+class cuDFOnRayDataframePartitionManager(GenericRayFramePartitionManager):
     """The class implements the interface in ``GenericRayFramePartitionManager`` using cuDF on Ray."""
 
-    _partition_class = cuDFOnRayFramePartition
-    _column_partitions_class = cuDFOnRayFrameColumnPartition
-    _row_partition_class = cuDFOnRayFrameRowPartition
+    _partition_class = cuDFOnRayDataframePartition
+    _column_partitions_class = cuDFOnRayDataframeColumnPartition
+    _row_partition_class = cuDFOnRayDataframeRowPartition
 
     @classmethod
     def _create_partitions(cls, keys, gpu_managers):
@@ -80,7 +80,7 @@ class cuDFOnRayFramePartitionManager(GenericRayFramePartitionManager):
         Returns
         -------
         np.ndarray
-            A NumPy array of ``cuDFOnRayFramePartition`` objects.
+            A NumPy array of ``cuDFOnRayDataframePartition`` objects.
         """
         return np.array(
             [
@@ -160,7 +160,7 @@ class cuDFOnRayFramePartitionManager(GenericRayFramePartitionManager):
         Returns
         -------
         np.ndarray
-            A NumPy array of ``cuDFOnRayFramePartition`` objects.
+            A NumPy array of ``cuDFOnRayDataframePartition`` objects.
         """
         preprocessed_map_func = cls.preprocess_func(map_func)
         partitions_flat = partitions.flatten()
@@ -189,7 +189,7 @@ class cuDFOnRayFramePartitionManager(GenericRayFramePartitionManager):
         Returns
         -------
         np.ndarray
-            A NumPy array of ``cuDFOnRayFramePartition`` objects.
+            A NumPy array of ``cuDFOnRayDataframePartition`` objects.
 
         Notes
         -----

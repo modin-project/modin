@@ -16,10 +16,10 @@
 from modin.core.storage_formats.pyarrow.query_compiler import PyarrowQueryCompiler
 from modin.core.execution.ray.generic.io import RayIO
 from modin.experimental.core.execution.ray.implementations.pyarrow_on_ray.dataframe.dataframe import (
-    PyarrowOnRayFrame,
+    PyarrowOnRayDataframe,
 )
 from modin.experimental.core.execution.ray.implementations.pyarrow_on_ray.partitioning.partition import (
-    PyarrowOnRayFramePartition,
+    PyarrowOnRayDataframePartition,
 )
 from modin.core.storage_formats.pyarrow.parsers import PyarrowCSVParser
 from modin.core.execution.ray.common.task_wrapper import RayTask
@@ -29,16 +29,16 @@ from modin.core.io import CSVDispatcher
 class PyarrowOnRayCSVDispatcher(RayTask, PyarrowCSVParser, CSVDispatcher):
     """Class handles utils for reading `.csv` files with PyArrow backend and Ray engine."""
 
-    frame_cls = PyarrowOnRayFrame
-    frame_partition_cls = PyarrowOnRayFramePartition
+    frame_cls = PyarrowOnRayDataframe
+    frame_partition_cls = PyarrowOnRayDataframePartition
     query_compiler_cls = PyarrowQueryCompiler
 
 
 class PyarrowOnRayIO(RayIO):
     """Class for storing IO functions operated on PyArrow backend and Ray engine."""
 
-    frame_cls = PyarrowOnRayFrame
-    frame_partition_cls = PyarrowOnRayFramePartition
+    frame_cls = PyarrowOnRayDataframe
+    frame_partition_cls = PyarrowOnRayDataframePartition
     query_compiler_cls = PyarrowQueryCompiler
     csv_reader = PyarrowOnRayCSVDispatcher
 

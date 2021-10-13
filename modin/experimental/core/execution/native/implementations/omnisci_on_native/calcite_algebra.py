@@ -161,7 +161,7 @@ class CalciteScanNode(CalciteBaseNode):
 
     Parameters
     ----------
-    modin_frame : OmnisciOnNativeFrame
+    modin_frame : OmnisciOnNativeDataframe
         A frame to scan. The frame should have a materialized table
         in OmniSci.
 

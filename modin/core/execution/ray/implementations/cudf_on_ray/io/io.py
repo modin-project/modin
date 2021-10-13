@@ -17,13 +17,13 @@ from modin.core.io import BaseIO
 from modin.core.execution.ray.implementations.cudf_on_ray.io import cuDFCSVDispatcher
 from modin.core.storage_formats.cudf.query_compiler import cuDFQueryCompiler
 from modin.core.execution.ray.implementations.cudf_on_ray.dataframe.dataframe import (
-    cuDFOnRayFrame,
+    cuDFOnRayDataframe,
 )
 from modin.core.execution.ray.implementations.cudf_on_ray.partitioning.partition_manager import (
-    cuDFOnRayFramePartitionManager,
+    cuDFOnRayDataframePartitionManager,
 )
 from modin.core.execution.ray.implementations.cudf_on_ray.partitioning.partition import (
-    cuDFOnRayFramePartition,
+    cuDFOnRayDataframePartition,
 )
 
 
@@ -34,14 +34,14 @@ from modin.core.storage_formats.cudf.parser import cuDFCSVParser
 class cuDFOnRayIO(BaseIO):
     """The class implements ``BaseIO`` class using cuDF-entities."""
 
-    frame_cls = cuDFOnRayFrame
+    frame_cls = cuDFOnRayDataframe
     query_compiler_cls = cuDFQueryCompiler
 
     build_args = dict(
-        frame_partition_cls=cuDFOnRayFramePartition,
+        frame_partition_cls=cuDFOnRayDataframePartition,
         query_compiler_cls=cuDFQueryCompiler,
-        frame_cls=cuDFOnRayFrame,
-        frame_partition_mgr_cls=cuDFOnRayFramePartitionManager,
+        frame_cls=cuDFOnRayDataframe,
+        frame_partition_mgr_cls=cuDFOnRayDataframePartitionManager,
     )
 
     read_csv = type("", (RayTask, cuDFCSVParser, cuDFCSVDispatcher), build_args).read

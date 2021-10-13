@@ -14,19 +14,19 @@
 """The module defines interface for an axis partition with PyArrow backend and Ray engine."""
 
 from modin.core.dataframe.pandas.partitioning.axis_partition import (
-    BaseFrameAxisPartition,
+    BaseDataframeAxisPartition,
 )
-from .partition import PyarrowOnRayFramePartition
+from .partition import PyarrowOnRayDataframePartition
 
 import ray
 import pyarrow
 
 
-class PyarrowOnRayFrameAxisPartition(BaseFrameAxisPartition):
+class PyarrowOnRayDataframeAxisPartition(BaseDataframeAxisPartition):
     """
     Class defines axis partition interface with PyArrow backend and Ray engine.
 
-    Inherits functionality from ``BaseFrameAxisPartition`` class.
+    Inherits functionality from ``BaseDataframeAxisPartition`` class.
 
     Parameters
     ----------
@@ -35,7 +35,7 @@ class PyarrowOnRayFrameAxisPartition(BaseFrameAxisPartition):
     """
 
     def __init__(self, list_of_blocks):
-        # Unwrap from PandasFramePartition object for ease of use
+        # Unwrap from PandasDataframePartition object for ease of use
         self.list_of_blocks = [obj.oid for obj in list_of_blocks]
 
     def apply(self, func, num_splits=None, other_axis_partition=None, **kwargs):
@@ -48,8 +48,8 @@ class PyarrowOnRayFrameAxisPartition(BaseFrameAxisPartition):
             The function to apply.
         num_splits : int, optional
             The number of times to split the resulting object.
-        other_axis_partition : PyarrowOnRayFrameAxisPartition, optional
-            Another ``PyarrowOnRayFrameAxisPartition`` object to apply to
+        other_axis_partition : PyarrowOnRayDataframeAxisPartition, optional
+            Another ``PyarrowOnRayDataframeAxisPartition`` object to apply to
             `func` with this one.
         **kwargs : dict
             Additional keyward arguments to pass with `func`.
@@ -57,7 +57,7 @@ class PyarrowOnRayFrameAxisPartition(BaseFrameAxisPartition):
         Returns
         -------
         list
-            List with ``PyarrowOnRayFramePartition`` objects.
+            List with ``PyarrowOnRayDataframePartition`` objects.
 
         Notes
         -----
@@ -68,7 +68,7 @@ class PyarrowOnRayFrameAxisPartition(BaseFrameAxisPartition):
 
         if other_axis_partition is not None:
             return [
-                PyarrowOnRayFramePartition(obj)
+                PyarrowOnRayDataframePartition(obj)
                 for obj in deploy_ray_func_between_two_axis_partitions.options(
                     num_returns=num_splits
                 ).remote(
@@ -84,7 +84,7 @@ class PyarrowOnRayFrameAxisPartition(BaseFrameAxisPartition):
         args = [self.axis, func, num_splits, kwargs]
         args.extend(self.list_of_blocks)
         return [
-            PyarrowOnRayFramePartition(obj)
+            PyarrowOnRayDataframePartition(obj)
             for obj in deploy_ray_axis_func.options(num_returns=num_splits).remote(
                 *args
             )
@@ -106,11 +106,11 @@ class PyarrowOnRayFrameAxisPartition(BaseFrameAxisPartition):
         Returns
         -------
         list
-            List with ``PyarrowOnRayFramePartition`` objects.
+            List with ``PyarrowOnRayDataframePartition`` objects.
 
         Notes
         -----
-        Method extends ``BaseFrameAxisPartition.shuffle``.
+        Method extends ``BaseDataframeAxisPartition.shuffle``.
         """
         if num_splits is None:
             num_splits = len(self.list_of_blocks)
@@ -118,18 +118,18 @@ class PyarrowOnRayFrameAxisPartition(BaseFrameAxisPartition):
         args = [self.axis, func, num_splits, kwargs]
         args.extend(self.list_of_blocks)
         return [
-            PyarrowOnRayFramePartition(obj)
+            PyarrowOnRayDataframePartition(obj)
             for obj in deploy_ray_axis_func.options(num_returns=num_splits).remote(
                 *args
             )
         ]
 
 
-class PyarrowOnRayFrameColumnPartition(PyarrowOnRayFrameAxisPartition):
+class PyarrowOnRayDataframeColumnPartition(PyarrowOnRayDataframeAxisPartition):
     """
     The column partition implementation for PyArrow backend and Ray engine.
 
-    All of the implementation for this class is in the ``PyarrowOnRayFrameAxisPartition``
+    All of the implementation for this class is in the ``PyarrowOnRayDataframeAxisPartition``
     parent class, and this class defines the axis to perform the computation over.
 
     Parameters
@@ -141,11 +141,11 @@ class PyarrowOnRayFrameColumnPartition(PyarrowOnRayFrameAxisPartition):
     axis = 0
 
 
-class PyarrowOnRayFrameRowPartition(PyarrowOnRayFrameAxisPartition):
+class PyarrowOnRayDataframeRowPartition(PyarrowOnRayDataframeAxisPartition):
     """
     The row partition implementation for PyArrow backend and Ray engine.
 
-    All of the implementation for this class is in the ``PyarrowOnRayFrameAxisPartition``
+    All of the implementation for this class is in the ``PyarrowOnRayDataframeAxisPartition``
     parent class, and this class defines the axis to perform the computation over.
 
     Parameters

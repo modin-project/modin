@@ -13,24 +13,24 @@
 
 """Modin Dataframe algebra (core operators)."""
 
-from .function import Function
-from .mapfunction import MapFunction
-from .mapreducefunction import MapReduceFunction
-from .reductionfunction import ReductionFunction
-from .foldfunction import FoldFunction
-from .binary_function import BinaryFunction
-from .groupby_function import (
-    GroupbyReduceFunction,
+from .operator import Operator
+from .map import Map
+from .tree_reduce import TreeReduce
+from .reduce import Reduce
+from .fold import Fold
+from .binary import Binary
+from .groupby import (
+    GroupByReduce,
     groupby_reduce_functions,
 )
 
 __all__ = [
-    "Function",
-    "MapFunction",
-    "MapReduceFunction",
-    "ReductionFunction",
-    "FoldFunction",
-    "BinaryFunction",
-    "GroupbyReduceFunction",
+    "Operator",
+    "Map",
+    "TreeReduce",
+    "Reduce",
+    "Fold",
+    "Binary",
+    "GroupByReduce",
     "groupby_reduce_functions",
 ]

@@ -11,31 +11,31 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-"""Module houses class that implements ``PandasFramePartitionManager``."""
+"""Module houses class that implements ``PandasDataframePartitionManager``."""
 
 import numpy as np
 
 from modin.core.dataframe.pandas.partitioning.partition_manager import (
-    PandasFramePartitionManager,
+    PandasDataframePartitionManager,
 )
 from .axis_partition import (
-    PandasOnDaskFrameColumnPartition,
-    PandasOnDaskFrameRowPartition,
+    PandasOnDaskDataframeColumnPartition,
+    PandasOnDaskDataframeRowPartition,
 )
-from .partition import PandasOnDaskFramePartition
+from .partition import PandasOnDaskDataframePartition
 from modin.error_message import ErrorMessage
 import pandas
 
 from distributed.client import default_client
 
 
-class PandasOnDaskFramePartitionManager(PandasFramePartitionManager):
-    """The class implements the interface in `PandasFramePartitionManager`."""
+class PandasOnDaskDataframePartitionManager(PandasDataframePartitionManager):
+    """The class implements the interface in `PandasDataframePartitionManager`."""
 
-    # This object uses PandasOnDaskFramePartition objects as the underlying store.
-    _partition_class = PandasOnDaskFramePartition
-    _column_partitions_class = PandasOnDaskFrameColumnPartition
-    _row_partition_class = PandasOnDaskFrameRowPartition
+    # This object uses PandasOnDaskDataframePartition objects as the underlying store.
+    _partition_class = PandasOnDaskDataframePartition
+    _column_partitions_class = PandasOnDaskDataframeColumnPartition
+    _row_partition_class = PandasOnDaskDataframeRowPartition
 
     @classmethod
     def get_indices(cls, axis, partitions, index_func):

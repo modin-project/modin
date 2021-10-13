@@ -13,10 +13,10 @@
 
 """Module houses Map functions builder class."""
 
-from .function import Function
+from .operator import Operator
 
 
-class MapFunction(Function):
+class Map(Operator):
     """Builder class for Map functions."""
 
     @classmethod

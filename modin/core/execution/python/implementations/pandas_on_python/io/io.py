@@ -16,7 +16,7 @@
 from modin.core.io import BaseIO
 from modin.core.storage_formats.pandas.query_compiler import PandasQueryCompiler
 from modin.core.execution.python.implementations.pandas_on_python.dataframe.dataframe import (
-    PandasOnPythonFrame,
+    PandasOnPythonDataframe,
 )
 
 
@@ -27,5 +27,5 @@ class PandasOnPythonIO(BaseIO):
     Inherits default function implementations from ``BaseIO`` parent class.
     """
 
-    frame_cls = PandasOnPythonFrame
+    frame_cls = PandasOnPythonDataframe
     query_compiler_cls = PandasQueryCompiler

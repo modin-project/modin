@@ -15,12 +15,12 @@
 
 import pandas
 
-from .mapreducefunction import MapReduceFunction
+from .tree_reduce import TreeReduce
 from .default2pandas.groupby import GroupBy
 from modin.utils import try_cast_to_pandas, hashable
 
 
-class GroupbyReduceFunction(MapReduceFunction):
+class GroupByReduce(TreeReduce):
     """Builder class for GroupBy aggregation functions."""
 
     @classmethod
@@ -84,7 +84,7 @@ class GroupbyReduceFunction(MapReduceFunction):
         drop=False,
     ):
         """
-        Execute Map phase of GroupbyReduce.
+        Execute Map phase of GroupByReduce.
 
         Groups DataFrame and applies map function. Groups will be
         preserved in the results index for the following reduce phase.
@@ -160,7 +160,7 @@ class GroupbyReduceFunction(MapReduceFunction):
         method=None,
     ):
         """
-        Execute Reduce phase of GroupbyReduce.
+        Execute Reduce phase of GroupByReduce.
 
         Combines groups from the Map phase and applies reduce function.
 

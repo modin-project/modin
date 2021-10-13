@@ -13,10 +13,10 @@
 
 """Module houses MapReduce functions builder class."""
 
-from .function import Function
+from .operator import Operator
 
 
-class MapReduceFunction(Function):
+class TreeReduce(Operator):
     """Builder class for MapReduce functions."""
 
     @classmethod

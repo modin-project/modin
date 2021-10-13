@@ -31,10 +31,10 @@ from modin.core.storage_formats.pandas.query_compiler import PandasQueryCompiler
 from modin.core.execution.ray.implementations.pandas_on_ray.io import PandasOnRayIO
 from modin.core.io import CSVGlobDispatcher, PickleExperimentalDispatcher
 from modin.core.execution.ray.implementations.pandas_on_ray.dataframe.dataframe import (
-    PandasOnRayFrame,
+    PandasOnRayDataframe,
 )
 from modin.core.execution.ray.implementations.pandas_on_ray.partitioning.partition import (
-    PandasOnRayFramePartition,
+    PandasOnRayDataframePartition,
 )
 from modin.core.execution.ray.common.task_wrapper import RayTask
 from modin.config import NPartitions
@@ -90,9 +90,9 @@ class ExperimentalPandasOnRayIO(PandasOnRayIO):
     """
 
     build_args = dict(
-        frame_partition_cls=PandasOnRayFramePartition,
+        frame_partition_cls=PandasOnRayDataframePartition,
         query_compiler_cls=PandasQueryCompiler,
-        frame_cls=PandasOnRayFrame,
+        frame_cls=PandasOnRayDataframe,
     )
     read_csv_glob = type(
         "", (RayTask, PandasCSVGlobParser, CSVGlobDispatcher), build_args
@@ -220,7 +220,7 @@ class ExperimentalPandasOnRayIO(PandasOnRayIO):
                 chunksize,
             )
             partition_ids.append(
-                [PandasOnRayFramePartition(obj) for obj in partition_id[:-1]]
+                [PandasOnRayDataframePartition(obj) for obj in partition_id[:-1]]
             )
             index_ids.append(partition_id[-1])
         new_index = pandas.RangeIndex(sum(ray.get(index_ids)))

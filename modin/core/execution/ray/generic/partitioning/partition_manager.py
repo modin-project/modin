@@ -16,14 +16,14 @@
 import numpy as np
 
 from modin.core.dataframe.pandas.partitioning.partition_manager import (
-    PandasFramePartitionManager,
+    PandasDataframePartitionManager,
 )
 
 import ray
 
 
-class GenericRayFramePartitionManager(PandasFramePartitionManager):
-    """The class implements the interface in `PandasFramePartitionManager`."""
+class GenericRayFramePartitionManager(PandasDataframePartitionManager):
+    """The class implements the interface in `PandasDataframePartitionManager`."""
 
     @classmethod
     def to_numpy(cls, partitions, **kwargs):

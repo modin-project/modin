@@ -16,34 +16,34 @@
 import cudf
 import ray
 
-from .partition import cuDFOnRayFramePartition
+from .partition import cuDFOnRayDataframePartition
 
 
-class cuDFOnRayFrameAxisPartition(object):
+class cuDFOnRayDataframeAxisPartition(object):
     """
     Base class for any axis partition class for cuDF backend.
 
     Parameters
     ----------
     partitions : np.ndarray
-        NumPy array with ``cuDFOnRayFramePartition``-s.
+        NumPy array with ``cuDFOnRayDataframePartition``-s.
     """
 
     def __init__(self, partitions):
         self.partitions = [obj for obj in partitions]
 
-    partition_type = cuDFOnRayFramePartition
+    partition_type = cuDFOnRayDataframePartition
     instance_type = cudf.DataFrame
 
 
-class cuDFOnRayFrameColumnPartition(cuDFOnRayFrameAxisPartition):
+class cuDFOnRayDataframeColumnPartition(cuDFOnRayDataframeAxisPartition):
     """
-    The column partition implementation of ``cuDFOnRayFrameAxisPartition``.
+    The column partition implementation of ``cuDFOnRayDataframeAxisPartition``.
 
     Parameters
     ----------
     partitions : np.ndarray
-        NumPy array with ``cuDFOnRayFramePartition``-s.
+        NumPy array with ``cuDFOnRayDataframePartition``-s.
     """
 
     axis = 0
@@ -59,7 +59,7 @@ class cuDFOnRayFrameColumnPartition(cuDFOnRayFrameAxisPartition):
 
         Returns
         -------
-        cuDFOnRayFramePartition
+        cuDFOnRayDataframePartition
         """
         keys = [partition.get_key() for partition in self.partitions]
         gpu_managers = [partition.get_gpu_manager() for partition in self.partitions]
@@ -75,18 +75,18 @@ class cuDFOnRayFrameColumnPartition(cuDFOnRayFrameAxisPartition):
             cudf_dataframe_object_ids, axis=self.axis, func=func
         )
         key = ray.get(key)
-        result = cuDFOnRayFramePartition(gpu_manager=head_gpu_manager, key=key)
+        result = cuDFOnRayDataframePartition(gpu_manager=head_gpu_manager, key=key)
         return result
 
 
-class cuDFOnRayFrameRowPartition(cuDFOnRayFrameAxisPartition):
+class cuDFOnRayDataframeRowPartition(cuDFOnRayDataframeAxisPartition):
     """
-    The row partition implementation of ``cuDFOnRayFrameAxisPartition``.
+    The row partition implementation of ``cuDFOnRayDataframeAxisPartition``.
 
     Parameters
     ----------
     partitions : np.ndarray
-        NumPy array with ``cuDFOnRayFramePartition``-s.
+        NumPy array with ``cuDFOnRayDataframePartition``-s.
     """
 
     axis = 1
@@ -102,7 +102,7 @@ class cuDFOnRayFrameRowPartition(cuDFOnRayFrameAxisPartition):
 
         Returns
         -------
-        cuDFOnRayFramePartition
+        cuDFOnRayDataframePartition
 
         Notes
         -----
@@ -115,4 +115,4 @@ class cuDFOnRayFrameRowPartition(cuDFOnRayFrameAxisPartition):
         # FIXME: Method `gpu_manager.reduce_key_list` does not exist.
         key = gpu.reduce_key_list.remote(keys, func)
         key = ray.get(key)
-        return cuDFOnRayFramePartition(gpu_manager=gpu, key=key)
+        return cuDFOnRayDataframePartition(gpu_manager=gpu, key=key)

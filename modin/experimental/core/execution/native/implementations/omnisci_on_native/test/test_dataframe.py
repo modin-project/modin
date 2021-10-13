@@ -41,7 +41,7 @@ from modin.pandas.test.utils import (
 from modin.utils import try_cast_to_pandas
 
 from modin.experimental.core.execution.native.implementations.omnisci_on_native.partitioning.partition_manager import (
-    OmnisciOnNativeFramePartitionManager,
+    OmnisciOnNativeDataframePartitionManager,
 )
 from modin.experimental.core.execution.native.implementations.omnisci_on_native.df_algebra import (
     FrameNode,
@@ -1975,7 +1975,7 @@ class TestUnsupportedColumns:
     )
     def test_unsupported_columns(self, data, is_good):
         pandas_df = pandas.DataFrame({"col": data})
-        obj, bad_cols = OmnisciOnNativeFramePartitionManager._get_unsupported_cols(
+        obj, bad_cols = OmnisciOnNativeDataframePartitionManager._get_unsupported_cols(
             pandas_df
         )
         if is_good:

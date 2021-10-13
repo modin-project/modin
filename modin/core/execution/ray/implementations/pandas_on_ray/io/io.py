@@ -35,22 +35,22 @@ from modin.core.storage_formats.pandas.parsers import (
 )
 from modin.core.execution.ray.common.task_wrapper import RayTask
 from modin.core.execution.ray.implementations.pandas_on_ray.partitioning.partition import (
-    PandasOnRayFramePartition,
+    PandasOnRayDataframePartition,
 )
 from modin.core.execution.ray.implementations.pandas_on_ray.dataframe.dataframe import (
-    PandasOnRayFrame,
+    PandasOnRayDataframe,
 )
 
 
 class PandasOnRayIO(RayIO):
     """Factory providing methods for performing I/O operations using pandas as backend on Ray as engine."""
 
-    frame_cls = PandasOnRayFrame
+    frame_cls = PandasOnRayDataframe
     query_compiler_cls = PandasQueryCompiler
     build_args = dict(
-        frame_partition_cls=PandasOnRayFramePartition,
+        frame_partition_cls=PandasOnRayDataframePartition,
         query_compiler_cls=PandasQueryCompiler,
-        frame_cls=PandasOnRayFrame,
+        frame_cls=PandasOnRayDataframe,
     )
     read_csv = type("", (RayTask, PandasCSVParser, CSVDispatcher), build_args).read
     read_fwf = type("", (RayTask, PandasFWFParser, FWFDispatcher), build_args).read

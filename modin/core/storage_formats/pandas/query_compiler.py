@@ -15,7 +15,7 @@
 Module contains ``PandasQueryCompiler`` class.
 
 ``PandasQueryCompiler`` is responsible for compiling efficient DataFrame algebra
-queries for the ``PandasFrame``.
+queries for the ``PandasDataframe``.
 """
 
 import numpy as np
@@ -43,12 +43,12 @@ from modin.utils import (
     _inherit_docstrings,
 )
 from modin.core.dataframe.algebra import (
-    FoldFunction,
-    MapFunction,
-    MapReduceFunction,
-    ReductionFunction,
-    BinaryFunction,
-    GroupbyReduceFunction,
+    Fold,
+    Map,
+    TreeReduce,
+    Reduce,
+    Binary,
+    GroupByReduce,
     groupby_reduce_functions,
 )
 
@@ -218,11 +218,11 @@ class PandasQueryCompiler(BaseQueryCompiler):
     Query compiler for the pandas backend.
 
     This class translates common query compiler API into the DataFrame Algebra
-    queries, that is supposed to be executed by :py:class:`~modin.engines.base.frame.data.PandasFrame`.
+    queries, that is supposed to be executed by :py:class:`~modin.engines.base.frame.data.PandasDataframe`.
 
     Parameters
     ----------
-    modin_frame : PandasFrame
+    modin_frame : PandasDataframe
         Modin Frame to query with the compiled queries.
     """
 
@@ -348,37 +348,37 @@ class PandasQueryCompiler(BaseQueryCompiler):
     # such that columns/rows that don't have an index on the other DataFrame
     # result in NaN values.
 
-    add = BinaryFunction.register(pandas.DataFrame.add)
-    combine = BinaryFunction.register(pandas.DataFrame.combine)
-    combine_first = BinaryFunction.register(pandas.DataFrame.combine_first)
-    eq = BinaryFunction.register(pandas.DataFrame.eq)
-    floordiv = BinaryFunction.register(pandas.DataFrame.floordiv)
-    ge = BinaryFunction.register(pandas.DataFrame.ge)
-    gt = BinaryFunction.register(pandas.DataFrame.gt)
-    le = BinaryFunction.register(pandas.DataFrame.le)
-    lt = BinaryFunction.register(pandas.DataFrame.lt)
-    mod = BinaryFunction.register(pandas.DataFrame.mod)
-    mul = BinaryFunction.register(pandas.DataFrame.mul)
-    ne = BinaryFunction.register(pandas.DataFrame.ne)
-    pow = BinaryFunction.register(pandas.DataFrame.pow)
-    rfloordiv = BinaryFunction.register(pandas.DataFrame.rfloordiv)
-    rmod = BinaryFunction.register(pandas.DataFrame.rmod)
-    rpow = BinaryFunction.register(pandas.DataFrame.rpow)
-    rsub = BinaryFunction.register(pandas.DataFrame.rsub)
-    rtruediv = BinaryFunction.register(pandas.DataFrame.rtruediv)
-    sub = BinaryFunction.register(pandas.DataFrame.sub)
-    truediv = BinaryFunction.register(pandas.DataFrame.truediv)
-    __and__ = BinaryFunction.register(pandas.DataFrame.__and__)
-    __or__ = BinaryFunction.register(pandas.DataFrame.__or__)
-    __rand__ = BinaryFunction.register(pandas.DataFrame.__rand__)
-    __ror__ = BinaryFunction.register(pandas.DataFrame.__ror__)
-    __rxor__ = BinaryFunction.register(pandas.DataFrame.__rxor__)
-    __xor__ = BinaryFunction.register(pandas.DataFrame.__xor__)
-    df_update = BinaryFunction.register(
+    add = Binary.register(pandas.DataFrame.add)
+    combine = Binary.register(pandas.DataFrame.combine)
+    combine_first = Binary.register(pandas.DataFrame.combine_first)
+    eq = Binary.register(pandas.DataFrame.eq)
+    floordiv = Binary.register(pandas.DataFrame.floordiv)
+    ge = Binary.register(pandas.DataFrame.ge)
+    gt = Binary.register(pandas.DataFrame.gt)
+    le = Binary.register(pandas.DataFrame.le)
+    lt = Binary.register(pandas.DataFrame.lt)
+    mod = Binary.register(pandas.DataFrame.mod)
+    mul = Binary.register(pandas.DataFrame.mul)
+    ne = Binary.register(pandas.DataFrame.ne)
+    pow = Binary.register(pandas.DataFrame.pow)
+    rfloordiv = Binary.register(pandas.DataFrame.rfloordiv)
+    rmod = Binary.register(pandas.DataFrame.rmod)
+    rpow = Binary.register(pandas.DataFrame.rpow)
+    rsub = Binary.register(pandas.DataFrame.rsub)
+    rtruediv = Binary.register(pandas.DataFrame.rtruediv)
+    sub = Binary.register(pandas.DataFrame.sub)
+    truediv = Binary.register(pandas.DataFrame.truediv)
+    __and__ = Binary.register(pandas.DataFrame.__and__)
+    __or__ = Binary.register(pandas.DataFrame.__or__)
+    __rand__ = Binary.register(pandas.DataFrame.__rand__)
+    __ror__ = Binary.register(pandas.DataFrame.__ror__)
+    __rxor__ = Binary.register(pandas.DataFrame.__rxor__)
+    __xor__ = Binary.register(pandas.DataFrame.__xor__)
+    df_update = Binary.register(
         copy_df_for_func(pandas.DataFrame.update, display_name="update"),
         join_type="left",
     )
-    series_update = BinaryFunction.register(
+    series_update = Binary.register(
         copy_df_for_func(
             lambda x, y: pandas.Series.update(x.squeeze(axis=1), y.squeeze(axis=1)),
             display_name="update",
@@ -666,7 +666,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
     # END Transpose
 
-    # MapReduce operations
+    # TreeReduce operations
 
     def is_monotonic_decreasing(self):
         def is_monotonic_decreasing(df):
@@ -682,12 +682,12 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
         return self.default_to_pandas(is_monotonic_increasing)
 
-    count = MapReduceFunction.register(pandas.DataFrame.count, pandas.DataFrame.sum)
-    sum = MapReduceFunction.register(pandas.DataFrame.sum)
-    prod = MapReduceFunction.register(pandas.DataFrame.prod)
-    any = MapReduceFunction.register(pandas.DataFrame.any, pandas.DataFrame.any)
-    all = MapReduceFunction.register(pandas.DataFrame.all, pandas.DataFrame.all)
-    memory_usage = MapReduceFunction.register(
+    count = TreeReduce.register(pandas.DataFrame.count, pandas.DataFrame.sum)
+    sum = TreeReduce.register(pandas.DataFrame.sum)
+    prod = TreeReduce.register(pandas.DataFrame.prod)
+    any = TreeReduce.register(pandas.DataFrame.any, pandas.DataFrame.any)
+    all = TreeReduce.register(pandas.DataFrame.all, pandas.DataFrame.all)
+    memory_usage = TreeReduce.register(
         pandas.DataFrame.memory_usage,
         lambda x, *args, **kwargs: pandas.DataFrame.sum(x),
         axis=0,
@@ -703,9 +703,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 kwargs["numeric_only"] = False
             return pandas.DataFrame.max(df, **kwargs)
 
-        return MapReduceFunction.register(map_func, reduce_func)(
-            self, axis=axis, **kwargs
-        )
+        return TreeReduce.register(map_func, reduce_func)(self, axis=axis, **kwargs)
 
     def min(self, axis, **kwargs):
         def map_func(df, **kwargs):
@@ -717,9 +715,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 kwargs["numeric_only"] = False
             return pandas.DataFrame.min(df, **kwargs)
 
-        return MapReduceFunction.register(map_func, reduce_func)(
-            self, axis=axis, **kwargs
-        )
+        return TreeReduce.register(map_func, reduce_func)(self, axis=axis, **kwargs)
 
     def mean(self, axis, **kwargs):
         if kwargs.get("level") is not None:
@@ -761,42 +757,40 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 count_cols = count_cols.sum(axis=axis, skipna=False)
             return sum_cols / count_cols
 
-        return MapReduceFunction.register(
+        return TreeReduce.register(
             map_fn,
             reduce_fn,
         )(self, axis=axis, **kwargs)
 
-    # END MapReduce operations
+    # END TreeReduce operations
 
-    # Reduction operations
-    idxmax = ReductionFunction.register(pandas.DataFrame.idxmax)
-    idxmin = ReductionFunction.register(pandas.DataFrame.idxmin)
-    median = ReductionFunction.register(pandas.DataFrame.median)
-    nunique = ReductionFunction.register(pandas.DataFrame.nunique)
-    skew = ReductionFunction.register(pandas.DataFrame.skew)
-    kurt = ReductionFunction.register(pandas.DataFrame.kurt)
-    sem = ReductionFunction.register(pandas.DataFrame.sem)
-    std = ReductionFunction.register(pandas.DataFrame.std)
-    var = ReductionFunction.register(pandas.DataFrame.var)
-    sum_min_count = ReductionFunction.register(pandas.DataFrame.sum)
-    prod_min_count = ReductionFunction.register(pandas.DataFrame.prod)
-    quantile_for_single_value = ReductionFunction.register(pandas.DataFrame.quantile)
-    mad = ReductionFunction.register(pandas.DataFrame.mad)
+    # Reduce operations
+    idxmax = Reduce.register(pandas.DataFrame.idxmax)
+    idxmin = Reduce.register(pandas.DataFrame.idxmin)
+    median = Reduce.register(pandas.DataFrame.median)
+    nunique = Reduce.register(pandas.DataFrame.nunique)
+    skew = Reduce.register(pandas.DataFrame.skew)
+    kurt = Reduce.register(pandas.DataFrame.kurt)
+    sem = Reduce.register(pandas.DataFrame.sem)
+    std = Reduce.register(pandas.DataFrame.std)
+    var = Reduce.register(pandas.DataFrame.var)
+    sum_min_count = Reduce.register(pandas.DataFrame.sum)
+    prod_min_count = Reduce.register(pandas.DataFrame.prod)
+    quantile_for_single_value = Reduce.register(pandas.DataFrame.quantile)
+    mad = Reduce.register(pandas.DataFrame.mad)
 
     def to_datetime(self, *args, **kwargs):
         if len(self.columns) == 1:
-            return MapFunction.register(
+            return Map.register(
                 # to_datetime has inplace side effects, see GH#3063
                 lambda df, *args, **kwargs: pandas.to_datetime(
                     df.squeeze(axis=1), *args, **kwargs
                 ).to_frame()
             )(self, *args, **kwargs)
         else:
-            return ReductionFunction.register(pandas.to_datetime, axis=1)(
-                self, *args, **kwargs
-            )
+            return Reduce.register(pandas.to_datetime, axis=1)(self, *args, **kwargs)
 
-    # END Reduction operations
+    # END Reduce operations
 
     def _resample_func(
         self, resample_args, func_name, new_columns=None, df_op=None, *args, **kwargs
@@ -1015,75 +1009,75 @@ class PandasQueryCompiler(BaseQueryCompiler):
     def resample_quantile(self, resample_args, q, **kwargs):
         return self._resample_func(resample_args, "quantile", q=q, **kwargs)
 
-    window_mean = FoldFunction.register(
+    window_mean = Fold.register(
         lambda df, rolling_args, *args, **kwargs: pandas.DataFrame(
             df.rolling(*rolling_args).mean(*args, **kwargs)
         )
     )
-    window_sum = FoldFunction.register(
+    window_sum = Fold.register(
         lambda df, rolling_args, *args, **kwargs: pandas.DataFrame(
             df.rolling(*rolling_args).sum(*args, **kwargs)
         )
     )
-    window_var = FoldFunction.register(
+    window_var = Fold.register(
         lambda df, rolling_args, ddof, *args, **kwargs: pandas.DataFrame(
             df.rolling(*rolling_args).var(ddof=ddof, *args, **kwargs)
         )
     )
-    window_std = FoldFunction.register(
+    window_std = Fold.register(
         lambda df, rolling_args, ddof, *args, **kwargs: pandas.DataFrame(
             df.rolling(*rolling_args).std(ddof=ddof, *args, **kwargs)
         )
     )
-    rolling_count = FoldFunction.register(
+    rolling_count = Fold.register(
         lambda df, rolling_args: pandas.DataFrame(df.rolling(*rolling_args).count())
     )
-    rolling_sum = FoldFunction.register(
+    rolling_sum = Fold.register(
         lambda df, rolling_args, *args, **kwargs: pandas.DataFrame(
             df.rolling(*rolling_args).sum(*args, **kwargs)
         )
     )
-    rolling_mean = FoldFunction.register(
+    rolling_mean = Fold.register(
         lambda df, rolling_args, *args, **kwargs: pandas.DataFrame(
             df.rolling(*rolling_args).mean(*args, **kwargs)
         )
     )
-    rolling_median = FoldFunction.register(
+    rolling_median = Fold.register(
         lambda df, rolling_args, **kwargs: pandas.DataFrame(
             df.rolling(*rolling_args).median(**kwargs)
         )
     )
-    rolling_var = FoldFunction.register(
+    rolling_var = Fold.register(
         lambda df, rolling_args, ddof, *args, **kwargs: pandas.DataFrame(
             df.rolling(*rolling_args).var(ddof=ddof, *args, **kwargs)
         )
     )
-    rolling_std = FoldFunction.register(
+    rolling_std = Fold.register(
         lambda df, rolling_args, ddof, *args, **kwargs: pandas.DataFrame(
             df.rolling(*rolling_args).std(ddof=ddof, *args, **kwargs)
         )
     )
-    rolling_min = FoldFunction.register(
+    rolling_min = Fold.register(
         lambda df, rolling_args, *args, **kwargs: pandas.DataFrame(
             df.rolling(*rolling_args).min(*args, **kwargs)
         )
     )
-    rolling_max = FoldFunction.register(
+    rolling_max = Fold.register(
         lambda df, rolling_args, *args, **kwargs: pandas.DataFrame(
             df.rolling(*rolling_args).max(*args, **kwargs)
         )
     )
-    rolling_skew = FoldFunction.register(
+    rolling_skew = Fold.register(
         lambda df, rolling_args, **kwargs: pandas.DataFrame(
             df.rolling(*rolling_args).skew(**kwargs)
         )
     )
-    rolling_kurt = FoldFunction.register(
+    rolling_kurt = Fold.register(
         lambda df, rolling_args, **kwargs: pandas.DataFrame(
             df.rolling(*rolling_args).kurt(**kwargs)
         )
     )
-    rolling_apply = FoldFunction.register(
+    rolling_apply = Fold.register(
         lambda df, rolling_args, func, raw, engine, engine_kwargs, args, kwargs: pandas.DataFrame(
             df.rolling(*rolling_args).apply(
                 func=func,
@@ -1095,7 +1089,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             )
         )
     )
-    rolling_quantile = FoldFunction.register(
+    rolling_quantile = Fold.register(
         lambda df, rolling_args, quantile, interpolation, **kwargs: pandas.DataFrame(
             df.rolling(*rolling_args).quantile(
                 quantile=quantile, interpolation=interpolation, **kwargs
@@ -1111,7 +1105,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 )
             )
         else:
-            return FoldFunction.register(
+            return Fold.register(
                 lambda df: pandas.DataFrame(
                     df.rolling(*rolling_args).corr(
                         other=other, pairwise=pairwise, *args, **kwargs
@@ -1127,7 +1121,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 )
             )
         else:
-            return FoldFunction.register(
+            return Fold.register(
                 lambda df: pandas.DataFrame(
                     df.rolling(*rolling_args).cov(
                         other=other, pairwise=pairwise, ddof=ddof, **kwargs
@@ -1318,27 +1312,25 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
     # Map partitions operations
     # These operations are operations that apply a function to every partition.
-    abs = MapFunction.register(pandas.DataFrame.abs, dtypes="copy")
-    applymap = MapFunction.register(pandas.DataFrame.applymap)
-    conj = MapFunction.register(
-        lambda df, *args, **kwargs: pandas.DataFrame(np.conj(df))
-    )
-    invert = MapFunction.register(pandas.DataFrame.__invert__)
-    isin = MapFunction.register(pandas.DataFrame.isin, dtypes=np.bool)
-    isna = MapFunction.register(pandas.DataFrame.isna, dtypes=np.bool)
-    _isfinite = MapFunction.register(
+    abs = Map.register(pandas.DataFrame.abs, dtypes="copy")
+    applymap = Map.register(pandas.DataFrame.applymap)
+    conj = Map.register(lambda df, *args, **kwargs: pandas.DataFrame(np.conj(df)))
+    invert = Map.register(pandas.DataFrame.__invert__)
+    isin = Map.register(pandas.DataFrame.isin, dtypes=np.bool)
+    isna = Map.register(pandas.DataFrame.isna, dtypes=np.bool)
+    _isfinite = Map.register(
         lambda df, *args, **kwargs: pandas.DataFrame(np.isfinite(df))
     )
-    negative = MapFunction.register(pandas.DataFrame.__neg__)
-    notna = MapFunction.register(pandas.DataFrame.notna, dtypes=np.bool)
-    round = MapFunction.register(pandas.DataFrame.round)
-    replace = MapFunction.register(pandas.DataFrame.replace)
-    series_view = MapFunction.register(
+    negative = Map.register(pandas.DataFrame.__neg__)
+    notna = Map.register(pandas.DataFrame.notna, dtypes=np.bool)
+    round = Map.register(pandas.DataFrame.round)
+    replace = Map.register(pandas.DataFrame.replace)
+    series_view = Map.register(
         lambda df, *args, **kwargs: pandas.DataFrame(
             df.squeeze(axis=1).view(*args, **kwargs)
         )
     )
-    to_numeric = MapFunction.register(
+    to_numeric = Map.register(
         lambda df, *args, **kwargs: pandas.DataFrame(
             pandas.to_numeric(df.squeeze(axis=1), *args, **kwargs)
         )
@@ -1348,53 +1340,53 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
     # String map partitions operations
 
-    str_capitalize = MapFunction.register(_str_map("capitalize"), dtypes="copy")
-    str_center = MapFunction.register(_str_map("center"), dtypes="copy")
-    str_contains = MapFunction.register(_str_map("contains"), dtypes=np.bool)
-    str_count = MapFunction.register(_str_map("count"), dtypes=int)
-    str_endswith = MapFunction.register(_str_map("endswith"), dtypes=np.bool)
-    str_find = MapFunction.register(_str_map("find"), dtypes="copy")
-    str_findall = MapFunction.register(_str_map("findall"), dtypes="copy")
-    str_get = MapFunction.register(_str_map("get"), dtypes="copy")
-    str_index = MapFunction.register(_str_map("index"), dtypes="copy")
-    str_isalnum = MapFunction.register(_str_map("isalnum"), dtypes=np.bool)
-    str_isalpha = MapFunction.register(_str_map("isalpha"), dtypes=np.bool)
-    str_isdecimal = MapFunction.register(_str_map("isdecimal"), dtypes=np.bool)
-    str_isdigit = MapFunction.register(_str_map("isdigit"), dtypes=np.bool)
-    str_islower = MapFunction.register(_str_map("islower"), dtypes=np.bool)
-    str_isnumeric = MapFunction.register(_str_map("isnumeric"), dtypes=np.bool)
-    str_isspace = MapFunction.register(_str_map("isspace"), dtypes=np.bool)
-    str_istitle = MapFunction.register(_str_map("istitle"), dtypes=np.bool)
-    str_isupper = MapFunction.register(_str_map("isupper"), dtypes=np.bool)
-    str_join = MapFunction.register(_str_map("join"), dtypes="copy")
-    str_len = MapFunction.register(_str_map("len"), dtypes=int)
-    str_ljust = MapFunction.register(_str_map("ljust"), dtypes="copy")
-    str_lower = MapFunction.register(_str_map("lower"), dtypes="copy")
-    str_lstrip = MapFunction.register(_str_map("lstrip"), dtypes="copy")
-    str_match = MapFunction.register(_str_map("match"), dtypes="copy")
-    str_normalize = MapFunction.register(_str_map("normalize"), dtypes="copy")
-    str_pad = MapFunction.register(_str_map("pad"), dtypes="copy")
-    str_partition = MapFunction.register(_str_map("partition"), dtypes="copy")
-    str_repeat = MapFunction.register(_str_map("repeat"), dtypes="copy")
-    str_replace = MapFunction.register(_str_map("replace"), dtypes="copy")
-    str_rfind = MapFunction.register(_str_map("rfind"), dtypes="copy")
-    str_rindex = MapFunction.register(_str_map("rindex"), dtypes="copy")
-    str_rjust = MapFunction.register(_str_map("rjust"), dtypes="copy")
-    str_rpartition = MapFunction.register(_str_map("rpartition"), dtypes="copy")
-    str_rsplit = MapFunction.register(_str_map("rsplit"), dtypes="copy")
-    str_rstrip = MapFunction.register(_str_map("rstrip"), dtypes="copy")
-    str_slice = MapFunction.register(_str_map("slice"), dtypes="copy")
-    str_slice_replace = MapFunction.register(_str_map("slice_replace"), dtypes="copy")
-    str_split = MapFunction.register(_str_map("split"), dtypes="copy")
-    str_startswith = MapFunction.register(_str_map("startswith"), dtypes=np.bool)
-    str_strip = MapFunction.register(_str_map("strip"), dtypes="copy")
-    str_swapcase = MapFunction.register(_str_map("swapcase"), dtypes="copy")
-    str_title = MapFunction.register(_str_map("title"), dtypes="copy")
-    str_translate = MapFunction.register(_str_map("translate"), dtypes="copy")
-    str_upper = MapFunction.register(_str_map("upper"), dtypes="copy")
-    str_wrap = MapFunction.register(_str_map("wrap"), dtypes="copy")
-    str_zfill = MapFunction.register(_str_map("zfill"), dtypes="copy")
-    str___getitem__ = MapFunction.register(_str_map("__getitem__"), dtypes="copy")
+    str_capitalize = Map.register(_str_map("capitalize"), dtypes="copy")
+    str_center = Map.register(_str_map("center"), dtypes="copy")
+    str_contains = Map.register(_str_map("contains"), dtypes=np.bool)
+    str_count = Map.register(_str_map("count"), dtypes=int)
+    str_endswith = Map.register(_str_map("endswith"), dtypes=np.bool)
+    str_find = Map.register(_str_map("find"), dtypes="copy")
+    str_findall = Map.register(_str_map("findall"), dtypes="copy")
+    str_get = Map.register(_str_map("get"), dtypes="copy")
+    str_index = Map.register(_str_map("index"), dtypes="copy")
+    str_isalnum = Map.register(_str_map("isalnum"), dtypes=np.bool)
+    str_isalpha = Map.register(_str_map("isalpha"), dtypes=np.bool)
+    str_isdecimal = Map.register(_str_map("isdecimal"), dtypes=np.bool)
+    str_isdigit = Map.register(_str_map("isdigit"), dtypes=np.bool)
+    str_islower = Map.register(_str_map("islower"), dtypes=np.bool)
+    str_isnumeric = Map.register(_str_map("isnumeric"), dtypes=np.bool)
+    str_isspace = Map.register(_str_map("isspace"), dtypes=np.bool)
+    str_istitle = Map.register(_str_map("istitle"), dtypes=np.bool)
+    str_isupper = Map.register(_str_map("isupper"), dtypes=np.bool)
+    str_join = Map.register(_str_map("join"), dtypes="copy")
+    str_len = Map.register(_str_map("len"), dtypes=int)
+    str_ljust = Map.register(_str_map("ljust"), dtypes="copy")
+    str_lower = Map.register(_str_map("lower"), dtypes="copy")
+    str_lstrip = Map.register(_str_map("lstrip"), dtypes="copy")
+    str_match = Map.register(_str_map("match"), dtypes="copy")
+    str_normalize = Map.register(_str_map("normalize"), dtypes="copy")
+    str_pad = Map.register(_str_map("pad"), dtypes="copy")
+    str_partition = Map.register(_str_map("partition"), dtypes="copy")
+    str_repeat = Map.register(_str_map("repeat"), dtypes="copy")
+    str_replace = Map.register(_str_map("replace"), dtypes="copy")
+    str_rfind = Map.register(_str_map("rfind"), dtypes="copy")
+    str_rindex = Map.register(_str_map("rindex"), dtypes="copy")
+    str_rjust = Map.register(_str_map("rjust"), dtypes="copy")
+    str_rpartition = Map.register(_str_map("rpartition"), dtypes="copy")
+    str_rsplit = Map.register(_str_map("rsplit"), dtypes="copy")
+    str_rstrip = Map.register(_str_map("rstrip"), dtypes="copy")
+    str_slice = Map.register(_str_map("slice"), dtypes="copy")
+    str_slice_replace = Map.register(_str_map("slice_replace"), dtypes="copy")
+    str_split = Map.register(_str_map("split"), dtypes="copy")
+    str_startswith = Map.register(_str_map("startswith"), dtypes=np.bool)
+    str_strip = Map.register(_str_map("strip"), dtypes="copy")
+    str_swapcase = Map.register(_str_map("swapcase"), dtypes="copy")
+    str_title = Map.register(_str_map("title"), dtypes="copy")
+    str_translate = Map.register(_str_map("translate"), dtypes="copy")
+    str_upper = Map.register(_str_map("upper"), dtypes="copy")
+    str_wrap = Map.register(_str_map("wrap"), dtypes="copy")
+    str_zfill = Map.register(_str_map("zfill"), dtypes="copy")
+    str___getitem__ = Map.register(_str_map("__getitem__"), dtypes="copy")
 
     # END String map partitions operations
 
@@ -1418,32 +1410,32 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
     # Dt map partitions operations
 
-    dt_date = MapFunction.register(_dt_prop_map("date"))
-    dt_time = MapFunction.register(_dt_prop_map("time"))
-    dt_timetz = MapFunction.register(_dt_prop_map("timetz"))
-    dt_year = MapFunction.register(_dt_prop_map("year"))
-    dt_month = MapFunction.register(_dt_prop_map("month"))
-    dt_day = MapFunction.register(_dt_prop_map("day"))
-    dt_hour = MapFunction.register(_dt_prop_map("hour"))
-    dt_minute = MapFunction.register(_dt_prop_map("minute"))
-    dt_second = MapFunction.register(_dt_prop_map("second"))
-    dt_microsecond = MapFunction.register(_dt_prop_map("microsecond"))
-    dt_nanosecond = MapFunction.register(_dt_prop_map("nanosecond"))
-    dt_week = MapFunction.register(_dt_prop_map("week"))
-    dt_weekofyear = MapFunction.register(_dt_prop_map("weekofyear"))
-    dt_dayofweek = MapFunction.register(_dt_prop_map("dayofweek"))
-    dt_weekday = MapFunction.register(_dt_prop_map("weekday"))
-    dt_dayofyear = MapFunction.register(_dt_prop_map("dayofyear"))
-    dt_quarter = MapFunction.register(_dt_prop_map("quarter"))
-    dt_is_month_start = MapFunction.register(_dt_prop_map("is_month_start"))
-    dt_is_month_end = MapFunction.register(_dt_prop_map("is_month_end"))
-    dt_is_quarter_start = MapFunction.register(_dt_prop_map("is_quarter_start"))
-    dt_is_quarter_end = MapFunction.register(_dt_prop_map("is_quarter_end"))
-    dt_is_year_start = MapFunction.register(_dt_prop_map("is_year_start"))
-    dt_is_year_end = MapFunction.register(_dt_prop_map("is_year_end"))
-    dt_is_leap_year = MapFunction.register(_dt_prop_map("is_leap_year"))
-    dt_daysinmonth = MapFunction.register(_dt_prop_map("daysinmonth"))
-    dt_days_in_month = MapFunction.register(_dt_prop_map("days_in_month"))
+    dt_date = Map.register(_dt_prop_map("date"))
+    dt_time = Map.register(_dt_prop_map("time"))
+    dt_timetz = Map.register(_dt_prop_map("timetz"))
+    dt_year = Map.register(_dt_prop_map("year"))
+    dt_month = Map.register(_dt_prop_map("month"))
+    dt_day = Map.register(_dt_prop_map("day"))
+    dt_hour = Map.register(_dt_prop_map("hour"))
+    dt_minute = Map.register(_dt_prop_map("minute"))
+    dt_second = Map.register(_dt_prop_map("second"))
+    dt_microsecond = Map.register(_dt_prop_map("microsecond"))
+    dt_nanosecond = Map.register(_dt_prop_map("nanosecond"))
+    dt_week = Map.register(_dt_prop_map("week"))
+    dt_weekofyear = Map.register(_dt_prop_map("weekofyear"))
+    dt_dayofweek = Map.register(_dt_prop_map("dayofweek"))
+    dt_weekday = Map.register(_dt_prop_map("weekday"))
+    dt_dayofyear = Map.register(_dt_prop_map("dayofyear"))
+    dt_quarter = Map.register(_dt_prop_map("quarter"))
+    dt_is_month_start = Map.register(_dt_prop_map("is_month_start"))
+    dt_is_month_end = Map.register(_dt_prop_map("is_month_end"))
+    dt_is_quarter_start = Map.register(_dt_prop_map("is_quarter_start"))
+    dt_is_quarter_end = Map.register(_dt_prop_map("is_quarter_end"))
+    dt_is_year_start = Map.register(_dt_prop_map("is_year_start"))
+    dt_is_year_end = Map.register(_dt_prop_map("is_year_end"))
+    dt_is_leap_year = Map.register(_dt_prop_map("is_leap_year"))
+    dt_daysinmonth = Map.register(_dt_prop_map("daysinmonth"))
+    dt_days_in_month = Map.register(_dt_prop_map("days_in_month"))
 
     def dt_tz(self):
         def datetime_tz(df):
@@ -1457,27 +1449,27 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
         return self.default_to_pandas(datetime_freq)
 
-    dt_to_period = MapFunction.register(_dt_func_map("to_period"))
-    dt_to_pydatetime = MapFunction.register(_dt_func_map("to_pydatetime"))
-    dt_tz_localize = MapFunction.register(_dt_func_map("tz_localize"))
-    dt_tz_convert = MapFunction.register(_dt_func_map("tz_convert"))
-    dt_normalize = MapFunction.register(_dt_func_map("normalize"))
-    dt_strftime = MapFunction.register(_dt_func_map("strftime"))
-    dt_round = MapFunction.register(_dt_func_map("round"))
-    dt_floor = MapFunction.register(_dt_func_map("floor"))
-    dt_ceil = MapFunction.register(_dt_func_map("ceil"))
-    dt_month_name = MapFunction.register(_dt_func_map("month_name"))
-    dt_day_name = MapFunction.register(_dt_func_map("day_name"))
-    dt_to_pytimedelta = MapFunction.register(_dt_func_map("to_pytimedelta"))
-    dt_total_seconds = MapFunction.register(_dt_func_map("total_seconds"))
-    dt_seconds = MapFunction.register(_dt_prop_map("seconds"))
-    dt_days = MapFunction.register(_dt_prop_map("days"))
-    dt_microseconds = MapFunction.register(_dt_prop_map("microseconds"))
-    dt_nanoseconds = MapFunction.register(_dt_prop_map("nanoseconds"))
-    dt_qyear = MapFunction.register(_dt_prop_map("qyear"))
-    dt_start_time = MapFunction.register(_dt_prop_map("start_time"))
-    dt_end_time = MapFunction.register(_dt_prop_map("end_time"))
-    dt_to_timestamp = MapFunction.register(_dt_func_map("to_timestamp"))
+    dt_to_period = Map.register(_dt_func_map("to_period"))
+    dt_to_pydatetime = Map.register(_dt_func_map("to_pydatetime"))
+    dt_tz_localize = Map.register(_dt_func_map("tz_localize"))
+    dt_tz_convert = Map.register(_dt_func_map("tz_convert"))
+    dt_normalize = Map.register(_dt_func_map("normalize"))
+    dt_strftime = Map.register(_dt_func_map("strftime"))
+    dt_round = Map.register(_dt_func_map("round"))
+    dt_floor = Map.register(_dt_func_map("floor"))
+    dt_ceil = Map.register(_dt_func_map("ceil"))
+    dt_month_name = Map.register(_dt_func_map("month_name"))
+    dt_day_name = Map.register(_dt_func_map("day_name"))
+    dt_to_pytimedelta = Map.register(_dt_func_map("to_pytimedelta"))
+    dt_total_seconds = Map.register(_dt_func_map("total_seconds"))
+    dt_seconds = Map.register(_dt_prop_map("seconds"))
+    dt_days = Map.register(_dt_prop_map("days"))
+    dt_microseconds = Map.register(_dt_prop_map("microseconds"))
+    dt_nanoseconds = Map.register(_dt_prop_map("nanoseconds"))
+    dt_qyear = Map.register(_dt_prop_map("qyear"))
+    dt_start_time = Map.register(_dt_prop_map("start_time"))
+    dt_end_time = Map.register(_dt_prop_map("end_time"))
+    dt_to_timestamp = Map.register(_dt_func_map("to_timestamp"))
 
     # END Dt map partitions operations
 
@@ -1576,11 +1568,11 @@ class PandasQueryCompiler(BaseQueryCompiler):
     # that is being operated on. This means that we have to put all of that
     # data in the same place.
 
-    cummax = FoldFunction.register(pandas.DataFrame.cummax)
-    cummin = FoldFunction.register(pandas.DataFrame.cummin)
-    cumsum = FoldFunction.register(pandas.DataFrame.cumsum)
-    cumprod = FoldFunction.register(pandas.DataFrame.cumprod)
-    diff = FoldFunction.register(pandas.DataFrame.diff)
+    cummax = Fold.register(pandas.DataFrame.cummax)
+    cummin = Fold.register(pandas.DataFrame.cummin)
+    cumsum = Fold.register(pandas.DataFrame.cumsum)
+    cumprod = Fold.register(pandas.DataFrame.cumprod)
+    diff = Fold.register(pandas.DataFrame.diff)
 
     def clip(self, lower, upper, **kwargs):
         kwargs["upper"] = upper
@@ -2486,13 +2478,13 @@ class PandasQueryCompiler(BaseQueryCompiler):
     # nature. They require certain data to exist on the same partition, and
     # after the shuffle, there should be only a local map required.
 
-    groupby_all = GroupbyReduceFunction.register("all")
-    groupby_any = GroupbyReduceFunction.register("any")
-    groupby_count = GroupbyReduceFunction.register("count")
-    groupby_max = GroupbyReduceFunction.register("max")
-    groupby_min = GroupbyReduceFunction.register("min")
-    groupby_prod = GroupbyReduceFunction.register("prod")
-    groupby_sum = GroupbyReduceFunction.register("sum")
+    groupby_all = GroupByReduce.register("all")
+    groupby_any = GroupByReduce.register("any")
+    groupby_count = GroupByReduce.register("count")
+    groupby_max = GroupByReduce.register("max")
+    groupby_min = GroupByReduce.register("min")
+    groupby_prod = GroupByReduce.register("prod")
+    groupby_sum = GroupByReduce.register("sum")
 
     def groupby_size(
         self, by, axis, groupby_args, map_args, reduce_args, numeric_only, drop
@@ -2532,7 +2524,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         Group underlying data and apply aggregation functions to each group of the specified column/row.
 
         This method is responsible of performing dictionary groupby aggregation for such functions,
-        that can be implemented via MapReduce approach.
+        that can be implemented via TreeReduce approach.
 
         Parameters
         ----------
@@ -2543,8 +2535,8 @@ class PandasQueryCompiler(BaseQueryCompiler):
             0 is for index, when 1 is for columns.
         agg_func : dict(label) -> str
             Dictionary that maps row/column labels to the function names.
-            **Note:** specified functions have to be supported by ``modin.core.dataframe.algebra.GroupbyReduceFunction``.
-            Supported functions are listed in the ``modin.core.dataframe.algebra.GroupbyReduceFunction.groupby_reduce_functions``
+            **Note:** specified functions have to be supported by ``modin.core.dataframe.algebra.GroupByReduce``.
+            Supported functions are listed in the ``modin.core.dataframe.algebra.GroupByReduce.groupby_reduce_functions``
             dictionary.
         agg_args : list
             Serves the compatibility purpose. Does not affect the result.
@@ -2556,7 +2548,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             If `by` is a QueryCompiler indicates whether or not by-data came
             from the `self`.
         **kwargs : dict
-            Additional parameters to pass to the ``modin.core.dataframe.algebra.GroupbyReduceFunction.register``.
+            Additional parameters to pass to the ``modin.core.dataframe.algebra.GroupByReduce.register``.
 
         Returns
         -------
@@ -2594,7 +2586,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 )
                 reduce_dict[reduced_col_name] = groupby_reduce_functions[func][1]
             map_dict[col] = map_fns
-        return GroupbyReduceFunction.register(map_dict, reduce_dict, **kwargs)(
+        return GroupByReduce.register(map_dict, reduce_dict, **kwargs)(
             query_compiler=self,
             by=by,
             axis=axis,
@@ -2617,7 +2609,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         drop=False,
     ):
         def is_reduce_fn(fn, deep_level=0):
-            """Check whether all functions which is defined by `fn` can be implemented via MapReduce approach."""
+            """Check whether all functions which is defined by `fn` can be implemented via TreeReduce approach."""
             if not isinstance(fn, str) and isinstance(fn, Container):
                 # `deep_level` parameter specifies the number of nested containers that was met:
                 # - if it's 0, then we're outside of container, `fn` could be either function name

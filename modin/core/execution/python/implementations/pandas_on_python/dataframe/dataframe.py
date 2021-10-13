@@ -12,23 +12,23 @@
 # governing permissions and limitations under the License.
 
 """
-Module contains class ``PandasOnPythonFrame``.
+Module contains class ``PandasOnPythonDataframe``.
 
-``PandasOnPythonFrame`` is dataframe class with pandas backend and Python engine.
+``PandasOnPythonDataframe`` is dataframe class with pandas backend and Python engine.
 """
 
-from modin.core.dataframe.pandas.dataframe.dataframe import PandasFrame
+from modin.core.dataframe.pandas.dataframe.dataframe import PandasDataframe
 from ..partitioning.partition_manager import (
-    PandasOnPythonFramePartitionManager,
+    PandasOnPythonDataframePartitionManager,
 )
 
 
-class PandasOnPythonFrame(PandasFrame):
+class PandasOnPythonDataframe(PandasDataframe):
     """
     Class for dataframes with pandas backend and Python engine.
 
-    ``PandasOnPythonFrame`` doesn't implement any specific interfaces,
-    all functionality is inherited from the ``PandasFrame`` class.
+    ``PandasOnPythonDataframe`` doesn't implement any specific interfaces,
+    all functionality is inherited from the ``PandasDataframe`` class.
 
     Parameters
     ----------
@@ -48,4 +48,4 @@ class PandasOnPythonFrame(PandasFrame):
         The data types for the dataframe columns.
     """
 
-    _partition_mgr_cls = PandasOnPythonFramePartitionManager
+    _partition_mgr_cls = PandasOnPythonDataframePartitionManager

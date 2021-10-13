@@ -15,18 +15,18 @@
 
 import pandas
 from modin.core.execution.ray.implementations.pandas_on_ray.partitioning.partition import (
-    PandasOnRayFramePartition,
+    PandasOnRayDataframePartition,
 )
 
 import ray
 import pyarrow
 
 
-class PyarrowOnRayFramePartition(PandasOnRayFramePartition):
+class PyarrowOnRayDataframePartition(PandasOnRayDataframePartition):
     """
     Class provides partition interface specific for PyArrow backend and Ray engine.
 
-    Inherits functionality from the ``PandasOnRayFramePartition`` class.
+    Inherits functionality from the ``PandasOnRayDataframePartition`` class.
 
     Parameters
     ----------
@@ -68,10 +68,10 @@ class PyarrowOnRayFramePartition(PandasOnRayFramePartition):
 
         Returns
         -------
-        PyarrowOnRayFramePartition
-            A ``PyarrowOnRayFramePartition`` object.
+        PyarrowOnRayDataframePartition
+            A ``PyarrowOnRayDataframePartition`` object.
         """
-        return PyarrowOnRayFramePartition(ray.put(pyarrow.Table.from_pandas(obj)))
+        return PyarrowOnRayDataframePartition(ray.put(pyarrow.Table.from_pandas(obj)))
 
     @classmethod
     def _length_extraction_fn(cls):
@@ -102,7 +102,7 @@ class PyarrowOnRayFramePartition(PandasOnRayFramePartition):
 
         Returns
         -------
-        PyarrowOnRayFramePartition
-            A ``PyarrowOnRayFramePartition`` object.
+        PyarrowOnRayDataframePartition
+            A ``PyarrowOnRayDataframePartition`` object.
         """
         return cls.put(pandas.DataFrame())

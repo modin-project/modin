@@ -15,7 +15,7 @@
 Module contains ``PyarrowQueryCompiler`` class.
 
 ``PyarrowQueryCompiler`` is responsible for compiling efficient DataFrame algebra
-queries for the ``PyarrowOnRayFrame``.
+queries for the ``PyarrowOnRayDataframe``.
 """
 
 from modin.core.storage_formats.pandas.query_compiler import PandasQueryCompiler
@@ -50,11 +50,11 @@ class PyarrowQueryCompiler(PandasQueryCompiler):
 
     This class translates common query compiler API into the DataFrame Algebra
     queries, that is supposed to be executed by
-    :py:class:`~modin.experimental.core.execution.ray.implementations.pyarrow_on_ray.dataframe.dataframe.PyarrowOnRayFrame`.
+    :py:class:`~modin.experimental.core.execution.ray.implementations.pyarrow_on_ray.dataframe.dataframe.PyarrowOnRayDataframe`.
 
     Parameters
     ----------
-    modin_frame : PyarrowOnRayFrame
+    modin_frame : PyarrowOnRayDataframe
         Modin Frame to query with the compiled queries.
     """
 
@@ -254,7 +254,7 @@ class PyarrowQueryCompiler(PandasQueryCompiler):
         ----------
         axis : {0, 1}
             Axis to compute index labels along. 0 is for index and 1 is for column.
-        data_object : PyarrowOnRayFrame
+        data_object : PyarrowOnRayDataframe
             Modin Frame object to build indices from.
         compute_diff : bool, default: True
             Whether to cut the resulted indices to a subset of the self indices.
@@ -276,8 +276,8 @@ class PyarrowQueryCompiler(PandasQueryCompiler):
 
         index_obj = self.index if not axis else self.columns
         old_blocks = self.data if compute_diff else None
-        # FIXME: `BasePandasFrame.get_indices` was deprecated, this call should be
-        # replaced either by `BasePandasFrame._compute_axis_label` or by `BasePandasFrame.axes`.
+        # FIXME: `PandasDataframe.get_indices` was deprecated, this call should be
+        # replaced either by `PandasDataframe._compute_axis_label` or by `PandasDataframe.axes`.
         new_indices = data_object.get_indices(
             axis=axis,
             index_func=lambda df: arrow_index_extraction(df, axis),

@@ -149,19 +149,19 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
     Query compiler for the OmniSci backend.
 
     This class doesn't perform much processing and mostly forwards calls to
-    :py:class:`~modin.experimental.core.execution.native.implementations.omnisci_on_native.dataframe.dataframe.OmnisciOnNativeFrame`
+    :py:class:`~modin.experimental.core.execution.native.implementations.omnisci_on_native.dataframe.dataframe.OmnisciOnNativeDataframe`
     for lazy execution trees build.
 
     Parameters
     ----------
-    frame : OmnisciOnNativeFrame
+    frame : OmnisciOnNativeDataframe
         Modin Frame to query with the compiled queries.
     shape_hint : {"row", "column", None}, default: None
         Shape hint for frames known to be a column or a row, otherwise None.
 
     Attributes
     ----------
-    _modin_frame : OmnisciOnNativeFrame
+    _modin_frame : OmnisciOnNativeDataframe
         Modin Frame to query with the compiled queries.
     _shape_hint : {"row", "column", None}
         Shape hint for frames known to be a column or a row, otherwise None.
@@ -437,7 +437,7 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
             default_axis_setter(0)(self, index)
         else:
             default_axis_setter(0)(self, index)
-            # NotImplementedError: OmnisciOnNativeFrame._set_index is not yet suported
+            # NotImplementedError: OmnisciOnNativeDataframe._set_index is not yet suported
             # self._modin_frame.index = index
 
     def _get_columns(self):

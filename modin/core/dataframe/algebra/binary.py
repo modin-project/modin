@@ -16,10 +16,10 @@
 import numpy as np
 import pandas
 
-from .function import Function
+from .operator import Operator
 
 
-class BinaryFunction(Function):
+class Binary(Operator):
     """Builder class for Binary functions."""
 
     @classmethod
