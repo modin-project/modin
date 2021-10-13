@@ -30,7 +30,7 @@ class FWFDispatcher(TextFileDispatcher):
     """
 
     @classmethod
-    def read(cls, filepath_or_buffer, **kwargs):
+    def _read(cls, filepath_or_buffer, **kwargs):
         """
         Read data from `filepath_or_buffer` according to the passed `read_fwf` `kwargs` parameters.
 
