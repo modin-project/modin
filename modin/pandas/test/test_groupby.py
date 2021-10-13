@@ -1389,7 +1389,7 @@ def test_agg_func_None_rename(by_and_agg_dict, as_index):
         True,
         pytest.param(
             False,
-            marks=pytest.mark.xfail_execution(
+            marks=pytest.mark.xfail_executions(
                 ["BaseOnPython"], reason="See Pandas issue #39103"
             ),
         ),

@@ -11,7 +11,7 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-"""Module houses Fold functions builder class."""
+"""Module houses builder class for Fold operator."""
 
 from .operator import Operator
 
@@ -22,7 +22,7 @@ class Fold(Operator):
     @classmethod
     def call(cls, fold_function, axis=None):
         """
-        Build Fold function that will be performed across rows/columns.
+        Build Fold operator that will be performed across rows/columns.
 
         Parameters
         ----------

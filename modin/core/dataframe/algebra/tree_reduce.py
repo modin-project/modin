@@ -11,18 +11,18 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-"""Module houses MapReduce functions builder class."""
+"""Module houses builder class for TreeReduce operator."""
 
 from .operator import Operator
 
 
 class TreeReduce(Operator):
-    """Builder class for MapReduce functions."""
+    """Builder class for TreeReduce operator."""
 
     @classmethod
     def call(cls, map_function, reduce_function, axis=None):
         """
-        Build MapReduce function.
+        Build TreeReduce operator.
 
         Parameters
         ----------

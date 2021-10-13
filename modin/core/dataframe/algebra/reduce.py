@@ -17,12 +17,12 @@ from .operator import Operator
 
 
 class Reduce(Operator):
-    """Builder class for Reduction functions."""
+    """Builder class for Reduce operator."""
 
     @classmethod
     def call(cls, reduction_function, axis=None):
         """
-        Build Reduction function that will be performed across rows/columns.
+        Build Reduce operator that will be performed across rows/columns.
 
         It's used if `func` reduces the dimension of partitions in contrast to `Fold`.
 

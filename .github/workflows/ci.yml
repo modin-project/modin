@@ -68,12 +68,7 @@ jobs:
             asv_bench/benchmarks/utils \
             asv_bench/benchmarks/__init__.py asv_bench/benchmarks/io/__init__.py \
             asv_bench/benchmarks/scalability/__init__.py \
-            modin/core/io/io.py \
-            modin/core/io/column_stores \
-            modin/core/io/sql \
-            modin/core/io/text \
-            modin/core/io/__init__.py \
-            modin/core/io/file_dispatcher.py \
+            modin/core/io \
             modin/experimental/core/execution/ray/implementations/pandas_on_ray \
             modin/experimental/core/execution/ray/implementations/pyarrow_on_ray \
             modin/pandas/series.py \
@@ -106,6 +101,12 @@ jobs:
             modin/experimental/core/execution/native/implementations/omnisci_on_native/dataframe \
             modin/experimental/core/execution/native/implementations/omnisci_on_native/io \
             modin/experimental/core/execution/native/implementations/omnisci_on_native/partitioning \
+            modin/experimental/core/execution/native/implementations/omnisci_on_native/calcite_algebra.py \
+            modin/experimental/core/execution/native/implementations/omnisci_on_native/calcite_builder.py \
+            modin/experimental/core/execution/native/implementations/omnisci_on_native/calcite_serializer.py \
+            modin/experimental/core/execution/native/implementations/omnisci_on_native/df_algebra.py \
+            modin/experimental/core/execution/native/implementations/omnisci_on_native/expr.py \
+            modin/experimental/core/execution/native/implementations/omnisci_on_native/omnisci_worker.py \
       - run: python scripts/doc_checker.py modin/experimental/core/storage_formats/omnisci
 
   lint-flake8:

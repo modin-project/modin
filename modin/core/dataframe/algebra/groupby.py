@@ -11,7 +11,7 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-"""Module houses GroupBy functions builder class."""
+"""Module houses builder class for GroupByReduce operator."""
 
 import pandas
 

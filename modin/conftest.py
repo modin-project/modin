@@ -275,17 +275,17 @@ def pytest_runtest_call(item):
 
     # dynamicly adding custom markers to tests
     for custom_marker in custom_markers:
-        for marker in item.iter_markers(name=f"{custom_marker}_execution"):
-            execution = marker.args[0]
-            if not isinstance(execution, list):
-                execution = [execution]
+        for marker in item.iter_markers(name=f"{custom_marker}_executions"):
+            executions = marker.args[0]
+            if not isinstance(executions, list):
+                executions = [executions]
 
             current_execution = get_current_execution()
             reason = marker.kwargs.pop("reason", "")
 
             item.add_marker(
                 getattr(pytest.mark, custom_marker)(
-                    condition=current_execution in execution,
+                    condition=current_execution in executions,
                     reason=f"Execution {current_execution} does not pass this test. {reason}",
                     **marker.kwargs,
                 )

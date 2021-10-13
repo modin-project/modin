@@ -11,18 +11,18 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-"""Module houses Map functions builder class."""
+"""Module houses builder class for Map operator."""
 
 from .operator import Operator
 
 
 class Map(Operator):
-    """Builder class for Map functions."""
+    """Builder class for Map operator."""
 
     @classmethod
     def call(cls, function, *call_args, **call_kwds):
         """
-        Build Map function that will be performed across each partition.
+        Build Map operator that will be performed across each partition.
 
         Parameters
         ----------
