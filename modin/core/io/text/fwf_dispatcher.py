@@ -13,13 +13,14 @@
 
 """Module houses `FWFDispatcher` class, that is used for reading of tables with fixed-width formatted lines."""
 
-from modin.core.io.file_dispatcher import OpenFile
-from modin.core.io.text.text_file_dispatcher import TextFileDispatcher
-import pandas._libs.lib as lib
-import pandas
 from csv import QUOTE_NONE
 
+import pandas
+import pandas._libs.lib as lib
+
 from modin.config import NPartitions
+from modin.core.io.file_dispatcher import OpenFile
+from modin.core.io.text.text_file_dispatcher import TextFileDispatcher
 
 
 class FWFDispatcher(TextFileDispatcher):
@@ -45,6 +46,13 @@ class FWFDispatcher(TextFileDispatcher):
         -------
         new_query_compiler : BaseQueryCompiler
             Query compiler with imported data for further processing.
+
+        Notes
+        -----
+        `skiprows` is handled diferently based on the parameter type because of
+        performance reasons. If `skiprows` is integer - rows will be skipped during
+        data file partitioning and wouldn't be actually read. If `skiprows` is array
+        or callable - full data file will be read and only then rows will be dropped.
         """
         filepath_or_buffer_md = (
             cls.get_path(filepath_or_buffer)
