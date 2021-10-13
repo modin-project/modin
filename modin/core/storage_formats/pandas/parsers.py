@@ -49,7 +49,7 @@ from pandas.io.common import infer_compression
 from pandas.util._decorators import doc
 import warnings
 
-from modin.core.io import FileDispatcher
+from modin.core.io.file_dispatcher import OpenFile
 from modin.core.storage_formats.pandas.utils import split_result_of_axis_func_pandas
 from modin.error_message import ErrorMessage
 
@@ -234,22 +234,19 @@ class PandasCSVParser(PandasParser):
         header_size = kwargs.pop("header_size", None)
         if start is not None and end is not None:
             # pop "compression" from kwargs because bio is uncompressed
-            bio = FileDispatcher.file_open(
-                fname, "rb", kwargs.pop("compression", "infer")
-            )
-            header = b""
-            # In this case we beware that fisrt line can contain BOM, so
-            # adding this line to the `header` for reading and then skip it
-            if kwargs.get("encoding", None) is not None and header_size == 0:
-                header += bio.readline()
-                # `skiprows` can be only None here, so don't check it's type
-                # and just set to 1
-                kwargs["skiprows"] = 1
-            for _ in range(header_size):
-                header += bio.readline()
-            bio.seek(start)
-            to_read = header + bio.read(end - start)
-            bio.close()
+            with OpenFile(fname, "rb", kwargs.pop("compression", "infer")) as bio:
+                header = b""
+                # In this case we beware that fisrt line can contain BOM, so
+                # adding this line to the `header` for reading and then skip it
+                if kwargs.get("encoding", None) is not None and header_size == 0:
+                    header += bio.readline()
+                    # `skiprows` can be only None here, so don't check it's type
+                    # and just set to 1
+                    kwargs["skiprows"] = 1
+                for _ in range(header_size):
+                    header += bio.readline()
+                bio.seek(start)
+                to_read = header + bio.read(end - start)
             pandas_df = pandas.read_csv(BytesIO(to_read), **kwargs)
         else:
             # This only happens when we are reading with only one worker (Default)
@@ -284,16 +281,13 @@ class PandasCSVGlobParser(PandasCSVParser):
         for fname, start, end in chunks:
             if start is not None and end is not None:
                 # pop "compression" from kwargs because bio is uncompressed
-                bio = FileDispatcher.file_open(
-                    fname, "rb", kwargs.pop("compression", "infer")
-                )
-                if kwargs.get("encoding", None) is not None:
-                    header = b"" + bio.readline()
-                else:
-                    header = b""
-                bio.seek(start)
-                to_read = header + bio.read(end - start)
-                bio.close()
+                with OpenFile(fname, "rb", kwargs.pop("compression", "infer")) as bio:
+                    if kwargs.get("encoding", None) is not None:
+                        header = b"" + bio.readline()
+                    else:
+                        header = b""
+                    bio.seek(start)
+                    to_read = header + bio.read(end - start)
                 pandas_dfs.append(pandas.read_csv(BytesIO(to_read), **kwargs))
             else:
                 # This only happens when we are reading with only one worker (Default)
@@ -351,16 +345,13 @@ class PandasFWFParser(PandasParser):
         index_col = kwargs.get("index_col", None)
         if start is not None and end is not None:
             # pop "compression" from kwargs because bio is uncompressed
-            bio = FileDispatcher.file_open(
-                fname, "rb", kwargs.pop("compression", "infer")
-            )
-            if kwargs.get("encoding", None) is not None:
-                header = b"" + bio.readline()
-            else:
-                header = b""
-            bio.seek(start)
-            to_read = header + bio.read(end - start)
-            bio.close()
+            with OpenFile(fname, "rb", kwargs.pop("compression", "infer")) as bio:
+                if kwargs.get("encoding", None) is not None:
+                    header = b"" + bio.readline()
+                else:
+                    header = b""
+                bio.seek(start)
+                to_read = header + bio.read(end - start)
             pandas_df = pandas.read_fwf(BytesIO(to_read), **kwargs)
         else:
             # This only happens when we are reading with only one worker (Default)
@@ -589,12 +580,9 @@ class PandasJSONParser(PandasParser):
         end = kwargs.pop("end", None)
         if start is not None and end is not None:
             # pop "compression" from kwargs because bio is uncompressed
-            bio = FileDispatcher.file_open(
-                fname, "rb", kwargs.pop("compression", "infer")
-            )
-            bio.seek(start)
-            to_read = b"" + bio.read(end - start)
-            bio.close()
+            with OpenFile(fname, "rb", kwargs.pop("compression", "infer")) as bio:
+                bio.seek(start)
+                to_read = b"" + bio.read(end - start)
             columns = kwargs.pop("columns")
             pandas_df = pandas.read_json(BytesIO(to_read), **kwargs)
         else:

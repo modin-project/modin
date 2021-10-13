@@ -13,6 +13,7 @@
 
 """Module houses `FWFDispatcher` class, that is used for reading of tables with fixed-width formatted lines."""
 
+from modin.core.io.file_dispatcher import OpenFile
 from modin.core.io.text.text_file_dispatcher import TextFileDispatcher
 import pandas._libs.lib as lib
 import pandas
@@ -108,10 +109,11 @@ class FWFDispatcher(TextFileDispatcher):
         usecols_md = cls._validate_usecols_arg(usecols)
         if usecols is not None and usecols_md[1] != "integer":
             del kwargs["usecols"]
-            all_cols = pandas.read_fwf(
-                cls.file_open(filepath_or_buffer, "rb"),
-                **dict(kwargs, nrows=0, skipfooter=0),
-            ).columns
+            with OpenFile(filepath_or_buffer, "rb") as f:
+                all_cols = pandas.read_fwf(
+                    f,
+                    **dict(kwargs, nrows=0, skipfooter=0),
+                ).columns
             usecols = all_cols.get_indexer_for(list(usecols_md[0]))
         parse_dates = kwargs.pop("parse_dates", False)
         partition_kwargs = dict(
@@ -128,7 +130,7 @@ class FWFDispatcher(TextFileDispatcher):
             encoding if encoding is not None else "UTF-8"
         )
         is_quoting = kwargs.get("quoting", "") != QUOTE_NONE
-        with cls.file_open(filepath_or_buffer, "rb", compression_type) as f:
+        with OpenFile(filepath_or_buffer, "rb", compression_type) as f:
             # Skip the header since we already have the header information and skip the
             # rows we are told to skip.
             if isinstance(skiprows, int) or skiprows is None:

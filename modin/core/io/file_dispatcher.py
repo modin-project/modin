@@ -18,6 +18,7 @@ Module houses `FileDispatcher` class.
 for direct files processing.
 """
 
+import fsspec
 import os
 import re
 from modin.config import Backend
@@ -25,6 +26,75 @@ import numpy as np
 
 S3_ADDRESS_REGEX = re.compile("[sS]3://(.*?)/(.*)")
 NOT_IMPLEMENTED_MESSAGE = "Implement in children classes!"
+
+
+class OpenFile:
+    """
+    OpenFile is a context manager for an input file.
+
+    OpenFile uses fsspec to open files on __enter__. On __exit__, it closes the
+    fsspec file. This class exists to encapsulate the special behavior in
+    __enter__ around anon=False and anon=True for s3 buckets.
+
+    Parameters
+    ----------
+    file_path : str
+        String that represents the path to the file (paths to S3 buckets
+        are also acceptable).
+    mode : str, default: "rb"
+        String, which defines which mode file should be open.
+    compression : str, default: "infer"
+        File compression name.
+
+    Attributes
+    ----------
+    file_path : str
+        String that represents the path to the file
+    mode : str
+        String that defines which mode the file should be opened in.
+    compression : str
+        File compression name.
+    file : fsspec.core.OpenFile
+        The opened file.
+    """
+
+    def __init__(self, file_path, mode="rb", compression="infer"):
+        self.file_path = file_path
+        self.mode = mode
+        self.compression = compression
+
+    def __enter__(self):
+        """
+        Open the file with fsspec and return the opened file.
+
+        Returns
+        -------
+        fsspec.core.OpenFile
+            The opened file.
+        """
+        from botocore.exceptions import NoCredentialsError
+
+        try:
+            self.file = fsspec.open(
+                self.file_path, self.mode, self.compression, anon=False
+            )
+            return self.file.open()
+        except NoCredentialsError:
+            self.file = fsspec.open(
+                self.file_path, self.mode, self.compression, anon=True
+            )
+            return self.file.open()
+
+    def __exit__(self, *args):
+        """
+        Close the file.
+
+        Parameters
+        ----------
+        *args : any type
+            Variable positional arguments, all unused.
+        """
+        self.file.close()
 
 
 class FileDispatcher:
@@ -129,75 +199,6 @@ class FileDispatcher:
             return file_path
         else:
             return os.path.abspath(file_path)
-
-    @classmethod
-    def file_open(cls, file_path, mode="rb", compression="infer"):
-        """
-        Get the file handle from `file_path`.
-
-        Parameters
-        ----------
-        file_path : str
-            String that represents the path to the file (paths to S3 buckets
-            are also acceptable).
-        mode : str, default: "rb"
-            String, which defines which mode file should be open.
-        compression : str, default: "infer"
-            File compression name (acceptable values are "gzip", "bz2", "xz" and "zip").
-
-        Returns
-        -------
-        file-like
-            file-like object of the `file_path`.
-        """
-        if isinstance(file_path, str):
-            match = S3_ADDRESS_REGEX.search(file_path)
-            if match is not None:
-                if file_path[0] == "S":
-                    file_path = "{}{}".format("s", file_path[1:])
-                import s3fs as S3FS
-                from botocore.exceptions import NoCredentialsError
-
-                s3fs = S3FS.S3FileSystem(anon=False)
-                try:
-                    return s3fs.open(file_path)
-                except NoCredentialsError:
-                    s3fs = S3FS.S3FileSystem(anon=True)
-                    return s3fs.open(file_path)
-            elif compression == "gzip":
-                import gzip
-
-                return gzip.open(file_path, mode=mode)
-            elif compression == "bz2":
-                import bz2
-
-                return bz2.BZ2File(file_path, mode=mode)
-            elif compression == "xz":
-                import lzma
-
-                return lzma.LZMAFile(file_path, mode=mode)
-            elif compression == "zip":
-                import zipfile
-
-                zf = zipfile.ZipFile(file_path, mode=mode.replace("b", ""))
-                if zf.mode == "w":
-                    return zf
-                elif zf.mode == "r":
-                    zip_names = zf.namelist()
-                    if len(zip_names) == 1:
-                        f = zf.open(zip_names.pop())
-                        return f
-                    elif len(zip_names) == 0:
-                        raise ValueError(
-                            "Zero files found in ZIP file {}".format(file_path)
-                        )
-                    else:
-                        raise ValueError(
-                            "Multiple files found in ZIP file."
-                            " Only one file per ZIP: {}".format(zip_names)
-                        )
-
-        return open(file_path, mode=mode)
 
     @classmethod
     def file_size(cls, f):
