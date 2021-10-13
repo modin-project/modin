@@ -77,7 +77,6 @@ def pytest_addoption(parser):
     parser.addoption(
         "--extra-test-parameters",
         action="store_true",
-        default=None,
         help="activate extra test parameter combinations",
     )
 
