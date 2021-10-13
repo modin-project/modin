@@ -163,9 +163,9 @@ class TextFileDispatcher(FileDispatcher):
             Indicate quote in a file.
         is_quoting : bool, default: True
             Whether or not to consider quotes.
-        encoding: str, optional
+        encoding : str, optional
             Encoding of `f`.
-        newline: bytes, optional
+        newline : bytes, optional
             Byte or sequence of bytes indicating line endings.
 
         Returns
@@ -231,9 +231,9 @@ class TextFileDispatcher(FileDispatcher):
             Indicate quote in a file.
         is_quoting : bool, default: True
             Whether or not to consider quotes.
-        encoding: str, optional
+        encoding : str, optional
             Encoding of `f`.
-        newline: bytes, optional
+        newline : bytes, optional
             Byte or sequence of bytes indicating line endings.
         header_size : int, default: 0
             Number of rows, that occupied by header.
@@ -353,9 +353,9 @@ class TextFileDispatcher(FileDispatcher):
             Whether or not to consider quotes.
         outside_quotes : bool, default: True
             Whether the file pointer is within quotes or not at the time this function is called.
-        encoding: str, optional
+        encoding : str, optional
             Encoding of `f`.
-        newline: bytes, optional
+        newline : bytes, optional
             Byte or sequence of bytes indicating line endings.
 
         Returns
@@ -371,18 +371,12 @@ class TextFileDispatcher(FileDispatcher):
 
         rows_read = 0
 
-        if encoding not in ("unicode_escape", "utf16", "utf32"):
-            for line in f:
-                if (
-                    is_quoting
-                    and (line.count(quotechar) - line.count(b"\\" + quotechar)) % 2
-                ):
-                    outside_quotes = not outside_quotes
-                if outside_quotes:
-                    rows_read += 1
-                    if rows_read >= nrows:
-                        break
-        else:
+        if (
+            encoding
+            and "utf" in encoding
+            and "8" not in encoding
+            or encoding == "unicode_escape"
+        ):
             buffer_size = io.DEFAULT_BUFFER_SIZE
             chunk = f.read(buffer_size)
             while chunk:
@@ -409,6 +403,17 @@ class TextFileDispatcher(FileDispatcher):
                 if lines[-1]:
                     # last line can be read without newline bytes
                     chunk = lines[-1] + chunk
+        else:
+            for line in f:
+                if (
+                    is_quoting
+                    and (line.count(quotechar) - line.count(b"\\" + quotechar)) % 2
+                ):
+                    outside_quotes = not outside_quotes
+                if outside_quotes:
+                    rows_read += 1
+                    if rows_read >= nrows:
+                        break
 
         # case when EOF
         if not outside_quotes:
@@ -418,20 +423,37 @@ class TextFileDispatcher(FileDispatcher):
 
     @classmethod
     def compute_newline(cls, file_like, encoding):
-        newline = None
-        if encoding in ("unicode_escape", "utf16", "utf32"):
-            import codecs
+        """
+        Compute byte or sequence of bytes indicating line endings.
 
+        Parameters
+        ----------
+        file_like : file-like object
+            File handle that should be used for line endings computing.
+        encoding : str
+            Encoding of `file_like`.
+
+        Returns
+        -------
+        bytes
+            line endings
+        """
+        newline = None
+        if (
+            encoding
+            and "utf" in encoding
+            and "8" not in encoding
+            or encoding == "unicode_escape"
+        ):
             # trigger for computing f.newlines
             file_like.readline()
             # in bytes
             newline = file_like.newlines.encode(encoding)
-            if encoding == "utf16":
-                if newline.startswith(codecs.BOM_UTF16):
-                    newline = newline[len(codecs.BOM_UTF16) :]
-            elif encoding == "utf32":
-                if newline.startswith(codecs.BOM_UTF32):
-                    newline = newline[len(codecs.BOM_UTF32) :]
+            if "16" in encoding or "32" in encoding:
+                count_newline_bytes = 2 * 2 if "16" in encoding else 2 * 4
+                if len(newline) > count_newline_bytes:
+                    # remove BOM mark if exists
+                    newline = newline[-count_newline_bytes:]
         return newline
 
     # _read helper functions
@@ -450,9 +472,9 @@ class TextFileDispatcher(FileDispatcher):
             Indicate quote in a file.
         is_quoting : bool
             Whether or not to consider quotes.
-        encoding: str, optional
+        encoding : str, optional
             Encoding of `f`.
-        newline: bytes, optional
+        newline : bytes, optional
             Byte or sequence of bytes indicating line endings.
 
         Returns

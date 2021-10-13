@@ -535,7 +535,11 @@ class TestCsv:
             "unicode_escape",
             "raw_unicode_escape",
             "utf16",
+            "utf_16_le",
+            "utf_16_be",
             "utf32",
+            "utf_32_le",
+            "utf_32_be",
         ],
     )
     @pytest.mark.parametrize("engine", [None, "python", "c"])
