@@ -17,6 +17,7 @@ Module houses `TextFileDispatcher` class.
 `TextFileDispatcher` contains utils for text formats files, inherits util functions for
 files from `FileDispatcher` class and can be used as base class for dipatchers of SQL queries.
 """
+from csv import Dialect
 
 from modin.core.io.file_dispatcher import FileDispatcher
 from modin.core.storage_formats.pandas.utils import compute_chunksize
@@ -26,14 +27,19 @@ import numpy as np
 import warnings
 import os
 import codecs
-from typing import Union, Sequence, Optional, Tuple
+from typing import Union, Sequence, Optional, Tuple, Callable, Dict
 import pandas
 import pandas._libs.lib as lib
+from pandas._typing import FilePathOrBuffer
 from pandas.core.dtypes.common import is_list_like
 
 from modin.config import NPartitions
 
 ColumnNamesTypes = Tuple[Union[pandas.Index, pandas.MultiIndex, pandas.Int64Index]]
+ReadCsvKwargsType = Dict[
+    str, Union[str, int, bool, dict, object, Sequence, Callable, Dialect, None]
+]
+IndexColType = Union[int, str, bool, Sequence[int], Sequence[str], None]
 
 
 class TextFileDispatcher(FileDispatcher):
@@ -607,9 +613,61 @@ class TextFileDispatcher(FileDispatcher):
 
         return partition_ids, index_ids, dtypes_ids
 
+    # _read helper functions
+    @classmethod
+    def _read_csv_check_support(
+        cls,
+        filepath_or_buffer: FilePathOrBuffer,
+        read_csv_kwargs: ReadCsvKwargsType,
+        compression_infered: str,
+        check_fwf_specific: bool = False,
+    ) -> bool:
+        """
+        Need to move in TextFileDispatcher.
+        Check if passed parameters are supported by current `read_csv` implementation.
+
+        Parameters
+        ----------
+        filepath_or_buffer : str, path object or file-like object
+            `filepath_or_buffer` parameter of read_csv function.
+        read_csv_kwargs : dict
+            Parameters of read_csv function.
+        compression_infered : str
+            Inferred `compression` parameter of read_csv function.
+        check_fwf_specific : bool
+            Flag that determines when to check `read_fwf` function-specific parameters.
+
+        Returns
+        -------
+        bool
+            Whether passed parameters are supported or not.
+        """
+        if isinstance(filepath_or_buffer, str):
+            if not cls.file_exists(filepath_or_buffer):
+                return False
+        elif not cls.pathlib_or_pypath(filepath_or_buffer):
+            return False
+
+        if compression_infered is not None:
+            if compression_infered not in ["gzip", "bz2", "xz", "zip"]:
+                return False
+
+        if read_csv_kwargs.get("chunksize") is not None:
+            return False
+
+        if check_fwf_specific:
+            # If infer_nrows is a significant portion of the number of rows, pandas may be
+            # faster.
+            infer_nrows = read_csv_kwargs.get("infer_nrows", 100)
+            if infer_nrows > 100:
+                return cls.single_worker_read(filepath_or_buffer, **read_csv_kwargs)
+
+        return True
+
     @classmethod
     @_inherit_docstrings(pandas.io.parsers.base_parser.ParserBase._validate_usecols_arg)
     def _validate_usecols_arg(cls, usecols):
+        # TODO: maybe delete
         msg = (
             "'usecols' must either be list-like of all strings, all unicode, "
             "all integers or a callable."
@@ -630,3 +688,254 @@ class TextFileDispatcher(FileDispatcher):
 
             return usecols, usecols_dtype
         return usecols, None
+
+    @classmethod
+    def _manage_skiprows_parameter(
+        cls,
+        skiprows: Union[int, Sequence[int], Callable, None] = None,
+        header_size: int = 0,
+    ) -> Tuple[Union[int, Sequence, Callable], bool, int]:
+        """
+        Manage read_csv `skiprows` parameter.
+
+        Change `skiprows` parameter in the way Modin could more optimally
+        process it. `csv_dispatcher` have two mechanisms of rows skipping:
+
+        1) During file partitioning (setting of file limits that should be read
+        by each partition) exact rows can be excluded from partitioning scope,
+        thus they won't be read at all and can be considered as skipped. This is
+        the most effective way of rows skipping (since it doesn't require any
+        actual data reading and postprocessing), but in this case `skiprows`
+        parameter can be an integer only. When it possible Modin always uses
+        this approach by setting of `skiprows_partitioning` return value.
+
+        2) Rows for skipping can be dropped after full dataset import. This is
+        more expensive way since it requires extra IO work and postprocessing
+        afterwards, but `skiprows` parameter can be of any non-integer type
+        supported by `pandas.read_csv` `skiprows` parameter. These rows is
+        specified by setting of `skiprows_md` return value.
+
+        In some cases, if `skiprows` is uniformly distributed array (e.g. [1,2,3]),
+        `skiprows` can be "squashed" and represented as integer to make a fastpath.
+        If there is a gap between the first row for skipping and the last line of
+        the header (that will be skipped too), then assign to read this gap first
+        (assign the first partition to read these rows be setting of `pre_reading`
+        return value). See `Examples` section for details.
+
+        Parameters
+        ----------
+        skiprows : int, array or callable, optional
+            Original `skiprows` parameter of read_csv function.
+        header_size : int, default: 0
+            Number of rows that are used by header.
+
+        Returns
+        -------
+        skiprows_md : int, array or callable
+            Updated skiprows parameter. If `skiprows` is an array, this
+            array will be sorted and. Also parameter will be aligned to
+            actual data in the `query_compiler` (which, for example,
+            doesn't contain header rows)
+        pre_reading : int
+            The number of rows that should be read before data file
+            splitting for further reading (the number of rows for
+            the first partition).
+        skiprows_partitioning : int
+            The number of rows that should be skipped virtually (skipped during
+            data file partitioning).
+
+        Examples
+        --------
+        Let's consider case when `header`="infer" and `skiprows`=[3,4,5]. In
+        this specific case fastpath can be done since `skiprows` is uniformly
+        distributed array, so we can "squash" it to integer and set
+        `skiprows_partitioning`=3. But if no additional action will be done,
+        these three rows will be skipped right after header line, that corresponds
+        to `skiprows`=[1,2,3]. Now, to avoid this discrepancy, we need to assign
+        the first partition to read data between header line and the first
+        row for skipping by setting of `pre_reading` parameter, so setting
+        `pre_reading`=2. During data file partitiong, these lines will be assigned
+        for reading for the first partition, and then file position will be set at
+        the beginning of rows that should be skipped by `skiprows_partitioning`.
+        After skipping of these rows, the rest data will be divided between the
+        rest of partitions, see rows assignement below:
+
+        0 - header line (skip during partitioning)
+        1 - pre_reading (assign to read by the first partition)
+        2 - pre_reading (assign to read by the first partition)
+        3 - skiprows_partitioning (skip during partitioning)
+        4 - skiprows_partitioning (skip during partitioning)
+        5 - skiprows_partitioning (skip during partitioning)
+        6 - data to partition (divide between the rest of partitions)
+        7 - data to partition (divide between the rest of partitions)
+        """
+        pre_reading = 0
+        skiprows_partitioning = 0
+        skiprows_md = 0
+        if isinstance(skiprows, int):
+            skiprows_partitioning = skiprows
+        elif is_list_like(skiprows):
+            skiprows_md = np.sort(skiprows)
+            if np.all(np.diff(skiprows_md) == 1):
+                # `skiprows` is uniformly distributed array.
+                pre_reading = (
+                    skiprows_md[0] - header_size if skiprows_md[0] > header_size else 0
+                )
+                skiprows_partitioning = len(skiprows_md)
+                skiprows_md = 0
+            else:
+                skiprows_md = skiprows_md - header_size
+        elif callable(skiprows):
+
+            def skiprows_func(x):
+                return skiprows(x + header_size)
+
+            skiprows_md = skiprows_func
+
+        return skiprows_md, pre_reading, skiprows_partitioning
+
+    @classmethod
+    def _define_index(
+        cls,
+        index_ids: list,
+        index_name: str,
+    ) -> Tuple[IndexColType, list]:
+        """
+        Compute the resulting DataFrame index and index lengths for each of partitions.
+
+        Parameters
+        ----------
+        index_ids : list
+            Array with references to the partitions index objects.
+        index_name : str
+            Name that should be assigned to the index if `index_col`
+            is not provided.
+
+        Returns
+        -------
+        new_index : IndexColType
+            Index that should be passed to the new_frame constructor.
+        row_lengths : list
+            Partitions rows lengths.
+        """
+        index_objs = cls.materialize(index_ids)
+        if len(index_objs) == 0 or isinstance(index_objs[0], int):
+            row_lengths = index_objs
+            new_index = pandas.RangeIndex(sum(index_objs))
+        else:
+            row_lengths = [len(o) for o in index_objs]
+            new_index = index_objs[0].append(index_objs[1:])
+            new_index.name = index_name
+
+        return new_index, row_lengths
+
+    @classmethod
+    def _get_new_qc(
+        cls,
+        partition_ids: list,
+        index_ids: list,
+        dtypes_ids: list,
+        index_col: IndexColType,
+        index_name: str,
+        column_widths: list,
+        column_names: ColumnNamesTypes,
+        skiprows_md: Union[Sequence, callable, None] = None,
+        header_size: int = None,
+        **kwargs,
+    ):
+        """
+        Get new query compiler from data received from workers.
+
+        Parameters
+        ----------
+        partition_ids : list
+            Array with references to the partitions data.
+        index_ids : list
+            Array with references to the partitions index objects.
+        dtypes_ids : list
+            Array with references to the partitions dtypes objects.
+        index_col : IndexColType
+            `index_col` parameter of `read_csv` function.
+        index_name : str
+            Name that should be assigned to the index if `index_col`
+            is not provided.
+        column_widths : list
+            Number of columns in each partition.
+        column_names : ColumnNamesTypes
+            Array with columns names.
+        skiprows_md : array-like or callable, optional
+            Specifies rows to skip.
+        header_size : int, default: 0
+            Number of rows, that occupied by header.
+        **kwargs : dict
+            Parameters of `read_csv` function needed for postprocessing.
+
+        Returns
+        -------
+        new_query_compiler : BaseQueryCompiler
+            New query compiler, created from `new_frame`.
+        """
+        new_index, row_lengths = cls._define_index(index_ids, index_name)
+        # Compute dtypes by getting collecting and combining all of the partitions. The
+        # reported dtypes from differing rows can be different based on the inference in
+        # the limited data seen by each worker. We use pandas to compute the exact dtype
+        # over the whole column for each column. The index is set below.
+        dtypes = cls.get_dtypes(dtypes_ids) if len(dtypes_ids) > 0 else None
+        # Compose modin partitions from `partition_ids`
+        partition_ids = cls.build_partition(partition_ids, row_lengths, column_widths)
+
+        # Set the index for the dtypes to the column names
+        if isinstance(dtypes, pandas.Series):
+            dtypes.index = column_names
+        else:
+            dtypes = pandas.Series(dtypes, index=column_names)
+
+        new_frame = cls.frame_cls(
+            partition_ids,
+            new_index,
+            column_names,
+            row_lengths,
+            column_widths,
+            dtypes=dtypes,
+        )
+        new_query_compiler = cls.query_compiler_cls(new_frame)
+        skipfooter = kwargs.get("skipfooter", None)
+        if skipfooter:
+            new_query_compiler = new_query_compiler.drop(
+                new_query_compiler.index[-skipfooter:]
+            )
+        if skiprows_md is not None:
+            # skip rows that passed as array or callable
+            nrows = kwargs.get("nrows", None)
+            index_range = pandas.RangeIndex(len(new_query_compiler.index))
+            if is_list_like(skiprows_md):
+                new_query_compiler = new_query_compiler.view(
+                    index=index_range.delete(skiprows_md)
+                )
+            elif callable(skiprows_md):
+                mod_index = skiprows_md(index_range)
+                mod_index = (
+                    mod_index
+                    if isinstance(mod_index, np.ndarray)
+                    else mod_index.to_numpy("bool")
+                )
+                view_idx = index_range[~mod_index]
+                new_query_compiler = new_query_compiler.view(index=view_idx)
+            else:
+                raise TypeError(
+                    f"Not acceptable type of `skiprows` parameter: {type(skiprows_md)}"
+                )
+
+            if not isinstance(new_query_compiler.index, pandas.MultiIndex):
+                new_query_compiler = new_query_compiler.reset_index(drop=True)
+
+            if nrows:
+                new_query_compiler = new_query_compiler.view(
+                    pandas.RangeIndex(len(new_query_compiler.index))[:nrows]
+                )
+        if kwargs.get("squeeze", False) and len(new_query_compiler.columns) == 1:
+            return new_query_compiler[new_query_compiler.columns[0]]
+        if index_col is None:
+            new_query_compiler._modin_frame.synchronize_labels(axis=0)
+
+        return new_query_compiler
