@@ -53,7 +53,7 @@ from modin.core.execution.python.implementations.pandas_on_python.io import (  #
     PandasOnPythonIO,
 )
 from modin.core.execution.dispatching.factories import factories  # noqa: E402
-from modin.utils import get_current_backend  # noqa: E402
+from modin.utils import get_current_execution  # noqa: E402
 from modin.pandas.test.utils import (  # noqa: E402
     _make_csv_file,
     get_unique_filename,
@@ -76,10 +76,10 @@ def pytest_addoption(parser):
         help="simulate cloud for testing: off|normal|experimental",
     )
     parser.addoption(
-        "--backend",
+        "--execution",
         action="store",
         default=None,
-        help="specifies backend to run tests on",
+        help="specifies execution to run tests on",
     )
     parser.addoption(
         "--extra-test-parameters",
@@ -212,7 +212,7 @@ def enforce_config():
     os.environ = orig_env
 
 
-BASE_BACKEND_NAME = "BaseOnPython"
+BASE_EXECUTION_NAME = "BaseOnPython"
 
 
 class TestQC(BaseQueryCompiler):
@@ -247,9 +247,9 @@ class BaseOnPythonFactory(factories.BaseFactory):
         cls.io_cls = BaseOnPythonIO
 
 
-def set_base_backend(name=BASE_BACKEND_NAME):
+def set_base_execution(name=BASE_EXECUTION_NAME):
     setattr(factories, f"{name}Factory", BaseOnPythonFactory)
-    modin.set_backends(engine="python", partition=name.split("On")[0])
+    modin.set_execution(engine="python", partition=name.split("On")[0])
 
 
 def pytest_configure(config):
@@ -258,16 +258,16 @@ def pytest_configure(config):
 
         utils.extra_test_parameters = config.option.extra_test_parameters
 
-    backend = config.option.backend
+    execution = config.option.execution
 
-    if backend is None:
+    if execution is None:
         return
 
-    if backend == BASE_BACKEND_NAME:
-        set_base_backend(BASE_BACKEND_NAME)
+    if execution == BASE_EXECUTION_NAME:
+        set_base_execution(BASE_EXECUTION_NAME)
     else:
-        partition, engine = backend.split("On")
-        modin.set_backends(engine=engine, partition=partition)
+        partition, engine = execution.split("On")
+        modin.set_execution(engine=engine, partition=partition)
 
 
 def pytest_runtest_call(item):
@@ -275,18 +275,18 @@ def pytest_runtest_call(item):
 
     # dynamicly adding custom markers to tests
     for custom_marker in custom_markers:
-        for marker in item.iter_markers(name=f"{custom_marker}_backends"):
-            backends = marker.args[0]
-            if not isinstance(backends, list):
-                backends = [backends]
+        for marker in item.iter_markers(name=f"{custom_marker}_execution"):
+            execution = marker.args[0]
+            if not isinstance(execution, list):
+                execution = [execution]
 
-            current_backend = get_current_backend()
+            current_execution = get_current_execution()
             reason = marker.kwargs.pop("reason", "")
 
             item.add_marker(
                 getattr(pytest.mark, custom_marker)(
-                    condition=current_backend in backends,
-                    reason=f"Backend {current_backend} does not pass this test. {reason}",
+                    condition=current_execution in execution,
+                    reason=f"Execution {current_execution} does not pass this test. {reason}",
                     **marker.kwargs,
                 )
             )

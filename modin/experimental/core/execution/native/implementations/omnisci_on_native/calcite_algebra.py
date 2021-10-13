@@ -15,7 +15,7 @@
 Module provides classes for relational algebra expressions.
 
 Provided classes reflect relational algebra format used by
-OmniSci backend.
+OmniSci storage format.
 """
 
 import abc

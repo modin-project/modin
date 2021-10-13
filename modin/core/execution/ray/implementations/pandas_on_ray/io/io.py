@@ -43,7 +43,7 @@ from modin.core.execution.ray.implementations.pandas_on_ray.dataframe.dataframe 
 
 
 class PandasOnRayIO(RayIO):
-    """Factory providing methods for performing I/O operations using pandas as backend on Ray as engine."""
+    """Factory providing methods for performing I/O operations using pandas as storage format on Ray as engine."""
 
     frame_cls = PandasOnRayDataframe
     query_compiler_cls = PandasQueryCompiler

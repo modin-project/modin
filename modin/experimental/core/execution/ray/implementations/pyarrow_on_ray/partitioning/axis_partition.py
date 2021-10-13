@@ -11,7 +11,7 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-"""The module defines interface for an axis partition with PyArrow backend and Ray engine."""
+"""The module defines interface for an axis partition with PyArrow storage format and Ray engine."""
 
 from modin.core.dataframe.pandas.partitioning.axis_partition import (
     BaseDataframeAxisPartition,
@@ -24,7 +24,7 @@ import pyarrow
 
 class PyarrowOnRayDataframeAxisPartition(BaseDataframeAxisPartition):
     """
-    Class defines axis partition interface with PyArrow backend and Ray engine.
+    Class defines axis partition interface with PyArrow storage format and Ray engine.
 
     Inherits functionality from ``BaseDataframeAxisPartition`` class.
 
@@ -127,7 +127,7 @@ class PyarrowOnRayDataframeAxisPartition(BaseDataframeAxisPartition):
 
 class PyarrowOnRayDataframeColumnPartition(PyarrowOnRayDataframeAxisPartition):
     """
-    The column partition implementation for PyArrow backend and Ray engine.
+    The column partition implementation for PyArrow storage format and Ray engine.
 
     All of the implementation for this class is in the ``PyarrowOnRayDataframeAxisPartition``
     parent class, and this class defines the axis to perform the computation over.
@@ -143,7 +143,7 @@ class PyarrowOnRayDataframeColumnPartition(PyarrowOnRayDataframeAxisPartition):
 
 class PyarrowOnRayDataframeRowPartition(PyarrowOnRayDataframeAxisPartition):
     """
-    The row partition implementation for PyArrow backend and Ray engine.
+    The row partition implementation for PyArrow storage format and Ray engine.
 
     All of the implementation for this class is in the ``PyarrowOnRayDataframeAxisPartition``
     parent class, and this class defines the axis to perform the computation over.

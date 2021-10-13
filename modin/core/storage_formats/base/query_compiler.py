@@ -2116,7 +2116,7 @@ class BaseQueryCompiler(abc.ABC):
     # after the shuffle, there should be only a local map required.
 
     # FIXME: `map_args` and `reduce_args` leaked there from `PandasQueryCompiler.groupby_*`,
-    # pandas backend implements groupby via MapReduce approach, but for other backends these
+    # pandas storage format implements groupby via MapReduce approach, but for other storage formats these
     # parameters make no sense, they shouldn't be present in a base class.
 
     @doc_utils.doc_groupby_method(
@@ -3136,7 +3136,7 @@ class BaseQueryCompiler(abc.ABC):
     # Resample methods
 
     # FIXME:
-    #   1. Backend shouldn't care about differences between Series and DataFrame
+    #   1. Query Compiler shouldn't care about differences between Series and DataFrame
     #      so `resample_agg_df` and `resample_agg_ser` should be combined (Modin issue #3104).
     #   2. In DataFrame API `Resampler.aggregate` is an alias for `Resampler.apply`
     #      we should remove one of these methods: `resample_agg_*` or `resample_app_*` (Modin issue #3107).
@@ -3378,7 +3378,7 @@ class BaseQueryCompiler(abc.ABC):
             self, resample_args, _method, *args, **kwargs
         )
 
-    # FIXME: Backend shouldn't care about differences between Series and DataFrame
+    # FIXME: Query Compiler shouldn't care about differences between Series and DataFrame
     # so `resample_ohlc_df` and `resample_ohlc_ser` should be combined (Modin issue #3104).
     @doc_utils.doc_resample_agg(
         action="compute open, high, low and close values",
@@ -3409,7 +3409,7 @@ class BaseQueryCompiler(abc.ABC):
         )
 
     # FIXME: This method require us to build high-level resampler object
-    # which we shouldn't do at the backend. We need to move this at the front.
+    # which we shouldn't do at the query compiler. We need to move this at the front.
     # (Modin issue #3105)
     @doc_utils.add_refer_to("Resampler.pipe")
     def resample_pipe(self, resample_args, func, *args, **kwargs):

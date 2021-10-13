@@ -19,8 +19,8 @@ from modin.core.storage_formats import (
 
 import pytest
 
-BASE_BACKEND = BaseQueryCompiler
-BACKENDS = [PandasQueryCompiler, PyarrowQueryCompiler]
+BASE_EXECUTION = BaseQueryCompiler
+EXECUTIONS = [PandasQueryCompiler, PyarrowQueryCompiler]
 
 
 def test_base_abstract_methods():
@@ -34,7 +34,7 @@ def test_base_abstract_methods():
         "default_to_pandas",
     ]
 
-    not_implemented_methods = BASE_BACKEND.__abstractmethods__.difference(
+    not_implemented_methods = BASE_EXECUTION.__abstractmethods__.difference(
         allowed_abstract_methods
     )
 
@@ -44,18 +44,18 @@ def test_base_abstract_methods():
 
     assert (
         len(not_implemented_methods) == 0
-    ), f"{BASE_BACKEND} has not implemented abstract methods: {not_implemented_methods}"
+    ), f"{BASE_EXECUTION} has not implemented abstract methods: {not_implemented_methods}"
 
 
-@pytest.mark.parametrize("backend", BACKENDS)
-def test_api_consistent(backend):
-    base_methods = set(BASE_BACKEND.__dict__)
+@pytest.mark.parametrize("execution", EXECUTIONS)
+def test_api_consistent(execution):
+    base_methods = set(BASE_EXECUTION.__dict__)
     custom_methods = set(
-        [key for key in backend.__dict__.keys() if not key.startswith("_")]
+        [key for key in execution.__dict__.keys() if not key.startswith("_")]
     )
 
     extra_methods = custom_methods.difference(base_methods)
-    # checking that custom backend do not implements extra api methods
+    # checking that custom execution do not implements extra api methods
     assert (
         len(extra_methods) == 0
-    ), f"{backend} implement these extra methods: {extra_methods}"
+    ), f"{execution} implement these extra methods: {extra_methods}"

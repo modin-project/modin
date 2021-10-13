@@ -13,8 +13,8 @@
 
 import pytest
 
-from modin.config import Engine, Backend
-from modin import set_backends
+from modin.config import Engine, StorageFormat
+from modin import set_execution
 
 from modin.core.execution.dispatching.factories.dispatcher import (
     FactoryDispatcher,
@@ -84,10 +84,10 @@ def test_factory_switch():
     assert FactoryDispatcher.get_factory().io_cls == "Foo"
     Engine.put("Python")  # revert engine to default
 
-    Backend.put("Test")
+    StorageFormat.put("Test")
     assert FactoryDispatcher.get_factory() == TestOnPythonFactory
     assert FactoryDispatcher.get_factory().io_cls == "Bar"
-    Backend.put("Pandas")  # revert engine to default
+    StorageFormat.put("Pandas")  # revert engine to default
 
 
 def test_engine_wrong_factory():
@@ -96,6 +96,6 @@ def test_engine_wrong_factory():
     Engine.put("Python")  # revert engine to default
 
 
-def test_set_backends():
-    set_backends("Bar", "Foo")
+def test_set_execution():
+    set_execution("Bar", "Foo")
     assert FactoryDispatcher.get_factory() == FooOnBarFactory

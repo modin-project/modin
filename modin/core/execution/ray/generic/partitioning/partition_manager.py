@@ -22,7 +22,7 @@ from modin.core.dataframe.pandas.partitioning.partition_manager import (
 import ray
 
 
-class GenericRayFramePartitionManager(PandasDataframePartitionManager):
+class GenericRayDataframePartitionManager(PandasDataframePartitionManager):
     """The class implements the interface in `PandasDataframePartitionManager`."""
 
     @classmethod

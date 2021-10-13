@@ -54,7 +54,7 @@ from modin.core.storage_formats.pandas.utils import split_result_of_axis_func_pa
 from modin.error_message import ErrorMessage
 
 _doc_pandas_parser_class = """
-Class for handling {data_type} on the workers using pandas backend.
+Class for handling {data_type} on the workers using pandas storage format.
 
 Inherits common functions from `PandasParser` class.
 """
@@ -135,7 +135,7 @@ def find_common_type_cat(types):
 
 
 class PandasParser(object):
-    """Base class for parser classes with pandas backend."""
+    """Base class for parser classes with pandas storage format."""
 
     @classmethod
     def get_dtypes(cls, dtypes_ids):

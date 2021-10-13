@@ -32,7 +32,7 @@ warnings.filterwarnings(
 )
 
 
-def set_backends(engine=None, partition=None):
+def set_execution(engine=None, partition=None):
     """
     Method to set the _pair_ of execution engine and partition format simultaneously.
     This is needed because there might be cases where switching one by one would be
@@ -40,19 +40,19 @@ def set_backends(engine=None, partition=None):
 
     The method returns pair of old values, so it is easy to return back.
     """
-    from .config import Engine, Backend
+    from .config import Engine, StorageFormat
 
     old_engine, old_partition = None, None
     # defer callbacks until both entities are set
     if engine is not None:
         old_engine = Engine._put_nocallback(engine)
     if partition is not None:
-        old_partition = Backend._put_nocallback(partition)
+        old_partition = StorageFormat._put_nocallback(partition)
     # execute callbacks if something was changed
     if old_engine is not None:
         Engine._check_callbacks(old_engine)
     if old_partition is not None:
-        Backend._check_callbacks(old_partition)
+        StorageFormat._check_callbacks(old_partition)
 
     return old_engine, old_partition
 

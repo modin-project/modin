@@ -22,7 +22,7 @@ from pandas.api.types import is_scalar
 
 class PandasDataframePartition(ABC):  # pragma: no cover
     """
-    An abstract class that is base for any partition class of ``pandas`` backend.
+    An abstract class that is base for any partition class of ``pandas`` storage format.
 
     The class providing an API that has to be overridden by child classes.
     """

@@ -15,7 +15,7 @@
 Module houses experimental IO classes and parser functions needed for these classes.
 
 Any function or class can be considered experimental API if it is not strictly replicating existent
-backend API, even if it is only extending the API.
+Query Compiler API, even if it is only extending the API.
 """
 
 import numpy as np
@@ -83,7 +83,7 @@ def _read_parquet_columns(path, columns, num_splits, kwargs):  # pragma: no cove
 
 class ExperimentalPandasOnRayIO(PandasOnRayIO):
     """
-    Class for handling experimental IO functionality with pandas backend and Ray engine.
+    Class for handling experimental IO functionality with pandas storage format and Ray engine.
 
     ``ExperimentalPandasOnRayIO`` inherits some util functions and unmodified IO functions
     from ``PandasOnRayIO`` class.

@@ -58,15 +58,15 @@ import re
 
 class OmnisciOnNativeDataframe(PandasDataframe):
     """
-    Lazy dataframe based on Arrow table representation and embedded OmniSci backend.
+    Lazy dataframe based on Arrow table representation and embedded OmniSci storage format.
 
     Currently, materialized dataframe always has a single partition. This partition
     can hold either Arrow table or pandas dataframe.
 
     Operations on a dataframe are not instantly executed and build an operations
     tree instead. When frame's data is accessed this tree is transformed into
-    a query which is executed in OmniSci backend. In case of simple transformations
-    Arrow API can be used instead of OmniSci backend.
+    a query which is executed in OmniSci storage format. In case of simple transformations
+    Arrow API can be used instead of OmniSci storage format.
 
     Since frames are used as an input for other frames, all operations produce
     new frames and are not executed in-place.
@@ -98,7 +98,7 @@ class OmnisciOnNativeDataframe(PandasDataframe):
     force_execution_mode : str or None
         Used by tests to control frame's execution process.
     has_unsupported_data : bool
-        True for frames holding data not supported by Arrow or OmniSci backend.
+        True for frames holding data not supported by Arrow or OmniSci storage format.
 
     Attributes
     ----------
@@ -120,7 +120,7 @@ class OmnisciOnNativeDataframe(PandasDataframe):
     _index_cache : pandas.Index or None
         Materialized index of the frame or None when index is not materialized.
     _has_unsupported_data : bool
-        True for frames holding data not supported by Arrow or OmniSci backend.
+        True for frames holding data not supported by Arrow or OmniSci storage format.
         Operations on such frames are not allowed and should be defaulted
         to pandas instead.
     _dtypes : pandas.Series
@@ -638,7 +638,7 @@ class OmnisciOnNativeDataframe(PandasDataframe):
                 raise NotImplementedError("unsupported value for fillna")
         except TypeError:
             raise NotImplementedError(
-                "Heterogenous data is not supported in OmniSci backend"
+                "Heterogenous data is not supported in OmniSci storage format"
             )
 
         new_op = TransformNode(self, exprs)
@@ -1038,7 +1038,9 @@ class OmnisciOnNativeDataframe(PandasDataframe):
             The new frame.
         """
         if how == "outer":
-            raise NotImplementedError("outer join is not supported in OmniSci backend")
+            raise NotImplementedError(
+                "outer join is not supported in OmniSci storage format"
+            )
 
         lhs = self._maybe_materialize_rowid()
         reset_index_names = False

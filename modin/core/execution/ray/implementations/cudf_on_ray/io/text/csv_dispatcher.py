@@ -24,7 +24,7 @@ from typing import Tuple
 
 class cuDFCSVDispatcher(CSVDispatcher):
     """
-    The class implements ``CSVDispatcher`` using cuDF backend.
+    The class implements ``CSVDispatcher`` using cuDF storage format.
 
     This class handles utils for reading `.csv` files.
     """

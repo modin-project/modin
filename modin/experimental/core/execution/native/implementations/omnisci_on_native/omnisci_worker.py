@@ -36,7 +36,7 @@ from modin.config import OmnisciFragmentSize, OmnisciLaunchParameters
 
 
 class OmnisciServer:
-    """Wrapper class for OmniSci backend."""
+    """Wrapper class for OmniSci storage format."""
 
     _server = None
 
@@ -58,7 +58,7 @@ class OmnisciServer:
             cls._server = None
 
     def __init__(self):
-        """Initialize OmniSci backend."""
+        """Initialize OmniSci storage format."""
         self.start_server()
 
     @classmethod
@@ -228,7 +228,7 @@ class OmnisciServer:
     @classmethod
     def put_pandas_to_omnisci(cls, df, name=None):
         """
-        Import ``pandas.DataFrame`` to OmniSci backend.
+        Import ``pandas.DataFrame`` to OmniSci storage format.
 
         Parameters
         ----------

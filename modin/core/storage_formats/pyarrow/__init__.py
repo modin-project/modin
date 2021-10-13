@@ -11,7 +11,7 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-"""The module represents the query compiler level for the PyArrow backend."""
+"""The module represents the query compiler level for the PyArrow storage format."""
 
 from .query_compiler import PyarrowQueryCompiler
 

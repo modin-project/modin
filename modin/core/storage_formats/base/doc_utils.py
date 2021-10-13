@@ -675,8 +675,8 @@ def doc_groupby_method(result, refer_to, action=None):
 
     .. warning
         `map_args` and `reduce_args` parameters are deprecated. They're leaked here from
-        ``PandasQueryCompiler.groupby_*``, pandas backend implements groupby via MapReduce
-        approach, but for other backends these parameters make no sense, and so they'll be removed in the future.
+        ``PandasQueryCompiler.groupby_*``, pandas storage format implements groupby via TreeReduce
+        approach, but for other storage formats these parameters make no sense, and so they'll be removed in the future.
     """
     if action is None:
         action = f"compute {result}"

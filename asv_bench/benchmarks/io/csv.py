@@ -19,7 +19,7 @@ from ..utils import (
     RAND_LOW,
     RAND_HIGH,
     ASV_USE_IMPL,
-    ASV_USE_BACKEND,
+    ASV_USE_STORAGE_FORMAT,
     IMPL,
     execute,
     get_shape_id,
@@ -88,7 +88,7 @@ class TimeReadCsvTrueFalseValues(BaseReadCsv):
                 true_values=["Yes", "true"],
                 false_values=["No", "false"],
             ),
-            trigger_omnisci_import=ASV_USE_BACKEND == "omnisci",
+            trigger_omnisci_import=ASV_USE_STORAGE_FORMAT == "omnisci",
         )
 
 

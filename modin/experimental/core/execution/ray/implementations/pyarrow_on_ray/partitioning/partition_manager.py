@@ -11,7 +11,7 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-"""Module houses class for tracking partitions with PyArrow backend and Ray engine."""
+"""Module houses class for tracking partitions with PyArrow storage format and Ray engine."""
 
 from modin.core.execution.ray.generic.partitioning.partition_manager import (
     GenericRayDataframePartitionManager,
@@ -27,7 +27,7 @@ from .partition import (
 
 class PyarrowOnRayDataframePartitionManager(GenericRayDataframePartitionManager):
     """
-    Class for tracking partitions with PyArrow backend and Ray engine.
+    Class for tracking partitions with PyArrow storage format and Ray engine.
 
     Inherits all functionality from ``GenericRayDataframePartitionManager`` and ``PandasDataframePartitionManager`` base
     classes.

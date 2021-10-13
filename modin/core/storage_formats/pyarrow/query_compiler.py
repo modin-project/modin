@@ -46,7 +46,7 @@ class FakeSeries:
 @_inherit_docstrings(PandasQueryCompiler)
 class PyarrowQueryCompiler(PandasQueryCompiler):
     """
-    Query compiler for the PyArrow backend.
+    Query compiler for the PyArrow storage format.
 
     This class translates common query compiler API into the DataFrame Algebra
     queries, that is supposed to be executed by

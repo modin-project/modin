@@ -11,7 +11,7 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-"""The module defines interface for a partition with PyArrow backend and Ray engine."""
+"""The module defines interface for a partition with PyArrow storage format and Ray engine."""
 
 import pandas
 from modin.core.execution.ray.implementations.pandas_on_ray.partitioning.partition import (
@@ -24,7 +24,7 @@ import pyarrow
 
 class PyarrowOnRayDataframePartition(PandasOnRayDataframePartition):
     """
-    Class provides partition interface specific for PyArrow backend and Ray engine.
+    Class provides partition interface specific for PyArrow storage format and Ray engine.
 
     Inherits functionality from the ``PandasOnRayDataframePartition`` class.
 

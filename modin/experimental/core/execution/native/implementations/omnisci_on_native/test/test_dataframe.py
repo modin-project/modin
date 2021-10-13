@@ -18,14 +18,14 @@ import pyarrow
 import pytest
 import re
 
-from modin.config import IsExperimental, Engine, Backend
+from modin.config import IsExperimental, Engine, StorageFormat
 from modin.pandas.test.utils import io_ops_bad_exc
 from .utils import eval_io, ForceOmnisciImport, set_execution_mode, run_and_compare
 from pandas.core.dtypes.common import is_list_like
 
 IsExperimental.put(True)
 Engine.put("native")
-Backend.put("omnisci")
+StorageFormat.put("omnisci")
 
 import modin.pandas as pd
 from modin.pandas.test.utils import (
@@ -723,7 +723,7 @@ class TestGroupby:
         run_and_compare(groupby_count, data=self.data, cols=cols, as_index=as_index)
 
     @pytest.mark.xfail(
-        reason="Currently mean() passes a lambda into backend which cannot be executed on omnisci backend"
+        reason="Currently mean() passes a lambda into query compiler which cannot be executed on OmniSci storage format"
     )
     @pytest.mark.parametrize("cols", cols_value)
     @pytest.mark.parametrize("as_index", bool_arg_values)
@@ -762,7 +762,7 @@ class TestGroupby:
         run_and_compare(lambda_func, data=self.data, force_lazy=False)
 
     @pytest.mark.xfail(
-        reason="Function specified as a string should be passed into backend API, but currently it is transformed into a lambda"
+        reason="Function specified as a string should be passed into query compiler API, but currently it is transformed into a lambda"
     )
     @pytest.mark.parametrize("cols", cols_value)
     @pytest.mark.parametrize("as_index", bool_arg_values)
@@ -1955,7 +1955,7 @@ class TestDropna:
     @pytest.mark.parametrize("dropna", [True, False])
     def test_dropna_groupby(self, by, dropna):
         def applier(df, *args, **kwargs):
-            # OmniSci backend preserves NaNs at the result of groupby,
+            # OmniSci storage format preserves NaNs at the result of groupby,
             # so replacing NaNs with '0' to match with Pandas.
             # https://github.com/modin-project/modin/issues/2878
             return df.groupby(by=by, dropna=dropna).sum().fillna(0)

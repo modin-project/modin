@@ -215,7 +215,7 @@ def copy_df_for_func(func, display_name: str = None):
 @_inherit_docstrings(BaseQueryCompiler)
 class PandasQueryCompiler(BaseQueryCompiler):
     """
-    Query compiler for the pandas backend.
+    Query compiler for the pandas storage format.
 
     This class translates common query compiler API into the DataFrame Algebra
     queries, that is supposed to be executed by :py:class:`~modin.engines.base.frame.data.PandasDataframe`.

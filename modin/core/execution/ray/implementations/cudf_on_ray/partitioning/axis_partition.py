@@ -21,7 +21,7 @@ from .partition import cuDFOnRayDataframePartition
 
 class cuDFOnRayDataframeAxisPartition(object):
     """
-    Base class for any axis partition class for cuDF backend.
+    Base class for any axis partition class for cuDF storage format.
 
     Parameters
     ----------

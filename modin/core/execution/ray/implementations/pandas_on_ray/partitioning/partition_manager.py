@@ -11,7 +11,7 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-"""Module houses class that implements ``GenericRayFramePartitionManager`` using Ray."""
+"""Module houses class that implements ``GenericRayDataframePartitionManager`` using Ray."""
 
 import inspect
 import numpy as np
@@ -19,7 +19,7 @@ import threading
 
 from modin.config import ProgressBar
 from modin.core.execution.ray.generic.partitioning.partition_manager import (
-    GenericRayFramePartitionManager,
+    GenericRayDataframePartitionManager,
 )
 from .axis_partition import (
     PandasOnRayDataframeColumnPartition,
@@ -88,7 +88,7 @@ def progress_bar_wrapper(f):
     return magic
 
 
-class PandasOnRayDataframePartitionManager(GenericRayFramePartitionManager):
+class PandasOnRayDataframePartitionManager(GenericRayDataframePartitionManager):
     """The class implements the interface in `PandasDataframePartitionManager`."""
 
     # This object uses RayRemotePartition objects as the underlying store.

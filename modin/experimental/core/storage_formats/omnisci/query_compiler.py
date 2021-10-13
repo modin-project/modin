@@ -83,7 +83,7 @@ def build_method_wrapper(name, method):
     @wraps(method)
     def method_wrapper(self, *args, **kwargs):
         # If the method wasn't found in the parent query compiler that means,
-        # that we're calling one that is OmniSci backend-specific, if we intend
+        # that we're calling one that is OmniSci-specific, if we intend
         # to fallback to pandas on 'NotImplementedError' then the call of this
         # private method is caused by some public QC method, so we catch
         # the exception here and do fallback properly
@@ -146,7 +146,7 @@ def bind_wrappers(cls):
 @_inherit_docstrings(BaseQueryCompiler)
 class DFAlgQueryCompiler(BaseQueryCompiler):
     """
-    Query compiler for the OmniSci backend.
+    Query compiler for the OmniSci storage format.
 
     This class doesn't perform much processing and mostly forwards calls to
     :py:class:`~modin.experimental.core.execution.native.implementations.omnisci_on_native.dataframe.dataframe.OmnisciOnNativeDataframe`
@@ -177,7 +177,7 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
         self._shape_hint = shape_hint
 
     def finalize(self):
-        # TODO: implement this for OmniSci backend
+        # TODO: implement this for OmniSci storage format
         raise NotImplementedError()
 
     def to_pandas(self):
@@ -333,7 +333,7 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
         # TODO: handle `is_multi_by`, `agg_args`, `drop` args
         if callable(agg_func):
             raise NotImplementedError(
-                "Python callable is not a valid aggregation function for OmniSci backend."
+                "Python callable is not a valid aggregation function for OmniSci storage format."
             )
         new_frame = self._modin_frame.groupby_agg(
             by, axis, agg_func, groupby_kwargs, **agg_kwargs
@@ -379,7 +379,7 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
             Axis to perform aggregation along. 0 is to apply function against each column,
             all the columns will be reduced into a single scalar. 1 is to aggregate
             across rows.
-            *Note:* OmniSci backend supports aggregation for 0 axis only, aggregation
+            *Note:* OmniSci storage format supports aggregation for 0 axis only, aggregation
             along rows will be defaulted to pandas.
         level : None, default: None
             Serves the compatibility purpose, always have to be None.

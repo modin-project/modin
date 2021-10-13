@@ -11,7 +11,7 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-"""The module defines interface for a partition with pandas backend and Python engine."""
+"""The module defines interface for a partition with pandas storage format and Python engine."""
 
 import pandas
 
@@ -21,7 +21,7 @@ from modin.core.dataframe.pandas.partitioning.partition import PandasDataframePa
 
 class PandasOnPythonDataframePartition(PandasDataframePartition):
     """
-    Partition class with interface for pandas backend and Python engine.
+    Partition class with interface for pandas storage format and Python engine.
 
     Class holds the data and metadata for a single partition and implements
     methods of parent abstract class ``PandasDataframePartition``.

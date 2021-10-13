@@ -14,12 +14,12 @@
 """
 Contain IO dispatcher class.
 
-Dispatcher routes the work to backend-specific functions.
+Dispatcher routes the work to execution-specific functions.
 """
 
-from modin.config import Engine, Backend, IsExperimental
+from modin.config import Engine, StorageFormat, IsExperimental
 from modin.core.execution.dispatching.factories import factories
-from modin.utils import get_current_backend, _inherit_docstrings
+from modin.utils import get_current_execution, _inherit_docstrings
 
 
 class FactoryNotFoundError(AttributeError):
@@ -101,7 +101,7 @@ class FactoryDispatcher(object):
     Class that routes IO-work to the factories.
 
     This class is responsible for keeping selected factory up-to-date and dispatching
-    calls of IO-functions to its actual backend-specific implementations.
+    calls of IO-functions to its actual execution-specific implementations.
     """
 
     __factory: factories.BaseFactory = None
@@ -124,13 +124,13 @@ class FactoryDispatcher(object):
             This parameters serves the compatibility purpose.
             Does not affect the result.
         """
-        factory_name = get_current_backend() + "Factory"
+        factory_name = get_current_execution() + "Factory"
         try:
             cls.__factory = getattr(factories, factory_name)
         except AttributeError:
             if factory_name == "ExperimentalOmnisciOnRayFactory":
                 msg = (
-                    "OmniSci backend no longer needs Ray engine; "
+                    "OmniSci storage format no longer needs Ray engine; "
                     "please specify MODIN_ENGINE='native'"
                 )
                 raise FactoryNotFoundError(msg)
@@ -145,9 +145,11 @@ class FactoryDispatcher(object):
                     msg = (
                         "Cannot find a factory for partition '{}' and execution engine '{}'. "
                         "Potential reason might be incorrect environment variable value for "
-                        f"{Backend.varname} or {Engine.varname}"
+                        f"{StorageFormat.varname} or {Engine.varname}"
                     )
-                raise FactoryNotFoundError(msg.format(Backend.get(), Engine.get()))
+                raise FactoryNotFoundError(
+                    msg.format(StorageFormat.get(), Engine.get())
+                )
             cls.__factory = StubFactory.set_failing_name(factory_name)
         else:
             cls.__factory.prepare()
@@ -288,4 +290,4 @@ class FactoryDispatcher(object):
 
 
 Engine.subscribe(FactoryDispatcher._update_factory)
-Backend.subscribe(FactoryDispatcher._update_factory)
+StorageFormat.subscribe(FactoryDispatcher._update_factory)

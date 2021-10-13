@@ -21,7 +21,7 @@ for direct files processing.
 import fsspec
 import os
 import re
-from modin.config import Backend
+from modin.config import StorageFormat
 import numpy as np
 
 S3_ADDRESS_REGEX = re.compile("[sS]3://(.*?)/(.*)")
@@ -134,16 +134,16 @@ class FileDispatcher:
 
         Notes
         -----
-        `read` is high-level function that calls specific for defined backend, engine and
+        `read` is high-level function that calls specific for defined storage format, engine and
         dispatcher class `_read` function with passed parameters and performs some
         postprocessing work on the resulting query_compiler object.
         """
         query_compiler = cls._read(*args, **kwargs)
         # TODO (devin-petersohn): Make this section more general for non-pandas kernel
         # implementations.
-        if Backend.get() == "Pandas":
+        if StorageFormat.get() == "Pandas":
             import pandas as kernel_lib
-        elif Backend.get() == "Cudf":
+        elif StorageFormat.get() == "Cudf":
             import cudf as kernel_lib
         else:
             raise NotImplementedError("FIXME")

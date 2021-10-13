@@ -11,7 +11,7 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-"""Module houses class that implements ``GenericRayFramePartitionManager`` using cuDF."""
+"""Module houses class that implements ``GenericRayDataframePartitionManager`` using cuDF."""
 
 import numpy as np
 import ray
@@ -25,7 +25,7 @@ from .partition import cuDFOnRayDataframePartition
 from modin.core.storage_formats.pandas.utils import split_result_of_axis_func_pandas
 from modin.config import GpuCount
 from modin.core.execution.ray.generic.partitioning.partition_manager import (
-    GenericRayFramePartitionManager,
+    GenericRayDataframePartitionManager,
 )
 
 # Global view of GPU Actors
@@ -56,8 +56,8 @@ def func(df, other, apply_func):
     return apply_func(ray.get(df.get.remote()), ray.get(other.get.remote()))
 
 
-class cuDFOnRayDataframePartitionManager(GenericRayFramePartitionManager):
-    """The class implements the interface in ``GenericRayFramePartitionManager`` using cuDF on Ray."""
+class cuDFOnRayDataframePartitionManager(GenericRayDataframePartitionManager):
+    """The class implements the interface in ``GenericRayDataframePartitionManager`` using cuDF on Ray."""
 
     _partition_class = cuDFOnRayDataframePartition
     _column_partitions_class = cuDFOnRayDataframeColumnPartition

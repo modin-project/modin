@@ -14,7 +14,7 @@
 """
 Module contains class ``PandasOnPythonDataframe``.
 
-``PandasOnPythonDataframe`` is dataframe class with pandas backend and Python engine.
+``PandasOnPythonDataframe`` is dataframe class with pandas storage format and Python engine.
 """
 
 from modin.core.dataframe.pandas.dataframe.dataframe import PandasDataframe
@@ -25,7 +25,7 @@ from ..partitioning.partition_manager import (
 
 class PandasOnPythonDataframe(PandasDataframe):
     """
-    Class for dataframes with pandas backend and Python engine.
+    Class for dataframes with pandas storage format and Python engine.
 
     ``PandasOnPythonDataframe`` doesn't implement any specific interfaces,
     all functionality is inherited from the ``PandasDataframe`` class.

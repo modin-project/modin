@@ -15,7 +15,7 @@
 Module contains class PandasDataframe.
 
 PandasDataframe is a parent abstract class for any dataframe class
-for pandas backend.
+for pandas storage format.
 """
 from collections import OrderedDict
 import numpy as np
@@ -33,7 +33,7 @@ from modin.core.storage_formats.pandas.parsers import (
 
 class PandasDataframe(object):
     """
-    An abstract class that represents the parent class for any pandas backend dataframe class.
+    An abstract class that represents the parent class for any pandas storage format dataframe class.
 
     This class provides interfaces to run operations on dataframe partitions.
 
