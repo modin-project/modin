@@ -59,14 +59,15 @@ class CSVDispatcher(TextFileDispatcher):
             else cls.get_path_or_buffer(filepath_or_buffer)
         )
         compression_infered = cls.infer_compression(
-            filepath_or_buffer, kwargs.get("compression")
+            filepath_or_buffer, kwargs["compression"]
         )
-        # Getting frequently used read_csv kwargs
-        names = kwargs.get("names", lib.no_default)
-        index_col = kwargs.get("index_col", None)
-        encoding = kwargs.get("encoding", None)
-        skiprows = kwargs.get("skiprows", None)
-        header = kwargs.get("header", "infer")
+        # Getting frequently used read_csv kwargs;
+        # They should be defined in higher level
+        names = kwargs["names"]
+        index_col = kwargs["index_col"]
+        encoding = kwargs["encoding"]
+        skiprows = kwargs["skiprows"]
+        header = kwargs["header"]
         # Define header size for further skipping (Header can be skipped because header
         # information will be obtained further from empty_df, so no need to handle it
         # by workers)
@@ -91,7 +92,7 @@ class CSVDispatcher(TextFileDispatcher):
         # In these cases we should pass additional metadata
         # to the workers to match pandas output
         pass_names = names in [None, lib.no_default] and (
-            skiprows is not None or kwargs.get("skipfooter", 0) != 0
+            skiprows is not None or kwargs["skipfooter"] != 0
         )
 
         pd_df_metadata = pandas.read_csv(
@@ -129,7 +130,7 @@ class CSVDispatcher(TextFileDispatcher):
             splits = cls.partitioned_file(
                 f,
                 num_partitions=NPartitions.get(),
-                nrows=kwargs.get("nrows", None) if not should_handle_skiprows else None,
+                nrows=kwargs["nrows"] if not should_handle_skiprows else None,
                 skiprows=skiprows_partitioning,
                 quotechar=quotechar,
                 is_quoting=is_quoting,
@@ -153,8 +154,9 @@ class CSVDispatcher(TextFileDispatcher):
             column_names=column_names,
             skiprows_md=skiprows_md if should_handle_skiprows else None,
             header_size=header_size,
-            skipfooter=kwargs.get("skipfooter", None),
-            parse_dates=kwargs.get("parse_dates", False),
-            nrows=kwargs.get("nrows", None) if should_handle_skiprows else None,
+            squeeze=kwargs["squeeze"],
+            skipfooter=kwargs["skipfooter"],
+            parse_dates=kwargs["parse_dates"],
+            nrows=kwargs["nrows"] if should_handle_skiprows else None,
         )
         return new_query_compiler
