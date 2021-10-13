@@ -46,7 +46,7 @@ from .utils import (
 )
 
 if Backend.get() == "Omnisci":
-    from modin.experimental.engines.omnisci_on_native.test.utils import (
+    from modin.experimental.core.execution.native.implementations.omnisci_on_native.test.utils import (
         eval_io,
         align_datetime_dtypes,
     )

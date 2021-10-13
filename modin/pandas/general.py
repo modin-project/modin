@@ -25,7 +25,7 @@ from .base import BasePandasDataset
 from .dataframe import DataFrame
 from .series import Series
 from modin.utils import to_pandas
-from modin.backends.base.query_compiler import BaseQueryCompiler
+from modin.core.storage_formats.base.query_compiler import BaseQueryCompiler
 from modin.utils import _inherit_docstrings
 
 

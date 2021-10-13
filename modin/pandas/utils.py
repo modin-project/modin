@@ -37,7 +37,7 @@ def from_non_pandas(df, index, columns, dtype):
     modin.pandas.DataFrame
         Converted DataFrame.
     """
-    from modin.data_management.factories.dispatcher import FactoryDispatcher
+    from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
 
     new_qc = FactoryDispatcher.from_non_pandas(df, index, columns, dtype)
     if new_qc is not None:
@@ -61,7 +61,7 @@ def from_pandas(df):
     modin.pandas.DataFrame
         A new Modin DataFrame object.
     """
-    from modin.data_management.factories.dispatcher import FactoryDispatcher
+    from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
     from .dataframe import DataFrame
 
     return DataFrame(query_compiler=FactoryDispatcher.from_pandas(df))
@@ -81,7 +81,7 @@ def from_arrow(at):
     DataFrame
         A new Modin DataFrame object.
     """
-    from modin.data_management.factories.dispatcher import FactoryDispatcher
+    from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
     from .dataframe import DataFrame
 
     return DataFrame(query_compiler=FactoryDispatcher.from_arrow(at))
@@ -150,7 +150,7 @@ def is_label(obj, label, axis=0):
 
     Parameters
     ----------
-    obj : modin.pandas.DataFrame, modin.pandas.Series or modin.backends.base.BaseQueryCompiler
+    obj : modin.pandas.DataFrame, modin.pandas.Series or modin.core.storage_formats.base.BaseQueryCompiler
         Object to check.
     label : object
         Label name to check.

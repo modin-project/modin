@@ -40,7 +40,7 @@ IsExperimental.put(True)
 # in the user code
 from .numpy_wrap import _CAUGHT_NUMPY  # noqa F401
 from modin.pandas import *  # noqa F401, F403
-from .io_exp import (  # noqa F401
+from .io import (  # noqa F401
     read_sql,
     read_csv_glob,
     read_pickle_distributed,
