@@ -374,22 +374,20 @@ class PandasFWFParser(PandasParser):
             return pandas.read_fwf(fname, **kwargs)
 
         # pop "compression" from kwargs because bio is uncompressed
-        bio = FileDispatcher.file_open(fname, "rb", kwargs.pop("compression", "infer"))
-        header = b""
-        # In this case we beware that fisrt line can contain BOM, so
-        # adding this line to the `header` for reading and then skip it
-        if kwargs.get("encoding", None) is not None and header_size == 0:
-            header += bio.readline()
-            # `skiprows` can be only None here, so don't check it's type
-            # and just set to 1
-            kwargs["skiprows"] = 1
-        for _ in range(header_size):
-            header += bio.readline()
-        bio.seek(start)
-        to_read = header + bio.read(end - start)
-        bio.close()
+        with OpenFile(fname, "rb", kwargs.pop("compression", "infer")) as bio:
+            header = b""
+            # In this case we beware that fisrt line can contain BOM, so
+            # adding this line to the `header` for reading and then skip it
+            if kwargs.get("encoding", None) is not None and header_size == 0:
+                header += bio.readline()
+                # `skiprows` can be only None here, so don't check it's type
+                # and just set to 1
+                kwargs["skiprows"] = 1
+            for _ in range(header_size):
+                header += bio.readline()
+            bio.seek(start)
+            to_read = header + bio.read(end - start)
         pandas_df = pandas.read_fwf(BytesIO(to_read), **kwargs)
-
         index = (
             pandas_df.index
             if not isinstance(pandas_df.index, pandas.RangeIndex)

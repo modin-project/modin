@@ -623,7 +623,6 @@ class TextFileDispatcher(FileDispatcher):
         check_fwf_specific: bool = False,
     ) -> bool:
         """
-        Need to move in TextFileDispatcher.
         Check if passed parameters are supported by current `read_csv` implementation.
 
         Parameters
@@ -634,7 +633,7 @@ class TextFileDispatcher(FileDispatcher):
             Parameters of read_csv function.
         compression_infered : str
             Inferred `compression` parameter of read_csv function.
-        check_fwf_specific : bool
+        check_fwf_specific : bool, default: False
             Flag that determines when to check `read_fwf` function-specific parameters.
 
         Returns
