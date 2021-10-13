@@ -281,7 +281,6 @@ class PandasFramePartitionManager(ABC):
             right = right.T
         else:
             partitions_for_apply = left
-            right = right
 
         [obj.drain_call_queue() for row in right for obj in row]
 

@@ -45,7 +45,7 @@ class cuDFQueryCompiler(PandasQueryCompiler):
             ) == 1:
                 partition.iloc[row_internal_indices] = unique_items[0]
             else:
-                permutations_col = permutations_col = np.vstack(
+                permutations_col = np.vstack(
                     [col_internal_indices] * len(col_internal_indices)
                 ).T.flatten()
                 permutations_row = np.hstack(
