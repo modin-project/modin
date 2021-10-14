@@ -122,6 +122,7 @@ class FWFDispatcher(TextFileDispatcher):
             skiprows=None,
             nrows=None,
             compression=compression_infered,
+            callback=pandas.read_fwf,
         )
 
         with cls.file_open(filepath_or_buffer_md, "rb", compression_infered) as f:

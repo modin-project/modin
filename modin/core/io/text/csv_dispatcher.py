@@ -114,6 +114,7 @@ class CSVDispatcher(TextFileDispatcher):
             skiprows=None,
             nrows=None,
             compression=compression_infered,
+            callback=pandas.read_csv,
         )
 
         with OpenFile(

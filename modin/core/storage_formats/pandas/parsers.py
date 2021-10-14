@@ -233,11 +233,11 @@ class PandasCSVParser(PandasParser):
         end = kwargs.pop("end", None)
         header_size = kwargs.pop("header_size", None)
         encoding = kwargs.get("encoding", None)
-
+        callback = kwargs.pop("callback")
         if start is None or end is None:
             # This only happens when we are reading with only one worker (Default)
-            return pandas.read_csv(fname, **kwargs)
-        
+            return callback(fname, **kwargs)
+
         # pop "compression" from kwargs because bio is uncompressed
         with OpenFile(
             fname,
@@ -275,7 +275,7 @@ class PandasCSVParser(PandasParser):
 
             bio.seek(start)
             to_read = header + bio.read(end - start)
-        pandas_df = pandas.read_csv(BytesIO(to_read), **kwargs)
+        pandas_df = callback(BytesIO(to_read), **kwargs)
         index = (
             pandas_df.index
             if not isinstance(pandas_df.index, pandas.RangeIndex)
@@ -364,39 +364,7 @@ class PandasFWFParser(PandasParser):
     @staticmethod
     @doc(_doc_parse_func, parameters=_doc_parse_parameters_common)
     def parse(fname, **kwargs):
-        warnings.filterwarnings("ignore")
-        num_splits = kwargs.pop("num_splits", None)
-        start = kwargs.pop("start", None)
-        end = kwargs.pop("end", None)
-        header_size = kwargs.pop("header_size", None)
-        if start is None or end is None:
-            # This only happens when we are reading with only one worker (Default)
-            return pandas.read_fwf(fname, **kwargs)
-
-        # pop "compression" from kwargs because bio is uncompressed
-        with OpenFile(fname, "rb", kwargs.pop("compression", "infer")) as bio:
-            header = b""
-            # In this case we beware that fisrt line can contain BOM, so
-            # adding this line to the `header` for reading and then skip it
-            if kwargs.get("encoding", None) is not None and header_size == 0:
-                header += bio.readline()
-                # `skiprows` can be only None here, so don't check it's type
-                # and just set to 1
-                kwargs["skiprows"] = 1
-            for _ in range(header_size):
-                header += bio.readline()
-            bio.seek(start)
-            to_read = header + bio.read(end - start)
-        pandas_df = pandas.read_fwf(BytesIO(to_read), **kwargs)
-        index = (
-            pandas_df.index
-            if not isinstance(pandas_df.index, pandas.RangeIndex)
-            else len(pandas_df)
-        )
-        return _split_result_for_readers(1, num_splits, pandas_df) + [
-            index,
-            pandas_df.dtypes,
-        ]
+        return PandasCSVParser.parse(fname, **kwargs)
 
 
 @doc(_doc_pandas_parser_class, data_type="excel files")
