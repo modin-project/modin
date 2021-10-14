@@ -31,6 +31,7 @@ from typing import Union, IO, AnyStr, Sequence, Dict, List, Optional, Any
 
 from modin.error_message import ErrorMessage
 from .dataframe import DataFrame
+from .series import Series
 from modin.utils import _inherit_docstrings, Engine
 from . import _update_engine
 
@@ -56,6 +57,7 @@ def _read(**kwargs):
     from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
 
     Engine.subscribe(_update_engine)
+    squeeze = kwargs.pop("squeeze", False)
     pd_obj = FactoryDispatcher.read_csv(**kwargs)
     # This happens when `read_csv` returns a TextFileReader object for iterating through
     if isinstance(pd_obj, pandas.io.parsers.TextFileReader):
@@ -64,6 +66,8 @@ def _read(**kwargs):
             query_compiler=reader(*args, **kwargs)
         )
         return pd_obj
+    if squeeze:
+        return Series(query_compiler=pd_obj)
     return DataFrame(query_compiler=pd_obj)
 
 
