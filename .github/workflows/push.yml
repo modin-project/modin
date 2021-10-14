@@ -134,7 +134,7 @@ jobs:
         shell: bash -l {0}
     strategy:
       matrix:
-        python-version: ["3.7", "3.8"]
+        python-version: ["3.7", "3.8", "3.9"]
         engine: ["python", "ray", "dask"]
     env:
       MODIN_ENGINE: ${{matrix.engine}}
@@ -199,7 +199,7 @@ jobs:
         shell: bash -l {0}
     strategy:
       matrix:
-        python-version: ["3.7", "3.8"]
+        python-version: ["3.7", "3.8", "3.9"]
         engine: ["ray", "dask"]
         test-task:
           - modin/pandas/test/dataframe/test_binary.py
@@ -254,7 +254,7 @@ jobs:
         shell: bash -l {0}
     strategy:
       matrix:
-        python-version: ["3.7", "3.8"]
+        python-version: ["3.7", "3.8", "3.9"]
     env:
       MODIN_BACKEND: pyarrow
       MODIN_EXPERIMENTAL: "True"
@@ -284,7 +284,7 @@ jobs:
         shell: bash -l {0}
     strategy:
       matrix:
-        python-version: [ "3.7", "3.8" ]
+        python-version: ["3.7", "3.8", "3.9"]
         engine: ["ray", "dask"]
     env:
       MODIN_EXPERIMENTAL: "True"

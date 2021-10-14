@@ -81,7 +81,7 @@ jobs:
         shell: bash -l {0}
     strategy:
       matrix:
-        python-version: ["3.7", "3.8"]
+        python-version: ["3.7", "3.8", "3.9"]
         test-task:
           - modin/pandas/test/dataframe/test_binary.py
           - modin/pandas/test/dataframe/test_default.py
