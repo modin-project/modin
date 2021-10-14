@@ -72,18 +72,16 @@ class OpenFile:
         fsspec.core.OpenFile
             The opened file.
         """
-        from botocore.exceptions import NoCredentialsError
+        args = (self.file_path, self.mode, self.compression)
+        self.file = fsspec.open(*args, anon=False)
+        if S3_ADDRESS_REGEX.search(self.file_path):
+            from botocore.exceptions import NoCredentialsError
 
-        try:
-            self.file = fsspec.open(
-                self.file_path, self.mode, self.compression, anon=False
-            )
-            return self.file.open()
-        except NoCredentialsError:
-            self.file = fsspec.open(
-                self.file_path, self.mode, self.compression, anon=True
-            )
-            return self.file.open()
+            try:
+                return self.file.open()
+            except NoCredentialsError:
+                self.file = fsspec.open(*args, anon=True)
+        return self.file.open()
 
     def __exit__(self, *args):
         """
