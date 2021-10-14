@@ -41,7 +41,7 @@ test_cluster = create_cluster(
     **cluster_params,
 )
 with test_cluster:
-    data_file = "https://modin-datasets.s3.amazonaws.com/cloud/trips_xaa.csv"
+    data_file = "https://modin-datasets.s3.amazonaws.com/cloud/taxi/trips_xaa.csv"
     if USE_OMNISCI:
         # Workaround for GH#2099
         from modin.experimental.cloud import get_connection
@@ -71,7 +71,7 @@ with test_cluster:
 
     parameters = {
         "data_file": data_file,
-        # "data_file": "s3://modin-datasets/cloud/trips_xaa.csv",
+        # "data_file": "s3://modin-datasets/cloud/taxi/trips_xaa.csv",
         "dfiles_num": 1,
         "validation": False,
         "no_ibis": True,
