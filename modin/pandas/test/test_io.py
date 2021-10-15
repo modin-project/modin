@@ -1870,7 +1870,8 @@ class TestFwf:
             pytest.param(
                 13,
                 marks=pytest.mark.xfail(
-                    reason="read_fwf bug on pandas side: pandas-dev/pandas#44021"
+                    Engine.get() == "Ray",
+                    reason="read_fwf bug on pandas side: pandas-dev/pandas#44021",
                 ),
             ),
             None,

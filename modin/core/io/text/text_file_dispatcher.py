@@ -620,7 +620,7 @@ class TextFileDispatcher(FileDispatcher):
         filepath_or_buffer: FilePathOrBuffer,
         read_kwargs: ReadCsvKwargsType,
         compression_infered: str,
-        check_fwf_specific: bool = False,
+        fwf_specific: bool = False,
     ) -> bool:
         """
         Check if passed parameters are supported by current `read_csv` or `read_fwf` implementation.
@@ -633,7 +633,7 @@ class TextFileDispatcher(FileDispatcher):
             Parameters of read_* function.
         compression_infered : str
             Inferred `compression` parameter of read_* function.
-        check_fwf_specific : bool, default: False
+        fwf_specific : bool, default: False
             Flag that determines when to check `read_fwf` function-specific parameters.
 
         Returns
@@ -654,7 +654,7 @@ class TextFileDispatcher(FileDispatcher):
         if read_kwargs["chunksize"] is not None:
             return False
 
-        if check_fwf_specific:
+        if fwf_specific:
             # If infer_nrows is a significant portion of the number of rows, pandas may be
             # faster.
             if read_kwargs["infer_nrows"] > 100:

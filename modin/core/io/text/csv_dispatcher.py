@@ -30,29 +30,7 @@ class CSVDispatcher(TextFileDispatcher):
     """
 
     @classmethod
-    def _read(cls, filepath_or_buffer, **kwargs):
-        """
-        Read data from `filepath_or_buffer` according to `kwargs` parameters.
-
-        Parameters
-        ----------
-        filepath_or_buffer : str, path object or file-like object
-            `filepath_or_buffer` parameter of `read_csv` function.
-        **kwargs : dict
-            Parameters of `read_csv` function.
-
-        Returns
-        -------
-        new_query_compiler : BaseQueryCompiler
-            Query compiler with imported data for further processing.
-
-        Notes
-        -----
-        `skiprows` is handled diferently based on the parameter type because of
-        performance reasons. If `skiprows` is integer - rows will be skipped during
-        data file partitioning and wouldn't be actually read. If `skiprows` is array
-        or callable - full data file will be read and only then rows will be dropped.
-        """
+    def _general_read(cls, filepath_or_buffer, callback, fwf_specific, **kwargs):
         filepath_or_buffer_md = (
             cls.get_path(filepath_or_buffer)
             if isinstance(filepath_or_buffer, str)
@@ -84,10 +62,14 @@ class CSVDispatcher(TextFileDispatcher):
             skiprows_md, int
         )
 
-        use_modin_impl = cls._read_csv_check_support(filepath_or_buffer, kwargs)
+        use_modin_impl = cls._read_csv_check_support(
+            filepath_or_buffer,
+            kwargs,
+            fwf_specific=fwf_specific,
+        )
         if not use_modin_impl:
             return cls.single_worker_read(
-                filepath_or_buffer, callback=pandas.read_csv, **kwargs
+                filepath_or_buffer, callback=callback, **kwargs
             )
 
         is_quoting = kwargs.get("quoting", "") != QUOTE_NONE
@@ -97,7 +79,7 @@ class CSVDispatcher(TextFileDispatcher):
             skiprows is not None or kwargs["skipfooter"] != 0
         )
 
-        pd_df_metadata = pandas.read_csv(
+        pd_df_metadata = callback(
             filepath_or_buffer,
             **dict(kwargs, nrows=1, skipfooter=0, index_col=index_col),
         )
@@ -143,7 +125,7 @@ class CSVDispatcher(TextFileDispatcher):
             )
 
         partition_ids, index_ids, dtypes_ids = cls._launch_tasks(
-            splits, callback=pandas.read_csv, **partition_kwargs
+            splits, callback=callback, **partition_kwargs
         )
 
         new_query_compiler = cls._get_new_qc(
@@ -162,3 +144,31 @@ class CSVDispatcher(TextFileDispatcher):
             nrows=kwargs["nrows"] if should_handle_skiprows else None,
         )
         return new_query_compiler
+
+    @classmethod
+    def _read(cls, filepath_or_buffer, **kwargs):
+        """
+        Read data from `filepath_or_buffer` according to `kwargs` parameters.
+
+        Parameters
+        ----------
+        filepath_or_buffer : str, path object or file-like object
+            `filepath_or_buffer` parameter of `read_csv` function.
+        **kwargs : dict
+            Parameters of `read_csv` function.
+
+        Returns
+        -------
+        new_query_compiler : BaseQueryCompiler
+            Query compiler with imported data for further processing.
+
+        Notes
+        -----
+        `skiprows` is handled diferently based on the parameter type because of
+        performance reasons. If `skiprows` is integer - rows will be skipped during
+        data file partitioning and wouldn't be actually read. If `skiprows` is array
+        or callable - full data file will be read and only then rows will be dropped.
+        """
+        return cls._general_read(
+            filepath_or_buffer, callback=pandas.read_csv, fwf_specific=False, **kwargs
+        )
