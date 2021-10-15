@@ -86,7 +86,9 @@ class CSVDispatcher(TextFileDispatcher):
 
         use_modin_impl = cls._read_csv_check_support(filepath_or_buffer, kwargs)
         if not use_modin_impl:
-            return cls.single_worker_read(filepath_or_buffer, **kwargs)
+            return cls.single_worker_read(
+                filepath_or_buffer, callback=pandas.read_csv, **kwargs
+            )
 
         is_quoting = kwargs.get("quoting", "") != QUOTE_NONE
         # In these cases we should pass additional metadata
@@ -114,7 +116,6 @@ class CSVDispatcher(TextFileDispatcher):
             skiprows=None,
             nrows=None,
             compression=compression_infered,
-            callback=pandas.read_csv,
         )
 
         with OpenFile(
@@ -142,7 +143,7 @@ class CSVDispatcher(TextFileDispatcher):
             )
 
         partition_ids, index_ids, dtypes_ids = cls._launch_tasks(
-            splits, **partition_kwargs
+            splits, callback=pandas.read_csv, **partition_kwargs
         )
 
         new_query_compiler = cls._get_new_qc(

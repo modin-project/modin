@@ -618,21 +618,21 @@ class TextFileDispatcher(FileDispatcher):
     def _read_csv_check_support(
         cls,
         filepath_or_buffer: FilePathOrBuffer,
-        read_csv_kwargs: ReadCsvKwargsType,
+        read_kwargs: ReadCsvKwargsType,
         compression_infered: str,
         check_fwf_specific: bool = False,
     ) -> bool:
         """
-        Check if passed parameters are supported by current `read_csv` implementation.
+        Check if passed parameters are supported by current `read_csv` or `read_fwf` implementation.
 
         Parameters
         ----------
         filepath_or_buffer : str, path object or file-like object
-            `filepath_or_buffer` parameter of read_csv function.
-        read_csv_kwargs : dict
-            Parameters of read_csv function.
+            `filepath_or_buffer` parameter of read_* function.
+        read_kwargs : dict
+            Parameters of read_* function.
         compression_infered : str
-            Inferred `compression` parameter of read_csv function.
+            Inferred `compression` parameter of read_* function.
         check_fwf_specific : bool, default: False
             Flag that determines when to check `read_fwf` function-specific parameters.
 
@@ -651,15 +651,14 @@ class TextFileDispatcher(FileDispatcher):
             if compression_infered not in ["gzip", "bz2", "xz", "zip"]:
                 return False
 
-        if read_csv_kwargs.get("chunksize") is not None:
+        if read_kwargs["chunksize"] is not None:
             return False
 
         if check_fwf_specific:
             # If infer_nrows is a significant portion of the number of rows, pandas may be
             # faster.
-            infer_nrows = read_csv_kwargs.get("infer_nrows", 100)
-            if infer_nrows > 100:
-                return cls.single_worker_read(filepath_or_buffer, **read_csv_kwargs)
+            if read_kwargs["infer_nrows"] > 100:
+                return False
 
         return True
 

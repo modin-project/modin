@@ -91,7 +91,9 @@ class FWFDispatcher(TextFileDispatcher):
             filepath_or_buffer, kwargs, compression_infered, check_fwf_specific=True
         )
         if not use_modin_impl:
-            return cls.single_worker_read(filepath_or_buffer, **kwargs)
+            return cls.single_worker_read(
+                filepath_or_buffer, callback=pandas.read_fwf, **kwargs
+            )
 
         is_quoting = kwargs["quoting"] != QUOTE_NONE
         quotechar = kwargs["quotechar"].encode(
@@ -122,7 +124,6 @@ class FWFDispatcher(TextFileDispatcher):
             skiprows=None,
             nrows=None,
             compression=compression_infered,
-            callback=pandas.read_fwf,
         )
 
         with cls.file_open(filepath_or_buffer_md, "rb", compression_infered) as f:
@@ -140,7 +141,7 @@ class FWFDispatcher(TextFileDispatcher):
             )
 
         partition_ids, index_ids, dtypes_ids = cls._launch_tasks(
-            splits, **partition_kwargs
+            splits, callback=pandas.read_fwf, **partition_kwargs
         )
 
         new_query_compiler = cls._get_new_qc(
