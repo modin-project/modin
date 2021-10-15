@@ -44,7 +44,7 @@ class TreeReduce(Operator):
             """Execute MapReduce function against passed query compiler."""
             _axis = kwargs.get("axis") if axis is None else axis
             return query_compiler.__constructor__(
-                query_compiler._modin_frame.map_reduce(
+                query_compiler._modin_frame.tree_reduce(
                     cls.validate_axis(_axis),
                     lambda x: map_function(x, *args, **kwargs),
                     lambda y: reduce_function(y, *args, **kwargs),
