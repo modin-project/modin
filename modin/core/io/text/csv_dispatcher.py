@@ -31,6 +31,27 @@ class CSVDispatcher(TextFileDispatcher):
 
     @classmethod
     def _general_read(cls, filepath_or_buffer, callback, fwf_specific, **kwargs):
+        """
+        Read data from `filepath_or_buffer` according to `kwargs` parameters.
+
+        Used in `read_csv` and `read_fwf` Modin implementations.
+
+        Parameters
+        ----------
+        filepath_or_buffer : str, path object or file-like object
+            `filepath_or_buffer` parameter of `read_csv` function.
+        callback : function
+            Function that used in parsers. For example: `pandas.read_csv`.
+        fwf_specific : bool
+            Flag that determines when to use `read_fwf` function-specific parameters.
+        **kwargs : dict
+            Parameters of `read_csv` function.
+
+        Returns
+        -------
+        new_query_compiler : BaseQueryCompiler
+            Query compiler with imported data for further processing.
+        """
         filepath_or_buffer_md = (
             cls.get_path(filepath_or_buffer)
             if isinstance(filepath_or_buffer, str)
