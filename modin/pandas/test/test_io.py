@@ -869,11 +869,13 @@ class TestCsv:
             encoding_errors=encoding_errors,
         )
 
-    def test_read_csv_s3(self):
+    @pytest.mark.parametrize("is_use_storage_options", [True, False])
+    def test_read_csv_s3(self, is_use_storage_options):
         eval_io(
             fn_name="read_csv",
             # read_csv kwargs
             filepath_or_buffer="s3://noaa-ghcn-pds/csv/1788.csv",
+            storage_options={"anon": True} if is_use_storage_options else None,
         )
 
     @pytest.mark.parametrize("names", [list("XYZ"), None])

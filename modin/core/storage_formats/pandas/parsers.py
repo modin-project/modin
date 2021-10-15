@@ -235,8 +235,14 @@ class PandasCSVParser(PandasParser):
         encoding = kwargs.get("encoding", None)
         if start is not None and end is not None:
             # pop "compression" from kwargs because bio is uncompressed
-            with OpenFile(fname, "rb", kwargs.pop("compression", "infer")) as bio:
-                # In this case we beware that first line can contain BOM, so
+            with OpenFile(
+                fname,
+                "rb",
+                kwargs.pop("compression", "infer"),
+                **(kwargs.pop("storage_options", None) or {}),
+            ) as bio:
+                header = b""
+                # In this case we beware that fisrt line can contain BOM, so
                 # adding this line to the `header` for reading and then skip it
                 header = b""
                 if encoding and (

@@ -46,6 +46,8 @@ class OpenFile:
         String, which defines which mode file should be open.
     compression : str, default: "infer"
         File compression name.
+    **kwargs : dict
+        Keywords arguments to be passed into ``fsspec.open`` function.
 
     Attributes
     ----------
@@ -57,12 +59,15 @@ class OpenFile:
         File compression name.
     file : fsspec.core.OpenFile
         The opened file.
+    kwargs : dict
+        Keywords arguments to be passed into ``fsspec.open`` function.
     """
 
-    def __init__(self, file_path, mode="rb", compression="infer"):
+    def __init__(self, file_path, mode="rb", compression="infer", **kwargs):
         self.file_path = file_path
         self.mode = mode
         self.compression = compression
+        self.kwargs = kwargs
 
     def __enter__(self):
         """
@@ -82,7 +87,7 @@ class OpenFile:
 
         args = (self.file_path, self.mode, self.compression)
 
-        self.file = fsspec.open(*args, anon=False)
+        self.file = fsspec.open(*args, **self.kwargs)
         try:
             return self.file.open()
         except credential_error_type:

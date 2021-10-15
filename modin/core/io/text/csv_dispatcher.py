@@ -131,7 +131,12 @@ class CSVDispatcher(TextFileDispatcher):
             compression=compression_infered,
         )
 
-        with OpenFile(filepath_or_buffer_md, "rb", compression_infered) as f:
+        with OpenFile(
+            filepath_or_buffer_md,
+            "rb",
+            compression_infered,
+            **(kwargs.get("storage_options") or {}),
+        ) as f:
             old_pos = f.tell()
             fio = io.TextIOWrapper(f, encoding=encoding, newline="")
             newline, quotechar = cls.compute_newline(
