@@ -65,7 +65,6 @@ def _read(**kwargs):
             query_compiler=reader(*args, **kwargs)
         )
         return pd_obj
-
     result = DataFrame(query_compiler=pd_obj)
     if squeeze:
         return result.squeeze(axis=1)
