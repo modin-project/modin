@@ -465,7 +465,6 @@ jobs:
       - run: python -m pytest -n 2 modin/pandas/test/test_groupby.py
       - run: python -m pytest -n 2 modin/pandas/test/test_reshape.py
       - run: python -m pytest -n 2 modin/pandas/test/test_general.py
-      - run: python -m pytest modin/pandas/test/test_io.py --verbose
       - run: python -m pytest modin/experimental/pandas/test/test_io_exp.py
       - run: pip install "dfsql>=0.4.2" && pytest modin/experimental/sql/test/test_sql.py
       - run: |
@@ -586,7 +585,6 @@ jobs:
           - modin/pandas/test/test_groupby.py
           - modin/pandas/test/test_reshape.py
           - modin/pandas/test/test_general.py
-          - modin/pandas/test/test_io.py
     env:
       MODIN_ENGINE: ${{matrix.engine}}
       MODIN_MEMORY: 1000000000
@@ -608,10 +606,6 @@ jobs:
           conda info
           conda list
       - run: python -m pytest ${{matrix.test-task}}
-        if: matrix.test-task != 'modin/pandas/test/test_io.py'
-      - timeout-minutes: 30
-        run: python -m pytest modin/pandas/test/test_io.py --verbose
-        if: matrix.test-task == 'modin/pandas/test/test_io.py'
       - run: choco install codecov
       - run: codecov -f ./coverage.xml
 
