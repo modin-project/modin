@@ -24,7 +24,7 @@ import re
 from modin.config import Backend
 import numpy as np
 
-S3_ADDRESS_REGEX = re.compile("s3://(.*?)/(.*)")
+S3_ADDRESS_REGEX = re.compile("[sS]3://(.*?)/(.*)")
 NOT_IMPLEMENTED_MESSAGE = "Implement in children classes!"
 
 
@@ -241,6 +241,8 @@ class FileDispatcher:
         if isinstance(file_path, str):
             match = S3_ADDRESS_REGEX.search(file_path)
             if match is not None:
+                if file_path[0] == "S":
+                    file_path = "{}{}".format("s", file_path[1:])
                 import s3fs as S3FS
                 from botocore.exceptions import NoCredentialsError
 

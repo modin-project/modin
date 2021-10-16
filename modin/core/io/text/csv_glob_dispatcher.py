@@ -285,6 +285,8 @@ class CSVGlobDispatcher(CSVDispatcher):
         if isinstance(file_path, str):
             match = S3_ADDRESS_REGEX.search(file_path)
             if match is not None:
+                if file_path[0] == "S":
+                    file_path = "{}{}".format("s", file_path[1:])
                 import s3fs as S3FS
                 from botocore.exceptions import NoCredentialsError
 
@@ -314,6 +316,10 @@ class CSVGlobDispatcher(CSVDispatcher):
             List of strings of absolute file paths.
         """
         if S3_ADDRESS_REGEX.search(file_path):
+            # S3FS does not allow captial S in s3 addresses.
+            if file_path[0] == "S":
+                file_path = "{}{}".format("s", file_path[1:])
+
             import s3fs as S3FS
             from botocore.exceptions import NoCredentialsError
 

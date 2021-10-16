@@ -116,7 +116,7 @@ class TestCsvGlob:
     Engine.get() != "Ray", reason="Currently only support Ray engine for glob paths."
 )
 def test_read_multiple_csv_s3():
-    modin_df = pd.read_csv_glob("s3://noaa-ghcn-pds/csv/178*.csv")
+    modin_df = pd.read_csv_glob("S3://noaa-ghcn-pds/csv/178*.csv")
 
     # We have to specify the columns because the column names are not identical. Since we specified the column names, we also have to skip the original column names.
     pandas_dfs = [
