@@ -137,6 +137,44 @@ def find_common_type_cat(types):
 class PandasParser(object):
     """Base class for parser classes with pandas storage format."""
 
+    @staticmethod
+    @doc(_doc_parse_func, parameters=_doc_parse_parameters_common)
+    def generic_parse(fname, **kwargs):
+        warnings.filterwarnings("ignore")
+        num_splits = kwargs.pop("num_splits", None)
+        start = kwargs.pop("start", None)
+        end = kwargs.pop("end", None)
+        header_size = kwargs.pop("header_size", None)
+        callback = kwargs.pop("callback")
+        if start is None or end is None:
+            # This only happens when we are reading with only one worker (Default)
+            return callback(fname, **kwargs)
+
+        # pop "compression" from kwargs because bio is uncompressed
+        with OpenFile(fname, "rb", kwargs.pop("compression", "infer")) as bio:
+            header = b""
+            # In this case we beware that first line can contain BOM, so
+            # adding this line to the `header` for reading and then skip it
+            if kwargs.get("encoding", None) is not None and header_size == 0:
+                header += bio.readline()
+                # `skiprows` can be only None here, so don't check it's type
+                # and just set to 1
+                kwargs["skiprows"] = 1
+            for _ in range(header_size):
+                header += bio.readline()
+            bio.seek(start)
+            to_read = header + bio.read(end - start)
+        pandas_df = callback(BytesIO(to_read), **kwargs)
+        index = (
+            pandas_df.index
+            if not isinstance(pandas_df.index, pandas.RangeIndex)
+            else len(pandas_df)
+        )
+        return _split_result_for_readers(1, num_splits, pandas_df) + [
+            index,
+            pandas_df.dtypes,
+        ]
+
     @classmethod
     def get_dtypes(cls, dtypes_ids):
         """
@@ -227,64 +265,7 @@ class PandasCSVParser(PandasParser):
     @staticmethod
     @doc(_doc_parse_func, parameters=_doc_parse_parameters_common)
     def parse(fname, **kwargs):
-        warnings.filterwarnings("ignore")
-        num_splits = kwargs.pop("num_splits", None)
-        start = kwargs.pop("start", None)
-        end = kwargs.pop("end", None)
-        header_size = kwargs.pop("header_size", None)
-        encoding = kwargs.get("encoding", None)
-        callback = kwargs.pop("callback")
-        if start is None or end is None:
-            # This only happens when we are reading with only one worker (Default)
-            return callback(fname, **kwargs)
-
-        # pop "compression" from kwargs because bio is uncompressed
-        with OpenFile(
-            fname,
-            "rb",
-            kwargs.pop("compression", "infer"),
-            **(kwargs.pop("storage_options", None) or {}),
-        ) as bio:
-            # In this case we beware that first line can contain BOM, so
-            # adding this line to the `header` for reading and then skip it
-            header = b""
-            if encoding and (
-                "utf" in encoding
-                and "8" not in encoding
-                or encoding == "unicode_escape"
-                or encoding.replace("-", "_") == "utf_8_sig"
-            ):
-                # do not 'close' the wrapper - underlying buffer is managed by `bio` handle
-                fio = TextIOWrapper(bio, encoding=encoding, newline="")
-                if header_size == 0:
-                    header = fio.readline().encode(encoding)
-                    kwargs["skiprows"] = 1
-                for _ in range(header_size):
-                    header += fio.readline().encode(encoding)
-            elif encoding is not None:
-                if header_size == 0:
-                    header = bio.readline()
-                    # `skiprows` can be only None here, so don't check it's type
-                    # and just set to 1
-                    kwargs["skiprows"] = 1
-                for _ in range(header_size):
-                    header += bio.readline()
-            else:
-                for _ in range(header_size):
-                    header += bio.readline()
-
-            bio.seek(start)
-            to_read = header + bio.read(end - start)
-        pandas_df = callback(BytesIO(to_read), **kwargs)
-        index = (
-            pandas_df.index
-            if not isinstance(pandas_df.index, pandas.RangeIndex)
-            else len(pandas_df)
-        )
-        return _split_result_for_readers(1, num_splits, pandas_df) + [
-            index,
-            pandas_df.dtypes,
-        ]
+        return PandasParser.generic_parse(fname, **kwargs)
 
 
 @doc(_doc_pandas_parser_class, data_type="multiple CSV files simultaneously")
@@ -364,7 +345,7 @@ class PandasFWFParser(PandasParser):
     @staticmethod
     @doc(_doc_parse_func, parameters=_doc_parse_parameters_common)
     def parse(fname, **kwargs):
-        return PandasCSVParser.parse(fname, **kwargs)
+        return PandasParser.generic_parse(fname, **kwargs)
 
 
 @doc(_doc_pandas_parser_class, data_type="excel files")
