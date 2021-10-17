@@ -613,14 +613,13 @@ class TextFileDispatcher(FileDispatcher):
 
         return partition_ids, index_ids, dtypes_ids
 
-    # _read helper functions
     @classmethod
-    def _read_csv_check_support(
+    def _read_csv_fwf_check_support(
         cls,
         filepath_or_buffer: FilePathOrBuffer,
         read_kwargs: ReadCsvKwargsType,
         compression_infered: str,
-        fwf_specific: bool = False,
+        is_for_fwf_reader: bool = False,
     ) -> bool:
         """
         Check if passed parameters are supported by current `read_csv` or `read_fwf` implementation.
@@ -633,7 +632,7 @@ class TextFileDispatcher(FileDispatcher):
             Parameters of read_* function.
         compression_infered : str
             Inferred `compression` parameter of read_* function.
-        fwf_specific : bool, default: False
+        is_for_fwf_reader : bool, default: False
             Flag that determines when to check `read_fwf` function-specific parameters.
 
         Returns
@@ -654,7 +653,7 @@ class TextFileDispatcher(FileDispatcher):
         if read_kwargs["chunksize"] is not None:
             return False
 
-        if fwf_specific:
+        if is_for_fwf_reader:
             # If infer_nrows is a significant portion of the number of rows, pandas may be
             # faster.
             if read_kwargs["infer_nrows"] > 100:
@@ -665,7 +664,6 @@ class TextFileDispatcher(FileDispatcher):
     @classmethod
     @_inherit_docstrings(pandas.io.parsers.base_parser.ParserBase._validate_usecols_arg)
     def _validate_usecols_arg(cls, usecols):
-        # TODO: maybe delete
         msg = (
             "'usecols' must either be list-like of all strings, all unicode, "
             "all integers or a callable."
@@ -694,10 +692,10 @@ class TextFileDispatcher(FileDispatcher):
         header_size: int = 0,
     ) -> Tuple[Union[int, Sequence, Callable], bool, int]:
         """
-        Manage read_csv `skiprows` parameter.
+        Manage `skiprows` parameter of read_csv and read_fwf functions.
 
         Change `skiprows` parameter in the way Modin could more optimally
-        process it. `csv_dispatcher` have two mechanisms of rows skipping:
+        process it. `csv_dispatcher` and `fwf_dispatcher` have two mechanisms of rows skipping:
 
         1) During file partitioning (setting of file limits that should be read
         by each partition) exact rows can be excluded from partitioning scope,
@@ -710,7 +708,7 @@ class TextFileDispatcher(FileDispatcher):
         2) Rows for skipping can be dropped after full dataset import. This is
         more expensive way since it requires extra IO work and postprocessing
         afterwards, but `skiprows` parameter can be of any non-integer type
-        supported by `pandas.read_csv` `skiprows` parameter. These rows is
+        supported by any pandas read function. These rows is
         specified by setting of `skiprows_md` return value.
 
         In some cases, if `skiprows` is uniformly distributed array (e.g. [1,2,3]),
@@ -723,7 +721,7 @@ class TextFileDispatcher(FileDispatcher):
         Parameters
         ----------
         skiprows : int, array or callable, optional
-            Original `skiprows` parameter of read_csv function.
+            Original `skiprows` parameter of any pandas read function.
         header_size : int, default: 0
             Number of rows that are used by header.
 
@@ -731,7 +729,7 @@ class TextFileDispatcher(FileDispatcher):
         -------
         skiprows_md : int, array or callable
             Updated skiprows parameter. If `skiprows` is an array, this
-            array will be sorted and. Also parameter will be aligned to
+            array will be sorted. Also parameter will be aligned to
             actual data in the `query_compiler` (which, for example,
             doesn't contain header rows)
         pre_reading : int
@@ -934,7 +932,7 @@ class TextFileDispatcher(FileDispatcher):
         return new_query_compiler
 
     @classmethod
-    def _generic_read(cls, filepath_or_buffer, callback, fwf_specific, **kwargs):
+    def _generic_read(cls, filepath_or_buffer, callback, is_for_fwf_reader, **kwargs):
         """
         Read data from `filepath_or_buffer` according to `kwargs` parameters.
 
@@ -943,13 +941,13 @@ class TextFileDispatcher(FileDispatcher):
         Parameters
         ----------
         filepath_or_buffer : str, path object or file-like object
-            `filepath_or_buffer` parameter of `read_csv` function.
+            `filepath_or_buffer` parameter of read functions.
         callback : function
             Function that used in parsers. For example: `pandas.read_csv`.
-        fwf_specific : bool
+        is_for_fwf_reader : bool
             Flag that determines when to use `read_fwf` function-specific parameters.
         **kwargs : dict
-            Parameters of `read_csv` function.
+            Parameters of read functions.
 
         Returns
         -------
@@ -964,7 +962,7 @@ class TextFileDispatcher(FileDispatcher):
         compression_infered = cls.infer_compression(
             filepath_or_buffer, kwargs["compression"]
         )
-        # Getting frequently used read_csv kwargs;
+        # Getting frequently used kwargs;
         # They should be defined in higher level
         names = kwargs["names"]
         index_col = kwargs["index_col"]
@@ -987,11 +985,11 @@ class TextFileDispatcher(FileDispatcher):
             skiprows_md, int
         )
 
-        use_modin_impl = cls._read_csv_check_support(
+        use_modin_impl = cls._read_csv_fwf_check_support(
             filepath_or_buffer,
             kwargs,
             compression_infered,
-            fwf_specific=fwf_specific,
+            is_for_fwf_reader=is_for_fwf_reader,
         )
         if not use_modin_impl:
             return cls.single_worker_read(

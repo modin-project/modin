@@ -50,5 +50,8 @@ class CSVDispatcher(TextFileDispatcher):
         or callable - full data file will be read and only then rows will be dropped.
         """
         return cls._generic_read(
-            filepath_or_buffer, callback=pandas.read_csv, fwf_specific=False, **kwargs
+            filepath_or_buffer,
+            callback=pandas.read_csv,
+            is_for_fwf_reader=False,
+            **kwargs
         )

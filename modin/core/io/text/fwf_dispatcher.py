@@ -50,5 +50,8 @@ class FWFDispatcher(TextFileDispatcher):
         or callable - full data file will be read and only then rows will be dropped.
         """
         return cls._generic_read(
-            filepath_or_buffer, callback=pandas.read_fwf, fwf_specific=True, **kwargs
+            filepath_or_buffer,
+            callback=pandas.read_fwf,
+            is_for_fwf_reader=True,
+            **kwargs
         )
