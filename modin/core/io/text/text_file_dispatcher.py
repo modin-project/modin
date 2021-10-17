@@ -17,22 +17,22 @@ Module houses `TextFileDispatcher` class.
 `TextFileDispatcher` contains utils for text formats files, inherits util functions for
 files from `FileDispatcher` class and can be used as base class for dipatchers of SQL queries.
 """
-from csv import Dialect
-
-from modin.core.io.file_dispatcher import FileDispatcher
-from modin.core.storage_formats.pandas.utils import compute_chunksize
-from modin.utils import _inherit_docstrings
-from modin.core.io.text.utils import CustomNewlineIterator
-import numpy as np
 import warnings
 import os
 import codecs
 from typing import Union, Sequence, Optional, Tuple, Callable, Dict
+from csv import Dialect, QUOTE_NONE
+
+import numpy as np
 import pandas
 import pandas._libs.lib as lib
 from pandas._typing import FilePathOrBuffer
 from pandas.core.dtypes.common import is_list_like
 
+from modin.core.io.file_dispatcher import FileDispatcher, OpenFile
+from modin.core.storage_formats.pandas.utils import compute_chunksize
+from modin.utils import _inherit_docstrings
+from modin.core.io.text.utils import CustomNewlineIterator
 from modin.config import NPartitions
 
 ColumnNamesTypes = Tuple[Union[pandas.Index, pandas.MultiIndex, pandas.Int64Index]]
@@ -931,4 +931,133 @@ class TextFileDispatcher(FileDispatcher):
         if index_col is None:
             new_query_compiler._modin_frame.synchronize_labels(axis=0)
 
+        return new_query_compiler
+
+    @classmethod
+    def _generic_read(cls, filepath_or_buffer, callback, fwf_specific, **kwargs):
+        """
+        Read data from `filepath_or_buffer` according to `kwargs` parameters.
+
+        Used in `read_csv` and `read_fwf` Modin implementations.
+
+        Parameters
+        ----------
+        filepath_or_buffer : str, path object or file-like object
+            `filepath_or_buffer` parameter of `read_csv` function.
+        callback : function
+            Function that used in parsers. For example: `pandas.read_csv`.
+        fwf_specific : bool
+            Flag that determines when to use `read_fwf` function-specific parameters.
+        **kwargs : dict
+            Parameters of `read_csv` function.
+
+        Returns
+        -------
+        new_query_compiler : BaseQueryCompiler
+            Query compiler with imported data for further processing.
+        """
+        filepath_or_buffer_md = (
+            cls.get_path(filepath_or_buffer)
+            if isinstance(filepath_or_buffer, str)
+            else cls.get_path_or_buffer(filepath_or_buffer)
+        )
+        compression_infered = cls.infer_compression(
+            filepath_or_buffer, kwargs["compression"]
+        )
+        # Getting frequently used read_csv kwargs;
+        # They should be defined in higher level
+        names = kwargs["names"]
+        index_col = kwargs["index_col"]
+        encoding = kwargs["encoding"]
+        skiprows = kwargs["skiprows"]
+        header = kwargs["header"]
+        # Define header size for further skipping (Header can be skipped because header
+        # information will be obtained further from empty_df, so no need to handle it
+        # by workers)
+        header_size = cls._define_header_size(
+            header,
+            names,
+        )
+        (
+            skiprows_md,
+            pre_reading,
+            skiprows_partitioning,
+        ) = cls._manage_skiprows_parameter(skiprows, header_size)
+        should_handle_skiprows = skiprows_md is not None and not isinstance(
+            skiprows_md, int
+        )
+
+        use_modin_impl = cls._read_csv_check_support(
+            filepath_or_buffer,
+            kwargs,
+            compression_infered,
+            fwf_specific=fwf_specific,
+        )
+        if not use_modin_impl:
+            return cls.single_worker_read(
+                filepath_or_buffer, callback=callback, **kwargs
+            )
+
+        is_quoting = kwargs["quoting"] != QUOTE_NONE
+        quotechar = kwargs["quotechar"].encode(
+            encoding if encoding is not None else "UTF-8"
+        )
+        # In these cases we should pass additional metadata
+        # to the workers to match pandas output
+        pass_names = names in [None, lib.no_default] and (
+            skiprows is not None or kwargs["skipfooter"] != 0
+        )
+
+        pd_df_metadata = callback(
+            filepath_or_buffer,
+            **dict(kwargs, nrows=1, skipfooter=0, index_col=index_col),
+        )
+        column_names = pd_df_metadata.columns
+        column_widths, num_splits = cls._define_metadata(pd_df_metadata, column_names)
+
+        # kwargs that will be passed to the workers
+        partition_kwargs = dict(
+            kwargs,
+            fname=filepath_or_buffer_md,
+            num_splits=num_splits,
+            header_size=header_size if not pass_names else 0,
+            names=names if not pass_names else column_names,
+            header=header if not pass_names else "infer",
+            skipfooter=0,
+            skiprows=None,
+            nrows=None,
+            compression=compression_infered,
+        )
+
+        with OpenFile(filepath_or_buffer_md, "rb", compression_infered) as f:
+            splits = cls.partitioned_file(
+                f,
+                num_partitions=NPartitions.get(),
+                nrows=kwargs["nrows"] if not should_handle_skiprows else None,
+                skiprows=skiprows_partitioning,
+                quotechar=quotechar,
+                is_quoting=is_quoting,
+                header_size=header_size,
+                pre_reading=pre_reading,
+            )
+
+        partition_ids, index_ids, dtypes_ids = cls._launch_tasks(
+            splits, callback=callback, **partition_kwargs
+        )
+
+        new_query_compiler = cls._get_new_qc(
+            partition_ids=partition_ids,
+            index_ids=index_ids,
+            dtypes_ids=dtypes_ids,
+            index_col=index_col,
+            index_name=pd_df_metadata.index.name,
+            column_widths=column_widths,
+            column_names=column_names,
+            skiprows_md=skiprows_md if should_handle_skiprows else None,
+            header_size=header_size,
+            squeeze=kwargs["squeeze"],
+            skipfooter=kwargs["skipfooter"],
+            parse_dates=kwargs["parse_dates"],
+            nrows=kwargs["nrows"] if should_handle_skiprows else None,
+        )
         return new_query_compiler

@@ -15,10 +15,10 @@
 
 import pandas
 
-from modin.core.io.text.csv_dispatcher import CSVDispatcher
+from modin.core.io.text.text_file_dispatcher import TextFileDispatcher
 
 
-class FWFDispatcher(CSVDispatcher):
+class FWFDispatcher(TextFileDispatcher):
     """
     Class handles utils for reading of tables with fixed-width formatted lines.
 
@@ -49,6 +49,6 @@ class FWFDispatcher(CSVDispatcher):
         data file partitioning and wouldn't be actually read. If `skiprows` is array
         or callable - full data file will be read and only then rows will be dropped.
         """
-        return cls._general_read(
+        return cls._generic_read(
             filepath_or_buffer, callback=pandas.read_fwf, fwf_specific=True, **kwargs
         )
