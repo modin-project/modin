@@ -767,9 +767,7 @@ class TextFileDispatcher(FileDispatcher):
         6 - data to partition (divide between the rest of partitions)
         7 - data to partition (divide between the rest of partitions)
         """
-        pre_reading = 0
-        skiprows_partitioning = 0
-        skiprows_md = 0
+        pre_reading = skiprows_partitioning = skiprows_md = 0
         if isinstance(skiprows, int):
             skiprows_partitioning = skiprows
         elif is_list_like(skiprows):
@@ -874,7 +872,7 @@ class TextFileDispatcher(FileDispatcher):
             New query compiler, created from `new_frame`.
         """
         new_index, row_lengths = cls._define_index(index_ids, index_name)
-        # Compute dtypes by getting collecting and combining all of the partitions. The
+        # Compute dtypes by collecting and combining all of the partition dtypes. The
         # reported dtypes from differing rows can be different based on the inference in
         # the limited data seen by each worker. We use pandas to compute the exact dtype
         # over the whole column for each column. The index is set below.
@@ -912,11 +910,8 @@ class TextFileDispatcher(FileDispatcher):
                 )
             elif callable(skiprows_md):
                 mod_index = skiprows_md(index_range)
-                mod_index = (
-                    mod_index
-                    if isinstance(mod_index, np.ndarray)
-                    else mod_index.to_numpy("bool")
-                )
+                if not isinstance(mod_index, np.ndarray):
+                    mod_index = mod_index.to_numpy("bool")
                 view_idx = index_range[~mod_index]
                 new_query_compiler = new_query_compiler.view(index=view_idx)
             else:

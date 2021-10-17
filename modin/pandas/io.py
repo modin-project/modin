@@ -489,11 +489,9 @@ def read_fwf(
     Engine.subscribe(_update_engine)
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
     kwargs.update(kwargs.pop("kwds", {}))
-    default_kwargs = parser_defaults.copy()
-    default_kwargs.update(kwargs)
-    kwargs = default_kwargs
-
-    pd_obj = FactoryDispatcher.read_fwf(**kwargs)
+    target_kwargs = parser_defaults.copy()
+    target_kwargs.update(kwargs)
+    pd_obj = FactoryDispatcher.read_fwf(**target_kwargs)
     # When `read_fwf` returns a TextFileReader object for iterating through
     if isinstance(pd_obj, pandas.io.parsers.TextFileReader):
         reader = pd_obj.read
