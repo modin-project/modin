@@ -22,7 +22,7 @@ class FWFDispatcher(TextFileDispatcher):
     """
     Class handles utils for reading of tables with fixed-width formatted lines.
 
-    Inherits some common for text files util functions from `CSVDispatcher` class.
+    Inherits some common for text files util functions from `TextFileDispatcher` class.
     """
 
     @classmethod
