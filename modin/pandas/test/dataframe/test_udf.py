@@ -145,6 +145,28 @@ def test_apply_text_func_with_level(level, data, func, axis):
     )
 
 
+def test_explode():
+    # This test data has two columns where some items are lists that
+    # explode() should expand.
+    data = {
+        "A": [[0, 1, 2], "foo", [], [3, 4]],
+        "B": 1,
+        "C": [["a", "b", "c"], np.nan, [], ["d", "e"]],
+    }
+    eval_general(pd.DataFrame(data), pandas.DataFrame(data), lambda df: df.explode("A"))
+    eval_general(
+        pd.DataFrame(data), pandas.DataFrame(data), lambda df: df.explode("A", True)
+    )
+    eval_general(
+        pd.DataFrame(data), pandas.DataFrame(data), lambda df: df.explode(["A", "C"])
+    )
+    eval_general(
+        pd.DataFrame(data),
+        pandas.DataFrame(data),
+        lambda df: df.explode(["A", "C"], True),
+    )
+
+
 @pytest.mark.parametrize("axis", ["rows", "columns"])
 @pytest.mark.parametrize("args", [(1,), ("_A",)])
 def test_apply_args(axis, args):

@@ -2108,6 +2108,24 @@ class BaseQueryCompiler(abc.ABC):
             self, func=func, axis=axis, *args, **kwargs
         )
 
+    def explode(self, column):
+        """
+        Explode the given columns.
+
+        Parameters
+        ----------
+        column : Union[Hashable, Sequence[Hashable]]
+            The columns to explode.
+
+        Returns
+        -------
+        BaseQueryCompiler
+            QueryCompiler that contains the results of execution. For each row
+            in the input QueryCompiler, if the selected columns each contain M
+            items, there will be M rows created by exploding the columns.
+        """
+        return DataFrameDefault.register(pandas.DataFrame.explode)(self, column)
+
     # END UDF
 
     # Manual Partitioning methods (e.g. merge, groupby)

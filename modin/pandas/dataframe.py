@@ -816,9 +816,7 @@ class DataFrame(BasePandasDataset):
         """
         Transform each element of a list-like to a row, replicating index values.
         """
-        return self._default_to_pandas(
-            pandas.DataFrame.explode, column, ignore_index=ignore_index
-        )
+        return super(DataFrame, self).explode(column, ignore_index)
 
     def _update_var_dicts_in_kwargs(self, expr, kwargs):
         """

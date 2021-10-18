@@ -1004,7 +1004,9 @@ class Series(BasePandasDataset):
         """
         Transform each element of a list-like to a row.
         """
-        return self._default_to_pandas(pandas.Series.explode, ignore_index=ignore_index)
+        return super(Series, self).explode(
+            "__reduced__" if self.name is None else self.name, ignore_index
+        )
 
     def factorize(self, sort=False, na_sentinel=-1):  # noqa: PR01, RT01, D200
         """

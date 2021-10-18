@@ -2324,6 +2324,11 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
     # END Insert
 
+    def explode(self, column):
+        return self.__constructor__(
+            self._modin_frame.explode(1, lambda df: df.explode(column))
+        )
+
     # UDF (apply and agg) methods
     # There is a wide range of behaviors that are supported, so a lot of the
     # logic can get a bit convoluted.
