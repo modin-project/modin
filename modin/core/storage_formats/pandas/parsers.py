@@ -687,7 +687,12 @@ class PandasFeatherParser(PandasParser):
         num_splits = kwargs.pop("num_splits", None)
         if num_splits is None:
             return pandas.read_feather(fname, **kwargs)
-        df = feather.read_feather(fname, **kwargs)
+
+        with OpenFile(
+            fname,
+            **(kwargs.pop("storage_options", None) or {}),
+        ) as file:
+            df = feather.read_feather(file, **kwargs)
         # Append the length of the index here to build it externally
         return _split_result_for_readers(0, num_splits, df) + [len(df.index), df.dtypes]
 
