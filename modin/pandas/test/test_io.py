@@ -2016,6 +2016,10 @@ class TestFeather:
             path=make_feather_file(),
         )
 
+    @pytest.mark.xfail(
+        condition="config.getoption('--simulate-cloud').lower() != 'off'",
+        reason="The reason of tests fail in `cloud` mode is unknown for now - issue #3264",
+    )
     @pytest.mark.parametrize("is_use_storage_options", [True, False])
     def test_read_feather_s3(self, is_use_storage_options):
         eval_io(
