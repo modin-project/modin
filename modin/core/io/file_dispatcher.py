@@ -74,15 +74,17 @@ class OpenFile:
         """
         try:
             from botocore.exceptions import NoCredentialsError
+
+            credential_error_type = (NoCredentialsError,)
         except ModuleNotFoundError:
-            pass
+            credential_error_type = ()
 
         args = (self.file_path, self.mode, self.compression)
 
         self.file = fsspec.open(*args, anon=False)
         try:
             return self.file.open()
-        except NoCredentialsError:
+        except credential_error_type:
             self.file = fsspec.open(*args, anon=True)
         return self.file.open()
 
