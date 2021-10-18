@@ -176,9 +176,7 @@ class TextFileDispatcher(FileDispatcher):
         """
         if is_quoting:
             chunk = f.read(offset_size)
-            outside_quotes = (
-                not (chunk.count(quotechar) - chunk.count(b"\\" + quotechar)) % 2
-            )
+            outside_quotes = not chunk.count(quotechar) % 2
         else:
             f.seek(offset_size, os.SEEK_CUR)
             outside_quotes = True
@@ -387,11 +385,7 @@ class TextFileDispatcher(FileDispatcher):
                 if len(lines) != 1:
                     for line in lines[:-1]:
                         bytes_read += len(line) + len(newline)
-                        if (
-                            is_quoting
-                            and (line.count(quotechar) - line.count(b"\\" + quotechar))
-                            % 2
-                        ):
+                        if is_quoting and line.count(quotechar) % 2:
                             outside_quotes = not outside_quotes
                         if outside_quotes:
                             rows_read += 1
@@ -405,10 +399,7 @@ class TextFileDispatcher(FileDispatcher):
                     chunk = lines[-1] + chunk
         else:
             for line in f:
-                if (
-                    is_quoting
-                    and (line.count(quotechar) - line.count(b"\\" + quotechar)) % 2
-                ):
+                if is_quoting and line.count(quotechar) % 2:
                     outside_quotes = not outside_quotes
                 if outside_quotes:
                     rows_read += 1
