@@ -23,6 +23,7 @@ from modin.utils import to_pandas
 from modin.pandas.utils import from_arrow
 import pyarrow as pa
 import os
+import sys
 import shutil
 import sqlalchemy as sa
 import csv
@@ -532,7 +533,13 @@ class TestCsv:
             "iso-8859-1",
             "cp1252",
             "utf8",
-            "unicode_escape",
+            pytest.param(
+                "unicode_escape",
+                marks=pytest.mark.skip(
+                    condition=sys.version_info < (3, 9),
+                    reason="https://bugs.python.org/issue45461",
+                ),
+            ),
             "raw_unicode_escape",
             "utf16",
             "utf_16_le",
