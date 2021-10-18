@@ -9,8 +9,8 @@ Install XGBoost on Modin
 ------------------------
 
 Modin comes with all the dependencies except ``xgboost`` package by default.
-Currently, distributed XGBoost on Modin is only supported on the Ray backend, therefore, see
-the :doc:`installation page </installation>` for more information on installing Modin with the Ray backend.
+Currently, distributed XGBoost on Modin is only supported on the Ray execution engine, therefore, see
+the :doc:`installation page </installation>` for more information on installing Modin with the Ray engine.
 To install ``xgboost`` package you can use ``pip``:
 
 .. code-block:: bash

@@ -26,7 +26,7 @@ Usage Guide
 
 The most efficient way to create Modin ``Series`` is to import data from external
 storage using the highly efficient Modin IO methods (for example using ``pd.read_csv``,
-see details for Modin IO methods in the :doc:`separate section </flow/modin/engines/base/io>`),
+see details for Modin IO methods in the :doc:`separate section </flow/modin/core/io/index>`),
 but even if the data does not originate from a file, any pandas supported data type or
 ``pandas.Series`` can be used. Internally, the ``Series`` data is divided into
 partitions, which number along an axis usually corresponds to the number of the user's hardware CPUs. If needed,
@@ -82,10 +82,10 @@ Let's consider simple example of creation and interacting with Modin ``Series``:
 
     # List of `Series` partitions
 
-    [[<modin.engines.ray.pandas_on_ray.frame.partition.PandasOnRayFramePartition object at 0x000001E7CD11BD60>]
-    [<modin.engines.ray.pandas_on_ray.frame.partition.PandasOnRayFramePartition object at 0x000001E7CD11BE50>]
-    [<modin.engines.ray.pandas_on_ray.frame.partition.PandasOnRayFramePartition object at 0x000001E7CD11BF40>]
-    [<modin.engines.ray.pandas_on_ray.frame.partition.PandasOnRayFramePartition object at 0x000001E7CD13E070>]]
+    [[<modin.core.execution.ray.implementations.pandas_on_ray.partitioning.partition.PandasOnRayFramePartition object at 0x7fc554e607f0>]
+    [<modin.core.execution.ray.implementations.pandas_on_ray.partitioning.partition.PandasOnRayFramePartition object at 0x7fc554e9a4f0>]
+    [<modin.core.execution.ray.implementations.pandas_on_ray.partitioning.partition.PandasOnRayFramePartition object at 0x7fc554e60820>]
+    [<modin.core.execution.ray.implementations.pandas_on_ray.partitioning.partition.PandasOnRayFramePartition object at 0x7fc554e609d0>]]
 
     # The first `Series` partition
     

@@ -36,17 +36,17 @@ API.
 
     import os
 
-    # Setting `MODIN_BACKEND` environment variable.
+    # Setting `MODIN_STORAGE_FORMAT` environment variable.
     # Also can be set outside the script.
-    os.environ["MODIN_BACKEND"] = "OmniSci"
+    os.environ["MODIN_STORAGE_FORMAT"] = "OmniSci"
 
     import modin.config
     import modin.pandas as pd
 
-    # Checking initially set `Backend` config,
-    # which corresponds to `MODIN_BACKEND` environment
+    # Checking initially set `StorageFormat` config,
+    # which corresponds to `MODIN_STORAGE_FORMAT` environment
     # variable
-    print(modin.config.Backend.get()) # prints 'Omnisci'
+    print(modin.config.StorageFormat.get()) # prints 'Omnisci'
 
     # Checking default value of `NPartitions`
     print(modin.config.NPartitions.get()) # prints '8'

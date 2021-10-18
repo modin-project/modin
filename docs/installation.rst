@@ -53,7 +53,7 @@ or for different functionalities of Modin. Here is a list of dependency sets for
 
 .. code-block:: bash
 
-  pip install "modin[dask]" # If you want to use the Dask backend
+  pip install "modin[dask]" # If you want to use the Dask execution engine
 
 Installing with conda
 ---------------------

@@ -56,8 +56,8 @@ For the simplicity the other backend systems - Dask and MPI are omitted and only
 * Query Executor is responsible for getting the Dataframe Algebra DAG, performing further optimizations based
   on a selected backend execution subsystem and mapping or compiling the Dataframe Algebra DAG to and actual
   execution sequence.
-* Backends module is responsible for mapping the abstract operation to an actual executor call, e.g. Pandas,
-  PyArrow, custom backend.
+* Storage formats module is responsible for mapping the abstract operation to an actual executor call, e.g. Pandas,
+  PyArrow, custom formats.
 * Orchestration subsystem is responsible for spawning and controlling the actual execution environment for the
   selected backend. It spawns the actual nodes, fires up the execution environment, e.g. Ray, monitors the state
   of executors and provides telemetry
@@ -65,14 +65,14 @@ For the simplicity the other backend systems - Dask and MPI are omitted and only
 Component View
 --------------
 .. toctree::
-   ../flow/modin/engines/base/frame/index
-   ../flow/modin/engines/ray/generic
-   ../flow/modin/engines/ray/pandas_on_ray/frame/index
-   ../flow/modin/engines/ray/cudf_on_ray/frame/index
-   ../flow/modin/engines/dask/pandas_on_dask/frame/index
+   ../flow/modin/core/dataframe/pandas/index
+   ../flow/modin/core/execution/ray/generic
+   ../flow/modin/core/execution/ray/implementations/pandas_on_ray/index
+   ../flow/modin/core/execution/ray/implementations/cudf_on_ray/index
+   ../flow/modin/core/execution/dask/implementations/pandas_on_dask/index
    ../flow/modin/experimental/index
-   ../flow/modin/backends/index
-   ../flow/modin/engines/python/pandas_on_python/frame/index
+   ../flow/modin/core/storage_formats/index
+   ../flow/modin/core/execution/python/implementations/pandas_on_python/index
 
 
 DataFrame Partitioning
@@ -285,57 +285,60 @@ by documentation for now, the rest is coming soon...).
    ├───docs
    ├───examples
    ├───modin
-   │   ├─── :doc:`backends </flow/modin/backends/index>`
-   │   │   ├───base
-   │   │   │   └─── :doc:`query_compiler </flow/modin/backends/base/query_compiler>`
-   │   │   ├─── :doc:`pandas </flow/modin/backends/pandas/index>`
-   │   │   |   ├─── :doc:`parsers </flow/modin/backends/pandas/parsers>`
-   │   │   │   └─── :doc:`query_compiler </flow/modin/backends/pandas/query_compiler>`
-   │   │   └─── :doc:`pyarrow </flow/modin/backends/pyarrow/index>`
-   │   │   |   ├─── :doc:`parsers </flow/modin/backends/pyarrow/parsers>`
-   │   │   │   └─── :doc:`query_compiler </flow/modin/backends/pyarrow/query_compiler>`
    │   ├─── :doc:`config </flow/modin/config>`
-   │   ├───data_management
-   │   │   ├─── :doc:`factories </flow/modin/data_management/factories>`
-   │   │   └─── :doc:`functions </flow/modin/data_management/functions>`
+   │   ├───core
+   │   │   ├─── :doc:`dataframe </flow/modin/core/dataframe/index>`
+   │   │   │   ├─── :doc:`algebra </flow/modin/core/dataframe/algebra>`
+   │   │   │   ├─── :doc:`base </flow/modin/core/dataframe/base/index>`
+   │   │   │   │   ├───dataframe
+   │   │   │   │   └───partitioning
+   │   │   │   └─── :doc:`pandas </flow/modin/core/dataframe/pandas/index>`
+   │   │   ├───execution
+   │   │   │   ├───dask
+   │   │   │   │   ├───common
+   │   │   │   │   └───implementations
+   │   │   │   │       └─── :doc:`pandas_on_dask </flow/modin/core/execution/dask/implementations/pandas_on_dask/index>`
+   │   │   │   ├─── :doc:`dispatching </flow/modin/core/execution/dispatching>`
+   │   │   │   ├───python
+   │   │   │   │   └───implementations
+   │   │   │   │       └─── :doc:`pandas_on_python </flow/modin/core/execution/python/implementations/pandas_on_python/index>`
+   │   │   │   └───ray
+   │   │   │       ├───common
+   │   │   │       ├─── :doc:`generic </flow/modin/core/execution/ray/generic>`
+   │   │   │       └───implementations
+   │   │   │           ├─── :doc:`cudf_on_ray </flow/modin/core/execution/ray/implementations/cudf_on_ray/index>`
+   │   │   │           └─── :doc:`pandas_on_ray </flow/modin/core/execution/ray/implementations/pandas_on_ray/index>`
+   │   │   ├─── :doc:`io </flow/modin/core/io/index>`
+   │   │   └─── :doc:`storage_formats </flow/modin/core/storage_formats/index>`
+   │   │       ├─── :doc:`base </flow/modin/core/storage_formats/base/query_compiler>`
+   │   │       ├───cudf
+   │   │       ├─── :doc:`pandas </flow/modin/core/storage_formats/pandas/index>`             
+   │   │       └─── :doc:`pyarrow </flow/modin/core/storage_formats/pyarrow/index>`
    │   ├───distributed
-   │   │   └───dataframe
-   │   │       └─── :doc:`pandas </flow/modin/distributed/dataframe/pandas>`
-   │   ├───engines
-   │   │   ├───base
-   │   │   │   ├─── :doc:`frame </flow/modin/engines/base/frame/index>`
-   │   │   │   └─── :doc:`io </flow/modin/engines/base/io>`
-   │   │   ├───dask
-   │   │   │   └───pandas_on_dask
-   │   │   |       └─── :doc:`frame </flow/modin/engines/dask/pandas_on_dask/frame/index>`
-   │   │   ├───python
-   │   │   │   └───pandas_on_python
-   │   │   │       └─── :doc:`frame </flow/modin/engines/python/pandas_on_python/frame/index>`
-   │   │   └───ray
-   │   │       ├─── :doc:`generic </flow/modin/engines/ray/generic>`
-   │   │       ├───cudf_on_ray
-   │   │       │   ├─── :doc:`frame </flow/modin/engines/ray/cudf_on_ray/frame/index>`
-   │   │       │   └─── :doc:`io </flow/modin/engines/ray/cudf_on_ray/io>`
-   │   │       └───pandas_on_ray
-   │   │           └─── :doc:`frame </flow/modin/engines/ray/pandas_on_ray/frame/index>`
-   │   ├── :doc:`experimental </flow/modin/experimental/experimental>`
-   │   │   ├─── :doc:`backends </flow/modin/experimental/backends/index>`
-   │   │   │   └─── :doc:`omnisci </flow/modin/experimental/backends/omnisci/index>`
-   │   │   │       └─── :doc:`query_compiler </flow/modin/experimental/backends/omnisci/query_compiler>`
+   │   │   ├───dataframe
+   │   │   │   └─── :doc:`pandas </flow/modin/distributed/dataframe/pandas>`
+   │   ├─── :doc:`experimental </flow/modin/experimental/experimental>`
    │   │   ├───cloud
-   │   │   ├───engines
-   │   │   │   ├─── :doc:`omnisci_on_native </flow/modin/experimental/engines/omnisci_on_native/frame/index>`
-   │   │   │   ├─── :doc:`pandas_on_ray </flow/modin/experimental/engines/pandas_on_ray>`
-   │   │   │   └─── :doc:`pyarrow_on_ray </flow/modin/experimental/engines/pyarrow_on_ray>`
+   │   │   ├───core
+   │   │   │   ├───execution
+   │   │   │   │   ├───native
+   │   │   │   │   │   └───implementations
+   │   │   │   │   │       └─── :doc:`omnisci_on_native </flow/modin/experimental/core/execution/native/implementations/omnisci_on_native/index>`
+   │   │   │   │   └───ray
+   │   │   │   │       └───implementations
+   │   │   │   │           ├─── :doc:`pandas_on_ray </flow/modin/experimental/core/execution/ray/implementations/pandas_on_ray>`
+   │   │   │   │           └─── :doc:`pyarrow_on_ray </flow/modin/experimental/core/execution/ray/implementations/pyarrow_on_ray>`
+   │   │   │   └─── :doc:`storage_formats </flow/modin/experimental/core/storage_formats/index>`
+   │   │   │       └─── :doc:`omnisci </flow/modin/experimental/core/storage_formats/omnisci/index>`
    │   │   ├─── :doc:`pandas </flow/modin/experimental/pandas>`
    │   │   ├─── :doc:`sklearn </flow/modin/experimental/sklearn>`
+   │   │   ├───spreadsheet
    │   │   ├───sql
    │   │   └─── :doc:`xgboost </flow/modin/experimental/xgboost>`
    │   ├───pandas
    │   │   ├─── :doc:`dataframe </flow/modin/pandas/dataframe>`
    │   │   └─── :doc:`series </flow/modin/pandas/series>`
-   │   ├───spreadsheet
-   │   └───sql
+   │   └───spreadsheet
    ├───requirements
    ├───scripts
    └───stress_tests
@@ -343,7 +346,7 @@ by documentation for now, the rest is coming soon...).
 .. _pandas Dataframe: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.html
 .. _Arrow tables: https://arrow.apache.org/docs/python/generated/pyarrow.Table.html
 .. _Ray: https://github.com/ray-project/ray
-.. _code: https://github.com/modin-project/modin/blob/master/modin/engines/base/frame/data.py
+.. _code: https://github.com/modin-project/modin/blob/master/modin/core/dataframe
 .. _Dask Futures: https://docs.dask.org/en/latest/futures.html
 .. _issue: https://github.com/modin-project/modin/issues
 .. _Discourse: https://discuss.modin.org
