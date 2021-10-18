@@ -610,7 +610,12 @@ class PandasJSONParser(PandasParser):
         end = kwargs.pop("end", None)
         if start is not None and end is not None:
             # pop "compression" from kwargs because bio is uncompressed
-            with OpenFile(fname, "rb", kwargs.pop("compression", "infer")) as bio:
+            with OpenFile(
+                fname,
+                "rb",
+                kwargs.pop("compression", "infer"),
+                **(kwargs.pop("storage_options", None) or {}),
+            ) as bio:
                 bio.seek(start)
                 to_read = b"" + bio.read(end - start)
             columns = kwargs.pop("columns")

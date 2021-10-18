@@ -1354,6 +1354,16 @@ class TestJson:
             lines=lines,
         )
 
+    @pytest.mark.parametrize("is_use_storage_options", [True, False])
+    def test_read_json_s3(self, is_use_storage_options):
+        eval_io(
+            fn_name="read_json",
+            path_or_buf="s3://modin-datasets/testing/test_data.json",
+            lines=True,
+            orient="records",
+            storage_options={"anon": True} if is_use_storage_options else None,
+        )
+
     def test_read_json_categories(self):
         eval_io(
             fn_name="read_json",
