@@ -1951,6 +1951,14 @@ class TestFwf:
 
         df_equals(modin_df, pandas_df)
 
+    @pytest.mark.parametrize("is_use_storage_options", [True, False])
+    def test_read_fwf_s3(self, is_use_storage_options):
+        eval_io(
+            fn_name="read_fwf",
+            filepath_or_buffer="s3://modin-datasets/testing/test_data.fwf",
+            storage_options={"anon": True} if is_use_storage_options else None,
+        )
+
 
 class TestGbq:
     @pytest.mark.xfail(reason="Need to verify GBQ access")
