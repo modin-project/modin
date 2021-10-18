@@ -35,20 +35,25 @@ test_cluster = create_cluster(
     "aws",
     "aws_credentials",
     cluster_name="rayscale-test",
-    region="eu-north-1",
-    zone="eu-north-1b",
-    image="ami-00e1e82d7d4ca80d3",
+    region="eu-central-1",
+    zone="eu-central-1b",
+    image="ami-05f7491af5eef733a",
     **cluster_params,
 )
 with test_cluster:
-    data_file = "https://modin-datasets.s3.amazonaws.com/trips_data.csv"
     if USE_OMNISCI:
-        # Workaround for GH#2099
         from modin.experimental.cloud import get_connection
 
-        data_file, remote_data_file = "/tmp/trips_data.csv", data_file
-        get_connection().modules["subprocess"].check_call(
-            ["wget", remote_data_file, "-O", data_file]
+        # We should move omniscripts trigger in remote conext
+        import modin.experimental.engines.omnisci_on_native.frame.omnisci_worker
+
+        OmnisciServer = (
+            get_connection()
+            .modules["modin.experimental.engines.omnisci_on_native.frame.omnisci_worker"]
+            .OmnisciServer
+        )
+        modin.experimental.engines.omnisci_on_native.frame.omnisci_worker.OmnisciServer = (
+            OmnisciServer
         )
 
         # Omniscripts check for files being present when given local file paths,
@@ -58,8 +63,7 @@ with test_cluster:
         utils.utils.glob = get_connection().modules["glob"]
 
     parameters = {
-        "data_file": data_file,
-        # "data_file": "s3://modin-datasets/trips_data.csv",
+        "data_file": "s3://modin-datasets/cloud/taxi/trips_xaa.csv",
         "dfiles_num": 1,
         "validation": False,
         "no_ibis": True,
