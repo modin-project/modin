@@ -72,18 +72,21 @@ class OpenFile:
         fsspec.core.OpenFile
             The opened file.
         """
-        from botocore.exceptions import NoCredentialsError
-
         try:
-            self.file = fsspec.open(
-                self.file_path, self.mode, self.compression, anon=False
-            )
+            from botocore.exceptions import NoCredentialsError
+
+            credential_error_type = (NoCredentialsError,)
+        except ModuleNotFoundError:
+            credential_error_type = ()
+
+        args = (self.file_path, self.mode, self.compression)
+
+        self.file = fsspec.open(*args, anon=False)
+        try:
             return self.file.open()
-        except NoCredentialsError:
-            self.file = fsspec.open(
-                self.file_path, self.mode, self.compression, anon=True
-            )
-            return self.file.open()
+        except credential_error_type:
+            self.file = fsspec.open(*args, anon=True)
+        return self.file.open()
 
     def __exit__(self, *args):
         """
