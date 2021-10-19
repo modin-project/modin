@@ -2538,9 +2538,9 @@ class BaseQueryCompiler(abc.ABC):
 
         Parameters
         ----------
-        index : list of ints, optional
+        index : list-like of ints, optional
             Positional indices of rows to grab.
-        columns : list of ints, optional
+        columns : list-like of ints, optional
             Positional indices of columns to grab.
 
         Returns
