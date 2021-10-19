@@ -224,13 +224,6 @@ def eval_to_file(modin_obj, pandas_obj, fn, extension, **fn_kwargs):
     reason="Segmentation fault; see PR #2347 ffor details",
 )
 class TestCsv:
-    def test_just_test(self):
-        for i in range(8):
-            pd.DataFrame([1, 2, 3, 4]).to_csv("initial-data.csv", index=False)
-            df = pd.read_csv("initial-data.csv")
-            df.index[df.isnull().all(axis=1)].values.tolist()
-            df.columns[df.isnull().all(axis=0)].values.tolist()
-
     # delimiter tests
     @pytest.mark.parametrize("sep", [None, "_", ",", ".", "\n"])
     @pytest.mark.parametrize("delimiter", ["_", ",", ".", "\n"])
