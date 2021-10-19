@@ -324,7 +324,6 @@ models = [
 for i in models:
     model = i
     cv_result = cross_val_score(model, X, Y, cv=kfold, scoring="accuracy")
-    cv_result = cv_result
     xyz.append(cv_result.mean())
     std.append(cv_result.std())
     accuracy.append(cv_result)

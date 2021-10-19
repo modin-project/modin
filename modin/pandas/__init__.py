@@ -13,7 +13,7 @@
 
 import pandas
 
-__pandas_version__ = "1.3.2"
+__pandas_version__ = "1.3.4"
 
 if pandas.__version__ != __pandas_version__:
     import warnings
@@ -85,6 +85,7 @@ from pandas import (
     datetime,
     NamedAgg,
     NA,
+    api,
 )
 import os
 import multiprocessing
@@ -106,19 +107,22 @@ def _update_engine(publisher: Parameter):
     from modin.config import Backend, CpuCount
 
     if publisher.get() == "Ray":
-        from modin.engines.ray.utils import initialize_ray
+        if _is_first_update.get("Ray", True):
+            from modin.core.execution.ray.common.utils import initialize_ray
 
+            initialize_ray()
+    elif publisher.get() == "Native":
         # With OmniSci backend there is only a single worker per node
         # and we allow it to work on all cores.
         if Backend.get() == "Omnisci":
-            CpuCount.put(1)
-            os.environ["OMP_NUM_THREADS"] = str(multiprocessing.cpu_count())
-        if _is_first_update.get("Ray", True):
-            initialize_ray()
-
+            os.environ["OMP_NUM_THREADS"] = str(CpuCount.get())
+        else:
+            raise ValueError(
+                f"Backend should be 'Omnisci' with 'Native' engine, but provided {Backend.get()}."
+            )
     elif publisher.get() == "Dask":
         if _is_first_update.get("Dask", True):
-            from modin.engines.dask.utils import initialize_dask
+            from modin.core.execution.dask.common.utils import initialize_dask
 
             initialize_dask()
     elif publisher.get() == "Cloudray":
@@ -131,7 +135,7 @@ def _update_engine(publisher: Parameter):
             def init_remote_ray(partition):
                 from ray import ray_constants
                 import modin
-                from modin.engines.ray.utils import initialize_ray
+                from modin.core.execution.ray.common.utils import initialize_ray
 
                 modin.set_backends("Ray", partition)
                 initialize_ray(
@@ -143,13 +147,20 @@ def _update_engine(publisher: Parameter):
             init_remote_ray(Backend.get())
             # import FactoryDispatcher here to initialize IO class
             # so it doesn't skew read_csv() timings later on
-            import modin.data_management.factories.dispatcher  # noqa: F401
+            import modin.core.execution.dispatching.factories.dispatcher  # noqa: F401
         else:
             get_connection().modules["modin"].set_backends("Ray", Backend.get())
     elif publisher.get() == "Cloudpython":
         from modin.experimental.cloud import get_connection
 
         get_connection().modules["modin"].set_backends("Python")
+    elif publisher.get() == "Cloudnative":
+        from modin.experimental.cloud import get_connection
+
+        assert (
+            Backend.get() == "Omnisci"
+        ), f"Backend should be 'Omnisci' with 'Cloudnative' engine, but provided {Backend.get()}."
+        get_connection().modules["modin"].set_backends("Native", "OmniSci")
 
     elif publisher.get() not in _NOINIT_ENGINES:
         raise ImportError("Unrecognized execution engine: {}.".format(publisher.get()))
@@ -313,6 +324,7 @@ __all__ = [
     "value_counts",
     "datetime",
     "NamedAgg",
+    "api",
 ]
 
 del pandas, Engine, Parameter

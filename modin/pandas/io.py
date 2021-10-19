@@ -26,7 +26,7 @@ import pandas._libs.lib as lib
 import pathlib
 import re
 from collections import OrderedDict
-from pandas._typing import FilePathOrBuffer, StorageOptions
+from pandas._typing import CompressionOptions, FilePathOrBuffer, StorageOptions
 from typing import Union, IO, AnyStr, Sequence, Dict, List, Optional, Any
 
 from modin.error_message import ErrorMessage
@@ -53,9 +53,10 @@ def _read(**kwargs):
     -------
     modin.pandas.DataFrame
     """
-    from modin.data_management.factories.dispatcher import FactoryDispatcher
+    from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
 
     Engine.subscribe(_update_engine)
+    squeeze = kwargs.pop("squeeze", False)
     pd_obj = FactoryDispatcher.read_csv(**kwargs)
     # This happens when `read_csv` returns a TextFileReader object for iterating through
     if isinstance(pd_obj, pandas.io.parsers.TextFileReader):
@@ -64,7 +65,10 @@ def _read(**kwargs):
             query_compiler=reader(*args, **kwargs)
         )
         return pd_obj
-    return DataFrame(query_compiler=pd_obj)
+    result = DataFrame(query_compiler=pd_obj)
+    if squeeze:
+        return result.squeeze(axis=1)
+    return result
 
 
 @_inherit_docstrings(pandas.read_csv)
@@ -205,7 +209,7 @@ def read_parquet(
     use_nullable_dtypes: bool = False,
     **kwargs,
 ):
-    from modin.data_management.factories.dispatcher import FactoryDispatcher
+    from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
 
     Engine.subscribe(_update_engine)
     return DataFrame(
@@ -242,7 +246,7 @@ def read_json(
 ):
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
 
-    from modin.data_management.factories.dispatcher import FactoryDispatcher
+    from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
 
     Engine.subscribe(_update_engine)
     return DataFrame(query_compiler=FactoryDispatcher.read_json(**kwargs))
@@ -267,7 +271,7 @@ def read_gbq(
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
     kwargs.update(kwargs.pop("kwargs", {}))
 
-    from modin.data_management.factories.dispatcher import FactoryDispatcher
+    from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
 
     Engine.subscribe(_update_engine)
     return DataFrame(query_compiler=FactoryDispatcher.read_gbq(**kwargs))
@@ -293,7 +297,7 @@ def read_html(
 ):
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
 
-    from modin.data_management.factories.dispatcher import FactoryDispatcher
+    from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
 
     Engine.subscribe(_update_engine)
     return DataFrame(query_compiler=FactoryDispatcher.read_html(**kwargs))
@@ -304,7 +308,7 @@ def read_clipboard(sep=r"\s+", **kwargs):  # pragma: no cover
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
     kwargs.update(kwargs.pop("kwargs", {}))
 
-    from modin.data_management.factories.dispatcher import FactoryDispatcher
+    from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
 
     Engine.subscribe(_update_engine)
     return DataFrame(query_compiler=FactoryDispatcher.read_clipboard(**kwargs))
@@ -341,7 +345,7 @@ def read_excel(
 ):
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
 
-    from modin.data_management.factories.dispatcher import FactoryDispatcher
+    from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
 
     Engine.subscribe(_update_engine)
     intermediate = FactoryDispatcher.read_excel(**kwargs)
@@ -371,7 +375,7 @@ def read_hdf(
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
     kwargs.update(kwargs.pop("kwargs", {}))
 
-    from modin.data_management.factories.dispatcher import FactoryDispatcher
+    from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
 
     Engine.subscribe(_update_engine)
     return DataFrame(query_compiler=FactoryDispatcher.read_hdf(**kwargs))
@@ -386,7 +390,7 @@ def read_feather(
 ):
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
 
-    from modin.data_management.factories.dispatcher import FactoryDispatcher
+    from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
 
     Engine.subscribe(_update_engine)
     return DataFrame(query_compiler=FactoryDispatcher.read_feather(**kwargs))
@@ -409,7 +413,7 @@ def read_stata(
 ):
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
 
-    from modin.data_management.factories.dispatcher import FactoryDispatcher
+    from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
 
     Engine.subscribe(_update_engine)
     return DataFrame(query_compiler=FactoryDispatcher.read_stata(**kwargs))
@@ -426,7 +430,7 @@ def read_sas(
 ):  # pragma: no cover
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
 
-    from modin.data_management.factories.dispatcher import FactoryDispatcher
+    from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
 
     Engine.subscribe(_update_engine)
     return DataFrame(query_compiler=FactoryDispatcher.read_sas(**kwargs))
@@ -440,7 +444,7 @@ def read_pickle(
 ):
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
 
-    from modin.data_management.factories.dispatcher import FactoryDispatcher
+    from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
 
     Engine.subscribe(_update_engine)
     return DataFrame(query_compiler=FactoryDispatcher.read_pickle(**kwargs))
@@ -459,7 +463,7 @@ def read_sql(
 ):
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
 
-    from modin.data_management.factories.dispatcher import FactoryDispatcher
+    from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
 
     Engine.subscribe(_update_engine)
     if kwargs.get("chunksize") is not None:
@@ -479,7 +483,7 @@ def read_fwf(
     infer_nrows=100,
     **kwds,
 ):
-    from modin.data_management.factories.dispatcher import FactoryDispatcher
+    from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
 
     Engine.subscribe(_update_engine)
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
@@ -508,7 +512,7 @@ def read_sql_table(
 ):
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
 
-    from modin.data_management.factories.dispatcher import FactoryDispatcher
+    from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
 
     Engine.subscribe(_update_engine)
     return DataFrame(query_compiler=FactoryDispatcher.read_sql_table(**kwargs))
@@ -527,7 +531,7 @@ def read_sql_query(
 ):
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
 
-    from modin.data_management.factories.dispatcher import FactoryDispatcher
+    from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
 
     Engine.subscribe(_update_engine)
     return DataFrame(query_compiler=FactoryDispatcher.read_sql_query(**kwargs))
@@ -539,7 +543,7 @@ def read_spss(
     usecols: Union[Sequence[str], type(None)] = None,
     convert_categoricals: bool = True,
 ):
-    from modin.data_management.factories.dispatcher import FactoryDispatcher
+    from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
 
     Engine.subscribe(_update_engine)
     return DataFrame(
@@ -550,18 +554,22 @@ def read_spss(
 @_inherit_docstrings(pandas.to_pickle)
 def to_pickle(
     obj: Any,
-    filepath_or_buffer: Union[str, pathlib.Path],
-    compression: Optional[str] = "infer",
+    filepath_or_buffer: FilePathOrBuffer,
+    compression: CompressionOptions = "infer",
     protocol: int = pickle.HIGHEST_PROTOCOL,
     storage_options: StorageOptions = None,
 ):
-    from modin.data_management.factories.dispatcher import FactoryDispatcher
+    from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
 
     Engine.subscribe(_update_engine)
     if isinstance(obj, DataFrame):
         obj = obj._query_compiler
     return FactoryDispatcher.to_pickle(
-        obj, filepath_or_buffer, compression=compression, protocol=protocol
+        obj,
+        filepath_or_buffer=filepath_or_buffer,
+        compression=compression,
+        protocol=protocol,
+        storage_options=storage_options,
     )
 
 
@@ -629,6 +637,8 @@ def read_xml(
 
 @_inherit_docstrings(pandas.HDFStore)
 class HDFStore(pandas.HDFStore):
+    _return_modin_dataframe = True
+
     def __getattribute__(self, item):
         default_behaviors = ["__init__", "__class__"]
         method = super(HDFStore, self).__getattribute__(item)
@@ -667,7 +677,9 @@ class HDFStore(pandas.HDFStore):
                         for k, v in kwargs.items()
                     }
                     obj = super(HDFStore, self).__getattribute__(item)(*args, **kwargs)
-                    if isinstance(obj, pandas.DataFrame):
+                    if self._return_modin_dataframe and isinstance(
+                        obj, pandas.DataFrame
+                    ):
                         return DataFrame(obj)
                     return obj
 

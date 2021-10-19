@@ -26,16 +26,15 @@ from ..utils import (
     generate_dataframe,
     RAND_LOW,
     RAND_HIGH,
-    ASV_DATASET_SIZE,
-    UNARY_OP_DATA_SIZE,
     execute,
+    get_benchmark_shapes,
 )
 
 
 class TimeFromPandas:
     param_names = ["shape", "cpus"]
     params = [
-        UNARY_OP_DATA_SIZE[ASV_DATASET_SIZE],
+        get_benchmark_shapes("TimeFromPandas"),
         [4, 16, 32],
     ]
 
@@ -54,7 +53,7 @@ class TimeFromPandas:
 class TimeToPandas:
     param_names = ["shape", "cpus"]
     params = [
-        UNARY_OP_DATA_SIZE[ASV_DATASET_SIZE],
+        get_benchmark_shapes("TimeToPandas"),
         [4, 16, 32],
     ]
 

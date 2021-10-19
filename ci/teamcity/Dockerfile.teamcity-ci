@@ -22,6 +22,7 @@ SHELL ["/bin/bash", "--login", "-c"]
 RUN conda init bash
 ENV PATH /root/anaconda3/envs/modin/bin:$PATH
 
+RUN conda config --set channel_priority strict
 RUN conda update python -y
 RUN conda env create -f ${ENVIRONMENT}
 RUN conda install curl PyGithub

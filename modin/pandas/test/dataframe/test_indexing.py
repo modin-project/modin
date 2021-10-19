@@ -184,7 +184,7 @@ def test_iloc(request, data):
     pandas_df = pandas.DataFrame(data)
 
     if not name_contains(request.node.name, ["empty_data"]):
-        # Scaler
+        # Scalar
         np.testing.assert_equal(modin_df.iloc[0, 1], pandas_df.iloc[0, 1])
 
         # Series
@@ -222,6 +222,12 @@ def test_iloc(request, data):
         df_equals(
             modin_df.iloc[lambda df: df.index.get_indexer_for(df.index[:5])],
             pandas_df.iloc[lambda df: df.index.get_indexer_for(df.index[:5])],
+        )
+
+        # Read values, selecting rows with callable and a column with a scalar.
+        df_equals(
+            pandas_df.iloc[lambda df: df.index.get_indexer_for(df.index[:5]), 0],
+            modin_df.iloc[lambda df: df.index.get_indexer_for(df.index[:5]), 0],
         )
     else:
         with pytest.raises(IndexError):
@@ -277,13 +283,14 @@ def test_loc(data):
 
     key1 = modin_df.columns[0]
     key2 = modin_df.columns[1]
-    # Scaler
+    # Scalar
     df_equals(modin_df.loc[0, key1], pandas_df.loc[0, key1])
 
     # Series
     df_equals(modin_df.loc[0], pandas_df.loc[0])
     df_equals(modin_df.loc[1:, key1], pandas_df.loc[1:, key1])
     df_equals(modin_df.loc[1:2, key1], pandas_df.loc[1:2, key1])
+    df_equals(modin_df.loc[:, key1], pandas_df.loc[:, key1])
 
     # DataFrame
     df_equals(modin_df.loc[[1, 2]], pandas_df.loc[[1, 2]])
@@ -323,10 +330,30 @@ def test_loc(data):
     pandas_df_copy.loc[[1, 2]] = 42
     df_equals(modin_df_copy, pandas_df_copy)
 
+    # Write an item, selecting rows with a callable.
+    modin_df_copy2 = modin_df.copy()
+    pandas_df_copy2 = pandas_df.copy()
+    modin_df_copy2.loc[lambda df: df[key1].isin(list(range(1000)))] = 42
+    pandas_df_copy2.loc[lambda df: df[key1].isin(list(range(1000)))] = 42
+    df_equals(modin_df_copy2, pandas_df_copy2)
+
+    # Write an item, selecting rows with a callable and a column with a scalar.
+    modin_df_copy3 = modin_df.copy()
+    pandas_df_copy3 = pandas_df.copy()
+    modin_df_copy3.loc[lambda df: df[key1].isin(list(range(1000))), key1] = 42
+    pandas_df_copy3.loc[lambda df: df[key1].isin(list(range(1000))), key1] = 42
+    df_equals(modin_df_copy3, pandas_df_copy3)
+
     # From issue #1775
     df_equals(
         modin_df.loc[lambda df: df.iloc[:, 0].isin(list(range(1000)))],
         pandas_df.loc[lambda df: df.iloc[:, 0].isin(list(range(1000)))],
+    )
+
+    # Read values, selecting rows with a callable and a column with a scalar.
+    df_equals(
+        pandas_df.loc[lambda df: df[key1].isin(list(range(1000))), key1],
+        modin_df.loc[lambda df: df[key1].isin(list(range(1000))), key1],
     )
 
     # From issue #1374
@@ -485,15 +512,16 @@ def test_iloc_assignment():
     modin_df.iloc[0]["col1"] = 11
     modin_df.iloc[1]["col1"] = 21
     modin_df.iloc[2]["col1"] = 31
-    modin_df.iloc[0]["col2"] = 12
-    modin_df.iloc[1]["col2"] = 22
-    modin_df.iloc[2]["col2"] = 32
+    modin_df.iloc[lambda df: 0]["col2"] = 12
+    modin_df.iloc[1][lambda df: ["col2"]] = 22
+    modin_df.iloc[lambda df: 2][lambda df: ["col2"]] = 32
     pandas_df.iloc[0]["col1"] = 11
     pandas_df.iloc[1]["col1"] = 21
     pandas_df.iloc[2]["col1"] = 31
-    pandas_df.iloc[0]["col2"] = 12
-    pandas_df.iloc[1]["col2"] = 22
-    pandas_df.iloc[2]["col2"] = 32
+    pandas_df.iloc[lambda df: 0]["col2"] = 12
+    pandas_df.iloc[1][lambda df: ["col2"]] = 22
+    pandas_df.iloc[lambda df: 2][lambda df: ["col2"]] = 32
+
     df_equals(modin_df, pandas_df)
 
 
@@ -1614,6 +1642,16 @@ def test_setitem_on_empty_df(data, value, convert_to_series, new_col_id):
         return df
 
     eval_general(modin_df, pandas_df, applyier)
+
+
+def test___setitem__unhashable_list():
+    # from #3258 and #3291
+    cols = ["a", "b"]
+    modin_df = pd.DataFrame([[0, 0]], columns=cols)
+    modin_df[cols] = modin_df[cols]
+    pandas_df = pandas.DataFrame([[0, 0]], columns=cols)
+    pandas_df[cols] = pandas_df[cols]
+    df_equals(modin_df, pandas_df)
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)

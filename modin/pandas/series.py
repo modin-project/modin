@@ -1335,14 +1335,10 @@ class Series(BasePandasDataset):
             if abs(periods) >= len(self.index):
                 return Series(dtype=self.dtype)
             else:
-                if periods > 0:
-                    new_index = self.index.drop(labels=self.index[:periods])
-                    new_df = self.drop(self.index[-periods:])
-                else:
-                    new_index = self.index.drop(labels=self.index[periods:])
-                    new_df = self.drop(self.index[:-periods])
-
-                new_df.index = new_index
+                new_df = self.iloc[:-periods] if periods > 0 else self.iloc[-periods:]
+                new_df.index = (
+                    self.index[periods:] if periods > 0 else self.index[:periods]
+                )
                 return new_df
         else:
             raise ValueError(
@@ -1986,15 +1982,28 @@ class Series(BasePandasDataset):
         """
         Return a Series containing counts of unique values.
         """
-        return self.__constructor__(
-            query_compiler=self._query_compiler.value_counts(
+        if bins is not None:
+            # Potentially we could implement `cut` function from pandas API, which
+            # bins values into intervals, and then we can just count them as regular values.
+            # TODO #1333: new_self = Series(pd.cut(self, bins, include_lowest=True), dtype="interval")
+            return self._default_to_pandas(
+                pandas.Series.value_counts,
                 normalize=normalize,
                 sort=sort,
                 ascending=ascending,
                 bins=bins,
                 dropna=dropna,
             )
+        counted_values = super(Series, self).value_counts(
+            subset=self,
+            normalize=normalize,
+            sort=sort,
+            ascending=ascending,
+            dropna=dropna,
         )
+        # pandas sets output index names to None because the Series name already contains it
+        counted_values._query_compiler.set_index_name(None)
+        return counted_values
 
     def view(self, dtype=None):  # noqa: PR01, RT01, D200
         """

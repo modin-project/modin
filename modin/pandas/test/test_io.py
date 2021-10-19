@@ -16,6 +16,7 @@ import numpy as np
 import pandas
 from pandas.errors import ParserWarning
 import pandas._libs.lib as lib
+from pandas.core.dtypes.common import is_list_like
 from collections import OrderedDict
 from modin.config import TestDatasetSize, Engine, Backend, IsExperimental
 from modin.utils import to_pandas
@@ -34,7 +35,6 @@ from .utils import (
     json_short_bytes,
     json_long_string,
     json_long_bytes,
-    eval_io,
     get_unique_filename,
     io_ops_bad_exc,
     eval_io_from_str,
@@ -44,6 +44,14 @@ from .utils import (
     teardown_test_files,
     generate_dataframe,
 )
+
+if Backend.get() == "Omnisci":
+    from modin.experimental.core.execution.native.implementations.omnisci_on_native.test.utils import (
+        eval_io,
+        align_datetime_dtypes,
+    )
+else:
+    from .utils import eval_io
 
 if Backend.get() == "Pandas":
     import modin.pandas as pd
@@ -82,119 +90,9 @@ def assert_files_eq(path1, path2):
             return False
 
 
-def setup_json_file(filename, row_size=NROWS, force=True):
-    if os.path.exists(filename) and not force:
-        pass
-    else:
-        df = pandas.DataFrame(
-            {"col1": np.arange(row_size), "col2": np.arange(row_size)}
-        )
-        df.to_json(filename)
-
-
-def setup_json_lines_file(filename, row_size=NROWS, col_size=2, force=True):
-    if os.path.exists(filename) and not force:
-        pass
-    else:
-        df = pandas.DataFrame(
-            {f"col{x + 1}": np.arange(row_size) for x in range(col_size)}
-        )
-        df.to_json(filename, lines=True, orient="records")
-
-
-def setup_html_file(filename, row_size=NROWS, force=True):
-    if os.path.exists(filename) and not force:
-        pass
-    else:
-        df = pandas.DataFrame(
-            {"col1": np.arange(row_size), "col2": np.arange(row_size)}
-        )
-        df.to_html(filename)
-
-
 def setup_clipboard(row_size=NROWS):
     df = pandas.DataFrame({"col1": np.arange(row_size), "col2": np.arange(row_size)})
     df.to_clipboard()
-
-
-def setup_excel_file(filename, row_size=NROWS, force=True):
-    if os.path.exists(filename) and not force:
-        pass
-    else:
-        df = pandas.DataFrame(
-            {"col1": np.arange(row_size), "col2": np.arange(row_size)}
-        )
-        df.to_excel(filename)
-
-
-def setup_feather_file(filename, row_size=NROWS, force=True):
-    if os.path.exists(filename) and not force:
-        pass
-    else:
-        df = pandas.DataFrame(
-            {"col1": np.arange(row_size), "col2": np.arange(row_size)}
-        )
-        df.to_feather(filename)
-
-
-def setup_hdf_file(filename, row_size=NROWS, force=True, format=None):
-    if os.path.exists(filename) and not force:
-        pass
-    else:
-        df = pandas.DataFrame(
-            {"col1": np.arange(row_size), "col2": np.arange(row_size)}
-        )
-        df.to_hdf(filename, key="df", format=format)
-
-
-def setup_stata_file(filename, row_size=NROWS, force=True):
-    if os.path.exists(filename) and not force:
-        pass
-    else:
-        df = pandas.DataFrame(
-            {"col1": np.arange(row_size), "col2": np.arange(row_size)}
-        )
-        df.to_stata(filename)
-
-
-def setup_pickle_file(filename, row_size=NROWS, force=True):
-    if os.path.exists(filename) and not force:
-        pass
-    else:
-        df = pandas.DataFrame(
-            {"col1": np.arange(row_size), "col2": np.arange(row_size)}
-        )
-        df.to_pickle(filename)
-
-
-def setup_fwf_file(filename, force=True, fwf_data=None):
-    if not force and os.path.exists(filename):
-        return
-
-    if fwf_data is None:
-        fwf_data = """ACW000116041961TAVG -142  k  183  k  419  k  720  k 1075  k 1546  k 1517  k 1428  k 1360  k 1121  k  457  k  -92  k
-ACW000116041962TAVG   60  k   32  k -207  k  582  k  855  k 1328  k 1457  k 1340  k 1110  k  941  k  270  k -179  k
-ACW000116041963TAVG -766  k -606  k -152  k  488  k 1171  k 1574  k 1567  k 1543  k 1279  k  887  k  513  k -161  k
-ACW000116041964TAVG    9  k -138  k    2  k  685  k 1166  k 1389  k 1453  k 1504  k 1168  k  735  k  493  k   59  k
-ACW000116041965TAVG   -9  k -158  k  -15  k  537  k  934  k 1447  k 1434  k 1424  k 1324  k  921  k  -22  k -231  k
-ACW000116041966TAVG -490  k -614  k  108  k  246  k 1082  k 1642  k 1620  k 1471  k 1195  k  803  k  329  k    2  k
-ACW000116041967TAVG -270  k   36  k  397  k  481  k 1052  k 1373  k 1655  k 1598  k 1318  k  997  k  559  k  -96  k
-ACW000116041968TAVG -306  k -183  k  220  k  714  k  935  k 1635  k 1572  k 1718  k 1331  k  781  k  180  k  -56  k
-ACW000116041969TAVG -134  k -494  k -185  k  497  k  962  k 1634  k 1687  k 1773  k 1379  k  932  k  321  k -275  k
-ACW000116041970TAVG -483  k -704  k  -75  k  261  k 1093  k 1724  k 1470  k 1609  k 1163  k  836  k  300  k   73  k
-ACW000116041971TAVG   -6  k   83  k  -40  k  472  k 1180  k 1411  k 1700  k 1600  k 1165  k  908  k  361  k  383  k
-ACW000116041972TAVG -377  k   -4  k  250  k  556  k 1117  k 1444  k 1778  k 1545  k 1073  k  797  k  481  k  404  k
-ACW000116041973TAVG   61  k  169  k  453  k  472  k 1075  k 1545  k 1866  k 1579  k 1199  k  563  k  154  k   11  k
-ACW000116041974TAVG  191  k  209  k  339  k  748  k 1094  k 1463  k 1498  k 1541  k 1319  k  585  k  428  k  335  k
-ACW000116041975TAVG  346  k   88  k  198  k  488  k 1165  k 1483  k 1756  k 1906  k 1374  k  845  k  406  k  387  k
-ACW000116041976TAVG -163  k  -62  k -135  k  502  k 1128  k 1461  k 1822  k 1759  k 1136  k  715  k  458  k -205  k
-ACW000116041977TAVG -192  k -279  k  234  k  332  k 1128  k 1566  k 1565  k 1556  k 1126  k  949  k  421  k  162  k
-ACW000116041978TAVG   55  k -354  k   66  k  493  k 1155  k 1552  k 1564  k 1555  k 1061  k  932  k  688  k -464  k
-ACW000116041979TAVG -618  k -632  k   35  k  474  k  993  k 1566  k 1484  k 1483  k 1229  k  647  k  412  k  -40  k
-ACW000116041980TAVG -340  k -500  k  -35  k  524  k 1071  k 1534  k 1655  k 1502  k 1269  k  660  k  138  k  125  k"""
-
-    with open(filename, "w") as f:
-        f.write(fwf_data)
 
 
 def eval_to_file(modin_obj, pandas_obj, fn, extension, **fn_kwargs):
@@ -339,55 +237,115 @@ class TestCsv:
             skipfooter=skipfooter,
         )
 
-    @pytest.mark.parametrize("true_values", [["Yes"], ["Yes", "true"], None])
-    @pytest.mark.parametrize("false_values", [["No"], ["No", "false"], None])
-    @pytest.mark.parametrize("skiprows", [2, lambda x: x % 2])
-    @pytest.mark.parametrize("skipfooter", [0, 10])
+    @pytest.mark.parametrize("header", ["infer", None, 0])
+    @pytest.mark.parametrize(
+        "skiprows",
+        [
+            2,
+            lambda x: x % 2,
+            lambda x: x > 25,
+            lambda x: x > 128,
+            np.arange(10, 50),
+            np.arange(10, 50, 2),
+        ],
+    )
     @pytest.mark.parametrize("nrows", [35, None])
-    @pytest.mark.parametrize("names", [["c1", "c2", "c3", "c4"], None])
+    @pytest.mark.parametrize(
+        "names",
+        [
+            [f"c{col_number}" for col_number in range(4)],
+            [f"c{col_number}" for col_number in range(6)],
+            None,
+        ],
+    )
+    @pytest.mark.parametrize("encoding", ["latin1", "windows-1251", None])
     def test_read_csv_parsing_2(
         self,
-        true_values,
-        false_values,
+        make_csv_file,
+        request,
+        header,
         skiprows,
-        skipfooter,
         nrows,
         names,
+        encoding,
     ):
-        xfail_case_1 = (
-            (false_values or true_values)
-            and Engine.get() != "Python"
-            and Backend.get() != "Omnisci"
-        )
-        xfail_case_2 = (
+        xfail_case = (
             Backend.get() == "Omnisci"
+            and header is not None
             and isinstance(skiprows, int)
             and names is None
-            and skipfooter == 0
             and nrows is None
-            and not true_values
-            and not false_values
         )
-        if xfail_case_1:
-            pytest.xfail("modin and pandas dataframes differs - issue #2446")
-        if xfail_case_2:
+        if xfail_case:
             pytest.xfail(
                 "read_csv fails because of duplicated columns names - issue #3080"
             )
+        if request.config.getoption(
+            "--simulate-cloud"
+        ).lower() != "off" and is_list_like(skiprows):
+            pytest.xfail(
+                reason="The reason of tests fail in `cloud` mode is unknown for now - issue #2340"
+            )
+        if encoding:
+            unique_filename = get_unique_filename()
+            make_csv_file(
+                filename=unique_filename,
+                encoding=encoding,
+            )
+        kwargs = {
+            "filepath_or_buffer": unique_filename
+            if encoding
+            else pytest.csvs_names["test_read_csv_regular"],
+            "header": header,
+            "skiprows": skiprows,
+            "nrows": nrows,
+            "names": names,
+            "encoding": encoding,
+        }
 
+        if Engine.get() != "Python":
+            df = pandas.read_csv(**dict(kwargs, nrows=1))
+            # in that case first partition will contain str
+            if df[df.columns[0]][df.index[0]] in ["c1", "col1", "c3", "col3"]:
+                pytest.xfail("read_csv incorrect output with float data - issue #2634")
         eval_io(
             fn_name="read_csv",
             check_exception_type=None,  # issue #2320
             raising_exceptions=None,
             check_kwargs_callable=not callable(skiprows),
             # read_csv kwargs
+            **kwargs,
+        )
+
+    @pytest.mark.parametrize("true_values", [["Yes"], ["Yes", "true"], None])
+    @pytest.mark.parametrize("false_values", [["No"], ["No", "false"], None])
+    @pytest.mark.parametrize("skipfooter", [0, 10])
+    @pytest.mark.parametrize("nrows", [35, None])
+    def test_read_csv_parsing_3(
+        self,
+        true_values,
+        false_values,
+        skipfooter,
+        nrows,
+    ):
+        xfail_case = (
+            (false_values or true_values)
+            and Engine.get() != "Python"
+            and Backend.get() != "Omnisci"
+        )
+        if xfail_case:
+            pytest.xfail("modin and pandas dataframes differs - issue #2446")
+
+        eval_io(
+            fn_name="read_csv",
+            check_exception_type=None,  # issue #2320
+            raising_exceptions=None,
+            # read_csv kwargs
             filepath_or_buffer=pytest.csvs_names["test_read_csv_yes_no"],
             true_values=true_values,
             false_values=false_values,
-            skiprows=skiprows,
             skipfooter=skipfooter,
             nrows=nrows,
-            names=names,
         )
 
     def test_read_csv_skipinitialspace(self):
@@ -404,18 +362,8 @@ class TestCsv:
     @pytest.mark.parametrize(
         "test_case",
         [
-            pytest.param(
-                "single_element",
-                marks=pytest.mark.xfail(
-                    reason="infinite recursion error - issue #2032"
-                ),
-            ),
-            pytest.param(
-                "single_column",
-                marks=pytest.mark.xfail(
-                    reason="infinite recursion error - issue #2032"
-                ),
-            ),
+            "single_element",
+            "single_column",
             "multiple_columns",
         ],
     )
@@ -891,12 +839,6 @@ class TestCsv:
                 StringIO(open(pytest.csvs_names["test_read_csv_regular"], "r").read())
             )
 
-        with pytest.warns(UserWarning):
-            pd.read_csv(
-                pytest.csvs_names["test_read_csv_regular"],
-                skiprows=lambda x: x in [0, 2],
-            )
-
     @pytest.mark.xfail(
         condition="config.getoption('--simulate-cloud').lower() != 'off'",
         reason="The reason of tests fail in `cloud` mode is unknown for now - issue #2340",
@@ -908,6 +850,10 @@ class TestCsv:
             modin_warning=UserWarning,
             # read_csv kwargs
             filepath_or_buffer="https://raw.githubusercontent.com/modin-project/modin/master/modin/pandas/test/data/blah.csv",
+            # It takes about ~17Gb of RAM for Omnisci to import the whole table from this test
+            # because of too many (~1000) string columns in it. Taking a subset of columns
+            # to be able to run this test on low-RAM machines.
+            usecols=[0, 1, 2, 3] if Backend.get() == "Omnisci" else None,
         )
 
     @pytest.mark.parametrize("nrows", [21, 5, None])
@@ -1042,6 +988,11 @@ class TestCsv:
             pytest.csvs_names["test_read_csv_regular"], method="modin"
         )
 
+        if Backend.get() == "Omnisci":
+            # Aligning DateTime dtypes because of the bug related to the `parse_dates` parameter:
+            # https://github.com/modin-project/modin/issues/3485
+            modin_df, pandas_df = align_datetime_dtypes(modin_df, pandas_df)
+
         df_equals(modin_df, pandas_df)
 
     @pytest.mark.parametrize(
@@ -1062,14 +1013,11 @@ class TestCsv:
         unique_filename = get_unique_filename()
         make_csv_file(filename=unique_filename)
 
-        try:
-            with open(unique_filename, mode=read_mode) as buffer:
-                df_pandas = pandas.read_csv(buffer)
-                buffer.seek(0)
-                df_modin = pd.read_csv(buffer)
-                df_equals(df_modin, df_pandas)
-        finally:
-            teardown_test_files([unique_filename])
+        with open(unique_filename, mode=read_mode) as buffer:
+            df_pandas = pandas.read_csv(buffer)
+            buffer.seek(0)
+            df_modin = pd.read_csv(buffer)
+            df_equals(df_modin, df_pandas)
 
     def test_unnamed_index(self):
         def get_internal_df(df):
@@ -1246,24 +1194,21 @@ class TestParquet:
             path="modin/pandas/test/data/hdfs.parquet",
         )
 
+    @pytest.mark.parametrize("path_type", ["url", "object"])
     @pytest.mark.xfail(
-        Engine.get() == "Python",
-        reason="S3-like path doesn't support in pandas with anonymous credentials. See issue #2301.",
+        condition="config.getoption('--simulate-cloud').lower() != 'off'",
+        reason="The reason of tests fail in `cloud` mode is unknown for now - issue #3264",
     )
-    def test_read_parquet_s3(self):
-        import s3fs
-
-        # Pandas currently supports only default credentials for boto therefore
-        # we use S3FileSystem with `anon=True` for  to make testing possible.
+    def test_read_parquet_s3(self, path_type):
         dataset_url = "s3://aws-roda-hcls-datalake/chembl_27/chembl_27_public_tissue_dictionary/part-00000-66508102-96fa-4fd9-a0fd-5bc072a74293-c000.snappy.parquet"
-        fs = s3fs.S3FileSystem(anon=True)
-        pandas_df = pandas.read_parquet(fs.open(dataset_url, "rb"))
-        modin_df_s3fs = pd.read_parquet(fs.open(dataset_url, "rb"))
-        df_equals(pandas_df, modin_df_s3fs)
+        if path_type == "object":
+            import s3fs
 
-        # Modin supports default and anonymous credentials and resolves this internally.
-        modin_df_s3 = pd.read_parquet(dataset_url)
-        df_equals(pandas_df, modin_df_s3)
+            fs = s3fs.S3FileSystem(anon=True)
+            with fs.open(dataset_url, "rb") as file_obj:
+                eval_io("read_parquet", path=file_obj)
+        else:
+            eval_io("read_parquet", path=dataset_url, storage_options={"anon": True})
 
     @pytest.mark.xfail(
         condition="config.getoption('--simulate-cloud').lower() != 'off'",
@@ -1284,12 +1229,17 @@ class TestParquet:
                 "C": ["c"] * 2000,
             }
         )
-        pandas_df.to_csv(csv_fname, index=False)
-        # read into pyarrow table and write it to a parquet file
-        t = csv.read_csv(csv_fname)
-        parquet.write_table(t, parquet_fname)
+        try:
+            pandas_df.to_csv(csv_fname, index=False)
+            # read into pyarrow table and write it to a parquet file
+            t = csv.read_csv(csv_fname)
+            parquet.write_table(t, parquet_fname)
 
-        df_equals(pd.read_parquet(parquet_fname), pandas.read_parquet(parquet_fname))
+            df_equals(
+                pd.read_parquet(parquet_fname), pandas.read_parquet(parquet_fname)
+            )
+        finally:
+            teardown_test_files([parquet_fname, csv_fname])
 
     @pytest.mark.xfail(
         condition="config.getoption('--simulate-cloud').lower() != 'off'",
@@ -1326,18 +1276,13 @@ class TestParquet:
 
 class TestJson:
     @pytest.mark.parametrize("lines", [False, True])
-    def test_read_json(self, lines):
-        unique_filename = get_unique_filename(extension="json")
-        try:
-            setup_json_file(filename=unique_filename)
-            eval_io(
-                fn_name="read_json",
-                # read_json kwargs
-                path_or_buf=unique_filename,
-                lines=lines,
-            )
-        finally:
-            teardown_test_files([unique_filename])
+    def test_read_json(self, make_json_file, lines):
+        eval_io(
+            fn_name="read_json",
+            # read_json kwargs
+            path_or_buf=make_json_file(lines=lines),
+            lines=lines,
+        )
 
     def test_read_json_categories(self):
         eval_io(
@@ -1382,118 +1327,87 @@ class TestJson:
             ),
         ],
     )
-    def test_read_json_file_handle(self, read_mode):
-        unique_filename = get_unique_filename(extension="json")
-        try:
-            setup_json_file(filename=unique_filename)
-            with open(unique_filename, mode=read_mode) as buf:
-                df_pandas = pandas.read_json(buf)
-                buf.seek(0)
-                df_modin = pd.read_json(buf)
-                df_equals(df_pandas, df_modin)
-        finally:
-            teardown_test_files([unique_filename])
+    def test_read_json_file_handle(self, make_json_file, read_mode):
+        with open(make_json_file(), mode=read_mode) as buf:
+            df_pandas = pandas.read_json(buf)
+            buf.seek(0)
+            df_modin = pd.read_json(buf)
+            df_equals(df_pandas, df_modin)
 
     @pytest.mark.xfail(
         condition="config.getoption('--simulate-cloud').lower() != 'off'",
         reason="The reason of tests fail in `cloud` mode is unknown for now - issue #3264",
     )
-    def test_read_json_metadata(self):
-        unique_filename = get_unique_filename(extension="json")
-        try:
-            setup_json_lines_file(unique_filename, col_size=80)
+    def test_read_json_metadata(self, make_json_file):
+        # `lines=True` is for triggering Modin implementation,
+        # `orient="records"` should be set if `lines=True`
+        df = pd.read_json(
+            make_json_file(ncols=80, lines=True), lines=True, orient="records"
+        )
+        parts_width_cached = df._query_compiler._modin_frame._column_widths_cache
+        num_splits = len(df._query_compiler._modin_frame._partitions[0])
+        parts_width_actual = [
+            len(df._query_compiler._modin_frame._partitions[0][i].get().columns)
+            for i in range(num_splits)
+        ]
 
-            # `lines=True` is for triggering Modin implementation,
-            # `orient="records"` should be set if `lines=True`
-            df = pd.read_json(unique_filename, lines=True, orient="records")
-            parts_width_cached = df._query_compiler._modin_frame._column_widths_cache
-            num_splits = len(df._query_compiler._modin_frame._partitions[0])
-            parts_width_actual = [
-                len(df._query_compiler._modin_frame._partitions[0][i].get().columns)
-                for i in range(num_splits)
-            ]
-
-            assert parts_width_cached == parts_width_actual
-
-        finally:
-            teardown_test_files([unique_filename])
+        assert parts_width_cached == parts_width_actual
 
 
 class TestExcel:
     @check_file_leaks
-    def test_read_excel(self):
-        unique_filename = get_unique_filename(extension="xlsx")
-        try:
-            setup_excel_file(filename=unique_filename)
-            eval_io(
-                fn_name="read_excel",
-                # read_excel kwargs
-                io=unique_filename,
-            )
-        finally:
-            teardown_test_files([unique_filename])
+    def test_read_excel(self, make_excel_file):
+        eval_io(
+            fn_name="read_excel",
+            # read_excel kwargs
+            io=make_excel_file(),
+        )
 
     @check_file_leaks
     @pytest.mark.xfail(
         condition="config.getoption('--simulate-cloud').lower() != 'off'",
         reason="The reason of tests fail in `cloud` mode is unknown for now - issue #3264",
     )
-    def test_read_excel_engine(self):
-        unique_filename = get_unique_filename(extension="xlsx")
-        try:
-            setup_excel_file(filename=unique_filename)
-            eval_io(
-                fn_name="read_excel",
-                modin_warning=UserWarning,
-                # read_excel kwargs
-                io=unique_filename,
-                engine="openpyxl",
-            )
-        finally:
-            teardown_test_files([unique_filename])
+    def test_read_excel_engine(self, make_excel_file):
+        eval_io(
+            fn_name="read_excel",
+            modin_warning=UserWarning,
+            # read_excel kwargs
+            io=make_excel_file(),
+            engine="openpyxl",
+        )
 
     @check_file_leaks
     @pytest.mark.xfail(
         condition="config.getoption('--simulate-cloud').lower() != 'off'",
         reason="The reason of tests fail in `cloud` mode is unknown for now - issue #3264",
     )
-    def test_read_excel_index_col(self):
-        unique_filename = get_unique_filename(extension="xlsx")
-        try:
-            setup_excel_file(filename=unique_filename)
-
-            eval_io(
-                fn_name="read_excel",
-                modin_warning=UserWarning,
-                # read_excel kwargs
-                io=unique_filename,
-                index_col=0,
-            )
-        finally:
-            teardown_test_files([unique_filename])
+    def test_read_excel_index_col(self, make_excel_file):
+        eval_io(
+            fn_name="read_excel",
+            modin_warning=UserWarning,
+            # read_excel kwargs
+            io=make_excel_file(),
+            index_col=0,
+        )
 
     @check_file_leaks
     @pytest.mark.xfail(
         condition="config.getoption('--simulate-cloud').lower() != 'off'",
         reason="The reason of tests fail in `cloud` mode is unknown for now - issue #3264",
     )
-    def test_read_excel_all_sheets(self):
-        unique_filename = get_unique_filename(extension="xlsx")
-        try:
-            setup_excel_file(filename=unique_filename)
+    def test_read_excel_all_sheets(self, make_excel_file):
+        unique_filename = make_excel_file()
 
-            pandas_df = pandas.read_excel(unique_filename, sheet_name=None)
-            modin_df = pd.read_excel(unique_filename, sheet_name=None)
+        pandas_df = pandas.read_excel(unique_filename, sheet_name=None)
+        modin_df = pd.read_excel(unique_filename, sheet_name=None)
 
-            assert isinstance(pandas_df, (OrderedDict, dict))
-            assert isinstance(modin_df, type(pandas_df))
+        assert isinstance(pandas_df, (OrderedDict, dict))
+        assert isinstance(modin_df, type(pandas_df))
+        assert pandas_df.keys() == modin_df.keys()
 
-            assert pandas_df.keys() == modin_df.keys()
-
-            for key in pandas_df.keys():
-                df_equals(modin_df.get(key), pandas_df.get(key))
-        finally:
-            teardown_test_files([unique_filename])
+        for key in pandas_df.keys():
+            df_equals(modin_df.get(key), pandas_df.get(key))
 
     @pytest.mark.xfail(
         Engine.get() != "Python",
@@ -1539,22 +1453,19 @@ class TestExcel:
         condition="config.getoption('--simulate-cloud').lower() != 'off'",
         reason="TypeError: Expected list, got type - issue #3284",
     )
-    def test_ExcelFile(self):
-        unique_filename = get_unique_filename(extension="xlsx")
+    def test_ExcelFile(self, make_excel_file):
+        unique_filename = make_excel_file()
+
+        modin_excel_file = pd.ExcelFile(unique_filename)
+        pandas_excel_file = pandas.ExcelFile(unique_filename)
+
         try:
-            setup_excel_file(filename=unique_filename)
-
-            modin_excel_file = pd.ExcelFile(unique_filename)
-            pandas_excel_file = pandas.ExcelFile(unique_filename)
-
             df_equals(modin_excel_file.parse(), pandas_excel_file.parse())
-
             assert modin_excel_file.io == unique_filename
             assert isinstance(modin_excel_file, pd.ExcelFile)
+        finally:
             modin_excel_file.close()
             pandas_excel_file.close()
-        finally:
-            teardown_test_files([unique_filename])
 
     @pytest.mark.xfail(strict=False, reason="Flaky test, defaults to pandas")
     def test_to_excel(self):
@@ -1584,21 +1495,15 @@ class TestExcel:
         condition="config.getoption('--simulate-cloud').lower() != 'off'",
         reason="The reason of tests fail in `cloud` mode is unknown for now - issue #3264",
     )
-    def test_read_excel_empty_frame(self):
-        unique_filename = get_unique_filename(extension="xlsx")
-        try:
-            setup_excel_file(filename=unique_filename)
-
-            eval_io(
-                fn_name="read_excel",
-                modin_warning=UserWarning,
-                # read_excel kwargs
-                io=unique_filename,
-                usecols=[0],
-                index_col=0,
-            )
-        finally:
-            teardown_test_files([unique_filename])
+    def test_read_excel_empty_frame(self, make_excel_file):
+        eval_io(
+            fn_name="read_excel",
+            modin_warning=UserWarning,
+            # read_excel kwargs
+            io=make_excel_file(),
+            usecols=[0],
+            index_col=0,
+        )
 
 
 class TestHdf:
@@ -1607,27 +1512,23 @@ class TestHdf:
         condition="config.getoption('--simulate-cloud').lower() != 'off'",
         reason="The reason of tests fail in `cloud` mode is unknown for now - issue #3264",
     )
-    def test_read_hdf(self, format):
-        unique_filename = get_unique_filename(extension="hdf")
-        try:
-            setup_hdf_file(filename=unique_filename, format=format)
-            eval_io(
-                fn_name="read_hdf",
-                # read_hdf kwargs
-                path_or_buf=unique_filename,
-                key="df",
-            )
-        finally:
-            teardown_test_files([unique_filename])
+    def test_read_hdf(self, make_hdf_file, format):
+        eval_io(
+            fn_name="read_hdf",
+            # read_hdf kwargs
+            path_or_buf=make_hdf_file(format=format),
+            key="df",
+        )
 
     @pytest.mark.xfail(
         condition="config.getoption('--simulate-cloud').lower() != 'off'",
         reason="The reason of tests fail in `cloud` mode is unknown for now - issue #3264",
     )
     def test_HDFStore(self):
+        hdf_file = None
+        unique_filename_modin = get_unique_filename(extension="hdf")
+        unique_filename_pandas = get_unique_filename(extension="hdf")
         try:
-            unique_filename_modin = get_unique_filename(extension="hdf")
-            unique_filename_pandas = get_unique_filename(extension="hdf")
             modin_store = pd.HDFStore(unique_filename_modin)
             pandas_store = pandas.HDFStore(unique_filename_pandas)
 
@@ -1636,11 +1537,13 @@ class TestHdf:
             modin_store["foo"] = modin_df
             pandas_store["foo"] = pandas_df
 
-            assert assert_files_eq(unique_filename_modin, unique_filename_pandas)
             modin_df = modin_store.get("foo")
             pandas_df = pandas_store.get("foo")
             df_equals(modin_df, pandas_df)
 
+            modin_store.close()
+            pandas_store.close()
+            assert assert_files_eq(unique_filename_modin, unique_filename_pandas)
             assert isinstance(modin_store, pd.HDFStore)
 
             handle, hdf_file = tempfile.mkstemp(suffix=".hdf5", prefix="test_read")
@@ -1653,8 +1556,27 @@ class TestHdf:
             pandas_df = pandas.read_hdf(hdf_file, key="data/df1", mode="r")
             df_equals(modin_df, pandas_df)
         finally:
-            os.unlink(hdf_file)
+            if hdf_file:
+                os.unlink(hdf_file)
             teardown_test_files([unique_filename_modin, unique_filename_pandas])
+
+    @pytest.mark.xfail(
+        condition="config.getoption('--simulate-cloud').lower() != 'off'",
+        reason="The reason of tests fail in `cloud` mode is unknown for now - issue #3264",
+    )
+    def test_HDFStore_in_read_hdf(self):
+        filename = get_unique_filename(extension="hdf")
+        dfin = pd.DataFrame(np.random.rand(8, 8))
+        try:
+            dfin.to_hdf(filename, "/key")
+
+            with pd.HDFStore(filename) as h:
+                modin_df = pd.read_hdf(h, "/key")
+            with pandas.HDFStore(filename) as h:
+                pandas_df = pandas.read_hdf(h, "/key")
+            df_equals(modin_df, pandas_df)
+        finally:
+            teardown_test_files([filename])
 
 
 class TestSql:
@@ -1746,13 +1668,8 @@ class TestSql:
 
 class TestHtml:
     @pytest.mark.xfail(reason="read_html is not yet implemented properly - issue #1296")
-    def test_read_html(self):
-        unique_filename = get_unique_filename(extension="html")
-        try:
-            setup_html_file(filename=unique_filename)
-            eval_io(fn_name="read_html", io=unique_filename)
-        finally:
-            teardown_test_files([unique_filename])
+    def test_read_html(self, make_html_file):
+        eval_io(fn_name="read_html", io=make_html_file())
 
     def test_to_html(self):
         modin_df, pandas_df = create_test_dfs(TEST_DATA)
@@ -1763,7 +1680,7 @@ class TestHtml:
 
 
 class TestFwf:
-    def test_fwf_file(self):
+    def test_fwf_file(self, make_fwf_file):
         fwf_data = (
             "id8141  360.242940  149.910199 11950.7\n"
             "id1594  444.953632  166.985655 11788.4\n"
@@ -1771,18 +1688,11 @@ class TestFwf:
             "id1230  413.836124  184.375703 11916.8\n"
             "id1948  502.953953  173.237159 12468.3\n"
         )
+        unique_filename = make_fwf_file(fwf_data=fwf_data)
 
-        unique_filename = get_unique_filename(extension="txt")
-        try:
-            setup_fwf_file(filename=unique_filename, fwf_data=fwf_data)
-
-            colspecs = [(0, 6), (8, 20), (21, 33), (34, 43)]
-            df = pd.read_fwf(
-                unique_filename, colspecs=colspecs, header=None, index_col=0
-            )
-            assert isinstance(df, pd.DataFrame)
-        finally:
-            teardown_test_files([unique_filename])
+        colspecs = [(0, 6), (8, 20), (21, 33), (34, 43)]
+        df = pd.read_fwf(unique_filename, colspecs=colspecs, header=None, index_col=0)
+        assert isinstance(df, pd.DataFrame)
 
     @pytest.mark.parametrize(
         "kwargs",
@@ -1815,20 +1725,16 @@ class TestFwf:
             },
         ],
     )
-    def test_fwf_file_colspecs_widths(self, kwargs):
-        unique_filename = get_unique_filename(extension="txt")
-        try:
-            setup_fwf_file(filename=unique_filename)
+    def test_fwf_file_colspecs_widths(self, make_fwf_file, kwargs):
+        unique_filename = make_fwf_file()
 
-            modin_df = pd.read_fwf(unique_filename, **kwargs)
-            pandas_df = pd.read_fwf(unique_filename, **kwargs)
+        modin_df = pd.read_fwf(unique_filename, **kwargs)
+        pandas_df = pd.read_fwf(unique_filename, **kwargs)
 
-            df_equals(modin_df, pandas_df)
-        finally:
-            teardown_test_files([unique_filename])
+        df_equals(modin_df, pandas_df)
 
     @pytest.mark.parametrize("usecols", [["a"], ["a", "b", "d"], [0, 1, 3]])
-    def test_fwf_file_usecols(self, usecols):
+    def test_fwf_file_usecols(self, make_fwf_file, usecols):
         fwf_data = (
             "a       b           c          d\n"
             "id8141  360.242940  149.910199 11950.7\n"
@@ -1837,78 +1743,63 @@ class TestFwf:
             "id1230  413.836124  184.375703 11916.8\n"
             "id1948  502.953953  173.237159 12468.3\n"
         )
+        eval_io(
+            fn_name="read_fwf",
+            # read_fwf kwargs
+            filepath_or_buffer=make_fwf_file(fwf_data=fwf_data),
+            usecols=usecols,
+        )
 
-        unique_filename = get_unique_filename(extension="txt")
-        try:
-            setup_fwf_file(filename=unique_filename, fwf_data=fwf_data)
+    def test_fwf_file_chunksize(self, make_fwf_file):
+        unique_filename = make_fwf_file()
 
-            eval_io(
-                fn_name="read_fwf",
-                # read_fwf kwargs
-                filepath_or_buffer=unique_filename,
-                usecols=usecols,
-            )
-        finally:
-            teardown_test_files([unique_filename])
+        # Tests __next__ and correctness of reader as an iterator
+        rdf_reader = pd.read_fwf(unique_filename, chunksize=5)
+        pd_reader = pandas.read_fwf(unique_filename, chunksize=5)
 
-    def test_fwf_file_chunksize(self):
-        unique_filename = get_unique_filename(extension="txt")
-        try:
-            setup_fwf_file(filename=unique_filename)
-
-            # Tests __next__ and correctness of reader as an iterator
-            rdf_reader = pd.read_fwf(unique_filename, chunksize=5)
-            pd_reader = pandas.read_fwf(unique_filename, chunksize=5)
-
-            for modin_df, pd_df in zip(rdf_reader, pd_reader):
-                df_equals(modin_df, pd_df)
-
-            # Tests that get_chunk works correctly
-            rdf_reader = pd.read_fwf(unique_filename, chunksize=1)
-            pd_reader = pandas.read_fwf(unique_filename, chunksize=1)
-
-            modin_df = rdf_reader.get_chunk(1)
-            pd_df = pd_reader.get_chunk(1)
-
+        for modin_df, pd_df in zip(rdf_reader, pd_reader):
             df_equals(modin_df, pd_df)
 
-            # Tests that read works correctly
-            rdf_reader = pd.read_fwf(unique_filename, chunksize=1)
-            pd_reader = pandas.read_fwf(unique_filename, chunksize=1)
+        # Tests that get_chunk works correctly
+        rdf_reader = pd.read_fwf(unique_filename, chunksize=1)
+        pd_reader = pandas.read_fwf(unique_filename, chunksize=1)
 
-            modin_df = rdf_reader.read()
-            pd_df = pd_reader.read()
+        modin_df = rdf_reader.get_chunk(1)
+        pd_df = pd_reader.get_chunk(1)
 
-            df_equals(modin_df, pd_df)
-        finally:
-            teardown_test_files([unique_filename])
+        df_equals(modin_df, pd_df)
+
+        # Tests that read works correctly
+        rdf_reader = pd.read_fwf(unique_filename, chunksize=1)
+        pd_reader = pandas.read_fwf(unique_filename, chunksize=1)
+
+        modin_df = rdf_reader.read()
+        pd_df = pd_reader.read()
+
+        df_equals(modin_df, pd_df)
 
     @pytest.mark.parametrize("nrows", [13, None])
-    def test_fwf_file_skiprows(self, nrows):
-        unique_filename = get_unique_filename(extension="txt")
-        try:
-            setup_fwf_file(filename=unique_filename)
+    def test_fwf_file_skiprows(self, make_fwf_file, nrows):
+        unique_filename = make_fwf_file()
 
-            eval_io(
-                fn_name="read_fwf",
-                # read_fwf kwargs
-                filepath_or_buffer=unique_filename,
-                skiprows=2,
-                nrows=nrows,
-            )
+        eval_io(
+            fn_name="read_fwf",
+            # read_fwf kwargs
+            filepath_or_buffer=unique_filename,
+            skiprows=2,
+            nrows=nrows,
+        )
 
-            eval_io(
-                fn_name="read_fwf",
-                # read_fwf kwargs
-                filepath_or_buffer=unique_filename,
-                usecols=[0, 4, 7],
-                skiprows=[2, 5],
-                nrows=nrows,
-            )
-        finally:
-            teardown_test_files([unique_filename])
+        eval_io(
+            fn_name="read_fwf",
+            # read_fwf kwargs
+            filepath_or_buffer=unique_filename,
+            usecols=[0, 4, 7],
+            skiprows=[2, 5],
+            nrows=nrows,
+        )
 
-    def test_fwf_file_index_col(self):
+    def test_fwf_file_index_col(self, make_fwf_file):
         fwf_data = (
             "a       b           c          d\n"
             "id8141  360.242940  149.910199 11950.7\n"
@@ -1917,34 +1808,22 @@ class TestFwf:
             "id1230  413.836124  184.375703 11916.8\n"
             "id1948  502.953953  173.237159 12468.3\n"
         )
+        eval_io(
+            fn_name="read_fwf",
+            # read_fwf kwargs
+            filepath_or_buffer=make_fwf_file(fwf_data=fwf_data),
+            index_col="c",
+        )
 
-        unique_filename = get_unique_filename(extension="txt")
-        try:
-            setup_fwf_file(filename=unique_filename, fwf_data=fwf_data)
-            eval_io(
-                fn_name="read_fwf",
-                # read_fwf kwargs
-                filepath_or_buffer=unique_filename,
-                index_col="c",
-            )
-        finally:
-            teardown_test_files([unique_filename])
+    def test_fwf_file_skipfooter(self, make_fwf_file):
+        eval_io(
+            fn_name="read_fwf",
+            # read_fwf kwargs
+            filepath_or_buffer=make_fwf_file(),
+            skipfooter=2,
+        )
 
-    def test_fwf_file_skipfooter(self):
-        unique_filename = get_unique_filename(extension="txt")
-        try:
-            setup_fwf_file(filename=unique_filename)
-
-            eval_io(
-                fn_name="read_fwf",
-                # read_fwf kwargs
-                filepath_or_buffer=unique_filename,
-                skipfooter=2,
-            )
-        finally:
-            teardown_test_files([unique_filename])
-
-    def test_fwf_file_parse_dates(self):
+    def test_fwf_file_parse_dates(self, make_fwf_file):
         dates = pandas.date_range("2000", freq="h", periods=10)
         fwf_data = "col1 col2        col3 col4"
         for i in range(10, 20):
@@ -1954,25 +1833,21 @@ class TestFwf:
                 col3=str(i),
                 col4=str(dates[i - 10].time()),
             )
-        unique_filename = get_unique_filename(extension="txt")
-        try:
-            setup_fwf_file(filename=unique_filename, fwf_data=fwf_data)
+        unique_filename = make_fwf_file(fwf_data=fwf_data)
 
-            eval_io(
-                fn_name="read_fwf",
-                # read_fwf kwargs
-                filepath_or_buffer=unique_filename,
-                parse_dates=[["col2", "col4"]],
-            )
+        eval_io(
+            fn_name="read_fwf",
+            # read_fwf kwargs
+            filepath_or_buffer=unique_filename,
+            parse_dates=[["col2", "col4"]],
+        )
 
-            eval_io(
-                fn_name="read_fwf",
-                # read_fwf kwargs
-                filepath_or_buffer=unique_filename,
-                parse_dates={"time": ["col2", "col4"]},
-            )
-        finally:
-            teardown_test_files([unique_filename])
+        eval_io(
+            fn_name="read_fwf",
+            # read_fwf kwargs
+            filepath_or_buffer=unique_filename,
+            parse_dates={"time": ["col2", "col4"]},
+        )
 
     @pytest.mark.parametrize(
         "read_mode",
@@ -1987,34 +1862,24 @@ class TestFwf:
             ),
         ],
     )
-    def test_read_fwf_file_handle(self, read_mode):
-        unique_filename = get_unique_filename(extension="txt")
-        try:
-            setup_fwf_file(filename=unique_filename)
+    def test_read_fwf_file_handle(self, make_fwf_file, read_mode):
+        with open(make_fwf_file(), mode=read_mode) as buffer:
+            df_pandas = pandas.read_fwf(buffer)
+            buffer.seek(0)
+            df_modin = pd.read_fwf(buffer)
+            df_equals(df_modin, df_pandas)
 
-            with open(unique_filename, mode=read_mode) as buffer:
-                df_pandas = pandas.read_fwf(buffer)
-                buffer.seek(0)
-                df_modin = pd.read_fwf(buffer)
-                df_equals(df_modin, df_pandas)
-        finally:
-            teardown_test_files([unique_filename])
-
-    def test_read_fwf_empty_frame(self):
+    def test_read_fwf_empty_frame(self, make_fwf_file):
         kwargs = {
             "usecols": [0],
             "index_col": 0,
         }
-        unique_filename = get_unique_filename(extension="txt")
-        try:
-            setup_fwf_file(filename=unique_filename)
+        unique_filename = make_fwf_file()
 
-            modin_df = pd.read_fwf(unique_filename, **kwargs)
-            pandas_df = pandas.read_fwf(unique_filename, **kwargs)
+        modin_df = pd.read_fwf(unique_filename, **kwargs)
+        pandas_df = pandas.read_fwf(unique_filename, **kwargs)
 
-            df_equals(modin_df, pandas_df)
-        finally:
-            teardown_test_files([unique_filename])
+        df_equals(modin_df, pandas_df)
 
 
 class TestGbq:
@@ -2037,17 +1902,12 @@ class TestGbq:
 
 
 class TestStata:
-    def test_read_stata(self):
-        unique_filename = get_unique_filename(extension="stata")
-        try:
-            setup_stata_file(filename=unique_filename)
-            eval_io(
-                fn_name="read_stata",
-                # read_stata kwargs
-                filepath_or_buffer=unique_filename,
-            )
-        finally:
-            teardown_test_files([unique_filename])
+    def test_read_stata(self, make_stata_file):
+        eval_io(
+            fn_name="read_stata",
+            # read_stata kwargs
+            filepath_or_buffer=make_stata_file(),
+        )
 
     def test_to_stata(self):
         modin_df, pandas_df = create_test_dfs(TEST_DATA)
@@ -2061,18 +1921,12 @@ class TestFeather:
         condition="config.getoption('--simulate-cloud').lower() != 'off'",
         reason="The reason of tests fail in `cloud` mode is unknown for now - issue #3264",
     )
-    def test_read_feather(self):
-        unique_filename = get_unique_filename(extension="feather")
-        try:
-            setup_feather_file(filename=unique_filename)
-
-            eval_io(
-                fn_name="read_feather",
-                # read_feather kwargs
-                path=unique_filename,
-            )
-        finally:
-            teardown_test_files([unique_filename])
+    def test_read_feather(self, make_feather_file):
+        eval_io(
+            fn_name="read_feather",
+            # read_feather kwargs
+            path=make_feather_file(),
+        )
 
     @pytest.mark.xfail(
         condition="config.getoption('--simulate-cloud').lower() != 'off'",
@@ -2109,18 +1963,12 @@ class TestClipboard:
 
 
 class TestPickle:
-    def test_read_pickle(self):
-        unique_filename = get_unique_filename(extension="pkl")
-        try:
-            setup_pickle_file(filename=unique_filename)
-
-            eval_io(
-                fn_name="read_pickle",
-                # read_pickle kwargs
-                filepath_or_buffer=unique_filename,
-            )
-        finally:
-            teardown_test_files([unique_filename])
+    def test_read_pickle(self, make_pickle_file):
+        eval_io(
+            fn_name="read_pickle",
+            # read_pickle kwargs
+            filepath_or_buffer=make_pickle_file(),
+        )
 
     @pytest.mark.xfail(
         condition="config.getoption('--simulate-cloud').lower() != 'off'",

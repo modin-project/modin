@@ -26,11 +26,12 @@ from pandas.io.formats.printing import pprint_thing
 from pandas._libs.lib import no_default
 from pandas._typing import StorageOptions
 
+import re
 import itertools
 import functools
 import numpy as np
 import sys
-from typing import IO, Optional, Sequence, Tuple, Union, Mapping, Iterator, Hashable
+from typing import IO, Optional, Tuple, Union, Mapping, Iterator
 import warnings
 
 from modin.error_message import ErrorMessage
@@ -819,12 +820,50 @@ class DataFrame(BasePandasDataset):
             pandas.DataFrame.explode, column, ignore_index=ignore_index
         )
 
+    def _update_var_dicts_in_kwargs(self, expr, kwargs):
+        """
+        Copy variables with "@" prefix in `local_dict` and `global_dict` keys of kwargs.
+
+        Parameters
+        ----------
+        expr : str
+            The expression string to search variables with "@" prefix.
+        kwargs : dict
+            See the documentation for eval() for complete details on the keyword arguments accepted by query().
+        """
+        if "@" not in expr:
+            return
+        frame = sys._getframe()
+        try:
+            f_locals = frame.f_back.f_back.f_locals
+            f_globals = frame.f_back.f_back.f_globals
+        finally:
+            del frame
+        local_names = set(re.findall(r"@([\w]+)", expr))
+        local_dict = {}
+        global_dict = {}
+
+        for name in local_names:
+            for dct_out, dct_in in ((local_dict, f_locals), (global_dict, f_globals)):
+                try:
+                    dct_out[name] = dct_in[name]
+                except KeyError:
+                    pass
+
+        if local_dict:
+            local_dict.update(kwargs.get("local_dict") or {})
+            kwargs["local_dict"] = local_dict
+        if global_dict:
+            global_dict.update(kwargs.get("global_dict") or {})
+            kwargs["global_dict"] = global_dict
+
     def eval(self, expr, inplace=False, **kwargs):  # noqa: PR01, RT01, D200
         """
         Evaluate a string describing operations on ``DataFrame`` columns.
         """
         self._validate_eval_query(expr, **kwargs)
         inplace = validate_bool_kwarg(inplace, "inplace")
+        self._update_var_dicts_in_kwargs(expr, kwargs)
         new_query_compiler = self._query_compiler.eval(expr, **kwargs)
         return_type = type(
             pandas.DataFrame(columns=self.columns)
@@ -1268,11 +1307,6 @@ class DataFrame(BasePandasDataset):
             )
             other = [other]
         else:
-            # This constraint carried over from Pandas.
-            if on is not None:
-                raise ValueError(
-                    "Joining multiple DataFrames only supported for joining on index"
-                )
             new_columns = (
                 pandas.DataFrame(columns=self.columns)
                 .join(
@@ -1473,27 +1507,21 @@ class DataFrame(BasePandasDataset):
             if abs(periods) >= len(self.index):
                 return DataFrame(columns=self.columns)
             else:
-                if periods > 0:
-                    new_index = self.index.drop(labels=self.index[:periods])
-                    new_df = self.drop(self.index[-periods:])
-                else:
-                    new_index = self.index.drop(labels=self.index[periods:])
-                    new_df = self.drop(self.index[:-periods])
-
-                new_df.index = new_index
+                new_df = self.iloc[:-periods] if periods > 0 else self.iloc[-periods:]
+                new_df.index = (
+                    self.index[periods:] if periods > 0 else self.index[:periods]
+                )
                 return new_df
         else:
             if abs(periods) >= len(self.columns):
                 return DataFrame(index=self.index)
             else:
-                if periods > 0:
-                    new_columns = self.columns.drop(labels=self.columns[:periods])
-                    new_df = self.drop(self.columns[-periods:], axis="columns")
-                else:
-                    new_columns = self.columns.drop(labels=self.columns[periods:])
-                    new_df = self.drop(self.columns[:-periods], axis="columns")
-
-                new_df.columns = new_columns
+                new_df = (
+                    self.iloc[:, :-periods] if periods > 0 else self.iloc[:, -periods:]
+                )
+                new_df.columns = (
+                    self.columns[periods:] if periods > 0 else self.columns[:periods]
+                )
                 return new_df
 
     def unstack(self, level=-1, fill_value=None):  # noqa: PR01, RT01, D200
@@ -1683,6 +1711,7 @@ class DataFrame(BasePandasDataset):
         Query the columns of a ``DataFrame`` with a boolean expression.
         """
         ErrorMessage.non_verified_udf()
+        self._update_var_dicts_in_kwargs(expr, kwargs)
         self._validate_eval_query(expr, **kwargs)
         inplace = validate_bool_kwarg(inplace, "inplace")
         new_query_compiler = self._query_compiler.query(expr, **kwargs)
@@ -2331,26 +2360,6 @@ class DataFrame(BasePandasDataset):
         )
         self._update_inplace(new_query_compiler=query_compiler)
 
-    def value_counts(
-        self,
-        subset: Sequence[Hashable] = None,
-        normalize: bool = False,
-        sort: bool = True,
-        ascending: bool = False,
-        dropna: bool = True,
-    ):  # noqa: PR01, RT01, D200
-        """
-        Return a ``Series`` containing counts of unique rows in the ``DataFrame``.
-        """
-        return self._default_to_pandas(
-            "value_counts",
-            subset=subset,
-            normalize=normalize,
-            sort=sort,
-            ascending=ascending,
-            dropna=dropna,
-        )
-
     def where(
         self,
         cond,
@@ -2542,15 +2551,12 @@ class DataFrame(BasePandasDataset):
                     key = DataFrame(key, columns=self.columns)
                 return self.mask(key, value, inplace=True)
 
-            def setitem_unhashable_key(df):
-                # Arrow makes memory-mapped objects immutable, so copy will allow them
-                # to be mutable again.
-                df = df.copy(True)
+            def setitem_unhashable_key(df, value):
                 df[key] = value
                 return df
 
             return self._update_inplace(
-                self._default_to_pandas(setitem_unhashable_key)._query_compiler
+                self._default_to_pandas(setitem_unhashable_key, value)._query_compiler
             )
         if is_list_like(value):
             if isinstance(value, (pandas.DataFrame, DataFrame)):
@@ -2863,9 +2869,6 @@ class DataFrame(BasePandasDataset):
         """
         if isinstance(expr, str) and expr == "":
             raise ValueError("expr cannot be an empty string")
-
-        if isinstance(expr, str) and "@" in expr:
-            ErrorMessage.not_implemented("Local variables not yet supported in eval.")
 
         if isinstance(expr, str) and "not" in expr:
             if "parser" in kwargs and kwargs["parser"] == "python":

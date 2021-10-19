@@ -22,7 +22,7 @@ from pandas.testing import (
     assert_extension_array_equal,
 )
 import modin.pandas as pd
-from modin.utils import to_pandas
+from modin.utils import to_pandas, try_cast_to_pandas
 from modin.config import TestDatasetSize, TrackFileLeaks
 from io import BytesIO
 import os
@@ -773,6 +773,7 @@ def eval_io(
             pd,
             pandas,
             applyier,
+            comparator=comparator,
             check_exception_type=check_exception_type,
             raising_exceptions=raising_exceptions,
             check_kwargs_callable=check_kwargs_callable,
@@ -1244,21 +1245,31 @@ def teardown_test_files(test_paths: list):
         teardown_test_file(path)
 
 
-def sort_index_for_equal_values(series, ascending=False):
-    if series.index.dtype == np.float64:
+def sort_index_for_equal_values(df, ascending=True):
+    """Sort `df` indices of equal rows."""
+    if df.index.dtype == np.float64:
         # HACK: workaround for pandas bug:
         # https://github.com/pandas-dev/pandas/issues/34455
-        series.index = series.index.astype("str")
-    res = series.groupby(series, sort=False).apply(
+        df.index = df.index.astype("str")
+    res = df.groupby(by=df if df.ndim == 1 else df.columns, sort=False).apply(
         lambda df: df.sort_index(ascending=ascending)
     )
-    if res.index.nlevels > series.index.nlevels:
+    if res.index.nlevels > df.index.nlevels:
         # Sometimes GroupBy adds an extra level with 'by' to the result index.
         # GroupBy is very inconsistent about when it's doing this, so that's
         # why this clumsy if-statement is used.
         res.index = res.index.droplevel(0)
-    res.name = series.name
+    # GroupBy overwrites original index names with 'by', so the following line restores original names
+    res.index.names = df.index.names
     return res
+
+
+def df_equals_with_non_stable_indices(df1, df2):
+    """Assert equality of two frames regardless of the index order for equal values."""
+    df1, df2 = map(try_cast_to_pandas, (df1, df2))
+    np.testing.assert_array_equal(df1.values, df2.values)
+    sorted1, sorted2 = map(sort_index_for_equal_values, (df1, df2))
+    df_equals(sorted1, sorted2)
 
 
 def rotate_decimal_digits_or_symbols(value):
@@ -1269,3 +1280,62 @@ def rotate_decimal_digits_or_symbols(value):
         tens = value // 10
         ones = value % 10
         return tens + ones * 10
+
+
+def make_default_file(file_type: str):
+    """Helper function for pytest fixtures."""
+    filenames = []
+
+    def _create_file(filenames, filename, force, nrows, ncols, func: str, func_kw=None):
+        """
+        Helper function that creates a dataframe before writing it to a file.
+
+        Eliminates the duplicate code that is needed before of output functions calls.
+
+        Notes
+        -----
+        Importantly, names of created files are added to `filenames` variable for
+        their further automatic deletion. Without this step, files created by
+        `pytest` fixtures will not be deleted.
+        """
+        if force or not os.path.exists(filename):
+            df = pandas.DataFrame(
+                {f"col{x + 1}": np.arange(nrows) for x in range(ncols)}
+            )
+            getattr(df, func)(filename, **func_kw if func_kw else {})
+            filenames.append(filename)
+
+    file_type_to_extension = {
+        "excel": "xlsx",
+        "fwf": "txt",
+        "pickle": "pkl",
+    }
+    extension = file_type_to_extension.get(file_type, file_type)
+
+    def _make_default_file(filename=None, nrows=NROWS, ncols=2, force=True, **kwargs):
+        if filename is None:
+            filename = get_unique_filename(extension=extension)
+
+        if file_type == "json":
+            lines = kwargs.get("lines")
+            func_kw = {"lines": lines, "orient": "records"} if lines else {}
+            _create_file(filenames, filename, force, nrows, ncols, "to_json", func_kw)
+        elif file_type in ("html", "excel", "feather", "stata", "pickle"):
+            _create_file(filenames, filename, force, nrows, ncols, f"to_{file_type}")
+        elif file_type == "hdf":
+            func_kw = {"key": "df", "format": kwargs.get("format")}
+            _create_file(filenames, filename, force, nrows, ncols, "to_hdf", func_kw)
+        elif file_type == "fwf":
+            if force or not os.path.exists(filename):
+                fwf_data = kwargs.get("fwf_data")
+                if fwf_data is None:
+                    with open("modin/pandas/test/data/test_data.fwf", "r") as fwf_file:
+                        fwf_data = fwf_file.read()
+                with open(filename, "w") as f:
+                    f.write(fwf_data)
+                filenames.append(filename)
+        else:
+            raise ValueError(f"Unsupported file type: {file_type}")
+        return filename
+
+    return _make_default_file, filenames

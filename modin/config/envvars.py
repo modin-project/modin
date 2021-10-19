@@ -70,7 +70,7 @@ class Engine(EnvironmentVariable, type=str):
     """Distribution engine to run queries by."""
 
     varname = "MODIN_ENGINE"
-    choices = ("Ray", "Dask", "Python")
+    choices = ("Ray", "Dask", "Python", "Native")
 
     @classmethod
     def _get_default(cls):
@@ -99,16 +99,29 @@ class Engine(EnvironmentVariable, type=str):
             import distributed
 
         except ImportError:
-            raise ImportError(
-                "Please `pip install modin[ray]` or `modin[dask]` to install an engine"
-            )
-        if version.parse(dask.__version__) < version.parse("2.22.0") or version.parse(
-            distributed.__version__
-        ) < version.parse("2.22.0"):
-            raise ImportError(
-                "Please `pip install modin[dask]` to install compatible Dask version."
-            )
-        return "Dask"
+            pass
+        else:
+            if version.parse(dask.__version__) < version.parse(
+                "2.22.0"
+            ) or version.parse(distributed.__version__) < version.parse("2.22.0"):
+                raise ImportError(
+                    "Please `pip install modin[dask]` to install compatible Dask version."
+                )
+            return "Dask"
+        try:
+            from omniscidbe import PyDbEngine  # noqa
+        except ModuleNotFoundError:
+            try:
+                from dbe import PyDbEngine  # noqa
+            except ImportError:
+                pass
+            else:
+                return "Native"
+        else:
+            return "Native"
+        raise ImportError(
+            "Please refer to installation documentation page to install an engine"
+        )
 
 
 class Backend(EnvironmentVariable, type=str):
@@ -170,7 +183,14 @@ class GpuCount(EnvironmentVariable, type=int):
 
 
 class Memory(EnvironmentVariable, type=int):
-    """How much memory give to each Ray worker (in bytes)."""
+    """
+    How much memory (in bytes) give to an execution engine.
+
+    Notes
+    -----
+    * In Ray case: the amount of memory to start the Plasma object store with.
+    * In Dask case: the amount of memory that is given to each worker depending on CPUs used.
+    """
 
     varname = "MODIN_MEMORY"
 
@@ -275,6 +295,13 @@ class AsvImplementation(EnvironmentVariable, type=ExactStr):
     choices = ("modin", "pandas")
 
     default = "modin"
+
+
+class AsvDataSizeConfig(EnvironmentVariable, type=ExactStr):
+    """Allows to override default size of data (shapes)."""
+
+    varname = "MODIN_ASV_DATASIZE_CONFIG"
+    default = None
 
 
 class ProgressBar(EnvironmentVariable, type=bool):
