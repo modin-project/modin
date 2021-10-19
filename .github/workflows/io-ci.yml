@@ -1,67 +1,23 @@
 name: io-ci
 on: pull_request
 jobs:
-  lint-commit:
-    name: lint (commit)
-    runs-on: ubuntu-latest
-    env:
-      GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
-    steps:
-      - uses: actions/checkout@v2
-        with:
-          fetch-depth: 0
-      - uses: actions/setup-node@v1
-        with:
-          node-version: "12.x"
-      - run: npm install --save-dev @commitlint/{config-conventional,cli} commitlint-plugin-jira-rules commitlint-config-jira
-      - name: Add dependencies for commitlint action
-        run: echo "NODE_PATH=$GITHUB_WORKSPACE/node_modules" >> $GITHUB_ENV
-      - run: git remote add upstream https://github.com/modin-project/modin.git
-      - run: git fetch upstream
-      - run: npx commitlint --from upstream/master --to $(git log upstream/master..HEAD --pretty=format:"%h" | tail -1) --verbose
-
-  lint-black:
-    name: lint (black)
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-        with:
-          fetch-depth: 1
-      - uses: actions/setup-python@v2
-        with:
-          python-version: "3.7.x"
-          architecture: "x64"
-      - run: pip install black
-      - run: black --check --diff modin/ asv_bench/benchmarks scripts/doc_checker.py
-
-  lint-flake8:
-    name: lint (flake8)
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-        with:
-          fetch-depth: 1
-      - uses: actions/setup-python@v2
-        with:
-          python-version: "3.7.x"
-          architecture: "x64"
-      - run: pip install flake8 flake8-print
-      - run: flake8 --enable=T modin/ asv_bench/benchmarks scripts/doc_checker.py
-
-  test-io-ubuntu:
-    needs: [lint-commit, lint-flake8, lint-black]
-    runs-on: ubuntu-latest
+  test-io:
+    runs-on: ${{matrix.os}}
     defaults:
       run:
         shell: bash -l {0}
     strategy:
       matrix:
+        os: [ubuntu-latest, windows-latest]
         python-version: ["3.7", "3.8"]
         engine: ["python", "ray", "dask"]
+        exclude:
+          - os: windows-latest
+            engine: "python"
     env:
       MODIN_ENGINE: ${{matrix.engine}}
       MODIN_MEMORY: 1000000000
-    name: test-io-ubuntu (engine ${{matrix.engine}}, python ${{matrix.python-version}})
+    name: test-io (os ${{matrix.os}}, engine ${{matrix.engine}}, python ${{matrix.python-version}})
     steps:
       - uses: actions/checkout@v2
         with:
@@ -72,15 +28,17 @@ jobs:
           environment-file: environment-dev.yml
           python-version: ${{matrix.python-version}}
           channel-priority: strict
-          use-only-tar-bz2: true # IMPORTANT: This needs to be set for caching to work properly!
       - name: Conda environment
         run: |
           conda info
           conda list
       - name: Install HDF5
+        if: matrix.os == 'ubuntu-latest'
         run: sudo apt update && sudo apt install -y libhdf5-dev
-      - run: python -m pytest modin/pandas/test/test_io.py --verbose
-      - run: |
+      - timeout-minutes: 30
+        run: python -m pytest modin/pandas/test/test_io.py --verbose
+      - if: matrix.os == 'ubuntu-latest'
+        run: |
           curl -o codecov https://codecov.io/bash
           VERSION=$(grep -o 'VERSION=\"[0-9\.]*\"' codecov | cut -d'"' -f2);
           curl -o SHA512SUM "https://raw.githubusercontent.com/codecov/codecov-bash/${VERSION}/SHA512SUM"
@@ -90,38 +48,7 @@ jobs:
               echo 'CORRUPTED CODECOV SCRIPT!!!'
               exit 10
           fi
-
-  test-io-windows:
-    needs: [lint-commit, lint-flake8, lint-black]
-    runs-on: windows-latest
-    defaults:
-      run:
-        shell: bash -l {0}
-    strategy:
-      matrix:
-        python-version: ["3.7", "3.8"]
-        engine: ["ray", "dask"]
-    env:
-      MODIN_ENGINE: ${{matrix.engine}}
-      MODIN_MEMORY: 1000000000
-    name: test-io-windows (engine ${{matrix.engine}}, python ${{matrix.python-version}})
-    steps:
-      - uses: actions/checkout@v2
-        with:
-          fetch-depth: 2
-      - uses: conda-incubator/setup-miniconda@v2
-        with:
-          activate-environment: modin
-          environment-file: environment-dev.yml
-          python-version: ${{matrix.python-version}}
-          channel-priority: strict
-          use-only-tar-bz2: true # IMPORTANT: This needs to be set for caching to work properly!
-          auto-update-conda: true # this enable `use-only-tar-bz2` feature on Windows
-      - name: Conda environment
+      - if: matrix.os == 'windows-latest'
         run: |
-          conda info
-          conda list
-      - timeout-minutes: 30
-        run: python -m pytest modin/pandas/test/test_io.py --verbose
-      - run: choco install codecov
-      - run: codecov -f ./coverage.xml
+          choco install codecov
+          codecov -f ./coverage.xml
