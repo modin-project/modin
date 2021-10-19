@@ -56,6 +56,7 @@ def _read(**kwargs):
     from modin.data_management.factories.dispatcher import FactoryDispatcher
 
     Engine.subscribe(_update_engine)
+    squeeze = kwargs.pop("squeeze", False)
     pd_obj = FactoryDispatcher.read_csv(**kwargs)
     # This happens when `read_csv` returns a TextFileReader object for iterating through
     if isinstance(pd_obj, pandas.io.parsers.TextFileReader):
@@ -64,7 +65,10 @@ def _read(**kwargs):
             query_compiler=reader(*args, **kwargs)
         )
         return pd_obj
-    return DataFrame(query_compiler=pd_obj)
+    result = DataFrame(query_compiler=pd_obj)
+    if squeeze:
+        return result.squeeze(axis=1)
+    return result
 
 
 @_inherit_docstrings(pandas.read_csv)
