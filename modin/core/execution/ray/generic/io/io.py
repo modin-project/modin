@@ -133,50 +133,61 @@ class RayIO(BaseIO):
                 Arguments to pass to ``pandas.to_csv(**kw)`` plus an extra argument
                 `partition_idx` serving as chunk index to maintain rows order.
             """
+            new_kwargs = kwargs.copy()
             if kw["partition_idx"] != 0:
                 # we need to create a new file only for first recording
                 # all the rest should be recorded in appending mode
-                if "w" in kwargs["mode"]:
-                    kwargs["mode"] = kwargs["mode"].replace("w", "a")
+                if "w" in new_kwargs["mode"]:
+                    new_kwargs["mode"] = new_kwargs["mode"].replace("w", "a")
                 # It is enough to write the header for the first partition
-                kwargs["header"] = False
+                new_kwargs["header"] = False
 
             # for parallelization purposes, each partition is written to an intermediate buffer
-            path_or_buf = kwargs["path_or_buf"]
-            is_binary = "b" in kwargs["mode"]
+            path_or_buf = new_kwargs["path_or_buf"]
+            is_binary = "b" in new_kwargs["mode"]
             if is_binary:
-                kwargs["path_or_buf"] = io.BytesIO()
+                new_kwargs["path_or_buf"] = io.BytesIO()
             else:
-                kwargs["path_or_buf"] = io.StringIO()
-            df.to_csv(**kwargs)
-            content = kwargs["path_or_buf"].getvalue()
-            kwargs["path_or_buf"].close()
+                new_kwargs["path_or_buf"] = io.StringIO()
+            df.to_csv(**new_kwargs)
+            content = new_kwargs["path_or_buf"].getvalue()
+            new_kwargs["path_or_buf"].close()
 
-            # each process waits for its turn to write to a file;
-            # in case of violation of the order of receiving messages from the queue,
-            # the message is placed back
-            while True:
-                get_value = queue.get(block=True)
-                if get_value == kw["partition_idx"]:
-                    break
-                queue.put(get_value)
+            try:
+                # each process waits for its turn to write to a file;
+                # in case of violation of the order of receiving messages from the queue,
+                # the message is placed back
+                while True:
+                    get_value = queue.get(block=True)
+                    if get_value == kw["partition_idx"]:
+                        break
+                    elif get_value == -1:
+                        # End other threads without rest work
+                        queue.put(-1)
+                        return pandas.DataFrame()
+                    queue.put(get_value)
 
-            # preparing to write data from the buffer to a file
-            with pandas.io.common.get_handle(
-                path_or_buf,
-                # in case when using URL in implicit text mode
-                # pandas try to open `path_or_buf` in binary mode
-                kwargs["mode"] if is_binary else kwargs["mode"] + "t",
-                encoding=kwargs["encoding"],
-                errors=kwargs["errors"],
-                compression=kwargs["compression"],
-                storage_options=kwargs["storage_options"],
-                is_text=False,
-            ) as handles:
-                handles.handle.write(content)
+                # preparing to write data from the buffer to a file
+                with pandas.io.common.get_handle(
+                    path_or_buf,
+                    # in case when using URL in implicit text mode
+                    # pandas try to open `path_or_buf` in binary mode
+                    new_kwargs["mode"] if is_binary else new_kwargs["mode"] + "t",
+                    encoding=new_kwargs["encoding"],
+                    errors=new_kwargs["errors"],
+                    compression=new_kwargs["compression"],
+                    storage_options=new_kwargs["storage_options"],
+                    is_text=False,
+                ) as handles:
+                    handles.handle.write(content)
 
-            # signal that the next process can start writing to the file
-            queue.put(get_value + 1)
+                # signal that the next process can start writing to the file
+                queue.put(get_value + 1)
+
+            except Exception as e:
+                # Message for another threads about exception
+                queue.put(-1)
+                raise e
 
             # used for synchronization purposes
             return pandas.DataFrame()
