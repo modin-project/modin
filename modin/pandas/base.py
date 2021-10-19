@@ -2542,6 +2542,31 @@ class BasePandasDataset(object):
 
         return FactoryDispatcher.to_csv(new_query_compiler, **kwargs)
 
+    def to_parquet(
+        self,
+        path,
+        engine="auto",
+        compression="snappy",
+        index=None,
+        partition_cols=None,
+        **kwargs,
+    ):  # pragma: no cover
+
+        config = {
+            "path": path,
+            "engine": engine,
+            "compression": compression,
+            "index": index,
+            "partition_cols": partition_cols,
+        }
+        new_query_compiler = self._query_compiler
+
+        from modin.core.execution.dispatching.factories.dispatcher import (
+            FactoryDispatcher,
+        )
+
+        return FactoryDispatcher.to_parquet(new_query_compiler, **config, **kwargs)
+
     def to_dict(self, orient="dict", into=dict):  # pragma: no cover
         return self._default_to_pandas("to_dict", orient=orient, into=into)
 

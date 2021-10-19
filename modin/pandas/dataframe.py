@@ -2188,30 +2188,6 @@ class DataFrame(BasePandasDataset):
             encoding=None,
         )
 
-    def to_parquet(
-        self,
-        path=None,
-        engine="auto",
-        compression="snappy",
-        index=None,
-        partition_cols=None,
-        storage_options: StorageOptions = None,
-        **kwargs,
-    ):  # pragma: no cover # noqa: PR01, RT01, D200
-        """
-        Write a ``DataFrame`` to the binary parquet format.
-        """
-        return self._default_to_pandas(
-            pandas.DataFrame.to_parquet,
-            path,
-            engine=engine,
-            compression=compression,
-            index=index,
-            partition_cols=partition_cols,
-            storage_options=storage_options,
-            **kwargs,
-        )
-
     def to_period(
         self, freq=None, axis=0, copy=True
     ):  # pragma: no cover # noqa: PR01, RT01, D200

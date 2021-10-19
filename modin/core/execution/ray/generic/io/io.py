@@ -196,3 +196,100 @@ class RayIO(BaseIO):
         for rows in result:
             for partition in rows:
                 wait([partition.oid])
+
+    @staticmethod
+    def _to_parquet_check_support(kwargs):
+        """
+        Check if parallel version of ``to_parquet`` could be used.
+
+        Parameters
+        ----------
+        kwargs : dict
+            Keyword arguments passed to ``.to_parquet()``.
+
+        Returns
+        -------
+        bool
+            Whether parallel version of ``to_parquet`` is applicable.
+        """
+        path = kwargs["path"]
+        engine = kwargs["engine"]
+        compression = kwargs["compression"]
+        if not isinstance(path, str):
+            return False
+        if any((path.endswith(ext) for ext in [".gz", ".bz2", ".zip", ".xz"])):
+            return False
+        if engine != "auto":
+            return False
+        if compression is None or not compression == "snappy":
+            return False
+        return True
+
+    @classmethod
+    def to_parquet(cls, qc, **kwargs):
+        """
+        Write a ``DataFrame`` to the binary parquet format.
+
+        Parameters
+        ----------
+        qc : BaseQueryCompiler
+            The query compiler of the Modin dataframe that we want to run ``to_parquet`` on.
+        **kwargs : dict
+            Parameters for ``pandas.to_parquet(**kwargs)``.
+        """
+        if not cls._to_parquet_check_support(kwargs):
+            return BaseIO.to_parquet(qc, **kwargs)
+
+        # The partition id will be added to the queue, for which the moment
+        # of writing to the file has come
+        queue = Queue(maxsize=1)
+
+        def func(df, **kw):
+            """
+            Dump a chunk of rows as parquet, then save them to target maintaining order.
+
+            Parameters
+            ----------
+            df : pandas.DataFrame
+                A chunk of rows to write to a parquet file.
+            **kw : dict
+                Arguments to pass to ``pandas.to_parquet(**kw)`` plus an extra argument
+                `partition_idx` serving as chunk index to maintain rows order.
+            """
+            from modin.distributed.dataframe.pandas import unwrap_partitions
+            partitions = unwrap_partitions(df, axis=0)
+            for i, part in enumerate(partitions):
+                # TODO: Test changing kwargs["partition_cols"]
+                df.to_parquet(**kwargs)
+                # TODO for naren-ponder: Figure out this part for to_parquet
+
+            # each process waits for its turn to write to a file;
+            # in case of violation of the order of receiving messages from the queue,
+            # the message is placed back
+            while True:
+                get_value = queue.get(block=True)
+                if get_value == kw["partition_idx"]:
+                    break
+                queue.put(get_value)
+
+            # signal that the next process can start writing to the file
+            queue.put(get_value + 1)
+
+            # used for synchronization purposes
+            return pandas.DataFrame()
+
+        # signaling that the partition with id==0 can be written to the file
+        queue.put(0)
+        result = qc._modin_frame._partition_mgr_cls.map_axis_partitions(
+            axis=0,
+            partitions=qc._modin_frame._partitions,
+            map_func=func,
+            keep_partitioning=True,
+            lengths=None,
+            enumerate_partitions=True,
+        )
+
+        # pending completion
+        for rows in result:
+            for partition in rows:
+                wait([partition.oid])
