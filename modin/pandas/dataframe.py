@@ -31,7 +31,7 @@ import itertools
 import functools
 import numpy as np
 import sys
-from typing import IO, Optional, Tuple, Union, Mapping, Iterator
+from typing import IO, Optional, Union, Mapping, Iterator
 import warnings
 
 from modin.error_message import ErrorMessage
