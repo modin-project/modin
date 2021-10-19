@@ -922,6 +922,7 @@ class TestCsv:
     )
     @pytest.mark.parametrize("header", [False, True])
     @pytest.mark.parametrize("mode", ["w", "wb+"])
+    @pytest.mark.parametrize("test", [1, 2, 3, 4, 5] * 3)
     @pytest.mark.xfail(
         condition="config.getoption('--simulate-cloud').lower() != 'off'",
         reason="The reason of tests fail in `cloud` mode is unknown for now - issue #2340",
