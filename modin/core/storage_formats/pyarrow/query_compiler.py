@@ -93,7 +93,6 @@ class PyarrowQueryCompiler(PandasQueryCompiler):
         cmp_ops = {
             "==": "equal",
             "!=": "not_equal",
-            ">": "greater_than",
             "<": "less_than",
             "<=": "less_than_or_equal_to",
             ">": "greater_than",
@@ -229,30 +228,6 @@ class PyarrowQueryCompiler(PandasQueryCompiler):
             sel_vec = filt.evaluate(table.to_batches()[0], pa.default_memory_pool())
             result = filter_with_selection_vector(table, sel_vec)
             return result
-
-        def gandiva_query2(table, query):
-            """
-            Build gandiva filter based on the specified query.
-
-            Parameters
-            ----------
-            table : pyarrow.Table
-                Table to evaluate query on.
-            query : str
-                Query string to evaluate on the `table` columns.
-
-            Returns
-            -------
-            pyarrow.gandiva.Filter
-            """
-            expr = gen_table_expr(table, query)
-            if not can_be_condition(expr):
-                raise ValueError("Root operation should be a filter.")
-            builder = gandiva.TreeExprBuilder()
-            root = build_node(table, expr.terms, builder)
-            cond = builder.make_condition(root)
-            filt = gandiva.make_filter(table.schema, cond)
-            return filt
 
         def query_builder(arrow_table, **kwargs):
             """Evaluate string query on the passed pyarrow table."""

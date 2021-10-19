@@ -281,7 +281,6 @@ class PandasFramePartitionManager(ABC):
             right = right.T
         else:
             partitions_for_apply = left
-            right = right
 
         [obj.drain_call_queue() for row in right for obj in row]
 
@@ -552,47 +551,6 @@ class PandasFramePartitionManager(ABC):
             lengths=lengths,
             enumerate_partitions=enumerate_partitions,
         )
-
-    @classmethod
-    @wait_computations_if_benchmark_mode
-    def simple_shuffle(cls, axis, partitions, map_func, lengths):
-        """
-        Shuffle data so lengths of partitions match given `lengths` via calling `map_func`.
-
-        Parameters
-        ----------
-        axis : {0, 1}
-            Axis to perform the map across (0 - index, 1 - columns).
-        partitions : NumPy 2D array
-            Partitions of Modin Frame.
-        map_func : callable
-            Function to apply.
-        lengths : list(int)
-            List of lengths to shuffle the object.
-
-        Returns
-        -------
-        NumPy array
-            An array of new partitions for a Modin Frame.
-        """
-        preprocessed_map_func = cls.preprocess_func(map_func)
-        partitions = cls.axis_partition(partitions, axis)
-        # For mapping across the entire axis, we don't maintain partitioning because we
-        # may want to line to partitioning up with another BlockPartitions object. Since
-        # we don't need to maintain the partitioning, this gives us the opportunity to
-        # load-balance the data as well.
-        result_blocks = np.array(
-            [
-                part.apply(
-                    preprocessed_map_func, _lengths=lengths, manual_partition=True
-                )
-                for part in partitions
-            ]
-        )
-        # If we are mapping over columns, they are returned to use the same as
-        # rows, so we need to transpose the returned 2D NumPy array to return
-        # the structure to the correct order.
-        return result_blocks.T if not axis else result_blocks
 
     @classmethod
     def concat(cls, axis, left_parts, right_parts):

@@ -8,6 +8,7 @@ dependencies:
   - libthrift<0.14.1  # ref: modin gh-2840
   - dask[complete]>=2.22.0
   - distributed>=2.22.0
+  - fsspec
   - xarray
   - Jinja2
   - pathlib

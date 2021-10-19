@@ -176,7 +176,7 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
             shape_hint = "column"
         self._shape_hint = shape_hint
 
-    def finalize():
+    def finalize(self):
         # TODO: implement this for OmniSci backend
         raise NotImplementedError()
 

@@ -424,9 +424,6 @@ jobs:
     env:
       MODIN_ENGINE: ${{matrix.engine}}
       MODIN_MEMORY: 1000000000
-      MKL_NUM_THREADS: 1
-      NUMEXPR_NUM_THREADS: 1
-      OMP_NUM_THREADS: 1
     name: test-ubuntu (engine ${{matrix.engine}}, python ${{matrix.python-version}})
     steps:
       - uses: actions/checkout@v2
@@ -532,9 +529,6 @@ jobs:
       MODIN_ENGINE: "python"
       MODIN_EXPERIMENTAL: "True"
       MODIN_MEMORY: 1000000000
-      MKL_NUM_THREADS: 1
-      NUMEXPR_NUM_THREADS: 1
-      OMP_NUM_THREADS: 1
     name: test cloud
     steps:
       - uses: actions/checkout@v2
@@ -596,9 +590,6 @@ jobs:
     env:
       MODIN_ENGINE: ${{matrix.engine}}
       MODIN_MEMORY: 1000000000
-      MKL_NUM_THREADS: 1
-      NUMEXPR_NUM_THREADS: 1
-      OMP_NUM_THREADS: 1
     name: test-windows
     steps:
       - uses: actions/checkout@v2

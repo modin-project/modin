@@ -6,6 +6,7 @@ dependencies:
   - pyarrow==3.0.0
   - libthrift
   - numpy>=1.16.5
+  - fsspec
   - pip
   - pytest>=6.0.1
   - pytest-cov>=2.10.1

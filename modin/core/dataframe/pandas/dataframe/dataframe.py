@@ -1982,38 +1982,6 @@ class PandasFrame(object):
         )
         return reindexed_frames[0], reindexed_frames[1:], joined_index
 
-    def _simple_shuffle(self, axis, other):
-        """
-        Shuffle `other` rows or columns to match partitioning of `self`.
-
-        Parameters
-        ----------
-        axis : {0, 1}
-            Axis to shuffle over.
-        other : PandasFrame
-            Modin DataFrame to match to `self` partitioning.
-
-        Returns
-        -------
-        PandasFrame
-            Shuffled version of `other`.
-
-        Notes
-        -----
-        This should only be called when `other.axes[axis]` and `self.axes[axis]`
-        are identical.
-        """
-        assert self.axes[axis].equals(
-            other.axes[axis]
-        ), "`_simple_shuffle` should only be used if axis is identical"
-        if axis == 0:
-            lengths = self._row_lengths
-        else:
-            lengths = self._column_widths
-        return other._partition_mgr_cls.simple_shuffle(
-            axis, other._partitions, lambda x: x, lengths
-        )
-
     def binary_op(self, op, right_frame, join_type="outer"):
         """
         Perform an operation that requires joining with another Modin DataFrame.

@@ -4,6 +4,7 @@ dependencies:
   - pandas==1.3.3
   - numpy>=1.16.5
   - pyarrow>=1.0.0
+  - fsspec
   - xarray
   - Jinja2
   - pathlib

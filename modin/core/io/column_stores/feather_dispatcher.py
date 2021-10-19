@@ -52,6 +52,7 @@ class FeatherDispatcher(ColumnStoreDispatcher):
         PyArrow feather is used. Please refer to the documentation here
         https://arrow.apache.org/docs/python/api.html#feather-format
         """
+        path = cls.get_path(path)
         if columns is None:
             from pyarrow.feather import read_feather
 
