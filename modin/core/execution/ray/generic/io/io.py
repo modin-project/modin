@@ -256,7 +256,8 @@ class RayIO(BaseIO):
             partitions = unwrap_partitions(df, axis=0)
             for i, _ in enumerate(partitions):
                 output_path = kwargs["path"]
-                kwargs["path"] = f"{output_path}/part-{i:04d}.snappy.parquet"
+                compression = kwargs["compression"]
+                kwargs["path"] = f"{output_path}/part-{i:04d}.{compression}.parquet"
                 df.to_parquet(**kwargs)
 
         # signaling that the partition with id==0 can be written to the file
