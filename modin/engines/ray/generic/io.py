@@ -17,6 +17,7 @@ import io
 import pandas
 
 from modin.engines.base.io import BaseIO
+from ray.util.queue import Queue
 from ray import wait
 
 
@@ -116,6 +117,10 @@ class RayIO(BaseIO):
         if not cls._to_csv_check_support(kwargs):
             return BaseIO.to_csv(qc, **kwargs)
 
+        # The partition id will be added to the queue, for which the moment
+        # of writing to the file has come
+        queue = Queue(maxsize=1)
+
         def func(df, **kw):
             """
             Dump a chunk of rows as csv, then save them to target maintaining order.
@@ -150,7 +155,6 @@ class RayIO(BaseIO):
             # each process waits for its turn to write to a file;
             # in case of violation of the order of receiving messages from the queue,
             # the message is placed back
-            queue = kw["queue"]
             while True:
                 get_value = queue.get(block=True)
                 if get_value == kw["partition_idx"]:
@@ -177,6 +181,8 @@ class RayIO(BaseIO):
             # used for synchronization purposes
             return pandas.DataFrame()
 
+        # signaling that the partition with id==0 can be written to the file
+        queue.put(0)
         result = qc._modin_frame._partition_mgr_cls.map_axis_partitions(
             axis=1,
             partitions=qc._modin_frame._partitions,
@@ -184,7 +190,6 @@ class RayIO(BaseIO):
             keep_partitioning=True,
             lengths=None,
             enumerate_partitions=True,
-            create_queue=True,
         )
 
         # pending completion

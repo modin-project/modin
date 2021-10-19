@@ -379,7 +379,6 @@ class PandasFramePartitionManager(ABC):
         apply_indices=None,
         enumerate_partitions=False,
         lengths=None,
-        create_queue=False,
     ):
         """
         Broadcast the `right` partitions to `left` and apply `apply_func` along full `axis`.
@@ -404,8 +403,6 @@ class PandasFramePartitionManager(ABC):
             Note that `apply_func` must be able to accept `partition_idx` kwarg.
         lengths : list of ints, default: None
             The list of lengths to shuffle the object.
-        create_queue : bool, default: False
-            [Add message].
 
         Returns
         -------
@@ -438,16 +435,6 @@ class PandasFramePartitionManager(ABC):
 
         if apply_indices is None:
             apply_indices = np.arange(len(left_partitions))
-
-        if create_queue:
-            from ray.util.queue import Queue
-
-            # The partition id will be added to the queue, for which the moment
-            # of writing to the file has come
-            queue = Queue()
-            # signaling that the partition with id==0 can be written to the file
-            queue.put(0)
-            kw["queue"] = queue
 
         result_blocks = np.array(
             [
@@ -525,7 +512,6 @@ class PandasFramePartitionManager(ABC):
         keep_partitioning=False,
         lengths=None,
         enumerate_partitions=False,
-        create_queue=False,
     ):
         """
         Apply `map_func` to every partition in `partitions` along given `axis`.
@@ -546,8 +532,6 @@ class PandasFramePartitionManager(ABC):
         enumerate_partitions : bool, default: False
             Whether or not to pass partition index into `map_func`.
             Note that `map_func` must be able to accept `partition_idx` kwarg.
-        create_queue : bool, default: False
-            [Add message].
 
         Returns
         -------
@@ -567,7 +551,6 @@ class PandasFramePartitionManager(ABC):
             right=None,
             lengths=lengths,
             enumerate_partitions=enumerate_partitions,
-            create_queue=create_queue,
         )
 
     @classmethod
