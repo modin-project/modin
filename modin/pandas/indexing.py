@@ -810,9 +810,9 @@ class _iLocIndexer(_LocationIndexerBase):
 
         Returns
         -------
-        row_lookup : slice(None) if full axis grab, pandas.RangeIndex if repeatness is detected, numpy.ndarray otherwise
+        row_lookup : slice(None) if full axis grab, pandas.RangeIndex if repetition is detected, numpy.ndarray otherwise
             List of index labels.
-        col_lookup : slice(None) if full axis grab, pandas.RangeIndex if repeatness is detected, numpy.ndarray otherwise
+        col_lookup : slice(None) if full axis grab, pandas.RangeIndex if repetition is detected, numpy.ndarray otherwise
             List of columns labels.
         """
         row_loc = [row_loc] if is_scalar(row_loc) else row_loc

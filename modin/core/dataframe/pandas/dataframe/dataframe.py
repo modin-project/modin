@@ -430,11 +430,11 @@ class PandasFrame(object):
         ----------
         row_indices : list of hashable, optional
             The row labels to extract.
-        row_numeric_idx : list of int, optional
+        row_numeric_idx : list-like of ints, optional
             The row indices to extract.
         col_indices : list of hashable, optional
             The column labels to extract.
-        col_numeric_idx : list of int, optional
+        col_numeric_idx : list-like of ints, optional
             The column indices to extract.
 
         Returns
@@ -452,7 +452,7 @@ class PandasFrame(object):
             if is_range_like(indexer):
                 if indexer.step == 1 and len(indexer) == len(self.axes[axis]):
                     indexer = None
-                if indexer is not None and not isinstance(indexer, pandas.RangeIndex):
+                elif indexer is not None and not isinstance(indexer, pandas.RangeIndex):
                     # Pure python's range is not fully compatible with a list of ints,
                     # converting it to `pandas.RangeIndex` that is compatible.
                     indexer = pandas.RangeIndex(
@@ -460,7 +460,7 @@ class PandasFrame(object):
                     )
             else:
                 ErrorMessage.catch_bugs_and_request_email(
-                    failure_condition=not (is_list_like(indexer) or indexer is None),
+                    failure_condition=not (indexer is None or is_list_like(indexer)),
                     extra_log=f"Mask takes only list-like numeric indexers, received: {type(indexer)}",
                 )
             indexers.append(indexer)
@@ -523,27 +523,18 @@ class PandasFrame(object):
                 for p, idx in col_partitions_list.items()
             ]
             # Use the slice to calculate the new columns
-            monotonic_col_idx = (
+            # TODO: Support processing of non-1-step ranges
+            if is_list_like(col_numeric_idx) and col_numeric_idx.step > 0:
                 # Pandas Index is more likely to preserve its metadata if the indexer is slice
-                slice(
-                    col_numeric_idx.start,
-                    col_numeric_idx.stop,
-                    col_numeric_idx.step,
+                monotonic_col_idx = slice(
+                    col_numeric_idx.start, col_numeric_idx.stop, col_numeric_idx.step
                 )
-                # TODO: Fast range processing of non-1-step ranges is not yet supported
-                if is_range_like(col_numeric_idx) and col_numeric_idx.step > 0
-                else sorted(col_numeric_idx)
-            )
+            else:
+                monotonic_col_idx = sorted(col_numeric_idx)
             new_columns = self.columns[monotonic_col_idx]
             assert sum(new_col_widths) == len(
                 new_columns
-            ), "{} != {}.\n{}\n{}\n{}".format(
-                sum(new_col_widths),
-                len(new_columns),
-                col_numeric_idx,
-                self._column_widths,
-                col_partitions_list,
-            )
+            ), f"{sum(new_col_widths)} != {len(new_columns)}.\n{col_numeric_idx}\n{self._column_widths}\n{col_partitions_list}"
             if self._dtypes is not None:
                 new_dtypes = self.dtypes.iloc[monotonic_col_idx]
             else:
@@ -585,13 +576,13 @@ class PandasFrame(object):
         # common case to keep it fast.
         if (
             row_numeric_idx is None
-            # TODO: Fast range processing of non-1-step ranges is not yet supported
+            # Fast range processing of non-1-step ranges is not yet supported
             or (is_range_like(row_numeric_idx) and row_numeric_idx.step > 0)
             or len(row_numeric_idx) == 1
             or np.all(row_numeric_idx[1:] >= row_numeric_idx[:-1])
         ) and (
             col_numeric_idx is None
-            # TODO: Fast range processing of non-1-step ranges is not yet supported
+            # Fast range processing of non-1-step ranges is not yet supported
             or (is_range_like(col_numeric_idx) and col_numeric_idx.step > 0)
             or len(col_numeric_idx) == 1
             or np.all(col_numeric_idx[1:] >= col_numeric_idx[:-1])
@@ -952,7 +943,7 @@ class PandasFrame(object):
             A mapping from partition index to list of internal indices which correspond to `indices` in each
             partition.
         """
-        # TODO: Handling of slices with specified 'step' is not yet implemented
+        # TODO: Support handling of slices with specified 'step'. For now, converting them into a range
         if isinstance(indices, slice) and (
             indices.step is not None or indices.step != 1
         ):

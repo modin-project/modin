@@ -1153,7 +1153,7 @@ class PandasFramePartitionManager(ABC):
         partition_copy = partitions.copy()
         row_position_counter = 0
 
-        def compute_offset(internal_idx, remote_part, axis):
+        def compute_part_size(internal_idx, remote_part, axis):
             """Compute indexer length along the specified axis for the passed partition."""
             if isinstance(internal_idx, slice):
                 internal_idx = range(
@@ -1170,8 +1170,8 @@ class PandasFramePartitionManager(ABC):
                 col_blk_idx, col_internal_idx = col_values
                 remote_part = partition_copy[row_blk_idx, col_blk_idx]
 
-                row_offset = compute_offset(row_internal_idx, remote_part, axis=0)
-                col_offset = compute_offset(col_internal_idx, remote_part, axis=1)
+                row_offset = compute_part_size(row_internal_idx, remote_part, axis=0)
+                col_offset = compute_part_size(col_internal_idx, remote_part, axis=1)
 
                 if item_to_distribute is not None:
                     item = item_to_distribute[
