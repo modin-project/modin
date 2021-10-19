@@ -34,6 +34,9 @@ from modin.pandas.test.utils import (
     udf_func_values,
     udf_func_keys,
     test_data,
+    bool_arg_keys,
+    bool_arg_values,
+    arg_keys,
 )
 from modin.config import NPartitions, Backend
 
@@ -145,25 +148,50 @@ def test_apply_text_func_with_level(level, data, func, axis):
     )
 
 
-def test_explode():
+@pytest.mark.parametrize(
+    "ignore_index", bool_arg_values, ids=arg_keys("ignore_index", bool_arg_keys)
+)
+def test_explode_single_partition(ignore_index):
     # This test data has two columns where some items are lists that
-    # explode() should expand.
+    # explode() should expand. In some rows, the columns have list-like
+    # elements that must be expanded, and in others, they have empty lists
+    # or items that aren't list-like at all.
     data = {
         "A": [[0, 1, 2], "foo", [], [3, 4]],
         "B": 1,
         "C": [["a", "b", "c"], np.nan, [], ["d", "e"]],
     }
-    eval_general(pd.DataFrame(data), pandas.DataFrame(data), lambda df: df.explode("A"))
     eval_general(
-        pd.DataFrame(data), pandas.DataFrame(data), lambda df: df.explode("A", True)
-    )
-    eval_general(
-        pd.DataFrame(data), pandas.DataFrame(data), lambda df: df.explode(["A", "C"])
+        pd.DataFrame(data),
+        pandas.DataFrame(data),
+        lambda df: df.explode("A", ignore_index=ignore_index),
     )
     eval_general(
         pd.DataFrame(data),
         pandas.DataFrame(data),
-        lambda df: df.explode(["A", "C"], True),
+        lambda df: df.explode(["A", "C"], ignore_index=ignore_index),
+    )
+
+
+@pytest.mark.parametrize(
+    "ignore_index", bool_arg_values, ids=arg_keys("ignore_index", bool_arg_keys)
+)
+def test_explode_all_partitions(ignore_index):
+    # Test explode with enough rows to fill all partitions. explode should
+    # expand every row in the input data into two rows. It's especially
+    # important that the input data has list-like elements that must be
+    # expanded at the boundaries of the partitions, e.g. at row 31.
+    num_rows = NPartitions.get() * 32
+    data = {"A": [[3, 4]] * num_rows, "C": [["a", "b"]] * num_rows}
+    eval_general(
+        pd.DataFrame(data),
+        pandas.DataFrame(data),
+        lambda df: df.explode("A", ignore_index=ignore_index),
+    )
+    eval_general(
+        pd.DataFrame(data),
+        pandas.DataFrame(data),
+        lambda df: df.explode(["A", "C"], ignore_index=ignore_index),
     )
 
 

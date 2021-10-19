@@ -810,14 +810,6 @@ class DataFrame(BasePandasDataset):
             and self.eq(other).all().all()
         )
 
-    def explode(
-        self, column: Union[str, Tuple], ignore_index: bool = False
-    ):  # noqa: PR01, RT01, D200
-        """
-        Transform each element of a list-like to a row, replicating index values.
-        """
-        return super(DataFrame, self).explode(column, ignore_index)
-
     def _update_var_dicts_in_kwargs(self, expr, kwargs):
         """
         Copy variables with "@" prefix in `local_dict` and `global_dict` keys of kwargs.

@@ -58,4 +58,4 @@ def test_api_consistent(backend):
     # checking that custom backend do not implements extra api methods
     assert (
         len(extra_methods) == 0
-    ), f"{backend} implements these extra methods: {extra_methods}"
+    ), f"{backend} implement these extra methods: {extra_methods}"
