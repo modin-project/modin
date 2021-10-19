@@ -14,6 +14,7 @@
 """The module holds base class implementing required I/O over Ray."""
 
 import io
+import os
 import pandas
 
 from modin.core.io import BaseIO
@@ -213,13 +214,10 @@ class RayIO(BaseIO):
             Whether parallel version of ``to_parquet`` is applicable.
         """
         path = kwargs["path"]
-        engine = kwargs["engine"]
         compression = kwargs["compression"]
         if not isinstance(path, str):
             return False
         if any((path.endswith(ext) for ext in [".gz", ".bz2", ".zip", ".xz"])):
-            return False
-        if engine != "auto":
             return False
         if compression is None or not compression == "snappy":
             return False
@@ -252,13 +250,13 @@ class RayIO(BaseIO):
                 Arguments to pass to ``pandas.to_parquet(**kw)`` plus an extra argument
                 `partition_idx` serving as chunk index to maintain rows order.
             """
-            from modin.distributed.dataframe.pandas import unwrap_partitions
-            partitions = unwrap_partitions(df, axis=0)
-            for i, _ in enumerate(partitions):
-                output_path = kwargs["path"]
-                compression = kwargs["compression"]
-                kwargs["path"] = f"{output_path}/part-{i:04d}.{compression}.parquet"
-                df.to_parquet(**kwargs)
+            output_path = kwargs["path"]
+            compression = kwargs["compression"]
+            partition_idx = kw["partition_idx"]
+            if not os.path.exists(output_path):
+                os.makedirs(output_path)
+            kwargs["path"] = f"{output_path}/part-{partition_idx:04d}.{compression}.parquet"
+            df.to_parquet(**kwargs)
 
         # signaling that the partition with id==0 can be written to the file
         qc._modin_frame._partition_mgr_cls.map_axis_partitions(
