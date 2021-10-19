@@ -240,10 +240,6 @@ class RayIO(BaseIO):
         if not cls._to_parquet_check_support(kwargs):
             return BaseIO.to_parquet(qc, **kwargs)
 
-        # The partition id will be added to the queue, for which the moment
-        # of writing to the file has come
-        queue = Queue(maxsize=1)
-
         def func(df, **kw):
             """
             Dump a chunk of rows as parquet, then save them to target maintaining order.
@@ -258,29 +254,13 @@ class RayIO(BaseIO):
             """
             from modin.distributed.dataframe.pandas import unwrap_partitions
             partitions = unwrap_partitions(df, axis=0)
-            for i, part in enumerate(partitions):
-                # TODO: Test changing kwargs["partition_cols"]
+            for i, _ in enumerate(partitions):
+                output_path = kwargs["path"]
+                kwargs["path"] = f"{output_path}/part-{i:04d}.snappy.parquet"
                 df.to_parquet(**kwargs)
-                # TODO for naren-ponder: Figure out this part for to_parquet
-
-            # each process waits for its turn to write to a file;
-            # in case of violation of the order of receiving messages from the queue,
-            # the message is placed back
-            while True:
-                get_value = queue.get(block=True)
-                if get_value == kw["partition_idx"]:
-                    break
-                queue.put(get_value)
-
-            # signal that the next process can start writing to the file
-            queue.put(get_value + 1)
-
-            # used for synchronization purposes
-            return pandas.DataFrame()
 
         # signaling that the partition with id==0 can be written to the file
-        queue.put(0)
-        result = qc._modin_frame._partition_mgr_cls.map_axis_partitions(
+        qc._modin_frame._partition_mgr_cls.map_axis_partitions(
             axis=0,
             partitions=qc._modin_frame._partitions,
             map_func=func,
@@ -288,8 +268,3 @@ class RayIO(BaseIO):
             lengths=None,
             enumerate_partitions=True,
         )
-
-        # pending completion
-        for rows in result:
-            for partition in rows:
-                wait([partition.oid])
