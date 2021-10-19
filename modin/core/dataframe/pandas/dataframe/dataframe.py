@@ -523,8 +523,8 @@ class PandasFrame(object):
                 for p, idx in col_partitions_list.items()
             ]
             # Use the slice to calculate the new columns
-            # TODO: Support processing of non-1-step ranges
-            if is_list_like(col_numeric_idx) and col_numeric_idx.step > 0:
+            # TODO: Support fast processing of negative-step ranges
+            if is_range_like(col_numeric_idx) and col_numeric_idx.step > 0:
                 # Pandas Index is more likely to preserve its metadata if the indexer is slice
                 monotonic_col_idx = slice(
                     col_numeric_idx.start, col_numeric_idx.stop, col_numeric_idx.step
