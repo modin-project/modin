@@ -927,7 +927,7 @@ class TestCsv:
         condition="config.getoption('--simulate-cloud').lower() != 'off'",
         reason="The reason of tests fail in `cloud` mode is unknown for now - issue #2340",
     )
-    def test_to_csv(self, header, mode):
+    def test_to_csv(self, header, mode, test):
 
         pandas_df = generate_dataframe()
         modin_df = pd.DataFrame(pandas_df)
