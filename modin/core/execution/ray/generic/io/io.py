@@ -193,4 +193,4 @@ class RayIO(BaseIO):
             enumerate_partitions=True,
         )
         # pending completion
-        [get(partition.oid) for partition in result.flatten()]
+        get([partition.oid for partition in result.flatten()])
