@@ -87,6 +87,8 @@ def assert_files_eq(path1, path2):
         if file1_content == file2_content:
             return True
         else:
+            print(f"FILE1 CONTENT: {file1_content}\n\n\n\n\n")  # noqa: T001
+            print(f"FILE2 CONTENT: {file2_content}\n\n")  # noqa: T001
             return False
 
 
