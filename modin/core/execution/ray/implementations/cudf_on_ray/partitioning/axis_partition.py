@@ -107,7 +107,7 @@ class cuDFOnRayDataframeRowPartition(cuDFOnRayDataframeAxisPartition):
         Notes
         -----
         Since we are using row partitions, we can bypass the Ray plasma
-        store during axis reduce functions.
+        store during axis reduction functions.
         """
         keys = [partition.get_key() for partition in self.partitions]
         gpu = self.partitions[0].get_gpu_manager()

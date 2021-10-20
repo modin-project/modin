@@ -179,7 +179,7 @@ class PandasDataframe(object):
         reduce_func = self._build_mapreduce_func(0, dtype_builder)
         # For now we will use a pandas Series for the dtypes.
         if len(self.columns) > 0:
-            dtypes = self.tree_reduce(0, map_func, reduce_func).to_pandas().iloc[0]
+            dtypes = self.map_reduce(0, map_func, reduce_func).to_pandas().iloc[0]
         else:
             dtypes = pandas.Series([])
         # reset name to None because we use "__reduced__" internally
@@ -1150,12 +1150,12 @@ class PandasDataframe(object):
         reduced data dimensionality (dataframe -> series).
         """
 
-        def _tree_reduce_func(df, *args, **kwargs):
+        def _map_reduce_func(df, *args, **kwargs):
             """Map-reducer function itself executing `func`, presenting the resulting pandas.Series as pandas.DataFrame."""
             series_result = func(df, *args, **kwargs)
             if axis == 0 and isinstance(series_result, pandas.Series):
                 # In the case of axis=0, we need to keep the shape of the data
-                # consistent with what we have done. In the case of a reduce, the
+                # consistent with what we have done. In the case of a reduction, the
                 # data for axis=0 should be a single value for each column. By
                 # transposing the data after we convert to a DataFrame, we ensure that
                 # the columns of the result line up with the columns from the data.
@@ -1170,9 +1170,9 @@ class PandasDataframe(object):
                     result.columns = ["__reduced__"]
             return result
 
-        return _tree_reduce_func
+        return _map_reduce_func
 
-    def _compute_tree_reduce_metadata(self, axis, new_parts):
+    def _compute_map_reduce_metadata(self, axis, new_parts):
         """
         Compute the metadata for the result of reduce function.
 
@@ -1225,9 +1225,9 @@ class PandasDataframe(object):
         new_parts = self._partition_mgr_cls.map_axis_partitions(
             axis, self._partitions, func
         )
-        return self._compute_tree_reduce_metadata(axis, new_parts)
+        return self._compute_map_reduce_metadata(axis, new_parts)
 
-    def tree_reduce(self, axis, map_func, reduce_func=None):
+    def map_reduce(self, axis, map_func, reduce_func=None):
         """
         Apply function that will reduce the data to a pandas Series.
 
@@ -1256,7 +1256,7 @@ class PandasDataframe(object):
         reduce_parts = self._partition_mgr_cls.map_axis_partitions(
             axis, map_parts, reduce_func
         )
-        return self._compute_tree_reduce_metadata(axis, reduce_parts)
+        return self._compute_map_reduce_metadata(axis, reduce_parts)
 
     def map(self, func, dtypes=None):
         """

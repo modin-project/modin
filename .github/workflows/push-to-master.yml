@@ -37,7 +37,7 @@ jobs:
           pytest modin/pandas/test/dataframe/test_iter.py
           pytest modin/pandas/test/dataframe/test_join_sort.py
           pytest modin/pandas/test/dataframe/test_map_metadata.py
-          pytest modin/pandas/test/dataframe/test_reduce.py
+          pytest modin/pandas/test/dataframe/test_reduction.py
           pytest modin/pandas/test/dataframe/test_udf.py
           pytest modin/pandas/test/dataframe/test_window.py
           pytest modin/pandas/test/test_series.py
@@ -89,7 +89,7 @@ jobs:
           - modin/pandas/test/dataframe/test_iter.py
           - modin/pandas/test/dataframe/test_join_sort.py
           - modin/pandas/test/dataframe/test_map_metadata.py
-          - modin/pandas/test/dataframe/test_reduce.py
+          - modin/pandas/test/dataframe/test_reduction.py
           - modin/pandas/test/dataframe/test_udf.py
           - modin/pandas/test/dataframe/test_window.py
           - modin/pandas/test/dataframe/test_pickle.py

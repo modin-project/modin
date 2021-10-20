@@ -11,18 +11,18 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-"""Module houses builder class for TreeReduce operator."""
+"""Module houses builder class for MapReduce operator."""
 
 from .operator import Operator
 
 
-class TreeReduce(Operator):
-    """Builder class for TreeReduce operator."""
+class MapReduce(Operator):
+    """Builder class for MapReduce operator."""
 
     @classmethod
     def call(cls, map_function, reduce_function, axis=None):
         """
-        Build TreeReduce operator.
+        Build MapReduce operator.
 
         Parameters
         ----------
@@ -44,7 +44,7 @@ class TreeReduce(Operator):
             """Execute MapReduce function against passed query compiler."""
             _axis = kwargs.get("axis") if axis is None else axis
             return query_compiler.__constructor__(
-                query_compiler._modin_frame.tree_reduce(
+                query_compiler._modin_frame.map_reduce(
                     cls.validate_axis(_axis),
                     lambda x: map_function(x, *args, **kwargs),
                     lambda y: reduce_function(y, *args, **kwargs),

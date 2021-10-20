@@ -93,10 +93,10 @@ class TimeGroupByDictionaryAggregation(BaseTimeGroupBy):
     params = [
         get_benchmark_shapes("TimeGroupByDictionaryAggregation"),
         GROUPBY_NGROUPS,
-        ["reduce", "aggregation"],
+        ["reduction", "aggregation"],
     ]
     operations = {
-        "reduce": ["sum", "count", "prod"],
+        "reduction": ["sum", "count", "prod"],
         "aggregation": ["quantile", "std", "median"],
     }
 
