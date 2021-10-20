@@ -682,7 +682,7 @@ class Series(BasePandasDataset):
         try:
             return_type = type(
                 getattr(
-                    pandas.Series(self.values[:1], index=self.index[:1]), apply_func
+                    pandas.Series(self[:1].values, index=self.index[:1]), apply_func
                 )(func, *args, **kwargs)
             ).__name__
         except Exception:
