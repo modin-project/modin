@@ -13,12 +13,29 @@
 
 """The module holds base class implementing required I/O over Ray."""
 
+import asyncio
 import io
 import pandas
 
 from modin.core.io import BaseIO
-from ray.util.queue import Queue
-from ray import get
+import ray
+
+
+@ray.remote(num_cpus=0)
+class SignalActor:
+    def __init__(self, count_events):
+        print(count_events)
+        self.events = [asyncio.Event() for _ in range(count_events)]
+
+    def send(self, event_idx):
+        self.events[event_idx].set()
+
+    async def wait(self, event_idx, should_wait=True):
+        if should_wait:
+            await self.events[event_idx].wait()
+
+    def is_set(self, event_idx):
+        return self.events[event_idx].is_set()
 
 
 class RayIO(BaseIO):
@@ -119,7 +136,7 @@ class RayIO(BaseIO):
 
         # The partition id will be added to the queue, for which the moment
         # of writing to the file has come
-        queue = Queue(maxsize=1)
+        signals = SignalActor.remote(5)
 
         def func(df, **kw):
             """
@@ -133,8 +150,9 @@ class RayIO(BaseIO):
                 Arguments to pass to ``pandas.to_csv(**kw)`` plus an extra argument
                 `partition_idx` serving as chunk index to maintain rows order.
             """
+            idx = kw["partition_idx"]
             new_kwargs = kwargs.copy()
-            if kw["partition_idx"] != 0:
+            if idx != 0:
                 # we need to create a new file only for first recording
                 # all the rest should be recorded in appending mode
                 if "w" in new_kwargs["mode"]:
@@ -154,13 +172,7 @@ class RayIO(BaseIO):
             new_kwargs["path_or_buf"].close()
 
             # each process waits for its turn to write to a file;
-            # in case of violation of the order of receiving messages from the queue,
-            # the message is placed back
-            while True:
-                get_value = queue.get(block=True)
-                if get_value == kw["partition_idx"]:
-                    break
-                queue.put(get_value)
+            ray.get(signals.wait.remote(idx))
 
             # preparing to write data from the buffer to a file
             with pandas.io.common.get_handle(
@@ -177,13 +189,12 @@ class RayIO(BaseIO):
                 handles.handle.write(content)
 
             # signal that the next process can start writing to the file
-            queue.put(get_value + 1)
-
+            ray.get(signals.send.remote(idx + 1))
             # used for synchronization purposes
             return pandas.DataFrame()
 
         # signaling that the partition with id==0 can be written to the file
-        queue.put(0)
+        ray.get(signals.send.remote(0))
         result = qc._modin_frame._partition_mgr_cls.map_axis_partitions(
             axis=1,
             partitions=qc._modin_frame._partitions,
@@ -193,4 +204,4 @@ class RayIO(BaseIO):
             enumerate_partitions=True,
         )
         # pending completion
-        get([partition.oid for partition in result.flatten()])
+        ray.get([partition.oid for partition in result.flatten()])
