@@ -2188,6 +2188,31 @@ class DataFrame(BasePandasDataset):
             encoding=None,
         )
 
+    def to_parquet(
+        self,
+        path,
+        engine="auto",
+        compression="snappy",
+        index=None,
+        partition_cols=None,
+        **kwargs,
+    ):
+
+        config = {
+            "path": path,
+            "engine": engine,
+            "compression": compression,
+            "index": index,
+            "partition_cols": partition_cols,
+        }
+        new_query_compiler = self._query_compiler
+
+        from modin.core.execution.dispatching.factories.dispatcher import (
+            FactoryDispatcher,
+        )
+
+        return FactoryDispatcher.to_parquet(new_query_compiler, **config, **kwargs)
+
     def to_period(
         self, freq=None, axis=0, copy=True
     ):  # pragma: no cover # noqa: PR01, RT01, D200
