@@ -1,4 +1,4 @@
-# Ponder dev onboarding for MacOS
+# Modin dev onboarding
 
 1. [Set up git](https://docs.github.com/en/get-started/quickstart/set-up-git)
 1. [install anaconda](https://www.anaconda.com/products/individual#macos). Once installed,
