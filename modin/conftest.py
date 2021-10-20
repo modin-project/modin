@@ -15,6 +15,7 @@ import os
 import sys
 import pytest
 import pandas
+from pandas.util._decorators import doc
 import numpy as np
 import pyarrow as pa
 import pyarrow.parquet as pq
@@ -44,13 +45,19 @@ import modin  # noqa: E402
 import modin.config  # noqa: E402
 from modin.config import IsExperimental, TestRayClient  # noqa: E402
 
-from modin.backends import PandasQueryCompiler, BaseQueryCompiler  # noqa: E402
-from modin.engines.python.pandas_on_python.io import PandasOnPythonIO  # noqa: E402
-from modin.data_management.factories import factories  # noqa: E402
+from modin.core.storage_formats import (  # noqa: E402
+    PandasQueryCompiler,
+    BaseQueryCompiler,
+)
+from modin.core.execution.python.implementations.pandas_on_python.io import (  # noqa: E402
+    PandasOnPythonIO,
+)
+from modin.core.execution.dispatching.factories import factories  # noqa: E402
 from modin.utils import get_current_backend  # noqa: E402
 from modin.pandas.test.utils import (  # noqa: E402
     _make_csv_file,
     get_unique_filename,
+    make_default_file,
     teardown_test_files,
     NROWS,
     IO_OPS_DATA_DIR,
@@ -285,6 +292,14 @@ def pytest_runtest_call(item):
             )
 
 
+_doc_pytest_fixture = """
+Pytest fixture factory that makes temp {file_type} files for testing.
+
+Yields:
+    Function that generates {file_type} files
+"""
+
+
 @pytest.fixture(scope="class")
 def TestReadCSVFixture():
     filenames = []
@@ -329,17 +344,31 @@ def TestReadCSVFixture():
 
 
 @pytest.fixture
+@doc(_doc_pytest_fixture, file_type="csv")
 def make_csv_file():
-    """Pytest fixture factory that makes temp csv files for testing.
-    Yields:
-        Function that generates csv files
-    """
     filenames = []
 
     yield _make_csv_file(filenames)
 
     # Delete csv files that were created
     teardown_test_files(filenames)
+
+
+def create_fixture(file_type):
+    @doc(_doc_pytest_fixture, file_type=file_type)
+    def fixture():
+        func, filenames = make_default_file(file_type=file_type)
+        yield func
+        teardown_test_files(filenames)
+
+    return fixture
+
+
+for file_type in ("json", "html", "excel", "feather", "stata", "hdf", "pickle", "fwf"):
+
+    fixture = create_fixture(file_type)
+    fixture.__name__ = f"make_{file_type}_file"
+    globals()[fixture.__name__] = pytest.fixture(fixture)
 
 
 @pytest.fixture
@@ -353,7 +382,8 @@ def make_parquet_file():
 
     def _make_parquet_file(
         filename,
-        row_size=NROWS,
+        nrows=NROWS,
+        ncols=2,
         force=True,
         directory=False,
         partitioned_columns=[],
@@ -362,32 +392,31 @@ def make_parquet_file():
 
         Args:
             filename: The name of test file, that should be created.
-            row_size: Number of rows for the dataframe.
+            nrows: Number of rows for the dataframe.
+            ncols: Number of cols for the dataframe.
             force: Create a new file/directory even if one already exists.
             directory: Create a partitioned directory using pyarrow.
             partitioned_columns: Create a partitioned directory using pandas.
             Will be ignored if directory=True.
         """
-        df = pandas.DataFrame(
-            {"col1": np.arange(row_size), "col2": np.arange(row_size)}
-        )
-        if os.path.exists(filename) and not force:
-            pass
-        elif directory:
-            if os.path.exists(filename):
-                shutil.rmtree(filename)
+        if force or not os.path.exists(filename):
+            df = pandas.DataFrame(
+                {f"col{x + 1}": np.arange(nrows) for x in range(ncols)}
+            )
+            if directory:
+                if os.path.exists(filename):
+                    shutil.rmtree(filename)
+                else:
+                    os.makedirs(filename)
+                table = pa.Table.from_pandas(df)
+                pq.write_to_dataset(table, root_path=filename)
+            elif len(partitioned_columns) > 0:
+                df.to_parquet(filename, partition_cols=partitioned_columns)
             else:
-                os.mkdir(filename)
-            table = pa.Table.from_pandas(df)
-            pq.write_to_dataset(table, root_path=filename)
-        elif len(partitioned_columns) > 0:
-            df.to_parquet(filename, partition_cols=partitioned_columns)
-        else:
-            df.to_parquet(filename)
+                df.to_parquet(filename)
+            filenames.append(filename)
 
-        filenames.append(filename)
-
-    # Return function that generates csv files
+    # Return function that generates parquet files
     yield _make_parquet_file
 
     # Delete parquet file that was created

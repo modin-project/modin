@@ -2528,7 +2528,9 @@ class BasePandasDataset(object):
         }
         new_query_compiler = self._query_compiler
 
-        from modin.data_management.factories.dispatcher import FactoryDispatcher
+        from modin.core.execution.dispatching.factories.dispatcher import (
+            FactoryDispatcher,
+        )
 
         return FactoryDispatcher.to_csv(new_query_compiler, **kwargs)
 
@@ -2772,7 +2774,9 @@ class BasePandasDataset(object):
             # so pandas._to_sql will not write the index to the database as well
             index = False
 
-        from modin.data_management.factories.dispatcher import FactoryDispatcher
+        from modin.core.execution.dispatching.factories.dispatcher import (
+            FactoryDispatcher,
+        )
 
         FactoryDispatcher.to_sql(
             new_query_compiler,
@@ -2954,15 +2958,7 @@ class BasePandasDataset(object):
         else:
             return self._getitem(key)
 
-    def __hash__(self):
-        """
-        Raise an exception when calling hash on non-hashable ``DataFrame`` or ``Series`` objects.
-
-        Raises
-        ------
-        TypeError
-        """
-        raise TypeError(f"unhashable type: '{type(self).__name__}'")
+    __hash__ = None
 
     def _setitem_slice(self, key: slice, value):
         """

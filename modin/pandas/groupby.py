@@ -31,8 +31,8 @@ from modin.utils import (
     hashable,
     wrap_into_list,
 )
-from modin.backends.base.query_compiler import BaseQueryCompiler
-from modin.data_management.functions.default_methods.groupby_default import GroupBy
+from modin.core.storage_formats.base.query_compiler import BaseQueryCompiler
+from modin.core.dataframe.algebra.default2pandas.groupby import GroupBy
 from modin.config import IsExperimental
 from .series import Series
 from .utils import is_label

@@ -311,7 +311,7 @@ class StackingAveragedModels(BaseEstimator, RegressorMixin, TransformerMixin):
         self.n_folds = n_folds
 
     def fit(self, X, y):
-        self.base_models_ = [[] for x in self.base_models]
+        self.base_models_ = [[] for _ in self.base_models]
         self.meta_model_ = clone(self.meta_model)
         kfold = KFold(n_splits=self.n_folds, shuffle=True, random_state=156)
         out_of_fold_predictions = np.zeros((X.shape[0], len(self.base_models)))

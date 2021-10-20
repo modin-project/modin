@@ -23,10 +23,10 @@ jobs:
           conda info
           conda list
       - name: Internals tests
-        run: python -m pytest modin/data_management/factories/test/test_dispatcher.py modin/experimental/cloud/test/test_cloud.py
+        run: python -m pytest modin/core/execution/dispatching/factories/test/test_dispatcher.py modin/experimental/cloud/test/test_cloud.py
       - run: python -m pytest modin/config/test
       - run: python -m pytest modin/test/test_envvar_catcher.py
-      - run: python -m pytest modin/test/backends/pandas/test_internals.py
+      - run: python -m pytest modin/test/storage_formats/pandas/test_internals.py
       - run: python -m pytest modin/test/test_envvar_npartitions.py
       - run: python -m pytest modin/test/test_partition_api.py
 
@@ -114,7 +114,7 @@ jobs:
           conda list
       - name: Install HDF5
         run: sudo apt update && sudo apt install -y libhdf5-dev
-      - run: pytest modin/experimental/engines/omnisci_on_native/test/test_dataframe.py
+      - run: pytest modin/experimental/core/execution/native/implementations/omnisci_on_native/test/test_dataframe.py
       - run: pytest modin/pandas/test/test_io.py::TestCsv
       - run: |
           curl -o codecov https://codecov.io/bash
@@ -287,6 +287,7 @@ jobs:
         python-version: [ "3.7", "3.8" ]
         engine: ["ray", "dask"]
     env:
+      MODIN_EXPERIMENTAL: "True"
       MODIN_ENGINE: ${{matrix.engine}}
     name: test-spreadsheet (engine ${{matrix.engine}}, python ${{matrix.python-version}})
     steps:
@@ -304,4 +305,4 @@ jobs:
         run: |
           conda info
           conda list
-      - run: python -m pytest modin/spreadsheet/test/test_general.py
+      - run: python -m pytest modin/experimental/spreadsheet/test/test_general.py

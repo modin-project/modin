@@ -13,7 +13,7 @@
 
 import pandas
 
-__pandas_version__ = "1.3.3"
+__pandas_version__ = "1.3.4"
 
 if pandas.__version__ != __pandas_version__:
     import warnings
@@ -108,7 +108,7 @@ def _update_engine(publisher: Parameter):
 
     if publisher.get() == "Ray":
         if _is_first_update.get("Ray", True):
-            from modin.engines.ray.utils import initialize_ray
+            from modin.core.execution.ray.common.utils import initialize_ray
 
             initialize_ray()
     elif publisher.get() == "Native":
@@ -122,7 +122,7 @@ def _update_engine(publisher: Parameter):
             )
     elif publisher.get() == "Dask":
         if _is_first_update.get("Dask", True):
-            from modin.engines.dask.utils import initialize_dask
+            from modin.core.execution.dask.common.utils import initialize_dask
 
             initialize_dask()
     elif publisher.get() == "Cloudray":
@@ -135,7 +135,7 @@ def _update_engine(publisher: Parameter):
             def init_remote_ray(partition):
                 from ray import ray_constants
                 import modin
-                from modin.engines.ray.utils import initialize_ray
+                from modin.core.execution.ray.common.utils import initialize_ray
 
                 modin.set_backends("Ray", partition)
                 initialize_ray(
@@ -147,7 +147,7 @@ def _update_engine(publisher: Parameter):
             init_remote_ray(Backend.get())
             # import FactoryDispatcher here to initialize IO class
             # so it doesn't skew read_csv() timings later on
-            import modin.data_management.factories.dispatcher  # noqa: F401
+            import modin.core.execution.dispatching.factories.dispatcher  # noqa: F401
         else:
             get_connection().modules["modin"].set_backends("Ray", Backend.get())
     elif publisher.get() == "Cloudpython":

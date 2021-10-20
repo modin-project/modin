@@ -46,7 +46,7 @@ RUN wget -nv https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.
     && rm -f /tmp/miniconda3.sh
 
 RUN conda update -n base -c defaults conda -y \
-    && conda create -n ${CONDA_ENV_NAME} --yes -c conda-forge \
+    && conda create -n ${CONDA_ENV_NAME} --yes -c conda-forge --strict-channel-priority \
         modin-ray \
         ray-dashboard \
         scikit-learn \

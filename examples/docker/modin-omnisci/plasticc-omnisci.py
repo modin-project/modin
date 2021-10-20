@@ -16,7 +16,6 @@ import time
 from collections import OrderedDict
 from functools import partial
 import modin.pandas as pd
-from modin.experimental.engines.omnisci_on_native.frame.omnisci_worker import OmnisciServer
 
 import numpy as np
 import xgboost as xgb

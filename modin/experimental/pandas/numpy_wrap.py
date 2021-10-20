@@ -29,7 +29,7 @@ else:
     import types
     import copyreg
     from modin.config import Engine
-    from modin.data_management.factories import REMOTE_ENGINES
+    from modin.core.execution.dispatching.factories import REMOTE_ENGINES
     import modin
     import pandas
     import os
