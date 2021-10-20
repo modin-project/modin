@@ -133,27 +133,27 @@ class RayIO(BaseIO):
                 Arguments to pass to ``pandas.to_csv(**kw)`` plus an extra argument
                 `partition_idx` serving as chunk index to maintain rows order.
             """
-            new_kwargs = kwargs.copy()
-            if kw["partition_idx"] != 0:
-                # we need to create a new file only for first recording
-                # all the rest should be recorded in appending mode
-                if "w" in new_kwargs["mode"]:
-                    new_kwargs["mode"] = new_kwargs["mode"].replace("w", "a")
-                # It is enough to write the header for the first partition
-                new_kwargs["header"] = False
-
-            # for parallelization purposes, each partition is written to an intermediate buffer
-            path_or_buf = new_kwargs["path_or_buf"]
-            is_binary = "b" in new_kwargs["mode"]
-            if is_binary:
-                new_kwargs["path_or_buf"] = io.BytesIO()
-            else:
-                new_kwargs["path_or_buf"] = io.StringIO()
-            df.to_csv(**new_kwargs)
-            content = new_kwargs["path_or_buf"].getvalue()
-            new_kwargs["path_or_buf"].close()
-
             try:
+                new_kwargs = kwargs.copy()
+                if kw["partition_idx"] != 0:
+                    # we need to create a new file only for first recording
+                    # all the rest should be recorded in appending mode
+                    if "w" in new_kwargs["mode"]:
+                        new_kwargs["mode"] = new_kwargs["mode"].replace("w", "a")
+                    # It is enough to write the header for the first partition
+                    new_kwargs["header"] = False
+
+                # for parallelization purposes, each partition is written to an intermediate buffer
+                path_or_buf = new_kwargs["path_or_buf"]
+                is_binary = "b" in new_kwargs["mode"]
+                if is_binary:
+                    new_kwargs["path_or_buf"] = io.BytesIO()
+                else:
+                    new_kwargs["path_or_buf"] = io.StringIO()
+                df.to_csv(**new_kwargs)
+                content = new_kwargs["path_or_buf"].getvalue()
+                new_kwargs["path_or_buf"].close()
+
                 # each process waits for its turn to write to a file;
                 # in case of violation of the order of receiving messages from the queue,
                 # the message is placed back
@@ -161,10 +161,6 @@ class RayIO(BaseIO):
                     get_value = queue.get(block=True)
                     if get_value == kw["partition_idx"]:
                         break
-                    elif get_value == -1:
-                        # End other threads without rest work
-                        queue.put(-1)
-                        return pandas.DataFrame()
                     queue.put(get_value)
 
                 # preparing to write data from the buffer to a file
@@ -185,8 +181,7 @@ class RayIO(BaseIO):
                 queue.put(get_value + 1)
 
             except Exception as e:
-                # Message for another threads about exception
-                queue.put(-1)
+                queue.shutdown(force=True)
                 raise e
 
             # used for synchronization purposes
