@@ -681,9 +681,9 @@ class Series(BasePandasDataset):
         # the return type.
         try:
             return_type = type(
-                getattr(pandas.Series(self.values[:1], index=self.index[:1]), apply_func)(
-                    func, *args, **kwargs
-                )
+                getattr(
+                    pandas.Series(self.values[:1], index=self.index[:1]), apply_func
+                )(func, *args, **kwargs)
             ).__name__
         except Exception:
             return_type = type(self).__name__
