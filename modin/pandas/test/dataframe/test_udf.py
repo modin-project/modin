@@ -149,9 +149,12 @@ def test_apply_text_func_with_level(level, data, func, axis):
 
 
 @pytest.mark.parametrize(
+    "column", ["A", ["A", "C"]], ids=arg_keys("column", ["A", ["A", "C"]])
+)
+@pytest.mark.parametrize(
     "ignore_index", bool_arg_values, ids=arg_keys("ignore_index", bool_arg_keys)
 )
-def test_explode_single_partition(ignore_index):
+def test_explode_single_partition(column, ignore_index):
     # This test data has two columns where some items are lists that
     # explode() should expand. In some rows, the columns have list-like
     # elements that must be expanded, and in others, they have empty lists
@@ -164,19 +167,17 @@ def test_explode_single_partition(ignore_index):
     eval_general(
         pd.DataFrame(data),
         pandas.DataFrame(data),
-        lambda df: df.explode("A", ignore_index=ignore_index),
-    )
-    eval_general(
-        pd.DataFrame(data),
-        pandas.DataFrame(data),
-        lambda df: df.explode(["A", "C"], ignore_index=ignore_index),
+        lambda df: df.explode(column, ignore_index=ignore_index),
     )
 
 
 @pytest.mark.parametrize(
+    "column", ["A", ["A", "C"]], ids=arg_keys("column", ["A", ["A", "C"]])
+)
+@pytest.mark.parametrize(
     "ignore_index", bool_arg_values, ids=arg_keys("ignore_index", bool_arg_keys)
 )
-def test_explode_all_partitions(ignore_index):
+def test_explode_all_partitions(column, ignore_index):
     # Test explode with enough rows to fill all partitions. explode should
     # expand every row in the input data into two rows. It's especially
     # important that the input data has list-like elements that must be
@@ -186,12 +187,7 @@ def test_explode_all_partitions(ignore_index):
     eval_general(
         pd.DataFrame(data),
         pandas.DataFrame(data),
-        lambda df: df.explode("A", ignore_index=ignore_index),
-    )
-    eval_general(
-        pd.DataFrame(data),
-        pandas.DataFrame(data),
-        lambda df: df.explode(["A", "C"], ignore_index=ignore_index),
+        lambda df: df.explode(column, ignore_index=ignore_index),
     )
 
 

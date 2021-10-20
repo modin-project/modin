@@ -1378,11 +1378,13 @@ class PandasFrame(object):
         partitions = self._partition_mgr_cls.map_axis_partitions(
             axis, self._partitions, func
         )
-        return self.__constructor__(
-            partitions,
-            self._compute_axis_labels(axis ^ 1, partitions),
-            self.columns,
-        )
+        if axis == 1:
+            new_index = self._compute_axis_labels(0, partitions)
+            new_columns = self.columns
+        else:
+            new_index = self.index
+            new_columns = self._compute_axis_labels(1, partitions)
+        return self.__constructor__(partitions, new_index, new_columns)
 
     def apply_full_axis(
         self,
