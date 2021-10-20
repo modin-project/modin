@@ -182,6 +182,8 @@ class RayIO(BaseIO):
             # used for synchronization purposes
             return pandas.DataFrame()
 
+        # signaling that the partition with id==0 can be written to the file
+        queue.put(0)
         result = qc._modin_frame._partition_mgr_cls.map_axis_partitions(
             axis=1,
             partitions=qc._modin_frame._partitions,
@@ -190,7 +192,5 @@ class RayIO(BaseIO):
             lengths=None,
             enumerate_partitions=True,
         )
-        # signaling that the partition with id==0 can be written to the file
-        queue.put(0)
         # pending completion
         [get(partition.oid) for partition in result.flatten()]
