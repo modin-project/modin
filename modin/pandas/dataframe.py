@@ -2190,11 +2190,12 @@ class DataFrame(BasePandasDataset):
 
     def to_parquet(
         self,
-        path,
+        path=None,
         engine="auto",
         compression="snappy",
         index=None,
         partition_cols=None,
+        storage_options=None,
         **kwargs,
     ):
 
@@ -2204,6 +2205,7 @@ class DataFrame(BasePandasDataset):
             "compression": compression,
             "index": index,
             "partition_cols": partition_cols,
+            "storage_options": storage_options,
         }
         new_query_compiler = self._query_compiler
 
