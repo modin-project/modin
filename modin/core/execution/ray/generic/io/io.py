@@ -134,7 +134,8 @@ class RayIO(BaseIO):
 
         # The partition id will be added to the queue, for which the moment
         # of writing to the file has come
-        signals = SignalActor.remote(len(qc._modin_frame._partitions) + 1)
+        count_signals = len(qc._modin_frame._partitions)
+        signals = SignalActor.remote(count_signals + 1)
 
         def func(df, **kw):
             """
@@ -149,27 +150,27 @@ class RayIO(BaseIO):
                 `partition_idx` serving as chunk index to maintain rows order.
             """
             idx = kw["partition_idx"]
-            new_kwargs = kwargs.copy()
+            _kwargs = kwargs.copy()
             if idx != 0:
                 # we need to create a new file only for first recording
                 # all the rest should be recorded in appending mode
-                if "w" in new_kwargs["mode"]:
-                    new_kwargs["mode"] = new_kwargs["mode"].replace("w", "a")
+                if "w" in _kwargs["mode"]:
+                    _kwargs["mode"] = _kwargs["mode"].replace("w", "a")
                 # It is enough to write the header for the first partition
-                new_kwargs["header"] = False
+                _kwargs["header"] = False
 
             # for parallelization purposes, each partition is written to an intermediate buffer
-            path_or_buf = new_kwargs["path_or_buf"]
-            is_binary = "b" in new_kwargs["mode"]
+            path_or_buf = _kwargs["path_or_buf"]
+            is_binary = "b" in _kwargs["mode"]
             if is_binary:
-                new_kwargs["path_or_buf"] = io.BytesIO()
+                _kwargs["path_or_buf"] = io.BytesIO()
             else:
-                new_kwargs["path_or_buf"] = io.StringIO()
-            df.to_csv(**new_kwargs)
-            content = new_kwargs["path_or_buf"].getvalue()
-            new_kwargs["path_or_buf"].close()
+                _kwargs["path_or_buf"] = io.StringIO()
+            df.to_csv(**_kwargs)
+            content = _kwargs["path_or_buf"].getvalue()
+            _kwargs["path_or_buf"].close()
 
-            # each process waits for its turn to write to a file;
+            # each process waits for its turn to write to a file
             ray.get(signals.wait.remote(idx))
 
             # preparing to write data from the buffer to a file
@@ -177,11 +178,11 @@ class RayIO(BaseIO):
                 path_or_buf,
                 # in case when using URL in implicit text mode
                 # pandas try to open `path_or_buf` in binary mode
-                new_kwargs["mode"] if is_binary else new_kwargs["mode"] + "t",
-                encoding=new_kwargs["encoding"],
-                errors=new_kwargs["errors"],
-                compression=new_kwargs["compression"],
-                storage_options=new_kwargs["storage_options"],
+                _kwargs["mode"] if is_binary else _kwargs["mode"] + "t",
+                encoding=_kwargs["encoding"],
+                errors=_kwargs["errors"],
+                compression=_kwargs["compression"],
+                storage_options=_kwargs["storage_options"],
                 is_text=False,
             ) as handles:
                 handles.handle.write(content)
@@ -193,7 +194,7 @@ class RayIO(BaseIO):
 
         # signaling that the partition with id==0 can be written to the file
         ray.get(signals.send.remote(0))
-        result = qc._modin_frame._partition_mgr_cls.map_axis_partitions(
+        _ = qc._modin_frame._partition_mgr_cls.map_axis_partitions(
             axis=1,
             partitions=qc._modin_frame._partitions,
             map_func=func,
@@ -202,4 +203,5 @@ class RayIO(BaseIO):
             enumerate_partitions=True,
         )
         # pending completion
-        ray.get([partition.oid for partition in result.flatten()])
+        last_signal_id = count_signals
+        ray.get(signals.wait.remote(last_signal_id))
