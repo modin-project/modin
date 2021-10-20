@@ -255,8 +255,11 @@ class RayIO(BaseIO):
             partition_idx = kw["partition_idx"]
             if not os.path.exists(output_path):
                 os.makedirs(output_path)
-            kwargs["path"] = f"{output_path}/part-{partition_idx:04d}.{compression}.parquet"
+            kwargs[
+                "path"
+            ] = f"{output_path}/part-{partition_idx:04d}.{compression}.parquet"
             df.to_parquet(**kwargs)
+            return pandas.DataFrame()
 
         # signaling that the partition with id==0 can be written to the file
         qc._modin_frame._partition_mgr_cls.map_axis_partitions(

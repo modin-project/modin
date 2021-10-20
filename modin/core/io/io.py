@@ -855,7 +855,9 @@ class BaseIO(object):
         return obj.to_csv(**kwargs)
 
     @classmethod
-    @_inherit_docstrings(pandas.DataFrame.to_parquet, apilink="pandas.DataFrame.to_parquet")
+    @_inherit_docstrings(
+        pandas.DataFrame.to_parquet, apilink="pandas.DataFrame.to_parquet"
+    )
     def to_parquet(cls, obj, **kwargs):  # noqa: PR01
         """
         Write object to the binary parquet format using pandas.
