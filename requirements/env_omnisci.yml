@@ -13,7 +13,7 @@ dependencies:
   - pytest-xdist>=2.1.0
   - coverage<5.0
   - pygithub==1.53
-  - pyomniscidbe
+  - pyomniscidbe<=5.7.1 # modin-project/modin#3574
   - s3fs>=0.4.2
   - psutil
   - openpyxl
