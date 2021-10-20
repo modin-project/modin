@@ -378,6 +378,7 @@ class PandasDataframePartitionManager(ABC):
         apply_indices=None,
         enumerate_partitions=False,
         lengths=None,
+        remote_options=None,
     ):
         """
         Broadcast the `right` partitions to `left` and apply `apply_func` along full `axis`.
@@ -402,6 +403,9 @@ class PandasDataframePartitionManager(ABC):
             Note that `apply_func` must be able to accept `partition_idx` kwarg.
         lengths : list of ints, default: None
             The list of lengths to shuffle the object.
+        remote_options : dict, default: None
+            Options that can be defined prior to calling a remote function
+            https://docs.ray.io/en/latest/advanced.html#dynamic-remote-parameters.
 
         Returns
         -------
@@ -439,6 +443,7 @@ class PandasDataframePartitionManager(ABC):
             [
                 left_partitions[i].apply(
                     preprocessed_map_func,
+                    remote_options=remote_options,
                     **kw,
                     **({"partition_idx": idx} if enumerate_partitions else {}),
                 )
@@ -511,6 +516,7 @@ class PandasDataframePartitionManager(ABC):
         keep_partitioning=False,
         lengths=None,
         enumerate_partitions=False,
+        remote_options=None,
     ):
         """
         Apply `map_func` to every partition in `partitions` along given `axis`.
@@ -531,6 +537,9 @@ class PandasDataframePartitionManager(ABC):
         enumerate_partitions : bool, default: False
             Whether or not to pass partition index into `map_func`.
             Note that `map_func` must be able to accept `partition_idx` kwarg.
+        remote_options : dict, default: None
+            Options that can be defined prior to calling a remote function
+            https://docs.ray.io/en/latest/advanced.html#dynamic-remote-parameters.
 
         Returns
         -------
@@ -550,6 +559,7 @@ class PandasDataframePartitionManager(ABC):
             right=None,
             lengths=lengths,
             enumerate_partitions=enumerate_partitions,
+            remote_options=remote_options,
         )
 
     @classmethod
