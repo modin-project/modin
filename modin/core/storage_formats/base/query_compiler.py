@@ -2307,6 +2307,28 @@ class BaseQueryCompiler(abc.ABC):
             drop=drop,
         )
 
+    @doc_utils.doc_groupby_method(result="mean", refer_to="mean")
+    def groupby_mean(
+        self,
+        by,
+        axis,
+        groupby_args,
+        map_args,
+        reduce_args=None,
+        numeric_only=True,
+        drop=False,
+    ):
+        return GroupByDefault.register(pandas.core.groupby.DataFrameGroupBy.mean)(
+            self,
+            by=by,
+            axis=axis,
+            groupby_args=groupby_args,
+            map_args=map_args,
+            reduce_args=reduce_args,
+            numeric_only=numeric_only,
+            drop=drop,
+        )
+
     @doc_utils.doc_groupby_method(
         action="get the number of elements",
         result="number of elements",
