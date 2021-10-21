@@ -4536,3 +4536,18 @@ def test_cat_as_unordered(data, inplace):
     modin_result = modin_series.cat.as_unordered(inplace=inplace)
     df_equals(modin_series, pandas_series)
     df_equals(modin_result, pandas_result)
+
+
+def test_peculiar_callback():
+    def func(val):
+        if not isinstance(val, tuple):
+            raise BaseException("Urgh...")
+        return val
+
+    pandas_df = pandas.DataFrame({"col": [(0, 1)]})
+    pandas_series = pandas_df["col"].apply(func)
+
+    modin_df = pd.DataFrame({"col": [(0, 1)]})
+    modin_series = modin_df["col"].apply(func)
+
+    df_equals(modin_series, pandas_series)
