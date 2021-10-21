@@ -132,7 +132,7 @@ class DataFrameGroupBy(object):
         fallback = False
         converted_columns = {}
         if not kwargs.get("numeric_only", False):
-            for col, dt in self._df.dtypes.items():
+            for col, dt in self._query_compiler.dtypes.items():
                 if is_datetime64_any_dtype(dt):
                     if self._df[col].hasnans:
                         fallback = True
