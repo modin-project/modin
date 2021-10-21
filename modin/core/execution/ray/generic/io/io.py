@@ -119,8 +119,8 @@ class RayIO(BaseIO):
 
         @ray.remote(num_cpus=0)
         class SignalActor:
-            def __init__(self, count_events):
-                self.events = [asyncio.Event() for _ in range(count_events)]
+            def __init__(self, event_count):
+                self.events = [asyncio.Event() for _ in range(event_count)]
 
             def send(self, event_idx):
                 self.events[event_idx].set()
@@ -132,10 +132,8 @@ class RayIO(BaseIO):
             def is_set(self, event_idx):
                 return self.events[event_idx].is_set()
 
-        # The partition id will be added to the queue, for which the moment
-        # of writing to the file has come
-        count_signals = len(qc._modin_frame._partitions)
-        signals = SignalActor.remote(count_signals + 1)
+        signal_count = len(qc._modin_frame._partitions)
+        signals = SignalActor.remote(signal_count + 1)
 
         def func(df, **kw):
             """
@@ -203,5 +201,5 @@ class RayIO(BaseIO):
             enumerate_partitions=True,
         )
         # pending completion
-        last_signal_id = count_signals
+        last_signal_id = signal_count
         ray.get(signals.wait.remote(last_signal_id))
