@@ -118,8 +118,8 @@ class RayIO(BaseIO):
         if not cls._to_csv_check_support(kwargs):
             return BaseIO.to_csv(qc, **kwargs)
 
-        @ray.remote(num_cpus=0)
-        class SignalActor:
+        @ray.remote
+        class SignalActor:  # pragma: no cover
             def __init__(self, event_count):
                 self.events = [asyncio.Event() for _ in range(event_count)]
 
@@ -193,7 +193,7 @@ class RayIO(BaseIO):
 
         # signaling that the partition with id==0 can be written to the file
         ray.get(signals.send.remote(0))
-        _ = qc._modin_frame._partition_mgr_cls.map_axis_partitions(
+        result = qc._modin_frame._partition_mgr_cls.map_axis_partitions(
             axis=1,
             partitions=qc._modin_frame._partitions,
             map_func=func,
@@ -203,7 +203,7 @@ class RayIO(BaseIO):
             max_retries=0,
         )
         # pending completion
-        get([partition.oid for partition in result.flatten()])
+        ray.get([partition.oid for partition in result.flatten()])
 
     @staticmethod
     def _to_parquet_check_support(kwargs):
