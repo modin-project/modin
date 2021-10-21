@@ -681,19 +681,12 @@ class Series(BasePandasDataset):
         # the return type.
         try:
             return_type = type(
-                getattr(pandas.Series("", index=self.index[:1]), apply_func)(
-                    func, *args, **kwargs
-                )
+                getattr(
+                    pandas.Series(self[:1].values, index=self.index[:1]), apply_func
+                )(func, *args, **kwargs)
             ).__name__
         except Exception:
-            try:
-                return_type = type(
-                    getattr(pandas.Series(0, index=self.index[:1]), apply_func)(
-                        func, *args, **kwargs
-                    )
-                ).__name__
-            except Exception:
-                return_type = type(self).__name__
+            return_type = type(self).__name__
         if (
             isinstance(func, str)
             or is_list_like(func)
