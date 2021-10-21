@@ -165,8 +165,7 @@ def test_explode_single_partition(column, ignore_index):
         "C": [["a", "b", "c"], np.nan, [], ["d", "e"]],
     }
     eval_general(
-        pd.DataFrame(data),
-        pandas.DataFrame(data),
+        *create_test_dfs(data),
         lambda df: df.explode(column, ignore_index=ignore_index),
     )
 
@@ -185,8 +184,7 @@ def test_explode_all_partitions(column, ignore_index):
     num_rows = NPartitions.get() * 32
     data = {"A": [[3, 4]] * num_rows, "C": [["a", "b"]] * num_rows}
     eval_general(
-        pd.DataFrame(data),
-        pandas.DataFrame(data),
+        *create_test_dfs(data),
         lambda df: df.explode(column, ignore_index=ignore_index),
     )
 

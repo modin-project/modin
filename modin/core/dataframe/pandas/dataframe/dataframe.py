@@ -1376,7 +1376,7 @@ class PandasFrame(object):
             A new filtered dataframe.
         """
         partitions = self._partition_mgr_cls.map_axis_partitions(
-            axis, self._partitions, func
+            axis, self._partitions, func, keep_partitioning=True
         )
         if axis == 1:
             new_index = self._compute_axis_labels(0, partitions)
