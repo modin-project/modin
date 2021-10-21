@@ -1300,9 +1300,8 @@ class TestParquet:
         )
 
         with tempfile.TemporaryDirectory() as directory:
-            path = f"{directory}/data"
-            os.makedirs(path)
-            test_df.to_parquet(path + "/part-00000.parquet")
+            path = f"{directory}/data/part-00000.parquet"
+            test_df.to_parquet(path)
             read_df = pd.read_parquet(path)
 
             df_equals(test_df, read_df)
