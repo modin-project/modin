@@ -192,7 +192,7 @@ class RayIO(BaseIO):
 
         # signaling that the partition with id==0 can be written to the file
         ray.get(signals.send.remote(0))
-        _ = qc._modin_frame._partition_mgr_cls.map_axis_partitions(
+        result = qc._modin_frame._partition_mgr_cls.map_axis_partitions(
             axis=1,
             partitions=qc._modin_frame._partitions,
             map_func=func,
@@ -201,5 +201,4 @@ class RayIO(BaseIO):
             enumerate_partitions=True,
         )
         # pending completion
-        last_signal_id = signal_count
-        ray.get(signals.wait.remote(last_signal_id))
+        ray.get([partition.oid for partition in result.flatten()])
