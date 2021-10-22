@@ -3165,13 +3165,17 @@ def test_take():
             modin_s.take([2], axis=1)
 
 
-@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-def test_explode(data):
+@pytest.mark.parametrize(
+    "ignore_index", bool_arg_values, ids=arg_keys("ignore_index", bool_arg_keys)
+)
+def test_explode(ignore_index):
+    # Some items in this test data are lists that explode() should expand.
+    data = [[1, 2, 3], "foo", [], [3, 4]]
     modin_series, pandas_series = create_test_series(data)
-    with pytest.warns(UserWarning):
-        modin_result = modin_series.explode()
-    pandas_result = pandas_series.explode()
-    df_equals(modin_result, pandas_result)
+    df_equals(
+        modin_series.explode(ignore_index=ignore_index),
+        pandas_series.explode(ignore_index=ignore_index),
+    )
 
 
 def test_to_period():

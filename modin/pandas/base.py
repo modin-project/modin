@@ -1269,6 +1269,14 @@ class BasePandasDataset(object):
     def eq(self, other, axis="columns", level=None):
         return self._binary_op("eq", other, axis=axis, level=level)
 
+    def explode(self, column, ignore_index: bool = False):
+        exploded = self.__constructor__(
+            query_compiler=self._query_compiler.explode(column)
+        )
+        if ignore_index:
+            exploded = exploded.reset_index(drop=True)
+        return exploded
+
     def ewm(
         self,
         com=None,

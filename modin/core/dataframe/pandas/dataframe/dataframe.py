@@ -1358,6 +1358,34 @@ class PandasFrame(object):
             self.dtypes if axis == 0 else None,
         )
 
+    def explode(self, axis, func):
+        """
+        Explode list-like entries along an entire axis.
+
+        Parameters
+        ----------
+        axis : int
+            The axis specifying how to explode. If axis=1, explode according
+            to columns.
+        func : callable
+            The function to use to explode a single element.
+
+        Returns
+        -------
+        PandasFrame
+            A new filtered dataframe.
+        """
+        partitions = self._partition_mgr_cls.map_axis_partitions(
+            axis, self._partitions, func, keep_partitioning=True
+        )
+        if axis == 1:
+            new_index = self._compute_axis_labels(0, partitions)
+            new_columns = self.columns
+        else:
+            new_index = self.index
+            new_columns = self._compute_axis_labels(1, partitions)
+        return self.__constructor__(partitions, new_index, new_columns)
+
     def apply_full_axis(
         self,
         axis,
