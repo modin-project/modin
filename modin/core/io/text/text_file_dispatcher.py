@@ -23,7 +23,6 @@ from modin.core.storage_formats.pandas.utils import compute_chunksize
 from modin.utils import _inherit_docstrings
 import numpy as np
 import warnings
-import io
 import os
 from typing import Union, Sequence, Optional, Tuple
 import pandas
@@ -63,7 +62,7 @@ class TextFileDispatcher(FileDispatcher):
         use it without having to fall back to pandas and share file objects between
         workers. Given a filepath, return it immediately.
         """
-        if isinstance(filepath_or_buffer, (io.BufferedReader, io.TextIOWrapper)):
+        if hasattr(filepath_or_buffer, "name"):
             buffer_filepath = filepath_or_buffer.name
             if cls.file_exists(buffer_filepath):
                 warnings.warn(
