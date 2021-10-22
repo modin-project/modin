@@ -117,8 +117,7 @@ def parquet_eval_to_file(modin_obj, pandas_obj, fn, extension, **fn_kwargs):
         modin_df = pd.read_parquet(unique_filename_modin)
         df_equals(pandas_df, modin_df)
     finally:
-        shutil.rmtree(unique_filename_modin)
-        teardown_test_file(unique_filename_pandas)
+        teardown_test_files([unique_filename_modin, unique_filename_pandas])
 
 
 def eval_to_file(modin_obj, pandas_obj, fn, extension, **fn_kwargs):
