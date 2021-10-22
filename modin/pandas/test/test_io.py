@@ -42,6 +42,7 @@ from .utils import (
     dummy_decorator,
     create_test_dfs,
     COMP_TO_EXT,
+    teardown_test_file,
     teardown_test_files,
     generate_dataframe,
 )
@@ -116,7 +117,11 @@ def parquet_eval_to_file(modin_obj, pandas_obj, fn, extension, **fn_kwargs):
         modin_df = pd.read_parquet(unique_filename_modin)
         df_equals(pandas_df, modin_df)
     finally:
-        teardown_test_files([unique_filename_modin, unique_filename_pandas])
+        teardown_test_file(unique_filename_pandas)
+        try:
+            teardown_test_file(unique_filename_modin)
+        except IsADirectoryError:
+            shutil.rmtree(unique_filename_modin)
 
 
 def eval_to_file(modin_obj, pandas_obj, fn, extension, **fn_kwargs):
