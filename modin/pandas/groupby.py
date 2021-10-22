@@ -128,7 +128,10 @@ class DataFrameGroupBy(object):
         return self._default_to_pandas(lambda df: df.sem(ddof=ddof))
 
     def mean(self, *args, **kwargs):
-        return self._apply_agg_function(lambda df: df.mean(*args, **kwargs))
+        result = self._apply_agg_function(lambda df: df.mean(*args, **kwargs))
+        if self._by is None and not self._as_index:
+            result.reset_index(drop=True, inplace=True)
+        return result
 
     def any(self, **kwargs):
         return self._wrap_aggregation(
@@ -246,7 +249,8 @@ class DataFrameGroupBy(object):
             result = self._apply_agg_function(
                 lambda df: df.shift(periods, freq, axis, fill_value)
             )
-            result._query_compiler.set_index_name(None)
+            if self._by is not None:
+                result._query_compiler.set_index_name(None)
         return result
 
     def nth(self, n, dropna=None):
@@ -254,8 +258,9 @@ class DataFrameGroupBy(object):
 
     def cumsum(self, axis=0, *args, **kwargs):
         result = self._apply_agg_function(lambda df: df.cumsum(axis, *args, **kwargs))
-        # pandas does not name the index on cumsum
-        result._query_compiler.set_index_name(None)
+        if self._by is not None:
+            # pandas does not name the index on cumsum
+            result._query_compiler.set_index_name(None)
         return result
 
     @property
@@ -272,14 +277,19 @@ class DataFrameGroupBy(object):
 
     def cummax(self, axis=0, **kwargs):
         result = self._apply_agg_function(lambda df: df.cummax(axis, **kwargs))
-        # pandas does not name the index on cummax
-        result._query_compiler.set_index_name(None)
+        if self._by is not None:
+            # pandas does not name the index on cummax
+            result._query_compiler.set_index_name(None)
         return result
 
     def apply(self, func, *args, **kwargs):
         if not isinstance(func, BuiltinFunctionType):
             func = wrap_udf_function(func)
-        return self._apply_agg_function(lambda df: df.apply(func, *args, **kwargs))
+
+        result = self._apply_agg_function(lambda df: df.apply(func, *args, **kwargs))
+        if self._by is None and not self._as_index:
+            result.reset_index(drop=True, inplace=True)
+        return result
 
     @property
     def dtypes(self):
@@ -406,8 +416,10 @@ class DataFrameGroupBy(object):
 
     def cummin(self, axis=0, **kwargs):
         result = self._apply_agg_function(lambda df: df.cummin(axis=axis, **kwargs))
-        # pandas does not name the index on cummin
-        result._query_compiler.set_index_name(None)
+        if self._by is not None:
+            # pandas does not name the index on cummin
+            result._query_compiler.set_index_name(None)
+
         return result
 
     def bfill(self, limit=None):
@@ -466,11 +478,14 @@ class DataFrameGroupBy(object):
                 **kwargs,
             )
         elif callable(func):
-            return self._apply_agg_function(
+            result = self._apply_agg_function(
                 lambda grp, *args, **kwargs: grp.aggregate(func, *args, **kwargs),
                 *args,
                 **kwargs,
             )
+            if self._by is None and not self._as_index:
+                result.reset_index(drop=True, inplace=True)
+            return result
         elif isinstance(func, str):
             # Using "getattr" here masks possible AttributeError which we throw
             # in __getattr__, so we should call __getattr__ directly instead.
@@ -589,10 +604,11 @@ class DataFrameGroupBy(object):
             result.name = None
         return result.fillna(0)
 
-    def sum(self, **kwargs):
+    def sum(self, numeric_only=False, **kwargs):
         return self._wrap_aggregation(
             type(self._query_compiler).groupby_sum,
             lambda df, **kwargs: df.sum(**kwargs),
+            numeric_only=numeric_only,
             **kwargs,
         )
 
@@ -631,21 +647,31 @@ class DataFrameGroupBy(object):
         return self._default_to_pandas(lambda df: df.ngroup(ascending))
 
     def nunique(self, dropna=True):
-        return self._apply_agg_function(lambda df: df.nunique(dropna))
+        result = self._apply_agg_function(lambda df: df.nunique(dropna))
+
+        if self._by is None and not self._as_index:
+            result.reset_index(drop=True, inplace=True)
+        return result
 
     def resample(self, rule, *args, **kwargs):
         return self._default_to_pandas(lambda df: df.resample(rule, *args, **kwargs))
 
     def median(self, **kwargs):
-        return self._apply_agg_function(lambda df: df.median(**kwargs))
+        result = self._apply_agg_function(lambda df: df.median(**kwargs))
+
+        if self._by is None and not self._as_index:
+            result.reset_index(drop=True, inplace=True)
+
+        return result
 
     def head(self, n=5):
         return self._default_to_pandas(lambda df: df.head(n))
 
     def cumprod(self, axis=0, *args, **kwargs):
         result = self._apply_agg_function(lambda df: df.cumprod(axis, *args, **kwargs))
-        # pandas does not name the index on cumprod
-        result._query_compiler.set_index_name(None)
+        if self._by is not None:
+            # pandas does not name the index on cumprod
+            result._query_compiler.set_index_name(None)
         return result
 
     def __iter__(self):
@@ -658,8 +684,9 @@ class DataFrameGroupBy(object):
         result = self._apply_agg_function(
             lambda df: df.transform(func, *args, **kwargs)
         )
-        # pandas does not name the index on transform
-        result._query_compiler.set_index_name(None)
+        if self._by is not None:
+            # pandas does not name the index on transform
+            result._query_compiler.set_index_name(None)
         return result
 
     def corr(self, **kwargs):
@@ -678,8 +705,9 @@ class DataFrameGroupBy(object):
             **new_groupby_kwargs,
         )
         result = work_object._apply_agg_function(lambda df: df.fillna(**kwargs))
-        # pandas does not name the index on fillna
-        result._query_compiler.set_index_name(None)
+        if self._by is not None:
+            # pandas does not name the index on fillna
+            result._query_compiler.set_index_name(None)
         return result
 
     def count(self, **kwargs):
@@ -721,7 +749,12 @@ class DataFrameGroupBy(object):
         if is_list_like(q):
             return self._default_to_pandas(lambda df: df.quantile(q=q, **kwargs))
 
-        return self._apply_agg_function(lambda df: df.quantile(q, **kwargs))
+        result = self._apply_agg_function(lambda df: df.quantile(q, **kwargs))
+
+        if self._by is None and not self._as_index:
+            result.reset_index(drop=True, inplace=True)
+
+        return result
 
     def diff(self):
         return self._default_to_pandas(lambda df: df.diff())

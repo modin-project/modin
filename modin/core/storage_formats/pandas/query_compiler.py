@@ -2755,7 +2755,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 result_cols = result.columns
                 result.drop(columns=missmatched_cols, inplace=True, errors="ignore")
 
-                if not as_index:
+                if not as_index and by[0] is not None:
                     keep_index_levels = len(by) > 1 and any(
                         isinstance(x, pandas.CategoricalDtype)
                         for x in df[internal_by_cols].dtypes
