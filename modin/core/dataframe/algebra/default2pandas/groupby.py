@@ -16,6 +16,7 @@
 from .default import DefaultMethod
 
 import pandas
+from pandas.core.dtypes.common import is_list_like
 
 
 # FIXME: there is no sence of keeping `GroupBy` and `GroupByDefault` logic in a different
@@ -207,7 +208,8 @@ class GroupBy:
             if numeric_only:
                 df = df.select_dtypes(include="number")
 
-            by = by.squeeze(axis=1)
+            if isinstance(by, pandas.DataFrame):
+                by = by.squeeze(axis=1)
             if (
                 drop
                 and isinstance(by, pandas.Series)
@@ -230,13 +232,30 @@ class GroupBy:
                 result = result.to_frame()
 
             if not as_index:
-                if (
-                    len(result.index.names) == 1 and result.index.names[0] is None
-                ) or all([name in result.columns for name in result.index.names]):
-                    drop = False
-                elif kwargs.get("method") == "size":
-                    drop = True
-                result = result.reset_index(drop=not drop)
+                method = kwargs.get("method")
+                internal_by = (
+                    [by.name]
+                    if (drop or method == "size") and isinstance(by, pandas.Series)
+                    else by
+                )
+                drop, lvls_to_drop, cols_to_drop = cls.handle_as_index(
+                    result.columns,
+                    result.index.names,
+                    internal_by,
+                    by_cols_dtypes=(
+                        df.index.dtypes.values
+                        if isinstance(df.index, pandas.MultiIndex)
+                        else [df.index.dtype]
+                    ),
+                    is_multi_by=len(internal_by) > 1,
+                    drop=drop,
+                    method=method,
+                )
+                if len(lvls_to_drop) > 0:
+                    result.index = result.index.droplevel(lvls_to_drop)
+                if len(cols_to_drop) > 0:
+                    result.drop(columns=cols_to_drop, inplace=True)
+                result = result.reset_index(drop=drop)
 
             if result.index.name == "__reduced__":
                 result.index.name = None
@@ -269,6 +288,173 @@ class GroupBy:
         if cls.is_aggregate(func):
             return cls.build_aggregate_method(func)
         return cls.build_groupby_reduce_method(func)
+
+    @staticmethod
+    def handle_as_index(
+        result_cols,
+        result_index_names,
+        internal_by_cols,
+        by_cols_dtypes=None,
+        is_multi_by=None,
+        selection=None,
+        partition_idx=0,
+        drop=True,
+        method=None,
+    ):
+        """
+        Help to handle ``as_index=False`` parameter for the GroupBy result.
+
+        This function resolve naming conflicts of the index levels to insert and the column labels
+        for the GroupBy result. The logic of this function assumes that the initial GroupBy result
+        was computed as ``as_index=True``.
+
+        Parameters
+        ----------
+        result_cols : pandas.Index
+            Columns of the GroupBy result.
+        result_index_names : list-like
+            Index names of the GroupBy result.
+        internal_by_cols : list-like
+            Internal 'by' columns.
+        by_cols_dtypes : list-like, optional
+            Data types of the internal 'by' columns. Required to do special casing
+            in case of categorical 'by'. If not specified, assume that there is no
+            categorical data in 'by'.
+        is_multi_by : bool, optional
+            Whether grouping on multiple items. If not specified, assume ``True`` if
+            the amount of `internal_by_cols` is greater than 1, ``False`` otherwise.
+        selection : label or list of labels, optional
+            Set of columns to which aggregation was applied. If not specified
+            assuming that aggregation was applied to all of the available columns.
+        partition_idx : int, default: 0
+            Positional index of the current partition.
+        drop : bool, default: True
+            Indicates whether or not any of the `by` data came from the same frame.
+        method : str, optional
+            Name of the groupby function. This is a hint to be able to do special casing.
+            Note: this parameter is a legacy from the ``groupby_size`` implementation,
+            it's a hacky one and probably will be removed in the future.
+
+        Returns
+        -------
+        drop_index : bool
+            Indicates whether to drop all index levels (True) or insert them into the
+            resulting columns (False).
+        lvls_to_drop : list of ints
+            Contains numeric indices of the levels of the result index to drop as intersected.
+        cols_to_drop : list of labels
+            Contains labels of the columns to drop from the result as intersected.
+
+        Examples
+        --------
+        >>> groupby_result = compute_groupby_without_processing_as_index_parameter()
+        >>> if not as_index:
+        >>>     drop, lvls_to_drop, cols_to_drop = handle_as_index(**extract_required_params(groupby_result))
+        >>>     if len(lvls_to_drop) > 0:
+        >>>         groupby_result.index = groupby_result.index.droplevel(lvls_to_drop)
+        >>>     if len(cols_to_drop) > 0:
+        >>>         groupby_result = groupby_result.drop(columns=cols_to_drop)
+        >>>     groupby_result_with_processed_as_index_parameter = groupby_result.reset_index(drop=drop)
+        >>> else:
+        >>>     groupby_result_with_processed_as_index_parameter = groupby_result
+        """
+        # If the method is "size" then the result contains only one unique named column
+        # and we don't have to worry about any naming conflicts, so inserting all of
+        # the "by" into the result (just a fast-path)
+        if method == "size":
+            return False, [], []
+
+        if is_multi_by is None:
+            is_multi_by = len(internal_by_cols) > 1
+
+        # Pandas logic of resolving naming conflicts is the following:
+        #   1. If any categorical is in 'by' and 'by' is multi-column, then the categorical
+        #      index is prioritized: drop intersected columns and insert all of the 'by' index
+        #      levels to the frame as columns.
+        #   2. Otherwise, aggregation result is prioritized: drop intersected index levels and
+        #      insert the filtered ones to the frame as columns.
+        if by_cols_dtypes is not None:
+            keep_index_levels = (
+                is_multi_by
+                and selection is None
+                and any(isinstance(x, pandas.CategoricalDtype) for x in by_cols_dtypes)
+            )
+        else:
+            keep_index_levels = False
+
+        # 1. We insert 'by'-columns to the result at the beginning of the frame and so only to the
+        #    first partition, if partition_idx != 0 we just drop the index, and so if no columns
+        #    that may locate in different partitions and needed to drop (keep_index_levels is True),
+        #    then we can exit here.
+        # 2. We don't insert by-columns to the result if by-data came from a different
+        #    frame (drop is False), there's only one exception for this rule when method is "size",
+        #    so if (drop is False) and method is not "size" we just drop the index and so can exit here.
+        if (not keep_index_levels and partition_idx != 0) or (
+            not drop and method != "size"
+        ):
+            return True, [], []
+
+        if not isinstance(internal_by_cols, pandas.Index):
+            if not is_list_like(internal_by_cols):
+                internal_by_cols = [internal_by_cols]
+            internal_by_cols = pandas.Index(internal_by_cols)
+
+        internal_by_cols = (
+            internal_by_cols[~internal_by_cols.str.match(r"__reduced__.*", na=False)]
+            if hasattr(internal_by_cols, "str")
+            else internal_by_cols
+        )
+
+        if selection is not None:
+            selection = (
+                selection
+                if isinstance(selection, pandas.Index)
+                else pandas.Index(selection)
+            )
+
+        lvls_to_drop = []
+        cols_to_drop = []
+
+        if not keep_index_levels:
+            # We want to insert such internal-by-cols that are not presented
+            # in the result in order to not create naming conflicts
+            cols_to_insert = (
+                internal_by_cols.copy()
+                if selection is None and internal_by_cols.nlevels != result_cols.nlevels
+                else frozenset(
+                    (
+                        col
+                        for col in internal_by_cols
+                        if col not in (result_cols if selection is None else selection)
+                    )
+                )
+            )
+        else:
+            cols_to_insert = internal_by_cols
+            # We want to drop such internal-by-cols that are presented
+            # in the result in order to not create naming conflicts
+            cols_to_drop = (
+                pandas.Index([])
+                if internal_by_cols.nlevels != result_cols.nlevels
+                else frozenset((col for col in cols_to_insert if col in result_cols))
+            )
+
+        lvls_to_drop = (
+            result_index_names
+            if partition_idx != 0
+            else [
+                i
+                for i, name in enumerate(result_index_names)
+                if name not in cols_to_insert
+            ]
+        )
+
+        drop = False
+        if len(lvls_to_drop) == len(result_index_names):
+            drop = True
+            lvls_to_drop = []
+
+        return drop, lvls_to_drop, cols_to_drop
 
 
 class GroupByDefault(DefaultMethod):

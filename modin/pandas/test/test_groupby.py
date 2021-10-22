@@ -16,6 +16,7 @@ import pandas
 import numpy as np
 import modin.pandas as pd
 from modin.utils import try_cast_to_pandas, get_current_execution, hashable
+from modin.core.dataframe.algebra.default2pandas.groupby import GroupBy
 from modin.pandas.utils import from_pandas, is_scalar
 from .utils import (
     df_equals,
@@ -163,6 +164,10 @@ def test_mixed_dtypes_groupby(as_index):
             {"col2": sum},
             {"col2": "max", "col4": "sum", "col5": "min"},
             {"col2": max, "col4": sum, "col5": "min"},
+            # Intersection of 'by' and agg cols for MapReduce impl
+            {"col0": "count", "col1": "count", "col2": "count"},
+            # Intersection of 'by' and agg cols for FullAxis impl
+            {"col0": "nunique", "col1": "nunique", "col2": "nunique"},
         ]
         for func in agg_functions:
             eval_agg(modin_groupby, pandas_groupby, func)
@@ -363,10 +368,34 @@ def test_simple_row_groupby(by, as_index, col1_category):
         eval_var(modin_groupby, pandas_groupby)
         eval_skew(modin_groupby, pandas_groupby)
 
-    agg_functions = [lambda df: df.sum(), "min", "max", min, sum]
+    agg_functions = [
+        lambda df: df.sum(),
+        "min",
+        "max",
+        min,
+        sum,
+        # Intersection of 'by' and agg cols for MapReduce impl
+        {"col1": "count", "col2": "count"},
+        # Intersection of 'by' and agg cols for FullAxis impl
+        {"col1": "nunique", "col2": "nunique"},
+    ]
     for func in agg_functions:
-        eval_agg(modin_groupby, pandas_groupby, func)
-        eval_aggregate(modin_groupby, pandas_groupby, func)
+        # Pandas raises an exception when 'by' contains categorical key and `as_index=False`
+        # because of this bug: https://github.com/pandas-dev/pandas/issues/36698
+        # Modin correctly processes the result, that's why `check_exception_type=None` in some cases
+        is_pandas_bug_case = not as_index and col1_category and isinstance(func, dict)
+        eval_general(
+            modin_groupby,
+            pandas_groupby,
+            lambda grp: grp.agg(func),
+            check_exception_type=None if is_pandas_bug_case else True,
+        )
+        eval_general(
+            modin_groupby,
+            pandas_groupby,
+            lambda grp: grp.aggregate(func),
+            check_exception_type=None if is_pandas_bug_case else True,
+        )
 
     eval_general(modin_groupby, pandas_groupby, lambda df: df.last(), is_default=True)
     eval_general(
@@ -1366,7 +1395,7 @@ def test_shift_freq(groupby_axis, shift_axis):
                     "min": (list(test_data["int_data"].keys())[-1], min),
                 },
             },
-            marks=pytest.mark.skip("See Modin issue #2542"),
+            marks=pytest.mark.skip("See Modin issue #3602"),
         ),
     ],
 )
@@ -1401,14 +1430,24 @@ def test_agg_func_None_rename(by_and_agg_dict, as_index):
     [["sum", "min", "max"], ["mean", "quantile"]],
     ids=["reduction", "aggregation"],
 )
-def test_dict_agg_rename_mi_columns(as_index, by_length, agg_fns):
+@pytest.mark.parametrize(
+    "intersection_with_by_cols",
+    [pytest.param(True, marks=pytest.mark.skip("See Modin issue #3602")), False],
+)
+def test_dict_agg_rename_mi_columns(
+    as_index, by_length, agg_fns, intersection_with_by_cols
+):
     md_df, pd_df = create_test_dfs(test_data["int_data"])
     mi_columns = generate_multiindex(len(md_df.columns), nlevels=4)
 
     md_df.columns, pd_df.columns = mi_columns, mi_columns
 
     by = list(md_df.columns[:by_length])
-    agg_cols = list(md_df.columns[by_length : by_length + 3])
+    agg_cols = (
+        list(md_df.columns[by_length - 1 : by_length + 2])
+        if intersection_with_by_cols
+        else list(md_df.columns[by_length : by_length + 3])
+    )
 
     agg_dict = {
         f"custom-{i}" + str(agg_fns[i % len(agg_fns)]): (col, agg_fns[i % len(agg_fns)])
@@ -1655,7 +1694,20 @@ def test_unknown_groupby(columns):
                     list(test_data_values[0].keys())[-1]: (sum, min, max),
                 }
             ),
-            marks=pytest.mark.skip("See modin issue #2542"),
+            id="Agg and 'by' intersection (MapReduce implementation)",
+        ),
+        pytest.param(
+            lambda grp: grp.agg(
+                {
+                    list(test_data_values[0].keys())[1]: (max, "mean", "nunique"),
+                    list(test_data_values[0].keys())[-1]: (sum, min, max),
+                }
+            ),
+            id="Agg and 'by' intersection (FullAxis implementation)",
+        ),
+        pytest.param(
+            lambda grp: grp.agg({list(test_data_values[0].keys())[0]: "count"}),
+            id="Agg and 'by' intersection (modin-project/modin#3376)",
         ),
     ],
 )
@@ -1714,3 +1766,110 @@ def test_not_str_by(by, as_index):
     eval_general(md_grp, pd_grp, lambda grp: grp.agg(lambda df: df.mean()))
     eval_general(md_grp, pd_grp, lambda grp: grp.dtypes)
     eval_general(md_grp, pd_grp, lambda grp: grp.first())
+
+
+@pytest.mark.parametrize("internal_by_length", [0, 1, 2])
+@pytest.mark.parametrize("external_by_length", [0, 1, 2])
+@pytest.mark.parametrize("has_categorical_by", [True, False])
+@pytest.mark.parametrize(
+    "agg_func",
+    [
+        pytest.param(
+            lambda grp: grp.apply(lambda df: df.dtypes), id="modin_dtype_impl"
+        ),
+        pytest.param(lambda grp: grp.apply(lambda df: df.sum()), id="apply(sum)"),
+        pytest.param(lambda grp: grp.count(), id="count"),
+        pytest.param(lambda grp: grp.nunique(), id="nunique"),
+        pytest.param(
+            {"c": "sum", "d": "nunique"}, id="dict_agg_no_intersection_with_by"
+        ),
+        pytest.param(
+            {"b": "mean", "c": "sum", "d": "nunique"},
+            id="dict_agg_has_intersection_with_by",
+        ),
+        pytest.param(
+            {"a": "nunique", "c": "sum", "d": "nunique"},
+            id="dict_agg_has_intersection_with_categorical_by",
+        ),
+    ],
+)
+def test_handle_as_index(
+    internal_by_length, external_by_length, has_categorical_by, agg_func, request
+):
+    """
+    Test ``GroupBy.handle_as_index``.
+
+    The role of the ``handle_as_index`` method is to build a groupby result considering
+    ``as_index=False`` from the result that was computed with ``as_index=True``.
+
+    So the testing flow is the following:
+        1. Compute GroupBy result with the ``as_index=True`` parameter via Modin.
+        2. Build ``as_index=False`` result from the ``as_index=True`` using ``handle_as_index`` method.
+        3. Compute GroupBy result with the ``as_index=False`` parameter via Pandas (is the reference result).
+        4. Compare the result from the second step with the reference.
+    """
+    by_length = sum((internal_by_length, external_by_length))
+    if by_length == 0:
+        return
+
+    if (
+        has_categorical_by
+        and by_length > 1
+        and (
+            isinstance(agg_func, dict)
+            or ("nunique" in request.node.callspec.id.split("-"))
+        )
+    ):
+        pytest.skip(
+            "The linked bug makes pandas raise an exception when 'by' is categorical: "
+            "https://github.com/pandas-dev/pandas/issues/36698"
+        )
+
+    data = {
+        "a": [1, 1, 2, 2],
+        "b": [2, 2, 3, 3],
+        "c": [1, 2, 3, 4],
+        "d": [5, 6, 7, 8],
+    }
+
+    if isinstance(agg_func, dict):
+        selection = list(agg_func.keys())
+        agg_dict = agg_func
+        agg_func = lambda grp: grp.agg(agg_dict)  # noqa: E731 (lambda assignment)
+    else:
+        selection = None
+
+    df = pandas.DataFrame(data)
+    external_by_cols = GroupBy.validate_by(df.add_prefix("external_"))
+
+    if has_categorical_by:
+        df = df.astype({"a": "category"})
+
+    internal_by = df.columns[:internal_by_length].tolist()
+    external_by = external_by_cols[:external_by_length]
+
+    by = internal_by + external_by
+
+    grp_res = pd.DataFrame(df).groupby(by, as_index=True)
+    grp_ref = df.groupby(by, as_index=False)
+
+    res = agg_func(grp_res)
+    ref = agg_func(grp_ref)
+
+    drop, lvls_to_drop, cols_to_drop = GroupBy.handle_as_index(
+        result_cols=res.columns,
+        result_index_names=res.index.names,
+        internal_by_cols=internal_by,
+        by_cols_dtypes=df[internal_by].dtypes.values,
+        is_multi_by=len(by) > 1,
+        selection=selection,
+        drop=len(internal_by) != 0,
+    )
+
+    if len(lvls_to_drop) > 0:
+        res.index = res.index.droplevel(lvls_to_drop)
+    if len(cols_to_drop) > 0:
+        res = res.drop(columns=cols_to_drop)
+    res = res.reset_index(drop=drop)
+
+    df_equals(res, ref)

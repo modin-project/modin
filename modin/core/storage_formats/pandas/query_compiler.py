@@ -51,6 +51,7 @@ from modin.core.dataframe.algebra import (
     GroupByReduce,
     groupby_reduce_functions,
 )
+from modin.core.dataframe.algebra.default2pandas.groupby import GroupBy
 
 
 def _get_axis(axis):
@@ -2756,69 +2757,31 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 result.drop(columns=missmatched_cols, inplace=True, errors="ignore")
 
                 if not as_index:
-                    keep_index_levels = len(by) > 1 and any(
-                        isinstance(x, pandas.CategoricalDtype)
-                        for x in df[internal_by_cols].dtypes
+                    drop, lvls_to_drop, cols_to_drop = GroupBy.handle_as_index(
+                        result_cols,
+                        result.index.names,
+                        internal_by_cols,
+                        by_cols_dtypes=df[internal_by_cols].dtypes.values,
+                        is_multi_by=is_multi_by,
+                        selection=(
+                            agg_func.keys() if isinstance(agg_func, dict) else None
+                        ),
+                        partition_idx=partition_idx,
+                        drop=drop,
                     )
-
-                    if internal_by_cols.nlevels != result_cols.nlevels:
-                        cols_to_insert = (
-                            pandas.Index([])
-                            if keep_index_levels
-                            else internal_by_cols.copy()
-                        )
-                    else:
-                        cols_to_insert = (
-                            internal_by_cols.intersection(result_cols)
-                            if keep_index_levels
-                            else internal_by_cols.difference(result_cols)
-                        )
-
-                    if keep_index_levels:
-                        result.drop(
-                            columns=cols_to_insert, inplace=True, errors="ignore"
-                        )
-
-                    drop = True
-                    if partition_idx == 0:
-                        drop = False
-                        if not keep_index_levels:
-                            lvls_to_drop = [
-                                i
-                                for i, name in enumerate(result.index.names)
-                                if name not in cols_to_insert
-                            ]
-                            if len(lvls_to_drop) == result.index.nlevels:
-                                drop = True
-                            else:
-                                result.index = result.index.droplevel(lvls_to_drop)
-
-                    if (
-                        not isinstance(result.index, pandas.MultiIndex)
-                        and result.index.name is None
-                    ):
-                        drop = True
-
+                    if len(lvls_to_drop) > 0:
+                        result.index = result.index.droplevel(lvls_to_drop)
+                    if len(cols_to_drop) > 0:
+                        result.drop(columns=cols_to_drop, inplace=True)
                     result.reset_index(drop=drop, inplace=True)
-
-                new_index_names = [
-                    None
-                    if isinstance(name, str) and name.startswith("__reduced__")
-                    else name
-                    for name in result.index.names
-                ]
-
-                cols_to_drop = (
-                    result.columns[result.columns.str.match(r"__reduced__.*", na=False)]
-                    if hasattr(result.columns, "str")
-                    else []
-                )
-
-                result.index.names = new_index_names
-
-                # Not dropping columns if result is Series
-                if len(result.columns) > 1:
-                    result.drop(columns=cols_to_drop, inplace=True)
+                else:
+                    new_index_names = [
+                        None
+                        if isinstance(name, str) and name.startswith("__reduced__")
+                        else name
+                        for name in result.index.names
+                    ]
+                    result.index.names = new_index_names
 
                 return result
 
