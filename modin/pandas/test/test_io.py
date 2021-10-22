@@ -42,7 +42,6 @@ from .utils import (
     dummy_decorator,
     create_test_dfs,
     COMP_TO_EXT,
-    teardown_test_file,
     teardown_test_files,
     generate_dataframe,
 )
