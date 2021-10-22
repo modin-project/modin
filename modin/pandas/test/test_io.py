@@ -42,6 +42,7 @@ from .utils import (
     dummy_decorator,
     create_test_dfs,
     COMP_TO_EXT,
+    teardown_test_file,
     teardown_test_files,
     generate_dataframe,
 )
@@ -94,6 +95,30 @@ def assert_files_eq(path1, path2):
 def setup_clipboard(row_size=NROWS):
     df = pandas.DataFrame({"col1": np.arange(row_size), "col2": np.arange(row_size)})
     df.to_clipboard()
+
+
+def parquet_eval_to_file(modin_obj, pandas_obj, fn, extension, **fn_kwargs):
+    """Helper function to test `to_<extension>` methods.
+
+    Args:
+        modin_obj: Modin DataFrame or Series to test `to_<extension>` method.
+        pandas_obj: Pandas DataFrame or Series to test `to_<extension>` method.
+        fn: name of the method, that should be tested.
+        extension: Extension of the test file.
+    """
+    unique_filename_modin = get_unique_filename(extension=extension)
+    unique_filename_pandas = get_unique_filename(extension=extension)
+
+    try:
+        getattr(modin_obj, fn)(unique_filename_modin, **fn_kwargs)
+        getattr(pandas_obj, fn)(unique_filename_pandas, **fn_kwargs)
+
+        pandas_df = pandas.read_parquet(unique_filename_pandas)
+        modin_df = pd.read_parquet(unique_filename_modin)
+        df_equals(pandas_df, modin_df)
+    finally:
+        shutil.rmtree(unique_filename_modin)
+        teardown_test_file(unique_filename_pandas)
 
 
 def eval_to_file(modin_obj, pandas_obj, fn, extension, **fn_kwargs):
@@ -1281,7 +1306,7 @@ class TestParquet:
     )
     def test_to_parquet(self):
         modin_df, pandas_df = create_test_dfs(TEST_DATA)
-        eval_to_file(
+        parquet_eval_to_file(
             modin_obj=modin_df,
             pandas_obj=pandas_df,
             fn="to_parquet",
