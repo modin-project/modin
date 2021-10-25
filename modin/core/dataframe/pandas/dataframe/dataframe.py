@@ -1312,8 +1312,14 @@ class PandasFrame(object):
         -----
         The data shape is not changed (length and width of the table).
         """
+        if axis == 0 or axis == "index":
+            lengths = self._row_lengths
+        elif axis == 1 or axis == "columns":
+            lengths = self._column_widths
+        else:
+            lengths = None
         new_partitions = self._partition_mgr_cls.map_axis_partitions(
-            axis, self._partitions, func
+            axis, self._partitions, func, lengths=lengths
         )
         return self.__constructor__(
             new_partitions,
