@@ -248,6 +248,13 @@ class _LocationIndexerBase(object):
         -------
         modin.pandas.DataFrame or modin.pandas.Series
             Located dataset.
+
+        Notes
+        -----
+        Usage of `slice(None)` as a lookup is a hack to pass information about
+        full-axis grab without computing actual indices that triggers lazy computations.
+        Ideally, this API should get rid of using slices as indexers and either use a
+        common ``Indexer`` object or range and ``np.ndarray`` only.
         """
         if isinstance(row_lookup, slice):
             ErrorMessage.catch_bugs_and_request_email(
@@ -814,6 +821,13 @@ class _iLocIndexer(_LocationIndexerBase):
             List of index labels.
         col_lookup : slice(None) if full axis grab, pandas.RangeIndex if repetition is detected, numpy.ndarray otherwise
             List of columns labels.
+
+        Notes
+        -----
+        Usage of `slice(None)` as a resulting lookup is a hack to pass information about
+        full-axis grab without computing actual indices that triggers lazy computations.
+        Ideally, this API should get rid of using slices as indexers and either use a
+        common ``Indexer`` object or range and ``np.ndarray`` only.
         """
         row_loc = [row_loc] if is_scalar(row_loc) else row_loc
         col_loc = [col_loc] if is_scalar(col_loc) else col_loc
