@@ -117,8 +117,8 @@ class RayIO(BaseIO):
         if not cls._to_csv_check_support(kwargs):
             return BaseIO.to_csv(qc, **kwargs)
 
-        @ray.remote(num_cpus=0)
-        class SignalActor:
+        @ray.remote
+        class SignalActor:  # pragma: no cover
             def __init__(self, event_count):
                 self.events = [asyncio.Event() for _ in range(event_count)]
 
