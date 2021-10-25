@@ -521,8 +521,26 @@ class TestCsv:
 
         df_equals(df1, df2)
 
-    # Quoting, Compression, and File Format parameters tests
+    # Quoting, Compression parameters tests
     @pytest.mark.parametrize("compression", ["infer", "gzip", "bz2", "xz", "zip"])
+    @pytest.mark.parametrize("engine", [None, "python", "c"])
+    def test_read_csv_compression(self, make_csv_file, compression, engine):
+        unique_filename = get_unique_filename()
+        make_csv_file(filename=unique_filename, compression=compression)
+        compressed_file_path = (
+            f"{unique_filename}.{COMP_TO_EXT[compression]}"
+            if compression != "infer"
+            else unique_filename
+        )
+
+        eval_io(
+            fn_name="read_csv",
+            # read_csv kwargs
+            filepath_or_buffer=compressed_file_path,
+            compression=compression,
+            engine=engine,
+        )
+
     @pytest.mark.parametrize(
         "encoding",
         [
@@ -547,27 +565,18 @@ class TestCsv:
             "utf32",
             "utf_32_le",
             "utf_32_be",
+            "utf-8-sig",
         ],
     )
-    @pytest.mark.parametrize("engine", [None, "python", "c"])
-    def test_read_csv_compression(self, make_csv_file, compression, encoding, engine):
+    def test_read_csv_encoding(self, make_csv_file, encoding):
         unique_filename = get_unique_filename()
-        make_csv_file(
-            filename=unique_filename, encoding=encoding, compression=compression
-        )
-        compressed_file_path = (
-            f"{unique_filename}.{COMP_TO_EXT[compression]}"
-            if compression != "infer"
-            else unique_filename
-        )
+        make_csv_file(filename=unique_filename, encoding=encoding)
 
         eval_io(
             fn_name="read_csv",
             # read_csv kwargs
-            filepath_or_buffer=compressed_file_path,
-            compression=compression,
+            filepath_or_buffer=unique_filename,
             encoding=encoding,
-            engine=engine,
         )
 
     @pytest.mark.parametrize("thousands", [None, ",", "_", " "])
