@@ -239,11 +239,11 @@ class PandasCSVParser(PandasParser):
                 # In this case we beware that first line can contain BOM, so
                 # adding this line to the `header` for reading and then skip it
                 header = b""
-                if (
-                    encoding
-                    and "utf" in encoding
+                if encoding and (
+                    "utf" in encoding
                     and "8" not in encoding
                     or encoding == "unicode_escape"
+                    or encoding.replace("-", "_") == "utf_8_sig"
                 ):
                     # 'close' call on underlay buffer is enough
                     fio = TextIOWrapper(bio, encoding=encoding, newline="")

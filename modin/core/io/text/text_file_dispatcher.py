@@ -413,7 +413,7 @@ class TextFileDispatcher(FileDispatcher):
         return outside_quotes, rows_read
 
     @classmethod
-    def compute_newline(cls, file_like, encoding):
+    def compute_newline(cls, file_like, encoding, quotechar):
         """
         Compute byte or sequence of bytes indicating line endings.
 
@@ -423,6 +423,8 @@ class TextFileDispatcher(FileDispatcher):
             File handle that should be used for line endings computing.
         encoding : str
             Encoding of `file_like`.
+        quotechar : str
+            Quotechar used for parsing `file-like`.
 
         Returns
         -------
@@ -430,22 +432,29 @@ class TextFileDispatcher(FileDispatcher):
             line endings
         """
         newline = None
+
+        if encoding is None:
+            return newline, quotechar.encode("UTF-8")
+
+        quotechar = quotechar.encode(encoding)
+        encoding = encoding.replace("-", "_")
+
         if (
-            encoding
-            and "utf" in encoding
+            "utf" in encoding
             and "8" not in encoding
             or encoding == "unicode_escape"
+            or encoding == "utf_8_sig"
         ):
             # trigger for computing f.newlines
             file_like.readline()
             # in bytes
             newline = file_like.newlines.encode(encoding)
-            if "16" in encoding or "32" in encoding:
-                count_newline_bytes = 2 * 2 if "16" in encoding else 2 * 4
-                if len(newline) > count_newline_bytes:
-                    # remove BOM mark if exists
-                    newline = newline[-count_newline_bytes:]
-        return newline
+            count_symbol_bytes = 2 if "16" in encoding else 4 if "32" in encoding else 1
+            if len(newline) > count_symbol_bytes * 2:
+                newline = newline[-count_symbol_bytes * 2 :]
+                quotechar = quotechar[-count_symbol_bytes:]
+
+        return newline, quotechar
 
     # _read helper functions
     @classmethod

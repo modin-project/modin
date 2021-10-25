@@ -104,12 +104,6 @@ class CSVDispatcher(TextFileDispatcher):
             return cls.single_worker_read(filepath_or_buffer, **kwargs)
 
         is_quoting = kwargs.get("quoting", "") != QUOTE_NONE
-        quotechar = kwargs.get("quotechar", '"').encode(
-            encoding if encoding is not None else "UTF-8"
-        )
-        if encoding == "utf-8-sig":
-            # remove BOM
-            quotechar = quotechar[3:]
         # In these cases we should pass additional metadata
         # to the workers to match pandas output
         pass_names = names in [None, lib.no_default] and (
@@ -140,7 +134,9 @@ class CSVDispatcher(TextFileDispatcher):
         with OpenFile(filepath_or_buffer_md, "rb", compression_infered) as f:
             old_pos = f.tell()
             fio = io.TextIOWrapper(f, encoding=encoding, newline="")
-            newline = cls.compute_newline(fio, encoding)
+            newline, quotechar = cls.compute_newline(
+                fio, encoding, kwargs.get("quotechar", '"')
+            )
             f.seek(old_pos)
             splits = cls.partitioned_file(
                 f,

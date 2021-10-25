@@ -127,9 +127,6 @@ class FWFDispatcher(TextFileDispatcher):
             usecols=usecols,
         )
         encoding = kwargs.get("encoding", None)
-        quotechar = kwargs.get("quotechar", '"').encode(
-            encoding if encoding is not None else "UTF-8"
-        )
         is_quoting = kwargs.get("quoting", "") != QUOTE_NONE
         with OpenFile(filepath_or_buffer, "rb", compression_type) as f:
             # Skip the header since we already have the header information and skip the
@@ -163,7 +160,9 @@ class FWFDispatcher(TextFileDispatcher):
 
             old_pos = f.tell()
             fio = io.TextIOWrapper(f, encoding=encoding, newline="")
-            newline = cls.compute_newline(fio, encoding)
+            newline, quotechar = cls.compute_newline(
+                fio, encoding, kwargs.get("quotechar", '"')
+            )
             f.seek(old_pos)
             splits = cls.partitioned_file(
                 f,

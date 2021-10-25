@@ -579,6 +579,17 @@ class TestCsv:
             encoding=encoding,
         )
 
+    def test_read_csv_3146(self, make_csv_file):
+        unique_filename = get_unique_filename()
+        make_csv_file(filename=unique_filename, encoding="utf-8-sig")
+
+        eval_io(
+            fn_name="read_csv",
+            # read_csv kwargs
+            filepath_or_buffer=unique_filename,
+            encoding="utf-8-sig",
+        )
+
     @pytest.mark.parametrize("thousands", [None, ",", "_", " "])
     @pytest.mark.parametrize("decimal", [".", "_"])
     @pytest.mark.parametrize("lineterminator", [None, "x", "\n"])
