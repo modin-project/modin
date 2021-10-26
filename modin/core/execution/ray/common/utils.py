@@ -30,60 +30,6 @@ from modin.config import (
 )
 
 
-def _move_stdlib_ahead_of_site_packages(*args):
-    """
-    Ensure packages from stdlib have higher import priority than from site-packages.
-
-    Parameters
-    ----------
-    *args : tuple
-        Ignored, added for compatibility with Ray.
-
-    Notes
-    -----
-    This function is expected to be run on all workers including the driver.
-    This is a hack solution to fix GH-#647, GH-#746.
-    """
-    site_packages_path = None
-    site_packages_path_index = -1
-    for i, path in enumerate(sys.path):
-        if sys.exec_prefix in path and path.endswith("site-packages"):
-            site_packages_path = path
-            site_packages_path_index = i
-            # break on first found
-            break
-
-    if site_packages_path is not None:
-        # stdlib packages layout as follows:
-        # - python3.x
-        #   - typing.py
-        #   - site-packages/
-        #     - pandas
-        # So extracting the dirname of the site_packages can point us
-        # to the directory containing standard libraries.
-        sys.path.insert(site_packages_path_index, os.path.dirname(site_packages_path))
-
-
-def _import_pandas(*args):
-    """
-    Import pandas to make sure all its machinery is ready.
-
-    This prevents a race condition between two threads deserializing functions
-    and trying to import pandas at the same time.
-
-    Parameters
-    ----------
-    *args : tuple
-        Ignored, added for compatibility with Ray.
-
-    Notes
-    -----
-    This function is expected to be run on all workers before any
-    serialization or deserialization starts.
-    """
-    import pandas  # noqa F401
-
-
 def initialize_ray(
     override_is_cluster=False,
     override_redis_address: str = None,
@@ -185,11 +131,6 @@ def initialize_ray(
             if not GPU_MANAGERS:
                 for i in range(GpuCount.get()):
                     GPU_MANAGERS.append(GPUManager.remote(i))
-    _move_stdlib_ahead_of_site_packages()
-    ray.worker.global_worker.run_function_on_all_workers(
-        _move_stdlib_ahead_of_site_packages
-    )
-    ray.worker.global_worker.run_function_on_all_workers(_import_pandas)
     num_cpus = int(ray.cluster_resources()["CPU"])
     num_gpus = int(ray.cluster_resources().get("GPU", 0))
     if Backend.get() == "Cudf":
