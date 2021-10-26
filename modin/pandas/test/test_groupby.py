@@ -107,7 +107,7 @@ def test_mixed_dtypes_groupby(as_index):
             modin_df_almost_equals_pandas,
             is_default=True,
         )
-        # eval_shift(modin_groupby, pandas_groupby) # dont work
+        eval_shift(modin_groupby, pandas_groupby)
         eval_mean(modin_groupby, pandas_groupby)
         eval_any(modin_groupby, pandas_groupby)
         eval_min(modin_groupby, pandas_groupby)

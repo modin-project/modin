@@ -227,6 +227,26 @@ class DataFrameGroupBy(object):
 
         if freq is None and axis == 1 and self._axis == 0:
             result = _shift(self._df, periods, freq, axis, fill_value)
+
+            if self._by is None:
+                old_index = result.index
+                new_positions = [None] * len(old_index)
+
+                counter = 0
+                index_unique = pandas.unique(old_index)
+                for idx in index_unique:
+                    for position, idx_ in enumerate(old_index):
+                        if idx == idx_:
+                            new_positions[position] = counter
+                            counter += 1
+
+                result.index = pandas.MultiIndex.from_tuples(
+                    [*zip(new_positions, old_index)], names=["_", old_index.name]
+                )
+                result.sort_index(level=0, inplace=True)
+
+                new_index = result.index.droplevel(0)
+                result.index = new_index
         elif (
             freq is not None
             and axis == 0
