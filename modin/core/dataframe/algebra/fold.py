@@ -11,41 +11,39 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-"""Module houses Map functions builder class."""
+"""Module houses builder class for Fold operator."""
 
-from .function import Function
+from .operator import Operator
 
 
-class MapFunction(Function):
-    """Builder class for Map functions."""
+class Fold(Operator):
+    """Builder class for Fold functions."""
 
     @classmethod
-    def call(cls, function, *call_args, **call_kwds):
+    def call(cls, fold_function, axis=None):
         """
-        Build Map function that will be performed across each partition.
+        Build Fold operator that will be performed across rows/columns.
 
         Parameters
         ----------
-        function : callable(pandas.DataFrame) -> pandas.DataFrame
-            Function that will be applied to the each partition.
-            Function takes `pandas.DataFrame` and returns `pandas.DataFrame`
-            of the same shape.
-        *call_args : args
-            Args that will be passed to the returned function.
-        **call_kwds : kwargs
-            Kwargs that will be passed to the returned function.
+        fold_function : callable(pandas.DataFrame) -> pandas.DataFrame
+            Function to apply across rows/columns.
+        axis : int, optional
+            Specifies axis to apply function along.
 
         Returns
         -------
         callable
-            Function that takes query compiler and executes map function.
+            Function that takes query compiler and executes Fold function.
         """
 
         def caller(query_compiler, *args, **kwargs):
-            """Execute Map function against passed query compiler."""
+            """Execute Fold function against passed query compiler."""
+            _axis = kwargs.get("axis") if axis is None else axis
             return query_compiler.__constructor__(
-                query_compiler._modin_frame.map(
-                    lambda x: function(x, *args, **kwargs), *call_args, **call_kwds
+                query_compiler._modin_frame.fold(
+                    cls.validate_axis(_axis),
+                    lambda x: fold_function(x, *args, **kwargs),
                 )
             )
 

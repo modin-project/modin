@@ -15,7 +15,7 @@
 
 from .compatibility import (
     ASV_USE_IMPL,
-    ASV_USE_BACKEND,
+    ASV_USE_STORAGE_FORMAT,
 )
 from .data_shapes import RAND_LOW, RAND_HIGH, GROUPBY_NGROUPS, get_benchmark_shapes
 from .common import (
@@ -35,7 +35,7 @@ from .common import (
 
 __all__ = [
     "ASV_USE_IMPL",
-    "ASV_USE_BACKEND",
+    "ASV_USE_STORAGE_FORMAT",
     "RAND_LOW",
     "RAND_HIGH",
     "GROUPBY_NGROUPS",

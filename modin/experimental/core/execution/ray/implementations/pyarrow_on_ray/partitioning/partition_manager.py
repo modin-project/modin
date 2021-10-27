@@ -11,29 +11,29 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-"""Module houses class for tracking partitions with PyArrow backend and Ray engine."""
+"""Module houses class for tracking partitions with PyArrow storage format and Ray engine."""
 
 from modin.core.execution.ray.generic.partitioning.partition_manager import (
-    GenericRayFramePartitionManager,
+    GenericRayDataframePartitionManager,
 )
 from .axis_partition import (
-    PyarrowOnRayFrameColumnPartition,
-    PyarrowOnRayFrameRowPartition,
+    PyarrowOnRayDataframeColumnPartition,
+    PyarrowOnRayDataframeRowPartition,
 )
 from .partition import (
-    PyarrowOnRayFramePartition,
+    PyarrowOnRayDataframePartition,
 )
 
 
-class PyarrowOnRayFramePartitionManager(GenericRayFramePartitionManager):
+class PyarrowOnRayDataframePartitionManager(GenericRayDataframePartitionManager):
     """
-    Class for tracking partitions with PyArrow backend and Ray engine.
+    Class for tracking partitions with PyArrow storage format and Ray engine.
 
-    Inherits all functionality from ``GenericRayFramePartitionManager`` and ``PandasFramePartitionManager`` base
+    Inherits all functionality from ``GenericRayDataframePartitionManager`` and ``PandasDataframePartitionManager`` base
     classes.
     """
 
-    # This object uses PyarrowOnRayFramePartition objects as the underlying store.
-    _partition_class = PyarrowOnRayFramePartition
-    _column_partitions_class = PyarrowOnRayFrameColumnPartition
-    _row_partition_class = PyarrowOnRayFrameRowPartition
+    # This object uses PyarrowOnRayDataframePartition objects as the underlying store.
+    _partition_class = PyarrowOnRayDataframePartition
+    _column_partitions_class = PyarrowOnRayDataframeColumnPartition
+    _row_partition_class = PyarrowOnRayDataframeRowPartition

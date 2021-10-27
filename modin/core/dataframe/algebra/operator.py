@@ -11,13 +11,13 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-"""Module contains an interface for function builder classes."""
+"""Module contains an interface for operator builder classes."""
 
 from typing import Optional
 
 
-class Function(object):
-    """Interface for building functions that can execute in parallel across partitions."""
+class Operator(object):
+    """Interface for building operators that can execute in parallel across partitions."""
 
     def __init__(self):
         raise ValueError(
@@ -29,7 +29,7 @@ class Function(object):
     @classmethod
     def call(cls, func, **call_kwds):
         """
-        Build function that apply source function across the entire dataset.
+        Build operator that applies source function across the entire dataset.
 
         Parameters
         ----------
@@ -48,7 +48,7 @@ class Function(object):
     # FIXME: `register` is an alias for `call` method. One of them should be removed.
     def register(cls, func, **kwargs):
         """
-        Build function that apply source function across the entire dataset.
+        Build operator that applies source function across the entire dataset.
 
         Parameters
         ----------

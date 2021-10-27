@@ -11,20 +11,20 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-"""The module defines interface for a partition with pandas backend and Python engine."""
+"""The module defines interface for a partition with pandas storage format and Python engine."""
 
 import pandas
 
 from modin.core.storage_formats.pandas.utils import length_fn_pandas, width_fn_pandas
-from modin.core.dataframe.pandas.partitioning.partition import PandasFramePartition
+from modin.core.dataframe.pandas.partitioning.partition import PandasDataframePartition
 
 
-class PandasOnPythonFramePartition(PandasFramePartition):
+class PandasOnPythonDataframePartition(PandasDataframePartition):
     """
-    Partition class with interface for pandas backend and Python engine.
+    Partition class with interface for pandas storage format and Python engine.
 
     Class holds the data and metadata for a single partition and implements
-    methods of parent abstract class ``PandasFramePartition``.
+    methods of parent abstract class ``PandasDataframePartition``.
 
     Parameters
     ----------
@@ -83,8 +83,8 @@ class PandasOnPythonFramePartition(PandasFramePartition):
 
         Returns
         -------
-        PandasOnPythonFramePartition
-            New ``PandasOnPythonFramePartition`` object.
+        PandasOnPythonDataframePartition
+            New ``PandasOnPythonDataframePartition`` object.
         """
 
         def call_queue_closure(data, call_queue):
@@ -113,7 +113,7 @@ class PandasOnPythonFramePartition(PandasFramePartition):
 
         self.data = call_queue_closure(self.data, self.call_queue)
         self.call_queue = []
-        return PandasOnPythonFramePartition(func(self.data.copy(), *args, **kwargs))
+        return PandasOnPythonDataframePartition(func(self.data.copy(), *args, **kwargs))
 
     def add_to_apply_calls(self, func, *args, **kwargs):
         """
@@ -130,10 +130,10 @@ class PandasOnPythonFramePartition(PandasFramePartition):
 
         Returns
         -------
-        PandasOnPythonFramePartition
-            New ``PandasOnPythonFramePartition`` object with extended call queue.
+        PandasOnPythonDataframePartition
+            New ``PandasOnPythonDataframePartition`` object with extended call queue.
         """
-        return PandasOnPythonFramePartition(
+        return PandasOnPythonDataframePartition(
             self.data.copy(), call_queue=self.call_queue + [(func, args, kwargs)]
         )
 
@@ -195,8 +195,8 @@ class PandasOnPythonFramePartition(PandasFramePartition):
 
         Returns
         -------
-        PandasOnPythonFramePartition
-            New ``PandasOnPythonFramePartition`` object.
+        PandasOnPythonDataframePartition
+            New ``PandasOnPythonDataframePartition`` object.
         """
         return cls(obj)
 
@@ -282,7 +282,7 @@ class PandasOnPythonFramePartition(PandasFramePartition):
 
         Returns
         -------
-        PandasOnPythonFramePartition
-            New ``PandasOnPythonFramePartition`` object wrapping empty pandas DataFrame.
+        PandasOnPythonDataframePartition
+            New ``PandasOnPythonDataframePartition`` object wrapping empty pandas DataFrame.
         """
         return cls(pandas.DataFrame())

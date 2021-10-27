@@ -70,9 +70,9 @@ def unwrap_partitions(api_layer_object, axis=None, get_ip=False):
         actual_engine = type(
             api_layer_object._query_compiler._modin_frame._partitions[0][0]
         ).__name__
-        if actual_engine in ("PandasOnRayFramePartition",):
+        if actual_engine in ("PandasOnRayDataframePartition",):
             return _unwrap_partitions("oid")
-        elif actual_engine in ("PandasOnDaskFramePartition",):
+        elif actual_engine in ("PandasOnDaskDataframePartition",):
             return _unwrap_partitions("future")
         raise ValueError(
             f"Do not know how to unwrap '{actual_engine}' underlying partitions"

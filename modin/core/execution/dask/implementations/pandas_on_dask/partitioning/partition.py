@@ -16,7 +16,7 @@
 import pandas
 
 from modin.core.storage_formats.pandas.utils import length_fn_pandas, width_fn_pandas
-from modin.core.dataframe.pandas.partitioning.partition import PandasFramePartition
+from modin.core.dataframe.pandas.partitioning.partition import PandasDataframePartition
 
 from distributed.client import default_client
 from distributed import Future
@@ -26,9 +26,9 @@ from dask.distributed import wait
 from modin.pandas.indexing import compute_sliced_len
 
 
-class PandasOnDaskFramePartition(PandasFramePartition):
+class PandasOnDaskDataframePartition(PandasDataframePartition):
     """
-    The class implements the interface in ``PandasFramePartition``.
+    The class implements the interface in ``PandasDataframePartition``.
 
     Parameters
     ----------
@@ -83,8 +83,8 @@ class PandasOnDaskFramePartition(PandasFramePartition):
 
         Returns
         -------
-        PandasOnDaskFramePartition
-            A new ``PandasOnDaskFramePartition`` object.
+        PandasOnDaskDataframePartition
+            A new ``PandasOnDaskDataframePartition`` object.
 
         Notes
         -----
@@ -104,7 +104,7 @@ class PandasOnDaskFramePartition(PandasFramePartition):
         futures = [
             client.submit(lambda l, i: l[i], future, i, pure=False) for i in range(2)
         ]
-        return PandasOnDaskFramePartition(futures[0], ip=futures[1])
+        return PandasOnDaskDataframePartition(futures[0], ip=futures[1])
 
     def add_to_apply_calls(self, func, *args, **kwargs):
         """
@@ -121,14 +121,14 @@ class PandasOnDaskFramePartition(PandasFramePartition):
 
         Returns
         -------
-        PandasOnDaskFramePartition
-            A new ``PandasOnDaskFramePartition`` object.
+        PandasOnDaskDataframePartition
+            A new ``PandasOnDaskDataframePartition`` object.
 
         Notes
         -----
         The keyword arguments are sent as a dictionary.
         """
-        return PandasOnDaskFramePartition(
+        return PandasOnDaskDataframePartition(
             self.future, call_queue=self.call_queue + [[func, args, kwargs]]
         )
 
@@ -172,8 +172,8 @@ class PandasOnDaskFramePartition(PandasFramePartition):
 
         Returns
         -------
-        PandasOnDaskFramePartition
-            A new ``PandasOnDaskFramePartition`` object.
+        PandasOnDaskDataframePartition
+            A new ``PandasOnDaskDataframePartition`` object.
         """
         new_obj = super().mask(row_indices, col_indices)
         client = default_client()
@@ -193,10 +193,10 @@ class PandasOnDaskFramePartition(PandasFramePartition):
 
         Returns
         -------
-        PandasOnDaskFramePartition
+        PandasOnDaskDataframePartition
             A copy of this partition.
         """
-        return PandasOnDaskFramePartition(
+        return PandasOnDaskDataframePartition(
             self.future,
             length=self._length_cache,
             width=self._width_cache,
@@ -244,8 +244,8 @@ class PandasOnDaskFramePartition(PandasFramePartition):
 
         Returns
         -------
-        PandasOnDaskFramePartition
-            A new ``PandasOnDaskFramePartition`` object.
+        PandasOnDaskDataframePartition
+            A new ``PandasOnDaskDataframePartition`` object.
         """
         client = default_client()
         return cls(client.scatter(obj, hash=False))
@@ -346,8 +346,8 @@ class PandasOnDaskFramePartition(PandasFramePartition):
 
         Returns
         -------
-        PandasOnDaskFramePartition
-            A new ``PandasOnDaskFramePartition`` object.
+        PandasOnDaskDataframePartition
+            A new ``PandasOnDaskDataframePartition`` object.
         """
         return cls(pandas.DataFrame(), 0, 0)
 

@@ -19,7 +19,7 @@ import pandas
 
 
 class PyarrowCSVParser:
-    """Class for handling CSV files on the workers using PyArrow backend."""
+    """Class for handling CSV files on the workers using PyArrow storage format."""
 
     def parse(self, fname, num_splits, start, end, header, **kwargs):
         """

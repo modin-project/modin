@@ -12,7 +12,7 @@
 # governing permissions and limitations under the License.
 
 """
-Module holds internal entities for Modin XGBoost on Ray backend.
+Module holds internal entities for Modin XGBoost on Ray engine.
 
 Class ModinXGBoostActor provides interfaces to run XGBoost operations
 on remote workers. Other functions create Ray actors, distribute data between them, etc.
@@ -456,7 +456,7 @@ def _train(
     **kwargs,
 ):
     """
-    Run distributed training of XGBoost model on Ray backend.
+    Run distributed training of XGBoost model on Ray engine.
 
     During work it evenly distributes `dtrain` between workers according
     to IP addresses partitions (in case of not even distribution of `dtrain`
@@ -595,7 +595,7 @@ def _predict(
     **kwargs,
 ):
     """
-    Run distributed prediction with a trained booster on Ray backend.
+    Run distributed prediction with a trained booster on Ray engine.
 
     During execution it runs ``xgb.predict`` on each worker for subset of `data`
     and creates Modin DataFrame with prediction results.

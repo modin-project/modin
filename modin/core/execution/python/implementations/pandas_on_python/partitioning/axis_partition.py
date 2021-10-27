@@ -11,21 +11,21 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-"""The module defines interface for an axis partition with pandas backend and python engine."""
+"""The module defines interface for an axis partition with pandas storage format and python engine."""
 
 import pandas
 
 from modin.core.dataframe.pandas.partitioning.axis_partition import (
-    PandasFrameAxisPartition,
+    PandasDataframeAxisPartition,
 )
-from .partition import PandasOnPythonFramePartition
+from .partition import PandasOnPythonDataframePartition
 
 
-class PandasOnPythonFrameAxisPartition(PandasFrameAxisPartition):
+class PandasOnPythonDataframeAxisPartition(PandasDataframeAxisPartition):
     """
-    Class defines axis partition interface with pandas backend and Python engine.
+    Class defines axis partition interface with pandas storage format and Python engine.
 
-    Inherits functionality from ``PandasFrameAxisPartition`` class.
+    Inherits functionality from ``PandasDataframeAxisPartition`` class.
 
     Parameters
     ----------
@@ -36,18 +36,18 @@ class PandasOnPythonFrameAxisPartition(PandasFrameAxisPartition):
     def __init__(self, list_of_blocks):
         for obj in list_of_blocks:
             obj.drain_call_queue()
-        # Unwrap from PandasFramePartition object for ease of use
+        # Unwrap from PandasDataframePartition object for ease of use
         self.list_of_blocks = [obj.data for obj in list_of_blocks]
 
-    partition_type = PandasOnPythonFramePartition
+    partition_type = PandasOnPythonDataframePartition
     instance_type = pandas.DataFrame
 
 
-class PandasOnPythonFrameColumnPartition(PandasOnPythonFrameAxisPartition):
+class PandasOnPythonDataframeColumnPartition(PandasOnPythonDataframeAxisPartition):
     """
-    The column partition implementation for pandas backend and Python engine.
+    The column partition implementation for pandas storage format and Python engine.
 
-    All of the implementation for this class is in the ``PandasOnPythonFrameAxisPartition``
+    All of the implementation for this class is in the ``PandasOnPythonDataframeAxisPartition``
     parent class, and this class defines the axis to perform the computation over.
 
     Parameters
@@ -59,11 +59,11 @@ class PandasOnPythonFrameColumnPartition(PandasOnPythonFrameAxisPartition):
     axis = 0
 
 
-class PandasOnPythonFrameRowPartition(PandasOnPythonFrameAxisPartition):
+class PandasOnPythonDataframeRowPartition(PandasOnPythonDataframeAxisPartition):
     """
-    The row partition implementation for pandas backend and Python engine.
+    The row partition implementation for pandas storage format and Python engine.
 
-    All of the implementation for this class is in the ``PandasOnPythonFrameAxisPartition``
+    All of the implementation for this class is in the ``PandasOnPythonDataframeAxisPartition``
     parent class, and this class defines the axis to perform the computation over.
 
     Parameters

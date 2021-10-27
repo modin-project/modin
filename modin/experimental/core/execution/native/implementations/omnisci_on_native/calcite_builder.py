@@ -615,7 +615,7 @@ class CalciteBuilder:
 
         Parameters
         ----------
-        frame : OmnisciOnNativeFrame
+        frame : OmnisciOnNativeDataframe
             An input frame for a projection.
 
         Returns

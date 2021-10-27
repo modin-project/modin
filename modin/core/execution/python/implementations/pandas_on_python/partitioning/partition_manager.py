@@ -11,25 +11,25 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-"""Module houses class for managing partitions with pandas backend and Python engine."""
+"""Module houses class for managing partitions with pandas storage format and Python engine."""
 
 from modin.core.dataframe.pandas.partitioning.partition_manager import (
-    PandasFramePartitionManager,
+    PandasDataframePartitionManager,
 )
 from .axis_partition import (
-    PandasOnPythonFrameColumnPartition,
-    PandasOnPythonFrameRowPartition,
+    PandasOnPythonDataframeColumnPartition,
+    PandasOnPythonDataframeRowPartition,
 )
-from .partition import PandasOnPythonFramePartition
+from .partition import PandasOnPythonDataframePartition
 
 
-class PandasOnPythonFramePartitionManager(PandasFramePartitionManager):
+class PandasOnPythonDataframePartitionManager(PandasDataframePartitionManager):
     """
-    Class for managing partitions with pandas backend and Python engine.
+    Class for managing partitions with pandas storage format and Python engine.
 
-    Inherits all functionality from ``PandasFramePartitionManager`` base class.
+    Inherits all functionality from ``PandasDataframePartitionManager`` base class.
     """
 
-    _partition_class = PandasOnPythonFramePartition
-    _column_partitions_class = PandasOnPythonFrameColumnPartition
-    _row_partition_class = PandasOnPythonFrameRowPartition
+    _partition_class = PandasOnPythonDataframePartition
+    _column_partitions_class = PandasOnPythonDataframeColumnPartition
+    _row_partition_class = PandasOnPythonDataframeRowPartition

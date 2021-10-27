@@ -11,19 +11,19 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-"""Module houses class that implements ``PandasFrame``."""
+"""Module houses class that implements ``PandasDataframe``."""
 
-from modin.core.dataframe.pandas.dataframe.dataframe import PandasFrame
+from modin.core.dataframe.pandas.dataframe.dataframe import PandasDataframe
 from ..partitioning.partition_manager import (
-    PandasOnDaskFramePartitionManager,
+    PandasOnDaskDataframePartitionManager,
 )
 
 from distributed.client import default_client
 
 
-class PandasOnDaskFrame(PandasFrame):
+class PandasOnDaskDataframe(PandasDataframe):
     """
-    The class implements the interface in ``PandasFrame``.
+    The class implements the interface in ``PandasDataframe``.
 
     Parameters
     ----------
@@ -43,7 +43,7 @@ class PandasOnDaskFrame(PandasFrame):
         The data types for the dataframe columns.
     """
 
-    _partition_mgr_cls = PandasOnDaskFramePartitionManager
+    _partition_mgr_cls = PandasOnDaskDataframePartitionManager
 
     @property
     def _row_lengths(self):

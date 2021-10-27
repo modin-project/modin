@@ -575,7 +575,7 @@ class InputRefExpr(BaseExpr):
 
     Parameters
     ----------
-    frame : OmnisciOnNativeFrame
+    frame : OmnisciOnNativeDataframe
         An input frame.
     col : str
         An input column name.
@@ -584,7 +584,7 @@ class InputRefExpr(BaseExpr):
 
     Attributes
     ----------
-    modin_frame : OmnisciOnNativeFrame
+    modin_frame : OmnisciOnNativeDataframe
         An input frame.
     column : str
         An input column name.

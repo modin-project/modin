@@ -11,7 +11,7 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-"""Module houses class that implements ``GenericRayFramePartitionManager`` using Ray."""
+"""Module houses class that implements ``GenericRayDataframePartitionManager`` using Ray."""
 
 import inspect
 import numpy as np
@@ -19,14 +19,14 @@ import threading
 
 from modin.config import ProgressBar
 from modin.core.execution.ray.generic.partitioning.partition_manager import (
-    GenericRayFramePartitionManager,
+    GenericRayDataframePartitionManager,
 )
 from .axis_partition import (
-    PandasOnRayFrameColumnPartition,
-    PandasOnRayFrameRowPartition,
+    PandasOnRayDataframeColumnPartition,
+    PandasOnRayDataframeRowPartition,
 )
 from .partition import (
-    PandasOnRayFramePartition,
+    PandasOnRayDataframePartition,
 )
 from modin.core.execution.ray.generic.modin_aqp import call_progress_bar
 from modin.error_message import ErrorMessage
@@ -88,13 +88,13 @@ def progress_bar_wrapper(f):
     return magic
 
 
-class PandasOnRayFramePartitionManager(GenericRayFramePartitionManager):
-    """The class implements the interface in `PandasFramePartitionManager`."""
+class PandasOnRayDataframePartitionManager(GenericRayDataframePartitionManager):
+    """The class implements the interface in `PandasDataframePartitionManager`."""
 
     # This object uses RayRemotePartition objects as the underlying store.
-    _partition_class = PandasOnRayFramePartition
-    _column_partitions_class = PandasOnRayFrameColumnPartition
-    _row_partition_class = PandasOnRayFrameRowPartition
+    _partition_class = PandasOnRayDataframePartition
+    _column_partitions_class = PandasOnRayDataframeColumnPartition
+    _row_partition_class = PandasOnRayDataframeRowPartition
 
     @classmethod
     def get_indices(cls, axis, partitions, index_func=None):
@@ -106,7 +106,7 @@ class PandasOnRayFramePartitionManager(GenericRayFramePartitionManager):
         axis : {0, 1}
             Axis to extract the labels over.
         partitions : np.ndarray
-            NumPy array with ``PandasFramePartition``-s.
+            NumPy array with ``PandasDataframePartition``-s.
         index_func : callable, default: None
             The function to be used to extract the indices.
 
@@ -205,7 +205,7 @@ class PandasOnRayFramePartitionManager(GenericRayFramePartitionManager):
         np.ndarray
             A NumPy array of partitions.
         """
-        return super(PandasOnRayFramePartitionManager, cls).map_partitions(
+        return super(PandasOnRayDataframePartitionManager, cls).map_partitions(
             partitions, map_func
         )
 
@@ -227,7 +227,7 @@ class PandasOnRayFramePartitionManager(GenericRayFramePartitionManager):
         np.ndarray
             A NumPy array of partitions.
         """
-        return super(PandasOnRayFramePartitionManager, cls).lazy_map_partitions(
+        return super(PandasOnRayDataframePartitionManager, cls).lazy_map_partitions(
             partitions, map_func
         )
 
@@ -272,7 +272,7 @@ class PandasOnRayFramePartitionManager(GenericRayFramePartitionManager):
         This method should be used in the case when `map_func` relies on
         some global information about the axis.
         """
-        return super(PandasOnRayFramePartitionManager, cls).map_axis_partitions(
+        return super(PandasOnRayDataframePartitionManager, cls).map_axis_partitions(
             axis, partitions, map_func, keep_partitioning, lengths, enumerate_partitions
         )
 
@@ -301,7 +301,7 @@ class PandasOnRayFramePartitionManager(GenericRayFramePartitionManager):
         This preprocesses the `func` first before applying it to the partitions.
         """
         return super(
-            PandasOnRayFramePartitionManager, cls
+            PandasOnRayDataframePartitionManager, cls
         )._apply_func_to_list_of_partitions(func, partitions, **kwargs)
 
     @classmethod
@@ -339,7 +339,7 @@ class PandasOnRayFramePartitionManager(GenericRayFramePartitionManager):
         internal index to the external representation.
         """
         return super(
-            PandasOnRayFramePartitionManager, cls
+            PandasOnRayDataframePartitionManager, cls
         ).apply_func_to_select_indices(
             axis, partitions, func, indices, keep_remaining=keep_remaining
         )
@@ -381,7 +381,7 @@ class PandasOnRayFramePartitionManager(GenericRayFramePartitionManager):
         it must use `internal_indices` as a keyword argument.
         """
         return super(
-            PandasOnRayFramePartitionManager, cls
+            PandasOnRayDataframePartitionManager, cls
         ).apply_func_to_select_indices_along_full_axis(
             axis, partitions, func, indices, keep_remaining
         )
@@ -424,7 +424,7 @@ class PandasOnRayFramePartitionManager(GenericRayFramePartitionManager):
         arguments.
         """
         return super(
-            PandasOnRayFramePartitionManager, cls
+            PandasOnRayDataframePartitionManager, cls
         ).apply_func_to_indices_both_axis(
             partitions,
             func,
@@ -437,24 +437,24 @@ class PandasOnRayFramePartitionManager(GenericRayFramePartitionManager):
     @progress_bar_wrapper
     def binary_operation(cls, axis, left, func, right):
         """
-        Apply a function that requires partitions of two ``PandasOnRayFrame`` objects.
+        Apply a function that requires partitions of two ``PandasOnRayDataframe`` objects.
 
         Parameters
         ----------
         axis : {0, 1}
             The axis to apply the function over (0 - rows, 1 - columns).
         left : np.ndarray
-            The partitions of left ``PandasOnRayFrame``.
+            The partitions of left ``PandasOnRayDataframe``.
         func : callable
             The function to apply.
         right : np.ndarray
-            The partitions of right ``PandasOnRayFrame``.
+            The partitions of right ``PandasOnRayDataframe``.
 
         Returns
         -------
         np.ndarray
             A NumPy array with new partitions.
         """
-        return super(PandasOnRayFramePartitionManager, cls).binary_operation(
+        return super(PandasOnRayDataframePartitionManager, cls).binary_operation(
             axis, left, func, right
         )

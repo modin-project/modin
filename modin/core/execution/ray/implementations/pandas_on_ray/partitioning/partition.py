@@ -16,7 +16,7 @@
 import pandas
 
 from modin.core.storage_formats.pandas.utils import length_fn_pandas, width_fn_pandas
-from modin.core.dataframe.pandas.partitioning.partition import PandasFramePartition
+from modin.core.dataframe.pandas.partitioning.partition import PandasDataframePartition
 from modin.pandas.indexing import compute_sliced_len
 
 import ray
@@ -32,9 +32,9 @@ if version.parse(ray.__version__) >= version.parse("1.2.0"):
 compute_sliced_len = ray.remote(compute_sliced_len)
 
 
-class PandasOnRayFramePartition(PandasFramePartition):
+class PandasOnRayDataframePartition(PandasDataframePartition):
     """
-    The class implements the interface in ``PandasFramePartition``.
+    The class implements the interface in ``PandasDataframePartition``.
 
     Parameters
     ----------
@@ -89,8 +89,8 @@ class PandasOnRayFramePartition(PandasFramePartition):
 
         Returns
         -------
-        PandasOnRayFramePartition
-            A new ``PandasOnRayFramePartition`` object.
+        PandasOnRayDataframePartition
+            A new ``PandasOnRayDataframePartition`` object.
 
         Notes
         -----
@@ -106,7 +106,7 @@ class PandasOnRayFramePartition(PandasFramePartition):
             # this dramatically improves performance.
             func, args, kwargs = call_queue[0]
             result, length, width, ip = apply_func.remote(oid, func, *args, **kwargs)
-        return PandasOnRayFramePartition(result, length, width, ip)
+        return PandasOnRayDataframePartition(result, length, width, ip)
 
     def add_to_apply_calls(self, func, *args, **kwargs):
         """
@@ -123,15 +123,15 @@ class PandasOnRayFramePartition(PandasFramePartition):
 
         Returns
         -------
-        PandasOnRayFramePartition
-            A new ``PandasOnRayFramePartition`` object.
+        PandasOnRayDataframePartition
+            A new ``PandasOnRayDataframePartition`` object.
 
         Notes
         -----
         It does not matter if `func` is callable or an ``ray.ObjectRef``. Ray will
         handle it correctly either way. The keyword arguments are sent as a dictionary.
         """
-        return PandasOnRayFramePartition(
+        return PandasOnRayDataframePartition(
             self.oid, call_queue=self.call_queue + [(func, args, kwargs)]
         )
 
@@ -171,10 +171,10 @@ class PandasOnRayFramePartition(PandasFramePartition):
 
         Returns
         -------
-        PandasOnRayFramePartition
+        PandasOnRayDataframePartition
             A copy of this partition.
         """
-        return PandasOnRayFramePartition(
+        return PandasOnRayDataframePartition(
             self.oid,
             length=self._length_cache,
             width=self._width_cache,
@@ -222,8 +222,8 @@ class PandasOnRayFramePartition(PandasFramePartition):
 
         Returns
         -------
-        PandasOnRayFramePartition
-            A new ``PandasOnRayFramePartition`` object.
+        PandasOnRayDataframePartition
+            A new ``PandasOnRayDataframePartition`` object.
         """
         new_obj = super().mask(row_indices, col_indices)
         if isinstance(row_indices, slice) and isinstance(
@@ -252,10 +252,12 @@ class PandasOnRayFramePartition(PandasFramePartition):
 
         Returns
         -------
-        PandasOnRayFramePartition
-            A new ``PandasOnRayFramePartition`` object.
+        PandasOnRayDataframePartition
+            A new ``PandasOnRayDataframePartition`` object.
         """
-        return PandasOnRayFramePartition(ray.put(obj), len(obj.index), len(obj.columns))
+        return PandasOnRayDataframePartition(
+            ray.put(obj), len(obj.index), len(obj.columns)
+        )
 
     @classmethod
     def preprocess_func(cls, func):
@@ -363,8 +365,8 @@ class PandasOnRayFramePartition(PandasFramePartition):
 
         Returns
         -------
-        PandasOnRayFramePartition
-            A new ``PandasOnRayFramePartition`` object.
+        PandasOnRayDataframePartition
+            A new ``PandasOnRayDataframePartition`` object.
         """
         return cls.put(pandas.DataFrame())
 

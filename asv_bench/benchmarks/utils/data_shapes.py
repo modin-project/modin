@@ -16,10 +16,10 @@
 import os
 import json
 
-from .compatibility import ASV_USE_BACKEND, ASV_DATASET_SIZE
+from .compatibility import ASV_USE_STORAGE_FORMAT, ASV_DATASET_SIZE
 
 RAND_LOW = 0
-RAND_HIGH = 1_000_000_000 if ASV_USE_BACKEND == "omnisci" else 100
+RAND_HIGH = 1_000_000_000 if ASV_USE_STORAGE_FORMAT == "omnisci" else 100
 
 BINARY_OP_DATA_SIZE = {
     "big": [
@@ -90,7 +90,7 @@ _DEFAULT_CONFIG_T = [
     (
         UNARY_OP_DATA_SIZE[ASV_DATASET_SIZE],
         [
-            # Pandas backend benchmarks
+            # Pandas storage format benchmarks
             "TimeGroupByMultiColumn",
             "TimeGroupByDefaultAggregations",
             "TimeGroupByDictionaryAggregation",
@@ -122,7 +122,7 @@ _DEFAULT_CONFIG_T = [
     (
         BINARY_OP_DATA_SIZE[ASV_DATASET_SIZE],
         [
-            # Pandas backend benchmarks
+            # Pandas storage format benchmarks
             "TimeJoin",
             "TimeMerge",
             "TimeConcat",
@@ -133,7 +133,7 @@ _DEFAULT_CONFIG_T = [
     (
         SERIES_DATA_SIZE[ASV_DATASET_SIZE],
         [
-            # Pandas backend benchmarks
+            # Pandas storage format benchmarks
             "TimeFillnaSeries",
         ],
     ),

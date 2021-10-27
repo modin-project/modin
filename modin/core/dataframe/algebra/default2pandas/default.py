@@ -13,14 +13,14 @@
 
 """Module houses default functions builder class."""
 
-from modin.core.dataframe.algebra.function import Function
+from modin.core.dataframe.algebra import Operator
 from modin.utils import try_cast_to_pandas
 
 from pandas.core.dtypes.common import is_list_like
 import pandas
 
 
-class DefaultMethod(Function):
+class DefaultMethod(Operator):
     """
     Builder for default-to-pandas methods.
 

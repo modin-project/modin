@@ -68,12 +68,12 @@ class FrameMapper:
 
     Parameters
     ----------
-    frame : OmnisciOnNativeFrame
+    frame : OmnisciOnNativeDataframe
         Target frame.
 
     Attributes
     ----------
-    _frame : OmnisciOnNativeFrame
+    _frame : OmnisciOnNativeDataframe
         Target frame.
     """
 
@@ -123,7 +123,7 @@ class InputMapper:
 
         Parameters
         ----------
-        frame : OmnisciOnNativeFrame
+        frame : OmnisciOnNativeDataframe
             A frame for which a mapper is registered.
         mapper : object
             A mapper to register.
@@ -330,12 +330,12 @@ class FrameNode(DFAlgNode):
 
     Parameters
     ----------
-    modin_frame : OmnisciOnNativeFrame
+    modin_frame : OmnisciOnNativeDataframe
         Referenced frame.
 
     Attributes
     ----------
-    modin_frame : OmnisciOnNativeFrame
+    modin_frame : OmnisciOnNativeDataframe
         Referenced frame.
     """
 
@@ -888,7 +888,7 @@ def translate_exprs_to_base(exprs, base):
     ----------
     exprs : dict
         Expressions to translate.
-    base : OmnisciOnNativeFrame
+    base : OmnisciOnNativeDataframe
         Required input frame for translated expressions.
 
     Returns
@@ -935,9 +935,9 @@ def replace_frame_in_exprs(exprs, old_frame, new_frame):
     ----------
     exprs : dict
         Expressions to translate.
-    old_frame : OmnisciOnNativeFrame
+    old_frame : OmnisciOnNativeDataframe
         An input frame to replace.
-    new_frame : OmnisciOnNativeFrame
+    new_frame : OmnisciOnNativeDataframe
         A new input frame to use.
 
     Returns

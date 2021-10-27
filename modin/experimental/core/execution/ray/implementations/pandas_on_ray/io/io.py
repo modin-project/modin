@@ -15,7 +15,7 @@
 Module houses experimental IO classes and parser functions needed for these classes.
 
 Any function or class can be considered experimental API if it is not strictly replicating existent
-backend API, even if it is only extending the API.
+Query Compiler API, even if it is only extending the API.
 """
 
 import numpy as np
@@ -31,10 +31,10 @@ from modin.core.storage_formats.pandas.query_compiler import PandasQueryCompiler
 from modin.core.execution.ray.implementations.pandas_on_ray.io import PandasOnRayIO
 from modin.core.io import CSVGlobDispatcher, PickleExperimentalDispatcher
 from modin.core.execution.ray.implementations.pandas_on_ray.dataframe.dataframe import (
-    PandasOnRayFrame,
+    PandasOnRayDataframe,
 )
 from modin.core.execution.ray.implementations.pandas_on_ray.partitioning.partition import (
-    PandasOnRayFramePartition,
+    PandasOnRayDataframePartition,
 )
 from modin.core.execution.ray.common.task_wrapper import RayTask
 from modin.config import NPartitions
@@ -83,16 +83,16 @@ def _read_parquet_columns(path, columns, num_splits, kwargs):  # pragma: no cove
 
 class ExperimentalPandasOnRayIO(PandasOnRayIO):
     """
-    Class for handling experimental IO functionality with pandas backend and Ray engine.
+    Class for handling experimental IO functionality with pandas storage format and Ray engine.
 
     ``ExperimentalPandasOnRayIO`` inherits some util functions and unmodified IO functions
     from ``PandasOnRayIO`` class.
     """
 
     build_args = dict(
-        frame_partition_cls=PandasOnRayFramePartition,
+        frame_partition_cls=PandasOnRayDataframePartition,
         query_compiler_cls=PandasQueryCompiler,
-        frame_cls=PandasOnRayFrame,
+        frame_cls=PandasOnRayDataframe,
     )
     read_csv_glob = type(
         "", (RayTask, PandasCSVGlobParser, CSVGlobDispatcher), build_args
@@ -220,7 +220,7 @@ class ExperimentalPandasOnRayIO(PandasOnRayIO):
                 chunksize,
             )
             partition_ids.append(
-                [PandasOnRayFramePartition(obj) for obj in partition_id[:-1]]
+                [PandasOnRayDataframePartition(obj) for obj in partition_id[:-1]]
             )
             index_ids.append(partition_id[-1])
         new_index = pandas.RangeIndex(sum(ray.get(index_ids)))

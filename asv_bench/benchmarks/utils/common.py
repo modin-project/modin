@@ -30,7 +30,7 @@ from .compatibility import (
     ASV_USE_IMPL,
     ASV_DATASET_SIZE,
     ASV_USE_ENGINE,
-    ASV_USE_BACKEND,
+    ASV_USE_STORAGE_FORMAT,
 )
 from .data_shapes import RAND_LOW, RAND_HIGH
 
@@ -456,7 +456,7 @@ def trigger_import(*dfs):
     *dfs : iterable
         DataFrames to trigger import.
     """
-    assert ASV_USE_BACKEND == "omnisci"
+    assert ASV_USE_STORAGE_FORMAT == "omnisci"
 
     from modin.experimental.core.execution.native.implementations.omnisci_on_native.omnisci_worker import (
         OmnisciServer,
@@ -491,7 +491,7 @@ def execute(
         trigger_import(df)
         return
     if ASV_USE_IMPL == "modin":
-        if ASV_USE_BACKEND == "omnisci":
+        if ASV_USE_STORAGE_FORMAT == "omnisci":
             df._query_compiler._modin_frame._execute()
             return
         partitions = df._query_compiler._modin_frame._partitions

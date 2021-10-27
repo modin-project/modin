@@ -38,7 +38,7 @@ from modin.pandas.test.utils import (
     bool_arg_values,
     arg_keys,
 )
-from modin.config import NPartitions, Backend
+from modin.config import NPartitions, StorageFormat
 
 NPartitions.put(4)
 
@@ -104,9 +104,9 @@ def test_aggregate_error_checking():
 
 
 @pytest.mark.xfail(
-    Backend.get() == "Pandas",
+    StorageFormat.get() == "Pandas",
     reason="DataFrame.apply(dict) raises an exception because of a bug in its"
-    "implementation for pandas backend, this prevents us from catching the desired"
+    "implementation for pandas storage format, this prevents us from catching the desired"
     "exception. You can track this bug at:"
     "https://github.com/modin-project/modin/issues/3221",
 )

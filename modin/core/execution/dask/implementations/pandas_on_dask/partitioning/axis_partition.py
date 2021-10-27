@@ -14,9 +14,9 @@
 """Module houses classes responsible for storing an axis partition and applying a function to it."""
 
 from modin.core.dataframe.pandas.partitioning.axis_partition import (
-    PandasFrameAxisPartition,
+    PandasDataframeAxisPartition,
 )
-from .partition import PandasOnDaskFramePartition
+from .partition import PandasOnDaskDataframePartition
 
 from distributed.client import default_client
 from distributed import Future
@@ -24,14 +24,14 @@ from distributed.utils import get_ip
 import pandas
 
 
-class PandasOnDaskFrameAxisPartition(PandasFrameAxisPartition):
+class PandasOnDaskDataframeAxisPartition(PandasDataframeAxisPartition):
     """
-    The class implements the interface in ``PandasFrameAxisPartition``.
+    The class implements the interface in ``PandasDataframeAxisPartition``.
 
     Parameters
     ----------
     list_of_blocks : list
-        List of ``PandasOnDaskFramePartition`` objects.
+        List of ``PandasOnDaskDataframePartition`` objects.
     get_ip : bool, default: False
         Whether to get node IP addresses of conforming partitions or not.
     """
@@ -39,12 +39,12 @@ class PandasOnDaskFrameAxisPartition(PandasFrameAxisPartition):
     def __init__(self, list_of_blocks, get_ip=False):
         for obj in list_of_blocks:
             obj.drain_call_queue()
-        # Unwrap from PandasFramePartition object for ease of use
+        # Unwrap from PandasDataframePartition object for ease of use
         self.list_of_blocks = [obj.future for obj in list_of_blocks]
         if get_ip:
             self.list_of_ips = [obj._ip_cache for obj in list_of_blocks]
 
-    partition_type = PandasOnDaskFramePartition
+    partition_type = PandasOnDaskDataframePartition
     instance_type = Future
 
     @classmethod
@@ -78,7 +78,7 @@ class PandasOnDaskFrameAxisPartition(PandasFrameAxisPartition):
         client = default_client()
         axis_result = client.submit(
             deploy_dask_func,
-            PandasFrameAxisPartition.deploy_axis_func,
+            PandasDataframeAxisPartition.deploy_axis_func,
             axis,
             func,
             num_splits,
@@ -131,7 +131,7 @@ class PandasOnDaskFrameAxisPartition(PandasFrameAxisPartition):
         client = default_client()
         axis_result = client.submit(
             deploy_dask_func,
-            PandasFrameAxisPartition.deploy_func_between_two_axis_partitions,
+            PandasDataframeAxisPartition.deploy_func_between_two_axis_partitions,
             axis,
             func,
             num_splits,
@@ -150,7 +150,7 @@ class PandasOnDaskFrameAxisPartition(PandasFrameAxisPartition):
 
     def _wrap_partitions(self, partitions):
         """
-        Wrap partitions passed as a list of distributed.Future with ``PandasOnDaskFramePartition`` class.
+        Wrap partitions passed as a list of distributed.Future with ``PandasOnDaskDataframePartition`` class.
 
         Parameters
         ----------
@@ -160,7 +160,7 @@ class PandasOnDaskFrameAxisPartition(PandasFrameAxisPartition):
         Returns
         -------
         list
-            List of ``PandasOnDaskFramePartition`` objects.
+            List of ``PandasOnDaskDataframePartition`` objects.
         """
         return [
             self.partition_type(future, length, width, ip)
@@ -168,7 +168,7 @@ class PandasOnDaskFrameAxisPartition(PandasFrameAxisPartition):
         ]
 
 
-class PandasOnDaskFrameColumnPartition(PandasOnDaskFrameAxisPartition):
+class PandasOnDaskDataframeColumnPartition(PandasOnDaskDataframeAxisPartition):
     """
     The column partition implementation.
 
@@ -178,7 +178,7 @@ class PandasOnDaskFrameColumnPartition(PandasOnDaskFrameAxisPartition):
     Parameters
     ----------
     list_of_blocks : list
-        List of ``PandasOnDaskFramePartition`` objects.
+        List of ``PandasOnDaskDataframePartition`` objects.
     get_ip : bool, default: False
         Whether to get node IP addresses to conforming partitions or not.
     """
@@ -186,7 +186,7 @@ class PandasOnDaskFrameColumnPartition(PandasOnDaskFrameAxisPartition):
     axis = 0
 
 
-class PandasOnDaskFrameRowPartition(PandasOnDaskFrameAxisPartition):
+class PandasOnDaskDataframeRowPartition(PandasOnDaskDataframeAxisPartition):
     """
     The row partition implementation.
 
@@ -196,7 +196,7 @@ class PandasOnDaskFrameRowPartition(PandasOnDaskFrameAxisPartition):
     Parameters
     ----------
     list_of_blocks : list
-        List of ``PandasOnDaskFramePartition`` objects.
+        List of ``PandasOnDaskDataframePartition`` objects.
     get_ip : bool, default: False
         Whether to get node IP addresses to conforming partitions or not.
     """
