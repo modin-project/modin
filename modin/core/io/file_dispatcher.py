@@ -81,7 +81,10 @@ class OpenFile:
         try:
             from botocore.exceptions import NoCredentialsError
 
-            credential_error_type = (NoCredentialsError,)
+            credential_error_type = (
+                NoCredentialsError,
+                PermissionError,
+            )
         except ModuleNotFoundError:
             credential_error_type = ()
 
@@ -91,7 +94,8 @@ class OpenFile:
         try:
             return self.file.open()
         except credential_error_type:
-            self.file = fsspec.open(*args, anon=True)
+            self.kwargs["anon"] = True
+            self.file = fsspec.open(*args, **self.kwargs)
         return self.file.open()
 
     def __exit__(self, *args):

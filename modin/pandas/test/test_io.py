@@ -869,13 +869,16 @@ class TestCsv:
             encoding_errors=encoding_errors,
         )
 
-    @pytest.mark.parametrize("is_use_storage_options", [True, False])
-    def test_read_csv_s3(self, is_use_storage_options):
+    @pytest.mark.parametrize(
+        "storage_options",
+        [{"anon": False}, {"anon": True}, {"key": "123", "secret": "123"}, None],
+    )
+    def test_read_csv_s3(self, storage_options):
         eval_io(
             fn_name="read_csv",
             # read_csv kwargs
             filepath_or_buffer="s3://noaa-ghcn-pds/csv/1788.csv",
-            storage_options={"anon": True} if is_use_storage_options else None,
+            storage_options=storage_options,
         )
 
     @pytest.mark.parametrize("names", [list("XYZ"), None])
@@ -1270,7 +1273,7 @@ class TestParquet:
         reason="The reason of tests fail in `cloud` mode is unknown for now - issue #3264",
     )
     def test_read_parquet_s3(self, path_type):
-        dataset_url = "s3://aws-roda-hcls-datalake/chembl_27/chembl_27_public_tissue_dictionary/part-00000-66508102-96fa-4fd9-a0fd-5bc072a74293-c000.snappy.parquet"
+        dataset_url = "s3://modin-datasets/testing/test_data.parquet"
         if path_type == "object":
             import s3fs
 
@@ -1354,14 +1357,17 @@ class TestJson:
             lines=lines,
         )
 
-    @pytest.mark.parametrize("is_use_storage_options", [True, False])
-    def test_read_json_s3(self, is_use_storage_options):
+    @pytest.mark.parametrize(
+        "storage_options",
+        [{"anon": False}, {"anon": True}, {"key": "123", "secret": "123"}, None],
+    )
+    def test_read_json_s3(self, storage_options):
         eval_io(
             fn_name="read_json",
             path_or_buf="s3://modin-datasets/testing/test_data.json",
             lines=True,
             orient="records",
-            storage_options={"anon": True} if is_use_storage_options else None,
+            storage_options=storage_options,
         )
 
     def test_read_json_categories(self):
@@ -1961,12 +1967,15 @@ class TestFwf:
 
         df_equals(modin_df, pandas_df)
 
-    @pytest.mark.parametrize("is_use_storage_options", [True, False])
-    def test_read_fwf_s3(self, is_use_storage_options):
+    @pytest.mark.parametrize(
+        "storage_options",
+        [{"anon": False}, {"anon": True}, {"key": "123", "secret": "123"}, None],
+    )
+    def test_read_fwf_s3(self, storage_options):
         eval_io(
             fn_name="read_fwf",
             filepath_or_buffer="s3://modin-datasets/testing/test_data.fwf",
-            storage_options={"anon": True} if is_use_storage_options else None,
+            storage_options=storage_options,
         )
 
 
@@ -2020,12 +2029,15 @@ class TestFeather:
         condition="config.getoption('--simulate-cloud').lower() != 'off'",
         reason="The reason of tests fail in `cloud` mode is unknown for now - issue #3264",
     )
-    @pytest.mark.parametrize("is_use_storage_options", [True, False])
-    def test_read_feather_s3(self, is_use_storage_options):
+    @pytest.mark.parametrize(
+        "storage_options",
+        [{"anon": False}, {"anon": True}, {"key": "123", "secret": "123"}, None],
+    )
+    def test_read_feather_s3(self, storage_options):
         eval_io(
             fn_name="read_feather",
             path="s3://modin-datasets/testing/test_data.feather",
-            storage_options={"anon": True} if is_use_storage_options else None,
+            storage_options=storage_options,
         )
 
     @pytest.mark.xfail(
