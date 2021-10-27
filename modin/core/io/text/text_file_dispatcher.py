@@ -448,10 +448,12 @@ class TextFileDispatcher(FileDispatcher):
             # trigger for computing f.newlines
             file_like.readline()
             # in bytes
+            count_newline_symbols = len(file_like.newlines)
             newline = file_like.newlines.encode(encoding)
             count_symbol_bytes = 2 if "16" in encoding else 4 if "32" in encoding else 1
-            if len(newline) > count_symbol_bytes * 2:
-                newline = newline[-count_symbol_bytes * 2 :]
+            if len(newline) > count_symbol_bytes * count_newline_symbols:
+                # The case when BOM bytes are present in `newline` and `quotechar` byte arrays
+                newline = newline[-count_symbol_bytes * count_newline_symbols :]
                 quotechar = quotechar[-count_symbol_bytes:]
 
         return newline, quotechar
