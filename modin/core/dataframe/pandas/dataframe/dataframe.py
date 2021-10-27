@@ -1313,7 +1313,7 @@ class PandasFrame(object):
         The data shape is not changed (length and width of the table).
         """
         new_partitions = self._partition_mgr_cls.map_axis_partitions(
-            axis, self._partitions, func
+            axis, self._partitions, func, keep_partitioning=True
         )
         return self.__constructor__(
             new_partitions,
