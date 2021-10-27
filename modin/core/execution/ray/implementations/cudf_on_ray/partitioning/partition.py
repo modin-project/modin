@@ -28,7 +28,7 @@ class cuDFOnRayDataframePartition(PandasDataframePartition):
 
     Parameters
     ----------
-    gpu_manager : modin.engines.ray.cudf_on_ray.frame.GPUManager
+    gpu_manager : modin.core.execution.ray.implementations.cudf_on_ray.partitioning.GPUManager
         A gpu manager to store cuDF dataframes.
     key : ray.ObjectRef or int
         An integer key (or reference to key) associated with
@@ -81,7 +81,7 @@ class cuDFOnRayDataframePartition(PandasDataframePartition):
 
         Parameters
         ----------
-        gpu_manager : modin.engines.ray.cudf_on_ray.frame.GPUManager
+        gpu_manager : modin.core.execution.ray.implementations.cudf_on_ray.partitioning.GPUManager
             A gpu manager to store cuDF dataframes.
         pandas_dataframe : pandas.DataFrame/pandas.Series
             A ``pandas.DataFrame/pandas.Series`` to put.
@@ -264,7 +264,7 @@ class cuDFOnRayDataframePartition(PandasDataframePartition):
 
         Returns
         -------
-        modin.engines.ray.cudf_on_ray.frame.GPUManager
+        modin.core.execution.ray.implementations.cudf_on_ray.partitioning.GPUManager
             ``GPUManager`` associated with this object.
         """
         return self.gpu_manager

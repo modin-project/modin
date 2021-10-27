@@ -94,11 +94,11 @@ class Provider:
 class BaseCluster:
     """
     Cluster manager for Modin. Knows how to use certain tools to spawn and destroy clusters,
-    can serve as context manager to switch execution engine and partition to remote.
+    can serve as context manager to switch execution engine and storage format to remote.
     """
 
     target_engine = None
-    target_partition = None
+    target_storage_format = None
     wrap_cmd = None
     Connector = Connection
 
@@ -191,7 +191,9 @@ class BaseCluster:
     def __enter__(self):
         self.spawn(wait=True)  # make sure cluster is ready
         self.connection.activate()
-        self.old_execution = set_execution(self.target_engine, self.target_partition)
+        self.old_execution = set_execution(
+            self.target_engine, self.target_storage_format
+        )
         return self
 
     def __exit__(self, *a, **kw):

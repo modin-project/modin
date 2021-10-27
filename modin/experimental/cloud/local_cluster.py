@@ -72,7 +72,7 @@ _UNUSED = object()
 
 class LocalCluster(BaseCluster):
     target_engine = "Cloudpython"
-    target_partition = "Pandas"
+    target_storage_format = "Pandas"
 
     Connector = LocalConnection
 
