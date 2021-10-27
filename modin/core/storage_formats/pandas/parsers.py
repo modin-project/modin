@@ -245,7 +245,7 @@ class PandasCSVParser(PandasParser):
                     or encoding == "unicode_escape"
                     or encoding.replace("-", "_") == "utf_8_sig"
                 ):
-                    # 'close' call on underlay buffer is enough
+                    # do not 'close' the wrapper - underlying buffer is managed by `bio` handle
                     fio = TextIOWrapper(bio, encoding=encoding, newline="")
                     if header_size == 0:
                         header = fio.readline().encode(encoding)

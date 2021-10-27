@@ -523,10 +523,13 @@ class TestCsv:
 
     # Quoting, Compression parameters tests
     @pytest.mark.parametrize("compression", ["infer", "gzip", "bz2", "xz", "zip"])
+    @pytest.mark.parametrize("encoding", [None, "latin8", "utf16"])
     @pytest.mark.parametrize("engine", [None, "python", "c"])
-    def test_read_csv_compression(self, make_csv_file, compression, engine):
+    def test_read_csv_compression(self, make_csv_file, compression, encoding, engine):
         unique_filename = get_unique_filename()
-        make_csv_file(filename=unique_filename, compression=compression)
+        make_csv_file(
+            filename=unique_filename, encoding=encoding, compression=compression
+        )
         compressed_file_path = (
             f"{unique_filename}.{COMP_TO_EXT[compression]}"
             if compression != "infer"
@@ -538,6 +541,7 @@ class TestCsv:
             # read_csv kwargs
             filepath_or_buffer=compressed_file_path,
             compression=compression,
+            encoding=encoding,
             engine=engine,
         )
 
@@ -545,7 +549,6 @@ class TestCsv:
         "encoding",
         [
             None,
-            "latin8",
             "ISO-8859-1",
             "latin1",
             "iso-8859-1",
@@ -559,7 +562,6 @@ class TestCsv:
                 ),
             ),
             "raw_unicode_escape",
-            "utf16",
             "utf_16_le",
             "utf_16_be",
             "utf32",
@@ -577,17 +579,6 @@ class TestCsv:
             # read_csv kwargs
             filepath_or_buffer=unique_filename,
             encoding=encoding,
-        )
-
-    def test_read_csv_3146(self, make_csv_file):
-        unique_filename = get_unique_filename()
-        make_csv_file(filename=unique_filename, encoding="utf-8-sig")
-
-        eval_io(
-            fn_name="read_csv",
-            # read_csv kwargs
-            filepath_or_buffer=unique_filename,
-            encoding="utf-8-sig",
         )
 
     @pytest.mark.parametrize("thousands", [None, ",", "_", " "])
