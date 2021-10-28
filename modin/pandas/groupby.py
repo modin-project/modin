@@ -128,7 +128,13 @@ class DataFrameGroupBy(object):
         return self._default_to_pandas(lambda df: df.sem(ddof=ddof))
 
     def mean(self, *args, **kwargs):
-        return self._apply_agg_function(lambda df: df.mean(*args, **kwargs))
+        # return self._apply_agg_function(lambda df: df.mean(*args, **kwargs))
+        return self._wrap_aggregation(
+            type(self._query_compiler).groupby_mean,
+            lambda df, **kwargs: df.mean(**kwargs),
+            numeric_only=True,
+            **kwargs,
+        )
 
     def any(self, **kwargs):
         return self._wrap_aggregation(

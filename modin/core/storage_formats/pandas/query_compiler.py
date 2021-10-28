@@ -2490,6 +2490,12 @@ class PandasQueryCompiler(BaseQueryCompiler):
     groupby_min = GroupByReduce.register("min")
     groupby_prod = GroupByReduce.register("prod")
     groupby_sum = GroupByReduce.register("sum")
+    groupby_mean = GroupByReduce.register(
+        lambda df, **kwargs: df.agg(["sum", "count"]).swaplevel(axis=1),
+        lambda df, **kwargs: df.apply(
+            lambda x: x.loc[:, "sum"].sum() / x.loc[:, "count"].sum()
+        ),
+    )
 
     def groupby_size(
         self, by, axis, groupby_args, map_args, reduce_args, numeric_only, drop

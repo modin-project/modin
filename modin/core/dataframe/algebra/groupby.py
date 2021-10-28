@@ -447,6 +447,7 @@ class GroupByReduce(MapReduce):
 groupby_reduce_functions = {
     "all": ("all", "all"),
     "any": ("any", "any"),
+    "mean": ("mean", "mean"),
     "count": ("count", "sum"),
     "max": ("max", "max"),
     "min": ("min", "min"),
