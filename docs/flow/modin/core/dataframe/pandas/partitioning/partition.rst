@@ -16,5 +16,5 @@ and no logic for updating inplace.
 Public API
 ----------
 
-.. autoclass:: modin.core.dataframe.pandas.partitioning.PandasFramePartition
+.. autoclass:: modin.core.dataframe.pandas.partitioning.partition.PandasDataframePartition
   :members:

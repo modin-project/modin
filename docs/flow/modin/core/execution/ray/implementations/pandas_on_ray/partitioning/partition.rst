@@ -18,7 +18,7 @@ An operation on a block partition can be performed in two modes:
 Public API
 ----------
 
-.. autoclass:: modin.core.execution.ray.implementations.pandas_on_ray.partitioning.PandasOnRayDataframePartition
+.. autoclass:: modin.core.execution.ray.implementations.pandas_on_ray.partitioning.partition.PandasOnRayDataframePartition
   :members:
 
 .. _asynchronously: https://en.wikipedia.org/wiki/Asynchrony_(computer_programming)

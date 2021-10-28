@@ -1,7 +1,7 @@
 :orphan:
 
 Operators Module Description
-"""""""""""""""""""""""""""
+""""""""""""""""""""""""""""
 
 Brief description
 '''''''''''''''''

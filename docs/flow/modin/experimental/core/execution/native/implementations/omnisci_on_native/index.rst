@@ -35,7 +35,6 @@ class.
 
     dataframe
     partitioning/partition
-    partitioning/axis_partition
     partitioning/partition_manager
     omnisci_engine
     df_algebra

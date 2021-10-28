@@ -4,7 +4,7 @@ TransformMapper
 Public API
 ----------
 
-.. autoclass:: modin.experimental.core.execution.native.implementations.omnisci_on_native.TransformMapper
+.. autoclass:: modin.experimental.core.execution.native.implementations.omnisci_on_native.df_algebra.TransformMapper
   :members:
 
 FrameMapper
@@ -13,7 +13,7 @@ FrameMapper
 Public API
 ----------
 
-.. autoclass:: modin.experimental.core.execution.native.implementations.omnisci_on_native.FrameMapper
+.. autoclass:: modin.experimental.core.execution.native.implementations.omnisci_on_native.df_algebra.FrameMapper
   :members:
 
 InputMapper
@@ -22,7 +22,7 @@ InputMapper
 Public API
 ----------
 
-.. autoclass:: modin.experimental.core.execution.native.implementations.omnisci_on_native.InputMapper
+.. autoclass:: modin.experimental.core.execution.native.implementations.omnisci_on_native.df_algebra.InputMapper
   :members:
 
 DFAlgNode
@@ -31,7 +31,7 @@ DFAlgNode
 Public API
 ----------
 
-.. autoclass:: modin.experimental.core.execution.native.implementations.omnisci_on_native.DFAlgNode
+.. autoclass:: modin.experimental.core.execution.native.implementations.omnisci_on_native.df_algebra.DFAlgNode
   :members:
 
 FrameNode
@@ -40,7 +40,7 @@ FrameNode
 Public API
 ----------
 
-.. autoclass:: modin.experimental.core.execution.native.implementations.omnisci_on_native.FrameNode
+.. autoclass:: modin.experimental.core.execution.native.implementations.omnisci_on_native.df_algebra.FrameNode
   :members:
 
 MaskNode
@@ -49,7 +49,7 @@ MaskNode
 Public API
 ----------
 
-.. autoclass:: modin.experimental.core.execution.native.implementations.omnisci_on_native.MaskNode
+.. autoclass:: modin.experimental.core.execution.native.implementations.omnisci_on_native.df_algebra.MaskNode
   :members:
 
 GroupbyAggNode
@@ -58,7 +58,7 @@ GroupbyAggNode
 Public API
 ----------
 
-.. autoclass:: modin.experimental.core.execution.native.implementations.omnisci_on_native.GroupbyAggNode
+.. autoclass:: modin.experimental.core.execution.native.implementations.omnisci_on_native.df_algebra.GroupbyAggNode
   :members:
 
 TransformNode
@@ -67,7 +67,7 @@ TransformNode
 Public API
 ----------
 
-.. autoclass:: modin.experimental.core.execution.native.implementations.omnisci_on_native.TransformNode
+.. autoclass:: modin.experimental.core.execution.native.implementations.omnisci_on_native.df_algebra.TransformNode
   :members:
 
 JoinNode
@@ -76,7 +76,7 @@ JoinNode
 Public API
 ----------
 
-.. autoclass:: modin.experimental.core.execution.native.implementations.omnisci_on_native.JoinNode
+.. autoclass:: modin.experimental.core.execution.native.implementations.omnisci_on_native.df_algebra.JoinNode
   :members:
 
 UnionNode
@@ -85,7 +85,7 @@ UnionNode
 Public API
 ----------
 
-.. autoclass:: modin.experimental.core.execution.native.implementations.omnisci_on_native.UnionNode
+.. autoclass:: modin.experimental.core.execution.native.implementations.omnisci_on_native.df_algebra.UnionNode
   :members:
 
 SortNode
@@ -94,7 +94,7 @@ SortNode
 Public API
 ----------
 
-.. autoclass:: modin.experimental.core.execution.native.implementations.omnisci_on_native.SortNode
+.. autoclass:: modin.experimental.core.execution.native.implementations.omnisci_on_native.df_algebra.SortNode
   :members:
 
 FilterNode
@@ -103,7 +103,7 @@ FilterNode
 Public API
 ----------
 
-.. autoclass:: modin.experimental.core.execution.native.implementations.omnisci_on_native.FilterNode
+.. autoclass:: modin.experimental.core.execution.native.implementations.omnisci_on_native.df_algebra.FilterNode
   :members:
 
 Utilities
@@ -112,5 +112,5 @@ Utilities
 Public API
 ----------
 
-.. autofunction:: modin.experimental.core.execution.native.implementations.omnisci_on_native.translate_exprs_to_base
-.. autofunction:: modin.experimental.core.execution.native.implementations.omnisci_on_native.replace_frame_in_exprs
+.. autofunction:: modin.experimental.core.execution.native.implementations.omnisci_on_native.df_algebra.translate_exprs_to_base
+.. autofunction:: modin.experimental.core.execution.native.implementations.omnisci_on_native.df_algebra.replace_frame_in_exprs

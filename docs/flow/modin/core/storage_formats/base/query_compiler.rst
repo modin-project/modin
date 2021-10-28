@@ -9,7 +9,7 @@ implementations for most of the interface methods, all of which
 :ref:`default to pandas <defaulting-to-pandas-mechanism>`.
 
 Subclassing :py:class:`~modin.core.storage_formats.base.query_compiler.BaseQueryCompiler`
-'''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+'''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 If you want to add new type of query compiler to Modin the new class needs to inherit
 from :py:class:`~modin.core.storage_formats.base.query_compiler.BaseQueryCompiler` and implement the abstract methods:
 
