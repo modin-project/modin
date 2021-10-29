@@ -945,7 +945,7 @@ class PandasDataframe(object):
         """
         # TODO: Support handling of slices with specified 'step'. For now, converting them into a range
         if isinstance(indices, slice) and (
-            indices.step is not None or indices.step != 1
+            indices.step is not None and indices.step != 1
         ):
             list_of_indices = range(*indices.indices(len(self.axes[axis])))
             return self._get_dict_of_block_index(axis=axis, indices=list_of_indices)
@@ -956,8 +956,8 @@ class PandasDataframe(object):
             if indices == slice(None) or indices == slice(0, None):
                 return OrderedDict(
                     zip(
-                        range(len(self.axes[axis])),
-                        [slice(None)] * len(self.axes[axis]),
+                        range(self._partitions.shape[axis]),
+                        [slice(None)] * self._partitions.shape[axis],
                     )
                 )
             if indices.start is None or indices.start == 0:
