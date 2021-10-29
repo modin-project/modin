@@ -1582,6 +1582,10 @@ class PandasFrame(object):
                 row_partitions_list,
                 col_partitions_list,
                 item_to_distribute,
+                # Passing caches instead of values in order to not trigger shapes recomputation
+                # if it won't be used inside this function.
+                self._row_lengths_cache,
+                self._column_widths_cache,
             )
             return self.__constructor__(
                 new_partitions,
