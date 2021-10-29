@@ -485,11 +485,11 @@ class PandasFrame(object):
                     # Row lengths for slice are calculated as the length of the slice
                     # on the partition. Often this will be the same length as the current
                     # length, but sometimes it is different, thus the extra calculation.
-                    range(*idx.indices(self._row_lengths[p]))
-                    if isinstance(idx, slice)
-                    else idx
+                    range(*part_indexer.indices(self._row_lengths[part_idx]))
+                    if isinstance(part_indexer, slice)
+                    else part_indexer
                 )
-                for n_p, index in row_partitions_list.items()
+                for part_idx, part_indexer in row_partitions_list.items()
             ]
             new_index = self.index[
                 # Pandas Index is more likely to preserve its metadata if the indexer is slice
@@ -516,11 +516,11 @@ class PandasFrame(object):
                     # Column widths for slice are calculated as the length of the slice
                     # on the partition. Often this will be the same length as the current
                     # length, but sometimes it is different, thus the extra calculation.
-                    range(*idx.indices(self._column_widths[p]))
-                    if isinstance(idx, slice)
-                    else idx
+                    range(*part_indexer.indices(self._column_widths[part_idx]))
+                    if isinstance(part_indexer, slice)
+                    else part_indexer
                 )
-                for n_p, columns in col_partitions_list.items()
+                for part_idx, part_indexer in col_partitions_list.items()
             ]
             # Use the slice to calculate the new columns
             # TODO: Support fast processing of negative-step ranges
