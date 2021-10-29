@@ -19,7 +19,7 @@ import matplotlib
 import modin.pandas as pd
 import io
 
-from modin.pandas.test.utils import (
+from modin.test.pandas.utils import (
     random_state,
     RAND_LOW,
     RAND_HIGH,

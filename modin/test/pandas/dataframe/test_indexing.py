@@ -19,7 +19,7 @@ import matplotlib
 import modin.pandas as pd
 import sys
 
-from modin.pandas.test.utils import (
+from modin.test.pandas.utils import (
     NROWS,
     RAND_LOW,
     RAND_HIGH,
@@ -363,10 +363,10 @@ def test_loc(data):
 
 def test_loc_multi_index():
     modin_df = pd.read_csv(
-        "modin/pandas/test/data/blah.csv", header=[0, 1, 2, 3], index_col=0
+        "modin/test/pandas/data/blah.csv", header=[0, 1, 2, 3], index_col=0
     )
     pandas_df = pandas.read_csv(
-        "modin/pandas/test/data/blah.csv", header=[0, 1, 2, 3], index_col=0
+        "modin/test/pandas/data/blah.csv", header=[0, 1, 2, 3], index_col=0
     )
 
     df_equals(modin_df.loc[1], pandas_df.loc[1])

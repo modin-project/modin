@@ -189,7 +189,7 @@ class TestCsv:
 
     @pytest.mark.parametrize("usecols", [lambda col_name: col_name in ["a", "b", "e"]])
     def test_from_csv_with_callable_usecols(self, usecols):
-        fname = "modin/pandas/test/data/test_usecols.csv"
+        fname = "modin/test/pandas/data/test_usecols.csv"
         pandas_df = pandas.read_csv(fname, usecols=usecols)
         modin_df = pd.read_csv(fname, usecols=usecols)
         df_equals(modin_df, pandas_df)
@@ -504,7 +504,7 @@ class TestCsv:
         df_equals(modin_df, pd_df)
 
     def test_read_csv_encoding_976(self):
-        file_name = "modin/pandas/test/data/issue_976.csv"
+        file_name = "modin/test/pandas/data/issue_976.csv"
         names = [str(i) for i in range(11)]
 
         kwargs = {
@@ -798,7 +798,7 @@ class TestCsv:
         eval_io(
             fn_name="read_csv",
             # read_csv kwargs
-            filepath_or_buffer="modin/pandas/test/data/test_categories.csv",
+            filepath_or_buffer="modin/test/pandas/data/test_categories.csv",
             names=["one", "two"],
             dtype={"one": "int64", "two": "category"},
         )
@@ -826,7 +826,7 @@ class TestCsv:
         eval_io(
             fn_name="read_csv",
             # read_csv kwargs
-            filepath_or_buffer="modin/pandas/test/data/test_time_parsing.csv",
+            filepath_or_buffer="modin/test/pandas/data/test_time_parsing.csv",
             names=names,
             header=header,
             index_col=index_col,
@@ -855,7 +855,7 @@ class TestCsv:
         eval_io(
             fn_name="read_csv",
             # read_csv kwargs
-            filepath_or_buffer="modin/pandas/test/data/issue_2239.csv",
+            filepath_or_buffer="modin/test/pandas/data/issue_2239.csv",
             names=names,
             skiprows=skiprows,
         )
@@ -883,7 +883,7 @@ class TestCsv:
             fn_name="read_csv",
             modin_warning=UserWarning,
             # read_csv kwargs
-            filepath_or_buffer="https://raw.githubusercontent.com/modin-project/modin/master/modin/pandas/test/data/blah.csv",
+            filepath_or_buffer="https://raw.githubusercontent.com/modin-project/modin/master/modin/test/pandas/data/blah.csv",
             # It takes about ~17Gb of RAM for Omnisci to import the whole table from this test
             # because of too many (~1000) string columns in it. Taking a subset of columns
             # to be able to run this test on low-RAM machines.
@@ -896,7 +896,7 @@ class TestCsv:
         eval_io(
             fn_name="read_csv",
             # read_csv kwargs
-            filepath_or_buffer="modin/pandas/test/data/newlines.csv",
+            filepath_or_buffer="modin/test/pandas/data/newlines.csv",
             nrows=nrows,
             skiprows=skiprows,
             cast_to_str=StorageFormat.get() != "Omnisci",
@@ -919,7 +919,7 @@ class TestCsv:
         eval_io(
             fn_name="read_csv",
             # read_csv kwargs
-            filepath_or_buffer="modin/pandas/test/data/test_categories.json",
+            filepath_or_buffer="modin/test/pandas/data/test_categories.json",
         )
 
     @pytest.mark.parametrize(
@@ -935,7 +935,7 @@ class TestCsv:
         eval_io(
             fn_name="read_csv",
             # read_csv kwargs
-            filepath_or_buffer="modin/pandas/test/data/issue_2074.csv",
+            filepath_or_buffer="modin/test/pandas/data/issue_2074.csv",
             **kwargs,
         )
 
@@ -1058,7 +1058,7 @@ class TestCsv:
             partition = read_df._query_compiler._modin_frame._partitions[0][0]
             return partition.to_pandas()
 
-        path = "modin/pandas/test/data/issue_3119.csv"
+        path = "modin/test/pandas/data/issue_3119.csv"
         read_df = pd.read_csv(path, index_col=0)
         assert get_internal_df(read_df).index.name is None
         read_df = pd.read_csv(path, index_col=[0, 1])
@@ -1225,7 +1225,7 @@ class TestParquet:
         eval_io(
             fn_name="read_parquet",
             # read_parquet kwargs
-            path="modin/pandas/test/data/hdfs.parquet",
+            path="modin/test/pandas/data/hdfs.parquet",
         )
 
     @pytest.mark.parametrize("path_type", ["url", "object"])
@@ -1322,7 +1322,7 @@ class TestJson:
         eval_io(
             fn_name="read_json",
             # read_json kwargs
-            path_or_buf="modin/pandas/test/data/test_categories.json",
+            path_or_buf="modin/test/pandas/data/test_categories.json",
             dtype={"one": "int64", "two": "category"},
         )
 
@@ -1452,12 +1452,12 @@ class TestExcel:
         eval_io(
             fn_name="read_excel",
             # read_excel kwargs
-            io="modin/pandas/test/data/excel_sheetname_title.xlsx",
+            io="modin/test/pandas/data/excel_sheetname_title.xlsx",
         )
 
     @check_file_leaks
     def test_excel_empty_line(self):
-        path = "modin/pandas/test/data/test_emptyline.xlsx"
+        path = "modin/test/pandas/data/test_emptyline.xlsx"
         modin_df = pd.read_excel(path)
         assert str(modin_df)
 
@@ -1479,7 +1479,7 @@ class TestExcel:
         eval_io(
             fn_name="read_excel",
             # read_excel kwargs
-            io="modin/pandas/test/data/modin_error_book.xlsx",
+            io="modin/test/pandas/data/modin_error_book.xlsx",
             sheet_name=sheet_name,
         )
 

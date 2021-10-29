@@ -1329,7 +1329,7 @@ def make_default_file(file_type: str):
             if force or not os.path.exists(filename):
                 fwf_data = kwargs.get("fwf_data")
                 if fwf_data is None:
-                    with open("modin/pandas/test/data/test_data.fwf", "r") as fwf_file:
+                    with open("modin/test/pandas/data/test_data.fwf", "r") as fwf_file:
                         fwf_data = fwf_file.read()
                 with open(filename, "w") as f:
                     f.write(fwf_data)
