@@ -6,7 +6,7 @@ Operators Module Description
 Brief description
 '''''''''''''''''
 Most of the functions that are evaluated by `QueryCompiler` can be categorized into
-one of the patterns: Map, TreeReduce, Binary, Reduce, etc, called operators. The ``modin.core.dataframe.algebra``
+one of the patterns: Map, MapReduce, Binary, Reduction, etc., called core operators. The ``modin.core.dataframe.algebra``
 module provides templates to easily build such types of functions. These templates
 are supposed to be used at the `QueryCompiler` level since each built function accepts
 and returns `QueryCompiler`.

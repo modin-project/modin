@@ -57,7 +57,7 @@ For the simplicity the other backend systems - Dask and MPI are omitted and only
   on a selected backend execution subsystem and mapping or compiling the Dataframe Algebra DAG to and actual
   execution sequence.
 * Storage formats module is responsible for mapping the abstract operation to an actual executor call, e.g. Pandas,
-  PyArrow, custom formats.
+  PyArrow, custom format.
 * Orchestration subsystem is responsible for spawning and controlling the actual execution environment for the
   selected backend. It spawns the actual nodes, fires up the execution environment, e.g. Ray, monitors the state
   of executors and provides telemetry
