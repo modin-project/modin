@@ -1,7 +1,7 @@
 PandasOnDask Dataframe implementation
 =====================================
 
-This page describes the implementation of :doc:`base Dataframe Objects </flow/modin/core/dataframe/index>`
+This page describes the implementation of :doc:`Modin PandasDataframe Objects </flow/modin/core/dataframe/pandas/index>`
 specific for `PandasOnDask` backend.
 
 * :doc:`Dataframe <dataframe>`

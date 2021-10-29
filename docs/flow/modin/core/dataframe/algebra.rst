@@ -33,8 +33,8 @@ Uniformly apply a function argument to each partition in parallel.
 .. figure:: /img/map_evaluation.svg
     :align: center
 
-Reduction operator
--------------------
+Reduce operator
+---------------
 Applies an argument function that reduces each column or row on the specified axis into a scalar, but requires knowledge about the whole axis.
 Be aware that providing this knowledge may be expensive because the execution engine has to
 concatenate partitions along the specified axis. Also, note that the execution engine expects
@@ -43,8 +43,8 @@ that the reduction function returns a one dimensional frame.
 .. figure:: /img/reduce_evaluation.svg
     :align: center
 
-TreeReduce operator
--------------------
+MapReduce operator
+------------------
 Applies an argument function that reduces specified axis into a scalar. First applies map function to each partition
 in parallel, then concatenates resulted partitions along the specified axis and applies reduction
 function. In contrast with `Map function` template, here you're allowed to change partition shape
@@ -66,17 +66,17 @@ the right operand to the left.
     more expensive operation than the binary function itself.
 
 Fold operator
---------------
+-------------
 Applies an argument function that requires knowledge of the whole axis. Be aware that providing this knowledge may be
 expensive because the execution engine has to concatenate partitions along the specified axis.
 
 GroupBy operator
------------------
+----------------
 Evaluates GroupBy aggregation for that type of functions that can be executed via MapReduce approach.
 To be able to form groups engine broadcasts ``by`` partitions to each partition of the source frame.
 
 Default-to-pandas operator
----------------------------
+--------------------------
 Do :ref:`fallback to pandas <defaulting-to-pandas-mechanism>` for passed function.
 
 
@@ -88,23 +88,23 @@ new functions.
 Imagine you have a complex aggregation that can be implemented into a single query but
 doesn't have any implementation in pandas API. If you know how to implement this
 aggregation efficiently in a distributed frame, you may want to use one of the above described
-patterns (e.g. ``TreeReduce``). 
+patterns (e.g. ``MapReduce``).
 
 Let's implement a function that counts non-NA values for each column or row
 (``pandas.DataFrame.count``). First, we need to determine the function type.
-TreeReduce approach would be great: in a map phase, we'll count non-NA cells in each
+MapReduce approach would be great: in a map phase, we'll count non-NA cells in each
 partition in parallel and then just sum its results in the reduce phase.
 
-To define the TreeReduce function that does `count` + `sum` we just need to register the
+To define the MapReduce function that does `count` + `sum` we just need to register the
 appropriate functions and then assign the result to the picked `QueryCompiler`
 (`PandasQueryCompiler` in our case):
 
 .. code-block:: python
 
     from modin.core.storage_formats import PandasQueryCompiler
-    from modin.core.dataframe.algebra import TreeReduce
+    from modin.core.dataframe.algebra import MapReduce
 
-    PandasQueryCompiler.custom_count = TreeReduce.register(pandas.DataFrame.count, pandas.DataFrame.sum)
+    PandasQueryCompiler.custom_count = MapReduce.register(pandas.DataFrame.count, pandas.DataFrame.sum)
 
 Then, we want to handle it from the DataFrame, so we need to create a way to do that:
 

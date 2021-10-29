@@ -6,10 +6,10 @@ Base Dataframe Objects
 Modin paritions data to scale efficiently.
 To keep track of everything a few key classes are introduced: ``Dataframe``, ``Partition``, ``AxisPartiton`` and ``PartitionManager``.
 
-* `Dataframe` is the class conforming to DataFrame Algebra.
+* `Dataframe` is the class conforming to Dataframe Algebra.
 * `Partition` is an element of a NxM grid which, when combined, represents the ``Dataframe``
 * `AxisPartition` is a joined group of ``Parition``-s along some axis (either rows or labels)
-* `PartitionManager` is the manager that implements the primitives used for DataFrame Algebra operations over ``Partition``-s
+* `PartitionManager` is the manager that implements the primitives used for Dataframe Algebra operations over ``Partition``-s
 
 Each :doc:`storage format </flow/modin/core/storage_formats/index>` may have its own implementations of these Dataframe's entities.
 Current stable implementations are the following:
