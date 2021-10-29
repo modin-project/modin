@@ -21,6 +21,7 @@ files from `FileDispatcher` class and can be used as base class for dipatchers o
 from modin.core.io.file_dispatcher import FileDispatcher
 from modin.core.storage_formats.pandas.utils import compute_chunksize
 from modin.utils import _inherit_docstrings
+from modin.core.io.text.utils import CustomNewlineIterator
 import numpy as np
 import warnings
 import io
@@ -326,33 +327,6 @@ class TextFileDispatcher(FileDispatcher):
 
         return result
 
-    class _CustomIterator:
-        r"""Used to iterate through files in binary mode line by line where newline != b'\n'."""
-
-        def __init__(self, _file, newline):
-            self.file = _file
-            self.newline = newline
-            self.bytes_read = self.chunk_size = 0
-
-        def __iter__(self):
-            buffer_size = io.DEFAULT_BUFFER_SIZE
-            chunk = self.file.read(buffer_size)
-            while chunk:
-                self.bytes_read = 0
-                # split remove newline bytes from line
-                lines = chunk.split(self.newline)
-                self.chunk_size = len(chunk)
-                for line in lines[:-1]:
-                    self.bytes_read += len(line) + len(self.newline)
-                    yield line
-                chunk = self.file.read(buffer_size)
-                if lines[-1]:
-                    # last line can be read without newline bytes
-                    chunk = lines[-1] + chunk
-
-        def seek(self):
-            self.file.seek(self.bytes_read - self.chunk_size, 1)
-
     @classmethod
     def _read_rows(
         cls,
@@ -403,7 +377,7 @@ class TextFileDispatcher(FileDispatcher):
             or encoding == "unicode_escape"
             or encoding.replace("-", "_") == "utf_8_sig"
         ):
-            iterator = cls._CustomIterator(f, newline)
+            iterator = CustomNewlineIterator(f, newline)
         else:
             iterator = f
 
@@ -415,7 +389,7 @@ class TextFileDispatcher(FileDispatcher):
                 if rows_read >= nrows:
                     break
 
-        if isinstance(iterator, cls._CustomIterator):
+        if isinstance(iterator, CustomNewlineIterator):
             iterator.seek()
 
         # case when EOF
