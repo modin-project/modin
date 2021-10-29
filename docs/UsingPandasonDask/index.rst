@@ -1,4 +1,4 @@
-Pandas on Dask
+pandas on Dask
 ==============
 
 The Dask engine and documentation could use your help! Consider opening a
