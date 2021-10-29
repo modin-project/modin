@@ -445,7 +445,7 @@ class TextFileDispatcher(FileDispatcher):
 
             for bom in boms:
                 if newline.startswith(bom):
-                    bom_len = len(codecs.BOM_UTF8)
+                    bom_len = len(bom)
                     newline = newline[bom_len:]
                     quotechar = quotechar[bom_len:]
                     break
