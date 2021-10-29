@@ -41,7 +41,7 @@ dask_deps = ["dask>=2.22.0", "distributed>=2.22.0"]
 ray_deps = ["ray[default]>=1.4.0", "pyarrow>=1.0"]
 remote_deps = ["rpyc==4.1.5", "cloudpickle", "boto3"]
 spreadsheet_deps = ["modin-spreadsheet>=0.1.0"]
-sql_deps = ["dfsql>=0.4.2"]
+sql_deps = ["dfsql>=0.4.2", "pyparsing<=2.4.7"]
 all_deps = dask_deps + ray_deps + remote_deps + spreadsheet_deps
 
 # dfsql does not support Windows yet
