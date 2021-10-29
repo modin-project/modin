@@ -25,6 +25,7 @@ import numpy as np
 import warnings
 import io
 import os
+import codecs
 from typing import Union, Sequence, Optional, Tuple
 import pandas
 import pandas._libs.lib as lib
@@ -447,23 +448,33 @@ class TextFileDispatcher(FileDispatcher):
             return newline, quotechar.encode("UTF-8")
 
         quotechar = quotechar.encode(encoding)
+        encoding = encoding.replace("-", "_")
 
         if (
             "utf" in encoding
             and "8" not in encoding
             or encoding == "unicode_escape"
-            or encoding.replace("-", "_") == "utf_8_sig"
+            or encoding == "utf_8_sig"
         ):
             # trigger for computing f.newlines
             file_like.readline()
             # in bytes
-            count_newline_symbols = len(file_like.newlines)
             newline = file_like.newlines.encode(encoding)
-            count_symbol_bytes = 2 if "16" in encoding else 4 if "32" in encoding else 1
-            if len(newline) > count_symbol_bytes * count_newline_symbols:
-                # The case when BOM bytes are present in `newline` and `quotechar` byte arrays
-                newline = newline[-count_symbol_bytes * count_newline_symbols :]
-                quotechar = quotechar[-count_symbol_bytes:]
+            boms = None
+            if encoding == "utf_8_sig":
+                boms = [codecs.BOM_UTF8]
+            elif "16" in encoding:
+                boms = [codecs.BOM_UTF16_BE, codecs.BOM_UTF16_LE]
+            elif "32" in encoding:
+                boms = [codecs.BOM_UTF32_BE, codecs.BOM_UTF32_LE]
+
+            if boms:
+                for bom in boms:
+                    if newline.startswith(bom):
+                        bom_len = len(codecs.BOM_UTF8)
+                        newline = newline[bom_len:]
+                        quotechar = quotechar[bom_len:]
+                        break
 
         return newline, quotechar
 
