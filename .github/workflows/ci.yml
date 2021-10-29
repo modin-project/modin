@@ -344,7 +344,6 @@ jobs:
           conda list
       - name: Install HDF5
         run: sudo apt update && sudo apt install -y libhdf5-dev
-      - run: pytest modin/test/storage_formats/omnisci/test_internals.py
       - run: MODIN_BENCHMARK_MODE=True pytest modin/test/pandas/internals/test_benchmark_mode.py
       - run: pytest modin/test/experimental/core/execution/native/implementations/omnisci_on_native/test_dataframe.py
       - run: pytest modin/test/pandas/test_io.py::TestCsv --verbose
