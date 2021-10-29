@@ -50,6 +50,7 @@ from pandas.util._decorators import doc
 import warnings
 
 from modin.core.io.file_dispatcher import OpenFile
+from modin.core.io.sql.connection import ModinDatabaseConnection
 from modin.core.storage_formats.pandas.utils import split_result_of_axis_func_pandas
 from modin.error_message import ErrorMessage
 
@@ -690,6 +691,8 @@ index_col : str or list of str
     )
     def parse(sql, con, index_col, **kwargs):
         num_splits = kwargs.pop("num_splits", None)
+        if isinstance(con, ModinDatabaseConnection):
+            con = con.get_connection()
         if num_splits is None:
             return pandas.read_sql(sql, con, index_col=index_col, **kwargs)
         df = pandas.read_sql(sql, con, index_col=index_col, **kwargs)
