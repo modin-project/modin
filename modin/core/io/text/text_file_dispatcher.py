@@ -369,42 +369,52 @@ class TextFileDispatcher(FileDispatcher):
 
         rows_read = 0
 
-        if (
-            encoding
-            and "utf" in encoding
+        class _CustomIterator:
+            def __init__(self, _file, newline):
+                self.file = _file
+                self.newline = newline
+
+            def __iter__(self):
+                buffer_size = io.DEFAULT_BUFFER_SIZE
+                chunk = self.file.read(buffer_size)
+                self.bytes_read = self.chunk_size = 0
+                while chunk:
+                    self.bytes_read = 0
+                    # split remove newline bytes from line
+                    lines = chunk.split(self.newline)
+                    self.chunk_size = len(chunk)
+                    if len(lines) != 1:
+                        for line in lines[:-1]:
+                            self.bytes_read += len(line) + len(self.newline)
+                            yield line
+                    chunk = self.file.read(buffer_size)
+                    if lines[-1]:
+                        # last line can be read without newline bytes
+                        chunk = lines[-1] + chunk
+
+            def seek(self):
+                self.file.seek(self.file.tell() + self.bytes_read - self.chunk_size)
+
+        if encoding and (
+            "utf" in encoding
             and "8" not in encoding
             or encoding == "unicode_escape"
+            or encoding.replace("-", "_") == "utf_8_sig"
         ):
-            buffer_size = io.DEFAULT_BUFFER_SIZE
-            chunk = f.read(buffer_size)
-            while chunk:
-                bytes_read = 0
-                # split remove newline bytes from line
-                lines = chunk.split(newline)
-                chunk_size = len(chunk)
-                if len(lines) != 1:
-                    for line in lines[:-1]:
-                        bytes_read += len(line) + len(newline)
-                        if is_quoting and line.count(quotechar) % 2:
-                            outside_quotes = not outside_quotes
-                        if outside_quotes:
-                            rows_read += 1
-                            if rows_read >= nrows:
-                                f.seek(f.tell() + bytes_read - chunk_size)
-                                return outside_quotes, rows_read
-
-                chunk = f.read(buffer_size)
-                if lines[-1]:
-                    # last line can be read without newline bytes
-                    chunk = lines[-1] + chunk
+            iterator = _CustomIterator(f, newline)
         else:
-            for line in f:
-                if is_quoting and line.count(quotechar) % 2:
-                    outside_quotes = not outside_quotes
-                if outside_quotes:
-                    rows_read += 1
-                    if rows_read >= nrows:
-                        break
+            iterator = f
+
+        for line in iterator:
+            if is_quoting and line.count(quotechar) % 2:
+                outside_quotes = not outside_quotes
+            if outside_quotes:
+                rows_read += 1
+                if rows_read >= nrows:
+                    break
+
+        if iterator != f:
+            iterator.seek()
 
         # case when EOF
         if not outside_quotes:
@@ -437,13 +447,12 @@ class TextFileDispatcher(FileDispatcher):
             return newline, quotechar.encode("UTF-8")
 
         quotechar = quotechar.encode(encoding)
-        encoding = encoding.replace("-", "_")
 
         if (
             "utf" in encoding
             and "8" not in encoding
             or encoding == "unicode_escape"
-            or encoding == "utf_8_sig"
+            or encoding.replace("-", "_") == "utf_8_sig"
         ):
             # trigger for computing f.newlines
             file_like.readline()
