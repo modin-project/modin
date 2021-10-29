@@ -10,7 +10,6 @@
 import sys
 import os
 import types
-from unittest.mock import Mock
 
 import ray
 # stub ray.remote to be a no-op so it doesn't shadow docstrings
@@ -22,11 +21,17 @@ def noop_decorator(*args, **kwargs):
 ray.remote = noop_decorator
 
 # fake modules if they're missing
-for mod_name in ("cudf", "cupy", "pyarrow.gandiva", "omniscidbe", "modin_spreadsheet"):
+for mod_name in ("cudf", "cupy", "pyarrow.gandiva", "omniscidbe"):
     try:
         __import__(mod_name)
     except ImportError:
-        sys.modules[mod_name] = Mock()
+        sys.modules[mod_name] = types.ModuleType(
+            mod_name, f"fake {mod_name} for building docs"
+        )
+if not hasattr(sys.modules["cudf"], "DataFrame"):
+    sys.modules["cudf"].DataFrame = type("DataFrame", (object,), {})
+if not hasattr(sys.modules["omniscidbe"], "PyDbEngine"):
+    sys.modules["omniscidbe"].PyDbEngine = type("PyDbEngine", (object,), {})
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 import modin
