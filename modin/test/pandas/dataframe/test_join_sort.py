@@ -18,7 +18,7 @@ import matplotlib
 import modin.pandas as pd
 from modin.utils import to_pandas
 
-from modin.pandas.test.utils import (
+from modin.test.pandas.utils import (
     random_state,
     df_equals,
     arg_keys,

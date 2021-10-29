@@ -20,7 +20,7 @@ from modin.utils import to_pandas
 from numpy.testing import assert_array_equal
 import io
 
-from modin.pandas.test.utils import (
+from modin.test.pandas.utils import (
     df_equals,
     name_contains,
     test_data_values,

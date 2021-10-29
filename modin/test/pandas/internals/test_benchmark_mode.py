@@ -14,7 +14,7 @@
 # test BenchmarkMode == True
 
 import modin.pandas as pd
-from modin.pandas.test.utils import test_data_values
+from modin.test.pandas.utils import test_data_values
 from modin.config import BenchmarkMode
 
 

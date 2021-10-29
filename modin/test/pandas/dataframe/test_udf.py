@@ -18,7 +18,7 @@ import matplotlib
 import modin.pandas as pd
 
 from pandas.core.dtypes.common import is_list_like
-from modin.pandas.test.utils import (
+from modin.test.pandas.utils import (
     random_state,
     df_equals,
     test_data_values,

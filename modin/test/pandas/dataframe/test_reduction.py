@@ -17,7 +17,7 @@ import pandas
 import matplotlib
 import modin.pandas as pd
 
-from modin.pandas.test.utils import (
+from modin.test.pandas.utils import (
     df_equals,
     arg_keys,
     test_data,
