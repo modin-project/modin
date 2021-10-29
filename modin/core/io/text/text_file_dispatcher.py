@@ -326,6 +326,33 @@ class TextFileDispatcher(FileDispatcher):
 
         return result
 
+    class _CustomIterator:
+        r"""Used to iterate through files in binary mode line by line where newline != b'\n'."""
+
+        def __init__(self, _file, newline):
+            self.file = _file
+            self.newline = newline
+            self.bytes_read = self.chunk_size = 0
+
+        def __iter__(self):
+            buffer_size = io.DEFAULT_BUFFER_SIZE
+            chunk = self.file.read(buffer_size)
+            while chunk:
+                self.bytes_read = 0
+                # split remove newline bytes from line
+                lines = chunk.split(self.newline)
+                self.chunk_size = len(chunk)
+                for line in lines[:-1]:
+                    self.bytes_read += len(line) + len(self.newline)
+                    yield line
+                chunk = self.file.read(buffer_size)
+                if lines[-1]:
+                    # last line can be read without newline bytes
+                    chunk = lines[-1] + chunk
+
+        def seek(self):
+            self.file.seek(self.bytes_read - self.chunk_size, 1)
+
     @classmethod
     def _read_rows(
         cls,
@@ -370,39 +397,13 @@ class TextFileDispatcher(FileDispatcher):
 
         rows_read = 0
 
-        class _CustomIterator:
-            def __init__(self, _file, newline):
-                self.file = _file
-                self.newline = newline
-
-            def __iter__(self):
-                buffer_size = io.DEFAULT_BUFFER_SIZE
-                chunk = self.file.read(buffer_size)
-                self.bytes_read = self.chunk_size = 0
-                while chunk:
-                    self.bytes_read = 0
-                    # split remove newline bytes from line
-                    lines = chunk.split(self.newline)
-                    self.chunk_size = len(chunk)
-                    if len(lines) != 1:
-                        for line in lines[:-1]:
-                            self.bytes_read += len(line) + len(self.newline)
-                            yield line
-                    chunk = self.file.read(buffer_size)
-                    if lines[-1]:
-                        # last line can be read without newline bytes
-                        chunk = lines[-1] + chunk
-
-            def seek(self):
-                self.file.seek(self.file.tell() + self.bytes_read - self.chunk_size)
-
         if encoding and (
             "utf" in encoding
             and "8" not in encoding
             or encoding == "unicode_escape"
             or encoding.replace("-", "_") == "utf_8_sig"
         ):
-            iterator = _CustomIterator(f, newline)
+            iterator = cls._CustomIterator(f, newline)
         else:
             iterator = f
 
@@ -414,7 +415,7 @@ class TextFileDispatcher(FileDispatcher):
                 if rows_read >= nrows:
                     break
 
-        if iterator != f:
+        if isinstance(iterator, cls._CustomIterator):
             iterator.seek()
 
         # case when EOF
@@ -460,21 +461,20 @@ class TextFileDispatcher(FileDispatcher):
             file_like.readline()
             # in bytes
             newline = file_like.newlines.encode(encoding)
-            boms = None
+            boms = ()
             if encoding == "utf_8_sig":
-                boms = [codecs.BOM_UTF8]
+                boms = (codecs.BOM_UTF8,)
             elif "16" in encoding:
-                boms = [codecs.BOM_UTF16_BE, codecs.BOM_UTF16_LE]
+                boms = (codecs.BOM_UTF16_BE, codecs.BOM_UTF16_LE)
             elif "32" in encoding:
-                boms = [codecs.BOM_UTF32_BE, codecs.BOM_UTF32_LE]
+                boms = (codecs.BOM_UTF32_BE, codecs.BOM_UTF32_LE)
 
-            if boms:
-                for bom in boms:
-                    if newline.startswith(bom):
-                        bom_len = len(codecs.BOM_UTF8)
-                        newline = newline[bom_len:]
-                        quotechar = quotechar[bom_len:]
-                        break
+            for bom in boms:
+                if newline.startswith(bom):
+                    bom_len = len(codecs.BOM_UTF8)
+                    newline = newline[bom_len:]
+                    quotechar = quotechar[bom_len:]
+                    break
 
         return newline, quotechar
 
