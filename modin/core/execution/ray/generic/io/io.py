@@ -147,7 +147,6 @@ class RayIO(BaseIO):
                 Arguments to pass to ``pandas.to_csv(**kw)`` plus an extra argument
                 `partition_idx` serving as chunk index to maintain rows order.
             """
-            nonlocal signals
             idx = kw["partition_idx"]
             _kwargs = kwargs.copy()
             if idx != 0:
@@ -203,4 +202,3 @@ class RayIO(BaseIO):
         )
         # pending completion
         ray.get([partition.oid for partition in result.flatten()])
-        del signals
