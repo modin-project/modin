@@ -489,7 +489,7 @@ class PandasFrame(object):
                     if isinstance(idx, slice)
                     else idx
                 )
-                for p, idx in row_partitions_list.items()
+                for n_p, index in row_partitions_list.items()
             ]
             new_index = self.index[
                 # Pandas Index is more likely to preserve its metadata if the indexer is slice
@@ -520,7 +520,7 @@ class PandasFrame(object):
                     if isinstance(idx, slice)
                     else idx
                 )
-                for p, idx in col_partitions_list.items()
+                for n_p, columns in col_partitions_list.items()
             ]
             # Use the slice to calculate the new columns
             # TODO: Support fast processing of negative-step ranges
