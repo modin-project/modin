@@ -1719,13 +1719,10 @@ def test_not_str_by(by, as_index):
 
 def test_sum_with_level():
     data = {
-        "A": [0.0, 1.0, 2.0, 3.0, 4.0],
-        "B": [0.0, 1.0, 0.0, 1.0, 0.0],
+        "A": ["0.0", "1.0", "2.0", "3.0", "4.0"],
+        "B": ["0.0", "1.0", "0.0", "1.0", "0.0"],
         "C": ["foo1", "foo2", "foo3", "foo4", "foo5"],
         "D": pandas.bdate_range("1/1/2009", periods=5),
     }
-
-    data = pandas.DataFrame(data).to_numpy()  # Reset dtypes
     modin_df, pandas_df = pd.DataFrame(data), pandas.DataFrame(data)
-    modin_df.columns = pandas_df.columns = ["A", "B", "C", "D"]
-    eval_general(modin_df, pandas_df, lambda df: df.groupby("C").sum())
+    eval_general(modin_df, pandas_df, lambda df: df.set_index("C").groupby("C").sum())
