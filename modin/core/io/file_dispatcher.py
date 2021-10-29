@@ -21,7 +21,7 @@ for direct files processing.
 import fsspec
 import os
 import re
-from modin.config import Backend
+from modin.config import StorageFormat
 import numpy as np
 
 S3_ADDRESS_REGEX = re.compile("[sS]3://(.*?)/(.*)")
@@ -72,18 +72,21 @@ class OpenFile:
         fsspec.core.OpenFile
             The opened file.
         """
-        from botocore.exceptions import NoCredentialsError
-
         try:
-            self.file = fsspec.open(
-                self.file_path, self.mode, self.compression, anon=False
-            )
+            from botocore.exceptions import NoCredentialsError
+
+            credential_error_type = (NoCredentialsError,)
+        except ModuleNotFoundError:
+            credential_error_type = ()
+
+        args = (self.file_path, self.mode, self.compression)
+
+        self.file = fsspec.open(*args, anon=False)
+        try:
             return self.file.open()
-        except NoCredentialsError:
-            self.file = fsspec.open(
-                self.file_path, self.mode, self.compression, anon=True
-            )
-            return self.file.open()
+        except credential_error_type:
+            self.file = fsspec.open(*args, anon=True)
+        return self.file.open()
 
     def __exit__(self, *args):
         """
@@ -131,16 +134,16 @@ class FileDispatcher:
 
         Notes
         -----
-        `read` is high-level function that calls specific for defined backend, engine and
+        `read` is high-level function that calls specific for defined storage format, engine and
         dispatcher class `_read` function with passed parameters and performs some
         postprocessing work on the resulting query_compiler object.
         """
         query_compiler = cls._read(*args, **kwargs)
         # TODO (devin-petersohn): Make this section more general for non-pandas kernel
         # implementations.
-        if Backend.get() == "Pandas":
+        if StorageFormat.get() == "Pandas":
             import pandas as kernel_lib
-        elif Backend.get() == "Cudf":
+        elif StorageFormat.get() == "Cudf":
             import cudf as kernel_lib
         else:
             raise NotImplementedError("FIXME")

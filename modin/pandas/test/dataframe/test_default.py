@@ -52,7 +52,6 @@ matplotlib.use("Agg")
         ("align", lambda df: {"other": df}),
         ("expanding", None),
         ("corrwith", lambda df: {"other": df}),
-        ("explode", lambda df: {"column": df.columns[0]}),
         ("ewm", lambda df: {"com": 0.5}),
         ("from_dict", lambda df: {"data": None}),
         ("from_records", lambda df: {"data": to_pandas(df)}),

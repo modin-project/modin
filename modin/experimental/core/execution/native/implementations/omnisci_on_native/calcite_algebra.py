@@ -15,7 +15,7 @@
 Module provides classes for relational algebra expressions.
 
 Provided classes reflect relational algebra format used by
-OmniSci backend.
+OmniSci storage format.
 """
 
 import abc
@@ -161,7 +161,7 @@ class CalciteScanNode(CalciteBaseNode):
 
     Parameters
     ----------
-    modin_frame : OmnisciOnNativeFrame
+    modin_frame : OmnisciOnNativeDataframe
         A frame to scan. The frame should have a materialized table
         in OmniSci.
 

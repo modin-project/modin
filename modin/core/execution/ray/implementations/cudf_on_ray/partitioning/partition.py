@@ -18,13 +18,13 @@ import cudf
 import cupy
 import numpy as np
 import cupy as cp
-from modin.core.dataframe.pandas.partitioning.partition import PandasFramePartition
+from modin.core.dataframe.pandas.partitioning.partition import PandasDataframePartition
 from pandas.core.dtypes.common import is_list_like
 
 
-class cuDFOnRayFramePartition(PandasFramePartition):
+class cuDFOnRayDataframePartition(PandasDataframePartition):
     """
-    The class implements the interface in ``PandasFramePartition`` using cuDF on Ray.
+    The class implements the interface in ``PandasDataframePartition`` using cuDF on Ray.
 
     Parameters
     ----------
@@ -49,7 +49,7 @@ class cuDFOnRayFramePartition(PandasFramePartition):
 
         Returns
         -------
-        cuDFOnRayFramePartition
+        cuDFOnRayDataframePartition
             New instance of cuDF partition.
         """
         return type(self)
@@ -66,11 +66,11 @@ class cuDFOnRayFramePartition(PandasFramePartition):
 
         Returns
         -------
-        cuDFOnRayFramePartition
+        cuDFOnRayDataframePartition
             A copy of this object.
         """
         # Shallow copy.
-        return cuDFOnRayFramePartition(
+        return cuDFOnRayDataframePartition(
             self.gpu_manager, self.key, self._length_cache, self._width_cache
         )
 
@@ -149,14 +149,14 @@ class cuDFOnRayFramePartition(PandasFramePartition):
 
         Returns
         -------
-        cuDFOnRayFramePartition
+        cuDFOnRayDataframePartition
             New partition based on result of `func`.
 
         Notes
         -----
-        We eagerly schedule the apply `func` and produce a new ``cuDFOnRayFramePartition``.
+        We eagerly schedule the apply `func` and produce a new ``cuDFOnRayDataframePartition``.
         """
-        return cuDFOnRayFramePartition(self.gpu_manager, self.apply(func, **kwargs))
+        return cuDFOnRayDataframePartition(self.gpu_manager, self.apply(func, **kwargs))
 
     @classmethod
     def preprocess_func(cls, func):
@@ -249,7 +249,7 @@ class cuDFOnRayFramePartition(PandasFramePartition):
                 row_indices = new_row_indices
             return df.iloc[row_indices, col_indices]
 
-        iloc = cuDFOnRayFramePartition.preprocess_func(iloc)
+        iloc = cuDFOnRayDataframePartition.preprocess_func(iloc)
         return self.gpu_manager.apply.remote(
             self.key,
             None,
@@ -353,7 +353,7 @@ class cuDFOnRayFramePartition(PandasFramePartition):
 
         Returns
         -------
-        cuDFOnRayFramePartition
+        cuDFOnRayDataframePartition
         """
         new_key = self.gpu_manager.apply.remote(
             self.get_key(),

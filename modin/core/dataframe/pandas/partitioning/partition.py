@@ -20,9 +20,9 @@ from copy import copy
 from pandas.api.types import is_scalar
 
 
-class PandasFramePartition(ABC):  # pragma: no cover
+class PandasDataframePartition(ABC):  # pragma: no cover
     """
-    An abstract class that is base for any partition class of ``pandas`` backend.
+    An abstract class that is base for any partition class of ``pandas`` storage format.
 
     The class providing an API that has to be overridden by child classes.
     """
@@ -39,7 +39,7 @@ class PandasFramePartition(ABC):  # pragma: no cover
         Notes
         -----
         This is the opposite of the classmethod `put`.
-        E.g. if you assign `x = PandasFramePartition.put(1)`, `x.get()` should
+        E.g. if you assign `x = PandasDataframePartition.put(1)`, `x.get()` should
         always return 1.
         """
         pass
@@ -59,8 +59,8 @@ class PandasFramePartition(ABC):  # pragma: no cover
 
         Returns
         -------
-        PandasFramePartition
-            New `PandasFramePartition` object.
+        PandasDataframePartition
+            New `PandasDataframePartition` object.
 
         Notes
         -----
@@ -85,8 +85,8 @@ class PandasFramePartition(ABC):  # pragma: no cover
 
         Returns
         -------
-        PandasFramePartition
-            New `PandasFramePartition` object with the function added to the call queue.
+        PandasDataframePartition
+            New `PandasDataframePartition` object with the function added to the call queue.
 
         Notes
         -----
@@ -151,8 +151,8 @@ class PandasFramePartition(ABC):  # pragma: no cover
 
         Returns
         -------
-        PandasFramePartition
-            New `PandasFramePartition` object.
+        PandasDataframePartition
+            New `PandasDataframePartition` object.
         """
 
         def is_full_axis_mask(index, axis_length):
@@ -202,8 +202,8 @@ class PandasFramePartition(ABC):  # pragma: no cover
 
         Returns
         -------
-        PandasFramePartition
-            New `PandasFramePartition` object.
+        PandasDataframePartition
+            New `PandasDataframePartition` object.
         """
         pass
 
@@ -226,7 +226,7 @@ class PandasFramePartition(ABC):  # pragma: no cover
         -----
         This is a classmethod because the definition of how to preprocess
         should be class-wide. Also, we may want to use this before we
-        deploy a preprocessed function to multiple `PandasFramePartition`
+        deploy a preprocessed function to multiple `PandasDataframePartition`
         objects.
         """
         pass
@@ -297,7 +297,7 @@ class PandasFramePartition(ABC):  # pragma: no cover
 
         Returns
         -------
-        PandasFramePartition
-            New `PandasFramePartition` object.
+        PandasDataframePartition
+            New `PandasDataframePartition` object.
         """
         pass

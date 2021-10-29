@@ -11,17 +11,17 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-"""Module provides a partition class for ``OmnisciOnNativeFrame`` frame."""
+"""Module provides a partition class for ``OmnisciOnNativeDataframe`` frame."""
 
 import pandas
 
-from modin.core.dataframe.pandas.partitioning.partition import PandasFramePartition
+from modin.core.dataframe.pandas.partitioning.partition import PandasDataframePartition
 import pyarrow
 
 
-class OmnisciOnNativeFramePartition(PandasFramePartition):
+class OmnisciOnNativeDataframePartition(PandasDataframePartition):
     """
-    A partition of ``OmnisciOnNativeFrame`` frame.
+    A partition of ``OmnisciOnNativeDataframe`` frame.
 
     Class holds either a ``pandas.DataFrame`` or ``pyarrow.Table``.
 
@@ -101,10 +101,10 @@ class OmnisciOnNativeFramePartition(PandasFramePartition):
 
         Returns
         -------
-        OmnisciOnNativeFramePartition
+        OmnisciOnNativeDataframePartition
             The new partition.
         """
-        return OmnisciOnNativeFramePartition(
+        return OmnisciOnNativeDataframePartition(
             pandas_df=obj, length=len(obj.index), width=len(obj.columns)
         )
 
@@ -133,10 +133,10 @@ class OmnisciOnNativeFramePartition(PandasFramePartition):
 
         Returns
         -------
-        OmnisciOnNativeFramePartition
+        OmnisciOnNativeDataframePartition
             The new partition.
         """
-        return OmnisciOnNativeFramePartition(
+        return OmnisciOnNativeDataframePartition(
             arrow_table=obj,
             length=len(obj),
             width=len(obj.columns),

@@ -19,7 +19,7 @@ import psutil
 import warnings
 
 from modin.config import (
-    Backend,
+    StorageFormat,
     IsRayCluster,
     RayRedisAddress,
     RayRedisPassword,
@@ -173,7 +173,7 @@ def initialize_ray(
             }
             ray.init(**ray_init_kwargs)
 
-        if Backend.get() == "Cudf":
+        if StorageFormat.get() == "Cudf":
             from modin.core.execution.ray.implementations.cudf_on_ray.frame.gpu_manager import (
                 GPUManager,
             )
@@ -192,7 +192,7 @@ def initialize_ray(
     ray.worker.global_worker.run_function_on_all_workers(_import_pandas)
     num_cpus = int(ray.cluster_resources()["CPU"])
     num_gpus = int(ray.cluster_resources().get("GPU", 0))
-    if Backend.get() == "Cudf":
+    if StorageFormat.get() == "Cudf":
         NPartitions._put(num_gpus)
     else:
         NPartitions._put(num_cpus)

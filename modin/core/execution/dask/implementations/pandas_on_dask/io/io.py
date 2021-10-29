@@ -16,10 +16,10 @@
 from modin.core.io import BaseIO
 from modin.core.storage_formats.pandas.query_compiler import PandasQueryCompiler
 from modin.core.execution.dask.implementations.pandas_on_dask.dataframe.dataframe import (
-    PandasOnDaskFrame,
+    PandasOnDaskDataframe,
 )
 from modin.core.execution.dask.implementations.pandas_on_dask.partitioning.partition import (
-    PandasOnDaskFramePartition,
+    PandasOnDaskDataframePartition,
 )
 from modin.core.io import (
     CSVDispatcher,
@@ -43,11 +43,11 @@ from modin.core.execution.dask.common.task_wrapper import DaskTask
 class PandasOnDaskIO(BaseIO):
     """The class implements interface in ``BaseIO`` using Dask as an execution engine."""
 
-    frame_cls = PandasOnDaskFrame
+    frame_cls = PandasOnDaskDataframe
     query_compiler_cls = PandasQueryCompiler
     build_args = dict(
-        frame_cls=PandasOnDaskFrame,
-        frame_partition_cls=PandasOnDaskFramePartition,
+        frame_cls=PandasOnDaskDataframe,
+        frame_partition_cls=PandasOnDaskDataframePartition,
         query_compiler_cls=PandasQueryCompiler,
     )
 

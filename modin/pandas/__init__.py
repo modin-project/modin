@@ -13,7 +13,7 @@
 
 import pandas
 
-__pandas_version__ = "1.3.3"
+__pandas_version__ = "1.3.4"
 
 if pandas.__version__ != __pandas_version__:
     import warnings
@@ -104,7 +104,7 @@ _NOINIT_ENGINES = {
 
 def _update_engine(publisher: Parameter):
     global dask_client
-    from modin.config import Backend, CpuCount
+    from modin.config import StorageFormat, CpuCount
 
     if publisher.get() == "Ray":
         if _is_first_update.get("Ray", True):
@@ -112,13 +112,13 @@ def _update_engine(publisher: Parameter):
 
             initialize_ray()
     elif publisher.get() == "Native":
-        # With OmniSci backend there is only a single worker per node
+        # With OmniSci storage format there is only a single worker per node
         # and we allow it to work on all cores.
-        if Backend.get() == "Omnisci":
+        if StorageFormat.get() == "Omnisci":
             os.environ["OMP_NUM_THREADS"] = str(CpuCount.get())
         else:
             raise ValueError(
-                f"Backend should be 'Omnisci' with 'Native' engine, but provided {Backend.get()}."
+                f"Storage format should be 'Omnisci' with 'Native' engine, but provided {StorageFormat.get()}."
             )
     elif publisher.get() == "Dask":
         if _is_first_update.get("Dask", True):
@@ -137,30 +137,30 @@ def _update_engine(publisher: Parameter):
                 import modin
                 from modin.core.execution.ray.common.utils import initialize_ray
 
-                modin.set_backends("Ray", partition)
+                modin.set_execution("Ray", partition)
                 initialize_ray(
                     override_is_cluster=True,
                     override_redis_address=f"localhost:{ray_constants.DEFAULT_PORT}",
                     override_redis_password=ray_constants.REDIS_DEFAULT_PASSWORD,
                 )
 
-            init_remote_ray(Backend.get())
+            init_remote_ray(StorageFormat.get())
             # import FactoryDispatcher here to initialize IO class
             # so it doesn't skew read_csv() timings later on
             import modin.core.execution.dispatching.factories.dispatcher  # noqa: F401
         else:
-            get_connection().modules["modin"].set_backends("Ray", Backend.get())
+            get_connection().modules["modin"].set_execution("Ray", StorageFormat.get())
     elif publisher.get() == "Cloudpython":
         from modin.experimental.cloud import get_connection
 
-        get_connection().modules["modin"].set_backends("Python")
+        get_connection().modules["modin"].set_execution("Python")
     elif publisher.get() == "Cloudnative":
         from modin.experimental.cloud import get_connection
 
         assert (
-            Backend.get() == "Omnisci"
-        ), f"Backend should be 'Omnisci' with 'Cloudnative' engine, but provided {Backend.get()}."
-        get_connection().modules["modin"].set_backends("Native", "OmniSci")
+            StorageFormat.get() == "Omnisci"
+        ), f"Storage format should be 'Omnisci' with 'Cloudnative' engine, but provided {StorageFormat.get()}."
+        get_connection().modules["modin"].set_execution("Native", "OmniSci")
 
     elif publisher.get() not in _NOINIT_ENGINES:
         raise ImportError("Unrecognized execution engine: {}.".format(publisher.get()))

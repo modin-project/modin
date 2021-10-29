@@ -11,14 +11,14 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-"""Module houses class that implements ``PandasFrame`` using Ray."""
+"""Module houses class that implements ``PandasDataframe`` using Ray."""
 
 import pandas
 
 from ..partitioning.partition_manager import (
-    PandasOnRayFramePartitionManager,
+    PandasOnRayDataframePartitionManager,
 )
-from modin.core.dataframe.pandas.dataframe.dataframe import PandasFrame
+from modin.core.dataframe.pandas.dataframe.dataframe import PandasDataframe
 from modin.core.storage_formats.pandas.parsers import (
     find_common_type_cat as find_common_type,
 )
@@ -26,9 +26,9 @@ from modin.core.storage_formats.pandas.parsers import (
 import ray
 
 
-class PandasOnRayFrame(PandasFrame):
+class PandasOnRayDataframe(PandasDataframe):
     """
-    The class implements the interface in ``PandasFrame`` using Ray.
+    The class implements the interface in ``PandasDataframe`` using Ray.
 
     Parameters
     ----------
@@ -48,7 +48,7 @@ class PandasOnRayFrame(PandasFrame):
         The data types for the dataframe columns.
     """
 
-    _partition_mgr_cls = PandasOnRayFramePartitionManager
+    _partition_mgr_cls = PandasOnRayDataframePartitionManager
 
     @classmethod
     def combine_dtypes(cls, list_of_dtypes, column_names):

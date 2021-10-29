@@ -11,6 +11,8 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
+"""Module houses ``PickleExperimentalDispatcher`` class that is used for reading `.pkl` files."""
+
 import glob
 import warnings
 
@@ -19,12 +21,34 @@ from modin.config import NPartitions
 
 
 class PickleExperimentalDispatcher(FileDispatcher):
+    """
+    Class handles utils for reading `.pkl` files.
+
+    Inherits some common from `FileDispatcher` class.
+    """
+
     @classmethod
     def _read(cls, filepath_or_buffer, **kwargs):
         """
+        Read data from `filepath_or_buffer` according to `kwargs` parameters.
+
+        Parameters
+        ----------
+        filepath_or_buffer : str, path object or file-like object
+            `filepath_or_buffer` parameter of `read_pickle` function.
+        **kwargs : dict
+            Parameters of `read_pickle` function.
+
+        Returns
+        -------
+        new_query_compiler : BaseQueryCompiler
+            Query compiler with imported data for further processing.
+
+        Notes
+        -----
         In experimental mode, we can use `*` in the filename.
 
-        Note: the number of partitions is equal to the number of input files.
+        The number of partitions is equal to the number of input files.
         """
         if not (isinstance(filepath_or_buffer, str) and "*" in filepath_or_buffer):
             warnings.warn("Defaulting to Modin core implementation")

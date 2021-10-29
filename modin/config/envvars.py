@@ -124,10 +124,10 @@ class Engine(EnvironmentVariable, type=str):
         )
 
 
-class Backend(EnvironmentVariable, type=str):
+class StorageFormat(EnvironmentVariable, type=str):
     """Engine to run on a single node of distribution."""
 
-    varname = "MODIN_BACKEND"
+    varname = "MODIN_STORAGE_FORMAT"
     default = "Pandas"
     choices = ("Pandas", "OmniSci", "Pyarrow", "Cudf")
 
@@ -227,7 +227,7 @@ class NPartitions(EnvironmentVariable, type=int):
         -------
         int
         """
-        if Backend.get() == "Cudf":
+        if StorageFormat.get() == "Cudf":
             return GpuCount.get()
         else:
             return CpuCount.get()

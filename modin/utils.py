@@ -23,7 +23,7 @@ import pandas
 import numpy as np
 
 from pandas.util._decorators import Appender
-from modin.config import Engine, Backend, IsExperimental
+from modin.config import Engine, StorageFormat, IsExperimental
 
 PANDAS_API_URL_TEMPLATE = f"https://pandas.pydata.org/pandas-docs/version/{pandas.__version__}/reference/api/{{}}.html"
 
@@ -506,16 +506,16 @@ def wrap_udf_function(func):
     return wrapper
 
 
-def get_current_backend():
+def get_current_execution():
     """
-    Return current backend name as a string.
+    Return current execution name as a string.
 
     Returns
     -------
     str
-        Returns <Backend>On<Engine>-like string.
+        Returns <StorageFormat>On<Engine>-like string.
     """
-    return f"{'Experimental' if IsExperimental.get() else ''}{Backend.get()}On{Engine.get()}"
+    return f"{'Experimental' if IsExperimental.get() else ''}{StorageFormat.get()}On{Engine.get()}"
 
 
 def instancer(_class):

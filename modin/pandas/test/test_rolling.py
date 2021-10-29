@@ -212,3 +212,14 @@ def test_api_indexer():
     pandas_rolled = pandas_df.rolling(window=indexer)
     modin_rolled = modin_df.rolling(window=indexer)
     df_equals(modin_rolled.sum(), pandas_rolled.sum())
+
+
+def test_issue_3512():
+    data = np.random.rand(129)
+    modin_df = pd.DataFrame(data)
+    pandas_df = pandas.DataFrame(data)
+
+    modin_ans = modin_df[0:33].rolling(window=21).mean()
+    pandas_ans = pandas_df[0:33].rolling(window=21).mean()
+
+    df_equals(modin_ans, pandas_ans)

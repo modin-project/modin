@@ -31,7 +31,7 @@ import itertools
 import functools
 import numpy as np
 import sys
-from typing import IO, Optional, Tuple, Union, Mapping, Iterator
+from typing import IO, Optional, Union, Mapping, Iterator
 import warnings
 
 from modin.error_message import ErrorMessage
@@ -808,16 +808,6 @@ class DataFrame(BasePandasDataset):
             self.index.equals(other.index)
             and self.columns.equals(other.columns)
             and self.eq(other).all().all()
-        )
-
-    def explode(
-        self, column: Union[str, Tuple], ignore_index: bool = False
-    ):  # noqa: PR01, RT01, D200
-        """
-        Transform each element of a list-like to a row, replicating index values.
-        """
-        return self._default_to_pandas(
-            pandas.DataFrame.explode, column, ignore_index=ignore_index
         )
 
     def _update_var_dicts_in_kwargs(self, expr, kwargs):

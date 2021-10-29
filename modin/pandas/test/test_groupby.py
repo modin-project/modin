@@ -15,7 +15,7 @@ import pytest
 import pandas
 import numpy as np
 import modin.pandas as pd
-from modin.utils import try_cast_to_pandas, get_current_backend, hashable
+from modin.utils import try_cast_to_pandas, get_current_execution, hashable
 from modin.pandas.utils import from_pandas, is_scalar
 from .utils import (
     df_equals,
@@ -424,7 +424,7 @@ def test_simple_row_groupby(by, as_index, col1_category):
     )
     eval_fillna(modin_groupby, pandas_groupby)
     eval_count(modin_groupby, pandas_groupby)
-    if get_current_backend() != "BaseOnPython":
+    if get_current_execution() != "BaseOnPython":
         eval_general(
             modin_groupby,
             pandas_groupby,
@@ -1389,7 +1389,7 @@ def test_agg_func_None_rename(by_and_agg_dict, as_index):
         True,
         pytest.param(
             False,
-            marks=pytest.mark.xfail_backends(
+            marks=pytest.mark.xfail_executions(
                 ["BaseOnPython"], reason="See Pandas issue #39103"
             ),
         ),

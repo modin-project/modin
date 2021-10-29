@@ -11,16 +11,16 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-"""Module houses GroupBy functions builder class."""
+"""Module houses builder class for GroupByReduce operator."""
 
 import pandas
 
-from .mapreducefunction import MapReduceFunction
+from .map_reduce import MapReduce
 from .default2pandas.groupby import GroupBy
 from modin.utils import try_cast_to_pandas, hashable
 
 
-class GroupbyReduceFunction(MapReduceFunction):
+class GroupByReduce(MapReduce):
     """Builder class for GroupBy aggregation functions."""
 
     @classmethod
@@ -84,7 +84,7 @@ class GroupbyReduceFunction(MapReduceFunction):
         drop=False,
     ):
         """
-        Execute Map phase of GroupbyReduce.
+        Execute Map phase of GroupByReduce.
 
         Groups DataFrame and applies map function. Groups will be
         preserved in the results index for the following reduce phase.
@@ -160,7 +160,7 @@ class GroupbyReduceFunction(MapReduceFunction):
         method=None,
     ):
         """
-        Execute Reduce phase of GroupbyReduce.
+        Execute Reduce phase of GroupByReduce.
 
         Combines groups from the Map phase and applies reduce function.
 

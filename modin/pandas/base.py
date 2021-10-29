@@ -1269,6 +1269,14 @@ class BasePandasDataset(object):
     def eq(self, other, axis="columns", level=None):
         return self._binary_op("eq", other, axis=axis, level=level)
 
+    def explode(self, column, ignore_index: bool = False):
+        exploded = self.__constructor__(
+            query_compiler=self._query_compiler.explode(column)
+        )
+        if ignore_index:
+            exploded = exploded.reset_index(drop=True)
+        return exploded
+
     def ewm(
         self,
         com=None,
@@ -1686,7 +1694,7 @@ class BasePandasDataset(object):
                 **kwargs,
             )
         # If `numeric_only` is None, then we can do this precheck to whether or not
-        # frame contains non-numeric columns, if it doesn't, then we can pass to a backend
+        # frame contains non-numeric columns, if it doesn't, then we can pass to a query compiler
         # `numeric_only=False` parameter and make its work easier in that case, rather than
         # performing under complicate `numeric_only=None` parameter
         if not numeric_only:
@@ -3102,7 +3110,7 @@ class Resampler(object):
         self._query_compiler = dataframe._query_compiler
         axis = self._dataframe._get_axis_number(axis)
         # FIXME: this should be converted into a dict to ensure simplicity
-        # of handling resample parameters at the backend level.
+        # of handling resample parameters at the query compiler level.
         self.resample_args = [
             rule,
             axis,

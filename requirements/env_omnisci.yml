@@ -2,7 +2,7 @@ name: modin_on_omnisci
 channels:
   - conda-forge
 dependencies:
-  - pandas==1.3.3
+  - pandas==1.3.4
   - pyarrow==3.0.0
   - libthrift
   - numpy>=1.16.5
@@ -13,7 +13,7 @@ dependencies:
   - pytest-xdist>=2.1.0
   - coverage<5.0
   - pygithub==1.53
-  - pyomniscidbe
+  - pyomniscidbe<=5.7.1 # modin-project/modin#3574
   - s3fs>=0.4.2
   - psutil
   - openpyxl

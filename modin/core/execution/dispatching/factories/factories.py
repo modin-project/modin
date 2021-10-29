@@ -12,10 +12,10 @@
 # governing permissions and limitations under the License.
 
 """
-Module contains Factories for all of the supported Modin backends.
+Module contains Factories for all of the supported Modin executions.
 
 Factory is a bridge between calls of IO function from high-level API and its
-actual implementation in the backend, bound to that factory. Each backend is represented
+actual implementation in the execution, bound to that factory. Each execution is represented
 with a Factory class.
 """
 
@@ -35,24 +35,24 @@ _doc_abstract_factory_class = """
 Abstract {role} factory which allows to override the IO module easily.
 
 This class is responsible for dispatching calls of IO-functions to its
-actual backend-specific implementations.
+actual execution-specific implementations.
 
 Attributes
 ----------
 io_cls : BaseIO
-    IO module class of the underlying backend. The place to dispatch calls to.
+    IO module class of the underlying execution. The place to dispatch calls to.
 """
 
 _doc_factory_class = """
-Factory of {backend_name} backend.
+Factory of {execution_name} execution.
 
 This class is responsible for dispatching calls of IO-functions to its
-actual backend-specific implementations.
+actual execution-specific implementations.
 
 Attributes
 ----------
-io_cls : {backend_name}IO
-    IO module class of the underlying backend. The place to dispatch calls to.
+io_cls : {execution_name}IO
+    IO module class of the underlying execution. The place to dispatch calls to.
 """
 
 _doc_factory_prepare_method = """
@@ -71,7 +71,7 @@ Parameters
 Returns
 -------
 QueryCompiler
-    Query compiler of the selected backend.
+    Query compiler of the selected storage format.
 """
 
 _doc_io_method_template = (
@@ -150,7 +150,8 @@ class BaseFactory(object):
 
     @classmethod
     @doc(
-        _doc_factory_prepare_method, io_module_name="an underlying backend's IO-module"
+        _doc_factory_prepare_method,
+        io_module_name="an underlying execution's IO-module",
     )
     def prepare(cls):
         raise NotImplementedError("Subclasses of BaseFactory must implement prepare")
@@ -398,7 +399,7 @@ class BaseFactory(object):
         return cls.io_cls.to_csv(*args, **kwargs)
 
 
-@doc(_doc_factory_class, backend_name="cuDFOnRay")
+@doc(_doc_factory_class, execution_name="cuDFOnRay")
 class CudfOnRayFactory(BaseFactory):
     @classmethod
     @doc(_doc_factory_prepare_method, io_module_name="``cuDFOnRayIO``")
@@ -408,7 +409,7 @@ class CudfOnRayFactory(BaseFactory):
         cls.io_cls = cuDFOnRayIO
 
 
-@doc(_doc_factory_class, backend_name="PandasOnRay")
+@doc(_doc_factory_class, execution_name="PandasOnRay")
 class PandasOnRayFactory(BaseFactory):
     @classmethod
     @doc(_doc_factory_prepare_method, io_module_name="``PandasOnRayIO``")
@@ -420,7 +421,7 @@ class PandasOnRayFactory(BaseFactory):
         cls.io_cls = PandasOnRayIO
 
 
-@doc(_doc_factory_class, backend_name="PandasOnPython")
+@doc(_doc_factory_class, execution_name="PandasOnPython")
 class PandasOnPythonFactory(BaseFactory):
     @classmethod
     @doc(_doc_factory_prepare_method, io_module_name="``PandasOnPythonIO``")
@@ -432,7 +433,7 @@ class PandasOnPythonFactory(BaseFactory):
         cls.io_cls = PandasOnPythonIO
 
 
-@doc(_doc_factory_class, backend_name="PandasOnDask")
+@doc(_doc_factory_class, execution_name="PandasOnDask")
 class PandasOnDaskFactory(BaseFactory):
     @classmethod
     @doc(_doc_factory_prepare_method, io_module_name="``PandasOnDaskIO``")
@@ -477,7 +478,7 @@ class ExperimentalBaseFactory(BaseFactory):
         return cls.io_cls.read_sql(**kwargs)
 
 
-@doc(_doc_factory_class, backend_name="experimental PandasOnRay")
+@doc(_doc_factory_class, execution_name="experimental PandasOnRay")
 class ExperimentalPandasOnRayFactory(ExperimentalBaseFactory, PandasOnRayFactory):
     @classmethod
     @doc(_doc_factory_prepare_method, io_module_name="``ExperimentalPandasOnRayIO``")
@@ -521,17 +522,17 @@ class ExperimentalPandasOnRayFactory(ExperimentalBaseFactory, PandasOnRayFactory
         return cls.io_cls.to_pickle_distributed(*args, **kwargs)
 
 
-@doc(_doc_factory_class, backend_name="experimental PandasOnDask")
+@doc(_doc_factory_class, execution_name="experimental PandasOnDask")
 class ExperimentalPandasOnDaskFactory(ExperimentalBaseFactory, PandasOnDaskFactory):
     pass
 
 
-@doc(_doc_factory_class, backend_name="experimental PandasOnPython")
+@doc(_doc_factory_class, execution_name="experimental PandasOnPython")
 class ExperimentalPandasOnPythonFactory(ExperimentalBaseFactory, PandasOnPythonFactory):
     pass
 
 
-@doc(_doc_factory_class, backend_name="experimental PyarrowOnRay")
+@doc(_doc_factory_class, execution_name="experimental PyarrowOnRay")
 class ExperimentalPyarrowOnRayFactory(BaseFactory):  # pragma: no cover
     @classmethod
     @doc(_doc_factory_prepare_method, io_module_name="experimental ``PyarrowOnRayIO``")
@@ -592,17 +593,17 @@ class ExperimentalRemoteFactory(ExperimentalBaseFactory):
         cls.io_cls = WrappedIO(get_connection(), cls.wrapped_factory)
 
 
-@doc(_doc_factory_class, backend_name="experimental remote PandasOnRay")
+@doc(_doc_factory_class, execution_name="experimental remote PandasOnRay")
 class ExperimentalPandasOnCloudrayFactory(ExperimentalRemoteFactory):
     wrapped_factory = PandasOnRayFactory
 
 
-@doc(_doc_factory_class, backend_name="experimental remote PandasOnPython")
+@doc(_doc_factory_class, execution_name="experimental remote PandasOnPython")
 class ExperimentalPandasOnCloudpythonFactory(ExperimentalRemoteFactory):
     wrapped_factory = PandasOnPythonFactory
 
 
-@doc(_doc_factory_class, backend_name="experimental OmnisciOnNative")
+@doc(_doc_factory_class, execution_name="experimental OmnisciOnNative")
 class ExperimentalOmnisciOnNativeFactory(BaseFactory):
     @classmethod
     @doc(
@@ -616,6 +617,6 @@ class ExperimentalOmnisciOnNativeFactory(BaseFactory):
         cls.io_cls = OmnisciOnNativeIO
 
 
-@doc(_doc_factory_class, backend_name="experimental remote OmnisciOnNative")
+@doc(_doc_factory_class, execution_name="experimental remote OmnisciOnNative")
 class ExperimentalOmnisciOnCloudnativeFactory(ExperimentalRemoteFactory):
     wrapped_factory = ExperimentalOmnisciOnNativeFactory

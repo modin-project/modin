@@ -19,7 +19,7 @@ import numpy as np
 from modin.core.storage_formats.pandas.utils import split_result_of_axis_func_pandas
 
 
-class BaseFrameAxisPartition(ABC):  # pragma: no cover
+class BaseDataframeAxisPartition(ABC):  # pragma: no cover
     """
     An abstract class that represents the parent class for any axis partition class.
 
@@ -41,11 +41,11 @@ class BaseFrameAxisPartition(ABC):  # pragma: no cover
         ----------
         func : callable
             The function to apply. This will be preprocessed according to
-            the corresponding `PandasFramePartition` objects.
+            the corresponding `PandasDataframePartition` objects.
         num_splits : int, default: None
             The number of times to split the result object.
-        other_axis_partition : BaseFrameAxisPartition, default: None
-            Another `BaseFrameAxisPartition` object to be applied
+        other_axis_partition : BaseDataframeAxisPartition, default: None
+            Another `BaseDataframeAxisPartition` object to be applied
             to func. This is for operations that are between two data sets.
         maintain_partitioning : bool, default: True
             Whether to keep the partitioning in the same
@@ -60,14 +60,14 @@ class BaseFrameAxisPartition(ABC):  # pragma: no cover
         Returns
         -------
         list
-            A list of `PandasFramePartition` objects.
+            A list of `PandasDataframePartition` objects.
 
         Notes
         -----
         The procedures that invoke this method assume full axis
         knowledge. Implement this method accordingly.
 
-        You must return a list of `PandasFramePartition` objects from this method.
+        You must return a list of `PandasDataframePartition` objects from this method.
         """
         pass
 
@@ -87,7 +87,7 @@ class BaseFrameAxisPartition(ABC):  # pragma: no cover
         Returns
         -------
         list
-            A list of `PandasFramePartition` objects split by `lengths`.
+            A list of `PandasDataframePartition` objects split by `lengths`.
         """
         pass
 
@@ -97,12 +97,12 @@ class BaseFrameAxisPartition(ABC):  # pragma: no cover
 
     def _wrap_partitions(self, partitions):
         """
-        Wrap remote partition objects with `PandasFramePartition` class.
+        Wrap remote partition objects with `PandasDataframePartition` class.
 
         Parameters
         ----------
         partitions : list
-            List of remotes partition objects to be wrapped with `PandasFramePartition` class.
+            List of remotes partition objects to be wrapped with `PandasDataframePartition` class.
 
         Returns
         -------
@@ -122,7 +122,7 @@ class BaseFrameAxisPartition(ABC):  # pragma: no cover
 
         Returns
         -------
-        BaseFrameAxisPartition
+        BaseDataframeAxisPartition
             An axis partition containing only a single materialized partition.
         """
         materialized = self.apply(
@@ -164,7 +164,7 @@ class BaseFrameAxisPartition(ABC):  # pragma: no cover
                 return self.list_of_blocks
 
 
-class PandasFrameAxisPartition(BaseFrameAxisPartition):
+class PandasDataframeAxisPartition(BaseDataframeAxisPartition):
     """
     An abstract class is created to simplify and consolidate the code for axis partition that run pandas.
 
@@ -188,8 +188,8 @@ class PandasFrameAxisPartition(BaseFrameAxisPartition):
             The function to apply.
         num_splits : int, default: None
             The number of times to split the result object.
-        other_axis_partition : PandasFrameAxisPartition, default: None
-            Another `PandasFrameAxisPartition` object to be applied
+        other_axis_partition : PandasDataframeAxisPartition, default: None
+            Another `PandasDataframeAxisPartition` object to be applied
             to func. This is for operations that are between two data sets.
         maintain_partitioning : bool, default: True
             Whether to keep the partitioning in the same
@@ -204,7 +204,7 @@ class PandasFrameAxisPartition(BaseFrameAxisPartition):
         Returns
         -------
         list
-            A list of `PandasFramePartition` objects.
+            A list of `PandasDataframePartition` objects.
         """
         if num_splits is None:
             num_splits = len(self.list_of_blocks)
@@ -257,7 +257,7 @@ class PandasFrameAxisPartition(BaseFrameAxisPartition):
         Returns
         -------
         list
-            A list of `PandasFramePartition` objects split by `lengths`.
+            A list of `PandasDataframePartition` objects split by `lengths`.
         """
         num_splits = len(lengths)
         # We add these to kwargs and will pop them off before performing the operation.

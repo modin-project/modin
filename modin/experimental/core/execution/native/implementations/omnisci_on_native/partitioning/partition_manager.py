@@ -11,16 +11,16 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-"""Module provides a partition manager class for ``OmnisciOnNativeFrame`` frame."""
+"""Module provides a partition manager class for ``OmnisciOnNativeDataframe`` frame."""
 
 from modin.pandas.utils import is_scalar
 import numpy as np
 
 from modin.core.dataframe.pandas.partitioning.partition_manager import (
-    PandasFramePartitionManager,
+    PandasDataframePartitionManager,
 )
 from ..partitioning.partition import (
-    OmnisciOnNativeFramePartition,
+    OmnisciOnNativeDataframePartition,
 )
 from ..omnisci_worker import (
     OmnisciServer,
@@ -38,25 +38,25 @@ import pandas
 import re
 
 
-class OmnisciOnNativeFramePartitionManager(PandasFramePartitionManager):
+class OmnisciOnNativeDataframePartitionManager(PandasDataframePartitionManager):
     """
-    Frame manager for ``OmnisciOnNativeFrame``.
+    Frame manager for ``OmnisciOnNativeDataframe``.
 
-    This class handles several features of ``OmnisciOnNativeFrame``:
+    This class handles several features of ``OmnisciOnNativeDataframe``:
       - frame always has a single partition
       - frame cannot process some data types
       - frame has to use mangling for index labels
-      - frame uses OmniSci backend for execution
+      - frame uses OmniSci storage format for execution
     """
 
-    _partition_class = OmnisciOnNativeFramePartition
+    _partition_class = OmnisciOnNativeDataframePartition
 
     @classmethod
     def _compute_num_partitions(cls):
         """
         Return a number of partitions a frame should be split to.
 
-        `OmnisciOnNativeFrame` always has a single partition.
+        `OmnisciOnNativeDataframe` always has a single partition.
 
         Returns
         -------
@@ -67,7 +67,7 @@ class OmnisciOnNativeFramePartitionManager(PandasFramePartitionManager):
     @classmethod
     def from_pandas(cls, df, return_dims=False):
         """
-        Create ``OmnisciOnNativeFrame`` from ``pandas.DataFrame``.
+        Create ``OmnisciOnNativeDataframe`` from ``pandas.DataFrame``.
 
         Parameters
         ----------
@@ -213,7 +213,7 @@ class OmnisciOnNativeFramePartitionManager(PandasFramePartitionManager):
     @classmethod
     def run_exec_plan(cls, plan, index_cols, dtypes, columns):
         """
-        Run execution plan in OmniSci backend to materialize frame.
+        Run execution plan in OmniSci storage format to materialize frame.
 
         Parameters
         ----------

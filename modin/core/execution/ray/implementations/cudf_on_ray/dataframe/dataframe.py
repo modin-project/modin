@@ -11,27 +11,27 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-"""Module houses class that implements ``PandasOnRayFrame`` class using cuDF."""
+"""Module houses class that implements ``PandasOnRayDataframe`` class using cuDF."""
 
 import numpy as np
 import ray
 
 from ..partitioning.partition import (
-    cuDFOnRayFramePartition,
+    cuDFOnRayDataframePartition,
 )
 from ..partitioning.partition_manager import (
-    cuDFOnRayFramePartitionManager,
+    cuDFOnRayDataframePartitionManager,
 )
 
 from modin.core.execution.ray.implementations.pandas_on_ray.dataframe.dataframe import (
-    PandasOnRayFrame,
+    PandasOnRayDataframe,
 )
 from modin.error_message import ErrorMessage
 
 
-class cuDFOnRayFrame(PandasOnRayFrame):
+class cuDFOnRayDataframe(PandasOnRayDataframe):
     """
-    The class implements the interface in ``PandasOnRayFrame`` using cuDF.
+    The class implements the interface in ``PandasOnRayDataframe`` using cuDF.
 
     Parameters
     ----------
@@ -51,7 +51,7 @@ class cuDFOnRayFrame(PandasOnRayFrame):
         The data types for the dataframe columns.
     """
 
-    _partition_mgr_cls = cuDFOnRayFramePartitionManager
+    _partition_mgr_cls = cuDFOnRayDataframePartitionManager
 
     def synchronize_labels(self, axis=None):
         """
@@ -105,7 +105,7 @@ class cuDFOnRayFrame(PandasOnRayFrame):
         self._partitions = np.array(
             [
                 [
-                    cuDFOnRayFramePartition(
+                    cuDFOnRayDataframePartition(
                         self._partitions[i][j].get_gpu_manager(),
                         keys[i][j],
                         self._partitions[i][j]._length_cache,
@@ -140,8 +140,8 @@ class cuDFOnRayFrame(PandasOnRayFrame):
 
         Returns
         -------
-        cuDFOnRayFrame
-             A new ``cuDFOnRayFrame`` from the mask provided.
+        cuDFOnRayDataframe
+             A new ``cuDFOnRayDataframe`` from the mask provided.
 
         Notes
         -----

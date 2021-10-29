@@ -26,7 +26,7 @@ RUN apt-get update --yes \
     && rm -rf /var/lib/apt/lists/*
 
 # Modin settings
-ENV MODIN_BACKEND="omnisci"
+ENV MODIN_STORAGE_FORMAT="omnisci"
 ENV MODIN_EXPERIMENTAL="true"
 ENV MODIN_ENGINE="native"
 
@@ -51,11 +51,11 @@ RUN wget -nv https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.
     && rm -f /tmp/miniconda3.sh
 
 RUN conda update -n base -c defaults conda -y \
-    && conda create -n ${CONDA_ENV_NAME} --yes -c conda-forge \
-        modin-omnisci \
-        scikit-learn \
-        scikit-learn-intelex \
-        xgboost \
+    && conda create -n ${CONDA_ENV_NAME} --yes -c conda-forge --strict-channel-priority \
+    modin-omnisci \
+    scikit-learn \
+    scikit-learn-intelex \
+    xgboost \
     && conda clean --all --yes
 
 # Activate ${CONDA_ENV_NAME} for interactive shells

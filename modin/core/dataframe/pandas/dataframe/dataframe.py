@@ -12,10 +12,10 @@
 # governing permissions and limitations under the License.
 
 """
-Module contains class PandasFrame.
+Module contains class PandasDataframe.
 
-PandasFrame is a parent abstract class for any dataframe class
-for pandas backend.
+PandasDataframe is a parent abstract class for any dataframe class
+for pandas storage format.
 """
 from collections import OrderedDict
 import numpy as np
@@ -32,9 +32,9 @@ from modin.core.storage_formats.pandas.parsers import (
 from modin.pandas.indexing import is_range_like
 
 
-class PandasFrame(object):
+class PandasDataframe(object):
     """
-    An abstract class that represents the parent class for any pandas backend dataframe class.
+    An abstract class that represents the parent class for any pandas storage format dataframe class.
 
     This class provides interfaces to run operations on dataframe partitions.
 
@@ -66,7 +66,7 @@ class PandasFrame(object):
 
         Returns
         -------
-        PandasFrame
+        PandasDataframe
         """
         return type(self)
 
@@ -439,8 +439,8 @@ class PandasFrame(object):
 
         Returns
         -------
-        PandasFrame
-             A new PandasFrame from the mask provided.
+        PandasDataframe
+             A new PandasDataframe from the mask provided.
 
         Notes
         -----
@@ -612,7 +612,7 @@ class PandasFrame(object):
             row_numeric_idx=new_row_order, col_numeric_idx=new_col_order
         )
 
-    def from_labels(self) -> "PandasFrame":
+    def from_labels(self) -> "PandasDataframe":
         """
         Convert the row labels to a column of data, inserted at the first position.
 
@@ -621,8 +621,8 @@ class PandasFrame(object):
 
         Returns
         -------
-        PandasFrame
-            A PandasFrame with new columns from index labels.
+        PandasDataframe
+            A PandasDataframe with new columns from index labels.
         """
         new_row_labels = pandas.RangeIndex(len(self.index))
 
@@ -689,7 +689,7 @@ class PandasFrame(object):
         result.synchronize_labels(0)
         return result
 
-    def to_labels(self, column_list: List[Hashable]) -> "PandasFrame":
+    def to_labels(self, column_list: List[Hashable]) -> "PandasDataframe":
         """
         Move one or more columns into the row labels. Previous labels are dropped.
 
@@ -700,8 +700,8 @@ class PandasFrame(object):
 
         Returns
         -------
-        PandasFrame
-            A new PandasFrame that has the updated labels.
+        PandasDataframe
+            A new PandasDataframe that has the updated labels.
         """
         extracted_columns = self.mask(col_indices=column_list).to_pandas()
         if len(column_list) == 1:
@@ -729,8 +729,8 @@ class PandasFrame(object):
 
         Returns
         -------
-        PandasFrame
-            A new PandasFrame with reordered columns and/or rows.
+        PandasDataframe
+            A new PandasDataframe with reordered columns and/or rows.
         """
         if row_numeric_idx is not None:
             ordered_rows = self._partition_mgr_cls.map_axis_partitions(
@@ -756,7 +756,7 @@ class PandasFrame(object):
 
         Returns
         -------
-        PandasFrame
+        PandasDataframe
             A copied version of this object.
         """
         return self.__constructor__(
@@ -867,7 +867,7 @@ class PandasFrame(object):
 
         Returns
         -------
-        PandasFrame
+        PandasDataframe
             A new dataframe with the updated labels.
         """
         new_labels = self.axes[axis].map(lambda x: str(prefix) + str(x))
@@ -891,7 +891,7 @@ class PandasFrame(object):
 
         Returns
         -------
-        PandasFrame
+        PandasDataframe
             A new dataframe with the updated labels.
         """
         new_labels = self.axes[axis].map(lambda x: str(x) + str(suffix))
@@ -1209,7 +1209,7 @@ class PandasFrame(object):
 
         Returns
         -------
-        PandasFrame
+        PandasDataframe
             Modin series (1xN frame) containing the reduced data.
         """
         new_axes, new_axes_lengths = [0, 0], [0, 0]
@@ -1242,7 +1242,7 @@ class PandasFrame(object):
 
         Returns
         -------
-        PandasFrame
+        PandasDataframe
             Modin series (1xN frame) containing the reduced data.
         """
         func = self._build_mapreduce_func(axis, func)
@@ -1267,7 +1267,7 @@ class PandasFrame(object):
 
         Returns
         -------
-        PandasFrame
+        PandasDataframe
             A new dataframe.
         """
         map_func = self._build_mapreduce_func(axis, map_func)
@@ -1297,7 +1297,7 @@ class PandasFrame(object):
 
         Returns
         -------
-        PandasFrame
+        PandasDataframe
             A new dataframe.
         """
         new_partitions = self._partition_mgr_cls.map_partitions(self._partitions, func)
@@ -1329,7 +1329,7 @@ class PandasFrame(object):
 
         Returns
         -------
-        PandasFrame
+        PandasDataframe
             A new dataframe.
 
         Notes
@@ -1337,7 +1337,7 @@ class PandasFrame(object):
         The data shape is not changed (length and width of the table).
         """
         new_partitions = self._partition_mgr_cls.map_axis_partitions(
-            axis, self._partitions, func
+            axis, self._partitions, func, keep_partitioning=True
         )
         return self.__constructor__(
             new_partitions,
@@ -1361,7 +1361,7 @@ class PandasFrame(object):
 
         Returns
         -------
-        PandasFrame
+        PandasDataframe
             A new filtered dataframe.
         """
         new_partitions = self._partition_mgr_cls.map_axis_partitions(
@@ -1381,6 +1381,34 @@ class PandasFrame(object):
             *new_lengths,
             self.dtypes if axis == 0 else None,
         )
+
+    def explode(self, axis, func):
+        """
+        Explode list-like entries along an entire axis.
+
+        Parameters
+        ----------
+        axis : int
+            The axis specifying how to explode. If axis=1, explode according
+            to columns.
+        func : callable
+            The function to use to explode a single element.
+
+        Returns
+        -------
+        PandasFrame
+            A new filtered dataframe.
+        """
+        partitions = self._partition_mgr_cls.map_axis_partitions(
+            axis, self._partitions, func, keep_partitioning=True
+        )
+        if axis == 1:
+            new_index = self._compute_axis_labels(0, partitions)
+            new_columns = self.columns
+        else:
+            new_index = self.index
+            new_columns = self._compute_axis_labels(1, partitions)
+        return self.__constructor__(partitions, new_index, new_columns)
 
     def apply_full_axis(
         self,
@@ -1412,7 +1440,7 @@ class PandasFrame(object):
 
         Returns
         -------
-        PandasFrame
+        PandasDataframe
             A new dataframe.
 
         Notes
@@ -1462,7 +1490,7 @@ class PandasFrame(object):
 
         Returns
         -------
-        PandasFrame
+        PandasDataframe
             A new dataframe.
         """
         assert apply_indices is not None or numeric_indices is not None
@@ -1531,7 +1559,7 @@ class PandasFrame(object):
 
         Returns
         -------
-        PandasFrame
+        PandasDataframe
             A new dataframe.
         """
         # TODO Infer columns and index from `keep_remaining` and `apply_indices`
@@ -1607,7 +1635,7 @@ class PandasFrame(object):
             Axis to broadcast over.
         func : callable
             Function to apply.
-        other : PandasFrame
+        other : PandasDataframe
             Modin DataFrame to broadcast.
         join_type : str, default: "left"
             Type of join to apply.
@@ -1618,7 +1646,7 @@ class PandasFrame(object):
 
         Returns
         -------
-        PandasFrame
+        PandasDataframe
             New Modin DataFrame.
         """
         # Only sort the indices if they do not match
@@ -1711,7 +1739,7 @@ class PandasFrame(object):
             Axis to apply function along.
         func : callable
             Function to apply.
-        other : PandasFrame
+        other : PandasDataframe
             Partitions of which should be broadcasted.
         apply_indices : list, default: None
             List of labels to apply (if `numeric_indices` are not specified).
@@ -1731,7 +1759,7 @@ class PandasFrame(object):
 
         Returns
         -------
-        PandasFrame
+        PandasDataframe
             New Modin DataFrame.
         """
         assert (
@@ -1797,7 +1825,7 @@ class PandasFrame(object):
             Axis to apply over (0 - rows, 1 - columns).
         func : callable
             Function to apply.
-        other : PandasFrame or list
+        other : PandasDataframe or list
             Modin DataFrame(s) to broadcast.
         new_index : list-like, optional
             Index of the result. We may know this in advance,
@@ -1817,7 +1845,7 @@ class PandasFrame(object):
 
         Returns
         -------
-        PandasFrame
+        PandasDataframe
             New Modin DataFrame.
         """
         if other is not None:
@@ -1876,7 +1904,7 @@ class PandasFrame(object):
         ----------
         axis : {0, 1}
             Axis to copartition along (0 - rows, 1 - columns).
-        other : PandasFrame
+        other : PandasDataframe
             Other Modin DataFrame(s) to copartition against.
         how : str
             How to manage joining the index object ("left", "right", etc.).
@@ -1985,14 +2013,14 @@ class PandasFrame(object):
         ----------
         op : callable
             Function to apply after the join.
-        right_frame : PandasFrame
+        right_frame : PandasDataframe
             Modin DataFrame to join with.
         join_type : str, default: "outer"
             Type of join to apply.
 
         Returns
         -------
-        PandasFrame
+        PandasDataframe
             New Modin DataFrame.
         """
         left_parts, right_parts, joined_index = self._copartition(
@@ -2023,7 +2051,7 @@ class PandasFrame(object):
 
         Returns
         -------
-        PandasFrame
+        PandasDataframe
             New Modin DataFrame.
         """
         # Fast path for equivalent columns and partitioning
@@ -2091,7 +2119,7 @@ class PandasFrame(object):
         ----------
         axis : {0, 1}
             Axis to groupby and aggregate over.
-        by : PandasFrame or None
+        by : PandasDataframe or None
             A Modin DataFrame to group by.
         map_func : callable
             Map component of the aggregation.
@@ -2108,7 +2136,7 @@ class PandasFrame(object):
 
         Returns
         -------
-        PandasFrame
+        PandasDataframe
             New Modin DataFrame.
         """
         by_parts = by if by is None else by._partitions
@@ -2143,7 +2171,7 @@ class PandasFrame(object):
 
         Returns
         -------
-        PandasFrame
+        PandasDataframe
             New Modin DataFrame.
         """
         new_index = df.index
@@ -2173,7 +2201,7 @@ class PandasFrame(object):
 
         Returns
         -------
-        PandasFrame
+        PandasDataframe
             New Modin DataFrame.
         """
         new_frame, new_lengths, new_widths = cls._partition_mgr_cls.from_arrow(
@@ -2260,7 +2288,7 @@ class PandasFrame(object):
 
         Returns
         -------
-        PandasFrame
+        PandasDataframe
             New Modin DataFrame.
         """
         new_partitions = self._partition_mgr_cls.lazy_map_partitions(

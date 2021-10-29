@@ -11,21 +11,21 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-"""Module houses Binary functions builder class."""
+"""Module houses builder class for Binary operator."""
 
 import numpy as np
 import pandas
 
-from .function import Function
+from .operator import Operator
 
 
-class BinaryFunction(Function):
-    """Builder class for Binary functions."""
+class Binary(Operator):
+    """Builder class for Binary operator."""
 
     @classmethod
     def call(cls, func, join_type="outer", preserve_labels=False):
         """
-        Build template binary function.
+        Build template binary operator.
 
         Parameters
         ----------

@@ -12,28 +12,28 @@
 # governing permissions and limitations under the License.
 
 """
-Module contains class ``PyarrowOnRayFrame``.
+Module contains class ``PyarrowOnRayDataframe``.
 
-``PyarrowOnRayFrame`` is a dataframe class with PyArrow backend and Ray engine.
+``PyarrowOnRayDataframe`` is a dataframe class with PyArrow storage format and Ray engine.
 """
 
 import pandas
 from pandas.core.dtypes.cast import find_common_type
 
 from ..partitioning.partition_manager import (
-    PyarrowOnRayFramePartitionManager,
+    PyarrowOnRayDataframePartitionManager,
 )
-from modin.core.dataframe.pandas.dataframe.dataframe import PandasFrame
+from modin.core.dataframe.pandas.dataframe.dataframe import PandasDataframe
 
 import ray
 
 
-class PyarrowOnRayFrame(PandasFrame):
+class PyarrowOnRayDataframe(PandasDataframe):
     """
-    Class for dataframes with PyArrow backend and Ray engine.
+    Class for dataframes with PyArrow storage format and Ray engine.
 
-    ``PyarrowOnRayFrame`` implements interfaces specific for PyArrow and Ray,
-    other functionality is inherited from the ``PandasFrame`` class.
+    ``PyarrowOnRayDataframe`` implements interfaces specific for PyArrow and Ray,
+    other functionality is inherited from the ``PandasDataframe`` class.
 
     Parameters
     ----------
@@ -53,7 +53,7 @@ class PyarrowOnRayFrame(PandasFrame):
         The data types for the dataframe columns.
     """
 
-    _partition_mgr_cls = PyarrowOnRayFramePartitionManager
+    _partition_mgr_cls = PyarrowOnRayDataframePartitionManager
 
     def synchronize_labels(self, axis=None):
         """
@@ -107,7 +107,7 @@ class PyarrowOnRayFrame(PandasFrame):
         -------
         pandas.DataFrame
         """
-        df = super(PyarrowOnRayFrame, self).to_pandas()
+        df = super(PyarrowOnRayDataframe, self).to_pandas()
         df.index = self.index
         df.columns = self.columns
         return df

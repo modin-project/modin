@@ -19,7 +19,7 @@ import matplotlib
 import modin.pandas as pd
 from numpy.testing import assert_array_equal
 from pandas.core.base import SpecificationError
-from modin.utils import get_current_backend
+from modin.utils import get_current_execution
 import sys
 
 from modin.utils import to_pandas
@@ -502,7 +502,7 @@ def test___repr__(name, dt_index, data):
         )
         pandas_series.index = modin_series.index = index
 
-    if get_current_backend() == "BaseOnPython" and data == "empty":
+    if get_current_execution() == "BaseOnPython" and data == "empty":
         # TODO: Remove this when default `dtype` of empty Series will be `object` in pandas (see #3142).
         assert modin_series.dtype == np.object
         assert pandas_series.dtype == np.float64
@@ -1548,7 +1548,7 @@ def test_dropna_inplace(data):
 
 def test_dtype_empty():
     modin_series, pandas_series = pd.Series(), pandas.Series()
-    if get_current_backend() == "BaseOnPython":
+    if get_current_execution() == "BaseOnPython":
         # TODO: Remove this when default `dtype` of empty Series will be `object` in pandas (see #3142).
         assert modin_series.dtype == np.object
         assert pandas_series.dtype == np.float64
@@ -3165,13 +3165,17 @@ def test_take():
             modin_s.take([2], axis=1)
 
 
-@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-def test_explode(data):
+@pytest.mark.parametrize(
+    "ignore_index", bool_arg_values, ids=arg_keys("ignore_index", bool_arg_keys)
+)
+def test_explode(ignore_index):
+    # Some items in this test data are lists that explode() should expand.
+    data = [[1, 2, 3], "foo", [], [3, 4]]
     modin_series, pandas_series = create_test_series(data)
-    with pytest.warns(UserWarning):
-        modin_result = modin_series.explode()
-    pandas_result = pandas_series.explode()
-    df_equals(modin_result, pandas_result)
+    df_equals(
+        modin_series.explode(ignore_index=ignore_index),
+        pandas_series.explode(ignore_index=ignore_index),
+    )
 
 
 def test_to_period():
@@ -4536,3 +4540,18 @@ def test_cat_as_unordered(data, inplace):
     modin_result = modin_series.cat.as_unordered(inplace=inplace)
     df_equals(modin_series, pandas_series)
     df_equals(modin_result, pandas_result)
+
+
+def test_peculiar_callback():
+    def func(val):
+        if not isinstance(val, tuple):
+            raise BaseException("Urgh...")
+        return val
+
+    pandas_df = pandas.DataFrame({"col": [(0, 1)]})
+    pandas_series = pandas_df["col"].apply(func)
+
+    modin_df = pd.DataFrame({"col": [(0, 1)]})
+    modin_series = modin_df["col"].apply(func)
+
+    df_equals(modin_series, pandas_series)

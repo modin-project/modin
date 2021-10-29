@@ -14,7 +14,7 @@
 """
 Module houses ``OmnisciOnNativeIO`` class.
 
-``OmnisciOnNativeIO`` is used for storing IO functions implementations with OmniSci backend and Native engine.
+``OmnisciOnNativeIO`` is used for storing IO functions implementations with OmniSci storage format and Native engine.
 """
 
 from csv import Dialect
@@ -27,7 +27,7 @@ from modin.experimental.core.storage_formats.omnisci.query_compiler import (
 )
 from modin.core.io import BaseIO
 from modin.experimental.core.execution.native.implementations.omnisci_on_native.dataframe.dataframe import (
-    OmnisciOnNativeFrame,
+    OmnisciOnNativeDataframe,
 )
 from modin.error_message import ErrorMessage
 from modin.core.io.text.text_file_dispatcher import TextFileDispatcher
@@ -63,12 +63,12 @@ class ArrowEngineException(Exception):
 
 class OmnisciOnNativeIO(BaseIO, TextFileDispatcher):
     """
-    Class contains IO functions implementations with OmniSci backend and Native engine.
+    Class contains IO functions implementations with OmniSci storage format and Native engine.
 
     Inherits some common for OmniSci engine util functions from ``BaseIO`` class.
     """
 
-    frame_cls = OmnisciOnNativeFrame
+    frame_cls = OmnisciOnNativeDataframe
     query_compiler_cls = DFAlgQueryCompiler
 
     arg_keys = [

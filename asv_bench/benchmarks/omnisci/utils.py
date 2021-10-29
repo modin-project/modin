@@ -11,4 +11,4 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-"""The module contains the functionality that is used when benchmarking Modin commits on OmniSci backend."""
+"""The module contains the functionality that is used when benchmarking Modin commits on OmniSci storage format."""

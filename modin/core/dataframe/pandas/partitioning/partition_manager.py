@@ -69,12 +69,12 @@ def wait_computations_if_benchmark_mode(func):
     return func
 
 
-class PandasFramePartitionManager(ABC):
+class PandasDataframePartitionManager(ABC):
     """
     Base class for managing the dataframe data layout and operators across the distribution of partitions.
 
     Partition class is the class to use for storing each partition.
-    Each partition must extend the `PandasFramePartition` class.
+    Each partition must extend the `PandasDataframePartition` class.
     """
 
     _partition_class = None
@@ -86,7 +86,7 @@ class PandasFramePartitionManager(ABC):
     @classmethod
     def preprocess_func(cls, map_func):
         """
-        Preprocess a function to be applied to `PandasFramePartition` objects.
+        Preprocess a function to be applied to `PandasDataframePartition` objects.
 
         Parameters
         ----------
@@ -101,13 +101,13 @@ class PandasFramePartitionManager(ABC):
         Notes
         -----
         Preprocessing does not require any specific format, only that the
-        `PandasFramePartition.apply` method will recognize it (for the subclass
+        `PandasDataframePartition.apply` method will recognize it (for the subclass
         being used).
 
-        If your `PandasFramePartition` objects assume that a function provided
+        If your `PandasDataframePartition` objects assume that a function provided
         is serialized or wrapped or in some other format, this is the place
         to add that logic. It is possible that this can also just return
-        `map_func` if the `apply` method of the `PandasFramePartition` object
+        `map_func` if the `apply` method of the `PandasDataframePartition` object
         you are using does not require any modification to a given function.
         """
         return cls._partition_class.preprocess_func(map_func)
@@ -117,7 +117,7 @@ class PandasFramePartitionManager(ABC):
     @classmethod
     def column_partitions(cls, partitions):
         """
-        Get the list of `BaseFrameAxisPartition` objects representing column-wise paritions.
+        Get the list of `BaseDataframeAxisPartition` objects representing column-wise paritions.
 
         Parameters
         ----------
@@ -127,12 +127,12 @@ class PandasFramePartitionManager(ABC):
         Returns
         -------
         list
-            A list of `BaseFrameAxisPartition` objects.
+            A list of `BaseDataframeAxisPartition` objects.
 
         Notes
         -----
-        Each value in this list will be an `BaseFrameAxisPartition` object.
-        `BaseFrameAxisPartition` is located in `axis_partition.py`.
+        Each value in this list will be an `BaseDataframeAxisPartition` object.
+        `BaseDataframeAxisPartition` is located in `axis_partition.py`.
         """
         if not isinstance(partitions, list):
             partitions = [partitions]
@@ -143,7 +143,7 @@ class PandasFramePartitionManager(ABC):
     @classmethod
     def row_partitions(cls, partitions):
         """
-        List of `BaseFrameAxisPartition` objects representing row-wise partitions.
+        List of `BaseDataframeAxisPartition` objects representing row-wise partitions.
 
         Parameters
         ----------
@@ -153,12 +153,12 @@ class PandasFramePartitionManager(ABC):
         Returns
         -------
         list
-            A list of `BaseFrameAxisPartition` objects.
+            A list of `BaseDataframeAxisPartition` objects.
 
         Notes
         -----
-        Each value in this list will an `BaseFrameAxisPartition` object.
-        `BaseFrameAxisPartition` is located in `axis_partition.py`.
+        Each value in this list will an `BaseDataframeAxisPartition` object.
+        `BaseDataframeAxisPartition` is located in `axis_partition.py`.
         """
         if not isinstance(partitions, list):
             partitions = [partitions]
@@ -179,7 +179,7 @@ class PandasFramePartitionManager(ABC):
         Returns
         -------
         list
-            A list of `BaseFrameAxisPartition` objects.
+            A list of `BaseDataframeAxisPartition` objects.
         """
         return (
             cls.column_partitions(partitions)
@@ -621,12 +621,12 @@ class PandasFramePartitionManager(ABC):
     @classmethod
     def to_pandas(cls, partitions):
         """
-        Convert NumPy array of PandasFramePartition to pandas DataFrame.
+        Convert NumPy array of PandasDataframePartition to pandas DataFrame.
 
         Parameters
         ----------
         partitions : np.ndarray
-            NumPy array of PandasFramePartition.
+            NumPy array of PandasDataframePartition.
 
         Returns
         -------
@@ -659,14 +659,14 @@ class PandasFramePartitionManager(ABC):
     @classmethod
     def to_numpy(cls, partitions, **kwargs):
         """
-        Convert NumPy array of PandasFramePartition to NumPy array of data stored within `partitions`.
+        Convert NumPy array of PandasDataframePartition to NumPy array of data stored within `partitions`.
 
         Parameters
         ----------
         partitions : np.ndarray
-            NumPy array of PandasFramePartition.
+            NumPy array of PandasDataframePartition.
         **kwargs : dict
-            Keyword arguments for PandasFramePartition.to_numpy function.
+            Keyword arguments for PandasDataframePartition.to_numpy function.
 
         Returns
         -------
@@ -790,7 +790,7 @@ class PandasFramePartitionManager(ABC):
         axis : {0, 1}
             Axis to extract the labels over.
         partitions : np.ndarray
-            NumPy array with PandasFramePartition's.
+            NumPy array with PandasDataframePartition's.
         index_func : callable, default: None
             The function to be used to extract the indices.
 
@@ -841,12 +841,12 @@ class PandasFramePartitionManager(ABC):
         other : np.ndarray
             The partitions to be broadcasted to `partitions`.
         **kwargs : dict
-            Keyword arguments for PandasFramePartition.apply function.
+            Keyword arguments for PandasDataframePartition.apply function.
 
         Returns
         -------
         list
-            A list of PandasFramePartition objects.
+            A list of PandasDataframePartition objects.
         """
         preprocessed_func = cls.preprocess_func(func)
         return [
@@ -866,12 +866,12 @@ class PandasFramePartitionManager(ABC):
         partitions : np.ndarray
             The partitions to which the `func` will apply.
         **kwargs : dict
-            Keyword arguments for PandasFramePartition.apply function.
+            Keyword arguments for PandasDataframePartition.apply function.
 
         Returns
         -------
         list
-            A list of PandasFramePartition objects.
+            A list of PandasDataframePartition objects.
 
         Notes
         -----
@@ -1216,18 +1216,18 @@ class PandasFramePartitionManager(ABC):
     @wait_computations_if_benchmark_mode
     def binary_operation(cls, axis, left, func, right):
         """
-        Apply a function that requires two PandasFrame objects.
+        Apply a function that requires two PandasDataframe objects.
 
         Parameters
         ----------
         axis : {0, 1}
             The axis to apply the function over (0 - rows, 1 - columns).
         left : np.ndarray
-            The partitions of left PandasFrame.
+            The partitions of left PandasDataframe.
         func : callable
             The function to apply.
         right : np.ndarray
-            The partitions of right PandasFrame.
+            The partitions of right PandasDataframe.
 
         Returns
         -------
