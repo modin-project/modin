@@ -624,11 +624,10 @@ class DataFrameGroupBy(object):
             result.name = None
         return result.fillna(0)
 
-    def sum(self, numeric_only=False, **kwargs):
+    def sum(self, **kwargs):
         return self._wrap_aggregation(
             type(self._query_compiler).groupby_sum,
             lambda df, **kwargs: df.sum(**kwargs),
-            numeric_only=numeric_only,
             **kwargs,
         )
 
