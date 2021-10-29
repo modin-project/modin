@@ -18,7 +18,7 @@ import numpy as np
 import modin.pandas as pd
 from modin.config import PersistentPickle
 
-from modin.pandas.test.utils import df_equals
+from modin.test.pandas.utils import df_equals
 
 
 @pytest.fixture

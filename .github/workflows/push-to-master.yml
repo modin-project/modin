@@ -31,22 +31,22 @@ jobs:
       - name: Run Modin tests
         run: |
           pytest modin/experimental/xgboost/test/test_default.py
-          pytest modin/pandas/test/dataframe/test_binary.py
-          pytest modin/pandas/test/dataframe/test_default.py
-          pytest modin/pandas/test/dataframe/test_indexing.py
-          pytest modin/pandas/test/dataframe/test_iter.py
-          pytest modin/pandas/test/dataframe/test_join_sort.py
-          pytest modin/pandas/test/dataframe/test_map_metadata.py
-          pytest modin/pandas/test/dataframe/test_reduce.py
-          pytest modin/pandas/test/dataframe/test_udf.py
-          pytest modin/pandas/test/dataframe/test_window.py
-          pytest modin/pandas/test/test_series.py
-          pytest modin/pandas/test/test_rolling.py
-          pytest modin/pandas/test/test_concat.py
-          pytest modin/pandas/test/test_groupby.py
-          pytest modin/pandas/test/test_reshape.py
-          pytest modin/pandas/test/test_general.py
-          pytest modin/pandas/test/test_io.py
+          pytest modin/test/pandas/dataframe/test_binary.py
+          pytest modin/test/pandas/dataframe/test_default.py
+          pytest modin/test/pandas/dataframe/test_indexing.py
+          pytest modin/test/pandas/dataframe/test_iter.py
+          pytest modin/test/pandas/dataframe/test_join_sort.py
+          pytest modin/test/pandas/dataframe/test_map_metadata.py
+          pytest modin/test/pandas/dataframe/test_reduction.py
+          pytest modin/test/pandas/dataframe/test_udf.py
+          pytest modin/test/pandas/dataframe/test_window.py
+          pytest modin/test/pandas/test_series.py
+          pytest modin/test/pandas/test_rolling.py
+          pytest modin/test/pandas/test_concat.py
+          pytest modin/test/pandas/test_groupby.py
+          pytest modin/test/pandas/test_reshape.py
+          pytest modin/test/pandas/test_general.py
+          pytest modin/test/pandas/test_io.py
           pytest modin/experimental/pandas/test/test_io_exp.py
 
   test-docs:
@@ -83,23 +83,23 @@ jobs:
       matrix:
         python-version: ["3.8"]
         test-task:
-          - modin/pandas/test/dataframe/test_binary.py
-          - modin/pandas/test/dataframe/test_default.py
-          - modin/pandas/test/dataframe/test_indexing.py
-          - modin/pandas/test/dataframe/test_iter.py
-          - modin/pandas/test/dataframe/test_join_sort.py
-          - modin/pandas/test/dataframe/test_map_metadata.py
-          - modin/pandas/test/dataframe/test_reduce.py
-          - modin/pandas/test/dataframe/test_udf.py
-          - modin/pandas/test/dataframe/test_window.py
-          - modin/pandas/test/dataframe/test_pickle.py
-          - modin/pandas/test/test_series.py
-          - modin/pandas/test/test_rolling.py
-          - modin/pandas/test/test_concat.py
-          - modin/pandas/test/test_groupby.py
-          - modin/pandas/test/test_reshape.py
-          - modin/pandas/test/test_general.py
-          - modin/pandas/test/test_io.py
+          - modin/test/pandas/dataframe/test_binary.py
+          - modin/test/pandas/dataframe/test_default.py
+          - modin/test/pandas/dataframe/test_indexing.py
+          - modin/test/pandas/dataframe/test_iter.py
+          - modin/test/pandas/dataframe/test_join_sort.py
+          - modin/test/pandas/dataframe/test_map_metadata.py
+          - modin/test/pandas/dataframe/test_reduction.py
+          - modin/test/pandas/dataframe/test_udf.py
+          - modin/test/pandas/dataframe/test_window.py
+          - modin/test/pandas/dataframe/test_pickle.py
+          - modin/test/pandas/test_series.py
+          - modin/test/pandas/test_rolling.py
+          - modin/test/pandas/test_concat.py
+          - modin/test/pandas/test_groupby.py
+          - modin/test/pandas/test_reshape.py
+          - modin/test/pandas/test_general.py
+          - modin/test/pandas/test_io.py
     env:
       MODIN_ENGINE: ray
       MODIN_MEMORY: 1000000000

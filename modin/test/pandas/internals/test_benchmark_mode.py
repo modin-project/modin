@@ -15,7 +15,7 @@
 
 from contextlib import nullcontext
 import modin.pandas as pd
-from modin.pandas.test.utils import test_data_values
+from modin.test.pandas.utils import test_data_values
 from modin.config import BenchmarkMode, StorageFormat
 from modin.test.test_utils import warns_that_defaulting_to_pandas
 

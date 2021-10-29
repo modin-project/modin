@@ -54,7 +54,7 @@ from modin.core.execution.python.implementations.pandas_on_python.io import (  #
 )
 from modin.core.execution.dispatching.factories import factories  # noqa: E402
 from modin.utils import get_current_execution  # noqa: E402
-from modin.pandas.test.utils import (  # noqa: E402
+from modin.test.pandas.utils import (  # noqa: E402
     _make_csv_file,
     get_unique_filename,
     make_default_file,
@@ -134,17 +134,17 @@ def simulate_cloud(request):
     assert IsExperimental.get(), "Simulated cloud must be started in experimental mode"
 
     from modin.experimental.cloud import create_cluster, get_connection
-    import modin.pandas.test.utils
+    import modin.test.pandas.utils
 
     with create_cluster("local", cluster_type="local"):
         get_connection().teleport(set_experimental_env)(mode)
         with Patcher(
             get_connection(),
-            (modin.pandas.test.utils, "assert_index_equal"),
-            (modin.pandas.test.utils, "assert_series_equal"),
-            (modin.pandas.test.utils, "assert_frame_equal"),
-            (modin.pandas.test.utils, "assert_extension_array_equal"),
-            (modin.pandas.test.utils, "assert_empty_frame_equal"),
+            (modin.test.pandas.utils, "assert_index_equal"),
+            (modin.test.pandas.utils, "assert_series_equal"),
+            (modin.test.pandas.utils, "assert_frame_equal"),
+            (modin.test.pandas.utils, "assert_extension_array_equal"),
+            (modin.test.pandas.utils, "assert_empty_frame_equal"),
         ):
             yield
 
@@ -254,7 +254,7 @@ def set_base_execution(name=BASE_EXECUTION_NAME):
 
 def pytest_configure(config):
     if config.option.extra_test_parameters is not None:
-        import modin.pandas.test.utils as utils
+        import modin.test.pandas.utils as utils
 
         utils.extra_test_parameters = config.option.extra_test_parameters
 
