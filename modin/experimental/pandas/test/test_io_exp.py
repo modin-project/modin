@@ -16,7 +16,7 @@ import pandas
 import pytest
 import modin.experimental.pandas as pd
 from modin.config import Engine
-from modin.pandas.test.utils import df_equals, teardown_test_files, test_data
+from modin.test.pandas.utils import df_equals, teardown_test_files, test_data
 
 
 @pytest.mark.skipif(
