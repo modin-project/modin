@@ -1,4 +1,4 @@
 include versioneer.py
 include modin/_version.py
 include modin/experimental/cloud/ray-autoscaler.yml
-include modin/pandas/test/data/*.csv
+include modin/test/pandas/data/*.csv

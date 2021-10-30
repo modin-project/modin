@@ -14,7 +14,7 @@
 import pandas
 import pytest
 
-from modin.pandas.test.utils import (
+from modin.test.pandas.utils import (
     test_data_values,
     create_test_dfs,
     df_equals,

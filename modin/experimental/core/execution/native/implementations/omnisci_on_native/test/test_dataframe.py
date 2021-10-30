@@ -19,14 +19,15 @@ import pytest
 import re
 
 from modin.config import StorageFormat
-from modin.pandas.test.utils import io_ops_bad_exc, default_to_pandas_ignore_string
+from modin.test.pandas.utils import io_ops_bad_exc, default_to_pandas_ignore_string
+from modin.test.pandas.utils import io_ops_bad_exc
 from .utils import eval_io, ForceOmnisciImport, set_execution_mode, run_and_compare
 from pandas.core.dtypes.common import is_list_like
 
 StorageFormat.put("omnisci")
 
 import modin.pandas as pd
-from modin.pandas.test.utils import (
+from modin.test.pandas.utils import (
     df_equals,
     bool_arg_values,
     to_pandas,
@@ -99,7 +100,7 @@ class TestCSV:
 
     def test_usecols_csv(self):
         """check with the following arguments: names, dtype, skiprows, delimiter"""
-        csv_file = os.path.join(self.root, "modin/pandas/test/data", "test_usecols.csv")
+        csv_file = os.path.join(self.root, "modin/test/pandas/data", "test_usecols.csv")
 
         for kwargs in (
             {"delimiter": ","},
@@ -135,7 +136,7 @@ class TestCSV:
 
     def test_time_parsing(self):
         csv_file = os.path.join(
-            self.root, "modin/pandas/test/data", "test_time_parsing.csv"
+            self.root, "modin/test/pandas/data", "test_time_parsing.csv"
         )
         for kwargs in (
             {
@@ -185,7 +186,7 @@ class TestCSV:
     @pytest.mark.parametrize("null_dtype", ["category", "float64"])
     def test_null_col(self, null_dtype):
         csv_file = os.path.join(
-            self.root, "modin/pandas/test/data", "test_null_col.csv"
+            self.root, "modin/test/pandas/data", "test_null_col.csv"
         )
         ref = pandas.read_csv(
             csv_file,
@@ -213,7 +214,7 @@ class TestCSV:
         df_equals(ref, exp)
 
     def test_read_and_concat(self):
-        csv_file = os.path.join(self.root, "modin/pandas/test/data", "test_usecols.csv")
+        csv_file = os.path.join(self.root, "modin/test/pandas/data", "test_usecols.csv")
         ref1 = pandas.read_csv(csv_file)
         ref2 = pandas.read_csv(csv_file)
         ref = pandas.concat([ref1, ref2])
@@ -227,7 +228,7 @@ class TestCSV:
     @pytest.mark.parametrize("names", [None, ["a", "b", "c", "d", "e"]])
     @pytest.mark.parametrize("header", [None, 0])
     def test_from_csv(self, header, names):
-        csv_file = os.path.join(self.root, "modin/pandas/test/data", "test_usecols.csv")
+        csv_file = os.path.join(self.root, "modin/test/pandas/data", "test_usecols.csv")
         eval_io(
             fn_name="read_csv",
             # read_csv kwargs
@@ -238,7 +239,7 @@ class TestCSV:
 
     @pytest.mark.parametrize("kwargs", [{"sep": "|"}, {"delimiter": "|"}])
     def test_sep_delimiter(self, kwargs):
-        csv_file = os.path.join(self.root, "modin/pandas/test/data", "test_delim.csv")
+        csv_file = os.path.join(self.root, "modin/test/pandas/data", "test_delim.csv")
         eval_io(
             fn_name="read_csv",
             # read_csv kwargs
@@ -248,7 +249,7 @@ class TestCSV:
 
     @pytest.mark.skip(reason="https://github.com/modin-project/modin/issues/2174")
     def test_float32(self):
-        csv_file = os.path.join(self.root, "modin/pandas/test/data", "test_usecols.csv")
+        csv_file = os.path.join(self.root, "modin/test/pandas/data", "test_usecols.csv")
         kwargs = {
             "dtype": {"a": "float32", "b": "float32"},
         }

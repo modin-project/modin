@@ -72,7 +72,7 @@ you should reopen your terminal to find "(base)" next to your prompt: ![](conda_
 
 1. Try a unit test:
     ```
-    pytest modin/pandas/test/test_concat.py
+    pytest modin/test/pandas/test_concat.py
     ```
 
 1. [Add a GPG key](https://docs.github.com/en/authentication/managing-commit-signature-verification/adding-a-new-gpg-key-to-your-github-account ) to your Modin account. Your commits need to be signed with a GPG key. For mac, you can use [Mac GPG](https://gpgtools.org/).

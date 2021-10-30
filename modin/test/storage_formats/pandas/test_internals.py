@@ -12,7 +12,7 @@
 # governing permissions and limitations under the License.
 
 import modin.pandas as pd
-from modin.pandas.test.utils import create_test_dfs, test_data_values, df_equals
+from modin.test.pandas.utils import create_test_dfs, test_data_values, df_equals
 from modin.config import NPartitions
 
 import pytest

@@ -20,7 +20,7 @@ import numpy as np
 from pandas.api.types import is_datetime64_any_dtype
 import pyarrow as pa
 
-from modin.pandas.test.utils import (
+from modin.test.pandas.utils import (
     df_equals,
     io_ops_bad_exc,
     eval_io as general_eval_io,
@@ -48,7 +48,7 @@ def eval_io(
 
     Notes
     -----
-    For parameters description please refer to ``modin.pandas.test.utils.eval_io``.
+    For parameters description please refer to ``modin.test.pandas.utils.eval_io``.
     """
 
     def omnisci_comparator(df1, df2):

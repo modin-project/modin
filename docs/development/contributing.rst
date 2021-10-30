@@ -163,7 +163,7 @@ To run the entire test suite, run the following from the project root:
 
 .. code-block:: bash
 
-  pytest modin/pandas/test
+  pytest modin/test/pandas
 
 The test suite is very large, and may take a long time if you run every test. If you've
 only modified a small amount of code, it may be sufficient to run a single test or some
@@ -171,7 +171,7 @@ subset of the test suite. In order to run a specific test run:
 
 .. code-block:: bash
 
-  pytest modin/pandas/test::test_new_functionality
+  pytest modin/test/pandas::test_new_functionality
 
 The entire test suite is automatically run for each pull request.
 
