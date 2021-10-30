@@ -18,7 +18,7 @@ import pytest
 import modin.pandas as pd
 from modin.distributed.dataframe.pandas import unwrap_partitions, from_partitions
 from modin.config import Engine, NPartitions
-from modin.pandas.test.utils import df_equals
+from modin.test.pandas.utils import df_equals
 from modin.pandas.indexing import compute_sliced_len
 from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
 
