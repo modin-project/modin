@@ -40,7 +40,7 @@ Data parsing mechanism differs depending on the data format type:
 """
 
 from collections import OrderedDict
-from io import BytesIO
+from io import BytesIO, TextIOWrapper
 import numpy as np
 import pandas
 from pandas.core.dtypes.cast import find_common_type
@@ -232,24 +232,43 @@ class PandasCSVParser(PandasParser):
         start = kwargs.pop("start", None)
         end = kwargs.pop("end", None)
         header_size = kwargs.pop("header_size", None)
+        encoding = kwargs.get("encoding", None)
         if start is not None and end is not None:
             # pop "compression" from kwargs because bio is uncompressed
-            bio = FileDispatcher.file_open(
+            with FileDispatcher.file_open(
                 fname, "rb", kwargs.pop("compression", "infer")
-            )
-            header = b""
-            # In this case we beware that fisrt line can contain BOM, so
-            # adding this line to the `header` for reading and then skip it
-            if kwargs.get("encoding", None) is not None and header_size == 0:
-                header += bio.readline()
-                # `skiprows` can be only None here, so don't check it's type
-                # and just set to 1
-                kwargs["skiprows"] = 1
-            for _ in range(header_size):
-                header += bio.readline()
-            bio.seek(start)
-            to_read = header + bio.read(end - start)
-            bio.close()
+            ) as bio:
+                # In this case we beware that first line can contain BOM, so
+                # adding this line to the `header` for reading and then skip it
+                header = b""
+                if encoding and (
+                    "utf" in encoding
+                    and "8" not in encoding
+                    or encoding == "unicode_escape"
+                    or encoding.replace("-", "_") == "utf_8_sig"
+                ):
+                    # do not 'close' the wrapper - underlying buffer is managed by `bio` handle
+                    fio = TextIOWrapper(bio, encoding=encoding, newline="")
+                    if header_size == 0:
+                        header = fio.readline().encode(encoding)
+                        kwargs["skiprows"] = 1
+                    for _ in range(header_size):
+                        header += fio.readline().encode(encoding)
+                elif encoding is not None:
+                    if header_size == 0:
+                        header = bio.readline()
+                        # `skiprows` can be only None here, so don't check it's type
+                        # and just set to 1
+                        kwargs["skiprows"] = 1
+                    for _ in range(header_size):
+                        header += bio.readline()
+                else:
+                    for _ in range(header_size):
+                        header += bio.readline()
+
+                bio.seek(start)
+                to_read = header + bio.read(end - start)
+
             pandas_df = pandas.read_csv(BytesIO(to_read), **kwargs)
         else:
             # This only happens when we are reading with only one worker (Default)

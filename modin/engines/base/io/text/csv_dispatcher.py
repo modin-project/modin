@@ -21,6 +21,7 @@ import pandas
 from pandas.core.dtypes.common import is_list_like
 from csv import QUOTE_NONE, Dialect
 import sys
+import io
 from typing import Union, Sequence, Callable, Dict, Tuple
 from pandas._typing import FilePathOrBuffer
 import pandas._libs.lib as lib
@@ -102,9 +103,6 @@ class CSVDispatcher(TextFileDispatcher):
             return cls.single_worker_read(filepath_or_buffer, **kwargs)
 
         is_quoting = kwargs.get("quoting", "") != QUOTE_NONE
-        quotechar = kwargs.get("quotechar", '"').encode(
-            encoding if encoding is not None else "UTF-8"
-        )
         # In these cases we should pass additional metadata
         # to the workers to match pandas output
         pass_names = names in [None, lib.no_default] and (
@@ -133,6 +131,12 @@ class CSVDispatcher(TextFileDispatcher):
         )
 
         with cls.file_open(filepath_or_buffer_md, "rb", compression_infered) as f:
+            old_pos = f.tell()
+            fio = io.TextIOWrapper(f, encoding=encoding, newline="")
+            newline, quotechar = cls.compute_newline(
+                fio, encoding, kwargs.get("quotechar", '"')
+            )
+            f.seek(old_pos)
             splits = cls.partitioned_file(
                 f,
                 num_partitions=NPartitions.get(),
@@ -140,6 +144,8 @@ class CSVDispatcher(TextFileDispatcher):
                 skiprows=skiprows_partitioning,
                 quotechar=quotechar,
                 is_quoting=is_quoting,
+                encoding=encoding,
+                newline=newline,
                 header_size=header_size,
                 pre_reading=pre_reading,
             )
