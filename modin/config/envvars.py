@@ -70,7 +70,7 @@ class Engine(EnvironmentVariable, type=str):
     """Distribution engine to run queries by."""
 
     varname = "MODIN_ENGINE"
-    choices = ("Ray", "Dask", "Python", "Native", "Scaleout")
+    choices = ("Ray", "Dask", "Python", "Native", "Unidist")
 
     @classmethod
     def _get_default(cls):
@@ -122,12 +122,12 @@ class Engine(EnvironmentVariable, type=str):
         else:
             return "Native"
         try:
-            import scaleout  # noqa: F401
+            import unidist  # noqa: F401
 
         except ImportError:
             pass
         else:
-            return "Scaleout"
+            return "Unidist"
         raise ImportError(
             "Please refer to installation documentation page to install an engine"
         )

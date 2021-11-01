@@ -655,31 +655,31 @@ class ExperimentalOmnisciOnCloudnativeFactory(ExperimentalRemoteFactory):
     wrapped_factory = ExperimentalOmnisciOnNativeFactory
 
 
-@doc(_doc_factory_class, backend_name="experimental PandasOnScaleout")
-class ExperimentalPandasOnScaleoutFactory(BaseFactory):
+@doc(_doc_factory_class, execution_name="experimental PandasOnUnidist")
+class ExperimentalPandasOnUnidistFactory(BaseFactory):
     @classmethod
     @doc(
         _doc_factory_prepare_method,
-        io_module_name="experimental ``PandasOnScaleoutIO``",
+        io_module_name="experimental ``PandasOnUnidistIO``",
     )
     def prepare(cls):
-        from modin.experimental.core.execution.scaleout.implementations.pandas_on_scaleout.io import (
-            PandasOnScaleoutIO,
+        from modin.experimental.core.execution.unidist.implementations.pandas_on_unidist.io import (
+            PandasOnUnidistIO,
         )
 
-        cls.io_cls = PandasOnScaleoutIO
+        cls.io_cls = PandasOnUnidistIO
 
 
-@doc(_doc_factory_class, backend_name="experimental PyarrowOnScaleout")
-class ExperimentalPyarrowOnScaleoutFactory(BaseFactory):
+@doc(_doc_factory_class, execution_name="experimental PyarrowOnUnidist")
+class ExperimentalPyarrowOnUnidistFactory(BaseFactory):
     @classmethod
     @doc(
         _doc_factory_prepare_method,
-        io_module_name="experimental ``PyarrowOnScaleoutIO``",
+        io_module_name="experimental ``PyarrowOnUnidistIO``",
     )
     def prepare(cls):
-        from modin.experimental.core.execution.scaleout.implementations.pyarrow_on_scaleout.io import (
-            PyarrowOnScaleoutIO,
+        from modin.experimental.core.execution.unidist.implementations.pyarrow_on_unidist.io import (
+            PyarrowOnUnidistIO,
         )
 
-        cls.io_cls = PyarrowOnScaleoutIO
+        cls.io_cls = PyarrowOnUnidistIO
