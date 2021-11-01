@@ -45,6 +45,7 @@ with test_cluster:
         from modin.experimental.cloud import get_connection
 
         # We should move omniscripts trigger in remote conext
+        # https://github.com/intel-ai/omniscripts/blob/7d4599bcacf51de876952c658048571d32275ac1/taxi/taxibench_pandas_ibis.py#L482
         import modin.experimental.engines.omnisci_on_native.frame.omnisci_worker
 
         OmnisciServer = (
