@@ -420,11 +420,11 @@ class CSVDispatcher(TextFileDispatcher):
         to `skiprows`=[1,2,3]. Now, to avoid this discrepancy, we need to assign
         the first partition to read data between header line and the first
         row for skipping by setting of `pre_reading` parameter, so setting
-        `pre_reading`=2. During data file partitiong, these lines will be assigned
+        `pre_reading`=2. During data file partitioning, these lines will be assigned
         for reading for the first partition, and then file position will be set at
         the beginning of rows that should be skipped by `skiprows_partitioning`.
         After skipping of these rows, the rest data will be divided between the
-        rest of partitions, see rows assignement below:
+        rest of partitions, see rows assignment below:
 
         0 - header line (skip during partitioning)
         1 - pre_reading (assign to read by the first partition)
