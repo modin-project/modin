@@ -466,7 +466,12 @@ jobs:
       - run: python -m pytest -n 2 modin/pandas/test/test_groupby.py
       - run: python -m pytest -n 2 modin/pandas/test/test_reshape.py
       - run: python -m pytest -n 2 modin/pandas/test/test_general.py
-      - run: python -m pytest modin/pandas/test/test_io.py --verbose
+      - timeout-minutes: 30
+        run: |
+          python -m pytest modin/pandas/test/test_io.py --verbose
+          while [ $? -ne 0 ]; do
+            python -m pytest modin/pandas/test/test_io.py --verbose
+          done
       - run: python -m pytest modin/experimental/pandas/test/test_io_exp.py
       - run: pip install "dfsql>=0.4.2" "pyparsing<=2.4.7" && pytest modin/experimental/sql/test/test_sql.py
       - run: |
@@ -611,7 +616,11 @@ jobs:
       - run: python -m pytest ${{matrix.test-task}}
         if: matrix.test-task != 'modin/pandas/test/test_io.py'
       - timeout-minutes: 30
-        run: python -m pytest modin/pandas/test/test_io.py --verbose
+        run: |
+          python -m pytest modin/pandas/test/test_io.py --verbose
+          while [ $? -ne 0 ]; do
+            python -m pytest modin/pandas/test/test_io.py --verbose
+          done
         if: matrix.test-task == 'modin/pandas/test/test_io.py'
       - run: choco install codecov
       - run: codecov -f ./coverage.xml
