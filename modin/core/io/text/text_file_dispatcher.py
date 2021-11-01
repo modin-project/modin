@@ -21,9 +21,11 @@ files from `FileDispatcher` class and can be used as base class for dipatchers o
 from modin.core.io.file_dispatcher import FileDispatcher
 from modin.core.storage_formats.pandas.utils import compute_chunksize
 from modin.utils import _inherit_docstrings
+from modin.core.io.text.utils import CustomNewlineIterator
 import numpy as np
 import warnings
 import os
+import codecs
 from typing import Union, Sequence, Optional, Tuple
 import pandas
 import pandas._libs.lib as lib
@@ -146,6 +148,8 @@ class TextFileDispatcher(FileDispatcher):
         offset_size: int,
         quotechar: bytes = b'"',
         is_quoting: bool = True,
+        encoding: str = None,
+        newline: bytes = None,
     ):
         """
         Move the file offset at the specified amount of bytes.
@@ -160,6 +164,10 @@ class TextFileDispatcher(FileDispatcher):
             Indicate quote in a file.
         is_quoting : bool, default: True
             Whether or not to consider quotes.
+        encoding : str, optional
+            Encoding of `f`.
+        newline : bytes, optional
+            Byte or sequence of bytes indicating line endings.
 
         Returns
         -------
@@ -184,6 +192,8 @@ class TextFileDispatcher(FileDispatcher):
             quotechar=quotechar,
             is_quoting=is_quoting,
             outside_quotes=outside_quotes,
+            encoding=encoding,
+            newline=newline,
         )
 
         return outside_quotes
@@ -197,6 +207,8 @@ class TextFileDispatcher(FileDispatcher):
         skiprows: int = None,
         quotechar: bytes = b'"',
         is_quoting: bool = True,
+        encoding: str = None,
+        newline: bytes = None,
         header_size: int = 0,
         pre_reading: int = 0,
     ):
@@ -218,6 +230,10 @@ class TextFileDispatcher(FileDispatcher):
             Indicate quote in a file.
         is_quoting : bool, default: True
             Whether or not to consider quotes.
+        encoding : str, optional
+            Encoding of `f`.
+        newline : bytes, optional
+            Byte or sequence of bytes indicating line endings.
         header_size : int, default: 0
             Number of rows, that occupied by header.
         pre_reading : int, default: 0
@@ -236,7 +252,9 @@ class TextFileDispatcher(FileDispatcher):
         if num_partitions is None:
             num_partitions = NPartitions.get() - 1 if pre_reading else NPartitions.get()
 
-        rows_skipper = cls.rows_skipper_builder(f, quotechar, is_quoting=is_quoting)
+        rows_skipper = cls.rows_skipper_builder(
+            f, quotechar, is_quoting=is_quoting, encoding=encoding, newline=newline
+        )
         result = []
 
         file_size = cls.file_size(f)
@@ -251,6 +269,8 @@ class TextFileDispatcher(FileDispatcher):
                 quotechar=quotechar,
                 is_quoting=is_quoting,
                 outside_quotes=outside_quotes,
+                encoding=encoding,
+                newline=newline,
             )
             read_rows_counter += read_rows
 
@@ -275,6 +295,8 @@ class TextFileDispatcher(FileDispatcher):
                     nrows=partition_size,
                     quotechar=quotechar,
                     is_quoting=is_quoting,
+                    encoding=encoding,
+                    newline=newline,
                 )
                 result.append((start, f.tell()))
                 start = f.tell()
@@ -291,6 +313,8 @@ class TextFileDispatcher(FileDispatcher):
                     offset_size=partition_size,
                     quotechar=quotechar,
                     is_quoting=is_quoting,
+                    encoding=encoding,
+                    newline=newline,
                 )
 
                 result.append((start, f.tell()))
@@ -310,6 +334,8 @@ class TextFileDispatcher(FileDispatcher):
         quotechar: bytes = b'"',
         is_quoting: bool = True,
         outside_quotes: bool = True,
+        encoding: str = None,
+        newline: bytes = None,
     ):
         """
         Move the file offset at the specified amount of rows.
@@ -326,6 +352,10 @@ class TextFileDispatcher(FileDispatcher):
             Whether or not to consider quotes.
         outside_quotes : bool, default: True
             Whether the file pointer is within quotes or not at the time this function is called.
+        encoding : str, optional
+            Encoding of `f`.
+        newline : bytes, optional
+            Byte or sequence of bytes indicating line endings.
 
         Returns
         -------
@@ -340,7 +370,17 @@ class TextFileDispatcher(FileDispatcher):
 
         rows_read = 0
 
-        for line in f:
+        if encoding and (
+            "utf" in encoding
+            and "8" not in encoding
+            or encoding == "unicode_escape"
+            or encoding.replace("-", "_") == "utf_8_sig"
+        ):
+            iterator = CustomNewlineIterator(f, newline)
+        else:
+            iterator = f
+
+        for line in iterator:
             if is_quoting and line.count(quotechar) % 2:
                 outside_quotes = not outside_quotes
             if outside_quotes:
@@ -348,15 +388,74 @@ class TextFileDispatcher(FileDispatcher):
                 if rows_read >= nrows:
                     break
 
+        if isinstance(iterator, CustomNewlineIterator):
+            iterator.seek()
+
         # case when EOF
         if not outside_quotes:
             rows_read += 1
 
         return outside_quotes, rows_read
 
+    @classmethod
+    def compute_newline(cls, file_like, encoding, quotechar):
+        """
+        Compute byte or sequence of bytes indicating line endings.
+
+        Parameters
+        ----------
+        file_like : file-like object
+            File handle that should be used for line endings computing.
+        encoding : str
+            Encoding of `file_like`.
+        quotechar : str
+            Quotechar used for parsing `file-like`.
+
+        Returns
+        -------
+        bytes
+            line endings
+        """
+        newline = None
+
+        if encoding is None:
+            return newline, quotechar.encode("UTF-8")
+
+        quotechar = quotechar.encode(encoding)
+        encoding = encoding.replace("-", "_")
+
+        if (
+            "utf" in encoding
+            and "8" not in encoding
+            or encoding == "unicode_escape"
+            or encoding == "utf_8_sig"
+        ):
+            # trigger for computing f.newlines
+            file_like.readline()
+            # in bytes
+            newline = file_like.newlines.encode(encoding)
+            boms = ()
+            if encoding == "utf_8_sig":
+                boms = (codecs.BOM_UTF8,)
+            elif "16" in encoding:
+                boms = (codecs.BOM_UTF16_BE, codecs.BOM_UTF16_LE)
+            elif "32" in encoding:
+                boms = (codecs.BOM_UTF32_BE, codecs.BOM_UTF32_LE)
+
+            for bom in boms:
+                if newline.startswith(bom):
+                    bom_len = len(bom)
+                    newline = newline[bom_len:]
+                    quotechar = quotechar[bom_len:]
+                    break
+
+        return newline, quotechar
+
     # _read helper functions
     @classmethod
-    def rows_skipper_builder(cls, f, quotechar, is_quoting):
+    def rows_skipper_builder(
+        cls, f, quotechar, is_quoting, encoding=None, newline=None
+    ):
         """
         Build object for skipping passed number of lines.
 
@@ -368,6 +467,10 @@ class TextFileDispatcher(FileDispatcher):
             Indicate quote in a file.
         is_quoting : bool
             Whether or not to consider quotes.
+        encoding : str, optional
+            Encoding of `f`.
+        newline : bytes, optional
+            Byte or sequence of bytes indicating line endings.
 
         Returns
         -------
@@ -384,6 +487,8 @@ class TextFileDispatcher(FileDispatcher):
                     quotechar=quotechar,
                     is_quoting=is_quoting,
                     nrows=n,
+                    encoding=encoding,
+                    newline=newline,
                 )[1]
 
         return skipper
