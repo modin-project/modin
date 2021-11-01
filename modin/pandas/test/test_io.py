@@ -87,6 +87,8 @@ def assert_files_eq(path1, path2):
         if file1_content == file2_content:
             return True
         else:
+            print(f"FILE1: {file1_content}")
+            print(f"FILE2: {file2_content}")
             return False
 
 
