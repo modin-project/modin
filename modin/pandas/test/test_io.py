@@ -59,6 +59,15 @@ if StorageFormat.get() == "Pandas":
     import modin.pandas as pd
 else:
     import modin.experimental.pandas as pd
+
+try:
+    import ray
+
+    EXCEPTIONS = (ray.exceptions.WorkerCrashedError,)
+except ImportError:
+    EXCEPTIONS = ()
+
+
 from modin.config import NPartitions
 
 NPartitions.put(4)
@@ -143,7 +152,11 @@ def eval_to_file(modin_obj, pandas_obj, fn, extension, **fn_kwargs):
     unique_filename_pandas = get_unique_filename(extension=extension)
 
     try:
-        getattr(modin_obj, fn)(unique_filename_modin, **fn_kwargs)
+        try:
+            getattr(modin_obj, fn)(unique_filename_modin, **fn_kwargs)
+        except EXCEPTIONS:
+            getattr(modin_obj, fn)(unique_filename_modin, **fn_kwargs)
+
         getattr(pandas_obj, fn)(unique_filename_pandas, **fn_kwargs)
 
         assert assert_files_eq(unique_filename_modin, unique_filename_pandas)

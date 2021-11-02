@@ -276,4 +276,4 @@ class RayIO(BaseIO):
             lengths=None,
             enumerate_partitions=True,
         )
-        get([partition.oid for partition in result.flatten()])
+        ray.get([part.oid for row in result for part in row])
