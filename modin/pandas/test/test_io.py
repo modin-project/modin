@@ -319,6 +319,7 @@ class TestCsv:
             **kwargs,
         )
 
+    @pytest.mark.skip
     @pytest.mark.parametrize("true_values", [["Yes"], ["Yes", "true"], None])
     @pytest.mark.parametrize("false_values", [["No"], ["No", "false"], None])
     @pytest.mark.parametrize("skipfooter", [0, 10])
