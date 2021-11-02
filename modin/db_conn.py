@@ -42,6 +42,7 @@ class ModinDatabaseConnection:
     """
 
     def __init__(self, lib, *args, **kwargs):
+        lib = lib.lower()
         if lib not in (_PSYCOPG_LIB_NAME, _SQLALCHEMY_LIB_NAME):
             raise Exception("Unsupported database library")
         self.lib = lib

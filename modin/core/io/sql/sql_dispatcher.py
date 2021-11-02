@@ -25,7 +25,7 @@ import pandas
 import warnings
 
 from modin.core.io.file_dispatcher import FileDispatcher
-from modin.core.io.sql.connection import ModinDatabaseConnection
+from modin.db_conn import ModinDatabaseConnection
 from modin.config import NPartitions
 
 
@@ -61,7 +61,7 @@ class SQLDispatcher(FileDispatcher):
         if not (connection_is_modin_db_connection or isinstance(con, str)):
             warnings.warn(
                 "To use parallel implementation of `read_sql`, pass either "
-                "the SQL connection string or an ModinDatabaseConnection "
+                "the SQL connection string or a ModinDatabaseConnection "
                 "with the arguments required to make a connection, instead "
                 "of {}.".format(type(con))
             )

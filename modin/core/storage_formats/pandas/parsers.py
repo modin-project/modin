@@ -50,7 +50,7 @@ from pandas.util._decorators import doc
 import warnings
 
 from modin.core.io.file_dispatcher import OpenFile
-from modin.core.io.sql.connection import ModinDatabaseConnection
+from modin.db_conn import ModinDatabaseConnection
 from modin.core.storage_formats.pandas.utils import split_result_of_axis_func_pandas
 from modin.error_message import ErrorMessage
 

@@ -18,6 +18,7 @@ from pandas.errors import ParserWarning
 import pandas._libs.lib as lib
 from pandas.core.dtypes.common import is_list_like
 from collections import OrderedDict
+from modin.db_conn import ModinDatabaseConnection
 from modin.config import TestDatasetSize, Engine, StorageFormat, IsExperimental
 from modin.utils import to_pandas
 from modin.pandas.utils import from_arrow
@@ -1646,22 +1647,28 @@ class TestSql:
             pd.read_sql_table(table, conn)
 
         # Test SQLAlchemy engine
-        conn = sa.create_engine(conn)
+        sqlalchemy_engine = sa.create_engine(conn)
         eval_io(
             fn_name="read_sql",
             # read_sql kwargs
             sql=query,
-            con=conn,
+            con=sqlalchemy_engine,
         )
 
         # Test SQLAlchemy Connection
-        conn = conn.connect()
+        sqlalchemy_connection = sqlalchemy_engine.connect()
         eval_io(
             fn_name="read_sql",
             # read_sql kwargs
             sql=query,
-            con=conn,
+            con=sqlalchemy_connection,
         )
+
+        modin_df = pd.read_sql(
+            sql=query, con=ModinDatabaseConnection("sqlalchemy", conn)
+        )
+        pandas_df = pandas.read_sql(sql=query, con=sqlalchemy_connection)
+        df_equals(modin_df, pandas_df)
 
     @pytest.mark.xfail(
         condition="config.getoption('--simulate-cloud').lower() != 'off'",
