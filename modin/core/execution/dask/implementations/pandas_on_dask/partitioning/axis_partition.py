@@ -49,7 +49,14 @@ class PandasOnDaskDataframeAxisPartition(PandasDataframeAxisPartition):
 
     @classmethod
     def deploy_axis_func(
-        cls, axis, func, num_splits, kwargs, maintain_partitioning, *partitions
+        cls,
+        axis,
+        func,
+        num_splits,
+        kwargs,
+        maintain_partitioning,
+        remote_options,
+        *partitions
     ):
         """
         Deploy a function along a full axis.
@@ -67,6 +74,9 @@ class PandasOnDaskDataframeAxisPartition(PandasDataframeAxisPartition):
         maintain_partitioning : bool
             If True, keep the old partitioning if possible.
             If False, create a new partition layout.
+        remote_options : dict, default: None
+            Options that can be defined prior to calling a remote function
+            https://docs.ray.io/en/latest/advanced.html#dynamic-remote-parameters (Ignored for now).
         *partitions : iterable
             All partitions that make up the full axis (row or column).
 
@@ -84,6 +94,7 @@ class PandasOnDaskDataframeAxisPartition(PandasDataframeAxisPartition):
             num_splits,
             kwargs,
             maintain_partitioning,
+            remote_options,
             *partitions,
             pure=False,
         )

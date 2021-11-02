@@ -199,6 +199,7 @@ class RayIO(BaseIO):
             keep_partitioning=True,
             lengths=None,
             enumerate_partitions=True,
+            remote_options={"max_retries": 0},
         )
         # pending completion
         ray.get([partition.oid for partition in result.flatten()])

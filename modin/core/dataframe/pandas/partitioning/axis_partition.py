@@ -32,6 +32,7 @@ class BaseDataframeAxisPartition(ABC):  # pragma: no cover
         num_splits=None,
         other_axis_partition=None,
         maintain_partitioning=True,
+        remote_options=None,
         **kwargs,
     ):
         """
@@ -54,6 +55,9 @@ class BaseDataframeAxisPartition(ABC):  # pragma: no cover
             In this case, we have to return the partitioning to its previous
             orientation (the lengths will remain the same). This is ignored between
             two axis partitions.
+        remote_options : dict, default: None
+            Options that can be defined prior to calling a remote function
+            https://docs.ray.io/en/latest/advanced.html#dynamic-remote-parameters.
         **kwargs : dict
             Additional keywords arguments to be passed in `func`.
 
@@ -177,6 +181,7 @@ class PandasDataframeAxisPartition(BaseDataframeAxisPartition):
         num_splits=None,
         other_axis_partition=None,
         maintain_partitioning=True,
+        remote_options=None,
         **kwargs,
     ):
         """
@@ -198,6 +203,9 @@ class PandasDataframeAxisPartition(BaseDataframeAxisPartition):
             In this case, we have to return the partitioning to its previous
             orientation (the lengths will remain the same). This is ignored between
             two axis partitions.
+        remote_options : dict, default: None
+            Options that can be defined prior to calling a remote function
+            https://docs.ray.io/en/latest/advanced.html#dynamic-remote-parameters.
         **kwargs : dict
             Additional keywords arguments to be passed in `func`.
 
@@ -237,7 +245,14 @@ class PandasDataframeAxisPartition(BaseDataframeAxisPartition):
                     ),
                 )
             )
-        args = [self.axis, func, num_splits, kwargs, maintain_partitioning]
+        args = [
+            self.axis,
+            func,
+            num_splits,
+            kwargs,
+            maintain_partitioning,
+            remote_options,
+        ]
         args.extend(self.list_of_blocks)
         return self._wrap_partitions(self.deploy_axis_func(*args))
 
@@ -269,7 +284,14 @@ class PandasDataframeAxisPartition(BaseDataframeAxisPartition):
 
     @classmethod
     def deploy_axis_func(
-        cls, axis, func, num_splits, kwargs, maintain_partitioning, *partitions
+        cls,
+        axis,
+        func,
+        num_splits,
+        kwargs,
+        maintain_partitioning,
+        remote_options,
+        *partitions,
     ):
         """
         Deploy a function along a full axis.
@@ -287,6 +309,9 @@ class PandasDataframeAxisPartition(BaseDataframeAxisPartition):
         maintain_partitioning : bool
             If True, keep the old partitioning if possible.
             If False, create a new partition layout.
+        remote_options : dict, default: None
+            Options that can be defined prior to calling a remote function
+            https://docs.ray.io/en/latest/advanced.html#dynamic-remote-parameters (Ignored for now).
         *partitions : iterable
             All partitions that make up the full axis (row or column).
 
