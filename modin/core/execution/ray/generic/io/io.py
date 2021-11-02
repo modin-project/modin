@@ -201,17 +201,17 @@ class RayIO(BaseIO):
     @staticmethod
     def _to_parquet_check_support(kwargs):
         """
-        Check if parallel version of ``to_parquet`` could be used.
+        Check if parallel version of `to_parquet` could be used.
 
         Parameters
         ----------
         kwargs : dict
-            Keyword arguments passed to ``.to_parquet()``.
+            Keyword arguments passed to `.to_parquet()`.
 
         Returns
         -------
         bool
-            Whether parallel version of ``to_parquet`` is applicable.
+            Whether parallel version of `to_parquet` is applicable.
         """
         path = kwargs["path"]
         compression = kwargs["compression"]
@@ -231,9 +231,9 @@ class RayIO(BaseIO):
         Parameters
         ----------
         qc : BaseQueryCompiler
-            The query compiler of the Modin dataframe that we want to run ``to_parquet`` on.
+            The query compiler of the Modin dataframe that we want to run `to_parquet` on.
         **kwargs : dict
-            Parameters for ``pandas.to_parquet(**kwargs)``.
+            Parameters for `pandas.to_parquet(**kwargs)`.
         """
         if not cls._to_parquet_check_support(kwargs):
             return BaseIO.to_parquet(qc, **kwargs)
@@ -247,7 +247,7 @@ class RayIO(BaseIO):
             df : pandas.DataFrame
                 A chunk of rows to write to a parquet file.
             **kw : dict
-                Arguments to pass to ``pandas.to_parquet(**kw)`` plus an extra argument
+                Arguments to pass to ``pandas.to_parquet(**kwargs)`` plus an extra argument
                 `partition_idx` serving as chunk index to maintain rows order.
             """
             output_path = kwargs["path"]
