@@ -59,7 +59,7 @@ else:
     import modin.experimental.pandas as pd
 from modin.config import NPartitions
 
-NPartitions.put(4)
+NPartitions.put(2)
 
 DATASET_SIZE_DICT = {
     "Small": 64,
