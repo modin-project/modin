@@ -2195,7 +2195,7 @@ class DataFrame(BasePandasDataset):
         compression="snappy",
         index=None,
         partition_cols=None,
-        storage_options=None,
+        storage_options: StorageOptions = None,
         **kwargs,
     ):
 

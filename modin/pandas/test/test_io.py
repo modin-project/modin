@@ -100,11 +100,16 @@ def setup_clipboard(row_size=NROWS):
 def parquet_eval_to_file(modin_obj, pandas_obj, fn, extension, **fn_kwargs):
     """Helper function to test `to_parquet` method.
 
-    Args:
-        modin_obj: Modin DataFrame or Series to test `to_parquet` method.
-        pandas_obj: Pandas DataFrame or Series to test `to_parquet` method.
-        fn: name of the method, that should be tested.
-        extension: Extension of the test file.
+    Parameters
+    ----------
+        modin_obj: pd.DataFrame
+            Modin DataFrame or Series to test `to_parquet` method.
+        pandas_obj: pandas.DataFrame
+            Pandas DataFrame or Series to test `to_parquet` method.
+        fn: str
+            Name of the method, that should be tested.
+        extension: str
+            Extension of the test file.
     """
     unique_filename_modin = get_unique_filename(extension=extension)
     unique_filename_pandas = get_unique_filename(extension=extension)
