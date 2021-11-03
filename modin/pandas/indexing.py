@@ -528,7 +528,7 @@ class _LocIndexer(_LocationIndexerBase):
             else:
                 result_slice = self.df.columns.slice_locs(col_loc.start, col_loc.stop)
                 return self.df.iloc[:, slice(*result_slice)]
-        if isinstance(col_loc, slice) and col_loc == slice(None) and ndim == 1:
+        if self.df.empty:
             return self.df._default_to_pandas(lambda df: df.loc[key])
 
         row_lookup, col_lookup = self._compute_lookup(row_loc, col_loc)
