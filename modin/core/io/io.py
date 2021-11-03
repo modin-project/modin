@@ -26,6 +26,7 @@ import pandas._libs.lib as lib
 from pandas._typing import CompressionOptions, FilePathOrBuffer, StorageOptions
 from pandas.util._decorators import doc
 
+from modin.db_conn import ModinDatabaseConnection
 from modin.error_message import ErrorMessage
 from modin.core.storage_formats.base.query_compiler import BaseQueryCompiler
 from modin.utils import _inherit_docstrings
@@ -665,6 +666,8 @@ class BaseIO(object):
         chunksize=None,
     ):  # noqa: PR01
         ErrorMessage.default_to_pandas("`read_sql`")
+        if isinstance(con, ModinDatabaseConnection):
+            con = con.get_connection()
         return cls.from_pandas(
             pandas.read_sql(
                 sql,

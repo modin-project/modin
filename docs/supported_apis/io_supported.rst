@@ -65,13 +65,13 @@ Connecting to a database for `read_sql`
 """"""""""""""""""""""""""""""""""""""""""""
 To make Pandas read from a SQL database, you have two options:
 
-1) Pass a connection string, e.g. `postgresql://reader:NWDMCE5xdipIjRrp@hh-pgsql-public.ebi.ac.uk:5432/pfmegrnargs`
-2) Pass an open database connection, e.g. for psycopg2, `psycopg2.connect("dbname=pfmegrnargs user=reader password=NWDMCE5xdipIjRrp host=hh-pgsql-public.ebi.ac.uk")`
+1) Pass a connection string, e.g. ``postgresql://reader:NWDMCE5xdipIjRrp@hh-pgsql-public.ebi.ac.uk:5432/pfmegrnargs``
+2) Pass an open database connection, e.g. for psycopg2, ``psycopg2.connect("dbname=pfmegrnargs user=reader password=NWDMCE5xdipIjRrp host=hh-pgsql-public.ebi.ac.uk")``
 
 The first option works with both Modin and Pandas. If you try the second option
 in Modin, Modin, will default to Pandas, because it can't pickle the open
 connection and send it to remote workers. The solution is to use a
-`ModinDatabaseConnection`, like so:
+``ModinDatabaseConnection``, like so:
 
 .. code-block:: python
 
@@ -92,5 +92,5 @@ connection and send it to remote workers. The solution is to use a
             chunksize=None)
 
 
-The `ModinDatabaseConnection` will save any arguments you supply it and forward
+The ``ModinDatabaseConnection`` will save any arguments you supply it and forward
 them to the workers to make their own connections.
