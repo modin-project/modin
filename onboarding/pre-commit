@@ -11,8 +11,14 @@ printf "running flake8. This script will preempt the commit if flake8 fails.\n"
 flake8 modin/ asv_bench/benchmarks scripts/doc_checker.py
 printf "flake8 passed!\n"
 
+changed_files=$(git diff --name-only master | tr '\n' ' ')
+
 printf "running scripts/doc_checker.py. This script will preempt the commit if it fails.\n"
-python scripts/doc_checker.py $(git diff --name-only master | tr '\n' ' ')
+python scripts/doc_checker.py $changed_files
 printf "scripts/doc_checker.py passed!\n"
+
+printf "running pydocstyle. This script will preempt the commit if it fails.\n"
+pydocstyle $changed_files
+printf "pydocstyle passed!\n"
 
 printf "pre-commit hook finished!\n"

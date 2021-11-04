@@ -80,7 +80,7 @@ you should reopen your terminal to find "(base)" next to your prompt: ![](conda_
 
 1. (Optional) We recommend a few workflow settings:
 
-    1. If you use Visual Studio Code, auto-format with black every time you save changes:
+    1. If you use Visual Studio Code, auto-format with [black](https://black.readthedocs.io/en/stable/) every time you save changes:
         1. Install [Microsoft's Python extension](https://marketplace.visualstudio.com/items?itemName=ms-python.python)
         1. Open your VSCode settings, in `Code -> Preferences -> Settings`.
         1. Search for "python formatting provider" and select "black" from the dropdown menu.
