@@ -13,6 +13,7 @@
 
 """Collection of general utility functions, mostly for internal use."""
 
+import importlib
 import types
 import re
 
@@ -535,3 +536,28 @@ def instancer(_class):
         Instance of `_class`.
     """
     return _class()
+
+
+def import_optional_dependency(name, message):
+    """
+    Import an optional dependecy.
+
+    Parameters
+    ----------
+    name : str
+        The module name.
+    extra : str
+        Additional text to include in the ImportError message.
+
+    Returns
+    -------
+    module : ModuleType
+        The imported module.
+    """
+    try:
+        return importlib.import_module(name)
+    except ImportError:
+        raise ImportError(
+            f"Missing optional dependency '{name}'. {message} "
+            f"Use pip or conda to install {name}."
+        ) from None
