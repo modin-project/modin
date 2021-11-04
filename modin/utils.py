@@ -546,7 +546,7 @@ def import_optional_dependency(name, message):
     ----------
     name : str
         The module name.
-    extra : str
+    message : str
         Additional text to include in the ImportError message.
 
     Returns
