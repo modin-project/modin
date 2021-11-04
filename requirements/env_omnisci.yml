@@ -13,7 +13,7 @@ dependencies:
   - coverage<5.0
   - pygithub==1.53
   - pyomniscidbe<=5.7.1 # modin-project/modin#3574
-  - s3fs>=0.4.2
+  - s3fs>=2021.8
   - psutil
   - openpyxl
   - xlrd

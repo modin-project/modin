@@ -13,7 +13,7 @@ dependencies:
   - pathlib
   - scipy
   - pip
-  - s3fs>=0.4.2
+  - s3fs>=2021.8
   - feather-format
   - lxml
   - openpyxl
