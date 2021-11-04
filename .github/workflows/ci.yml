@@ -610,7 +610,7 @@ jobs:
           conda list
       - run: python -m pytest ${{matrix.test-task}}
         if: matrix.test-task != 'modin/pandas/test/test_io.py'
-      - timeout-minutes: 30
+      - timeout-minutes: 45
         run: python -m pytest modin/pandas/test/test_io.py --verbose
         if: matrix.test-task == 'modin/pandas/test/test_io.py'
       - run: choco install codecov
