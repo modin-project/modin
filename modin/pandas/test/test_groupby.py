@@ -1466,21 +1466,34 @@ def test_agg_exceptions(operation):
     eval_aggregation(*create_test_dfs(data), operation=operation)
 
 
-def test_mean_agg_datetime():
+def test_mean_agg_different_types():
     N = 200
-    fill_data = [
-        (
-            "date_column",
-            [
-                np.datetime64("2000"),
-                np.datetime64("2010"),
-                np.datetime64("2011"),
-                np.datetime64("2011-06-15T00:00"),
-                np.datetime64("2009-01-01"),
-            ]
-            * (N // 5),
-        ),
-    ]
+    fill_data = {
+        "date": [
+            np.datetime64("2000"),
+            np.datetime64("2010"),
+            np.datetime64("2011"),
+            np.datetime64("2011-06-15T00:00"),
+            np.datetime64("2009-01-01"),
+        ]
+        * (N // 5),
+        "int_and_nan": [
+            2000,
+            2010,
+            2011,
+            None,
+            None,
+        ]
+        * (N // 5),
+        "float_and_nan": [
+            2000.0,
+            2010.0,
+            2011.0,
+            None,
+            None,
+        ]
+        * (N // 5),
+    }
 
     data1 = {
         "column_to_by": ["foo", "bar", "baz", "qux"] * (N // 4),
@@ -1488,7 +1501,7 @@ def test_mean_agg_datetime():
 
     data2 = {
         f"{key}{i}": value
-        for key, value in fill_data
+        for key, value in fill_data.items()
         for i in range(N // len(fill_data))
     }
 
