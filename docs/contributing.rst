@@ -13,6 +13,9 @@ want to review in order to get started.
 
 Also, feel free to join the discussions on the `developer mailing list`_.
 
+If you want a quick guide to getting your development enviroment setup, please
+use [the contributing instructions on GitHub](https://github.com/modin-project/modin/blob/master/contributing/contributing.md).
+
 Certificate of Origin
 ---------------------
 
