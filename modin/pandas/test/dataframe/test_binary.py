@@ -25,6 +25,7 @@ from modin.pandas.test.utils import (
     create_test_dfs,
 )
 from modin.config import NPartitions
+from modin.test.test_utils import warns_that_defaulting_to_pandas
 
 NPartitions.put(4)
 
@@ -101,7 +102,7 @@ def test_math_functions_level(op):
     )
 
     # Defaults to pandas
-    with pytest.warns(UserWarning):
+    with warns_that_defaulting_to_pandas():
         # Operation against self for sanity check
         getattr(modin_df, op)(modin_df, axis=0, level=1)
 
@@ -155,7 +156,7 @@ def test_multi_level_comparison(data, op):
     modin_df_multi_level.index = new_idx
 
     # Defaults to pandas
-    with pytest.warns(UserWarning):
+    with warns_that_defaulting_to_pandas():
         # Operation against self for sanity check
         getattr(modin_df_multi_level, op)(modin_df_multi_level, axis=0, level=1)
 

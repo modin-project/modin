@@ -16,19 +16,20 @@ import pytest
 import numpy as np
 import modin.pandas as pd
 
+from modin.test.test_utils import warns_that_defaulting_to_pandas
 from .utils import df_equals, test_data_values
 
 
 def test_get_dummies():
     s = pd.Series(list("abca"))
-    with pytest.warns(UserWarning):
+    with warns_that_defaulting_to_pandas():
         pd.get_dummies(s)
 
     s1 = ["a", "b", np.nan]
-    with pytest.warns(UserWarning):
+    with warns_that_defaulting_to_pandas():
         pd.get_dummies(s1)
 
-    with pytest.warns(UserWarning):
+    with warns_that_defaulting_to_pandas():
         pd.get_dummies(s1, dummy_na=True)
 
     data = {"A": ["a", "b", "a"], "B": ["b", "a", "c"], "C": [1, 2, 3]}
@@ -52,22 +53,22 @@ def test_get_dummies():
     with pytest.raises(NotImplementedError):
         pd.get_dummies(modin_df, prefix=["col1", "col2"], sparse=True)
 
-    with pytest.warns(UserWarning):
+    with warns_that_defaulting_to_pandas():
         pd.get_dummies(pd.Series(list("abcaa")))
 
-    with pytest.warns(UserWarning):
+    with warns_that_defaulting_to_pandas():
         pd.get_dummies(pd.Series(list("abcaa")), drop_first=True)
 
-    with pytest.warns(UserWarning):
+    with warns_that_defaulting_to_pandas():
         pd.get_dummies(pd.Series(list("abc")), dtype=float)
 
-    with pytest.warns(UserWarning):
+    with warns_that_defaulting_to_pandas():
         pd.get_dummies(1)
 
 
 def test_melt():
     data = test_data_values[0]
-    with pytest.warns(UserWarning):
+    with pytest.warns(UserWarning, match="implementation has mismatches with pandas"):
         pd.melt(pd.DataFrame(data))
 
 
@@ -97,18 +98,18 @@ def test_crosstab():
         dtype=object,
     )
 
-    with pytest.warns(UserWarning):
+    with warns_that_defaulting_to_pandas():
         df = pd.crosstab(a, [b, c], rownames=["a"], colnames=["b", "c"])
         assert isinstance(df, pd.DataFrame)
 
     foo = pd.Categorical(["a", "b"], categories=["a", "b", "c"])
     bar = pd.Categorical(["d", "e"], categories=["d", "e", "f"])
 
-    with pytest.warns(UserWarning):
+    with warns_that_defaulting_to_pandas():
         df = pd.crosstab(foo, bar)
         assert isinstance(df, pd.DataFrame)
 
-    with pytest.warns(UserWarning):
+    with warns_that_defaulting_to_pandas():
         df = pd.crosstab(foo, bar, dropna=False)
         assert isinstance(df, pd.DataFrame)
 
@@ -124,7 +125,7 @@ def test_lreshape():
         }
     )
 
-    with pytest.warns(UserWarning):
+    with warns_that_defaulting_to_pandas():
         df = pd.lreshape(data, {"year": ["year1", "year2"], "hr": ["hr1", "hr2"]})
         assert isinstance(df, pd.DataFrame)
 
@@ -143,7 +144,7 @@ def test_wide_to_long():
         }
     )
 
-    with pytest.warns(UserWarning):
+    with warns_that_defaulting_to_pandas():
         df = pd.wide_to_long(data, ["hr", "year"], "team", "index")
         assert isinstance(df, pd.DataFrame)
 

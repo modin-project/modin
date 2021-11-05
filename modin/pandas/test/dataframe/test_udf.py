@@ -40,6 +40,7 @@ from modin.pandas.test.utils import (
     arg_keys,
 )
 from modin.config import NPartitions, StorageFormat
+from modin.test.test_utils import warns_that_defaulting_to_pandas
 
 NPartitions.put(4)
 
@@ -94,10 +95,10 @@ def test_aggregate_alias():
 def test_aggregate_error_checking():
     modin_df = pd.DataFrame(test_data["float_nan_data"])
 
-    with pytest.warns(UserWarning):
+    with warns_that_defaulting_to_pandas():
         modin_df.aggregate({modin_df.columns[0]: "sum", modin_df.columns[1]: "mean"})
 
-    with pytest.warns(UserWarning):
+    with warns_that_defaulting_to_pandas():
         modin_df.aggregate("cumproduct")
 
     with pytest.raises(ValueError):

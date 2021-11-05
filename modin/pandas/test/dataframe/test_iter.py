@@ -30,6 +30,7 @@ from modin.pandas.test.utils import (
     test_data,
 )
 from modin.config import NPartitions
+from modin.test.test_utils import warns_that_defaulting_to_pandas
 
 NPartitions.put(4)
 
@@ -137,7 +138,7 @@ def test__options_display():
 
 def test___finalize__():
     data = test_data_values[0]
-    with pytest.warns(UserWarning):
+    with warns_that_defaulting_to_pandas():
         pd.DataFrame(data).__finalize__(None)
 
 

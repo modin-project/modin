@@ -40,6 +40,7 @@ from modin.pandas.test.utils import (
 )
 from modin.config import NPartitions
 from modin.utils import get_current_execution
+from modin.test.test_utils import warns_that_defaulting_to_pandas
 
 NPartitions.put(4)
 
@@ -675,7 +676,7 @@ def test_reindex_like():
         columns=["temp_celsius", "windspeed"],
         index=pd.DatetimeIndex(["2014-02-12", "2014-02-13", "2014-02-15"]),
     )
-    with pytest.warns(UserWarning):
+    with warns_that_defaulting_to_pandas():
         df2.reindex_like(df1)
 
 
@@ -1420,7 +1421,7 @@ def test_xs():
     }
     df = pd.DataFrame(data=d)
     df = df.set_index(["class", "animal", "locomotion"])
-    with pytest.warns(UserWarning):
+    with warns_that_defaulting_to_pandas():
         df.xs("mammal")
 
 

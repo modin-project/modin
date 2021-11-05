@@ -47,6 +47,7 @@ from modin.pandas.test.utils import (
     create_test_dfs,
 )
 from modin.config import NPartitions
+from modin.test.test_utils import warns_that_defaulting_to_pandas
 
 NPartitions.put(4)
 
@@ -634,7 +635,7 @@ def test_drop():
             [0.3, 0.2],
         ],
     )
-    with pytest.warns(UserWarning):
+    with warns_that_defaulting_to_pandas():
         df.drop(index="length", level=1)
 
 
@@ -1292,5 +1293,5 @@ def test___abs__(request, data):
 
 def test___round__():
     data = test_data_values[0]
-    with pytest.warns(UserWarning):
+    with warns_that_defaulting_to_pandas():
         pd.DataFrame(data).__round__()

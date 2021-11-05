@@ -20,6 +20,7 @@ import modin.pandas as pd
 from numpy.testing import assert_array_equal
 from pandas.core.base import SpecificationError
 from modin.utils import get_current_execution
+from modin.test.test_utils import warns_that_defaulting_to_pandas
 import sys
 
 from modin.utils import to_pandas
@@ -176,7 +177,7 @@ def inter_df_math_helper_one_side(modin_series, pandas_series, op):
 
     try:
         # Defaults to pandas
-        with pytest.warns(UserWarning):
+        with warns_that_defaulting_to_pandas():
             # Operation against self for sanity check
             getattr(modin_df_multi_level, op)(modin_df_multi_level, level=1)
     except TypeError:
@@ -565,7 +566,7 @@ def test___setitem___non_hashable(key, index):
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test___sizeof__(data):
     modin_series, pandas_series = create_test_series(data)
-    with pytest.warns(UserWarning):
+    with warns_that_defaulting_to_pandas():
         modin_series.__sizeof__()
 
 
@@ -732,7 +733,7 @@ def test_aggregate_error_checking(data):
 
     def user_warning_checker(series, fn):
         if isinstance(series, pd.Series):
-            with pytest.warns(UserWarning):
+            with warns_that_defaulting_to_pandas():
                 return fn(series)
         return fn(series)
 
@@ -751,7 +752,7 @@ def test_aggregate_error_checking(data):
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_align(data):
     modin_series, _ = create_test_series(data)  # noqa: F841
-    with pytest.warns(UserWarning):
+    with warns_that_defaulting_to_pandas():
         modin_series.align(modin_series)
 
 
@@ -944,7 +945,7 @@ def test_argmin(data, skipna):
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_argsort(data):
     modin_series, pandas_series = create_test_series(data)
-    with pytest.warns(UserWarning):
+    with warns_that_defaulting_to_pandas():
         modin_result = modin_series.argsort()
     df_equals(modin_result, pandas_series.argsort())
 
@@ -952,7 +953,7 @@ def test_argsort(data):
 def test_asfreq():
     index = pd.date_range("1/1/2000", periods=4, freq="T")
     series = pd.Series([0.0, None, 2.0, 3.0], index=index)
-    with pytest.warns(UserWarning):
+    with warns_that_defaulting_to_pandas():
         # We are only testing that this defaults to pandas, so we will just check for
         # the warning
         series.asfreq(freq="30S")
@@ -1701,21 +1702,21 @@ def test_equals():
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_ewm(data):
     modin_series, _ = create_test_series(data)  # noqa: F841
-    with pytest.warns(UserWarning):
+    with warns_that_defaulting_to_pandas():
         modin_series.ewm(halflife=6)
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_expanding(data):
     modin_series, _ = create_test_series(data)  # noqa: F841
-    with pytest.warns(UserWarning):
+    with warns_that_defaulting_to_pandas():
         modin_series.expanding()
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_factorize(data):
     modin_series, _ = create_test_series(data)  # noqa: F841
-    with pytest.warns(UserWarning):
+    with warns_that_defaulting_to_pandas():
         modin_series.factorize()
 
 
@@ -1846,7 +1847,7 @@ def test_head(data, n):
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_hist(data):
     modin_series, _ = create_test_series(data)  # noqa: F841
-    with pytest.warns(UserWarning):
+    with warns_that_defaulting_to_pandas():
         modin_series.hist(None)
 
 
@@ -1926,7 +1927,7 @@ def test_index(data):
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_interpolate(data):
     modin_series, _ = create_test_series(data)  # noqa: F841
-    with pytest.warns(UserWarning):
+    with warns_that_defaulting_to_pandas():
         modin_series.interpolate()
 
 
@@ -2161,7 +2162,7 @@ def test_map(data, na_values):
 def test_mask():
     modin_series = pd.Series(np.arange(10))
     m = modin_series % 3 == 0
-    with pytest.warns(UserWarning):
+    with warns_that_defaulting_to_pandas():
         try:
             modin_series.mask(~m, -modin_series)
         except ValueError:
@@ -2321,7 +2322,7 @@ def test_nunique(data, dropna):
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_pct_change(data):
     modin_series, pandas_series = create_test_series(data)
-    with pytest.warns(UserWarning):
+    with warns_that_defaulting_to_pandas():
         modin_series.pct_change()
 
 
@@ -2554,7 +2555,7 @@ def test_reindex_like():
 
     series1 = df1["windspeed"]
     series2 = df2["windspeed"]
-    with pytest.warns(UserWarning):
+    with warns_that_defaulting_to_pandas():
         series2.reindex_like(series1)
 
 
@@ -2823,7 +2824,7 @@ def test_sample(data):
         modin_result = modin_series.sample(n=12, random_state=21019)
         df_equals(pandas_result, modin_result)
 
-    with pytest.warns(UserWarning):
+    with warns_that_defaulting_to_pandas():
         df_equals(
             modin_series.sample(n=0, random_state=21019),
             pandas_series.sample(n=0, random_state=21019),
@@ -3193,7 +3194,7 @@ def test_explode(ignore_index):
 def test_to_period():
     idx = pd.date_range("1/1/2012", periods=5, freq="M")
     series = pd.Series(np.random.randint(0, 100, size=(len(idx))), index=idx)
-    with pytest.warns(UserWarning):
+    with warns_that_defaulting_to_pandas():
         series.to_period()
 
 
@@ -3218,21 +3219,21 @@ def test_to_string(request, data):
 def test_to_timestamp():
     idx = pd.date_range("1/1/2012", periods=5, freq="M")
     series = pd.Series(np.random.randint(0, 100, size=(len(idx))), index=idx)
-    with pytest.warns(UserWarning):
+    with warns_that_defaulting_to_pandas():
         series.to_period().to_timestamp()
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_to_xarray(data):
     modin_series, _ = create_test_series(data)  # noqa: F841
-    with pytest.warns(UserWarning):
+    with warns_that_defaulting_to_pandas():
         modin_series.to_xarray()
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_tolist(data):
     modin_series, _ = create_test_series(data)  # noqa: F841
-    with pytest.warns(UserWarning):
+    with warns_that_defaulting_to_pandas():
         modin_series.tolist()
 
 
@@ -3556,12 +3557,12 @@ def test_str_cat():
     modin_series, pandas_series = create_test_series(data)
     others = data
 
-    with pytest.warns(UserWarning):
+    with warns_that_defaulting_to_pandas():
         # We are only testing that this defaults to pandas, so we will just check for
         # the warning
         modin_series.str.cat(others)
 
-    with pytest.warns(UserWarning):
+    with warns_that_defaulting_to_pandas():
         # We are only testing that this defaults to pandas, so we will just check for
         # the warning
         modin_series.str.cat(None)
@@ -3580,7 +3581,7 @@ def test_str_split(data, pat, n, expand):
 
     if n >= -1:
         if expand and pat:
-            with pytest.warns(UserWarning):
+            with warns_that_defaulting_to_pandas():
                 # We are only testing that this defaults to pandas, so we will just check for
                 # the warning
                 modin_series.str.split(pat, n=n, expand=expand)
@@ -3604,7 +3605,7 @@ def test_str_rsplit(data, pat, n, expand):
 
     if n >= -1:
         if expand and pat:
-            with pytest.warns(UserWarning):
+            with warns_that_defaulting_to_pandas():
                 # We are only testing that this defaults to pandas, so we will just check for
                 # the warning
                 modin_series.str.rsplit(pat, n=n, expand=expand)
@@ -3659,7 +3660,7 @@ def test_str_get_dummies(data, sep):
     modin_series, pandas_series = create_test_series(data)
 
     if sep:
-        with pytest.warns(UserWarning):
+        with warns_that_defaulting_to_pandas():
             # We are only testing that this defaults to pandas, so we will just check for
             # the warning
             modin_series.str.get_dummies(sep)
@@ -3945,7 +3946,7 @@ def test_str_extract(data, expand):
     modin_series, pandas_series = create_test_series(data)
 
     if expand is not None:
-        with pytest.warns(UserWarning):
+        with warns_that_defaulting_to_pandas():
             # We are only testing that this defaults to pandas, so we will just check for
             # the warning
             modin_series.str.extract(r"([ab])(\d)", expand=expand)
@@ -3955,7 +3956,7 @@ def test_str_extract(data, expand):
 def test_str_extractall(data):
     modin_series, pandas_series = create_test_series(data)
 
-    with pytest.warns(UserWarning):
+    with warns_that_defaulting_to_pandas():
         # We are only testing that this defaults to pandas, so we will just check for
         # the warning
         modin_series.str.extractall(r"([ab])(\d)")

@@ -35,6 +35,7 @@ from modin.pandas.test.utils import (
     extra_test_parameters,
 )
 from modin.config import NPartitions
+from modin.test.test_utils import warns_that_defaulting_to_pandas
 
 NPartitions.put(4)
 
@@ -366,7 +367,7 @@ def test_sort_multiindex(sort_remaining):
             setattr(df, index, new_index)
 
     for kwargs in [{"level": 0}, {"axis": 0}, {"axis": 1}]:
-        with pytest.warns(UserWarning):
+        with warns_that_defaulting_to_pandas():
             df_equals(
                 modin_df.sort_index(sort_remaining=sort_remaining, **kwargs),
                 pandas_df.sort_index(sort_remaining=sort_remaining, **kwargs),

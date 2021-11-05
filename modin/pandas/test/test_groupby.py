@@ -33,6 +33,7 @@ from .utils import (
     value_equals,
 )
 from modin.config import NPartitions
+from modin.test.test_utils import warns_that_defaulting_to_pandas
 
 NPartitions.put(4)
 
@@ -1030,7 +1031,7 @@ def test_multi_column_groupby():
 
     df_equals(modin_df.groupby(by).count(), pandas_df.groupby(by).count())
 
-    with pytest.warns(UserWarning):
+    with warns_that_defaulting_to_pandas():
         for k, _ in modin_df.groupby(by):
             assert isinstance(k, tuple)
 
