@@ -2,4 +2,7 @@ fsspec
 s3fs
 ray[default]>=1.4.0
 jupyterlab
+ipywidgets
+tqdm
 git+https://github.com/modin-project/modin
+modin_spreadsheet
