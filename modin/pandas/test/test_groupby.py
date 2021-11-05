@@ -1477,12 +1477,28 @@ def test_mean_agg_different_types():
             np.datetime64("2009-01-01"),
         ]
         * (N // 5),
+        "int_only": [
+            2000,
+            2010,
+            2011,
+            2012,
+            2009
+        ]
+        * (N // 5),
         "int_and_nan": [
             2000,
             2010,
             2011,
             None,
             None,
+        ]
+        * (N // 5),
+        "float_only": [
+            2000.0,
+            2010.0,
+            2011.0,
+            2012.0,
+            2009.0,
         ]
         * (N // 5),
         "float_and_nan": [
