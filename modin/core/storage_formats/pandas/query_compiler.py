@@ -2503,7 +2503,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         result = result.div(result["__mean_agg_size_column__"], axis=0)
         return result.drop("__mean_agg_size_column__", axis=1)
 
-    groupby_mean = GroupbyReduceFunction.register(
+    groupby_mean = GroupByReduce.register(
         _mean_agg_map,
         _mean_agg_reduce,
         default_to_pandas_func=lambda dfgb, **kwargs: dfgb.mean(**kwargs),
