@@ -1,5 +1,5 @@
 fsspec
 s3fs
-ray==1.0.0
+ray[default]>=1.4.0
 jupyterlab
 git+https://github.com/modin-project/modin
