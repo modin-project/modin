@@ -44,7 +44,7 @@ class PandasDataframePartition(ABC):  # pragma: no cover
         """
         pass
 
-    def apply(self, func, *args, **kwargs):
+    def apply(self, func, func_kw=None, *args, **kwargs):
         """
         Apply a function to the object wrapped by this partition.
 

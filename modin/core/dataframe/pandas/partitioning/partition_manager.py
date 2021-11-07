@@ -356,7 +356,9 @@ class PandasDataframePartitionManager(ABC):
                 [
                     part.apply(
                         apply_func,
-                        **{other_name: right[col_idx] if axis else right[row_idx]},
+                        func_kw={
+                            other_name: right[col_idx] if axis else right[row_idx]
+                        },
                     )
                     for col_idx, part in enumerate(left[row_idx])
                 ]
@@ -378,7 +380,7 @@ class PandasDataframePartitionManager(ABC):
         apply_indices=None,
         enumerate_partitions=False,
         lengths=None,
-        remote_options=None,
+        **kwargs,
     ):
         """
         Broadcast the `right` partitions to `left` and apply `apply_func` along full `axis`.
@@ -403,9 +405,8 @@ class PandasDataframePartitionManager(ABC):
             Note that `apply_func` must be able to accept `partition_idx` kwarg.
         lengths : list of ints, default: None
             The list of lengths to shuffle the object.
-        remote_options : dict, default: None
-            Options that can be defined prior to calling a remote function
-            https://docs.ray.io/en/latest/advanced.html#dynamic-remote-parameters.
+        **kwargs : dict
+            Add opts.
 
         Returns
         -------
@@ -428,28 +429,27 @@ class PandasDataframePartitionManager(ABC):
         # may want to line to partitioning up with another BlockPartitions object. Since
         # we don't need to maintain the partitioning, this gives us the opportunity to
         # load-balance the data as well.
-        kw = {
-            "num_splits": num_splits,
-            "other_axis_partition": right_partitions,
-        }
+        func_kw = {}
         if lengths:
-            kw["_lengths"] = lengths
-            kw["manual_partition"] = True
+            kwargs["_lengths"] = lengths
+            kwargs["manual_partition"] = True
 
         if apply_indices is None:
             apply_indices = np.arange(len(left_partitions))
 
-        result_blocks = np.array(
-            [
-                left_partitions[i].apply(
-                    preprocessed_map_func,
-                    remote_options=remote_options,
-                    **kw,
-                    **({"partition_idx": idx} if enumerate_partitions else {}),
-                )
-                for idx, i in enumerate(apply_indices)
-            ]
-        )
+        result_blocks = [None] * len(apply_indices)
+        for idx, i in enumerate(apply_indices):
+            if enumerate_partitions:
+                func_kw["partition_idx"] = idx
+            result_blocks[idx] = left_partitions[i].apply(
+                preprocessed_map_func,
+                func_kw,
+                num_splits=num_splits,
+                other_axis_partition=right_partitions,
+                **kwargs,
+            )
+        result_blocks = np.array(result_blocks)
+
         # If we are mapping over columns, they are returned to use the same as
         # rows, so we need to transpose the returned 2D NumPy array to return
         # the structure to the correct order.
@@ -516,7 +516,7 @@ class PandasDataframePartitionManager(ABC):
         keep_partitioning=False,
         lengths=None,
         enumerate_partitions=False,
-        remote_options=None,
+        **kwargs,
     ):
         """
         Apply `map_func` to every partition in `partitions` along given `axis`.
@@ -537,9 +537,8 @@ class PandasDataframePartitionManager(ABC):
         enumerate_partitions : bool, default: False
             Whether or not to pass partition index into `map_func`.
             Note that `map_func` must be able to accept `partition_idx` kwarg.
-        remote_options : dict, default: None
-            Options that can be defined prior to calling a remote function
-            https://docs.ray.io/en/latest/advanced.html#dynamic-remote-parameters.
+        **kwargs : dict
+            Add opts.
 
         Returns
         -------
@@ -559,7 +558,7 @@ class PandasDataframePartitionManager(ABC):
             right=None,
             lengths=lengths,
             enumerate_partitions=enumerate_partitions,
-            remote_options=remote_options,
+            **kwargs,
         )
 
     @classmethod

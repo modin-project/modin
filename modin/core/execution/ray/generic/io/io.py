@@ -190,7 +190,7 @@ class RayIO(BaseIO):
             keep_partitioning=True,
             lengths=None,
             enumerate_partitions=True,
-            remote_options={"max_retries": 0},
+            max_retries=0,
         )
 
         # pending completion

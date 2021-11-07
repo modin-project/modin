@@ -29,10 +29,10 @@ class BaseDataframeAxisPartition(ABC):  # pragma: no cover
     def apply(
         self,
         func,
+        func_kw=None,
         num_splits=None,
         other_axis_partition=None,
         maintain_partitioning=True,
-        remote_options=None,
         **kwargs,
     ):
         """
@@ -43,6 +43,8 @@ class BaseDataframeAxisPartition(ABC):  # pragma: no cover
         func : callable
             The function to apply. This will be preprocessed according to
             the corresponding `PandasDataframePartition` objects.
+        func_kw : dict
+            Additional arguments to be passed in `func`.
         num_splits : int, default: None
             The number of times to split the result object.
         other_axis_partition : BaseDataframeAxisPartition, default: None
@@ -55,11 +57,8 @@ class BaseDataframeAxisPartition(ABC):  # pragma: no cover
             In this case, we have to return the partitioning to its previous
             orientation (the lengths will remain the same). This is ignored between
             two axis partitions.
-        remote_options : dict, default: None
-            Options that can be defined prior to calling a remote function
-            https://docs.ray.io/en/latest/advanced.html#dynamic-remote-parameters.
         **kwargs : dict
-            Additional keywords arguments to be passed in `func`.
+            Additional options.
 
         Returns
         -------
@@ -75,7 +74,7 @@ class BaseDataframeAxisPartition(ABC):  # pragma: no cover
         """
         pass
 
-    def shuffle(self, func, lengths, **kwargs):
+    def shuffle(self, func, func_kw, lengths, **kwargs):
         """
         Shuffle the order of the data in this axis partition based on the `lengths`.
 
@@ -83,10 +82,12 @@ class BaseDataframeAxisPartition(ABC):  # pragma: no cover
         ----------
         func : callable
             The function to apply before splitting.
+        func_kw : dict
+            Additional arguments to be passed in `func`.
         lengths : list
             The list of partition lengths to split the result into.
         **kwargs : dict
-            Additional keywords arguments to be passed in `func`.
+            Add opts.
 
         Returns
         -------
@@ -178,10 +179,10 @@ class PandasDataframeAxisPartition(BaseDataframeAxisPartition):
     def apply(
         self,
         func,
+        func_kw=None,
         num_splits=None,
         other_axis_partition=None,
         maintain_partitioning=True,
-        remote_options=None,
         **kwargs,
     ):
         """
@@ -191,6 +192,8 @@ class PandasDataframeAxisPartition(BaseDataframeAxisPartition):
         ----------
         func : callable
             The function to apply.
+        func_kw : dict
+            Additional arguments to be passed in `func`.
         num_splits : int, default: None
             The number of times to split the result object.
         other_axis_partition : PandasDataframeAxisPartition, default: None
@@ -203,11 +206,8 @@ class PandasDataframeAxisPartition(BaseDataframeAxisPartition):
             In this case, we have to return the partitioning to its previous
             orientation (the lengths will remain the same). This is ignored between
             two axis partitions.
-        remote_options : dict, default: None
-            Options that can be defined prior to calling a remote function
-            https://docs.ray.io/en/latest/advanced.html#dynamic-remote-parameters.
         **kwargs : dict
-            Additional keywords arguments to be passed in `func`.
+            Additional options.
 
         Returns
         -------
@@ -231,11 +231,11 @@ class PandasDataframeAxisPartition(BaseDataframeAxisPartition):
                 self.deploy_func_between_two_axis_partitions(
                     self.axis,
                     func,
+                    func_kw,
                     num_splits,
                     len(self.list_of_blocks),
                     other_shape,
                     kwargs,
-                    remote_options,
                     *tuple(
                         self.list_of_blocks
                         + [
@@ -249,15 +249,15 @@ class PandasDataframeAxisPartition(BaseDataframeAxisPartition):
         args = [
             self.axis,
             func,
+            func_kw,
             num_splits,
-            kwargs,
             maintain_partitioning,
-            remote_options,
+            kwargs,
         ]
         args.extend(self.list_of_blocks)
         return self._wrap_partitions(self.deploy_axis_func(*args))
 
-    def shuffle(self, func, lengths, **kwargs):
+    def shuffle(self, func, func_kw, lengths, **kwargs):
         """
         Shuffle the order of the data in this axis partition based on the `lengths`.
 
@@ -265,10 +265,12 @@ class PandasDataframeAxisPartition(BaseDataframeAxisPartition):
         ----------
         func : callable
             The function to apply before splitting.
+        func_kw : dict
+            Additional arguments to be passed in `func`.
         lengths : list
             The list of partition lengths to split the result into.
         **kwargs : dict
-            Additional keywords arguments to be passed in `func`.
+            Add opts.
 
         Returns
         -------
@@ -276,10 +278,9 @@ class PandasDataframeAxisPartition(BaseDataframeAxisPartition):
             A list of `PandasDataframePartition` objects split by `lengths`.
         """
         num_splits = len(lengths)
-        # We add these to kwargs and will pop them off before performing the operation.
         kwargs["manual_partition"] = True
         kwargs["_lengths"] = lengths
-        args = [self.axis, func, num_splits, kwargs, False]
+        args = [self.axis, func, func_kw, num_splits, False, kwargs]
         args.extend(self.list_of_blocks)
         return self._wrap_partitions(self.deploy_axis_func(*args))
 
@@ -288,10 +289,10 @@ class PandasDataframeAxisPartition(BaseDataframeAxisPartition):
         cls,
         axis,
         func,
+        func_kw,
         num_splits,
-        kwargs,
         maintain_partitioning,
-        remote_options,
+        deploy_kw,
         *partitions,
     ):
         """
@@ -303,18 +304,17 @@ class PandasDataframeAxisPartition(BaseDataframeAxisPartition):
             The axis to perform the function along.
         func : callable
             The function to perform.
+        func_kw : dict
+            Additional arguments to be passed in `func`.
         num_splits : int
             The number of splits to return (see `split_result_of_axis_func_pandas`).
-        kwargs : dict
-            Additional keywords arguments to be passed in `func`.
         maintain_partitioning : bool
             If True, keep the old partitioning if possible.
             If False, create a new partition layout.
-        remote_options : dict, default: None
-            Options that can be defined prior to calling a remote function
-            https://docs.ray.io/en/latest/advanced.html#dynamic-remote-parameters (Ignored for now).
         *partitions : iterable
             All partitions that make up the full axis (row or column).
+        deploy_kw : dict
+            Additional options.
 
         Returns
         -------
@@ -322,11 +322,11 @@ class PandasDataframeAxisPartition(BaseDataframeAxisPartition):
             A list of pandas DataFrames.
         """
         # Pop these off first because they aren't expected by the function.
-        manual_partition = kwargs.pop("manual_partition", False)
-        lengths = kwargs.pop("_lengths", None)
+        manual_partition = deploy_kw.pop("manual_partition", False)
+        lengths = deploy_kw.pop("_lengths", None)
 
         dataframe = pandas.concat(list(partitions), axis=axis, copy=False)
-        result = func(dataframe, **kwargs)
+        result = func(dataframe, **(func_kw if func_kw else {}))
 
         if manual_partition:
             # The split function is expecting a list
@@ -352,11 +352,11 @@ class PandasDataframeAxisPartition(BaseDataframeAxisPartition):
         cls,
         axis,
         func,
+        func_kw,
         num_splits,
         len_of_left,
         other_shape,
-        kwargs,
-        remote_options,
+        deploy_kw,
         *partitions,
     ):
         """
@@ -368,6 +368,8 @@ class PandasDataframeAxisPartition(BaseDataframeAxisPartition):
             The axis to perform the function along.
         func : callable
             The function to perform.
+        func_kw : dict
+            Additional arguments to be passed in `func`.
         num_splits : int
             The number of splits to return (see `split_result_of_axis_func_pandas`).
         len_of_left : int
@@ -375,11 +377,8 @@ class PandasDataframeAxisPartition(BaseDataframeAxisPartition):
         other_shape : np.ndarray
             The shape of right frame in terms of partitions, i.e.
             (other_shape[i-1], other_shape[i]) will indicate slice to restore i-1 axis partition.
-        kwargs : dict
-            Additional keywords arguments to be passed in `func`.
-        remote_options : dict, default: None
-            Options that can be defined prior to calling a remote function
-            https://docs.ray.io/en/latest/advanced.html#dynamic-remote-parameters (Ignored for now).
+        deploy_kw : dict
+            Add opts.
         *partitions : iterable
             All partitions that make up the full axis (row or column) for both data sets.
 
@@ -403,5 +402,5 @@ class PandasDataframeAxisPartition(BaseDataframeAxisPartition):
         ]
         rt_frame = pandas.concat(combined_axis, axis=axis ^ 1, copy=False)
 
-        result = func(lt_frame, rt_frame, **kwargs)
+        result = func(lt_frame, rt_frame, **(func_kw if func_kw else {}))
         return split_result_of_axis_func_pandas(axis, num_splits, result)

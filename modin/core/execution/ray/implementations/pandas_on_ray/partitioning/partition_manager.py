@@ -241,7 +241,7 @@ class PandasOnRayDataframePartitionManager(GenericRayDataframePartitionManager):
         keep_partitioning=False,
         lengths=None,
         enumerate_partitions=False,
-        remote_options=None,
+        **kwargs,
     ):
         """
         Apply `map_func` to every partition in `partitions` along given `axis`.
@@ -262,9 +262,8 @@ class PandasOnRayDataframePartitionManager(GenericRayDataframePartitionManager):
         enumerate_partitions : bool, default: False
             Whether or not to pass partition index into `map_func`.
             Note that `map_func` must be able to accept `partition_idx` kwarg.
-        remote_options : dict, default: None
-            Options that can be defined prior to calling a remote function
-            https://docs.ray.io/en/latest/advanced.html#dynamic-remote-parameters.
+        **kwargs : dict
+            Add opts.
 
         Returns
         -------
@@ -283,7 +282,7 @@ class PandasOnRayDataframePartitionManager(GenericRayDataframePartitionManager):
             keep_partitioning,
             lengths,
             enumerate_partitions,
-            remote_options,
+            **kwargs,
         )
 
     @classmethod
