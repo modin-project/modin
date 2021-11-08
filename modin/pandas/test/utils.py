@@ -295,6 +295,9 @@ agg_func = {
     "str": str,
     "sum mean": ["sum", "mean"],
     "sum df sum": ["sum", lambda df: df.sum()],
+    "axis-wise sum": lambda axis: (
+        axis.iloc[0] + axis.iloc[1] if isinstance(axis, pandas.Series) else axis + axis
+    ),
     "should raise TypeError": 1,
 }
 agg_func_keys = list(agg_func.keys())
