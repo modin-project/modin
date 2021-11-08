@@ -1,7 +1,7 @@
 Partition API in Modin
 ======================
 
-When you are working with a Modin Dataframe, you can unwrap its remote partitions
+When you are working with a low-level Modin Dataframe, you can unwrap its remote partitions
 to get the raw futures objects compatible with the execution engine (e.g. ``ray.ObjectRef`` for Ray).
 In addition to unwrapping of the remote partitions we also provide an API to construct a ``modin.pandas.DataFrame``
 from raw futures objects.

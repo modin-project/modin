@@ -134,16 +134,16 @@ responsibility is to ensure clean input to the Query Compiler. The Query Compile
 have knowledge of the compute kernels/in-memory format of the data in order to
 efficiently compile the queries.
 
-The Query Compiler is responsible for sending the compiled query to the Modin DataFrame.
+The Query Compiler is responsible for sending the compiled query to the low-level Modin Dataframe.
 In this design, the Query Compiler does not have information about where or when the
 query will be executed, and gives the control of the partition layout to the Modin
-DataFrame.
+Dataframe.
 
 In the interest of reducing the pandas API, the Query Compiler layer closely follows the
 pandas API, but cuts out a large majority of the repetition.
 
-Modin Dataframe
-"""""""""""""""
+Low-level Modin Dataframe
+"""""""""""""""""""""""""
 
 At this layer, operations can be performed lazily. Currently, Modin executes most
 operations eagerly in an attempt to behave as pandas does. Some operations, e.g.
@@ -152,7 +152,7 @@ cases, we can wait until another operation triggers computation. In the future, 
 to add additional query planning and laziness to Modin to ensure that queries are
 performed efficiently.
 
-The structure of the Modin Dataframe is extensible, such that any operation that could
+The structure of the low-level Modin Dataframe is extensible, such that any operation that could
 be better optimized for a given execution can be overridden and optimized in that way.
 
 This layer has a significantly reduced API from the QueryCompiler and the user-facing
@@ -209,7 +209,7 @@ Execution Engine/Framework
 """"""""""""""""""""""""""
 
 This layer is what Modin uses to perform computation on a partition of the data. The
-Modin Dataframe is designed to work with `task parallel`_ frameworks, but with some
+low-level Modin Dataframe is designed to work with `task parallel`_ frameworks, but with some
 effort, a data parallel framework is possible.
 
 Internal abstractions
@@ -335,10 +335,9 @@ by documentation for now, the rest is coming soon...).
    │   │   ├───spreadsheet
    │   │   ├───sql
    │   │   └─── :doc:`xgboost </flow/modin/experimental/xgboost>`
-   │   ├───pandas
-   │   │   ├─── :doc:`dataframe </flow/modin/pandas/dataframe>`
-   │   │   └─── :doc:`series </flow/modin/pandas/series>`
-   │   └───spreadsheet
+   │   └───pandas
+   │       ├─── :doc:`dataframe </flow/modin/pandas/dataframe>`
+   │       └─── :doc:`series </flow/modin/pandas/series>`
    ├───requirements
    ├───scripts
    └───stress_tests
