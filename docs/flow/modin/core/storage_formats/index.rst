@@ -1,7 +1,7 @@
 Storage Formats
 ===============
 Storage format is one of the components that form Modin's backend, it describes the type(s)
-of objects that are stored in the partitions of the selected Modin Dataframe implementation.
+of objects that are stored in the partitions of the selected low-level Modin Dataframe implementation.
 
 The base storage format in Modin is pandas. In that format, Modin Dataframe operates with
 partitions that hold ``pandas.DataFrame`` objects. Pandas is the most natural storage format
@@ -12,7 +12,7 @@ SQL-like databases (:doc:`OmniSci storage format </flow/modin/experimental/core/
 inside Modin Dataframe's partitions.
 
 An honor of converting high-level pandas API calls to the ones that are understandable
-by the corresponding backend's implementation belongs to the Query Compiler (QC) object.
+by the corresponding execution implementation belongs to the Query Compiler (QC) object.
 
 .. _query_compiler_def:
 
@@ -28,8 +28,8 @@ Query Compiler
 
 Modin supports several execution backends (storage format + execution engine). Calling any
 DataFrame API function will end up in some backend-specific method. The query compiler is
-a bridge between pandas DataFrame API and the actual Modin Dataframe implementation for the
-corresponding backend.
+a bridge between pandas DataFrame API and the actual low-level Modin Dataframe implementation for the
+corresponding execution.
 
 .. image:: /img/simplified_query_flow.svg
     :align: right

@@ -54,12 +54,12 @@ For the simplicity the other backend systems - Dask and MPI are omitted and only
 * Query Planner is subsystem that translates the Pandas API to intermediate Dataframe Algebra representation
   DAG and performs an initial set of optimizations.
 * Query Executor is responsible for getting the Dataframe Algebra DAG, performing further optimizations based
-  on a selected backend execution subsystem and mapping or compiling the Dataframe Algebra DAG to and actual
+  on a selected storage format and mapping or compiling the Dataframe Algebra DAG to and actual
   execution sequence.
 * Storage formats module is responsible for mapping the abstract operation to an actual executor call, e.g. Pandas,
   PyArrow, custom format.
 * Orchestration subsystem is responsible for spawning and controlling the actual execution environment for the
-  selected backend. It spawns the actual nodes, fires up the execution environment, e.g. Ray, monitors the state
+  selected execution. It spawns the actual nodes, fires up the execution environment, e.g. Ray, monitors the state
   of executors and provides telemetry
 
 Component View
