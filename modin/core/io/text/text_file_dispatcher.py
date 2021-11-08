@@ -19,6 +19,7 @@ files from `FileDispatcher` class and can be used as base class for dipatchers o
 """
 import warnings
 import os
+import io
 import codecs
 from typing import Union, Sequence, Optional, Tuple, Callable, Dict
 from csv import Dialect, QUOTE_NONE
@@ -997,9 +998,6 @@ class TextFileDispatcher(FileDispatcher):
             )
 
         is_quoting = kwargs["quoting"] != QUOTE_NONE
-        quotechar = kwargs["quotechar"].encode(
-            encoding if encoding is not None else "UTF-8"
-        )
         # In these cases we should pass additional metadata
         # to the workers to match pandas output
         pass_names = names in [None, lib.no_default] and (
@@ -1028,6 +1026,12 @@ class TextFileDispatcher(FileDispatcher):
         )
 
         with OpenFile(filepath_or_buffer_md, "rb", compression_infered) as f:
+            old_pos = f.tell()
+            fio = io.TextIOWrapper(f, encoding=encoding, newline="")
+            newline, quotechar = cls.compute_newline(
+                fio, encoding, kwargs.get("quotechar", '"')
+            )
+            f.seek(old_pos)
             splits = cls.partitioned_file(
                 f,
                 num_partitions=NPartitions.get(),
@@ -1035,6 +1039,8 @@ class TextFileDispatcher(FileDispatcher):
                 skiprows=skiprows_partitioning,
                 quotechar=quotechar,
                 is_quoting=is_quoting,
+                encoding=encoding,
+                newline=newline,
                 header_size=header_size,
                 pre_reading=pre_reading,
             )
