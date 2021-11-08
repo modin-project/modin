@@ -16,6 +16,7 @@
 # pip install braceexpand
 
 # NOTE: expects https://github.com/intel-ai/omniscripts checked out and in PYTHONPATH
+# NOTE: deprecated example
 
 # the following import turns on experimental mode in Modin,
 # including enabling running things in remote cloud

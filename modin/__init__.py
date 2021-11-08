@@ -32,9 +32,9 @@ warnings.filterwarnings(
 )
 
 
-def set_execution(engine=None, partition=None):
+def set_execution(engine=None, storage_format=None):
     """
-    Method to set the _pair_ of execution engine and partition format simultaneously.
+    Method to set the _pair_ of execution engine and storage format format simultaneously.
     This is needed because there might be cases where switching one by one would be
     impossible, as not all pairs of values are meaningful.
 
@@ -42,19 +42,19 @@ def set_execution(engine=None, partition=None):
     """
     from .config import Engine, StorageFormat
 
-    old_engine, old_partition = None, None
+    old_engine, old_storage_format = None, None
     # defer callbacks until both entities are set
     if engine is not None:
         old_engine = Engine._put_nocallback(engine)
-    if partition is not None:
-        old_partition = StorageFormat._put_nocallback(partition)
+    if storage_format is not None:
+        old_storage_format = StorageFormat._put_nocallback(storage_format)
     # execute callbacks if something was changed
     if old_engine is not None:
         Engine._check_callbacks(old_engine)
-    if old_partition is not None:
-        StorageFormat._check_callbacks(old_partition)
+    if old_storage_format is not None:
+        StorageFormat._check_callbacks(old_storage_format)
 
-    return old_engine, old_partition
+    return old_engine, old_storage_format
 
 
 __version__ = get_versions()["version"]

@@ -23,6 +23,7 @@ from modin.utils import to_pandas
 from modin.pandas.utils import from_arrow
 import pyarrow as pa
 import os
+import sys
 import shutil
 import sqlalchemy as sa
 import csv
@@ -520,12 +521,9 @@ class TestCsv:
 
         df_equals(df1, df2)
 
-    # Quoting, Compression, and File Format parameters tests
+    # Quoting, Compression parameters tests
     @pytest.mark.parametrize("compression", ["infer", "gzip", "bz2", "xz", "zip"])
-    @pytest.mark.parametrize(
-        "encoding",
-        [None, "latin8", "ISO-8859-1", "latin1", "iso-8859-1", "cp1252", "utf8"],
-    )
+    @pytest.mark.parametrize("encoding", [None, "latin8", "utf16"])
     @pytest.mark.parametrize("engine", [None, "python", "c"])
     def test_read_csv_compression(self, make_csv_file, compression, encoding, engine):
         unique_filename = get_unique_filename()
@@ -545,6 +543,42 @@ class TestCsv:
             compression=compression,
             encoding=encoding,
             engine=engine,
+        )
+
+    @pytest.mark.parametrize(
+        "encoding",
+        [
+            None,
+            "ISO-8859-1",
+            "latin1",
+            "iso-8859-1",
+            "cp1252",
+            "utf8",
+            pytest.param(
+                "unicode_escape",
+                marks=pytest.mark.skip(
+                    condition=sys.version_info < (3, 9),
+                    reason="https://bugs.python.org/issue45461",
+                ),
+            ),
+            "raw_unicode_escape",
+            "utf_16_le",
+            "utf_16_be",
+            "utf32",
+            "utf_32_le",
+            "utf_32_be",
+            "utf-8-sig",
+        ],
+    )
+    def test_read_csv_encoding(self, make_csv_file, encoding):
+        unique_filename = get_unique_filename()
+        make_csv_file(filename=unique_filename, encoding=encoding)
+
+        eval_io(
+            fn_name="read_csv",
+            # read_csv kwargs
+            filepath_or_buffer=unique_filename,
+            encoding=encoding,
         )
 
     @pytest.mark.parametrize("thousands", [None, ",", "_", " "])

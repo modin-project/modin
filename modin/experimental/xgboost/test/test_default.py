@@ -25,7 +25,7 @@ import modin.pandas as pd
 )
 @pytest.mark.skipif(
     Engine.get() == "Python",
-    reason="This test doesn't make sense on not distributed engine (see issue #2938).",
+    reason="This test doesn't make sense on non-distributed engine (see issue #2938).",
 )
 def test_engine():
     try:

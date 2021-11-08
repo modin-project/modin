@@ -11,7 +11,7 @@ Jinja2
 pathlib
 tables
 scipy
-s3fs>=0.4.2
+s3fs>=2021.8
 pytest
 pytest-benchmark
 coverage<5.0
