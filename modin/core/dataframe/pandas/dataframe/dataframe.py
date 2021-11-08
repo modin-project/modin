@@ -32,11 +32,12 @@ from modin.core.storage_formats.pandas.parsers import (
 
 
 def lazy_metadata_decorator(
-        apply_axis=None, inherit=False, axis_arg=-1, transpose=False
+    apply_axis=None, inherit=False, axis_arg=-1, transpose=False
 ):
     """
     Lazily propagate metadata
     """
+
     def decorator(f):
         from functools import wraps
 
@@ -80,6 +81,7 @@ def lazy_metadata_decorator(
             return result
 
         return magic
+
     return decorator
 
 
