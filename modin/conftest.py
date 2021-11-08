@@ -249,7 +249,7 @@ class BaseOnPythonFactory(factories.BaseFactory):
 
 def set_base_execution(name=BASE_EXECUTION_NAME):
     setattr(factories, f"{name}Factory", BaseOnPythonFactory)
-    modin.set_execution(engine="python", partition=name.split("On")[0])
+    modin.set_execution(engine="python", storage_format=name.split("On")[0])
 
 
 def pytest_configure(config):
@@ -267,7 +267,7 @@ def pytest_configure(config):
         set_base_execution(BASE_EXECUTION_NAME)
     else:
         partition, engine = execution.split("On")
-        modin.set_execution(engine=engine, partition=partition)
+        modin.set_execution(engine=engine, storage_format=partition)
 
 
 def pytest_runtest_call(item):
