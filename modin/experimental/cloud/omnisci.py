@@ -19,7 +19,7 @@ from .cluster import Provider
 
 class RemoteOmnisci(RayCluster):
     target_engine = "Cloudnative"
-    target_partition = "Omnisci"
+    target_storage_format = "Omnisci"
 
     def __init__(
         self,
