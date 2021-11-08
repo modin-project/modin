@@ -106,7 +106,7 @@ appropriate functions and then assign the result to the picked `QueryCompiler`
 
     PandasQueryCompiler.custom_count = MapReduce.register(pandas.DataFrame.count, pandas.DataFrame.sum)
 
-Then, we want to handle it from the :class:`~modin.pandas.DataFrame`, so we need to create a way to do that:
+Then, we want to handle it from the :py:class:`~modin.pandas.dataframe.DataFrame`, so we need to create a way to do that:
 
 .. code-block:: python
 

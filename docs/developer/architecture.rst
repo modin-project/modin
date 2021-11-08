@@ -290,8 +290,6 @@ by documentation for now, the rest is coming soon...).
    │   │   ├─── :doc:`dataframe </flow/modin/core/dataframe/index>`
    │   │   │   ├─── :doc:`algebra </flow/modin/core/dataframe/algebra>`
    │   │   │   ├─── :doc:`base </flow/modin/core/dataframe/base/index>`
-   │   │   │   │   ├───dataframe
-   │   │   │   │   └───partitioning
    │   │   │   └─── :doc:`pandas </flow/modin/core/dataframe/pandas/index>`
    │   │   ├───execution
    │   │   │   ├───dask

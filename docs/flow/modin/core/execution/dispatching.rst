@@ -9,7 +9,7 @@ Factories Module Description
 Brief description
 '''''''''''''''''
 Modin has several execution engines and storage formats, combining them together forms certain backends. 
-Calling any DataFrame API function will end up in some backend-specific method. The responsibility of dispatching high-level API calls to
+Calling any :py:class:`~modin.pandas.dataframe.DataFrame` API function will end up in some backend-specific method. The responsibility of dispatching high-level API calls to
 backend-specific function belongs to the :ref:`QueryCompiler <query_compiler_def>`, which is determined at the time of the dataframe's creation by the factory of
 the corresponding backend. The mission of this module is to route IO function calls from
 the API level to its actual backend-specific implementations, which builds the
@@ -21,7 +21,7 @@ Backend is a combination of the :doc:`storage format </flow/modin/core/storage_f
 For example, ``PandasOnRay`` backend means the combination of the `pandas storage format` and `Ray` execution engine.
 
 Each storage format has its own :ref:`Query Compiler <query_compiler_def>` which compiles the most efficient queries
-for the corresponding :doc:`Modin Dataframe </flow/modin/core/dataframe/index>` implementation. Speaking about ``PandasOnRay``
+for the corresponding :doc:`low-level Modin Dataframe </flow/modin/core/dataframe/index>` implementation. Speaking about ``PandasOnRay``
 backend, its Query Compiler is :doc:`PandasQueryCompiler </flow/modin/core/storage_formats/pandas/query_compiler>` and the
 Dataframe implementation is :doc:`PandasDataframe </flow/modin/core/dataframe/pandas/dataframe>`,
 which is general implementation for every backend of the  pandas storage format. The actual implementation of ``PandasOnRay`` frame
@@ -37,7 +37,7 @@ Factory Dispatcher
 ''''''''''''''''''
 The ``modin.core.execution.dispatching.factories.dispatcher.FactoryDispatcher`` class provides 
 public methods whose interface corresponds to pandas IO functions, the only difference is that they return `QueryCompiler` of the
-selected backend instead of DataFrame. ``FactoryDispatcher`` is responsible for routing
+selected backend instead of high-level :py:class:`~modin.pandas.dataframe.DataFrame`. ``FactoryDispatcher`` is responsible for routing
 these IO calls to the factory which represents the selected backend.
 
 So when you call ``read_csv()`` function and your backend is ``PandasOnRay`` then the
@@ -49,6 +49,6 @@ trace would be the following:
 ``modin.pandas.read_csv`` calls ``FactoryDispatcher.read_csv``, which calls ``.read_csv``
 function of the factory of the selected backend, in our case it's ``PandasOnRayFactory._read_csv``,
 which in turn forwards this call to the actual implementation of ``read_csv`` — to the
-``PandasOnRayIO.read_csv``. The result of ``modin.pandas.read_csv`` will return a Modin
+``PandasOnRayIO.read_csv``. The result of ``modin.pandas.read_csv`` will return a high-level Modin
 DataFrame with the appropriate `QueryCompiler` bound to it, which is responsible for
 dispatching all of the further function calls.
