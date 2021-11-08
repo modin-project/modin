@@ -1038,9 +1038,7 @@ class OmnisciOnNativeDataframe(PandasDataframe):
             The new frame.
         """
         if how == "outer":
-            raise NotImplementedError(
-                "outer join is not supported in OmniSci storage format"
-            )
+            raise NotImplementedError("outer join is not supported in OmniSci engine")
 
         lhs = self._maybe_materialize_rowid()
         reset_index_names = False
