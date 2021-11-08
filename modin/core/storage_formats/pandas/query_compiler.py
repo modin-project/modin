@@ -2775,12 +2775,12 @@ class PandasQueryCompiler(BaseQueryCompiler):
                         result.drop(columns=cols_to_drop, inplace=True)
                     result.reset_index(drop=drop, inplace=True)
                 else:
-                    new_index_names = [
+                    new_index_names = tuple(
                         None
                         if isinstance(name, str) and name.startswith("__reduced__")
                         else name
                         for name in result.index.names
-                    ]
+                    )
                     result.index.names = new_index_names
 
                 return result

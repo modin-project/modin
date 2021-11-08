@@ -221,7 +221,7 @@ class GroupByReduce(MapReduce):
                 by_cols_dtypes=(
                     df.index.dtypes.values
                     if isinstance(df.index, pandas.MultiIndex)
-                    else [df.index.dtype]
+                    else (df.index.dtype,)
                 ),
                 is_multi_by=len(by_part) > 1,
                 selection=reduce_func.keys() if isinstance(reduce_func, dict) else None,

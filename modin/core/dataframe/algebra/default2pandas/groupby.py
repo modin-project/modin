@@ -233,11 +233,15 @@ class GroupBy:
 
             if not as_index:
                 method = kwargs.get("method")
-                internal_by = (
-                    [by.name]
-                    if (drop or method == "size") and isinstance(by, pandas.Series)
-                    else by
-                )
+                if isinstance(by, pandas.Series):
+                    # 1. If `drop` is True then 'by' Series represents a column from the
+                    #    source frame and so the 'by' is internal.
+                    # 2. If method is 'size' then any 'by' considered to be internal
+                    #    (this is a hacky legacy from the ``groupby_size`` implementation)
+                    internal_by = (by.name,) if drop or method == "size" else tuple()
+                else:
+                    internal_by = by
+
                 drop, lvls_to_drop, cols_to_drop = cls.handle_as_index(
                     result.columns,
                     result.index.names,
@@ -245,7 +249,7 @@ class GroupBy:
                     by_cols_dtypes=(
                         df.index.dtypes.values
                         if isinstance(df.index, pandas.MultiIndex)
-                        else [df.index.dtype]
+                        else (df.index.dtype,)
                     ),
                     is_multi_by=len(internal_by) > 1,
                     drop=drop,
@@ -383,11 +387,10 @@ class GroupBy:
             keep_index_levels = False
 
         # 1. We insert 'by'-columns to the result at the beginning of the frame and so only to the
-        #    first partition, if partition_idx != 0 we just drop the index, and so if no columns
-        #    that may locate in different partitions and needed to drop (keep_index_levels is True),
-        #    then we can exit here.
-        # 2. We don't insert by-columns to the result if by-data came from a different
-        #    frame (drop is False), there's only one exception for this rule when method is "size",
+        #    first partition, if partition_idx != 0 we just drop the index. If there are no columns
+        #    that are required to drop (keep_index_levels is True) then we can exit here.
+        # 2. We don't insert 'by'-columns to the result if 'by'-data came from a different
+        #    frame (drop is False), there's only one exception for this rule: if the `method` is "size",
         #    so if (drop is False) and method is not "size" we just drop the index and so can exit here.
         if (not keep_index_levels and partition_idx != 0) or (
             not drop and method != "size"
@@ -416,7 +419,7 @@ class GroupBy:
         cols_to_drop = []
 
         if not keep_index_levels:
-            # We want to insert such internal-by-cols that are not presented
+            # We want to insert only these internal-by-cols that are not presented
             # in the result in order to not create naming conflicts
             cols_to_insert = (
                 internal_by_cols.copy()
