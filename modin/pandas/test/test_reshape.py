@@ -68,7 +68,7 @@ def test_get_dummies():
 
 def test_melt():
     data = test_data_values[0]
-    with pytest.warns(UserWarning, match="implementation has mismatches with pandas"):
+    with pytest.warns(UserWarning):
         pd.melt(pd.DataFrame(data))
 
 
