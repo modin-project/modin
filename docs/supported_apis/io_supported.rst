@@ -60,37 +60,3 @@ default to pandas.
 .. _`read_sas`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.read_sas.html#pandas.read_sas
 .. _`read_pickle`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.read_pickle.html#pandas.read_pickle
 .. _`read_sql`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.read_sql.html#pandas.read_sql
-
-Connecting to a database for `read_sql`
-""""""""""""""""""""""""""""""""""""""""""""
-To make Pandas read from a SQL database, you have two options:
-
-1) Pass a connection string, e.g. ``postgresql://reader:NWDMCE5xdipIjRrp@hh-pgsql-public.ebi.ac.uk:5432/pfmegrnargs``
-2) Pass an open database connection, e.g. for psycopg2, ``psycopg2.connect("dbname=pfmegrnargs user=reader password=NWDMCE5xdipIjRrp host=hh-pgsql-public.ebi.ac.uk")``
-
-The first option works with both Modin and Pandas. If you try the second option
-in Modin, Modin, will default to Pandas, because it can't pickle the open
-connection and send it to remote workers. The solution is to use a
-``ModinDatabaseConnection``, like so:
-
-.. code-block:: python
-
-    import modin.pandas as pd
-    from modin.db_conn import ModinDatabaseConnection
-    con = ModinDatabaseConnection(
-        'psycopg2',
-        host='hh-pgsql-public.ebi.ac.uk',
-        dbname='pfmegrnargs',
-        user='reader',
-        password='NWDMCE5xdipIjRrp')
-    df = pd.read_sql("SELECT * FROM rnc_database",
-                con,
-            index_col=None,
-            coerce_float=True,
-            params=None,
-            parse_dates=None,
-            chunksize=None)
-
-
-The ``ModinDatabaseConnection`` will save any arguments you supply it and forward
-them to the workers to make their own connections.
