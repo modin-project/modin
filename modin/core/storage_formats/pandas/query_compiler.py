@@ -2494,14 +2494,19 @@ class PandasQueryCompiler(BaseQueryCompiler):
     def _mean_agg_map(dfgb, **kwargs):
         kwargs["min_count"] = 1
         result = dfgb.sum(**kwargs)
-        result["__mean_agg_size_column__"] = dfgb.size()
+        divisor = dfgb.count()
+        divisor.set_axis(["__mean_agg_size_column__" + x for x in divisor.columns], axis=1, inplace=True)
+        result = pandas.concat([result, divisor], axis=1, copy=False)
         return result
 
     def _mean_agg_reduce(dfgb, **kwargs):
         kwargs["min_count"] = 1
         result = dfgb.sum(**kwargs)
-        result = result.div(result["__mean_agg_size_column__"], axis=0)
-        return result.drop("__mean_agg_size_column__", axis=1)
+        divirgent = result[[x for x in result.columns if not x.startswith("__mean_agg_size_column__")]]
+        divisor = result[[x for x in result.columns if x.startswith("__mean_agg_size_column__")]]
+        divisor.set_axis([x[len("__mean_agg_size_column__"):] for x in divisor.columns], axis=1, inplace=True)
+        result = divirgent.divide(divisor)
+        return result
 
     groupby_mean = GroupByReduce.register(
         _mean_agg_map,
