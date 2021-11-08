@@ -451,10 +451,11 @@ class PandasDataframe(object):
         for axis, indexer in enumerate((row_numeric_idx, col_numeric_idx)):
             if is_range_like(indexer):
                 if indexer.step == 1 and len(indexer) == len(self.axes[axis]):
+                    # By semantic of this function `None` indexer is a full axis access
                     indexer = None
                 elif indexer is not None and not isinstance(indexer, pandas.RangeIndex):
                     # Pure python's range is not fully compatible with a list of ints,
-                    # converting it to `pandas.RangeIndex` that is compatible.
+                    # converting it to ``pandas.RangeIndex``` that is compatible.
                     indexer = pandas.RangeIndex(
                         indexer.start, indexer.stop, indexer.step
                     )
@@ -492,7 +493,7 @@ class PandasDataframe(object):
                 for part_idx, part_indexer in row_partitions_list.items()
             ]
             new_index = self.index[
-                # Pandas Index is more likely to preserve its metadata if the indexer is slice
+                # pandas Index is more likely to preserve its metadata if the indexer is slice
                 slice(row_numeric_idx.start, row_numeric_idx.stop, row_numeric_idx.step)
                 # TODO: Fast range processing of non-1-step ranges is not yet supported
                 if is_range_like(row_numeric_idx) and row_numeric_idx.step > 0
@@ -525,16 +526,17 @@ class PandasDataframe(object):
             # Use the slice to calculate the new columns
             # TODO: Support fast processing of negative-step ranges
             if is_range_like(col_numeric_idx) and col_numeric_idx.step > 0:
-                # Pandas Index is more likely to preserve its metadata if the indexer is slice
+                # pandas Index is more likely to preserve its metadata if the indexer is slice
                 monotonic_col_idx = slice(
                     col_numeric_idx.start, col_numeric_idx.stop, col_numeric_idx.step
                 )
             else:
                 monotonic_col_idx = sorted(col_numeric_idx)
             new_columns = self.columns[monotonic_col_idx]
-            assert sum(new_col_widths) == len(
-                new_columns
-            ), f"{sum(new_col_widths)} != {len(new_columns)}.\n{col_numeric_idx}\n{self._column_widths}\n{col_partitions_list}"
+            ErrorMessage.catch_bugs_and_request_email(
+                failure_condition=sum(new_col_widths) != len(new_columns),
+                extra_log=f"{sum(new_col_widths)} != {len(new_columns)}.\n{col_numeric_idx}\n{self._column_widths}\n{col_partitions_list}",
+            )
             if self._dtypes is not None:
                 new_dtypes = self.dtypes.iloc[monotonic_col_idx]
             else:
@@ -947,8 +949,7 @@ class PandasDataframe(object):
         if isinstance(indices, slice) and (
             indices.step is not None and indices.step != 1
         ):
-            list_of_indices = range(*indices.indices(len(self.axes[axis])))
-            return self._get_dict_of_block_index(axis=axis, indices=list_of_indices)
+            indices = range(*indices.indices(len(self.axes[axis])))
         # Fasttrack slices
         if isinstance(indices, slice) or (is_range_like(indices) and indices.step == 1):
             # Converting range-like indexer to slice
@@ -1611,7 +1612,7 @@ class PandasDataframe(object):
                 col_partitions_list,
                 item_to_distribute,
                 # Passing caches instead of values in order to not trigger shapes recomputation
-                # if it won't be used inside this function.
+                # if they are not used inside this function.
                 self._row_lengths_cache,
                 self._column_widths_cache,
             )
