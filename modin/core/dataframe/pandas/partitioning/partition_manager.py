@@ -887,7 +887,7 @@ class PandasDataframePartitionManager(ABC):
         This preprocesses the `func` first before applying it to the partitions.
         """
         preprocessed_func = cls.preprocess_func(func)
-        return [obj.apply(preprocessed_func, **kwargs) for obj in partitions]
+        return [obj.apply(preprocessed_func, func_kw=kwargs) for obj in partitions]
 
     @classmethod
     @wait_computations_if_benchmark_mode

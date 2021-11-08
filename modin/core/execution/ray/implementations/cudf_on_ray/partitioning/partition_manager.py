@@ -198,7 +198,7 @@ class cuDFOnRayDataframePartitionManager(GenericRayDataframePartitionManager):
         preprocessed_map_func = cls.preprocess_func(func)
         key_futures = ray.get(
             [
-                partition.apply(preprocessed_map_func, **kwargs)
+                partition.apply(preprocessed_map_func, func_kw=kwargs)
                 for partition in partitions
             ]
         )

@@ -99,8 +99,8 @@ class PandasOnDaskDataframePartition(PandasDataframePartition):
         else:
             # We handle `len(call_queue) == 1` in a different way because
             # this improves performance a bit.
-            func, args, kwargs = call_queue[0]
-            future = client.submit(apply_func, self.future, func, *args, **kwargs)
+            func, args, func_kw = call_queue[0]
+            future = client.submit(apply_func, self.future, func, *args, **func_kw)
         futures = [
             client.submit(lambda l, i: l[i], future, i, pure=False) for i in range(2)
         ]
