@@ -31,7 +31,9 @@ from modin.core.storage_formats.pandas.parsers import (
 )
 
 
-def lazy_metadata_decorator(apply_axis=None, inherit=False, axis_arg=-1, transpose=False):
+def lazy_metadata_decorator(
+        apply_axis=None, inherit=False, axis_arg=-1, transpose=False
+):
     """
     Lazily propagate metadata
     """
