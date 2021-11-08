@@ -31,6 +31,56 @@ from modin.core.storage_formats.pandas.parsers import (
 )
 
 
+def lazy_metadata_decorator(apply_axis=None, inherit=False, axis_arg=-1, transpose=False):
+    """
+    Lazily propagate metadata
+    """
+    def decorator(f):
+        from functools import wraps
+
+        @wraps(f)
+        def magic(self, *args, **kwargs):
+            if apply_axis is not None:
+                if apply_axis == "both":
+                    if self._deferred_index and self._deferred_column:
+                        self._propagate_index_objs(axis=None)
+                    elif self._deferred_index:
+                        self._propagate_index_objs(axis=0)
+                    elif self._deferred_column:
+                        self._propagate_index_objs(axis=1)
+                elif apply_axis == "opposite":
+                    if "axis" not in kwargs:
+                        axis = args[axis_arg]
+                    else:
+                        axis = kwargs["axis"]
+                    if axis == 0 and self._deferred_column:
+                        self._propagate_index_objs(axis=1)
+                    elif axis == 1 and self._deferred_column:
+                        self._propagate_index_objs(axis=0)
+                elif apply_axis == "same":
+                    if "axis" not in kwargs:
+                        axis = args[axis_arg]
+                    else:
+                        axis = kwargs["axis"]
+                    if axis == 0 and self._deferred_column:
+                        self._propagate_index_objs(axis=0)
+                    elif axis == 1 and self._deferred_column:
+                        self._propagate_index_objs(axis=1)
+                elif apply_axis == "columns":
+                    self._propagate_index_objs(axis=1)
+            result = f(self, *args, **kwargs)
+            if inherit and not transpose:
+                result._deferred_index = self._deferred_index
+                result._deferred_column = self._deferred_column
+            elif inherit and transpose:
+                result._deferred_index = self._deferred_column
+                result._deferred_column = self._deferred_index
+            return result
+
+        return magic
+    return decorator
+
+
 class PandasDataframe(object):
     """
     An abstract class that represents the parent class for any pandas storage format dataframe class.
@@ -57,6 +107,9 @@ class PandasDataframe(object):
 
     _partition_mgr_cls = None
     _query_compiler_cls = PandasQueryCompiler
+    # These properties flag whether or not we are deferring the metadata synchronization
+    _deferred_index = False
+    _deferred_column = False
 
     @property
     def __constructor__(self):
@@ -332,6 +385,16 @@ class PandasDataframe(object):
         self._row_lengths_cache = [r for r in self._row_lengths if r != 0]
 
     def synchronize_labels(self, axis=None):
+        if axis is None:
+            self._deferred_index = True
+            self._deferred_column = True
+        elif axis == 0:
+            self._deferred_index = True
+        else:
+            self._deferred_column = True
+        return
+
+    def _propagate_index_objs(self, axis=None):
         """
         Synchronize labels by applying the index object for specific `axis` to the `self._partitions` lazily.
 
@@ -373,6 +436,8 @@ class PandasDataframe(object):
                     for i in range(len(self._partitions))
                 ]
             )
+            self._deferred_index = False
+            self._deferred_column = False
         elif axis == 0:
 
             def apply_idx_objs(df, idx):
@@ -392,6 +457,7 @@ class PandasDataframe(object):
                     for i in range(len(self._partitions))
                 ]
             )
+            self._deferred_index = False
         elif axis == 1:
 
             def apply_idx_objs(df, cols):
@@ -414,7 +480,9 @@ class PandasDataframe(object):
             ErrorMessage.catch_bugs_and_request_email(
                 axis is not None and axis not in [0, 1]
             )
+            self._deferred_column = False
 
+    @lazy_metadata_decorator(inherit=True)
     def mask(
         self,
         row_indices=None,
@@ -596,6 +664,7 @@ class PandasDataframe(object):
             row_numeric_idx=new_row_order, col_numeric_idx=new_col_order
         )
 
+    @lazy_metadata_decorator(apply_axis="columns")
     def from_labels(self) -> "PandasDataframe":
         """
         Convert the row labels to a column of data, inserted at the first position.
@@ -670,7 +739,7 @@ class PandasDataframe(object):
             column_widths=new_column_widths,
         )
         # Propagate the new row labels to the all dataframe partitions
-        result.synchronize_labels(0)
+        result.synchronize_labels(axis=0)
         return result
 
     def to_labels(self, column_list: List[Hashable]) -> "PandasDataframe":
@@ -698,6 +767,7 @@ class PandasDataframe(object):
         result.index = new_labels
         return result
 
+    @lazy_metadata_decorator(apply_axis="both")
     def _reorder_labels(self, row_numeric_idx=None, col_numeric_idx=None):
         """
         Reorder the column and or rows in this DataFrame.
@@ -734,6 +804,7 @@ class PandasDataframe(object):
             col_idx = self.columns
         return self.__constructor__(ordered_cols, row_idx, col_idx)
 
+    @lazy_metadata_decorator(inherit=True)
     def copy(self):
         """
         Copy this object.
@@ -781,6 +852,7 @@ class PandasDataframe(object):
         dtypes.index = column_names
         return dtypes
 
+    @lazy_metadata_decorator(apply_axis="both")
     def astype(self, col_dtypes):
         """
         Convert the columns dtypes to given dtypes.
@@ -1205,6 +1277,7 @@ class PandasDataframe(object):
         )
         return result
 
+    @lazy_metadata_decorator(apply_axis="both")
     def fold_reduce(self, axis, func):
         """
         Apply function that reduces Frame Manager to series but requires knowledge of full axis.
@@ -1227,6 +1300,7 @@ class PandasDataframe(object):
         )
         return self._compute_map_reduce_metadata(axis, new_parts)
 
+    @lazy_metadata_decorator(apply_axis="opposite", axis_arg=0)
     def map_reduce(self, axis, map_func, reduce_func=None):
         """
         Apply function that will reduce the data to a pandas Series.
@@ -1258,6 +1332,7 @@ class PandasDataframe(object):
         )
         return self._compute_map_reduce_metadata(axis, reduce_parts)
 
+    @lazy_metadata_decorator(inherit=True)
     def map(self, func, dtypes=None):
         """
         Perform a function that maps across the entire dataset.
@@ -1292,6 +1367,7 @@ class PandasDataframe(object):
             dtypes=dtypes,
         )
 
+    @lazy_metadata_decorator(apply_axis="both")
     def fold(self, axis, func):
         """
         Perform a function across an entire axis.
@@ -1323,6 +1399,7 @@ class PandasDataframe(object):
             self._column_widths,
         )
 
+    @lazy_metadata_decorator(apply_axis="both")
     def filter_full_axis(self, axis, func):
         """
         Filter data based on the function provided along an entire axis.
@@ -1358,6 +1435,7 @@ class PandasDataframe(object):
             self.dtypes if axis == 0 else None,
         )
 
+    @lazy_metadata_decorator(apply_axis="both")
     def explode(self, axis, func):
         """
         Explode list-like entries along an entire axis.
@@ -1386,6 +1464,7 @@ class PandasDataframe(object):
             new_columns = self._compute_axis_labels(1, partitions)
         return self.__constructor__(partitions, new_index, new_columns)
 
+    @lazy_metadata_decorator(apply_axis="both")
     def apply_full_axis(
         self,
         axis,
@@ -1432,6 +1511,7 @@ class PandasDataframe(object):
             other=None,
         )
 
+    @lazy_metadata_decorator(apply_axis="both")
     def apply_full_axis_select_indices(
         self,
         axis,
@@ -1493,6 +1573,7 @@ class PandasDataframe(object):
             new_columns = self.columns if axis == 0 else None
         return self.__constructor__(new_partitions, new_index, new_columns, None, None)
 
+    @lazy_metadata_decorator(apply_axis="both")
     def apply_select_indices(
         self,
         axis,
@@ -1595,6 +1676,7 @@ class PandasDataframe(object):
                 self._column_widths_cache,
             )
 
+    @lazy_metadata_decorator(apply_axis="both")
     def broadcast_apply(
         self, axis, func, other, join_type="left", preserve_labels=True, dtypes=None
     ):
@@ -1690,6 +1772,7 @@ class PandasDataframe(object):
             passed_len += len(internal)
         return result_dict
 
+    @lazy_metadata_decorator(apply_axis="both")
     def broadcast_apply_select_indices(
         self,
         axis,
@@ -1777,6 +1860,7 @@ class PandasDataframe(object):
 
         return self.__constructor__(new_partitions, *new_axes)
 
+    @lazy_metadata_decorator(apply_axis="both")
     def broadcast_apply_full_axis(
         self,
         axis,
@@ -1861,9 +1945,9 @@ class PandasDataframe(object):
             dtypes,
         )
         if new_index is not None:
-            result.synchronize_labels(0)
+            result.synchronize_labels(axis=0)
         if new_columns is not None:
-            result.synchronize_labels(1)
+            result.synchronize_labels(axis=1)
         return result
 
     def _copartition(self, axis, other, how, sort, force_repartition=False):
@@ -1977,6 +2061,7 @@ class PandasDataframe(object):
         )
         return reindexed_frames[0], reindexed_frames[1:], joined_index
 
+    @lazy_metadata_decorator(apply_axis="both")
     def binary_op(self, op, right_frame, join_type="outer"):
         """
         Perform an operation that requires joining with another Modin DataFrame.
@@ -2006,6 +2091,7 @@ class PandasDataframe(object):
         new_columns = self.columns.join(right_frame.columns, how=join_type)
         return self.__constructor__(new_frame, joined_index, new_columns, None, None)
 
+    @lazy_metadata_decorator(apply_axis="both")
     def concat(self, axis, others, how, sort):
         """
         Concatenate `self` with one or more other Modin DataFrames.
@@ -2074,6 +2160,7 @@ class PandasDataframe(object):
             new_partitions, new_index, new_columns, new_lengths, new_widths, new_dtypes
         )
 
+    @lazy_metadata_decorator(apply_axis="opposite", axis_arg=0)
     def groupby_reduce(
         self,
         axis,
@@ -2214,6 +2301,7 @@ class PandasDataframe(object):
             return np.dtype(res)
         return res
 
+    @lazy_metadata_decorator(apply_axis="both")
     def to_pandas(self):
         """
         Convert this Modin DataFrame to a pandas DataFrame.
@@ -2251,6 +2339,7 @@ class PandasDataframe(object):
         """
         return self._partition_mgr_cls.to_numpy(self._partitions, **kwargs)
 
+    @lazy_metadata_decorator(inherit=True, transpose=True)
     def transpose(self):
         """
         Transpose the index and columns of this Modin DataFrame.
@@ -2266,10 +2355,13 @@ class PandasDataframe(object):
         new_partitions = self._partition_mgr_cls.lazy_map_partitions(
             self._partitions, lambda df: df.T
         ).T
-        new_dtypes = pandas.Series(
-            np.full(len(self.index), find_common_type(self.dtypes.values)),
-            index=self.index,
-        )
+        if self._dtypes is not None:
+            new_dtypes = pandas.Series(
+                np.full(len(self.index), find_common_type(self.dtypes.values)),
+                index=self.index,
+            )
+        else:
+            new_dtypes = None
         return self.__constructor__(
             new_partitions,
             self.columns,
