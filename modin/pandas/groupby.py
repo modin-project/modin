@@ -946,6 +946,9 @@ class DataFrameGroupBy(object):
         else:
             groupby_qc = self._query_compiler
 
+        if len(groupby_qc._modin_frame.numeric_columns(True)) == 0:
+            numeric_only = False
+
         result = type(self._df)(
             query_compiler=qc_method(
                 groupby_qc,
