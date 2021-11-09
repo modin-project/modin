@@ -2197,20 +2197,23 @@ class DataFrame(BasePandasDataset):
         partition_cols=None,
         storage_options: StorageOptions = None,
         **kwargs,
-    ):  # pragma: no cover # noqa: PR01, RT01, D200
-        """
-        Write a ``DataFrame`` to the binary parquet format.
-        """
-        return self._default_to_pandas(
-            pandas.DataFrame.to_parquet,
-            path,
-            engine=engine,
-            compression=compression,
-            index=index,
-            partition_cols=partition_cols,
-            storage_options=storage_options,
-            **kwargs,
+    ):
+
+        config = {
+            "path": path,
+            "engine": engine,
+            "compression": compression,
+            "index": index,
+            "partition_cols": partition_cols,
+            "storage_options": storage_options,
+        }
+        new_query_compiler = self._query_compiler
+
+        from modin.core.execution.dispatching.factories.dispatcher import (
+            FactoryDispatcher,
         )
+
+        return FactoryDispatcher.to_parquet(new_query_compiler, **config, **kwargs)
 
     def to_period(
         self, freq=None, axis=0, copy=True

@@ -288,6 +288,11 @@ class FactoryDispatcher(object):
     def to_csv(cls, *args, **kwargs):
         return cls.__factory._to_csv(*args, **kwargs)
 
+    @classmethod
+    @_inherit_docstrings(factories.BaseFactory._to_parquet)
+    def to_parquet(cls, *args, **kwargs):
+        return cls.__factory._to_parquet(*args, **kwargs)
+
 
 Engine.subscribe(FactoryDispatcher._update_factory)
 StorageFormat.subscribe(FactoryDispatcher._update_factory)
