@@ -131,7 +131,8 @@ class DataFrameGroupBy(object):
     def mean(self, *args, **kwargs):
         fallback = False
         converted_columns = {}
-        if not kwargs.get("numeric_only", False):
+        numeric_only=kwargs.get("numeric_only", False)
+        if not numeric_only:
             for col, dt in self._query_compiler.dtypes.items():
                 if is_datetime64_any_dtype(dt):
                     if self._df[col].hasnans:
@@ -160,7 +161,6 @@ class DataFrameGroupBy(object):
             result = self._wrap_aggregation(
                 type(self._query_compiler).groupby_mean,
                 lambda df, **kwargs: df.mean(*args, **kwargs),
-                numeric_only=False,
                 **kwargs,
             )
             if len(converted_columns) > 0:
