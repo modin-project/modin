@@ -1,5 +1,5 @@
-Pandas Query Compiler
-"""""""""""""""""""""
+PandasQueryCompiler
+"""""""""""""""""""
 :py:class:`~modin.core.storage_formats.pandas.query_compiler.PandasQueryCompiler` is responsible for compiling
 a set of known predefined functions and pairing those with dataframe algebra operators in the
 :doc:`PandasDataframe </flow/modin/core/dataframe/pandas/dataframe>`, specifically for dataframes backed by

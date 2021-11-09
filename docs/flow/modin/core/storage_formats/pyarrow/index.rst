@@ -7,10 +7,10 @@ PyArrow storage format
     query_compiler
     parsers
 
-In general, PyArrow storage formats follow the flow of the pandas ones: query compiler contains an instance of Modin Frame,
+In general, PyArrow storage formats follow the flow of the pandas ones: query compiler contains an instance of Modin Dataframe,
 which is internally split into partitions. The main difference is that partitions contain PyArrow tables,
-instead of DataFrames like with :doc:`pandas storage format </flow/modin/core/storage_formats/pandas/index>`. To learn more about this approach please
-visit :doc:`PyArrow execution engine </flow/modin/experimental/core/execution/ray/implementations/pyarrow_on_ray>` section.
+instead of ``pandas.DataFrame``-s like with :doc:`pandas storage format </flow/modin/core/storage_formats/pandas/index>`. To learn more about this approach please
+visit :doc:`PyArrowOnRay execution </flow/modin/experimental/core/execution/ray/implementations/pyarrow_on_ray>` section.
 
 
 High-Level Module Overview

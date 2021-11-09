@@ -134,7 +134,7 @@ responsibility is to ensure clean input to the Query Compiler. The Query Compile
 have knowledge of the compute kernels/in-memory format of the data in order to
 efficiently compile the queries.
 
-The Query Compiler is responsible for sending the compiled query to the low-level Modin Dataframe.
+The Query Compiler is responsible for sending the compiled query to the Core Modin Dataframe.
 In this design, the Query Compiler does not have information about where or when the
 query will be executed, and gives the control of the partition layout to the Modin
 Dataframe.
@@ -142,8 +142,8 @@ Dataframe.
 In the interest of reducing the pandas API, the Query Compiler layer closely follows the
 pandas API, but cuts out a large majority of the repetition.
 
-Low-level Modin Dataframe
-"""""""""""""""""""""""""
+Core Modin Dataframe
+""""""""""""""""""""
 
 At this layer, operations can be performed lazily. Currently, Modin executes most
 operations eagerly in an attempt to behave as pandas does. Some operations, e.g.
@@ -152,7 +152,7 @@ cases, we can wait until another operation triggers computation. In the future, 
 to add additional query planning and laziness to Modin to ensure that queries are
 performed efficiently.
 
-The structure of the low-level Modin Dataframe is extensible, such that any operation that could
+The structure of the Core Modin Dataframe is extensible, such that any operation that could
 be better optimized for a given execution can be overridden and optimized in that way.
 
 This layer has a significantly reduced API from the QueryCompiler and the user-facing
@@ -160,8 +160,8 @@ API. Each of these APIs represents a single way of performing a given operation 
 behavior. Some of these are expanded for convenience/understanding. The API abstractions
 are as follows:
 
-Modin Dataframe API
-'''''''''''''''''''
+Core Modin Dataframe API
+''''''''''''''''''''''''
 
 * ``mask``: Indexing/masking/selecting on the data (by label or by integer index).
 * ``copy``: Create a copy of the data.
@@ -201,7 +201,7 @@ This API can be implemented by other distributed/parallel DataFrame libraries an
 plugged in to Modin as well. Create an issue_ or discuss on our Discourse_ for more
 information!
 
-The Modin Dataframe is responsible for the data layout and shuffling, partitioning,
+The Core Modin Dataframe is responsible for the data layout and shuffling, partitioning,
 and serializing the tasks that get sent to each partition. Other implementations of the
 Modin Dataframe interface will have to handle these as well.
 
@@ -209,7 +209,7 @@ Execution Engine/Framework
 """"""""""""""""""""""""""
 
 This layer is what Modin uses to perform computation on a partition of the data. The
-low-level Modin Dataframe is designed to work with `task parallel`_ frameworks, but with some
+Core Modin Dataframe is designed to work with `task parallel`_ frameworks, but with some
 effort, a data parallel framework is possible.
 
 Internal abstractions
@@ -235,7 +235,7 @@ important for some operations in pandas which can accept different arguments and
 operations for different columns, e.g. ``fillna`` with a dictionary.
 
 This abstraction separates the actual data movement and function application from the
-Dataframe layer to keep the Dataframe API small and separately optimize the data
+Dataframe layer to keep the Core Dataframe API small and separately optimize the data
 movement and metadata management.
 
 Partition

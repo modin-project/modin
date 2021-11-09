@@ -33,8 +33,8 @@ Uniformly apply a function argument to each partition in parallel.
 .. figure:: /img/map_evaluation.svg
     :align: center
 
-Reduce operator
----------------
+Reduction operator
+------------------
 Applies an argument function that reduces each column or row on the specified axis into a scalar, but requires knowledge about the whole axis.
 Be aware that providing this knowledge may be expensive because the execution engine has to
 concatenate partitions along the specified axis. Also, note that the execution engine expects

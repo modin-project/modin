@@ -5,7 +5,7 @@ High-Level Module Overview
 
 This module houses parser classes (classes that are used for data parsing on the workers)
 and util functions for handling parsing results. ``PandasParser`` is base class for parser
-classes with pandas format, that contains methods common for all child classes. Other
+classes with pandas storage format, that contains methods common for all child classes. Other
 module classes implement ``parse`` function that performs parsing of specific format data
 basing on the chunk information computed in the ``modin.core.io`` module. After
 chunk data parsing is completed, resulting ``DataFrame``-s will be splitted into smaller

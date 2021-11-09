@@ -8,7 +8,7 @@ individual block partition.
 The class provides an API that has to be overridden by child classes in order to manipulate
 on data and metadata they store.
 
-The public API exposed by the children of this class is used in ``PandasDataframePartitionManager``.
+The public API exposed by the children of this class is used in :py:class:`~modin.core.dataframe.pandas.partitioning.partition_manager.PandasDataframePartitionManager`.
 
 The objects wrapped by the child classes are treated as immutable by ``PandasDataframePartitionManager`` subclasses
 and no logic for updating inplace.

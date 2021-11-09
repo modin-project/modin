@@ -21,7 +21,7 @@ Execution is a combination of the :doc:`storage format </flow/modin/core/storage
 For example, ``PandasOnRay`` execution means the combination of the `pandas storage format` and `Ray` engine.
 
 Each storage format has its own :ref:`Query Compiler <query_compiler_def>` which compiles the most efficient queries
-for the corresponding :doc:`low-level Modin Dataframe </flow/modin/core/dataframe/index>` implementation. Speaking about ``PandasOnRay``
+for the corresponding :doc:`Core Modin Dataframe </flow/modin/core/dataframe/index>` implementation. Speaking about ``PandasOnRay``
 execution, its Query Compiler is :doc:`PandasQueryCompiler </flow/modin/core/storage_formats/pandas/query_compiler>` and the
 Dataframe implementation is :doc:`PandasDataframe </flow/modin/core/dataframe/pandas/dataframe>`,
 which is general implementation for every execution of the pandas storage format. The actual implementation of ``PandasOnRay`` frame

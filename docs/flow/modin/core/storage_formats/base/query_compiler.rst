@@ -1,5 +1,5 @@
-Base Query Compiler
-"""""""""""""""""""
+BaseQueryCompiler
+"""""""""""""""""
 
 Brief description
 '''''''''''''''''

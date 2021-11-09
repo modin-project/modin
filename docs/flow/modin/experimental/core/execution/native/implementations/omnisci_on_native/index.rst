@@ -6,9 +6,9 @@ OmnisciOnNative Dataframe Implementation
 Modin implements ``Dataframe``, ``PartitionManager`` and ``Partition`` classes
 specific for ``OmnisciOnNative`` execution:
 
-* :doc:`Dataframe <dataframe>`
-* :doc:`Partition <partitioning/partition>`
-* :doc:`PartitionManager <partitioning/partition_manager>`
+* :doc:`OmnisciOnNativeDataframe <dataframe>`
+* :doc:`OmnisciOnNativeDataframePartition <partitioning/partition>`
+* :doc:`OmnisciOnNativeDataframePartitionManager <partitioning/partition_manager>`
 
 Overview of OmniSci embedded engine usage can be accessed in the related section:
 

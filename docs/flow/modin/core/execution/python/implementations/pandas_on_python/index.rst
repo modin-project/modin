@@ -6,10 +6,10 @@ specific for `PandasOnPython` execution. Since Python engine doesn't allow compu
 operations on partitions are performed sequentially. The absence of parallelization doesn't give any
 perfomance speed-up, so ``PandasOnPython`` is used for testing purposes only.
 
-* :doc:`Dataframe <dataframe>`
-* :doc:`Partition <partitioning/partition>`
-* :doc:`AxisPartition <partitioning/axis_partition>`
-* :doc:`PartitionManager <partitioning/partition_manager>`
+* :doc:`PandasOnPythonDataframe <dataframe>`
+* :doc:`PandasOnPythonDataframePartition <partitioning/partition>`
+* :doc:`PandasOnPythonDataframeAxisPartition <partitioning/axis_partition>`
+* :doc:`PandasOnPythonDataframePartitionManager <partitioning/partition_manager>`
 
 .. toctree::
     :hidden:

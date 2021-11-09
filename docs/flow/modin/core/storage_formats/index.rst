@@ -1,7 +1,7 @@
 Storage Formats
 ===============
 Storage format is one of the components that form Modin's execution, it describes the type(s)
-of objects that are stored in the partitions of the selected low-level Modin Dataframe implementation.
+of objects that are stored in the partitions of the selected Core Modin Dataframe implementation.
 
 The base storage format in Modin is pandas. In that format, Modin Dataframe operates with
 partitions that hold ``pandas.DataFrame`` objects. Pandas is the most natural storage format
@@ -28,7 +28,7 @@ Query Compiler
 
 Modin supports several execution backends (storage format + execution engine). Calling any
 DataFrame API function will end up in some execution-specific method. The query compiler is
-a bridge between pandas DataFrame API and the actual low-level Modin Dataframe implementation for the
+a bridge between pandas DataFrame API and the actual Core Modin Dataframe implementation for the
 corresponding execution.
 
 .. image:: /img/simplified_query_flow.svg
@@ -38,10 +38,10 @@ corresponding execution.
 Each storage format has its own Query Compiler class that implements the most optimal
 query routing for the selected format.
 
-Query compilers of all storage formats implement a common API, which is used by the Modin Dataframe
+Query compilers of all storage formats implement a common API, which is used by the high-level Modin DataFrame
 to support dataframe queries. The role of the query compiler is to translate its API into
 a pairing of known user-defined functions and dataframe algebra operators. Each query compiler instance contains a
-:doc:`frame </flow/modin/core/dataframe/base/index>` of the selected execution implementation and queries
+:doc:`Core Modin Dataframe </flow/modin/core/dataframe/base/index>` of the selected execution implementation and queries
 it with the compiled queries to get the result. The query compiler object is immutable,
 so the result of every method is a new query compiler.
 
@@ -52,7 +52,7 @@ whole methods can be handled at the API layer with the existing API.
 
 The query compiler is the level where Modin stops distinguishing DataFrame and Series (or column) objects.
 A Series is represented by a `1xN` query compiler, where the Series name is the column label.
-If Series is unnamed, then the label is ``"__reduced__"``. The Dataframe API layer
+If Series is unnamed, then the label is ``"__reduced__"``. The high-level DataFrame API layer
 interprets a one-column query compiler as Series or DataFrame depending on the operation context.
 
 .. note::

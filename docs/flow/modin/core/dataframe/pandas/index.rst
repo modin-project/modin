@@ -1,5 +1,5 @@
-Modin Pandas Dataframe Objects
-==============================
+Modin PandasDataframe Objects
+=============================
 
 * :doc:`PandasDataframe <dataframe>` is the class conforming to Dataframe Algebra.
 * :doc:`PandasDataframePartition <partitioning/partition>` implements ``Partition`` interface holding ``pandas.DataFrame``.
