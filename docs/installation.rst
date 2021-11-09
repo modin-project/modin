@@ -48,7 +48,7 @@ email the bug reporter: bug_reports@modin.org.
 Installing specific dependency sets
 """""""""""""""""""""""""""""""""""
 
-Modin has a number of specific dependency sets for running Modin on different backends
+Modin has a number of specific dependency sets for running Modin on different execution backends
 or for different functionalities of Modin. Here is a list of dependency sets for Modin:
 
 .. code-block:: bash

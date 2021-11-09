@@ -1,6 +1,6 @@
 Storage Formats
 ===============
-Storage format is one of the components that form Modin's backend, it describes the type(s)
+Storage format is one of the components that form Modin's execution, it describes the type(s)
 of objects that are stored in the partitions of the selected low-level Modin Dataframe implementation.
 
 The base storage format in Modin is pandas. In that format, Modin Dataframe operates with
@@ -27,7 +27,7 @@ Query Compiler
     pyarrow/index
 
 Modin supports several execution backends (storage format + execution engine). Calling any
-DataFrame API function will end up in some backend-specific method. The query compiler is
+DataFrame API function will end up in some execution-specific method. The query compiler is
 a bridge between pandas DataFrame API and the actual low-level Modin Dataframe implementation for the
 corresponding execution.
 

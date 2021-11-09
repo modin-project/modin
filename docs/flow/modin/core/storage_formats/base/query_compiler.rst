@@ -86,7 +86,7 @@ and already can be used in Modin DataFrame:
     1     2     5
 
 To be able to select this query compiler as default via ``modin.config`` you also need
-to define the combination of your query compiler and pandas execution engine as a backend
+to define the combination of your query compiler and pandas engine as an execution
 by adding the corresponding factory. To find more information about factories,
 visit :doc:`corresponding section </flow/modin/core/execution/dispatching>` of the flow documentation.
 

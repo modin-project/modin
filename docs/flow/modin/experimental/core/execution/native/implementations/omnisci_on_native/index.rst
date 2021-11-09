@@ -4,7 +4,7 @@ OmnisciOnNative Dataframe Implementation
 ========================================
 
 Modin implements ``Dataframe``, ``PartitionManager`` and ``Partition`` classes
-specific for ``OmnisciOnNative`` backend:
+specific for ``OmnisciOnNative`` execution:
 
 * :doc:`Dataframe <dataframe>`
 * :doc:`Partition <partitioning/partition>`

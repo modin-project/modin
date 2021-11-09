@@ -2,7 +2,7 @@ cuDFOnRay Dataframe Implementation
 ==================================
 
 Modin implements ``Dataframe``, ``PartitionManager``, ``AxisPartition``, ``Partition`` and 
-``GPUManager`` classes specific for ``cuDFOnRay`` backend:
+``GPUManager`` classes specific for ``cuDFOnRay`` execution:
 
 * :doc:`Dataframe <dataframe>`
 * :doc:`Partition <partitioning/partition>`

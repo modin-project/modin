@@ -2,7 +2,7 @@ PandasOnRay Dataframe implementation
 ====================================
 
 Modin implements ``Dataframe``, ``PartitionManager``, ``AxisPartition`` and ``Partition`` classes
-specific for ``PandasOnRay`` backend:
+specific for ``PandasOnRay`` execution:
 
 * :doc:`Dataframe <dataframe>`
 * :doc:`Partition <partitioning/partition>`

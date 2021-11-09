@@ -7,7 +7,7 @@ High-Level Data Import Operation Workflow
 '''''''''''''''''''''''''''''''''''''''''
 
 .. note:: 
-    ``read_csv`` on PandasOnRay backend was taken as an example
+    ``read_csv`` on PandasOnRay execution was taken as an example
     in this chapter for reader convenience. For other import functions workflow and
     classes/functions naming convension will be the same.
 

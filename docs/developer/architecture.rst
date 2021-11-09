@@ -44,7 +44,7 @@ architecture is implemented using several interacting components:
 .. image:: /img/component_view.png
    :align: center
 
-For the simplicity the other backend systems - Dask and MPI are omitted and only Ray execution is shown.
+For the simplicity the other execution systems - Dask and MPI are omitted and only Ray execution is shown.
 
 * Dataframe subsystem is the backbone of the dataframe holding and query compilation. It is responsible for
   dispatching the ingress/egress to the appropriate module, getting the Pandas API and calling the query
