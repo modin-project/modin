@@ -5,15 +5,17 @@
 Modin uses semantic versioning. So when doing a point release, please make a separate branch
 off the previous release tag, and `git cherry-pick` **only** bugfixes there (assuming previous release was versioned `X.Y.Z`):
 
-        `git checkout -b release-X.Y.Z+1 X.Y.Z`
+        git checkout -b release-X.Y.Z+1 X.Y.Z
 
 ### Major release
 
 A "major" (that would be `0.xx.0` for now until Modin hits `1.0` milestone) release could be done by branching from `master`:
 
-        `git checkout -b release-X.Y.0 master`
+        git checkout -b release-X.Y.0 master
 
 ## Preparing the release
+
+Before continuing with the release process, make sure that automated CI which runs on each commit passed successfully with the commit you deem as a "release candidate".
 
 Modin follows the "no push" logic, which is _only_ circumvented for cherry-picked commits,
 as reviewing them again would not add a lot of value but would add lots of excess work.
@@ -21,27 +23,33 @@ as reviewing them again would not add a lot of value but would add lots of exces
 Hence non-cherry-pick commits should happen in a separate branch in your own fork, and
 be delivered to the release branch by using a PR.
 
-Note that Modin uses fully signed commits at least for releases, so you have to have GPG keys set up. See onboarding instructions on where to get started.
+Note that Modin uses fully signed commits at least for releases, so you have to have GPG keys set up. See [onboarding instructions](https://github.com/modin-project/modin/blob/master/onboarding/onboarding.md) on where to get started.
 
-To update Modin version, use the following method (uses versioneer):
+To update Modin version, follow the instructions below.
 
 ### Update the link to release in readme
 
-Change the `README.md` in the root so release badge points to new (would be created) release.
+**Note**: from now on you work in a branch in your fork (in `origin`).
+
+Change the `README.md` in the repo root so release badge points to new (would be created) release.
 
 ### Commit
 
-        `git commit -a -S -m "Release version X.Y.Z"`
+        git commit -a -S -m "Release version X.Y.Z"
 
 Pay attention to that `-S` switch if you haven't enabled signing all the commits!
 Modin requires release commits to be signed (do not mix this with "signing off" commits, this
 is a whole different story - signed commits are cryptographically signed).
 
+Push the commit, make a PR _against `release-X.Y.Z`_ branch and, when it's merged, pull that branch from `upstream` before proceeding.
+
 ### Tag commit
 
-        `git tag -as X.Y.Z`
+**Note**: from now on you work in the release branch (in `upstream`).
 
-  * Look for other releases on examples of how to compose the release documentation
+        git tag -as X.Y.Z
+
+  * Look for [other releases](https://github.com/modin-project/modin/releases) on examples of how to compose the release documentation
     * Always try to make a one-line summary
     * The annotation should contain features and changes compared to previous release
     * You can link to merge commits, but try to "explain" what a PR does instead of blindly copying its title
