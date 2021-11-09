@@ -28,6 +28,7 @@ from modin.config import NPartitions
 from modin.core.io.file_dispatcher import OpenFile
 from modin.core.io.file_dispatcher import S3_ADDRESS_REGEX
 from modin.core.io.text.csv_dispatcher import CSVDispatcher
+from modin.utils import import_optional_dependency
 
 
 class CSVGlobDispatcher(CSVDispatcher):
@@ -287,7 +288,9 @@ class CSVGlobDispatcher(CSVDispatcher):
             if match is not None:
                 if file_path[0] == "S":
                     file_path = "{}{}".format("s", file_path[1:])
-                import s3fs as S3FS
+                S3FS = import_optional_dependency(
+                    "s3fs", "Module s3fs is required to read S3FS files."
+                )
                 from botocore.exceptions import NoCredentialsError
 
                 s3fs = S3FS.S3FileSystem(anon=False)
@@ -320,7 +323,9 @@ class CSVGlobDispatcher(CSVDispatcher):
             if file_path[0] == "S":
                 file_path = "{}{}".format("s", file_path[1:])
 
-            import s3fs as S3FS
+            S3FS = import_optional_dependency(
+                "s3fs", "Module s3fs is required to read S3FS files."
+            )
             from botocore.exceptions import NoCredentialsError
 
             def get_file_path(fs_handle) -> List[str]:

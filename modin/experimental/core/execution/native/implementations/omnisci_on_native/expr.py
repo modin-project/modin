@@ -219,6 +219,11 @@ class BaseExpr(abc.ABC):
         BaseExpr
             The cast expression.
         """
+        # From float to int cast we expect truncate behavior but CAST
+        # operation would give us round behavior.
+        if is_float_dtype(self._dtype) and is_integer_dtype(res_type):
+            return self.floor()
+
         new_expr = OpExpr("CAST", [self], res_type)
         return new_expr
 

@@ -14,6 +14,7 @@
 """The module holds base class implementing required I/O over Ray."""
 
 import io
+import os
 import pandas
 
 from modin.core.io import BaseIO
@@ -196,3 +197,76 @@ class RayIO(BaseIO):
         for rows in result:
             for partition in rows:
                 wait([partition.oid])
+
+    @staticmethod
+    def _to_parquet_check_support(kwargs):
+        """
+        Check if parallel version of `to_parquet` could be used.
+
+        Parameters
+        ----------
+        kwargs : dict
+            Keyword arguments passed to `.to_parquet()`.
+
+        Returns
+        -------
+        bool
+            Whether parallel version of `to_parquet` is applicable.
+        """
+        path = kwargs["path"]
+        compression = kwargs["compression"]
+        if not isinstance(path, str):
+            return False
+        if any((path.endswith(ext) for ext in [".gz", ".bz2", ".zip", ".xz"])):
+            return False
+        if compression is None or not compression == "snappy":
+            return False
+        return True
+
+    @classmethod
+    def to_parquet(cls, qc, **kwargs):
+        """
+        Write a ``DataFrame`` to the binary parquet format.
+
+        Parameters
+        ----------
+        qc : BaseQueryCompiler
+            The query compiler of the Modin dataframe that we want to run `to_parquet` on.
+        **kwargs : dict
+            Parameters for `pandas.to_parquet(**kwargs)`.
+        """
+        if not cls._to_parquet_check_support(kwargs):
+            return BaseIO.to_parquet(qc, **kwargs)
+
+        def func(df, **kw):
+            """
+            Dump a chunk of rows as parquet, then save them to target maintaining order.
+
+            Parameters
+            ----------
+            df : pandas.DataFrame
+                A chunk of rows to write to a parquet file.
+            **kw : dict
+                Arguments to pass to ``pandas.to_parquet(**kwargs)`` plus an extra argument
+                `partition_idx` serving as chunk index to maintain rows order.
+            """
+            output_path = kwargs["path"]
+            compression = kwargs["compression"]
+            partition_idx = kw["partition_idx"]
+            if not os.path.exists(output_path):
+                os.makedirs(output_path)
+            kwargs[
+                "path"
+            ] = f"{output_path}/part-{partition_idx:04d}.{compression}.parquet"
+            df.to_parquet(**kwargs)
+            return pandas.DataFrame()
+
+        result = qc._modin_frame._partition_mgr_cls.map_axis_partitions(
+            axis=1,
+            partitions=qc._modin_frame._partitions,
+            map_func=func,
+            keep_partitioning=True,
+            lengths=None,
+            enumerate_partitions=True,
+        )
+        wait([part.oid for row in result for part in row])
