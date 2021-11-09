@@ -180,7 +180,7 @@ Modin DataFrame API
 * ``transpose``: Swap the axes (columns become rows, rows become columns).
 * ``groupby``:
 
-   * ``groupby_reduce``: Perform a reduction on each group.
+   * ``groupby_reduce``: Perform a reduce on each group.
    * ``groupby_apply``: Apply a function to each group.
 
 * take functions

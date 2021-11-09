@@ -46,7 +46,7 @@ from modin.core.dataframe.algebra import (
     Fold,
     Map,
     MapReduce,
-    Reduction,
+    Reduce,
     Binary,
     GroupByReduce,
     groupby_reduce_functions,
@@ -764,20 +764,20 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
     # END MapReduce operations
 
-    # Reduction operations
-    idxmax = Reduction.register(pandas.DataFrame.idxmax)
-    idxmin = Reduction.register(pandas.DataFrame.idxmin)
-    median = Reduction.register(pandas.DataFrame.median)
-    nunique = Reduction.register(pandas.DataFrame.nunique)
-    skew = Reduction.register(pandas.DataFrame.skew)
-    kurt = Reduction.register(pandas.DataFrame.kurt)
-    sem = Reduction.register(pandas.DataFrame.sem)
-    std = Reduction.register(pandas.DataFrame.std)
-    var = Reduction.register(pandas.DataFrame.var)
-    sum_min_count = Reduction.register(pandas.DataFrame.sum)
-    prod_min_count = Reduction.register(pandas.DataFrame.prod)
-    quantile_for_single_value = Reduction.register(pandas.DataFrame.quantile)
-    mad = Reduction.register(pandas.DataFrame.mad)
+    # Reduce operations
+    idxmax = Reduce.register(pandas.DataFrame.idxmax)
+    idxmin = Reduce.register(pandas.DataFrame.idxmin)
+    median = Reducegister(pandas.DataFrame.median)
+    nunique = Reducegister(pandas.DataFrame.nunique)
+    skew = Reduceter(pandas.DataFrame.skew)
+    kurt = Reducegister(pandas.DataFrame.kurt)
+    sem = Reducegister(pandas.DataFrame.sem)
+    std = Reduceter(pandas.DataFrame.std)
+    var = Reduceter(pandas.DataFrame.var)
+    sum_min_count = Reducegister(pandas.DataFrame.sum)
+    prod_min_count = Reduce.register(pandas.DataFrame.prod)
+    quantile_for_single_value = Reduce.register(pandas.DataFrame.quantile)
+    mad = Reduce.register(pandas.DataFrame.mad)
 
     def to_datetime(self, *args, **kwargs):
         if len(self.columns) == 1:
@@ -788,9 +788,9 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 ).to_frame()
             )(self, *args, **kwargs)
         else:
-            return Reduction.register(pandas.to_datetime, axis=1)(self, *args, **kwargs)
+            return Reduce.register(pandas.to_datetime, axis=1)(self, *args, **kwargs)
 
-    # END Reduction operations
+    # END Reduce operations
 
     def _resample_func(
         self, resample_args, func_name, new_columns=None, df_op=None, *args, **kwargs

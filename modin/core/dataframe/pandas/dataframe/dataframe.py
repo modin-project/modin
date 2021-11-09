@@ -1155,7 +1155,7 @@ class PandasDataframe(object):
             series_result = func(df, *args, **kwargs)
             if axis == 0 and isinstance(series_result, pandas.Series):
                 # In the case of axis=0, we need to keep the shape of the data
-                # consistent with what we have done. In the case of a reduction, the
+                # consistent with what we have done. In the case of a reduce, the
                 # data for axis=0 should be a single value for each column. By
                 # transposing the data after we convert to a DataFrame, we ensure that
                 # the columns of the result line up with the columns from the data.

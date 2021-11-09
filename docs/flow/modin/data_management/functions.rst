@@ -33,12 +33,12 @@ Uniformly apply a function argument to each partition in parallel.
 .. figure:: /img/map_evaluation.svg
     :align: center
 
-Reduction functions
+Reduce functions
 -------------------
 Applies an argument function that reduces each column or row on the specified axis into a scalar, but requires knowledge about the whole axis.
 Be aware that providing this knowledge may be expensive because the execution engine has to
 concatenate partitions along the specified axis. Also, note that the execution engine expects
-that the reduction function returns a one dimensional frame.
+that the reduce function returns a one dimensional frame.
 
 .. figure:: /img/reduce_evaluation.svg
     :align: center
@@ -46,9 +46,9 @@ that the reduction function returns a one dimensional frame.
 MapReduce Functions
 -------------------
 Applies an argument function that reduces specified axis into a scalar. First applies map function to each partition
-in parallel, then concatenates resulted partitions along the specified axis and applies reduction
+in parallel, then concatenates resulted partitions along the specified axis and applies reduce
 function. In contrast with `Map function` template, here you're allowed to change partition shape
-in the map phase. Note that the execution engine expects that the reduction function returns a one dimensional frame.
+in the map phase. Note that the execution engine expects that the reduce function returns a one dimensional frame.
 
 Binary functions
 ----------------
