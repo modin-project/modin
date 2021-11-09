@@ -16,7 +16,7 @@
 import numpy as np
 import pandas
 import pandas.core.groupby
-from pandas.core.dtypes.common import is_list_like
+from pandas.core.dtypes.common import is_list_like, is_numeric_dtype
 from pandas.core.aggregation import reconstruct_func
 from pandas._libs.lib import no_default
 import pandas.core.common as com
@@ -946,7 +946,7 @@ class DataFrameGroupBy(object):
         else:
             groupby_qc = self._query_compiler
 
-        if len(groupby_qc._modin_frame.numeric_columns(True)) == 0:
+        if all(not is_numeric_dtype(dtype) for dtype in groupby_qc.dtypes):
             numeric_only = False
 
         result = type(self._df)(
