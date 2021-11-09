@@ -22,6 +22,7 @@ import fsspec
 import os
 import re
 from modin.config import StorageFormat
+from modin.utils import import_optional_dependency
 import numpy as np
 
 S3_ADDRESS_REGEX = re.compile("[sS]3://(.*?)/(.*)")
@@ -245,7 +246,9 @@ class FileDispatcher:
             if match is not None:
                 if file_path[0] == "S":
                     file_path = "{}{}".format("s", file_path[1:])
-                import s3fs as S3FS
+                S3FS = import_optional_dependency(
+                    "s3fs", "Module s3fs is required to read S3FS files."
+                )
                 from botocore.exceptions import NoCredentialsError
 
                 s3fs = S3FS.S3FileSystem(anon=False)

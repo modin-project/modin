@@ -16,6 +16,7 @@
 from modin.core.io.column_stores.column_store_dispatcher import (
     ColumnStoreDispatcher,
 )
+from modin.utils import import_optional_dependency
 
 
 class FeatherDispatcher(ColumnStoreDispatcher):
@@ -54,6 +55,9 @@ class FeatherDispatcher(ColumnStoreDispatcher):
         """
         path = cls.get_path(path)
         if columns is None:
+            import_optional_dependency(
+                "pyarrow", "pyarrow is required to read feather files."
+            )
             from pyarrow.feather import read_feather
 
             df = read_feather(path)
