@@ -161,13 +161,7 @@ class TestCsv:
     )
     @pytest.mark.parametrize("skip_blank_lines", [True, False])
     def test_read_csv_col_handling(
-        self,
-        header,
-        index_col,
-        prefix,
-        names,
-        usecols,
-        skip_blank_lines,
+        self, header, index_col, prefix, names, usecols, skip_blank_lines,
     ):
         if names is lib.no_default:
             pytest.skip("some parameters combiantions fails: issue #2312")
@@ -210,11 +204,7 @@ class TestCsv:
     )
     @pytest.mark.parametrize("skipfooter", [0, 10])
     def test_read_csv_parsing_1(
-        self,
-        dtype,
-        engine,
-        converters,
-        skipfooter,
+        self, dtype, engine, converters, skipfooter,
     ):
 
         if dtype:
@@ -261,14 +251,7 @@ class TestCsv:
     )
     @pytest.mark.parametrize("encoding", ["latin1", "windows-1251", None])
     def test_read_csv_parsing_2(
-        self,
-        make_csv_file,
-        request,
-        header,
-        skiprows,
-        nrows,
-        names,
-        encoding,
+        self, make_csv_file, request, header, skiprows, nrows, names, encoding,
     ):
         xfail_case = (
             StorageFormat.get() == "Omnisci"
@@ -290,8 +273,7 @@ class TestCsv:
         if encoding:
             unique_filename = get_unique_filename()
             make_csv_file(
-                filename=unique_filename,
-                encoding=encoding,
+                filename=unique_filename, encoding=encoding,
             )
         kwargs = {
             "filepath_or_buffer": unique_filename
@@ -323,11 +305,7 @@ class TestCsv:
     @pytest.mark.parametrize("skipfooter", [0, 10])
     @pytest.mark.parametrize("nrows", [35, None])
     def test_read_csv_parsing_3(
-        self,
-        true_values,
-        false_values,
-        skipfooter,
-        nrows,
+        self, true_values, false_values, skipfooter, nrows,
     ):
         xfail_case = (
             (false_values or true_values)
@@ -361,12 +339,7 @@ class TestCsv:
         eval_io_from_str(str_initial_spaces, unique_filename, skipinitialspace=True)
 
     @pytest.mark.parametrize(
-        "test_case",
-        [
-            "single_element",
-            "single_column",
-            "multiple_columns",
-        ],
+        "test_case", ["single_element", "single_column", "multiple_columns",],
     )
     def test_read_csv_squeeze(self, request, test_case):
         if request.config.getoption("--simulate-cloud").lower() != "off":
@@ -405,12 +378,7 @@ class TestCsv:
     @pytest.mark.parametrize("verbose", [True, False])
     @pytest.mark.parametrize("skip_blank_lines", [True, False])
     def test_read_csv_nans_handling(
-        self,
-        na_values,
-        keep_default_na,
-        na_filter,
-        verbose,
-        skip_blank_lines,
+        self, na_values, keep_default_na, na_filter, verbose, skip_blank_lines,
     ):
         eval_io(
             fn_name="read_csv",
@@ -587,13 +555,7 @@ class TestCsv:
     @pytest.mark.parametrize("escapechar", [None, "d", "x"])
     @pytest.mark.parametrize("dialect", ["test_csv_dialect", None])
     def test_read_csv_file_format(
-        self,
-        make_csv_file,
-        thousands,
-        decimal,
-        lineterminator,
-        escapechar,
-        dialect,
+        self, make_csv_file, thousands, decimal, lineterminator, escapechar, dialect,
     ):
         if Engine.get() != "Python" and lineterminator == "x":
             pytest.xfail("read_csv with Ray engine outputs empty frame - issue #2493")
@@ -648,12 +610,7 @@ class TestCsv:
     @pytest.mark.parametrize("doublequote", [True, False])
     @pytest.mark.parametrize("comment", [None, "#", "x"])
     def test_read_csv_quoting(
-        self,
-        make_csv_file,
-        quoting,
-        quotechar,
-        doublequote,
-        comment,
+        self, make_csv_file, quoting, quotechar, doublequote, comment,
     ):
         # in these cases escapechar should be set, otherwise error occures
         # _csv.Error: need to escape, but no escapechar set"
@@ -688,10 +645,7 @@ class TestCsv:
     @pytest.mark.parametrize("error_bad_lines", [True, False, None])
     @pytest.mark.parametrize("on_bad_lines", ["error", "warn", "skip", None])
     def test_read_csv_error_handling(
-        self,
-        warn_bad_lines,
-        error_bad_lines,
-        on_bad_lines,
+        self, warn_bad_lines, error_bad_lines, on_bad_lines,
     ):
         # in that case exceptions are raised both by Modin and pandas
         # and tests pass
@@ -772,8 +726,7 @@ class TestCsv:
             )
         else:
             make_csv_file(
-                filename=unique_filename,
-                delimiter=delimiter,
+                filename=unique_filename, delimiter=delimiter,
             )
 
             eval_io(
@@ -1293,11 +1246,7 @@ class TestParquet:
         reason="The reason of tests fail in `cloud` mode is unknown for now - issue #3264",
     )
     def test_read_parquet_2462(self):
-        test_df = pd.DataFrame(
-            {
-                "col1": [["ad_1", "ad_2"], ["ad_3"]],
-            }
-        )
+        test_df = pd.DataFrame({"col1": [["ad_1", "ad_2"], ["ad_3"]],})
 
         with tempfile.TemporaryDirectory() as directory:
             path = f"{directory}/data"

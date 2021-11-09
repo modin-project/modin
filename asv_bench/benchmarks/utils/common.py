@@ -246,11 +246,7 @@ def gen_true_false_int_data(nrows, ncols, rand_low, rand_high):
 
 
 def gen_data(
-    data_type: str,
-    nrows: int,
-    ncols: int,
-    rand_low: int,
-    rand_high: int,
+    data_type: str, nrows: int, ncols: int, rand_low: int, rand_high: int,
 ) -> dict:
     """
     Generate data with caching.

@@ -112,8 +112,7 @@ class FWFDispatcher(TextFileDispatcher):
             del kwargs["usecols"]
             with OpenFile(filepath_or_buffer, "rb") as f:
                 all_cols = pandas.read_fwf(
-                    f,
-                    **dict(kwargs, nrows=0, skipfooter=0),
+                    f, **dict(kwargs, nrows=0, skipfooter=0),
                 ).columns
             usecols = all_cols.get_indexer_for(list(usecols_md[0]))
         parse_dates = kwargs.pop("parse_dates", False)

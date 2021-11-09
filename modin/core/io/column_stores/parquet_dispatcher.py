@@ -15,9 +15,7 @@
 
 import os
 
-from modin.core.io.column_stores.column_store_dispatcher import (
-    ColumnStoreDispatcher,
-)
+from modin.core.io.column_stores.column_store_dispatcher import ColumnStoreDispatcher
 from modin.error_message import ErrorMessage
 
 

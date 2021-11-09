@@ -757,10 +757,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 count_cols = count_cols.sum(axis=axis, skipna=False)
             return sum_cols / count_cols
 
-        return MapReduce.register(
-            map_fn,
-            reduce_fn,
-        )(self, axis=axis, **kwargs)
+        return MapReduce.register(map_fn, reduce_fn,)(self, axis=axis, **kwargs)
 
     # END MapReduce operations
 
@@ -1392,9 +1389,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
     def unique(self):
         new_modin_frame = self._modin_frame.apply_full_axis(
-            0,
-            lambda x: x.squeeze(axis=1).unique(),
-            new_columns=self.columns,
+            0, lambda x: x.squeeze(axis=1).unique(), new_columns=self.columns,
         )
         return self.__constructor__(new_modin_frame)
 
@@ -2092,9 +2087,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         )
         new_index = pandas.RangeIndex(len(self.index) * len(value_vars))
         new_modin_frame = self._modin_frame.__constructor__(
-            new_parts,
-            index=new_index,
-            columns=id_vars + [var_name, value_name],
+            new_parts, index=new_index, columns=id_vars + [var_name, value_name],
         )
         result = self.__constructor__(new_modin_frame)
         # this assigment needs to propagate correct indices into partitions
@@ -2708,9 +2701,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
                 missmatched_cols = internal_by_df.columns.difference(df.columns)
                 df = pandas.concat(
-                    [df, internal_by_df[missmatched_cols]],
-                    axis=1,
-                    copy=False,
+                    [df, internal_by_df[missmatched_cols]], axis=1, copy=False,
                 )
                 internal_by_cols = internal_by_df.columns
 

@@ -314,8 +314,7 @@ def test_constructor_columns_and_index():
         pandas.DataFrame(pandas_df, columns=["max_speed", "health"]),
     )
     df_equals(
-        pd.DataFrame(modin_df, index=[1, 2]),
-        pandas.DataFrame(pandas_df, index=[1, 2]),
+        pd.DataFrame(modin_df, index=[1, 2]), pandas.DataFrame(pandas_df, index=[1, 2]),
     )
     df_equals(
         pd.DataFrame(modin_df, index=[1, 2], columns=["health"]),

@@ -121,12 +121,7 @@ def read(filename):
     ]
     dtypes = {columns_names[i]: columns_types[i] for i in range(len(columns_names))}
 
-    df = pd.read_csv(
-        filename,
-        names=columns_names,
-        dtype=dtypes,
-        skiprows=1,
-    )
+    df = pd.read_csv(filename, names=columns_names, dtype=dtypes, skiprows=1,)
 
     return df
 

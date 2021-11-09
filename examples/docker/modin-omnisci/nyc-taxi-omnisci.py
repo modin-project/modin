@@ -14,7 +14,9 @@
 import sys
 import time
 import modin.pandas as pd
-from modin.experimental.core.execution.native.implementations.omnisci_on_native.omnisci_worker import OmnisciServer
+from modin.experimental.core.execution.native.implementations.omnisci_on_native.omnisci_worker import (
+    OmnisciServer,
+)
 
 
 def read(filename):
@@ -135,10 +137,7 @@ def read(filename):
     dates_only = [col for (col, valtype) in dtypes.items() if valtype in ["timestamp"]]
 
     df = pd.read_csv(
-        filename,
-        names=columns_names,
-        dtype=all_but_dates,
-        parse_dates=dates_only,
+        filename, names=columns_names, dtype=all_but_dates, parse_dates=dates_only,
     )
 
     df.shape  # to trigger real execution

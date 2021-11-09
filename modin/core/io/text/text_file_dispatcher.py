@@ -526,9 +526,7 @@ class TextFileDispatcher(FileDispatcher):
 
     @classmethod
     def _define_metadata(
-        cls,
-        df: pandas.DataFrame,
-        column_names: ColumnNamesTypes,
+        cls, df: pandas.DataFrame, column_names: ColumnNamesTypes,
     ) -> Tuple[list, int]:
         """
         Define partitioning metadata.

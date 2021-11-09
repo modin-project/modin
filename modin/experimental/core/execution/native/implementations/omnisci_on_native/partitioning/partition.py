@@ -16,9 +16,7 @@
 import pandas
 
 from modin.core.dataframe.pandas.partitioning.partition import PandasDataframePartition
-from ..omnisci_worker import (
-    OmnisciServer,
-)
+from ..omnisci_worker import OmnisciServer
 import pyarrow
 
 
@@ -146,7 +144,5 @@ class OmnisciOnNativeDataframePartition(PandasDataframePartition):
             The new partition.
         """
         return OmnisciOnNativeDataframePartition(
-            arrow_table=obj,
-            length=len(obj),
-            width=len(obj.columns),
+            arrow_table=obj, length=len(obj), width=len(obj.columns),
         )

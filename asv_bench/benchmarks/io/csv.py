@@ -55,12 +55,7 @@ class TimeReadCsvSkiprows(BaseReadCsv):
     param_names = ["shape", "skiprows"]
     params = [
         shapes,
-        [
-            None,
-            "lambda_even_rows",
-            "range_uniform",
-            "range_step2",
-        ],
+        [None, "lambda_even_rows", "range_uniform", "range_step2",],
     ]
 
     def setup(self, test_filenames, shape, skiprows):
@@ -109,11 +104,7 @@ class TimeReadCsvNamesDtype:
 
     def _add_timestamp_columns(self, df):
         df = df.copy()
-        date_column = IMPL["pandas"].date_range(
-            "2000",
-            periods=df.shape[0],
-            freq="ms",
-        )
+        date_column = IMPL["pandas"].date_range("2000", periods=df.shape[0], freq="ms",)
         for col in self._timestamp_columns:
             df[col] = date_column
         return df

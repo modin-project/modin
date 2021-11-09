@@ -30,12 +30,12 @@ from modin.config import AsvDataSizeConfig
                 [
                     # binary shapes
                     [[10, 10], [15, 15]],
-                    [[11, 11], [13, 13]]
+                    [[11, 11], [13, 13]],
                 ],
                 [
                     # unary shapes
                     [11, 11],
-                    [13, 13]
+                    [13, 13],
                 ],
             ],
         ),
@@ -51,12 +51,7 @@ def test_get_benchmark_shapes(asv_config_content, result):
 
 @pytest.mark.parametrize(
     "asv_config_content, result",
-    [
-        (
-            '{"TimeJoin": [[[10, 10], [15, 15]]]',
-            [[100, 100]],
-        ),
-    ],
+    [('{"TimeJoin": [[[10, 10], [15, 15]]]', [[100, 100]],),],
 )
 @patch.object(data_shapes, "CONFIG_FROM_FILE", new=None)
 def test_get_benchmark_shapes_default(asv_config_content, result):

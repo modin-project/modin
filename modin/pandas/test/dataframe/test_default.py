@@ -157,8 +157,7 @@ def test_between_time():
         pandas_df.between_time("12:00", "17:00"),
     )
     df_equals(
-        modin_df.between_time("3:00", "4:00"),
-        pandas_df.between_time("3:00", "4:00"),
+        modin_df.between_time("3:00", "4:00"), pandas_df.between_time("3:00", "4:00"),
     )
     df_equals(
         modin_df.T.between_time("12:00", "17:00", axis=1),
@@ -402,9 +401,7 @@ def test_kurt_kurtosis_level(level):
     df_pandas.columns = index
 
     eval_general(
-        df_modin,
-        df_pandas,
-        lambda df: df.kurtosis(axis=1, level=level),
+        df_modin, df_pandas, lambda df: df.kurtosis(axis=1, level=level),
     )
 
 
@@ -441,9 +438,7 @@ def test_mad_level(level):
     modin_df.columns = index
     pandas_df.columns = index
     eval_general(
-        modin_df,
-        pandas_df,
-        lambda df: df.mad(axis=1, level=level),
+        modin_df, pandas_df, lambda df: df.mad(axis=1, level=level),
     )
 
 
@@ -554,12 +549,7 @@ def test_pivot_table_data(data, index, columns, values):
 )
 @pytest.mark.parametrize("margins_name", ["Custom name", None])
 def test_pivot_table_margins(
-    data,
-    index,
-    columns,
-    values,
-    aggfunc,
-    margins_name,
+    data, index, columns, values, aggfunc, margins_name,
 ):
     eval_general(
         *create_test_dfs(data),
@@ -741,18 +731,10 @@ def test_resample_specific(rule, closed, label, on, level):
         modin_df[on] = pandas.date_range("22/06/1941", periods=12, freq="T")
 
     pandas_resampler = pandas_df.resample(
-        rule,
-        closed=closed,
-        label=label,
-        on=on,
-        level=level,
+        rule, closed=closed, label=label, on=on, level=level,
     )
     modin_resampler = modin_df.resample(
-        rule,
-        closed=closed,
-        label=label,
-        on=on,
-        level=level,
+        rule, closed=closed, label=label, on=on, level=level,
     )
     df_equals(modin_resampler.var(0), pandas_resampler.var(0))
     if on is None and level is None:
@@ -823,11 +805,7 @@ def test_stack(data, is_multi_idx, is_multi_col):
     if is_multi_col:
         if len(pandas_df.columns) == 64:
             columns = pd.MultiIndex.from_product(
-                [
-                    ["A", "B", "C", "D"],
-                    ["xx", "yy", "zz", "LAST"],
-                    [10, 20, 30, 40],
-                ]
+                [["A", "B", "C", "D"], ["xx", "yy", "zz", "LAST"], [10, 20, 30, 40],]
             )
         elif len(pandas_df.columns) == 100:
             columns = pd.MultiIndex.from_product(
@@ -904,8 +882,7 @@ def test_swaplevel():
         ),
     )
     df_equals(
-        modin_df.swaplevel("Number", "Color"),
-        pandas_df.swaplevel("Number", "Color"),
+        modin_df.swaplevel("Number", "Color"), pandas_df.swaplevel("Number", "Color"),
     )
     df_equals(modin_df.swaplevel(), pandas_df.swaplevel())
     df_equals(modin_df.swaplevel(0, 1), pandas_df.swaplevel(0, 1))
@@ -939,16 +916,14 @@ def test_take():
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_to_records(request, data):
     eval_general(
-        *create_test_dfs(data),
-        lambda df: df.dropna().to_records(),
+        *create_test_dfs(data), lambda df: df.dropna().to_records(),
     )
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_to_string(data):
     eval_general(
-        *create_test_dfs(data),
-        lambda df: df.to_string(),
+        *create_test_dfs(data), lambda df: df.to_string(),
     )
 
 

@@ -460,9 +460,7 @@ def df_categories_equals(df1, df2):
     categories_columns = df1.select_dtypes(include="category").columns
     for column in categories_columns:
         assert_extension_array_equal(
-            df1[column].values,
-            df2[column].values,
-            check_dtype=False,
+            df1[column].values, df2[column].values, check_dtype=False,
         )
 
 
@@ -805,9 +803,7 @@ def eval_io_from_str(csv_str: str, unique_filename: str, **kwargs):
             f.write(csv_str)
 
         eval_io(
-            filepath_or_buffer=unique_filename,
-            fn_name="read_csv",
-            **kwargs,
+            filepath_or_buffer=unique_filename, fn_name="read_csv", **kwargs,
         )
 
     finally:
@@ -1125,9 +1121,7 @@ def generate_dataframe(row_size=NROWS, additional_col_values=None):
     if additional_col_values is not None:
         assert isinstance(additional_col_values, (list, tuple))
         data.update(
-            {
-                "col7": random_state.choice(additional_col_values, size=row_size),
-            }
+            {"col7": random_state.choice(additional_col_values, size=row_size),}
         )
     return pandas.DataFrame(data)
 

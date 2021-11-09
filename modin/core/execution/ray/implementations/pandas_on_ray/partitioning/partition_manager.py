@@ -25,9 +25,7 @@ from .axis_partition import (
     PandasOnRayDataframeColumnPartition,
     PandasOnRayDataframeRowPartition,
 )
-from .partition import (
-    PandasOnRayDataframePartition,
-)
+from .partition import PandasOnRayDataframePartition
 from modin.core.execution.ray.generic.modin_aqp import call_progress_bar
 from modin.error_message import ErrorMessage
 import pandas
@@ -70,8 +68,7 @@ def progress_bar_wrapper(f):
                 ) = inspect.getframeinfo(current_frame)
                 current_frame = current_frame.f_back
             t = threading.Thread(
-                target=call_progress_bar,
-                args=(result_parts, line_number),
+                target=call_progress_bar, args=(result_parts, line_number),
             )
             t.start()
             # We need to know whether or not we are in a jupyter notebook

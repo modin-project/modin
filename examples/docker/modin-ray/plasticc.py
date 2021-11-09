@@ -142,10 +142,7 @@ def read(
 ):
     train = pd.read_csv(training_set_filename, dtype=dtypes)
     test = pd.read_csv(
-        test_set_filename,
-        names=list(dtypes.keys()),
-        dtype=dtypes,
-        header=0,
+        test_set_filename, names=list(dtypes.keys()), dtype=dtypes, header=0,
     )
 
     train_meta = pd.read_csv(training_set_metadata_filename, dtype=meta_dtypes)

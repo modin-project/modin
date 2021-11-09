@@ -174,8 +174,7 @@ class PandasParser(object):
             # concat all elements of `partitions_dtypes` and find common dtype
             # for each of the column among all partitions
             frame_dtypes = combined_part_dtypes.apply(
-                lambda row: find_common_type_cat(row.values),
-                axis=1,
+                lambda row: find_common_type_cat(row.values), axis=1,
             ).squeeze(axis=0)
 
         return frame_dtypes
@@ -206,10 +205,8 @@ class PandasParser(object):
         pandas_frame = cls.parse(fname, **kwargs)
         if isinstance(pandas_frame, pandas.io.parsers.TextFileReader):
             pd_read = pandas_frame.read
-            pandas_frame.read = (
-                lambda *args, **kwargs: cls.query_compiler_cls.from_pandas(
-                    pd_read(*args, **kwargs), cls.frame_cls
-                )
+            pandas_frame.read = lambda *args, **kwargs: cls.query_compiler_cls.from_pandas(
+                pd_read(*args, **kwargs), cls.frame_cls
             )
             return pandas_frame
         elif isinstance(pandas_frame, (OrderedDict, dict)):

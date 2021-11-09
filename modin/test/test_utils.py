@@ -136,11 +136,7 @@ def test_doc_inherit_prop_builder():
 @pytest.mark.parametrize(
     "source_doc,to_append,expected",
     [
-        (
-            "One-line doc.",
-            "One-line message.",
-            "One-line doc.One-line message.",
-        ),
+        ("One-line doc.", "One-line message.", "One-line doc.One-line message.",),
         (
             """
             Regular doc-string

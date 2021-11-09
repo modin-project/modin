@@ -84,10 +84,7 @@ class CSVDispatcher(TextFileDispatcher):
         # Define header size for further skipping (Header can be skipped because header
         # information will be obtained further from empty_df, so no need to handle it
         # by workers)
-        header_size = cls._define_header_size(
-            header,
-            names,
-        )
+        header_size = cls._define_header_size(header, names,)
         (
             skiprows_md,
             pre_reading,
@@ -219,9 +216,7 @@ class CSVDispatcher(TextFileDispatcher):
 
     @classmethod
     def _define_index(
-        cls,
-        index_ids: list,
-        index_name: str,
+        cls, index_ids: list, index_name: str,
     ) -> Tuple[IndexColType, list]:
         """
         Compute the resulting DataFrame index and index lengths for each of partitions.

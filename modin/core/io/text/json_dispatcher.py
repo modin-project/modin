@@ -69,10 +69,7 @@ class JSONDispatcher(TextFileDispatcher):
 
             args = {"fname": path_or_buf, "num_splits": num_splits, **kwargs}
 
-            splits = cls.partitioned_file(
-                f,
-                num_partitions=NPartitions.get(),
-            )
+            splits = cls.partitioned_file(f, num_partitions=NPartitions.get(),)
             for start, end in splits:
                 args.update({"start": start, "end": end})
                 partition_id = cls.deploy(cls.parse, num_splits + 3, args)

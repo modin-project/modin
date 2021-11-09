@@ -40,12 +40,10 @@ num_cpus = mp.cpu_count()
 
 
 @pytest.mark.parametrize(
-    "modin_type_y",
-    [pd.DataFrame, pd.Series],
+    "modin_type_y", [pd.DataFrame, pd.Series],
 )
 @pytest.mark.parametrize(
-    "num_actors",
-    [1, num_cpus, None, modin.config.NPartitions.get() + 1],
+    "num_actors", [1, num_cpus, None, modin.config.NPartitions.get() + 1],
 )
 @pytest.mark.parametrize(
     "data",
@@ -55,9 +53,7 @@ num_cpus = mp.cpu_count()
             {"objective": "binary:logistic", "eval_metric": ["logloss", "error"]},
         ),
     ],
-    ids=[
-        "load_breast_cancer",
-    ],
+    ids=["load_breast_cancer",],
 )
 def test_xgb_with_binary_classification_datasets(data, num_actors, modin_type_y):
     dataset, param = data
@@ -116,40 +112,19 @@ def test_xgb_with_binary_classification_datasets(data, num_actors, modin_type_y)
 
 
 @pytest.mark.parametrize(
-    "modin_type_y",
-    [pd.DataFrame, pd.Series],
+    "modin_type_y", [pd.DataFrame, pd.Series],
 )
 @pytest.mark.parametrize(
-    "num_actors",
-    [1, num_cpus, None, modin.config.NPartitions.get() + 1],
+    "num_actors", [1, num_cpus, None, modin.config.NPartitions.get() + 1],
 )
 @pytest.mark.parametrize(
     "data",
     [
-        (
-            load_iris(),
-            {
-                "num_class": 3,
-            },
-        ),
-        (
-            load_digits(),
-            {
-                "num_class": 10,
-            },
-        ),
-        (
-            load_wine(),
-            {
-                "num_class": 3,
-            },
-        ),
+        (load_iris(), {"num_class": 3,},),
+        (load_digits(), {"num_class": 10,},),
+        (load_wine(), {"num_class": 3,},),
     ],
-    ids=[
-        "load_iris",
-        "load_digits",
-        "load_wine",
-    ],
+    ids=["load_iris", "load_digits", "load_wine",],
 )
 def test_xgb_with_multiclass_classification_datasets(data, num_actors, modin_type_y):
     dataset, param_ = data
@@ -211,26 +186,13 @@ def test_xgb_with_multiclass_classification_datasets(data, num_actors, modin_typ
 
 
 @pytest.mark.parametrize(
-    "modin_type_y",
-    [pd.DataFrame, pd.Series],
+    "modin_type_y", [pd.DataFrame, pd.Series],
 )
 @pytest.mark.parametrize(
-    "num_actors",
-    [
-        1,
-        num_cpus,
-        None,
-        modin.config.NPartitions.get() + 1,
-    ],
+    "num_actors", [1, num_cpus, None, modin.config.NPartitions.get() + 1,],
 )
 @pytest.mark.parametrize(
-    "data",
-    [
-        (load_diabetes(), {"eta": 0.01}),
-    ],
-    ids=[
-        "load_diabetes",
-    ],
+    "data", [(load_diabetes(), {"eta": 0.01}),], ids=["load_diabetes",],
 )
 def test_xgb_with_regression_datasets(data, num_actors, modin_type_y):
     dataset, param = data

@@ -45,7 +45,7 @@ sql_deps = ["dfsql>=0.4.2", "pyparsing<=2.4.7"]
 all_deps = dask_deps + ray_deps + remote_deps + spreadsheet_deps
 
 # dfsql does not support Windows yet
-if os.name != 'nt':
+if os.name != "nt":
     all_deps += sql_deps
 
 setup(

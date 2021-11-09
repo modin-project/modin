@@ -53,9 +53,7 @@ class PickleExperimentalDispatcher(FileDispatcher):
         if not (isinstance(filepath_or_buffer, str) and "*" in filepath_or_buffer):
             warnings.warn("Defaulting to Modin core implementation")
             return cls.single_worker_read(
-                filepath_or_buffer,
-                single_worker_read=True,
-                **kwargs,
+                filepath_or_buffer, single_worker_read=True, **kwargs,
             )
         filepath_or_buffer = sorted(glob.glob(filepath_or_buffer))
 
@@ -73,14 +71,7 @@ class PickleExperimentalDispatcher(FileDispatcher):
             warnings.warn("can be inefficient partitioning")
 
         for file_name in filepath_or_buffer:
-            partition_id = cls.deploy(
-                cls.parse,
-                3,
-                dict(
-                    fname=file_name,
-                    **kwargs,
-                ),
-            )
+            partition_id = cls.deploy(cls.parse, 3, dict(fname=file_name, **kwargs,),)
             partition_ids.append(partition_id[:-2])
             lengths_ids.append(partition_id[-2])
             widths_ids.append(partition_id[-1])

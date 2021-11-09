@@ -14,7 +14,9 @@
 import sys
 import time
 import modin.pandas as pd
-from modin.experimental.core.execution.native.implementations.omnisci_on_native.omnisci_worker import OmnisciServer
+from modin.experimental.core.execution.native.implementations.omnisci_on_native.omnisci_worker import (
+    OmnisciServer,
+)
 
 from sklearn import config_context
 import sklearnex
@@ -122,12 +124,7 @@ def read(filename):
     ]
     dtypes = {columns_names[i]: columns_types[i] for i in range(len(columns_names))}
 
-    df = pd.read_csv(
-        filename,
-        names=columns_names,
-        dtype=dtypes,
-        skiprows=1,
-    )
+    df = pd.read_csv(filename, names=columns_names, dtype=dtypes, skiprows=1,)
 
     df.shape  # to trigger real execution
     df._query_compiler._modin_frame._partitions[0][

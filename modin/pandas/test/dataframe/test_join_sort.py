@@ -208,18 +208,10 @@ def test_merge(test_data, test_data2):
             df_equals(modin_result, pandas_result)
 
             modin_result = modin_df.merge(
-                modin_df2,
-                how=hows[i],
-                left_on="key",
-                right_on="key",
-                sort=sorts[j],
+                modin_df2, how=hows[i], left_on="key", right_on="key", sort=sorts[j],
             )
             pandas_result = pandas_df.merge(
-                pandas_df2,
-                how=hows[i],
-                left_on="key",
-                right_on="key",
-                sort=sorts[j],
+                pandas_df2, how=hows[i], left_on="key", right_on="key", sort=sorts[j],
             )
             df_equals(modin_result, pandas_result)
 
@@ -434,9 +426,7 @@ def test_sort_multiindex(sort_remaining):
 )
 @pytest.mark.parametrize("na_position", ["first", "last"], ids=["first", "last"])
 @pytest.mark.parametrize(
-    "ignore_index",
-    bool_arg_values,
-    ids=arg_keys("ignore_index", bool_arg_keys),
+    "ignore_index", bool_arg_values, ids=arg_keys("ignore_index", bool_arg_keys),
 )
 @pytest.mark.parametrize("key", [None, rotate_decimal_digits_or_symbols])
 def test_sort_values(

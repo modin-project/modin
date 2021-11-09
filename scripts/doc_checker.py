@@ -126,8 +126,7 @@ def check_optional_args(doc: Docstring) -> list:
                 (
                     "MD01",
                     MODIN_ERROR_CODES["MD01"].format(
-                        parameter=parameter,
-                        found=type_line,
+                        parameter=parameter, found=type_line,
                     ),
                 )
             )

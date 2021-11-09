@@ -223,8 +223,8 @@ data.dtypes
 data.info()
 data["Type 2"].value_counts(dropna=False)
 data1 = (
-    data
-)  # also we will use data to fill missing value so I assign it to data1 variable
+    data  # also we will use data to fill missing value so I assign it to data1 variable
+)
 data1["Type 2"].dropna(
     inplace=True
 )  # inplace = True means we do not assign it to new variable. Changes automatically assigned to data
