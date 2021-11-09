@@ -290,7 +290,7 @@ class GroupByReduce(MapReduce):
             )
         assert axis == 0, "Can only groupby reduce with axis=0"
 
-        if query_compiler._modin_frame.numeric_columns(True) == []:
+        if len(query_compiler._modin_frame.numeric_columns(True)) == 0:
             numeric_only = False
 
         if numeric_only:
