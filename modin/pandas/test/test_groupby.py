@@ -1214,11 +1214,18 @@ def eval_shift(modin_groupby, pandas_groupby):
         pandas_groupby,
         lambda groupby: groupby.shift(periods=-3),
     )
-    eval_general(
-        modin_groupby,
-        pandas_groupby,
-        lambda groupby: groupby.shift(axis=1, fill_value=777),
-    )
+
+    pandas_res = pandas_groupby.shift(axis=1, fill_value=777)
+    modin_res = modin_groupby.shift(axis=1, fill_value=777)
+    # Pandas produces unexpected index order (pandas GH 44269).
+    # Here we align index of Modin result with pandas to make test passed.
+    import pandas.core.algorithms as algorithms
+
+    indexer, _ = modin_res.index.get_indexer_non_unique(modin_res.index._values)
+    indexer = algorithms.unique1d(indexer)
+    modin_res = modin_res.take(indexer)
+
+    df_equals(modin_res, pandas_res)
 
 
 def test_groupby_on_index_values_with_loop():

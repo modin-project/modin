@@ -227,13 +227,6 @@ class DataFrameGroupBy(object):
 
         if freq is None and axis == 1 and self._axis == 0:
             result = _shift(self._df, periods, freq, axis, fill_value)
-
-            # This workaround is connected with pandas GH 44269 to align a row order with pandas.
-            import pandas.core.algorithms as algorithms
-
-            indexer, _ = result.index.get_indexer_non_unique(result.index._values)
-            indexer = algorithms.unique1d(indexer)
-            result = result.take(indexer)
         elif (
             freq is not None
             and axis == 0
