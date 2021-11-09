@@ -263,7 +263,7 @@ class PandasOnRayDataframePartitionManager(GenericRayDataframePartitionManager):
             Whether or not to pass partition index into `map_func`.
             Note that `map_func` must be able to accept `partition_idx` kwarg.
         **kwargs : dict
-            Additional options.
+            Additional options that could be used by different engines.
 
         Returns
         -------
