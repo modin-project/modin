@@ -356,9 +356,7 @@ class PandasDataframePartitionManager(ABC):
                 [
                     part.apply(
                         apply_func,
-                        func_kw={
-                            other_name: right[col_idx] if axis else right[row_idx]
-                        },
+                        **{other_name: right[col_idx] if axis else right[row_idx]},
                     )
                     for col_idx, part in enumerate(left[row_idx])
                 ]
@@ -406,7 +404,7 @@ class PandasDataframePartitionManager(ABC):
         lengths : list of ints, default: None
             The list of lengths to shuffle the object.
         **kwargs : dict
-            Add opts.
+            Additional options.
 
         Returns
         -------
@@ -429,27 +427,28 @@ class PandasDataframePartitionManager(ABC):
         # may want to line to partitioning up with another BlockPartitions object. Since
         # we don't need to maintain the partitioning, this gives us the opportunity to
         # load-balance the data as well.
-        func_kw = {}
+        kw = {
+            "num_splits": num_splits,
+            "other_axis_partition": right_partitions,
+        }
         if lengths:
-            kwargs["_lengths"] = lengths
-            kwargs["manual_partition"] = True
+            kw["_lengths"] = lengths
+            kw["manual_partition"] = True
 
         if apply_indices is None:
             apply_indices = np.arange(len(left_partitions))
 
-        result_blocks = [None] * len(apply_indices)
-        for idx, i in enumerate(apply_indices):
-            if enumerate_partitions:
-                func_kw["partition_idx"] = idx
-            result_blocks[idx] = left_partitions[i].apply(
-                preprocessed_map_func,
-                func_kw,
-                num_splits=num_splits,
-                other_axis_partition=right_partitions,
-                **kwargs,
-            )
-        result_blocks = np.array(result_blocks)
-
+        result_blocks = np.array(
+            [
+                left_partitions[i].apply(
+                    preprocessed_map_func,
+                    **kw,
+                    **({"partition_idx": idx} if enumerate_partitions else {}),
+                    **kwargs,
+                )
+                for idx, i in enumerate(apply_indices)
+            ]
+        )
         # If we are mapping over columns, they are returned to use the same as
         # rows, so we need to transpose the returned 2D NumPy array to return
         # the structure to the correct order.
@@ -538,7 +537,7 @@ class PandasDataframePartitionManager(ABC):
             Whether or not to pass partition index into `map_func`.
             Note that `map_func` must be able to accept `partition_idx` kwarg.
         **kwargs : dict
-            Add opts.
+            Additional options.
 
         Returns
         -------
@@ -887,7 +886,7 @@ class PandasDataframePartitionManager(ABC):
         This preprocesses the `func` first before applying it to the partitions.
         """
         preprocessed_func = cls.preprocess_func(func)
-        return [obj.apply(preprocessed_func, func_kw=kwargs) for obj in partitions]
+        return [obj.apply(preprocessed_func, **kwargs) for obj in partitions]
 
     @classmethod
     @wait_computations_if_benchmark_mode

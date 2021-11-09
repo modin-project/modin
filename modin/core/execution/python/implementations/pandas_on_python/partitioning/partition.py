@@ -68,7 +68,7 @@ class PandasOnPythonDataframePartition(PandasDataframePartition):
         self.drain_call_queue()
         return self.data.copy()
 
-    def apply(self, func, func_kw=None, *args, **kwargs):
+    def apply(self, func, *args, **kwargs):
         """
         Apply a function to the object wrapped by this partition.
 
@@ -113,9 +113,7 @@ class PandasOnPythonDataframePartition(PandasDataframePartition):
 
         self.data = call_queue_closure(self.data, self.call_queue)
         self.call_queue = []
-        return PandasOnPythonDataframePartition(
-            func(self.data.copy(), *args, **(func_kw if func_kw else {}))
-        )
+        return PandasOnPythonDataframePartition(func(self.data.copy(), *args, **kwargs))
 
     def add_to_apply_calls(self, func, *args, **kwargs):
         """

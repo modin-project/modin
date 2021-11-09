@@ -38,9 +38,7 @@ class PyarrowOnRayDataframeAxisPartition(BaseDataframeAxisPartition):
         # Unwrap from PandasDataframePartition object for ease of use
         self.list_of_blocks = [obj.oid for obj in list_of_blocks]
 
-    def apply(
-        self, func, func_kw, num_splits=None, other_axis_partition=None, **kwargs
-    ):
+    def apply(self, func, num_splits=None, other_axis_partition=None, **kwargs):
         """
         Apply func to the object in the Plasma store.
 
@@ -48,15 +46,13 @@ class PyarrowOnRayDataframeAxisPartition(BaseDataframeAxisPartition):
         ----------
         func : callable or ray.ObjectRef
             The function to apply.
-        func_kw : dict
-            Additional keyward arguments to pass with `func`.
         num_splits : int, optional
             The number of times to split the resulting object.
         other_axis_partition : PyarrowOnRayDataframeAxisPartition, optional
             Another ``PyarrowOnRayDataframeAxisPartition`` object to apply to
             `func` with this one.
         **kwargs : dict
-            Additional opts.
+            Additional keyward arguments to pass with `func`.
 
         Returns
         -------
@@ -78,7 +74,6 @@ class PyarrowOnRayDataframeAxisPartition(BaseDataframeAxisPartition):
                 ).remote(
                     self.axis,
                     func,
-                    func_kw,
                     num_splits,
                     len(self.list_of_blocks),
                     kwargs,
@@ -86,7 +81,7 @@ class PyarrowOnRayDataframeAxisPartition(BaseDataframeAxisPartition):
                 )
             ]
 
-        args = [self.axis, func, func_kw, num_splits, kwargs]
+        args = [self.axis, func, num_splits, kwargs]
         args.extend(self.list_of_blocks)
         return [
             PyarrowOnRayDataframePartition(obj)

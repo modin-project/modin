@@ -26,7 +26,6 @@ class BaseDataframeAxisPartition(ABC):  # pragma: no cover
     def apply(
         self,
         func,
-        func_kw,
         num_splits=None,
         other_axis_partition=None,
         maintain_partitioning=True,
@@ -40,8 +39,6 @@ class BaseDataframeAxisPartition(ABC):  # pragma: no cover
         func : callable
             The function to apply. This will be preprocessed according to
             the corresponding `BaseDataframePartition` objects.
-        func_kw : dict
-            Additional arguments to be passed in `func`.
         num_splits : int, default: None
             The number of times to split the result object.
         other_axis_partition : BaseDataframeAxisPartition, default: None
@@ -55,7 +52,7 @@ class BaseDataframeAxisPartition(ABC):  # pragma: no cover
             orientation (the lengths will remain the same). This is ignored between
             two axis partitions.
         **kwargs : dict
-            Additional options.
+            Additional keywords arguments to be passed in `func`.
 
         Returns
         -------
@@ -71,7 +68,7 @@ class BaseDataframeAxisPartition(ABC):  # pragma: no cover
         """
         pass
 
-    def shuffle(self, func, func_kw, engths, **kwargs):
+    def shuffle(self, func, lengths, **kwargs):
         """
         Shuffle the order of the data in this axis partition based on the `lengths`.
 
@@ -79,12 +76,10 @@ class BaseDataframeAxisPartition(ABC):  # pragma: no cover
         ----------
         func : callable
             The function to apply before splitting.
-        func_kw : dict
-            Additional arguments to be passed in `func`.
         lengths : list
             The list of partition lengths to split the result into.
         **kwargs : dict
-            Add opts.
+            Additional keywords arguments to be passed in `func`.
 
         Returns
         -------

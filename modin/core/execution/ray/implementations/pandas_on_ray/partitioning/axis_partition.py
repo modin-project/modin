@@ -49,14 +49,7 @@ class PandasOnRayDataframeAxisPartition(PandasDataframeAxisPartition):
 
     @classmethod
     def deploy_axis_func(
-        cls,
-        axis,
-        func,
-        func_kw,
-        num_splits,
-        maintain_partitioning,
-        deploy_kw,
-        *partitions,
+        cls, axis, func, num_splits, kwargs, maintain_partitioning, *partitions
     ):
         """
         Deploy a function along a full axis.
@@ -67,15 +60,13 @@ class PandasOnRayDataframeAxisPartition(PandasDataframeAxisPartition):
             The axis to perform the function along.
         func : callable
             The function to perform.
-        func_kw : dict
-            Additional arguments to be passed in `func`.
         num_splits : int
             The number of splits to return (see ``split_result_of_axis_func_pandas``).
+        kwargs : dict
+            Additional keywords arguments to be passed in `func`.
         maintain_partitioning : bool
             If True, keep the old partitioning if possible.
             If False, create a new partition layout.
-        deploy_kw : dict
-            Add opts.
         *partitions : iterable
             All partitions that make up the full axis (row or column).
 
@@ -84,8 +75,8 @@ class PandasOnRayDataframeAxisPartition(PandasDataframeAxisPartition):
         list
             A list of ``pandas.DataFrame``-s.
         """
-        lengths = deploy_kw.get("_lengths", None)
-        max_retries = deploy_kw.pop("max_retries", None)
+        lengths = kwargs.get("_lengths", None)
+        max_retries = kwargs.pop("max_retries", None)
 
         return deploy_ray_func.options(
             num_returns=(num_splits if lengths is None else len(lengths)) * 4,
@@ -94,24 +85,15 @@ class PandasOnRayDataframeAxisPartition(PandasDataframeAxisPartition):
             PandasDataframeAxisPartition.deploy_axis_func,
             axis,
             func,
-            func_kw,
             num_splits,
+            kwargs,
             maintain_partitioning,
-            deploy_kw,
             *partitions,
         )
 
     @classmethod
     def deploy_func_between_two_axis_partitions(
-        cls,
-        axis,
-        func,
-        func_kw,
-        num_splits,
-        len_of_left,
-        other_shape,
-        deploy_kw,
-        *partitions,
+        cls, axis, func, num_splits, len_of_left, other_shape, kwargs, *partitions
     ):
         """
         Deploy a function along a full axis between two data sets.
@@ -122,8 +104,6 @@ class PandasOnRayDataframeAxisPartition(PandasDataframeAxisPartition):
             The axis to perform the function along.
         func : callable
             The function to perform.
-        func_kw : dict
-            Additional arguments to be passed in `func`.
         num_splits : int
             The number of splits to return (see ``split_result_of_axis_func_pandas``).
         len_of_left : int
@@ -131,8 +111,8 @@ class PandasOnRayDataframeAxisPartition(PandasDataframeAxisPartition):
         other_shape : np.ndarray
             The shape of right frame in terms of partitions, i.e.
             (other_shape[i-1], other_shape[i]) will indicate slice to restore i-1 axis partition.
-        deploy_kw : dict
-            Add opts.
+        kwargs : dict
+            Additional keywords arguments to be passed in `func`.
         *partitions : iterable
             All partitions that make up the full axis (row or column) for both data sets.
 
@@ -141,19 +121,14 @@ class PandasOnRayDataframeAxisPartition(PandasDataframeAxisPartition):
         list
             A list of ``pandas.DataFrame``-s.
         """
-        max_retries = deploy_kw.pop("max_retries", None)
-        return deploy_ray_func.options(
-            num_returns=num_splits * 4,
-            **({"max_retries": max_retries} if max_retries else {}),
-        ).remote(
+        return deploy_ray_func.options(num_returns=num_splits * 4).remote(
             PandasDataframeAxisPartition.deploy_func_between_two_axis_partitions,
             axis,
             func,
-            func_kw,
             num_splits,
             len_of_left,
             other_shape,
-            deploy_kw,
+            kwargs,
             *partitions,
         )
 

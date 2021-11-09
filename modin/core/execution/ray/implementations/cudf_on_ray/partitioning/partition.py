@@ -94,7 +94,7 @@ class cuDFOnRayDataframePartition(PandasDataframePartition):
         """
         return gpu_manager.put.remote(pandas_dataframe)
 
-    def apply(self, func, func_kw, **kwargs):
+    def apply(self, func, **kwargs):
         """
         Apply `func` to this partition.
 
@@ -102,10 +102,8 @@ class cuDFOnRayDataframePartition(PandasDataframePartition):
         ----------
         func : callable
             A function to apply.
-        func_kw : dict
-            Additional arguments to be passed in `func`.
         **kwargs : dict
-            Additional opts.
+            Additional keywords arguments to be passed in `func`.
 
         Returns
         -------
@@ -113,9 +111,7 @@ class cuDFOnRayDataframePartition(PandasDataframePartition):
             A reference to integer key of result
             in internal dict-storage of `self.gpu_manager`.
         """
-        return self.gpu_manager.apply.remote(
-            self.get_key(), None, func, func_kw, **kwargs
-        )
+        return self.gpu_manager.apply.remote(self.get_key(), None, func, **kwargs)
 
     # TODO: Check the need of this method
     def apply_result_not_dataframe(self, func, **kwargs):
@@ -140,7 +136,7 @@ class cuDFOnRayDataframePartition(PandasDataframePartition):
             self.get_key(), func, **kwargs
         )
 
-    def add_to_apply_calls(self, func, func_kw, **kwargs):
+    def add_to_apply_calls(self, func, **kwargs):
         """
         Apply `func` to this partition and create new.
 
@@ -148,10 +144,8 @@ class cuDFOnRayDataframePartition(PandasDataframePartition):
         ----------
         func : callable
             A function to apply.
-        func_kw : dict
-            Additional arguments to be passed in `func`.
         **kwargs : dict
-            Additional opts.
+            Additional keywords arguments to be passed in `func`.
 
         Returns
         -------
@@ -162,9 +156,7 @@ class cuDFOnRayDataframePartition(PandasDataframePartition):
         -----
         We eagerly schedule the apply `func` and produce a new ``cuDFOnRayDataframePartition``.
         """
-        return cuDFOnRayDataframePartition(
-            self.gpu_manager, self.apply(func, func_kw, **kwargs)
-        )
+        return cuDFOnRayDataframePartition(self.gpu_manager, self.apply(func, **kwargs))
 
     @classmethod
     def preprocess_func(cls, func):

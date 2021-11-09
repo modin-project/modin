@@ -117,7 +117,6 @@ class PandasOnDaskDataframePartitionManager(PandasDataframePartitionManager):
                 [
                     part.apply(
                         map_func,
-                        {},
                         *(
                             rt_axis_parts[col_idx].list_of_blocks
                             if axis

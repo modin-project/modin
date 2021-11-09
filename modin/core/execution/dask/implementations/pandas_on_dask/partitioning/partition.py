@@ -68,7 +68,7 @@ class PandasOnDaskDataframePartition(PandasDataframePartition):
             return self.future
         return self.future.result()
 
-    def apply(self, func, func_kw=None, *args, **kwargs):
+    def apply(self, func, *args, **kwargs):
         """
         Apply a function to the object wrapped by this partition.
 
@@ -91,7 +91,7 @@ class PandasOnDaskDataframePartition(PandasDataframePartition):
         The keyword arguments are sent as a dictionary.
         """
         client = default_client()
-        call_queue = self.call_queue + [[func, args, func_kw if func_kw else {}]]
+        call_queue = self.call_queue + [[func, args, kwargs]]
         if len(call_queue) > 1:
             future = client.submit(
                 apply_list_of_funcs, call_queue, self.future, pure=False
@@ -99,8 +99,8 @@ class PandasOnDaskDataframePartition(PandasDataframePartition):
         else:
             # We handle `len(call_queue) == 1` in a different way because
             # this improves performance a bit.
-            func, args, func_kw = call_queue[0]
-            future = client.submit(apply_func, self.future, func, *args, **func_kw)
+            func, args, kwargs = call_queue[0]
+            future = client.submit(apply_func, self.future, func, *args, **kwargs)
         futures = [
             client.submit(lambda l, i: l[i], future, i, pure=False) for i in range(2)
         ]

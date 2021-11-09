@@ -175,7 +175,6 @@ class PandasOnRayDataframePartitionManager(GenericRayDataframePartitionManager):
                 [
                     part.apply(
                         map_func,
-                        {},
                         *(
                             rt_axis_parts[col_idx].list_of_blocks
                             if axis
@@ -264,7 +263,7 @@ class PandasOnRayDataframePartitionManager(GenericRayDataframePartitionManager):
             Whether or not to pass partition index into `map_func`.
             Note that `map_func` must be able to accept `partition_idx` kwarg.
         **kwargs : dict
-            Add opts.
+            Additional options.
 
         Returns
         -------
