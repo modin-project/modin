@@ -762,6 +762,137 @@ def test_resample_specific(rule, closed, label, on, level):
         )
 
 
+@pytest.mark.parametrize(
+    "params",
+    [
+        (["volume"], ["volume"]),
+        (("volume",), ("volume",)),
+        (pandas.Series(["volume"]), pd.Series(["volume"])),
+        (pandas.Index(["volume"]), pd.Index(["volume"])),
+    ],
+    ids=["list", "tuple", "series", "index"],
+)
+def test_resample_getitem(params):
+    idx = pandas.DatetimeIndex(
+        [
+            "2013-07-31",
+            "2013-08-31",
+            "2013-09-30",
+            "2013-10-31",
+            "2013-11-30",
+            "2013-12-31",
+            "2014-01-31",
+            "2014-02-28",
+            "2014-03-31",
+            "2014-04-30",
+            "2014-05-31",
+            "2014-06-30",
+        ],
+        dtype="datetime64[ns]",
+        freq="M",
+    )
+
+    d2 = {
+        "price": [10, 11, 9, 13, 14, 18, 17, 19, 20, 21, 22, 23],
+        "volume": [50, 60, 40, 100, 50, 100, 40, 50, 60, 70, 33, 20],
+    }
+
+    df2 = pandas.DataFrame(d2, index=idx)
+
+    pandas_res = df2.resample("3T")[params[0]].mean()
+
+    md_idx = pd.DatetimeIndex(
+        [
+            "2013-07-31",
+            "2013-08-31",
+            "2013-09-30",
+            "2013-10-31",
+            "2013-11-30",
+            "2013-12-31",
+            "2014-01-31",
+            "2014-02-28",
+            "2014-03-31",
+            "2014-04-30",
+            "2014-05-31",
+            "2014-06-30",
+        ],
+        dtype="datetime64[ns]",
+        freq="M",
+    )
+
+    md_df2 = pd.DataFrame(d2, index=md_idx)
+
+    modin_res = md_df2.resample("3T")[params[1]].mean()
+
+    assert len(pandas_res) == len(modin_res)
+
+    assert len(pandas_res.index) == len(modin_res.index)
+    assert len(pandas_res.columns) == len(modin_res.columns)
+
+    for i in range(len(modin_res.index)):
+        assert pandas_res.index[i] == modin_res.index[i]
+
+    for i in range(len(modin_res.columns)):
+        assert pandas_res.columns[i] == modin_res.columns[i]
+
+
+def test_resample_getitem_error():
+    idx = pandas.DatetimeIndex(
+        [
+            "2013-07-31",
+            "2013-08-31",
+            "2013-09-30",
+            "2013-10-31",
+            "2013-11-30",
+            "2013-12-31",
+            "2014-01-31",
+            "2014-02-28",
+            "2014-03-31",
+            "2014-04-30",
+            "2014-05-31",
+            "2014-06-30",
+        ],
+        dtype="datetime64[ns]",
+        freq="M",
+    )
+
+    md_idx = pd.DatetimeIndex(
+        [
+            "2013-07-31",
+            "2013-08-31",
+            "2013-09-30",
+            "2013-10-31",
+            "2013-11-30",
+            "2013-12-31",
+            "2014-01-31",
+            "2014-02-28",
+            "2014-03-31",
+            "2014-04-30",
+            "2014-05-31",
+            "2014-06-30",
+        ],
+        dtype="datetime64[ns]",
+        freq="M",
+    )
+
+    d2 = {
+        "price": [10, 11, 9, 13, 14, 18, 17, 19, 20, 21, 22, 23],
+        "volume": [50, 60, 40, 100, 50, 100, 40, 50, 60, 70, 33, 20],
+    }
+
+    df2 = pandas.DataFrame(d2, index=idx)
+
+    md_df2 = pd.DataFrame(d2, index=md_idx)
+
+    with pytest.raises(KeyError) as raises_pandas:
+        df2.resample("3T")[["volume", "price", "date"]]
+
+    with pytest.raises(KeyError) as raises_modin:
+        md_df2.resample("3T")[["volume", "price", "date"]]
+
+    assert raises_pandas.type is raises_modin.type
+
+
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 @pytest.mark.parametrize("index", ["default", "ndarray", "has_duplicates"])
 @pytest.mark.parametrize("axis", [0, 1])
