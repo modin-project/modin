@@ -451,7 +451,7 @@ class PandasDataframe(object):
         for axis, indexer in enumerate((row_numeric_idx, col_numeric_idx)):
             if is_range_like(indexer):
                 if indexer.step == 1 and len(indexer) == len(self.axes[axis]):
-                    # By semantic of this function `None` indexer is a full axis access
+                    # By this function semantics, `None` indexer is a full-axis access
                     indexer = None
                 elif indexer is not None and not isinstance(indexer, pandas.RangeIndex):
                     # Pure python's range is not fully compatible with a list of ints,
