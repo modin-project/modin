@@ -56,7 +56,7 @@ def lazy_metadata_decorator(
                         axis = args[axis_arg]
                     else:
                         axis = kwargs["axis"]
-                    if axis == 0 and self._deferred_column:
+                    if axis == 0 and self._deferred_index:
                         self._propagate_index_objs(axis=1)
                     elif axis == 1 and self._deferred_column:
                         self._propagate_index_objs(axis=0)
@@ -65,7 +65,7 @@ def lazy_metadata_decorator(
                         axis = args[axis_arg]
                     else:
                         axis = kwargs["axis"]
-                    if axis == 0 and self._deferred_column:
+                    if axis == 0 and self._deferred_index:
                         self._propagate_index_objs(axis=0)
                     elif axis == 1 and self._deferred_column:
                         self._propagate_index_objs(axis=1)
