@@ -131,7 +131,7 @@ class DataFrameGroupBy(object):
     def mean(self, *args, **kwargs):
         fallback = False
         converted_columns = {}
-        numeric_only=kwargs.get("numeric_only", False)
+        numeric_only = kwargs.get("numeric_only", False)
         if not numeric_only:
             for col, dt in self._query_compiler.dtypes.items():
                 if is_datetime64_any_dtype(dt):

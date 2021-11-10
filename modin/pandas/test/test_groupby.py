@@ -1465,6 +1465,7 @@ def test_agg_exceptions(operation):
 
     eval_aggregation(*create_test_dfs(data), operation=operation)
 
+
 @pytest.mark.parametrize("numeric_only", [True, False])
 def test_mean_agg_different_types(numeric_only):
     N = 200
@@ -1477,14 +1478,7 @@ def test_mean_agg_different_types(numeric_only):
             np.datetime64("2009-01-01"),
         ]
         * (N // 5),
-        "int_only": [
-            2000,
-            2010,
-            2011,
-            2012,
-            2009
-        ]
-        * (N // 5),
+        "int_only": [2000, 2010, 2011, 2012, 2009] * (N // 5),
         "int_and_nan": [
             2000,
             2010,
@@ -1523,7 +1517,9 @@ def test_mean_agg_different_types(numeric_only):
 
     data = {**data1, **data2}
 
-    eval_aggregation(*create_test_dfs(data), operation="mean", numeric_only=numeric_only)
+    eval_aggregation(
+        *create_test_dfs(data), operation="mean", numeric_only=numeric_only
+    )
 
 
 @pytest.mark.skip(
