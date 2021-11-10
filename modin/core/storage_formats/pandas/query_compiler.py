@@ -2505,6 +2505,9 @@ class PandasQueryCompiler(BaseQueryCompiler):
         divirgent = result[[x for x in result.columns if not x.startswith("__mean_agg_size_column__")]]
         divisor = result[[x for x in result.columns if x.startswith("__mean_agg_size_column__")]]
         divisor.set_axis([x[len("__mean_agg_size_column__"):] for x in divisor.columns], axis=1, inplace=True)
+        # Following line makes sure we exclude any "by" columns that could be carried in via "__mean_agg_size_column__"
+        # while they shouldn't be present and was removed since map phase was done.
+        divisor = divisor[divirgent.columns]
         result = divirgent.divide(divisor)
         return result
 
