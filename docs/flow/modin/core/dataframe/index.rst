@@ -11,7 +11,7 @@ To keep track of everything a few key classes are introduced: ``Dataframe``, ``P
 * ``AxisPartition`` is a joined group of ``Partition``-s along some axis (either rows or columns)
 * ``PartitionManager`` is the manager that implements the primitives used for Dataframe Algebra operations over ``Partition``-s
 
-Each execution engine and each execution system (:doc:`storage format </flow/modin/core/storage_formats/index>` + execution engine)
+Each :doc:`storage format </flow/modin/core/storage_formats/index>`, execution engine, and each execution system (storage format + execution engine)
 may have its own implementations of these Core Dataframe's entities.
 Current stable implementations are the following:
 
