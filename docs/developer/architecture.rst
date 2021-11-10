@@ -33,7 +33,7 @@ look to something like this:
    :align: center
 
 The user - Data Scientist interacts with the Modin system by sending interactive or
-batch commands through API and Modin executes them using various backend execution
+batch commands through API and Modin executes them using various execution
 engines: Ray, Dask and MPI are currently supported.
 
 Subsystem/Container View
@@ -44,7 +44,7 @@ architecture is implemented using several interacting components:
 .. image:: /img/component_view.png
    :align: center
 
-For the simplicity the other backend systems - Dask and MPI are omitted and only Ray backend is shown.
+For the simplicity the other execution systems - Dask and MPI are omitted and only Ray execution is shown.
 
 * Dataframe subsystem is the backbone of the dataframe holding and query compilation. It is responsible for
   dispatching the ingress/egress to the appropriate module, getting the Pandas API and calling the query
@@ -54,25 +54,25 @@ For the simplicity the other backend systems - Dask and MPI are omitted and only
 * Query Planner is subsystem that translates the Pandas API to intermediate Dataframe Algebra representation
   DAG and performs an initial set of optimizations.
 * Query Executor is responsible for getting the Dataframe Algebra DAG, performing further optimizations based
-  on a selected backend execution subsystem and mapping or compiling the Dataframe Algebra DAG to and actual
+  on a selected storage format and mapping or compiling the Dataframe Algebra DAG to and actual
   execution sequence.
-* Backends module is responsible for mapping the abstract operation to an actual executor call, e.g. Pandas,
-  PyArrow, custom backend.
+* Storage formats module is responsible for mapping the abstract operation to an actual executor call, e.g. Pandas,
+  PyArrow, custom format.
 * Orchestration subsystem is responsible for spawning and controlling the actual execution environment for the
-  selected backend. It spawns the actual nodes, fires up the execution environment, e.g. Ray, monitors the state
+  selected execution. It spawns the actual nodes, fires up the execution environment, e.g. Ray, monitors the state
   of executors and provides telemetry
 
 Component View
 --------------
 .. toctree::
-   ../flow/modin/engines/base/frame/index
-   ../flow/modin/engines/ray/generic
-   ../flow/modin/engines/ray/pandas_on_ray/frame/index
-   ../flow/modin/engines/ray/cudf_on_ray/frame/index
-   ../flow/modin/engines/dask/pandas_on_dask/frame/index
+   ../flow/modin/core/dataframe/pandas/index
+   ../flow/modin/core/execution/ray/generic
+   ../flow/modin/core/execution/ray/implementations/pandas_on_ray/index
+   ../flow/modin/core/execution/ray/implementations/cudf_on_ray/index
+   ../flow/modin/core/execution/dask/implementations/pandas_on_dask/index
    ../flow/modin/experimental/index
-   ../flow/modin/backends/index
-   ../flow/modin/engines/python/pandas_on_python/frame/index
+   ../flow/modin/core/storage_formats/index
+   ../flow/modin/core/execution/python/implementations/pandas_on_python/index
 
 
 DataFrame Partitioning
@@ -88,7 +88,7 @@ following figure illustrates this concept.
    :align: center
 
 Currently, each partition's memory format is a `pandas DataFrame`_. In the future, we will
-support additional in-memory formats for the backend, namely `Arrow tables`_.
+support additional in-memory formats, namely `Arrow tables`_.
 
 Index
 """""
@@ -134,16 +134,16 @@ responsibility is to ensure clean input to the Query Compiler. The Query Compile
 have knowledge of the compute kernels/in-memory format of the data in order to
 efficiently compile the queries.
 
-The Query Compiler is responsible for sending the compiled query to the Modin DataFrame.
+The Query Compiler is responsible for sending the compiled query to the Core Modin Dataframe.
 In this design, the Query Compiler does not have information about where or when the
 query will be executed, and gives the control of the partition layout to the Modin
-DataFrame.
+Dataframe.
 
 In the interest of reducing the pandas API, the Query Compiler layer closely follows the
 pandas API, but cuts out a large majority of the repetition.
 
-Modin DataFrame
-"""""""""""""""
+Core Modin Dataframe
+""""""""""""""""""""
 
 At this layer, operations can be performed lazily. Currently, Modin executes most
 operations eagerly in an attempt to behave as pandas does. Some operations, e.g.
@@ -152,16 +152,16 @@ cases, we can wait until another operation triggers computation. In the future, 
 to add additional query planning and laziness to Modin to ensure that queries are
 performed efficiently.
 
-The structure of the Modin DataFrame is extensible, such that any operation that could
-be better optimized for a given backend can be overridden and optimized in that way.
+The structure of the Core Modin Dataframe is extensible, such that any operation that could
+be better optimized for a given execution can be overridden and optimized in that way.
 
 This layer has a significantly reduced API from the QueryCompiler and the user-facing
 API. Each of these APIs represents a single way of performing a given operation or
 behavior. Some of these are expanded for convenience/understanding. The API abstractions
 are as follows:
 
-Modin DataFrame API
-'''''''''''''''''''
+Core Modin Dataframe API
+''''''''''''''''''''''''
 
 * ``mask``: Indexing/masking/selecting on the data (by label or by integer index).
 * ``copy``: Create a copy of the data.
@@ -201,15 +201,15 @@ This API can be implemented by other distributed/parallel DataFrame libraries an
 plugged in to Modin as well. Create an issue_ or discuss on our Discourse_ for more
 information!
 
-The Modin DataFrame is responsible for the data layout and shuffling, partitioning,
+The Core Modin Dataframe is responsible for the data layout and shuffling, partitioning,
 and serializing the tasks that get sent to each partition. Other implementations of the
-Modin DataFrame interface will have to handle these as well.
+Modin Dataframe interface will have to handle these as well.
 
 Execution Engine/Framework
 """"""""""""""""""""""""""
 
 This layer is what Modin uses to perform computation on a partition of the data. The
-Modin DataFrame is designed to work with `task parallel`_ frameworks, but with some
+Core Modin Dataframe is designed to work with `task parallel`_ frameworks, but with some
 effort, a data parallel framework is possible.
 
 Internal abstractions
@@ -235,14 +235,14 @@ important for some operations in pandas which can accept different arguments and
 operations for different columns, e.g. ``fillna`` with a dictionary.
 
 This abstraction separates the actual data movement and function application from the
-DataFrame layer to keep the DataFrame API small and separately optimize the data
+Dataframe layer to keep the Core Dataframe API small and separately optimize the data
 movement and metadata management.
 
 Partition
 '''''''''
 
-Partitions are responsible for managing a subset of the DataFrame. As is mentioned
-above, the DataFrame is partitioned both row and column-wise. This gives Modin
+Partitions are responsible for managing a subset of the Dataframe. As is mentioned
+above, the Dataframe is partitioned both row and column-wise. This gives Modin
 scalability in both directions and flexibility in data layout. There are a number of
 optimizations in Modin that are implemented in the partitions. Partitions are specific
 to the execution framework and in-memory format of the data. This allows Modin to
@@ -285,57 +285,57 @@ by documentation for now, the rest is coming soon...).
    ├───docs
    ├───examples
    ├───modin
-   │   ├─── :doc:`backends </flow/modin/backends/index>`
-   │   │   ├───base
-   │   │   │   └─── :doc:`query_compiler </flow/modin/backends/base/query_compiler>`
-   │   │   ├─── :doc:`pandas </flow/modin/backends/pandas/index>`
-   │   │   |   ├─── :doc:`parsers </flow/modin/backends/pandas/parsers>`
-   │   │   │   └─── :doc:`query_compiler </flow/modin/backends/pandas/query_compiler>`
-   │   │   └─── :doc:`pyarrow </flow/modin/backends/pyarrow/index>`
-   │   │   |   ├─── :doc:`parsers </flow/modin/backends/pyarrow/parsers>`
-   │   │   │   └─── :doc:`query_compiler </flow/modin/backends/pyarrow/query_compiler>`
    │   ├─── :doc:`config </flow/modin/config>`
-   │   ├───data_management
-   │   │   ├─── :doc:`factories </flow/modin/data_management/factories>`
-   │   │   └─── :doc:`functions </flow/modin/data_management/functions>`
+   │   ├───core
+   │   │   ├─── :doc:`dataframe </flow/modin/core/dataframe/index>`
+   │   │   │   ├─── :doc:`algebra </flow/modin/core/dataframe/algebra>`
+   │   │   │   ├─── :doc:`base </flow/modin/core/dataframe/base/index>`
+   │   │   │   └─── :doc:`pandas </flow/modin/core/dataframe/pandas/index>`
+   │   │   ├───execution
+   │   │   │   ├───dask
+   │   │   │   │   ├───common
+   │   │   │   │   └───implementations
+   │   │   │   │       └─── :doc:`pandas_on_dask </flow/modin/core/execution/dask/implementations/pandas_on_dask/index>`
+   │   │   │   ├─── :doc:`dispatching </flow/modin/core/execution/dispatching>`
+   │   │   │   ├───python
+   │   │   │   │   └───implementations
+   │   │   │   │       └─── :doc:`pandas_on_python </flow/modin/core/execution/python/implementations/pandas_on_python/index>`
+   │   │   │   └───ray
+   │   │   │       ├───common
+   │   │   │       ├─── :doc:`generic </flow/modin/core/execution/ray/generic>`
+   │   │   │       └───implementations
+   │   │   │           ├─── :doc:`cudf_on_ray </flow/modin/core/execution/ray/implementations/cudf_on_ray/index>`
+   │   │   │           └─── :doc:`pandas_on_ray </flow/modin/core/execution/ray/implementations/pandas_on_ray/index>`
+   │   │   ├─── :doc:`io </flow/modin/core/io/index>`
+   │   │   └─── :doc:`storage_formats </flow/modin/core/storage_formats/index>`
+   │   │       ├─── :doc:`base </flow/modin/core/storage_formats/base/query_compiler>`
+   │   │       ├───cudf
+   │   │       ├─── :doc:`pandas </flow/modin/core/storage_formats/pandas/index>`             
+   │   │       └─── :doc:`pyarrow </flow/modin/core/storage_formats/pyarrow/index>`
    │   ├───distributed
-   │   │   └───dataframe
-   │   │       └─── :doc:`pandas </flow/modin/distributed/dataframe/pandas>`
-   │   ├───engines
-   │   │   ├───base
-   │   │   │   ├─── :doc:`frame </flow/modin/engines/base/frame/index>`
-   │   │   │   └─── :doc:`io </flow/modin/engines/base/io>`
-   │   │   ├───dask
-   │   │   │   └───pandas_on_dask
-   │   │   |       └─── :doc:`frame </flow/modin/engines/dask/pandas_on_dask/frame/index>`
-   │   │   ├───python
-   │   │   │   └───pandas_on_python
-   │   │   │       └─── :doc:`frame </flow/modin/engines/python/pandas_on_python/frame/index>`
-   │   │   └───ray
-   │   │       ├─── :doc:`generic </flow/modin/engines/ray/generic>`
-   │   │       ├───cudf_on_ray
-   │   │       │   ├─── :doc:`frame </flow/modin/engines/ray/cudf_on_ray/frame/index>`
-   │   │       │   └─── :doc:`io </flow/modin/engines/ray/cudf_on_ray/io>`
-   │   │       └───pandas_on_ray
-   │   │           └─── :doc:`frame </flow/modin/engines/ray/pandas_on_ray/frame/index>`
-   │   ├── :doc:`experimental </flow/modin/experimental/experimental>`
-   │   │   ├─── :doc:`backends </flow/modin/experimental/backends/index>`
-   │   │   │   └─── :doc:`omnisci </flow/modin/experimental/backends/omnisci/index>`
-   │   │   │       └─── :doc:`query_compiler </flow/modin/experimental/backends/omnisci/query_compiler>`
+   │   │   ├───dataframe
+   │   │   │   └─── :doc:`pandas </flow/modin/distributed/dataframe/pandas>`
+   │   ├─── :doc:`experimental </flow/modin/experimental/experimental>`
    │   │   ├───cloud
-   │   │   ├───engines
-   │   │   │   ├─── :doc:`omnisci_on_native </flow/modin/experimental/engines/omnisci_on_native/frame/index>`
-   │   │   │   ├─── :doc:`pandas_on_ray </flow/modin/experimental/engines/pandas_on_ray>`
-   │   │   │   └─── :doc:`pyarrow_on_ray </flow/modin/experimental/engines/pyarrow_on_ray>`
+   │   │   ├───core
+   │   │   │   ├───execution
+   │   │   │   │   ├───native
+   │   │   │   │   │   └───implementations
+   │   │   │   │   │       └─── :doc:`omnisci_on_native </flow/modin/experimental/core/execution/native/implementations/omnisci_on_native/index>`
+   │   │   │   │   └───ray
+   │   │   │   │       └───implementations
+   │   │   │   │           ├─── :doc:`pandas_on_ray </flow/modin/experimental/core/execution/ray/implementations/pandas_on_ray>`
+   │   │   │   │           └─── :doc:`pyarrow_on_ray </flow/modin/experimental/core/execution/ray/implementations/pyarrow_on_ray>`
+   │   │   │   └─── :doc:`storage_formats </flow/modin/experimental/core/storage_formats/index>`
+   │   │   │       └─── :doc:`omnisci </flow/modin/experimental/core/storage_formats/omnisci/index>`
    │   │   ├─── :doc:`pandas </flow/modin/experimental/pandas>`
    │   │   ├─── :doc:`sklearn </flow/modin/experimental/sklearn>`
+   │   │   ├───spreadsheet
    │   │   ├───sql
    │   │   └─── :doc:`xgboost </flow/modin/experimental/xgboost>`
-   │   ├───pandas
-   │   │   ├─── :doc:`dataframe </flow/modin/pandas/dataframe>`
-   │   │   └─── :doc:`series </flow/modin/pandas/series>`
-   │   ├───spreadsheet
-   │   └───sql
+   │   └───pandas
+   │       ├─── :doc:`dataframe </flow/modin/pandas/dataframe>`
+   │       └─── :doc:`series </flow/modin/pandas/series>`
    ├───requirements
    ├───scripts
    └───stress_tests
@@ -343,7 +343,7 @@ by documentation for now, the rest is coming soon...).
 .. _pandas Dataframe: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.html
 .. _Arrow tables: https://arrow.apache.org/docs/python/generated/pyarrow.Table.html
 .. _Ray: https://github.com/ray-project/ray
-.. _code: https://github.com/modin-project/modin/blob/master/modin/engines/base/frame/data.py
+.. _code: https://github.com/modin-project/modin/blob/master/modin/core/dataframe
 .. _Dask Futures: https://docs.dask.org/en/latest/futures.html
 .. _issue: https://github.com/modin-project/modin/issues
 .. _Discourse: https://discuss.modin.org
