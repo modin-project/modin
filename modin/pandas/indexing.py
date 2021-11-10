@@ -747,6 +747,8 @@ class _iLocIndexer(_LocationIndexerBase):
         self.col_scalar = is_scalar(col_loc)
         self._check_dtypes(row_loc)
         self._check_dtypes(col_loc)
+        if self.df.empty:
+            return self.df._default_to_pandas(lambda df: df.iloc[key])
 
         row_lookup, col_lookup = self._compute_lookup(row_loc, col_loc)
         result = super(_iLocIndexer, self).__getitem__(row_lookup, col_lookup, ndim)
