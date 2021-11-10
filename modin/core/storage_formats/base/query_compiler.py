@@ -2308,7 +2308,7 @@ class BaseQueryCompiler(abc.ABC):
         )
 
     @doc_utils.doc_groupby_method(result="mean", refer_to="mean")
-    def groupby_mean(
+    def groupby_mean_numeric(
         self,
         by,
         axis,

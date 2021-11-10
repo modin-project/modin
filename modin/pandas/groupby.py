@@ -159,7 +159,7 @@ class DataFrameGroupBy(object):
                 )
                 self._query_compiler = self._df._query_compiler
             result = self._wrap_aggregation(
-                type(self._query_compiler).groupby_mean,
+                type(self._query_compiler).groupby_mean_numeric,
                 lambda df, **kwargs: df.mean(*args, **kwargs),
                 **kwargs,
             )

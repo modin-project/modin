@@ -2511,7 +2511,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         result = divirgent.divide(divisor)
         return result
 
-    groupby_mean = GroupByReduce.register(
+    groupby_mean_numeric = GroupByReduce.register(
         _mean_agg_map,
         _mean_agg_reduce,
         default_to_pandas_func=lambda dfgb, **kwargs: dfgb.mean(**kwargs),
