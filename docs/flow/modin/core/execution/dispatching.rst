@@ -8,7 +8,7 @@ Factories Module Description
 
 Brief description
 '''''''''''''''''
-Modin has several execution engines and storage formats, combining them together forms certain executions (backends). 
+Modin has several execution engines and storage formats, combining them together forms certain executions. 
 Calling any :py:class:`~modin.pandas.dataframe.DataFrame` API function will end up in some execution-specific method. The responsibility of dispatching high-level API calls to
 execution-specific function belongs to the :ref:`QueryCompiler <query_compiler_def>`, which is determined at the time of the dataframe's creation by the factory of
 the corresponding execution. The mission of this module is to route IO function calls from
@@ -24,7 +24,7 @@ Each storage format has its own :ref:`Query Compiler <query_compiler_def>` which
 for the corresponding :doc:`Core Modin Dataframe </flow/modin/core/dataframe/index>` implementation. Speaking about ``PandasOnRay``
 execution, its Query Compiler is :doc:`PandasQueryCompiler </flow/modin/core/storage_formats/pandas/query_compiler>` and the
 Dataframe implementation is :doc:`PandasDataframe </flow/modin/core/dataframe/pandas/dataframe>`,
-which is general implementation for every execution of the pandas storage format. The actual implementation of ``PandasOnRay`` frame
+which is general implementation for every execution of the pandas storage format. The actual implementation of ``PandasOnRay`` dataframe
 is defined by the :doc:`PandasOnRayDataframe </flow/modin/core/execution/ray/implementations/pandas_on_ray/dataframe>` class that
 extends ``PandasDataframe``.
 

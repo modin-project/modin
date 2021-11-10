@@ -85,10 +85,10 @@ Let's consider simple example of creation and interacting with Modin ``DataFrame
 
     # List of DataFrame partitions
 
-    [[<modin.core.execution.ray.implementations.pandas_on_ray.partitioning.partition.PandasOnRayFramePartition object at 0x7fc554e607f0>]
-    [<modin.core.execution.ray.implementations.pandas_on_ray.partitioning.partition.PandasOnRayFramePartition object at 0x7fc554e9a4f0>]
-    [<modin.core.execution.ray.implementations.pandas_on_ray.partitioning.partition.PandasOnRayFramePartition object at 0x7fc554e60820>]
-    [<modin.core.execution.ray.implementations.pandas_on_ray.partitioning.partition.PandasOnRayFramePartition object at 0x7fc554e609d0>]]
+    [[<modin.core.execution.ray.implementations.pandas_on_ray.partitioning.partition.PandasOnRayDataframePartition object at 0x7fc554e607f0>]
+    [<modin.core.execution.ray.implementations.pandas_on_ray.partitioning.partition.PandasOnRayDataframePartition object at 0x7fc554e9a4f0>]
+    [<modin.core.execution.ray.implementations.pandas_on_ray.partitioning.partition.PandasOnRayDataframePartition object at 0x7fc554e60820>]
+    [<modin.core.execution.ray.implementations.pandas_on_ray.partitioning.partition.PandasOnRayDataframePartition object at 0x7fc554e609d0>]]
 
     # The first DataFrame partition
     
