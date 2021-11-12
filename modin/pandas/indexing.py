@@ -514,6 +514,8 @@ class _LocIndexer(_LocationIndexerBase):
         --------
         pandas.DataFrame.loc
         """
+        if self.df.empty:
+            return self.df._default_to_pandas(lambda df: df.loc[key])
         row_loc, col_loc, ndim = self._parse_row_and_column_locators(key)
         self.row_scalar = is_scalar(row_loc)
         self.col_scalar = is_scalar(col_loc)
@@ -528,8 +530,6 @@ class _LocIndexer(_LocationIndexerBase):
             else:
                 result_slice = self.df.columns.slice_locs(col_loc.start, col_loc.stop)
                 return self.df.iloc[:, slice(*result_slice)]
-        if self.df.empty:
-            return self.df._default_to_pandas(lambda df: df.loc[key])
 
         row_lookup, col_lookup = self._compute_lookup(row_loc, col_loc)
         if any(i == -1 for i in row_lookup) or any(i == -1 for i in col_lookup):
@@ -742,13 +742,13 @@ class _iLocIndexer(_LocationIndexerBase):
         --------
         pandas.DataFrame.iloc
         """
+        if self.df.empty:
+            return self.df._default_to_pandas(lambda df: df.iloc[key])
         row_loc, col_loc, ndim = self._parse_row_and_column_locators(key)
         self.row_scalar = is_scalar(row_loc)
         self.col_scalar = is_scalar(col_loc)
         self._check_dtypes(row_loc)
         self._check_dtypes(col_loc)
-        if self.df.empty:
-            return self.df._default_to_pandas(lambda df: df.iloc[key])
 
         row_lookup, col_lookup = self._compute_lookup(row_loc, col_loc)
         result = super(_iLocIndexer, self).__getitem__(row_lookup, col_lookup, ndim)
