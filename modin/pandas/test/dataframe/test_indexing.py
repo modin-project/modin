@@ -434,10 +434,12 @@ def test_loc_multi_index():
 
 
 def test_loc_empty():
-    pandas_df1 = pandas.DataFrame(np.array([i**2 for i in range(5)]), columns=["TIME"])
+    pandas_df1 = pandas.DataFrame(
+        np.array([i**2 for i in range(5)]), columns=["TIME"]
+    )
     pandas_df2 = pandas.DataFrame(index=pandas_df1.index)
 
-    modin_df1 = pd.DataFrame(np.array([i**2 for i in range(5)]), columns=["TIME"])
+    modin_df1 = pd.DataFrame(np.array([i ** 2 for i in range(5)]), columns=["TIME"])
     modin_df2 = pd.DataFrame(index=modin_df1.index)
 
     df_equals(pandas_df2.loc[1], modin_df2.loc[1])
@@ -552,10 +554,12 @@ def test_iloc_nested_assignment(data):
 
 
 def test_iloc_empty():
-    pandas_df1 = pandas.DataFrame(np.array([i**2 for i in range(5)]), columns=["TIME"])
+    pandas_df1 = pandas.DataFrame(
+        np.array([i**2 for i in range(5)]), columns=["TIME"]
+    )
     pandas_df2 = pandas.DataFrame(index=pandas_df1.index)
 
-    modin_df1 = pd.DataFrame(np.array([i**2 for i in range(5)]), columns=["TIME"])
+    modin_df1 = pd.DataFrame(np.array([i ** 2 for i in range(5)]), columns=["TIME"])
     modin_df2 = pd.DataFrame(index=modin_df1.index)
 
     df_equals(pandas_df2.iloc[1], modin_df2.iloc[1])
