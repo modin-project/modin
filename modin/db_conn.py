@@ -27,6 +27,10 @@ _PSYCOPG_LIB_NAME = "psycopg2"
 _SQLALCHEMY_LIB_NAME = "sqlalchemy"
 
 
+class UnsupportedDatabaseException(Exception):
+    pass
+
+
 class ModinDatabaseConnection:
     """
     Creates a SQL database connection.
@@ -44,7 +48,7 @@ class ModinDatabaseConnection:
     def __init__(self, lib, *args, **kwargs):
         lib = lib.lower()
         if lib not in (_PSYCOPG_LIB_NAME, _SQLALCHEMY_LIB_NAME):
-            raise Exception("Unsupported database library")
+            raise UnsupportedDatabaseException(f"Unsupported database library {lib}")
         self.lib = lib
         self.args = args
         self.kwargs = kwargs

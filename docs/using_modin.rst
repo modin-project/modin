@@ -72,9 +72,10 @@ To make Pandas read from a SQL database, you have two options:
 2) Pass an open database connection, e.g. for psycopg2, ``psycopg2.connect("dbname=pfmegrnargs user=reader password=NWDMCE5xdipIjRrp host=hh-pgsql-public.ebi.ac.uk")``
 
 The first option works with both Modin and Pandas. If you try the second option
-in Modin, Modin, will default to Pandas, because it can't pickle the open
-connection and send it to remote workers. The solution is to use a
-``ModinDatabaseConnection``, like so:
+in Modin, Modin will default to pandas because open database connections cannot be pickled.
+Pickling is required to send connection details to remote workers.
+To handle the unique requirements of distributed database access, Modin has a distributed
+database connection called ``ModinDatabaseConnection``:
 
 .. code-block:: python
 
