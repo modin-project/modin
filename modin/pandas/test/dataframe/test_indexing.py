@@ -443,6 +443,9 @@ def test_loc_empty():
     modin_df2 = pd.DataFrame(index=modin_df1.index)
 
     df_equals(pandas_df2.loc[1], modin_df2.loc[1])
+    pandas_df2.loc[1] = 3
+    modin_df2.loc[1] = 3
+    df_equals(pandas_df2, modin_df2)
 
 
 @pytest.mark.parametrize("index", [["row1", "row2", "row3"]])
@@ -563,6 +566,9 @@ def test_iloc_empty():
     modin_df2 = pd.DataFrame(index=modin_df1.index)
 
     df_equals(pandas_df2.iloc[1], modin_df2.iloc[1])
+    pandas_df2.iloc[1] = 3
+    modin_df2.iloc[1] = 3
+    df_equals(pandas_df2, modin_df2)
 
 
 def test_loc_series():
