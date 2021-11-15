@@ -25,11 +25,16 @@ import warnings
 from modin.core.storage_formats.pandas.parsers import (
     _split_result_for_readers,
     PandasCSVGlobParser,
+    PandasJsonGlobParser,
     PandasPickleExperimentalParser,
 )
 from modin.core.storage_formats.pandas.query_compiler import PandasQueryCompiler
 from modin.core.execution.ray.implementations.pandas_on_ray.io import PandasOnRayIO
-from modin.core.io import CSVGlobDispatcher, PickleExperimentalDispatcher
+from modin.core.io import (
+    CSVGlobDispatcher,
+    JsonGlobDispatcher,
+    PickleExperimentalDispatcher,
+)
 from modin.core.execution.ray.implementations.pandas_on_ray.dataframe.dataframe import (
     PandasOnRayDataframe,
 )
@@ -96,6 +101,11 @@ class ExperimentalPandasOnRayIO(PandasOnRayIO):
     )
     read_csv_glob = type(
         "", (RayTask, PandasCSVGlobParser, CSVGlobDispatcher), build_args
+    )._read
+    read_json_glob = type(
+        "",
+        (RayTask, PandasJsonGlobParser, JsonGlobDispatcher),
+        build_args,
     )._read
     read_pickle_distributed = type(
         "",

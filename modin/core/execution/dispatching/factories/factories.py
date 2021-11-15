@@ -515,6 +515,15 @@ class ExperimentalPandasOnRayFactory(ExperimentalBaseFactory, PandasOnRayFactory
     @classmethod
     @doc(
         _doc_io_method_raw_template,
+        source="JSON files",
+        params=_doc_io_method_kwargs_params,
+    )
+    def _read_json_glob(cls, **kwargs):
+        return cls.io_cls.read_json_glob(**kwargs)
+
+    @classmethod
+    @doc(
+        _doc_io_method_raw_template,
         source="Pickle files",
         params=_doc_io_method_kwargs_params,
     )

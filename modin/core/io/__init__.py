@@ -18,6 +18,7 @@ from .text.csv_dispatcher import CSVDispatcher
 from .text.csv_glob_dispatcher import CSVGlobDispatcher
 from .text.fwf_dispatcher import FWFDispatcher
 from .text.json_dispatcher import JSONDispatcher
+from .text.json_glob_dispatcher import JsonGlobDispatcher
 from .text.excel_dispatcher import ExcelDispatcher
 from .file_dispatcher import FileDispatcher
 from .text.text_file_dispatcher import TextFileDispatcher
@@ -33,6 +34,7 @@ __all__ = [
     "CSVGlobDispatcher",
     "FWFDispatcher",
     "JSONDispatcher",
+    "JsonGlobDispatcher",
     "FileDispatcher",
     "TextFileDispatcher",
     "ParquetDispatcher",

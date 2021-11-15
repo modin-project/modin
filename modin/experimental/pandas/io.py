@@ -223,6 +223,63 @@ def _read(**kwargs) -> DataFrame:
 read_csv_glob = _make_parser_func(sep=",")
 
 
+def read_json_glob(
+    filepath_or_buffer: FilePathOrBuffer,
+    orient=None,
+    typ="frame",
+    dtype=None,
+    convert_axes=None,
+    convert_dates=True,
+    keep_default_dates=True,
+    numpy=False,
+    precise_float=False,
+    date_unit=None,
+    encoding=None,
+    encoding_errors="strict",
+    lines=False,
+    chunksize=None,
+    compression="infer",
+    nrows: Optional[int] = None,
+    storage_options: StorageOptions = None,
+):  # noqa: MD02
+    """
+    Convert a JSON string to pandas object.
+
+    In experimental mode, we can use `*` in the filename. The files must contain
+    parts of one dataframe. For details see `modin.pandas.read_json`.
+    Note: the number of partitions is equal to the number of input files.
+
+    Parameters
+    ----------
+    filepath_or_buffer : a valid JSON str, path object or file-like object
+    orient : str, optional
+    typ : {{'frame', 'series'}}, default: 'frame'
+    dtype : bool or dict, optional
+    convert_axes : bool, optional
+    convert_dates : bool or list of str, default: True
+    keep_default_dates : bool, default: True
+    numpy : bool, default: False
+    precise_float : bool, default: False
+    date_unit : str, optional
+    encoding : str, default: 'utf-8'
+    encoding_errors : str, default: "strict"
+    lines : bool, default: False
+    chunksize : int, optional
+    compression : {{'infer', 'gzip', 'bz2', 'zip', 'xz', None}}, default: 'infer'
+    nrows : int, optional
+    storage_options : dict, optional
+
+    Returns
+    -------
+    Series or DataFrame
+    The type returned depends on the value of `typ`.
+    """
+    Engine.subscribe(_update_engine)
+    assert IsExperimental.get(), "This only works in experimental mode"
+    _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
+    return DataFrame(query_compiler=FactoryDispatcher.read_json_glob(**kwargs))
+
+
 def read_pickle_distributed(
     filepath_or_buffer: FilePathOrBuffer,
     compression: Optional[str] = "infer",

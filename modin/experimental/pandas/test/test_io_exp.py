@@ -158,3 +158,31 @@ def test_distributed_pickling(filename, compression):
 
     pickle_files = glob.glob(filename)
     teardown_test_files(pickle_files)
+
+
+@pytest.mark.skipif(
+    not Engine.get() == "Ray",
+    reason=f"{Engine.get()} does not have experimental API",
+)
+@pytest.mark.parametrize("compression", [None, "gzip"])
+@pytest.mark.parametrize("filename", ["default_read.json", "glob_read*.json"])
+def test_read_json_glob(filename, compression):
+    data = test_data["int_data"]
+    df = pd.DataFrame(data)
+
+    if compression:
+        filename = f"{filename}.gz"
+
+    half_df_rows = len(df) // 2
+    if "*" in filename:
+        # create several files that should be read by once
+        df[:half_df_rows].to_json(filename.replace("*", "0"), compression=compression)
+        df[half_df_rows:].to_json(filename.replace("*", "1"), compression=compression)
+    else:
+        df.to_json(filename, compression=compression)
+
+    try:
+        df = pd.read_json_glob(filename, compression=compression)
+    finally:
+        json_files = glob.glob(filename)
+        teardown_test_files(json_files)
