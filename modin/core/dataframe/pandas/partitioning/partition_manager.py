@@ -378,6 +378,7 @@ class PandasDataframePartitionManager(ABC):
         apply_indices=None,
         enumerate_partitions=False,
         lengths=None,
+        **kwargs,
     ):
         """
         Broadcast the `right` partitions to `left` and apply `apply_func` along full `axis`.
@@ -402,6 +403,8 @@ class PandasDataframePartitionManager(ABC):
             Note that `apply_func` must be able to accept `partition_idx` kwarg.
         lengths : list of ints, default: None
             The list of lengths to shuffle the object.
+        **kwargs : dict
+            Additional options that could be used by different engines.
 
         Returns
         -------
@@ -441,6 +444,7 @@ class PandasDataframePartitionManager(ABC):
                     preprocessed_map_func,
                     **kw,
                     **({"partition_idx": idx} if enumerate_partitions else {}),
+                    **kwargs,
                 )
                 for idx, i in enumerate(apply_indices)
             ]
@@ -511,6 +515,7 @@ class PandasDataframePartitionManager(ABC):
         keep_partitioning=False,
         lengths=None,
         enumerate_partitions=False,
+        **kwargs,
     ):
         """
         Apply `map_func` to every partition in `partitions` along given `axis`.
@@ -531,6 +536,8 @@ class PandasDataframePartitionManager(ABC):
         enumerate_partitions : bool, default: False
             Whether or not to pass partition index into `map_func`.
             Note that `map_func` must be able to accept `partition_idx` kwarg.
+        **kwargs : dict
+            Additional options that could be used by different engines.
 
         Returns
         -------
@@ -550,6 +557,7 @@ class PandasDataframePartitionManager(ABC):
             right=None,
             lengths=lengths,
             enumerate_partitions=enumerate_partitions,
+            **kwargs,
         )
 
     @classmethod

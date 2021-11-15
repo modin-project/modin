@@ -241,6 +241,7 @@ class PandasOnRayDataframePartitionManager(GenericRayDataframePartitionManager):
         keep_partitioning=False,
         lengths=None,
         enumerate_partitions=False,
+        **kwargs,
     ):
         """
         Apply `map_func` to every partition in `partitions` along given `axis`.
@@ -261,6 +262,8 @@ class PandasOnRayDataframePartitionManager(GenericRayDataframePartitionManager):
         enumerate_partitions : bool, default: False
             Whether or not to pass partition index into `map_func`.
             Note that `map_func` must be able to accept `partition_idx` kwarg.
+        **kwargs : dict
+            Additional options that could be used by different engines.
 
         Returns
         -------
@@ -273,7 +276,13 @@ class PandasOnRayDataframePartitionManager(GenericRayDataframePartitionManager):
         some global information about the axis.
         """
         return super(PandasOnRayDataframePartitionManager, cls).map_axis_partitions(
-            axis, partitions, map_func, keep_partitioning, lengths, enumerate_partitions
+            axis,
+            partitions,
+            map_func,
+            keep_partitioning,
+            lengths,
+            enumerate_partitions,
+            **kwargs,
         )
 
     @classmethod
