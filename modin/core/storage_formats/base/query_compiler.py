@@ -2556,9 +2556,9 @@ class BaseQueryCompiler(abc.ABC):
 
         Parameters
         ----------
-        index : list of ints, optional
+        index : list-like of ints, optional
             Positional indices of rows to grab.
-        columns : list of ints, optional
+        columns : list-like of ints, optional
             Positional indices of columns to grab.
 
         Returns
@@ -2566,8 +2566,8 @@ class BaseQueryCompiler(abc.ABC):
         BaseQueryCompiler
             New masked QueryCompiler.
         """
-        index = [] if index is None else index
-        columns = [] if columns is None else columns
+        index = slice(None) if index is None else index
+        columns = slice(None) if columns is None else columns
 
         def applyier(df):
             return df.iloc[index, columns]

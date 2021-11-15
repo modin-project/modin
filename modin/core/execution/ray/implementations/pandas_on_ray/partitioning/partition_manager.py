@@ -404,6 +404,8 @@ class PandasOnRayDataframePartitionManager(GenericRayDataframePartitionManager):
         row_partitions_list,
         col_partitions_list,
         item_to_distribute=None,
+        row_lengths=None,
+        col_widths=None,
     ):
         """
         Apply a function along both axes.
@@ -420,6 +422,12 @@ class PandasOnRayDataframePartitionManager(GenericRayDataframePartitionManager):
             List of column partitions.
         item_to_distribute : item, optional
             The item to split up so it can be applied over both axes.
+        row_lengths : list of ints, optional
+            Lengths of partitions for every row. If not specified this information
+            is extracted from partitions itself.
+        col_widths : list of ints, optional
+            Widths of partitions for every column. If not specified this information
+            is extracted from partitions itself.
 
         Returns
         -------
@@ -440,6 +448,8 @@ class PandasOnRayDataframePartitionManager(GenericRayDataframePartitionManager):
             row_partitions_list,
             col_partitions_list,
             item_to_distribute,
+            row_lengths,
+            col_widths,
         )
 
     @classmethod
