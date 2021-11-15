@@ -12,12 +12,15 @@ import os
 import types
 
 import ray
+
 # stub ray.remote to be a no-op so it doesn't shadow docstrings
 def noop_decorator(*args, **kwargs):
     if len(args) == 1 and len(kwargs) == 0 and callable(args[0]):
         # This is the case where the decorator is just @ray.remote without parameters.
         return args[0]
     return lambda cls_or_func: cls_or_func
+
+
 ray.remote = noop_decorator
 
 # fake modules if they're missing
@@ -107,13 +110,13 @@ pygments_style = "sphinx"
 # -- Options for HTML output -------------------------------------------------
 
 # Maps git branches to Sphinx themes
-default_html_theme = "sphinx_rtd_theme"
+default_html_theme = "pydata_sphinx_theme"
 current_branch = "nature"
 
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
 #
-html_theme = "sphinx_rtd_theme"
+html_theme = "pydata_sphinx_theme"
 
 html_logo = "img/MODIN_ver2.png"
 
