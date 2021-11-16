@@ -763,7 +763,7 @@ def test_resample_specific(rule, closed, label, on, level):
 
 
 @pytest.mark.parametrize(
-    "params",
+    "columns",
     [
         ["volume"],
         ("volume",),
@@ -771,61 +771,23 @@ def test_resample_specific(rule, closed, label, on, level):
         pandas.Index(["volume"]),
         ["volume", "price", "date"],
     ],
-    ids=["list", "tuple", "series", "index", "error_params"],
+    ids=["list", "tuple", "series", "index", "not_exist"],
 )
-def test_resample_getitem(params):
-    idx = pandas.DatetimeIndex(
-        [
-            "2013-07-31",
-            "2013-08-31",
-            "2013-09-30",
-            "2013-10-31",
-            "2013-11-30",
-            "2013-12-31",
-            "2014-01-31",
-            "2014-02-28",
-            "2014-03-31",
-            "2014-04-30",
-            "2014-05-31",
-            "2014-06-30",
-        ],
-        dtype="datetime64[ns]",
-        freq="M",
-    )
+def test_resample_getitem(columns):
+    index = pandas.date_range("1/1/2013", periods=9, freq="T")
 
-    md_idx = pd.DatetimeIndex(idx)
-
-    d2 = {
-        "price": [10, 11, 9, 13, 14, 18, 17, 19, 20, 21, 22, 23],
-        "volume": [50, 60, 40, 100, 50, 100, 40, 50, 60, 70, 33, 20],
+    data = {
+        "price": range(9),
+        "volume": range(10, 19),
     }
 
-    df2 = pandas.DataFrame(d2, index=idx)
+    modin_df, pandas_df = create_test_dfs(data, index=index)
 
-    md_df2 = pd.DataFrame(d2, index=md_idx)
-
-    err = False
-
-    try:
-        df2.resample("3T")[params].mean()
-    except KeyError:
-        err = True
-
-    if err:
-        with pytest.raises(KeyError) as raises_pandas:
-            df2.resample("3T")[params]
-
-        with pytest.raises(KeyError) as raises_modin:
-            md_df2.resample("3T")[params]
-
-        assert raises_pandas.type is raises_modin.type
-    else:
-        eval_general(
-            md_df2,
-            df2,
-            lambda df: df.resample("3T")[params].mean(),
-            params=params,
-        )
+    eval_general(
+        modin_df,
+        pandas_df,
+        lambda df: df.resample("3T")[columns].mean(),
+    )
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
