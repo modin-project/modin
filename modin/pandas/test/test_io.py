@@ -152,10 +152,15 @@ def eval_to_file(modin_obj, pandas_obj, fn, extension, **fn_kwargs):
     unique_filename_pandas = get_unique_filename(extension=extension)
 
     try:
-        try:
-            getattr(modin_obj, fn)(unique_filename_modin, **fn_kwargs)
-        except EXCEPTIONS:
-            getattr(modin_obj, fn)(unique_filename_modin, **fn_kwargs)
+        # parameter `max_retries=0` is set for `to_csv` function on Ray engine,
+        # in order to increase the stability of tests, we repeat the call of
+        # the entire function manually
+        for _ in range(3):
+            try:
+                getattr(modin_obj, fn)(unique_filename_modin, **fn_kwargs)
+            except EXCEPTIONS:
+                continue
+            break
 
         getattr(pandas_obj, fn)(unique_filename_pandas, **fn_kwargs)
 

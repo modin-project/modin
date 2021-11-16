@@ -13,13 +13,13 @@
 
 """The module holds base class implementing required I/O over Ray."""
 
-import asyncio
 import io
 import os
 import pandas
 
 from modin.core.io import BaseIO
-import ray
+from modin.core.execution.ray.common.utils import SignalActor
+from ray import get
 
 
 class RayIO(BaseIO):
@@ -118,23 +118,7 @@ class RayIO(BaseIO):
         if not cls._to_csv_check_support(kwargs):
             return BaseIO.to_csv(qc, **kwargs)
 
-        @ray.remote
-        class SignalActor:  # pragma: no cover
-            def __init__(self, event_count):
-                self.events = [asyncio.Event() for _ in range(event_count)]
-
-            def send(self, event_idx):
-                self.events[event_idx].set()
-
-            async def wait(self, event_idx, should_wait=True):
-                if should_wait:
-                    await self.events[event_idx].wait()
-
-            def is_set(self, event_idx):
-                return self.events[event_idx].is_set()
-
-        signal_count = len(qc._modin_frame._partitions)
-        signals = SignalActor.remote(signal_count + 1)
+        signals = SignalActor.remote(len(qc._modin_frame._partitions) + 1)
 
         def func(df, **kw):
             """
@@ -148,51 +132,50 @@ class RayIO(BaseIO):
                 Arguments to pass to ``pandas.to_csv(**kw)`` plus an extra argument
                 `partition_idx` serving as chunk index to maintain rows order.
             """
-            idx = kw["partition_idx"]
-            _kwargs = kwargs.copy()
-            if idx != 0:
+            partition_idx = kw["partition_idx"]
+            # the copy is made to not implicitly change the input parameters;
+            # to write to an intermediate buffer, we need to change `path_or_buf` in kwargs
+            csv_kwargs = kwargs.copy()
+            if partition_idx != 0:
                 # we need to create a new file only for first recording
                 # all the rest should be recorded in appending mode
-                if "w" in _kwargs["mode"]:
-                    _kwargs["mode"] = _kwargs["mode"].replace("w", "a")
+                if "w" in csv_kwargs["mode"]:
+                    csv_kwargs["mode"] = csv_kwargs["mode"].replace("w", "a")
                 # It is enough to write the header for the first partition
-                _kwargs["header"] = False
+                csv_kwargs["header"] = False
 
             # for parallelization purposes, each partition is written to an intermediate buffer
-            path_or_buf = _kwargs["path_or_buf"]
-            is_binary = "b" in _kwargs["mode"]
-            if is_binary:
-                _kwargs["path_or_buf"] = io.BytesIO()
-            else:
-                _kwargs["path_or_buf"] = io.StringIO()
-            df.to_csv(**_kwargs)
-            content = _kwargs["path_or_buf"].getvalue()
-            _kwargs["path_or_buf"].close()
+            path_or_buf = csv_kwargs["path_or_buf"]
+            is_binary = "b" in csv_kwargs["mode"]
+            csv_kwargs["path_or_buf"] = io.BytesIO() if is_binary else io.StringIO()
+            df.to_csv(**csv_kwargs)
+            content = csv_kwargs["path_or_buf"].getvalue()
+            csv_kwargs["path_or_buf"].close()
 
             # each process waits for its turn to write to a file
-            ray.get(signals.wait.remote(idx))
+            get(signals.wait.remote(partition_idx))
 
             # preparing to write data from the buffer to a file
             with pandas.io.common.get_handle(
                 path_or_buf,
                 # in case when using URL in implicit text mode
                 # pandas try to open `path_or_buf` in binary mode
-                _kwargs["mode"] if is_binary else _kwargs["mode"] + "t",
-                encoding=_kwargs["encoding"],
-                errors=_kwargs["errors"],
-                compression=_kwargs["compression"],
-                storage_options=_kwargs["storage_options"],
+                csv_kwargs["mode"] if is_binary else csv_kwargs["mode"] + "t",
+                encoding=kwargs["encoding"],
+                errors=kwargs["errors"],
+                compression=kwargs["compression"],
+                storage_options=kwargs["storage_options"],
                 is_text=False,
             ) as handles:
                 handles.handle.write(content)
 
             # signal that the next process can start writing to the file
-            ray.get(signals.send.remote(idx + 1))
+            get(signals.send.remote(partition_idx + 1))
             # used for synchronization purposes
             return pandas.DataFrame()
 
         # signaling that the partition with id==0 can be written to the file
-        ray.get(signals.send.remote(0))
+        get(signals.send.remote(0))
         result = qc._modin_frame._partition_mgr_cls.map_axis_partitions(
             axis=1,
             partitions=qc._modin_frame._partitions,
@@ -203,7 +186,7 @@ class RayIO(BaseIO):
             max_retries=0,
         )
         # pending completion
-        ray.get([partition.oid for partition in result.flatten()])
+        get([partition.oid for partition in result.flatten()])
 
     @staticmethod
     def _to_parquet_check_support(kwargs):
@@ -276,4 +259,4 @@ class RayIO(BaseIO):
             lengths=None,
             enumerate_partitions=True,
         )
-        ray.get([part.oid for row in result for part in row])
+        get([part.oid for row in result for part in row])
