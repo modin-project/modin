@@ -14,44 +14,38 @@
 """Module houses `CSVDispatcher` class, that is used for reading `.csv` files."""
 
 import pandas
+from pandas._typing import FilePathOrBuffer
 
 from modin.core.io.text.text_file_dispatcher import TextFileDispatcher
 
 
 class CSVDispatcher(TextFileDispatcher):
-    """
-    Class handles utils for reading `.csv` files.
+    """Class handles utils for reading `.csv` files."""
 
-    Inherits some common for text files util functions from `TextFileDispatcher` class.
-    """
+    callback = pandas.read_csv
 
     @classmethod
-    def _read(cls, filepath_or_buffer, **kwargs):
+    def check_parameters_support(
+        cls,
+        filepath_or_buffer: FilePathOrBuffer,
+        read_kwargs: dict,
+    ):
         """
-        Read data from `filepath_or_buffer` according to `kwargs` parameters.
+        Check support of parameters of `read_csv` function.
 
         Parameters
         ----------
         filepath_or_buffer : str, path object or file-like object
             `filepath_or_buffer` parameter of `read_csv` function.
-        **kwargs : dict
+        read_kwargs : dict
             Parameters of `read_csv` function.
 
         Returns
         -------
-        new_query_compiler : BaseQueryCompiler
-            Query compiler with imported data for further processing.
-
-        Notes
-        -----
-        `skiprows` is handled diferently based on the parameter type because of
-        performance reasons. If `skiprows` is integer - rows will be skipped during
-        data file partitioning and wouldn't be actually read. If `skiprows` is array
-        or callable - full data file will be read and only then rows will be dropped.
+        bool
+            Whether passed parameters are supported or not.
         """
-        return cls._generic_read(
+        return TextFileDispatcher.check_parameters_support(
             filepath_or_buffer,
-            callback=pandas.read_csv,
-            is_for_fwf_reader=False,
-            **kwargs
+            read_kwargs,
         )

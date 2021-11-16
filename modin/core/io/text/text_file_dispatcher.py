@@ -21,8 +21,8 @@ import warnings
 import os
 import io
 import codecs
-from typing import Union, Sequence, Optional, Tuple, Callable, Dict
-from csv import Dialect, QUOTE_NONE
+from typing import Union, Sequence, Optional, Tuple, Callable
+from csv import QUOTE_NONE
 
 import numpy as np
 import pandas
@@ -37,18 +37,11 @@ from modin.core.io.text.utils import CustomNewlineIterator
 from modin.config import NPartitions
 
 ColumnNamesTypes = Tuple[Union[pandas.Index, pandas.MultiIndex, pandas.Int64Index]]
-ReadCsvKwargsType = Dict[
-    str, Union[str, int, bool, dict, object, Sequence, Callable, Dialect, None]
-]
 IndexColType = Union[int, str, bool, Sequence[int], Sequence[str], None]
 
 
 class TextFileDispatcher(FileDispatcher):
-    """
-    Class handles utils for reading text formats files.
-
-    Inherits some util functions for processing files from `FileDispatcher` class.
-    """
+    """Class handles utils for reading text formats files."""
 
     @classmethod
     def get_path_or_buffer(cls, filepath_or_buffer):
@@ -615,26 +608,20 @@ class TextFileDispatcher(FileDispatcher):
         return partition_ids, index_ids, dtypes_ids
 
     @classmethod
-    def _read_csv_fwf_check_support(
+    def check_parameters_support(
         cls,
         filepath_or_buffer: FilePathOrBuffer,
-        read_kwargs: ReadCsvKwargsType,
-        compression_infered: str,
-        is_for_fwf_reader: bool = False,
+        read_kwargs: dict,
     ) -> bool:
         """
-        Check if passed parameters are supported by current `read_csv` or `read_fwf` implementation.
+        Check support of only general parameters of `read_*` function.
 
         Parameters
         ----------
         filepath_or_buffer : str, path object or file-like object
-            `filepath_or_buffer` parameter of read_* function.
+            `filepath_or_buffer` parameter of `read_*` function.
         read_kwargs : dict
-            Parameters of read_* function.
-        compression_infered : str
-            Inferred `compression` parameter of read_* function.
-        is_for_fwf_reader : bool, default: False
-            Flag that determines when to check `read_fwf` function-specific parameters.
+            Parameters of `read_*` function.
 
         Returns
         -------
@@ -647,18 +634,8 @@ class TextFileDispatcher(FileDispatcher):
         elif not cls.pathlib_or_pypath(filepath_or_buffer):
             return False
 
-        if compression_infered is not None:
-            if compression_infered not in ["gzip", "bz2", "xz", "zip"]:
-                return False
-
         if read_kwargs["chunksize"] is not None:
             return False
-
-        if is_for_fwf_reader:
-            # If infer_nrows is a significant portion of the number of rows, pandas may be
-            # faster.
-            if read_kwargs["infer_nrows"] > 100:
-                return False
 
         return True
 
@@ -933,7 +910,7 @@ class TextFileDispatcher(FileDispatcher):
         return new_query_compiler
 
     @classmethod
-    def _generic_read(cls, filepath_or_buffer, callback, is_for_fwf_reader, **kwargs):
+    def _read(cls, filepath_or_buffer: FilePathOrBuffer, **kwargs):
         """
         Read data from `filepath_or_buffer` according to `kwargs` parameters.
 
@@ -943,10 +920,6 @@ class TextFileDispatcher(FileDispatcher):
         ----------
         filepath_or_buffer : str, path object or file-like object
             `filepath_or_buffer` parameter of read functions.
-        callback : function
-            Function that used in parsers. For example: `pandas.read_csv`.
-        is_for_fwf_reader : bool
-            Flag that determines when to use `read_fwf` function-specific parameters.
         **kwargs : dict
             Parameters of read functions.
 
@@ -986,15 +959,13 @@ class TextFileDispatcher(FileDispatcher):
             skiprows_md, int
         )
 
-        use_modin_impl = cls._read_csv_fwf_check_support(
+        use_modin_impl = cls.check_parameters_support(
             filepath_or_buffer,
             kwargs,
-            compression_infered,
-            is_for_fwf_reader=is_for_fwf_reader,
         )
         if not use_modin_impl:
             return cls.single_worker_read(
-                filepath_or_buffer, callback=callback, **kwargs
+                filepath_or_buffer, callback=cls.callback, **kwargs
             )
 
         is_quoting = kwargs["quoting"] != QUOTE_NONE
@@ -1004,7 +975,7 @@ class TextFileDispatcher(FileDispatcher):
             skiprows is not None or kwargs["skipfooter"] != 0
         )
 
-        pd_df_metadata = callback(
+        pd_df_metadata = cls.callback(
             filepath_or_buffer,
             **dict(kwargs, nrows=1, skipfooter=0, index_col=index_col),
         )
@@ -1046,7 +1017,7 @@ class TextFileDispatcher(FileDispatcher):
             )
 
         partition_ids, index_ids, dtypes_ids = cls._launch_tasks(
-            splits, callback=callback, **partition_kwargs
+            splits, callback=cls.callback, **partition_kwargs
         )
 
         new_query_compiler = cls._get_new_qc(

@@ -14,44 +14,41 @@
 """Module houses `FWFDispatcher` class, that is used for reading of tables with fixed-width formatted lines."""
 
 import pandas
+from pandas._typing import FilePathOrBuffer
 
 from modin.core.io.text.text_file_dispatcher import TextFileDispatcher
 
 
 class FWFDispatcher(TextFileDispatcher):
-    """
-    Class handles utils for reading of tables with fixed-width formatted lines.
+    """Class handles utils for reading of tables with fixed-width formatted lines."""
 
-    Inherits some common for text files util functions from `TextFileDispatcher` class.
-    """
+    callback = pandas.read_fwf
 
     @classmethod
-    def _read(cls, filepath_or_buffer, **kwargs):
+    def check_parameters_support(
+        cls,
+        filepath_or_buffer: FilePathOrBuffer,
+        read_kwargs: dict,
+    ):
         """
-        Read data from `filepath_or_buffer` according to the passed `read_fwf` `kwargs` parameters.
+        Check support of parameters of `read_fwf` function.
 
         Parameters
         ----------
         filepath_or_buffer : str, path object or file-like object
             `filepath_or_buffer` parameter of `read_fwf` function.
-        **kwargs : dict
+        read_kwargs : dict
             Parameters of `read_fwf` function.
 
         Returns
         -------
-        new_query_compiler : BaseQueryCompiler
-            Query compiler with imported data for further processing.
-
-        Notes
-        -----
-        `skiprows` is handled diferently based on the parameter type because of
-        performance reasons. If `skiprows` is integer - rows will be skipped during
-        data file partitioning and wouldn't be actually read. If `skiprows` is array
-        or callable - full data file will be read and only then rows will be dropped.
+        bool
+            Whether passed parameters are supported or not.
         """
-        return cls._generic_read(
+        use_modin_impl = TextFileDispatcher.check_parameters_support(
             filepath_or_buffer,
-            callback=pandas.read_fwf,
-            is_for_fwf_reader=True,
-            **kwargs
+            read_kwargs,
         )
+        # If infer_nrows is a significant portion of the number of rows, pandas may be
+        # faster.
+        return use_modin_impl and not read_kwargs["infer_nrows"] > 100
