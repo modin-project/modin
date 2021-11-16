@@ -44,7 +44,6 @@ from .utils import (
     string_na_rep_values,
     string_na_rep_keys,
     numeric_dfs,
-    no_numeric_dfs,
     agg_func_keys,
     agg_func_values,
     agg_func_except_keys,
@@ -2411,8 +2410,7 @@ def test_prod_specific(min_count, numeric_only):
 @pytest.mark.parametrize("q", quantiles_values, ids=quantiles_keys)
 def test_quantile(request, data, q):
     modin_series, pandas_series = create_test_series(data)
-    if not name_contains(request.node.name, no_numeric_dfs):
-        df_equals(modin_series.quantile(q), pandas_series.quantile(q))
+    df_equals(modin_series.quantile(q), pandas_series.quantile(q))
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)

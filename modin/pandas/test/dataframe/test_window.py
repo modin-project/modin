@@ -21,12 +21,10 @@ from modin.pandas.test.utils import (
     random_state,
     df_equals,
     arg_keys,
-    name_contains,
     test_data_values,
     test_data_keys,
     test_data_with_duplicates_values,
     test_data_with_duplicates_keys,
-    no_numeric_dfs,
     quantiles_keys,
     quantiles_values,
     axis_keys,
@@ -608,37 +606,29 @@ def test_quantile(request, data, q):
     modin_df = pd.DataFrame(data)
     pandas_df = pandas.DataFrame(data)
 
-    if not name_contains(request.node.name, no_numeric_dfs):
-        df_equals(modin_df.quantile(q), pandas_df.quantile(q))
-        df_equals(modin_df.quantile(q, axis=1), pandas_df.quantile(q, axis=1))
+    df_equals(modin_df.quantile(q), pandas_df.quantile(q))
+    df_equals(modin_df.quantile(q, axis=1), pandas_df.quantile(q, axis=1))
 
-        try:
-            pandas_result = pandas_df.quantile(q, axis=1, numeric_only=False)
-        except Exception as e:
-            with pytest.raises(type(e)):
-                modin_df.quantile(q, axis=1, numeric_only=False)
-        else:
-            modin_result = modin_df.quantile(q, axis=1, numeric_only=False)
-            df_equals(modin_result, pandas_result)
+    try:
+        pandas_result = pandas_df.quantile(q, axis=1, numeric_only=False)
+    except Exception as e:
+        with pytest.raises(type(e)):
+            modin_df.quantile(q, axis=1, numeric_only=False)
     else:
-        with pytest.raises(ValueError):
-            modin_df.quantile(q)
+        modin_result = modin_df.quantile(q, axis=1, numeric_only=False)
+        df_equals(modin_result, pandas_result)
 
-    if not name_contains(request.node.name, no_numeric_dfs):
-        df_equals(modin_df.T.quantile(q), pandas_df.T.quantile(q))
-        df_equals(modin_df.T.quantile(q, axis=1), pandas_df.T.quantile(q, axis=1))
+    df_equals(modin_df.T.quantile(q), pandas_df.T.quantile(q))
+    df_equals(modin_df.T.quantile(q, axis=1), pandas_df.T.quantile(q, axis=1))
 
-        try:
-            pandas_result = pandas_df.T.quantile(q, axis=1, numeric_only=False)
-        except Exception as e:
-            with pytest.raises(type(e)):
-                modin_df.T.quantile(q, axis=1, numeric_only=False)
-        else:
-            modin_result = modin_df.T.quantile(q, axis=1, numeric_only=False)
-            df_equals(modin_result, pandas_result)
+    try:
+        pandas_result = pandas_df.T.quantile(q, axis=1, numeric_only=False)
+    except Exception as e:
+        with pytest.raises(type(e)):
+            modin_df.T.quantile(q, axis=1, numeric_only=False)
     else:
-        with pytest.raises(ValueError):
-            modin_df.T.quantile(q)
+        modin_result = modin_df.T.quantile(q, axis=1, numeric_only=False)
+        df_equals(modin_result, pandas_result)
 
 
 @pytest.mark.parametrize("axis", ["rows", "columns"])
