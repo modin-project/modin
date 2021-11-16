@@ -19,7 +19,9 @@ import modin.pandas as pd
 
 ### Installation
 
-Modin can be installed from PyPI:
+#### From PyPI
+
+Modin can be installed using following line:
 
 ```bash
 pip install modin
@@ -36,6 +38,21 @@ pip install modin[all] # Install all of the above
 ```
 Modin will automatically detect which engine you have installed and use that for
 scheduling computation!
+
+#### From conda-forge
+
+Following line will install modin and 3 engines ([Ray](https://github.com/ray-project/ray),
+[Dask](https://github.com/dask/dask) and [Omnisci](https://modin.readthedocs.io/en/latest/UsingOmnisci/index.html))
+
+```bash
+conda install -c conda-forge modin-all
+```
+
+Also each engine could be installed explicitly. For example this line installs all 3:
+
+```bash
+conda install -c conda-forge modin-ray modin-dask modin-omnisci
+```
 
 ### Pandas API Coverage
 
@@ -81,6 +98,8 @@ os.environ["MODIN_ENGINE"] = "dask"  # Modin will use Dask
 import modin.pandas as pd
 ```
 
+Check [complete Modin documentation](https://modin.readthedocs.io/en/latest/UsingOmnisci/index.html) for Omnisci engine setup
+
 **Note: You should not change the engine after you have imported Modin as it will result in undefined behavior**
 
 ##### Which engine should I use?
@@ -89,6 +108,9 @@ If you are on Windows, you must use Dask. Ray does not support Windows. If you a
 Linux or Mac OS, you can install and use either engine. There is no knowledge required
 to use either of these engines as Modin abstracts away all of the complexity, so feel
 free to pick either!
+
+On Linux you also can choose [Omnisci](https://modin.readthedocs.io/en/latest/UsingOmnisci/index.html) which is an experimental
+engine based on [OmnisciDB](https://www.omnisci.com/platform/omniscidb) and included into [Intel Distribution of Modin](https://software.intel.com/content/www/us/en/develop/tools/oneapi/components/distribution-of-modin.html#gs.86stqv)
 
 ##### Advanced usage
 
