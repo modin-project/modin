@@ -191,6 +191,7 @@ class RayIO(BaseIO):
             keep_partitioning=True,
             lengths=None,
             enumerate_partitions=True,
+            max_retries=0,
         )
 
         # pending completion
