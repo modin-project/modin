@@ -58,8 +58,6 @@ IO_OPS_DATA_DIR = os.path.join(os.path.dirname(__file__), "io_tests_data")
 # Input data and functions for the tests
 # The test data that we will test our code against
 test_data = {
-    # "empty_data": {},
-    # "columns_only": {"col1": [], "col2": [], "col3": [], "col4": [], "col5": []},
     "int_data": {
         "col{}".format(int((i - NCOLS / 2) % NCOLS + 1)): random_state.randint(
             RAND_LOW, RAND_HIGH, size=(NROWS)
@@ -179,8 +177,6 @@ test_data_large_categorical_series_values = [
 test_data_large_categorical_series_keys = ["categorical_series"]
 
 numeric_dfs = [
-    "empty_data",
-    "columns_only",
     "int_data",
     "float_nan_data",
     "with_index_column",
