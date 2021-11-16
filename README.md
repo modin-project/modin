@@ -110,7 +110,7 @@ to use either of these engines as Modin abstracts away all of the complexity, so
 free to pick either!
 
 On Linux you also can choose [Omnisci](https://modin.readthedocs.io/en/latest/UsingOmnisci/index.html) which is an experimental
-engine based on [OmnisciDB](https://www.omnisci.com/platform/omniscidb) and included into [Intel Distribution of Modin](https://software.intel.com/content/www/us/en/develop/tools/oneapi/components/distribution-of-modin.html#gs.86stqv)
+engine based on [OmnisciDB](https://www.omnisci.com/platform/omniscidb) and included into [Intel® Distribution of Modin](https://software.intel.com/content/www/us/en/develop/tools/oneapi/components/distribution-of-modin.html) which is a part of [Intel® oneAPI AI Analytics Toolkit (AI Kit)](https://www.intel.com/content/www/us/en/developer/tools/oneapi/ai-analytics-toolkit.html)
 
 ##### Advanced usage
 
