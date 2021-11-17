@@ -21,6 +21,11 @@ from modin.config import NPartitions
 
 NPartitions.put(4)
 
+# Our configuration in pytest.ini requires that we explicitly catch all
+# instances of defaulting to pandas, but some test modules, like this one,
+# have too many such instances.
+pytestmark = pytest.mark.filterwarnings("default:.*defaulting to pandas.*:UserWarning")
+
 
 def create_test_series(vals):
     if isinstance(vals, dict):

@@ -11,6 +11,8 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
+import contextlib
+import warnings
 import pandas
 import pytest
 import modin.pandas as pd
@@ -106,50 +108,67 @@ def test_merge():
     modin_df2 = pd.DataFrame(frame_data2)
     pandas_df2 = pandas.DataFrame(frame_data2)
 
-    join_types = ["outer", "inner"]
-    for how in join_types:
-        # Defaults
-        modin_result = pd.merge(modin_df, modin_df2, how=how)
+    join_type_outer = "outer"
+    join_type_inner = "inner"
+    warnings.filterwarnings("error", ".*defaulting to pandas")
+    for how in (join_type_outer, join_type_inner):
+        if how == join_type_outer:
+            warning_catcher = warns_that_defaulting_to_pandas()
+        else:
+            warning_catcher = contextlib.nullcontext()
+        with warning_catcher:
+            modin_result = pd.merge(modin_df, modin_df2, how=how)
         pandas_result = pandas.merge(pandas_df, pandas_df2, how=how)
         df_equals(modin_result, pandas_result)
 
         # left_on and right_index
-        modin_result = pd.merge(
-            modin_df, modin_df2, how=how, left_on="col1", right_index=True
-        )
+        with warns_that_defaulting_to_pandas():
+            modin_result = pd.merge(
+                modin_df, modin_df2, how=how, left_on="col1", right_index=True
+            )
         pandas_result = pandas.merge(
             pandas_df, pandas_df2, how=how, left_on="col1", right_index=True
         )
         df_equals(modin_result, pandas_result)
 
         # left_index and right_on
-        modin_result = pd.merge(
-            modin_df, modin_df2, how=how, left_index=True, right_on="col1"
-        )
+        with warns_that_defaulting_to_pandas():
+            modin_result = pd.merge(
+                modin_df, modin_df2, how=how, left_index=True, right_on="col1"
+            )
         pandas_result = pandas.merge(
             pandas_df, pandas_df2, how=how, left_index=True, right_on="col1"
         )
         df_equals(modin_result, pandas_result)
 
         # left_on and right_on col1
-        modin_result = pd.merge(
-            modin_df, modin_df2, how=how, left_on="col1", right_on="col1"
-        )
+        if how == join_type_outer:
+            warning_catcher = warns_that_defaulting_to_pandas()
+        else:
+            warning_catcher = contextlib.nullcontext()
+        with warning_catcher:
+            modin_result = pd.merge(
+                modin_df, modin_df2, how=how, left_on="col1", right_on="col1"
+            )
         pandas_result = pandas.merge(
             pandas_df, pandas_df2, how=how, left_on="col1", right_on="col1"
         )
         df_equals(modin_result, pandas_result)
 
         # left_on and right_on col2
-        modin_result = pd.merge(
-            modin_df, modin_df2, how=how, left_on="col2", right_on="col2"
-        )
+        if how == join_type_outer:
+            warning_catcher = warns_that_defaulting_to_pandas()
+        else:
+            warning_catcher = contextlib.nullcontext()
+        with warning_catcher:
+            modin_result = pd.merge(
+                modin_df, modin_df2, how=how, left_on="col2", right_on="col2"
+            )
         pandas_result = pandas.merge(
             pandas_df, pandas_df2, how=how, left_on="col2", right_on="col2"
         )
         df_equals(modin_result, pandas_result)
 
-        # left_index and right_index
         modin_result = pd.merge(
             modin_df, modin_df2, how=how, left_index=True, right_index=True
         )
@@ -245,7 +264,8 @@ def test_merge_asof_on_variations():
         {"left_index": True, "right_index": True},
     ]:
         pandas_merged = pandas.merge_asof(pandas_left, pandas_right, **on_arguments)
-        modin_merged = pd.merge_asof(modin_left, modin_right, **on_arguments)
+        with warns_that_defaulting_to_pandas():
+            modin_merged = pd.merge_asof(modin_left, modin_right, **on_arguments)
         df_equals(pandas_merged, modin_merged)
 
 
@@ -263,13 +283,14 @@ def test_merge_asof_suffixes():
             right_index=True,
             suffixes=suffixes,
         )
-        modin_merged = pd.merge_asof(
-            modin_left,
-            modin_right,
-            left_index=True,
-            right_index=True,
-            suffixes=suffixes,
-        )
+        with warns_that_defaulting_to_pandas():
+            modin_merged = pd.merge_asof(
+                modin_left,
+                modin_right,
+                left_index=True,
+                right_index=True,
+                suffixes=suffixes,
+            )
         df_equals(pandas_merged, modin_merged)
 
     with pytest.raises(ValueError):
@@ -280,7 +301,7 @@ def test_merge_asof_suffixes():
             right_index=True,
             suffixes=(False, False),
         )
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError), warns_that_defaulting_to_pandas():
         modin_merged = pd.merge_asof(
             modin_left,
             modin_right,
@@ -297,45 +318,45 @@ def test_merge_asof_bad_arguments():
     modin_left, modin_right = pd.DataFrame(left), pd.DataFrame(right)
 
     # Can't mix by with left_by/right_by
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError), warns_that_defaulting_to_pandas():
         pandas.merge_asof(
             pandas_left, pandas_right, on="a", by="b", left_by="can't do with by"
         )
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError), warns_that_defaulting_to_pandas():
         pd.merge_asof(
             modin_left, modin_right, on="a", by="b", left_by="can't do with by"
         )
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError), warns_that_defaulting_to_pandas():
         pandas.merge_asof(
             pandas_left, pandas_right, by="b", on="a", right_by="can't do with by"
         )
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError), warns_that_defaulting_to_pandas():
         pd.merge_asof(
             modin_left, modin_right, by="b", on="a", right_by="can't do with by"
         )
 
     # Can't mix on with left_on/right_on
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError), warns_that_defaulting_to_pandas():
         pandas.merge_asof(pandas_left, pandas_right, on="a", left_on="can't do with by")
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError), warns_that_defaulting_to_pandas():
         pd.merge_asof(modin_left, modin_right, on="a", left_on="can't do with by")
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError), warns_that_defaulting_to_pandas():
         pandas.merge_asof(
             pandas_left, pandas_right, on="a", right_on="can't do with by"
         )
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError), warns_that_defaulting_to_pandas():
         pd.merge_asof(modin_left, modin_right, on="a", right_on="can't do with by")
 
     # Can't mix left_index with left_on or on, similarly for right.
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError), warns_that_defaulting_to_pandas():
         pd.merge_asof(modin_left, modin_right, on="a", right_index=True)
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError), warns_that_defaulting_to_pandas():
         pd.merge_asof(
             modin_left, modin_right, left_on="a", right_on="a", right_index=True
         )
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError), warns_that_defaulting_to_pandas():
         pd.merge_asof(modin_left, modin_right, on="a", left_index=True)
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError), warns_that_defaulting_to_pandas():
         pd.merge_asof(
             modin_left, modin_right, left_on="a", right_on="a", left_index=True
         )
@@ -343,15 +364,15 @@ def test_merge_asof_bad_arguments():
     # Need both left and right
     with pytest.raises(Exception):  # Pandas bug, didn't validate inputs sufficiently
         pandas.merge_asof(pandas_left, pandas_right, left_on="a")
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError), warns_that_defaulting_to_pandas():
         pd.merge_asof(modin_left, modin_right, left_on="a")
     with pytest.raises(Exception):  # Pandas bug, didn't validate inputs sufficiently
         pandas.merge_asof(pandas_left, pandas_right, right_on="a")
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError), warns_that_defaulting_to_pandas():
         pd.merge_asof(modin_left, modin_right, right_on="a")
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError), warns_that_defaulting_to_pandas():
         pandas.merge_asof(pandas_left, pandas_right)
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError), warns_that_defaulting_to_pandas():
         pd.merge_asof(modin_left, modin_right)
 
 
@@ -390,6 +411,14 @@ def test_merge_asof_merge_options():
     pandas_quotes, pandas_trades = to_pandas(modin_quotes), to_pandas(modin_trades)
 
     # left_by + right_by
+    with warns_that_defaulting_to_pandas():
+        modin_result = pd.merge_asof(
+            modin_quotes,
+            modin_trades,
+            on="time",
+            left_by="ticker",
+            right_by="ticker2",
+        )
     df_equals(
         pandas.merge_asof(
             pandas_quotes,
@@ -398,18 +427,19 @@ def test_merge_asof_merge_options():
             left_by="ticker",
             right_by="ticker2",
         ),
-        pd.merge_asof(
-            modin_quotes,
-            modin_trades,
-            on="time",
-            left_by="ticker",
-            right_by="ticker2",
-        ),
+        modin_result,
     )
 
     # Just by:
     pandas_trades["ticker"] = pandas_trades["ticker2"]
     modin_trades["ticker"] = modin_trades["ticker2"]
+    with warns_that_defaulting_to_pandas():
+        modin_result = pd.merge_asof(
+            modin_quotes,
+            modin_trades,
+            on="time",
+            by="ticker",
+        )
     df_equals(
         pandas.merge_asof(
             pandas_quotes,
@@ -417,15 +447,18 @@ def test_merge_asof_merge_options():
             on="time",
             by="ticker",
         ),
-        pd.merge_asof(
-            modin_quotes,
-            modin_trades,
-            on="time",
-            by="ticker",
-        ),
+        modin_result,
     )
 
     # Tolerance
+    with warns_that_defaulting_to_pandas():
+        modin_result = pd.merge_asof(
+            modin_quotes,
+            modin_trades,
+            on="time",
+            by="ticker",
+            tolerance=pd.Timedelta("2ms"),
+        )
     df_equals(
         pandas.merge_asof(
             pandas_quotes,
@@ -434,16 +467,18 @@ def test_merge_asof_merge_options():
             by="ticker",
             tolerance=pd.Timedelta("2ms"),
         ),
-        pd.merge_asof(
-            modin_quotes,
-            modin_trades,
-            on="time",
-            by="ticker",
-            tolerance=pd.Timedelta("2ms"),
-        ),
+        modin_result,
     )
 
     # Direction
+    with warns_that_defaulting_to_pandas():
+        modin_result = pd.merge_asof(
+            modin_quotes,
+            modin_trades,
+            on="time",
+            by="ticker",
+            direction="forward",
+        )
     df_equals(
         pandas.merge_asof(
             pandas_quotes,
@@ -452,16 +487,19 @@ def test_merge_asof_merge_options():
             by="ticker",
             direction="forward",
         ),
-        pd.merge_asof(
-            modin_quotes,
-            modin_trades,
-            on="time",
-            by="ticker",
-            direction="forward",
-        ),
+        modin_result,
     )
 
     # Allow exact matches
+    with warns_that_defaulting_to_pandas():
+        modin_result = pd.merge_asof(
+            modin_quotes,
+            modin_trades,
+            on="time",
+            by="ticker",
+            tolerance=pd.Timedelta("10ms"),
+            allow_exact_matches=False,
+        )
     df_equals(
         pandas.merge_asof(
             pandas_quotes,
@@ -471,14 +509,7 @@ def test_merge_asof_merge_options():
             tolerance=pd.Timedelta("10ms"),
             allow_exact_matches=False,
         ),
-        pd.merge_asof(
-            modin_quotes,
-            modin_trades,
-            on="time",
-            by="ticker",
-            tolerance=pd.Timedelta("10ms"),
-            allow_exact_matches=False,
-        ),
+        modin_result,
     )
 
 
@@ -599,25 +630,30 @@ def test_unique():
 def test_value_counts(normalize, bins, dropna):
     # We sort indices for Modin and pandas result because of issue #1650
     values = np.array([3, 1, 2, 3, 4, np.nan])
-    modin_result = sort_index_for_equal_values(
-        pd.value_counts(values, normalize=normalize, ascending=False), False
-    )
+    # Here and below, value_counts itself does not default to pandas, but
+    # value_counts calls sort_values(), which defaults to Pandas.
+    with pytest.warns(UserWarning, match="sort_values defaulting to pandas"):
+        modin_result = sort_index_for_equal_values(
+            pd.value_counts(values, normalize=normalize, ascending=False), False
+        )
     pandas_result = sort_index_for_equal_values(
         pandas.value_counts(values, normalize=normalize, ascending=False), False
     )
     df_equals(modin_result, pandas_result)
 
-    modin_result = sort_index_for_equal_values(
-        pd.value_counts(values, bins=bins, ascending=False), False
-    )
+    with pytest.warns(UserWarning):
+        modin_result = sort_index_for_equal_values(
+            pd.value_counts(values, bins=bins, ascending=False), False
+        )
     pandas_result = sort_index_for_equal_values(
         pandas.value_counts(values, bins=bins, ascending=False), False
     )
     df_equals(modin_result, pandas_result)
 
-    modin_result = sort_index_for_equal_values(
-        pd.value_counts(values, dropna=dropna, ascending=True), True
-    )
+    with pytest.warns(UserWarning):
+        modin_result = sort_index_for_equal_values(
+            pd.value_counts(values, dropna=dropna, ascending=True), True
+        )
     pandas_result = sort_index_for_equal_values(
         pandas.value_counts(values, dropna=dropna, ascending=True), True
     )
@@ -730,7 +766,8 @@ def test_default_to_pandas_warning_message(func, regex):
 
 def test_empty_dataframe():
     df = pd.DataFrame(columns=["a", "b"])
-    df[(df.a == 1) & (df.b == 2)]
+    with warns_that_defaulting_to_pandas():
+        df[(df.a == 1) & (df.b == 2)]
 
 
 def test_empty_series():

@@ -73,6 +73,11 @@ except ImportError:
 
 from modin.config import NPartitions
 
+# Our configuration in pytest.ini requires that we explicitly catch all
+# instances of defaulting to pandas, but some test modules, like this one,
+# have too many such instances.
+pytestmark = pytest.mark.filterwarnings("default:.*defaulting to pandas.*:UserWarning")
+
 NPartitions.put(4)
 
 DATASET_SIZE_DICT = {

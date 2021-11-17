@@ -47,6 +47,11 @@ NPartitions.put(4)
 # Force matplotlib to not use any Xwindows backend.
 matplotlib.use("Agg")
 
+# Our configuration in pytest.ini requires that we explicitly catch all
+# instances of defaulting to pandas, but some test modules, like this one,
+# have too many such instances.
+pytestmark = pytest.mark.filterwarnings("default:.*defaulting to pandas.*:UserWarning")
+
 
 def test_agg_dict():
     md_df, pd_df = create_test_dfs(test_data_values[0])
