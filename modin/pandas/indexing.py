@@ -557,6 +557,45 @@ class _LocationIndexerBase(object):
         col_loc = col_loc(self.df) if callable(col_loc) else col_loc
         return row_loc, col_loc, _compute_ndim(row_loc, col_loc)
 
+    # HACK: This method bypasses regular ``loc/iloc.__getitem__`` flow in order to ensure better
+    # performance in the case of boolean masking. The only purpose of this method is to compensate
+    # for a lack of backend's indexing API, there is no Query Compiler method allowing masking
+    # along both axis when any of the indexers is a boolean. That's why rows and columns masking
+    # phases are separate in this case.
+    # TODO: Remove this method and handle this case naturally via ``loc/iloc.__getitem__`` flow
+    # when QC API would support both-axis masking with boolean indexers.
+    def _handle_boolean_masking(self, row_loc, col_loc):
+        """
+        Retrieve dataset according to the boolean mask for rows and an indexer for columns.
+
+        In comparison with the regular ``loc/iloc.__getitem__`` flow this method efficiently
+        masks rows with a Modin Series boolean mask without materializing it (if the selected
+        execution implements such masking).
+
+        Parameters
+        ----------
+        row_loc : modin.pandas.Series of bool dtype
+            Boolean mask to index rows with.
+        col_loc : object
+            An indexer along column axis.
+
+        Returns
+        -------
+        modin.pandas.DataFrame or modin.pandas.Series
+            Located dataset.
+        """
+        ErrorMessage.catch_bugs_and_request_email(
+            failure_condition=not isinstance(row_loc, Series),
+            extra_log=f"Only ``modin.pandas.Series`` boolean masks are acceptable, got: {type(row_loc)}",
+        )
+
+        aligned_loc = row_loc.reindex(index=self.df.index)
+        masked_df = self.df.__constructor__(
+            query_compiler=self.qc.getitem_array(aligned_loc._query_compiler)
+        )
+        # Passing `slice(None)` as a row indexer since we've just applied it
+        return type(self)(masked_df)[(slice(None), col_loc)]
+
 
 class _LocIndexer(_LocationIndexerBase):
     """
@@ -602,6 +641,9 @@ class _LocIndexer(_LocationIndexerBase):
             else:
                 result_slice = self.df.columns.slice_locs(col_loc.start, col_loc.stop)
                 return self.df.iloc[:, slice(*result_slice)]
+
+        if is_boolean_array(row_loc) and isinstance(row_loc, Series):
+            return self._handle_boolean_masking(row_loc, col_loc)
 
         row_lookup, col_lookup = self._compute_lookup(row_loc, col_loc)
         result = super(_LocIndexer, self).__getitem__(row_lookup, col_lookup, ndim)
@@ -840,6 +882,9 @@ class _iLocIndexer(_LocationIndexerBase):
         self.col_scalar = is_scalar(col_loc)
         self._check_dtypes(row_loc)
         self._check_dtypes(col_loc)
+
+        if is_boolean_array(row_loc) and isinstance(row_loc, Series):
+            return self._handle_boolean_masking(row_loc, col_loc)
 
         row_lookup, col_lookup = self._compute_lookup(row_loc, col_loc)
         result = super(_iLocIndexer, self).__getitem__(row_lookup, col_lookup, ndim)
