@@ -43,6 +43,8 @@ IndexColType = Union[int, str, bool, Sequence[int], Sequence[str], None]
 class TextFileDispatcher(FileDispatcher):
     """Class handles utils for reading text formats files."""
 
+    # The variable allows to set a function with which one partition will be read;
+    # Used in dispatchers and parsers
     read_callback = None
 
     @classmethod

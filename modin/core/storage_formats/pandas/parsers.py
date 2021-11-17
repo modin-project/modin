@@ -152,7 +152,12 @@ class PandasParser(object):
             return callback(fname, **kwargs)
 
         # pop "compression" from kwargs because bio is uncompressed
-        with OpenFile(fname, "rb", kwargs.pop("compression", "infer")) as bio:
+        with OpenFile(
+            fname,
+            "rb",
+            kwargs.pop("compression", "infer"),
+            **(kwargs.pop("storage_options", None) or {}),
+        ) as bio:
             header = b""
             # In this case we beware that first line can contain BOM, so
             # adding this line to the `header` for reading and then skip it
