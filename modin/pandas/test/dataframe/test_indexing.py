@@ -39,6 +39,7 @@ from modin.pandas.test.utils import (
     extra_test_parameters,
 )
 from modin.config import NPartitions
+from modin.utils import get_current_execution
 
 NPartitions.put(4)
 
@@ -344,17 +345,20 @@ def test_loc(data):
     pandas_df_copy3.loc[lambda df: df[key1].isin(list(range(1000))), key1] = 42
     df_equals(modin_df_copy3, pandas_df_copy3)
 
-    # From issue #1775
-    df_equals(
-        modin_df.loc[lambda df: df.iloc[:, 0].isin(list(range(1000)))],
-        pandas_df.loc[lambda df: df.iloc[:, 0].isin(list(range(1000)))],
-    )
+    # Disabled for `BaseOnPython` because of the issue with `getitem_array`:
+    # https://github.com/modin-project/modin/issues/3701
+    if get_current_execution() != "BaseOnPython":
+        # From issue #1775
+        df_equals(
+            modin_df.loc[lambda df: df.iloc[:, 0].isin(list(range(1000)))],
+            pandas_df.loc[lambda df: df.iloc[:, 0].isin(list(range(1000)))],
+        )
 
-    # Read values, selecting rows with a callable and a column with a scalar.
-    df_equals(
-        pandas_df.loc[lambda df: df[key1].isin(list(range(1000))), key1],
-        modin_df.loc[lambda df: df[key1].isin(list(range(1000))), key1],
-    )
+        # Read values, selecting rows with a callable and a column with a scalar.
+        df_equals(
+            pandas_df.loc[lambda df: df[key1].isin(list(range(1000))), key1],
+            modin_df.loc[lambda df: df[key1].isin(list(range(1000))), key1],
+        )
 
     # From issue #1374
     with pytest.raises(KeyError):
