@@ -902,8 +902,6 @@ class TextFileDispatcher(FileDispatcher):
                 new_query_compiler = new_query_compiler.view(
                     pandas.RangeIndex(len(new_query_compiler.index))[:nrows]
                 )
-        if kwargs.get("squeeze", False) and len(new_query_compiler.columns) == 1:
-            return new_query_compiler[new_query_compiler.columns[0]]
         if index_col is None:
             new_query_compiler._modin_frame.synchronize_labels(axis=0)
 
@@ -1030,7 +1028,6 @@ class TextFileDispatcher(FileDispatcher):
             column_names=column_names,
             skiprows_md=skiprows_md if should_handle_skiprows else None,
             header_size=header_size,
-            squeeze=kwargs["squeeze"],
             skipfooter=kwargs["skipfooter"],
             parse_dates=kwargs["parse_dates"],
             nrows=kwargs["nrows"] if should_handle_skiprows else None,
