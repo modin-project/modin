@@ -781,11 +781,8 @@ def test_resample_getitem(columns):
         "volume": range(10, 19),
     }
 
-    modin_df, pandas_df = create_test_dfs(data, index=index)
-
     eval_general(
-        modin_df,
-        pandas_df,
+        *create_test_dfs(data, index=index),
         lambda df: df.resample("3T")[columns].mean(),
     )
 
