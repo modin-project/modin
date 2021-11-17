@@ -21,7 +21,6 @@ from modin.core.io.text.text_file_dispatcher import (
 import pandas
 from pandas.core.dtypes.common import is_list_like
 from csv import QUOTE_NONE, Dialect
-import sys
 import io
 from typing import Union, Sequence, Callable, Dict, Tuple
 from pandas._typing import FilePathOrBuffer
@@ -97,9 +96,7 @@ class CSVDispatcher(TextFileDispatcher):
             skiprows_md, int
         )
 
-        use_modin_impl = cls._read_csv_check_support(
-            filepath_or_buffer, kwargs, compression_infered
-        )
+        use_modin_impl = cls._read_csv_check_support(filepath_or_buffer, kwargs)
         if not use_modin_impl:
             return cls.single_worker_read(filepath_or_buffer, **kwargs)
 
@@ -177,7 +174,6 @@ class CSVDispatcher(TextFileDispatcher):
         cls,
         filepath_or_buffer: FilePathOrBuffer,
         read_csv_kwargs: ReadCsvKwargsType,
-        compression_infered: str,
     ) -> bool:
         """
         Check if passed parameters are supported by current `read_csv` implementation.
@@ -188,8 +184,6 @@ class CSVDispatcher(TextFileDispatcher):
             `filepath_or_buffer` parameter of read_csv function.
         read_csv_kwargs : dict
             Parameters of read_csv function.
-        compression_infered : str
-            Inferred `compression` parameter of read_csv function.
 
         Returns
         -------
@@ -202,19 +196,8 @@ class CSVDispatcher(TextFileDispatcher):
         elif not cls.pathlib_or_pypath(filepath_or_buffer):
             return False
 
-        if compression_infered is not None:
-            use_modin_impl = compression_infered in ["gzip", "bz2", "xz"] or (
-                compression_infered == "zip"
-                # need python3.7 to .seek and .tell ZipExtFile
-                and sys.version_info[0] == 3
-                and sys.version_info[1] >= 7
-            )
-            if not use_modin_impl:
-                return False
-
         if read_csv_kwargs.get("chunksize") is not None:
             return False
-
         return True
 
     @classmethod
