@@ -55,8 +55,7 @@ class ParquetDispatcher(ColumnStoreDispatcher):
         https://arrow.apache.org/docs/python/parquet.html
         """
         import_optional_dependency(
-            "pyarrow",
-            "pyarrow is required to read parquet files.",
+            "pyarrow", "pyarrow is required to read parquet files.",
         )
         from pyarrow.parquet import ParquetDataset
         from modin.pandas.io import PQ_INDEX_REGEX
