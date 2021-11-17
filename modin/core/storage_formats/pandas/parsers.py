@@ -235,8 +235,14 @@ class PandasCSVParser(PandasParser):
         encoding = kwargs.get("encoding", None)
         if start is not None and end is not None:
             # pop "compression" from kwargs because bio is uncompressed
-            with OpenFile(fname, "rb", kwargs.pop("compression", "infer")) as bio:
-                # In this case we beware that first line can contain BOM, so
+            with OpenFile(
+                fname,
+                "rb",
+                kwargs.pop("compression", "infer"),
+                **(kwargs.pop("storage_options", None) or {}),
+            ) as bio:
+                header = b""
+                # In this case we beware that fisrt line can contain BOM, so
                 # adding this line to the `header` for reading and then skip it
                 header = b""
                 if encoding and (
@@ -364,7 +370,12 @@ class PandasFWFParser(PandasParser):
         index_col = kwargs.get("index_col", None)
         if start is not None and end is not None:
             # pop "compression" from kwargs because bio is uncompressed
-            with OpenFile(fname, "rb", kwargs.pop("compression", "infer")) as bio:
+            with OpenFile(
+                fname,
+                "rb",
+                kwargs.pop("compression", "infer"),
+                **(kwargs.pop("storage_options", None) or {}),
+            ) as bio:
                 if kwargs.get("encoding", None) is not None:
                     header = b"" + bio.readline()
                 else:
@@ -599,7 +610,12 @@ class PandasJSONParser(PandasParser):
         end = kwargs.pop("end", None)
         if start is not None and end is not None:
             # pop "compression" from kwargs because bio is uncompressed
-            with OpenFile(fname, "rb", kwargs.pop("compression", "infer")) as bio:
+            with OpenFile(
+                fname,
+                "rb",
+                kwargs.pop("compression", "infer"),
+                **(kwargs.pop("storage_options", None) or {}),
+            ) as bio:
                 bio.seek(start)
                 to_read = b"" + bio.read(end - start)
             columns = kwargs.pop("columns")
@@ -671,7 +687,12 @@ class PandasFeatherParser(PandasParser):
         num_splits = kwargs.pop("num_splits", None)
         if num_splits is None:
             return pandas.read_feather(fname, **kwargs)
-        df = feather.read_feather(fname, **kwargs)
+
+        with OpenFile(
+            fname,
+            **(kwargs.pop("storage_options", None) or {}),
+        ) as file:
+            df = feather.read_feather(file, **kwargs)
         # Append the length of the index here to build it externally
         return _split_result_for_readers(0, num_splits, df) + [len(df.index), df.dtypes]
 
