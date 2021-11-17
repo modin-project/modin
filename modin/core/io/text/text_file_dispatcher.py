@@ -43,6 +43,8 @@ IndexColType = Union[int, str, bool, Sequence[int], Sequence[str], None]
 class TextFileDispatcher(FileDispatcher):
     """Class handles utils for reading text formats files."""
 
+    read_callback = None
+
     @classmethod
     def get_path_or_buffer(cls, filepath_or_buffer):
         """
@@ -963,7 +965,7 @@ class TextFileDispatcher(FileDispatcher):
         )
         if not use_modin_impl:
             return cls.single_worker_read(
-                filepath_or_buffer, callback=cls.callback, **kwargs
+                filepath_or_buffer, callback=cls.read_callback, **kwargs
             )
 
         is_quoting = kwargs["quoting"] != QUOTE_NONE
@@ -973,7 +975,7 @@ class TextFileDispatcher(FileDispatcher):
             skiprows is not None or kwargs["skipfooter"] != 0
         )
 
-        pd_df_metadata = cls.callback(
+        pd_df_metadata = cls.read_callback(
             filepath_or_buffer,
             **dict(kwargs, nrows=1, skipfooter=0, index_col=index_col),
         )
@@ -1015,7 +1017,7 @@ class TextFileDispatcher(FileDispatcher):
             )
 
         partition_ids, index_ids, dtypes_ids = cls._launch_tasks(
-            splits, callback=cls.callback, **partition_kwargs
+            splits, callback=cls.read_callback, **partition_kwargs
         )
 
         new_query_compiler = cls._get_new_qc(

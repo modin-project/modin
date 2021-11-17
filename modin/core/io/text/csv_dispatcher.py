@@ -14,7 +14,6 @@
 """Module houses `CSVDispatcher` class, that is used for reading `.csv` files."""
 
 import pandas
-from pandas._typing import FilePathOrBuffer
 
 from modin.core.io.text.text_file_dispatcher import TextFileDispatcher
 
@@ -22,30 +21,4 @@ from modin.core.io.text.text_file_dispatcher import TextFileDispatcher
 class CSVDispatcher(TextFileDispatcher):
     """Class handles utils for reading `.csv` files."""
 
-    callback = pandas.read_csv
-
-    @classmethod
-    def check_parameters_support(
-        cls,
-        filepath_or_buffer: FilePathOrBuffer,
-        read_kwargs: dict,
-    ):
-        """
-        Check support of parameters of `read_csv` function.
-
-        Parameters
-        ----------
-        filepath_or_buffer : str, path object or file-like object
-            `filepath_or_buffer` parameter of `read_csv` function.
-        read_kwargs : dict
-            Parameters of `read_csv` function.
-
-        Returns
-        -------
-        bool
-            Whether passed parameters are supported or not.
-        """
-        return TextFileDispatcher.check_parameters_support(
-            filepath_or_buffer,
-            read_kwargs,
-        )
+    read_callback = pandas.read_csv

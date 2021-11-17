@@ -22,7 +22,7 @@ from modin.core.io.text.text_file_dispatcher import TextFileDispatcher
 class FWFDispatcher(TextFileDispatcher):
     """Class handles utils for reading of tables with fixed-width formatted lines."""
 
-    callback = pandas.read_fwf
+    read_callback = pandas.read_fwf
 
     @classmethod
     def check_parameters_support(
@@ -45,10 +45,8 @@ class FWFDispatcher(TextFileDispatcher):
         bool
             Whether passed parameters are supported or not.
         """
-        use_modin_impl = TextFileDispatcher.check_parameters_support(
-            filepath_or_buffer,
-            read_kwargs,
-        )
-        # If infer_nrows is a significant portion of the number of rows, pandas may be
-        # faster.
-        return use_modin_impl and not read_kwargs["infer_nrows"] > 100
+        if read_kwargs["infer_nrows"] > 100:
+            # If infer_nrows is a significant portion of the number of rows, pandas may be
+            # faster.
+            return False
+        return super().check_parameters_support(filepath_or_buffer, read_kwargs)
