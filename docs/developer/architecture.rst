@@ -165,8 +165,8 @@ Modin DataFrame API
 
 * ``mask``: Indexing/masking/selecting on the data (by label or by integer index).
 * ``copy``: Create a copy of the data.
-* ``mapreduce``: Reduce the dimension of the data.
-* ``foldreduce``: Reduce the dimension of the data, but entire column/row information is needed.
+* ``treereduce``: Reduce the dimension of the data.
+* ``reducefullaxis``: Reduce the dimension of the data, but entire column/row information is needed.
 * ``map``: Perform a map.
 * ``fold``: Perform a fold.
 * ``apply_<type>``: Apply a function that may or may not change the shape of the data.

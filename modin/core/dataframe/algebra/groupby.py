@@ -15,7 +15,7 @@
 
 import pandas
 
-from .map_reduce import MapReduce
+from .tree_reduce import MapReduce
 from .default2pandas.groupby import GroupBy
 from modin.utils import try_cast_to_pandas, hashable
 
@@ -296,7 +296,7 @@ class GroupByReduce(MapReduce):
         else:
             qc = query_compiler
 
-        map_fn, reduce_fn = cls.build_map_reduce_functions(
+        map_fn, reduce_fn = cls.build_tree_reduce_functions(
             by=by,
             axis=axis,
             groupby_args=groupby_args,
@@ -310,7 +310,7 @@ class GroupByReduce(MapReduce):
 
         # If `by` is a ModinFrame, then its partitions will be broadcasted to every
         # `self` partition in a way determined by engine (modin_frame.groupby_reduce)
-        # Otherwise `by` was already bound to the Map function in `build_map_reduce_functions`.
+        # Otherwise `by` was already bound to the Map function in `build_tree_reduce_functions`.
         broadcastable_by = getattr(by, "_modin_frame", None)
         apply_indices = list(map_func.keys()) if isinstance(map_func, dict) else None
         new_modin_frame = qc._modin_frame.groupby_reduce(
@@ -348,7 +348,7 @@ class GroupByReduce(MapReduce):
         return lambda grp: grp.agg(partition_dict)
 
     @classmethod
-    def build_map_reduce_functions(
+    def build_tree_reduce_functions(
         cls,
         by,
         axis,

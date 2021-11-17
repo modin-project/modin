@@ -175,11 +175,11 @@ class PandasDataframe(object):
         def dtype_builder(df):
             return df.apply(lambda col: find_common_type(col.values), axis=0)
 
-        map_func = self._build_mapreduce_func(0, lambda df: df.dtypes)
-        reduce_func = self._build_mapreduce_func(0, dtype_builder)
+        map_func = self._build_treereduce_func(0, lambda df: df.dtypes)
+        reduce_func = self._build_treereduce_func(0, dtype_builder)
         # For now we will use a pandas Series for the dtypes.
         if len(self.columns) > 0:
-            dtypes = self.map_reduce(0, map_func, reduce_func).to_pandas().iloc[0]
+            dtypes = self.tree_reduce(0, map_func, reduce_func).to_pandas().iloc[0]
         else:
             dtypes = pandas.Series([])
         # reset name to None because we use "__reduced__" internally
@@ -416,24 +416,20 @@ class PandasDataframe(object):
             )
 
     def mask(
-        self,
-        row_indices=None,
-        row_numeric_idx=None,
-        col_indices=None,
-        col_numeric_idx=None,
+        self, row_labels=None, row_positions=None, col_labels=None, col_positions=None,
     ):
         """
         Lazily select columns or rows from given indices.
 
         Parameters
         ----------
-        row_indices : list of hashable, optional
+        row_labels : list of hashable, optional
             The row labels to extract.
-        row_numeric_idx : list of int, optional
+        row_positions : list of int, optional
             The row indices to extract.
-        col_indices : list of hashable, optional
+        col_labels : list of hashable, optional
             The column labels to extract.
-        col_numeric_idx : list of int, optional
+        col_positions : list of int, optional
             The column indices to extract.
 
         Returns
@@ -443,33 +439,33 @@ class PandasDataframe(object):
 
         Notes
         -----
-        If both `row_indices` and `row_numeric_idx` are set, `row_indices` will be used.
-        The same rule applied to `col_indices` and `col_numeric_idx`.
+        If both `row_labels` and `row_positions` are set, `row_labels` will be used.
+        The same rule applied to `col_labels` and `col_positions`.
         """
         # Check on all possible ranges
-        if isinstance(row_numeric_idx, slice) and (
-            row_numeric_idx == slice(None) or row_numeric_idx == slice(0, None)
+        if isinstance(row_positions, slice) and (
+            row_positions == slice(None) or row_positions == slice(0, None)
         ):
-            row_numeric_idx = None
-        if isinstance(col_numeric_idx, slice) and (
-            col_numeric_idx == slice(None) or col_numeric_idx == slice(0, None)
+            row_positions = None
+        if isinstance(col_positions, slice) and (
+            col_positions == slice(None) or col_positions == slice(0, None)
         ):
-            col_numeric_idx = None
+            col_positions = None
         if (
-            row_indices is None
-            and row_numeric_idx is None
-            and col_indices is None
-            and col_numeric_idx is None
+            row_labels is None
+            and row_positions is None
+            and col_labels is None
+            and col_positions is None
         ):
             return self.copy()
-        # Get numpy array of positions of values from `row_indices`
-        if row_indices is not None:
-            row_numeric_idx = self.index.get_indexer_for(row_indices)
-        if row_numeric_idx is not None:
+        # Get numpy array of positions of values from `row_labels`
+        if row_labels is not None:
+            row_positions = self.index.get_indexer_for(row_labels)
+        if row_positions is not None:
             # Get dict of row_parts as {row_index: row_internal_indices}
             # TODO: Rename `row_partitions_list`->`row_partitions_dict`
-            row_partitions_list = self._get_dict_of_block_index(0, row_numeric_idx)
-            if isinstance(row_numeric_idx, slice):
+            row_partitions_list = self._get_dict_of_block_index(0, row_positions)
+            if isinstance(row_positions, slice):
                 # Row lengths for slice are calculated as the length of the slice
                 # on the partition. Often this will be the same length as the current
                 # length, but sometimes it is different, thus the extra calculation.
@@ -478,10 +474,10 @@ class PandasDataframe(object):
                     for p, idx in row_partitions_list.items()
                 ]
                 # Use the slice to calculate the new row index
-                new_index = self.index[row_numeric_idx]
+                new_index = self.index[row_positions]
             else:
                 new_row_lengths = [len(idx) for _, idx in row_partitions_list.items()]
-                new_index = self.index[sorted(row_numeric_idx)]
+                new_index = self.index[sorted(row_positions)]
         else:
             row_partitions_list = {
                 i: slice(None) for i in range(len(self._row_lengths))
@@ -489,13 +485,13 @@ class PandasDataframe(object):
             new_row_lengths = self._row_lengths
             new_index = self.index
 
-        # Get numpy array of positions of values from `col_indices`
-        if col_indices is not None:
-            col_numeric_idx = self.columns.get_indexer_for(col_indices)
-        if col_numeric_idx is not None:
+        # Get numpy array of positions of values from `col_labels`
+        if col_labels is not None:
+            col_positions = self.columns.get_indexer_for(col_labels)
+        if col_positions is not None:
             # Get dict of col_parts as {col_index: col_internal_indices}
-            col_partitions_list = self._get_dict_of_block_index(1, col_numeric_idx)
-            if isinstance(col_numeric_idx, slice):
+            col_partitions_list = self._get_dict_of_block_index(1, col_positions)
+            if isinstance(col_positions, slice):
                 # Column widths for slice are calculated as the length of the slice
                 # on the partition. Often this will be the same length as the current
                 # length, but sometimes it is different, thus the extra calculation.
@@ -504,25 +500,25 @@ class PandasDataframe(object):
                     for p, idx in col_partitions_list.items()
                 ]
                 # Use the slice to calculate the new columns
-                new_columns = self.columns[col_numeric_idx]
+                new_columns = self.columns[col_positions]
                 assert sum(new_col_widths) == len(
                     new_columns
                 ), "{} != {}.\n{}\n{}\n{}".format(
                     sum(new_col_widths),
                     len(new_columns),
-                    col_numeric_idx,
+                    col_positions,
                     self._column_widths,
                     col_partitions_list,
                 )
                 if self._dtypes is not None:
-                    new_dtypes = self.dtypes[col_numeric_idx]
+                    new_dtypes = self.dtypes[col_positions]
                 else:
                     new_dtypes = None
             else:
                 new_col_widths = [len(idx) for _, idx in col_partitions_list.items()]
-                new_columns = self.columns[sorted(col_numeric_idx)]
+                new_columns = self.columns[sorted(col_positions)]
                 if self._dtypes is not None:
-                    new_dtypes = self.dtypes.iloc[sorted(col_numeric_idx)]
+                    new_dtypes = self.dtypes.iloc[sorted(col_positions)]
                 else:
                     new_dtypes = None
         else:
@@ -561,15 +557,15 @@ class PandasDataframe(object):
         # Check if monotonically increasing, return if it is. Fast track code path for
         # common case to keep it fast.
         if (
-            row_numeric_idx is None
-            or isinstance(row_numeric_idx, slice)
-            or len(row_numeric_idx) == 1
-            or np.all(row_numeric_idx[1:] >= row_numeric_idx[:-1])
+            row_positions is None
+            or isinstance(row_positions, slice)
+            or len(row_positions) == 1
+            or np.all(row_positions[1:] >= row_positions[:-1])
         ) and (
-            col_numeric_idx is None
-            or isinstance(col_numeric_idx, slice)
-            or len(col_numeric_idx) == 1
-            or np.all(col_numeric_idx[1:] >= col_numeric_idx[:-1])
+            col_positions is None
+            or isinstance(col_positions, slice)
+            or len(col_positions) == 1
+            or np.all(col_positions[1:] >= col_positions[:-1])
         ):
             return intermediate
         # The new labels are often smaller than the old labels, so we can't reuse the
@@ -578,22 +574,22 @@ class PandasDataframe(object):
         # We create a dictionary mapping the position of the numeric index with respect
         # to all others, then recreate that order by mapping the new order values from
         # the old. This information is sent to `_reorder_labels`.
-        if row_numeric_idx is not None:
+        if row_positions is not None:
             row_order_mapping = dict(
-                zip(sorted(row_numeric_idx), range(len(row_numeric_idx)))
+                zip(sorted(row_positions), range(len(row_positions)))
             )
-            new_row_order = [row_order_mapping[idx] for idx in row_numeric_idx]
+            new_row_order = [row_order_mapping[idx] for idx in row_positions]
         else:
             new_row_order = None
-        if col_numeric_idx is not None:
+        if col_positions is not None:
             col_order_mapping = dict(
-                zip(sorted(col_numeric_idx), range(len(col_numeric_idx)))
+                zip(sorted(col_positions), range(len(col_positions)))
             )
-            new_col_order = [col_order_mapping[idx] for idx in col_numeric_idx]
+            new_col_order = [col_order_mapping[idx] for idx in col_positions]
         else:
             new_col_order = None
         return intermediate._reorder_labels(
-            row_numeric_idx=new_row_order, col_numeric_idx=new_col_order
+            row_positions=new_row_order, col_positions=new_col_order
         )
 
     def from_labels(self) -> "PandasDataframe":
@@ -683,27 +679,25 @@ class PandasDataframe(object):
         PandasDataframe
             A new PandasDataframe that has the updated labels.
         """
-        extracted_columns = self.mask(col_indices=column_list).to_pandas()
+        extracted_columns = self.mask(col_labels=column_list).to_pandas()
         if len(column_list) == 1:
             new_labels = pandas.Index(extracted_columns.squeeze(axis=1))
         else:
             new_labels = pandas.MultiIndex.from_frame(extracted_columns)
-        result = self.mask(
-            col_indices=[i for i in self.columns if i not in column_list]
-        )
+        result = self.mask(col_labels=[i for i in self.columns if i not in column_list])
         result.index = new_labels
         return result
 
-    def _reorder_labels(self, row_numeric_idx=None, col_numeric_idx=None):
+    def _reorder_labels(self, row_positions=None, col_positions=None):
         """
         Reorder the column and or rows in this DataFrame.
 
         Parameters
         ----------
-        row_numeric_idx : list of int, optional
+        row_positions : list of int, optional
             The ordered list of new row orders such that each position within the list
             indicates the new position.
-        col_numeric_idx : list of int, optional
+        col_positions : list of int, optional
             The ordered list of new column orders such that each position within the
             list indicates the new position.
 
@@ -712,19 +706,19 @@ class PandasDataframe(object):
         PandasDataframe
             A new PandasDataframe with reordered columns and/or rows.
         """
-        if row_numeric_idx is not None:
+        if row_positions is not None:
             ordered_rows = self._partition_mgr_cls.map_axis_partitions(
-                0, self._partitions, lambda df: df.iloc[row_numeric_idx]
+                0, self._partitions, lambda df: df.iloc[row_positions]
             )
-            row_idx = self.index[row_numeric_idx]
+            row_idx = self.index[row_positions]
         else:
             ordered_rows = self._partitions
             row_idx = self.index
-        if col_numeric_idx is not None:
+        if col_positions is not None:
             ordered_cols = self._partition_mgr_cls.map_axis_partitions(
-                1, ordered_rows, lambda df: df.iloc[:, col_numeric_idx]
+                1, ordered_rows, lambda df: df.iloc[:, col_positions]
             )
-            col_idx = self.columns[col_numeric_idx]
+            col_idx = self.columns[col_positions]
         else:
             ordered_cols = ordered_rows
             col_idx = self.columns
@@ -1124,7 +1118,7 @@ class PandasDataframe(object):
     # These methods are for building the correct answer in a modular way.
     # Please be careful when changing these!
 
-    def _build_mapreduce_func(self, axis, func):
+    def _build_treereduce_func(self, axis, func):
         """
         Properly formats a MapReduce result so that the partitioning is correct.
 
@@ -1146,7 +1140,7 @@ class PandasDataframe(object):
         reduced data dimensionality (dataframe -> series).
         """
 
-        def _map_reduce_func(df, *args, **kwargs):
+        def _tree_reduce_func(df, *args, **kwargs):
             """Map-reducer function itself executing `func`, presenting the resulting pandas.Series as pandas.DataFrame."""
             series_result = func(df, *args, **kwargs)
             if axis == 0 and isinstance(series_result, pandas.Series):
@@ -1166,9 +1160,9 @@ class PandasDataframe(object):
                     result.columns = ["__reduced__"]
             return result
 
-        return _map_reduce_func
+        return _tree_reduce_func
 
-    def _compute_map_reduce_metadata(self, axis, new_parts):
+    def _compute_tree_reduce_metadata(self, axis, new_parts):
         """
         Compute the metadata for the result of reduce function.
 
@@ -1198,7 +1192,7 @@ class PandasDataframe(object):
         )
         return result
 
-    def fold_reduce(self, axis, func):
+    def reduce_full_axis(self, axis, func):
         """
         Apply function that reduces Frame Manager to series but requires knowledge of full axis.
 
@@ -1214,13 +1208,13 @@ class PandasDataframe(object):
         PandasDataframe
             Modin series (1xN frame) containing the reduced data.
         """
-        func = self._build_mapreduce_func(axis, func)
+        func = self._build_treereduce_func(axis, func)
         new_parts = self._partition_mgr_cls.map_axis_partitions(
             axis, self._partitions, func
         )
-        return self._compute_map_reduce_metadata(axis, new_parts)
+        return self._compute_tree_reduce_metadata(axis, new_parts)
 
-    def map_reduce(self, axis, map_func, reduce_func=None):
+    def tree_reduce(self, axis, map_func, reduce_func=None):
         """
         Apply function that will reduce the data to a pandas Series.
 
@@ -1239,17 +1233,17 @@ class PandasDataframe(object):
         PandasDataframe
             A new dataframe.
         """
-        map_func = self._build_mapreduce_func(axis, map_func)
+        map_func = self._build_treereduce_func(axis, map_func)
         if reduce_func is None:
             reduce_func = map_func
         else:
-            reduce_func = self._build_mapreduce_func(axis, reduce_func)
+            reduce_func = self._build_treereduce_func(axis, reduce_func)
 
         map_parts = self._partition_mgr_cls.map_partitions(self._partitions, map_func)
         reduce_parts = self._partition_mgr_cls.map_axis_partitions(
             axis, map_parts, reduce_func
         )
-        return self._compute_map_reduce_metadata(axis, reduce_parts)
+        return self._compute_tree_reduce_metadata(axis, reduce_parts)
 
     def map(self, func, dtypes=None):
         """
@@ -1316,7 +1310,7 @@ class PandasDataframe(object):
             self._column_widths,
         )
 
-    def filter_full_axis(self, axis, func):
+    def filter(self, axis, func):
         """
         Filter data based on the function provided along an entire axis.
 
@@ -1477,8 +1471,8 @@ class PandasDataframe(object):
         axis,
         func,
         apply_indices=None,
-        row_indices=None,
-        col_indices=None,
+        row_labels=None,
+        col_labels=None,
         new_index=None,
         new_columns=None,
         keep_remaining=False,
@@ -1495,12 +1489,12 @@ class PandasDataframe(object):
             The function to apply.
         apply_indices : list-like, default: None
             The labels to apply over. Must be given if axis is provided.
-        row_indices : list-like, default: None
+        row_labels : list-like, default: None
             The row indices to apply over. Must be provided with
-            `col_indices` to apply over both axes.
-        col_indices : list-like, default: None
+            `col_labels` to apply over both axes.
+        col_labels : list-like, default: None
             The column indices to apply over. Must be provided
-            with `row_indices` to apply over both axes.
+            with `row_labels` to apply over both axes.
         new_index : list-like, optional
             The index of the result. We may know this in advance,
             and if not provided it must be computed.
@@ -1554,11 +1548,11 @@ class PandasDataframe(object):
         else:
             # We are applying over both axes here, so make sure we have all the right
             # variables set.
-            assert row_indices is not None and col_indices is not None
+            assert row_labels is not None and col_labels is not None
             assert keep_remaining
             assert item_to_distribute is not None
-            row_partitions_list = self._get_dict_of_block_index(0, row_indices).items()
-            col_partitions_list = self._get_dict_of_block_index(1, col_indices).items()
+            row_partitions_list = self._get_dict_of_block_index(0, row_labels).items()
+            col_partitions_list = self._get_dict_of_block_index(1, col_labels).items()
             new_partitions = self._partition_mgr_cls.apply_func_to_indices_both_axis(
                 self._partitions,
                 func,
@@ -1814,7 +1808,7 @@ class PandasDataframe(object):
             axis=axis,
             left=self._partitions,
             right=other,
-            apply_func=self._build_mapreduce_func(axis, func),
+            apply_func=self._build_treereduce_func(axis, func),
             apply_indices=apply_indices,
             enumerate_partitions=enumerate_partitions,
             keep_partitioning=True,
