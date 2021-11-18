@@ -574,6 +574,29 @@ def test_loc_series():
     df_equals(pd_df, md_df)
 
 
+@pytest.mark.parametrize("locator_name", ["loc", "iloc"])
+@pytest.mark.parametrize(
+    "slice_indexer",
+    [
+        slice(None, None, -2),
+        slice(1, 10, None),
+        slice(None, 10, None),
+        slice(10, None, None),
+        slice(10, None, -2),
+        slice(-10, None, -2),
+        slice(None, 1_000_000_000, None),
+    ],
+)
+def test_loc_iloc_slice_indexer(locator_name, slice_indexer):
+    md_df, pd_df = create_test_dfs(test_data_values[0])
+    # Shifting the index, so labels won't match its position
+    shifted_index = pandas.RangeIndex(1, len(md_df) + 1)
+    md_df.index = shifted_index
+    pd_df.index = shifted_index
+
+    eval_general(md_df, pd_df, lambda df: getattr(df, locator_name)[slice_indexer])
+
+
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_pop(request, data):
     modin_df = pd.DataFrame(data)

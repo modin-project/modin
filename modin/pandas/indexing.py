@@ -588,10 +588,8 @@ class _LocationIndexerBase(object):
             failure_condition=not isinstance(row_loc, Series),
             extra_log=f"Only ``modin.pandas.Series`` boolean masks are acceptable, got: {type(row_loc)}",
         )
-
-        aligned_loc = row_loc.reindex(index=self.df.index)
         masked_df = self.df.__constructor__(
-            query_compiler=self.qc.getitem_array(aligned_loc._query_compiler)
+            query_compiler=self.qc.getitem_array(row_loc._query_compiler)
         )
         # Passing `slice(None)` as a row indexer since we've just applied it
         return type(self)(masked_df)[(slice(None), col_loc)]
@@ -790,13 +788,24 @@ class _LocIndexer(_LocationIndexerBase):
                 if isinstance(axis_loc, slice) and axis_loc == slice(None):
                     axis_lookup = axis_loc
                 else:
-                    axis_lookup = self.qc.get_axis(axis).slice_indexer(
+                    axis_labels = self.qc.get_axis(axis)
+                    # `slice_indexer` returns a fully-defined numeric slice for a non-fully-defined labels-based slice
+                    axis_lookup = axis_labels.slice_indexer(
                         axis_loc.start, axis_loc.stop, axis_loc.step
                     )
+                    # Converting negative indices to its actual positions:
                     axis_lookup = pandas.RangeIndex(
-                        axis_lookup.start,
-                        axis_lookup.stop,
-                        axis_lookup.step,
+                        start=(
+                            axis_lookup.start
+                            if axis_lookup.start >= 0
+                            else axis_lookup.start + len(axis_labels)
+                        ),
+                        stop=(
+                            axis_lookup.stop
+                            if axis_lookup.stop >= 0
+                            else axis_lookup.stop + len(axis_labels)
+                        ),
+                        step=axis_lookup.step,
                     )
             elif self.qc.has_multiindex(axis):
                 # `Index.get_locs` raises an IndexError by itself if missing labels were provided,
@@ -808,14 +817,15 @@ class _LocIndexer(_LocationIndexerBase):
             elif is_boolean_array(axis_loc):
                 axis_lookup = boolean_mask_to_numeric(axis_loc)
             else:
+                axis_labels = self.qc.get_axis(axis)
                 if is_list_like(axis_loc) and not isinstance(
                     axis_loc, (np.ndarray, pandas.Index)
                 ):
                     # `Index.get_indexer_for` works much faster with numpy arrays than with python lists,
                     # so although we lose some time here on converting to numpy, `Index.get_indexer_for`
                     # speedup covers the loss that we gain here.
-                    axis_loc = np.array(axis_loc)
-                axis_lookup = self.qc.get_axis(axis).get_indexer_for(axis_loc)
+                    axis_loc = np.array(axis_loc, dtype=axis_labels.dtype)
+                axis_lookup = axis_labels.get_indexer_for(axis_loc)
                 # `Index.get_indexer_for` sets -1 value for missing labels, we have to verify whether
                 # there are any -1 in the received indexer to raise a KeyError here.
                 missing_mask = axis_lookup < 0
@@ -963,7 +973,7 @@ class _iLocIndexer(_LocationIndexerBase):
                     # `Index.__getitem__` works much faster with numpy arrays than with python lists,
                     # so although we lose some time here on converting to numpy, `Index.__getitem__`
                     # speedup covers the loss that we gain here.
-                    axis_loc = np.array(axis_loc)
+                    axis_loc = np.array(axis_loc, dtype=np.int64)
                 # Relatively fast check allows us to not trigger `self.qc.get_axis()` computation
                 # if there're no negative indices and so they're not depend on the axis length.
                 if isinstance(axis_loc, np.ndarray) and not (axis_loc < 0).any():
