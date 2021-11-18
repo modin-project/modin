@@ -155,12 +155,16 @@ def eval_to_file(modin_obj, pandas_obj, fn, extension, **fn_kwargs):
         # parameter `max_retries=0` is set for `to_csv` function on Ray engine,
         # in order to increase the stability of tests, we repeat the call of
         # the entire function manually
+        last_exception = None
         for _ in range(3):
             try:
                 getattr(modin_obj, fn)(unique_filename_modin, **fn_kwargs)
-            except EXCEPTIONS:
+            except EXCEPTIONS as exc:
+                last_exception = exc
                 continue
             break
+        else:
+            raise last_exception
 
         getattr(pandas_obj, fn)(unique_filename_pandas, **fn_kwargs)
 

@@ -19,7 +19,7 @@ import pandas
 
 from modin.core.io import BaseIO
 from modin.core.execution.ray.common.utils import SignalActor
-from ray import get
+import ray
 
 
 class RayIO(BaseIO):
@@ -153,7 +153,7 @@ class RayIO(BaseIO):
             csv_kwargs["path_or_buf"].close()
 
             # each process waits for its turn to write to a file
-            get(signals.wait.remote(partition_idx))
+            ray.get(signals.wait.remote(partition_idx))
 
             # preparing to write data from the buffer to a file
             with pandas.io.common.get_handle(
@@ -170,12 +170,12 @@ class RayIO(BaseIO):
                 handles.handle.write(content)
 
             # signal that the next process can start writing to the file
-            get(signals.send.remote(partition_idx + 1))
+            ray.get(signals.send.remote(partition_idx + 1))
             # used for synchronization purposes
             return pandas.DataFrame()
 
         # signaling that the partition with id==0 can be written to the file
-        get(signals.send.remote(0))
+        ray.get(signals.send.remote(0))
         result = qc._modin_frame._partition_mgr_cls.map_axis_partitions(
             axis=1,
             partitions=qc._modin_frame._partitions,
@@ -186,7 +186,7 @@ class RayIO(BaseIO):
             max_retries=0,
         )
         # pending completion
-        get([partition.oid for partition in result.flatten()])
+        ray.get([partition.oid for partition in result.flatten()])
 
     @staticmethod
     def _to_parquet_check_support(kwargs):
@@ -259,4 +259,4 @@ class RayIO(BaseIO):
             lengths=None,
             enumerate_partitions=True,
         )
-        get([part.oid for row in result for part in row])
+        ray.get([part.oid for row in result for part in row])
