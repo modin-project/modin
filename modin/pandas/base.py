@@ -3128,12 +3128,6 @@ class Resampler(object):
         self.__groups = self.__get_groups(*self.resample_args.values())
 
     def __getitem__(self, key):
-        if len(self._dataframe.columns.intersection(key)) != len(key):
-            missed_keys = list(set(key).difference(self._dataframe.columns))
-            raise KeyError(f"Columns {str(missed_keys)[1:-1]} don't exist.")
-        return self._gotitem(list(key))
-
-    def _gotitem(self, key):
         """
         Get define.
 
@@ -3147,8 +3141,12 @@ class Resampler(object):
         modin.pandas.BasePandasDataset
             Sliced object.
         """
+        if len(self._dataframe.columns.intersection(key)) != len(key):
+            missed_keys = list(set(key).difference(self._dataframe.columns))
+            raise KeyError(f"Columns {str(missed_keys)[1:-1]} don't exist.")
+
         try:
-            subset_ = self._dataframe[key]
+            subset_ = self._dataframe[list(key)]
         except IndexError:
             subset_ = self._dataframe
 
