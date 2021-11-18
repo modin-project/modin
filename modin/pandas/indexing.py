@@ -630,17 +630,6 @@ class _LocIndexer(_LocationIndexerBase):
         row_loc, col_loc, ndim = self._parse_row_and_column_locators(key)
         self.row_scalar = is_scalar(row_loc)
         self.col_scalar = is_scalar(col_loc)
-        if isinstance(row_loc, slice) and row_loc == slice(None):
-            # If we're only slicing columns, handle the case with `__getitem__`
-            if not isinstance(col_loc, slice):
-                # Boolean indexers can just be sliced into the columns object and
-                # then passed to `__getitem__`
-                if is_boolean_array(col_loc):
-                    col_loc = self.df.columns[col_loc]
-                return self.df.__getitem__(col_loc)
-            else:
-                result_slice = self.df.columns.slice_locs(col_loc.start, col_loc.stop)
-                return self.df.iloc[:, slice(*result_slice)]
 
         if is_boolean_array(row_loc) and isinstance(row_loc, Series):
             return self._handle_boolean_masking(row_loc, col_loc)
