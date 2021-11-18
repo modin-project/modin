@@ -55,6 +55,6 @@ def square_summary(number: int) -> int:  # noqa: PR01, GL08
     Examples
     --------
     The function that will never be used in modin.pandas.DataFrame same as in
-    Pandas or Numpy.
+    pandas or NumPy.
     """
     return number ** 2
