@@ -70,12 +70,12 @@ The spreadsheet widget provides a number of options that allows the user to chan
 Converting Spreadsheets To and From Dataframes
 ----------------------------------------------
 
-.. automodule:: modin.spreadsheet.general
+.. automodule:: modin.experimental.spreadsheet.general
     :noindex:
     :members: from_dataframe
 
     
-.. automodule:: modin.spreadsheet.general
+.. automodule:: modin.experimental.spreadsheet.general
     :noindex:
     :members: to_dataframe
 

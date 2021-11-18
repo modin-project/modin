@@ -424,6 +424,16 @@ def test_loc_multi_index():
     df_equals(modin_df.loc[modin_df.index[:7]], pandas_df.loc[pandas_df.index[:7]])
 
 
+def test_loc_empty():
+    pandas_df = pandas.DataFrame(index=range(5))
+    modin_df = pd.DataFrame(index=range(5))
+
+    df_equals(pandas_df.loc[1], modin_df.loc[1])
+    pandas_df.loc[1] = 3
+    modin_df.loc[1] = 3
+    df_equals(pandas_df, modin_df)
+
+
 @pytest.mark.parametrize("index", [["row1", "row2", "row3"]])
 @pytest.mark.parametrize("columns", [["col1", "col2"]])
 def test_loc_assignment(index, columns):
@@ -530,6 +540,16 @@ def test_iloc_nested_assignment(data):
     modin_df[key2].iloc[0] = None
     pandas_df[key2].iloc[0] = None
     df_equals(modin_df, pandas_df)
+
+
+def test_iloc_empty():
+    pandas_df = pandas.DataFrame(index=range(5))
+    modin_df = pd.DataFrame(index=range(5))
+
+    df_equals(pandas_df.iloc[1], modin_df.iloc[1])
+    pandas_df.iloc[1] = 3
+    modin_df.iloc[1] = 3
+    df_equals(pandas_df, modin_df)
 
 
 def test_loc_series():
@@ -1369,6 +1389,7 @@ def test___getitem__(data):
         (1, -1),
         (-3, -1),
         (1, -1, 2),
+        (-1, 1, -1),
     ]
 
     # slice test

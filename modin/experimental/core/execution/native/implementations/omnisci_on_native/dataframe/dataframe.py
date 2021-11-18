@@ -275,11 +275,11 @@ class OmnisciOnNativeDataframe(PandasDataframe):
         ----------
         row_labels : list, optional
             Indices of rows to select.
-        row_positions : list of int, optional
+        row_positions : list-like of ints, optional
             Numeric indices of rows to select.
         col_labels : list, optional
             Indices of columns to select.
-        col_positions : list of int, optional
+        col_positions : list-like of ints, optional
             Numeric indices of columns to select.
 
         Returns

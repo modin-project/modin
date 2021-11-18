@@ -26,7 +26,7 @@ Modin is more of a column-store, which we inherited from modern database systems
 
 ## Modin aims
 
-In the long-term, Modin is planned to become a DataFrame library that supports the popular APIs (SQL, pandas, etc.) and runs on a variety of compute engines and backends. In fact, a group was able to contribute a dask.delayed backend to Modin already in <200 lines of code [PR](https://github.com/modin-project/modin/pull/281).
+In the long-term, Modin is planned to become a DataFrame library that supports the popular APIs (SQL, pandas, etc.) and runs on a variety of compute engines and storage formats. In fact, a group was able to contribute a dask.delayed execution to Modin already in <200 lines of code [PR](https://github.com/modin-project/modin/pull/281).
 
 
 - Reference: [Query: What is the difference between Dask and Modin? #515](https://github.com/modin-project/modin/issues/515) 

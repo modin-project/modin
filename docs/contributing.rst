@@ -13,6 +13,9 @@ want to review in order to get started.
 
 Also, feel free to join the discussions on the `developer mailing list`_.
 
+If you want a quick guide to getting your development enviroment setup, please
+use `the contributing instructions on GitHub`_.
+
 Certificate of Origin
 ---------------------
 
@@ -221,3 +224,4 @@ More docs on this coming soon...
 .. _developer mailing list: https://groups.google.com/forum/#!forum/modin-dev
 .. _Asv dashboard: https://modin.org/modin-bench/#/
 .. _Asv readme: https://github.com/modin-project/modin/blob/master/asv_bench/README.md
+.. _the contributing instructions on GitHub: https://github.com/modin-project/modin/blob/master/contributing/contributing.md

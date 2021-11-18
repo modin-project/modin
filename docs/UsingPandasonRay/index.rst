@@ -15,7 +15,7 @@ If you want to be explicit, you could set the following environment variables:
 .. code-block:: bash
 
    export MODIN_ENGINE=ray
-   export MODIN_BACKEND=pandas
+   export MODIN_STORAGE_FORMAT=pandas
 
 or turn it on in source code:
 
@@ -23,4 +23,4 @@ or turn it on in source code:
 
    import modin.config as cfg
    cfg.Engine.put('ray')
-   cfg.Backend.put('pandas')
+   cfg.StorageFormat.put('pandas')
