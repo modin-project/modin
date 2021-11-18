@@ -19,7 +19,7 @@ import pandas
 
 from modin.core.io import BaseIO
 from ray.util.queue import Queue
-from ray import wait
+from ray import get
 
 
 class RayIO(BaseIO):
@@ -195,9 +195,7 @@ class RayIO(BaseIO):
         )
 
         # pending completion
-        for rows in result:
-            for partition in rows:
-                wait([partition.oid])
+        get([partition.oid for partition in result.flatten()])
 
     @staticmethod
     def _to_parquet_check_support(kwargs):
@@ -270,4 +268,4 @@ class RayIO(BaseIO):
             lengths=None,
             enumerate_partitions=True,
         )
-        wait([part.oid for row in result for part in row])
+        get([partition.oid for partition in result.flatten()])
