@@ -241,7 +241,9 @@ class OmnisciOnNativeIO(BaseIO, TextFileDispatcher):
                 return cls._read(**mykwargs)
 
             cls._validate_read_csv_kwargs(mykwargs)
-            use_modin_impl, error_message = cls._read_csv_check_support(mykwargs,)
+            use_modin_impl, error_message = cls._read_csv_check_support(
+                mykwargs,
+            )
             if not use_modin_impl:
                 raise ArrowEngineException(error_message)
             if isinstance(dtype, dict):
@@ -405,7 +407,8 @@ class OmnisciOnNativeIO(BaseIO, TextFileDispatcher):
 
     @classmethod
     def _read_csv_check_support(
-        cls, read_csv_kwargs: ReadCsvKwargsType,
+        cls,
+        read_csv_kwargs: ReadCsvKwargsType,
     ) -> Tuple[bool, str]:
         """
         Check if passed parameters are supported by current ``modin.pandas.read_csv`` implementation.
@@ -547,7 +550,8 @@ class OmnisciOnNativeIO(BaseIO, TextFileDispatcher):
 
     @classmethod
     def _validate_read_csv_kwargs(
-        cls, read_csv_kwargs: ReadCsvKwargsType,
+        cls,
+        read_csv_kwargs: ReadCsvKwargsType,
     ):
         """
         Validate `read_csv` keyword arguments.

@@ -144,5 +144,7 @@ class OmnisciOnNativeDataframePartition(PandasDataframePartition):
             The new partition.
         """
         return OmnisciOnNativeDataframePartition(
-            arrow_table=obj, length=len(obj), width=len(obj.columns),
+            arrow_table=obj,
+            length=len(obj),
+            width=len(obj.columns),
         )

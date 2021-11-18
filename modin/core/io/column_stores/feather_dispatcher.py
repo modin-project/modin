@@ -59,7 +59,10 @@ class FeatherDispatcher(ColumnStoreDispatcher):
             )
             from pyarrow.feather import read_feather
 
-            with OpenFile(path, **(kwargs.get("storage_options", None) or {}),) as file:
+            with OpenFile(
+                path,
+                **(kwargs.get("storage_options", None) or {}),
+            ) as file:
                 df = read_feather(file)
             # pyarrow.feather.read_feather doesn't support columns as pandas.Index
             columns = list(df.columns)

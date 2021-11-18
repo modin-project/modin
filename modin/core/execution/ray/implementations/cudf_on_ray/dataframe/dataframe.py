@@ -114,7 +114,11 @@ class cuDFOnRayDataframe(PandasOnRayDataframe):
         )
 
     def mask(
-        self, row_labels=None, row_positions=None, col_labels=None, col_positions=None,
+        self,
+        row_labels=None,
+        row_positions=None,
+        col_labels=None,
+        col_positions=None,
     ):
         """
         Lazily select columns or rows from given indices.

@@ -398,7 +398,11 @@ def test_merge_asof_merge_options():
             right_by="ticker2",
         ),
         pd.merge_asof(
-            modin_quotes, modin_trades, on="time", left_by="ticker", right_by="ticker2",
+            modin_quotes,
+            modin_trades,
+            on="time",
+            left_by="ticker",
+            right_by="ticker2",
         ),
     )
 
@@ -406,8 +410,18 @@ def test_merge_asof_merge_options():
     pandas_trades["ticker"] = pandas_trades["ticker2"]
     modin_trades["ticker"] = modin_trades["ticker2"]
     df_equals(
-        pandas.merge_asof(pandas_quotes, pandas_trades, on="time", by="ticker",),
-        pd.merge_asof(modin_quotes, modin_trades, on="time", by="ticker",),
+        pandas.merge_asof(
+            pandas_quotes,
+            pandas_trades,
+            on="time",
+            by="ticker",
+        ),
+        pd.merge_asof(
+            modin_quotes,
+            modin_trades,
+            on="time",
+            by="ticker",
+        ),
     )
 
     # Tolerance
@@ -431,10 +445,18 @@ def test_merge_asof_merge_options():
     # Direction
     df_equals(
         pandas.merge_asof(
-            pandas_quotes, pandas_trades, on="time", by="ticker", direction="forward",
+            pandas_quotes,
+            pandas_trades,
+            on="time",
+            by="ticker",
+            direction="forward",
         ),
         pd.merge_asof(
-            modin_quotes, modin_trades, on="time", by="ticker", direction="forward",
+            modin_quotes,
+            modin_trades,
+            on="time",
+            by="ticker",
+            direction="forward",
         ),
     )
 
@@ -689,7 +711,10 @@ def test_to_pandas_indices(data):
         (lambda df: df.mean(level=0), r"DataFrame\.mean"),
         (lambda df: df + df, r"DataFrame\.add"),
         (lambda df: df.index, r"DataFrame\.get_axis\(0\)"),
-        (lambda df: df.drop(columns="col1").squeeze().repeat(2), r"Series\.repeat",),
+        (
+            lambda df: df.drop(columns="col1").squeeze().repeat(2),
+            r"Series\.repeat",
+        ),
         (lambda df: df.groupby("col1").prod(), r"GroupBy\.prod"),
         (lambda df: df.rolling(1).count(), r"Rolling\.count"),
     ],

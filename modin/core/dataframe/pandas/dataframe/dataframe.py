@@ -418,7 +418,11 @@ class PandasDataframe(ModinDataframe):
             )
 
     def mask(
-        self, row_labels=None, row_positions=None, col_labels=None, col_positions=None,
+        self,
+        row_labels=None,
+        row_positions=None,
+        col_labels=None,
+        col_positions=None,
     ):
         """
         Lazily select columns or rows from given indices.
@@ -668,7 +672,11 @@ class PandasDataframe(ModinDataframe):
             return df.reset_index()
 
         new_parts = self._partition_mgr_cls.apply_func_to_select_indices(
-            0, self._partitions, from_labels_executor, [0], keep_remaining=True,
+            0,
+            self._partitions,
+            from_labels_executor,
+            [0],
+            keep_remaining=True,
         )
         new_column_widths = [
             self.index.nlevels + self._column_widths[0]
@@ -1214,7 +1222,10 @@ class PandasDataframe(ModinDataframe):
 
         new_dtypes = None
         result = self.__constructor__(
-            new_parts, *new_axes, *new_axes_lengths, new_dtypes,
+            new_parts,
+            *new_axes,
+            *new_axes_lengths,
+            new_dtypes,
         )
         return result
 
@@ -1334,33 +1345,37 @@ class PandasDataframe(ModinDataframe):
         )
 
     def window(
-        self, axis, reduce_fn, window_size, result_schema=None,
+        self,
+        axis,
+        reduce_fn,
+        window_size,
+        result_schema=None,
     ) -> "PandasDataframe":
         """Apply a sliding window operator that acts as a GROUPBY on each window, and reduces down to a single row (column) per window.
 
-         Notes
-         -----
-             The user-defined reduce function must reduce each window’s column
-                 (row if axis=1) down to a single value.
+        Notes
+        -----
+            The user-defined reduce function must reduce each window’s column
+                (row if axis=1) down to a single value.
 
-         Parameters
-         ----------
-             axis: int
-                 The axis to slide over.
-             reduce_fn: callable
-                 The reduce function to apply over the data.
-             window_size: int
-                 The number of row/columns to pass to the function.
-                 (The size of the sliding window).
-             result_schema: dictionary of dtypes
-                 Mapping from column labels to data types that represents the types of the output dataframe.
+        Parameters
+        ----------
+            axis: int
+                The axis to slide over.
+            reduce_fn: callable
+                The reduce function to apply over the data.
+            window_size: int
+                The number of row/columns to pass to the function.
+                (The size of the sliding window).
+            result_schema: dictionary of dtypes
+                Mapping from column labels to data types that represents the types of the output dataframe.
 
-         Returns
-         -------
-         PandasDataframe
-             A new PandasDataframe with the reduce function applied over windows of the specified
-                 axis.
-         """
+        Returns
+        -------
+        PandasDataframe
+            A new PandasDataframe with the reduce function applied over windows of the specified
+                axis.
+        """
         pass
 
     def fold(self, axis, func):
@@ -1508,20 +1523,20 @@ class PandasDataframe(ModinDataframe):
     def sort_by(self, axis, columns, ascending=True) -> "PandasDataframe":
         """Logically reorder rows (columns if axis=1) lexicographically by the data in a column or set of columns.
 
-         Parameters
-         ----------
-             axis: int
-                 The axis to perform the sort over.
-             columns: string or list of strings
-                 Column label(s) to use to determine lexicographical ordering.
-             ascending: boolean
-                 Whether to sort in ascending or descending order.
+        Parameters
+        ----------
+            axis: int
+                The axis to perform the sort over.
+            columns: string or list of strings
+                Column label(s) to use to determine lexicographical ordering.
+            ascending: boolean
+                Whether to sort in ascending or descending order.
 
-         Returns
-         -------
-         PandasDataframe
-             A new PandasDataframe sorted into lexicographical order by the specified column(s).
-         """
+        Returns
+        -------
+        PandasDataframe
+            A new PandasDataframe sorted into lexicographical order by the specified column(s).
+        """
         pass
 
     def filter(self, axis, condition):
@@ -1557,7 +1572,10 @@ class PandasDataframe(ModinDataframe):
         new_lengths[axis ^ 1] = None  # We do not know what the resulting widths will be
 
         return self.__constructor__(
-            new_partitions, *new_axes, *new_lengths, self.dtypes if axis == 0 else None,
+            new_partitions,
+            *new_axes,
+            *new_lengths,
+            self.dtypes if axis == 0 else None,
         )
 
     def filter_by_types(self, types):
@@ -1608,7 +1626,12 @@ class PandasDataframe(ModinDataframe):
         return self.__constructor__(partitions, new_index, new_columns)
 
     def apply_full_axis(
-        self, axis, func, new_index=None, new_columns=None, dtypes=None,
+        self,
+        axis,
+        func,
+        new_index=None,
+        new_columns=None,
+        dtypes=None,
     ):
         """
         Perform a function across an entire axis.
@@ -1693,8 +1716,14 @@ class PandasDataframe(ModinDataframe):
         # Get the indices for the axis being applied to (it is the opposite of axis
         # being applied over)
         dict_indices = self._get_dict_of_block_index(axis ^ 1, numeric_indices)
-        new_partitions = self._partition_mgr_cls.apply_func_to_select_indices_along_full_axis(
-            axis, self._partitions, func, dict_indices, keep_remaining=keep_remaining,
+        new_partitions = (
+            self._partition_mgr_cls.apply_func_to_select_indices_along_full_axis(
+                axis,
+                self._partitions,
+                func,
+                dict_indices,
+                keep_remaining=keep_remaining,
+            )
         )
         # TODO Infer columns and index from `keep_remaining` and `apply_indices`
         if new_index is None:
@@ -2067,7 +2096,13 @@ class PandasDataframe(ModinDataframe):
             dtypes = pandas.Series(
                 [np.dtype(dtypes)] * len(new_axes[1]), index=new_axes[1]
             )
-        result = self.__constructor__(new_partitions, *new_axes, None, None, dtypes,)
+        result = self.__constructor__(
+            new_partitions,
+            *new_axes,
+            None,
+            None,
+            dtypes,
+        )
         if new_index is not None:
             result.synchronize_labels(0)
         if new_columns is not None:
@@ -2285,36 +2320,36 @@ class PandasDataframe(ModinDataframe):
     def groupby(self, axis, by, operator, result_schema=None):
         """Generate groups based on values in the input column(s) and perform the specified operation on each.
 
-         Notes
-         -----
-             No communication between groups is allowed in this algebra implementation.
+        Notes
+        -----
+            No communication between groups is allowed in this algebra implementation.
 
-             The number of rows (columns if axis=1) returned by the user-defined function
-                 passed to the groupby may be at most the number of rows in the group, and
-                 may be as small as a single row.
+            The number of rows (columns if axis=1) returned by the user-defined function
+                passed to the groupby may be at most the number of rows in the group, and
+                may be as small as a single row.
 
-             Unlike the pandas API, an intermediate “GROUP BY” object is not present in this
-                 algebra implementation.
+            Unlike the pandas API, an intermediate “GROUP BY” object is not present in this
+                algebra implementation.
 
-         Parameters
-         ----------
-             axis: int
-                 The axis to apply the grouping over.
-             by: string or list of strings
-                 One or more column labels to use for grouping.
-             operator: callable
-                 The operation to carry out on each of the groups. The operator is another
-                 algebraic operator with its own user-defined function parameter, depending
-                 on the output desired by the user.
-             result_schema: dictionary of dtypes
-                 Mapping from column labels to data types that represents the types of the output dataframe.
+        Parameters
+        ----------
+            axis: int
+                The axis to apply the grouping over.
+            by: string or list of strings
+                One or more column labels to use for grouping.
+            operator: callable
+                The operation to carry out on each of the groups. The operator is another
+                algebraic operator with its own user-defined function parameter, depending
+                on the output desired by the user.
+            result_schema: dictionary of dtypes
+                Mapping from column labels to data types that represents the types of the output dataframe.
 
-         Returns
-         -------
-         PandasDataframe
-             A new PandasDataframe containing the groupings specified, with the operator
-                 applied to each group.
-         """
+        Returns
+        -------
+        PandasDataframe
+            A new PandasDataframe containing the groupings specified, with the operator
+                applied to each group.
+        """
         pass
 
     def groupby_reduce(

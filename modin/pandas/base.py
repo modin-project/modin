@@ -855,7 +855,12 @@ class BasePandasDataset(object):
                     stacklevel=2,
                 )
         query_compiler = self._query_compiler.apply(
-            func, axis, args=args, raw=raw, result_type=result_type, **kwds,
+            func,
+            axis,
+            args=args,
+            raw=raw,
+            result_type=result_type,
+            **kwds,
         )
         return query_compiler
 
@@ -1707,7 +1712,11 @@ class BasePandasDataset(object):
             else self
         )
         result_qc = getattr(data._query_compiler, op_name)(
-            axis=axis, skipna=skipna, level=level, numeric_only=numeric_only, **kwargs,
+            axis=axis,
+            skipna=skipna,
+            level=level,
+            numeric_only=numeric_only,
+            **kwargs,
         )
         return self._reduce_dimension(result_qc)
 
@@ -1884,7 +1893,11 @@ class BasePandasDataset(object):
         )
 
     def reindex(
-        self, index=None, columns=None, copy=True, **kwargs,
+        self,
+        index=None,
+        columns=None,
+        copy=True,
+        **kwargs,
     ):
         if (
             kwargs.get("level") is not None
@@ -2042,7 +2055,10 @@ class BasePandasDataset(object):
             raise ValueError("cannot insert level_0, already exists")
         else:
             new_query_compiler = self._query_compiler.reset_index(
-                drop=drop, level=level, col_level=col_level, col_fill=col_fill,
+                drop=drop,
+                level=level,
+                col_level=col_level,
+                col_fill=col_fill,
             )
         return self._create_or_update_from_compiler(new_query_compiler, inplace)
 
@@ -2674,7 +2690,11 @@ class BasePandasDataset(object):
         )
 
     def to_numpy(self, dtype=None, copy=False, na_value=no_default):
-        return self._query_compiler.to_numpy(dtype=dtype, copy=copy, na_value=na_value,)
+        return self._query_compiler.to_numpy(
+            dtype=dtype,
+            copy=copy,
+            na_value=na_value,
+        )
 
     # TODO(williamma12): When this gets implemented, have the series one call this.
     def to_period(self, freq=None, axis=0, copy=True):  # pragma: no cover
@@ -3170,7 +3190,12 @@ class Resampler(object):
             query_comp_op = self._query_compiler.resample_app_ser
 
         dataframe = DataFrame(
-            query_compiler=query_comp_op(self.resample_args, func, *args, **kwargs,)
+            query_compiler=query_comp_op(
+                self.resample_args,
+                func,
+                *args,
+                **kwargs,
+            )
         )
         if is_list_like(func) or isinstance(self._dataframe, DataFrame):
             return dataframe
@@ -3189,7 +3214,12 @@ class Resampler(object):
             query_comp_op = self._query_compiler.resample_agg_ser
 
         dataframe = DataFrame(
-            query_compiler=query_comp_op(self.resample_args, func, *args, **kwargs,)
+            query_compiler=query_comp_op(
+                self.resample_args,
+                func,
+                *args,
+                **kwargs,
+            )
         )
         if is_list_like(func) or isinstance(self._dataframe, DataFrame):
             return dataframe
@@ -3300,42 +3330,60 @@ class Resampler(object):
     def first(self, _method="first", *args, **kwargs):
         return self._dataframe.__constructor__(
             query_compiler=self._query_compiler.resample_first(
-                self.resample_args, _method, *args, **kwargs,
+                self.resample_args,
+                _method,
+                *args,
+                **kwargs,
             )
         )
 
     def last(self, _method="last", *args, **kwargs):
         return self._dataframe.__constructor__(
             query_compiler=self._query_compiler.resample_last(
-                self.resample_args, _method, *args, **kwargs,
+                self.resample_args,
+                _method,
+                *args,
+                **kwargs,
             )
         )
 
     def max(self, _method="max", *args, **kwargs):
         return self._dataframe.__constructor__(
             query_compiler=self._query_compiler.resample_max(
-                self.resample_args, _method, *args, **kwargs,
+                self.resample_args,
+                _method,
+                *args,
+                **kwargs,
             )
         )
 
     def mean(self, _method="mean", *args, **kwargs):
         return self._dataframe.__constructor__(
             query_compiler=self._query_compiler.resample_mean(
-                self.resample_args, _method, *args, **kwargs,
+                self.resample_args,
+                _method,
+                *args,
+                **kwargs,
             )
         )
 
     def median(self, _method="median", *args, **kwargs):
         return self._dataframe.__constructor__(
             query_compiler=self._query_compiler.resample_median(
-                self.resample_args, _method, *args, **kwargs,
+                self.resample_args,
+                _method,
+                *args,
+                **kwargs,
             )
         )
 
     def min(self, _method="min", *args, **kwargs):
         return self._dataframe.__constructor__(
             query_compiler=self._query_compiler.resample_min(
-                self.resample_args, _method, *args, **kwargs,
+                self.resample_args,
+                _method,
+                *args,
+                **kwargs,
             )
         )
 
@@ -3345,13 +3393,19 @@ class Resampler(object):
         if isinstance(self._dataframe, DataFrame):
             return DataFrame(
                 query_compiler=self._query_compiler.resample_ohlc_df(
-                    self.resample_args, _method, *args, **kwargs,
+                    self.resample_args,
+                    _method,
+                    *args,
+                    **kwargs,
                 )
             )
         else:
             return DataFrame(
                 query_compiler=self._query_compiler.resample_ohlc_ser(
-                    self.resample_args, _method, *args, **kwargs,
+                    self.resample_args,
+                    _method,
+                    *args,
+                    **kwargs,
                 )
             )
 
@@ -3372,7 +3426,10 @@ class Resampler(object):
     def sem(self, _method="sem", *args, **kwargs):
         return self._dataframe.__constructor__(
             query_compiler=self._query_compiler.resample_sem(
-                self.resample_args, _method, *args, **kwargs,
+                self.resample_args,
+                _method,
+                *args,
+                **kwargs,
             )
         )
 
@@ -3600,18 +3657,30 @@ class Rolling(object):
     ):
         return self._dataframe.__constructor__(
             query_compiler=self._query_compiler.rolling_apply(
-                self.rolling_args, func, raw, engine, engine_kwargs, args, kwargs,
+                self.rolling_args,
+                func,
+                raw,
+                engine,
+                engine_kwargs,
+                args,
+                kwargs,
             )
         )
 
     def aggregate(
-        self, func, *args, **kwargs,
+        self,
+        func,
+        *args,
+        **kwargs,
     ):
         from .dataframe import DataFrame
 
         dataframe = DataFrame(
             query_compiler=self._query_compiler.rolling_aggregate(
-                self.rolling_args, func, *args, **kwargs,
+                self.rolling_args,
+                func,
+                *args,
+                **kwargs,
             )
         )
         if isinstance(self._dataframe, DataFrame):

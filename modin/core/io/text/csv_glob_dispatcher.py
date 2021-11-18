@@ -414,7 +414,10 @@ class CSVGlobDispatcher(CSVDispatcher):
 
                 # TODO(williamma12): Handle when skiprows > number of rows in file. Currently returns empty df.
                 outside_quotes, read_rows = cls._read_rows(
-                    f, nrows=skip_amount, quotechar=quotechar, is_quoting=is_quoting,
+                    f,
+                    nrows=skip_amount,
+                    quotechar=quotechar,
+                    is_quoting=is_quoting,
                 )
                 if skiprows:
                     skiprows -= read_rows
@@ -447,7 +450,10 @@ class CSVGlobDispatcher(CSVDispatcher):
                         read_size = nrows - read_rows_counter
 
                     outside_quotes, read_rows = cls._read_rows(
-                        f, nrows=read_size, quotechar=quotechar, is_quoting=is_quoting,
+                        f,
+                        nrows=read_size,
+                        quotechar=quotechar,
+                        is_quoting=is_quoting,
                     )
                     split_size += read_rows
                     read_rows_counter += read_rows

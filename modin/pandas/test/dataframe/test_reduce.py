@@ -87,7 +87,9 @@ def test_all_any_level(data, axis, level, method):
         pandas_df.columns = new_col
 
     eval_general(
-        modin_df, pandas_df, lambda df: getattr(df, method)(axis=axis, level=level),
+        modin_df,
+        pandas_df,
+        lambda df: getattr(df, method)(axis=axis, level=level),
     )
 
 
@@ -95,7 +97,8 @@ def test_all_any_level(data, axis, level, method):
 @pytest.mark.parametrize("data", [test_data["float_nan_data"]])
 def test_count(data, axis):
     eval_general(
-        *create_test_dfs(data), lambda df: df.count(axis=axis),
+        *create_test_dfs(data),
+        lambda df: df.count(axis=axis),
     )
 
 
@@ -123,7 +126,9 @@ def test_count_level(data, axis, level):
         pandas_df.columns = new_col
 
     eval_general(
-        modin_df, pandas_df, lambda df: df.count(axis=axis, level=level),
+        modin_df,
+        pandas_df,
+        lambda df: df.count(axis=axis, level=level),
     )
 
 
@@ -132,7 +137,9 @@ def test_count_dtypes(data):
     modin_df, pandas_df = pd.DataFrame(data), pandas.DataFrame(data)
 
     eval_general(
-        modin_df, pandas_df, lambda df: df.isna().count(axis=0),
+        modin_df,
+        pandas_df,
+        lambda df: df.isna().count(axis=0),
     )
 
 
@@ -140,7 +147,8 @@ def test_count_dtypes(data):
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_describe(data, percentiles):
     eval_general(
-        *create_test_dfs(data), lambda df: df.describe(percentiles=percentiles),
+        *create_test_dfs(data),
+        lambda df: df.describe(percentiles=percentiles),
     )
 
 
@@ -265,12 +273,17 @@ def test_min_max_mean(data, axis, skipna, numeric_only, is_transposed, method):
 @pytest.mark.parametrize("axis", axis_values, ids=axis_keys)
 @pytest.mark.parametrize("data", [test_data["float_nan_data"]])
 def test_prod(
-    data, axis, skipna, is_transposed, method,
+    data,
+    axis,
+    skipna,
+    is_transposed,
+    method,
 ):
     eval_general(
         *create_test_dfs(data),
         lambda df, *args, **kwargs: getattr(df.T if is_transposed else df, method)(
-            axis=axis, skipna=skipna,
+            axis=axis,
+            skipna=skipna,
         ),
     )
 
@@ -296,7 +309,10 @@ def test_prod(
 def test_sum(data, axis, skipna, is_transposed):
     eval_general(
         *create_test_dfs(data),
-        lambda df: (df.T if is_transposed else df).sum(axis=axis, skipna=skipna,),
+        lambda df: (df.T if is_transposed else df).sum(
+            axis=axis,
+            skipna=skipna,
+        ),
     )
 
     # test for issue #1953

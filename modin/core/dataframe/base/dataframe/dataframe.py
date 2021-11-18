@@ -238,7 +238,10 @@ class ModinDataframe(ABC):
 
     @abstractmethod
     def reduce(
-        self, axis: int, function: Callable, dtypes: Optional[str] = None,
+        self,
+        axis: int,
+        function: Callable,
+        dtypes: Optional[str] = None,
     ) -> "ModinDataframe":
         """Perform a user-defined per-column aggregation, where each column reduces down to a single value.
 
@@ -266,7 +269,10 @@ class ModinDataframe(ABC):
 
     @abstractmethod
     def tree_reduce(
-        self, axis: int, function: Callable, dtypes: Optional[str] = None,
+        self,
+        axis: int,
+        function: Callable,
+        dtypes: Optional[str] = None,
     ) -> "ModinDataframe":
         """Perform a user-defined per-column aggregation, where each column reduces down to a single value using a tree-reduce computation pattern.
 

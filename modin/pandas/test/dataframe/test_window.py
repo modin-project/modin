@@ -90,7 +90,8 @@ def test_diff(axis, periods):
 @pytest.mark.parametrize("axis", ["rows", "columns"])
 def test_diff_transposed(axis):
     eval_general(
-        *create_test_dfs(test_data["int_data"]), lambda df: df.T.diff(axis=axis),
+        *create_test_dfs(test_data["int_data"]),
+        lambda df: df.T.diff(axis=axis),
     )
 
 
@@ -354,7 +355,8 @@ def test_fillna_dict_series():
     df_equals(modin_df.fillna({"a": 0, "b": 5}), df.fillna({"a": 0, "b": 5}))
 
     df_equals(
-        modin_df.fillna({"a": 0, "b": 5, "d": 7}), df.fillna({"a": 0, "b": 5, "d": 7}),
+        modin_df.fillna({"a": 0, "b": 5, "d": 7}),
+        df.fillna({"a": 0, "b": 5, "d": 7}),
     )
 
     # Series treated same as dict

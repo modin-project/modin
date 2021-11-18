@@ -685,7 +685,11 @@ class BaseQueryCompiler(abc.ABC):
             New QueryCompiler with updated values.
         """
         return BinaryDefault.register(pandas.Series.update, inplace=True)(
-            self, other=other, squeeze_self=True, squeeze_other=True, **kwargs,
+            self,
+            other=other,
+            squeeze_self=True,
+            squeeze_other=True,
+            **kwargs,
         )
 
     @doc_utils.add_refer_to("DataFrame.clip")
@@ -999,7 +1003,10 @@ class BaseQueryCompiler(abc.ABC):
         return DataFrameDefault.register(pandas.DataFrame.prod)(self, **kwargs)
 
     @doc_utils.doc_reduce_agg(
-        method="sum", refer_to="sum", extra_params=["**kwargs"], params="axis : {0, 1}",
+        method="sum",
+        refer_to="sum",
+        extra_params=["**kwargs"],
+        params="axis : {0, 1}",
     )
     def sum(self, **kwargs):  # noqa: PR02
         return DataFrameDefault.register(pandas.DataFrame.sum)(self, **kwargs)

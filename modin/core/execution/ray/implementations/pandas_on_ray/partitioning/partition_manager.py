@@ -68,7 +68,8 @@ def progress_bar_wrapper(f):
                 ) = inspect.getframeinfo(current_frame)
                 current_frame = current_frame.f_back
             t = threading.Thread(
-                target=call_progress_bar, args=(result_parts, line_number),
+                target=call_progress_bar,
+                args=(result_parts, line_number),
             )
             t.start()
             # We need to know whether or not we are in a jupyter notebook

@@ -266,7 +266,11 @@ class OmnisciOnNativeDataframe(PandasDataframe):
         return InputRefExpr(self, col, self.get_dtype(col))
 
     def mask(
-        self, row_labels=None, row_positions=None, col_labels=None, col_positions=None,
+        self,
+        row_labels=None,
+        row_positions=None,
+        col_labels=None,
+        col_positions=None,
     ):
         """
         Mask operation.
@@ -835,7 +839,13 @@ class OmnisciOnNativeDataframe(PandasDataframe):
 
         condition = self._build_equi_join_condition(other, left_on, right_on)
 
-        op = JoinNode(self, other, how=how, exprs=exprs, condition=condition,)
+        op = JoinNode(
+            self,
+            other,
+            how=how,
+            exprs=exprs,
+            condition=condition,
+        )
 
         new_columns = Index.__new__(Index, data=new_columns)
         res = self.__constructor__(
@@ -1056,7 +1066,13 @@ class OmnisciOnNativeDataframe(PandasDataframe):
                 exprs[new_col_name] = rhs.ref(col)
                 new_columns.append(new_col_name)
 
-            op = JoinNode(lhs, rhs, how=how, exprs=exprs, condition=condition,)
+            op = JoinNode(
+                lhs,
+                rhs,
+                how=how,
+                exprs=exprs,
+                condition=condition,
+            )
 
             new_columns = Index.__new__(
                 Index, data=new_columns, dtype=self.columns.dtype
@@ -1071,7 +1087,10 @@ class OmnisciOnNativeDataframe(PandasDataframe):
 
         if sort:
             lhs = lhs.sort_rows(
-                lhs._index_cols, ascending=True, ignore_index=False, na_position="last",
+                lhs._index_cols,
+                ascending=True,
+                ignore_index=False,
+                na_position="last",
             )
 
         if reset_index_names:
