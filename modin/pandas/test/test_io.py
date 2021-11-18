@@ -1864,7 +1864,19 @@ class TestFwf:
 
         df_equals(modin_df, pd_df)
 
-    @pytest.mark.parametrize("nrows", [13, None])
+    @pytest.mark.parametrize(
+        "nrows",
+        [
+            pytest.param(
+                13,
+                marks=pytest.mark.xfail(
+                    Engine.get() == "Ray",
+                    reason="read_fwf bug on pandas side: pandas-dev/pandas#44021",
+                ),
+            ),
+            None,
+        ],
+    )
     def test_fwf_file_skiprows(self, make_fwf_file, nrows):
         unique_filename = make_fwf_file()
 
