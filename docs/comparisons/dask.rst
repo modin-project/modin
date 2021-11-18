@@ -60,7 +60,7 @@ Dask DataFrame
 Dask DataFrame uses row-based partitioning, similar to Spark. This can be seen in their
 `documentation`_. They also have a custom index object for indexing into the object,
 which is not pandas compatible. Dask DataFrame seems to treat operations on the
-DataFrame as MapReduce operations, which is a good paradigm for the subset of the pandas
+DataFrame as TreeReduce operations, which is a good paradigm for the subset of the pandas
 API they have chosen to implement, but makes certain operations impossible. Dask
 Dataframe is also lazy and places a lot of partitioning responsibility on the user.
 

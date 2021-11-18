@@ -29,9 +29,10 @@ from modin.error_message import ErrorMessage
 from modin.core.storage_formats.pandas.parsers import (
     find_common_type_cat as find_common_type,
 )
+from modin.core.dataframe.base.dataframe.dataframe import ModinDataframe
 
 
-class PandasDataframe(object):
+class PandasDataframe(ModinDataframe):
     """
     An abstract class that represents the parent class for any pandas storage format dataframe class.
 
@@ -164,7 +165,7 @@ class PandasDataframe(object):
 
     def _compute_dtypes(self):
         """
-        Compute the data types via MapReduce pattern.
+        Compute the data types via TreeReduce pattern.
 
         Returns
         -------
@@ -1120,7 +1121,7 @@ class PandasDataframe(object):
 
     def _build_treereduce_func(self, axis, func):
         """
-        Properly formats a MapReduce result so that the partitioning is correct.
+        Properly formats a TreeReduce result so that the partitioning is correct.
 
         Parameters
         ----------
@@ -1136,7 +1137,7 @@ class PandasDataframe(object):
 
         Notes
         -----
-        This should be used for any MapReduce style operation that results in a
+        This should be used for any TreeReduce style operation that results in a
         reduced data dimensionality (dataframe -> series).
         """
 
@@ -1214,6 +1215,34 @@ class PandasDataframe(object):
         )
         return self._compute_tree_reduce_metadata(axis, new_parts)
 
+    def reduce(self, axis, function, dtypes=None):
+        """
+        Perform a user-defined per-column aggregation, where each column reduces down to a single value.
+
+        Notes
+        -----
+            The user-defined function must reduce to a single value.
+
+        Parameters
+        ----------
+            axis: int
+                The axis to perform the reduce over.
+            function: callable
+                The reduce function to apply to each column.
+            dtypes: str
+                The data types for the result. This is an optimization
+                because there are functions that always result in a particular data
+                type, and this allows us to avoid (re)computing it.
+
+        Returns
+        -------
+        PandasDataframe
+            Modin series (1xN frame) containing the reduced data.
+        """
+        new_df = self.reduce_full_axis(axis, function)
+
+        return new_df
+
     def tree_reduce(self, axis, map_func, reduce_func=None):
         """
         Apply function that will reduce the data to a pandas Series.
@@ -1279,6 +1308,36 @@ class PandasDataframe(object):
             dtypes=dtypes,
         )
 
+    def window(
+        self, axis, reduce_fn, window_size, result_schema=None,
+    ) -> "PandasDataframe":
+        """Apply a sliding window operator that acts as a GROUPBY on each window, and reduces down to a single row (column) per window.
+
+         Notes
+         -----
+             The user-defined reduce function must reduce each window’s column
+                 (row if axis=1) down to a single value.
+
+         Parameters
+         ----------
+             axis: int
+                 The axis to slide over.
+             reduce_fn: callable
+                 The reduce function to apply over the data.
+             window_size: int
+                 The number of row/columns to pass to the function.
+                 (The size of the sliding window).
+             result_schema: dictionary of dtypes
+                 Mapping from column labels to data types that represents the types of the output dataframe.
+
+         Returns
+         -------
+         PandasDataframe
+             A new PandasDataframe with the reduce function applied over windows of the specified
+                 axis.
+         """
+        pass
+
     def fold(self, axis, func):
         """
         Perform a function across an entire axis.
@@ -1310,7 +1369,128 @@ class PandasDataframe(object):
             self._column_widths,
         )
 
-    def filter(self, axis, func):
+    def infer_types(self, columns_list: List[str]) -> "PandasDataframe":
+        """Determine the compatible type shared by all values in the specified columns, and coerce them to that type.
+
+        Parameters
+        ----------
+            columns_list: list of strings
+                List of column labels to infer and induce types over.
+
+        Returns
+        -------
+        PandasDataframe
+            A new PandasDataframe with the inferred schema.
+        """
+        pass
+
+    def join(self, axis, condition, other, join_type) -> "PandasDataframe":
+        """Join this dataframe with the other.
+
+        Notes
+        -----
+            During the join, this dataframe is considered the left, while the other is
+                treated as the right.
+
+            Only inner joins, left outer, right outer, and full outer joins are currently supported.
+                Support for other join types (e.g. natural join) may be implemented in the future.
+
+        Parameters
+        ----------
+            axis: int
+                The axis to perform the join on.
+            condition: callable
+                Function that determines which rows should be joined. The condition can be a
+                simple equality, e.g. "left.col1 == right.col1" or can be arbitrarily complex.
+            other: ModinDataframe
+                The other data to join with, i.e. the right dataframe.
+            join_type: string
+                The type of join to perform.
+
+        Returns
+        -------
+        PandasDataframe
+            A new PandasDataframe that is the result of applying the specified join over the two
+            dataframes.
+        """
+        pass
+
+    def rename(
+        self, new_row_labels=None, new_col_labels=None, level=None
+    ) -> "PandasDataframe":
+        """Replace the row and column labels with the specified new labels.
+        Notes
+        -----
+            If level is not specified, the default behavior is to replace row labels in all levels.
+        Parameters
+        ----------
+            new_row_labels: dictionary
+                Mapping from old row labels to new labels
+            new_col_labels: dictionary
+                Mapping from old col labels to new labels
+            level: int
+                Level whose row labels to replace
+        Returns
+        -------
+        PandasDataframe
+            A new PandasDataframe with the new row and column labels.
+        """
+        new_index = self.index.copy()
+
+        def swap_labels(label_dict):
+            return lambda label: label_dict.get(label, label)
+
+        def swap_labels_levels(index_tuple):
+            return tuple(new_row_labels.get(label, label) for label in index_tuple)
+
+        if new_row_labels:
+            swap_row_labels = swap_labels(new_row_labels)
+            if isinstance(self.index, pandas.MultiIndex):
+                if level is None:
+                    new_index = new_index.map(swap_labels_levels)
+                else:
+                    new_index.set_levels(
+                        new_index.levels[level].map(swap_row_labels), level
+                    )
+            else:
+                new_index = new_index.map(swap_row_labels)
+        new_cols = self.columns.copy()
+        if new_col_labels:
+            new_cols = new_cols.map(swap_labels(new_col_labels))
+
+        def map_fn(df):
+            return df.rename(index=new_row_labels, columns=new_col_labels, level=level)
+
+        new_parts = self._partition_mgr_cls.map_partitions(self._partitions, map_fn)
+        return self.__constructor__(
+            new_parts,
+            new_index,
+            new_cols,
+            self._row_lengths,
+            self._column_widths,
+            self._dtypes,
+        )
+
+    def sort_by(self, axis, columns, ascending=True) -> "PandasDataframe":
+        """Logically reorder rows (columns if axis=1) lexicographically by the data in a column or set of columns.
+
+         Parameters
+         ----------
+             axis: int
+                 The axis to perform the sort over.
+             columns: string or list of strings
+                 Column label(s) to use to determine lexicographical ordering.
+             ascending: boolean
+                 Whether to sort in ascending or descending order.
+
+         Returns
+         -------
+         PandasDataframe
+             A new PandasDataframe sorted into lexicographical order by the specified column(s).
+         """
+        pass
+
+    def filter(self, axis, condition):
         """
         Filter data based on the function provided along an entire axis.
 
@@ -1318,7 +1498,7 @@ class PandasDataframe(object):
         ----------
         axis : int
             The axis to filter over.
-        func : callable
+        condition : callable
             The function to use for the filter. This function should filter the
             data itself.
 
@@ -1327,8 +1507,12 @@ class PandasDataframe(object):
         PandasDataframe
             A new filtered dataframe.
         """
+        assert (
+            axis == 0 or axis == 1
+        ), "Axis argument to filter operator must be 0 (rows) or 1 (columns)"
+
         new_partitions = self._partition_mgr_cls.map_axis_partitions(
-            axis, self._partitions, func, keep_partitioning=True
+            axis, self._partitions, condition, keep_partitioning=True
         )
         new_axes, new_lengths = [0, 0], [0, 0]
 
@@ -1340,6 +1524,25 @@ class PandasDataframe(object):
 
         return self.__constructor__(
             new_partitions, *new_axes, *new_lengths, self.dtypes if axis == 0 else None,
+        )
+
+    def filter_by_types(self, types):
+        """Allow the user to specify a type or set of types by which to filter the columns.
+
+        Parameters
+        ----------
+        types: list of hashables
+            The types to filter columns by.
+
+        Returns
+        -------
+        ModinDataframe
+             A new ModinDataframe from the filter provided.
+        """
+        return self.mask(
+            col_positions=[
+                i for i in range(len(self.columns)) if self.dtypes[i] in types
+            ]
         )
 
     def explode(self, axis, func):
@@ -2040,6 +2243,41 @@ class PandasDataframe(object):
         return self.__constructor__(
             new_partitions, new_index, new_columns, new_lengths, new_widths, new_dtypes
         )
+
+    def groupby(self, axis, by, operator, result_schema=None):
+        """Generate groups based on values in the input column(s) and perform the specified operation on each.
+
+         Notes
+         -----
+             No communication between groups is allowed in this algebra implementation.
+
+             The number of rows (columns if axis=1) returned by the user-defined function
+                 passed to the groupby may be at most the number of rows in the group, and
+                 may be as small as a single row.
+
+             Unlike the pandas API, an intermediate “GROUP BY” object is not present in this
+                 algebra implementation.
+
+         Parameters
+         ----------
+             axis: int
+                 The axis to apply the grouping over.
+             by: string or list of strings
+                 One or more column labels to use for grouping.
+             operator: callable
+                 The operation to carry out on each of the groups. The operator is another
+                 algebraic operator with its own user-defined function parameter, depending
+                 on the output desired by the user.
+             result_schema: dictionary of dtypes
+                 Mapping from column labels to data types that represents the types of the output dataframe.
+
+         Returns
+         -------
+         PandasDataframe
+             A new PandasDataframe containing the groupings specified, with the operator
+                 applied to each group.
+         """
+        pass
 
     def groupby_reduce(
         self,

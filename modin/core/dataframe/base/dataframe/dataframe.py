@@ -78,7 +78,7 @@ class ModinDataframe(ABC):
         self,
         function: Callable,
         axis: Optional[int] = None,
-        result_schema: Optional[Dict[Hashable, type]] = None,
+        dtypes: Optional[str] = None,
     ) -> "ModinDataframe":
         """Apply a user-defined function row- wise (or column-wise if axis=1).
 
@@ -96,9 +96,10 @@ class ModinDataframe(ABC):
                 The function to map across the dataframe.
             axis: int or None
                 The axis to map over.
-            result_schema: dictionary
-                Mapping from column labels to data types that represents the types of the output dataframe.
-
+            dtypes: str
+                The data types for the result. This is an optimization
+                because there are functions that always result in a particular data
+                type, and this allows us to avoid (re)computing it.
         Returns
         -------
         ModinDataframe
@@ -237,10 +238,7 @@ class ModinDataframe(ABC):
 
     @abstractmethod
     def reduce(
-        self,
-        axis: int,
-        function: Callable,
-        result_schema: Optional[Dict[Hashable, type]] = None,
+        self, axis: int, function: Callable, dtypes: Optional[str] = None,
     ) -> "ModinDataframe":
         """Perform a user-defined per-column aggregation, where each column reduces down to a single value.
 
@@ -254,8 +252,10 @@ class ModinDataframe(ABC):
                 The axis to perform the reduce over.
             function: callable
                 The reduce function to apply to each column.
-            result_schema: dictionary
-                Mapping from column labels to data types that represents the types of the output dataframe.
+            dtypes: str
+                The data types for the result. This is an optimization
+                because there are functions that always result in a particular data
+                type, and this allows us to avoid (re)computing it.
 
         Returns
         -------
@@ -266,10 +266,7 @@ class ModinDataframe(ABC):
 
     @abstractmethod
     def tree_reduce(
-        self,
-        axis: int,
-        function: Callable,
-        result_schema: Optional[Dict[Hashable, type]] = None,
+        self, axis: int, function: Callable, dtypes: Optional[str] = None,
     ) -> "ModinDataframe":
         """Perform a user-defined per-column aggregation, where each column reduces down to a single value using a tree-reduce computation pattern.
 
@@ -285,8 +282,10 @@ class ModinDataframe(ABC):
                 The axis to perform the tree reduce over.
             function: callable
                 The tree reduce function to apply to each column.
-            result_schema: dictionary
-                Mapping from column labels to data types that represents the types of the output dataframe.
+            dtypes: str
+                The data types for the result. This is an optimization
+                because there are functions that always result in a particular data
+                type, and this allows us to avoid (re)computing it.
 
         Returns
         -------

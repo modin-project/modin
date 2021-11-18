@@ -15,12 +15,12 @@
 
 import pandas
 
-from .tree_reduce import MapReduce
+from .tree_reduce import TreeReduce
 from .default2pandas.groupby import GroupBy
 from modin.utils import try_cast_to_pandas, hashable
 
 
-class GroupByReduce(MapReduce):
+class GroupByReduce(TreeReduce):
     """Builder class for GroupBy aggregation functions."""
 
     @classmethod
@@ -28,7 +28,7 @@ class GroupByReduce(MapReduce):
         """
         Build template GroupBy aggregation function.
 
-        Resulted function is applied in parallel via MapReduce algorithm.
+        Resulted function is applied in parallel via TreeReduce algorithm.
 
         Parameters
         ----------
@@ -47,7 +47,7 @@ class GroupByReduce(MapReduce):
         -------
         callable
             Function that takes query compiler and executes GroupBy aggregation
-            with MapReduce algorithm.
+            with TreeReduce algorithm.
         """
         if isinstance(map_func, str):
 
@@ -231,7 +231,7 @@ class GroupByReduce(MapReduce):
         default_to_pandas_func=None,
     ):
         """
-        Execute GroupBy aggregation with MapReduce approach.
+        Execute GroupBy aggregation with TreeReduce approach.
 
         Parameters
         ----------
@@ -442,7 +442,7 @@ class GroupByReduce(MapReduce):
         return _map, _reduce
 
 
-# This dict is a map for function names and their equivalents in MapReduce
+# This dict is a map for function names and their equivalents in TreeReduce
 groupby_reduce_functions = {
     "all": ("all", "all"),
     "any": ("any", "any"),
