@@ -1216,11 +1216,16 @@ def eval_shift(modin_groupby, pandas_groupby):
         pandas_groupby,
         lambda groupby: groupby.shift(periods=-3),
     )
-    eval_general(
-        modin_groupby,
-        pandas_groupby,
-        lambda groupby: groupby.shift(axis=1, fill_value=777),
-    )
+    # Disabled for `BaseOnPython` because of the issue with `getitem_array`.
+    # groupby.shift internally masks the source frame with a Series boolean mask,
+    # doing so ends up in the `getitem_array` method, that is broken for `BaseOnPython`:
+    # https://github.com/modin-project/modin/issues/3701
+    if get_current_execution() != "BaseOnPython":
+        eval_general(
+            modin_groupby,
+            pandas_groupby,
+            lambda groupby: groupby.shift(axis=1, fill_value=777),
+        )
 
 
 def test_groupby_on_index_values_with_loop():
