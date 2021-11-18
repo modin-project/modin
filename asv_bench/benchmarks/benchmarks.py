@@ -531,7 +531,7 @@ class TimeIndexing:
         }[indexer_type]
 
     def time_iloc(self, shape, indexer_type):
-        # Pandas don't implement `df.iloc[series boolean_mask]` and raise an exception on it.
+        # Pandas doesn't implement `df.iloc[series boolean_mask]` and raise an exception on it.
         # Replacing this with the semantically equivalent construction:
         if indexer_type != "bool_series":
             execute(self.df.iloc[self.indexer])
