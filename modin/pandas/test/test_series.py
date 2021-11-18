@@ -976,8 +976,7 @@ def test_asof(where):
 
 
 @pytest.mark.parametrize(
-    "where",
-    [20, 30, [10.5, 40.5], [10], pandas.Index([20, 30]), pandas.Index([10.5]),],
+    "where", [20, 30, [10.5, 40.5], [10], pandas.Index([20, 30]), pandas.Index([10.5])],
 )
 def test_asof_large(where):
     values = test_data["float_nan_data"]["col1"]

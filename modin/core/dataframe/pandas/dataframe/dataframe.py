@@ -863,13 +863,13 @@ class PandasDataframe(ModinDataframe):
         PandasDataframe
             A new dataframe with the updated labels.
         """
-        new_labels = self.axes[axis].map(lambda x: str(prefix) + str(x))
-        new_frame = self.copy()
+
+        def new_labels_mapper(x):
+            return str(prefix) + str(x)
+
         if axis == 0:
-            new_frame.index = new_labels
-        else:
-            new_frame.columns = new_labels
-        return new_frame
+            return self.rename(new_row_labels=new_labels_mapper)
+        return self.rename(new_col_labels=new_labels_mapper)
 
     def add_suffix(self, suffix, axis):
         """
@@ -887,13 +887,13 @@ class PandasDataframe(ModinDataframe):
         PandasDataframe
             A new dataframe with the updated labels.
         """
-        new_labels = self.axes[axis].map(lambda x: str(x) + str(suffix))
-        new_frame = self.copy()
+
+        def new_labels_mapper(x):
+            return str(x) + str(suffix)
+
         if axis == 0:
-            new_frame.index = new_labels
-        else:
-            new_frame.columns = new_labels
-        return new_frame
+            return self.rename(new_row_labels=new_labels_mapper)
+        return self.rename(new_col_labels=new_labels_mapper)
 
     # END Metadata modification methods
 
@@ -1449,9 +1449,9 @@ class PandasDataframe(ModinDataframe):
             If level is not specified, the default behavior is to replace row labels in all levels.
         Parameters
         ----------
-            new_row_labels: dictionary
+            new_row_labels: dictionary or callable
                 Mapping from old row labels to new labels
-            new_col_labels: dictionary
+            new_col_labels: dictionary or callable
                 Mapping from old col labels to new labels
             level: int
                 Level whose row labels to replace
@@ -1463,10 +1463,19 @@ class PandasDataframe(ModinDataframe):
         new_index = self.index.copy()
 
         def swap_labels(label_dict):
-            return lambda label: label_dict.get(label, label)
+            return (
+                lambda label: label_dict.get(label, label)
+                if isinstance(label_dict, dict)
+                else label_dict(label)
+            )
 
         def swap_labels_levels(index_tuple):
-            return tuple(new_row_labels.get(label, label) for label in index_tuple)
+            return tuple(
+                new_row_labels.get(label, label)
+                if isinstance(new_row_labels, dict)
+                else new_row_labels(label)
+                for label in index_tuple
+            )
 
         if new_row_labels:
             swap_row_labels = swap_labels(new_row_labels)

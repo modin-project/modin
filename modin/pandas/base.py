@@ -3463,7 +3463,7 @@ class Window(object):
 
 @_inherit_docstrings(
     pandas.core.window.rolling.Rolling,
-    excluded=[pandas.core.window.rolling.Rolling.__init__,],
+    excluded=[pandas.core.window.rolling.Rolling.__init__],
 )
 class Rolling(object):
     def __init__(

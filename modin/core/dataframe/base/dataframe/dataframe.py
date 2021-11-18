@@ -427,8 +427,8 @@ class ModinDataframe(ABC):
     @abstractmethod
     def rename(
         self,
-        new_row_labels: Optional[Dict[Hashable, Hashable]] = None,
-        new_col_labels: Optional[Dict[Hashable, Hashable]] = None,
+        new_row_labels: Optional[Union[Dict[Hashable, Hashable], Callable]] = None,
+        new_col_labels: Optional[Union[Dict[Hashable, Hashable], Callable]] = None,
         level: Optional[Union[int, List[int]]] = None,
     ) -> "ModinDataframe":
         """Replace the row and column labels with the specified new labels.
@@ -439,9 +439,9 @@ class ModinDataframe(ABC):
 
         Parameters
         ----------
-            new_row_labels: dictionary
+            new_row_labels: dictionary or callable
                 Mapping from old row labels to new labels
-            new_col_labels: dictionary
+            new_col_labels: dictionary or callable
                 Mapping from old col labels to new labels
             level: int or list of ints
                 Level(s) whose row labels to replace

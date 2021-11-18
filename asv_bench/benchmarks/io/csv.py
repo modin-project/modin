@@ -55,7 +55,7 @@ class TimeReadCsvSkiprows(BaseReadCsv):
     param_names = ["shape", "skiprows"]
     params = [
         shapes,
-        [None, "lambda_even_rows", "range_uniform", "range_step2",],
+        [None, "lambda_even_rows", "range_uniform", "range_step2"],
     ]
 
     def setup(self, test_filenames, shape, skiprows):

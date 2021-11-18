@@ -805,7 +805,7 @@ def test_stack(data, is_multi_idx, is_multi_col):
     if is_multi_col:
         if len(pandas_df.columns) == 64:
             columns = pd.MultiIndex.from_product(
-                [["A", "B", "C", "D"], ["xx", "yy", "zz", "LAST"], [10, 20, 30, 40],]
+                [["A", "B", "C", "D"], ["xx", "yy", "zz", "LAST"], [10, 20, 30, 40]]
             )
         elif len(pandas_df.columns) == 100:
             columns = pd.MultiIndex.from_product(

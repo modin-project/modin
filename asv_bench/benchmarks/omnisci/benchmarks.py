@@ -300,7 +300,7 @@ class TimeIndexing:
     param_names = ["shape", "indexer_type"]
     params = [
         get_benchmark_shapes("omnisci.TimeIndexing"),
-        ["scalar", "bool", "slice", "list", "function",],
+        ["scalar", "bool", "slice", "list", "function"],
     ]
 
     def setup(self, shape, indexer_type):
