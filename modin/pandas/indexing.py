@@ -127,7 +127,7 @@ def is_boolean_array(x):
     bool
         True if argument is an array of bool, False otherwise.
     """
-    if isinstance(x, (np.ndarray, Series, pandas.Series)):
+    if isinstance(x, (np.ndarray, Series, pandas.Series, pandas.Index)):
         return is_bool_dtype(x.dtype)
     elif isinstance(x, (DataFrame, pandas.DataFrame)):
         return all(map(is_bool_dtype, x.dtypes))
@@ -148,7 +148,7 @@ def is_integer_array(x):
     bool
         True if argument is an array of integers, False otherwise.
     """
-    if isinstance(x, (np.ndarray, Series, pandas.Series)):
+    if isinstance(x, (np.ndarray, Series, pandas.Series, pandas.Index)):
         return is_integer_dtype(x.dtype)
     elif isinstance(x, (DataFrame, pandas.DataFrame)):
         return all(map(is_integer_dtype, x.dtypes))
@@ -631,7 +631,7 @@ class _LocIndexer(_LocationIndexerBase):
         self.row_scalar = is_scalar(row_loc)
         self.col_scalar = is_scalar(col_loc)
 
-        if is_boolean_array(row_loc) and isinstance(row_loc, Series):
+        if isinstance(row_loc, Series) and is_boolean_array(row_loc):
             return self._handle_boolean_masking(row_loc, col_loc)
 
         row_lookup, col_lookup = self._compute_lookup(row_loc, col_loc)
@@ -872,7 +872,7 @@ class _iLocIndexer(_LocationIndexerBase):
         self._check_dtypes(row_loc)
         self._check_dtypes(col_loc)
 
-        if is_boolean_array(row_loc) and isinstance(row_loc, Series):
+        if isinstance(row_loc, Series) and is_boolean_array(row_loc):
             return self._handle_boolean_masking(row_loc, col_loc)
 
         row_lookup, col_lookup = self._compute_lookup(row_loc, col_loc)
