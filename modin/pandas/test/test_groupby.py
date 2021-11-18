@@ -1202,13 +1202,19 @@ def eval_groups(modin_groupby, pandas_groupby):
 
 def eval_shift(modin_groupby, pandas_groupby):
     eval_general(
-        modin_groupby, pandas_groupby, lambda groupby: groupby.shift(),
+        modin_groupby,
+        pandas_groupby,
+        lambda groupby: groupby.shift(),
     )
     eval_general(
-        modin_groupby, pandas_groupby, lambda groupby: groupby.shift(periods=0),
+        modin_groupby,
+        pandas_groupby,
+        lambda groupby: groupby.shift(periods=0),
     )
     eval_general(
-        modin_groupby, pandas_groupby, lambda groupby: groupby.shift(periods=-3),
+        modin_groupby,
+        pandas_groupby,
+        lambda groupby: groupby.shift(periods=-3),
     )
     eval_general(
         modin_groupby,

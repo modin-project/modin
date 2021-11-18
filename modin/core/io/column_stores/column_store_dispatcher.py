@@ -220,7 +220,12 @@ class ColumnStoreDispatcher(FileDispatcher):
         dtypes = cls.build_dtypes(partition_ids[-1], columns)
         new_query_compiler = cls.query_compiler_cls(
             cls.frame_cls(
-                remote_parts, index, columns, row_lens, column_widths, dtypes=dtypes,
+                remote_parts,
+                index,
+                columns,
+                row_lens,
+                column_widths,
+                dtypes=dtypes,
             )
         )
         return new_query_compiler

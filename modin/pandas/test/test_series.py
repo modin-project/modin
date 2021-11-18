@@ -486,7 +486,9 @@ def test___pow__(data):
     "dt_index", [True, False], ids=["dt_index_true", "dt_index_false"]
 )
 @pytest.mark.parametrize(
-    "data", [*test_data_values, "empty"], ids=[*test_data_keys, "empty"],
+    "data",
+    [*test_data_values, "empty"],
+    ids=[*test_data_keys, "empty"],
 )
 def test___repr__(name, dt_index, data):
     if data == "empty":
@@ -620,7 +622,8 @@ def test_add_suffix(data):
 @pytest.mark.parametrize("func", agg_func_values, ids=agg_func_keys)
 def test_agg(data, func):
     eval_general(
-        *create_test_series(data), lambda df: df.agg(func),
+        *create_test_series(data),
+        lambda df: df.agg(func),
     )
 
 
@@ -631,7 +634,8 @@ def test_agg_except(data, func):
     # See details in pandas issue 36036.
     with pytest.raises(SpecificationError):
         eval_general(
-            *create_test_series(data), lambda df: df.agg(func),
+            *create_test_series(data),
+            lambda df: df.agg(func),
         )
 
 
@@ -643,7 +647,8 @@ def test_agg_numeric(request, data, func):
     ):
         axis = 0
         eval_general(
-            *create_test_series(data), lambda df: df.agg(func, axis),
+            *create_test_series(data),
+            lambda df: df.agg(func, axis),
         )
 
 
@@ -658,7 +663,8 @@ def test_agg_numeric_except(request, data, func):
         # See details in pandas issue 36036.
         with pytest.raises(SpecificationError):
             eval_general(
-                *create_test_series(data), lambda df: df.agg(func, axis),
+                *create_test_series(data),
+                lambda df: df.agg(func, axis),
             )
 
 
@@ -667,7 +673,8 @@ def test_agg_numeric_except(request, data, func):
 def test_aggregate(data, func):
     axis = 0
     eval_general(
-        *create_test_series(data), lambda df: df.aggregate(func, axis),
+        *create_test_series(data),
+        lambda df: df.aggregate(func, axis),
     )
 
 
@@ -679,7 +686,8 @@ def test_aggregate_except(data, func):
     # See details in pandas issues 36036.
     with pytest.raises(SpecificationError):
         eval_general(
-            *create_test_series(data), lambda df: df.aggregate(func, axis),
+            *create_test_series(data),
+            lambda df: df.aggregate(func, axis),
         )
 
 
@@ -691,7 +699,8 @@ def test_aggregate_numeric(request, data, func):
     ):
         axis = 0
         eval_general(
-            *create_test_series(data), lambda df: df.agg(func, axis),
+            *create_test_series(data),
+            lambda df: df.agg(func, axis),
         )
 
 
@@ -706,7 +715,8 @@ def test_aggregate_numeric_except(request, data, func):
         # See details in pandas issues 36036.
         with pytest.raises(SpecificationError):
             eval_general(
-                *create_test_series(data), lambda df: df.agg(func, axis),
+                *create_test_series(data),
+                lambda df: df.agg(func, axis),
             )
 
 
@@ -832,7 +842,8 @@ def test_append(data):
 @pytest.mark.parametrize("func", agg_func_values, ids=agg_func_keys)
 def test_apply(data, func):
     eval_general(
-        *create_test_series(data), lambda df: df.apply(func),
+        *create_test_series(data),
+        lambda df: df.apply(func),
     )
 
 
@@ -843,7 +854,8 @@ def test_apply_except(data, func):
     # See details in pandas issues 36036.
     with pytest.raises(SpecificationError):
         eval_general(
-            *create_test_series(data), lambda df: df.apply(func),
+            *create_test_series(data),
+            lambda df: df.apply(func),
         )
 
 
@@ -872,7 +884,8 @@ def test_apply_external_lib():
 def test_apply_numeric(request, data, func):
     if name_contains(request.node.name, numeric_dfs):
         eval_general(
-            *create_test_series(data), lambda df: df.apply(func),
+            *create_test_series(data),
+            lambda df: df.apply(func),
         )
 
 
@@ -884,7 +897,8 @@ def test_apply_numeric_except(request, data, func):
         # See details in pandas issues 36036.
         with pytest.raises(SpecificationError):
             eval_general(
-                *create_test_series(data), lambda df: df.apply(func),
+                *create_test_series(data),
+                lambda df: df.apply(func),
             )
 
 
@@ -976,7 +990,8 @@ def test_asof(where):
 
 
 @pytest.mark.parametrize(
-    "where", [20, 30, [10.5, 40.5], [10], pandas.Index([20, 30]), pandas.Index([10.5])],
+    "where",
+    [20, 30, [10.5, 40.5], [10], pandas.Index([20, 30]), pandas.Index([10.5])],
 )
 def test_asof_large(where):
     values = test_data["float_nan_data"]["col1"]
@@ -1583,7 +1598,8 @@ def test_dt():
         modin_series.dt.to_pydatetime(), pandas_series.dt.to_pydatetime()
     )
     df_equals(
-        modin_series.dt.tz_localize(None), pandas_series.dt.tz_localize(None),
+        modin_series.dt.tz_localize(None),
+        pandas_series.dt.tz_localize(None),
     )
     df_equals(
         modin_series.dt.tz_convert(tz="Europe/Berlin"),
@@ -2012,7 +2028,9 @@ def test_kurtosis_level(level):
     pandas_s.columns = index
 
     eval_general(
-        modin_s, pandas_s, lambda s: s.kurtosis(axis=1, level=level),
+        modin_s,
+        pandas_s,
+        lambda s: s.kurtosis(axis=1, level=level),
     )
 
 
@@ -2038,7 +2056,8 @@ def test_index_order(func):
     s_pandas.index = index
 
     df_equals(
-        getattr(s_modin, func)(level=0).index, getattr(s_pandas, func)(level=0).index,
+        getattr(s_modin, func)(level=0).index,
+        getattr(s_pandas, func)(level=0).index,
     )
 
 
@@ -2595,7 +2614,9 @@ def test_repeat(data, repeats):
 )
 def test_repeat_lists(data, repeats):
     eval_general(
-        pd.Series(data), pandas.Series(data), lambda df: df.repeat(repeats),
+        pd.Series(data),
+        pandas.Series(data),
+        lambda df: df.repeat(repeats),
     )
 
 
@@ -2660,10 +2681,12 @@ def test_resample(closed, label, level):
         pandas_resampler.transform(lambda x: (x - x.mean()) / x.std()),
     )
     df_equals(
-        modin_resampler.aggregate("max"), pandas_resampler.aggregate("max"),
+        modin_resampler.aggregate("max"),
+        pandas_resampler.aggregate("max"),
     )
     df_equals(
-        modin_resampler.apply("sum"), pandas_resampler.apply("sum"),
+        modin_resampler.apply("sum"),
+        pandas_resampler.apply("sum"),
     )
     df_equals(
         modin_resampler.get_group(name=list(modin_resampler.groups)[0]),
@@ -2675,7 +2698,8 @@ def test_resample(closed, label, level):
     # Upsampling from level= or on= selection is not supported
     if level is None:
         df_equals(
-            modin_resampler.interpolate(), pandas_resampler.interpolate(),
+            modin_resampler.interpolate(),
+            pandas_resampler.interpolate(),
         )
         df_equals(modin_resampler.asfreq(), pandas_resampler.asfreq())
         df_equals(
@@ -2871,7 +2895,8 @@ def test_sem_float_nan_only(skipna, ddof):
 @pytest.mark.parametrize("ddof", int_arg_values, ids=arg_keys("ddof", int_arg_keys))
 def test_sem_int_only(ddof):
     eval_general(
-        *create_test_series(test_data["int_data"]), lambda df: df.sem(ddof=ddof),
+        *create_test_series(test_data["int_data"]),
+        lambda df: df.sem(ddof=ddof),
     )
 
 
@@ -2918,7 +2943,8 @@ def test_shift_slice_shift(data, index, periods):
         ]
 
     df_equals(
-        modin_series.shift(periods=periods), pandas_series.shift(periods=periods),
+        modin_series.shift(periods=periods),
+        pandas_series.shift(periods=periods),
     )
     df_equals(
         modin_series.shift(periods=periods, fill_value=777),
@@ -2945,7 +2971,9 @@ def test_sort_index(data, ascending, sort_remaining, na_position):
         modin_series,
         pandas_series,
         lambda df: df.sort_index(
-            ascending=ascending, sort_remaining=sort_remaining, na_position=na_position,
+            ascending=ascending,
+            sort_remaining=sort_remaining,
+            na_position=na_position,
         ),
     )
 
@@ -3162,7 +3190,8 @@ def test_to_numpy(data):
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_to_string(request, data):
     eval_general(
-        *create_test_series(data), lambda df: df.to_string(),
+        *create_test_series(data),
+        lambda df: df.to_string(),
     )
 
 
@@ -3191,7 +3220,8 @@ def test_tolist(data):
 @pytest.mark.parametrize("func", agg_func_values, ids=agg_func_keys)
 def test_transform(data, func):
     eval_general(
-        *create_test_series(data), lambda df: df.transform(func),
+        *create_test_series(data),
+        lambda df: df.transform(func),
     )
 
 
@@ -3199,7 +3229,8 @@ def test_transform(data, func):
 @pytest.mark.parametrize("func", agg_func_except_values, ids=agg_func_except_keys)
 def test_transform_except(data, func):
     eval_general(
-        *create_test_series(data), lambda df: df.transform(func),
+        *create_test_series(data),
+        lambda df: df.transform(func),
     )
 
 
@@ -3282,7 +3313,8 @@ def test_tz_localize():
         pandas_series.tz_localize("America/Los_Angeles"),
     )
     df_equals(
-        modin_series.tz_localize("UTC"), pandas_series.tz_localize("UTC"),
+        modin_series.tz_localize("UTC"),
+        pandas_series.tz_localize("UTC"),
     )
 
 

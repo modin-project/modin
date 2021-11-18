@@ -530,7 +530,9 @@ class TextFileDispatcher(FileDispatcher):
 
     @classmethod
     def _define_metadata(
-        cls, df: pandas.DataFrame, column_names: ColumnNamesTypes,
+        cls,
+        df: pandas.DataFrame,
+        column_names: ColumnNamesTypes,
     ) -> Tuple[list, int]:
         """
         Define partitioning metadata.
@@ -611,7 +613,9 @@ class TextFileDispatcher(FileDispatcher):
 
     @classmethod
     def check_parameters_support(
-        cls, filepath_or_buffer: FilePathOrBuffer, read_kwargs: dict,
+        cls,
+        filepath_or_buffer: FilePathOrBuffer,
+        read_kwargs: dict,
     ) -> bool:
         """
         Check support of only general parameters of `read_*` function.
@@ -768,7 +772,9 @@ class TextFileDispatcher(FileDispatcher):
 
     @classmethod
     def _define_index(
-        cls, index_ids: list, index_name: str,
+        cls,
+        index_ids: list,
+        index_name: str,
     ) -> Tuple[IndexColType, list]:
         """
         Compute the resulting DataFrame index and index lengths for each of partitions.
@@ -942,7 +948,10 @@ class TextFileDispatcher(FileDispatcher):
         # Define header size for further skipping (Header can be skipped because header
         # information will be obtained further from empty_df, so no need to handle it
         # by workers)
-        header_size = cls._define_header_size(header, names,)
+        header_size = cls._define_header_size(
+            header,
+            names,
+        )
         (
             skiprows_md,
             pre_reading,
@@ -952,7 +961,10 @@ class TextFileDispatcher(FileDispatcher):
             skiprows_md, int
         )
 
-        use_modin_impl = cls.check_parameters_support(filepath_or_buffer, kwargs,)
+        use_modin_impl = cls.check_parameters_support(
+            filepath_or_buffer,
+            kwargs,
+        )
         if not use_modin_impl:
             return cls.single_worker_read(
                 filepath_or_buffer, callback=cls.read_callback, **kwargs

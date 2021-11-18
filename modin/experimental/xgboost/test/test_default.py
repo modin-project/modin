@@ -20,7 +20,8 @@ import modin.pandas as pd
 
 
 @pytest.mark.skipif(
-    Engine.get() == "Ray", reason="This test doesn't make sense on Ray engine.",
+    Engine.get() == "Ray",
+    reason="This test doesn't make sense on Ray engine.",
 )
 @pytest.mark.skipif(
     Engine.get() == "Python",

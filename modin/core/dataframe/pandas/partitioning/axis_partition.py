@@ -215,7 +215,9 @@ class PandasDataframeAxisPartition(BaseDataframeAxisPartition):
         # reshaping flattened `rt_parts` array into a frame with shape `other_shape`
         combined_axis = [
             pandas.concat(
-                rt_parts[other_shape[i - 1] : other_shape[i]], axis=axis, copy=False,
+                rt_parts[other_shape[i - 1] : other_shape[i]],
+                axis=axis,
+                copy=False,
             )
             for i in range(1, len(other_shape))
         ]

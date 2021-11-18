@@ -81,7 +81,8 @@ def test_agg_apply(axis, func, op):
 @pytest.mark.parametrize("op", ["agg", "apply"])
 def test_agg_apply_axis_names(axis, func, op):
     eval_general(
-        *create_test_dfs(test_data["int_data"]), lambda df: getattr(df, op)(func, axis),
+        *create_test_dfs(test_data["int_data"]),
+        lambda df: getattr(df, op)(func, axis),
     )
 
 
@@ -387,5 +388,6 @@ def test_query_after_insert():
 )
 def test_transform(data, func):
     eval_general(
-        *create_test_dfs(data), lambda df: df.transform(func),
+        *create_test_dfs(data),
+        lambda df: df.transform(func),
     )

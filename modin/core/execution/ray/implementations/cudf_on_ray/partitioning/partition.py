@@ -251,7 +251,11 @@ class cuDFOnRayDataframePartition(PandasDataframePartition):
 
         iloc = cuDFOnRayDataframePartition.preprocess_func(iloc)
         return self.gpu_manager.apply.remote(
-            self.key, None, iloc, col_indices=col_indices, row_indices=row_indices,
+            self.key,
+            None,
+            iloc,
+            col_indices=col_indices,
+            row_indices=row_indices,
         )
 
     def get_gpu_manager(self):
@@ -335,7 +339,8 @@ class cuDFOnRayDataframePartition(PandasDataframePartition):
 
         # FIXME: Can't find `gpu_manager.apply_result_not_dataframe` method.
         return self.gpu_manager.apply_result_not_dataframe.remote(
-            self.get_key(), convert,
+            self.get_key(),
+            convert,
         )
 
     def free(self):
@@ -350,7 +355,10 @@ class cuDFOnRayDataframePartition(PandasDataframePartition):
         -------
         cuDFOnRayDataframePartition
         """
-        new_key = self.gpu_manager.apply.remote(self.get_key(), lambda x: x,)
+        new_key = self.gpu_manager.apply.remote(
+            self.get_key(),
+            lambda x: x,
+        )
         new_key = ray.get(new_key)
         return self.__constructor__(self.gpu_manager, new_key)
 

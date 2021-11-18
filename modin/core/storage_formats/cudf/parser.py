@@ -76,8 +76,10 @@ class cuDFParser(object):
         pandas_frame = cls.parse(fname, **kwargs)
         if isinstance(pandas_frame, pandas.io.parsers.TextFileReader):
             pd_read = pandas_frame.read
-            pandas_frame.read = lambda *args, **kwargs: cls.query_compiler_cls.from_pandas(
-                pd_read(*args, **kwargs), cls.frame_cls
+            pandas_frame.read = (
+                lambda *args, **kwargs: cls.query_compiler_cls.from_pandas(
+                    pd_read(*args, **kwargs), cls.frame_cls
+                )
             )
             return pandas_frame
         elif isinstance(pandas_frame, (OrderedDict, dict)):

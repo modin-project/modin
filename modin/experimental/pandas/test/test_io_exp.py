@@ -20,7 +20,8 @@ from modin.pandas.test.utils import df_equals, teardown_test_files, test_data
 
 
 @pytest.mark.skipif(
-    Engine.get() == "Dask", reason="Dask does not have experimental API",
+    Engine.get() == "Dask",
+    reason="Dask does not have experimental API",
 )
 def test_from_sql_distributed(make_sql_connection):  # noqa: F811
     if Engine.get() == "Ray":
@@ -52,7 +53,8 @@ def test_from_sql_distributed(make_sql_connection):  # noqa: F811
 
 
 @pytest.mark.skipif(
-    Engine.get() == "Dask", reason="Dask does not have experimental API",
+    Engine.get() == "Dask",
+    reason="Dask does not have experimental API",
 )
 def test_from_sql_defaults(make_sql_connection):  # noqa: F811
     filename = "test_from_sql_distributed.db"
@@ -135,7 +137,8 @@ def test_read_multiple_csv_s3():
 
 
 @pytest.mark.skipif(
-    not Engine.get() == "Ray", reason=f"{Engine.get()} does not have experimental API",
+    not Engine.get() == "Ray",
+    reason=f"{Engine.get()} does not have experimental API",
 )
 @pytest.mark.parametrize("compression", [None, "gzip"])
 @pytest.mark.parametrize(

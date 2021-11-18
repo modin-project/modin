@@ -26,7 +26,9 @@ class FWFDispatcher(TextFileDispatcher):
 
     @classmethod
     def check_parameters_support(
-        cls, filepath_or_buffer: FilePathOrBuffer, read_kwargs: dict,
+        cls,
+        filepath_or_buffer: FilePathOrBuffer,
+        read_kwargs: dict,
     ):
         """
         Check support of parameters of `read_fwf` function.
