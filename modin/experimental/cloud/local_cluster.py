@@ -56,10 +56,7 @@ class LocalConnection(Connection):
         if not capture_out and hasattr(redirect, "write"):
             redirect.write(f"Running: {cmd}\n")
         return subprocess.Popen(
-            cmd,
-            stdin=subprocess.DEVNULL,
-            stdout=redirect,
-            stderr=redirect,
+            cmd, stdin=subprocess.DEVNULL, stdout=redirect, stderr=redirect,
         )
 
     @staticmethod

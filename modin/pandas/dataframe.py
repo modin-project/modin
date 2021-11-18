@@ -696,8 +696,7 @@ class DataFrame(BasePandasDataset):
         """
         return self.__constructor__(
             query_compiler=self._query_compiler.corr(
-                method=method,
-                min_periods=min_periods,
+                method=method, min_periods=min_periods,
             )
         )
 

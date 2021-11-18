@@ -384,11 +384,7 @@ class DataFrameGroupBy(object):
                 )
             cols_to_grab = internal_by.union(key)
             key = [col for col in self._df.columns if col in cols_to_grab]
-            return DataFrameGroupBy(
-                self._df[key],
-                drop=self._drop,
-                **kwargs,
-            )
+            return DataFrameGroupBy(self._df[key], drop=self._drop, **kwargs,)
         if (
             self._is_multi_by
             and isinstance(self._by, list)
@@ -398,11 +394,7 @@ class DataFrameGroupBy(object):
                 "Column lookups on GroupBy with arbitrary Series in by"
                 " is not yet supported."
             )
-        return SeriesGroupBy(
-            self._df[key],
-            drop=False,
-            **kwargs,
-        )
+        return SeriesGroupBy(self._df[key], drop=False, **kwargs,)
 
     def cummin(self, axis=0, **kwargs):
         result = self._apply_agg_function(lambda df: df.cummin(axis=axis, **kwargs))
@@ -478,11 +470,7 @@ class DataFrameGroupBy(object):
             if callable(agg_func):
                 return agg_func(*args, **kwargs)
 
-        result = self._apply_agg_function(
-            func,
-            *args,
-            **kwargs,
-        )
+        result = self._apply_agg_function(func, *args, **kwargs,)
 
         if relabeling_required:
             if not self._as_index:

@@ -280,10 +280,7 @@ def create_actors(num_actors):
 
 
 def _split_data_across_actors(
-    actors: List,
-    set_func,
-    X_parts,
-    y_parts,
+    actors: List, set_func, X_parts, y_parts,
 ):
     """
     Split row partitions of data between actors.
@@ -299,15 +296,10 @@ def _split_data_across_actors(
     y_parts : list
         Row partitions of y data.
     """
-    X_parts_by_actors = _assign_row_partitions_to_actors(
-        actors,
-        X_parts,
-    )
+    X_parts_by_actors = _assign_row_partitions_to_actors(actors, X_parts,)
 
     y_parts_by_actors = _assign_row_partitions_to_actors(
-        actors,
-        y_parts,
-        data_for_aligning=X_parts_by_actors,
+        actors, y_parts, data_for_aligning=X_parts_by_actors,
     )
 
     for rank, (_, actor) in enumerate(actors):
@@ -315,9 +307,7 @@ def _split_data_across_actors(
 
 
 def _assign_row_partitions_to_actors(
-    actors: List,
-    row_partitions,
-    data_for_aligning=None,
+    actors: List, row_partitions, data_for_aligning=None,
 ):
     """
     Assign row_partitions to actors.
@@ -448,12 +438,7 @@ def _assign_row_partitions_to_actors(
 
 
 def _train(
-    dtrain,
-    params: Dict,
-    *args,
-    num_actors=None,
-    evals=(),
-    **kwargs,
+    dtrain, params: Dict, *args, num_actors=None, evals=(), **kwargs,
 ):
     """
     Run distributed training of XGBoost model on Ray engine.
@@ -582,17 +567,13 @@ def _map_predict(booster, part, columns, **kwargs):
     """
     dmatrix = xgb.DMatrix(part)
     prediction = pandas.DataFrame(
-        booster.predict(dmatrix, **kwargs),
-        index=part.index,
-        columns=columns,
+        booster.predict(dmatrix, **kwargs), index=part.index, columns=columns,
     )
     return prediction
 
 
 def _predict(
-    booster,
-    data,
-    **kwargs,
+    booster, data, **kwargs,
 ):
     """
     Run distributed prediction with a trained booster on Ray engine.

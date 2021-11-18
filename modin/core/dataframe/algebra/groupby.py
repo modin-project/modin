@@ -127,8 +127,7 @@ class GroupByReduce(MapReduce):
             other = other.squeeze(axis=axis ^ 1)
             if isinstance(other, pandas.DataFrame):
                 df = pandas.concat(
-                    [df] + [other[[o for o in other if o not in df]]],
-                    axis=1,
+                    [df] + [other[[o for o in other if o not in df]]], axis=1,
                 )
                 other = list(other.columns)
             by_part = other

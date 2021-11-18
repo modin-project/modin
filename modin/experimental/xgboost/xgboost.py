@@ -102,9 +102,7 @@ class Booster(xgb.Booster):
         super(Booster, self).__init__(params=params, cache=cache, model_file=model_file)
 
     def predict(
-        self,
-        data: DMatrix,
-        **kwargs,
+        self, data: DMatrix, **kwargs,
     ):
         """
         Run distributed prediction with a trained booster.

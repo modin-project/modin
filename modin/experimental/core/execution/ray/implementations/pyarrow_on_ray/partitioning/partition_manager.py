@@ -20,9 +20,7 @@ from .axis_partition import (
     PyarrowOnRayDataframeColumnPartition,
     PyarrowOnRayDataframeRowPartition,
 )
-from .partition import (
-    PyarrowOnRayDataframePartition,
-)
+from .partition import PyarrowOnRayDataframePartition
 
 
 class PyarrowOnRayDataframePartitionManager(GenericRayDataframePartitionManager):

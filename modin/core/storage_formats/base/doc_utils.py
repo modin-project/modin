@@ -272,10 +272,7 @@ def doc_reduce_agg(method, refer_to, params=None, extra_params=None):
         ]
     )
     return doc_qc_method(
-        template,
-        params=params,
-        method=method,
-        refer_to=f"DataFrame.{refer_to}",
+        template, params=params, method=method, refer_to=f"DataFrame.{refer_to}",
     )
 
 

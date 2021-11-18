@@ -57,9 +57,6 @@ class TimeReadCsvNames:
 
     def time_read_csv_names(self, cache, shape):
         df = IMPL[ASV_USE_IMPL].read_csv(
-            self.filename,
-            names=self.names,
-            header=0,
-            dtype=self.dtype,
+            self.filename, names=self.names, header=0, dtype=self.dtype,
         )
         trigger_import(df)

@@ -186,11 +186,7 @@ def from_partitions(
         columns = partition_mgr_class.get_indices(1, parts, lambda df: df.axes[1])
 
     frame = partition_frame_class(
-        parts,
-        index,
-        columns,
-        row_lengths=row_lengths,
-        column_widths=column_widths,
+        parts, index, columns, row_lengths=row_lengths, column_widths=column_widths,
     )
 
     if labels_axis_to_sync != -1:

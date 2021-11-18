@@ -313,9 +313,7 @@ def TestReadCSVFixture():
     # each xdist worker spawned in separate process with separate namespace and dataset
     pytest.csvs_names = {file_id: get_unique_filename() for file_id in files_ids}
     # test_read_csv_col_handling, test_read_csv_parsing
-    _make_csv_file(filenames)(
-        filename=pytest.csvs_names["test_read_csv_regular"],
-    )
+    _make_csv_file(filenames)(filename=pytest.csvs_names["test_read_csv_regular"],)
     # test_read_csv_parsing
     _make_csv_file(filenames)(
         filename=pytest.csvs_names["test_read_csv_yes_no"],
@@ -323,8 +321,7 @@ def TestReadCSVFixture():
     )
     # test_read_csv_col_handling
     _make_csv_file(filenames)(
-        filename=pytest.csvs_names["test_read_csv_blank_lines"],
-        add_blank_lines=True,
+        filename=pytest.csvs_names["test_read_csv_blank_lines"], add_blank_lines=True,
     )
     # test_read_csv_nans_handling
     _make_csv_file(filenames)(
@@ -334,8 +331,7 @@ def TestReadCSVFixture():
     )
     # test_read_csv_error_handling
     _make_csv_file(filenames)(
-        filename=pytest.csvs_names["test_read_csv_bad_lines"],
-        add_bad_lines=True,
+        filename=pytest.csvs_names["test_read_csv_bad_lines"], add_bad_lines=True,
     )
 
     yield

@@ -1868,11 +1868,7 @@ class Series(BasePandasDataset):
         """
         return (
             super(Series, self)
-            .to_numpy(
-                dtype=dtype,
-                copy=copy,
-                na_value=na_value,
-            )
+            .to_numpy(dtype=dtype, copy=copy, na_value=na_value,)
             .flatten()
         )
 

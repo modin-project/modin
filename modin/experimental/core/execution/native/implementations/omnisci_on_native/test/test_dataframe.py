@@ -270,10 +270,7 @@ class TestCSV:
     )
     @pytest.mark.parametrize("names", [None, [f"c{x}" for x in range(1, 7)]])
     def test_read_csv_datetime(
-        self,
-        engine,
-        parse_dates,
-        names,
+        self, engine, parse_dates, names,
     ):
 
         parse_dates_unsupported = isinstance(parse_dates, dict) or (
@@ -316,9 +313,7 @@ class TestCSV:
         ],
     )
     def test_read_csv_col_handling(
-        self,
-        engine,
-        usecols,
+        self, engine, usecols,
     ):
         eval_io(
             fn_name="read_csv",
@@ -628,11 +623,7 @@ class TestConcat:
             return lib.concat([df], join=join, sort=sort, ignore_index=ignore_index)
 
         run_and_compare(
-            concat,
-            data=self.data,
-            join=join,
-            sort=sort,
-            ignore_index=ignore_index,
+            concat, data=self.data, join=join, sort=sort, ignore_index=ignore_index,
         )
 
     def test_groupby_concat_single(self):
@@ -641,8 +632,7 @@ class TestConcat:
             return df.groupby("a").agg({"b": "min"})
 
         run_and_compare(
-            concat,
-            data=self.data,
+            concat, data=self.data,
         )
 
     @pytest.mark.parametrize("join", ["inner"])
@@ -1813,9 +1803,7 @@ class TestSort:
             return df.sort_values(["a", "b"], ascending=ascending)
 
         run_and_compare(
-            sort,
-            data=self.data,
-            ascending=ascending,
+            sort, data=self.data, ascending=ascending,
         )
 
     @pytest.mark.parametrize("ascending", ascending_values)
@@ -1824,9 +1812,7 @@ class TestSort:
             return df.sort_values("d", ascending=ascending)
 
         run_and_compare(
-            sort,
-            data=self.data,
-            ascending=ascending,
+            sort, data=self.data, ascending=ascending,
         )
 
     @pytest.mark.parametrize("cols", cols_values)

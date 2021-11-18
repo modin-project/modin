@@ -15,9 +15,7 @@
 
 import os
 
-from modin.core.io.column_stores.column_store_dispatcher import (
-    ColumnStoreDispatcher,
-)
+from modin.core.io.column_stores.column_store_dispatcher import ColumnStoreDispatcher
 from modin.error_message import ErrorMessage
 from modin.utils import import_optional_dependency
 
@@ -57,8 +55,7 @@ class ParquetDispatcher(ColumnStoreDispatcher):
         https://arrow.apache.org/docs/python/parquet.html
         """
         import_optional_dependency(
-            "pyarrow",
-            "pyarrow is required to read parquet files.",
+            "pyarrow", "pyarrow is required to read parquet files.",
         )
         from pyarrow.parquet import ParquetDataset
         from modin.pandas.io import PQ_INDEX_REGEX
