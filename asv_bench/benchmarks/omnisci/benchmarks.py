@@ -29,6 +29,11 @@ from ..utils import (
     get_benchmark_shapes,
 )
 
+from ..benchmarks import (
+    TimeIndexing as TimeIndexingPandasExecution,
+    TimeIndexingColumns as TimeIndexingColumnsPandasExecution,
+)
+
 
 class TimeJoin:
     param_names = ["shape", "how"]
@@ -296,35 +301,18 @@ class TimeValueCountsSeries(BaseTimeValueCounts):
         execute(self.series.value_counts())
 
 
-class TimeIndexing:
-    param_names = ["shape", "indexer_type"]
+class TimeIndexing(TimeIndexingPandasExecution):
     params = [
         get_benchmark_shapes("omnisci.TimeIndexing"),
-        [
-            "scalar",
-            "bool",
-            "slice",
-            "list",
-            "function",
-        ],
+        *TimeIndexingPandasExecution.params[1:],
     ]
 
-    def setup(self, shape, indexer_type):
-        self.df = generate_dataframe(ASV_USE_IMPL, "int", *shape, RAND_LOW, RAND_HIGH)
-        trigger_import(self.df)
-        self.indexer = {
-            "bool": [False, True] * (shape[0] // 2),
-            "scalar": shape[0] // 2,
-            "slice": slice(0, shape[0], 2),
-            "list": list(range(shape[0])),
-            "function": lambda df: df.index[::-2],
-        }[indexer_type]
 
-    def time_iloc(self, shape, indexer_type):
-        execute(self.df.iloc[self.indexer])
-
-    def time_loc(self, shape, indexer_type):
-        execute(self.df.loc[self.indexer])
+class TimeIndexingColumns(TimeIndexingColumnsPandasExecution):
+    params = [
+        get_benchmark_shapes("omnisci.TimeIndexing"),
+        *TimeIndexingColumnsPandasExecution.params[1:],
+    ]
 
 
 class TimeResetIndex:

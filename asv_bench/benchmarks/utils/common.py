@@ -456,7 +456,8 @@ def trigger_import(*dfs):
     *dfs : iterable
         DataFrames to trigger import.
     """
-    assert ASV_USE_STORAGE_FORMAT == "omnisci"
+    if ASV_USE_STORAGE_FORMAT != "omnisci":
+        return
 
     from modin.experimental.core.execution.native.implementations.omnisci_on_native.omnisci_worker import (
         OmnisciServer,
