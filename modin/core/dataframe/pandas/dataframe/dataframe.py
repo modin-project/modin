@@ -1255,25 +1255,25 @@ class PandasDataframe(ModinDataframe):
         """
         Perform a user-defined per-column aggregation, where each column reduces down to a single value.
 
-        Notes
-        -----
-            The user-defined function must reduce to a single value.
-
         Parameters
         ----------
-            axis: int
-                The axis to perform the reduce over.
-            function: callable
-                The reduce function to apply to each column.
-            dtypes: str
-                The data types for the result. This is an optimization
-                because there are functions that always result in a particular data
-                type, and this allows us to avoid (re)computing it.
+        axis : int
+            The axis to perform the reduce over.
+        function : callable
+            The reduce function to apply to each column.
+        dtypes : str, default: None
+            The data types for the result. This is an optimization
+            because there are functions that always result in a particular data
+            type, and this allows us to avoid (re)computing it.
 
         Returns
         -------
         PandasDataframe
             Modin series (1xN frame) containing the reduced data.
+
+        Notes
+        -----
+        The user-defined function must reduce to a single value.
         """
         new_df = self.reduce_full_axis(axis, function)
 
@@ -1351,30 +1351,31 @@ class PandasDataframe(ModinDataframe):
         window_size,
         result_schema=None,
     ) -> "PandasDataframe":
-        """Apply a sliding window operator that acts as a GROUPBY on each window, and reduces down to a single row (column) per window.
-
-        Notes
-        -----
-            The user-defined reduce function must reduce each window’s column
-                (row if axis=1) down to a single value.
+        """
+        Apply a sliding window operator that acts as a GROUPBY on each window, and reduces down to a single row (column) per window.
 
         Parameters
         ----------
-            axis: int
-                The axis to slide over.
-            reduce_fn: callable
-                The reduce function to apply over the data.
-            window_size: int
-                The number of row/columns to pass to the function.
-                (The size of the sliding window).
-            result_schema: dictionary of dtypes
-                Mapping from column labels to data types that represents the types of the output dataframe.
+        axis : int
+            The axis to slide over.
+        reduce_fn : callable
+            The reduce function to apply over the data.
+        window_size : int
+            The number of row/columns to pass to the function.
+            (The size of the sliding window).
+        result_schema : dict, default: None
+            Mapping from column labels to data types that represents the types of the output dataframe.
 
         Returns
         -------
         PandasDataframe
             A new PandasDataframe with the reduce function applied over windows of the specified
                 axis.
+
+        Notes
+        -----
+        The user-defined reduce function must reduce each window’s column
+            (row if axis=1) down to a single value.
         """
         pass
 
@@ -1410,12 +1411,13 @@ class PandasDataframe(ModinDataframe):
         )
 
     def infer_types(self, columns_list: List[str]) -> "PandasDataframe":
-        """Determine the compatible type shared by all values in the specified columns, and coerce them to that type.
+        """
+        Determine the compatible type shared by all values in the specified columns, and coerce them to that type.
 
         Parameters
         ----------
-            columns_list: list of strings
-                List of column labels to infer and induce types over.
+        columns_list : list
+            List of column labels to infer and induce types over.
 
         Returns
         -------
@@ -1425,55 +1427,60 @@ class PandasDataframe(ModinDataframe):
         pass
 
     def join(self, axis, condition, other, join_type) -> "PandasDataframe":
-        """Join this dataframe with the other.
-
-        Notes
-        -----
-            During the join, this dataframe is considered the left, while the other is
-                treated as the right.
-
-            Only inner joins, left outer, right outer, and full outer joins are currently supported.
-                Support for other join types (e.g. natural join) may be implemented in the future.
+        """
+        Join this dataframe with the other.
 
         Parameters
         ----------
-            axis: int
-                The axis to perform the join on.
-            condition: callable
-                Function that determines which rows should be joined. The condition can be a
-                simple equality, e.g. "left.col1 == right.col1" or can be arbitrarily complex.
-            other: ModinDataframe
-                The other data to join with, i.e. the right dataframe.
-            join_type: string
-                The type of join to perform.
+        axis : int
+            The axis to perform the join on.
+        condition : callable
+            Function that determines which rows should be joined. The condition can be a
+            simple equality, e.g. "left.col1 == right.col1" or can be arbitrarily complex.
+        other : ModinDataframe
+            The other data to join with, i.e. the right dataframe.
+        join_type : string
+            The type of join to perform.
 
         Returns
         -------
         PandasDataframe
             A new PandasDataframe that is the result of applying the specified join over the two
             dataframes.
+
+        Notes
+        -----
+        During the join, this dataframe is considered the left, while the other is
+            treated as the right.
+
+        Only inner joins, left outer, right outer, and full outer joins are currently supported.
+            Support for other join types (e.g. natural join) may be implemented in the future.
         """
         pass
 
     def rename(
         self, new_row_labels=None, new_col_labels=None, level=None
     ) -> "PandasDataframe":
-        """Replace the row and column labels with the specified new labels.
-        Notes
-        -----
-            If level is not specified, the default behavior is to replace row labels in all levels.
+        """
+        Replace the row and column labels with the specified new labels.
+
         Parameters
         ----------
-            new_row_labels: dictionary or callable
-                Mapping from old row labels to new labels
-            new_col_labels: dictionary or callable
-                Mapping from old col labels to new labels
-            level: int
-                Level whose row labels to replace
+        new_row_labels : dict or callable, default: None
+            Mapping from old row labels to new labels.
+        new_col_labels : dict or callable, default: None
+            Mapping from old col labels to new labels.
+        level : int, default: None
+            Level whose row labels to replace.
+
         Returns
         -------
         PandasDataframe
             A new PandasDataframe with the new row and column labels.
+
+        Notes
+        -----
+        If level is not specified, the default behavior is to replace row labels in all levels.
         """
         new_index = self.index.copy()
 
@@ -1521,16 +1528,17 @@ class PandasDataframe(ModinDataframe):
         )
 
     def sort_by(self, axis, columns, ascending=True) -> "PandasDataframe":
-        """Logically reorder rows (columns if axis=1) lexicographically by the data in a column or set of columns.
+        """
+        Logically reorder rows (columns if axis=1) lexicographically by the data in a column or set of columns.
 
         Parameters
         ----------
-            axis: int
-                The axis to perform the sort over.
-            columns: string or list of strings
-                Column label(s) to use to determine lexicographical ordering.
-            ascending: boolean
-                Whether to sort in ascending or descending order.
+        axis : int
+            The axis to perform the sort over.
+        columns : string or list
+            Column label(s) to use to determine lexicographical ordering.
+        ascending : boolean, default: True
+            Whether to sort in ascending or descending order.
 
         Returns
         -------
@@ -1579,11 +1587,12 @@ class PandasDataframe(ModinDataframe):
         )
 
     def filter_by_types(self, types):
-        """Allow the user to specify a type or set of types by which to filter the columns.
+        """
+        Allow the user to specify a type or set of types by which to filter the columns.
 
         Parameters
         ----------
-        types: list of hashables
+        types : list
             The types to filter columns by.
 
         Returns
@@ -2318,37 +2327,38 @@ class PandasDataframe(ModinDataframe):
         )
 
     def groupby(self, axis, by, operator, result_schema=None):
-        """Generate groups based on values in the input column(s) and perform the specified operation on each.
-
-        Notes
-        -----
-            No communication between groups is allowed in this algebra implementation.
-
-            The number of rows (columns if axis=1) returned by the user-defined function
-                passed to the groupby may be at most the number of rows in the group, and
-                may be as small as a single row.
-
-            Unlike the pandas API, an intermediate “GROUP BY” object is not present in this
-                algebra implementation.
+        """
+        Generate groups based on values in the input column(s) and perform the specified operation on each.
 
         Parameters
         ----------
-            axis: int
-                The axis to apply the grouping over.
-            by: string or list of strings
-                One or more column labels to use for grouping.
-            operator: callable
-                The operation to carry out on each of the groups. The operator is another
-                algebraic operator with its own user-defined function parameter, depending
-                on the output desired by the user.
-            result_schema: dictionary of dtypes
-                Mapping from column labels to data types that represents the types of the output dataframe.
+        axis : int
+            The axis to apply the grouping over.
+        by : string or list of strings
+            One or more column labels to use for grouping.
+        operator : callable
+            The operation to carry out on each of the groups. The operator is another
+            algebraic operator with its own user-defined function parameter, depending
+            on the output desired by the user.
+        result_schema : dict, default: None
+            Mapping from column labels to data types that represents the types of the output dataframe.
 
         Returns
         -------
         PandasDataframe
             A new PandasDataframe containing the groupings specified, with the operator
                 applied to each group.
+
+        Notes
+        -----
+        No communication between groups is allowed in this algebra implementation.
+
+        The number of rows (columns if axis=1) returned by the user-defined function
+            passed to the groupby may be at most the number of rows in the group, and
+            may be as small as a single row.
+
+        Unlike the pandas API, an intermediate “GROUP BY” object is not present in this
+            algebra implementation.
         """
         pass
 
