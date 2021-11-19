@@ -183,9 +183,7 @@ def test_from_partitions_mismatched_labels(axis, index, columns):
 @pytest.mark.parametrize("col_labels", [[0, 2], slice(None)])
 @pytest.mark.parametrize("is_length_future", [False, True])
 @pytest.mark.parametrize("is_width_future", [False, True])
-def test_mask_preserve_cache(
-    row_labels, col_labels, is_length_future, is_width_future
-):
+def test_mask_preserve_cache(row_labels, col_labels, is_length_future, is_width_future):
     def deserialize(obj):
         if isinstance(obj, FutureType):
             return get_func(obj)

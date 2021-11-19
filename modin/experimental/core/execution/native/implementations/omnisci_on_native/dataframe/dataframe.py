@@ -311,9 +311,7 @@ class OmnisciOnNativeDataframe(PandasDataframe):
             )
 
         if row_labels is not None or row_positions is not None:
-            op = MaskNode(
-                base, row_labels=row_labels, row_positions=row_positions
-            )
+            op = MaskNode(base, row_labels=row_labels, row_positions=row_positions)
             return self.__constructor__(
                 columns=base.columns,
                 dtypes=base._dtypes,
@@ -1769,9 +1767,7 @@ class OmnisciOnNativeDataframe(PandasDataframe):
         """
         table = self._execute_arrow()
 
-        if not isinstance(row_positions, slice) and not is_range_like(
-            row_positions
-        ):
+        if not isinstance(row_positions, slice) and not is_range_like(row_positions):
             if not isinstance(row_positions, (pyarrow.Array, np.ndarray, list)):
                 row_positions = pyarrow.array(row_positions)
             return table.take(row_positions)
