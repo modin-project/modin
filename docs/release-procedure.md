@@ -99,7 +99,7 @@ to test that the wheels were uploaded correctly.
 
 ### Github
 
-After all is said and done and pushed to PyPI, open Github Releases page and create a new release. It should be enough to just specify "release from tag" and point it to newly created `X.Y.Z` tag without filling any extra information - Github should pull that from your tag annotations.
+After all is said and done and pushed to PyPI, open Github Releases page and create a new release. It should be enough to just specify "release from tag" and point it to newly created `X.Y.Z` tag plus fill the release title - it should read `Modin X.Y.Z` - Github should pull everything else including release text from your tag annotations.
 
 ### Conda-forge
 
