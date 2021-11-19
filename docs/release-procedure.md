@@ -50,6 +50,7 @@ Push the commit, make a PR _against `release-X.Y.Z`_ branch and, when it's merge
         git tag -as X.Y.Z
 
   * Look for [other releases](https://github.com/modin-project/modin/releases) on examples of how to compose the release documentation
+    * Start with a `Modin X.Y.Z` line followed by an empty line
     * Always try to make a one-line summary
     * The annotation should contain features and changes compared to previous release
     * You can link to merge commits, but try to "explain" what a PR does instead of blindly copying its title
@@ -99,7 +100,7 @@ to test that the wheels were uploaded correctly.
 
 ### Github
 
-After all is said and done and pushed to PyPI, open Github Releases page and create a new release. It should be enough to just specify "release from tag" and point it to newly created `X.Y.Z` tag without filling any extra information - Github should pull that from your tag annotations.
+After all is said and done and pushed to PyPI, open Github Releases page and create a new release. It should be enough to just specify "release from tag" and point it to newly created `X.Y.Z` tag (ensure the release title reads `Modin X.Y.Z`) - Github should pull everything including release text from your tag annotations.
 
 ### Conda-forge
 

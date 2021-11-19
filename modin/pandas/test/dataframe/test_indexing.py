@@ -107,10 +107,7 @@ def test_asof_without_nan(dates, subset):
 
 @pytest.mark.parametrize(
     "lookup",
-    [
-        [60, 70, 90],
-        [60.5, 70.5, 100],
-    ],
+    [[60, 70, 90], [60.5, 70.5, 100]],
 )
 @pytest.mark.parametrize("subset", ["col2", "col1", ["col1", "col2"], None])
 def test_asof_large(lookup, subset):

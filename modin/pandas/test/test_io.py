@@ -60,6 +60,15 @@ if StorageFormat.get() == "Pandas":
     import modin.pandas as pd
 else:
     import modin.experimental.pandas as pd
+
+try:
+    import ray
+
+    EXCEPTIONS = (ray.exceptions.WorkerCrashedError,)
+except ImportError:
+    EXCEPTIONS = ()
+
+
 from modin.config import NPartitions
 
 NPartitions.put(4)
@@ -144,7 +153,20 @@ def eval_to_file(modin_obj, pandas_obj, fn, extension, **fn_kwargs):
     unique_filename_pandas = get_unique_filename(extension=extension)
 
     try:
-        getattr(modin_obj, fn)(unique_filename_modin, **fn_kwargs)
+        # parameter `max_retries=0` is set for `to_csv` function on Ray engine,
+        # in order to increase the stability of tests, we repeat the call of
+        # the entire function manually
+        last_exception = None
+        for _ in range(3):
+            try:
+                getattr(modin_obj, fn)(unique_filename_modin, **fn_kwargs)
+            except EXCEPTIONS as exc:
+                last_exception = exc
+                continue
+            break
+        else:
+            raise last_exception
+
         getattr(pandas_obj, fn)(unique_filename_pandas, **fn_kwargs)
 
         assert assert_files_eq(unique_filename_modin, unique_filename_pandas)
@@ -397,11 +419,7 @@ class TestCsv:
 
     @pytest.mark.parametrize(
         "test_case",
-        [
-            "single_element",
-            "single_column",
-            "multiple_columns",
-        ],
+        ["single_element", "single_column", "multiple_columns"],
     )
     def test_read_csv_squeeze(self, request, test_case):
         if request.config.getoption("--simulate-cloud").lower() != "off":
@@ -1333,11 +1351,7 @@ class TestParquet:
         reason="The reason of tests fail in `cloud` mode is unknown for now - issue #3264",
     )
     def test_read_parquet_2462(self):
-        test_df = pandas.DataFrame(
-            {
-                "col1": [["ad_1", "ad_2"], ["ad_3"]],
-            }
-        )
+        test_df = pandas.DataFrame({"col1": [["ad_1", "ad_2"], ["ad_3"]]})
 
         with tempfile.TemporaryDirectory() as directory:
             path = f"{directory}/data"

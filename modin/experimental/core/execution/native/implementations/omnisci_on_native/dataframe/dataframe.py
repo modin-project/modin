@@ -17,9 +17,7 @@ from modin.core.dataframe.pandas.dataframe.dataframe import PandasDataframe
 from modin.experimental.core.storage_formats.omnisci.query_compiler import (
     DFAlgQueryCompiler,
 )
-from ..partitioning.partition_manager import (
-    OmnisciOnNativeDataframePartitionManager,
-)
+from ..partitioning.partition_manager import OmnisciOnNativeDataframePartitionManager
 
 from pandas.core.indexes.api import ensure_index, Index, MultiIndex, RangeIndex
 from pandas.core.dtypes.common import get_dtype, is_list_like, is_bool_dtype
