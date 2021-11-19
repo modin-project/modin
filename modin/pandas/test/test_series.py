@@ -974,35 +974,31 @@ def test_asof(where):
     # With NaN:
     values = [1, 2, np.nan, 4]
     index = [10, 20, 30, 40]
-    modin_series, pandas_series = pd.Series(values, index=index), pandas.Series(
-        values, index=index
+    modin_series, pandas_series = (
+        pd.Series(values, index=index),
+        pandas.Series(values, index=index),
     )
     df_equals(modin_series.asof(where), pandas_series.asof(where))
 
     # No NaN:
     values = [1, 2, 7, 4]
-    modin_series, pandas_series = pd.Series(values, index=index), pandas.Series(
-        values, index=index
+    modin_series, pandas_series = (
+        pd.Series(values, index=index),
+        pandas.Series(values, index=index),
     )
     df_equals(modin_series.asof(where), pandas_series.asof(where))
 
 
 @pytest.mark.parametrize(
     "where",
-    [
-        20,
-        30,
-        [10.5, 40.5],
-        [10],
-        pandas.Index([20, 30]),
-        pandas.Index([10.5]),
-    ],
+    [20, 30, [10.5, 40.5], [10], pandas.Index([20, 30]), pandas.Index([10.5])],
 )
 def test_asof_large(where):
     values = test_data["float_nan_data"]["col1"]
     index = list(range(len(values)))
-    modin_series, pandas_series = pd.Series(values, index=index), pandas.Series(
-        values, index=index
+    modin_series, pandas_series = (
+        pd.Series(values, index=index),
+        pandas.Series(values, index=index),
     )
     df_equals(modin_series.asof(where), pandas_series.asof(where))
 

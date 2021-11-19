@@ -23,9 +23,7 @@ from modin.core.storage_formats.base.query_compiler import (
     _get_axis as default_axis_getter,
 )
 from modin.core.storage_formats.pandas.query_compiler import PandasQueryCompiler
-from modin.utils import (
-    _inherit_docstrings,
-)
+from modin.utils import _inherit_docstrings
 from modin.error_message import ErrorMessage
 import pandas
 

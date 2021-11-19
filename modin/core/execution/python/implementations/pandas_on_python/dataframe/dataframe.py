@@ -18,9 +18,7 @@ Module contains class ``PandasOnPythonDataframe``.
 """
 
 from modin.core.dataframe.pandas.dataframe.dataframe import PandasDataframe
-from ..partitioning.partition_manager import (
-    PandasOnPythonDataframePartitionManager,
-)
+from ..partitioning.partition_manager import PandasOnPythonDataframePartitionManager
 
 
 class PandasOnPythonDataframe(PandasDataframe):

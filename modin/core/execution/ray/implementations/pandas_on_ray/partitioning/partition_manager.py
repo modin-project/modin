@@ -25,9 +25,7 @@ from .axis_partition import (
     PandasOnRayDataframeColumnPartition,
     PandasOnRayDataframeRowPartition,
 )
-from .partition import (
-    PandasOnRayDataframePartition,
-)
+from .partition import PandasOnRayDataframePartition
 from modin.core.execution.ray.generic.modin_aqp import call_progress_bar
 from modin.error_message import ErrorMessage
 import pandas

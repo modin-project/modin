@@ -397,11 +397,7 @@ class TestCsv:
 
     @pytest.mark.parametrize(
         "test_case",
-        [
-            "single_element",
-            "single_column",
-            "multiple_columns",
-        ],
+        ["single_element", "single_column", "multiple_columns"],
     )
     def test_read_csv_squeeze(self, request, test_case):
         if request.config.getoption("--simulate-cloud").lower() != "off":
@@ -1333,11 +1329,7 @@ class TestParquet:
         reason="The reason of tests fail in `cloud` mode is unknown for now - issue #3264",
     )
     def test_read_parquet_2462(self):
-        test_df = pandas.DataFrame(
-            {
-                "col1": [["ad_1", "ad_2"], ["ad_3"]],
-            }
-        )
+        test_df = pandas.DataFrame({"col1": [["ad_1", "ad_2"], ["ad_3"]]})
 
         with tempfile.TemporaryDirectory() as directory:
             path = f"{directory}/data"
