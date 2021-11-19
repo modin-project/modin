@@ -34,8 +34,7 @@ scheduling computation!
 Release candidates
 """"""""""""""""""
 
-Before most major releases, we will upload a release candidate to If you would like to
-install a pre-release of Modin, run the following:
+Before most major releases, we will upload a release candidate to test and check if there are any problems. If you would like to install a pre-release of Modin, run the following:
 
 .. code-block:: bash
 
@@ -54,6 +53,27 @@ storage formats or for different functionalities of Modin. Here is a list of dep
 .. code-block:: bash
 
   pip install "modin[dask]" # If you want to use the Dask execution engine
+
+Installing on Google Colab
+"""""""""""""""""""""""""""
+
+Modin can be used with Google Colab_ via the ``pip`` command, by running the following code in a new cell:
+
+.. code-block:: bash
+
+  !pip install modin[all]
+
+Since Colab preloads several of Modin's dependencies by default, we need to restart the Colab environment once Modin is installed by either clicking on the :code:`"RESTART RUNTIME"` button in the installation output or by run the following code:
+
+.. code-block:: python
+
+  # Post-install automatically kill and restart Colab environment 
+  import os
+  os.kill(os.getpid(), 9)
+
+Once you have restarted the Colab environment, you can use Modin in Colab in subsequent sessions.
+
+Note that on the free version of Colab, there is a `limit on the compute resource <https://research.google.com/colaboratory/faq.html>`_. To leverage the full power of Modin, you may have to upgrade to Colab Pro to get access to more compute resources.
 
 Installing with conda
 ---------------------
@@ -158,3 +178,4 @@ Once cloned, ``cd`` into the ``modin`` directory and use ``pip`` to install:
 .. _OmniSci: https://www.omnisci.com/platform/omniscidb
 .. _`Intel Distribution of Modin`: https://software.intel.com/content/www/us/en/develop/tools/oneapi/components/distribution-of-modin.html#gs.86stqv
 .. |reg|    unicode:: U+000AE .. REGISTERED SIGN
+.. _Colab: https://colab.research.google.com/

@@ -124,9 +124,18 @@ def test_xgb_with_binary_classification_datasets(data, num_actors, modin_type_y)
 @pytest.mark.parametrize(
     "data",
     [
-        (load_iris(), {"num_class": 3}),
-        (load_digits(), {"num_class": 10}),
-        (load_wine(), {"num_class": 3}),
+        (
+            load_iris(),
+            {"num_class": 3},
+        ),
+        (
+            load_digits(),
+            {"num_class": 10},
+        ),
+        (
+            load_wine(),
+            {"num_class": 3},
+        ),
     ],
     ids=["load_iris", "load_digits", "load_wine"],
 )
