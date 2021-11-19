@@ -1124,11 +1124,7 @@ def generate_dataframe(row_size=NROWS, additional_col_values=None):
 
     if additional_col_values is not None:
         assert isinstance(additional_col_values, (list, tuple))
-        data.update(
-            {
-                "col7": random_state.choice(additional_col_values, size=row_size),
-            }
-        )
+        data.update({"col7": random_state.choice(additional_col_values, size=row_size)})
     return pandas.DataFrame(data)
 
 

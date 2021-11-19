@@ -63,6 +63,42 @@ If you would like to request a particular method be implemented, feel free to `o
 issue`_. Before you open an issue please make sure that someone else has not already
 requested that functionality.
 
+Connecting to a database for `read_sql`
+---------------------------------------
+
+To make Pandas read from a SQL database, you have two options:
+
+1) Pass a connection string, e.g. ``postgresql://reader:NWDMCE5xdipIjRrp@hh-pgsql-public.ebi.ac.uk:5432/pfmegrnargs``
+2) Pass an open database connection, e.g. for psycopg2, ``psycopg2.connect("dbname=pfmegrnargs user=reader password=NWDMCE5xdipIjRrp host=hh-pgsql-public.ebi.ac.uk")``
+
+The first option works with both Modin and Pandas. If you try the second option
+in Modin, Modin will default to pandas because open database connections cannot be pickled.
+Pickling is required to send connection details to remote workers.
+To handle the unique requirements of distributed database access, Modin has a distributed
+database connection called ``ModinDatabaseConnection``:
+
+.. code-block:: python
+
+    import modin.pandas as pd
+    from modin.db_conn import ModinDatabaseConnection
+    con = ModinDatabaseConnection(
+        'psycopg2',
+        host='hh-pgsql-public.ebi.ac.uk',
+        dbname='pfmegrnargs',
+        user='reader',
+        password='NWDMCE5xdipIjRrp')
+    df = pd.read_sql("SELECT * FROM rnc_database",
+                con,
+            index_col=None,
+            coerce_float=True,
+            params=None,
+            parse_dates=None,
+            chunksize=None)
+
+
+The ``ModinDatabaseConnection`` will save any arguments you supply it and forward
+them to the workers to make their own connections.
+
 Using Modin on a Cluster (experimental)
 ---------------------------------------
 

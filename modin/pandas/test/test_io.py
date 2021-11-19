@@ -18,6 +18,7 @@ from pandas.errors import ParserWarning
 import pandas._libs.lib as lib
 from pandas.core.dtypes.common import is_list_like
 from collections import OrderedDict
+from modin.db_conn import ModinDatabaseConnection, UnsupportedDatabaseException
 from modin.config import TestDatasetSize, Engine, StorageFormat, IsExperimental
 from modin.utils import to_pandas
 from modin.pandas.utils import from_arrow
@@ -396,11 +397,7 @@ class TestCsv:
 
     @pytest.mark.parametrize(
         "test_case",
-        [
-            "single_element",
-            "single_column",
-            "multiple_columns",
-        ],
+        ["single_element", "single_column", "multiple_columns"],
     )
     def test_read_csv_squeeze(self, request, test_case):
         if request.config.getoption("--simulate-cloud").lower() != "off":
@@ -1332,11 +1329,7 @@ class TestParquet:
         reason="The reason of tests fail in `cloud` mode is unknown for now - issue #3264",
     )
     def test_read_parquet_2462(self):
-        test_df = pandas.DataFrame(
-            {
-                "col1": [["ad_1", "ad_2"], ["ad_3"]],
-            }
-        )
+        test_df = pandas.DataFrame({"col1": [["ad_1", "ad_2"], ["ad_3"]]})
 
         with tempfile.TemporaryDirectory() as directory:
             path = f"{directory}/data"
@@ -1698,22 +1691,31 @@ class TestSql:
             pd.read_sql_table(table, conn)
 
         # Test SQLAlchemy engine
-        conn = sa.create_engine(conn)
+        sqlalchemy_engine = sa.create_engine(conn)
         eval_io(
             fn_name="read_sql",
             # read_sql kwargs
             sql=query,
-            con=conn,
+            con=sqlalchemy_engine,
         )
 
         # Test SQLAlchemy Connection
-        conn = conn.connect()
+        sqlalchemy_connection = sqlalchemy_engine.connect()
         eval_io(
             fn_name="read_sql",
             # read_sql kwargs
             sql=query,
-            con=conn,
+            con=sqlalchemy_connection,
         )
+
+        modin_df = pd.read_sql(
+            sql=query, con=ModinDatabaseConnection("sqlalchemy", conn)
+        )
+        pandas_df = pandas.read_sql(sql=query, con=sqlalchemy_connection)
+        df_equals(modin_df, pandas_df)
+
+        with pytest.raises(UnsupportedDatabaseException):
+            ModinDatabaseConnection("unsupported_database")
 
     @pytest.mark.xfail(
         condition="config.getoption('--simulate-cloud').lower() != 'off'",
@@ -1864,7 +1866,19 @@ class TestFwf:
 
         df_equals(modin_df, pd_df)
 
-    @pytest.mark.parametrize("nrows", [13, None])
+    @pytest.mark.parametrize(
+        "nrows",
+        [
+            pytest.param(
+                13,
+                marks=pytest.mark.xfail(
+                    Engine.get() == "Ray",
+                    reason="read_fwf bug on pandas side: pandas-dev/pandas#44021",
+                ),
+            ),
+            None,
+        ],
+    )
     def test_fwf_file_skiprows(self, make_fwf_file, nrows):
         unique_filename = make_fwf_file()
 
