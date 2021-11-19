@@ -58,8 +58,8 @@ class cuDFQueryCompiler(PandasQueryCompiler):
         new_modin_frame = self._modin_frame.apply_select_indices(
             axis=None,
             func=iloc_mut,
-            row_indices=row_numeric_index,
-            col_indices=col_numeric_index,
+            row_labels=row_numeric_index,
+            col_labels=col_numeric_index,
             new_index=self.index,
             new_columns=self.columns,
             keep_remaining=True,

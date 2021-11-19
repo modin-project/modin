@@ -2144,13 +2144,13 @@ class PandasQueryCompiler(BaseQueryCompiler):
     def getitem_column_array(self, key, numeric=False):
         # Convert to list for type checking
         if numeric:
-            new_modin_frame = self._modin_frame.mask(col_numeric_idx=key)
+            new_modin_frame = self._modin_frame.mask(col_positions=key)
         else:
-            new_modin_frame = self._modin_frame.mask(col_indices=key)
+            new_modin_frame = self._modin_frame.mask(col_labels=key)
         return self.__constructor__(new_modin_frame)
 
     def getitem_row_array(self, key):
-        return self.__constructor__(self._modin_frame.mask(row_numeric_idx=key))
+        return self.__constructor__(self._modin_frame.mask(row_positions=key))
 
     def setitem(self, axis, key, value):
         return self._setitem(axis=axis, key=key, value=value, how=None)
@@ -2265,7 +2265,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 )
             )
         new_modin_frame = self._modin_frame.mask(
-            row_numeric_idx=index, col_numeric_idx=columns
+            row_positions=index, col_positions=columns
         )
         return self.__constructor__(new_modin_frame)
 
@@ -3031,7 +3031,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             untouched_frame = None
         else:
             new_modin_frame = self._modin_frame.mask(
-                col_indices=columns
+                col_labels=columns
             ).apply_full_axis(
                 0, lambda df: pandas.get_dummies(df, **kwargs), new_index=self.index
             )
@@ -3050,7 +3050,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
     # Indexing
     def view(self, index=None, columns=None):
         return self.__constructor__(
-            self._modin_frame.mask(row_numeric_idx=index, col_numeric_idx=columns)
+            self._modin_frame.mask(row_positions=index, col_positions=columns)
         )
 
     def write_items(self, row_numeric_index, col_numeric_index, broadcasted_items):
@@ -3083,8 +3083,8 @@ class PandasQueryCompiler(BaseQueryCompiler):
         new_modin_frame = self._modin_frame.apply_select_indices(
             axis=None,
             func=iloc_mut,
-            row_indices=row_numeric_index,
-            col_indices=col_numeric_index,
+            row_labels=row_numeric_index,
+            col_labels=col_numeric_index,
             new_index=self.index,
             new_columns=self.columns,
             keep_remaining=True,

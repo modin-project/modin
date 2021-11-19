@@ -138,15 +138,15 @@ class PandasDataframePartition(ABC):  # pragma: no cover
         """
         pass
 
-    def mask(self, row_indices, col_indices):
+    def mask(self, row_labels, col_labels):
         """
         Lazily create a mask that extracts the indices provided.
 
         Parameters
         ----------
-        row_indices : list-like, slice or label
+        row_labels : list-like, slice or label
             The indices for the rows to extract.
-        col_indices : list-like, slice or label
+        col_labels : list-like, slice or label
             The indices for the columns to extract.
 
         Returns
@@ -168,15 +168,15 @@ class PandasDataframePartition(ABC):  # pragma: no cover
                 and len(index) == axis_length
             )
 
-        row_indices = [row_indices] if is_scalar(row_indices) else row_indices
-        col_indices = [col_indices] if is_scalar(col_indices) else col_indices
+        row_labels = [row_labels] if is_scalar(row_labels) else row_labels
+        col_labels = [col_labels] if is_scalar(col_labels) else col_labels
 
-        if is_full_axis_mask(row_indices, self._length_cache) and is_full_axis_mask(
-            col_indices, self._width_cache
+        if is_full_axis_mask(row_labels, self._length_cache) and is_full_axis_mask(
+            col_labels, self._width_cache
         ):
             return copy(self)
 
-        new_obj = self.add_to_apply_calls(lambda df: df.iloc[row_indices, col_indices])
+        new_obj = self.add_to_apply_calls(lambda df: df.iloc[row_labels, col_labels])
 
         def try_recompute_cache(indices, previous_cache):
             """Compute new axis-length cache for the masked frame based on its previous cache."""
@@ -186,8 +186,8 @@ class PandasDataframePartition(ABC):  # pragma: no cover
                 return None
             return compute_sliced_len(indices, previous_cache)
 
-        new_obj._length_cache = try_recompute_cache(row_indices, self._length_cache)
-        new_obj._width_cache = try_recompute_cache(col_indices, self._width_cache)
+        new_obj._length_cache = try_recompute_cache(row_labels, self._length_cache)
+        new_obj._width_cache = try_recompute_cache(col_labels, self._width_cache)
         return new_obj
 
     @classmethod
