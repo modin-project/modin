@@ -448,7 +448,7 @@ class DataFrame(BasePandasDataset):
         elif hashable(by) and not isinstance(by, pandas.Grouper):
             drop = by in self.columns
             idx_name = by
-            if by in self._query_compiler.get_index_names(axis) and by is not None:
+            if by is not None and by in self._query_compiler.get_index_names(axis):
                 # In this case we pass the string value of the name through to the
                 # partitions. This is more efficient than broadcasting the values.
                 level, by = by, None
