@@ -32,7 +32,7 @@ def check_dmatrix(data, label=None, **kwargs):
         with pytest.raises(Exception) as mxgb_exception:
             mxgb.DMatrix(modin_data, label=modin_label, **kwargs)
         assert isinstance(
-            mxgb_exception.value, type(xgb_exception)
+            xgb_exception, type(mxgb_exception.value)
         ), "Got Modin Exception type {}, but xgboost Exception type {} was expected".format(
             type(mxgb_exception.value), type(xgb_exception)
         )
@@ -49,9 +49,9 @@ def check_dmatrix(data, label=None, **kwargs):
     [
         np.random.randn(5, 5),
         np.array([[1, 2], [3, 4]]),
-        # np.array([["a", "b"], ["c", "d"]]),
+        np.array([["a", "b"], ["c", "d"]]),
         [[1, 2], [3, 4]],
-        # [["a", "b"], ["c", "d"]],
+        [["a", "b"], ["c", "d"]],
     ],
 )
 @pytest.mark.parametrize(
