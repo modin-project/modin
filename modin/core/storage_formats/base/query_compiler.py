@@ -2134,7 +2134,7 @@ class BaseQueryCompiler(abc.ABC):
     # after the shuffle, there should be only a local map required.
 
     # FIXME: `map_args` and `reduce_args` leaked there from `PandasQueryCompiler.groupby_*`,
-    # pandas storage format implements groupby via MapReduce approach, but for other storage formats these
+    # pandas storage format implements groupby via TreeReduce approach, but for other storage formats these
     # parameters make no sense, they shouldn't be present in a base class.
 
     @doc_utils.doc_groupby_method(

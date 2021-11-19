@@ -15,7 +15,7 @@
 
 from .operator import Operator
 from .map import Map
-from .map_reduce import MapReduce
+from .tree_reduce import TreeReduce
 from .reduce import Reduce
 from .fold import Fold
 from .binary import Binary
@@ -27,7 +27,7 @@ from .groupby import (
 __all__ = [
     "Operator",
     "Map",
-    "MapReduce",
+    "TreeReduce",
     "Reduce",
     "Fold",
     "Binary",

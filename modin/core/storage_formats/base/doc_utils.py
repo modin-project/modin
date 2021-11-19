@@ -648,10 +648,10 @@ def doc_groupby_method(result, refer_to, action=None):
     groupby_args : dict
         GroupBy parameters as expected by ``modin.pandas.DataFrame.groupby`` signature.
     map_args : dict
-        Keyword arguments to pass to the reduce function. If GroupBy is implemented via MapReduce
+        Keyword arguments to pass to the reduce function. If GroupBy is implemented via TreeReduce
         approach, this argument is passed at the map phase only.
     reduce_args : dict, optional
-        If GroupBy is implemented with MapReduce approach, specifies arguments to pass to
+        If GroupBy is implemented with TreeReduce approach, specifies arguments to pass to
         the reduce function at the reduce phase, has no effect otherwise.
     numeric_only : bool, default: True
         Whether or not to drop non-numeric columns before executing GroupBy.
@@ -675,7 +675,7 @@ def doc_groupby_method(result, refer_to, action=None):
 
     .. warning
         `map_args` and `reduce_args` parameters are deprecated. They're leaked here from
-        ``PandasQueryCompiler.groupby_*``, pandas storage format implements groupby via MapReduce
+        ``PandasQueryCompiler.groupby_*``, pandas storage format implements groupby via TreeReduce
         approach, but for other storage formats these parameters make no sense, and so they'll be removed in the future.
     """
     if action is None:

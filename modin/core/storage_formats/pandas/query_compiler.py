@@ -45,7 +45,7 @@ from modin.utils import (
 from modin.core.dataframe.algebra import (
     Fold,
     Map,
-    MapReduce,
+    TreeReduce,
     Reduction,
     Binary,
     GroupByReduce,
@@ -666,7 +666,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
     # END Transpose
 
-    # MapReduce operations
+    # TreeReduce operations
 
     def is_monotonic_decreasing(self):
         def is_monotonic_decreasing(df):
@@ -682,12 +682,12 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
         return self.default_to_pandas(is_monotonic_increasing)
 
-    count = MapReduce.register(pandas.DataFrame.count, pandas.DataFrame.sum)
-    sum = MapReduce.register(pandas.DataFrame.sum)
-    prod = MapReduce.register(pandas.DataFrame.prod)
-    any = MapReduce.register(pandas.DataFrame.any, pandas.DataFrame.any)
-    all = MapReduce.register(pandas.DataFrame.all, pandas.DataFrame.all)
-    memory_usage = MapReduce.register(
+    count = TreeReduce.register(pandas.DataFrame.count, pandas.DataFrame.sum)
+    sum = TreeReduce.register(pandas.DataFrame.sum)
+    prod = TreeReduce.register(pandas.DataFrame.prod)
+    any = TreeReduce.register(pandas.DataFrame.any, pandas.DataFrame.any)
+    all = TreeReduce.register(pandas.DataFrame.all, pandas.DataFrame.all)
+    memory_usage = TreeReduce.register(
         pandas.DataFrame.memory_usage,
         lambda x, *args, **kwargs: pandas.DataFrame.sum(x),
         axis=0,
@@ -703,7 +703,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 kwargs["numeric_only"] = False
             return pandas.DataFrame.max(df, **kwargs)
 
-        return MapReduce.register(map_func, reduce_func)(self, axis=axis, **kwargs)
+        return TreeReduce.register(map_func, reduce_func)(self, axis=axis, **kwargs)
 
     def min(self, axis, **kwargs):
         def map_func(df, **kwargs):
@@ -715,7 +715,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 kwargs["numeric_only"] = False
             return pandas.DataFrame.min(df, **kwargs)
 
-        return MapReduce.register(map_func, reduce_func)(self, axis=axis, **kwargs)
+        return TreeReduce.register(map_func, reduce_func)(self, axis=axis, **kwargs)
 
     def mean(self, axis, **kwargs):
         if kwargs.get("level") is not None:
@@ -757,12 +757,12 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 count_cols = count_cols.sum(axis=axis, skipna=False)
             return sum_cols / count_cols
 
-        return MapReduce.register(
+        return TreeReduce.register(
             map_fn,
             reduce_fn,
         )(self, axis=axis, **kwargs)
 
-    # END MapReduce operations
+    # END TreeReduce operations
 
     # Reduction operations
     idxmax = Reduction.register(pandas.DataFrame.idxmax)
@@ -2529,7 +2529,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         Group underlying data and apply aggregation functions to each group of the specified column/row.
 
         This method is responsible of performing dictionary groupby aggregation for such functions,
-        that can be implemented via MapReduce approach.
+        that can be implemented via TreeReduce approach.
 
         Parameters
         ----------
@@ -2614,7 +2614,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         drop=False,
     ):
         def is_reduce_fn(fn, deep_level=0):
-            """Check whether all functions which is defined by `fn` can be implemented via MapReduce approach."""
+            """Check whether all functions which is defined by `fn` can be implemented via TreeReduce approach."""
             if not isinstance(fn, str) and isinstance(fn, Container):
                 # `deep_level` parameter specifies the number of nested containers that was met:
                 # - if it's 0, then we're outside of container, `fn` could be either function name
