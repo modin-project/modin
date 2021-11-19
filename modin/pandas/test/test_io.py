@@ -60,6 +60,15 @@ if StorageFormat.get() == "Pandas":
     import modin.pandas as pd
 else:
     import modin.experimental.pandas as pd
+
+try:
+    import ray
+
+    EXCEPTIONS = (ray.exceptions.WorkerCrashedError,)
+except ImportError:
+    EXCEPTIONS = ()
+
+
 from modin.config import NPartitions
 
 NPartitions.put(4)
@@ -144,7 +153,20 @@ def eval_to_file(modin_obj, pandas_obj, fn, extension, **fn_kwargs):
     unique_filename_pandas = get_unique_filename(extension=extension)
 
     try:
-        getattr(modin_obj, fn)(unique_filename_modin, **fn_kwargs)
+        # parameter `max_retries=0` is set for `to_csv` function on Ray engine,
+        # in order to increase the stability of tests, we repeat the call of
+        # the entire function manually
+        last_exception = None
+        for _ in range(3):
+            try:
+                getattr(modin_obj, fn)(unique_filename_modin, **fn_kwargs)
+            except EXCEPTIONS as exc:
+                last_exception = exc
+                continue
+            break
+        else:
+            raise last_exception
+
         getattr(pandas_obj, fn)(unique_filename_pandas, **fn_kwargs)
 
         assert assert_files_eq(unique_filename_modin, unique_filename_pandas)
