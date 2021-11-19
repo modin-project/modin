@@ -267,6 +267,16 @@ def test_indexing_duplicate_axis(data):
     )
 
 
+@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test_set_index(data):
+    modin_df = pd.DataFrame(data)
+    pandas_df = pandas.DataFrame(data)
+    
+    modin_result = modin_df.set_index([modin_df.index, modin_df.columns[0]])
+    pandas_result = pandas_df.set_index([pandas_df.index, pandas_df.columns[0]])
+    df_equals(modin_result, pandas_result)
+
+
 @pytest.mark.gpu
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_keys(data):
