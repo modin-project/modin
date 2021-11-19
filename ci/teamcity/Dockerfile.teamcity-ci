@@ -6,7 +6,7 @@
 #
 # docker build --build-arg ENVIRONMENT=environment-dev.yml -t modin-project/teamcity-ci:${BUILD_NUMBER} -f ci/teamcity/Dockerfile.teamcity-ci ci/teamcity
 
-FROM rayproject/ray:1.0.1
+FROM rayproject/ray:latest
 
 ARG ENVIRONMENT=environment-dev.yml
 
