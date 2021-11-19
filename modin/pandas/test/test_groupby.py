@@ -1400,7 +1400,7 @@ def test_agg_func_None_rename(by_and_agg_dict, as_index):
 @pytest.mark.parametrize(
     "agg_fns",
     [["sum", "min", "max"], ["mean", "quantile"]],
-    ids=["reduction", "aggregation"],
+    ids=["reduce", "aggregation"],
 )
 def test_dict_agg_rename_mi_columns(as_index, by_length, agg_fns):
     md_df, pd_df = create_test_dfs(test_data["int_data"])

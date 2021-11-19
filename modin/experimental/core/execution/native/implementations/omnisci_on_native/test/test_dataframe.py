@@ -1184,9 +1184,9 @@ class TestAgg:
     def test_simple_agg_no_default(self, method):
         def applier(df, **kwargs):
             if isinstance(df, pd.DataFrame):
-                # At the end of reduction function it does inevitable `transpose`, which
+                # At the end of reduce function it does inevitable `transpose`, which
                 # is defaulting to pandas. The following logic check that `transpose` is the only
-                # function that falling back to pandas in the reduction operation flow.
+                # function that falling back to pandas in the reduce operation flow.
                 with pytest.warns(UserWarning) as warns:
                     res = getattr(df, method)()
                 assert (

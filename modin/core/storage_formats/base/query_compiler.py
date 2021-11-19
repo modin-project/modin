@@ -3241,7 +3241,7 @@ class BaseQueryCompiler(abc.ABC):
             self, resample_args, limit
         )
 
-    @doc_utils.doc_resample_reduction(
+    @doc_utils.doc_resample_reduce(
         result="number of non-NA values", refer_to="count", compatibility_params=False
     )
     def resample_count(self, resample_args):
@@ -3267,7 +3267,7 @@ class BaseQueryCompiler(abc.ABC):
             self, resample_args, method, limit
         )
 
-    @doc_utils.doc_resample_reduction(
+    @doc_utils.doc_resample_reduce(
         result="first element", refer_to="first", params="_method : str"
     )
     def resample_first(self, resample_args, _method, *args, **kwargs):
@@ -3342,7 +3342,7 @@ class BaseQueryCompiler(abc.ABC):
             **kwargs,
         )
 
-    @doc_utils.doc_resample_reduction(
+    @doc_utils.doc_resample_reduce(
         result="last element", params="_method : str", refer_to="last"
     )
     def resample_last(self, resample_args, _method, *args, **kwargs):
@@ -3350,7 +3350,7 @@ class BaseQueryCompiler(abc.ABC):
             self, resample_args, _method, *args, **kwargs
         )
 
-    @doc_utils.doc_resample_reduction(
+    @doc_utils.doc_resample_reduce(
         result="maximum value", params="_method : str", refer_to="max"
     )
     def resample_max(self, resample_args, _method, *args, **kwargs):
@@ -3358,7 +3358,7 @@ class BaseQueryCompiler(abc.ABC):
             self, resample_args, _method, *args, **kwargs
         )
 
-    @doc_utils.doc_resample_reduction(
+    @doc_utils.doc_resample_reduce(
         result="mean value", params="_method : str", refer_to="mean"
     )
     def resample_mean(self, resample_args, _method, *args, **kwargs):
@@ -3366,7 +3366,7 @@ class BaseQueryCompiler(abc.ABC):
             self, resample_args, _method, *args, **kwargs
         )
 
-    @doc_utils.doc_resample_reduction(
+    @doc_utils.doc_resample_reduce(
         result="median value", params="_method : str", refer_to="median"
     )
     def resample_median(self, resample_args, _method, *args, **kwargs):
@@ -3374,7 +3374,7 @@ class BaseQueryCompiler(abc.ABC):
             self, resample_args, _method, *args, **kwargs
         )
 
-    @doc_utils.doc_resample_reduction(
+    @doc_utils.doc_resample_reduce(
         result="minimum value", params="_method : str", refer_to="min"
     )
     def resample_min(self, resample_args, _method, *args, **kwargs):
@@ -3388,7 +3388,7 @@ class BaseQueryCompiler(abc.ABC):
             self, resample_args, limit
         )
 
-    @doc_utils.doc_resample_reduction(
+    @doc_utils.doc_resample_reduce(
         result="number of unique values", params="_method : str", refer_to="nunique"
     )
     def resample_nunique(self, resample_args, _method, *args, **kwargs):
@@ -3457,7 +3457,7 @@ class BaseQueryCompiler(abc.ABC):
             self, resample_args, func, *args, **kwargs
         )
 
-    @doc_utils.doc_resample_reduction(
+    @doc_utils.doc_resample_reduce(
         result="product",
         params="""
         _method : str
@@ -3469,7 +3469,7 @@ class BaseQueryCompiler(abc.ABC):
             self, resample_args, _method, min_count, *args, **kwargs
         )
 
-    @doc_utils.doc_resample_reduction(
+    @doc_utils.doc_resample_reduce(
         result="quantile", params="q : float", refer_to="quantile"
     )
     def resample_quantile(self, resample_args, q, *args, **kwargs):
@@ -3477,7 +3477,7 @@ class BaseQueryCompiler(abc.ABC):
             self, resample_args, q, *args, **kwargs
         )
 
-    @doc_utils.doc_resample_reduction(
+    @doc_utils.doc_resample_reduce(
         result="standart error of the mean",
         params="ddof : int, default: 1",
         refer_to="sem",
@@ -3487,7 +3487,7 @@ class BaseQueryCompiler(abc.ABC):
             self, resample_args, ddof, *args, **kwargs
         )
 
-    @doc_utils.doc_resample_reduction(
+    @doc_utils.doc_resample_reduce(
         result="number of elements in a group", refer_to="size"
     )
     def resample_size(self, resample_args, *args, **kwargs):
@@ -3495,7 +3495,7 @@ class BaseQueryCompiler(abc.ABC):
             self, resample_args, *args, **kwargs
         )
 
-    @doc_utils.doc_resample_reduction(
+    @doc_utils.doc_resample_reduce(
         result="standart deviation", params="ddof : int", refer_to="std"
     )
     def resample_std(self, resample_args, ddof, *args, **kwargs):
@@ -3503,7 +3503,7 @@ class BaseQueryCompiler(abc.ABC):
             self, resample_args, ddof, *args, **kwargs
         )
 
-    @doc_utils.doc_resample_reduction(
+    @doc_utils.doc_resample_reduce(
         result="sum",
         params="""
         _method : str
@@ -3543,7 +3543,7 @@ class BaseQueryCompiler(abc.ABC):
             self, resample_args, arg, *args, **kwargs
         )
 
-    @doc_utils.doc_resample_reduction(
+    @doc_utils.doc_resample_reduce(
         result="variance", params="ddof : int", refer_to="var"
     )
     def resample_var(self, resample_args, ddof, *args, **kwargs):
