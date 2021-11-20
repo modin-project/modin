@@ -49,7 +49,7 @@ To disable it, start your preferred compute engine with the appropriate argument
   import ray
 
   ray.init(_plasma_directory="/tmp")  # setting to disable out of core in Ray
-  df = pd.read_csv("some.csv")
+ df = pd.read_csv("some.csv")
 
 If you are using Dask, you have to modify local configuration files. Visit the
 Dask documentation_ on object spilling for more details.
