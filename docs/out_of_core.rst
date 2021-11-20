@@ -28,7 +28,7 @@ In order to work with data that exceeds memory constraints, you can use Modin to
 
 .. code-block:: python
 
-  import pandas as pd
+  import modin.pandas as pd
   import numpy as np
   df = pd.concat([pd.DataFrame(np.random.randint(0, 100, size=(2**20, 2**8))) for _ in range(40)]) # 40x2GB frames -- Working!
   df.info()
