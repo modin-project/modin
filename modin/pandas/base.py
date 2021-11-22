@@ -3143,7 +3143,7 @@ class Resampler(object):
         """
         if len(self._dataframe.columns.intersection(key)) != len(key):
             missed_keys = list(set(key).difference(self._dataframe.columns))
-            raise KeyError(f"Columns {str(missed_keys)[1:-1]} don't exist.")
+            raise KeyError(f"Columns {str(missed_keys)} don't exist.")
 
         try:
             subset_ = self._dataframe[list(key)]
