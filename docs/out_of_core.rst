@@ -15,7 +15,7 @@ pandas makes use of in-memory data structures to store and operate on data, whic
 
   import pandas as pd
   import numpy as np
-  df = pd.concat([pd.DataFrame(np.random.randint(0, 100, size=(2**20, 2**8))) for _ in range(40)]) # Memory Error!
+  df = old_pd.concat([old_pd.DataFrame(np.random.randint(0, 100, size=(2**20, 2**8))) for _ in range(40)]) # Memory Error!
 
 When we run this on a laptop with 32GB of RAM, pandas will run out of memory and throw an error (e.g., :code:`MemoryError` , :code:`Killed: 9`). 
 
