@@ -253,6 +253,7 @@ class DataFrameGroupBy(object):
                 lambda df: df.shift(periods, freq, axis, fill_value)
             )
             if self._by is not None:
+                # pandas doesnt't name the index after `shift` in this case
                 result._query_compiler.set_index_name(None)
         return result
 
