@@ -21,7 +21,7 @@ import modin.pandas as pd
 
 #### From PyPI
 
-Modin can be installed using following line:
+Modin can be installed with `pip`:
 
 ```bash
 pip install modin
@@ -41,17 +41,19 @@ scheduling computation!
 
 #### From conda-forge
 
-Following line will install modin and 3 engines ([Ray](https://github.com/ray-project/ray),
+Installing from conda forge using `modin-all` will install Modin and 3 engines: ([Ray](https://github.com/ray-project/ray),
 [Dask](https://github.com/dask/dask) and [Omnisci](https://modin.readthedocs.io/en/latest/UsingOmnisci/index.html))
 
 ```bash
 conda install -c conda-forge modin-all
 ```
 
-Also each engine could be installed explicitly. For example this line installs all 3:
+Each engine can also be installed individually:
 
 ```bash
-conda install -c conda-forge modin-ray modin-dask modin-omnisci
+conda install -c conda-forge modin-ray  # install Ray engine with Modin
+conda install -c conda-forge modin-dask # install Dask engine with Modin
+conda install -c conda-forge modin-omnisci # install Omnisci engine with Modin
 ```
 
 ### Pandas API Coverage
@@ -98,7 +100,7 @@ os.environ["MODIN_ENGINE"] = "dask"  # Modin will use Dask
 import modin.pandas as pd
 ```
 
-Check [complete Modin documentation](https://modin.readthedocs.io/en/latest/UsingOmnisci/index.html) for Omnisci engine setup
+Check [this Modin docs section](https://modin.readthedocs.io/en/latest/UsingOmnisci/index.html) for Omnisci engine setup.
 
 **Note: You should not change the engine after you have imported Modin as it will result in undefined behavior**
 
