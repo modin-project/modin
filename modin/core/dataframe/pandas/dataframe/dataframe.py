@@ -30,6 +30,7 @@ from modin.core.storage_formats.pandas.parsers import (
     find_common_type_cat as find_common_type,
 )
 from modin.pandas.indexing import is_range_like
+from modin.config import NPartitions
 
 
 class PandasDataframe(object):
@@ -2087,6 +2088,18 @@ class PandasDataframe(object):
             new_lengths = None
             new_widths = None
         new_partitions = self._partition_mgr_cls.concat(axis, left_parts, right_parts)
+        shape = new_partitions.shape
+        # In the case when the number of partitions significantly differs from the value
+        # specified by `NPartitions`, we can get a significant slowdown in subsequent operations.
+        desired_count_partitions = NPartitions.get() * 2
+        if any((dim >= desired_count_partitions for dim in shape)):
+            df = self._partition_mgr_cls.to_pandas(new_partitions)
+            # need to recompute `new_lengths`, `new_widths`
+            (
+                new_partitions,
+                new_lengths,
+                new_widths,
+            ) = self._partition_mgr_cls.from_pandas(df, return_dims=True)
         if axis == 0:
             new_index = self.index.append([other.index for other in others])
             new_columns = joined_index
