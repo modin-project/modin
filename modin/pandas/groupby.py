@@ -130,8 +130,8 @@ class DataFrameGroupBy(object):
     def mean(self, *args, **kwargs):
         result = self._apply_agg_function(lambda df: df.mean(*args, **kwargs))
 
-        # This is workaround to align behavior with pandas. In this case pandas
-        # resets index, but modin doesn't do that. More details are in gh #3716.
+        # This is a workaround to align behavior with pandas. In this case pandas
+        # resets index, but Modin doesn't do that. More details are in https://github.com/modin-project/modin/issues/3716.
         if self._by is None and not self._as_index:
             result.reset_index(drop=True, inplace=True)
         return result
@@ -291,8 +291,8 @@ class DataFrameGroupBy(object):
             func = wrap_udf_function(func)
 
         result = self._apply_agg_function(lambda df: df.apply(func, *args, **kwargs))
-        # This is workaround to align behavior with pandas. In this case pandas
-        # resets index, but modin doesn't do that. More details are in gh #3716.
+        # This is a workaround to align behavior with pandas. In this case pandas
+        # resets index, but Modin doesn't do that. More details are in https://github.com/modin-project/modin/issues/3716.
         if self._by is None and not self._as_index:
             result.reset_index(drop=True, inplace=True)
         return result
@@ -489,8 +489,8 @@ class DataFrameGroupBy(object):
                 *args,
                 **kwargs,
             )
-            # This is workaround to align behavior with pandas. In this case pandas
-            # resets index, but modin doesn't do that. More details are in gh #3716.
+            # This is a workaround to align behavior with pandas. In this case pandas
+            # resets index, but Modin doesn't do that. More details are in https://github.com/modin-project/modin/issues/3716.
             if self._by is None and not self._as_index:
                 result.reset_index(drop=True, inplace=True)
             return result
@@ -656,8 +656,8 @@ class DataFrameGroupBy(object):
     def nunique(self, dropna=True):
         result = self._apply_agg_function(lambda df: df.nunique(dropna))
 
-        # This is workaround to align behavior with pandas. In this case pandas
-        # resets index, but modin doesn't do that. More details are in gh #3716.
+        # This is a workaround to align behavior with pandas. In this case pandas
+        # resets index, but Modin doesn't do that. More details are in https://github.com/modin-project/modin/issues/3716.
         if self._by is None and not self._as_index:
             result.reset_index(drop=True, inplace=True)
         return result
@@ -668,8 +668,8 @@ class DataFrameGroupBy(object):
     def median(self, **kwargs):
         result = self._apply_agg_function(lambda df: df.median(**kwargs))
 
-        # This is workaround to align behavior with pandas. In this case pandas
-        # resets index, but modin doesn't do that. More details are in gh #3716.
+        # This is a workaround to align behavior with pandas. In this case pandas
+        # resets index, but Modin doesn't do that. More details are in https://github.com/modin-project/modin/issues/3716.
         if self._by is None and not self._as_index:
             result.reset_index(drop=True, inplace=True)
 
@@ -762,8 +762,8 @@ class DataFrameGroupBy(object):
 
         result = self._apply_agg_function(lambda df: df.quantile(q, **kwargs))
 
-        # This is workaround to align behavior with pandas. In this case pandas
-        # resets index, but modin doesn't do that. More details are in gh #3716.
+        # This is a workaround to align behavior with pandas. In this case pandas
+        # resets index, but Modin doesn't do that. More details are in https://github.com/modin-project/modin/issues/3716.
         if self._by is None and not self._as_index:
             result.reset_index(drop=True, inplace=True)
 
