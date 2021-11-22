@@ -1,5 +1,20 @@
-Overview
-========
+Advanced Usage
+==============
+
+.. toctree::
+   :titlesonly:
+   :hidden:
+
+   spreadsheets_api
+   progress_bar
+   modin_sql
+   modin_xgboost
+   modin_in_the_cloud
+   
+.. meta::
+    :description lang=en:
+        Description of Modin's advanced features.
+
 Modin aims to not only optimize Pandas, but also provide a comprehensive, 
 integrated toolkit for data scientists. We are actively developing data science tools 
 such as DataFrame - spreadsheet integration, DataFrame algebra, progress bars, SQL queries
@@ -42,7 +57,7 @@ Read about Modin Dataframe support for SQL queries in this recent `blog post`_. 
 Distributed XGBoost on Modin
 ----------------------------
 Modin provides an implementation of distributed XGBoost machine learning algorithm on Modin DataFrames. See our
-:doc:`Distributed XGBoost on Modin documentation </experimental_features/modin_xgboost>` for details about installation and usage, as well as
+:doc:`Distributed XGBoost on Modin documentation <modin_xgboost>` for details about installation and usage, as well as
 :doc:`Modin XGBoost architecture documentation </flow/modin/experimental/xgboost>` for information about implementation and
 internal execution flow.
 

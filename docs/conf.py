@@ -130,6 +130,7 @@ html_theme_options = {
     "sidebarwidth": 270,
     "collapse_navigation": False,
     "navigation_depth": 4,
+    "show_toc_level": 2,
 }
 
 # Custom sidebar templates, must be a dictionary that maps document names
@@ -140,8 +141,8 @@ html_theme_options = {
 # default: ``['localtoc.html', 'relations.html', 'sourcelink.html',
 # 'searchbox.html']``.
 #
-html_sidebars = {
-    "**": ["globaltoc.html", "relations.html", "sourcelink.html", "searchbox.html"]
-}
+# html_sidebars = {
+#     "**": ["globaltoc.html", "relations.html", "sourcelink.html", "searchbox.html"]
+# }
 
 issues_github_path = "modin-project/modin"
