@@ -31,6 +31,9 @@ def check_dmatrix(data, label=None, **kwargs):
     except Exception as xgb_exception:
         with pytest.raises(Exception) as mxgb_exception:
             mxgb.DMatrix(modin_data, label=modin_label, **kwargs)
+        # Thrown exceptions are `XGBoostError`, which is a descendant of `ValueError`, and `ValueError`
+        # for XGBoost and Modin, respectively,  so we intentionally use `xgb_exception`
+        # as a first parameter of `isinstance` to pass the assertion
         assert isinstance(
             xgb_exception, type(mxgb_exception.value)
         ), "Got Modin Exception type {}, but xgboost Exception type {} was expected".format(
