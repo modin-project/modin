@@ -118,6 +118,8 @@ current_branch = "nature"
 #
 html_theme = "pydata_sphinx_theme"
 
+html_favicon = "img/MODIN_ver2.ico"
+
 html_logo = "img/MODIN_ver2.png"
 
 # Theme options are theme-specific and customize the look and feel of a theme
