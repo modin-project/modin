@@ -2092,14 +2092,21 @@ class PandasDataframe(object):
         # In the case when the number of partitions significantly differs from the value
         # specified by `NPartitions`, we can get a significant slowdown in subsequent operations.
         desired_count_partitions = NPartitions.get() * 2
-        if any((dim >= desired_count_partitions for dim in shape)):
-            df = self._partition_mgr_cls.to_pandas(new_partitions)
-            # need to recompute `new_lengths`, `new_widths`
-            (
-                new_partitions,
-                new_lengths,
-                new_widths,
-            ) = self._partition_mgr_cls.from_pandas(df, return_dims=True)
+        if shape[axis] >= desired_count_partitions:
+            new_partitions = self._partition_mgr_cls.map_axis_partitions(
+                axis=axis,
+                partitions=new_partitions,
+                map_func=lambda df: df,
+                keep_partitioning=False,
+                lengths=None,
+                enumerate_partitions=False,
+            )
+            if axis:
+                # The number of columns does not change
+                new_widths = None
+            else:
+                # The number of rows does not change
+                new_lengths = None
         if axis == 0:
             new_index = self.index.append([other.index for other in others])
             new_columns = joined_index
