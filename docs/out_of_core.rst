@@ -13,7 +13,7 @@ pandas makes use of in-memory data structures to store and operate on data, whic
 
 .. code-block:: python
 
-  import pandas as pd
+  import pandas as old_pd
   import numpy as np
   df = old_pd.concat([old_pd.DataFrame(np.random.randint(0, 100, size=(2**20, 2**8))) for _ in range(40)]) # Memory Error!
 
