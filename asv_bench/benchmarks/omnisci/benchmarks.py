@@ -28,7 +28,7 @@ from ..utils import (
     trigger_import,
     get_benchmark_shapes,
 )
-
+from ..utils.common import random_state
 import numpy as np
 
 
@@ -41,33 +41,29 @@ class TimeJoin:
     ]
 
     def setup(self, shape, how, is_equal_keys):
-        self.df1 = generate_dataframe(
-            ASV_USE_IMPL,
-            "int",
-            *shape,
-            RAND_LOW,
-            RAND_HIGH,
-            cache_prefix="left_join_frame",
+        self.df1, self.df2 = (
+            generate_dataframe(
+                ASV_USE_IMPL,
+                "int",
+                *frame_shape,
+                RAND_LOW,
+                RAND_HIGH,
+                cache_prefix=f"{i}-th_frame_to_join",
+            )
+            for i, frame_shape in enumerate((shape, shape))
         )
-        self.df2 = generate_dataframe(
-            ASV_USE_IMPL,
-            "int",
-            *shape,
-            RAND_LOW,
-            RAND_HIGH,
-            cache_prefix="right_join_frame",
-        )
+
         if is_equal_keys:
-            # OmniSci fails to join on a 'rowid' (backend uses internal row indices
-            # as keys to join if an actual index isn't specified), so explicitly
-            # specifying an index to join on it.
+            # When the frames have default indices to join on: RangeIndex(frame_length),
+            # OmniSci backend performs join on the internal meta-column called 'rowid'.
+            # There is a bug in the engine that makes such joins fail. To avoid joining
+            # on the meta-column we explicitly specify a non-default index to join on.
             # https://github.com/modin-project/modin/issues/3442
             common_index = np.arange(1, len(self.df1) + 1)
             self.df1.index = common_index
             self.df2.index = common_index
         else:
             indices_intersection_rate = 0.5
-            random_state = np.random.RandomState(seed=42)
 
             frame_length = len(self.df1)
             intersect_size = int(frame_length * indices_intersection_rate)
@@ -130,21 +126,16 @@ class TimeAppend:
     params = [get_benchmark_shapes("omnisci.TimeAppend")]
 
     def setup(self, shapes):
-        self.df1 = generate_dataframe(
-            ASV_USE_IMPL,
-            "int",
-            *shapes[0],
-            RAND_LOW,
-            RAND_HIGH,
-            cache_prefix="left_frame_to_append",
-        )
-        self.df2 = generate_dataframe(
-            ASV_USE_IMPL,
-            "int",
-            *shapes[1],
-            RAND_LOW,
-            RAND_HIGH,
-            cache_prefix="right_frame_to_append",
+        self.df1, self.df2 = (
+            generate_dataframe(
+                ASV_USE_IMPL,
+                "int",
+                *shape,
+                RAND_LOW,
+                RAND_HIGH,
+                cache_prefix=f"{i}-th_frame_to_append",
+            )
+            for i, shape in enumerate(shapes)
         )
         trigger_import(self.df1, self.df2)
 
