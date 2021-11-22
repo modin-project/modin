@@ -765,13 +765,23 @@ def test_resample_specific(rule, closed, label, on, level):
 @pytest.mark.parametrize(
     "columns",
     [
+        "volume",
+        "date",
         ["volume"],
         ("volume",),
         pandas.Series(["volume"]),
         pandas.Index(["volume"]),
         ["volume", "price", "date"],
     ],
-    ids=["list", "tuple", "series", "index", "not_exist"],
+    ids=[
+        "column",
+        "missed_column",
+        "list",
+        "tuple",
+        "series",
+        "index",
+        "missed_columns",
+    ],
 )
 def test_resample_getitem(columns):
     index = pandas.date_range("1/1/2013", periods=9, freq="T")

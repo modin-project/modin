@@ -3129,7 +3129,7 @@ class Resampler(object):
 
     def __getitem__(self, key):
         """
-        Get define.
+        Get ``Resampler`` based on `key` columns of original dataframe.
 
         Parameters
         ----------
@@ -3139,19 +3139,33 @@ class Resampler(object):
         Returns
         -------
         modin.pandas.BasePandasDataset
-            Sliced object.
+            New ``Resampler`` based on `key` columns subset
+            of the original dataframe.
         """
-        if len(self._dataframe.columns.intersection(key)) != len(key):
-            missed_keys = list(set(key).difference(self._dataframe.columns))
-            raise KeyError(f"Columns {str(missed_keys)} don't exist.")
 
-        try:
-            subset_ = self._dataframe[list(key)]
-        except IndexError:
-            subset_ = self._dataframe
+        def _get_new_resampler(key):
+            try:
+                subset = self._dataframe[key]
+            except KeyError:
+                subset = self._dataframe
 
-        new_rs = type(self)(subset_, **self.resample_args)
-        return new_rs
+            resampler = type(self)(subset, **self.resample_args)
+            return resampler
+
+        from .series import Series
+
+        if isinstance(
+            key, (list, tuple, Series, pandas.Series, pandas.Index, np.ndarray)
+        ):
+            if len(self._dataframe.columns.intersection(key)) != len(key):
+                missed_keys = list(set(key).difference(self._dataframe.columns))
+                raise KeyError(f"Columns {str(missed_keys)} aren't exist.")
+            return _get_new_resampler(list(key))
+
+        if key not in self._dataframe:
+            raise KeyError(f"Column {key} isn't exist.")
+
+        return _get_new_resampler(key)
 
     def __get_groups(
         self,
