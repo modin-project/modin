@@ -128,7 +128,7 @@ class DataFrameGroupBy(object):
         return self._default_to_pandas(lambda df: df.sem(ddof=ddof))
 
     def mean(self, *args, **kwargs):
-        return self._check_index_groupby(self._apply_agg_function)(
+        return self._check_result_index(self._apply_agg_function)(
             lambda df: df.mean(*args, **kwargs)
         )
 
@@ -245,7 +245,7 @@ class DataFrameGroupBy(object):
             )
             result = result.dropna(subset=self._by.columns).sort_index()
         else:
-            result = self._check_index_name_groupby(self._apply_agg_function)(
+            result = self._check_result_index_name(self._apply_agg_function)(
                 lambda df: df.shift(periods, freq, axis, fill_value)
             )
         return result
@@ -254,7 +254,7 @@ class DataFrameGroupBy(object):
         return self._default_to_pandas(lambda df: df.nth(n, dropna=dropna))
 
     def cumsum(self, axis=0, *args, **kwargs):
-        return self._check_index_name_groupby(self._apply_agg_function)(
+        return self._check_result_index_name(self._apply_agg_function)(
             lambda df: df.cumsum(axis, *args, **kwargs)
         )
 
@@ -271,7 +271,7 @@ class DataFrameGroupBy(object):
         )
 
     def cummax(self, axis=0, **kwargs):
-        return self._check_index_name_groupby(self._apply_agg_function)(
+        return self._check_result_index_name(self._apply_agg_function)(
             lambda df: df.cummax(axis, **kwargs)
         )
 
@@ -279,7 +279,7 @@ class DataFrameGroupBy(object):
         if not isinstance(func, BuiltinFunctionType):
             func = wrap_udf_function(func)
 
-        return self._check_index_groupby(self._apply_agg_function)(
+        return self._check_result_index(self._apply_agg_function)(
             lambda df: df.apply(func, *args, **kwargs)
         )
 
@@ -407,7 +407,7 @@ class DataFrameGroupBy(object):
         )
 
     def cummin(self, axis=0, **kwargs):
-        return self._check_index_name_groupby(self._apply_agg_function)(
+        return self._check_result_index_name(self._apply_agg_function)(
             lambda df: df.cummin(axis=axis, **kwargs)
         )
 
@@ -467,7 +467,7 @@ class DataFrameGroupBy(object):
                 **kwargs,
             )
         elif callable(func):
-            return self._check_index_groupby(self._apply_agg_function)(
+            return self._check_result_index(self._apply_agg_function)(
                 lambda grp, *args, **kwargs: grp.aggregate(func, *args, **kwargs),
                 *args,
                 **kwargs,
@@ -632,7 +632,7 @@ class DataFrameGroupBy(object):
         return self._default_to_pandas(lambda df: df.ngroup(ascending))
 
     def nunique(self, dropna=True):
-        return self._check_index_groupby(self._apply_agg_function)(
+        return self._check_result_index(self._apply_agg_function)(
             lambda df: df.nunique(dropna)
         )
 
@@ -640,7 +640,7 @@ class DataFrameGroupBy(object):
         return self._default_to_pandas(lambda df: df.resample(rule, *args, **kwargs))
 
     def median(self, **kwargs):
-        return self._check_index_groupby(self._apply_agg_function)(
+        return self._check_result_index(self._apply_agg_function)(
             lambda df: df.median(**kwargs)
         )
 
@@ -648,7 +648,7 @@ class DataFrameGroupBy(object):
         return self._default_to_pandas(lambda df: df.head(n))
 
     def cumprod(self, axis=0, *args, **kwargs):
-        return self._check_index_name_groupby(self._apply_agg_function)(
+        return self._check_result_index_name(self._apply_agg_function)(
             lambda df: df.cumprod(axis, *args, **kwargs)
         )
 
@@ -659,7 +659,7 @@ class DataFrameGroupBy(object):
         return self._default_to_pandas(lambda df: df.cov())
 
     def transform(self, func, *args, **kwargs):
-        return self._check_index_name_groupby(self._apply_agg_function)(
+        return self._check_result_index_name(self._apply_agg_function)(
             lambda df: df.transform(func, *args, **kwargs)
         )
 
@@ -678,7 +678,7 @@ class DataFrameGroupBy(object):
             squeeze=self._squeeze,
             **new_groupby_kwargs,
         )
-        return self._check_index_name_groupby(work_object._apply_agg_function)(
+        return self._check_result_index_name(work_object._apply_agg_function)(
             lambda df: df.fillna(**kwargs)
         )
 
@@ -721,7 +721,7 @@ class DataFrameGroupBy(object):
         if is_list_like(q):
             return self._default_to_pandas(lambda df: df.quantile(q=q, **kwargs))
 
-        return self._check_index_groupby(self._apply_agg_function)(
+        return self._check_result_index(self._apply_agg_function)(
             lambda df: df.quantile(q, **kwargs)
         )
 
@@ -935,7 +935,7 @@ class DataFrameGroupBy(object):
             return result.squeeze()
         return result
 
-    def _check_index_groupby(self, func):
+    def _check_result_index(self, func):
         """
         Check the result of `func` on the need of resetting index.
 
@@ -964,7 +964,7 @@ class DataFrameGroupBy(object):
 
         return wrapper
 
-    def _check_index_name_groupby(self, func):
+    def _check_result_index_name(self, func):
         """
         Check the result of `func` on the need of resetting index name.
 
@@ -1029,6 +1029,7 @@ class DataFrameGroupBy(object):
         result = type(self._df)(query_compiler=new_manager)
         if result._query_compiler.get_index_name() == "__reduced__":
             result._query_compiler.set_index_name(None)
+
         if self._squeeze:
             return result.squeeze()
         return result
