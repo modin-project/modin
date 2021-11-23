@@ -128,13 +128,9 @@ class DataFrameGroupBy(object):
         return self._default_to_pandas(lambda df: df.sem(ddof=ddof))
 
     def mean(self, *args, **kwargs):
-        result = self._apply_agg_function(lambda df: df.mean(*args, **kwargs))
-
-        # This is a workaround to align behavior with pandas. In this case pandas
-        # resets index, but Modin doesn't do that. More details are in https://github.com/modin-project/modin/issues/3716.
-        if self._by is None and not self._as_index:
-            result.reset_index(drop=True, inplace=True)
-        return result
+        return self._check_index_groupby(self._apply_agg_function)(
+            lambda df: df.mean(*args, **kwargs)
+        )
 
     def any(self, **kwargs):
         return self._wrap_aggregation(
@@ -249,23 +245,18 @@ class DataFrameGroupBy(object):
             )
             result = result.dropna(subset=self._by.columns).sort_index()
         else:
-            result = self._apply_agg_function(
+            result = self._check_index_name_groupby(self._apply_agg_function)(
                 lambda df: df.shift(periods, freq, axis, fill_value)
             )
-            if self._by is not None:
-                # pandas doesnt't name the index after `shift` in this case
-                result._query_compiler.set_index_name(None)
         return result
 
     def nth(self, n, dropna=None):
         return self._default_to_pandas(lambda df: df.nth(n, dropna=dropna))
 
     def cumsum(self, axis=0, *args, **kwargs):
-        result = self._apply_agg_function(lambda df: df.cumsum(axis, *args, **kwargs))
-        if self._by is not None:
-            # pandas does not name the index on cumsum
-            result._query_compiler.set_index_name(None)
-        return result
+        return self._check_index_name_groupby(self._apply_agg_function)(
+            lambda df: df.cumsum(axis, *args, **kwargs)
+        )
 
     @property
     def indices(self):
@@ -280,22 +271,17 @@ class DataFrameGroupBy(object):
         )
 
     def cummax(self, axis=0, **kwargs):
-        result = self._apply_agg_function(lambda df: df.cummax(axis, **kwargs))
-        if self._by is not None:
-            # pandas does not name the index on cummax
-            result._query_compiler.set_index_name(None)
-        return result
+        return self._check_index_name_groupby(self._apply_agg_function)(
+            lambda df: df.cummax(axis, **kwargs)
+        )
 
     def apply(self, func, *args, **kwargs):
         if not isinstance(func, BuiltinFunctionType):
             func = wrap_udf_function(func)
 
-        result = self._apply_agg_function(lambda df: df.apply(func, *args, **kwargs))
-        # This is a workaround to align behavior with pandas. In this case pandas
-        # resets index, but Modin doesn't do that. More details are in https://github.com/modin-project/modin/issues/3716.
-        if self._by is None and not self._as_index:
-            result.reset_index(drop=True, inplace=True)
-        return result
+        return self._check_index_groupby(self._apply_agg_function)(
+            lambda df: df.apply(func, *args, **kwargs)
+        )
 
     @property
     def dtypes(self):
@@ -421,12 +407,9 @@ class DataFrameGroupBy(object):
         )
 
     def cummin(self, axis=0, **kwargs):
-        result = self._apply_agg_function(lambda df: df.cummin(axis=axis, **kwargs))
-        if self._by is not None:
-            # pandas does not name the index on cummin
-            result._query_compiler.set_index_name(None)
-
-        return result
+        return self._check_index_name_groupby(self._apply_agg_function)(
+            lambda df: df.cummin(axis=axis, **kwargs)
+        )
 
     def bfill(self, limit=None):
         return self._default_to_pandas(lambda df: df.bfill(limit=limit))
@@ -484,16 +467,11 @@ class DataFrameGroupBy(object):
                 **kwargs,
             )
         elif callable(func):
-            result = self._apply_agg_function(
+            return self._check_index_groupby(self._apply_agg_function)(
                 lambda grp, *args, **kwargs: grp.aggregate(func, *args, **kwargs),
                 *args,
                 **kwargs,
             )
-            # This is a workaround to align behavior with pandas. In this case pandas
-            # resets index, but Modin doesn't do that. More details are in https://github.com/modin-project/modin/issues/3716.
-            if self._by is None and not self._as_index:
-                result.reset_index(drop=True, inplace=True)
-            return result
         elif isinstance(func, str):
             # Using "getattr" here masks possible AttributeError which we throw
             # in __getattr__, so we should call __getattr__ directly instead.
@@ -654,36 +632,25 @@ class DataFrameGroupBy(object):
         return self._default_to_pandas(lambda df: df.ngroup(ascending))
 
     def nunique(self, dropna=True):
-        result = self._apply_agg_function(lambda df: df.nunique(dropna))
-
-        # This is a workaround to align behavior with pandas. In this case pandas
-        # resets index, but Modin doesn't do that. More details are in https://github.com/modin-project/modin/issues/3716.
-        if self._by is None and not self._as_index:
-            result.reset_index(drop=True, inplace=True)
-        return result
+        return self._check_index_groupby(self._apply_agg_function)(
+            lambda df: df.nunique(dropna)
+        )
 
     def resample(self, rule, *args, **kwargs):
         return self._default_to_pandas(lambda df: df.resample(rule, *args, **kwargs))
 
     def median(self, **kwargs):
-        result = self._apply_agg_function(lambda df: df.median(**kwargs))
-
-        # This is a workaround to align behavior with pandas. In this case pandas
-        # resets index, but Modin doesn't do that. More details are in https://github.com/modin-project/modin/issues/3716.
-        if self._by is None and not self._as_index:
-            result.reset_index(drop=True, inplace=True)
-
-        return result
+        return self._check_index_groupby(self._apply_agg_function)(
+            lambda df: df.median(**kwargs)
+        )
 
     def head(self, n=5):
         return self._default_to_pandas(lambda df: df.head(n))
 
     def cumprod(self, axis=0, *args, **kwargs):
-        result = self._apply_agg_function(lambda df: df.cumprod(axis, *args, **kwargs))
-        if self._by is not None:
-            # pandas does not name the index on cumprod
-            result._query_compiler.set_index_name(None)
-        return result
+        return self._check_index_name_groupby(self._apply_agg_function)(
+            lambda df: df.cumprod(axis, *args, **kwargs)
+        )
 
     def __iter__(self):
         return self._iter.__iter__()
@@ -692,13 +659,9 @@ class DataFrameGroupBy(object):
         return self._default_to_pandas(lambda df: df.cov())
 
     def transform(self, func, *args, **kwargs):
-        result = self._apply_agg_function(
+        return self._check_index_name_groupby(self._apply_agg_function)(
             lambda df: df.transform(func, *args, **kwargs)
         )
-        if self._by is not None:
-            # pandas does not name the index on transform
-            result._query_compiler.set_index_name(None)
-        return result
 
     def corr(self, **kwargs):
         return self._default_to_pandas(lambda df: df.corr(**kwargs))
@@ -715,11 +678,9 @@ class DataFrameGroupBy(object):
             squeeze=self._squeeze,
             **new_groupby_kwargs,
         )
-        result = work_object._apply_agg_function(lambda df: df.fillna(**kwargs))
-        if self._by is not None:
-            # pandas does not name the index on fillna
-            result._query_compiler.set_index_name(None)
-        return result
+        return self._check_index_name_groupby(work_object._apply_agg_function)(
+            lambda df: df.fillna(**kwargs)
+        )
 
     def count(self, **kwargs):
         result = self._wrap_aggregation(
@@ -760,14 +721,9 @@ class DataFrameGroupBy(object):
         if is_list_like(q):
             return self._default_to_pandas(lambda df: df.quantile(q=q, **kwargs))
 
-        result = self._apply_agg_function(lambda df: df.quantile(q, **kwargs))
-
-        # This is a workaround to align behavior with pandas. In this case pandas
-        # resets index, but Modin doesn't do that. More details are in https://github.com/modin-project/modin/issues/3716.
-        if self._by is None and not self._as_index:
-            result.reset_index(drop=True, inplace=True)
-
-        return result
+        return self._check_index_groupby(self._apply_agg_function)(
+            lambda df: df.quantile(q, **kwargs)
+        )
 
     def diff(self):
         return self._default_to_pandas(lambda df: df.diff())
@@ -978,6 +934,63 @@ class DataFrameGroupBy(object):
         if self._squeeze:
             return result.squeeze()
         return result
+
+    def _check_index_groupby(self, func):
+        """
+        Check the result of `func` on the need of resetting index.
+
+        Parameters
+        ----------
+        func : callable
+            The function, the result of which will be checked.
+
+        Returns
+        -------
+        DataFrame
+            The result of `func` with dropped index or an original result.
+        """
+
+        def wrapper(*args, **kwargs):
+            result = func(*args, **kwargs)
+
+            if self._by is None and not self._as_index:
+                # This is a workaround to align behavior with pandas. In this case pandas
+                # resets index, but Modin doesn't do that. More details are in https://github.com/modin-project/modin/issues/3716.
+                result.reset_index(drop=True, inplace=True)
+
+            return result
+
+        wrapper.__name__ = func.__name__
+
+        return wrapper
+
+    def _check_index_name_groupby(self, func):
+        """
+        Check the result of `func` on the need of resetting index name.
+
+        Parameters
+        ----------
+        func : callable
+            The function, the result of which will be checked.
+
+        Returns
+        -------
+        DataFrame
+            The result of `func` with dropped index name or an original result.
+        """
+
+        def wrapper(*args, **kwargs):
+            result = func(*args, **kwargs)
+
+            if self._by is not None:
+                # pandas does not name the index for this func
+                result._query_compiler.set_index_name(None)
+
+            return result
+
+        wrapper.__name__ = func.__name__
+
+        return wrapper
 
     def _apply_agg_function(self, f, *args, **kwargs):
         """
