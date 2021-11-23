@@ -192,7 +192,7 @@ more information, and checkout [the difference between Modin and Dask!](https://
 ### More information and Getting Involved
 
 - Read the [documentation](https://modin.readthedocs.io/en/latest/) for more information.
-- Check out [our paper](http://www.vldb.org/pvldb/vol13/p2033-petersohn.pdf) to learn more about how Modin works.
+- Check out [our paper](http://www.vldb.org/pvldb/vol13/p2033-petersohn.pdf) to learn more about the theory underlying Modin.
 - Ask questions or participate in discussions on our [Discourse](https://discuss.modin.org).
 - Let us know how you're using Modin! Join our community [Slack](https://modin.org/slack.html) to discuss and ask questions.
 - Submit bug reports to our [GitHub Issues Page](https://github.com/modin-project/modin/issues).
