@@ -128,9 +128,7 @@ class DataFrameGroupBy(object):
         return self._default_to_pandas(lambda df: df.sem(ddof=ddof))
 
     def mean(self, *args, **kwargs):
-        return self._check_result_index(self._apply_agg_function)(
-            lambda df: df.mean(*args, **kwargs)
-        )
+        return self._apply_agg_function_check_index(lambda df: df.mean(*args, **kwargs))
 
     def any(self, **kwargs):
         return self._wrap_aggregation(
@@ -245,7 +243,7 @@ class DataFrameGroupBy(object):
             )
             result = result.dropna(subset=self._by.columns).sort_index()
         else:
-            result = self._check_result_index_name(self._apply_agg_function)(
+            result = self._apply_agg_function_check_index_name(
                 lambda df: df.shift(periods, freq, axis, fill_value)
             )
         return result
@@ -254,7 +252,7 @@ class DataFrameGroupBy(object):
         return self._default_to_pandas(lambda df: df.nth(n, dropna=dropna))
 
     def cumsum(self, axis=0, *args, **kwargs):
-        return self._check_result_index_name(self._apply_agg_function)(
+        return self._apply_agg_function_check_index_name(
             lambda df: df.cumsum(axis, *args, **kwargs)
         )
 
@@ -271,7 +269,7 @@ class DataFrameGroupBy(object):
         )
 
     def cummax(self, axis=0, **kwargs):
-        return self._check_result_index_name(self._apply_agg_function)(
+        return self._apply_agg_function_check_index_name(
             lambda df: df.cummax(axis, **kwargs)
         )
 
@@ -279,7 +277,7 @@ class DataFrameGroupBy(object):
         if not isinstance(func, BuiltinFunctionType):
             func = wrap_udf_function(func)
 
-        return self._check_result_index(self._apply_agg_function)(
+        return self._apply_agg_function_check_index(
             lambda df: df.apply(func, *args, **kwargs)
         )
 
@@ -407,7 +405,7 @@ class DataFrameGroupBy(object):
         )
 
     def cummin(self, axis=0, **kwargs):
-        return self._check_result_index_name(self._apply_agg_function)(
+        return self._apply_agg_function_check_index_name(
             lambda df: df.cummin(axis=axis, **kwargs)
         )
 
@@ -467,7 +465,7 @@ class DataFrameGroupBy(object):
                 **kwargs,
             )
         elif callable(func):
-            return self._check_result_index(self._apply_agg_function)(
+            return self._apply_agg_function_check_index(
                 lambda grp, *args, **kwargs: grp.aggregate(func, *args, **kwargs),
                 *args,
                 **kwargs,
@@ -632,23 +630,19 @@ class DataFrameGroupBy(object):
         return self._default_to_pandas(lambda df: df.ngroup(ascending))
 
     def nunique(self, dropna=True):
-        return self._check_result_index(self._apply_agg_function)(
-            lambda df: df.nunique(dropna)
-        )
+        return self._apply_agg_function_check_index(lambda df: df.nunique(dropna))
 
     def resample(self, rule, *args, **kwargs):
         return self._default_to_pandas(lambda df: df.resample(rule, *args, **kwargs))
 
     def median(self, **kwargs):
-        return self._check_result_index(self._apply_agg_function)(
-            lambda df: df.median(**kwargs)
-        )
+        return self._apply_agg_function_check_index(lambda df: df.median(**kwargs))
 
     def head(self, n=5):
         return self._default_to_pandas(lambda df: df.head(n))
 
     def cumprod(self, axis=0, *args, **kwargs):
-        return self._check_result_index_name(self._apply_agg_function)(
+        return self._apply_agg_function_check_index_name(
             lambda df: df.cumprod(axis, *args, **kwargs)
         )
 
@@ -659,7 +653,7 @@ class DataFrameGroupBy(object):
         return self._default_to_pandas(lambda df: df.cov())
 
     def transform(self, func, *args, **kwargs):
-        return self._check_result_index_name(self._apply_agg_function)(
+        return self._apply_agg_function_check_index_name(
             lambda df: df.transform(func, *args, **kwargs)
         )
 
@@ -678,7 +672,7 @@ class DataFrameGroupBy(object):
             squeeze=self._squeeze,
             **new_groupby_kwargs,
         )
-        return self._check_result_index_name(work_object._apply_agg_function)(
+        return work_object._apply_agg_function_check_index_name(
             lambda df: df.fillna(**kwargs)
         )
 
@@ -721,9 +715,7 @@ class DataFrameGroupBy(object):
         if is_list_like(q):
             return self._default_to_pandas(lambda df: df.quantile(q=q, **kwargs))
 
-        return self._check_result_index(self._apply_agg_function)(
-            lambda df: df.quantile(q, **kwargs)
-        )
+        return self._apply_agg_function_check_index(lambda df: df.quantile(q, **kwargs))
 
     def diff(self):
         return self._default_to_pandas(lambda df: df.diff())
@@ -935,62 +927,53 @@ class DataFrameGroupBy(object):
             return result.squeeze()
         return result
 
-    def _check_result_index(self, func):
+    def _apply_agg_function_check_index(self, *args, **kwargs):
         """
-        Check the result of `func` on the need of resetting index.
+        Perform `self._apply_agg_function` with additional check.
+
+        Check the result of `self._apply_agg_function` on the need of resetting index.
 
         Parameters
         ----------
-        func : callable
-            The function, the result of which will be checked.
+        *args : list
+            Positional arguments to pass to `self._apply_agg_function`.
+        **kwargs : dict
+            Keyword arguments to pass to `self._apply_agg_function`.
 
         Returns
         -------
         DataFrame
-            The result of `func` with dropped index or an original result.
         """
+        result = self._apply_agg_function(*args, **kwargs)
+        if self._by is None and not self._as_index:
+            # This is a workaround to align behavior with pandas. In this case pandas
+            # resets index, but Modin doesn't do that. More details are in https://github.com/modin-project/modin/issues/3716.
+            result.reset_index(drop=True, inplace=True)
 
-        def wrapper(*args, **kwargs):
-            result = func(*args, **kwargs)
+        return result
 
-            if self._by is None and not self._as_index:
-                # This is a workaround to align behavior with pandas. In this case pandas
-                # resets index, but Modin doesn't do that. More details are in https://github.com/modin-project/modin/issues/3716.
-                result.reset_index(drop=True, inplace=True)
-
-            return result
-
-        wrapper.__name__ = func.__name__
-
-        return wrapper
-
-    def _check_result_index_name(self, func):
+    def _apply_agg_function_check_index_name(self, *args, **kwargs):
         """
-        Check the result of `func` on the need of resetting index name.
+        Perform `self._apply_agg_function` with additional check.
+
+        Check the result of `self._apply_agg_function` on the need of resetting index name.
 
         Parameters
         ----------
-        func : callable
-            The function, the result of which will be checked.
+        *args : list
+            Positional arguments to pass to `self._apply_agg_function`.
+        **kwargs : dict
+            Keyword arguments to pass to `self._apply_agg_function`.
 
         Returns
         -------
         DataFrame
-            The result of `func` with dropped index name or an original result.
         """
-
-        def wrapper(*args, **kwargs):
-            result = func(*args, **kwargs)
-
-            if self._by is not None:
-                # pandas does not name the index for this func
-                result._query_compiler.set_index_name(None)
-
-            return result
-
-        wrapper.__name__ = func.__name__
-
-        return wrapper
+        result = self._apply_agg_function(*args, **kwargs)
+        if self._by is not None:
+            # pandas does not name the index for this case
+            result._query_compiler.set_index_name(None)
+        return result
 
     def _apply_agg_function(self, f, *args, **kwargs):
         """
