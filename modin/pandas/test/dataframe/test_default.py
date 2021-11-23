@@ -783,7 +783,7 @@ def test_resample_specific(rule, closed, label, on, level):
         "tuple",
         "series",
         "index",
-        "duplicated_column",
+        "duplicate_column",
         "missed_columns",
     ],
 )
