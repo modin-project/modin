@@ -3155,11 +3155,11 @@ class Resampler(object):
         ):
             if len(self._dataframe.columns.intersection(key)) != len(key):
                 missed_keys = list(set(key).difference(self._dataframe.columns))
-                raise KeyError(f"Columns {str(missed_keys)} aren't exist.")
+                raise KeyError(f"Columns not found: {str(sorted(missed_keys))[1:-1]}")
             return _get_new_resampler(list(key))
 
         if key not in self._dataframe:
-            raise KeyError(f"Column {key} isn't exist.")
+            raise KeyError(f"Column not found: {key}")
 
         return _get_new_resampler(key)
 
