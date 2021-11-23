@@ -66,12 +66,12 @@ requested that functionality.
 Connecting to a database for `read_sql`
 ---------------------------------------
 
-To make Pandas read from a SQL database, you have two options:
+To make pandas read from a SQL database, you have two options:
 
 1) Pass a connection string, e.g. ``postgresql://reader:NWDMCE5xdipIjRrp@hh-pgsql-public.ebi.ac.uk:5432/pfmegrnargs``
 2) Pass an open database connection, e.g. for psycopg2, ``psycopg2.connect("dbname=pfmegrnargs user=reader password=NWDMCE5xdipIjRrp host=hh-pgsql-public.ebi.ac.uk")``
 
-The first option works with both Modin and Pandas. If you try the second option
+The first option works with both Modin and pandas. If you try the second option
 in Modin, Modin will default to pandas because open database connections cannot be pickled.
 Pickling is required to send connection details to remote workers.
 To handle the unique requirements of distributed database access, Modin has a distributed
