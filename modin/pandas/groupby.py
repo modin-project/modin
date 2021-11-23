@@ -1029,7 +1029,6 @@ class DataFrameGroupBy(object):
         result = type(self._df)(query_compiler=new_manager)
         if result._query_compiler.get_index_name() == "__reduced__":
             result._query_compiler.set_index_name(None)
-
         if self._squeeze:
             return result.squeeze()
         return result
