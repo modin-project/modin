@@ -3211,7 +3211,7 @@ class Resampler(object):
         )
 
     def get_group(self, name, obj=None):
-        if list(self.resample_args)[1] == 0:
+        if self.resample_args[1] == 0:
             result = self.__groups.get_group(name)
         else:
             result = self.__groups.get_group(name).T
@@ -3446,7 +3446,7 @@ class Resampler(object):
             )
 
     def prod(self, _method="prod", min_count=0, *args, **kwargs):
-        if list(self.resample_args)[1] == 0:
+        if self.resample_args[1] == 0:
             result = self.__groups.prod(min_count=min_count, *args, **kwargs)
         else:
             result = self.__groups.prod(min_count=min_count, *args, **kwargs).T
@@ -3477,7 +3477,7 @@ class Resampler(object):
         )
 
     def sum(self, _method="sum", min_count=0, *args, **kwargs):
-        if list(self.resample_args)[1] == 0:
+        if self.resample_args[1] == 0:
             result = self.__groups.sum(min_count=min_count, *args, **kwargs)
         else:
             result = self.__groups.sum(min_count=min_count, *args, **kwargs).T
