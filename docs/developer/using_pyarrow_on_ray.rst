@@ -1,4 +1,4 @@
-Pyarrow on Ray
+PyArrow on Ray
 ==============
 
 Coming Soon!

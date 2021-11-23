@@ -25,6 +25,6 @@ about an API or method in Modin, please contact the Modin `developer mailing lis
 
 .. meta::
     :description lang=en:
-        Compilation of implemented Pandas APIs in Modin.
+        Compilation of implemented pandas APIs in Modin.
 
 .. _developer mailing list: https://groups.google.com/forum/#!forum/modin-dev

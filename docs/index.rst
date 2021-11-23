@@ -122,11 +122,12 @@ nature, you get a fast DataFrame at 1MB and 1TB+.
 
 **Modin is currently under active development. Requests and contributions are welcome!**
 
-**If you are interested in contributions please check out the :doc:`Getting Started</getting_started/index>`
-guide then refer to the :doc:`Developer Documentation</developer/index>`'developer documentation' section,
-where you can find system architecture and internal implementation details docs
-and other useful information.**
+If you are interested in contributions please check out the :doc:`Getting Started</getting_started/index>`
+guide then refer to the :doc:`Developer Documentation</developer/index>` section,
+where you can find system architecture, internal implementation details, and other useful information.
+Also check out the `Github`_ to view open issues and make contributions.
 
 .. _Dataframe: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.html
 .. _Ray: https://github.com/ray-project/ray/
 .. _Dask: https://dask.org/
+.. _Github: https://github.com/modin-project/modin

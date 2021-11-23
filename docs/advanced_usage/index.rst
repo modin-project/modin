@@ -15,7 +15,7 @@ Advanced Usage
     :description lang=en:
         Description of Modin's advanced features.
 
-Modin aims to not only optimize Pandas, but also provide a comprehensive, 
+Modin aims to not only optimize pandas, but also provide a comprehensive, 
 integrated toolkit for data scientists. We are actively developing data science tools 
 such as DataFrame - spreadsheet integration, DataFrame algebra, progress bars, SQL queries
 on DataFrames, and more. Join the `Discourse`_ for the latest updates!
