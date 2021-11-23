@@ -17,9 +17,7 @@ from modin.core.dataframe.pandas.dataframe.dataframe import PandasDataframe
 from modin.experimental.core.storage_formats.omnisci.query_compiler import (
     DFAlgQueryCompiler,
 )
-from ..partitioning.partition_manager import (
-    OmnisciOnNativeDataframePartitionManager,
-)
+from ..partitioning.partition_manager import OmnisciOnNativeDataframePartitionManager
 
 from pandas.core.indexes.api import ensure_index, Index, MultiIndex, RangeIndex
 from pandas.core.dtypes.common import get_dtype, is_list_like, is_bool_dtype
@@ -281,11 +279,11 @@ class OmnisciOnNativeDataframe(PandasDataframe):
         ----------
         row_indices : list, optional
             Indices of rows to select.
-        row_numeric_idx : list of int, optional
+        row_numeric_idx : list-like of ints, optional
             Numeric indices of rows to select.
         col_indices : list, optional
             Indices of columns to select.
-        col_numeric_idx : list of int, optional
+        col_numeric_idx : list-like of ints, optional
             Numeric indices of columns to select.
 
         Returns

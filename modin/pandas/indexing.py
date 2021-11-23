@@ -34,6 +34,7 @@ import pandas
 from pandas.api.types import is_list_like, is_bool
 from pandas.core.dtypes.common import is_integer
 from pandas.core.indexing import IndexingError
+from modin.error_message import ErrorMessage
 
 from .dataframe import DataFrame
 from .series import Series
@@ -236,9 +237,9 @@ class _LocationIndexerBase(object):
 
         Parameters
         ----------
-        row_lookup : slice or scalar
+        row_lookup : slice(None), range or np.ndarray
             The global row index to retrieve data from.
-        col_lookup : slice or scalar
+        col_lookup : slice(None), range or np.ndarray
             The global col index to retrieve data from.
         ndim : {0, 1, 2}
             Number of dimensions in dataset to be retrieved.
@@ -247,7 +248,26 @@ class _LocationIndexerBase(object):
         -------
         modin.pandas.DataFrame or modin.pandas.Series
             Located dataset.
+
+        Notes
+        -----
+        Usage of `slice(None)` as a lookup is a hack to pass information about
+        full-axis grab without computing actual indices that triggers lazy computations.
+        Ideally, this API should get rid of using slices as indexers and either use a
+        common ``Indexer`` object or range and ``np.ndarray`` only.
         """
+        if isinstance(row_lookup, slice):
+            ErrorMessage.catch_bugs_and_request_email(
+                failure_condition=row_lookup != slice(None),
+                extra_log=f"Only None-slices are acceptable as a slice argument in masking, got: {row_lookup}",
+            )
+            row_lookup = None
+        if isinstance(col_lookup, slice):
+            ErrorMessage.catch_bugs_and_request_email(
+                failure_condition=col_lookup != slice(None),
+                extra_log=f"Only None-slices are acceptable as a slice argument in masking, got: {col_lookup}",
+            )
+            col_lookup = None
         qc_view = self.qc.view(row_lookup, col_lookup)
         if ndim == 2:
             return self.df.__constructor__(query_compiler=qc_view)
@@ -453,7 +473,7 @@ class _LocationIndexerBase(object):
         Unpack the user input for getitem and setitem and compute ndim.
 
         loc[a] -> ([a], :), 1D
-        loc[[a,b],] -> ([a,b], :),
+        loc[[a,b]] -> ([a,b], :),
         loc[a,b] -> ([a], [b]), 0D
 
         Parameters
@@ -514,6 +534,8 @@ class _LocIndexer(_LocationIndexerBase):
         --------
         pandas.DataFrame.loc
         """
+        if self.df.empty:
+            return self.df._default_to_pandas(lambda df: df.loc[key])
         row_loc, col_loc, ndim = self._parse_row_and_column_locators(key)
         self.row_scalar = is_scalar(row_loc)
         self.col_scalar = is_scalar(col_loc)
@@ -740,6 +762,8 @@ class _iLocIndexer(_LocationIndexerBase):
         --------
         pandas.DataFrame.iloc
         """
+        if self.df.empty:
+            return self.df._default_to_pandas(lambda df: df.iloc[key])
         row_loc, col_loc, ndim = self._parse_row_and_column_locators(key)
         self.row_scalar = is_scalar(row_loc)
         self.col_scalar = is_scalar(col_loc)
@@ -797,34 +821,39 @@ class _iLocIndexer(_LocationIndexerBase):
 
         Returns
         -------
-        row_lookup : numpy.ndarray
+        row_lookup : slice(None) if full axis grab, pandas.RangeIndex if repetition is detected, numpy.ndarray otherwise
             List of index labels.
-        col_lookup : numpy.ndarray
+        col_lookup : slice(None) if full axis grab, pandas.RangeIndex if repetition is detected, numpy.ndarray otherwise
             List of columns labels.
+
+        Notes
+        -----
+        Usage of `slice(None)` as a resulting lookup is a hack to pass information about
+        full-axis grab without computing actual indices that triggers lazy computations.
+        Ideally, this API should get rid of using slices as indexers and either use a
+        common ``Indexer`` object or range and ``np.ndarray`` only.
         """
         row_loc = [row_loc] if is_scalar(row_loc) else row_loc
         col_loc = [col_loc] if is_scalar(col_loc) else col_loc
-        if (
-            not isinstance(row_loc, slice)
-            or isinstance(row_loc, slice)
-            and row_loc.step is not None
-        ):
-            row_lookup = (
-                pandas.RangeIndex(len(self.qc.index)).to_series().iloc[row_loc].index
-            )
-        else:
-            row_lookup = row_loc
-        if (
-            not isinstance(col_loc, slice)
-            or isinstance(col_loc, slice)
-            and col_loc.step is not None
-        ):
-            col_lookup = (
-                pandas.RangeIndex(len(self.qc.columns)).to_series().iloc[col_loc].index
-            )
-        else:
-            col_lookup = col_loc
-        return row_lookup, col_lookup
+        lookups = []
+        for axis, axis_loc in enumerate((row_loc, col_loc)):
+            if isinstance(axis_loc, slice) and axis_loc.step is None:
+                axis_lookup = (
+                    axis_loc
+                    if axis_loc == slice(None)
+                    else pandas.RangeIndex(
+                        *axis_loc.indices(len(self.qc.get_axis(axis)))
+                    )
+                )
+            else:
+                axis_lookup = (
+                    pandas.RangeIndex(len(self.qc.get_axis(axis)))
+                    .to_series()
+                    .iloc[axis_loc]
+                    .index
+                )
+            lookups.append(axis_lookup)
+        return lookups
 
     def _check_dtypes(self, locator):
         """

@@ -167,7 +167,7 @@ and lots of other useful information.**
    developer/partition_api
 
 .. toctree::
-   :caption: Engines, Backends, and APIs
+   :caption: Engines, Storage formats, and APIs
 
    UsingPandasonRay/index
    UsingPandasonDask/index

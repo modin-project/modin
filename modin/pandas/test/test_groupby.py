@@ -1310,8 +1310,9 @@ def test_groupby_multiindex(groupby_kwargs):
         modin_df = modin_df.T
         pandas_df = pandas_df.T
 
-    md_grp, pd_grp = modin_df.groupby(**groupby_kwargs), pandas_df.groupby(
-        **groupby_kwargs
+    md_grp, pd_grp = (
+        modin_df.groupby(**groupby_kwargs),
+        pandas_df.groupby(**groupby_kwargs),
     )
     modin_groupby_equals_pandas(md_grp, pd_grp)
     df_equals(md_grp.sum(), pd_grp.sum())
@@ -1729,8 +1730,9 @@ def test_multi_column_groupby_different_partitions(
         md_df = md_df.astype({by[0]: "category"})
         pd_df = pd_df.astype({by[0]: "category"})
 
-    md_grp, pd_grp = md_df.groupby(by, as_index=as_index), pd_df.groupby(
-        by, as_index=as_index
+    md_grp, pd_grp = (
+        md_df.groupby(by, as_index=as_index),
+        pd_df.groupby(by, as_index=as_index),
     )
     eval_general(md_grp, pd_grp, func_to_apply)
     eval___getitem__(md_grp, pd_grp, md_df.columns[1])
@@ -1756,8 +1758,9 @@ def test_not_str_by(by, as_index):
     columns = pandas.Index([0, 1.5, "str", pandas.Timestamp("2020-02-02"), None])
 
     md_df, pd_df = create_test_dfs(data, columns=columns)
-    md_grp, pd_grp = md_df.groupby(by, as_index=as_index), pd_df.groupby(
-        by, as_index=as_index
+    md_grp, pd_grp = (
+        md_df.groupby(by, as_index=as_index),
+        pd_df.groupby(by, as_index=as_index),
     )
 
     modin_groupby_equals_pandas(md_grp, pd_grp)

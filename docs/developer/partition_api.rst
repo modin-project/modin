@@ -1,7 +1,7 @@
 Partition API in Modin
 ======================
 
-When you are working with a Modin Dataframe, you can unwrap its remote partitions
+When you are working with a :py:class:`~modin.pandas.dataframe.DataFrame`, you can unwrap its remote partitions
 to get the raw futures objects compatible with the execution engine (e.g. ``ray.ObjectRef`` for Ray).
 In addition to unwrapping of the remote partitions we also provide an API to construct a ``modin.pandas.DataFrame``
 from raw futures objects.
@@ -13,7 +13,7 @@ You can pass the partitions having needed IPs to your function. It can help with
 
 Partition API implementations
 -----------------------------
-By default, a Modin Dataframe stores underlying partitions as ``pandas.DataFrame`` objects.
+By default, a :py:class:`~modin.pandas.dataframe.DataFrame` stores underlying partitions as ``pandas.DataFrame`` objects.
 You can find the specific implementation of Modin's Partition Interface in :doc:`Pandas Partition API </flow/modin/distributed/dataframe/pandas>`.
 
 .. toctree::
@@ -23,7 +23,7 @@ You can find the specific implementation of Modin's Partition Interface in :doc:
 
 Ray engine
 ----------
-However, it is worth noting that for Modin on ``Ray`` engine with ``pandas`` backend IPs of the remote partitions may not match
+However, it is worth noting that for Modin on ``Ray`` engine with ``pandas`` in-memory format IPs of the remote partitions may not match
 actual locations if the partitions are lower than 100 kB. Ray saves such objects (<= 100 kB, by default) in in-process store
 of the calling process (please, refer to `Ray documentation`_ for more information). We can't get IPs for such objects while maintaining good performance.
 So, you should keep in mind this for unwrapping of the remote partitions with their IPs. Several options are provided to handle the case in
@@ -31,7 +31,7 @@ So, you should keep in mind this for unwrapping of the remote partitions with th
 
 Dask engine
 -----------
-There is no mentioned above issue for Modin on ``Dask`` engine with ``pandas`` backend because ``Dask`` saves any objects
+There is no mentioned above issue for Modin on ``Dask`` engine with ``pandas`` in-memory format because ``Dask`` saves any objects
 in the worker process that processes a function (please, refer to `Dask documentation`_ for more information).
 
 How to handle Ray objects that are lower than 100 kB

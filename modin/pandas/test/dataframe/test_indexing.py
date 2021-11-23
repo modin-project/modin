@@ -107,10 +107,7 @@ def test_asof_without_nan(dates, subset):
 
 @pytest.mark.parametrize(
     "lookup",
-    [
-        [60, 70, 90],
-        [60.5, 70.5, 100],
-    ],
+    [[60, 70, 90], [60.5, 70.5, 100]],
 )
 @pytest.mark.parametrize("subset", ["col2", "col1", ["col1", "col2"], None])
 def test_asof_large(lookup, subset):
@@ -265,6 +262,16 @@ def test_indexing_duplicate_axis(data):
         modin_df.loc[0, modin_df.columns[0:4]],
         pandas_df.loc[0, pandas_df.columns[0:4]],
     )
+
+
+@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test_set_index(data):
+    modin_df = pd.DataFrame(data)
+    pandas_df = pandas.DataFrame(data)
+
+    modin_result = modin_df.set_index([modin_df.index, modin_df.columns[0]])
+    pandas_result = pandas_df.set_index([pandas_df.index, pandas_df.columns[0]])
+    df_equals(modin_result, pandas_result)
 
 
 @pytest.mark.gpu
@@ -433,6 +440,16 @@ def test_loc_multi_index():
     df_equals(modin_df.loc[modin_df.index[:7]], pandas_df.loc[pandas_df.index[:7]])
 
 
+def test_loc_empty():
+    pandas_df = pandas.DataFrame(index=range(5))
+    modin_df = pd.DataFrame(index=range(5))
+
+    df_equals(pandas_df.loc[1], modin_df.loc[1])
+    pandas_df.loc[1] = 3
+    modin_df.loc[1] = 3
+    df_equals(pandas_df, modin_df)
+
+
 @pytest.mark.parametrize("index", [["row1", "row2", "row3"]])
 @pytest.mark.parametrize("columns", [["col1", "col2"]])
 def test_loc_assignment(index, columns):
@@ -539,6 +556,16 @@ def test_iloc_nested_assignment(data):
     modin_df[key2].iloc[0] = None
     pandas_df[key2].iloc[0] = None
     df_equals(modin_df, pandas_df)
+
+
+def test_iloc_empty():
+    pandas_df = pandas.DataFrame(index=range(5))
+    modin_df = pd.DataFrame(index=range(5))
+
+    df_equals(pandas_df.iloc[1], modin_df.iloc[1])
+    pandas_df.iloc[1] = 3
+    modin_df.iloc[1] = 3
+    df_equals(pandas_df, modin_df)
 
 
 def test_loc_series():
@@ -1382,6 +1409,7 @@ def test___getitem__(data):
         (1, -1),
         (-3, -1),
         (1, -1, 2),
+        (-1, 1, -1),
     ]
 
     # slice test

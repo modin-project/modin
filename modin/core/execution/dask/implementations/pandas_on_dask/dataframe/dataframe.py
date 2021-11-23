@@ -14,9 +14,7 @@
 """Module houses class that implements ``PandasDataframe``."""
 
 from modin.core.dataframe.pandas.dataframe.dataframe import PandasDataframe
-from ..partitioning.partition_manager import (
-    PandasOnDaskDataframePartitionManager,
-)
+from ..partitioning.partition_manager import PandasOnDaskDataframePartitionManager
 
 from distributed.client import default_client
 

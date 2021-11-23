@@ -22,6 +22,7 @@ import fsspec
 import os
 import re
 from modin.config import StorageFormat
+from modin.utils import import_optional_dependency
 import numpy as np
 
 S3_ADDRESS_REGEX = re.compile("[sS]3://(.*?)/(.*)")
@@ -45,6 +46,8 @@ class OpenFile:
         String, which defines which mode file should be open.
     compression : str, default: "infer"
         File compression name.
+    **kwargs : dict
+        Keywords arguments to be passed into ``fsspec.open`` function.
 
     Attributes
     ----------
@@ -56,12 +59,15 @@ class OpenFile:
         File compression name.
     file : fsspec.core.OpenFile
         The opened file.
+    kwargs : dict
+        Keywords arguments to be passed into ``fsspec.open`` function.
     """
 
-    def __init__(self, file_path, mode="rb", compression="infer"):
+    def __init__(self, file_path, mode="rb", compression="infer", **kwargs):
         self.file_path = file_path
         self.mode = mode
         self.compression = compression
+        self.kwargs = kwargs
 
     def __enter__(self):
         """
@@ -75,17 +81,21 @@ class OpenFile:
         try:
             from botocore.exceptions import NoCredentialsError
 
-            credential_error_type = (NoCredentialsError,)
+            credential_error_type = (
+                NoCredentialsError,
+                PermissionError,
+            )
         except ModuleNotFoundError:
             credential_error_type = ()
 
         args = (self.file_path, self.mode, self.compression)
 
-        self.file = fsspec.open(*args, anon=False)
+        self.file = fsspec.open(*args, **self.kwargs)
         try:
             return self.file.open()
         except credential_error_type:
-            self.file = fsspec.open(*args, anon=True)
+            self.kwargs["anon"] = True
+            self.file = fsspec.open(*args, **self.kwargs)
         return self.file.open()
 
     def __exit__(self, *args):
@@ -245,7 +255,9 @@ class FileDispatcher:
             if match is not None:
                 if file_path[0] == "S":
                     file_path = "{}{}".format("s", file_path[1:])
-                import s3fs as S3FS
+                S3FS = import_optional_dependency(
+                    "s3fs", "Module s3fs is required to read S3FS files."
+                )
                 from botocore.exceptions import NoCredentialsError
 
                 s3fs = S3FS.S3FileSystem(anon=False)

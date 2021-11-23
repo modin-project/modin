@@ -378,6 +378,7 @@ class PandasDataframePartitionManager(ABC):
         apply_indices=None,
         enumerate_partitions=False,
         lengths=None,
+        **kwargs,
     ):
         """
         Broadcast the `right` partitions to `left` and apply `apply_func` along full `axis`.
@@ -402,6 +403,8 @@ class PandasDataframePartitionManager(ABC):
             Note that `apply_func` must be able to accept `partition_idx` kwarg.
         lengths : list of ints, default: None
             The list of lengths to shuffle the object.
+        **kwargs : dict
+            Additional options that could be used by different engines.
 
         Returns
         -------
@@ -441,6 +444,7 @@ class PandasDataframePartitionManager(ABC):
                     preprocessed_map_func,
                     **kw,
                     **({"partition_idx": idx} if enumerate_partitions else {}),
+                    **kwargs,
                 )
                 for idx, i in enumerate(apply_indices)
             ]
@@ -511,6 +515,7 @@ class PandasDataframePartitionManager(ABC):
         keep_partitioning=False,
         lengths=None,
         enumerate_partitions=False,
+        **kwargs,
     ):
         """
         Apply `map_func` to every partition in `partitions` along given `axis`.
@@ -531,6 +536,8 @@ class PandasDataframePartitionManager(ABC):
         enumerate_partitions : bool, default: False
             Whether or not to pass partition index into `map_func`.
             Note that `map_func` must be able to accept `partition_idx` kwarg.
+        **kwargs : dict
+            Additional options that could be used by different engines.
 
         Returns
         -------
@@ -550,6 +557,7 @@ class PandasDataframePartitionManager(ABC):
             right=None,
             lengths=lengths,
             enumerate_partitions=enumerate_partitions,
+            **kwargs,
         )
 
     @classmethod
@@ -1118,6 +1126,8 @@ class PandasDataframePartitionManager(ABC):
         row_partitions_list,
         col_partitions_list,
         item_to_distribute=None,
+        row_lengths=None,
+        col_widths=None,
     ):
         """
         Apply a function along both axes.
@@ -1128,12 +1138,22 @@ class PandasDataframePartitionManager(ABC):
             The partitions to which the `func` will apply.
         func : callable
             The function to apply.
-        row_partitions_list : list
-            List of row partitions.
-        col_partitions_list : list
-            List of column partitions.
+        row_partitions_list : iterable of tuples
+            Iterable of tuples, containing 2 values:
+                1. Integer row partition index.
+                2. Internal row indexer of this partition.
+        col_partitions_list : iterable of tuples
+            Iterable of tuples, containing 2 values:
+                1. Integer column partition index.
+                2. Internal column indexer of this partition.
         item_to_distribute : item, default: None
             The item to split up so it can be applied over both axes.
+        row_lengths : list of ints, optional
+            Lengths of partitions for every row. If not specified this information
+            is extracted from partitions itself.
+        col_widths : list of ints, optional
+            Widths of partitions for every column. If not specified this information
+            is extracted from partitions itself.
 
         Returns
         -------
@@ -1148,6 +1168,25 @@ class PandasDataframePartitionManager(ABC):
         """
         partition_copy = partitions.copy()
         row_position_counter = 0
+
+        if row_lengths is None:
+            row_lengths = [None] * len(row_partitions_list)
+        if col_widths is None:
+            col_widths = [None] * len(col_partitions_list)
+
+        def compute_part_size(indexer, remote_part, part_idx, axis):
+            """Compute indexer length along the specified axis for the passed partition."""
+            if isinstance(indexer, slice):
+                shapes_container = row_lengths if axis == 0 else col_widths
+                part_size = shapes_container[part_idx]
+                if part_size is None:
+                    part_size = (
+                        remote_part.length() if axis == 0 else remote_part.width()
+                    )
+                    shapes_container[part_idx] = part_size
+                indexer = range(*indexer.indices(part_size))
+            return len(indexer)
+
         for row_idx, row_values in enumerate(row_partitions_list):
             row_blk_idx, row_internal_idx = row_values
             col_position_counter = 0
@@ -1155,12 +1194,17 @@ class PandasDataframePartitionManager(ABC):
                 col_blk_idx, col_internal_idx = col_values
                 remote_part = partition_copy[row_blk_idx, col_blk_idx]
 
+                row_offset = compute_part_size(
+                    row_internal_idx, remote_part, row_idx, axis=0
+                )
+                col_offset = compute_part_size(
+                    col_internal_idx, remote_part, col_idx, axis=1
+                )
+
                 if item_to_distribute is not None:
                     item = item_to_distribute[
-                        row_position_counter : row_position_counter
-                        + len(row_internal_idx),
-                        col_position_counter : col_position_counter
-                        + len(col_internal_idx),
+                        row_position_counter : row_position_counter + row_offset,
+                        col_position_counter : col_position_counter + col_offset,
                     ]
                     item = {"item": item}
                 else:
@@ -1172,8 +1216,8 @@ class PandasDataframePartitionManager(ABC):
                     **item,
                 )
                 partition_copy[row_blk_idx, col_blk_idx] = block_result
-                col_position_counter += len(col_internal_idx)
-            row_position_counter += len(row_internal_idx)
+                col_position_counter += col_offset
+            row_position_counter += row_offset
         return partition_copy
 
     @classmethod

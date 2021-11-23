@@ -1945,24 +1945,17 @@ class DataFrame(BasePandasDataset):
             isinstance(col, (pandas.Index, Series, np.ndarray, list, Iterator))
             for col in keys
         ):
-            # The current implementation cannot mix a list column labels and list like
-            # objects.
-            if not all(
-                isinstance(col, (pandas.Index, Series, np.ndarray, list, Iterator))
-                for col in keys
-            ):
-                return self._default_to_pandas(
-                    "set_index",
-                    keys,
-                    drop=drop,
-                    append=append,
-                    inplace=inplace,
-                    verify_integrity=verify_integrity,
-                )
             if inplace:
                 frame = self
             else:
                 frame = self.copy()
+            if not all(
+                isinstance(col, (pandas.Index, Series, np.ndarray, list, Iterator))
+                for col in keys
+            ):
+                if drop:
+                    keys = [frame.pop(k) if not is_list_like(k) else k for k in keys]
+                keys = [k._to_pandas() if isinstance(k, Series) else k for k in keys]
             # These are single-threaded objects, so we might as well let pandas do the
             # calculation so that it matches.
             frame.index = (
@@ -2197,20 +2190,23 @@ class DataFrame(BasePandasDataset):
         partition_cols=None,
         storage_options: StorageOptions = None,
         **kwargs,
-    ):  # pragma: no cover # noqa: PR01, RT01, D200
-        """
-        Write a ``DataFrame`` to the binary parquet format.
-        """
-        return self._default_to_pandas(
-            pandas.DataFrame.to_parquet,
-            path,
-            engine=engine,
-            compression=compression,
-            index=index,
-            partition_cols=partition_cols,
-            storage_options=storage_options,
-            **kwargs,
+    ):
+
+        config = {
+            "path": path,
+            "engine": engine,
+            "compression": compression,
+            "index": index,
+            "partition_cols": partition_cols,
+            "storage_options": storage_options,
+        }
+        new_query_compiler = self._query_compiler
+
+        from modin.core.execution.dispatching.factories.dispatcher import (
+            FactoryDispatcher,
         )
+
+        return FactoryDispatcher.to_parquet(new_query_compiler, **config, **kwargs)
 
     def to_period(
         self, freq=None, axis=0, copy=True

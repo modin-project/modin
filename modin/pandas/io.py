@@ -484,11 +484,14 @@ def read_fwf(
     **kwds,
 ):
     from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
+    from pandas.io.parsers.base_parser import parser_defaults
 
     Engine.subscribe(_update_engine)
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
     kwargs.update(kwargs.pop("kwds", {}))
-    pd_obj = FactoryDispatcher.read_fwf(**kwargs)
+    target_kwargs = parser_defaults.copy()
+    target_kwargs.update(kwargs)
+    pd_obj = FactoryDispatcher.read_fwf(**target_kwargs)
     # When `read_fwf` returns a TextFileReader object for iterating through
     if isinstance(pd_obj, pandas.io.parsers.TextFileReader):
         reader = pd_obj.read
