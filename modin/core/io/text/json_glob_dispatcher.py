@@ -16,11 +16,11 @@
 import glob
 import warnings
 
-from modin.core.io.file_dispatcher import FileDispatcher
+from modin.core.io.text.json_dispatcher import JSONDispatcher
 from modin.config import NPartitions
 
 
-class JsonGlobDispatcher(FileDispatcher):
+class JsonGlobDispatcher(JSONDispatcher):
     """Class handles utils for reading `.pkl` files."""
 
     @classmethod
@@ -47,12 +47,7 @@ class JsonGlobDispatcher(FileDispatcher):
         The number of partitions is equal to the number of input files.
         """
         if not (isinstance(filepath_or_buffer, str) and "*" in filepath_or_buffer):
-            warnings.warn("Defaulting to Modin core implementation")
-            return cls.single_worker_read(
-                filepath_or_buffer,
-                single_worker_read=True,
-                **kwargs,
-            )
+            return super()._read(filepath_or_buffer, use_json_parser=True, **kwargs)
         filepath_or_buffer = sorted(glob.glob(filepath_or_buffer))
 
         if len(filepath_or_buffer) == 0:

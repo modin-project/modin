@@ -182,7 +182,8 @@ def test_read_json_glob(filename, compression):
         df.to_json(filename, compression=compression)
 
     try:
-        df = pd.read_json_glob(filename, compression=compression)
+        json_glob_df = pd.read_json_glob(filename, compression=compression)
+        df_equals(json_glob_df, df)
     finally:
         json_files = glob.glob(filename)
         teardown_test_files(json_files)
