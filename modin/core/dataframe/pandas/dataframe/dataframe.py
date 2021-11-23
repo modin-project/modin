@@ -2101,7 +2101,7 @@ class PandasDataframe(object):
                 lengths=None,
                 enumerate_partitions=False,
             )
-            if axis:
+            if axis == 1:
                 # The number of columns does not change
                 new_widths = None
             else:
