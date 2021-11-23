@@ -57,8 +57,8 @@ class SQLDispatcher(FileDispatcher):
         BaseQueryCompiler
             Query compiler with imported data for further processing.
         """
-        connection_is_modin_db_connection = isinstance(con, ModinDatabaseConnection)
-        if not (connection_is_modin_db_connection or isinstance(con, str)):
+        is_modin_db_connection = isinstance(con, ModinDatabaseConnection)
+        if not (is_modin_db_connection or isinstance(con, str)):
             warnings.warn(
                 "To use parallel implementation of `read_sql`, pass either "
                 "the SQL connection string or a ModinDatabaseConnection "
@@ -69,9 +69,7 @@ class SQLDispatcher(FileDispatcher):
             )
             return cls.single_worker_read(sql, con=con, index_col=index_col, **kwargs)
         row_cnt_query = "SELECT COUNT(*) FROM ({}) as foo".format(sql)
-        connection_for_pandas = (
-            con.get_connection() if connection_is_modin_db_connection else con
-        )
+        connection_for_pandas = con.get_connection() if is_modin_db_connection else con
         row_cnt = pandas.read_sql(row_cnt_query, connection_for_pandas).squeeze()
         cols_names_df = pandas.read_sql(
             "SELECT * FROM ({}) as foo LIMIT 0".format(sql),
