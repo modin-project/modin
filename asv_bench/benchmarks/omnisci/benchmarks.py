@@ -59,10 +59,12 @@ class TimeJoin:
             # There is a bug in the engine that makes such joins fail. To avoid joining
             # on the meta-column we explicitly specify a non-default index to join on.
             # https://github.com/modin-project/modin/issues/3442
-            common_index = np.arange(1, len(self.df1) + 1)
-            self.df1.index = common_index
-            self.df2.index = common_index
+            # Generating a new object for every index to avoid shared index objects:
+            self.df1.index = np.arange(1, len(self.df1) + 1)
+            self.df2.index = np.arange(1, len(self.df2) + 1)
         else:
+            # Intersection rate indicates how many common join-keys `self.df1`
+            # and `self.df2` have in terms of percentage.
             indices_intersection_rate = 0.5
 
             frame_length = len(self.df1)
