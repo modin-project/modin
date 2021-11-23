@@ -131,6 +131,24 @@ html_theme_options = {
     "collapse_navigation": False,
     "navigation_depth": 4,
     "show_toc_level": 2,
+    "github_url": "https://github.com/modin-project/modin",
+    "icon_links": [
+        {
+            "name": "PyPI",
+            "url": "https://pypi.org/project/modin",
+            "icon": "fab fa-python",
+        },
+        {
+            "name": "Join the Slack",
+            "url": "https://modin.org/slack.html",
+            "icon": "fab fa-slack",
+        },
+        {
+            "name": "Mailing List",
+            "url": "https://groups.google.com/forum/#!forum/modin-dev",
+            "icon": "fas fa-envelope-square",
+        },
+    ],
 }
 
 # Custom sidebar templates, must be a dictionary that maps document names
