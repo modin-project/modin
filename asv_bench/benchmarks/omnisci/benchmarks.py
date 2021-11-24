@@ -459,10 +459,3 @@ class TimeGroupByMultiColumn(BaseTimeGroupBy):
                 {col: "mean" for col in self.non_groupby_columns}
             )
         )
-
-    def time_groupby_agg_nunique_dict(self, *args, **kwargs):
-        execute(
-            self.df.groupby(by=self.groupby_columns).agg(
-                {col: "nunique" for col in self.non_groupby_columns}
-            )
-        )
