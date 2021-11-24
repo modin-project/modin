@@ -62,7 +62,7 @@ class TimeJoin:
             # https://github.com/modin-project/modin/issues/3442
             # Generating a new object for every index to avoid shared index objects:
             self.df1.index = pandas.RangeIndex(1, len(self.df1) + 1)
-            self.df2.index = pandas.RangeIndex(1, len(self.df1) + 1)
+            self.df2.index = pandas.RangeIndex(1, len(self.df2) + 1)
         else:
             # Intersection rate indicates how many common join-keys `self.df1`
             # and `self.df2` have in terms of percentage.
