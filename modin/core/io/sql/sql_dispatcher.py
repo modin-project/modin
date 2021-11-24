@@ -30,11 +30,7 @@ from modin.config import NPartitions
 
 
 class SQLDispatcher(FileDispatcher):
-    """
-    Class handles utils for reading SQL queries or database tables.
-
-    Inherits some common for files util functions from `FileDispatcher` class.
-    """
+    """Class handles utils for reading SQL queries or database tables."""
 
     @classmethod
     def _read(cls, sql, con, index_col=None, **kwargs):
