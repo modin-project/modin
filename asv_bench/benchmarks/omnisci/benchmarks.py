@@ -30,6 +30,7 @@ from ..utils import (
 )
 from ..utils.common import random_state
 import numpy as np
+import pandas
 
 
 class TimeJoin:
@@ -60,8 +61,8 @@ class TimeJoin:
             # on the meta-column we explicitly specify a non-default index to join on.
             # https://github.com/modin-project/modin/issues/3442
             # Generating a new object for every index to avoid shared index objects:
-            self.df1.index = np.arange(1, len(self.df1) + 1)
-            self.df2.index = np.arange(1, len(self.df2) + 1)
+            self.df1.index = pandas.RangeIndex(1, len(self.df1) + 1)
+            self.df2.index = pandas.RangeIndex(1, len(self.df1) + 1)
         else:
             # Intersection rate indicates how many common join-keys `self.df1`
             # and `self.df2` have in terms of percentage.
