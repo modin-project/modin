@@ -2699,20 +2699,28 @@ class PandasQueryCompiler(BaseQueryCompiler):
             # right index and placing columns in the correct order.
             groupby_kwargs["as_index"] = True
 
+            # We have to filter func-dict BEFORE inserting broadcasted 'by' columns
+            # to avoid multiple aggregation results for 'by' cols in case they're
+            # present in the func-dict:
+            partition_agg_func = GroupByReduce.try_filter_dict(agg_func, df)
+
             internal_by_cols = pandas.Index([])
-            missmatched_cols = pandas.Index([])
+            missed_by_cols = pandas.Index([])
+
             if by is not None:
                 internal_by_df = by[internal_by]
 
                 if isinstance(internal_by_df, pandas.Series):
                     internal_by_df = internal_by_df.to_frame()
 
-                missmatched_cols = internal_by_df.columns.difference(df.columns)
-                df = pandas.concat(
-                    [df, internal_by_df[missmatched_cols]],
-                    axis=1,
-                    copy=False,
-                )
+                missed_by_cols = internal_by_df.columns.difference(df.columns)
+                if len(missed_by_cols) > 0:
+                    df = pandas.concat(
+                        [df, internal_by_df[missed_by_cols]],
+                        axis=1,
+                        copy=False,
+                    )
+
                 internal_by_cols = internal_by_df.columns
 
                 external_by = by.columns.difference(internal_by).unique()
@@ -2734,15 +2742,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 """Compute groupby aggregation for a single partition."""
                 grouped_df = df.groupby(by=by, axis=axis, **groupby_kwargs)
                 try:
-                    if isinstance(agg_func, dict):
-                        # Filter our keys that don't exist in this partition. This happens when some columns
-                        # from this original dataframe didn't end up in every partition.
-                        partition_dict = {
-                            k: v for k, v in agg_func.items() if k in df.columns
-                        }
-                        result = grouped_df.agg(partition_dict)
-                    else:
-                        result = agg_func(grouped_df, **agg_kwargs)
+                    result = partition_agg_func(grouped_df, **agg_kwargs)
                 # This happens when the partition is filled with non-numeric data and a
                 # numeric operation is done. We need to build the index here to avoid
                 # issues with extracting the index.
@@ -2753,27 +2753,31 @@ class PandasQueryCompiler(BaseQueryCompiler):
                         result.name if result.name is not None else "__reduced__"
                     )
 
-                result_cols = result.columns
-                result.drop(columns=missmatched_cols, inplace=True, errors="ignore")
+                selection = agg_func.keys() if isinstance(agg_func, dict) else None
+                if selection is None:
+                    # Some pandas built-in aggregation functions aggregate 'by' columns
+                    # (for example 'apply', 'dtypes', maybe more...). Since we make sure
+                    # that all of the 'by' columns are presented in every partition by
+                    # inserting the missed ones, we will end up with all of the 'by'
+                    # columns being aggregated in every partition. To avoid duplications
+                    # in the result we drop all of the 'by' columns that were inserted
+                    # in this partition AFTER handling 'as_index' parameter. The order
+                    # is important for proper naming-conflicts handling.
+                    misaggregated_cols = missed_by_cols.intersection(result.columns)
+                else:
+                    misaggregated_cols = []
 
                 if not as_index:
-                    drop, lvls_to_drop, cols_to_drop = GroupBy.handle_as_index(
-                        result_cols,
-                        result.index.names,
+                    GroupBy.handle_as_index_for_dataframe(
+                        result,
                         internal_by_cols,
                         by_cols_dtypes=df[internal_by_cols].dtypes.values,
                         is_multi_by=is_multi_by,
-                        selection=(
-                            agg_func.keys() if isinstance(agg_func, dict) else None
-                        ),
+                        selection=selection,
                         partition_idx=partition_idx,
                         drop=drop,
+                        inplace=True,
                     )
-                    if len(lvls_to_drop) > 0:
-                        result.index = result.index.droplevel(lvls_to_drop)
-                    if len(cols_to_drop) > 0:
-                        result.drop(columns=cols_to_drop, inplace=True)
-                    result.reset_index(drop=drop, inplace=True)
                 else:
                     new_index_names = tuple(
                         None
@@ -2782,6 +2786,9 @@ class PandasQueryCompiler(BaseQueryCompiler):
                         for name in result.index.names
                     )
                     result.index.names = new_index_names
+
+                if len(misaggregated_cols) > 0:
+                    result.drop(columns=misaggregated_cols, inplace=True)
 
                 return result
 

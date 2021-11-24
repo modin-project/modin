@@ -121,6 +121,9 @@ class GroupByReduce(MapReduce):
         # right index and placing columns in the correct order.
         groupby_args["as_index"] = True
         groupby_args["observed"] = True
+        # We have to filter func-dict BEFORE inserting broadcasted 'by' columns
+        # to avoid multiple aggregation results for 'by' cols in case they're
+        # present in the func-dict:
         apply_func = cls.try_filter_dict(map_func, df)
         if other is not None:
             # Other is a broadcasted partition that represents 'by' columns
@@ -214,9 +217,8 @@ class GroupByReduce(MapReduce):
         result = apply_func(df.groupby(axis=axis, **groupby_args), **reduce_args)
 
         if not as_index:
-            drop, lvls_to_drop, cols_to_drop = GroupBy.handle_as_index(
-                result.columns,
-                result.index.names,
+            GroupBy.handle_as_index_for_dataframe(
+                result,
                 by_part,
                 by_cols_dtypes=(
                     df.index.dtypes.values
@@ -228,12 +230,8 @@ class GroupByReduce(MapReduce):
                 partition_idx=partition_idx,
                 drop=drop,
                 method=method,
+                inplace=True,
             )
-            if len(lvls_to_drop) > 0:
-                result.index = result.index.droplevel(lvls_to_drop)
-            if len(cols_to_drop) > 0:
-                result.drop(columns=cols_to_drop, inplace=True)
-            result = result.reset_index(drop=drop)
         # Result could not always be a frame, so wrapping it into DataFrame
         return pandas.DataFrame(result)
 

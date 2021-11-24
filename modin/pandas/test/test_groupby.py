@@ -27,6 +27,7 @@ from .utils import (
     test_data_values,
     modin_df_almost_equals_pandas,
     generate_multiindex,
+    test_groupby_data,
 )
 from modin.config import NPartitions
 
@@ -1695,7 +1696,7 @@ def test_unknown_groupby(columns):
                     list(test_data_values[0].keys())[-1]: (sum, min, max),
                 }
             ),
-            id="Agg and 'by' intersection (MapReduce implementation)",
+            id="Agg_and_by_intersection_MapReduce_implementation",
         ),
         pytest.param(
             lambda grp: grp.agg(
@@ -1704,11 +1705,11 @@ def test_unknown_groupby(columns):
                     list(test_data_values[0].keys())[-1]: (sum, min, max),
                 }
             ),
-            id="Agg and 'by' intersection (FullAxis implementation)",
+            id="Agg_and_by_intersection_FullAxis_implementation",
         ),
         pytest.param(
             lambda grp: grp.agg({list(test_data_values[0].keys())[0]: "count"}),
-            id="Agg and 'by' intersection (modin-project/modin#3376)",
+            id="Agg_and_by_intersection_issue_3376",
         ),
     ],
 )
@@ -1778,26 +1779,34 @@ def test_not_str_by(by, as_index):
     "agg_func",
     [
         pytest.param(
-            lambda grp: grp.apply(lambda df: df.dtypes), id="modin_dtype_impl"
+            lambda grp: grp.apply(lambda df: df.dtypes), id="modin_dtypes_impl"
         ),
-        pytest.param(lambda grp: grp.apply(lambda df: df.sum()), id="apply(sum)"),
+        pytest.param(lambda grp: grp.apply(lambda df: df.sum()), id="apply_sum"),
         pytest.param(lambda grp: grp.count(), id="count"),
         pytest.param(lambda grp: grp.nunique(), id="nunique"),
+        # Integer key means the index of the column to replace it with.
+        # 0 and -1 are considered to be the indices of the columns to group on.
+        pytest.param({1: "sum", 2: "nunique"}, id="dict_agg_no_intersection_with_by"),
         pytest.param(
-            {"c": "sum", "d": "nunique"}, id="dict_agg_no_intersection_with_by"
-        ),
-        pytest.param(
-            {"b": "mean", "c": "sum", "d": "nunique"},
+            {1: "sum", 2: "nunique", -1: "mean"},
             id="dict_agg_has_intersection_with_by",
         ),
         pytest.param(
-            {"a": "nunique", "c": "sum", "d": "nunique"},
+            {0: "nunique", 1: "sum", 2: "nunique"},
             id="dict_agg_has_intersection_with_categorical_by",
         ),
     ],
 )
+# There are two versions of the `handle_as_index` method: the one accepting pandas.DataFrame from
+# the execution kernel and backend agnostic. This parameter indicates which one implementation to use.
+@pytest.mark.parametrize("use_backend_agnostic_method", [True, False])
 def test_handle_as_index(
-    internal_by_length, external_by_length, has_categorical_by, agg_func, request
+    internal_by_length,
+    external_by_length,
+    has_categorical_by,
+    agg_func,
+    use_backend_agnostic_method,
+    request,
 ):
     """
     Test ``GroupBy.handle_as_index``.
@@ -1808,12 +1817,12 @@ def test_handle_as_index(
     So the testing flow is the following:
         1. Compute GroupBy result with the ``as_index=True`` parameter via Modin.
         2. Build ``as_index=False`` result from the ``as_index=True`` using ``handle_as_index`` method.
-        3. Compute GroupBy result with the ``as_index=False`` parameter via Pandas (is the reference result).
+        3. Compute GroupBy result with the ``as_index=False`` parameter via pandas as the reference result.
         4. Compare the result from the second step with the reference.
     """
     by_length = sum((internal_by_length, external_by_length))
     if by_length == 0:
-        return
+        pytest.skip("No keys to group on was passed, skipping the test.")
 
     if (
         has_categorical_by
@@ -1828,51 +1837,60 @@ def test_handle_as_index(
             "https://github.com/pandas-dev/pandas/issues/36698"
         )
 
-    data = {
-        "a": [1, 1, 2, 2],
-        "b": [2, 2, 3, 3],
-        "c": [1, 2, 3, 4],
-        "d": [5, 6, 7, 8],
-    }
+    df = pandas.DataFrame(test_groupby_data)
+    external_by_cols = GroupBy.validate_by(df.add_prefix("external_"))
+
+    if has_categorical_by:
+        df = df.astype({df.columns[0]: "category"})
 
     if isinstance(agg_func, dict):
+        agg_func = {df.columns[key]: value for key, value in agg_func.items()}
         selection = list(agg_func.keys())
         agg_dict = agg_func
         agg_func = lambda grp: grp.agg(agg_dict)  # noqa: E731 (lambda assignment)
     else:
         selection = None
 
-    df = pandas.DataFrame(data)
-    external_by_cols = GroupBy.validate_by(df.add_prefix("external_"))
-
-    if has_categorical_by:
-        df = df.astype({"a": "category"})
-
-    internal_by = df.columns[:internal_by_length].tolist()
+    # Selecting 'by' columns from both sides of the frame so they located in different partitions
+    internal_by = df.columns[
+        [i if i % 2 == 0 else -i for i in range(internal_by_length)]
+    ].tolist()
     external_by = external_by_cols[:external_by_length]
 
-    by = internal_by + external_by
+    pd_by = internal_by + external_by
+    md_by = internal_by + [pd.Series(ser) for ser in external_by]
 
-    grp_res = pd.DataFrame(df).groupby(by, as_index=True)
-    grp_ref = df.groupby(by, as_index=False)
+    grp_result = pd.DataFrame(df).groupby(md_by, as_index=True)
+    grp_reference = df.groupby(pd_by, as_index=False)
 
-    res = agg_func(grp_res)
-    ref = agg_func(grp_ref)
+    agg_result = agg_func(grp_result)
+    agg_reference = agg_func(grp_reference)
 
-    drop, lvls_to_drop, cols_to_drop = GroupBy.handle_as_index(
-        result_cols=res.columns,
-        result_index_names=res.index.names,
-        internal_by_cols=internal_by,
-        by_cols_dtypes=df[internal_by].dtypes.values,
-        is_multi_by=len(by) > 1,
-        selection=selection,
-        drop=len(internal_by) != 0,
-    )
+    if use_backend_agnostic_method:
+        drop, lvls_to_drop, cols_to_drop = GroupBy.handle_as_index(
+            result_cols=agg_result.columns,
+            result_index_names=agg_result.index.names,
+            internal_by_cols=internal_by,
+            by_cols_dtypes=df[internal_by].dtypes.values,
+            is_multi_by=len(md_by) > 1,
+            selection=selection,
+            drop=len(internal_by) != 0,
+        )
 
-    if len(lvls_to_drop) > 0:
-        res.index = res.index.droplevel(lvls_to_drop)
-    if len(cols_to_drop) > 0:
-        res = res.drop(columns=cols_to_drop)
-    res = res.reset_index(drop=drop)
+        if len(lvls_to_drop) > 0:
+            agg_result.index = agg_result.index.droplevel(lvls_to_drop)
+        if len(cols_to_drop) > 0:
+            agg_result = agg_result.drop(columns=cols_to_drop)
+        agg_result = agg_result.reset_index(drop=drop)
+    else:
+        GroupBy.handle_as_index_for_dataframe(
+            result=agg_result,
+            internal_by_cols=internal_by,
+            by_cols_dtypes=df[internal_by].dtypes.values,
+            is_multi_by=len(md_by) > 1,
+            selection=selection,
+            drop=len(internal_by) != 0,
+            inplace=True,
+        )
 
-    df_equals(res, ref)
+    df_equals(agg_result, agg_reference)

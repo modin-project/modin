@@ -236,15 +236,15 @@ class GroupBy:
                 if isinstance(by, pandas.Series):
                     # 1. If `drop` is True then 'by' Series represents a column from the
                     #    source frame and so the 'by' is internal.
-                    # 2. If method is 'size' then any 'by' considered to be internal
-                    #    (this is a hacky legacy from the ``groupby_size`` implementation)
+                    # 2. If method is 'size' then any 'by' considered to be internal.
+                    #    This is a hacky legacy from the ``groupby_size`` implementation:
+                    #    https://github.com/modin-project/modin/issues/3739
                     internal_by = (by.name,) if drop or method == "size" else tuple()
                 else:
                     internal_by = by
 
-                drop, lvls_to_drop, cols_to_drop = cls.handle_as_index(
-                    result.columns,
-                    result.index.names,
+                cls.handle_as_index_for_dataframe(
+                    result,
                     internal_by,
                     by_cols_dtypes=(
                         df.index.dtypes.values
@@ -254,12 +254,8 @@ class GroupBy:
                     is_multi_by=len(internal_by) > 1,
                     drop=drop,
                     method=method,
+                    inplace=True,
                 )
-                if len(lvls_to_drop) > 0:
-                    result.index = result.index.droplevel(lvls_to_drop)
-                if len(cols_to_drop) > 0:
-                    result.drop(columns=cols_to_drop, inplace=True)
-                result = result.reset_index(drop=drop)
 
             if result.index.name == "__reduced__":
                 result.index.name = None
@@ -294,6 +290,78 @@ class GroupBy:
         return cls.build_groupby_reduce_method(func)
 
     @staticmethod
+    def handle_as_index_for_dataframe(
+        result,
+        internal_by_cols,
+        missmatched_cols=None,
+        by_cols_dtypes=None,
+        is_multi_by=None,
+        selection=None,
+        partition_idx=0,
+        drop=True,
+        method=None,
+        inplace=False,
+    ):
+        """
+        Process `as_index=False` parameter for the passed GroupBy aggregation result.
+
+        Parameters
+        ----------
+        result : DataFrame
+            Frame containing GroupBy aggregation result computed with `as_index=True`
+            parameter (group names are located at the frame's index).
+        internal_by_cols : list-like
+            Internal 'by' columns.
+        by_cols_dtypes : list-like, optional
+            Data types of the internal 'by' columns. Required to do special casing
+            in case of categorical 'by'. If not specified, assume that there is no
+            categorical data in 'by'.
+        is_multi_by : bool, optional
+            Whether grouping on multiple items. If not specified, assume ``True`` if
+            the amount of `internal_by_cols` is greater than 1, ``False`` otherwise.
+        selection : label or list of labels, optional
+            Set of columns that were explicitly selected for aggregation (for example
+            via dict-aggregation). If not specified assuming that aggregation was
+            applied to all of the available columns.
+        partition_idx : int, default: 0
+            Positional index of the current partition.
+        drop : bool, default: True
+            Indicates whether or not any of the `by` data came from the same frame.
+        method : str, optional
+            Name of the groupby function. This is a hint to be able to do special casing.
+            Note: this parameter is a legacy from the ``groupby_size`` implementation,
+            it's a hacky one and probably will be removed in the future: https://github.com/modin-project/modin/issues/3739.
+        inplace : bool, default: False
+            Modify the DataFrame in place (do not create a new object).
+
+        Returns
+        -------
+        DataFrame
+            GroupBy aggregation result with the considered `as_index=False` parameter.
+        """
+        if not inplace:
+            result = result.copy()
+
+        drop, lvls_to_drop, cols_to_drop = GroupBy.handle_as_index(
+            result_cols=result.columns,
+            result_index_names=result.index.names,
+            internal_by_cols=internal_by_cols,
+            by_cols_dtypes=by_cols_dtypes,
+            is_multi_by=is_multi_by,
+            selection=selection,
+            partition_idx=partition_idx,
+            drop=drop,
+            method=method,
+        )
+
+        if len(lvls_to_drop) > 0:
+            result.index = result.index.droplevel(lvls_to_drop)
+        if len(cols_to_drop) > 0:
+            result.drop(columns=cols_to_drop, inplace=True)
+        result.reset_index(drop=drop, inplace=True)
+        return result
+
+    @staticmethod
     def handle_as_index(
         result_cols,
         result_index_names,
@@ -306,9 +374,9 @@ class GroupBy:
         method=None,
     ):
         """
-        Help to handle ``as_index=False`` parameter for the GroupBy result.
+        Compute hints to process ``as_index=False`` parameter for the GroupBy result.
 
-        This function resolve naming conflicts of the index levels to insert and the column labels
+        This function resolves naming conflicts of the index levels to insert and the column labels
         for the GroupBy result. The logic of this function assumes that the initial GroupBy result
         was computed as ``as_index=True``.
 
@@ -328,8 +396,9 @@ class GroupBy:
             Whether grouping on multiple items. If not specified, assume ``True`` if
             the amount of `internal_by_cols` is greater than 1, ``False`` otherwise.
         selection : label or list of labels, optional
-            Set of columns to which aggregation was applied. If not specified
-            assuming that aggregation was applied to all of the available columns.
+            Set of columns that were explicitly selected for aggregation (for example
+            via dict-aggregation). If not specified assuming that aggregation was
+            applied to all of the available columns.
         partition_idx : int, default: 0
             Positional index of the current partition.
         drop : bool, default: True
@@ -337,7 +406,7 @@ class GroupBy:
         method : str, optional
             Name of the groupby function. This is a hint to be able to do special casing.
             Note: this parameter is a legacy from the ``groupby_size`` implementation,
-            it's a hacky one and probably will be removed in the future.
+            it's a hacky one and probably will be removed in the future: https://github.com/modin-project/modin/issues/3739.
 
         Returns
         -------
@@ -403,17 +472,13 @@ class GroupBy:
             internal_by_cols = pandas.Index(internal_by_cols)
 
         internal_by_cols = (
-            internal_by_cols[~internal_by_cols.str.match(r"__reduced__.*", na=False)]
+            internal_by_cols[~internal_by_cols.str.startswith("__reduced__", na=False)]
             if hasattr(internal_by_cols, "str")
             else internal_by_cols
         )
 
-        if selection is not None:
-            selection = (
-                selection
-                if isinstance(selection, pandas.Index)
-                else pandas.Index(selection)
-            )
+        if selection is not None and not isinstance(selection, pandas.Index):
+            selection = pandas.Index(selection)
 
         lvls_to_drop = []
         cols_to_drop = []
@@ -421,36 +486,36 @@ class GroupBy:
         if not keep_index_levels:
             # We want to insert only these internal-by-cols that are not presented
             # in the result in order to not create naming conflicts
-            cols_to_insert = (
-                internal_by_cols.copy()
-                if selection is None and internal_by_cols.nlevels != result_cols.nlevels
-                else frozenset(
-                    (
-                        col
-                        for col in internal_by_cols
-                        if col not in (result_cols if selection is None else selection)
-                    )
+            if selection is None and internal_by_cols.nlevels != result_cols.nlevels:
+                cols_to_insert = internal_by_cols.copy()
+            elif selection is None:
+                cols_to_insert = frozenset(internal_by_cols) - frozenset(result_cols)
+            else:
+                cols_to_insert = frozenset(
+                    # We have to use explicit 'not in' check and not just difference
+                    # of sets because of specific '__contains__' operator in case of
+                    # scalar 'col' and MultiIndex 'selection'.
+                    col
+                    for col in internal_by_cols
+                    if col not in selection
                 )
-            )
         else:
             cols_to_insert = internal_by_cols
             # We want to drop such internal-by-cols that are presented
             # in the result in order to not create naming conflicts
-            cols_to_drop = (
-                pandas.Index([])
-                if internal_by_cols.nlevels != result_cols.nlevels
-                else frozenset((col for col in cols_to_insert if col in result_cols))
-            )
+            if internal_by_cols.nlevels != result_cols.nlevels:
+                cols_to_drop = pandas.Index([])
+            else:
+                cols_to_drop = frozenset(internal_by_cols) & frozenset(result_cols)
 
-        lvls_to_drop = (
-            result_index_names
-            if partition_idx != 0
-            else [
+        if partition_idx == 0:
+            lvls_to_drop = [
                 i
                 for i, name in enumerate(result_index_names)
                 if name not in cols_to_insert
             ]
-        )
+        else:
+            lvls_to_drop = result_index_names
 
         drop = False
         if len(lvls_to_drop) == len(result_index_names):
