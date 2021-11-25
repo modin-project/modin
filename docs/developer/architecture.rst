@@ -78,7 +78,7 @@ Data Transformation
 Query Compiler
 """"""""""""""
 
-The Query Compiler receives queries from the pandas API layer. The API layer's
+The :ref:`Query Compiler <query_compiler_def>` receives queries from the pandas API layer. The API layer's
 responsibility is to ensure clean input to the Query Compiler. The Query Compiler must
 have knowledge of the compute kernels/in-memory format of the data in order to
 efficiently compile the queries.
@@ -118,7 +118,7 @@ This API can be implemented by other distributed/parallel DataFrame libraries an
 plugged in to Modin as well. Create an issue_ or discuss on our Discourse_ for more
 information!
 
-The Core Modin Dataframe is responsible for the data layout and shuffling, partitioning,
+The :doc:`Core Modin Dataframe </flow/modin/core/dataframe/base/index>` is responsible for the data layout and shuffling, partitioning,
 and serializing the tasks that get sent to each partition. Other implementations of the
 Modin Dataframe interface will have to handle these as well.
 
@@ -163,7 +163,7 @@ effort, a data parallel framework is possible.
 Storage Format
 ''''''''''''''
 
-Storage format is one of the components that form Modin’s execution, it describes the in-memory partition type.
+:doc:`Storage format </flow/modin/core/storage_formats/index>` is one of the components that form Modin’s execution, it describes the in-memory partition type.
 The base storage format in Modin is pandas such that Modin Dataframe operates with partitions that hold ``pandas.DataFrame`` objects in that case.
 
 Data Ingress
@@ -181,7 +181,7 @@ Data Egress
 Factory Dispatcher
 """"""""""""""""""
 
-The Factory Dispatcher provides IO methods, whose interfaces corresponds to pandas IO functions,
+The :doc:`Factory Dispatcher </flow/modin/core/execution/dispatching>` provides IO methods, whose interfaces corresponds to pandas IO functions,
 and is in charge of routing the IO calls to a factory, which represents the selected execution.
 The factory, in turn, contains the specific IO class that it tranfers the calls and all required arguments to.
 The responsibility of the IO class is a parallel read/write from/to a file.
@@ -232,8 +232,10 @@ following figure illustrates this concept.
 .. image:: /img/block_partitions_diagram.png
    :align: center
 
-Currently, each partition's memory format is a `pandas DataFrame`_. In the future, we will
-support additional in-memory formats for the backend, namely `Arrow tables`_.
+Currently, main in-memory format of each partition is a `pandas DataFrame`_ (:doc:`pandas storage format </flow/modin/core/storage_formats/pandas/index>`).
+:doc:`Omnisci </flow/modin/experimental/core/storage_formats/omnisci/index>`, :doc:`PyArrow </flow/modin/core/storage_formats/pyarrow/index>`
+and cuDF are also supported as experimental in-memory formats in Modin.
+
 
 Index
 """""
