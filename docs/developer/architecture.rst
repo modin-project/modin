@@ -182,7 +182,7 @@ Factory Dispatcher
 """"""""""""""""""
 
 The Factory Dispatcher provides IO methods, whose interfaces corresponds to pandas IO functions,
-and in charge of routing the IO calls to a factory, which represents the selected execution.
+and is in charge of routing the IO calls to a factory, which represents the selected execution.
 The factory, in turn, contains the specific IO class that it tranfers the calls and all required arguments to.
 The responsibility of the IO class is a parallel read/write from/to a file.
 
@@ -199,11 +199,11 @@ documentation page on :doc:`contributing </contributing>`.
     - More for execution flow see on :doc:`pandas on Ray </flow/modin/core/execution/ray/implementations/pandas_on_ray/index>` page.
 - :doc:`pandas on Dask </UsingPandasonDask/index>`
     - Uses the `Dask Futures`_ execution framework.
-    - The storage format is `pandas` and in-memory partition type a pandas DataFrame.
+    - The storage format is `pandas` and in-memory partition type is a pandas DataFrame.
     - More for execution flow see on :doc:`pandas on Dask </flow/modin/core/execution/dask/implementations/pandas_on_dask/index>` page.
 - pandas on Python
     - Uses native python execution and serves for debug purposes.
-    - The storage format is `pandas` and in-memory partition type a pandas DataFrame.
+    - The storage format is `pandas` and in-memory partition type is a pandas DataFrame.
     - More for execution flow see on :doc:`pandas on Python </flow/modin/core/execution/python/implementations/pandas_on_python/index>` page.
 - :doc:`OmniSci on Native </UsingOmnisci/index>` (experimental)
     - Uses OmniSciDB as an engine.
@@ -215,7 +215,7 @@ documentation page on :doc:`contributing </contributing>`.
     - More for execution flow see on :doc:`Pyarrow on Ray </flow/modin/experimental/core/execution/ray/implementations/pyarrow_on_ray>` page.
 - cuDF on Ray (experimental)
     - Uses the Ray_ execution framework.
-    - The storage format is `cudf` and in-memory partition type a cuDF DataFrame.
+    - The storage format is `cudf` and in-memory partition type is a cuDF DataFrame.
     - More for execution flow see on :doc:`cuDF on Ray </flow/modin/core/execution/ray/implementations/cudf_on_ray/index>` page.
 
 .. _directory-tree:
