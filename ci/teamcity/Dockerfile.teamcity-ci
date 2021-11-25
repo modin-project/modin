@@ -14,6 +14,8 @@ ADD modin.tar /modin
 ADD git-rev /modin/git-rev
 
 WORKDIR /modin
+RUN ls -l /
+RUN ls -l /home/
 
 # Make RUN commands use `bash --login`:
 SHELL ["/bin/bash", "--login", "-c"]
