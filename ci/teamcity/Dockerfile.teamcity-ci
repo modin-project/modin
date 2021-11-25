@@ -20,7 +20,7 @@ SHELL ["/bin/bash", "--login", "-c"]
 
 # Initialize conda in bash config files:
 RUN conda init bash
-ENV PATH /root/anaconda3/envs/modin/bin:$PATH
+ENV PATH /home/ray/anaconda3/envs/modin/bin:$PATH
 
 RUN conda config --set channel_priority strict
 RUN conda update python -y
