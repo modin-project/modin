@@ -14,7 +14,7 @@ ADD modin.tar /modin
 ADD git-rev /modin/git-rev
 
 WORKDIR /modin
-RUN sudo chown -R $USER /modin
+RUN sudo chown -R ray /modin
 
 # Make RUN commands use `bash --login`:
 SHELL ["/bin/bash", "--login", "-c"]
