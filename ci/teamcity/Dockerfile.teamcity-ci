@@ -19,6 +19,10 @@ RUN sudo chown -R ray /modin
 # Make RUN commands use `bash --login`:
 SHELL ["/bin/bash", "--login", "-c"]
 
+# Initialize conda in bash config files:
+RUN conda init bash
+ENV PATH /home/ray/anaconda3/envs/modin/bin:$PATH
+
 RUN conda config --set channel_priority strict
 RUN conda update python -y
 RUN conda env create -f ${ENVIRONMENT}
@@ -31,6 +35,6 @@ RUN conda install curl PyGithub
 # activation is not always executed when "docker exec" is used
 # and then conda initialization overwrites PATH with its base
 # environment where python doesn't have any packages installed.
-RUN echo "conda activate modin" >> ~/.bashrc
+RUN echo "conda activate modin" > ~/.bashrc
 RUN echo "Make sure environment is activated"
 RUN conda list -n modin
