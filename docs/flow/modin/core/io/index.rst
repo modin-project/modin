@@ -99,7 +99,7 @@ classes for reading files of different formats.
   * ``sql_dispatcher.py`` -  class for reading SQL queries or database tables.
 
 Handling `skiprows` Parameter
-''''''''''''''''''''''''''''''''
+'''''''''''''''''''''''''''''
 
 Handling `skiprows` parameter by pandas import functions can be very tricky, especially
 for `read_csv` function because of interconnection with `header` parameter. In this section
@@ -165,7 +165,8 @@ it requires extra IO work and postprocessing afterwards, but `skiprows` paramete
 non-integer type supported by `pandas.read_csv`.
 
 In some cases, if `skiprows` is uniformly distributed array (e.g. [1, 2, 3]), `skiprows` can be
-"squashed" and represented as an integer to make a fastpath by skipping these rows during partitioning a file (using the first option). But if there is a gap between the first row for skipping
+"squashed" and represented as an integer to make a fastpath by skipping these rows during partitioning
+a file (using the first option). But if there is a gap between the first row for skipping
 and the last line of the header (that will be skipped too since header is read by each partition
 to ensure metadata is defined properly), then this gap should be assigned for reading first
 by assigning the first partition to read these rows by setting `pre_reading` parameter.
