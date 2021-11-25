@@ -21,7 +21,7 @@ from modin.config import NPartitions
 
 
 class PickleExperimentalDispatcher(FileDispatcher):
-    """Class handles utils for reading `.pkl` files."""
+    """Class handles utils for reading pickle files."""
 
     @classmethod
     def _read(cls, filepath_or_buffer, **kwargs):
