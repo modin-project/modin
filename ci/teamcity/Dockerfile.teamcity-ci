@@ -31,6 +31,6 @@ RUN conda install curl PyGithub
 # activation is not always executed when "docker exec" is used
 # and then conda initialization overwrites PATH with its base
 # environment where python doesn't have any packages installed.
-RUN echo "conda activate modin" > ~/.bashrc
+RUN echo "conda activate modin" >> ~/.bashrc
 RUN echo "Make sure environment is activated"
 RUN conda list -n modin
