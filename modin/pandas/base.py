@@ -3111,21 +3111,21 @@ class Resampler(object):
         axis = self._dataframe._get_axis_number(axis)
         # FIXME: this should be converted into a dict to ensure simplicity
         # of handling resample parameters at the query compiler level.
-        self.resample_args = [
-            rule,
-            axis,
-            closed,
-            label,
-            convention,
-            kind,
-            loffset,
-            base,
-            on,
-            level,
-            origin,
-            offset,
-        ]
-        self.__groups = self.__get_groups(*self.resample_args)
+        self.resample_args = {
+            "rule": rule,
+            "axis": axis,
+            "closed": closed,
+            "label": label,
+            "convention": convention,
+            "kind": kind,
+            "loffset": loffset,
+            "base": base,
+            "on": on,
+            "level": level,
+            "origin": origin,
+            "offset": offset,
+        }
+        self.__groups = self.__get_groups(**self.resample_args)
 
     def __getitem__(self, key):
         """
@@ -3144,9 +3144,7 @@ class Resampler(object):
         """
 
         def _get_new_resampler(key):
-            subset = self._dataframe[key]
-            resampler = type(self)(subset, *self.resample_args)
-            return resampler
+            return Resampler(self._dataframe[key], **self.resample_args)
 
         from .series import Series
 
@@ -3201,17 +3199,17 @@ class Resampler(object):
     @property
     def groups(self):
         return self._query_compiler.default_to_pandas(
-            lambda df: pandas.DataFrame.resample(df, *self.resample_args).groups
+            lambda df: pandas.DataFrame.resample(df, **self.resample_args).groups
         )
 
     @property
     def indices(self):
         return self._query_compiler.default_to_pandas(
-            lambda df: pandas.DataFrame.resample(df, *self.resample_args).indices
+            lambda df: pandas.DataFrame.resample(df, **self.resample_args).indices
         )
 
     def get_group(self, name, obj=None):
-        if self.resample_args[1] == 0:
+        if self.resample_args["axis"] == 0:
             result = self.__groups.get_group(name)
         else:
             result = self.__groups.get_group(name).T
@@ -3446,7 +3444,7 @@ class Resampler(object):
             )
 
     def prod(self, _method="prod", min_count=0, *args, **kwargs):
-        if self.resample_args[1] == 0:
+        if self.resample_args["axis"] == 0:
             result = self.__groups.prod(min_count=min_count, *args, **kwargs)
         else:
             result = self.__groups.prod(min_count=min_count, *args, **kwargs).T
@@ -3477,7 +3475,7 @@ class Resampler(object):
         )
 
     def sum(self, _method="sum", min_count=0, *args, **kwargs):
-        if self.resample_args[1] == 0:
+        if self.resample_args["axis"] == 0:
             result = self.__groups.sum(min_count=min_count, *args, **kwargs)
         else:
             result = self.__groups.sum(min_count=min_count, *args, **kwargs).T
