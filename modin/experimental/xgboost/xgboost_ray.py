@@ -59,7 +59,7 @@ class ModinXGBoostActor:
             f"Actor <{self._rank}>, nthread = {self._nthreads} was initialized."
         )
 
-    def _get_dmatrix(self, X_y):
+    def _get_dmatrix(self, X_y, **dmatrix_kwargs):
         """
         Create xgboost.DMatrix from sequence of pandas.DataFrame objects.
 
@@ -69,6 +69,8 @@ class ModinXGBoostActor:
         ----------
         X_y : list
             List of pandas.DataFrame objects.
+        **dmatrix_kwargs : dict
+            Keyword parameters for ``xgb.DMatrix``.
 
         Returns
         -------
@@ -87,9 +89,9 @@ class ModinXGBoostActor:
         y = pandas.concat(y, axis=0)
         LOGGER.info(f"Concat time: {time.time() - s} s")
 
-        return xgb.DMatrix(X, y, nthread=self._nthreads)
+        return xgb.DMatrix(X, y, nthread=self._nthreads, **dmatrix_kwargs)
 
-    def set_train_data(self, *X_y, add_as_eval_method=None):
+    def set_train_data(self, *X_y, add_as_eval_method=None, **dmatrix_kwargs):
         """
         Set train data for actor.
 
@@ -101,13 +103,15 @@ class ModinXGBoostActor:
             of ray.ObjectRef -> pandas.DataFrame happens.
         add_as_eval_method : str, optional
             Name of eval data. Used in case when train data also used for evaluation.
+        **dmatrix_kwargs : dict
+            Keyword parameters for ``xgb.DMatrix``.
         """
-        self._dtrain = self._get_dmatrix(X_y)
+        self._dtrain = self._get_dmatrix(X_y, **dmatrix_kwargs)
 
         if add_as_eval_method is not None:
             self._evals.append((self._dtrain, add_as_eval_method))
 
-    def add_eval_data(self, *X_y, eval_method):
+    def add_eval_data(self, *X_y, eval_method, **dmatrix_kwargs):
         """
         Add evaluation data for actor.
 
@@ -119,8 +123,10 @@ class ModinXGBoostActor:
             of ray.ObjectRef -> pandas.DataFrame happens.
         eval_method : str
             Name of eval data.
+        **dmatrix_kwargs : dict
+            Keyword parameters for ``xgb.DMatrix``.
         """
-        self._evals.append((self._get_dmatrix(X_y), eval_method))
+        self._evals.append((self._get_dmatrix(X_y, **dmatrix_kwargs), eval_method))
 
     def train(self, rabit_args, params, *args, **kwargs):
         """
@@ -491,6 +497,7 @@ def _train(
     s = time.time()
 
     X_row_parts, y_row_parts = dtrain
+    dmatrix_kwargs = dtrain.get_dmatrix_params()
 
     assert len(X_row_parts) == len(y_row_parts), "Unaligned train data"
 
@@ -526,7 +533,7 @@ def _train(
             _split_data_across_actors(
                 actors,
                 lambda actor, *X_y: actor.add_eval_data.remote(
-                    *X_y, eval_method=eval_method
+                    *X_y, eval_method=eval_method, **dmatrix_kwargs
                 ),
                 eval_X,
                 eval_y,
@@ -536,7 +543,7 @@ def _train(
     _split_data_across_actors(
         actors,
         lambda actor, *X_y: actor.set_train_data.remote(
-            *X_y, add_as_eval_method=add_as_eval_method
+            *X_y, add_as_eval_method=add_as_eval_method, **dmatrix_kwargs
         ),
         X_row_parts,
         y_row_parts,
@@ -560,7 +567,7 @@ def _train(
 
 
 @ray.remote
-def _map_predict(booster, part, columns, **kwargs):
+def _map_predict(booster, part, columns, dmatrix_kwargs={}, **kwargs):
     """
     Run prediction on a remote worker.
 
@@ -572,6 +579,8 @@ def _map_predict(booster, part, columns, **kwargs):
         Partition of full data used for local prediction.
     columns : list or ray.ObjectRef
         Columns for the result.
+    dmatrix_kwargs : dict, optional
+        Keyword parameters for ``xgb.DMatrix``.
     **kwargs : dict
         Other parameters are the same as for ``xgboost.Booster.predict``.
 
@@ -580,7 +589,7 @@ def _map_predict(booster, part, columns, **kwargs):
     ray.ObjectRef
         ``ray.ObjectRef`` with partial prediction.
     """
-    dmatrix = xgb.DMatrix(part)
+    dmatrix = xgb.DMatrix(part, **dmatrix_kwargs)
     prediction = pandas.DataFrame(
         booster.predict(dmatrix, **kwargs),
         index=part.index,
@@ -615,6 +624,7 @@ def _predict(
         Modin DataFrame with prediction results.
     """
     s = time.time()
+    dmatrix_kwargs = data.get_dmatrix_params()
 
     # Get metadata from DMatrix
     input_index, input_columns, row_lengths = data.metadata
@@ -639,7 +649,7 @@ def _predict(
     new_columns_ref = ray.put(new_columns)
 
     prediction_refs = [
-        _map_predict.remote(booster, part, new_columns_ref, **kwargs)
+        _map_predict.remote(booster, part, new_columns_ref, dmatrix_kwargs, **kwargs)
         for _, part in data.data
     ]
     predictions = from_partitions(
