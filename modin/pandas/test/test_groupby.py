@@ -12,6 +12,7 @@
 # governing permissions and limitations under the License.
 
 import pytest
+import itertools
 import pandas
 import numpy as np
 import modin.pandas as pd
@@ -1809,7 +1810,7 @@ def test_handle_as_index(
     request,
 ):
     """
-    Test ``GroupBy.handle_as_index``.
+    Test ``modin.core.dataframe.algebra.default2pandas.groupby.GroupBy.handle_as_index``.
 
     The role of the ``handle_as_index`` method is to build a groupby result considering
     ``as_index=False`` from the result that was computed with ``as_index=True``.
@@ -1894,3 +1895,40 @@ def test_handle_as_index(
         )
 
     df_equals(agg_result, agg_reference)
+
+
+def test_validate_by():
+    """Test ``modin.core.dataframe.algebra.default2pandas.groupby.GroupBy.validate_by``."""
+
+    def compare(obj1, obj2):
+        assert not (
+            isinstance(obj1, list) ^ isinstance(obj2, list)
+        ), f"Both objects must be instances of the same type: {type(obj1)} != {type(obj2)}."
+        if isinstance(obj1, list):
+            for val1, val2 in itertools.zip_longest(obj1, obj2):
+                df_equals(val1, val2)
+        else:
+            df_equals(obj1, obj2)
+
+    # This emulates situation when the Series's query compiler being passed as a 'by':
+    #   1. The Series at the QC level is represented as a single-column frame with the "__reduced__" columns.
+    #   2. The valid representation of such QC is an unnamed Series.
+    reduced_frame = pandas.DataFrame({"__reduced__": [1, 2, 3]})
+    series_result = GroupBy.validate_by(reduced_frame)
+    series_reference = [pandas.Series([1, 2, 3], name=None)]
+    compare(series_reference, series_result)
+
+    # This emulates situation when several 'by' columns of the group frame are passed as a single QueryCompiler:
+    #   1. If grouping on several columns the 'by' at the QC level is the following: ``df[by]._query_compiler``.
+    #   2. The valid representation of such QC is a list of Series.
+    splited_df = [pandas.Series([1, 2, 3], name=f"col{i}") for i in range(3)]
+    splited_df_result = GroupBy.validate_by(
+        pandas.concat(splited_df, axis=1, copy=True)
+    )
+    compare(splited_df, splited_df_result)
+
+    # This emulates situation of mixed by (two column names and an external Series):
+    by = ["col1", "col2", pandas.DataFrame({"__reduced__": [1, 2, 3]})]
+    result_by = GroupBy.validate_by(by)
+    reference_by = ["col1", "col2", pandas.Series([1, 2, 3], name=None)]
+    compare(reference_by, result_by)
