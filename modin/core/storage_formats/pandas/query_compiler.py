@@ -2772,11 +2772,12 @@ class PandasQueryCompiler(BaseQueryCompiler):
                         result,
                         internal_by_cols,
                         by_cols_dtypes=df[internal_by_cols].dtypes.values,
-                        is_multi_by=is_multi_by,
+                        by_length=len(by),
                         selection=selection,
                         partition_idx=partition_idx,
                         drop=drop,
                         inplace=True,
+                    )
                 else:
                     new_index_names = tuple(
                         None

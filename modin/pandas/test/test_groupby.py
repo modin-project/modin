@@ -1880,12 +1880,12 @@ def test_handle_as_index(
     agg_reference = agg_func(grp_reference)
 
     if use_backend_agnostic_method:
-        drop, lvls_to_drop, cols_to_drop = GroupBy.handle_as_index(
+        reset_index, drop, lvls_to_drop, cols_to_drop = GroupBy.handle_as_index(
             result_cols=agg_result.columns,
             result_index_names=agg_result.index.names,
             internal_by_cols=internal_by,
             by_cols_dtypes=df[internal_by].dtypes.values,
-            is_multi_by=len(md_by) > 1,
+            by_length=len(md_by),
             selection=selection,
             drop=len(internal_by) != 0,
         )
@@ -1894,13 +1894,14 @@ def test_handle_as_index(
             agg_result.index = agg_result.index.droplevel(lvls_to_drop)
         if len(cols_to_drop) > 0:
             agg_result = agg_result.drop(columns=cols_to_drop)
-        agg_result = agg_result.reset_index(drop=drop)
+        if reset_index:
+            agg_result = agg_result.reset_index(drop=drop)
     else:
         GroupBy.handle_as_index_for_dataframe(
             result=agg_result,
             internal_by_cols=internal_by,
             by_cols_dtypes=df[internal_by].dtypes.values,
-            is_multi_by=len(md_by) > 1,
+            by_length=len(md_by),
             selection=selection,
             drop=len(internal_by) != 0,
             inplace=True,

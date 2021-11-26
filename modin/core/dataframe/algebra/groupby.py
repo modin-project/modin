@@ -225,7 +225,7 @@ class GroupByReduce(MapReduce):
                     if isinstance(df.index, pandas.MultiIndex)
                     else (df.index.dtype,)
                 ),
-                is_multi_by=len(by_part) > 1,
+                by_length=len(by_part),
                 selection=reduce_func.keys() if isinstance(reduce_func, dict) else None,
                 partition_idx=partition_idx,
                 drop=drop,
