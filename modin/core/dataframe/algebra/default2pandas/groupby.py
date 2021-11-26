@@ -293,7 +293,6 @@ class GroupBy:
     def handle_as_index_for_dataframe(
         result,
         internal_by_cols,
-        missmatched_cols=None,
         by_cols_dtypes=None,
         by_length=None,
         selection=None,
@@ -303,7 +302,7 @@ class GroupBy:
         inplace=False,
     ):
         """
-        Process `as_index=False` parameter for the passed GroupBy aggregation result.
+        Handle `as_index=False` parameter for the passed GroupBy aggregation result.
 
         Parameters
         ----------
