@@ -59,7 +59,7 @@ class TimeJoin:
             # OmniSci backend performs join on the internal meta-column called 'rowid'.
             # There is a bug in the engine that makes such joins fail. To avoid joining
             # on the meta-column we explicitly specify a non-default index to join on.
-            # https://github.com/modin-project/modin/issues/3442
+            # https://github.com/modin-project/modin/issues/3740
             # Generating a new object for every index to avoid shared index objects:
             self.df1.index = pandas.RangeIndex(1, len(self.df1) + 1)
             self.df2.index = pandas.RangeIndex(1, len(self.df2) + 1)
