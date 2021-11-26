@@ -98,18 +98,18 @@ classes for reading files of different formats.
   
   * ``sql_dispatcher.py`` -  class for reading SQL queries or database tables.
 
-Handling `skiprows` Parameter
+Handling ``skiprows`` Parameter
 '''''''''''''''''''''''''''''
 
-Handling `skiprows` parameter by pandas import functions can be very tricky, especially
-for `read_csv` function because of interconnection with `header` parameter. In this section
-the techniques of `skiprows` processing both by pandas and by Modin are covered.
+Handling ``skiprows`` parameter by pandas import functions can be very tricky, especially
+for ``read_csv`` function because of interconnection with ``header`` parameter. In this section
+the techniques of ``skiprows`` processing by both pandas and Modin are covered.
 
-Processing `skiprows` by pandas
+Processing ``skiprows`` by pandas
 ===============================
 
-Let's consider a simple snippet with `pandas.read_csv` in order to understand interconnection
-of `header` and `skiprows` parameters:
+Let's consider a simple snippet with ``pandas.read_csv`` in order to understand interconnection
+of ``header`` and ``skiprows`` parameters:
 
 .. code-block:: python
 
@@ -135,49 +135,49 @@ of `header` and `skiprows` parameters:
   # rows 6, 7, 8 are read with header "5", rows 0, 1 are skipped additionally
   df = pandas.read_csv(StringIO(data), skiprows=[2, 3, 4], header=2)
 
-In the examples above list-like `skiprows` values are fixed and `header` is varied. In the first
-example with no header provided, rows 2, 3, 4 are skipped and row 0 is considered as a header.
-In the second example `header == 1`, so 0th row is skipped and the next available row is
-considered as a header. The third example shows the case when `header` and `skiprows` parameters
-values are intersected - in this case `skiprows` are dropped first and only then `header` is got
+In the examples above list-like ``skiprows`` values are fixed and ``header`` is varied. In the first
+example with no ``header`` provided, rows 2, 3, 4 are skipped and row 0 is considered as a header.
+In the second example ``header == 1``, so 0th row is skipped and the next available row is
+considered as a header. The third example shows the case when ``header`` and ``skiprows`` parameters
+values are intersected - in this case skipped rows are dropped first and only then ``header`` is got
 from the remaining rows (rows before header are skipped too).
 
-In the examples above list-like `skiprows` and integer `header` parameters are only considered,
+In the examples above only list-like ``skiprows`` and integer ``header`` parameters are considered,
 but the same logic is applicable for other types of the parameters.
 
-Processing `skiprows` by Modin
+Processing ``skiprows`` by Modin
 ==============================
 
-As it can be seen skipping rows in the pandas import functions is complicated and distributing
+As it can be seen, skipping rows in the pandas import functions is complicated and distributing
 this logic across multiple workers can complicate it even more. Thus in some rare corner cases
 default pandas implementation is used in Modin to avoid excessive Modin code complication.
 
 Modin uses two techniques for skipping rows:
 
-1) During partitioning a file (setting file limits that should be read by each partition)
+1) During file partitioning (setting file limits that should be read by each partition)
 exact rows can be excluded from partitioning scope, thus they won't be read at all and can be
 considered as skipped. This is the most effective way of skipping rows since it doesn't require
-any actual data reading and postprocessing, but in this case `skiprows` parameter can be an
+any actual data reading and postprocessing, but in this case ``skiprows`` parameter can be an
 integer only. When it is possible Modin always uses this approach.
 
 2) Rows for skipping can be dropped after full dataset import. This is more expensive way since
-it requires extra IO work and postprocessing afterwards, but `skiprows` parameter can be of any
-non-integer type supported by `pandas.read_csv`.
+it requires extra IO work and postprocessing afterwards, but ``skiprows`` parameter can be of any
+non-integer type supported by ``pandas.read_csv``.
 
-In some cases, if `skiprows` is uniformly distributed array (e.g. [1, 2, 3]), `skiprows` can be
-"squashed" and represented as an integer to make a fastpath by skipping these rows during partitioning
-a file (using the first option). But if there is a gap between the first row for skipping
+In some cases, if ``skiprows`` is uniformly distributed array (e.g. [1, 2, 3]), ``skiprows`` can be
+"squashed" and represented as an integer to make a fastpath by skipping these rows during file partitioning
+(using the first option). But if there is a gap between the first row for skipping
 and the last line of the header (that will be skipped too since header is read by each partition
 to ensure metadata is defined properly), then this gap should be assigned for reading first
-by assigning the first partition to read these rows by setting `pre_reading` parameter.
+by assigning the first partition to read these rows by setting ``pre_reading`` parameter.
 
-Let's consider an example of skipping rows during partitioning when `header="infer"` and
-`skiprows=[3, 4, 5]`. In this specific case fastpath can be done since `skiprows` is uniformly
+Let's consider an example of skipping rows during partitioning when ``header="infer"`` and
+``skiprows=[3, 4, 5]``. In this specific case fastpath can be done since ``skiprows`` is uniformly
 distributed array, so we can "squash" it to an integer and set "partitioning" skiprows to 3. But
 if no additional action is done, these three rows will be skipped right after header line,
-that corresponds to `skiprows=[1, 2, 3]`. To avoid this discrepancy, we need to assign the first
+that corresponds to ``skiprows=[1, 2, 3]``. To avoid this discrepancy, we need to assign the first
 partition to read data between header line and the first row for skipping by setting special
-`pre_reading` parameter to 2. Then, after the skipping of rows considered to be skipped during
+``pre_reading`` parameter to 2. Then, after the skipping of rows considered to be skipped during
 partitioning, the rest data will be divided between the rest of partitions, see rows assignment
 below:
 
