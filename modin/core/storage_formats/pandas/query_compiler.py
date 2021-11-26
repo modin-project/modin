@@ -2662,7 +2662,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 by = [by]
         else:
             if not isinstance(by, list):
-                by = [by]
+                by = [by] if by is not None else []
             internal_by = [o for o in by if hashable(o) and o in self.columns]
             internal_qc = (
                 [self.getitem_column_array(internal_by)] if len(internal_by) else []
@@ -2777,7 +2777,6 @@ class PandasQueryCompiler(BaseQueryCompiler):
                         partition_idx=partition_idx,
                         drop=drop,
                         inplace=True,
-                    )
                 else:
                     new_index_names = tuple(
                         None

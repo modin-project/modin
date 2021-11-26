@@ -19,12 +19,7 @@ from modin.core.io.file_dispatcher import OpenFile
 
 
 class FeatherDispatcher(ColumnStoreDispatcher):
-    """
-    Class handles utils for reading `.feather` files.
-
-    Inherits some common for columnar store files util functions from
-    `ColumnStoreDispatcher` class.
-    """
+    """Class handles utils for reading `.feather` files."""
 
     @classmethod
     def _read(cls, path, columns=None, **kwargs):

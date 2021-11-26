@@ -416,6 +416,9 @@ class BaseTimeGroupBy:
             groupby_ncols,
             count_groups=ngroups,
         )
+        # correct while we use 'col*' like name for non-groupby columns
+        # and 'groupby_col*' like name for groupby columns
+        self.non_groupby_columns = self.df.columns[:-groupby_ncols]
         trigger_import(self.df)
 
 
@@ -449,3 +452,10 @@ class TimeGroupByMultiColumn(BaseTimeGroupBy):
 
     def time_groupby_agg_nunique(self, *args, **kwargs):
         execute(self.df.groupby(by=self.groupby_columns).agg("nunique"))
+
+    def time_groupby_agg_mean_dict(self, *args, **kwargs):
+        execute(
+            self.df.groupby(by=self.groupby_columns).agg(
+                {col: "mean" for col in self.non_groupby_columns}
+            )
+        )
