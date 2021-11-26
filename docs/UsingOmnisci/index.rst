@@ -1,7 +1,11 @@
 OmniSci
 =======
 
-To enable ``OmniSci`` engine launch export :
+This section describes usage related documents for the OmniSciDB-based engine of Modin.
+
+This engine uses analytical database OmniSciDB_ to obtain high single-node scalability for
+specific set of dataframe operations.
+To enable this engine you can set the following environment variable:
 
 .. code-block:: bash
 
@@ -13,5 +17,8 @@ or use it in your code:
 
    import modin.config as cfg
    cfg.StorageFormat.put('omnisci')
+
+Since OmniSci is run through its native engine Modin itself sets ``MODIN_ENGINE=Native``
+and you might not specify it explicitly.
 
 .. _OmnisciDB: https://www.omnisci.com/platform/omniscidb
