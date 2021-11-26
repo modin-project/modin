@@ -99,14 +99,14 @@ classes for reading files of different formats.
   * ``sql_dispatcher.py`` -  class for reading SQL queries or database tables.
 
 Handling ``skiprows`` Parameter
-'''''''''''''''''''''''''''''
+'''''''''''''''''''''''''''''''
 
 Handling ``skiprows`` parameter by pandas import functions can be very tricky, especially
 for ``read_csv`` function because of interconnection with ``header`` parameter. In this section
 the techniques of ``skiprows`` processing by both pandas and Modin are covered.
 
 Processing ``skiprows`` by pandas
-===============================
+=================================
 
 Let's consider a simple snippet with ``pandas.read_csv`` in order to understand interconnection
 of ``header`` and ``skiprows`` parameters:
@@ -146,7 +146,7 @@ In the examples above only list-like ``skiprows`` and integer ``header`` paramet
 but the same logic is applicable for other types of the parameters.
 
 Processing ``skiprows`` by Modin
-==============================
+================================
 
 As it can be seen, skipping rows in the pandas import functions is complicated and distributing
 this logic across multiple workers can complicate it even more. Thus in some rare corner cases
