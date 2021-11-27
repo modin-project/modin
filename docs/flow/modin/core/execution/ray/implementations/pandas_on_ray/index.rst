@@ -24,6 +24,9 @@ storage format and mapping the query to one of the :doc:`Core Operators </flow/m
 :py:class:`~modin.core.execution.ray.implementations.pandas_on_ray.dataframe.dataframe.PandasOnRayDataframe` that inherits
 generic functionality from ``GenericRayDataframe`` and :py:class:`~modin.core.dataframe.pandas.dataframe.dataframe.PandasDataframe`.
 
+..
+  TODO: insert a link to ``GenericRayDataframe`` once we add an implementatiton of the class
+
 PandasOnRay Dataframe implementation
 ------------------------------------
 
