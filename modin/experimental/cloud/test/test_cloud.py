@@ -112,10 +112,7 @@ def test_create_or_update_cluster(make_ray_cluster, make_create_or_update_cluste
 )
 @pytest.mark.parametrize(
     "user_packages",
-    [
-        ["scikit-learn>=0.23", "modin==0.8.0"],
-        None,
-    ],
+    [["scikit-learn>=0.23", "modin==0.8.0"], None],
 )
 def test_update_conda_requirements(
     make_ray_cluster,

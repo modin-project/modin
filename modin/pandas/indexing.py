@@ -525,7 +525,7 @@ class _LocationIndexerBase(object):
         Unpack the user input for getitem and setitem and compute ndim.
 
         loc[a] -> ([a], :), 1D
-        loc[[a,b],] -> ([a,b], :),
+        loc[[a,b]] -> ([a,b], :),
         loc[a,b] -> ([a], [b]), 0D
 
         Parameters

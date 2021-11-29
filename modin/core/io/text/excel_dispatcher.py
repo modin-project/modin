@@ -25,11 +25,7 @@ EXCEL_READ_BLOCK_SIZE = 4096
 
 
 class ExcelDispatcher(TextFileDispatcher):
-    """
-    Class handles utils for reading excel files.
-
-    Inherits some common for text files util functions from `TextFileDispatcher` class.
-    """
+    """Class handles utils for reading excel files."""
 
     @classmethod
     def _read(cls, io, **kwargs):

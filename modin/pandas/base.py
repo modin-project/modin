@@ -3127,6 +3127,42 @@ class Resampler(object):
         ]
         self.__groups = self.__get_groups(*self.resample_args)
 
+    def __getitem__(self, key):
+        """
+        Get ``Resampler`` based on `key` columns of original dataframe.
+
+        Parameters
+        ----------
+        key : str or list
+            String or list of selections.
+
+        Returns
+        -------
+        modin.pandas.BasePandasDataset
+            New ``Resampler`` based on `key` columns subset
+            of the original dataframe.
+        """
+
+        def _get_new_resampler(key):
+            subset = self._dataframe[key]
+            resampler = type(self)(subset, *self.resample_args)
+            return resampler
+
+        from .series import Series
+
+        if isinstance(
+            key, (list, tuple, Series, pandas.Series, pandas.Index, np.ndarray)
+        ):
+            if len(self._dataframe.columns.intersection(key)) != len(key):
+                missed_keys = list(set(key).difference(self._dataframe.columns))
+                raise KeyError(f"Columns not found: {str(sorted(missed_keys))[1:-1]}")
+            return _get_new_resampler(list(key))
+
+        if key not in self._dataframe:
+            raise KeyError(f"Column not found: {key}")
+
+        return _get_new_resampler(key)
+
     def __get_groups(
         self,
         rule,
@@ -3520,9 +3556,7 @@ class Window(object):
 
 @_inherit_docstrings(
     pandas.core.window.rolling.Rolling,
-    excluded=[
-        pandas.core.window.rolling.Rolling.__init__,
-    ],
+    excluded=[pandas.core.window.rolling.Rolling.__init__],
 )
 class Rolling(object):
     def __init__(

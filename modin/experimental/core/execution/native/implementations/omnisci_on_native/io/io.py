@@ -62,11 +62,7 @@ class ArrowEngineException(Exception):
 
 
 class OmnisciOnNativeIO(BaseIO, TextFileDispatcher):
-    """
-    Class contains IO functions implementations with OmniSci storage format and Native engine.
-
-    Inherits some common for OmniSci engine util functions from ``BaseIO`` class.
-    """
+    """Class contains IO functions implementations with OmniSci storage format and Native engine."""
 
     frame_cls = OmnisciOnNativeDataframe
     query_compiler_cls = DFAlgQueryCompiler

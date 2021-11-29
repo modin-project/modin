@@ -13,9 +13,7 @@
 
 """Base IO classes optimized for pandas on Python execution."""
 
-from .io import (
-    PandasOnPythonIO,
-)
+from .io import PandasOnPythonIO
 
 __all__ = [
     "PandasOnPythonIO",

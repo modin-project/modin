@@ -108,10 +108,7 @@ def test_asof_without_nan(dates, subset):
 
 @pytest.mark.parametrize(
     "lookup",
-    [
-        [60, 70, 90],
-        [60.5, 70.5, 100],
-    ],
+    [[60, 70, 90], [60.5, 70.5, 100]],
 )
 @pytest.mark.parametrize("subset", ["col2", "col1", ["col1", "col2"], None])
 def test_asof_large(lookup, subset):
@@ -266,6 +263,16 @@ def test_indexing_duplicate_axis(data):
         modin_df.loc[0, modin_df.columns[0:4]],
         pandas_df.loc[0, pandas_df.columns[0:4]],
     )
+
+
+@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test_set_index(data):
+    modin_df = pd.DataFrame(data)
+    pandas_df = pandas.DataFrame(data)
+
+    modin_result = modin_df.set_index([modin_df.index, modin_df.columns[0]])
+    pandas_result = pandas_df.set_index([pandas_df.index, pandas_df.columns[0]])
+    df_equals(modin_result, pandas_result)
 
 
 @pytest.mark.gpu

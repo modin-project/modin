@@ -84,7 +84,7 @@ def test_mixed_dtypes_groupby(as_index):
     ]
 
     for by in by_values:
-        if by_values[0] == "col3":
+        if isinstance(by[0], str) and by[0] == "col3":
             modin_groupby = modin_df.set_index(by[0]).groupby(
                 by=by[0], as_index=as_index
             )
@@ -127,8 +127,6 @@ def test_mixed_dtypes_groupby(as_index):
 
         # TODO Add more apply functions
         apply_functions = [lambda df: df.sum(), min]
-        # Workaround for Pandas bug #34656. Recreate groupby object for Pandas
-        pandas_groupby = pandas_df.groupby(by=by[-1], as_index=as_index)
         for func in apply_functions:
             eval_apply(modin_groupby, pandas_groupby, func)
 
@@ -1216,16 +1214,30 @@ def eval_shift(modin_groupby, pandas_groupby):
         pandas_groupby,
         lambda groupby: groupby.shift(periods=-3),
     )
+
     # Disabled for `BaseOnPython` because of the issue with `getitem_array`.
     # groupby.shift internally masks the source frame with a Series boolean mask,
     # doing so ends up in the `getitem_array` method, that is broken for `BaseOnPython`:
     # https://github.com/modin-project/modin/issues/3701
     if get_current_execution() != "BaseOnPython":
-        eval_general(
-            modin_groupby,
-            pandas_groupby,
-            lambda groupby: groupby.shift(axis=1, fill_value=777),
-        )
+        if isinstance(pandas_groupby, pandas.core.groupby.DataFrameGroupBy):
+            pandas_res = pandas_groupby.shift(axis=1, fill_value=777)
+            modin_res = modin_groupby.shift(axis=1, fill_value=777)
+            # Pandas produces unexpected index order (pandas GH 44269).
+            # Here we align index of Modin result with pandas to make test passed.
+            import pandas.core.algorithms as algorithms
+
+            indexer, _ = modin_res.index.get_indexer_non_unique(modin_res.index._values)
+            indexer = algorithms.unique1d(indexer)
+            modin_res = modin_res.take(indexer)
+
+            df_equals(modin_res, pandas_res)
+        else:
+            eval_general(
+                modin_groupby,
+                pandas_groupby,
+                lambda groupby: groupby.shift(axis=1, fill_value=777),
+            )
 
 
 def test_groupby_on_index_values_with_loop():
@@ -1286,8 +1298,9 @@ def test_groupby_multiindex(groupby_kwargs):
         modin_df = modin_df.T
         pandas_df = pandas_df.T
 
-    md_grp, pd_grp = modin_df.groupby(**groupby_kwargs), pandas_df.groupby(
-        **groupby_kwargs
+    md_grp, pd_grp = (
+        modin_df.groupby(**groupby_kwargs),
+        pandas_df.groupby(**groupby_kwargs),
     )
     modin_groupby_equals_pandas(md_grp, pd_grp)
     df_equals(md_grp.sum(), pd_grp.sum())
@@ -1682,8 +1695,9 @@ def test_multi_column_groupby_different_partitions(
         md_df = md_df.astype({by[0]: "category"})
         pd_df = pd_df.astype({by[0]: "category"})
 
-    md_grp, pd_grp = md_df.groupby(by, as_index=as_index), pd_df.groupby(
-        by, as_index=as_index
+    md_grp, pd_grp = (
+        md_df.groupby(by, as_index=as_index),
+        pd_df.groupby(by, as_index=as_index),
     )
     eval_general(md_grp, pd_grp, func_to_apply)
     eval___getitem__(md_grp, pd_grp, md_df.columns[1])
@@ -1709,8 +1723,9 @@ def test_not_str_by(by, as_index):
     columns = pandas.Index([0, 1.5, "str", pandas.Timestamp("2020-02-02"), None])
 
     md_df, pd_df = create_test_dfs(data, columns=columns)
-    md_grp, pd_grp = md_df.groupby(by, as_index=as_index), pd_df.groupby(
-        by, as_index=as_index
+    md_grp, pd_grp = (
+        md_df.groupby(by, as_index=as_index),
+        pd_df.groupby(by, as_index=as_index),
     )
 
     modin_groupby_equals_pandas(md_grp, pd_grp)
@@ -1719,3 +1734,14 @@ def test_not_str_by(by, as_index):
     eval_general(md_grp, pd_grp, lambda grp: grp.agg(lambda df: df.mean()))
     eval_general(md_grp, pd_grp, lambda grp: grp.dtypes)
     eval_general(md_grp, pd_grp, lambda grp: grp.first())
+
+
+def test_sum_with_level():
+    data = {
+        "A": ["0.0", "1.0", "2.0", "3.0", "4.0"],
+        "B": ["0.0", "1.0", "0.0", "1.0", "0.0"],
+        "C": ["foo1", "foo2", "foo3", "foo4", "foo5"],
+        "D": pandas.bdate_range("1/1/2009", periods=5),
+    }
+    modin_df, pandas_df = pd.DataFrame(data), pandas.DataFrame(data)
+    eval_general(modin_df, pandas_df, lambda df: df.set_index("C").groupby("C").sum())

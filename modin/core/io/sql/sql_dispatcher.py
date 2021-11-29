@@ -25,15 +25,12 @@ import pandas
 import warnings
 
 from modin.core.io.file_dispatcher import FileDispatcher
+from modin.db_conn import ModinDatabaseConnection
 from modin.config import NPartitions
 
 
 class SQLDispatcher(FileDispatcher):
-    """
-    Class handles utils for reading SQL queries or database tables.
-
-    Inherits some common for files util functions from `FileDispatcher` class.
-    """
+    """Class handles utils for reading SQL queries or database tables."""
 
     @classmethod
     def _read(cls, sql, con, index_col=None, **kwargs):
@@ -44,7 +41,7 @@ class SQLDispatcher(FileDispatcher):
         ----------
         sql : str or SQLAlchemy Selectable (select or text object)
             SQL query to be executed or a table name.
-        con : SQLAlchemy connectable, str, or sqlite3 connection
+        con : SQLAlchemy connectable, str, sqlite3 connection, or ModinDatabaseConnection
             Connection object to database.
         index_col : str or list of str, optional
             Column(s) to set as index(MultiIndex).
@@ -56,34 +53,24 @@ class SQLDispatcher(FileDispatcher):
         BaseQueryCompiler
             Query compiler with imported data for further processing.
         """
-        try:
-            import psycopg2 as pg
-
-            if isinstance(con, pg.extensions.connection):
-                con = "postgresql+psycopg2://{}:{}@{}{}/{}".format(  # Table in DB
-                    con.info.user,  # <Username>: for DB
-                    con.info.password,  # Password for DB
-                    con.info.host if con.info.host != "/tmp" else "",  # @<Hostname>
-                    (":" + str(con.info.port))
-                    if con.info.host != "/tmp"
-                    else "",  # <port>
-                    con.info.dbname,  # Table in DB
-                )
-        except ImportError:
-            pass
-        # In the case that we are given a SQLAlchemy Connection or Engine, the objects
-        # are not pickleable. We have to convert it to the URL string and connect from
-        # each of the workers.
-        if not isinstance(con, str):
+        is_modin_db_connection = isinstance(con, ModinDatabaseConnection)
+        if not (is_modin_db_connection or isinstance(con, str)):
             warnings.warn(
-                "To use parallel implementation of `read_sql`, pass the sqlalchemy"
-                "connection string instead of {}.".format(type(con))
+                "To use parallel implementation of `read_sql`, pass either "
+                "the SQL connection string or a ModinDatabaseConnection "
+                "with the arguments required to make a connection, instead "
+                "of {}. For documentation of ModinDatabaseConnection, see https://modin.readthedocs.io/en/latest/supported_apis/io_supported.html#connecting-to-a-database-for-read-sql".format(
+                    type(con)
+                )
             )
             return cls.single_worker_read(sql, con=con, index_col=index_col, **kwargs)
         row_cnt_query = "SELECT COUNT(*) FROM ({}) as foo".format(sql)
-        row_cnt = pandas.read_sql(row_cnt_query, con).squeeze()
+        connection_for_pandas = con.get_connection() if is_modin_db_connection else con
+        row_cnt = pandas.read_sql(row_cnt_query, connection_for_pandas).squeeze()
         cols_names_df = pandas.read_sql(
-            "SELECT * FROM ({}) as foo LIMIT 0".format(sql), con, index_col=index_col
+            "SELECT * FROM ({}) as foo LIMIT 0".format(sql),
+            connection_for_pandas,
+            index_col=index_col,
         )
         cols_names = cols_names_df.columns
         num_partitions = NPartitions.get()

@@ -2661,7 +2661,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 by = [by]
         else:
             if not isinstance(by, list):
-                by = [by]
+                by = [by] if by is not None else []
             internal_by = [o for o in by if hashable(o) and o in self.columns]
             internal_qc = (
                 [self.getitem_column_array(internal_by)] if len(internal_by) else []
@@ -2755,7 +2755,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 result_cols = result.columns
                 result.drop(columns=missmatched_cols, inplace=True, errors="ignore")
 
-                if not as_index:
+                if not as_index and len(by) > 0:
                     keep_index_levels = len(by) > 1 and any(
                         isinstance(x, pandas.CategoricalDtype)
                         for x in df[internal_by_cols].dtypes

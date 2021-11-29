@@ -13,8 +13,6 @@
 
 """Experimental Base IO classes optimized for pandas on Ray execution."""
 
-from .io import (
-    ExperimentalPandasOnRayIO,
-)
+from .io import ExperimentalPandasOnRayIO
 
 __all__ = ["ExperimentalPandasOnRayIO"]

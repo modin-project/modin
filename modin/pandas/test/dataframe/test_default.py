@@ -762,6 +762,43 @@ def test_resample_specific(rule, closed, label, on, level):
         )
 
 
+@pytest.mark.parametrize(
+    "columns",
+    [
+        "volume",
+        "date",
+        ["volume"],
+        ["price", "date"],
+        ("volume",),
+        pandas.Series(["volume"]),
+        pandas.Index(["volume"]),
+        ["volume", "volume", "volume"],
+        ["volume", "price", "date"],
+    ],
+    ids=[
+        "column",
+        "missed_column",
+        "list",
+        "missed_column",
+        "tuple",
+        "series",
+        "index",
+        "duplicate_column",
+        "missed_columns",
+    ],
+)
+def test_resample_getitem(columns):
+    index = pandas.date_range("1/1/2013", periods=9, freq="T")
+    data = {
+        "price": range(9),
+        "volume": range(10, 19),
+    }
+    eval_general(
+        *create_test_dfs(data, index=index),
+        lambda df: df.resample("3T")[columns].mean(),
+    )
+
+
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 @pytest.mark.parametrize("index", ["default", "ndarray", "has_duplicates"])
 @pytest.mark.parametrize("axis", [0, 1])
@@ -823,11 +860,7 @@ def test_stack(data, is_multi_idx, is_multi_col):
     if is_multi_col:
         if len(pandas_df.columns) == 64:
             columns = pd.MultiIndex.from_product(
-                [
-                    ["A", "B", "C", "D"],
-                    ["xx", "yy", "zz", "LAST"],
-                    [10, 20, 30, 40],
-                ]
+                [["A", "B", "C", "D"], ["xx", "yy", "zz", "LAST"], [10, 20, 30, 40]]
             )
         elif len(pandas_df.columns) == 100:
             columns = pd.MultiIndex.from_product(

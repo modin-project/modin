@@ -19,18 +19,10 @@ import numpy as np
 from modin.core.dataframe.pandas.partitioning.partition_manager import (
     PandasDataframePartitionManager,
 )
-from ..partitioning.partition import (
-    OmnisciOnNativeDataframePartition,
-)
-from ..omnisci_worker import (
-    OmnisciServer,
-)
-from ..calcite_builder import (
-    CalciteBuilder,
-)
-from ..calcite_serializer import (
-    CalciteSerializer,
-)
+from ..partitioning.partition import OmnisciOnNativeDataframePartition
+from ..omnisci_worker import OmnisciServer
+from ..calcite_builder import CalciteBuilder
+from ..calcite_serializer import CalciteSerializer
 from modin.config import DoUseCalcite
 
 import pyarrow

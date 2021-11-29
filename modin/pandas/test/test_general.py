@@ -232,8 +232,9 @@ def test_merge_asof_on_variations():
         pandas.DataFrame(left, index=left_index),
         pandas.DataFrame(right, index=right_index),
     )
-    modin_left, modin_right = pd.DataFrame(left, index=left_index), pd.DataFrame(
-        right, index=right_index
+    modin_left, modin_right = (
+        pd.DataFrame(left, index=left_index),
+        pd.DataFrame(right, index=right_index),
     )
     for on_arguments in [
         {"on": "a"},
