@@ -411,3 +411,15 @@ def test_value_counts(subset_len, sort, normalize, dropna, ascending):
         # visit modin-issue#3388 for more info.
         check_exception_type=None if sort and ascending is None else True,
     )
+
+
+def test_value_counts_categorical():
+    # from issue #3571
+    data = np.array(["a"] * 50000 + ["b"] * 10000 + ["c"] * 1000)
+    random_state = np.random.RandomState(seed=42)
+    random_state.shuffle(data)
+
+    eval_general(
+        *create_test_dfs({"col1": data, "col2": data}, dtype="category"),
+        lambda df: df.value_counts(),
+    )

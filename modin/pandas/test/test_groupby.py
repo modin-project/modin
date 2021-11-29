@@ -1731,6 +1731,32 @@ def test_not_str_by(by, as_index):
     eval_general(md_grp, pd_grp, lambda grp: grp.first())
 
 
+@pytest.mark.parametrize("sort", [True, False])
+@pytest.mark.parametrize("is_categorical_by", [True, False])
+def test_groupby_sort(sort, is_categorical_by):
+    # from issue #3571
+    by = np.array(["a"] * 50000 + ["b"] * 10000 + ["c"] * 1000)
+    random_state = np.random.RandomState(seed=42)
+    random_state.shuffle(by)
+
+    data = {"key_col": by, "data_col": np.arange(len(by))}
+    md_df, pd_df = create_test_dfs(data)
+
+    if is_categorical_by:
+        md_df = md_df.astype({"key_col": "category"})
+        pd_df = pd_df.astype({"key_col": "category"})
+
+    md_grp = md_df.groupby("key_col", sort=sort)
+    pd_grp = pd_df.groupby("key_col", sort=sort)
+
+    modin_groupby_equals_pandas(md_grp, pd_grp)
+    eval_general(md_grp, pd_grp, lambda grp: grp.sum())
+    eval_general(md_grp, pd_grp, lambda grp: grp.size())
+    eval_general(md_grp, pd_grp, lambda grp: grp.agg(lambda df: df.mean()))
+    eval_general(md_grp, pd_grp, lambda grp: grp.dtypes)
+    eval_general(md_grp, pd_grp, lambda grp: grp.first())
+
+
 def test_sum_with_level():
     data = {
         "A": ["0.0", "1.0", "2.0", "3.0", "4.0"],
