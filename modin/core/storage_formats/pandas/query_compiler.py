@@ -2794,9 +2794,9 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
             try:
                 return compute_groupby(df, drop, partition_idx)
-            # This will happen with Arrow buffer read-only errors. We don't want to copy
-            # all the time, so this will try to fast-path the code first.
             except (ValueError, KeyError):
+                # This will happen with Arrow buffer read-only errors. We don't want to copy
+                # all the time, so this will try to fast-path the code first.
                 return compute_groupby(df.copy(), drop, partition_idx)
 
         apply_indices = list(agg_func.keys()) if isinstance(agg_func, dict) else None

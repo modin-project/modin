@@ -236,7 +236,7 @@ class GroupBy:
                 if isinstance(by, pandas.Series):
                     # 1. If `drop` is True then 'by' Series represents a column from the
                     #    source frame and so the 'by' is internal.
-                    # 2. If method is 'size' then any 'by' considered to be internal.
+                    # 2. If method is 'size' then any 'by' is considered to be internal.
                     #    This is a hacky legacy from the ``groupby_size`` implementation:
                     #    https://github.com/modin-project/modin/issues/3739
                     internal_by = (by.name,) if drop or method == "size" else tuple()

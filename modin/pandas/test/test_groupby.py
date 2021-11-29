@@ -1801,11 +1801,11 @@ def test_not_str_by(by, as_index):
         # 0 and -1 are considered to be the indices of the columns to group on.
         pytest.param({1: "sum", 2: "nunique"}, id="dict_agg_no_intersection_with_by"),
         pytest.param(
-            {1: "sum", 2: "nunique", -1: "mean"},
+            {0: "mean", 1: "sum", 2: "nunique"},
             id="dict_agg_has_intersection_with_by",
         ),
         pytest.param(
-            {0: "nunique", 1: "sum", 2: "nunique"},
+            {1: "sum", 2: "nunique", -1: "nunique"},
             id="dict_agg_has_intersection_with_categorical_by",
         ),
     ],
@@ -1833,9 +1833,9 @@ def test_handle_as_index(
         3. Compute GroupBy result with the ``as_index=False`` parameter via pandas as the reference result.
         4. Compare the result from the second step with the reference.
     """
-    by_length = sum((internal_by_length, external_by_length))
+    by_length = internal_by_length + external_by_length
     if by_length == 0:
-        pytest.skip("No keys to group on was passed, skipping the test.")
+        pytest.skip("No keys to group on were passed, skipping the test.")
 
     if (
         has_categorical_by
@@ -1854,7 +1854,7 @@ def test_handle_as_index(
     external_by_cols = GroupBy.validate_by(df.add_prefix("external_"))
 
     if has_categorical_by:
-        df = df.astype({df.columns[0]: "category"})
+        df = df.astype({df.columns[-1]: "category"})
 
     if isinstance(agg_func, dict):
         agg_func = {df.columns[key]: value for key, value in agg_func.items()}
@@ -1866,7 +1866,7 @@ def test_handle_as_index(
 
     # Selecting 'by' columns from both sides of the frame so they located in different partitions
     internal_by = df.columns[
-        [i if i % 2 == 0 else -i for i in range(internal_by_length)]
+        range(-internal_by_length // 2, internal_by_length // 2)
     ].tolist()
     external_by = external_by_cols[:external_by_length]
 
@@ -1914,8 +1914,8 @@ def test_validate_by():
     """Test ``modin.core.dataframe.algebra.default2pandas.groupby.GroupBy.validate_by``."""
 
     def compare(obj1, obj2):
-        assert not (
-            isinstance(obj1, list) ^ isinstance(obj2, list)
+        assert type(obj1) == type(
+            obj2
         ), f"Both objects must be instances of the same type: {type(obj1)} != {type(obj2)}."
         if isinstance(obj1, list):
             for val1, val2 in itertools.zip_longest(obj1, obj2):
