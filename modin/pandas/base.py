@@ -2894,7 +2894,7 @@ class BasePandasDataset(object):
     ):
         if subset is None:
             subset = self._query_compiler.columns
-        counted_values = self.groupby(by=subset, sort=False, dropna=dropna).size()
+        counted_values = self.groupby(by=subset, dropna=dropna, observed=True).size()
         if sort:
             counted_values.sort_values(ascending=ascending, inplace=True)
         if normalize:

@@ -3439,6 +3439,18 @@ def test_value_counts(sort, normalize, bins, dropna, ascending):
     )
 
 
+def test_value_counts_categorical():
+    # from issue #3571
+    data = np.array(["a"] * 50000 + ["b"] * 10000 + ["c"] * 1000)
+    random_state = np.random.RandomState(seed=42)
+    random_state.shuffle(data)
+
+    eval_general(
+        *create_test_series(data, dtype="category"),
+        lambda df: df.value_counts(),
+    )
+
+
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_values(data):
     modin_series, pandas_series = create_test_series(data)
