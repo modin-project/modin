@@ -158,9 +158,9 @@ html_theme_options = {
 # defined by theme itself.  Builtin themes are using these templates by
 # default: ``['localtoc.html', 'relations.html', 'sourcelink.html',
 # 'searchbox.html']``.
+# The default pydata_sphinx_theme sidebar templates are
+# sidebar-nav-bs.html and search-field.html.
 #
-# html_sidebars = {
-#     "**": ["globaltoc.html", "relations.html", "sourcelink.html", "searchbox.html"]
-# }
+html_sidebars = {}
 
 issues_github_path = "modin-project/modin"

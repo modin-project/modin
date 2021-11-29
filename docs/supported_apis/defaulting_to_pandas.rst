@@ -1,7 +1,5 @@
 Defaulting to pandas
-=======================================
-
-.. _defaulting-to-pandas-mechanism:
+====================
 
 The remaining unimplemented methods default to pandas. This allows users to continue
 using Modin even though their workloads contain functions not yet implemented in Modin.
@@ -16,7 +14,6 @@ the communication cost and single-threaded nature of pandas. Once the pandas ope
 has completed, we convert the DataFrame back into a partitioned Modin DataFrame. This
 way, operations performed after something defaults to pandas will be optimized with
 Modin.
-
 
 The exact methods we have implemented are listed in the respective subsections:
 

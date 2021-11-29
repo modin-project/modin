@@ -7,6 +7,11 @@ Slack
 Join our `Slack`_ community to connect with Modin users and contributors,
 discuss, and ask questions about all things Modin-related.
 
+Discussion forum
+----------------
+Check out our `discussion forum`_ to discuss release announcements, general
+questions, issues, use-cases, and tutorials.
+
 Mailing List
 ------------
 
@@ -22,5 +27,6 @@ Bug reports and feature requests can be directed to the issues_ page of the Modi
 GitHub repo.
 
 .. _Slack: https://modin.org/slack.html
+.. _discussion forum: https://discuss.modin.org/
 .. _developer mailing list: https://groups.google.com/forum/#!forum/modin-dev
 .. _issues: https://github.com/modin-project/modin/issues
