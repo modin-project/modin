@@ -20,6 +20,7 @@ import warnings
 import asyncio
 
 import ray
+from ray import ray_constants
 
 from modin.config import (
     StorageFormat,
@@ -121,7 +122,7 @@ def initialize_ray(
                 address=redis_address or "auto",
                 include_dashboard=False,
                 ignore_reinit_error=True,
-                _redis_password=redis_password,
+                _redis_password=redis_password or ray_constants.REDIS_DEFAULT_PASSWORD,
             )
         else:
             from modin.error_message import ErrorMessage
