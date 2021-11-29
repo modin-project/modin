@@ -2743,10 +2743,10 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 grouped_df = df.groupby(by=by, axis=axis, **groupby_kwargs)
                 try:
                     result = partition_agg_func(grouped_df, **agg_kwargs)
-                # This happens when the partition is filled with non-numeric data and a
-                # numeric operation is done. We need to build the index here to avoid
-                # issues with extracting the index.
                 except (DataError, TypeError):
+                    # This happens when the partition is filled with non-numeric data and a
+                    # numeric operation is done. We need to build the index here to avoid
+                    # issues with extracting the index.
                     result = pandas.DataFrame(index=grouped_df.size().index)
                 if isinstance(result, pandas.Series):
                     result = result.to_frame(
