@@ -34,6 +34,7 @@ from modin.pandas.test.utils import (
     generate_multiindex,
     test_data_diff_dtype,
     df_equals_with_non_stable_indices,
+    test_data_large_categorical_dataframe,
 )
 from modin.config import NPartitions
 
@@ -94,7 +95,9 @@ def test_all_any_level(data, axis, level, method):
 
 
 @pytest.mark.parametrize("axis", axis_values, ids=axis_keys)
-@pytest.mark.parametrize("data", [test_data["float_nan_data"]])
+@pytest.mark.parametrize(
+    "data", [test_data["float_nan_data"], test_data_large_categorical_dataframe]
+)
 def test_count(data, axis):
     eval_general(
         *create_test_dfs(data),
