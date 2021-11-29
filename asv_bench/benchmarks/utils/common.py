@@ -462,22 +462,20 @@ def trigger_import(*dfs):
     *dfs : iterable
         DataFrames to trigger import.
     """
-    assert ASV_USE_STORAGE_FORMAT == "omnisci"
+    if ASV_USE_STORAGE_FORMAT != "omnisci" or ASV_USE_IMPL == "pandas":
+        return
 
     from modin.experimental.core.execution.native.implementations.omnisci_on_native.omnisci_worker import (
         OmnisciServer,
     )
 
     for df in dfs:
-        if ASV_USE_IMPL == "modin":
-            df.shape  # to trigger real execution
-            df._query_compiler._modin_frame._partitions[0][
-                0
-            ].frame_id = OmnisciServer().put_arrow_to_omnisci(
-                df._query_compiler._modin_frame._partitions[0][0].get()
-            )  # to trigger real execution
-        elif ASV_USE_IMPL == "pandas":
-            pass
+        df.shape  # to trigger real execution
+        df._query_compiler._modin_frame._partitions[0][
+            0
+        ].frame_id = OmnisciServer().put_arrow_to_omnisci(
+            df._query_compiler._modin_frame._partitions[0][0].get()
+        )  # to trigger real execution
 
 
 def execute(
