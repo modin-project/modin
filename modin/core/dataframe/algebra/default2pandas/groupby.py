@@ -491,9 +491,7 @@ class GroupBy:
         if not keep_index_levels:
             # We want to insert only these internal-by-cols that are not presented
             # in the result in order to not create naming conflicts
-            if selection is None and internal_by_cols.nlevels != result_cols.nlevels:
-                cols_to_insert = internal_by_cols.copy()
-            elif selection is None:
+            if selection is None:
                 cols_to_insert = frozenset(internal_by_cols) - frozenset(result_cols)
             else:
                 cols_to_insert = frozenset(
@@ -508,10 +506,7 @@ class GroupBy:
             cols_to_insert = internal_by_cols
             # We want to drop such internal-by-cols that are presented
             # in the result in order to not create naming conflicts
-            if internal_by_cols.nlevels != result_cols.nlevels:
-                cols_to_drop = pandas.Index([])
-            else:
-                cols_to_drop = frozenset(internal_by_cols) & frozenset(result_cols)
+            cols_to_drop = frozenset(internal_by_cols) & frozenset(result_cols)
 
         if partition_idx == 0:
             lvls_to_drop = [
