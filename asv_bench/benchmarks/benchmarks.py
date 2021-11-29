@@ -510,25 +510,28 @@ class TimeIndexing:
         ],
     ]
 
+    indexer_getters = {
+        "bool_array": lambda df: np.array([False, True] * (len(df) // 2)),
+        # This boolean-Series is a projection of the source frame, it shouldn't
+        # be reimported or triggered to execute:
+        "bool_series": lambda df: df.iloc[:, 0] > 50,
+        "scalar": lambda df: len(df) // 2,
+        "slice": lambda df: slice(0, len(df), 2),
+        "continuous_slice": lambda df: slice(len(df) // 2),
+        "numpy_array_take_all_values": lambda df: np.arange(len(df)),
+        "python_list_take_10_values": lambda df: list(range(min(10, len(df)))),
+        "function": lambda df: (lambda df: df.index[::-2]),
+    }
+
     def setup(self, shape, indexer_type):
         self.df = generate_dataframe(ASV_USE_IMPL, "int", *shape, RAND_LOW, RAND_HIGH)
         trigger_import(self.df)
 
-        # This Series is a projection of the source frame, it shouldn't be reimported or triggered to execute.
-        series_bool_mask = self.df.iloc[:, 0] > 50
-        # HACK: Triggering `dtypes` meta-data computation in advance, so it won't affect the `loc/iloc` time.
-        series_bool_mask.dtypes
-
-        self.indexer = {
-            "bool_array": np.array([False, True] * (shape[0] // 2)),
-            "bool_series": series_bool_mask,
-            "scalar": shape[0] // 2,
-            "slice": slice(0, shape[0], 2),
-            "continuous_slice": slice(shape[0] // 2),
-            "numpy_array_take_all_values": np.arange(shape[0]),
-            "python_list_take_10_values": list(range(10)),
-            "function": lambda df: df.index[::-2],
-        }[indexer_type]
+        self.indexer = self.indexer_getters[indexer_type](self.df)
+        if isinstance(self.indexer, (pd.Series, pd.DataFrame)):
+            # HACK: Triggering `dtypes` meta-data computation in advance,
+            # so it won't affect the `loc/iloc` time:
+            self.indexer.dtypes
 
     def time_iloc(self, shape, indexer_type):
         # Pandas doesn't implement `df.iloc[series boolean_mask]` and raises an exception on it.
