@@ -3109,23 +3109,21 @@ class Resampler(object):
         self._dataframe = dataframe
         self._query_compiler = dataframe._query_compiler
         axis = self._dataframe._get_axis_number(axis)
-        # FIXME: this should be converted into a dict to ensure simplicity
-        # of handling resample parameters at the query compiler level.
-        self.resample_args = [
-            rule,
-            axis,
-            closed,
-            label,
-            convention,
-            kind,
-            loffset,
-            base,
-            on,
-            level,
-            origin,
-            offset,
-        ]
-        self.__groups = self.__get_groups(*self.resample_args)
+        self.resample_kwargs = {
+            "rule": rule,
+            "axis": axis,
+            "closed": closed,
+            "label": label,
+            "convention": convention,
+            "kind": kind,
+            "loffset": loffset,
+            "base": base,
+            "on": on,
+            "level": level,
+            "origin": origin,
+            "offset": offset,
+        }
+        self.__groups = self.__get_groups(**self.resample_kwargs)
 
     def __getitem__(self, key):
         """
@@ -3145,7 +3143,7 @@ class Resampler(object):
 
         def _get_new_resampler(key):
             subset = self._dataframe[key]
-            resampler = type(self)(subset, *self.resample_args)
+            resampler = type(self)(subset, **self.resample_kwargs)
             return resampler
 
         from .series import Series
@@ -3201,17 +3199,17 @@ class Resampler(object):
     @property
     def groups(self):
         return self._query_compiler.default_to_pandas(
-            lambda df: pandas.DataFrame.resample(df, *self.resample_args).groups
+            lambda df: pandas.DataFrame.resample(df, **self.resample_kwargs).groups
         )
 
     @property
     def indices(self):
         return self._query_compiler.default_to_pandas(
-            lambda df: pandas.DataFrame.resample(df, *self.resample_args).indices
+            lambda df: pandas.DataFrame.resample(df, **self.resample_kwargs).indices
         )
 
     def get_group(self, name, obj=None):
-        if self.resample_args[1] == 0:
+        if self.resample_kwargs["axis"] == 0:
             result = self.__groups.get_group(name)
         else:
             result = self.__groups.get_group(name).T
@@ -3227,7 +3225,7 @@ class Resampler(object):
 
         dataframe = DataFrame(
             query_compiler=query_comp_op(
-                self.resample_args,
+                self.resample_kwargs,
                 func,
                 *args,
                 **kwargs,
@@ -3251,7 +3249,7 @@ class Resampler(object):
 
         dataframe = DataFrame(
             query_compiler=query_comp_op(
-                self.resample_args,
+                self.resample_kwargs,
                 func,
                 *args,
                 **kwargs,
@@ -3268,61 +3266,63 @@ class Resampler(object):
     def transform(self, arg, *args, **kwargs):
         return self._dataframe.__constructor__(
             query_compiler=self._query_compiler.resample_transform(
-                self.resample_args, arg, *args, **kwargs
+                self.resample_kwargs, arg, *args, **kwargs
             )
         )
 
     def pipe(self, func, *args, **kwargs):
         return self._dataframe.__constructor__(
             query_compiler=self._query_compiler.resample_pipe(
-                self.resample_args, func, *args, **kwargs
+                self.resample_kwargs, func, *args, **kwargs
             )
         )
 
     def ffill(self, limit=None):
         return self._dataframe.__constructor__(
             query_compiler=self._query_compiler.resample_ffill(
-                self.resample_args, limit
+                self.resample_kwargs, limit
             )
         )
 
     def backfill(self, limit=None):
         return self._dataframe.__constructor__(
             query_compiler=self._query_compiler.resample_backfill(
-                self.resample_args, limit
+                self.resample_kwargs, limit
             )
         )
 
     def bfill(self, limit=None):
         return self._dataframe.__constructor__(
             query_compiler=self._query_compiler.resample_bfill(
-                self.resample_args, limit
+                self.resample_kwargs, limit
             )
         )
 
     def pad(self, limit=None):
         return self._dataframe.__constructor__(
-            query_compiler=self._query_compiler.resample_pad(self.resample_args, limit)
+            query_compiler=self._query_compiler.resample_pad(
+                self.resample_kwargs, limit
+            )
         )
 
     def nearest(self, limit=None):
         return self._dataframe.__constructor__(
             query_compiler=self._query_compiler.resample_nearest(
-                self.resample_args, limit
+                self.resample_kwargs, limit
             )
         )
 
     def fillna(self, method, limit=None):
         return self._dataframe.__constructor__(
             query_compiler=self._query_compiler.resample_fillna(
-                self.resample_args, method, limit
+                self.resample_kwargs, method, limit
             )
         )
 
     def asfreq(self, fill_value=None):
         return self._dataframe.__constructor__(
             query_compiler=self._query_compiler.resample_asfreq(
-                self.resample_args, fill_value
+                self.resample_kwargs, fill_value
             )
         )
 
@@ -3339,7 +3339,7 @@ class Resampler(object):
     ):
         return self._dataframe.__constructor__(
             query_compiler=self._query_compiler.resample_interpolate(
-                self.resample_args,
+                self.resample_kwargs,
                 method,
                 axis,
                 limit,
@@ -3353,20 +3353,20 @@ class Resampler(object):
 
     def count(self):
         return self._dataframe.__constructor__(
-            query_compiler=self._query_compiler.resample_count(self.resample_args)
+            query_compiler=self._query_compiler.resample_count(self.resample_kwargs)
         )
 
     def nunique(self, _method="nunique", *args, **kwargs):
         return self._dataframe.__constructor__(
             query_compiler=self._query_compiler.resample_nunique(
-                self.resample_args, _method, *args, **kwargs
+                self.resample_kwargs, _method, *args, **kwargs
             )
         )
 
     def first(self, _method="first", *args, **kwargs):
         return self._dataframe.__constructor__(
             query_compiler=self._query_compiler.resample_first(
-                self.resample_args,
+                self.resample_kwargs,
                 _method,
                 *args,
                 **kwargs,
@@ -3376,7 +3376,7 @@ class Resampler(object):
     def last(self, _method="last", *args, **kwargs):
         return self._dataframe.__constructor__(
             query_compiler=self._query_compiler.resample_last(
-                self.resample_args,
+                self.resample_kwargs,
                 _method,
                 *args,
                 **kwargs,
@@ -3386,7 +3386,7 @@ class Resampler(object):
     def max(self, _method="max", *args, **kwargs):
         return self._dataframe.__constructor__(
             query_compiler=self._query_compiler.resample_max(
-                self.resample_args,
+                self.resample_kwargs,
                 _method,
                 *args,
                 **kwargs,
@@ -3396,7 +3396,7 @@ class Resampler(object):
     def mean(self, _method="mean", *args, **kwargs):
         return self._dataframe.__constructor__(
             query_compiler=self._query_compiler.resample_mean(
-                self.resample_args,
+                self.resample_kwargs,
                 _method,
                 *args,
                 **kwargs,
@@ -3406,7 +3406,7 @@ class Resampler(object):
     def median(self, _method="median", *args, **kwargs):
         return self._dataframe.__constructor__(
             query_compiler=self._query_compiler.resample_median(
-                self.resample_args,
+                self.resample_kwargs,
                 _method,
                 *args,
                 **kwargs,
@@ -3416,7 +3416,7 @@ class Resampler(object):
     def min(self, _method="min", *args, **kwargs):
         return self._dataframe.__constructor__(
             query_compiler=self._query_compiler.resample_min(
-                self.resample_args,
+                self.resample_kwargs,
                 _method,
                 *args,
                 **kwargs,
@@ -3429,7 +3429,7 @@ class Resampler(object):
         if isinstance(self._dataframe, DataFrame):
             return DataFrame(
                 query_compiler=self._query_compiler.resample_ohlc_df(
-                    self.resample_args,
+                    self.resample_kwargs,
                     _method,
                     *args,
                     **kwargs,
@@ -3438,7 +3438,7 @@ class Resampler(object):
         else:
             return DataFrame(
                 query_compiler=self._query_compiler.resample_ohlc_ser(
-                    self.resample_args,
+                    self.resample_kwargs,
                     _method,
                     *args,
                     **kwargs,
@@ -3446,7 +3446,7 @@ class Resampler(object):
             )
 
     def prod(self, _method="prod", min_count=0, *args, **kwargs):
-        if self.resample_args[1] == 0:
+        if self.resample_kwargs["axis"] == 0:
             result = self.__groups.prod(min_count=min_count, *args, **kwargs)
         else:
             result = self.__groups.prod(min_count=min_count, *args, **kwargs).T
@@ -3456,13 +3456,13 @@ class Resampler(object):
         from .series import Series
 
         return Series(
-            query_compiler=self._query_compiler.resample_size(self.resample_args)
+            query_compiler=self._query_compiler.resample_size(self.resample_kwargs)
         )
 
     def sem(self, _method="sem", *args, **kwargs):
         return self._dataframe.__constructor__(
             query_compiler=self._query_compiler.resample_sem(
-                self.resample_args,
+                self.resample_kwargs,
                 _method,
                 *args,
                 **kwargs,
@@ -3472,12 +3472,12 @@ class Resampler(object):
     def std(self, ddof=1, *args, **kwargs):
         return self._dataframe.__constructor__(
             query_compiler=self._query_compiler.resample_std(
-                self.resample_args, *args, ddof=ddof, **kwargs
+                self.resample_kwargs, *args, ddof=ddof, **kwargs
             )
         )
 
     def sum(self, _method="sum", min_count=0, *args, **kwargs):
-        if self.resample_args[1] == 0:
+        if self.resample_kwargs["axis"] == 0:
             result = self.__groups.sum(min_count=min_count, *args, **kwargs)
         else:
             result = self.__groups.sum(min_count=min_count, *args, **kwargs).T
@@ -3486,14 +3486,14 @@ class Resampler(object):
     def var(self, ddof=1, *args, **kwargs):
         return self._dataframe.__constructor__(
             query_compiler=self._query_compiler.resample_var(
-                self.resample_args, *args, ddof=ddof, **kwargs
+                self.resample_kwargs, *args, ddof=ddof, **kwargs
             )
         )
 
     def quantile(self, q=0.5, **kwargs):
         return self._dataframe.__constructor__(
             query_compiler=self._query_compiler.resample_quantile(
-                self.resample_args, q, **kwargs
+                self.resample_kwargs, q, **kwargs
             )
         )
 
