@@ -112,18 +112,8 @@ are also plans to expose the Modin DataFrame API as a reduced API set that encom
 the entire pandas/dataframe API. See `experimental features`_ for more information.
 
 .. toctree::
-   :caption: Base pandas Dataset API
-
    /flow/modin/pandas/base
-
-.. toctree::
-   :caption: modin.pandas.DataFrame API
-
    /flow/modin/pandas/dataframe
-
-.. toctree::
-   :caption: modin.pandas.Series API
-
    /flow/modin/pandas/series
 
 Query Compiler

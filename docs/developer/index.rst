@@ -2,7 +2,7 @@ Developer
 =========
 
 .. toctree::
-    :titlesonly:
+    :maxdepth: 4
     
     contributing
     architecture
