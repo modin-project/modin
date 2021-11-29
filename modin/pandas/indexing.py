@@ -31,11 +31,11 @@ https://github.com/ray-project/ray/pull/1955#issuecomment-386781826
 
 import numpy as np
 import pandas
+import itertools
 from pandas.api.types import is_list_like, is_bool
 from pandas.core.dtypes.common import is_integer, is_bool_dtype, is_integer_dtype
 from pandas.core.indexing import IndexingError
 from modin.error_message import ErrorMessage
-from itertools import compress
 
 from .dataframe import DataFrame
 from .series import Series
@@ -222,7 +222,7 @@ def boolean_mask_to_numeric(indexer):
         return np.fromiter(
             # `itertools.compress` masks `data` with the `selectors` mask,
             # works about ~10% faster than a pure list comprehension
-            compress(data=range(len(indexer)), selectors=indexer),
+            itertools.compress(data=range(len(indexer)), selectors=indexer),
             dtype=np.int64,
         )
 
@@ -793,7 +793,7 @@ class _LocIndexer(_LocationIndexerBase):
                     axis_lookup = axis_labels.slice_indexer(
                         axis_loc.start, axis_loc.stop, axis_loc.step
                     )
-                    # Converting negative indices to its actual positions:
+                    # Converting negative indices to their actual positions:
                     axis_lookup = pandas.RangeIndex(
                         start=(
                             axis_lookup.start
@@ -835,9 +835,11 @@ class _LocIndexer(_LocationIndexerBase):
                         # on masking non-maskable list-like
                         np.array(axis_loc)[missing_mask]
                         if is_list_like(axis_loc)
+                        # If `axis_loc` is not a list-like then we can't select certain
+                        # labels that are missing and so printing the whole indexer
                         else axis_loc
                     )
-                    raise KeyError(f"Missing labels were provided: {missing_labels}")
+                    raise KeyError(missing_labels)
 
             if isinstance(axis_lookup, pandas.Index) and not is_range_like(axis_lookup):
                 axis_lookup = axis_lookup.values
@@ -975,7 +977,7 @@ class _iLocIndexer(_LocationIndexerBase):
                     # speedup covers the loss that we gain here.
                     axis_loc = np.array(axis_loc, dtype=np.int64)
                 # Relatively fast check allows us to not trigger `self.qc.get_axis()` computation
-                # if there're no negative indices and so they're not depend on the axis length.
+                # if there're no negative indices and so they don't not depend on the axis length.
                 if isinstance(axis_loc, np.ndarray) and not (axis_loc < 0).any():
                     axis_lookup = axis_loc
                 else:
