@@ -161,7 +161,7 @@ class RayRedisPassword(EnvironmentVariable, type=ExactStr):
 
         Returns
         -------
-        int
+        str
         """
         from ray import ray_constants
 
