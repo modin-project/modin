@@ -1055,9 +1055,9 @@ class TextFileDispatcher(FileDispatcher):
         pandas.Index
         """
         try:
-            # direct `skiprows_md` is more efficient than using of
+            # direct `skiprows` call is more efficient than using of
             # map method, but in some cases it can work incorrectly, e.g.
-            # when `skiprows_md` contains `in` operator
+            # when `skiprows` contains `in` operator
             mask = skiprows(rows_index)
             assert is_list_like(mask)
         except (ValueError, TypeError, AssertionError):
