@@ -22,7 +22,7 @@ When we run this on a laptop with 32GB of RAM, pandas will run out of memory and
 The `pandas documentation <https://pandas.pydata.org/pandas-docs/stable/user_guide/scale.html>`_ has a great section on recommendations for scaling your analysis to these larger datasets. However, this generally involves loading in less data or rewriting your pandas code to process the data in smaller chunks. 
 
 Operating on out-of-memory data with Modin
--------------------------------------------
+------------------------------------------
 
 In order to work with data that exceeds memory constraints, you can use Modin to handle these large datasets.
 
