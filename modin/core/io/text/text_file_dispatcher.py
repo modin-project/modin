@@ -1061,8 +1061,8 @@ class TextFileDispatcher(FileDispatcher):
             mask = skiprows(rows_index)
             assert is_list_like(mask)
         except (ValueError, TypeError, AssertionError):
-            # ValueError can be raised if `skiprows` callable contain membersip operator
-            # TypeError is raised if `skiprows` callable contain bitwise operator
+            # ValueError can be raised if `skiprows` callable contains membership operator
+            # TypeError is raised if `skiprows` callable contains bitwise operator
             # AssertionError is raised if unexpected behavior was detected
             mask = rows_index.map(skiprows)
 
