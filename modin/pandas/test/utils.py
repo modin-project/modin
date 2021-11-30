@@ -177,10 +177,14 @@ test_data_large_categorical_series_values = [
 test_data_large_categorical_series_keys = ["categorical_series"]
 
 numeric_dfs = [
+    "empty_data",
+    "columns_only",
     "int_data",
     "float_nan_data",
     "with_index_column",
 ]
+
+no_numeric_dfs = ["datetime_timedelta_data"]
 
 # String test data
 test_string_data = {
