@@ -1306,7 +1306,7 @@ def test_groupby_multiindex(groupby_kwargs):
     ],
 )
 def test_groupby_with_kwarg_dropna(groupby_kwargs, dropna):
-    frame_data = np.random.randint(0, 100, size=(2 ** 6, 2 ** 4))
+    frame_data = np.random.randint(0, 100, size=(2 ** 6, 2 ** 4)).astype(float)
     frame_data.ravel()[
         np.random.choice(frame_data.size, 2 ** 4, replace=False)
     ] = np.nan
