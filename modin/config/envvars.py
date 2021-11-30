@@ -154,6 +154,19 @@ class RayRedisPassword(EnvironmentVariable, type=ExactStr):
 
     varname = "MODIN_REDIS_PASSWORD"
 
+    @classmethod
+    def _get_default(cls):
+        """
+        Get default value of the config.
+
+        Returns
+        -------
+        int
+        """
+        from ray import ray_constants
+
+        return ray_constants.REDIS_DEFAULT_PASSWORD
+
 
 class CpuCount(EnvironmentVariable, type=int):
     """How many CPU cores to use during initialization of the Modin engine."""
