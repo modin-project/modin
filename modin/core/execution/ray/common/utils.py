@@ -20,6 +20,7 @@ import warnings
 import asyncio
 
 import ray
+from ray import ray_constants
 
 from modin.config import (
     StorageFormat,
@@ -30,6 +31,7 @@ from modin.config import (
     GpuCount,
     Memory,
     NPartitions,
+    ValueSource,
 )
 
 
@@ -113,7 +115,16 @@ def initialize_ray(
     if not ray.is_initialized() or override_is_cluster:
         cluster = override_is_cluster or IsRayCluster.get()
         redis_address = override_redis_address or RayRedisAddress.get()
-        redis_password = override_redis_password or RayRedisPassword.get()
+        redis_password = (
+            (
+                ray_constants.REDIS_DEFAULT_PASSWORD
+                if cluster
+                else RayRedisPassword.get()
+            )
+            if override_redis_address is None
+            and RayRedisPassword.get_value_source() == ValueSource.DEFAULT
+            else override_redis_password or RayRedisPassword.get()
+        )
 
         if cluster:
             # We only start ray in a cluster setting for the head node.
