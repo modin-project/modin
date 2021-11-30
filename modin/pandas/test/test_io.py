@@ -1644,7 +1644,9 @@ class TestHdf:
 
             modin_store.close()
             pandas_store.close()
-            assert assert_files_eq(unique_filename_modin, unique_filename_pandas)
+            modin_df = pandas.read_hdf(unique_filename_modin, key="foo", mode="r")
+            pandas_df = pandas.read_hdf(unique_filename_pandas, key="foo", mode="r")
+            df_equals(modin_df, pandas_df)
             assert isinstance(modin_store, pd.HDFStore)
 
             handle, hdf_file = tempfile.mkstemp(suffix=".hdf5", prefix="test_read")
