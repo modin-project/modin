@@ -121,7 +121,7 @@ def initialize_ray(
                 if cluster
                 else RayRedisPassword.get()
             )
-            if override_redis_address is None
+            if override_redis_password is None
             and RayRedisPassword.get_value_source() == ValueSource.DEFAULT
             else override_redis_password or RayRedisPassword.get()
         )
