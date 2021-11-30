@@ -57,6 +57,10 @@ RAND_HIGH = 100
 # Directory for storing I/O operations test data
 IO_OPS_DATA_DIR = os.path.join(os.path.dirname(__file__), "io_tests_data")
 
+# Once a partition has more than this many elements, Modin uses another
+# partition.
+min_num_elements_to_start_new_partition = 32
+
 # Input data and functions for the tests
 # The test data that we will test our code against
 test_data = {
@@ -211,11 +215,15 @@ test_data_categorical_keys = list(test_data_categorical.keys())
 
 # Fully fill all of the partitions used in tests.
 test_data_large_categorical_dataframe = {
-    i: pandas.Categorical(np.arange(NPartitions.get() * 32))
+    i: pandas.Categorical(
+        np.arange(NPartitions.get() * min_num_elements_to_start_new_partition)
+    )
     for i in range(NPartitions.get() * 32)
 }
 test_data_large_categorical_series_values = [
-    pandas.Categorical(np.arange(NPartitions.get() * 32))
+    pandas.Categorical(
+        np.arange(NPartitions.get() * min_num_elements_to_start_new_partition)
+    )
 ]
 test_data_large_categorical_series_keys = ["categorical_series"]
 
