@@ -7,7 +7,7 @@ Modin solves this problem by spilling over to disk, in other words, it uses your
 
 
 Motivating Example: Memory error with pandas
----------------------------------------------
+--------------------------------------------
 
 pandas makes use of in-memory data structures to store and operate on data, which means that if you have a dataset that is too large to fit in memory, it will cause an error on pandas. As an example, let's creates a 80GB DataFrame by appending together 40 different 2GB DataFrames. 
 
