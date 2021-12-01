@@ -3061,7 +3061,20 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 Partition data with updated values.
             """
             partition = partition.copy()
-            partition.iloc[row_internal_indices, col_internal_indices] = item
+            print(f"iloc_mut is writing item {repr(item)} of type {type(item)}")
+            print(
+                f"before setting categories with iloc, The current partition is: {repr(partition)}\n and its categories are: {repr(partition.status.cat.categories)}. The row indices are {repr(row_internal_indices)} and the column indicies are {repr(col_internal_indices)} and the item is {repr(item)}"
+            )
+            print(
+                f"The current partition is: {repr(partition)}\n and its categories are: {repr(partition.status.cat.categories)}"
+            )
+            try:
+                partition.iloc[row_internal_indices, col_internal_indices] = item
+            except ValueError as e:
+                raise Exception(
+                    f"Failed to set item with iloc. The current partition is: {repr(partition)}\n and its categories are: {repr(partition.status.cat.categories)}"
+                    + repr(e)
+                )
             return partition
 
         new_modin_frame = self._modin_frame.apply_select_indices(

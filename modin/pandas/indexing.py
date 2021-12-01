@@ -357,6 +357,9 @@ class _LocationIndexerBase(object):
             0 means assign to whole column, 1 means assign to whole row.
             If None, it means that partial assignment is done on both axes.
         """
+        print(
+            f"LocationIndexerBase given setitem with row_lookup {repr(row_lookup)} and col_lookup {repr(col_lookup)} and item {repr(item)} and axis {repr(axis)}"
+        )
         # Convert slices to indices for the purposes of application.
         # TODO (devin-petersohn): Apply to slice without conversion to list
         if isinstance(row_lookup, slice):
@@ -386,6 +389,7 @@ class _LocationIndexerBase(object):
                 new_col_len = len(col_lookup)
             to_shape = new_row_len, new_col_len
             item = self._broadcast_item(row_lookup, col_lookup, item, to_shape)
+            print(f"modin is writing item {repr(item)} of type {type(item)}")
             self._write_items(row_lookup, col_lookup, item)
 
     def _broadcast_item(self, row_lookup, col_lookup, item, to_shape):
@@ -695,6 +699,7 @@ class _LocIndexer(_LocationIndexerBase):
         --------
         pandas.DataFrame.loc
         """
+        print(f"LocIndexer is setting item {repr(item)} of type {type(item)}")
         row_loc, col_loc, _ = self._parse_row_and_column_locators(key)
         if isinstance(row_loc, list) and len(row_loc) == 1:
             if row_loc[0] not in self.qc.index:
@@ -713,6 +718,9 @@ class _LocIndexer(_LocationIndexerBase):
             self.qc = self.df._query_compiler
         else:
             row_lookup, col_lookup = self._compute_lookup(row_loc, col_loc)
+            print(
+                f"LocIndexer is calling superclass __setitem__ on item {repr(item)} of type {type(item)}"
+            )
             super(_LocIndexer, self).__setitem__(
                 row_lookup,
                 col_lookup,

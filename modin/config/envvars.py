@@ -404,6 +404,16 @@ class OmnisciLaunchParameters(EnvironmentVariable, type=dict):
         return result
 
 
+class MinNumElementsToStartNewPandasPartition(EnvironmentVariable, type=int):
+    """Minimum number of rows/columns in a single Pandas partition split.
+
+    Once a partition for a Pandas dataframe has more than this many elements,
+    Modin adds another partition."""
+
+    varname = "MODIN_MIN_NUM_ELEMENTS_TO_START_NEW_PANDAS_PARTITION"
+    default = 32
+
+
 def _check_vars():
     """
     Check validity of environment variables.
