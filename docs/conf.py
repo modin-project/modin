@@ -139,9 +139,19 @@ html_theme_options = {
             "icon": "fab fa-python",
         },
         {
+            "name": "conda-forge",
+            "url": "https://anaconda.org/conda-forge/modin",
+            "icon": "fas fa-circle-notch",
+        },
+        {
             "name": "Join the Slack",
             "url": "https://modin.org/slack.html",
             "icon": "fab fa-slack",
+        },
+        {
+            "name": "Discourse",
+            "url": "https://discuss.modin.org/",
+            "icon": "fab fa-discourse",
         },
         {
             "name": "Mailing List",
@@ -158,9 +168,9 @@ html_theme_options = {
 # defined by theme itself.  Builtin themes are using these templates by
 # default: ``['localtoc.html', 'relations.html', 'sourcelink.html',
 # 'searchbox.html']``.
+#
 # The default pydata_sphinx_theme sidebar templates are
 # sidebar-nav-bs.html and search-field.html.
-#
 html_sidebars = {}
 
 issues_github_path = "modin-project/modin"

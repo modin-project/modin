@@ -22,7 +22,7 @@ Quickstart
 **That's it. You're ready to use Modin on your previous pandas notebooks.** 
 
 We currently have most of the pandas API implemented and are working toward 
-full functional parity with pandas (as well as even more `tools and features`_ ).
+full functional parity with pandas (as well as even more tools and features).
 
 Using Modin on a Single Node
 ----------------------------
@@ -174,10 +174,18 @@ Specifying ``num_cpus`` limits the number of processors that Modin uses. You may
 specify more processors than you have available on your machine, however this will not
 improve the performance (and might end up hurting the performance of the system).
 
+Examples
+--------
+
+scikit-learn with LinearRegression
+""""""""""""""""""""""""""""""""""
+
+Here is a Jupyter Notebook example which uses Modin with scikit-learn
+and linear regression `sklearn LinearRegression`_.
+
 .. _`DataFrame`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.html
 .. _`pandas`: https://pandas.pydata.org/pandas-docs/stable/
 .. _`open an issue`: https://github.com/modin-project/modin/issues
 .. _`autoscaler documentation`: https://ray.readthedocs.io/en/latest/autoscaling.html
 .. _`Ray's documentation`: https://ray.readthedocs.io/en/latest/api.html
-.. _`tools and features`: comparisons/upcoming_features.html
 .. _sklearn LinearRegression: https://github.com/modin-project/modin/blob/master/examples/modin-scikit-learn-example.ipynb

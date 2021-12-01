@@ -109,7 +109,7 @@ The API is the outer-most layer that faces users. The majority of our current ef
 spent implementing the components of the pandas API. We have implemented a toy example
 for a sqlite API as a proof of concept, but this isn't ready for usage/testing. There
 are also plans to expose the Modin DataFrame API as a reduced API set that encompasses
-the entire pandas/dataframe API. See `experimental features`_ for more information.
+the entire pandas/dataframe API. See :doc:`advanced usage </advanced_usage/index>` for more information.
 
 .. toctree::
    /flow/modin/pandas/base
@@ -244,18 +244,18 @@ Supported Execution Frameworks and Memory Formats
 
 This is the list of execution frameworks and memory formats supported in Modin. If you
 would like to contribute a new execution framework or memory format, please see the
-documentation page on :doc:`contributing </contributing>`.
+documentation page on :doc:`contributing </developer/contributing>`.
 
-- :doc:`pandas on Ray </UsingPandasonRay/index>`
+- :doc:`pandas on Ray </developer/using_pandas_on_ray>`
     - Uses the Ray_ execution framework.
     - The compute kernel/in-memory format is a pandas DataFrame.
-- :doc:`pandas on Dask </UsingPandasonDask/index>`
+- :doc:`pandas on Dask </developer/using_pandas_on_dask>`
     - Uses the `Dask Futures`_ execution framework.
     - The compute kernel/in-memory format is a pandas DataFrame.
-- :doc:`Omnisci </UsingOmnisci/index>`
+- :doc:`Omnisci </developer/using_omnisci>`
     - Uses OmniSciDB as an engine.
     - The compute kernel/in-memory format is a pyarrow Table or pandas DataFrame when defaulting to pandas.
-- :doc:`Pyarrow on Ray </UsingPyarrowonRay/index>` (experimental)
+- :doc:`Pyarrow on Ray </developer/using_pyarrow_on_ray>` (experimental)
     - Uses the Ray_ execution framework.
     - The compute kernel/in-memory format is a pyarrow Table.
 
@@ -338,4 +338,4 @@ by documentation for now, the rest is coming soon...).
 .. _issue: https://github.com/modin-project/modin/issues
 .. _Discourse: https://discuss.modin.org
 .. _task parallel: https://en.wikipedia.org/wiki/Task_parallelism
-.. _experimental features: /experimental_features/index.html
+.. _experimental features: /advanced_usage/index.html
