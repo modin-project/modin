@@ -42,7 +42,7 @@ def get_default_chunksize(length, num_splits):
 def compute_chunksize(
     df,
     num_splits,
-    default_block_size=MinNumElementsToStartNewPandasPartition.get(),
+    default_block_size=None,
     axis=None,
 ):
     """

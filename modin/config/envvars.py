@@ -412,7 +412,7 @@ class MinNumElementsToStartNewPandasPartition(EnvironmentVariable, type=int):
     Modin adds another partition.
     """
 
-    varname = "MODIN_MIN_NUM_ELEMENTS_TO_START_NEW_PANDAS_PARTITION"
+    varname = "MODIN_MIN_ELEMENTS_IN_PARTITION"
     default = 32
 
 
