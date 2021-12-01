@@ -21,6 +21,7 @@ from pandas.testing import (
     assert_index_equal,
     assert_extension_array_equal,
 )
+from modin.config.envvars import NPartitions
 import modin.pandas as pd
 from modin.utils import to_pandas, try_cast_to_pandas
 from modin.config import TestDatasetSize, TrackFileLeaks
@@ -205,6 +206,16 @@ test_data_categorical = {
 
 test_data_categorical_values = list(test_data_categorical.values())
 test_data_categorical_keys = list(test_data_categorical.keys())
+
+# Fully fill all of the partitions used in tests.
+test_data_large_categorical_dataframe = {
+    i: pandas.Categorical(np.arange(NPartitions.get() * 32))
+    for i in range(NPartitions.get() * 32)
+}
+test_data_large_categorical_series_values = [
+    pandas.Categorical(np.arange(NPartitions.get() * 32))
+]
+test_data_large_categorical_series_keys = ["categorical_series"]
 
 numeric_dfs = [
     "empty_data",

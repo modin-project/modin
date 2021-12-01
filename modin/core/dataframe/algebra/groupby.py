@@ -18,6 +18,7 @@ import pandas
 from .map_reduce import MapReduce
 from .default2pandas.groupby import GroupBy
 from modin.utils import try_cast_to_pandas, hashable
+from modin.error_message import ErrorMessage
 
 
 class GroupByReduce(MapReduce):
@@ -309,6 +310,21 @@ class GroupByReduce(MapReduce):
                 )
             )
         assert axis == 0, "Can only groupby reduce with axis=0"
+
+        # The bug only occurs in the case of Categorical 'by', so we might want to check whether any of
+        # the 'by' dtypes is Categorical before going into this branch, however triggering 'dtypes'
+        # computation if they're not computed may take time, so we don't do it
+        if not groupby_args.get("sort", True) and isinstance(by, type(query_compiler)):
+            ErrorMessage.missmatch_with_pandas(
+                operation="df.groupby(categorical_by, sort=False)",
+                message=(
+                    "the groupby keys will be sorted anyway, although the 'sort=False' was passed. "
+                    "See the following issue for more details: "
+                    "https://github.com/modin-project/modin/issues/3571"
+                ),
+            )
+            groupby_args = groupby_args.copy()
+            groupby_args["sort"] = True
 
         if numeric_only:
             qc = query_compiler.getitem_column_array(

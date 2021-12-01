@@ -37,6 +37,7 @@ from modin.pandas.test.utils import (
     test_data,
     test_data_diff_dtype,
     modin_df_almost_equals_pandas,
+    test_data_large_categorical_dataframe,
 )
 from modin.config import NPartitions
 
@@ -94,7 +95,11 @@ def test_to_timestamp():
         df.to_period().to_timestamp()
 
 
-@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+@pytest.mark.parametrize(
+    "data",
+    test_data_values + [test_data_large_categorical_dataframe],
+    ids=test_data_keys + ["categorical_ints"],
+)
 def test_to_numpy(data):
     modin_df, pandas_df = pd.DataFrame(data), pandas.DataFrame(data)
     assert_array_equal(modin_df.values, pandas_df.values)

@@ -3,6 +3,7 @@
 
 <p align="center">
 <a href="https://discuss.modin.org"><img alt="" src="https://img.shields.io/badge/discourse-forum-purple.svg?logo=discourse&logoColor=white" align="center"></a>
+<a href='https://modin.org/slack.html'><img src='https://img.shields.io/static/v1?label=chat&logo=slack&message=Slack&color=brightgreen' alt='Slack'  align="center"/></a>
 <a href="https://codecov.io/gh/modin-project/modin"><img src="https://codecov.io/gh/modin-project/modin/branch/master/graph/badge.svg" align="center"/></a>
 <a href="https://github.com/modin-project/modin/actions"><img src="https://github.com/modin-project/modin/workflows/master/badge.svg" align="center"></a>
 <a href="https://modin.readthedocs.io/en/latest/?badge=latest"><img alt="" src="https://readthedocs.org/projects/modin/badge/?version=latest" align="center"></a>
@@ -214,8 +215,9 @@ more information, and checkout [the difference between Modin and Dask!](https://
 
 ### More information and Getting Involved
 
-- [Documentation](https://modin.readthedocs.io/en/latest/)
-- Ask questions or participate in discussions on our [Discourse](https://discuss.modin.org)
-- Join our mailing list [modin-dev@googlegroups.com](https://groups.google.com/forum/#!forum/modin-dev)
-- Submit bug reports to our [GitHub Issues Page](https://github.com/modin-project/modin/issues)
-- Contributions are welcome! Open a [pull request](https://github.com/modin-project/modin/pulls)
+- Read the [documentation](https://modin.readthedocs.io/en/latest/) for more information.
+- Check out [our paper](http://www.vldb.org/pvldb/vol13/p2033-petersohn.pdf) to learn more about the theory underlying Modin.
+- Ask questions or participate in discussions on our [Discourse](https://discuss.modin.org).
+- Let us know how you're using Modin! Join our community [Slack](https://modin.org/slack.html) to discuss and ask questions.
+- Submit bug reports to our [GitHub Issues Page](https://github.com/modin-project/modin/issues).
+- Contributions are welcome! Open a [pull request](https://github.com/modin-project/modin/pulls).
