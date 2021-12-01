@@ -122,6 +122,10 @@ class GroupByReduce(MapReduce):
         # right index and placing columns in the correct order.
         groupby_args["as_index"] = True
         groupby_args["observed"] = True
+        # We have to filter func-dict BEFORE inserting broadcasted 'by' columns
+        # to avoid multiple aggregation results for 'by' cols in case they're
+        # present in the func-dict:
+        apply_func = cls.try_filter_dict(map_func, df)
         if other is not None:
             # Other is a broadcasted partition that represents 'by' columns
             # Concatenate it with 'df' to group on its columns names
@@ -136,7 +140,6 @@ class GroupByReduce(MapReduce):
         else:
             by_part = by
 
-        apply_func = cls.try_filter_dict(map_func, df)
         result = apply_func(
             df.groupby(by=by_part, axis=axis, **groupby_args), **map_args
         )
@@ -194,8 +197,12 @@ class GroupByReduce(MapReduce):
         # there is a bug in pandas with intersection that forces us to do so:
         # https://github.com/pandas-dev/pandas/issues/39699
         by_part = pandas.Index(df.index.names)
-        if drop and len(df.columns.intersection(by_part)) > 0:
-            df.drop(columns=by_part, errors="ignore", inplace=True)
+        if drop:
+            to_drop = df.columns.intersection(by_part)
+            if isinstance(reduce_func, dict):
+                to_drop = to_drop.difference(reduce_func.keys())
+            if len(to_drop) > 0:
+                df.drop(columns=by_part, errors="ignore", inplace=True)
 
         groupby_args = groupby_args.copy()
         as_index = groupby_args["as_index"]
@@ -211,8 +218,21 @@ class GroupByReduce(MapReduce):
         result = apply_func(df.groupby(axis=axis, **groupby_args), **reduce_args)
 
         if not as_index:
-            insert_levels = partition_idx == 0 and (drop or method == "size")
-            result.reset_index(drop=not insert_levels, inplace=True)
+            GroupBy.handle_as_index_for_dataframe(
+                result,
+                by_part,
+                by_cols_dtypes=(
+                    df.index.dtypes.values
+                    if isinstance(df.index, pandas.MultiIndex)
+                    else (df.index.dtype,)
+                ),
+                by_length=len(by_part),
+                selection=reduce_func.keys() if isinstance(reduce_func, dict) else None,
+                partition_idx=partition_idx,
+                drop=drop,
+                method=method,
+                inplace=True,
+            )
         # Result could not always be a frame, so wrapping it into DataFrame
         return pandas.DataFrame(result)
 

@@ -450,6 +450,22 @@ class DataFrameGroupBy(object):
                 func, **kwargs
             )
             func_dict = {col: try_get_str_func(fn) for col, fn in func_dict.items()}
+            if (
+                relabeling_required
+                and not self._as_index
+                and any(col in func_dict for col in self._internal_by)
+            ):
+                ErrorMessage.missmatch_with_pandas(
+                    operation="GroupBy.aggregate(**dictionary_renaming_aggregation)",
+                    message=(
+                        "intersection of the columns to aggregate and 'by' is not yet supported when 'as_index=False', "
+                        "columns with group names of the intersection will not be presented in the result. "
+                        "To achieve the desired result rewrite the original code from:\n"
+                        "df.groupby('by_column', as_index=False).agg(agg_func=('by_column', agg_func))\n"
+                        "to the:\n"
+                        "df.groupby('by_column').agg(agg_func=('by_column', agg_func)).reset_index()"
+                    ),
+                )
 
             if any(i not in self._df.columns for i in func_dict.keys()):
                 from pandas.core.base import SpecificationError

@@ -46,6 +46,7 @@ DATASET_SIZE_DICT = {
 
 # Size of test dataframes
 NCOLS, NROWS = DATASET_SIZE_DICT.get(TestDatasetSize.get(), DATASET_SIZE_DICT["Normal"])
+NGROUPS = 10
 
 # Range for values for test data
 RAND_LOW = 0
@@ -136,6 +137,8 @@ test_bool_data = {
     )
     for i in range(NCOLS)
 }
+
+test_groupby_data = {f"col{i}": np.arange(NCOLS) % NGROUPS for i in range(NROWS)}
 
 test_data_resample = {
     "data": {"A": range(12), "B": range(12)},
