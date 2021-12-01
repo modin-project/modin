@@ -404,7 +404,7 @@ class OmnisciLaunchParameters(EnvironmentVariable, type=dict):
         return result
 
 
-class MinNumElementsToStartNewPandasPartition(EnvironmentVariable, type=int):
+class MinElementsInPartition(EnvironmentVariable, type=int):
     """
     Minimum number of rows/columns in a single pandas partition split.
 
