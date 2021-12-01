@@ -1961,9 +1961,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         def query_builder(df, **modin_internal_kwargs):
             return df.query(expr, inplace=False, **kwargs, **modin_internal_kwargs)
 
-        return self.__constructor__(
-            self._modin_frame.filter(1, query_builder)
-        )
+        return self.__constructor__(self._modin_frame.filter(1, query_builder))
 
     def rank(self, **kwargs):
         axis = kwargs.get("axis", 0)
