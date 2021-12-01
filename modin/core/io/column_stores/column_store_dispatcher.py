@@ -128,9 +128,7 @@ class ColumnStoreDispatcher(FileDispatcher):
         else:
             index = index_len
             index_len = len(index)
-        index_chunksize = compute_chunksize(
-            pandas.DataFrame(index=index), num_partitions, axis=0
-        )
+        index_chunksize = compute_chunksize((len(index), None), num_partitions, axis=0)
         if index_chunksize > index_len:
             row_lengths = [index_len] + [0 for _ in range(num_partitions - 1)]
         else:

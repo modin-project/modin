@@ -2093,6 +2093,10 @@ class PandasDataframe(object):
         # specified by `NPartitions`, we can get a significant slowdown in subsequent operations.
         desired_partition_count = NPartitions.get() * 2
         if shape[axis] >= desired_partition_count:
+            from modin.core.storage_formats.pandas.utils import (
+                compute_default_axes_lengths,
+            )
+
             new_partitions = self._partition_mgr_cls.map_axis_partitions(
                 axis=axis,
                 partitions=new_partitions,
@@ -2101,14 +2105,18 @@ class PandasDataframe(object):
                 lengths=None,
                 enumerate_partitions=False,
             )
+
             if axis == 1:
                 # The number of rows does not change but `new_widths` does.
-                # Thus, we set `new_widths` to ``None`` to be computed when necessary.
-                new_widths = None
+                new_widths = compute_default_axes_lengths(
+                    sum(new_widths), NPartitions.get(), axis=axis
+                )
             else:
                 # The number of columns does not change but `new_lengths` does.
-                # Thus, we set `new_lengths` to ``None`` to be computed when necessary.
-                new_lengths = None
+                new_lengths = compute_default_axes_lengths(
+                    sum(new_lengths), NPartitions.get(), axis=axis
+                )
+
         if axis == 0:
             new_index = self.index.append([other.index for other in others])
             new_columns = joined_index

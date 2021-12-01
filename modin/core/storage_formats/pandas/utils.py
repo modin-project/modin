@@ -38,14 +38,14 @@ def get_default_chunksize(length, num_splits):
     )
 
 
-def compute_chunksize(df, num_splits, default_block_size=32, axis=None):
+def compute_chunksize(df_shape, num_splits, default_block_size=32, axis=None):
     """
     Compute the number of rows and/or columns to include in each partition.
 
     Parameters
     ----------
-    df : pandas.DataFrame
-        DataFrame to split.
+    df_shape : tuple
+        Dataframe shape for which chunksizes are calculated.
     num_splits : int
         Number of splits to separate the DataFrame into.
     default_block_size : int, default: 32
@@ -60,14 +60,14 @@ def compute_chunksize(df, num_splits, default_block_size=32, axis=None):
         DataFrame. If axis is None, returns a tuple containing both.
     """
     if axis == 0 or axis is None:
-        row_chunksize = get_default_chunksize(len(df.index), num_splits)
+        row_chunksize = get_default_chunksize(df_shape[0], num_splits)
         # Take the min of the default and the memory-usage chunksize first to avoid a
         # large amount of small partitions.
         row_chunksize = max(1, row_chunksize, default_block_size)
         if axis == 0:
             return row_chunksize
     # We always execute this because we can only get here if axis is 1 or None.
-    col_chunksize = get_default_chunksize(len(df.columns), num_splits)
+    col_chunksize = get_default_chunksize(df_shape[1], num_splits)
     # Take the min of the default and the memory-usage chunksize first to avoid a
     # large amount of small partitions.
     col_chunksize = max(1, col_chunksize, default_block_size)
@@ -75,6 +75,34 @@ def compute_chunksize(df, num_splits, default_block_size=32, axis=None):
         return col_chunksize
 
     return row_chunksize, col_chunksize
+
+
+def compute_default_axes_lengths(axes_length, num_split, axis):
+    """
+    Compute the row/column partitions default lengths.
+
+    Parameters
+    ----------
+    axes_length : int
+        Length of index, row or columns depending on `axis`.
+    num_split : int
+        The number of partition lengths.
+    axis : int
+        Axis to split across.
+
+    Returns
+    -------
+    list
+        List of lengths, for index along the `axis`.
+    """
+    shape = (None, axes_length) if axis else (axes_length, None)
+    chunksize = compute_chunksize(shape, num_split, axis=axis)
+    # `len(new_length)` isn't necessarily equals to `num_split`
+    new_lengths = [chunksize] * (axes_length // chunksize)
+    last_chunksize = axes_length % chunksize
+    if last_chunksize:
+        new_lengths.append(last_chunksize)
+    return new_lengths
 
 
 def split_result_of_axis_func_pandas(axis, num_splits, result, length_list=None):
@@ -110,7 +138,7 @@ def split_result_of_axis_func_pandas(axis, num_splits, result, length_list=None)
     if num_splits == 1:
         return [result]
     # We do this to restore block partitioning
-    chunksize = compute_chunksize(result, num_splits, axis=axis)
+    chunksize = compute_chunksize(result.shape, num_splits, axis=axis)
     if axis == 0 or isinstance(result, pandas.Series):
         return [
             result.iloc[chunksize * i : chunksize * (i + 1)] for i in range(num_splits)
