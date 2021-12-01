@@ -243,7 +243,7 @@ Index
 We currently use the ``pandas.Index`` object for both indexing columns and rows. In the
 future, we will implement a distributed, pandas-compatible Index object in order to remove
 this scaling limitation from the system. Most workloads will not be affected by this scalability limit
-since it only appears when  operating on more than 10's of billions of columns or rows.
+since it only appears when operating on more than 10's of billions of columns or rows.
 **Important note**: If you are using the
 default index (``pandas.RangeIndex``) there is a fixed memory overhead (~200 bytes) and
 there will be no scalability issues with the index.
