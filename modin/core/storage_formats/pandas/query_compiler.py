@@ -1490,7 +1490,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         # `squeeze` will convert it to a scalar.
         first_result = (
             self.__constructor__(
-                self._modin_frame.fold_reduce(0, first_valid_index_builder)
+                self._modin_frame.reduce_full_axis(0, first_valid_index_builder)
             )
             .min(axis=1)
             .to_pandas()
@@ -1510,7 +1510,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         # `squeeze` will convert it to a scalar.
         first_result = (
             self.__constructor__(
-                self._modin_frame.fold_reduce(0, last_valid_index_builder)
+                self._modin_frame.reduce_full_axis(0, last_valid_index_builder)
             )
             .max(axis=1)
             .to_pandas()
@@ -1947,7 +1947,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             return df.query(expr, inplace=False, **kwargs, **modin_internal_kwargs)
 
         return self.__constructor__(
-            self._modin_frame.filter_full_axis(1, query_builder)
+            self._modin_frame.filter(1, query_builder)
         )
 
     def rank(self, **kwargs):
@@ -2245,7 +2245,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
     # This will change the shape of the resulting data.
     def dropna(self, **kwargs):
         return self.__constructor__(
-            self._modin_frame.filter_full_axis(
+            self._modin_frame.filter(
                 kwargs.get("axis", 0) ^ 1,
                 lambda df: pandas.DataFrame.dropna(df, **kwargs),
             )
