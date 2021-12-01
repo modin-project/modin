@@ -953,7 +953,12 @@ class PandasDataframe(ModinDataframe):
         if isinstance(indices, slice) or (is_range_like(indices) and indices.step == 1):
             # Converting range-like indexer to slice
             indices = slice(indices.start, indices.stop, indices.step)
-            if indices == slice(None) or indices == slice(0, None):
+            # Detecting full-axis grab
+            if (
+                indices.start in (None, 0)
+                and indices.step in (None, 1)
+                and (indices.stop is None or indices.stop >= len(self.axes[axis]))
+            ):
                 return OrderedDict(
                     zip(
                         range(self._partitions.shape[axis]),

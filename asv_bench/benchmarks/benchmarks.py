@@ -36,6 +36,7 @@ from .utils import (
     execute,
     translator_groupby_ngroups,
     get_benchmark_shapes,
+    trigger_import,
 )
 
 
@@ -497,27 +498,71 @@ class TimeIndexing:
     param_names = ["shape", "indexer_type"]
     params = [
         get_benchmark_shapes("TimeIndexing"),
-        ["scalar", "bool", "slice", "list", "function"],
+        [
+            "bool_array",
+            "bool_series",
+            "scalar",
+            "slice",
+            "continuous_slice",
+            "numpy_array_take_all_values",
+            "python_list_take_10_values",
+            "function",
+        ],
     ]
+
+    indexer_getters = {
+        "bool_array": lambda df: np.array([False, True] * (len(df) // 2)),
+        # This boolean-Series is a projection of the source frame, it shouldn't
+        # be reimported or triggered to execute:
+        "bool_series": lambda df: df.iloc[:, 0] > 50,
+        "scalar": lambda df: len(df) // 2,
+        "slice": lambda df: slice(0, len(df), 2),
+        "continuous_slice": lambda df: slice(len(df) // 2),
+        "numpy_array_take_all_values": lambda df: np.arange(len(df)),
+        "python_list_take_10_values": lambda df: list(range(min(10, len(df)))),
+        "function": lambda df: (lambda df: df.index[::-2]),
+    }
 
     def setup(self, shape, indexer_type):
         self.df = generate_dataframe(ASV_USE_IMPL, "int", *shape, RAND_LOW, RAND_HIGH)
-        if indexer_type == "bool":
-            self.indexer = [False, True] * (shape[0] // 2)
-        elif indexer_type == "scalar":
-            self.indexer = shape[0] // 2
-        elif indexer_type == "slice":
-            self.indexer = slice(0, shape[0], 2)
-        elif indexer_type == "list":
-            self.indexer = [x for x in range(shape[0])]
-        elif indexer_type == "function":
-            self.indexer = lambda df: df.index[::-2]
+        trigger_import(self.df)
+
+        self.indexer = self.indexer_getters[indexer_type](self.df)
+        if isinstance(self.indexer, (pd.Series, pd.DataFrame)):
+            # HACK: Triggering `dtypes` meta-data computation in advance,
+            # so it won't affect the `loc/iloc` time:
+            self.indexer.dtypes
 
     def time_iloc(self, shape, indexer_type):
-        execute(self.df.iloc[self.indexer])
+        # Pandas doesn't implement `df.iloc[series boolean_mask]` and raises an exception on it.
+        # Replacing this with the semantically equivalent construction:
+        if indexer_type != "bool_series":
+            execute(self.df.iloc[self.indexer])
+        else:
+            execute(self.df[self.indexer])
 
     def time_loc(self, shape, indexer_type):
         execute(self.df.loc[self.indexer])
+
+
+class TimeIndexingColumns:
+    param_names = ["shape"]
+    params = [get_benchmark_shapes("TimeIndexing")]
+
+    def setup(self, shape):
+        self.df = generate_dataframe(ASV_USE_IMPL, "int", *shape, RAND_LOW, RAND_HIGH)
+        trigger_import(self.df)
+        self.numeric_indexer = [0, 1]
+        self.labels_indexer = self.df.columns[self.numeric_indexer].tolist()
+
+    def time_iloc(self, shape):
+        execute(self.df.iloc[:, self.numeric_indexer])
+
+    def time_loc(self, shape):
+        execute(self.df.loc[:, self.labels_indexer])
+
+    def time___getitem__(self, shape):
+        execute(self.df[self.labels_indexer])
 
 
 class TimeMultiIndexing:

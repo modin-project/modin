@@ -34,6 +34,7 @@ from modin.pandas.test.utils import (
     generate_multiindex,
     test_data_diff_dtype,
     df_equals_with_non_stable_indices,
+    test_data_large_categorical_dataframe,
 )
 from modin.config import NPartitions
 
@@ -94,7 +95,9 @@ def test_all_any_level(data, axis, level, method):
 
 
 @pytest.mark.parametrize("axis", axis_values, ids=axis_keys)
-@pytest.mark.parametrize("data", [test_data["float_nan_data"]])
+@pytest.mark.parametrize(
+    "data", [test_data["float_nan_data"], test_data_large_categorical_dataframe]
+)
 def test_count(data, axis):
     eval_general(
         *create_test_dfs(data),
@@ -407,4 +410,16 @@ def test_value_counts(subset_len, sort, normalize, dropna, ascending):
         # does not raise an exception when it isn't a bool, when pandas do so,
         # visit modin-issue#3388 for more info.
         check_exception_type=None if sort and ascending is None else True,
+    )
+
+
+def test_value_counts_categorical():
+    # from issue #3571
+    data = np.array(["a"] * 50000 + ["b"] * 10000 + ["c"] * 1000)
+    random_state = np.random.RandomState(seed=42)
+    random_state.shuffle(data)
+
+    eval_general(
+        *create_test_dfs({"col1": data, "col2": data}, dtype="category"),
+        lambda df: df.value_counts(),
     )

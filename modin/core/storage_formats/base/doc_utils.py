@@ -310,7 +310,7 @@ doc_resample = partial(
 
     Parameters
     ----------
-    resample_args : list
+    resample_kwargs : dict
         Resample parameters as expected by ``modin.pandas.DataFrame.resample`` signature.
     {extra_params}
     Returns

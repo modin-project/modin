@@ -32,11 +32,7 @@ from modin.utils import import_optional_dependency
 
 
 class CSVGlobDispatcher(CSVDispatcher):
-    """
-    Class contains utils for reading multiple `.csv` files simultaneously.
-
-    Inherits some common for `.csv` files util functions from `CSVDispatcher` class.
-    """
+    """Class contains utils for reading multiple `.csv` files simultaneously."""
 
     @classmethod
     def _read(cls, filepath_or_buffer, **kwargs):

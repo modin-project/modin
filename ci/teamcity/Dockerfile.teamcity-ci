@@ -6,7 +6,7 @@
 #
 # docker build --build-arg ENVIRONMENT=environment-dev.yml -t modin-project/teamcity-ci:${BUILD_NUMBER} -f ci/teamcity/Dockerfile.teamcity-ci ci/teamcity
 
-FROM rayproject/ray:1.0.1
+FROM rayproject/ray:latest
 
 ARG ENVIRONMENT=environment-dev.yml
 
@@ -14,13 +14,14 @@ ADD modin.tar /modin
 ADD git-rev /modin/git-rev
 
 WORKDIR /modin
+RUN sudo chown -R ray /modin
 
 # Make RUN commands use `bash --login`:
 SHELL ["/bin/bash", "--login", "-c"]
 
 # Initialize conda in bash config files:
 RUN conda init bash
-ENV PATH /root/anaconda3/envs/modin/bin:$PATH
+ENV PATH /home/ray/anaconda3/envs/modin/bin:$PATH
 
 RUN conda config --set channel_priority strict
 RUN conda update python -y
