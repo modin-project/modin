@@ -20,7 +20,6 @@ import warnings
 import asyncio
 
 import ray
-from ray import ray_constants
 
 from modin.config import (
     StorageFormat,
@@ -117,7 +116,7 @@ def initialize_ray(
         redis_address = override_redis_address or RayRedisAddress.get()
         redis_password = (
             (
-                ray_constants.REDIS_DEFAULT_PASSWORD
+                ray.ray_constants.REDIS_DEFAULT_PASSWORD
                 if cluster
                 else RayRedisPassword.get()
             )
