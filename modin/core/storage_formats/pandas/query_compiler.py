@@ -51,6 +51,7 @@ from modin.core.dataframe.algebra import (
     GroupByReduce,
     groupby_reduce_functions,
 )
+from modin.core.dataframe.algebra.default2pandas.groupby import GroupBy
 
 
 def _get_axis(axis):
@@ -2698,20 +2699,28 @@ class PandasQueryCompiler(BaseQueryCompiler):
             # right index and placing columns in the correct order.
             groupby_kwargs["as_index"] = True
 
+            # We have to filter func-dict BEFORE inserting broadcasted 'by' columns
+            # to avoid multiple aggregation results for 'by' cols in case they're
+            # present in the func-dict:
+            partition_agg_func = GroupByReduce.try_filter_dict(agg_func, df)
+
             internal_by_cols = pandas.Index([])
-            missmatched_cols = pandas.Index([])
+            missed_by_cols = pandas.Index([])
+
             if by is not None:
                 internal_by_df = by[internal_by]
 
                 if isinstance(internal_by_df, pandas.Series):
                     internal_by_df = internal_by_df.to_frame()
 
-                missmatched_cols = internal_by_df.columns.difference(df.columns)
-                df = pandas.concat(
-                    [df, internal_by_df[missmatched_cols]],
-                    axis=1,
-                    copy=False,
-                )
+                missed_by_cols = internal_by_df.columns.difference(df.columns)
+                if len(missed_by_cols) > 0:
+                    df = pandas.concat(
+                        [df, internal_by_df[missed_by_cols]],
+                        axis=1,
+                        copy=False,
+                    )
+
                 internal_by_cols = internal_by_df.columns
 
                 external_by = by.columns.difference(internal_by).unique()
@@ -2733,100 +2742,61 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 """Compute groupby aggregation for a single partition."""
                 grouped_df = df.groupby(by=by, axis=axis, **groupby_kwargs)
                 try:
-                    if isinstance(agg_func, dict):
-                        # Filter our keys that don't exist in this partition. This happens when some columns
-                        # from this original dataframe didn't end up in every partition.
-                        partition_dict = {
-                            k: v for k, v in agg_func.items() if k in df.columns
-                        }
-                        result = grouped_df.agg(partition_dict)
-                    else:
-                        result = agg_func(grouped_df, **agg_kwargs)
-                # This happens when the partition is filled with non-numeric data and a
-                # numeric operation is done. We need to build the index here to avoid
-                # issues with extracting the index.
+                    result = partition_agg_func(grouped_df, **agg_kwargs)
                 except (DataError, TypeError):
+                    # This happens when the partition is filled with non-numeric data and a
+                    # numeric operation is done. We need to build the index here to avoid
+                    # issues with extracting the index.
                     result = pandas.DataFrame(index=grouped_df.size().index)
                 if isinstance(result, pandas.Series):
                     result = result.to_frame(
                         result.name if result.name is not None else "__reduced__"
                     )
 
-                result_cols = result.columns
-                result.drop(columns=missmatched_cols, inplace=True, errors="ignore")
+                selection = agg_func.keys() if isinstance(agg_func, dict) else None
+                if selection is None:
+                    # Some pandas built-in aggregation functions aggregate 'by' columns
+                    # (for example 'apply', 'dtypes', maybe more...). Since we make sure
+                    # that all of the 'by' columns are presented in every partition by
+                    # inserting the missed ones, we will end up with all of the 'by'
+                    # columns being aggregated in every partition. To avoid duplications
+                    # in the result we drop all of the 'by' columns that were inserted
+                    # in this partition AFTER handling 'as_index' parameter. The order
+                    # is important for proper naming-conflicts handling.
+                    misaggregated_cols = missed_by_cols.intersection(result.columns)
+                else:
+                    misaggregated_cols = []
 
-                if not as_index and len(by) > 0:
-                    keep_index_levels = len(by) > 1 and any(
-                        isinstance(x, pandas.CategoricalDtype)
-                        for x in df[internal_by_cols].dtypes
+                if not as_index:
+                    GroupBy.handle_as_index_for_dataframe(
+                        result,
+                        internal_by_cols,
+                        by_cols_dtypes=df[internal_by_cols].dtypes.values,
+                        by_length=len(by),
+                        selection=selection,
+                        partition_idx=partition_idx,
+                        drop=drop,
+                        inplace=True,
                     )
+                else:
+                    new_index_names = tuple(
+                        None
+                        if isinstance(name, str) and name.startswith("__reduced__")
+                        else name
+                        for name in result.index.names
+                    )
+                    result.index.names = new_index_names
 
-                    if internal_by_cols.nlevels != result_cols.nlevels:
-                        cols_to_insert = (
-                            pandas.Index([])
-                            if keep_index_levels
-                            else internal_by_cols.copy()
-                        )
-                    else:
-                        cols_to_insert = (
-                            internal_by_cols.intersection(result_cols)
-                            if keep_index_levels
-                            else internal_by_cols.difference(result_cols)
-                        )
-
-                    if keep_index_levels:
-                        result.drop(
-                            columns=cols_to_insert, inplace=True, errors="ignore"
-                        )
-
-                    drop = True
-                    if partition_idx == 0:
-                        drop = False
-                        if not keep_index_levels:
-                            lvls_to_drop = [
-                                i
-                                for i, name in enumerate(result.index.names)
-                                if name not in cols_to_insert
-                            ]
-                            if len(lvls_to_drop) == result.index.nlevels:
-                                drop = True
-                            else:
-                                result.index = result.index.droplevel(lvls_to_drop)
-
-                    if (
-                        not isinstance(result.index, pandas.MultiIndex)
-                        and result.index.name is None
-                    ):
-                        drop = True
-
-                    result.reset_index(drop=drop, inplace=True)
-
-                new_index_names = [
-                    None
-                    if isinstance(name, str) and name.startswith("__reduced__")
-                    else name
-                    for name in result.index.names
-                ]
-
-                cols_to_drop = (
-                    result.columns[result.columns.str.match(r"__reduced__.*", na=False)]
-                    if hasattr(result.columns, "str")
-                    else []
-                )
-
-                result.index.names = new_index_names
-
-                # Not dropping columns if result is Series
-                if len(result.columns) > 1:
-                    result.drop(columns=cols_to_drop, inplace=True)
+                if len(misaggregated_cols) > 0:
+                    result.drop(columns=misaggregated_cols, inplace=True)
 
                 return result
 
             try:
                 return compute_groupby(df, drop, partition_idx)
-            # This will happen with Arrow buffer read-only errors. We don't want to copy
-            # all the time, so this will try to fast-path the code first.
             except (ValueError, KeyError):
+                # This will happen with Arrow buffer read-only errors. We don't want to copy
+                # all the time, so this will try to fast-path the code first.
                 return compute_groupby(df.copy(), drop, partition_idx)
 
         apply_indices = list(agg_func.keys()) if isinstance(agg_func, dict) else None
