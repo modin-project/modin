@@ -1215,24 +1215,29 @@ def eval_shift(modin_groupby, pandas_groupby):
         lambda groupby: groupby.shift(periods=-3),
     )
 
-    if isinstance(pandas_groupby, pandas.core.groupby.DataFrameGroupBy):
-        pandas_res = pandas_groupby.shift(axis=1, fill_value=777)
-        modin_res = modin_groupby.shift(axis=1, fill_value=777)
-        # Pandas produces unexpected index order (pandas GH 44269).
-        # Here we align index of Modin result with pandas to make test passed.
-        import pandas.core.algorithms as algorithms
+    # Disabled for `BaseOnPython` because of the issue with `getitem_array`.
+    # groupby.shift internally masks the source frame with a Series boolean mask,
+    # doing so ends up in the `getitem_array` method, that is broken for `BaseOnPython`:
+    # https://github.com/modin-project/modin/issues/3701
+    if get_current_execution() != "BaseOnPython":
+        if isinstance(pandas_groupby, pandas.core.groupby.DataFrameGroupBy):
+            pandas_res = pandas_groupby.shift(axis=1, fill_value=777)
+            modin_res = modin_groupby.shift(axis=1, fill_value=777)
+            # Pandas produces unexpected index order (pandas GH 44269).
+            # Here we align index of Modin result with pandas to make test passed.
+            import pandas.core.algorithms as algorithms
 
-        indexer, _ = modin_res.index.get_indexer_non_unique(modin_res.index._values)
-        indexer = algorithms.unique1d(indexer)
-        modin_res = modin_res.take(indexer)
+            indexer, _ = modin_res.index.get_indexer_non_unique(modin_res.index._values)
+            indexer = algorithms.unique1d(indexer)
+            modin_res = modin_res.take(indexer)
 
-        df_equals(modin_res, pandas_res)
-    else:
-        eval_general(
-            modin_groupby,
-            pandas_groupby,
-            lambda groupby: groupby.shift(axis=1, fill_value=777),
-        )
+            df_equals(modin_res, pandas_res)
+        else:
+            eval_general(
+                modin_groupby,
+                pandas_groupby,
+                lambda groupby: groupby.shift(axis=1, fill_value=777),
+            )
 
 
 def test_groupby_on_index_values_with_loop():
