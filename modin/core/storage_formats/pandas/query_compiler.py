@@ -1504,9 +1504,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         # first_valid_index. The `to_pandas()` here is just for a single value and
         # `squeeze` will convert it to a scalar.
         first_result = (
-            self.__constructor__(
-                self._modin_frame.reduce_full_axis(0, first_valid_index_builder)
-            )
+            self.__constructor__(self._modin_frame.reduce(0, first_valid_index_builder))
             .min(axis=1)
             .to_pandas()
             .squeeze()
@@ -1524,9 +1522,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         # last_valid_index. The `to_pandas()` here is just for a single value and
         # `squeeze` will convert it to a scalar.
         first_result = (
-            self.__constructor__(
-                self._modin_frame.reduce_full_axis(0, last_valid_index_builder)
-            )
+            self.__constructor__(self._modin_frame.reduce(0, last_valid_index_builder))
             .max(axis=1)
             .to_pandas()
             .squeeze()

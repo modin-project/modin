@@ -1234,28 +1234,6 @@ class PandasDataframe(ModinDataframe):
         )
         return result
 
-    def reduce_full_axis(self, axis, func):
-        """
-        Apply function that reduces Frame Manager to series but requires knowledge of full axis.
-
-        Parameters
-        ----------
-        axis : {0, 1}
-            The axis to apply the function to (0 - index, 1 - columns).
-        func : callable
-            The function to reduce the Manager by. This function takes in a Manager.
-
-        Returns
-        -------
-        PandasDataframe
-            Modin series (1xN frame) containing the reduced data.
-        """
-        func = self._build_treereduce_func(axis, func)
-        new_parts = self._partition_mgr_cls.map_axis_partitions(
-            axis, self._partitions, func
-        )
-        return self._compute_tree_reduce_metadata(axis, new_parts)
-
     def reduce(self, axis, function, dtypes=None):
         """
         Perform a user-defined per-column aggregation, where each column reduces down to a single value.
@@ -1280,9 +1258,11 @@ class PandasDataframe(ModinDataframe):
         -----
         The user-defined function must reduce to a single value.
         """
-        new_df = self.reduce_full_axis(axis, function)
-
-        return new_df
+        func = self._build_treereduce_func(axis, func)
+        new_parts = self._partition_mgr_cls.map_axis_partitions(
+            axis, self._partitions, func
+        )
+        return self._compute_tree_reduce_metadata(axis, new_parts)
 
     def tree_reduce(self, axis, map_func, reduce_func=None):
         """

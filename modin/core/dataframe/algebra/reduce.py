@@ -43,7 +43,7 @@ class Reduce(Operator):
             """Execute Reduce function against passed query compiler."""
             _axis = kwargs.get("axis") if axis is None else axis
             return query_compiler.__constructor__(
-                query_compiler._modin_frame.reduce_full_axis(
+                query_compiler._modin_frame.reduce(
                     cls.validate_axis(_axis),
                     lambda x: reduce_function(x, *args, **kwargs),
                 )
