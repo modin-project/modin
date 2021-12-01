@@ -1,5 +1,5 @@
-BasePandasDataset
-"""""""""""""""""
+Base pandas Dataset API
+"""""""""""""""""""""""
 
 The class implements functionality that is common to Modin's pandas API for both ``DataFrame`` and ``Series`` classes.
 
