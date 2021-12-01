@@ -20,6 +20,7 @@ from pandas.core.dtypes.common import is_list_like, is_numeric_dtype
 from pandas.core.aggregation import reconstruct_func
 from pandas._libs.lib import no_default
 import pandas.core.common as com
+import copy
 from types import BuiltinFunctionType
 from collections.abc import Iterable
 
@@ -92,8 +93,6 @@ class DataFrameGroupBy(object):
         self._squeeze = squeeze
         self._kwargs.update(kwargs)
 
-    _index_grouped_cache = None
-
     def __getattr__(self, key):
         """
         Alter regular attribute access, looks up the name in the columns.
@@ -164,9 +163,17 @@ class DataFrameGroupBy(object):
     def tshift(self):
         return self._default_to_pandas(lambda df: df.tshift)
 
+    _groups_cache = no_default
+
+    # TODO: since python 3.9:
+    # @cached_property
     @property
     def groups(self):
-        return self._index_grouped
+        if self._groups_cache is not no_default:
+            return copy.deepcopy(self._groups_cache)
+
+        self._groups_cache = self._compute_index_grouped(numerical=False)
+        return copy.deepcopy(self._groups_cache)
 
     def min(self, **kwargs):
         return self._wrap_aggregation(
@@ -256,9 +263,17 @@ class DataFrameGroupBy(object):
             lambda df: df.cumsum(axis, *args, **kwargs)
         )
 
+    _indices_cache = no_default
+
+    # TODO: since python 3.9:
+    # @cached_property
     @property
     def indices(self):
-        return self._index_grouped
+        if self._indices_cache is not no_default:
+            return copy.deepcopy(self._indices_cache)
+
+        self._indices_cache = self._compute_index_grouped(numerical=True)
+        return copy.deepcopy(self._indices_cache)
 
     def pct_change(self):
         return self._default_to_pandas(lambda df: df.pct_change())
@@ -554,7 +569,7 @@ class DataFrameGroupBy(object):
         return self._default_to_pandas(lambda df: df.get_group(name, obj=obj))
 
     def __len__(self):
-        return len(self._index_grouped)
+        return len(self.indices)
 
     def all(self, **kwargs):
         return self._wrap_aggregation(
@@ -787,14 +802,15 @@ class DataFrameGroupBy(object):
         """
         from .dataframe import DataFrame
 
-        group_ids = self._index_grouped.keys()
+        indices = self.indices
+        group_ids = indices.keys()
         if self._axis == 0:
             return (
                 (
                     k,
                     DataFrame(
                         query_compiler=self._query_compiler.getitem_row_array(
-                            self._index.get_indexer_for(self._index_grouped[k].unique())
+                            indices[k]
                         )
                     ),
                 )
@@ -806,89 +822,94 @@ class DataFrameGroupBy(object):
                     k,
                     DataFrame(
                         query_compiler=self._query_compiler.getitem_column_array(
-                            self._index_grouped[k].unique()
+                            indices[k], numeric=True
                         )
                     ),
                 )
                 for k in (sorted(group_ids) if self._sort else group_ids)
             )
 
-    @property
-    def _index_grouped(self):
+    def _compute_index_grouped(self, numerical=False):
         """
         Construct an index of group IDs.
+
+        Parameters
+        ----------
+        numerical : bool, default: False
+            Whether a group indices should be positional (True) or label-based (False).
 
         Returns
         -------
         dict
-            A dict of {group name -> group labels} values.
+            A dict of {group name -> group indices} values.
 
         See Also
         --------
         pandas.core.groupby.GroupBy.groups
         """
-        if self._index_grouped_cache is None:
-            # Splitting level-by and column-by since we serialize them in a different ways
-            by = None
-            level = []
-            if self._level is not None:
-                level = self._level
-                if not isinstance(level, list):
-                    level = [level]
-            elif isinstance(self._by, list):
-                by = []
-                for o in self._by:
-                    if hashable(o) and o in self._query_compiler.get_index_names(
-                        self._axis
-                    ):
-                        level.append(o)
-                    else:
-                        by.append(o)
+        # Splitting level-by and column-by since we serialize them in a different ways
+        by = None
+        level = []
+        if self._level is not None:
+            level = self._level
+            if not isinstance(level, list):
+                level = [level]
+        elif isinstance(self._by, list):
+            by = []
+            for o in self._by:
+                if hashable(o) and o in self._query_compiler.get_index_names(
+                    self._axis
+                ):
+                    level.append(o)
+                else:
+                    by.append(o)
+        else:
+            by = self._by
+
+        is_multi_by = self._is_multi_by or (by is not None and len(level) > 0)
+
+        if hasattr(self._by, "columns") and is_multi_by:
+            by = list(self._by.columns)
+
+        if is_multi_by:
+            # Because we are doing a collect (to_pandas) here and then groupby, we
+            # end up using pandas implementation. Add the warning so the user is
+            # aware.
+            ErrorMessage.catch_bugs_and_request_email(self._axis == 1)
+            ErrorMessage.default_to_pandas("Groupby with multiple columns")
+            if isinstance(by, list) and all(
+                is_label(self._df, o, self._axis) for o in by
+            ):
+                pandas_df = self._df._query_compiler.getitem_column_array(
+                    by
+                ).to_pandas()
+            else:
+                by = try_cast_to_pandas(by, squeeze=True)
+                pandas_df = self._df._to_pandas()
+            by = wrap_into_list(by, level)
+            groupby_obj = pandas_df.groupby(by=by)
+            return groupby_obj.indices if numerical else groupby_obj.groups
+        else:
+            if isinstance(self._by, type(self._query_compiler)):
+                by = self._by.to_pandas().squeeze().values
+            elif self._by is None:
+                index = self._query_compiler.get_axis(self._axis)
+                levels_to_drop = [
+                    i
+                    for i, name in enumerate(index.names)
+                    if name not in level and i not in level
+                ]
+                by = index.droplevel(levels_to_drop)
+                if isinstance(by, pandas.MultiIndex):
+                    by = by.reorder_levels(level)
             else:
                 by = self._by
-
-            is_multi_by = self._is_multi_by or (by is not None and len(level) > 0)
-
-            if hasattr(self._by, "columns") and is_multi_by:
-                by = list(self._by.columns)
-
-            if is_multi_by:
-                # Because we are doing a collect (to_pandas) here and then groupby, we
-                # end up using pandas implementation. Add the warning so the user is
-                # aware.
-                ErrorMessage.catch_bugs_and_request_email(self._axis == 1)
-                ErrorMessage.default_to_pandas("Groupby with multiple columns")
-                if isinstance(by, list) and all(
-                    is_label(self._df, o, self._axis) for o in by
-                ):
-                    pandas_df = self._df._query_compiler.getitem_column_array(
-                        by
-                    ).to_pandas()
-                else:
-                    by = try_cast_to_pandas(by, squeeze=True)
-                    pandas_df = self._df._to_pandas()
-                by = wrap_into_list(by, level)
-                self._index_grouped_cache = pandas_df.groupby(by=by).groups
-            else:
-                if isinstance(self._by, type(self._query_compiler)):
-                    by = self._by.to_pandas().squeeze().values
-                elif self._by is None:
-                    index = self._query_compiler.get_axis(self._axis)
-                    levels_to_drop = [
-                        i
-                        for i, name in enumerate(index.names)
-                        if name not in level and i not in level
-                    ]
-                    by = index.droplevel(levels_to_drop)
-                    if isinstance(by, pandas.MultiIndex):
-                        by = by.reorder_levels(level)
-                else:
-                    by = self._by
-                if self._axis == 0:
-                    self._index_grouped_cache = self._index.groupby(by)
-                else:
-                    self._index_grouped_cache = self._columns.groupby(by)
-        return self._index_grouped_cache
+            axis_labels = self._query_compiler.get_axis(self._axis)
+            if numerical:
+                # Since we want positional indices of the groups, we want to group
+                # on a `RangeIndex`, not on the actual index labels
+                axis_labels = pandas.RangeIndex(len(axis_labels))
+            return axis_labels.groupby(by)
 
     def _wrap_aggregation(
         self, qc_method, default_func, drop=True, numeric_only=True, **kwargs
@@ -1107,14 +1128,15 @@ class SeriesGroupBy(DataFrameGroupBy):
         generator
             Generator expression of GroupBy object broken down into tuples for iteration.
         """
-        group_ids = self._index_grouped.keys()
+        indices = self.indices
+        group_ids = indices.keys()
         if self._axis == 0:
             return (
                 (
                     k,
                     Series(
                         query_compiler=self._query_compiler.getitem_row_array(
-                            self._index.get_indexer_for(self._index_grouped[k].unique())
+                            indices[k]
                         )
                     ),
                 )
@@ -1126,7 +1148,7 @@ class SeriesGroupBy(DataFrameGroupBy):
                     k,
                     Series(
                         query_compiler=self._query_compiler.getitem_column_array(
-                            self._index_grouped[k].unique()
+                            indices[k], numeric=True
                         )
                     ),
                 )

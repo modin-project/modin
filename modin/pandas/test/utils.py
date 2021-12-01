@@ -15,6 +15,8 @@ import pytest
 import numpy as np
 import math
 import pandas
+import itertools
+from collections import OrderedDict
 from pandas.testing import (
     assert_series_equal,
     assert_frame_equal,
@@ -1349,3 +1351,14 @@ def make_default_file(file_type: str):
         return filename
 
     return _make_default_file, filenames
+
+
+def dict_equals(dict1, dict2):
+    """Check whether two dictionaries are equal and raise an ``AssertionError`` if they aren't."""
+    dict1 = OrderedDict(sorted(dict1.items(), key=lambda item: item[0]))
+    dict2 = OrderedDict(sorted(dict2.items(), key=lambda item: item[0]))
+    for (key1, value1), (key2, value2) in itertools.zip_longest(
+        dict1.items(), dict2.items()
+    ):
+        assert (key1 == key2) or (np.isnan(key1) and np.isnan(key2))
+        np.testing.assert_array_equal(value1, value2)
