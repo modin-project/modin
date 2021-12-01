@@ -14,6 +14,7 @@
 import pytest
 import pandas
 import numpy as np
+import itertools
 import modin.pandas as pd
 from modin.utils import try_cast_to_pandas, get_current_execution, hashable
 from modin.pandas.utils import from_pandas, is_scalar
@@ -33,7 +34,7 @@ NPartitions.put(4)
 
 
 def modin_groupby_equals_pandas(modin_groupby, pandas_groupby):
-    for g1, g2 in zip(modin_groupby, pandas_groupby):
+    for g1, g2 in itertools.zip_longest(modin_groupby, pandas_groupby):
         assert g1[0] == g2[0]
         df_equals(g1[1], g2[1])
 
