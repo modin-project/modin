@@ -1258,9 +1258,9 @@ class PandasDataframe(ModinDataframe):
         -----
         The user-defined function must reduce to a single value.
         """
-        func = self._build_treereduce_func(axis, func)
+        function = self._build_treereduce_func(axis, function)
         new_parts = self._partition_mgr_cls.map_axis_partitions(
-            axis, self._partitions, func
+            axis, self._partitions, function
         )
         return self._compute_tree_reduce_metadata(axis, new_parts)
 
