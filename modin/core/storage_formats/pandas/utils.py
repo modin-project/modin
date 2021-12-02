@@ -66,7 +66,9 @@ def compute_chunksize(
         DataFrame. If axis is None, returns a tuple containing both.
     """
     default_block_size = (
-        default_block_size if default_block_size else MinElementsInPartition.get()
+        MinElementsInPartition.get()
+        if default_block_size is None
+        else default_block_size
     )
     if axis == 0 or axis is None:
         row_chunksize = get_default_chunksize(len(df.index), num_splits)
