@@ -17,6 +17,9 @@ import os
 import sys
 import psutil
 import warnings
+import asyncio
+
+import ray
 
 from modin.config import (
     StorageFormat,
@@ -27,6 +30,7 @@ from modin.config import (
     GpuCount,
     Memory,
     NPartitions,
+    ValueSource,
 )
 
 
@@ -107,12 +111,19 @@ def initialize_ray(
         What password to use when connecting to Redis.
         If not specified, ``modin.config.RayRedisPassword`` is used.
     """
-    import ray
-
     if not ray.is_initialized() or override_is_cluster:
         cluster = override_is_cluster or IsRayCluster.get()
         redis_address = override_redis_address or RayRedisAddress.get()
-        redis_password = override_redis_password or RayRedisPassword.get()
+        redis_password = (
+            (
+                ray.ray_constants.REDIS_DEFAULT_PASSWORD
+                if cluster
+                else RayRedisPassword.get()
+            )
+            if override_redis_password is None
+            and RayRedisPassword.get_value_source() == ValueSource.DEFAULT
+            else override_redis_password or RayRedisPassword.get()
+        )
 
         if cluster:
             # We only start ray in a cluster setting for the head node.
@@ -196,3 +207,54 @@ def initialize_ray(
         NPartitions._put(num_gpus)
     else:
         NPartitions._put(num_cpus)
+
+
+@ray.remote
+class SignalActor:  # pragma: no cover
+    """
+    Help synchronize across tasks and actors on cluster.
+
+    For details see: https://docs.ray.io/en/latest/advanced.html?highlight=signalactor#multi-node-synchronization-using-an-actor
+
+    Parameters
+    ----------
+    event_count : int
+        Number of events required for synchronization.
+    """
+
+    def __init__(self, event_count: int):
+        self.events = [asyncio.Event() for _ in range(event_count)]
+
+    def send(self, event_idx: int):
+        """
+        Indicate that event with `event_idx` has occured.
+
+        Parameters
+        ----------
+        event_idx : int
+        """
+        self.events[event_idx].set()
+
+    async def wait(self, event_idx: int):
+        """
+        Wait until event with `event_idx` has occured.
+
+        Parameters
+        ----------
+        event_idx : int
+        """
+        await self.events[event_idx].wait()
+
+    def is_set(self, event_idx: int) -> bool:
+        """
+        Check that event with `event_idx` had occured or not.
+
+        Parameters
+        ----------
+        event_idx : int
+
+        Returns
+        -------
+        bool
+        """
+        return self.events[event_idx].is_set()

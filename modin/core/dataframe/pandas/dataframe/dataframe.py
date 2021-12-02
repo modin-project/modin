@@ -21,7 +21,7 @@ from collections import OrderedDict
 import numpy as np
 import pandas
 from pandas.core.indexes.api import ensure_index, Index, RangeIndex
-from pandas.core.dtypes.common import is_numeric_dtype
+from pandas.core.dtypes.common import is_numeric_dtype, is_list_like
 from typing import List, Hashable
 
 from modin.core.storage_formats.pandas.query_compiler import PandasQueryCompiler
@@ -29,6 +29,7 @@ from modin.error_message import ErrorMessage
 from modin.core.storage_formats.pandas.parsers import (
     find_common_type_cat as find_common_type,
 )
+from modin.pandas.indexing import is_range_like
 
 
 class PandasDataframe(object):
@@ -429,11 +430,11 @@ class PandasDataframe(object):
         ----------
         row_indices : list of hashable, optional
             The row labels to extract.
-        row_numeric_idx : list of int, optional
+        row_numeric_idx : list-like of ints, optional
             The row indices to extract.
         col_indices : list of hashable, optional
             The column labels to extract.
-        col_numeric_idx : list of int, optional
+        col_numeric_idx : list-like of ints, optional
             The column indices to extract.
 
         Returns
@@ -446,15 +447,26 @@ class PandasDataframe(object):
         If both `row_indices` and `row_numeric_idx` are set, `row_indices` will be used.
         The same rule applied to `col_indices` and `col_numeric_idx`.
         """
-        # Check on all possible ranges
-        if isinstance(row_numeric_idx, slice) and (
-            row_numeric_idx == slice(None) or row_numeric_idx == slice(0, None)
-        ):
-            row_numeric_idx = None
-        if isinstance(col_numeric_idx, slice) and (
-            col_numeric_idx == slice(None) or col_numeric_idx == slice(0, None)
-        ):
-            col_numeric_idx = None
+        indexers = []
+        for axis, indexer in enumerate((row_numeric_idx, col_numeric_idx)):
+            if is_range_like(indexer):
+                if indexer.step == 1 and len(indexer) == len(self.axes[axis]):
+                    # By this function semantics, `None` indexer is a full-axis access
+                    indexer = None
+                elif indexer is not None and not isinstance(indexer, pandas.RangeIndex):
+                    # Pure python's range is not fully compatible with a list of ints,
+                    # converting it to ``pandas.RangeIndex``` that is compatible.
+                    indexer = pandas.RangeIndex(
+                        indexer.start, indexer.stop, indexer.step
+                    )
+            else:
+                ErrorMessage.catch_bugs_and_request_email(
+                    failure_condition=not (indexer is None or is_list_like(indexer)),
+                    extra_log=f"Mask takes only list-like numeric indexers, received: {type(indexer)}",
+                )
+            indexers.append(indexer)
+        row_numeric_idx, col_numeric_idx = indexers
+
         if (
             row_indices is None
             and row_numeric_idx is None
@@ -469,19 +481,24 @@ class PandasDataframe(object):
             # Get dict of row_parts as {row_index: row_internal_indices}
             # TODO: Rename `row_partitions_list`->`row_partitions_dict`
             row_partitions_list = self._get_dict_of_block_index(0, row_numeric_idx)
-            if isinstance(row_numeric_idx, slice):
-                # Row lengths for slice are calculated as the length of the slice
-                # on the partition. Often this will be the same length as the current
-                # length, but sometimes it is different, thus the extra calculation.
-                new_row_lengths = [
-                    len(range(*idx.indices(self._row_lengths[p])))
-                    for p, idx in row_partitions_list.items()
-                ]
-                # Use the slice to calculate the new row index
-                new_index = self.index[row_numeric_idx]
-            else:
-                new_row_lengths = [len(idx) for _, idx in row_partitions_list.items()]
-                new_index = self.index[sorted(row_numeric_idx)]
+            new_row_lengths = [
+                len(
+                    # Row lengths for slice are calculated as the length of the slice
+                    # on the partition. Often this will be the same length as the current
+                    # length, but sometimes it is different, thus the extra calculation.
+                    range(*part_indexer.indices(self._row_lengths[part_idx]))
+                    if isinstance(part_indexer, slice)
+                    else part_indexer
+                )
+                for part_idx, part_indexer in row_partitions_list.items()
+            ]
+            new_index = self.index[
+                # pandas Index is more likely to preserve its metadata if the indexer is slice
+                slice(row_numeric_idx.start, row_numeric_idx.stop, row_numeric_idx.step)
+                # TODO: Fast range processing of non-1-step ranges is not yet supported
+                if is_range_like(row_numeric_idx) and row_numeric_idx.step > 0
+                else sorted(row_numeric_idx)
+            ]
         else:
             row_partitions_list = {
                 i: slice(None) for i in range(len(self._row_lengths))
@@ -495,36 +512,35 @@ class PandasDataframe(object):
         if col_numeric_idx is not None:
             # Get dict of col_parts as {col_index: col_internal_indices}
             col_partitions_list = self._get_dict_of_block_index(1, col_numeric_idx)
-            if isinstance(col_numeric_idx, slice):
-                # Column widths for slice are calculated as the length of the slice
-                # on the partition. Often this will be the same length as the current
-                # length, but sometimes it is different, thus the extra calculation.
-                new_col_widths = [
-                    len(range(*idx.indices(self._column_widths[p])))
-                    for p, idx in col_partitions_list.items()
-                ]
-                # Use the slice to calculate the new columns
-                new_columns = self.columns[col_numeric_idx]
-                assert sum(new_col_widths) == len(
-                    new_columns
-                ), "{} != {}.\n{}\n{}\n{}".format(
-                    sum(new_col_widths),
-                    len(new_columns),
-                    col_numeric_idx,
-                    self._column_widths,
-                    col_partitions_list,
+            new_col_widths = [
+                len(
+                    # Column widths for slice are calculated as the length of the slice
+                    # on the partition. Often this will be the same length as the current
+                    # length, but sometimes it is different, thus the extra calculation.
+                    range(*part_indexer.indices(self._column_widths[part_idx]))
+                    if isinstance(part_indexer, slice)
+                    else part_indexer
                 )
-                if self._dtypes is not None:
-                    new_dtypes = self.dtypes[col_numeric_idx]
-                else:
-                    new_dtypes = None
+                for part_idx, part_indexer in col_partitions_list.items()
+            ]
+            # Use the slice to calculate the new columns
+            # TODO: Support fast processing of negative-step ranges
+            if is_range_like(col_numeric_idx) and col_numeric_idx.step > 0:
+                # pandas Index is more likely to preserve its metadata if the indexer is slice
+                monotonic_col_idx = slice(
+                    col_numeric_idx.start, col_numeric_idx.stop, col_numeric_idx.step
+                )
             else:
-                new_col_widths = [len(idx) for _, idx in col_partitions_list.items()]
-                new_columns = self.columns[sorted(col_numeric_idx)]
-                if self._dtypes is not None:
-                    new_dtypes = self.dtypes.iloc[sorted(col_numeric_idx)]
-                else:
-                    new_dtypes = None
+                monotonic_col_idx = sorted(col_numeric_idx)
+            new_columns = self.columns[monotonic_col_idx]
+            ErrorMessage.catch_bugs_and_request_email(
+                failure_condition=sum(new_col_widths) != len(new_columns),
+                extra_log=f"{sum(new_col_widths)} != {len(new_columns)}.\n{col_numeric_idx}\n{self._column_widths}\n{col_partitions_list}",
+            )
+            if self._dtypes is not None:
+                new_dtypes = self.dtypes.iloc[monotonic_col_idx]
+            else:
+                new_dtypes = None
         else:
             col_partitions_list = {
                 i: slice(None) for i in range(len(self._column_widths))
@@ -562,12 +578,14 @@ class PandasDataframe(object):
         # common case to keep it fast.
         if (
             row_numeric_idx is None
-            or isinstance(row_numeric_idx, slice)
+            # Fast range processing of non-1-step ranges is not yet supported
+            or (is_range_like(row_numeric_idx) and row_numeric_idx.step > 0)
             or len(row_numeric_idx) == 1
             or np.all(row_numeric_idx[1:] >= row_numeric_idx[:-1])
         ) and (
             col_numeric_idx is None
-            or isinstance(col_numeric_idx, slice)
+            # Fast range processing of non-1-step ranges is not yet supported
+            or (is_range_like(col_numeric_idx) and col_numeric_idx.step > 0)
             or len(col_numeric_idx) == 1
             or np.all(col_numeric_idx[1:] >= col_numeric_idx[:-1])
         ):
@@ -927,13 +945,25 @@ class PandasDataframe(object):
             A mapping from partition index to list of internal indices which correspond to `indices` in each
             partition.
         """
+        # TODO: Support handling of slices with specified 'step'. For now, converting them into a range
+        if isinstance(indices, slice) and (
+            indices.step is not None and indices.step != 1
+        ):
+            indices = range(*indices.indices(len(self.axes[axis])))
         # Fasttrack slices
-        if isinstance(indices, slice):
-            if indices == slice(None) or indices == slice(0, None):
+        if isinstance(indices, slice) or (is_range_like(indices) and indices.step == 1):
+            # Converting range-like indexer to slice
+            indices = slice(indices.start, indices.stop, indices.step)
+            # Detecting full-axis grab
+            if (
+                indices.start in (None, 0)
+                and indices.step in (None, 1)
+                and (indices.stop is None or indices.stop >= len(self.axes[axis]))
+            ):
                 return OrderedDict(
                     zip(
-                        range(len(self.axes[axis])),
-                        [slice(None)] * len(self.axes[axis]),
+                        range(self._partitions.shape[axis]),
+                        [slice(None)] * self._partitions.shape[axis],
                     )
                 )
             if indices.start is None or indices.start == 0:
@@ -1586,6 +1616,10 @@ class PandasDataframe(object):
                 row_partitions_list,
                 col_partitions_list,
                 item_to_distribute,
+                # Passing caches instead of values in order to not trigger shapes recomputation
+                # if they are not used inside this function.
+                self._row_lengths_cache,
+                self._column_widths_cache,
             )
             return self.__constructor__(
                 new_partitions,

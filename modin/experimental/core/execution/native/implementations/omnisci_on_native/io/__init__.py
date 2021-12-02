@@ -13,8 +13,6 @@
 
 """Base IO classes optimized for OmniSci on Native execution."""
 
-from .io import (
-    OmnisciOnNativeIO,
-)
+from .io import OmnisciOnNativeIO
 
 __all__ = ["OmnisciOnNativeIO"]

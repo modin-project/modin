@@ -21,6 +21,7 @@ from pandas.testing import (
     assert_index_equal,
     assert_extension_array_equal,
 )
+from modin.config.envvars import NPartitions
 import modin.pandas as pd
 from modin.utils import to_pandas, try_cast_to_pandas
 from modin.config import TestDatasetSize, TrackFileLeaks
@@ -45,6 +46,7 @@ DATASET_SIZE_DICT = {
 
 # Size of test dataframes
 NCOLS, NROWS = DATASET_SIZE_DICT.get(TestDatasetSize.get(), DATASET_SIZE_DICT["Normal"])
+NGROUPS = 10
 
 # Range for values for test data
 RAND_LOW = 0
@@ -136,6 +138,8 @@ test_bool_data = {
     for i in range(NCOLS)
 }
 
+test_groupby_data = {f"col{i}": np.arange(NCOLS) % NGROUPS for i in range(NROWS)}
+
 test_data_resample = {
     "data": {"A": range(12), "B": range(12)},
     "index": pandas.date_range("31/12/2000", periods=12, freq="H"),
@@ -202,6 +206,16 @@ test_data_categorical = {
 
 test_data_categorical_values = list(test_data_categorical.values())
 test_data_categorical_keys = list(test_data_categorical.keys())
+
+# Fully fill all of the partitions used in tests.
+test_data_large_categorical_dataframe = {
+    i: pandas.Categorical(np.arange(NPartitions.get() * 32))
+    for i in range(NPartitions.get() * 32)
+}
+test_data_large_categorical_series_values = [
+    pandas.Categorical(np.arange(NPartitions.get() * 32))
+]
+test_data_large_categorical_series_keys = ["categorical_series"]
 
 numeric_dfs = [
     "empty_data",
@@ -1124,11 +1138,7 @@ def generate_dataframe(row_size=NROWS, additional_col_values=None):
 
     if additional_col_values is not None:
         assert isinstance(additional_col_values, (list, tuple))
-        data.update(
-            {
-                "col7": random_state.choice(additional_col_values, size=row_size),
-            }
-        )
+        data.update({"col7": random_state.choice(additional_col_values, size=row_size)})
     return pandas.DataFrame(data)
 
 

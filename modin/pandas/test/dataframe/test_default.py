@@ -37,6 +37,7 @@ from modin.pandas.test.utils import (
     test_data,
     test_data_diff_dtype,
     modin_df_almost_equals_pandas,
+    test_data_large_categorical_dataframe,
 )
 from modin.config import NPartitions
 
@@ -94,7 +95,11 @@ def test_to_timestamp():
         df.to_period().to_timestamp()
 
 
-@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+@pytest.mark.parametrize(
+    "data",
+    test_data_values + [test_data_large_categorical_dataframe],
+    ids=test_data_keys + ["categorical_ints"],
+)
 def test_to_numpy(data):
     modin_df, pandas_df = pd.DataFrame(data), pandas.DataFrame(data)
     assert_array_equal(modin_df.values, pandas_df.values)
@@ -762,6 +767,43 @@ def test_resample_specific(rule, closed, label, on, level):
         )
 
 
+@pytest.mark.parametrize(
+    "columns",
+    [
+        "volume",
+        "date",
+        ["volume"],
+        ["price", "date"],
+        ("volume",),
+        pandas.Series(["volume"]),
+        pandas.Index(["volume"]),
+        ["volume", "volume", "volume"],
+        ["volume", "price", "date"],
+    ],
+    ids=[
+        "column",
+        "missed_column",
+        "list",
+        "missed_column",
+        "tuple",
+        "series",
+        "index",
+        "duplicate_column",
+        "missed_columns",
+    ],
+)
+def test_resample_getitem(columns):
+    index = pandas.date_range("1/1/2013", periods=9, freq="T")
+    data = {
+        "price": range(9),
+        "volume": range(10, 19),
+    }
+    eval_general(
+        *create_test_dfs(data, index=index),
+        lambda df: df.resample("3T")[columns].mean(),
+    )
+
+
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 @pytest.mark.parametrize("index", ["default", "ndarray", "has_duplicates"])
 @pytest.mark.parametrize("axis", [0, 1])
@@ -823,11 +865,7 @@ def test_stack(data, is_multi_idx, is_multi_col):
     if is_multi_col:
         if len(pandas_df.columns) == 64:
             columns = pd.MultiIndex.from_product(
-                [
-                    ["A", "B", "C", "D"],
-                    ["xx", "yy", "zz", "LAST"],
-                    [10, 20, 30, 40],
-                ]
+                [["A", "B", "C", "D"], ["xx", "yy", "zz", "LAST"], [10, 20, 30, 40]]
             )
         elif len(pandas_df.columns) == 100:
             columns = pd.MultiIndex.from_product(

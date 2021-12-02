@@ -28,10 +28,7 @@ BINARY_OP_DATA_SIZE = {
         # [[20, 500_000], [10, 1_000_000]],
         [[500_000, 20], [1_000_000, 10]],
     ],
-    "small": [
-        [[250, 250], [250, 250]],
-        [[10_000, 20], [25_000, 10]],
-    ],
+    "small": [[[250, 250], [250, 250]], [[10_000, 20], [25_000, 10]]],
 }
 UNARY_OP_DATA_SIZE = {
     "big": [
@@ -40,44 +37,25 @@ UNARY_OP_DATA_SIZE = {
         # [10, 1_000_000],
         [1_000_000, 10],
     ],
-    "small": [
-        [250, 250],
-        [10_000, 10],
-    ],
+    "small": [[250, 250], [10_000, 10]],
 }
 SERIES_DATA_SIZE = {
-    "big": [
-        [100_000, 1],
-    ],
-    "small": [
-        [10_000, 1],
-    ],
+    "big": [[100_000, 1]],
+    "small": [[10_000, 1]],
 }
 
 
 OMNISCI_BINARY_OP_DATA_SIZE = {
-    "big": [
-        [[500_000, 20], [1_000_000, 10]],
-    ],
-    "small": [
-        [[10_000, 20], [25_000, 10]],
-    ],
+    "big": [[[500_000, 20], [1_000_000, 10]]],
+    "small": [[[10_000, 20], [25_000, 10]]],
 }
 OMNISCI_UNARY_OP_DATA_SIZE = {
-    "big": [
-        [1_000_000, 10],
-    ],
-    "small": [
-        [10_000, 10],
-    ],
+    "big": [[1_000_000, 10]],
+    "small": [[10_000, 10]],
 }
 OMNISCI_SERIES_DATA_SIZE = {
-    "big": [
-        [10_000_000, 1],
-    ],
-    "small": [
-        [100_000, 1],
-    ],
+    "big": [[10_000_000, 1]],
+    "small": [[100_000, 1]],
 }
 
 DEFAULT_GROUPBY_NGROUPS = {
@@ -163,17 +141,11 @@ _DEFAULT_OMNISCI_CONFIG_T = [
     ),
     (
         OMNISCI_BINARY_OP_DATA_SIZE[ASV_DATASET_SIZE],
-        [
-            "omnisci.TimeMerge",
-            "omnisci.TimeAppend",
-        ],
+        ["omnisci.TimeMerge", "omnisci.TimeAppend"],
     ),
     (
         OMNISCI_SERIES_DATA_SIZE[ASV_DATASET_SIZE],
-        [
-            "omnisci.TimeBinaryOpSeries",
-            "omnisci.TimeValueCountsSeries",
-        ],
+        ["omnisci.TimeBinaryOpSeries", "omnisci.TimeValueCountsSeries"],
     ),
 ]
 DEFAULT_CONFIG = {}

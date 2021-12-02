@@ -16,9 +16,7 @@
 import pandas
 
 from modin.core.dataframe.pandas.partitioning.partition import PandasDataframePartition
-from ..omnisci_worker import (
-    OmnisciServer,
-)
+from ..omnisci_worker import OmnisciServer
 import pyarrow
 
 
