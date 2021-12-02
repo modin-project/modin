@@ -104,8 +104,8 @@ def test_xgb_with_binary_classification_datasets(data, num_actors, modin_type_y)
     predictions = bst.predict(xgb_dmatrix)
     modin_predictions = modin_bst.predict(mxgb_dmatrix)
 
-    preds = pd.DataFrame(predictions).apply(lambda x: round(x))
-    modin_preds = modin_predictions.apply(lambda x: round(x))
+    preds = pd.DataFrame(predictions).apply(lambda x: round(x), axis=0)
+    modin_preds = modin_predictions.apply(lambda x: round(x), axis=0)
 
     val = accuracy_score(y, preds)
     modin_val = accuracy_score(modin_y, modin_preds)
