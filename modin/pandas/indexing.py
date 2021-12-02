@@ -769,7 +769,7 @@ class _LocIndexer(_LocationIndexerBase):
             isinstance(row_loc, list)
             and len(row_loc) == 1
             and row_loc[0] not in self.qc.index
-        ) or (isinstance(row_loc, int) and row_loc not in self.qc.index):
+        ) or (not isinstance(row_loc, list) and row_loc not in self.qc.index):
             row_loc = row_loc[0] if isinstance(row_loc, list) else row_loc
             index = self.qc.index.insert(len(self.qc.index), row_loc)
             self.qc = self.qc.reindex(labels=index, axis=0)
