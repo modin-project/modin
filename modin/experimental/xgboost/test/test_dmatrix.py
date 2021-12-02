@@ -103,8 +103,8 @@ def test_feature_names():
     predictions = booster.predict(dmatrix)
     modin_predictions = md_booster.predict(md_dmatrix)
 
-    preds = pd.DataFrame(predictions).apply(lambda x: round(x))
-    modin_preds = modin_predictions.apply(lambda x: round(x))
+    preds = pd.DataFrame(predictions).apply(np.round, axis=0)
+    modin_preds = modin_predictions.apply(np.round, axis=0)
 
     accuracy = accuracy_score(y, preds)
     md_accuracy = accuracy_score(y, modin_preds)
