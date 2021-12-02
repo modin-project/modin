@@ -20,7 +20,6 @@ from modin.pandas.test.utils import (
     df_equals,
 )
 from modin.config import NPartitions
-import modin.pandas as pd
 
 NPartitions.put(4)
 
@@ -83,17 +82,3 @@ def test_insert_item(axis, item_length, loc, replace):
     ).to_pandas()
 
     df_equals(md_res, pd_res)
-
-
-@pytest.mark.parametrize("axis", [0, 1])
-def test_repartitioning_after_concat(axis):
-    df_count_before_concat = 16
-    dfs = [None] * df_count_before_concat
-    for i in range(df_count_before_concat):
-        dfs[i] = pd.DataFrame({"A": [1, 2, 3, 4, 5] * 3, "B": [6, 7, 8, 9, 10] * 3})
-    result = pd.concat(dfs, axis=axis)
-    # rows and columns have their own partitioning policy (at the time of writing the test - 32 rows and columns per partition),
-    # a check that is more resistant to changes should contain `<=` sign instead of `==`.
-    assert (
-        result._query_compiler._modin_frame._partitions.shape[axis] <= NPartitions.get()
-    )
