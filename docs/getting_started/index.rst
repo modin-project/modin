@@ -1,5 +1,18 @@
-Installation
-============
+Getting Started
+===============
+
+.. toctree::
+    :titlesonly:
+    :hidden:
+    
+    using_modin
+    out_of_core
+    pandas
+    dask
+
+.. meta::
+    :description lang=en:
+        Introduction to Modin.
 
 There are several ways to install Modin. Most users will want to install with
 ``pip`` or using ``conda`` tool, but some users may want to build from the master branch
@@ -13,7 +26,7 @@ Stable version
 """"""""""""""
 
 Modin can be installed with ``pip`` on Linux, Windows and MacOS. 2 engines are available for those platforms:
-:doc:`Ray</UsingPandasonRay/index>` and :doc:`Dask</UsingPandasonDask/index>`
+:doc:`Ray</developer/using_pandas_on_ray>` and :doc:`Dask</developer/using_pandas_on_dask>`
 To install the most recent stable release run the following:
 
 .. code-block:: bash
@@ -120,7 +133,7 @@ Using Intel\ |reg| Distribution of Modin
 """"""""""""""""""""""""""""""""""""""""
 
 With ``conda`` it is also possible to install Intel Distribution of Modin, a special version of Modin 
-that is part of Intel\ |reg| oneAPI AI Analytics Toolkit. This version of Modin is powered by :doc:`OmniSci</UsingOmnisci/index>` 
+that is part of Intel\ |reg| oneAPI AI Analytics Toolkit. This version of Modin is powered by :doc:`OmniSci</developer/using_omnisci>` 
 engine that contains a bunch of optimizations for Intel hardware. More details can be found on `Intel Distribution of Modin`_ page.
 
 Installing from the GitHub master branch
@@ -139,15 +152,15 @@ that these changes have not made it into a release and may not be completely sta
 Windows
 -------
 
-All Modin engines except :doc:`OmniSci</UsingOmnisci/index>` are available both on Windows and Linux as mentioned above.
-Default engine on Windows is :doc:`Ray</UsingPandasonRay/index>`.
+All Modin engines except :doc:`OmniSci</developer/using_omnisci>` are available both on Windows and Linux as mentioned above.
+Default engine on Windows is :doc:`Ray</developer/using_pandas_on_ray>`.
 It is also possible to use Windows Subsystem For Linux (WSL_), but this is generally not recommended due to the limitations
 and poor performance of Ray on WSL, a roughly 2-3x cost. 
 
 Building Modin from Source
 --------------------------
 
-If you're planning on :doc:`contributing </contributing>` to Modin, you will need to ensure that you are
+If you're planning on :doc:`contributing </developer/contributing>` to Modin, you will need to ensure that you are
 building Modin from the local repository that you are working off of. Occasionally,
 there are issues in overlapping Modin installs from pypi and from source. To avoid these
 issues, we recommend uninstalling Modin before you install from source:

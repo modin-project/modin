@@ -1132,6 +1132,30 @@ class TestCsv:
             index_col="col1",
         )
 
+    @pytest.mark.parametrize(
+        "skiprows",
+        [
+            lambda x: x > 20,
+            lambda x: True,
+            lambda x: x in [10, 20],
+            pytest.param(
+                lambda x: x << 10,
+                marks=pytest.mark.skipif(
+                    condition="config.getoption('--simulate-cloud').lower() != 'off'",
+                    reason="The reason of tests fail in `cloud` mode is unknown for now - issue #2340",
+                ),
+            ),
+        ],
+    )
+    def test_read_csv_skiprows_corner_cases(self, skiprows):
+        eval_io(
+            fn_name="read_csv",
+            check_kwargs_callable=not callable(skiprows),
+            # read_csv kwargs
+            filepath_or_buffer=pytest.csvs_names["test_read_csv_regular"],
+            skiprows=skiprows,
+        )
+
 
 class TestTable:
     def test_read_table(self, make_csv_file):

@@ -47,16 +47,16 @@ architecture is implemented using several interacting components:
 For the simplicity the other execution systems - Dask and MPI are omitted and only Ray execution is shown.
 
 * Dataframe subsystem is the backbone of the dataframe holding and query compilation. It is responsible for
-  dispatching the ingress/egress to the appropriate module, getting the Pandas API and calling the query
+  dispatching the ingress/egress to the appropriate module, getting the pandas API and calling the query
   compiler to convert calls to the internal intermediate Dataframe Algebra.
 * Data Ingress/Egress Module is working in conjunction with Dataframe and Partitions subsystem to read data
   split into partitions and send data into the appropriate node for storing.
-* Query Planner is subsystem that translates the Pandas API to intermediate Dataframe Algebra representation
+* Query Planner is subsystem that translates the pandas API to intermediate Dataframe Algebra representation
   DAG and performs an initial set of optimizations.
 * Query Executor is responsible for getting the Dataframe Algebra DAG, performing further optimizations based
   on a selected storage format and mapping or compiling the Dataframe Algebra DAG to and actual
   execution sequence.
-* Storage formats module is responsible for mapping the abstract operation to an actual executor call, e.g. Pandas,
+* Storage formats module is responsible for mapping the abstract operation to an actual executor call, e.g. pandas,
   PyArrow, custom format.
 * Orchestration subsystem is responsible for spawning and controlling the actual execution environment for the
   selected execution. It spawns the actual nodes, fires up the execution environment, e.g. Ray, monitors the state
@@ -109,21 +109,11 @@ The API is the outer-most layer that faces users. The majority of our current ef
 spent implementing the components of the pandas API. We have implemented a toy example
 for a sqlite API as a proof of concept, but this isn't ready for usage/testing. There
 are also plans to expose the Modin DataFrame API as a reduced API set that encompasses
-the entire pandas/dataframe API. See `experimental features`_ for more information.
+the entire pandas/dataframe API. See :doc:`advanced usage </advanced_usage/index>` for more information.
 
 .. toctree::
-   :caption: Base Pandas Dataset API
-
    /flow/modin/pandas/base
-
-.. toctree::
-   :caption: modin.pandas.DataFrame API
-
    /flow/modin/pandas/dataframe
-
-.. toctree::
-   :caption: modin.pandas.Series API
-
    /flow/modin/pandas/series
 
 Query Compiler
@@ -254,18 +244,18 @@ Supported Execution Frameworks and Memory Formats
 
 This is the list of execution frameworks and memory formats supported in Modin. If you
 would like to contribute a new execution framework or memory format, please see the
-documentation page on :doc:`contributing </contributing>`.
+documentation page on :doc:`contributing </developer/contributing>`.
 
-- :doc:`Pandas on Ray </UsingPandasonRay/index>`
+- :doc:`pandas on Ray </developer/using_pandas_on_ray>`
     - Uses the Ray_ execution framework.
     - The compute kernel/in-memory format is a pandas DataFrame.
-- :doc:`Pandas on Dask </UsingPandasonDask/index>`
+- :doc:`pandas on Dask </developer/using_pandas_on_dask>`
     - Uses the `Dask Futures`_ execution framework.
     - The compute kernel/in-memory format is a pandas DataFrame.
-- :doc:`Omnisci </UsingOmnisci/index>`
+- :doc:`Omnisci </developer/using_omnisci>`
     - Uses OmniSciDB as an engine.
     - The compute kernel/in-memory format is a pyarrow Table or pandas DataFrame when defaulting to pandas.
-- :doc:`Pyarrow on Ray </UsingPyarrowonRay/index>` (experimental)
+- :doc:`Pyarrow on Ray </developer/using_pyarrow_on_ray>` (experimental)
     - Uses the Ray_ execution framework.
     - The compute kernel/in-memory format is a pyarrow Table.
 
@@ -348,4 +338,4 @@ by documentation for now, the rest is coming soon...).
 .. _issue: https://github.com/modin-project/modin/issues
 .. _Discourse: https://discuss.modin.org
 .. _task parallel: https://en.wikipedia.org/wiki/Task_parallelism
-.. _experimental features: /experimental_features/index.html
+.. _experimental features: /advanced_usage/index.html
