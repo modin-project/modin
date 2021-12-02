@@ -20,7 +20,6 @@ from pandas.core.dtypes.common import is_list_like, is_numeric_dtype
 from pandas.core.aggregation import reconstruct_func
 from pandas._libs.lib import no_default
 import pandas.core.common as com
-import copy
 from types import BuiltinFunctionType
 from collections.abc import Iterable
 
@@ -170,10 +169,10 @@ class DataFrameGroupBy(object):
     @property
     def groups(self):
         if self._groups_cache is not no_default:
-            return copy.deepcopy(self._groups_cache)
+            return self._groups_cache
 
         self._groups_cache = self._compute_index_grouped(numerical=False)
-        return copy.deepcopy(self._groups_cache)
+        return self._groups_cache
 
     def min(self, **kwargs):
         return self._wrap_aggregation(
@@ -270,10 +269,10 @@ class DataFrameGroupBy(object):
     @property
     def indices(self):
         if self._indices_cache is not no_default:
-            return copy.deepcopy(self._indices_cache)
+            return self._indices_cache
 
         self._indices_cache = self._compute_index_grouped(numerical=True)
-        return copy.deepcopy(self._indices_cache)
+        return self._indices_cache
 
     def pct_change(self):
         return self._default_to_pandas(lambda df: df.pct_change())

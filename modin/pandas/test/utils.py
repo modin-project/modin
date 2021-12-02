@@ -16,13 +16,13 @@ import numpy as np
 import math
 import pandas
 import itertools
-from collections import OrderedDict
 from pandas.testing import (
     assert_series_equal,
     assert_frame_equal,
     assert_index_equal,
     assert_extension_array_equal,
 )
+from pandas.core.dtypes.common import is_list_like
 from modin.config.envvars import NPartitions
 import modin.pandas as pd
 from modin.utils import to_pandas, try_cast_to_pandas
@@ -1355,10 +1355,10 @@ def make_default_file(file_type: str):
 
 def dict_equals(dict1, dict2):
     """Check whether two dictionaries are equal and raise an ``AssertionError`` if they aren't."""
-    dict1 = OrderedDict(sorted(dict1.items(), key=lambda item: item[0]))
-    dict2 = OrderedDict(sorted(dict2.items(), key=lambda item: item[0]))
-    for (key1, value1), (key2, value2) in itertools.zip_longest(
-        dict1.items(), dict2.items()
-    ):
+    for key1, key2 in itertools.zip_longest(sorted(dict1), sorted(dict2)):
         assert (key1 == key2) or (np.isnan(key1) and np.isnan(key2))
-        np.testing.assert_array_equal(value1, value2)
+        value1, value2 = dict1[key1], dict2[key2]
+        if is_list_like(value1):
+            np.testing.assert_array_equal(value1, value2)
+        else:
+            assert value1 == value2
