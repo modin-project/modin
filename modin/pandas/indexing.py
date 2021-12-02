@@ -765,11 +765,15 @@ class _LocIndexer(_LocationIndexerBase):
             )
             return
         row_loc, col_loc, _ = self._parse_row_and_column_locators(key)
-        if isinstance(row_loc, list) and len(row_loc) == 1:
-            if row_loc[0] not in self.qc.index:
-                index = self.qc.index.insert(len(self.qc.index), row_loc[0])
-                self.qc = self.qc.reindex(labels=index, axis=0)
-                self.df._update_inplace(new_query_compiler=self.qc)
+        if (
+            isinstance(row_loc, list)
+            and len(row_loc) == 1
+            and row_loc[0] not in self.qc.index
+        ) or (isinstance(row_loc, int) and row_loc not in self.qc.index):
+            row_loc = row_loc[0] if isinstance(row_loc, list) else row_loc
+            index = self.qc.index.insert(len(self.qc.index), row_loc)
+            self.qc = self.qc.reindex(labels=index, axis=0)
+            self.df._update_inplace(new_query_compiler=self.qc)
 
         if (
             isinstance(col_loc, list)
