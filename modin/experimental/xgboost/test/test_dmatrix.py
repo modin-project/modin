@@ -13,6 +13,7 @@
 
 import numpy as np
 import pytest
+import pandas
 from sklearn.metrics import accuracy_score
 from sklearn.datasets import load_breast_cancer
 import xgboost as xgb
@@ -103,7 +104,7 @@ def test_feature_names():
     predictions = booster.predict(dmatrix)
     modin_predictions = md_booster.predict(md_dmatrix)
 
-    preds = pd.DataFrame(predictions).apply(np.round, axis=0)
+    preds = pandas.DataFrame(predictions).apply(np.round, axis=0)
     modin_preds = modin_predictions.apply(np.round, axis=0)
 
     accuracy = accuracy_score(y, preds)
