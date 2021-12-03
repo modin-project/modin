@@ -29,6 +29,7 @@ An illustration is available at
 https://github.com/ray-project/ray/pull/1955#issuecomment-386781826
 """
 
+import collections.abc
 import numpy as np
 import pandas
 import itertools
@@ -769,7 +770,10 @@ class _LocIndexer(_LocationIndexerBase):
             isinstance(row_loc, list)
             and len(row_loc) == 1
             and row_loc[0] not in self.qc.index
-        ) or (not isinstance(row_loc, list) and row_loc not in self.qc.index):
+        ) or (
+            not isinstance(row_loc, (collections.abc.Sized, slice))
+            and row_loc not in self.qc.index
+        ):
             row_loc = row_loc[0] if isinstance(row_loc, list) else row_loc
             index = self.qc.index.insert(len(self.qc.index), row_loc)
             self.qc = self.qc.reindex(labels=index, axis=0)
