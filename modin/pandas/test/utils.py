@@ -23,7 +23,7 @@ from pandas.testing import (
     assert_extension_array_equal,
 )
 from pandas.core.dtypes.common import is_list_like
-from modin.config.envvars import MinElementsInPartition, NPartitions
+from modin.config import MinElementsInPartition, NPartitions
 import modin.pandas as pd
 from modin.utils import to_pandas, try_cast_to_pandas
 from modin.config import TestDatasetSize, TrackFileLeaks

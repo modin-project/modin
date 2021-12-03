@@ -15,7 +15,7 @@ import pytest
 import numpy as np
 import pandas
 import matplotlib
-from modin.config.envvars import MinElementsInPartition
+from modin.config import MinElementsInPartition
 import modin.pandas as pd
 
 from pandas.core.dtypes.common import is_list_like

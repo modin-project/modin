@@ -13,7 +13,7 @@
 
 """Contains utility functions for frame partitioning."""
 
-from modin.config.envvars import MinElementsInPartition
+from modin.config import MinElementsInPartition
 import numpy as np
 import pandas
 
