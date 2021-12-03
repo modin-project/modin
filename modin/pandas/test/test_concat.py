@@ -25,8 +25,17 @@ from .utils import (
     create_test_dfs,
 )
 from modin.config import NPartitions
+from modin.utils import get_current_execution
 
 NPartitions.put(4)
+
+# Our configuration in pytest.ini requires that we explicitly catch all
+# instances of defaulting to pandas, but we should always default to pandas for
+# BaseOnPython.
+if get_current_execution() == "BaseOnPython":
+    pytestmark = pytest.mark.filterwarnings(
+        "default:.*defaulting to pandas.*:UserWarning"
+    )
 
 
 def test_df_concat():

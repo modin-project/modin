@@ -20,6 +20,7 @@ from modin.pandas.test.utils import (
     df_equals,
 )
 from modin.config import NPartitions
+from modin.test.test_utils import warns_that_defaulting_to_pandas
 
 NPartitions.put(4)
 
@@ -61,24 +62,38 @@ def test_insert_item(axis, item_length, loc, replace):
             second_mask = df.iloc[:, loc:]
         return pandas.concat([first_mask, value, second_mask], axis=axis)
 
-    md_frames, pd_frames = create_test_dfs(data, post_fn=post_fn)
+    with warns_that_defaulting_to_pandas():
+        md_frames, pd_frames = create_test_dfs(data, post_fn=post_fn)
     md_item1, md_item2 = md_frames
     pd_item1, pd_item2 = pd_frames
 
     index_loc = get_loc(pd_item1, loc)
 
     pd_res = get_reference(pd_item1, loc=index_loc, value=pd_item2)
-    md_res = md_item1._query_compiler.insert_item(
-        axis=axis, loc=index_loc, value=md_item2._query_compiler, replace=replace
-    ).to_pandas()
+    warnings_catcher = (
+        pytest.warns(
+            UserWarning,
+            match="<function DataFrame.concat> defaulting to pandas implementation.",
+        )
+        if loc == "penult"
+        else pytest.warns(
+            UserWarning,
+            match=r"DataFrame.get_axis\([01]\) defaulting to pandas implementation",
+        )
+    )
+    with warnings_catcher:
+        md_res = md_item1._query_compiler.insert_item(
+            axis=axis, loc=index_loc, value=md_item2._query_compiler, replace=replace
+        ).to_pandas()
     # breakpoint()
     df_equals(md_res, pd_res)
 
     index_loc = get_loc(pd_item2, loc)
 
     pd_res = get_reference(pd_item2, loc=index_loc, value=pd_item1)
-    md_res = md_item2._query_compiler.insert_item(
-        axis=axis, loc=index_loc, value=md_item1._query_compiler, replace=replace
-    ).to_pandas()
+    with warnings_catcher:
+        md_res = md_item2._query_compiler.insert_item(
+            axis=axis, loc=index_loc, value=md_item1._query_compiler, replace=replace
+        ).to_pandas()
 
     df_equals(md_res, pd_res)

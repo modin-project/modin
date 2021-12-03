@@ -42,11 +42,21 @@ from modin.pandas.test.utils import (
 )
 from modin.config import NPartitions
 from modin.test.test_utils import warns_that_defaulting_to_pandas
+from modin.utils import get_current_execution
 
 NPartitions.put(4)
 
 # Force matplotlib to not use any Xwindows backend.
 matplotlib.use("Agg")
+
+
+# Our configuration in pytest.ini requires that we explicitly catch all
+# instances of defaulting to pandas, but we should always default to pandas for
+# BaseOnPython.
+if get_current_execution() == "BaseOnPython":
+    pytestmark = pytest.mark.filterwarnings(
+        "default:.*defaulting to pandas.*:UserWarning"
+    )
 
 
 @pytest.mark.parametrize("axis", [0, 1])

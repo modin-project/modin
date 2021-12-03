@@ -12,7 +12,6 @@
 # governing permissions and limitations under the License.
 
 import contextlib
-import warnings
 import pandas
 import pytest
 import modin.pandas as pd
@@ -27,6 +26,14 @@ from .utils import (
     df_equals,
     sort_index_for_equal_values,
 )
+
+# Our configuration in pytest.ini requires that we explicitly catch all
+# instances of defaulting to pandas, but we should always default to pandas for
+# BaseOnPython.
+if get_current_execution() == "BaseOnPython":
+    pytestmark = pytest.mark.filterwarnings(
+        "default:.*defaulting to pandas.*:UserWarning"
+    )
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
@@ -110,7 +117,6 @@ def test_merge():
 
     join_type_outer = "outer"
     join_type_inner = "inner"
-    warnings.filterwarnings("error", ".*defaulting to pandas")
     for how in (join_type_outer, join_type_inner):
         if how == join_type_outer:
             warning_catcher = warns_that_defaulting_to_pandas()
@@ -630,9 +636,7 @@ def test_unique():
 def test_value_counts(normalize, bins, dropna):
     # We sort indices for Modin and pandas result because of issue #1650
     values = np.array([3, 1, 2, 3, 4, np.nan])
-    # Here and below, value_counts itself does not default to pandas, but
-    # value_counts calls sort_values(), which defaults to Pandas.
-    with pytest.warns(UserWarning, match="sort_values defaulting to pandas"):
+    with warns_that_defaulting_to_pandas():
         modin_result = sort_index_for_equal_values(
             pd.value_counts(values, normalize=normalize, ascending=False), False
         )
@@ -641,7 +645,7 @@ def test_value_counts(normalize, bins, dropna):
     )
     df_equals(modin_result, pandas_result)
 
-    with pytest.warns(UserWarning):
+    with warns_that_defaulting_to_pandas():
         modin_result = sort_index_for_equal_values(
             pd.value_counts(values, bins=bins, ascending=False), False
         )
@@ -650,7 +654,7 @@ def test_value_counts(normalize, bins, dropna):
     )
     df_equals(modin_result, pandas_result)
 
-    with pytest.warns(UserWarning):
+    with warns_that_defaulting_to_pandas():
         modin_result = sort_index_for_equal_values(
             pd.value_counts(values, dropna=dropna, ascending=True), True
         )
