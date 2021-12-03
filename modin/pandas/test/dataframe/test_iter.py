@@ -296,7 +296,7 @@ def test_constructor(data):
     [
         np.arange(1, 10000, dtype=np.float32),
         [
-            pd.Series([1, 2, 3], dtype="int32"),
+            pandas.Series([1, 2, 3], dtype="int32"),
             pandas.Series([4, 5, 6], dtype="int64"),
             np.array([7, 8, 9], dtype=np.float32),
         ],
