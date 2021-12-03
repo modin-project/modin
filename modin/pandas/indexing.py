@@ -771,7 +771,7 @@ class _LocIndexer(_LocationIndexerBase):
             and len(row_loc) == 1
             and row_loc[0] not in self.qc.index
         ) or (
-            not isinstance(row_loc, (collections.abc.Sized, slice))
+            not is_list_like(row_loc) or isinstance(row_loc, slice)
             and row_loc not in self.qc.index
         ):
             row_loc = row_loc[0] if isinstance(row_loc, list) else row_loc
