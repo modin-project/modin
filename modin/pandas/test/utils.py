@@ -23,7 +23,7 @@ from pandas.testing import (
     assert_extension_array_equal,
 )
 from pandas.core.dtypes.common import is_list_like
-from modin.config import MinElementsInPartition, NPartitions
+from modin.config import MinPartitionSize, NPartitions
 import modin.pandas as pd
 from modin.utils import to_pandas, try_cast_to_pandas
 from modin.config import TestDatasetSize, TrackFileLeaks
@@ -211,11 +211,11 @@ test_data_categorical_keys = list(test_data_categorical.keys())
 
 # Fully fill all of the partitions used in tests.
 test_data_large_categorical_dataframe = {
-    i: pandas.Categorical(np.arange(NPartitions.get() * MinElementsInPartition.get()))
-    for i in range(NPartitions.get() * MinElementsInPartition.get())
+    i: pandas.Categorical(np.arange(NPartitions.get() * MinPartitionSize.get()))
+    for i in range(NPartitions.get() * MinPartitionSize.get())
 }
 test_data_large_categorical_series_values = [
-    pandas.Categorical(np.arange(NPartitions.get() * MinElementsInPartition.get()))
+    pandas.Categorical(np.arange(NPartitions.get() * MinPartitionSize.get()))
 ]
 test_data_large_categorical_series_keys = ["categorical_series"]
 

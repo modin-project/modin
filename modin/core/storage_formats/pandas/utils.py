@@ -13,7 +13,7 @@
 
 """Contains utility functions for frame partitioning."""
 
-from modin.config import MinElementsInPartition
+from modin.config import MinPartitionSize
 import numpy as np
 import pandas
 
@@ -66,9 +66,7 @@ def compute_chunksize(
         DataFrame. If axis is None, returns a tuple containing both.
     """
     default_block_size = (
-        MinElementsInPartition.get()
-        if default_block_size is None
-        else default_block_size
+        MinPartitionSize.get() if default_block_size is None else default_block_size
     )
     if axis == 0 or axis is None:
         row_chunksize = get_default_chunksize(len(df.index), num_splits)
