@@ -22,7 +22,7 @@ import numpy as np
 import pandas
 from pandas.core.indexes.api import ensure_index, Index, RangeIndex
 from pandas.core.dtypes.common import is_numeric_dtype, is_list_like
-from typing import List, Hashable
+from typing import List, Hashable, Optional, Callable, Union, Dict
 
 from modin.core.storage_formats.pandas.query_compiler import PandasQueryCompiler
 from modin.error_message import ErrorMessage
@@ -419,11 +419,11 @@ class PandasDataframe(ModinDataframe):
 
     def mask(
         self,
-        row_labels=None,
-        row_positions=None,
-        col_labels=None,
-        col_positions=None,
-    ):
+        row_labels: Optional[List[Hashable]] = None,
+        row_positions: Optional[List[int]] = None,
+        col_labels: Optional[List[Hashable]] = None,
+        col_positions: Optional[List[int]] = None,
+    ) -> "PandasDataframe":
         """
         Lazily select columns or rows from given indices.
 
@@ -1234,7 +1234,12 @@ class PandasDataframe(ModinDataframe):
         )
         return result
 
-    def reduce(self, axis, function, dtypes=None):
+    def reduce(
+        self,
+        axis: int,
+        function: Callable,
+        dtypes: Optional[str] = None,
+    ) -> "PandasDataframe":
         """
         Perform a user-defined per-column aggregation, where each column reduces down to a single value.
 
@@ -1264,7 +1269,13 @@ class PandasDataframe(ModinDataframe):
         )
         return self._compute_tree_reduce_metadata(axis, new_parts)
 
-    def tree_reduce(self, axis, map_func, reduce_func=None):
+    def tree_reduce(
+        self,
+        axis: int,
+        map_func: Callable,
+        reduce_func: Optional[Callable] = None,
+        dtypes: Optional[str] = None,
+    ) -> "PandasDataframe":
         """
         Apply function that will reduce the data to a pandas Series.
 
@@ -1295,7 +1306,7 @@ class PandasDataframe(ModinDataframe):
         )
         return self._compute_tree_reduce_metadata(axis, reduce_parts)
 
-    def map(self, func, dtypes=None):
+    def map(self, func: Callable, dtypes: Optional[str] = None) -> "PandasDataframe":
         """
         Perform a function that maps across the entire dataset.
 
@@ -1331,10 +1342,10 @@ class PandasDataframe(ModinDataframe):
 
     def window(
         self,
-        axis,
-        reduce_fn,
-        window_size,
-        result_schema=None,
+        axis: int,
+        reduce_fn: Callable,
+        window_size: int,
+        result_schema: Optional[Dict[Hashable, type]] = None,
     ) -> "PandasDataframe":
         """
         Apply a sliding window operator that acts as a GROUPBY on each window, and reduces down to a single row (column) per window.
@@ -1411,7 +1422,9 @@ class PandasDataframe(ModinDataframe):
         """
         pass
 
-    def join(self, axis, condition, other, join_type) -> "PandasDataframe":
+    def join(
+        self, axis: int, condition: Callable, other: ModinDataframe, join_type: str
+    ) -> "PandasDataframe":
         """
         Join this dataframe with the other.
 
@@ -1444,7 +1457,10 @@ class PandasDataframe(ModinDataframe):
         pass
 
     def rename(
-        self, new_row_labels=None, new_col_labels=None, level=None
+        self,
+        new_row_labels: Optional[Union[Dict[Hashable, Hashable], Callable]] = None,
+        new_col_labels: Optional[Union[Dict[Hashable, Hashable], Callable]] = None,
+        level: Optional[Union[int, List[int]]] = None,
     ) -> "PandasDataframe":
         """
         Replace the row and column labels with the specified new labels.
@@ -1512,7 +1528,9 @@ class PandasDataframe(ModinDataframe):
             self._dtypes,
         )
 
-    def sort_by(self, axis, columns, ascending=True) -> "PandasDataframe":
+    def sort_by(
+        self, axis: int, columns: Union[str, List[str]], ascending: bool = True
+    ) -> "PandasDataframe":
         """
         Logically reorder rows (columns if axis=1) lexicographically by the data in a column or set of columns.
 
@@ -1532,7 +1550,7 @@ class PandasDataframe(ModinDataframe):
         """
         pass
 
-    def filter(self, axis, condition):
+    def filter(self, axis: int, condition: Callable) -> "PandasDataframe":
         """
         Filter data based on the function provided along an entire axis.
 
@@ -1571,7 +1589,7 @@ class PandasDataframe(ModinDataframe):
             self.dtypes if axis == 0 else None,
         )
 
-    def filter_by_types(self, types):
+    def filter_by_types(self, types: List[Hashable]) -> "PandasDataframe":
         """
         Allow the user to specify a type or set of types by which to filter the columns.
 
@@ -1582,8 +1600,8 @@ class PandasDataframe(ModinDataframe):
 
         Returns
         -------
-        ModinDataframe
-             A new ModinDataframe from the filter provided.
+        PandasDataframe
+             A new PandasDataframe from the filter provided.
         """
         return self.mask(
             col_positions=[
@@ -1591,7 +1609,7 @@ class PandasDataframe(ModinDataframe):
             ]
         )
 
-    def explode(self, axis, func):
+    def explode(self, axis: int, func: Callable) -> "PandasDataframe":
         """
         Explode list-like entries along an entire axis.
 
@@ -2243,7 +2261,13 @@ class PandasDataframe(ModinDataframe):
         new_columns = self.columns.join(right_frame.columns, how=join_type)
         return self.__constructor__(new_frame, joined_index, new_columns, None, None)
 
-    def concat(self, axis, others, how, sort):
+    def concat(
+        self,
+        axis: int,
+        others: Union["ModinDataframe", List["ModinDataframe"]],
+        how,
+        sort,
+    ) -> "PandasDataframe":
         """
         Concatenate `self` with one or more other Modin DataFrames.
 
@@ -2311,7 +2335,13 @@ class PandasDataframe(ModinDataframe):
             new_partitions, new_index, new_columns, new_lengths, new_widths, new_dtypes
         )
 
-    def groupby(self, axis, by, operator, result_schema=None):
+    def groupby(
+        self,
+        axis: int,
+        by: Union[str, List[str]],
+        operator: Callable,
+        result_schema: Optional[Dict[Hashable, type]] = None,
+    ) -> "PandasDataframe":
         """
         Generate groups based on values in the input column(s) and perform the specified operation on each.
 
