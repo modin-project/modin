@@ -13,7 +13,9 @@
 
 import numpy as np
 import pytest
+import pandas
 from sklearn.metrics import accuracy_score
+from sklearn.datasets import load_breast_cancer
 import xgboost as xgb
 
 import modin.pandas as pd
@@ -74,67 +76,49 @@ def test_dmatrix_feature_names_and_feature_types(data, feature_names, feature_ty
     check_dmatrix(data, feature_names=feature_names, feature_types=feature_types)
 
 
-@pytest.mark.parametrize(
-    "feature_names",
-    [
-        ["Feature1", "Feature2", "Feature3", "Feature4", "Feature5"],
-        [u"??1", u"??2", u"??3", u"??4", u"??5"],
-    ],
-)
-def test_feature_names(feature_names):
-    data = np.random.randn(100, 5)
-    label = np.array([0, 1] * 50)
+def test_feature_names():
+    dataset = load_breast_cancer()
+    X = dataset.data
+    y = dataset.target
+    feature_names = [f"feat{i}" for i in range(X.shape[1])]
 
     check_dmatrix(
-        data,
-        label,
+        X,
+        y,
         feature_names=feature_names,
     )
 
-    dm = xgb.DMatrix(data, label=label, feature_names=feature_names)
-    md_dm = mxgb.DMatrix(
-        pd.DataFrame(data), label=pd.Series(label), feature_names=feature_names
+    dmatrix = xgb.DMatrix(X, label=y, feature_names=feature_names)
+    md_dmatrix = mxgb.DMatrix(
+        pd.DataFrame(X), label=pd.Series(y), feature_names=feature_names
     )
 
     params = {
-        "objective": "multi:softprob",
+        "objective": "binary:logistic",
         "eval_metric": "mlogloss",
-        "eta": 0.3,
-        "num_class": 3,
     }
 
-    bst = xgb.train(params, dm, num_boost_round=10)
-    md_bst = mxgb.train(params, md_dm, num_boost_round=10)
+    booster = xgb.train(params, dmatrix, num_boost_round=10)
+    md_booster = mxgb.train(params, md_dmatrix, num_boost_round=10)
 
-    predictions = bst.predict(dm)
-    modin_predictions = md_bst.predict(md_dm)
+    predictions = booster.predict(dmatrix)
+    modin_predictions = md_booster.predict(md_dmatrix)
 
-    preds = np.asarray([np.argmax(line) for line in predictions])
-    md_preds = np.asarray([np.argmax(line) for line in modin_predictions.to_numpy()])
+    preds = pandas.DataFrame(predictions).apply(np.round, axis=0)
+    modin_preds = modin_predictions.apply(np.round, axis=0)
 
-    val = accuracy_score(label, preds)
-    md_val = accuracy_score(label, md_preds)
+    accuracy = accuracy_score(y, preds)
+    md_accuracy = accuracy_score(y, modin_preds)
 
-    np.testing.assert_allclose(val, md_val, atol=0.02, rtol=0.01)
+    np.testing.assert_allclose(accuracy, md_accuracy, atol=0.005, rtol=0.002)
 
-    dummy = np.random.randn(5, 5)
-    dm = xgb.DMatrix(dummy, feature_names=feature_names)
-    md_dm = mxgb.DMatrix(pd.DataFrame(dummy), feature_names=feature_names)
-    predictions = bst.predict(dm)
-    modin_predictions = md_bst.predict(md_dm)
-
-    preds = np.asarray([np.argmax(line) for line in predictions])
-    md_preds = np.asarray([np.argmax(line) for line in modin_predictions.to_numpy()])
-
-    assert preds.all() == md_preds.all()
-
-    # different feature names must raises error
-    dm = xgb.DMatrix(dummy, feature_names=list("abcde"))
-    md_dm = mxgb.DMatrix(pd.DataFrame(dummy), feature_names=list("abcde"))
+    # Different feature_names (default) must raise error in this case
+    dm = xgb.DMatrix(X)
+    md_dm = mxgb.DMatrix(pd.DataFrame(X))
     with pytest.raises(ValueError):
-        bst.predict(dm)
+        booster.predict(dm)
     with pytest.raises(ValueError):
-        md_bst.predict(md_dm)
+        repr(md_booster.predict(md_dm))
 
 
 def test_feature_weights():
