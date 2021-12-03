@@ -1288,6 +1288,10 @@ class PandasDataframe(ModinDataframe):
         reduce_func : callable, default: None
             Callable function to reduce the dataframe.
             If none, then apply map_func twice.
+        dtypes : str, default: None
+            The data types for the result. This is an optimization
+            because there are functions that always result in a particular data
+            type, and this allows us to avoid (re)computing it.
 
         Returns
         -------
