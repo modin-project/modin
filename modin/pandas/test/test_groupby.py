@@ -15,7 +15,6 @@ import pytest
 import itertools
 import pandas
 import numpy as np
-import itertools
 import modin.pandas as pd
 from modin.utils import try_cast_to_pandas, get_current_execution, hashable
 from modin.core.dataframe.algebra.default2pandas.groupby import GroupBy
