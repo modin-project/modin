@@ -4,7 +4,8 @@ PandasOnPython Execution
 Queries that perform data transformation, data ingress or data egress using the `pandas on Python` execution
 pass through the Modin components detailed below.
 
-To enable `pandas on Python` execution, please refer to the usage section in :doc:`pandas on Python </UsingPandasonPython/index>`.
+`pandas on Python` execution is sequential and it's used for the debug purposes. To enable `pandas on Python` execution,
+please refer to the usage section in :doc:`pandas on Python </UsingPandasonPython/index>`.
 
 Data Transformation
 '''''''''''''''''''
@@ -67,9 +68,9 @@ exposes the :py:class:`~modin.core.execution.python.implementations.pandas_on_py
 whose responsibility is a read/write from/to a file.
 
 When reading data from a CSV file, for example, the :py:class:`~modin.core.execution.python.implementations.pandas_on_python.io.io.PandasOnPythonIO` class
-reads the data using corresponed `pandas` function (`pandas.read_csv` in this case). After the reading is complete, a new query compiler is created from `pandas` object
+reads the data using corresponding `pandas` function (``pandas.read_csv()`` in this case). After the reading is complete, a new query compiler is created from `pandas` object
 using :py:meth:`~modin.core.execution.python.implementations.pandas_on_python.io.io.PandasOnPythonIO.from_pandas` and returned.
 
 When writing data to a CSV file, for example, the :py:class:`~modin.core.execution.python.implementations.pandas_on_python.io.PandasOnPythonIO` converts a query compiler
-to `pandas` object using :py:meth:`~modin.core.storage_formats.base.query_compiler.BaseQueryCompiler.to_pandas`. After, `pandas` writes the data to the file using corresponded
-function (`pandas.to_csv` in this case).
+to `pandas` object using :py:meth:`~modin.core.storage_formats.base.query_compiler.BaseQueryCompiler.to_pandas`. After that, `pandas` writes the data to the file using
+corresponding function (``pandas.to_csv()`` in this case).
