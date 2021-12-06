@@ -115,7 +115,7 @@ def is_scalar(obj):
 
 def is_full_grab_slice(slc, sequence_len=None):
     """
-    Check that the passes slice grabs the whole sequence.
+    Check that the passed slice grabs the whole sequence.
 
     Parameters
     ----------

@@ -955,7 +955,7 @@ class PandasDataframe(object):
         if isinstance(indices, slice) or (is_range_like(indices) and indices.step == 1):
             # Converting range-like indexer to slice
             indices = slice(indices.start, indices.stop, indices.step)
-            if is_full_grab_slice(indices):
+            if is_full_grab_slice(indices, sequence_len=len(self.axes[axis])):
                 return OrderedDict(
                     zip(
                         range(self._partitions.shape[axis]),

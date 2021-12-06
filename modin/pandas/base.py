@@ -2997,7 +2997,11 @@ class BasePandasDataset(object):
         modin.pandas.BasePandasDataset
             Selected rows.
         """
-        if is_full_grab_slice(key):
+        if is_full_grab_slice(
+            key,
+            # Avoid triggering shape computation for lazy executions
+            sequence_len=(None if self._query_compiler.lazy_execution else len(self)),
+        ):
             return self.copy()
         return self.iloc[key]
 
