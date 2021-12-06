@@ -765,18 +765,37 @@ class _LocIndexer(_LocationIndexerBase):
             )
             return
         row_loc, col_loc, _ = self._parse_row_and_column_locators(key)
-        if (
-            isinstance(row_loc, list)
-            and len(row_loc) == 1
-            and row_loc[0] not in self.qc.index
-        ) or (
-            not (is_list_like(row_loc) or isinstance(row_loc, slice))
-            and row_loc not in self.qc.index
+        self._maybe_enlarge_labels(row_loc, col_loc)
+
+        row_lookup, col_lookup = self._compute_lookup(row_loc, col_loc)
+        super(_LocIndexer, self).__setitem__(
+            row_lookup,
+            col_lookup,
+            item,
+            axis=self._determine_setitem_axis(
+                row_lookup, col_lookup, is_scalar(row_loc), is_scalar(col_loc)
+            ),
+        )
+
+    def _maybe_enlarge_labels(self, row_loc, col_loc):
+        """
+        Adds missing labels to the appropriate axis' index.
+
+        Parameters
+        ----------
+        row_loc : list or int
+            List of labels (or singular label) along row axis.
+        col_loc : list or int
+            List of labels (or singular label) along col axis.
+        """
+        if (isinstance(row_loc, list) and len(row_loc) == 1) or not (
+            is_list_like(row_loc) or isinstance(row_loc, slice)
         ):
             row_loc = row_loc[0] if isinstance(row_loc, list) else row_loc
-            index = self.qc.index.insert(len(self.qc.index), row_loc)
-            self.qc = self.qc.reindex(labels=index, axis=0)
-            self.df._update_inplace(new_query_compiler=self.qc)
+            if row_loc not in self.qc.index:
+                index = self.qc.index.insert(len(self.qc.index), row_loc)
+                self.qc = self.qc.reindex(labels=index, axis=0)
+                self.df._update_inplace(new_query_compiler=self.qc)
 
         if (
             isinstance(col_loc, list)
@@ -784,7 +803,6 @@ class _LocIndexer(_LocationIndexerBase):
             and col_loc[0] not in self.qc.columns
         ):
             new_col = pandas.Series(index=self.df.index)
-            new_col[row_loc] = item
             self.df.insert(loc=len(self.df.columns), column=col_loc[0], value=new_col)
             self.qc = self.df._query_compiler
         else:
