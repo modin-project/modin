@@ -113,6 +113,33 @@ def is_scalar(obj):
     return not isinstance(obj, BasePandasDataset) and pandas_is_scalar(obj)
 
 
+def is_full_grab_slice(slc, sequence_len=None):
+    """
+    Check that the passes slice grabs the whole sequence.
+
+    Parameters
+    ----------
+    slc : slice
+        Slice object to check.
+    sequence_len : int, optional
+        Length of the sequence to index with the passed `slc`.
+        If not specified the function won't consider `slc` to
+        be a full-grab if its ``.stop`` attribute is equal or
+        greater than the sequence length.
+
+    Returns
+    -------
+    bool
+    """
+    return (
+        slc.start in (None, 0)
+        and slc.step in (None, 1)
+        and (
+            slc.stop is None or (sequence_len is not None and slc.stop >= sequence_len)
+        )
+    )
+
+
 def from_modin_frame_to_mi(df, sortorder=None, names=None):
     """
     Make a pandas.MultiIndex from a DataFrame.

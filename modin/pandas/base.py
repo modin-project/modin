@@ -45,6 +45,7 @@ from typing import Optional, Union, Sequence, Hashable
 import warnings
 import pickle as pkl
 
+from .utils import is_full_grab_slice
 from modin.utils import try_cast_to_pandas, _inherit_docstrings
 from modin.error_message import ErrorMessage
 from modin.pandas.utils import is_scalar
@@ -2996,7 +2997,7 @@ class BasePandasDataset(object):
         modin.pandas.BasePandasDataset
             Selected rows.
         """
-        if key.start is None and key.stop is None:
+        if is_full_grab_slice(key):
             return self.copy()
         return self.iloc[key]
 

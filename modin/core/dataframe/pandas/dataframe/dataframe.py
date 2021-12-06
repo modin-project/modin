@@ -30,6 +30,7 @@ from modin.core.storage_formats.pandas.parsers import (
     find_common_type_cat as find_common_type,
 )
 from modin.pandas.indexing import is_range_like
+from modin.pandas.utils import is_full_grab_slice
 
 
 class PandasDataframe(object):
@@ -954,12 +955,7 @@ class PandasDataframe(object):
         if isinstance(indices, slice) or (is_range_like(indices) and indices.step == 1):
             # Converting range-like indexer to slice
             indices = slice(indices.start, indices.stop, indices.step)
-            # Detecting full-axis grab
-            if (
-                indices.start in (None, 0)
-                and indices.step in (None, 1)
-                and (indices.stop is None or indices.stop >= len(self.axes[axis]))
-            ):
+            if is_full_grab_slice(indices):
                 return OrderedDict(
                     zip(
                         range(self._partitions.shape[axis]),
