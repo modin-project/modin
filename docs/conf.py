@@ -12,12 +12,15 @@ import os
 import types
 
 import ray
+
 # stub ray.remote to be a no-op so it doesn't shadow docstrings
 def noop_decorator(*args, **kwargs):
     if len(args) == 1 and len(kwargs) == 0 and callable(args[0]):
         # This is the case where the decorator is just @ray.remote without parameters.
         return args[0]
     return lambda cls_or_func: cls_or_func
+
+
 ray.remote = noop_decorator
 
 # fake modules if they're missing
@@ -107,13 +110,15 @@ pygments_style = "sphinx"
 # -- Options for HTML output -------------------------------------------------
 
 # Maps git branches to Sphinx themes
-default_html_theme = "sphinx_rtd_theme"
+default_html_theme = "pydata_sphinx_theme"
 current_branch = "nature"
 
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
 #
-html_theme = "sphinx_rtd_theme"
+html_theme = "pydata_sphinx_theme"
+
+html_favicon = "img/MODIN_ver2.ico"
 
 html_logo = "img/MODIN_ver2.png"
 
@@ -125,6 +130,35 @@ html_theme_options = {
     "sidebarwidth": 270,
     "collapse_navigation": False,
     "navigation_depth": 4,
+    "show_toc_level": 2,
+    "github_url": "https://github.com/modin-project/modin",
+    "icon_links": [
+        {
+            "name": "PyPI",
+            "url": "https://pypi.org/project/modin",
+            "icon": "fab fa-python",
+        },
+        {
+            "name": "conda-forge",
+            "url": "https://anaconda.org/conda-forge/modin",
+            "icon": "fas fa-circle-notch",
+        },
+        {
+            "name": "Join the Slack",
+            "url": "https://modin.org/slack.html",
+            "icon": "fab fa-slack",
+        },
+        {
+            "name": "Discourse",
+            "url": "https://discuss.modin.org/",
+            "icon": "fab fa-discourse",
+        },
+        {
+            "name": "Mailing List",
+            "url": "https://groups.google.com/forum/#!forum/modin-dev",
+            "icon": "fas fa-envelope-square",
+        },
+    ],
 }
 
 # Custom sidebar templates, must be a dictionary that maps document names
@@ -135,8 +169,8 @@ html_theme_options = {
 # default: ``['localtoc.html', 'relations.html', 'sourcelink.html',
 # 'searchbox.html']``.
 #
-html_sidebars = {
-    "**": ["globaltoc.html", "relations.html", "sourcelink.html", "searchbox.html"]
-}
+# The default pydata_sphinx_theme sidebar templates are
+# sidebar-nav-bs.html and search-field.html.
+html_sidebars = {}
 
 issues_github_path = "modin-project/modin"

@@ -448,11 +448,7 @@ class DataFrame(BasePandasDataset):
         elif hashable(by) and not isinstance(by, pandas.Grouper):
             drop = by in self.columns
             idx_name = by
-            if (
-                self._query_compiler.has_multiindex(axis=axis)
-                and by in self._query_compiler.get_index_names(axis)
-                and by is not None
-            ):
+            if by is not None and by in self._query_compiler.get_index_names(axis):
                 # In this case we pass the string value of the name through to the
                 # partitions. This is more efficient than broadcasting the values.
                 level, by = by, None
@@ -1945,24 +1941,17 @@ class DataFrame(BasePandasDataset):
             isinstance(col, (pandas.Index, Series, np.ndarray, list, Iterator))
             for col in keys
         ):
-            # The current implementation cannot mix a list column labels and list like
-            # objects.
-            if not all(
-                isinstance(col, (pandas.Index, Series, np.ndarray, list, Iterator))
-                for col in keys
-            ):
-                return self._default_to_pandas(
-                    "set_index",
-                    keys,
-                    drop=drop,
-                    append=append,
-                    inplace=inplace,
-                    verify_integrity=verify_integrity,
-                )
             if inplace:
                 frame = self
             else:
                 frame = self.copy()
+            if not all(
+                isinstance(col, (pandas.Index, Series, np.ndarray, list, Iterator))
+                for col in keys
+            ):
+                if drop:
+                    keys = [frame.pop(k) if not is_list_like(k) else k for k in keys]
+                keys = [k._to_pandas() if isinstance(k, Series) else k for k in keys]
             # These are single-threaded objects, so we might as well let pandas do the
             # calculation so that it matches.
             frame.index = (

@@ -15,12 +15,15 @@ import pytest
 import numpy as np
 import math
 import pandas
+import itertools
 from pandas.testing import (
     assert_series_equal,
     assert_frame_equal,
     assert_index_equal,
     assert_extension_array_equal,
 )
+from pandas.core.dtypes.common import is_list_like
+from modin.config.envvars import NPartitions
 import modin.pandas as pd
 from modin.utils import to_pandas, try_cast_to_pandas
 from modin.config import TestDatasetSize, TrackFileLeaks
@@ -45,6 +48,7 @@ DATASET_SIZE_DICT = {
 
 # Size of test dataframes
 NCOLS, NROWS = DATASET_SIZE_DICT.get(TestDatasetSize.get(), DATASET_SIZE_DICT["Normal"])
+NGROUPS = 10
 
 # Range for values for test data
 RAND_LOW = 0
@@ -136,6 +140,8 @@ test_bool_data = {
     for i in range(NCOLS)
 }
 
+test_groupby_data = {f"col{i}": np.arange(NCOLS) % NGROUPS for i in range(NROWS)}
+
 test_data_resample = {
     "data": {"A": range(12), "B": range(12)},
     "index": pandas.date_range("31/12/2000", periods=12, freq="H"),
@@ -202,6 +208,16 @@ test_data_categorical = {
 
 test_data_categorical_values = list(test_data_categorical.values())
 test_data_categorical_keys = list(test_data_categorical.keys())
+
+# Fully fill all of the partitions used in tests.
+test_data_large_categorical_dataframe = {
+    i: pandas.Categorical(np.arange(NPartitions.get() * 32))
+    for i in range(NPartitions.get() * 32)
+}
+test_data_large_categorical_series_values = [
+    pandas.Categorical(np.arange(NPartitions.get() * 32))
+]
+test_data_large_categorical_series_keys = ["categorical_series"]
 
 numeric_dfs = [
     "empty_data",
@@ -1335,3 +1351,14 @@ def make_default_file(file_type: str):
         return filename
 
     return _make_default_file, filenames
+
+
+def dict_equals(dict1, dict2):
+    """Check whether two dictionaries are equal and raise an ``AssertionError`` if they aren't."""
+    for key1, key2 in itertools.zip_longest(sorted(dict1), sorted(dict2)):
+        assert (key1 == key2) or (np.isnan(key1) and np.isnan(key2))
+        value1, value2 = dict1[key1], dict2[key2]
+        if is_list_like(value1):
+            np.testing.assert_array_equal(value1, value2)
+        else:
+            assert value1 == value2

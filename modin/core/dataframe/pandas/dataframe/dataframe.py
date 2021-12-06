@@ -954,7 +954,12 @@ class PandasDataframe(object):
         if isinstance(indices, slice) or (is_range_like(indices) and indices.step == 1):
             # Converting range-like indexer to slice
             indices = slice(indices.start, indices.stop, indices.step)
-            if indices == slice(None) or indices == slice(0, None):
+            # Detecting full-axis grab
+            if (
+                indices.start in (None, 0)
+                and indices.step in (None, 1)
+                and (indices.stop is None or indices.stop >= len(self.axes[axis]))
+            ):
                 return OrderedDict(
                     zip(
                         range(self._partitions.shape[axis]),
@@ -2295,10 +2300,13 @@ class PandasDataframe(object):
         new_partitions = self._partition_mgr_cls.lazy_map_partitions(
             self._partitions, lambda df: df.T
         ).T
-        new_dtypes = pandas.Series(
-            np.full(len(self.index), find_common_type(self.dtypes.values)),
-            index=self.index,
-        )
+        if self._dtypes is not None:
+            new_dtypes = pandas.Series(
+                np.full(len(self.index), find_common_type(self.dtypes.values)),
+                index=self.index,
+            )
+        else:
+            new_dtypes = None
         return self.__constructor__(
             new_partitions,
             self.columns,

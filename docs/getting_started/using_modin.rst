@@ -1,3 +1,4 @@
+===========
 Using Modin
 ===========
 
@@ -21,7 +22,7 @@ Quickstart
 **That's it. You're ready to use Modin on your previous pandas notebooks.** 
 
 We currently have most of the pandas API implemented and are working toward 
-full functional parity with pandas (as well as even more `tools and features`_ ).
+full functional parity with pandas (as well as even more tools and features).
 
 Using Modin on a Single Node
 ----------------------------
@@ -29,7 +30,7 @@ Using Modin on a Single Node
 **In local (without a cluster) modin will create and manage a local (dask or ray) cluster for the execution**
 
 In order to use the most up-to-date version of Modin, please follow the instructions on
-the :doc:`installation page </installation>`.
+the :doc:`installation page <index>`.
 
 Once you import the library, you should see something similar to the following output:
 
@@ -66,12 +67,12 @@ requested that functionality.
 Connecting to a database for `read_sql`
 ---------------------------------------
 
-To make Pandas read from a SQL database, you have two options:
+To make pandas read from a SQL database, you have two options:
 
 1) Pass a connection string, e.g. ``postgresql://reader:NWDMCE5xdipIjRrp@hh-pgsql-public.ebi.ac.uk:5432/pfmegrnargs``
 2) Pass an open database connection, e.g. for psycopg2, ``psycopg2.connect("dbname=pfmegrnargs user=reader password=NWDMCE5xdipIjRrp host=hh-pgsql-public.ebi.ac.uk")``
 
-The first option works with both Modin and Pandas. If you try the second option
+The first option works with both Modin and pandas. If you try the second option
 in Modin, Modin will default to pandas because open database connections cannot be pickled.
 Pickling is required to send connection details to remote workers.
 To handle the unique requirements of distributed database access, Modin has a distributed
@@ -111,7 +112,7 @@ refer to the `autoscaler documentation`_.
 We will provide a sample config file for private servers and other cloud service
 providers as we continue to develop and improve Modin's cluster support.
 
-See more on the :doc:`Modin in the Cloud </experimental_features/modin_in_the_cloud>`
+See more on the :doc:`Modin in the Cloud </advanced_usage/modin_in_the_cloud>`
 documentation page.
 
 Advanced usage (experimental)
@@ -134,7 +135,7 @@ you can customize your Ray environment for use in Modin!
 Exceeding memory (Out of core pandas)
 """""""""""""""""""""""""""""""""""""
 
-Modin experimentally supports out of core operations. See more on the :doc:`Out of Core </out_of_core>`
+Modin experimentally supports out of core operations. See more on the :doc:`Out of Core <out_of_core>`
 documentation page.
 
 Reducing or limiting the resources Modin can use
@@ -175,14 +176,16 @@ improve the performance (and might end up hurting the performance of the system)
 
 Examples
 --------
-You can find an example on our recent `blog post`_ or on the `Jupyter Notebook`_ that we
-used to create the blog post.
+
+scikit-learn with LinearRegression
+""""""""""""""""""""""""""""""""""
+
+Here is a Jupyter Notebook example which uses Modin with scikit-learn
+and linear regression `sklearn LinearRegression`_.
 
 .. _`DataFrame`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.html
 .. _`pandas`: https://pandas.pydata.org/pandas-docs/stable/
 .. _`open an issue`: https://github.com/modin-project/modin/issues
 .. _`autoscaler documentation`: https://ray.readthedocs.io/en/latest/autoscaling.html
 .. _`Ray's documentation`: https://ray.readthedocs.io/en/latest/api.html
-.. _`blog post`: https://rise.cs.berkeley.edu/blog/pandas-on-ray-early-lessons/
-.. _`Jupyter Notebook`: https://gist.github.com/devin-petersohn/f424d9fb5579a96507c709a36d487f24#file-pandas_on_ray_blog_post_0-ipynb
-.. _`tools and features`: comparisons/upcoming_features.html
+.. _sklearn LinearRegression: https://github.com/modin-project/modin/blob/master/examples/modin-scikit-learn-example.ipynb

@@ -309,6 +309,7 @@ def generate_dataframe(
     groupby_ncols: Optional[int] = None,
     count_groups: Optional[int] = None,
     gen_unique_key: bool = False,
+    cache_prefix: str = None,
 ) -> Union[pd.DataFrame, pandas.DataFrame]:
     """
     Generate DataFrame with caching.
@@ -341,6 +342,8 @@ def generate_dataframe(
         Count of groups in groupby columns.
     gen_unique_key : bool, default: False
         Generate `col1` column where all elements are unique.
+    cache_prefix : str, optional
+        Prefix to add to the cache key of the requested frame.
 
     Returns
     -------
@@ -368,6 +371,9 @@ def generate_dataframe(
         count_groups,
         gen_unique_key,
     )
+
+    if cache_prefix is not None:
+        cache_key = (cache_prefix, *cache_key)
 
     if cache_key in dataframes_cache:
         return dataframes_cache[cache_key]
@@ -456,22 +462,20 @@ def trigger_import(*dfs):
     *dfs : iterable
         DataFrames to trigger import.
     """
-    assert ASV_USE_STORAGE_FORMAT == "omnisci"
+    if ASV_USE_STORAGE_FORMAT != "omnisci" or ASV_USE_IMPL == "pandas":
+        return
 
     from modin.experimental.core.execution.native.implementations.omnisci_on_native.omnisci_worker import (
         OmnisciServer,
     )
 
     for df in dfs:
-        if ASV_USE_IMPL == "modin":
-            df.shape  # to trigger real execution
-            df._query_compiler._modin_frame._partitions[0][
-                0
-            ].frame_id = OmnisciServer().put_arrow_to_omnisci(
-                df._query_compiler._modin_frame._partitions[0][0].get()
-            )  # to trigger real execution
-        elif ASV_USE_IMPL == "pandas":
-            pass
+        df.shape  # to trigger real execution
+        df._query_compiler._modin_frame._partitions[0][
+            0
+        ].frame_id = OmnisciServer().put_arrow_to_omnisci(
+            df._query_compiler._modin_frame._partitions[0][0].get()
+        )  # to trigger real execution
 
 
 def execute(

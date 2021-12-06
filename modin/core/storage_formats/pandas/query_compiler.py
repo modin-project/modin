@@ -51,6 +51,7 @@ from modin.core.dataframe.algebra import (
     GroupByReduce,
     groupby_reduce_functions,
 )
+from modin.core.dataframe.algebra.default2pandas.groupby import GroupBy
 
 
 def _get_axis(axis):
@@ -793,14 +794,14 @@ class PandasQueryCompiler(BaseQueryCompiler):
     # END Reduction operations
 
     def _resample_func(
-        self, resample_args, func_name, new_columns=None, df_op=None, *args, **kwargs
+        self, resample_kwargs, func_name, new_columns=None, df_op=None, *args, **kwargs
     ):
         """
         Resample underlying time-series data and apply aggregation on it.
 
         Parameters
         ----------
-        resample_args : list
+        resample_kwargs : dict
             Resample parameters in the format of ``modin.pandas.DataFrame.resample`` signature.
         func_name : str
             Aggregation function name to apply on resampler object.
@@ -820,11 +821,11 @@ class PandasQueryCompiler(BaseQueryCompiler):
             New QueryCompiler containing the result of resample aggregation.
         """
 
-        def map_func(df, resample_args=resample_args):
+        def map_func(df, resample_kwargs=resample_kwargs):
             """Resample time-series data of the passed frame and apply aggregation function on it."""
             if df_op is not None:
                 df = df_op(df)
-            resampled_val = df.resample(*resample_args)
+            resampled_val = df.resample(**resample_kwargs)
             op = getattr(pandas.core.resample.Resampler, func_name)
             if callable(op):
                 try:
@@ -832,7 +833,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
                     # all the time, so this will try to fast-path the code first.
                     val = op(resampled_val, *args, **kwargs)
                 except (ValueError):
-                    resampled_val = df.copy().resample(*resample_args)
+                    resampled_val = df.copy().resample(**resample_kwargs)
                     val = op(resampled_val, *args, **kwargs)
             else:
                 val = getattr(resampled_val, func_name)
@@ -847,12 +848,12 @@ class PandasQueryCompiler(BaseQueryCompiler):
         )
         return self.__constructor__(new_modin_frame)
 
-    def resample_get_group(self, resample_args, name, obj):
-        return self._resample_func(resample_args, "get_group", name=name, obj=obj)
+    def resample_get_group(self, resample_kwargs, name, obj):
+        return self._resample_func(resample_kwargs, "get_group", name=name, obj=obj)
 
-    def resample_app_ser(self, resample_args, func, *args, **kwargs):
+    def resample_app_ser(self, resample_kwargs, func, *args, **kwargs):
         return self._resample_func(
-            resample_args,
+            resample_kwargs,
             "apply",
             df_op=lambda df: df.squeeze(axis=1),
             func=func,
@@ -860,12 +861,12 @@ class PandasQueryCompiler(BaseQueryCompiler):
             **kwargs,
         )
 
-    def resample_app_df(self, resample_args, func, *args, **kwargs):
-        return self._resample_func(resample_args, "apply", func=func, *args, **kwargs)
+    def resample_app_df(self, resample_kwargs, func, *args, **kwargs):
+        return self._resample_func(resample_kwargs, "apply", func=func, *args, **kwargs)
 
-    def resample_agg_ser(self, resample_args, func, *args, **kwargs):
+    def resample_agg_ser(self, resample_kwargs, func, *args, **kwargs):
         return self._resample_func(
-            resample_args,
+            resample_kwargs,
             "aggregate",
             df_op=lambda df: df.squeeze(axis=1),
             func=func,
@@ -873,41 +874,45 @@ class PandasQueryCompiler(BaseQueryCompiler):
             **kwargs,
         )
 
-    def resample_agg_df(self, resample_args, func, *args, **kwargs):
+    def resample_agg_df(self, resample_kwargs, func, *args, **kwargs):
         return self._resample_func(
-            resample_args, "aggregate", func=func, *args, **kwargs
+            resample_kwargs, "aggregate", func=func, *args, **kwargs
         )
 
-    def resample_transform(self, resample_args, arg, *args, **kwargs):
-        return self._resample_func(resample_args, "transform", arg=arg, *args, **kwargs)
+    def resample_transform(self, resample_kwargs, arg, *args, **kwargs):
+        return self._resample_func(
+            resample_kwargs, "transform", arg=arg, *args, **kwargs
+        )
 
-    def resample_pipe(self, resample_args, func, *args, **kwargs):
-        return self._resample_func(resample_args, "pipe", func=func, *args, **kwargs)
+    def resample_pipe(self, resample_kwargs, func, *args, **kwargs):
+        return self._resample_func(resample_kwargs, "pipe", func=func, *args, **kwargs)
 
-    def resample_ffill(self, resample_args, limit):
-        return self._resample_func(resample_args, "ffill", limit=limit)
+    def resample_ffill(self, resample_kwargs, limit):
+        return self._resample_func(resample_kwargs, "ffill", limit=limit)
 
-    def resample_backfill(self, resample_args, limit):
-        return self._resample_func(resample_args, "backfill", limit=limit)
+    def resample_backfill(self, resample_kwargs, limit):
+        return self._resample_func(resample_kwargs, "backfill", limit=limit)
 
-    def resample_bfill(self, resample_args, limit):
-        return self._resample_func(resample_args, "bfill", limit=limit)
+    def resample_bfill(self, resample_kwargs, limit):
+        return self._resample_func(resample_kwargs, "bfill", limit=limit)
 
-    def resample_pad(self, resample_args, limit):
-        return self._resample_func(resample_args, "pad", limit=limit)
+    def resample_pad(self, resample_kwargs, limit):
+        return self._resample_func(resample_kwargs, "pad", limit=limit)
 
-    def resample_nearest(self, resample_args, limit):
-        return self._resample_func(resample_args, "nearest", limit=limit)
+    def resample_nearest(self, resample_kwargs, limit):
+        return self._resample_func(resample_kwargs, "nearest", limit=limit)
 
-    def resample_fillna(self, resample_args, method, limit):
-        return self._resample_func(resample_args, "fillna", method=method, limit=limit)
+    def resample_fillna(self, resample_kwargs, method, limit):
+        return self._resample_func(
+            resample_kwargs, "fillna", method=method, limit=limit
+        )
 
-    def resample_asfreq(self, resample_args, fill_value):
-        return self._resample_func(resample_args, "asfreq", fill_value=fill_value)
+    def resample_asfreq(self, resample_kwargs, fill_value):
+        return self._resample_func(resample_kwargs, "asfreq", fill_value=fill_value)
 
     def resample_interpolate(
         self,
-        resample_args,
+        resample_kwargs,
         method,
         axis,
         limit,
@@ -918,7 +923,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         **kwargs,
     ):
         return self._resample_func(
-            resample_args,
+            resample_kwargs,
             "interpolate",
             axis=axis,
             limit=limit,
@@ -929,47 +934,47 @@ class PandasQueryCompiler(BaseQueryCompiler):
             **kwargs,
         )
 
-    def resample_count(self, resample_args):
-        return self._resample_func(resample_args, "count")
+    def resample_count(self, resample_kwargs):
+        return self._resample_func(resample_kwargs, "count")
 
-    def resample_nunique(self, resample_args, _method, *args, **kwargs):
+    def resample_nunique(self, resample_kwargs, _method, *args, **kwargs):
         return self._resample_func(
-            resample_args, "nunique", _method=_method, *args, **kwargs
+            resample_kwargs, "nunique", _method=_method, *args, **kwargs
         )
 
-    def resample_first(self, resample_args, _method, *args, **kwargs):
+    def resample_first(self, resample_kwargs, _method, *args, **kwargs):
         return self._resample_func(
-            resample_args, "first", _method=_method, *args, **kwargs
+            resample_kwargs, "first", _method=_method, *args, **kwargs
         )
 
-    def resample_last(self, resample_args, _method, *args, **kwargs):
+    def resample_last(self, resample_kwargs, _method, *args, **kwargs):
         return self._resample_func(
-            resample_args, "last", _method=_method, *args, **kwargs
+            resample_kwargs, "last", _method=_method, *args, **kwargs
         )
 
-    def resample_max(self, resample_args, _method, *args, **kwargs):
+    def resample_max(self, resample_kwargs, _method, *args, **kwargs):
         return self._resample_func(
-            resample_args, "max", _method=_method, *args, **kwargs
+            resample_kwargs, "max", _method=_method, *args, **kwargs
         )
 
-    def resample_mean(self, resample_args, _method, *args, **kwargs):
+    def resample_mean(self, resample_kwargs, _method, *args, **kwargs):
         return self._resample_func(
-            resample_args, "median", _method=_method, *args, **kwargs
+            resample_kwargs, "median", _method=_method, *args, **kwargs
         )
 
-    def resample_median(self, resample_args, _method, *args, **kwargs):
+    def resample_median(self, resample_kwargs, _method, *args, **kwargs):
         return self._resample_func(
-            resample_args, "median", _method=_method, *args, **kwargs
+            resample_kwargs, "median", _method=_method, *args, **kwargs
         )
 
-    def resample_min(self, resample_args, _method, *args, **kwargs):
+    def resample_min(self, resample_kwargs, _method, *args, **kwargs):
         return self._resample_func(
-            resample_args, "min", _method=_method, *args, **kwargs
+            resample_kwargs, "min", _method=_method, *args, **kwargs
         )
 
-    def resample_ohlc_ser(self, resample_args, _method, *args, **kwargs):
+    def resample_ohlc_ser(self, resample_kwargs, _method, *args, **kwargs):
         return self._resample_func(
-            resample_args,
+            resample_kwargs,
             "ohlc",
             df_op=lambda df: df.squeeze(axis=1),
             _method=_method,
@@ -977,37 +982,47 @@ class PandasQueryCompiler(BaseQueryCompiler):
             **kwargs,
         )
 
-    def resample_ohlc_df(self, resample_args, _method, *args, **kwargs):
+    def resample_ohlc_df(self, resample_kwargs, _method, *args, **kwargs):
         return self._resample_func(
-            resample_args, "ohlc", _method=_method, *args, **kwargs
+            resample_kwargs, "ohlc", _method=_method, *args, **kwargs
         )
 
-    def resample_prod(self, resample_args, _method, min_count, *args, **kwargs):
+    def resample_prod(self, resample_kwargs, _method, min_count, *args, **kwargs):
         return self._resample_func(
-            resample_args, "prod", _method=_method, min_count=min_count, *args, **kwargs
+            resample_kwargs,
+            "prod",
+            _method=_method,
+            min_count=min_count,
+            *args,
+            **kwargs,
         )
 
-    def resample_size(self, resample_args):
-        return self._resample_func(resample_args, "size", new_columns=["__reduced__"])
+    def resample_size(self, resample_kwargs):
+        return self._resample_func(resample_kwargs, "size", new_columns=["__reduced__"])
 
-    def resample_sem(self, resample_args, _method, *args, **kwargs):
+    def resample_sem(self, resample_kwargs, _method, *args, **kwargs):
         return self._resample_func(
-            resample_args, "sem", _method=_method, *args, **kwargs
+            resample_kwargs, "sem", _method=_method, *args, **kwargs
         )
 
-    def resample_std(self, resample_args, ddof, *args, **kwargs):
-        return self._resample_func(resample_args, "std", ddof=ddof, *args, **kwargs)
+    def resample_std(self, resample_kwargs, ddof, *args, **kwargs):
+        return self._resample_func(resample_kwargs, "std", ddof=ddof, *args, **kwargs)
 
-    def resample_sum(self, resample_args, _method, min_count, *args, **kwargs):
+    def resample_sum(self, resample_kwargs, _method, min_count, *args, **kwargs):
         return self._resample_func(
-            resample_args, "sum", _method=_method, min_count=min_count, *args, **kwargs
+            resample_kwargs,
+            "sum",
+            _method=_method,
+            min_count=min_count,
+            *args,
+            **kwargs,
         )
 
-    def resample_var(self, resample_args, ddof, *args, **kwargs):
-        return self._resample_func(resample_args, "var", ddof=ddof, *args, **kwargs)
+    def resample_var(self, resample_kwargs, ddof, *args, **kwargs):
+        return self._resample_func(resample_kwargs, "var", ddof=ddof, *args, **kwargs)
 
-    def resample_quantile(self, resample_args, q, **kwargs):
-        return self._resample_func(resample_args, "quantile", q=q, **kwargs)
+    def resample_quantile(self, resample_kwargs, q, **kwargs):
+        return self._resample_func(resample_kwargs, "quantile", q=q, **kwargs)
 
     window_mean = Fold.register(
         lambda df, rolling_args, *args, **kwargs: pandas.DataFrame(
@@ -2661,7 +2676,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 by = [by]
         else:
             if not isinstance(by, list):
-                by = [by]
+                by = [by] if by is not None else []
             internal_by = [o for o in by if hashable(o) and o in self.columns]
             internal_qc = (
                 [self.getitem_column_array(internal_by)] if len(internal_by) else []
@@ -2698,20 +2713,28 @@ class PandasQueryCompiler(BaseQueryCompiler):
             # right index and placing columns in the correct order.
             groupby_kwargs["as_index"] = True
 
+            # We have to filter func-dict BEFORE inserting broadcasted 'by' columns
+            # to avoid multiple aggregation results for 'by' cols in case they're
+            # present in the func-dict:
+            partition_agg_func = GroupByReduce.try_filter_dict(agg_func, df)
+
             internal_by_cols = pandas.Index([])
-            missmatched_cols = pandas.Index([])
+            missed_by_cols = pandas.Index([])
+
             if by is not None:
                 internal_by_df = by[internal_by]
 
                 if isinstance(internal_by_df, pandas.Series):
                     internal_by_df = internal_by_df.to_frame()
 
-                missmatched_cols = internal_by_df.columns.difference(df.columns)
-                df = pandas.concat(
-                    [df, internal_by_df[missmatched_cols]],
-                    axis=1,
-                    copy=False,
-                )
+                missed_by_cols = internal_by_df.columns.difference(df.columns)
+                if len(missed_by_cols) > 0:
+                    df = pandas.concat(
+                        [df, internal_by_df[missed_by_cols]],
+                        axis=1,
+                        copy=False,
+                    )
+
                 internal_by_cols = internal_by_df.columns
 
                 external_by = by.columns.difference(internal_by).unique()
@@ -2733,100 +2756,61 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 """Compute groupby aggregation for a single partition."""
                 grouped_df = df.groupby(by=by, axis=axis, **groupby_kwargs)
                 try:
-                    if isinstance(agg_func, dict):
-                        # Filter our keys that don't exist in this partition. This happens when some columns
-                        # from this original dataframe didn't end up in every partition.
-                        partition_dict = {
-                            k: v for k, v in agg_func.items() if k in df.columns
-                        }
-                        result = grouped_df.agg(partition_dict)
-                    else:
-                        result = agg_func(grouped_df, **agg_kwargs)
-                # This happens when the partition is filled with non-numeric data and a
-                # numeric operation is done. We need to build the index here to avoid
-                # issues with extracting the index.
+                    result = partition_agg_func(grouped_df, **agg_kwargs)
                 except (DataError, TypeError):
+                    # This happens when the partition is filled with non-numeric data and a
+                    # numeric operation is done. We need to build the index here to avoid
+                    # issues with extracting the index.
                     result = pandas.DataFrame(index=grouped_df.size().index)
                 if isinstance(result, pandas.Series):
                     result = result.to_frame(
                         result.name if result.name is not None else "__reduced__"
                     )
 
-                result_cols = result.columns
-                result.drop(columns=missmatched_cols, inplace=True, errors="ignore")
+                selection = agg_func.keys() if isinstance(agg_func, dict) else None
+                if selection is None:
+                    # Some pandas built-in aggregation functions aggregate 'by' columns
+                    # (for example 'apply', 'dtypes', maybe more...). Since we make sure
+                    # that all of the 'by' columns are presented in every partition by
+                    # inserting the missed ones, we will end up with all of the 'by'
+                    # columns being aggregated in every partition. To avoid duplications
+                    # in the result we drop all of the 'by' columns that were inserted
+                    # in this partition AFTER handling 'as_index' parameter. The order
+                    # is important for proper naming-conflicts handling.
+                    misaggregated_cols = missed_by_cols.intersection(result.columns)
+                else:
+                    misaggregated_cols = []
 
                 if not as_index:
-                    keep_index_levels = len(by) > 1 and any(
-                        isinstance(x, pandas.CategoricalDtype)
-                        for x in df[internal_by_cols].dtypes
+                    GroupBy.handle_as_index_for_dataframe(
+                        result,
+                        internal_by_cols,
+                        by_cols_dtypes=df[internal_by_cols].dtypes.values,
+                        by_length=len(by),
+                        selection=selection,
+                        partition_idx=partition_idx,
+                        drop=drop,
+                        inplace=True,
                     )
+                else:
+                    new_index_names = tuple(
+                        None
+                        if isinstance(name, str) and name.startswith("__reduced__")
+                        else name
+                        for name in result.index.names
+                    )
+                    result.index.names = new_index_names
 
-                    if internal_by_cols.nlevels != result_cols.nlevels:
-                        cols_to_insert = (
-                            pandas.Index([])
-                            if keep_index_levels
-                            else internal_by_cols.copy()
-                        )
-                    else:
-                        cols_to_insert = (
-                            internal_by_cols.intersection(result_cols)
-                            if keep_index_levels
-                            else internal_by_cols.difference(result_cols)
-                        )
-
-                    if keep_index_levels:
-                        result.drop(
-                            columns=cols_to_insert, inplace=True, errors="ignore"
-                        )
-
-                    drop = True
-                    if partition_idx == 0:
-                        drop = False
-                        if not keep_index_levels:
-                            lvls_to_drop = [
-                                i
-                                for i, name in enumerate(result.index.names)
-                                if name not in cols_to_insert
-                            ]
-                            if len(lvls_to_drop) == result.index.nlevels:
-                                drop = True
-                            else:
-                                result.index = result.index.droplevel(lvls_to_drop)
-
-                    if (
-                        not isinstance(result.index, pandas.MultiIndex)
-                        and result.index.name is None
-                    ):
-                        drop = True
-
-                    result.reset_index(drop=drop, inplace=True)
-
-                new_index_names = [
-                    None
-                    if isinstance(name, str) and name.startswith("__reduced__")
-                    else name
-                    for name in result.index.names
-                ]
-
-                cols_to_drop = (
-                    result.columns[result.columns.str.match(r"__reduced__.*", na=False)]
-                    if hasattr(result.columns, "str")
-                    else []
-                )
-
-                result.index.names = new_index_names
-
-                # Not dropping columns if result is Series
-                if len(result.columns) > 1:
-                    result.drop(columns=cols_to_drop, inplace=True)
+                if len(misaggregated_cols) > 0:
+                    result.drop(columns=misaggregated_cols, inplace=True)
 
                 return result
 
             try:
                 return compute_groupby(df, drop, partition_idx)
-            # This will happen with Arrow buffer read-only errors. We don't want to copy
-            # all the time, so this will try to fast-path the code first.
             except (ValueError, KeyError):
+                # This will happen with Arrow buffer read-only errors. We don't want to copy
+                # all the time, so this will try to fast-path the code first.
                 return compute_groupby(df.copy(), drop, partition_idx)
 
         apply_indices = list(agg_func.keys()) if isinstance(agg_func, dict) else None

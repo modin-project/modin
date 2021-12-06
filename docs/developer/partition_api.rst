@@ -14,7 +14,7 @@ You can pass the partitions having needed IPs to your function. It can help with
 Partition API implementations
 -----------------------------
 By default, a :py:class:`~modin.pandas.dataframe.DataFrame` stores underlying partitions as ``pandas.DataFrame`` objects.
-You can find the specific implementation of Modin's Partition Interface in :doc:`Pandas Partition API </flow/modin/distributed/dataframe/pandas>`.
+You can find the specific implementation of Modin's Partition Interface in :doc:`pandas Partition API </flow/modin/distributed/dataframe/pandas>`.
 
 .. toctree::
   :hidden:

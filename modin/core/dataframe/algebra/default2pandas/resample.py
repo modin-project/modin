@@ -40,11 +40,11 @@ class Resampler:
             to resampled time-series data.
         """
 
-        def fn(df, resample_args, *args, **kwargs):
+        def fn(df, resample_kwargs, *args, **kwargs):
             """Resample time-series data of the passed frame and apply specified aggregation."""
             if squeeze_self:
                 df = df.squeeze(axis=1)
-            resampler = df.resample(*resample_args)
+            resampler = df.resample(**resample_kwargs)
 
             if type(func) == property:
                 return func.fget(resampler)
