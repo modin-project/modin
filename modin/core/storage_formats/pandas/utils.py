@@ -56,6 +56,7 @@ def compute_chunksize(
         Number of splits to separate the DataFrame into.
     default_block_size : int, optional
         Minimum number of rows/columns in a single split.
+        If not specified, the value is assumed equal to ``MinPartitionSize``.
     axis : int, optional
         Axis to split across. If not specified - split accros both axes.
 
