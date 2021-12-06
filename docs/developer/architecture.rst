@@ -27,7 +27,6 @@ logic internally.
 System View
 -----------
 A top-down view of Modin’s architecture is detailed below:
-look to something like this:
 
 .. image:: /img/10000_meter.png
    :align: center
@@ -263,7 +262,6 @@ Module/Class View
 
 Modin's modules layout is shown below. Click on the links to deep dive into Modin's internal implementation
 details. The documentation covers most modules, with more docs being added everyday!
-by documentation for now, the rest is coming soon...).
 
 .. parsed-literal::
    ├───.github
