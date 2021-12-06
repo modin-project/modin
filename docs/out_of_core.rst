@@ -1,5 +1,5 @@
 Out-of-memory data with Modin
-=====================================
+=============================
 
 When using pandas, you might run into a memory error if you are working with large datasets that cannot fit in memory or perform certain memory-intensive operations (e.g., joins). 
 
@@ -7,28 +7,28 @@ Modin solves this problem by spilling over to disk, in other words, it uses your
 
 
 Motivating Example: Memory error with pandas
----------------------------------------------
+--------------------------------------------
 
 pandas makes use of in-memory data structures to store and operate on data, which means that if you have a dataset that is too large to fit in memory, it will cause an error on pandas. As an example, let's creates a 80GB DataFrame by appending together 40 different 2GB DataFrames. 
 
 .. code-block:: python
 
-  import pandas as pd
+  import pandas as old_pd
   import numpy as np
-  df = pd.concat([pd.DataFrame(np.random.randint(0, 100, size=(2**20, 2**8))) for _ in range(40)]) # Memory Error!
+  df = old_pd.concat([old_pd.DataFrame(np.random.randint(0, 100, size=(2**20, 2**8))) for _ in range(40)]) # Memory Error!
 
 When we run this on a laptop with 32GB of RAM, pandas will run out of memory and throw an error (e.g., :code:`MemoryError` , :code:`Killed: 9`). 
 
 The `pandas documentation <https://pandas.pydata.org/pandas-docs/stable/user_guide/scale.html>`_ has a great section on recommendations for scaling your analysis to these larger datasets. However, this generally involves loading in less data or rewriting your pandas code to process the data in smaller chunks. 
 
 Operating on out-of-memory data with Modin
--------------------------------------------
+------------------------------------------
 
 In order to work with data that exceeds memory constraints, you can use Modin to handle these large datasets.
 
 .. code-block:: python
 
-  import pandas as pd
+  import modin.pandas as pd
   import numpy as np
   df = pd.concat([pd.DataFrame(np.random.randint(0, 100, size=(2**20, 2**8))) for _ in range(40)]) # 40x2GB frames -- Working!
   df.info()
