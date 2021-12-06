@@ -406,9 +406,7 @@ class _LocationIndexerBase(object):
                 # Case 3:  df = pd.Series([0, 1, 2], index=['a', 'b', 'c'])
                 # Then df.dtypes == dtype('int64') and type(df.dtypes) is
                 # numpy.dtype
-                or (
-                    getattr(self.df.dtypes, "name", "") == "category"
-                )
+                or (getattr(self.df.dtypes, "name", "") == "category")
             )
             if not assigning_to_single_category_column:
                 item = self._broadcast_item(row_lookup, col_lookup, item, to_shape)
