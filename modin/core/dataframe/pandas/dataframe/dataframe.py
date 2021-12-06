@@ -71,6 +71,8 @@ def lazy_metadata_decorator(
                         self._propagate_index_objs(axis=1)
                 elif apply_axis == "columns":
                     self._propagate_index_objs(axis=1)
+                elif apply_axis == "rows":
+                    self._propagate_index_objs(axis=0)
             result = f(self, *args, **kwargs)
             if inherit and not transpose:
                 result._deferred_index = self._deferred_index
@@ -668,7 +670,7 @@ class PandasDataframe(object):
             row_numeric_idx=new_row_order, col_numeric_idx=new_col_order
         )
 
-    @lazy_metadata_decorator(apply_axis="columns")
+    @lazy_metadata_decorator(apply_axis="rows")
     def from_labels(self) -> "PandasDataframe":
         """
         Convert the row labels to a column of data, inserted at the first position.
