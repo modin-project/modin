@@ -1408,7 +1408,7 @@ class PandasDataframe(object):
             self._column_widths,
         )
 
-    @lazy_metadata_decorator(apply_axis="both")
+    @lazy_metadata_decorator(apply_axis="always_both")
     def filter_full_axis(self, axis, func):
         """
         Filter data based on the function provided along an entire axis.
@@ -1869,7 +1869,7 @@ class PandasDataframe(object):
 
         return self.__constructor__(new_partitions, *new_axes)
 
-    @lazy_metadata_decorator(apply_axis="both")
+    @lazy_metadata_decorator(apply_axis="opposite", axis_arg=0)
     def broadcast_apply_full_axis(
         self,
         axis,
