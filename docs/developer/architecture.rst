@@ -26,7 +26,7 @@ logic internally.
 
 System View
 -----------
-If we look to the overall class structure of the Modin system from very top, it will
+A top-down view of Modin’s architecture is detailed below:
 look to something like this:
 
 .. image:: /img/10000_meter.png
@@ -67,7 +67,7 @@ Component View
 
 User queries which perform data transformation, data ingress or data egress pass through the Modin components
 detailed below. The path the query takes is mostly similar across execution systems, with some minor exceptions like
-:doc:`OmnisciOnNative </flow/modin/experimental/core/execution/native/implementations/omnisci_on_native/index>` for example.
+:doc:`OmnisciOnNative </flow/modin/experimental/core/execution/native/implementations/omnisci_on_native/index>`.
 
 Data Transformation
 '''''''''''''''''''
@@ -156,7 +156,7 @@ further on the pages specific to the execution framework.
 Execution Engine
 ''''''''''''''''
 
-This layer performs computation on a partition of the data. The
+This layer performs computation on partitions of the data. The
 Modin Dataframe is designed to work with `task parallel`_ frameworks, but integration with
 data parallel frameworks should be possible with some effort.
 
@@ -189,7 +189,7 @@ The IO class is responsible for performing a parallel read/write from/to a file.
 Supported Execution Engines and Storage Formats
 '''''''''''''''''''''''''''''''''''''''''''''''
 
-This is the list of execution engines and in-memory formats supported in Modin. If you
+This is a list of execution engines and in-memory formats supported in Modin. If you
 would like to contribute a new execution engine or in-memory format, please see the
 documentation page on :doc:`contributing </developer/contributing>`.
 
@@ -240,7 +240,7 @@ and cuDF are also supported as experimental in-memory formats in Modin.
 Index
 -----
 
-We currently use the ``pandas.Index`` object for both indexing columns and rows. In the
+We currently use the ``pandas.Index`` object for indexing both columns and rows. In the
 future, we will implement a distributed, pandas-compatible Index object in order to remove
 this scaling limitation from the system. Most workloads will not be affected by this scalability limit
 since it only appears when operating on more than 10's of billions of columns or rows.
@@ -262,7 +262,7 @@ Module/Class View
 -----------------
 
 Modin's modules layout is shown below. Click on the links to deep dive into Modin's internal implementation
-details just pick module you are interested in (only some of the modules are covered
+details. The documentation covers most modules, with more docs being added everyday!
 by documentation for now, the rest is coming soon...).
 
 .. parsed-literal::
