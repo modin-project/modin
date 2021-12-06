@@ -23,13 +23,13 @@ from typing import List, Hashable, Optional, Callable, Union, Dict
 
 class ModinDataframe(ABC):
     """
-    An abstract class that represents the Parent class for any DataFrame class.
+    An abstract class that represents the Parent class for any Dataframe class.
 
-    This class is intended to specify the behaviours that a DataFrame must implement.
+    This class is intended to specify the behaviors that a Dataframe must implement.
 
     For more details about how these methods were chosen, please refer to this
     (http://www.vldb.org/pvldb/vol13/p2033-petersohn.pdf) paper, which specifies
-    a DataFrame algebra that this class exposes.
+    a Dataframe algebra that this class exposes.
     """
 
     @abstractmethod
