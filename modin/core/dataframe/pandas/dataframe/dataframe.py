@@ -1869,7 +1869,7 @@ class PandasDataframe(object):
 
         return self.__constructor__(new_partitions, *new_axes)
 
-    @lazy_metadata_decorator(apply_axis="opposite", axis_arg=0)
+    @lazy_metadata_decorator(apply_axis="both")
     def broadcast_apply_full_axis(
         self,
         axis,
