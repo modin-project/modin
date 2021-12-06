@@ -779,7 +779,7 @@ class _LocIndexer(_LocationIndexerBase):
 
     def _maybe_enlarge_labels(self, row_loc, col_loc):
         """
-        Adds missing labels to the appropriate axis' index.
+        Add missing labels to the appropriate axis' index.
 
         Parameters
         ----------
