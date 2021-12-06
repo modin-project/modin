@@ -73,6 +73,9 @@ def lazy_metadata_decorator(
                     self._propagate_index_objs(axis=1)
                 elif apply_axis == "rows":
                     self._propagate_index_objs(axis=0)
+                elif apply_axis == "always_both":
+                    self._propagate_index_objs(axis=0)
+                    self._propagate_index_objs(axis=1)
             result = f(self, *args, **kwargs)
             if inherit and not transpose:
                 result._deferred_index = self._deferred_index
@@ -2307,7 +2310,7 @@ class PandasDataframe(object):
             return np.dtype(res)
         return res
 
-    @lazy_metadata_decorator(apply_axis="both")
+    @lazy_metadata_decorator(apply_axis="always_both")
     def to_pandas(self):
         """
         Convert this Modin DataFrame to a pandas DataFrame.
