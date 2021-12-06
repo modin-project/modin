@@ -396,7 +396,7 @@ class _LocationIndexerBase(object):
                 #                           dtype="category")
                 # Then type(df.dtypes) is pandas.core.series.Series
                 (
-                    type(self.df.dtypes) == pandas.core.series.Series
+                    isinstance(self.df.dtypes, pandas.core.series.Series)
                     and self.df.dtypes[col_lookup][0].name == "category"
                 )
                 # Case 2: df = pd.Series( ["a", "b", "c"],  dtype="category")
@@ -407,8 +407,7 @@ class _LocationIndexerBase(object):
                 # Then df.dtypes == dtype('int64') and type(df.dtypes) is
                 # numpy.dtype
                 or (
-                    hasattr(type(self.df.dtypes), "name")
-                    and self.df.dtypes.name == "category"
+                    getattr(self.df.dtypes, "name", "") == "category"
                 )
             )
             if not assigning_to_single_category_column:
