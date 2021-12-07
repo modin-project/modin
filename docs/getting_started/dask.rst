@@ -48,7 +48,7 @@ supported, it still works by falling back to running pandas. One of the key feat
 of being a drop-in replacement is that not only will it work for existing code, if a
 user wishes to go back to running pandas directly, they are not locked in to using Modin and can switch between Modin and pandas at no cost. In other words, Modin notebooks can be converted to and from pandas as the user desires.
 
-.. figure:: ../img/api_coverage_comparison.png
+.. figure:: ../img/api_coverage_comparison.svg
    :align: center
    :alt: Percentage coverage of the pandas dataframe API after deduplication
 
