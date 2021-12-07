@@ -1,7 +1,7 @@
 :orphan:
 
-PandasOnDask Dataframe implementation
-=====================================
+PandasOnDask Execution
+======================
 
 Queries that perform data transformation, data ingress or data egress using the `pandas on Dask` execution
 pass through the Modin components detailed below.
