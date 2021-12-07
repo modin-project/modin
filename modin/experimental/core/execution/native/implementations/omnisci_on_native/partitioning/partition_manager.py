@@ -251,10 +251,6 @@ class OmnisciOnNativeDataframePartitionManager(PandasDataframePartitionManager):
 
         curs = omniSession.executeRA(cmd_prefix + calcite_json)
         assert curs
-        rb = curs.getArrowRecordBatch()
-        assert rb is not None
-        at = pyarrow.Table.from_batches([rb])
-
         if hasattr(curs, "getArrowTable"):
             at = curs.getArrowTable()
         else:
