@@ -4,8 +4,8 @@
 
 # These owners will review everything in the Omnisci engine component
 # of Modin.
-/modin/experimental/backends/omnisci/**    @modin-project/modin-omnisci
-/modin/experimental/engines/omnisci_on_native/**    @modin-project/modin-omnisci
+/modin/experimental/core/storage_formats/omnisci/**    @modin-project/modin-omnisci
+/modin/experimental/core/execution/native/implementations/omnisci_on_native/**    @modin-project/modin-omnisci
 
 # These owners will review everything related to the xgboost implementation
 # in Modin
