@@ -263,7 +263,6 @@ class OmnisciOnNativeDataframePartitionManager(PandasDataframePartitionManager):
             at = pyarrow.Table.from_batches([rb])
         assert at is not None
 
-
         res = np.empty((1, 1), dtype=np.dtype(object))
         # workaround for https://github.com/modin-project/modin/issues/1851
         if DoUseCalcite.get():
