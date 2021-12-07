@@ -1,3 +1,5 @@
+:orphan:
+
 PandasOnPython Execution
 ========================
 
@@ -24,7 +26,6 @@ to determine how to apply it to a subset of the data - either cell-wise or along
 storage format. The :py:class:`~modin.core.storage_formats.pandas.query_compiler.PandasQueryCompiler` maps the query to one of the :doc:`Core Algebra Operators </flow/modin/core/dataframe/algebra>` of
 the :py:class:`~modin.core.execution.python.implementations.pandas_on_python.dataframe.dataframe.PandasOnPythonDataframe` which inherits
 generic functionality from the :py:class:`~modin.core.dataframe.pandas.dataframe.dataframe.PandasDataframe`.
-
 
 PandasOnPython Dataframe implementation
 ---------------------------------------

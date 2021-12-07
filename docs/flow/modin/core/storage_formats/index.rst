@@ -1,3 +1,5 @@
+:orphan:
+
 Storage Formats
 ===============
 Storage format is one of the components that form Modin's execution, it describes the type(s)
