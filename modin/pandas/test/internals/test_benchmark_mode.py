@@ -25,7 +25,7 @@ def test_syncronous_mode():
     # On Omnisci storage, transpose() defaults to Pandas.
     with (
         warns_that_defaulting_to_pandas()
-        if StorageFormat.get() == "omnisci"
+        if StorageFormat.get() == "Omnisci"
         else nullcontext()
     ):
         pd.DataFrame(test_data_values[0]).mean()
