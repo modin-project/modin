@@ -49,9 +49,9 @@ def compute_chunksize(
     Parameters
     ----------
     row_count : int, optional
-        Rows count.
+        Row count.
     col_count : int, optional
-        Columns count.
+        Column count.
     num_splits : int, optional
         Number of splits to separate the DataFrame into. `NPartitions` by default.
     default_block_size : int, default: 32
@@ -60,9 +60,9 @@ def compute_chunksize(
     Returns
     -------
     int
-        - `row_count` and `col_count` are specified: returns tuple of ints otherwise,
-        - `row_count`/`col_count` are specified: returns an integer number of rows/columns to split the
-        DataFrame.
+        - if `row_count` and `col_count` are specified, tuple of ints will be returned
+        - if `row_count`/`col_count` is specified, an integer number of rows/columns to split the
+        DataFrame will be returned.
     """
     assert row_count is not None or col_count is not None
 
