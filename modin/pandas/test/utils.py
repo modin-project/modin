@@ -1353,12 +1353,16 @@ def make_default_file(file_type: str):
     return _make_default_file, filenames
 
 
+def value_equals(obj1, obj2):
+    """Check wherher two scalar or list-like values are equal and raise an ``AssertionError`` if they aren't."""
+    if is_list_like(obj1):
+        np.testing.assert_array_equal(obj1, obj2)
+    else:
+        assert (obj1 == obj2) or (np.isnan(obj1) and np.isnan(obj2))
+
+
 def dict_equals(dict1, dict2):
     """Check whether two dictionaries are equal and raise an ``AssertionError`` if they aren't."""
     for key1, key2 in itertools.zip_longest(sorted(dict1), sorted(dict2)):
-        assert (key1 == key2) or (np.isnan(key1) and np.isnan(key2))
-        value1, value2 = dict1[key1], dict2[key2]
-        if is_list_like(value1):
-            np.testing.assert_array_equal(value1, value2)
-        else:
-            assert value1 == value2
+        value_equals(key1, key2)
+        value_equals(dict1[key1], dict2[key2])

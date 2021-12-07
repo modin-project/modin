@@ -866,6 +866,8 @@ class DataFrameGroupBy(object):
             by = self._by
 
         is_multi_by = self._is_multi_by or (by is not None and len(level) > 0)
+        # `dropna` param is the only one that matters for the group indices result
+        dropna = self._kwargs.get("dropna", True)
 
         if hasattr(self._by, "columns") and is_multi_by:
             by = list(self._by.columns)
@@ -886,7 +888,7 @@ class DataFrameGroupBy(object):
                 by = try_cast_to_pandas(by, squeeze=True)
                 pandas_df = self._df._to_pandas()
             by = wrap_into_list(by, level)
-            groupby_obj = pandas_df.groupby(by=by)
+            groupby_obj = pandas_df.groupby(by=by, dropna=dropna)
             return groupby_obj.indices if numerical else groupby_obj.groups
         else:
             if isinstance(self._by, type(self._query_compiler)):
@@ -908,7 +910,13 @@ class DataFrameGroupBy(object):
                 # Since we want positional indices of the groups, we want to group
                 # on a `RangeIndex`, not on the actual index labels
                 axis_labels = pandas.RangeIndex(len(axis_labels))
-            return axis_labels.groupby(by)
+            # `pandas.Index.groupby` doesn't take any parameters except `by`.
+            # Have to convert an Index to a Series to be able to process `dropna=False`:
+            if dropna:
+                return axis_labels.groupby(by)
+            else:
+                groupby_obj = axis_labels.to_series().groupby(by, dropna=dropna)
+                return groupby_obj.indices if numerical else groupby_obj.groups
 
     def _wrap_aggregation(
         self, qc_method, default_func, drop=True, numeric_only=True, **kwargs

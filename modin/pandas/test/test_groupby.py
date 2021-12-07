@@ -30,6 +30,7 @@ from .utils import (
     generate_multiindex,
     test_groupby_data,
     dict_equals,
+    value_equals,
 )
 from modin.config import NPartitions
 
@@ -45,7 +46,7 @@ def modin_groupby_equals_pandas(modin_groupby, pandas_groupby):
     )
 
     for g1, g2 in itertools.zip_longest(modin_groupby, pandas_groupby):
-        assert g1[0] == g2[0]
+        value_equals(g1[0], g2[0])
         df_equals(g1[1], g2[1])
 
 
@@ -1350,7 +1351,7 @@ def test_groupby_multiindex(groupby_kwargs):
     df_equals(md_grp.first(), pd_grp.first())
 
 
-@pytest.mark.parametrize("dropna", [(True), (False)])
+@pytest.mark.parametrize("dropna", [True, False])
 @pytest.mark.parametrize(
     "groupby_kwargs",
     [
@@ -1359,21 +1360,25 @@ def test_groupby_multiindex(groupby_kwargs):
         pytest.param({"level": [1, "four"]}, id="level_idx+name"),
         pytest.param({"by": "four"}, id="level_name"),
         pytest.param({"by": ["one", "two"]}, id="level_name_multi_by"),
-        pytest.param({"by": ["item0", "one", "two"]}, id="col_name+level_name"),
+        pytest.param(
+            {"by": ["item0", "one", "two"]},
+            id="col_name+level_name",
+        ),
+        pytest.param({"by": ["item0"]}, id="col_name"),
+        pytest.param(
+            {"by": ["item0", "item1"]},
+            id="col_name_multi_by",
+        ),
     ],
 )
 def test_groupby_with_kwarg_dropna(groupby_kwargs, dropna):
-    frame_data = np.random.randint(0, 100, size=(2 ** 6, 2 ** 4)).astype(float)
-    frame_data.ravel()[
-        np.random.choice(frame_data.size, 2 ** 4, replace=False)
-    ] = np.nan
-
-    modin_df = pd.DataFrame(frame_data)
-    pandas_df = pandas.DataFrame(frame_data)
+    modin_df = pd.DataFrame(test_data["float_nan_data"])
+    pandas_df = pandas.DataFrame(test_data["float_nan_data"])
 
     new_index = pandas.Index([f"item{i}" for i in range(len(pandas_df))])
     new_columns = pandas.MultiIndex.from_tuples(
-        [(i // 4, i // 2, i) for i in modin_df.columns], names=["four", "two", "one"]
+        [(i // 4, i // 2, i) for i in range(len(modin_df.columns))],
+        names=["four", "two", "one"],
     )
     modin_df.columns = new_columns
     modin_df.index = new_index
@@ -1388,12 +1393,26 @@ def test_groupby_with_kwarg_dropna(groupby_kwargs, dropna):
         **groupby_kwargs, dropna=dropna
     ), pandas_df.groupby(**groupby_kwargs, dropna=dropna)
     modin_groupby_equals_pandas(md_grp, pd_grp)
-    df_equals(md_grp.sum(), pd_grp.sum())
-    df_equals(md_grp.size(), pd_grp.size())
+
+    by_kwarg = groupby_kwargs.get("by", [])
+    # Disabled because of broken `dropna=False` for MapReduce implemented aggs:
+    # https://github.com/modin-project/modin/issues/3817
+    if not (
+        not dropna
+        and len(by_kwarg) > 1
+        and any(col in modin_df.columns for col in by_kwarg)
+    ):
+        df_equals(md_grp.sum(), pd_grp.sum())
+        df_equals(md_grp.size(), pd_grp.size())
     # Grouping on level works incorrect in case of aggregation:
     # https://github.com/modin-project/modin/issues/2912
-    # df_equals(md_grp.quantile(), pd_grp.quantile())
-    df_equals(md_grp.first(), pd_grp.first())
+    if any(col in modin_df.columns for col in by_kwarg):
+        df_equals(md_grp.quantile(), pd_grp.quantile())
+    # Default-to-pandas tests are disabled for multi-column 'by' because of the bug:
+    # https://github.com/modin-project/modin/issues/3827
+    if not (not dropna and len(by_kwarg) > 1):
+        df_equals(md_grp.first(), pd_grp.first())
+        df_equals(md_grp._default_to_pandas(lambda df: df.sum()), pd_grp.sum())
 
 
 @pytest.mark.parametrize("groupby_axis", [0, 1])
