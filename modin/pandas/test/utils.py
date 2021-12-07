@@ -478,7 +478,7 @@ def df_categories_equals(df1, df2):
         assert_extension_array_equal(
             df1[column].values,
             df2[column].values,
-            check_dtype=False,
+            check_dtype=True,
         )
 
 
@@ -559,7 +559,7 @@ def df_equals(df1, df2):
         assert_frame_equal(
             df1,
             df2,
-            check_dtype=False,
+            check_dtype=True,
             check_datetimelike_compat=True,
             check_index_type=False,
             check_column_type=False,
@@ -569,7 +569,7 @@ def df_equals(df1, df2):
     elif isinstance(df1, pandas.Index) and isinstance(df2, pandas.Index):
         assert_index_equal(df1, df2)
     elif isinstance(df1, pandas.Series) and isinstance(df2, pandas.Series):
-        assert_series_equal(df1, df2, check_dtype=False, check_series_type=False)
+        assert_series_equal(df1, df2, check_dtype=True, check_series_type=False)
     elif isinstance(df1, groupby_types) and isinstance(df2, groupby_types):
         for g1, g2 in zip(df1, df2):
             assert g1[0] == g2[0]
