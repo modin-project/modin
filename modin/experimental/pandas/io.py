@@ -191,7 +191,7 @@ def _read(**kwargs) -> DataFrame:
     General documentation is available in `modin.pandas.read_csv`.
 
     This experimental feature provides parallel reading from multiple csv files which are
-    defined by glob pattern. Works for local files only!
+    defined by glob pattern.
 
     Parameters
     ----------
@@ -201,6 +201,27 @@ def _read(**kwargs) -> DataFrame:
     Returns
     -------
     modin.DataFrame
+
+    Examples
+    --------
+    >>> import modin.experimental.pandas as pd
+    >>> df = pd.read_csv_glob("s3://nyc-tlc/trip data/yellow_tripdata_2020-1*")
+    UserWarning: `read_*` implementation has mismatches with pandas:
+    Data types of partitions are different! Please refer to the troubleshooting section of the Modin documentation to fix this issue.
+            VendorID tpep_pickup_datetime  ... total_amount  congestion_surcharge
+    0             1.0  2020-10-01 00:09:08  ...         4.30                   0.0
+    1             1.0  2020-10-01 00:09:19  ...        13.30                   2.5
+    2             1.0  2020-10-01 00:30:00  ...        15.36                   2.5
+    3             2.0  2020-10-01 00:56:46  ...        -3.80                   0.0
+    4             2.0  2020-10-01 00:56:46  ...         3.80                   0.0
+    ...           ...                  ...  ...          ...                   ...
+    4652008       NaN  2020-12-31 23:44:35  ...        43.95                   2.5
+    4652009       NaN  2020-12-31 23:41:36  ...        20.17                   2.5
+    4652010       NaN  2020-12-31 23:01:17  ...        78.98                   0.0
+    4652011       NaN  2020-12-31 23:31:29  ...        39.50                   0.0
+    4652012       NaN  2020-12-31 23:12:48  ...        20.64                   0.0
+
+    [4652013 rows x 18 columns]
     """
     Engine.subscribe(_update_engine)
 
