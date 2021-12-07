@@ -168,11 +168,32 @@ The base storage format in Modin is pandas. In the default case, the Modin Dataf
 Data Ingress
 ''''''''''''
 
+.. note::
+   Data ingress operation in Modin is operation of putting data from data source to multiple
+   partitions and vice versa for data egress operation, speed-up can be achieved
+   by performing operations in partitions in parallel.
+
+Data ingress operations workflow diagram is shown below. After ingress function from pandas API
+is called, compiled query from pandas API is passed to the ``FactoryDispatcher``, which
+forwards query to execution spefic IO class (for Ray engine and pandas storage format IO class
+will be named ``PandasOnRayIO``). This class defines Modin frame and query
+compiler classes and ``read_*`` functions, which could be get from the engine-specific class
+for managing remote tasks, class for data parsing on the workers by specific execution engine
+and file format (``PandasCSVParser`` for example) and class for files handling of concrete
+file format including chunking for execution on the head node (see dispatcher classes
+implementation :doc:`details </flow/modin/core/io/index>`). Using resulting IO class data
+is imported into Modin DataFrame for further processing.
+
 .. image:: /img/generic_data_ingress.svg
    :align: center
 
 Data Egress
 '''''''''''
+
+Data egress operation is similar to ingress operations up to execution-specific IO class
+construction. Egress function of this class are difined slightly different from ingress
+functions and created only specifically for engine since partitions already know their
+storage format. Using this IO class data is exported from partitions to the target file.
 
 .. image:: /img/generic_data_egress.svg
    :align: center
