@@ -54,6 +54,10 @@ class CSVGlobDispatcher(CSVDispatcher):
         # Ensures that the file is a string file path. Otherwise, default to pandas.
         filepath_or_buffer = cls.get_path_or_buffer(filepath_or_buffer)
         if isinstance(filepath_or_buffer, str):
+            if "*" not in filepath_or_buffer:
+                warnings.warn(
+                    f"'*' symbol not found in filename: '{filepath_or_buffer}'"
+                )
             if not cls.file_exists(filepath_or_buffer):
                 return cls.single_worker_read(filepath_or_buffer, **kwargs)
             filepath_or_buffer = cls.get_path(filepath_or_buffer)
