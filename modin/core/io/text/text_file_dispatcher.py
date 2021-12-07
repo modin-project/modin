@@ -891,10 +891,10 @@ class TextFileDispatcher(FileDispatcher):
                     index=index_range.delete(skiprows_md)
                 )
             elif callable(skiprows_md):
-                mod_index = skiprows_md(index_range)
-                if not isinstance(mod_index, np.ndarray):
-                    mod_index = mod_index.to_numpy("bool")
-                view_idx = index_range[~mod_index]
+                skip_mask = cls._get_skip_mask(index_range, skiprows_md)
+                if not isinstance(skip_mask, np.ndarray):
+                    skip_mask = skip_mask.to_numpy("bool")
+                view_idx = index_range[~skip_mask]
                 new_query_compiler = new_query_compiler.view(index=view_idx)
             else:
                 raise TypeError(
@@ -1039,3 +1039,33 @@ class TextFileDispatcher(FileDispatcher):
             nrows=kwargs["nrows"] if should_handle_skiprows else None,
         )
         return new_query_compiler
+
+    @classmethod
+    def _get_skip_mask(cls, rows_index: pandas.Index, skiprows: Callable):
+        """
+        Get mask of skipped by callable `skiprows` rows.
+
+        Parameters
+        ----------
+        rows_index : pandas.Index
+            Rows index to get mask for.
+        skiprows : Callable
+            Callable to check whether row index should be skipped.
+
+        Returns
+        -------
+        pandas.Index
+        """
+        try:
+            # direct `skiprows` call is more efficient than using of
+            # map method, but in some cases it can work incorrectly, e.g.
+            # when `skiprows` contains `in` operator
+            mask = skiprows(rows_index)
+            assert is_list_like(mask)
+        except (ValueError, TypeError, AssertionError):
+            # ValueError can be raised if `skiprows` callable contains membership operator
+            # TypeError is raised if `skiprows` callable contains bitwise operator
+            # AssertionError is raised if unexpected behavior was detected
+            mask = rows_index.map(skiprows)
+
+        return mask

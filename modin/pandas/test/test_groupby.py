@@ -29,6 +29,7 @@ from .utils import (
     modin_df_almost_equals_pandas,
     generate_multiindex,
     test_groupby_data,
+    dict_equals,
 )
 from modin.config import NPartitions
 
@@ -36,7 +37,14 @@ NPartitions.put(4)
 
 
 def modin_groupby_equals_pandas(modin_groupby, pandas_groupby):
-    for g1, g2 in zip(modin_groupby, pandas_groupby):
+    eval_general(
+        modin_groupby, pandas_groupby, lambda grp: grp.indices, comparator=dict_equals
+    )
+    eval_general(
+        modin_groupby, pandas_groupby, lambda grp: grp.groups, comparator=dict_equals
+    )
+
+    for g1, g2 in itertools.zip_longest(modin_groupby, pandas_groupby):
         assert g1[0] == g2[0]
         df_equals(g1[1], g2[1])
 

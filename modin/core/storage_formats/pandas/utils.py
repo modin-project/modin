@@ -13,6 +13,7 @@
 
 """Contains utility functions for frame partitioning."""
 
+from modin.config import MinPartitionSize
 import numpy as np
 import pandas
 
@@ -41,7 +42,7 @@ def get_default_chunksize(length, num_splits):
 
 
 def compute_chunksize(
-    row_count=None, col_count=None, num_splits=None, default_block_size=32
+    row_count=None, col_count=None, num_splits=None, default_block_size=None
 ):
     """
     Compute the number of rows and/or columns to include in each partition.
@@ -53,9 +54,10 @@ def compute_chunksize(
     col_count : int, optional
         Column count.
     num_splits : int, optional
-        Number of splits to separate the DataFrame into. `NPartitions` by default.
-    default_block_size : int, default: 32
+        Number of splits to separate the DataFrame into. ``NPartitions`` by default.
+    default_block_size : int, optional
         Minimum number of rows/columns in a single split.
+        If not specified, the value is assumed equal to ``MinPartitionSize``.
 
     Returns
     -------
@@ -68,6 +70,9 @@ def compute_chunksize(
 
     if num_splits is None:
         num_splits = NPartitions.get()
+
+    if default_block_size is None:
+        default_block_size = MinPartitionSize.get()
 
     if row_count is not None:
         row_chunksize = get_default_chunksize(row_count, num_splits)
