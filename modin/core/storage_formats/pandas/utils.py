@@ -62,7 +62,7 @@ def compute_chunksize(
     Returns
     -------
     int
-        - if `row_count` and `col_count` are specified, tuple of ints will be returned
+        - if `row_count` and `col_count` are specified, tuple of ints will be returned.
         - if `row_count`/`col_count` is specified, an integer number of rows/columns to split the
         DataFrame will be returned.
     """
