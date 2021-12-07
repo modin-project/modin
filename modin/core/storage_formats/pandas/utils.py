@@ -45,9 +45,9 @@ def compute_chunksize(index_len, num_splits, default_block_size=None):
     chunksize = index_len // num_splits
     if index_len % num_splits == 0:
         chunksize += 1
-    # Take the min of the default and the memory-usage chunksize first to avoid a
+    # chunksize shouldn't be less that `default_block_size` to avoid a
     # large amount of small partitions.
-    return max(1, chunksize, default_block_size)
+    return max(chunksize, default_block_size)
 
 
 def split_result_of_axis_func_pandas(axis, num_splits, result, length_list=None):
