@@ -21,23 +21,23 @@ Using a relational database engine implies a set of restrictions on
 operations we can execute on a dataframe.
 
 1. We cannot handle frames that use data types not supported by OmniSciDB.
-Currently, we allow only integer, float, string, and categorical data types.
+   Currently, we allow only integer, float, string, and categorical data types.
 
 2. Column data should be homogeneous.
 
 3. Can only support operations that map to relational algebra. This means
-most operations are supported over a single axis (axis=0) only. Non-relational
-operations like transposition and pivot are not supported.
+   most operations are supported over a single axis (axis=0) only. Non-relational
+   operations like transposition and pivot are not supported.
 
 When the unsupported data type is detected or unsupported operations is requested
-we use the original pandas framework.
+it falls back to the original pandas framework.
 
 Partitions
 ----------
 
-Partitioning is used to achieve high parallelism. In the case of OmniSciDB
-based execution parallelism is provided by OmniSciDB execution engine
-and we don't need to manage multiple partitions.
+In Modin, partitioning is used to achieve high parallelism. In the case of 
+OmniSciDB-based execution, parallelism is provided by OmniSciDB execution
+engine itself and we don't need to manage multiple partitions.
 :py:class:`~modin.experimental.core.execution.native.implementations.omnisci_on_native.dataframe.dataframe.OmnisciOnNativeDataframe`
 always has a single partition.
 
@@ -79,8 +79,8 @@ then wrapped into a high-level Modin DataFrame, which is then returned to the us
 .. figure:: /img/omnisci/omnisci_ingress.svg
    :align: center
 
-Note, that during this ingress flow, no data was imported to the OmniSciDB. The need for
-importing to OmniSci is decided at the execution stage by the Modin Core Dataframe layer.
+Note that during this ingress flow, no data is actually imported to the OmniSciDB. The need for
+importing to OmniSci is decided later at the execution stage by the Modin Core Dataframe layer.
 If the query requires for the data to be placed in OmniSciDB then the import is triggered.
 :py:class:`~modin.experimental.core.execution.native.implementations.omnisci_on_native.dataframe.dataframe.OmnisciOnNativeDataframe` 
 passes partition to import to the
@@ -115,7 +115,7 @@ and pass their execution to the
 :py:class:`~modin.experimental.core.execution.native.implementations.omnisci_on_native.dataframe.dataframe.OmnisciOnNativeDataframe`.
 
 When :py:class:`~modin.experimental.core.execution.native.implementations.omnisci_on_native.dataframe.dataframe.OmnisciOnNativeDataframe`
-recieves a query it determines, whether the operation is require data materialization
+recieves a query it determines whether the operation requires data materialization
 or can be performed lazily. Depending on that the operation is either appended to a
 lazy computation tree or executed.
 
@@ -181,7 +181,7 @@ find all leaves of an operation tree and import their Arrow tables. Partitions
 with imported tables hold corresponding table names used to refer to them in
 queries.
 
-OmniSciDB is SQL-based. SQL parsing is done in a separate process using
+OmniSciDB is SQL-based. SQL query parsing is done in a separate process using
 the Apache Calcite framework. A parsed query is serialized into JSON format
 and is transferred back to OmniSciDB. In Modin, we don't generate SQL queries
 for OmniSciDB but use this JSON format instead. Such queries can be directly
@@ -256,6 +256,16 @@ class.
 * :doc:`CalciteSerializer <calcite_serializer>`
 * :doc:`OmnisciServer <omnisci_worker>`
 
+Column name mangling
+''''''''''''''''''''
+
+In ``pandas.DataFrame`` columns might have names not allowed in SQL (e. g.
+an empty string). To handle this we simply add '`F_`' prefix to
+column names. Index labels are more tricky because they might be non-unique.
+Indexes are represented as regular columns, and we have to perform a special
+mangling to get valid and unique column names. Demangling is done when we
+transform our frame (i.e. its Arrow table) into ``pandas.DataFrame`` format.
+
 .. toctree::
     :hidden:
 
@@ -269,12 +279,3 @@ class.
     calcite_serializer
     omnisci_worker
 
-Column name mangling
-''''''''''''''''''''
-
-In ``pandas.DataFrame`` columns might have names not allowed in SQL (e. g.
-an empty string). To handle this we simply add '`F_`' prefix to
-column names. Index labels are more tricky because they might be non-unique.
-Indexes are represented as regular columns, and we have to perform a special
-mangling to get valid and unique column names. Demangling is done when we
-transform our frame (i.e. its Arrow table) into ``pandas.DataFrame`` format.
