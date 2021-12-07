@@ -6,7 +6,7 @@ PandasOnDask Dataframe implementation
 Queries that perform data transformation, data ingress or data egress using the `pandas on Dask` execution
 pass through the Modin components detailed below.
 
-To enable `pandas on Dask` execution, please refer to the usage section in :doc:`pandas on Dask </UsingPandasonDask/index>`.
+To enable `pandas on Dask` execution, please refer to the usage section in :doc:`pandas on Dask </developer/using_pandas_on_dask>`.
 
 Data Transformation
 '''''''''''''''''''
