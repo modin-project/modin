@@ -123,9 +123,10 @@ def is_full_grab_slice(slc, sequence_len=None):
         Slice object to check.
     sequence_len : int, optional
         Length of the sequence to index with the passed `slc`.
-        If not specified the function won't consider `slc` to
-        be a full-grab if its ``.stop`` attribute is equal or
-        greater than the sequence length.
+        If not specified the function won't be able to check whether
+        ``slc.stop`` is equal or greater than the sequence length to
+        consider `slc` to be a full-grab, and so, only slices with
+        ``.stop is None`` are considered to be a full-grab.
 
     Returns
     -------
