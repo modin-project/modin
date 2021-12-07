@@ -286,14 +286,14 @@ class GetColumn:
         ["col5", "col4"],
         ["col4", "col5"],
         ["col5", "col4", "col1"],
-        ["col1", pd.Series([1, 5, 7, 8])],  # 15
-        [pd.Series([1, 5, 7, 8])],
+        ["col1", pandas.Series([1, 5, 7, 8])],  # 15
+        [pandas.Series([1, 5, 7, 8])],
         [
-            pd.Series([1, 5, 7, 8]),
-            pd.Series([1, 5, 7, 8]),
-            pd.Series([1, 5, 7, 8]),
-            pd.Series([1, 5, 7, 8]),
-            pd.Series([1, 5, 7, 8]),
+            pandas.Series([1, 5, 7, 8]),
+            pandas.Series([1, 5, 7, 8]),
+            pandas.Series([1, 5, 7, 8]),
+            pandas.Series([1, 5, 7, 8]),
+            pandas.Series([1, 5, 7, 8]),
         ],
         ["col1", GetColumn("col5")],
         [GetColumn("col1"), GetColumn("col5")],
@@ -479,9 +479,7 @@ def test_simple_row_groupby(by, as_index, col1_category):
     eval_general(modin_groupby, pandas_groupby, lambda df: df.tail(n), is_default=True)
     eval_quantile(modin_groupby, pandas_groupby)
     eval_general(modin_groupby, pandas_groupby, lambda df: df.take(), is_default=True)
-    if isinstance(by, list) and not any(
-        isinstance(o, (pd.Series, pandas.Series)) for o in by
-    ):
+    if isinstance(by, list) and not any(isinstance(o, pandas.Series) for o in by):
         # Not yet supported for non-original-column-from-dataframe Series in by:
         eval___getattr__(modin_groupby, pandas_groupby, "col3")
         eval___getitem__(modin_groupby, pandas_groupby, "col3")
@@ -1748,7 +1746,7 @@ def test_mixed_columns_not_from_df(columns, as_index):
         [(True, "a"), (True, "b")],
         [(False, "a"), (False, "b"), (True, "c")],
         [(False, "a"), (True, "c")],
-        [(False, "a"), (False, pd.Series([5, 6, 7, 8]))],
+        [(False, "a"), (False, pandas.Series([5, 6, 7, 8]))],
     ],
 )
 def test_unknown_groupby(columns):

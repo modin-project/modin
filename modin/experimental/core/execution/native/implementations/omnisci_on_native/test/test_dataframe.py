@@ -48,6 +48,14 @@ from modin.experimental.core.execution.native.implementations.omnisci_on_native.
 )
 
 
+# Our configuration in pytest.ini requires that we explicitly catch all
+# instances of defaulting to pandas, but some test modules, like this one,
+# have too many such instances.
+# TODO(https://github.com/modin-project/modin/issues/3655): catch all instances
+# of defaulting to pandas.
+pytestmark = pytest.mark.filterwarnings("default:.*defaulting to pandas.*:UserWarning")
+
+
 @pytest.mark.usefixtures("TestReadCSVFixture")
 class TestCSV:
     from modin import __file__ as modin_root
