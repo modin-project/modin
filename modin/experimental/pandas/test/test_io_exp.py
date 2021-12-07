@@ -111,6 +111,10 @@ class TestCsvGlob:
 
         df_equals(modin_df, pandas_df)
 
+    def test_read_csv_without_glob(self):
+        with pytest.raises(FileNotFoundError):
+            modin_df = pd.read_csv_glob("s3://nyc-tlc/trip data/yellow_tripdata_2020-")
+
 
 @pytest.mark.skipif(
     Engine.get() != "Ray", reason="Currently only support Ray engine for glob paths."

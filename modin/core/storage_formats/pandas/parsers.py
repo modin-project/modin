@@ -308,6 +308,10 @@ class PandasCSVGlobParser(PandasCSVParser):
         num_splits = kwargs.pop("num_splits", None)
         index_col = kwargs.get("index_col", None)
 
+        # `single_worker_read` just pass filename via chunks; need check
+        if isinstance(chunks, str):
+            return pandas.read_csv(chunks, **kwargs)
+
         pandas_dfs = []
         for fname, start, end in chunks:
             if start is not None and end is not None:
