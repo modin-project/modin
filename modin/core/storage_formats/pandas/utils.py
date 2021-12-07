@@ -17,44 +17,19 @@ from modin.config import MinPartitionSize
 import numpy as np
 import pandas
 
-from modin.config import NPartitions
 
-
-def get_default_chunksize(length, num_splits):
+def compute_chunksize(index_len, num_splits, default_block_size=None):
     """
-    Get the most equal chunksize possible based on length and number of splits.
+    Compute the number of elemenents (rows/columns) to include in each partition.
+
+    Chunksize is defined the same for the axes.
 
     Parameters
     ----------
-    length : int
-        The length to split (number of rows/columns).
+    index_len : int
+        Element count in a index.
     num_splits : int
         The number of splits.
-
-    Returns
-    -------
-    int
-        Computed chunksize.
-    """
-    return (
-        length // num_splits if length % num_splits == 0 else length // num_splits + 1
-    )
-
-
-def compute_chunksize(
-    row_count=None, col_count=None, num_splits=None, default_block_size=None
-):
-    """
-    Compute the number of rows and/or columns to include in each partition.
-
-    Parameters
-    ----------
-    row_count : int, optional
-        Row count.
-    col_count : int, optional
-        Column count.
-    num_splits : int, optional
-        Number of splits to separate the DataFrame into. ``NPartitions`` by default.
     default_block_size : int, optional
         Minimum number of rows/columns in a single split.
         If not specified, the value is assumed equal to ``MinPartitionSize``.
@@ -62,34 +37,17 @@ def compute_chunksize(
     Returns
     -------
     int
-        - if `row_count` and `col_count` are specified, tuple of ints will be returned.
-        - if `row_count`/`col_count` is specified, an integer number of rows/columns to split the
-        DataFrame will be returned.
+        integer number of rows/columns to split the DataFrame will be returned.
     """
-    assert row_count is not None or col_count is not None
-
-    if num_splits is None:
-        num_splits = NPartitions.get()
-
     if default_block_size is None:
         default_block_size = MinPartitionSize.get()
 
-    if row_count is not None:
-        row_chunksize = get_default_chunksize(row_count, num_splits)
-        # Take the min of the default and the memory-usage chunksize first to avoid a
-        # large amount of small partitions.
-        row_chunksize = max(1, row_chunksize, default_block_size)
-        if col_count is None:
-            return row_chunksize
-
-    col_chunksize = get_default_chunksize(col_count, num_splits)
+    chunksize = index_len // num_splits
+    if index_len % num_splits == 0:
+        chunksize += 1
     # Take the min of the default and the memory-usage chunksize first to avoid a
     # large amount of small partitions.
-    col_chunksize = max(1, col_chunksize, default_block_size)
-    if row_count is None:
-        return col_chunksize
-
-    return row_chunksize, col_chunksize
+    return max(1, chunksize, default_block_size)
 
 
 def split_result_of_axis_func_pandas(axis, num_splits, result, length_list=None):
@@ -125,8 +83,7 @@ def split_result_of_axis_func_pandas(axis, num_splits, result, length_list=None)
     if num_splits == 1:
         return [result]
     # We do this to restore block partitioning
-    shape_part = {"row_count" if axis == 0 else "col_count": result.shape[axis]}
-    chunksize = compute_chunksize(**shape_part, num_splits=num_splits)
+    chunksize = compute_chunksize(result.shape[axis], num_splits)
     if axis == 0 or isinstance(result, pandas.Series):
         return [
             result.iloc[chunksize * i : chunksize * (i + 1)] for i in range(num_splits)

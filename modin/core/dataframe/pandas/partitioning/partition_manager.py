@@ -712,7 +712,8 @@ class PandasDataframePartitionManager(ABC):
 
         num_splits = NPartitions.get()
         put_func = cls._partition_class.put
-        row_chunksize, col_chunksize = compute_chunksize(*df.shape, num_splits)
+        row_chunksize = compute_chunksize(df.shape[0], num_splits)
+        col_chunksize = compute_chunksize(df.shape[1], num_splits)
 
         bar_format = (
             "{l_bar}{bar}{r_bar}"

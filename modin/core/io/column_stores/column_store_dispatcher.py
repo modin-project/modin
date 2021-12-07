@@ -128,9 +128,7 @@ class ColumnStoreDispatcher(FileDispatcher):
         else:
             index = index_len
             index_len = len(index)
-        index_chunksize = compute_chunksize(
-            row_count=index_len, num_splits=num_partitions
-        )
+        index_chunksize = compute_chunksize(index_len, num_partitions)
         if index_chunksize > index_len:
             row_lengths = [index_len] + [0 for _ in range(num_partitions - 1)]
         else:
