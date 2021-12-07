@@ -255,7 +255,7 @@ class OmnisciOnNativeDataframePartitionManager(PandasDataframePartitionManager):
         assert rb is not None
         at = pyarrow.Table.from_batches([rb])
 
-        if hasattr(curs, 'getArrowTable'):
+        if hasattr(curs, "getArrowTable"):
             at = curs.getArrowTable()
         else:
             rb = curs.getArrowRecordBatch()
