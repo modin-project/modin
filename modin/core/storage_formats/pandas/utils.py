@@ -37,7 +37,7 @@ def compute_chunksize(index_len, num_splits, default_block_size=None):
     Returns
     -------
     int
-        integer number of rows/columns to split the DataFrame will be returned.
+        Integer number of rows/columns to split the DataFrame will be returned.
     """
     if default_block_size is None:
         default_block_size = MinPartitionSize.get()
