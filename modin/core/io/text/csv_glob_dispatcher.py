@@ -56,7 +56,8 @@ class CSVGlobDispatcher(CSVDispatcher):
         if isinstance(filepath_or_buffer, str):
             if "*" not in filepath_or_buffer:
                 warnings.warn(
-                    f"'*' symbol not found in filename: '{filepath_or_buffer}'"
+                    "Shell-style wildcard '*' must be in the filename in order to read multiple "
+                    f"files at once; passed filename: '{filepath_or_buffer}'"
                 )
             if not cls.file_exists(filepath_or_buffer):
                 return cls.single_worker_read(filepath_or_buffer, **kwargs)
