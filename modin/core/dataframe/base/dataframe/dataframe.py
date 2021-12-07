@@ -44,7 +44,7 @@ class ModinDataframe(ABC):
         Mask rows and columns in the dataframe.
 
         Allow users to perform selection and projection on the row and column number (positional notation),
-        in addition to the row and column labels (named notation)
+        in addition to the row and column labels (named notation).
 
         Parameters
         ----------
@@ -89,7 +89,7 @@ class ModinDataframe(ABC):
         dtypes: Optional[str] = None,
     ) -> "ModinDataframe":
         """
-        Apply a user-defined function row- wise (or column-wise if axis=1).
+        Apply a user-defined function row-wise (or column-wise if axis=1).
 
         Parameters
         ----------
