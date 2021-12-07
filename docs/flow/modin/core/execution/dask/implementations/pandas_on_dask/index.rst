@@ -63,7 +63,7 @@ When a user calls any IO function from the ``modin.pandas.io`` module, the `API`
 :py:class:`~modin.core.execution.dispatching.factories.dispatcher.FactoryDispatcher` which defines a factory specific for
 the execution, namely, the :py:class:`~modin.core.execution.dispatching.factories.factories.PandasOnDaskFactory`. The factory, in turn,
 exposes the :py:class:`~modin.core.execution.dask.implementations.pandas_on_dask.io.PandasOnDaskIO` class
-whose responsibility is to perform a parallel read/sequential write from/to a file.
+whose responsibility is to perform a parallel read/write from/to a file.
 
 When reading data from a CSV file, for example, the :py:class:`~modin.core.execution.dask.implementations.pandas_on_dask.io.io.PandasOnDaskIO` class forwards
 the user query to the :meth:`~modin.core.io.text.CSVDispatcher._read` method of :py:class:`~modin.core.io.text.CSVDispatcher`, where the query's parameters are preprocessed
