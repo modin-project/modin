@@ -48,9 +48,13 @@ supported, it still works by falling back to running pandas. One of the key feat
 of being a drop-in replacement is that not only will it work for existing code, if a
 user wishes to go back to running pandas directly, they are not locked in to using Modin and can switch between Modin and pandas at no cost. In other words, Modin notebooks can be converted to and from pandas as the user desires.
 
+.. figure:: ../img/api_coverage_comparison.png
+   :align: center
+   :alt: Percentage coverage of the pandas dataframe API after deduplication
+
 Eager evaluation
 ________________
-Eager evaluation is the default mode of operation for data scientists when working with pandas DataFrames in an interactive environment, such as Jupyter Notebooks. Modin reproduces this familiar behavior by performing all computations as soon as it is issued, so that users can inspect intermediate results and quickly see the results of their computations without having to wait or explicitly trigger computation. This is especially useful during interactive data analysis, where users often iterate on their DataFrame workflows or build up their DataFrame queries in an incremental fashion.
+Eager evaluation is the default mode of operation for data scientists when working with pandas DataFrames in an interactive environment, such as Jupyter Notebooks. Modin reproduces this familiar behavior by performing all computations as soon as it is issued, so that users can inspect intermediate results and quickly see the results of their computations without having to wait or explicitly trigger computation. This is especially useful during interactive data analysis, where users often iterate on their DataFrame workflows or build up their DataFrame queries in an incremental fashion. Modin also supports lazy evaluation via the OmniSci engine, you can learn more about it :doc:`here <../developer/using_omnisci>`.
 
 Order preserving
 ________________
