@@ -764,9 +764,38 @@ class _LocIndexer(_LocationIndexerBase):
                 new_query_compiler=self.df._default_to_pandas(_loc)._query_compiler
             )
             return
-        row_loc, col_loc, _ = self._parse_row_and_column_locators(key)
+        # row_loc, col_loc, _ = self._parse_row_and_column_locators(key)
         self._maybe_enlarge_labels(row_loc, col_loc)
+        print(key)
+        print(item)
+        print(type(item))
+        row_loc, col_loc, ndims = self._parse_row_and_column_locators(key)
+        print("rl:", row_loc)
+        print("cl:", col_loc)
+        print("ndims:", ndims)
+        append_axis = self._check_missing_loc(row_loc, col_loc)
+        if ndims >= 1 and append_axis is not None:
+            # We enter this codepath if we're either appending a row or a column
+            if append_axis:
+                if len(col_loc) == 1:
+                    if is_scalar(item):
+                        item = [item] * len(self.qc.index)
+                    if not isinstance(item, (Series, DataFrame)):
+                        item = Series(item, name=col_loc[0])
+                    elif isinstance(item, Series):
+                        item = item.rename(index=col_loc[0])
+                    else:
+                        item = item.rename(columns=lambda x: col_loc[0])
+                    new_qc = self.qc.concat(1, item._query_compiler)
+                    self.df._update_inplace(new_query_compiler=new_qc)
+                else:
+                    pass
+            else:
+                pass
+        else:
+            self._set_item_existing_loc(row_loc, col_loc, item)
 
+    def _set_item_existing_loc(self, row_loc, col_loc, item):
         row_lookup, col_lookup = self._compute_lookup(row_loc, col_loc)
         super(_LocIndexer, self).__setitem__(
             row_lookup,
@@ -815,6 +844,25 @@ class _LocIndexer(_LocationIndexerBase):
                     row_lookup, col_lookup, is_scalar(row_loc), is_scalar(col_loc)
                 ),
             )
+
+    def _check_missing_loc(self, row_loc, col_loc):
+        if (
+            isinstance(row_loc, list)
+            and len(row_loc) == 1
+            and row_loc[0] not in self.qc.index
+        ):
+            return 0
+        if (
+            not (is_list_like(row_loc) or isinstance(row_loc, slice))
+            and row_loc not in self.qc.index
+        ):
+            return 0
+        if (
+            isinstance(col_loc, list)
+            and len(pandas.Index(col_loc).difference(self.qc.columns)) >= 1
+        ):
+            return 1
+        return None
 
     def _compute_enlarge_labels(self, locator, base_index):
         """
