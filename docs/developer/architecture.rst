@@ -169,7 +169,7 @@ Data Ingress
 ''''''''''''
 
 .. note::
-   Data ingress operation in Modin is operation of putting data from data source to multiple
+   Data ingress operation in Modin is operation of data import from data source to
    partitions and vice versa for data egress operation, speed-up can be achieved
    by performing operations in partitions in parallel.
 
@@ -177,8 +177,8 @@ Data ingress operations workflow diagram is shown below. After ingress function 
 is called, compiled query from pandas API is passed to the ``FactoryDispatcher``, which
 forwards query to execution spefic IO class (for Ray engine and pandas storage format IO class
 will be named ``PandasOnRayIO``). This class defines Modin frame and query
-compiler classes and ``read_*`` functions, which could be get from the engine-specific class
-for managing remote tasks, class for data parsing on the workers by specific execution engine
+compiler classes and ingress functions, which could be get from combination of the engine-specific
+class for managing remote tasks, class for data parsing on the workers by specific execution engine
 and file format (``PandasCSVParser`` for example) and class for files handling of concrete
 file format including chunking for execution on the head node (see dispatcher classes
 implementation :doc:`details </flow/modin/core/io/index>`). Using resulting IO class data
@@ -191,9 +191,10 @@ Data Egress
 '''''''''''
 
 Data egress operation is similar to ingress operations up to execution-specific IO class
-construction. Egress function of this class are difined slightly different from ingress
-functions and created only specifically for engine since partitions already know their
-storage format. Using this IO class data is exported from partitions to the target file.
+functions construction. Egress function of this class are difined slightly different from
+ingress functions and created only specifically for engine since partitions already have
+information about it's storage format. Using this IO class data is exported from partitions
+to the target file.
 
 .. image:: /img/generic_data_egress.svg
    :align: center
