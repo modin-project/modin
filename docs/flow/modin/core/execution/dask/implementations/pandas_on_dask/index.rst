@@ -74,6 +74,10 @@ On each Dask worker, the :py:class:`~modin.core.storage_formats.pandas.parsers.P
 After the remote tasks are finished, additional result postprocessing is performed,
 and a new query compiler with the data read is returned.
 
-For now, `pandas on Dask` execution defaults to `pandas` for writing data to a file. When writing data to a CSV file, for example, the :py:class:`~modin.core.execution.dask.implementations.pandas_on_dask.io.PandasOnDaskIO` converts a query compiler
-to `pandas` object using :py:meth:`~modin.core.storage_formats.base.query_compiler.BaseQueryCompiler.to_pandas`. After that, `pandas` writes the data to the file using
-corresponding function (``pandas.to_csv()`` in this case).
+When writing data to a CSV file, for example, the :py:class:`~modin.core.execution.dask.implementations.pandas_on_dask.io.PandasOnDaskIO` processes
+the user query to execute it on Dask workers. Then, the :py:class:`~modin.core.execution.dask.implementations.pandas_on_dask.io.PandasOnDaskIO` asks the
+:py:class:`~modin.core.execution.dask.implementations.pandas_on_dask.io.PandasOnDaskDataframe` to decompose the data into row-wise partitions
+that will be written into the file in parallel in Dask workers.
+
+.. note::
+   Currently, data egress uses default `pandas` implementation for `pandas on Dask` execution.
