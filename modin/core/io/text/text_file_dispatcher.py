@@ -723,8 +723,8 @@ class TextFileDispatcher(FileDispatcher):
             The number of rows that should be skipped virtually (skipped during
             data file partitioning).
         need_fallback_impl : bool
-            Whether pandas implementation should be used. If `need_fallback_impl`
-            is True, `skiprows` and `header` parameters values have intersecions.
+            Whether pandas implementation should be used. True if `skiprows` and
+            `header` values have intersections.
 
         Examples
         --------
@@ -770,6 +770,8 @@ class TextFileDispatcher(FileDispatcher):
                 need_fallback_impl = True
 
         elif callable(skiprows):
+            # Use fallback implementation if `header` and `skiprows`
+            # values have intersections
             skip_mask = cls._get_skip_mask(pandas.RangeIndex(header_size), skiprows)
             if any(map(bool, skip_mask)):
                 need_fallback_impl = True
