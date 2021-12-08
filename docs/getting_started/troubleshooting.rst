@@ -2,8 +2,8 @@ Troubleshooting
 ===============
 
 We hope your experience with Modin is bug-free, but there are some quirks about Modin
-that may require troubleshooting. If you still are having issues, contact us via
-one of the methods listed on this page_ or file a Github issue_.
+that may require troubleshooting. If you are still having issues, please post on
+the #support channel on our Slack_ community or open a Github issue_.
 
 Frequently encountered issues
 -----------------------------
@@ -218,4 +218,4 @@ This can happen when you use OmniSci engine along with ``pyarrow.gandiva``:
 Do not use OmniSci engine along with ``pyarrow.gandiva``.
 
 .. _issue: https://github.com/modin-project/modin/issues
-.. _page: https://modin.readthedocs.io/en/latest/contact.html 
+.. _Slack: https://modin.org/slack.html
