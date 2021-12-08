@@ -18,7 +18,7 @@ jobs:
         run: echo "NODE_PATH=$GITHUB_WORKSPACE/node_modules" >> $GITHUB_ENV
       - run: git remote add upstream https://github.com/modin-project/modin.git
       - run: git fetch upstream
-      - run: npx commitlint --from upstream/master --to HEAD --verbose
+      - run: npx commitlint --from upstream/master --to $(git log upstream/master..HEAD --pretty=format:"%h" | tail -1) --verbose
 
   lint-black:
     name: lint (black)
@@ -55,8 +55,8 @@ jobs:
             modin/pandas/series_utils.py modin/pandas/general.py \
             modin/pandas/plotting.py modin/pandas/utils.py \
             modin/pandas/iterator.py modin/pandas/indexing.py \
-      - run: python scripts/doc_checker.py modin/engines/base/frame
-      - run: python scripts/doc_checker.py modin/engines/dask
+      - run: python scripts/doc_checker.py modin/core/dataframe
+      - run: python scripts/doc_checker.py modin/core/execution/dask
       - run: |
           python scripts/doc_checker.py \
             modin/pandas/accessor.py modin/pandas/general.py \
@@ -64,19 +64,15 @@ jobs:
             modin/pandas/iterator.py modin/pandas/plotting.py \
             modin/pandas/series_utils.py modin/pandas/utils.py \
             modin/pandas/base.py \
-            modin/pandas/io.py modin/engines/base/io/io.py \
-            modin/engines/base/frame asv_bench/benchmarks/utils \
+            modin/pandas/io.py \
+            asv_bench/benchmarks/utils \
             asv_bench/benchmarks/__init__.py asv_bench/benchmarks/io/__init__.py \
             asv_bench/benchmarks/scalability/__init__.py \
-            modin/engines/base/io/column_stores \
-            modin/engines/base/io/sql \
-            modin/engines/base/io/text \
-            modin/engines/base/io/__init__.py \
-            modin/engines/base/io/file_dispatcher.py \
-            modin/experimental/engines/pandas_on_ray \
-            modin/experimental/engines/pyarrow_on_ray \
+            modin/core/io \
+            modin/experimental/core/execution/ray/implementations/pandas_on_ray \
+            modin/experimental/core/execution/ray/implementations/pyarrow_on_ray \
             modin/pandas/series.py \
-            modin/engines/python \
+            modin/core/execution/python \
             modin/pandas/dataframe.py \
             modin/config/__init__.py \
             modin/config/__main__.py \
@@ -89,24 +85,29 @@ jobs:
           python scripts/doc_checker.py modin/experimental/xgboost/__init__.py \
             modin/experimental/xgboost/utils.py modin/experimental/xgboost/xgboost.py \
             modin/experimental/xgboost/xgboost_ray.py
-      - run: python scripts/doc_checker.py modin/engines/ray
+      - run: python scripts/doc_checker.py modin/core/execution/ray
       - run: |
-          python scripts/doc_checker.py modin/data_management/functions \
-            modin/data_management/factories/factories.py                \
-            modin/data_management/factories/dispatcher.py               \
-            modin/data_management/utils.py
+          python scripts/doc_checker.py modin/core/execution/dispatching/factories/factories.py \
+            modin/core/execution/dispatching/factories/dispatcher.py                            \
       - run: python scripts/doc_checker.py scripts/doc_checker.py
       - run: |
-          python scripts/doc_checker.py modin/experimental/pandas/io_exp.py \
+          python scripts/doc_checker.py modin/experimental/pandas/io.py \
             modin/experimental/pandas/numpy_wrap.py modin/experimental/pandas/__init__.py
-      - run: python scripts/doc_checker.py modin/backends/base
-      - run: python scripts/doc_checker.py modin/backends/pyarrow
-      - run: python scripts/doc_checker.py modin/backends/pandas
+      - run: python scripts/doc_checker.py modin/core/storage_formats/base
+      - run: python scripts/doc_checker.py modin/core/storage_formats/pyarrow
+      - run: python scripts/doc_checker.py modin/core/storage_formats/pandas
       - run: |
           python scripts/doc_checker.py \
-          modin/experimental/engines/omnisci_on_native/frame \
-          modin/experimental/engines/omnisci_on_native/io.py
-      - run: python scripts/doc_checker.py modin/experimental/backends/omnisci
+            modin/experimental/core/execution/native/implementations/omnisci_on_native/dataframe \
+            modin/experimental/core/execution/native/implementations/omnisci_on_native/io \
+            modin/experimental/core/execution/native/implementations/omnisci_on_native/partitioning \
+            modin/experimental/core/execution/native/implementations/omnisci_on_native/calcite_algebra.py \
+            modin/experimental/core/execution/native/implementations/omnisci_on_native/calcite_builder.py \
+            modin/experimental/core/execution/native/implementations/omnisci_on_native/calcite_serializer.py \
+            modin/experimental/core/execution/native/implementations/omnisci_on_native/df_algebra.py \
+            modin/experimental/core/execution/native/implementations/omnisci_on_native/expr.py \
+            modin/experimental/core/execution/native/implementations/omnisci_on_native/omnisci_worker.py \
+      - run: python scripts/doc_checker.py modin/experimental/core/storage_formats/omnisci
 
   lint-flake8:
     name: lint (flake8)
@@ -140,6 +141,12 @@ jobs:
           python-version: 3.7
           channel-priority: strict
           use-only-tar-bz2: true # IMPORTANT: This needs to be set for caching to work properly!
+          # Miniconda setup sometimes fails because of an HTTP error. Retry
+          # it once if it fails. TODO(https://github.com/conda-incubator/setup-miniconda/issues/129):
+          # Get rid of this once setup-miniconda can be configured to retry
+          # setup on HTTP errors.
+          max_attempts: 2
+          retry_on: error
       - name: Conda environment
         run: |
           conda info
@@ -147,8 +154,8 @@ jobs:
       - run: sudo apt update && sudo apt install -y libhdf5-dev
       - name: Api tests
         run: python -m pytest modin/pandas/test/test_api.py
-      - name: Backends Api tests
-        run: python -m pytest modin/test/test_backends_api.py
+      - name: Executions Api tests
+        run: python -m pytest modin/test/test_executions_api.py
 
   test-headers:
     runs-on: ubuntu-latest
@@ -167,6 +174,12 @@ jobs:
           python-version: 3.7
           channel-priority: strict
           use-only-tar-bz2: true # IMPORTANT: This needs to be set for caching to work properly!
+          # Miniconda setup sometimes fails because of an http error. retry
+          # it once if it fails. todo(https://github.com/conda-incubator/setup-miniconda/issues/129):
+          # get rid of this once setup-miniconda can be configured to retry
+          # setup on http errors.
+          max_attempts: 2
+          retry_on: error
       - name: Conda environment
         run: |
           conda info
@@ -234,16 +247,22 @@ jobs:
           python-version: 3.7
           channel-priority: strict
           use-only-tar-bz2: true # IMPORTANT: This needs to be set for caching to work properly!
+          # Miniconda setup sometimes fails because of an http error. retry
+          # it once if it fails. todo(https://github.com/conda-incubator/setup-miniconda/issues/129):
+          # get rid of this once setup-miniconda can be configured to retry
+          # setup on http errors.
+          max_attempts: 2
+          retry_on: error
       - name: Conda environment
         run: |
           conda info
           conda list
       - name: Internals tests
-        run: python -m pytest modin/data_management/factories/test/test_dispatcher.py modin/experimental/cloud/test/test_cloud.py
+        run: python -m pytest modin/core/execution/dispatching/factories/test/test_dispatcher.py modin/experimental/cloud/test/test_cloud.py
       - run: python -m pytest modin/config/test
       - run: python -m pytest modin/test/test_envvar_catcher.py
-      - run: python -m pytest modin/test/backends/base/test_internals.py
-      - run: python -m pytest modin/test/backends/pandas/test_internals.py
+      - run: python -m pytest modin/test/storage_formats/base/test_internals.py
+      - run: python -m pytest modin/test/storage_formats/pandas/test_internals.py
       - run: python -m pytest modin/test/test_envvar_npartitions.py
       - run: python -m pytest -n 2 modin/test/test_partition_api.py
       - run: python -m pytest modin/test/test_utils.py
@@ -257,11 +276,11 @@ jobs:
         shell: bash -l {0}
     strategy:
       matrix:
-        backend: [BaseOnPython]
+        execution: [BaseOnPython]
     env:
       MODIN_MEMORY: 1000000000
       MODIN_TEST_DATASET_SIZE: "small"
-    name: Test ${{ matrix.backend }} backend, Python 3.7
+    name: Test ${{ matrix.execution }} execution, Python 3.7
     steps:
       - uses: actions/checkout@v2
         with:
@@ -273,30 +292,36 @@ jobs:
           python-version: 3.7
           channel-priority: strict
           use-only-tar-bz2: true # IMPORTANT: This needs to be set for caching to work properly!
+          # Miniconda setup sometimes fails because of an http error. retry
+          # it once if it fails. todo(https://github.com/conda-incubator/setup-miniconda/issues/129):
+          # get rid of this once setup-miniconda can be configured to retry
+          # setup on http errors.
+          max_attempts: 2
+          retry_on: error
       - name: Conda environment
         run: |
           conda info
           conda list
       - name: Install HDF5
         run: sudo apt update && sudo apt install -y libhdf5-dev
-      - run: pytest modin/experimental/xgboost/test/test_default.py --backend=${{ matrix.backend }}
-      - run: python -m pytest -n 2 modin/test/backends/base/test_internals.py --backend=${{ matrix.backend }}
-      - run: pytest -n 2 modin/pandas/test/dataframe/test_binary.py --backend=${{ matrix.backend }}
-      - run: pytest -n 2 modin/pandas/test/dataframe/test_default.py --backend=${{ matrix.backend }}
-      - run: pytest -n 2 modin/pandas/test/dataframe/test_indexing.py --backend=${{ matrix.backend }}
-      - run: pytest -n 2 modin/pandas/test/dataframe/test_iter.py --backend=${{ matrix.backend }}
-      - run: pytest -n 2 modin/pandas/test/dataframe/test_join_sort.py --backend=${{ matrix.backend }}
-      - run: pytest -n 2 modin/pandas/test/dataframe/test_map_metadata.py --backend=${{ matrix.backend }}
-      - run: pytest -n 2 modin/pandas/test/dataframe/test_reduction.py --backend=${{ matrix.backend }}
-      - run: pytest -n 2 modin/pandas/test/dataframe/test_udf.py --backend=${{ matrix.backend }}
-      - run: pytest -n 2 modin/pandas/test/dataframe/test_window.py --backend=${{ matrix.backend }}
-      - run: pytest -n 2 modin/pandas/test/dataframe/test_pickle.py --backend=${{ matrix.backend }}
-      - run: python -m pytest -n 2 modin/pandas/test/test_series.py --backend=${{ matrix.backend }}
-      - run: python -m pytest -n 2 modin/pandas/test/test_rolling.py --backend=${{ matrix.backend }}
-      - run: python -m pytest -n 2 modin/pandas/test/test_concat.py --backend=${{ matrix.backend }}
-      - run: python -m pytest -n 2 modin/pandas/test/test_groupby.py --backend=${{ matrix.backend }}
-      - run: python -m pytest -n 2 modin/pandas/test/test_reshape.py --backend=${{ matrix.backend }}
-      - run: python -m pytest -n 2 modin/pandas/test/test_general.py --backend=${{ matrix.backend }}
+      - run: pytest modin/experimental/xgboost/test/test_default.py --execution=${{ matrix.execution }}
+      - run: python -m pytest -n 2 modin/test/storage_formats/base/test_internals.py --execution=${{ matrix.execution }}
+      - run: pytest -n 2 modin/pandas/test/dataframe/test_binary.py --execution=${{ matrix.execution }}
+      - run: pytest -n 2 modin/pandas/test/dataframe/test_default.py --execution=${{ matrix.execution }}
+      - run: pytest -n 2 modin/pandas/test/dataframe/test_indexing.py --execution=${{ matrix.execution }}
+      - run: pytest -n 2 modin/pandas/test/dataframe/test_iter.py --execution=${{ matrix.execution }}
+      - run: pytest -n 2 modin/pandas/test/dataframe/test_join_sort.py --execution=${{ matrix.execution }}
+      - run: pytest -n 2 modin/pandas/test/dataframe/test_map_metadata.py --execution=${{ matrix.execution }}
+      - run: pytest -n 2 modin/pandas/test/dataframe/test_reduction.py --execution=${{ matrix.execution }}
+      - run: pytest -n 2 modin/pandas/test/dataframe/test_udf.py --execution=${{ matrix.execution }}
+      - run: pytest -n 2 modin/pandas/test/dataframe/test_window.py --execution=${{ matrix.execution }}
+      - run: pytest -n 2 modin/pandas/test/dataframe/test_pickle.py --execution=${{ matrix.execution }}
+      - run: python -m pytest -n 2 modin/pandas/test/test_series.py --execution=${{ matrix.execution }}
+      - run: python -m pytest -n 2 modin/pandas/test/test_rolling.py --execution=${{ matrix.execution }}
+      - run: python -m pytest -n 2 modin/pandas/test/test_concat.py --execution=${{ matrix.execution }}
+      - run: python -m pytest -n 2 modin/pandas/test/test_groupby.py --execution=${{ matrix.execution }}
+      - run: python -m pytest -n 2 modin/pandas/test/test_reshape.py --execution=${{ matrix.execution }}
+      - run: python -m pytest -n 2 modin/pandas/test/test_general.py --execution=${{ matrix.execution }}
       - run: |
           curl -o codecov https://codecov.io/bash
           VERSION=$(grep -o 'VERSION=\"[0-9\.]*\"' codecov | cut -d'"' -f2);
@@ -317,8 +342,8 @@ jobs:
     env:
       MODIN_EXPERIMENTAL: "True"
       MODIN_ENGINE: "native"
-      MODIN_BACKEND: "omnisci"
-    name: Test OmniSci backend, Python 3.7
+      MODIN_STORAGE_FORMAT: "omnisci"
+    name: Test OmniSci storage format, Python 3.7
     steps:
       - uses: actions/checkout@v2
         with:
@@ -330,6 +355,12 @@ jobs:
           environment-file: requirements/env_omnisci.yml
           python-version: 3.7
           use-only-tar-bz2: true # IMPORTANT: This needs to be set for caching to work properly!
+          # Miniconda setup sometimes fails because of an http error. retry
+          # it once if it fails. todo(https://github.com/conda-incubator/setup-miniconda/issues/129):
+          # get rid of this once setup-miniconda can be configured to retry
+          # setup on http errors.
+          max_attempts: 2
+          retry_on: error
       - name: Conda environment
         run: |
           conda info
@@ -337,7 +368,7 @@ jobs:
       - name: Install HDF5
         run: sudo apt update && sudo apt install -y libhdf5-dev
       - run: MODIN_BENCHMARK_MODE=True pytest modin/pandas/test/internals/test_benchmark_mode.py
-      - run: pytest modin/experimental/engines/omnisci_on_native/test/test_dataframe.py
+      - run: pytest modin/experimental/core/execution/native/implementations/omnisci_on_native/test/test_dataframe.py
       - run: pytest modin/pandas/test/test_io.py::TestCsv --verbose
       - run: |
           curl -o codecov https://codecov.io/bash
@@ -369,6 +400,12 @@ jobs:
         with:
           auto-activate-base: true
           activate-environment: ""
+          # Miniconda setup sometimes fails because of an http error. retry
+          # it once if it fails. todo(https://github.com/conda-incubator/setup-miniconda/issues/129):
+          # get rid of this once setup-miniconda can be configured to retry
+          # setup on http errors.
+          max_attempts: 2
+          retry_on: error
       - name: ASV installation
         run: |
           # FIXME: use the tag or release version of ASV as soon as it appears;
@@ -396,7 +433,7 @@ jobs:
                 -b ^benchmarks -b ^io -b ^scalability | tee benchmarks.log
 
               # check Modin on OmniSci
-              MODIN_ENGINE=native MODIN_BACKEND=omnisci MODIN_EXPERIMENTAL=true asv run --quick --strict --show-stderr \
+              MODIN_ENGINE=native MODIN_STORAGE_FORMAT=omnisci MODIN_EXPERIMENTAL=true asv run --quick --strict --show-stderr \
                 --launch-method=forkserver --config asv.conf.omnisci.json \
                 -b ^omnisci | tee benchmarks.log
           else
@@ -424,9 +461,6 @@ jobs:
     env:
       MODIN_ENGINE: ${{matrix.engine}}
       MODIN_MEMORY: 1000000000
-      MKL_NUM_THREADS: 1
-      NUMEXPR_NUM_THREADS: 1
-      OMP_NUM_THREADS: 1
     name: test-ubuntu (engine ${{matrix.engine}}, python ${{matrix.python-version}})
     steps:
       - uses: actions/checkout@v2
@@ -439,6 +473,12 @@ jobs:
           python-version: ${{matrix.python-version}}
           channel-priority: strict
           use-only-tar-bz2: true # IMPORTANT: This needs to be set for caching to work properly!
+          # Miniconda setup sometimes fails because of an http error. retry
+          # it once if it fails. todo(https://github.com/conda-incubator/setup-miniconda/issues/129):
+          # get rid of this once setup-miniconda can be configured to retry
+          # setup on http errors.
+          max_attempts: 2
+          retry_on: error
       - name: Conda environment
         run: |
           conda info
@@ -448,6 +488,8 @@ jobs:
       - run: MODIN_BENCHMARK_MODE=True pytest modin/pandas/test/internals/test_benchmark_mode.py
       - run: pytest -n 2 modin/experimental/xgboost/test/test_default.py
       - run: pytest -n 2 modin/experimental/xgboost/test/test_xgboost.py
+        if: matrix.engine == 'ray'
+      - run: pytest -n 2 modin/experimental/xgboost/test/test_dmatrix.py
         if: matrix.engine == 'ray'
       - run: pytest -n 2 modin/pandas/test/dataframe/test_binary.py
       - run: pytest -n 2 modin/pandas/test/dataframe/test_default.py
@@ -470,7 +512,7 @@ jobs:
       - run: python -m pytest -n 2 modin/pandas/test/test_general.py
       - run: python -m pytest modin/pandas/test/test_io.py --verbose
       - run: python -m pytest modin/experimental/pandas/test/test_io_exp.py
-      - run: pip install dfsql "mindsdb_sql<=0.0.12" && pytest modin/experimental/sql/test/test_sql.py
+      - run: pip install "dfsql>=0.4.2" "pyparsing<=2.4.7" && pytest modin/experimental/sql/test/test_sql.py
       - run: |
           curl -o codecov https://codecov.io/bash
           VERSION=$(grep -o 'VERSION=\"[0-9\.]*\"' codecov | cut -d'"' -f2);
@@ -504,6 +546,12 @@ jobs:
           python-version: 3.7
           channel-priority: strict
           use-only-tar-bz2: true # IMPORTANT: This needs to be set for caching to work properly!
+          # Miniconda setup sometimes fails because of an http error. retry
+          # it once if it fails. todo(https://github.com/conda-incubator/setup-miniconda/issues/129):
+          # get rid of this once setup-miniconda can be configured to retry
+          # setup on http errors.
+          max_attempts: 2
+          retry_on: error
       - name: Conda environment
         run: |
           conda info
@@ -532,9 +580,6 @@ jobs:
       MODIN_ENGINE: "python"
       MODIN_EXPERIMENTAL: "True"
       MODIN_MEMORY: 1000000000
-      MKL_NUM_THREADS: 1
-      NUMEXPR_NUM_THREADS: 1
-      OMP_NUM_THREADS: 1
     name: test cloud
     steps:
       - uses: actions/checkout@v2
@@ -547,6 +592,12 @@ jobs:
           python-version: 3.7
           channel-priority: strict
           use-only-tar-bz2: true # IMPORTANT: This needs to be set for caching to work properly!
+          # Miniconda setup sometimes fails because of an http error. retry
+          # it once if it fails. todo(https://github.com/conda-incubator/setup-miniconda/issues/129):
+          # get rid of this once setup-miniconda can be configured to retry
+          # setup on http errors.
+          max_attempts: 2
+          retry_on: error
       - name: Conda environment
         run: |
           conda info
@@ -596,9 +647,6 @@ jobs:
     env:
       MODIN_ENGINE: ${{matrix.engine}}
       MODIN_MEMORY: 1000000000
-      MKL_NUM_THREADS: 1
-      NUMEXPR_NUM_THREADS: 1
-      OMP_NUM_THREADS: 1
     name: test-windows
     steps:
       - uses: actions/checkout@v2
@@ -612,6 +660,12 @@ jobs:
           channel-priority: strict
           use-only-tar-bz2: true # IMPORTANT: This needs to be set for caching to work properly!
           auto-update-conda: true # this enable `use-only-tar-bz2` feature on Windows
+          # Miniconda setup sometimes fails because of an http error. retry
+          # it once if it fails. todo(https://github.com/conda-incubator/setup-miniconda/issues/129):
+          # get rid of this once setup-miniconda can be configured to retry
+          # setup on http errors.
+          max_attempts: 2
+          retry_on: error
       - name: Conda environment
         run: |
           conda info
@@ -634,7 +688,7 @@ jobs:
       matrix:
         python-version: ["3.7", "3.8"]
     env:
-      MODIN_BACKEND: pyarrow
+      MODIN_STORAGE_FORMAT: pyarrow
       MODIN_EXPERIMENTAL: "True"
     name: test (pyarrow, python ${{matrix.python-version}})
     steps:
@@ -648,6 +702,12 @@ jobs:
           python-version: ${{matrix.python-version}}
           channel-priority: strict
           use-only-tar-bz2: true # IMPORTANT: This needs to be set for caching to work properly!
+          # Miniconda setup sometimes fails because of an http error. retry
+          # it once if it fails. todo(https://github.com/conda-incubator/setup-miniconda/issues/129):
+          # get rid of this once setup-miniconda can be configured to retry
+          # setup on http errors.
+          max_attempts: 2
+          retry_on: error
       - name: Conda environment
         run: |
           conda info
@@ -666,6 +726,7 @@ jobs:
         python-version: [ "3.7", "3.8" ]
         engine: ["ray", "dask"]
     env:
+      MODIN_EXPERIMENTAL: "True"
       MODIN_ENGINE: ${{matrix.engine}}
     name: test-spreadsheet (engine ${{matrix.engine}}, python ${{matrix.python-version}})
     steps:
@@ -679,8 +740,14 @@ jobs:
           python-version: ${{matrix.python-version}}
           channel-priority: strict
           use-only-tar-bz2: true # IMPORTANT: This needs to be set for caching to work properly!
+          # Miniconda setup sometimes fails because of an http error. retry
+          # it once if it fails. todo(https://github.com/conda-incubator/setup-miniconda/issues/129):
+          # get rid of this once setup-miniconda can be configured to retry
+          # setup on http errors.
+          max_attempts: 2
+          retry_on: error
       - name: Conda environment
         run: |
           conda info
           conda list
-      - run: python -m pytest modin/spreadsheet/test/test_general.py
+      - run: python -m pytest modin/experimental/spreadsheet/test/test_general.py

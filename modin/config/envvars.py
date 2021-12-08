@@ -109,10 +109,10 @@ class Engine(EnvironmentVariable, type=str):
                 )
             return "Dask"
         try:
-            import omniscidbe  # noqa
-        except ImportError:
+            from omniscidbe import PyDbEngine  # noqa
+        except ModuleNotFoundError:
             try:
-                import dbe  # noqa
+                from dbe import PyDbEngine  # noqa
             except ImportError:
                 pass
             else:
@@ -124,10 +124,10 @@ class Engine(EnvironmentVariable, type=str):
         )
 
 
-class Backend(EnvironmentVariable, type=str):
+class StorageFormat(EnvironmentVariable, type=str):
     """Engine to run on a single node of distribution."""
 
-    varname = "MODIN_BACKEND"
+    varname = "MODIN_STORAGE_FORMAT"
     default = "Pandas"
     choices = ("Pandas", "OmniSci", "Pyarrow", "Cudf")
 
@@ -227,7 +227,7 @@ class NPartitions(EnvironmentVariable, type=int):
         -------
         int
         """
-        if Backend.get() == "Cudf":
+        if StorageFormat.get() == "Cudf":
             return GpuCount.get()
         else:
             return CpuCount.get()
@@ -402,6 +402,18 @@ class OmnisciLaunchParameters(EnvironmentVariable, type=dict):
             {key.replace("-", "_"): value for key, value in custom_parameters.items()}
         )
         return result
+
+
+class MinPartitionSize(EnvironmentVariable, type=int):
+    """
+    Minimum number of rows/columns in a single pandas partition split.
+
+    Once a partition for a pandas dataframe has more than this many elements,
+    Modin adds another partition.
+    """
+
+    varname = "MODIN_MIN_PARTITION_SIZE"
+    default = 32
 
 
 def _check_vars():

@@ -30,7 +30,7 @@ from .compatibility import (
     ASV_USE_IMPL,
     ASV_DATASET_SIZE,
     ASV_USE_ENGINE,
-    ASV_USE_BACKEND,
+    ASV_USE_STORAGE_FORMAT,
 )
 from .data_shapes import RAND_LOW, RAND_HIGH
 
@@ -308,6 +308,8 @@ def generate_dataframe(
     rand_high: int,
     groupby_ncols: Optional[int] = None,
     count_groups: Optional[int] = None,
+    gen_unique_key: bool = False,
+    cache_prefix: str = None,
 ) -> Union[pd.DataFrame, pandas.DataFrame]:
     """
     Generate DataFrame with caching.
@@ -338,6 +340,10 @@ def generate_dataframe(
         in each group every benchmarking time.
     count_groups : int, default: None
         Count of groups in groupby columns.
+    gen_unique_key : bool, default: False
+        Generate `col1` column where all elements are unique.
+    cache_prefix : str, optional
+        Prefix to add to the cache key of the requested frame.
 
     Returns
     -------
@@ -363,7 +369,11 @@ def generate_dataframe(
         rand_high,
         groupby_ncols,
         count_groups,
+        gen_unique_key,
     )
+
+    if cache_prefix is not None:
+        cache_key = (cache_prefix, *cache_key)
 
     if cache_key in dataframes_cache:
         return dataframes_cache[cache_key]
@@ -379,6 +389,9 @@ def generate_dataframe(
         groupby_columns = [f"groupby_col{x}" for x in range(groupby_ncols)]
         for groupby_col in groupby_columns:
             data[groupby_col] = np.tile(np.arange(count_groups), nrows // count_groups)
+
+    if gen_unique_key:
+        data["col1"] = np.arange(nrows)
 
     if impl == "modin":
         df = pd.DataFrame(data)
@@ -449,22 +462,20 @@ def trigger_import(*dfs):
     *dfs : iterable
         DataFrames to trigger import.
     """
-    assert ASV_USE_BACKEND == "omnisci"
+    if ASV_USE_STORAGE_FORMAT != "omnisci" or ASV_USE_IMPL == "pandas":
+        return
 
-    from modin.experimental.engines.omnisci_on_native.frame.omnisci_worker import (
+    from modin.experimental.core.execution.native.implementations.omnisci_on_native.omnisci_worker import (
         OmnisciServer,
     )
 
     for df in dfs:
-        if ASV_USE_IMPL == "modin":
-            df.shape  # to trigger real execution
-            df._query_compiler._modin_frame._partitions[0][
-                0
-            ].frame_id = OmnisciServer().put_arrow_to_omnisci(
-                df._query_compiler._modin_frame._partitions[0][0].get()
-            )  # to trigger real execution
-        elif ASV_USE_IMPL == "pandas":
-            pass
+        df.shape  # to trigger real execution
+        df._query_compiler._modin_frame._partitions[0][
+            0
+        ].frame_id = OmnisciServer().put_arrow_to_omnisci(
+            df._query_compiler._modin_frame._partitions[0][0].get()
+        )  # to trigger real execution
 
 
 def execute(
@@ -484,7 +495,7 @@ def execute(
         trigger_import(df)
         return
     if ASV_USE_IMPL == "modin":
-        if ASV_USE_BACKEND == "omnisci":
+        if ASV_USE_STORAGE_FORMAT == "omnisci":
             df._query_compiler._modin_frame._execute()
             return
         partitions = df._query_compiler._modin_frame._partitions

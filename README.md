@@ -3,10 +3,11 @@
 
 <p align="center">
 <a href="https://discuss.modin.org"><img alt="" src="https://img.shields.io/badge/discourse-forum-purple.svg?logo=discourse&logoColor=white" align="center"></a>
+<a href='https://modin.org/slack.html'><img src='https://img.shields.io/static/v1?label=chat&logo=slack&message=Slack&color=brightgreen' alt='Slack'  align="center"/></a>
 <a href="https://codecov.io/gh/modin-project/modin"><img src="https://codecov.io/gh/modin-project/modin/branch/master/graph/badge.svg" align="center"/></a>
 <a href="https://github.com/modin-project/modin/actions"><img src="https://github.com/modin-project/modin/workflows/master/badge.svg" align="center"></a>
 <a href="https://modin.readthedocs.io/en/latest/?badge=latest"><img alt="" src="https://readthedocs.org/projects/modin/badge/?version=latest" align="center"></a>
-<a href="https://pypi.org/project/modin/"><img alt="" src="https://img.shields.io/badge/pypi-0.10.2-blue.svg" align="center"></a>
+<a href="https://pypi.org/project/modin/"><img src="https://badge.fury.io/py/modin.svg" alt="PyPI version" align="center"></a>
 <a href="https://modin.org/modin-bench/#/"><img src="https://img.shields.io/badge/benchmarked%20by-asv-blue.svg" align="center"></a>
 </p>
 
@@ -19,7 +20,9 @@ import modin.pandas as pd
 
 ### Installation
 
-Modin can be installed from PyPI:
+#### From PyPI
+
+Modin can be installed with `pip`:
 
 ```bash
 pip install modin
@@ -36,6 +39,23 @@ pip install modin[all] # Install all of the above
 ```
 Modin will automatically detect which engine you have installed and use that for
 scheduling computation!
+
+#### From conda-forge
+
+Installing from conda forge using `modin-all` will install Modin and 3 engines: ([Ray](https://github.com/ray-project/ray),
+[Dask](https://github.com/dask/dask) and [Omnisci](https://modin.readthedocs.io/en/latest/UsingOmnisci/index.html))
+
+```bash
+conda install -c conda-forge modin-all
+```
+
+Each engine can also be installed individually:
+
+```bash
+conda install -c conda-forge modin-ray  # install Ray engine with Modin
+conda install -c conda-forge modin-dask # install Dask engine with Modin
+conda install -c conda-forge modin-omnisci # install Omnisci engine with Modin
+```
 
 ### Pandas API Coverage
 
@@ -81,6 +101,8 @@ os.environ["MODIN_ENGINE"] = "dask"  # Modin will use Dask
 import modin.pandas as pd
 ```
 
+Check [this Modin docs section](https://modin.readthedocs.io/en/latest/UsingOmnisci/index.html) for Omnisci engine setup.
+
 **Note: You should not change the engine after you have imported Modin as it will result in undefined behavior**
 
 ##### Which engine should I use?
@@ -89,6 +111,9 @@ If you are on Windows, you must use Dask. Ray does not support Windows. If you a
 Linux or Mac OS, you can install and use either engine. There is no knowledge required
 to use either of these engines as Modin abstracts away all of the complexity, so feel
 free to pick either!
+
+On Linux you also can choose [Omnisci](https://modin.readthedocs.io/en/latest/UsingOmnisci/index.html) which is an experimental
+engine based on [OmnisciDB](https://www.omnisci.com/platform/omniscidb) and included into [Intel® Distribution of Modin](https://software.intel.com/content/www/us/en/develop/tools/oneapi/components/distribution-of-modin.html) which is a part of [Intel® oneAPI AI Analytics Toolkit (AI Kit)](https://www.intel.com/content/www/us/en/developer/tools/oneapi/ai-analytics-toolkit.html)
 
 ##### Advanced usage
 
@@ -190,8 +215,9 @@ more information, and checkout [the difference between Modin and Dask!](https://
 
 ### More information and Getting Involved
 
-- [Documentation](https://modin.readthedocs.io/en/latest/)
-- Ask questions or participate in discussions on our [Discourse](https://discuss.modin.org)
-- Join our mailing list [modin-dev@googlegroups.com](https://groups.google.com/forum/#!forum/modin-dev)
-- Submit bug reports to our [GitHub Issues Page](https://github.com/modin-project/modin/issues)
-- Contributions are welcome! Open a [pull request](https://github.com/modin-project/modin/pulls)
+- Read the [documentation](https://modin.readthedocs.io/en/latest/) for more information.
+- Check out [our paper](http://www.vldb.org/pvldb/vol13/p2033-petersohn.pdf) to learn more about the theory underlying Modin.
+- Ask questions or participate in discussions on our [Discourse](https://discuss.modin.org).
+- Let us know how you're using Modin! Join our community [Slack](https://modin.org/slack.html) to discuss and ask questions.
+- Submit bug reports to our [GitHub Issues Page](https://github.com/modin-project/modin/issues).
+- Contributions are welcome! Open a [pull request](https://github.com/modin-project/modin/pulls).

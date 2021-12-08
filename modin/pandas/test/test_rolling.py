@@ -16,7 +16,7 @@ import numpy as np
 import pandas
 import modin.pandas as pd
 
-from .utils import df_equals, test_data_values, test_data_keys
+from .utils import df_equals, test_data_values, test_data_keys, create_test_dfs
 from modin.config import NPartitions
 
 NPartitions.put(4)
@@ -204,3 +204,22 @@ def test_series_dt_index(closed):
     )
     df_equals(modin_rolled.aggregate(np.sum), pandas_rolled.aggregate(np.sum))
     df_equals(modin_rolled.quantile(0.1), pandas_rolled.quantile(0.1))
+
+
+def test_api_indexer():
+    modin_df, pandas_df = create_test_dfs(test_data_values[0])
+    indexer = pd.api.indexers.FixedForwardWindowIndexer(window_size=3)
+    pandas_rolled = pandas_df.rolling(window=indexer)
+    modin_rolled = modin_df.rolling(window=indexer)
+    df_equals(modin_rolled.sum(), pandas_rolled.sum())
+
+
+def test_issue_3512():
+    data = np.random.rand(129)
+    modin_df = pd.DataFrame(data)
+    pandas_df = pandas.DataFrame(data)
+
+    modin_ans = modin_df[0:33].rolling(window=21).mean()
+    pandas_ans = pandas_df[0:33].rolling(window=21).mean()
+
+    df_equals(modin_ans, pandas_ans)

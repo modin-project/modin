@@ -21,13 +21,13 @@ import modin.pandas as pd
 
 @pytest.mark.skipif(
     Engine.get() == "Ray",
-    reason="This test doesn't make sense on Ray backend.",
+    reason="This test doesn't make sense on Ray engine.",
 )
 @pytest.mark.skipif(
     Engine.get() == "Python",
-    reason="This test doesn't make sense on not distributed backend (see issue #2938).",
+    reason="This test doesn't make sense on non-distributed engine (see issue #2938).",
 )
-def test_backend():
+def test_engine():
     try:
         xgb.train({}, xgb.DMatrix(pd.DataFrame([0]), pd.DataFrame([0])))
     except ValueError:

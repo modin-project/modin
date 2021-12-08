@@ -11,7 +11,7 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-"""General Modin on OmniSci backend benchmarks."""
+"""General Modin on OmniSci storage format benchmarks."""
 
 from ..utils import (
     generate_dataframe,
@@ -28,21 +28,68 @@ from ..utils import (
     trigger_import,
     get_benchmark_shapes,
 )
+from ..utils.common import random_state
+import numpy as np
+import pandas
+
+from ..benchmarks import (
+    TimeIndexing as TimeIndexingPandasExecution,
+    TimeIndexingColumns as TimeIndexingColumnsPandasExecution,
+)
 
 
 class TimeJoin:
-    param_names = ["shape", "how"]
+    param_names = ["shape", "how", "is_equal_keys"]
     params = [
         get_benchmark_shapes("omnisci.TimeJoin"),
         ["left", "inner"],
+        [True, False],
     ]
 
-    def setup(self, shape, how):
-        self.df1 = generate_dataframe(ASV_USE_IMPL, "int", *shape, RAND_LOW, RAND_HIGH)
-        self.df2 = generate_dataframe(ASV_USE_IMPL, "int", *shape, RAND_LOW, RAND_HIGH)
+    def setup(self, shape, how, is_equal_keys):
+        self.df1, self.df2 = (
+            generate_dataframe(
+                ASV_USE_IMPL,
+                "int",
+                *frame_shape,
+                RAND_LOW,
+                RAND_HIGH,
+                cache_prefix=f"{i}-th_frame_to_join",
+            )
+            for i, frame_shape in enumerate((shape, shape))
+        )
+
+        if is_equal_keys:
+            # When the frames have default indices to join on: RangeIndex(frame_length),
+            # OmniSci backend performs join on the internal meta-column called 'rowid'.
+            # There is a bug in the engine that makes such joins fail. To avoid joining
+            # on the meta-column we explicitly specify a non-default index to join on.
+            # https://github.com/modin-project/modin/issues/3740
+            # Generating a new object for every index to avoid shared index objects:
+            self.df1.index = pandas.RangeIndex(1, len(self.df1) + 1)
+            self.df2.index = pandas.RangeIndex(1, len(self.df2) + 1)
+        else:
+            # Intersection rate indicates how many common join-keys `self.df1`
+            # and `self.df2` have in terms of percentage.
+            indices_intersection_rate = 0.5
+
+            frame_length = len(self.df1)
+            intersect_size = int(frame_length * indices_intersection_rate)
+
+            intersect_part = random_state.choice(
+                self.df1.index, size=intersect_size, replace=False
+            )
+            non_intersect_part = np.arange(
+                start=frame_length, stop=frame_length + (frame_length - intersect_size)
+            )
+            new_index = np.concatenate([intersect_part, non_intersect_part])
+
+            random_state.shuffle(new_index)
+            self.df1.index = new_index
+
         trigger_import(self.df1, self.df2)
 
-    def time_join(self, shape, how):
+    def time_join(self, shape, how, is_equal_keys):
         # join dataframes on index to get the predictable shape
         execute(self.df1.join(self.df2, how=how, lsuffix="left_"))
 
@@ -51,24 +98,34 @@ class TimeMerge:
     param_names = ["shapes", "how"]
     params = [
         get_benchmark_shapes("omnisci.TimeMerge"),
-        ["left"],
+        ["left", "inner"],
     ]
 
     def setup(self, shapes, how):
-        self.df1 = generate_dataframe(
-            ASV_USE_IMPL, "int", *shapes[0], RAND_LOW, RAND_HIGH
-        )
-        self.df2 = generate_dataframe(
-            ASV_USE_IMPL, "int", *shapes[1], RAND_LOW, RAND_HIGH
-        )
-        trigger_import(self.df1, self.df2)
+        gen_unique_key = how == "inner"
+        self.dfs = []
+        for i, shape in enumerate(shapes):
+            self.dfs.append(
+                generate_dataframe(
+                    ASV_USE_IMPL,
+                    "int",
+                    *shape,
+                    RAND_LOW,
+                    RAND_HIGH,
+                    gen_unique_key=gen_unique_key,
+                    cache_prefix=f"{i}-th_frame_to_merge",
+                )
+            )
+        trigger_import(*self.dfs)
 
     def time_merge(self, shapes, how):
         # merging dataframes by index is not supported, therefore we merge by column
         # with arbitrary values, which leads to an unpredictable form of the operation result;
         # it's need to get the predictable shape to get consistent performance results
         execute(
-            self.df1.merge(self.df2, on="col1", how=how, suffixes=("left_", "right_"))
+            self.dfs[0].merge(
+                self.dfs[1], on="col1", how=how, suffixes=("left_", "right_")
+            )
         )
 
 
@@ -77,11 +134,16 @@ class TimeAppend:
     params = [get_benchmark_shapes("omnisci.TimeAppend")]
 
     def setup(self, shapes):
-        self.df1 = generate_dataframe(
-            ASV_USE_IMPL, "int", *shapes[0], RAND_LOW, RAND_HIGH
-        )
-        self.df2 = generate_dataframe(
-            ASV_USE_IMPL, "int", *shapes[1], RAND_LOW, RAND_HIGH
+        self.df1, self.df2 = (
+            generate_dataframe(
+                ASV_USE_IMPL,
+                "int",
+                *shape,
+                RAND_LOW,
+                RAND_HIGH,
+                cache_prefix=f"{i}-th_frame_to_append",
+            )
+            for i, shape in enumerate(shapes)
         )
         trigger_import(self.df1, self.df2)
 
@@ -287,35 +349,18 @@ class TimeValueCountsSeries(BaseTimeValueCounts):
         execute(self.series.value_counts())
 
 
-class TimeIndexing:
-    param_names = ["shape", "indexer_type"]
+class TimeIndexing(TimeIndexingPandasExecution):
     params = [
         get_benchmark_shapes("omnisci.TimeIndexing"),
-        [
-            "scalar",
-            "bool",
-            "slice",
-            "list",
-            "function",
-        ],
+        *TimeIndexingPandasExecution.params[1:],
     ]
 
-    def setup(self, shape, indexer_type):
-        self.df = generate_dataframe(ASV_USE_IMPL, "int", *shape, RAND_LOW, RAND_HIGH)
-        trigger_import(self.df)
-        self.indexer = {
-            "bool": [False, True] * (shape[0] // 2),
-            "scalar": shape[0] // 2,
-            "slice": slice(0, shape[0], 2),
-            "list": list(range(shape[0])),
-            "function": lambda df: df.index[::-2],
-        }[indexer_type]
 
-    def time_iloc(self, shape, indexer_type):
-        execute(self.df.iloc[self.indexer])
-
-    def time_loc(self, shape, indexer_type):
-        execute(self.df.loc[self.indexer])
+class TimeIndexingColumns(TimeIndexingColumnsPandasExecution):
+    params = [
+        get_benchmark_shapes("omnisci.TimeIndexing"),
+        *TimeIndexingColumnsPandasExecution.params[1:],
+    ]
 
 
 class TimeResetIndex:
@@ -413,6 +458,9 @@ class BaseTimeGroupBy:
             groupby_ncols,
             count_groups=ngroups,
         )
+        # correct while we use 'col*' like name for non-groupby columns
+        # and 'groupby_col*' like name for groupby columns
+        self.non_groupby_columns = self.df.columns[:-groupby_ncols]
         trigger_import(self.df)
 
 
@@ -446,3 +494,10 @@ class TimeGroupByMultiColumn(BaseTimeGroupBy):
 
     def time_groupby_agg_nunique(self, *args, **kwargs):
         execute(self.df.groupby(by=self.groupby_columns).agg("nunique"))
+
+    def time_groupby_agg_mean_dict(self, *args, **kwargs):
+        execute(
+            self.df.groupby(by=self.groupby_columns).agg(
+                {col: "mean" for col in self.non_groupby_columns}
+            )
+        )

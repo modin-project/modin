@@ -4,11 +4,11 @@ flatbuffers
 funcsigs
 mock
 opencv-python
+pydata_sphinx_theme
 pyyaml
 recommonmark
 sphinx
 sphinx-click
-sphinx_rtd_theme
 git+https://github.com/modin-project/modin.git@master#egg=modin[all]
 sphinxcontrib_plantuml
 sphinx-issues

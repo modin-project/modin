@@ -19,7 +19,7 @@ import matplotlib
 import modin.pandas as pd
 from numpy.testing import assert_array_equal
 from pandas.core.base import SpecificationError
-from modin.utils import get_current_backend
+from modin.utils import get_current_execution
 import sys
 
 from modin.utils import to_pandas
@@ -68,6 +68,8 @@ from .utils import (
     generate_multiindex,
     test_data_diff_dtype,
     df_equals_with_non_stable_indices,
+    test_data_large_categorical_series_keys,
+    test_data_large_categorical_series_values,
 )
 from modin.config import NPartitions
 
@@ -502,7 +504,7 @@ def test___repr__(name, dt_index, data):
         )
         pandas_series.index = modin_series.index = index
 
-    if get_current_backend() == "BaseOnPython" and data == "empty":
+    if get_current_execution() == "BaseOnPython" and data == "empty":
         # TODO: Remove this when default `dtype` of empty Series will be `object` in pandas (see #3142).
         assert modin_series.dtype == np.object
         assert pandas_series.dtype == np.float64
@@ -974,35 +976,31 @@ def test_asof(where):
     # With NaN:
     values = [1, 2, np.nan, 4]
     index = [10, 20, 30, 40]
-    modin_series, pandas_series = pd.Series(values, index=index), pandas.Series(
-        values, index=index
+    modin_series, pandas_series = (
+        pd.Series(values, index=index),
+        pandas.Series(values, index=index),
     )
     df_equals(modin_series.asof(where), pandas_series.asof(where))
 
     # No NaN:
     values = [1, 2, 7, 4]
-    modin_series, pandas_series = pd.Series(values, index=index), pandas.Series(
-        values, index=index
+    modin_series, pandas_series = (
+        pd.Series(values, index=index),
+        pandas.Series(values, index=index),
     )
     df_equals(modin_series.asof(where), pandas_series.asof(where))
 
 
 @pytest.mark.parametrize(
     "where",
-    [
-        20,
-        30,
-        [10.5, 40.5],
-        [10],
-        pandas.Index([20, 30]),
-        pandas.Index([10.5]),
-    ],
+    [20, 30, [10.5, 40.5], [10], pandas.Index([20, 30]), pandas.Index([10.5])],
 )
 def test_asof_large(where):
     values = test_data["float_nan_data"]["col1"]
     index = list(range(len(values)))
-    modin_series, pandas_series = pd.Series(values, index=index), pandas.Series(
-        values, index=index
+    modin_series, pandas_series = (
+        pd.Series(values, index=index),
+        pandas.Series(values, index=index),
     )
     df_equals(modin_series.asof(where), pandas_series.asof(where))
 
@@ -1233,7 +1231,11 @@ def test_corr(data):
     df_equals(modin_result, pandas_result)
 
 
-@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+@pytest.mark.parametrize(
+    "data",
+    test_data_values + test_data_large_categorical_series_values,
+    ids=test_data_keys + test_data_large_categorical_series_keys,
+)
 def test_count(data):
     modin_series, pandas_series = create_test_series(data)
     df_equals(modin_series.count(), pandas_series.count())
@@ -1548,7 +1550,7 @@ def test_dropna_inplace(data):
 
 def test_dtype_empty():
     modin_series, pandas_series = pd.Series(), pandas.Series()
-    if get_current_backend() == "BaseOnPython":
+    if get_current_execution() == "BaseOnPython":
         # TODO: Remove this when default `dtype` of empty Series will be `object` in pandas (see #3142).
         assert modin_series.dtype == np.object
         assert pandas_series.dtype == np.float64
@@ -1888,7 +1890,7 @@ def test_iloc(request, data):
     modin_series, pandas_series = create_test_series(data)
 
     if not name_contains(request.node.name, ["empty_data"]):
-        # Scaler
+        # Scalar
         np.testing.assert_equal(modin_series.iloc[0], pandas_series.iloc[0])
 
         # Series
@@ -2101,6 +2103,15 @@ def test_loc(data):
         (slice(None), 1),
     ]
     df_equals(modin_result, pandas_result)
+
+
+# This tests the bug from https://github.com/modin-project/modin/issues/3736
+def test_loc_setting_categorical_series():
+    modin_series = pd.Series(["a", "b", "c"], dtype="category")
+    pandas_series = pandas.Series(["a", "b", "c"], dtype="category")
+    modin_series.loc[1:3] = "a"
+    pandas_series.loc[1:3] = "a"
+    df_equals(modin_series, pandas_series)
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
@@ -3165,13 +3176,17 @@ def test_take():
             modin_s.take([2], axis=1)
 
 
-@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-def test_explode(data):
+@pytest.mark.parametrize(
+    "ignore_index", bool_arg_values, ids=arg_keys("ignore_index", bool_arg_keys)
+)
+def test_explode(ignore_index):
+    # Some items in this test data are lists that explode() should expand.
+    data = [[1, 2, 3], "foo", [], [3, 4]]
     modin_series, pandas_series = create_test_series(data)
-    with pytest.warns(UserWarning):
-        modin_result = modin_series.explode()
-    pandas_result = pandas_series.explode()
-    df_equals(modin_result, pandas_result)
+    df_equals(
+        modin_series.explode(ignore_index=ignore_index),
+        pandas_series.explode(ignore_index=ignore_index),
+    )
 
 
 def test_to_period():
@@ -3181,7 +3196,11 @@ def test_to_period():
         series.to_period()
 
 
-@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+@pytest.mark.parametrize(
+    "data",
+    test_data_values + test_data_large_categorical_series_values,
+    ids=test_data_keys + test_data_large_categorical_series_keys,
+)
 def test_to_numpy(data):
     modin_series, pandas_series = create_test_series(data)
     assert_array_equal(modin_series.values, pandas_series.values)
@@ -3436,6 +3455,18 @@ def test_value_counts(sort, normalize, bins, dropna, ascending):
         # does not raise an exception when it isn't a bool, when pandas do so,
         # visit modin-issue#3388 for more info.
         check_exception_type=None if sort and ascending is None else True,
+    )
+
+
+def test_value_counts_categorical():
+    # from issue #3571
+    data = np.array(["a"] * 50000 + ["b"] * 10000 + ["c"] * 1000)
+    random_state = np.random.RandomState(seed=42)
+    random_state.shuffle(data)
+
+    eval_general(
+        *create_test_series(data, dtype="category"),
+        lambda df: df.value_counts(),
     )
 
 
@@ -4536,3 +4567,18 @@ def test_cat_as_unordered(data, inplace):
     modin_result = modin_series.cat.as_unordered(inplace=inplace)
     df_equals(modin_series, pandas_series)
     df_equals(modin_result, pandas_result)
+
+
+def test_peculiar_callback():
+    def func(val):
+        if not isinstance(val, tuple):
+            raise BaseException("Urgh...")
+        return val
+
+    pandas_df = pandas.DataFrame({"col": [(0, 1)]})
+    pandas_series = pandas_df["col"].apply(func)
+
+    modin_df = pd.DataFrame({"col": [(0, 1)]})
+    modin_series = modin_df["col"].apply(func)
+
+    df_equals(modin_series, pandas_series)
