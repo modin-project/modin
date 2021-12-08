@@ -257,7 +257,7 @@ class.
 * :doc:`OmnisciServer <omnisci_worker>`
 
 Column name mangling
-''''''''''''''''''''
+""""""""""""""""""""
 
 In ``pandas.DataFrame`` columns might have names not allowed in SQL (e. g.
 an empty string). To handle this we simply add '`F_`' prefix to
