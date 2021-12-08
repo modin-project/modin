@@ -7,7 +7,7 @@ Queries that perform data transformation, data ingress or data egress using the 
 pass through the Modin components detailed below.
 
 `pandas on Python` execution is sequential and it's used for the debug purposes. To enable `pandas on Python` execution,
-please refer to the usage section in :doc:`pandas on Python </UsingPandasonPython/index>`.
+please refer to the usage section in :doc:`pandas on Python </developer/using_pandas_on_python>`.
 
 Data Transformation
 '''''''''''''''''''

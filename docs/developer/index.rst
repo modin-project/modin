@@ -12,6 +12,7 @@ Developer
     using_omnisci
     using_pyarrow_on_ray
     using_sql_on_ray
+    using_pandas_on_python
     troubleshooting
 
 .. meta::
