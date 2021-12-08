@@ -43,7 +43,7 @@ def compute_chunksize(index_len, num_splits, default_block_size=None):
         default_block_size = MinPartitionSize.get()
 
     chunksize = index_len // num_splits
-    if index_len % num_splits == 0:
+    if index_len % num_splits:
         chunksize += 1
     # chunksize shouldn't be less that `default_block_size` to avoid a
     # large amount of small partitions.
