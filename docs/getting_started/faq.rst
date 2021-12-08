@@ -95,3 +95,4 @@ Also check out the `Github`_ to view open issues and make contributions.
 .. _architecture: https://modin.readthedocs.io/en/stable/developer/architecture.html 
 .. _Ray: https://github.com/ray-project/ray/
 .. _Dask: https://dask.org/
+.. _here: https://modin.readthedocs.io/en/stable/UsingOmnisci/index.html 
