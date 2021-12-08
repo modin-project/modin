@@ -7,7 +7,7 @@ Modin uses pandas as a primary memory format of the underlying partitions and op
 ingested from the API layer in a specific way to this format. Thus, there is no need to care of choosing it
 but you can explicitly specify it anyway as shown below.
 
-One of the execution engines that Modin uses is Dask. To enable this engine you should set the following environment variables:
+One of the execution engines that Modin uses is Dask. To enable the pandas on Dask execution you should set the following environment variables:
 
 .. code-block:: bash
 
