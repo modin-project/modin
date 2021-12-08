@@ -8,7 +8,7 @@ ingested from the API layer in a specific way to this format. Thus, there is no 
 but you can explicitly specify it anyway as shown below.
 
 One of the execution engines that Modin uses is Python. This engine is sequential and it's used for the debug purposes.
-To enable this engine you should set the following environment variables:
+To enable the pandas on Python execution you should set the following environment variables:
 
 .. code-block:: bash
 
