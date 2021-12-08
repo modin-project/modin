@@ -132,6 +132,7 @@ def is_full_grab_slice(slc, sequence_len=None):
     -------
     bool
     """
+    assert isinstance(slc, slice), "slice object required"
     return (
         slc.start in (None, 0)
         and slc.step in (None, 1)
