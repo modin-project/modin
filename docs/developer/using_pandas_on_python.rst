@@ -3,11 +3,11 @@ pandas on Python
 
 This section describes usage related documents for the pandas on Python component of Modin.
 
-Modin uses pandas as a primary memory format of the underlying partitions and optimizes queries
-ingested from the API layer in a specific way to this format. Thus, there is no need to care of choosing it
-but you can explicitly specify it anyway as shown below.
+Modin uses pandas as the primary memory format of the underlying partitions and optimizes queries
+from the API layer in a specific way to this format. Since it is a default, you do not need to specify
+the pandas memory format, but we show how to explicitly set it below.
 
-One of the execution engines that Modin uses is Python. This engine is sequential and it's used for the debug purposes.
+One of the execution engines that Modin uses is Python. This engine is sequential and used for the debugging.
 To enable the pandas on Python execution you should set the following environment variables:
 
 .. code-block:: bash
