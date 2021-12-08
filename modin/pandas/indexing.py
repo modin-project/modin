@@ -789,7 +789,17 @@ class _LocIndexer(_LocationIndexerBase):
                     new_qc = self.qc.concat(1, item._query_compiler)
                     self.df._update_inplace(new_query_compiler=new_qc)
                 else:
-                    pass
+                    common_label_loc = np.isin(col_loc, self.qc.columns.values)
+                    if len(common_label_loc) != 0:
+                        # In this case we have some new cols and some old ones
+                        exist_items = item
+                        if is_list_like(item) and not isinstance(
+                            item, (DataFrame, Series)
+                        ):
+                            exist_items = item[:, common_label_loc]
+                        self._set_item_existing_loc(
+                            row_loc, np.array(col_loc)[~common_label_loc], exist_items
+                        )
             else:
                 pass
         else:
@@ -852,6 +862,22 @@ class _LocIndexer(_LocationIndexerBase):
             and row_loc[0] not in self.qc.index
         ):
             return 0
+        if (
+            not (is_list_like(row_loc) or isinstance(row_loc, slice))
+            and row_loc not in self.qc.index
+        ):
+            return 0
+        if isinstance(row_loc, list):
+            if len(row_loc) == 1:
+                return 0 if row_loc[0] not in self.qc.index else None
+            else:
+                missing_labels = self._compute_enlarge_labels(
+                    pandas.Index(row_loc), self.qc.index
+                )
+                # We cast to list to copy pandas' error:
+                # In pandas, we get: KeyError: [a, b,...] not in index
+                # If we don't convert to list we get: KeyError: [a b ...] not in index
+                raise KeyError("{} not in index".format(list(missing_labels)))
         if (
             not (is_list_like(row_loc) or isinstance(row_loc, slice))
             and row_loc not in self.qc.index
