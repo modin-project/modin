@@ -18,7 +18,7 @@ import numpy as np
 import pandas
 
 
-def compute_chunksize(index_len, num_splits, default_block_size=None):
+def compute_chunksize(axis_len, num_splits, default_block_size=None):
     """
     Compute the number of elemenents (rows/columns) to include in each partition.
 
@@ -26,8 +26,8 @@ def compute_chunksize(index_len, num_splits, default_block_size=None):
 
     Parameters
     ----------
-    index_len : int
-        Element count in a index.
+    axis_len : int
+        Element count in a axe.
     num_splits : int
         The number of splits.
     default_block_size : int, optional
@@ -42,8 +42,8 @@ def compute_chunksize(index_len, num_splits, default_block_size=None):
     if default_block_size is None:
         default_block_size = MinPartitionSize.get()
 
-    chunksize = index_len // num_splits
-    if index_len % num_splits:
+    chunksize = axis_len // num_splits
+    if axis_len % num_splits:
         chunksize += 1
     # chunksize shouldn't be less that `default_block_size` to avoid a
     # large amount of small partitions.
