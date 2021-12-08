@@ -73,9 +73,6 @@ def lazy_metadata_decorator(
                     self._propagate_index_objs(axis=1)
                 elif apply_axis == "rows":
                     self._propagate_index_objs(axis=0)
-                elif apply_axis == "always_both":
-                    self._propagate_index_objs(axis=0)
-                    self._propagate_index_objs(axis=1)
             result = f(self, *args, **kwargs)
             if inherit and not transpose:
                 result._deferred_index = self._deferred_index
@@ -1201,7 +1198,13 @@ class PandasDataframe(object):
                     allow_dups=True,
                 )
 
-            return lambda df: df.reindex(joined_index, axis=axis)
+            #return lambda df: df.reindex(joined_index, axis=axis)
+            def f(df, *args, **kwargs):
+                print("START")
+                print(df)
+                print("END")
+                return df.reindex(joined_index, axis=axis, *args, **kwargs)
+            return f
 
         return joined_index, make_reindexer
 
@@ -1408,7 +1411,7 @@ class PandasDataframe(object):
             self._column_widths,
         )
 
-    @lazy_metadata_decorator(apply_axis="always_both")
+    @lazy_metadata_decorator(apply_axis="both")
     def filter_full_axis(self, axis, func):
         """
         Filter data based on the function provided along an entire axis.
@@ -2169,7 +2172,7 @@ class PandasDataframe(object):
             new_partitions, new_index, new_columns, new_lengths, new_widths, new_dtypes
         )
 
-    @lazy_metadata_decorator(apply_axis="same", axis_arg=0)
+    @lazy_metadata_decorator(apply_axis="opposite", axis_arg=0)
     def groupby_reduce(
         self,
         axis,
@@ -2310,7 +2313,7 @@ class PandasDataframe(object):
             return np.dtype(res)
         return res
 
-    @lazy_metadata_decorator(apply_axis="always_both")
+    @lazy_metadata_decorator(apply_axis="both")
     def to_pandas(self):
         """
         Convert this Modin DataFrame to a pandas DataFrame.
