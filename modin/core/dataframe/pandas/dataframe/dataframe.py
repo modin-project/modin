@@ -43,36 +43,41 @@ def lazy_metadata_decorator(
 
         @wraps(f)
         def magic(self, *args, **kwargs):
-            if apply_axis is not None:
-                if apply_axis == "both":
-                    if self._deferred_index and self._deferred_column:
-                        self._propagate_index_objs(axis=None)
-                    elif self._deferred_index:
-                        self._propagate_index_objs(axis=0)
-                    elif self._deferred_column:
-                        self._propagate_index_objs(axis=1)
-                elif apply_axis == "opposite":
-                    if "axis" not in kwargs:
-                        axis = args[axis_arg]
-                    else:
-                        axis = kwargs["axis"]
-                    if axis == 0 and self._deferred_index:
-                        self._propagate_index_objs(axis=1)
-                    elif axis == 1 and self._deferred_column:
-                        self._propagate_index_objs(axis=0)
-                elif apply_axis == "same":
-                    if "axis" not in kwargs:
-                        axis = args[axis_arg]
-                    else:
-                        axis = kwargs["axis"]
-                    if axis == 0 and self._deferred_index:
-                        self._propagate_index_objs(axis=0)
-                    elif axis == 1 and self._deferred_column:
-                        self._propagate_index_objs(axis=1)
-                elif apply_axis == "columns":
-                    self._propagate_index_objs(axis=1)
-                elif apply_axis == "rows":
-                    self._propagate_index_objs(axis=0)
+            for obj in (
+                [self]
+                + [o for o in args if isinstance(o, PandasDataframe)]
+                + [o for _, o in kwargs.items() if isinstance(o, PandasDataframe)]
+            ):
+                if apply_axis is not None:
+                    if apply_axis == "both":
+                        if obj._deferred_index and self._deferred_column:
+                            obj._propagate_index_objs(axis=None)
+                        elif obj._deferred_index:
+                            obj._propagate_index_objs(axis=0)
+                        elif obj._deferred_column:
+                            obj._propagate_index_objs(axis=1)
+                    elif apply_axis == "opposite":
+                        if "axis" not in kwargs:
+                            axis = args[axis_arg]
+                        else:
+                            axis = kwargs["axis"]
+                        if axis == 0 and obj._deferred_index:
+                            obj._propagate_index_objs(axis=1)
+                        elif axis == 1 and obj._deferred_column:
+                            obj._propagate_index_objs(axis=0)
+                    elif apply_axis == "same":
+                        if "axis" not in kwargs:
+                            axis = args[axis_arg]
+                        else:
+                            axis = kwargs["axis"]
+                        if axis == 0 and obj._deferred_index:
+                            obj._propagate_index_objs(axis=0)
+                        elif axis == 1 and obj._deferred_column:
+                            obj._propagate_index_objs(axis=1)
+                    elif apply_axis == "columns":
+                        obj._propagate_index_objs(axis=1)
+                    elif apply_axis == "rows":
+                        obj._propagate_index_objs(axis=0)
             result = f(self, *args, **kwargs)
             if inherit and not transpose:
                 result._deferred_index = self._deferred_index
@@ -1197,14 +1202,7 @@ class PandasDataframe(object):
                     copy=True,
                     allow_dups=True,
                 )
-
-            #return lambda df: df.reindex(joined_index, axis=axis)
-            def f(df, *args, **kwargs):
-                print("START")
-                print(df)
-                print("END")
-                return df.reindex(joined_index, axis=axis, *args, **kwargs)
-            return f
+            return lambda df: df.reindex(joined_index, axis=axis)
 
         return joined_index, make_reindexer
 
