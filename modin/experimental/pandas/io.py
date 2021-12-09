@@ -303,8 +303,6 @@ def to_pickle_distributed(
         this argument with a non-fsspec URL. See the fsspec and backend storage
         implementation docs for the set of allowed keys and values.
     """
-    from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
-
     obj = self
     Engine.subscribe(_update_engine)
     if isinstance(self, DataFrame):
