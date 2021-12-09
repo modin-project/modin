@@ -7,15 +7,19 @@ the #support channel on our Slack_ community or open a Github issue_.
 
 What’s the issue with pandas? Why should I use Modin?
 """"""""""""""""""""""""""""""""""""""""""""""""""""""
-In pandas, you are only able to use one core at a time when you are doing computation of
-any kind. This approach does not scale on larger data sets and adding more hardware does not
-solve the problem.  
+While pandas work extremely well on small datasets, as soon as you start working with 
+medium to large datasets that are more than a few GBs, pandas can become painfully 
+slow or run out of memory. This is because pandas is single-threaded, in other words, 
+you can only process your data with one core at a time.
+any kind. This approach does not scale to larger data sets and adding more hardware does not
+lead to more performance gain. 
 
-The ``modin.pandas`` `DataFrame`_ is an extremely light-weight parallel DataFrame. Modin
-transparently distributes the data and computation so that all you need to do is
-continue using the pandas API as you were before installing Modin. With Modin, 
+The ``modin.pandas`` `DataFrame`_ is a highly scalable, parallel DataFrame. Modin
+transparently distributes the data and computation so that you can
+continue using the same pandas API while being able to work with more data faster. With Modin, 
 you are able to use all of the CPU cores on your machine, and because of it's light-weight
-nature often results in less memory overhead than pandas.
+nature often results in less memory overhead than pandas. See `this page <../getting_started/pandas>`
+to learn more about how Modin is different from pandas. 
 
 Why not just improve pandas?
 """"""""""""""""""""""""""""
