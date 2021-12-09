@@ -617,6 +617,8 @@ class TextFileDispatcher(FileDispatcher):
         cls,
         filepath_or_buffer: FilePathOrBuffer,
         read_kwargs: dict,
+        skiprows_md: Union[Sequence, callable, int],
+        header_size: int,
     ) -> bool:
         """
         Check support of only general parameters of `read_*` function.
@@ -627,12 +629,17 @@ class TextFileDispatcher(FileDispatcher):
             `filepath_or_buffer` parameter of `read_*` function.
         read_kwargs : dict
             Parameters of `read_*` function.
+        skiprows_md : int, array or callable
+            `skiprows` parameter modified for easier handling by Modin.
+        header_size : int
+            Number of rows that are used by header.
 
         Returns
         -------
         bool
             Whether passed parameters are supported or not.
         """
+        skiprows = read_kwargs.get("skiprows")
         if isinstance(filepath_or_buffer, str):
             if not cls.file_exists(filepath_or_buffer):
                 return False
@@ -640,6 +647,24 @@ class TextFileDispatcher(FileDispatcher):
             return False
 
         if read_kwargs["chunksize"] is not None:
+            return False
+
+        skiprows_unsupported = (
+            is_list_like(skiprows_md) and skiprows_md[0] < header_size
+        ) or (
+            callable(skiprows)
+            and any(
+                map(
+                    bool,
+                    cls._get_skip_mask(pandas.RangeIndex(header_size), skiprows),
+                )
+            )
+        )
+        if skiprows_unsupported:
+            ErrorMessage.single_warning(
+                "Values of `header` and `skiprows` parameters have intersections. "
+                "This case doesn't supported by Modin, so pandas implementation will be used!"
+            )
             return False
 
         return True
@@ -722,9 +747,6 @@ class TextFileDispatcher(FileDispatcher):
         skiprows_partitioning : int
             The number of rows that should be skipped virtually (skipped during
             data file partitioning).
-        need_fallback_impl : bool
-            Whether pandas implementation should be used. True if `skiprows` and
-            `header` values have intersections.
 
         Examples
         --------
@@ -751,7 +773,6 @@ class TextFileDispatcher(FileDispatcher):
         6 - data to partition (divide between the rest of partitions)
         7 - data to partition (divide between the rest of partitions)
         """
-        need_fallback_impl = False
         pre_reading = skiprows_partitioning = skiprows_md = 0
         if isinstance(skiprows, int):
             skiprows_partitioning = skiprows
@@ -766,33 +787,19 @@ class TextFileDispatcher(FileDispatcher):
                 skiprows_md = 0
             elif skiprows_md[0] > header_size:
                 skiprows_md = skiprows_md - header_size
-            else:
-                need_fallback_impl = True
 
         elif callable(skiprows):
-            # Use fallback implementation if `header` and `skiprows`
-            # values have intersections
-            skip_mask = cls._get_skip_mask(pandas.RangeIndex(header_size), skiprows)
-            if any(map(bool, skip_mask)):
-                need_fallback_impl = True
-            else:
 
-                def skiprows_func(x):
-                    return skiprows(x + header_size)
+            def skiprows_func(x):
+                return skiprows(x + header_size)
 
-                skiprows_md = skiprows_func
+            skiprows_md = skiprows_func
         elif skiprows is not None:
             raise TypeError(
                 f"Not acceptable type of `skiprows` parameter: {type(skiprows)}"
             )
 
-        if need_fallback_impl:
-            ErrorMessage.single_warning(
-                "Values of `header` and `skiprows` parameters have intersections. "
-                "This case doesn't supported by Modin, so pandas implementation will be used!"
-            )
-
-        return skiprows_md, pre_reading, skiprows_partitioning, need_fallback_impl
+        return skiprows_md, pre_reading, skiprows_partitioning
 
     @classmethod
     def _define_index(
@@ -976,12 +983,7 @@ class TextFileDispatcher(FileDispatcher):
             skiprows_md,
             pre_reading,
             skiprows_partitioning,
-            need_fallback_impl,
         ) = cls._manage_skiprows_parameter(skiprows, header_size)
-        if need_fallback_impl:
-            return cls.single_worker_read(
-                filepath_or_buffer, callback=cls.read_callback, **kwargs
-            )
         should_handle_skiprows = skiprows_md is not None and not isinstance(
             skiprows_md, int
         )
@@ -989,6 +991,8 @@ class TextFileDispatcher(FileDispatcher):
         use_modin_impl = cls.check_parameters_support(
             filepath_or_buffer,
             kwargs,
+            skiprows_md,
+            header_size,
         )
         if not use_modin_impl:
             return cls.single_worker_read(
