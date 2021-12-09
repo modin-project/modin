@@ -169,20 +169,23 @@ Data Ingress
 ''''''''''''
 
 .. note::
-   Data ingress operation in Modin is operation of data import from data source to
-   partitions and vice versa for data egress operation, speed-up can be achieved
-   by performing operations in partitions in parallel.
+   Data ingress operations (e.g. ``read_csv``) in Modin load data from the source into
+   partitions and vice versa for data egress (e.g. ``to_csv``) operation.
+   Improved performance is achieved by reading/writing in partitions in parallel.
 
-Data ingress operations workflow diagram is shown below. After ingress function from pandas API
-is called, compiled query from pandas API is passed to the ``FactoryDispatcher``, which
-forwards query to execution spefic IO class (for Ray engine and pandas storage format IO class
-will be named ``PandasOnRayIO``). This class defines Modin frame and query
-compiler classes and ingress functions, which could be get from combination of the engine-specific
-class for managing remote tasks, class for data parsing on the workers by specific execution engine
-and file format (``PandasCSVParser`` for example) and class for files handling of concrete
-file format including chunking for execution on the head node (see dispatcher classes
-implementation :doc:`details </flow/modin/core/io/index>`). Using resulting IO class data
-is imported into Modin DataFrame for further processing.
+The data ingress operations workflow diagram is shown below. After a data 
+ingress function from pandas API (e.g. ``read_csv``) is called, the compiled
+query from pandas API is passed to the ``FactoryDispatcher``, which forwards
+the query to execution specific IO class. For example, ``PandasOnRayIO`` is the
+name of the IO class for cases using the Ray engine and pandas storage format. 
+This IO class defines the Modin frame and query compiler classes to ensure correct
+object is constructed. It additionally exposes supported
+ ingress functions, which are mix-ins containing a combination of the engine-specific
+class for deploying remote tasks, the class for defining how to parse the given
+file format (``PandasCSVParser`` for example), and class that handles
+file format specific chunking on the head node (see dispatcher classes
+implementation :doc:`details </flow/modin/core/io/index>`). This ouput from
+the IO class ingress function is formatted into a Modin DataFrame for further processing.
 
 .. image:: /img/generic_data_ingress.svg
    :align: center
@@ -190,11 +193,11 @@ is imported into Modin DataFrame for further processing.
 Data Egress
 '''''''''''
 
-Data egress operation is similar to ingress operations up to execution-specific IO class
-functions construction. Egress function of this class are difined slightly different from
-ingress functions and created only specifically for engine since partitions already have
-information about it's storage format. Using this IO class data is exported from partitions
-to the target file.
+Data egress operations (e.g. ``to_csv``) are similar to ingress operations up to
+execution-specific IO class functions construction. Egress functions of this class
+are defined slightly different from ingress functions and created only
+specifically for engine since partitions already have information about its storage
+format. Using this IO class, data is exported from partitions to the target file.
 
 .. image:: /img/generic_data_egress.svg
    :align: center
