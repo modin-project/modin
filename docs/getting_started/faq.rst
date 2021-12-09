@@ -67,7 +67,7 @@ Absolutely! Unlike other parallel DataFrame systems, Modin is an extremely
 light-weight, robust DataFrame. Because it is so light-weight, Modin provides 
 speed-ups of up to 4x on a laptop with 4 physical cores.
 
-How do I use jupyter/collab notebooks with Modin? 
+How do I use Jupyter or Colab notebooks with Modin? 
 """"""""""""""""""""""""""""""""""""""""""""
 Just like you would use any other notebook, just replace your pandas import
 with modin:
@@ -78,9 +78,7 @@ with modin:
 
 Which execution engine (Ray or Dask) should I use for Modin?
 """""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
-Whichever one you want! Modin uses Ray_ or Dask_ to provide an effortless way to speed up 
-your pandas notebooks, scripts, and libraries. Modin will automatically detect which engine you have 
-installed and use that for scheduling computation. If you want to choose a specific 
+Whichever one you want! Modin supports Ray_ and Dask_ backends to provide an effortless way to speed up your pandas workflows. Modin will automatically detect which engine you have installed and use that for scheduling computation. If you don't have a preference, we recommend starting with Modin's default Ray backend. If you want to use a specific 
 compute engine to run on, you can set the environment variable ``MODIN_ENGINE`` and 
 Modin will do computation with that engine:
 
