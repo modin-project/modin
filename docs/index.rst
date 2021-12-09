@@ -7,11 +7,12 @@
 
 .. toctree::
    :hidden:
-   
+
    getting_started/index
    supported_apis/index
-   advanced_usage/index
+   advanced_usage/index # should probably go in usage_guide
    developer/index
+   usage_guide/index
    contact
 
 .. raw:: html
