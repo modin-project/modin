@@ -17,6 +17,16 @@ continue using the pandas API as you were before installing Modin. With Modin,
 you are able to use all of the CPU cores on your machine, and because of it's light-weight
 nature often results in less memory overhead than pandas.
 
+Why not just improve pandas?
+""""""""""""""""""""""""""""
+pandas is a massive community and well established codebase. Many of the issues
+we have identified and resolved with pandas are fundamental to its current
+implementation. While we would be happy to donate parts of Modin that
+make sense in pandas, many of these components would require significant (or
+total) redesign of the pandas architecture. Modin's architecture goes beyond
+pandas, which is why the pandas API is just a thin layer at the user level. To learn
+more about Modin's architecture, see the architecture_ documentation.
+
 How much faster can I go with Modin compared to pandas?
 """"""""""""""""""""""""""""""""""""""""""""""""""""""""
 Even in a traditionally serial task like ``read_csv``, we see large gains by efficiently 
