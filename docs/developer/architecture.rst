@@ -175,12 +175,13 @@ Data Ingress
 
 The data ingress operations workflow diagram is shown below. After a data 
 ingress function from pandas API (e.g. ``read_csv``) is called, the compiled
-query from pandas API is passed to the ``FactoryDispatcher``, which forwards
-the query to execution specific IO class. For example, ``PandasOnRayIO`` is the
+query from pandas API is passed to the :doc:`Factory Dispatcher </flow/modin/core/execution/dispatching>`,
+which provides IO class based on the selected execution. Resulting IO class will contain
+IO methods with interfaces that correspond to pandas IO functions and it's name
+will represent used execution. For example, ``PandasOnRayIO`` is the
 name of the IO class for cases using the Ray engine and pandas storage format. 
 This IO class defines the Modin frame and query compiler classes to ensure correct
-object is constructed. It additionally exposes supported
- ingress functions, which are mix-ins containing a combination of the engine-specific
+object is constructed and IO methods are mix-ins containing a combination of the engine-specific
 class for deploying remote tasks, the class for defining how to parse the given
 file format (``PandasCSVParser`` for example), and class that handles
 file format specific chunking on the head node (see dispatcher classes
@@ -201,14 +202,6 @@ format. Using this IO class, data is exported from partitions to the target file
 
 .. image:: /img/generic_data_egress.svg
    :align: center
-
-Factory Dispatcher
-""""""""""""""""""
-
-The :doc:`Factory Dispatcher </flow/modin/core/execution/dispatching>` provides IO methods with interfaces that correspond to pandas IO functions,
-and is in charge of routing IO calls to a factory corresponding to the selected execution.
-The factory, in turn, contains the specific IO class, which it calls with the required arguments.
-The IO class is responsible for performing a parallel read/write from/to a file.
 
 Supported Execution Engines and Storage Formats
 '''''''''''''''''''''''''''''''''''''''''''''''
