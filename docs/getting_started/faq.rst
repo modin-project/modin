@@ -29,10 +29,12 @@ more about Modin's architecture, see the architecture_ documentation.
 
 How much faster can I go with Modin compared to pandas?
 """"""""""""""""""""""""""""""""""""""""""""""""""""""""
+Modin is designed to scale with the amount of hardware available.
 Even in a traditionally serial task like ``read_csv``, we see large gains by efficiently 
 distributing the work across your entire machine. Because it is so light-weight, 
 Modin provides speed-ups of up to 4x on a laptop with 4 physical cores. This speedup scales
-efficiently with larger machines with more cores.
+efficiently with larger machines with more cores. We have several published papers that
+include performance results and comparisons against pandas.
 
 How much more data would I be able to process with Modin?
 """"""""""""""""""""""""""""""""""""""""""""""""""""""""""
