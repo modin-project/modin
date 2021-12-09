@@ -794,10 +794,6 @@ class TextFileDispatcher(FileDispatcher):
                 return skiprows(x + header_size)
 
             skiprows_md = skiprows_func
-        elif skiprows is not None:
-            raise TypeError(
-                f"Not acceptable type of `skiprows` parameter: {type(skiprows)}"
-            )
 
         return skiprows_md, pre_reading, skiprows_partitioning
 
@@ -925,6 +921,10 @@ class TextFileDispatcher(FileDispatcher):
                     skip_mask = skip_mask.to_numpy("bool")
                 view_idx = index_range[~skip_mask]
                 new_query_compiler = new_query_compiler.view(index=view_idx)
+            else:
+                raise TypeError(
+                    f"Not acceptable type of `skiprows` parameter: {type(skiprows_md)}"
+                )
 
             if not isinstance(new_query_compiler.index, pandas.MultiIndex):
                 new_query_compiler = new_query_compiler.reset_index(drop=True)
