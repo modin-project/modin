@@ -3,8 +3,9 @@
 Experimental PandasOnRay Execution
 ==================================
 
-Experimental PandasOnRay execution is designed to leave the underlying mechanisms: "Data Transformation", "Data Ingress", "Data Egress"
-architecturally :doc:`unchanged </flow/modin/core/execution/ray/implementations/pandas_on_ray/index>`.
+Experimental PandasOnRay execution is designed to leave the underlying mechanisms of PandasOnRay
+execution: "Data Transformation", "Data Ingress", "Data Egress" architecturally
+:doc:`unchanged </flow/modin/core/execution/ray/implementations/pandas_on_ray/index>`.
 
 Main differencies between these two executions
 ----------------------------------------------
