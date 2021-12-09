@@ -109,6 +109,8 @@ class Engine(EnvironmentVariable, type=str):
                 )
             return "Dask"
         try:
+            # We import ``PyDbEngine`` from this module since correct import of ``PyDbEngine`` itself
+            # from Omnisci is located in it with all the necessary options for dlopen.
             from modin.experimental.core.execution.native.implementations.omnisci_on_native.utils import (  # noqa
                 PyDbEngine,
             )

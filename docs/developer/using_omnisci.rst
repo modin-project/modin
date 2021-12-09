@@ -22,7 +22,7 @@ Since OmniSci is run through its native engine Modin itself sets ``MODIN_ENGINE=
 and you might not specify it explicitly.
 
 .. note::
-   If you encounter ``CommandLine Error: Option 'enable-vfe' registered more than once!`` error when using OmniSci,
+   If you encounter ``LLVM ERROR: inconsistency in registered CommandLine options`` error when using OmniSci,
    please refer to the respective section in :doc:`Troubleshooting </developer/troubleshooting>` page to avoid the issue.
 
 .. _OmnisciDB: https://www.omnisci.com/platform/omniscidb

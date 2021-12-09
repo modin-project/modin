@@ -195,8 +195,8 @@ funcion for example) as it is shown in the example below:
   pd_df = pd_df.set_index(index_col_name)
   pd_df.index.name = None
 
-Error when using OmniSci engine: ``CommandLine Error: Option 'enable-vfe' registered more than once!``
-""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+Error when using OmniSci engine: ``LLVM ERROR: inconsistency in registered CommandLine options``
+""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
 
 This can happen when you set the following config values prior Modin import:
 
@@ -213,6 +213,7 @@ This can happen when you set the following config values prior Modin import:
 
 **Solution**
 
-Please use the guide that is specified in :doc:`Omnisci </developer/using_omnisci>` usage section.
+Do not set ``Engine`` to ``Native`` prior Modin import in your code. However, if you want to be explicit
+as to the engine used, you can specify it using ``MODIN_ENGINE`` environment variable.
 
 .. _issue: https://github.com/modin-project/modin/issues
