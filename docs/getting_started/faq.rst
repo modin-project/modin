@@ -18,18 +18,18 @@ The ``modin.pandas`` `DataFrame`_ is a highly scalable, parallel DataFrame. Modi
 transparently distributes the data and computation so that you can
 continue using the same pandas API while being able to work with more data faster. With Modin, 
 you are able to use all of the CPU cores on your machine, and because of it's light-weight
-nature often results in less memory overhead than pandas. See `this page <../getting_started/pandas>`
-to learn more about how Modin is different from pandas. 
+nature often results in less memory overhead than pandas. See this 
+:doc:`page </getting_started/pandas>` to learn more about how Modin is different from pandas. 
 
 Why not just improve pandas?
 """"""""""""""""""""""""""""
-pandas is a massive community and well established codebase. Many of the issues
+Pandas is a massive community and well established codebase. Many of the issues
 we have identified and resolved with pandas are fundamental to its current
 implementation. While we would be happy to donate parts of Modin that
 make sense in pandas, many of these components would require significant (or
 total) redesign of the pandas architecture. Modin's architecture goes beyond
 pandas, which is why the pandas API is just a thin layer at the user level. To learn
-more about Modin's architecture, see the architecture_ documentation.
+more about Modin's architecture, see the :doc:`architecture </developer/architecture>` documentation.
 
 How much faster can I go with Modin compared to pandas?
 """"""""""""""""""""""""""""""""""""""""""""""""""""""""
@@ -37,7 +37,7 @@ Modin is designed to scale with the amount of hardware available.
 Even in a traditionally serial task like ``read_csv``, we see large gains by efficiently 
 distributing the work across your entire machine. Because it is so light-weight, 
 Modin provides speed-ups of up to 4x on a laptop with 4 physical cores. This speedup scales
-efficiently with larger machines with more cores. We have several published papers that
+efficiently to larger machines with more cores. We have several published papers that
 include performance results and comparisons against pandas.
 
 How much more data would I be able to process with Modin?
@@ -59,7 +59,7 @@ Core DataFrame has an efficient dataframe partitioning schema which allows for e
 parallelization. From here, the Modin DataFrame works with task parallel frameworks like
 Ray or Dask to execute computation, and then return the results to the user.
 
-For more details, take a look at our system architecture_. 
+For more details, take a look at our system :doc:`architecture </developer/architecture>`. 
 
 If I’m only using my laptop, can I still get the benefits of Modin?
 """"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
@@ -91,7 +91,7 @@ Modin will do computation with that engine:
    pip install "modin[dask]" # Install Modin dependencies and Dask to run on Dask
    export MODIN_ENGINE=dask  # Modin will use Dask
 
-We also have an experimental OmniSciDB-based engine of Modin you can read about here_.
+We also have an experimental OmniSciDB-based engine of Modin you can read about :doc:`here </developer/using_omnisci>`.
 We plan to support more execution backends in future. If you have a specific request, 
 please post on the #feature-requests channel on our Slack_ community. 
 
@@ -108,7 +108,5 @@ Also check out the `Github`_ to view open issues and make contributions.
 .. _Dataframe: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.html
 .. _Slack: https://modin.org/slack.html
 .. _Github: https://github.com/modin-project/modin
-.. _architecture: https://modin.readthedocs.io/en/stable/developer/architecture.html 
 .. _Ray: https://github.com/ray-project/ray/
 .. _Dask: https://dask.org/
-.. _here: https://modin.readthedocs.io/en/stable/UsingOmnisci/index.html 
