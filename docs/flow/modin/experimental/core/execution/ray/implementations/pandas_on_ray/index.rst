@@ -14,7 +14,7 @@ Main differencies between these two executions
 
 Objects implementations for Experimental PandasOnRay IO
 -------------------------------------------------------
-- :py:class:`~modin.experimental.core.execution.ray.implementations.pandas_on_ray.io.ExperimentalPandasOnRayIO`
+- :py:class:`~modin.experimental.core.execution.ray.implementations.pandas_on_ray.io.io.ExperimentalPandasOnRayIO`
 - :py:class:`~modin.core.execution.dispatching.factories.factories.ExperimentalPandasOnRayFactory`
 - :py:class:`~modin.core.io.text.csv_glob_dispatcher.CSVGlobDispatcher`
 - :py:class:`~modin.core.storage_formats.pandas.parsers.PandasCSVGlobParser`
