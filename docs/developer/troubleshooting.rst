@@ -111,10 +111,10 @@ differntly. Example of such behaviour is shown below.
   try :
       with open(test_filename, "w") as f:
           f.write(data)
-      
+
       pandas_df = pandas.read_csv(test_filename, **kwargs)
       pd_df = pd.read_csv(test_filename, **kwargs)
-      
+
       print(pandas_df)
       print(pd_df)
   finally:
@@ -194,5 +194,25 @@ funcion for example) as it is shown in the example below:
   pd_df = pd.read_csv(filename, dtype=data_dtype, index_col=None)
   pd_df = pd_df.set_index(index_col_name)
   pd_df.index.name = None
+
+Error when using OmniSci engine: ``CommandLine Error: Option 'enable-vfe' registered more than once!``
+""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+
+This can happen when you set the following config values prior Modin import:
+
+.. code-block:: python
+
+  import modin.config as cfg
+  cfg.Engine.put("Native")  # 'omniscidbe'/'dbe' would be imported with dlopen flags first time
+  cfg.StorageFormat.put("Omnisci")
+  cfg.IsExperimental.put(True)
+  import modin.pandas as pd  # Error
+  CommandLine Error: Option 'enable-vfe' registered more than once!
+  LLVM ERROR: inconsistency in registered CommandLine options
+  Aborted (core dumped)
+
+**Solution**
+
+Please use the guide that is specified in :doc:`Omnisci </developer/using_omnisci>` usage section.
 
 .. _issue: https://github.com/modin-project/modin/issues
