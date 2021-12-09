@@ -1,7 +1,7 @@
 Frequently Asked Questions (FAQs)
 =================================
 
-Below, you will find answer to the most commonly asked questions you may have about
+Below, you will find answers to the most commonly asked questions about
 Modin. If you still cannot find the answer you are looking for, please post on 
 the #support channel on our Slack_ community or open a Github issue_.
 
