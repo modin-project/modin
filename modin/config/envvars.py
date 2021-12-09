@@ -108,30 +108,12 @@ class Engine(EnvironmentVariable, type=str):
                     "Please `pip install modin[dask]` to install compatible Dask version."
                 )
             return "Dask"
-
-        # We use subprocess to identify whether 'omniscidbe'/'dbe' is installed by the following reasons:
-        # 1) We have to import 'omniscidbe'/'dbe' with specifying dlopen flags.
-        # 2) If we perform 1st clause, we have to import 'omniscidbe'/'dbe' after Modin itself is imported,
-        # i.e. the following code snippet won't work:
-        # ... import modin.config as cfg
-        # ... cfg.Engine.put("Native")  # 'omniscidbe'/'dbe' would be imported with dlopen flags first time
-        # ... cfg.StorageFormat.put("Omnisci")
-        # ... cfg.IsExperimental.put(True)
-        # ... import modin.pandas as pd  # Error
-        # ... CommandLine Error: Option 'enable-vfe' registered more than once!
-        # ... LLVM ERROR: inconsistency in registered CommandLine options
-        # ... Aborted (core dumped)
-        import subprocess
-
-        omniscidbe_info = subprocess.run(
-            ["pip", "show", "omniscidbe"], capture_output=True, text=True
-        )
-        if omniscidbe_info.stderr:
-            dbe_info = subprocess.run(
-                ["pip", "show", "dbe"], capture_output=True, text=True
+        try:
+            from modin.experimental.core.execution.native.implementations.omnisci_on_native.utils import (  # noqa
+                PyDbEngine,
             )
-            if not dbe_info.stderr:
-                return "Native"
+        except ImportError:
+            pass
         else:
             return "Native"
         raise ImportError(
