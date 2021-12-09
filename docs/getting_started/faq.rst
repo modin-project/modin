@@ -7,12 +7,11 @@ the #support channel on our Slack_ community or open a Github issue_.
 
 What’s the issue with pandas? Why should I use Modin?
 """"""""""""""""""""""""""""""""""""""""""""""""""""""
-While pandas work extremely well on small datasets, as soon as you start working with 
+While pandas works extremely well on small datasets, as soon as you start working with 
 medium to large datasets that are more than a few GBs, pandas can become painfully 
-slow or run out of memory. This is because pandas is single-threaded, in other words, 
-you can only process your data with one core at a time.
-any kind. This approach does not scale to larger data sets and adding more hardware does not
-lead to more performance gain. 
+slow or run out of memory. This is because pandas is single-threaded. In other words, 
+you can only process your data with one core at a time. This approach does not scale to 
+larger data sets and adding more hardware does not lead to more performance gain. 
 
 The ``modin.pandas`` `DataFrame`_ is a highly scalable, parallel DataFrame. Modin
 transparently distributes the data and computation so that you can
@@ -78,8 +77,11 @@ with modin:
 
 Which execution engine (Ray or Dask) should I use for Modin?
 """""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
-Whichever one you want! Modin supports Ray_ and Dask_ backends to provide an effortless way to speed up your pandas workflows. Modin will automatically detect which engine you have installed and use that for scheduling computation. If you don't have a preference, we recommend starting with Modin's default Ray backend. If you want to use a specific 
-compute engine to run on, you can set the environment variable ``MODIN_ENGINE`` and 
+Whichever one you want! Modin supports Ray_ and Dask_ backends to provide an effortless way 
+to speed up your pandas workflows. Modin will automatically detect which engine you have 
+installed and use that for scheduling computation. If you don't have a preference, we recommend 
+starting with Modin's default Ray backend. If you want to use a specific 
+compute engine, you can set the environment variable ``MODIN_ENGINE`` and 
 Modin will do computation with that engine:
 
 .. code-block:: bash
@@ -97,7 +99,7 @@ How can I contribute to Modin?
 """""""""""""""""""""""""""""""
 **Modin is currently under active development. Requests and contributions are welcome!**
 
-If you are interested in contributions please check out the :doc:`Getting Started</getting_started/index>`
+If you are interested in contributing please check out the :doc:`Getting Started</getting_started/index>`
 guide then refer to the :doc:`Developer Documentation</developer/index>` section,
 where you can find system architecture, internal implementation details, and other useful information.
 Also check out the `Github`_ to view open issues and make contributions.
