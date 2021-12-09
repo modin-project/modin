@@ -1105,9 +1105,9 @@ def check_file_leaks(func):
                     # modin reading any data (and this is what we care about).
                     if item[0].startswith("/proc/"):
                         continue
-                    # Ignore files in /private/tmp/ray/session/ (ray session logs)
-                    # because Ray intends to keep these logs open even after work
-                    # has been done.
+                    # Ignore files in /private/tmp/ray/ (ray session logs)
+                    # because Ray intends to keep these logs open even after
+                    # work has been done.
                     if item[0].startswith("/private/tmp/ray/"):
                         continue
                     leaks.append(item)
