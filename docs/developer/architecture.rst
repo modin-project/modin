@@ -200,8 +200,8 @@ documentation page on :doc:`contributing </developer/contributing>`.
     - Uses the `Dask Futures`_ execution framework.
     - The storage format is `pandas` and the in-memory partition type is a pandas DataFrame.
     - For more information on the execution path, see the :doc:`pandas on Dask </flow/modin/core/execution/dask/implementations/pandas_on_dask/index>` page.
-- pandas on Python
-    - Uses native python execution - mainly used for for debugging.
+- :doc:`pandas on Python </developer/using_pandas_on_python>`
+    - Uses native python execution - mainly used for debugging.
     - The storage format is `pandas` and the in-memory partition type is a pandas DataFrame.
     - For more information on the execution path, see the :doc:`pandas on Python </flow/modin/core/execution/python/implementations/pandas_on_python/index>` page.
 - :doc:`OmniSci on Native </developer/using_omnisci>` (experimental)
