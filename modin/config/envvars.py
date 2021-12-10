@@ -415,6 +415,20 @@ class MinPartitionSize(EnvironmentVariable, type=int):
     varname = "MODIN_MIN_PARTITION_SIZE"
     default = 32
 
+    @classmethod
+    def put(cls, value):
+        """
+        Set ``MinPartitionSize`` with extra checks.
+
+        Parameters
+        ----------
+        value : bool
+            Config value to set.
+        """
+        if value <= 0:
+            raise ValueError(f"Min partition size should be > 0, passed value {value}")
+        super().put(value)
+
 
 def _check_vars():
     """
