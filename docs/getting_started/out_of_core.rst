@@ -1,20 +1,47 @@
-Out of Core in Modin
-====================
+Out-of-memory data with Modin
+=============================
 
-If you are working with very large files or would like to exceed your memory, you may
-change the primary location of the `DataFrame`_. If you would like to exceed memory, you
-can use your disk as an overflow for the memory.
+When using pandas, you might run into a memory error if you are working with large datasets that cannot fit in memory or perform certain memory-intensive operations (e.g., joins). 
 
-Starting Modin with out of core enabled
----------------------------------------
+Modin solves this problem by spilling over to disk, in other words, it uses your disk as an overflow for memory so that you can work with datasets that are too large to fit in memory. By default, Modin leverages out-of-core methods to handle datasets that don't fit in memory for both Ray and Dask engines.
 
-Out of core is now enabled by default for both Ray and Dask engines.
 
-Disabling Out of Core
----------------------
+Motivating Example: Memory error with pandas
+--------------------------------------------
 
-Out of core is enabled by the compute engine selected. To disable it, start your
-preferred compute engine with the appropriate arguments. For example:
+pandas makes use of in-memory data structures to store and operate on data, which means that if you have a dataset that is too large to fit in memory, it will cause an error on pandas. As an example, let's creates a 80GB DataFrame by appending together 40 different 2GB DataFrames. 
+
+.. code-block:: python
+
+  import pandas
+  import numpy as np
+  df = pandas.concat([pandas.DataFrame(np.random.randint(0, 100, size=(2**20, 2**8))) for _ in range(40)]) # Memory Error!
+
+When we run this on a laptop with 32GB of RAM, pandas will run out of memory and throw an error (e.g., :code:`MemoryError` , :code:`Killed: 9`). 
+
+The `pandas documentation <https://pandas.pydata.org/pandas-docs/stable/user_guide/scale.html>`_ has a great section on recommendations for scaling your analysis to these larger datasets. However, this generally involves loading in less data or rewriting your pandas code to process the data in smaller chunks. 
+
+Operating on out-of-memory data with Modin
+------------------------------------------
+
+In order to work with data that exceeds memory constraints, you can use Modin to handle these large datasets.
+
+.. code-block:: python
+
+  import modin.pandas as pd
+  import numpy as np
+  df = pd.concat([pd.DataFrame(np.random.randint(0, 100, size=(2**20, 2**8))) for _ in range(40)]) # 40x2GB frames -- Working!
+  df.info()
+
+Not only does Modin let you work with datasets that are too large to fit in memory, we can perform various operations on them without worrying about memory constraints. 
+
+Advanced: Configuring out-of-core settings
+------------------------------------------
+
+.. why would you want to disable out of core?
+
+By default, out-of-core functionality is enabled by the compute engine selected. 
+To disable it, start your preferred compute engine with the appropriate arguments. For example:
 
 .. code-block:: python
 
@@ -25,27 +52,7 @@ preferred compute engine with the appropriate arguments. For example:
   df = pd.read_csv("some.csv")
 
 If you are using Dask, you have to modify local configuration files. Visit the
-Dask documentation_ on object spilling to see how.
+Dask documentation_ on object spilling for more details.
 
-Running an example with out of core
------------------------------------
 
-Before you run this, please make sure you follow the instructions listed above.
-
-.. code-block:: python
-
-  import modin.pandas as pd
-  import numpy as np
-  frame_data = np.random.randint(0, 100, size=(2**20, 2**8)) # 2GB each
-  df = pd.DataFrame(frame_data).add_prefix("col")
-  big_df = pd.concat([df for _ in range(20)]) # 20x2GB frames
-  print(big_df)
-  nan_big_df = big_df.isna() # The performance here represents a simple map
-  print(big_df.groupby("col1").count()) # group by on a large dataframe
-
-This example creates a 40GB DataFrame from 20 identical 2GB DataFrames and performs
-various operations on them. Feel free to play around with this code and let us know what
-you think!
-
-.. _Dataframe: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.html
 .. _documentation: https://distributed.dask.org/en/latest/worker.html#memory-management
