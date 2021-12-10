@@ -312,7 +312,12 @@ class PandasCSVGlobParser(PandasCSVParser):
         for fname, start, end in chunks:
             if start is not None and end is not None:
                 # pop "compression" from kwargs because bio is uncompressed
-                with OpenFile(fname, "rb", kwargs.pop("compression", "infer")) as bio:
+                with OpenFile(
+                    fname,
+                    "rb",
+                    kwargs.pop("compression", "infer"),
+                    **(kwargs.pop("storage_options", None) or {}),
+                ) as bio:
                     if kwargs.get("encoding", None) is not None:
                         header = b"" + bio.readline()
                     else:

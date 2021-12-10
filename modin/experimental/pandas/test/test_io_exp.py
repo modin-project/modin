@@ -136,6 +136,20 @@ def test_read_multiple_csv_s3():
     df_equals(modin_df, pandas_df)
 
 
+@pytest.mark.parametrize(
+    "storage_options",
+    [{"anon": False}, {"anon": True}, {"key": "123", "secret": "123"}, None],
+)
+def test_read_multiple_csv_s3_storage_opts(storage_options):
+    path = "s3://modin-datasets/testing/multiple_csv/"
+    modin_df = pd.read_csv_glob(path, storage_options=storage_options)
+    pandas_df = pd.concat(
+        [pandas.read_csv(f"{path}test_data{i}.csv") for i in range(2)]
+    ).reset_index(drop=True)
+
+    df_equals(modin_df, pandas_df)
+
+
 @pytest.mark.skipif(
     not Engine.get() == "Ray",
     reason=f"{Engine.get()} does not have experimental API",
