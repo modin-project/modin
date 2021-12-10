@@ -144,7 +144,8 @@ def test_read_multiple_csv_s3_storage_opts(storage_options):
     path = "s3://modin-datasets/testing/multiple_csv/"
     modin_df = pd.read_csv_glob(path, storage_options=storage_options)
     pandas_df = pd.concat(
-        [pandas.read_csv(f"{path}test_data{i}.csv") for i in range(2)]
+        [pandas.read_csv(f"{path}test_data{i}.csv") for i in range(2)],
+        storage_options=storage_options,
     ).reset_index(drop=True)
 
     df_equals(modin_df, pandas_df)
