@@ -14,10 +14,12 @@ slow or run out of memory. This is because pandas is single-threaded. In other w
 you can only process your data with one core at a time. This approach does not scale to 
 larger data sets and adding more hardware does not lead to more performance gain. 
 
-The ``modin.pandas`` `DataFrame`_ is a highly scalable, parallel DataFrame. Modin
-transparently distributes the data and computation so that you can
-continue using the same pandas API while being able to work with more data faster. Modin lets you use all the CPU cores on your machine, and because it is lightweight, it often has less memory overhead than pandas.
-:doc:`page </getting_started/pandas>` to learn more about how Modin is different from pandas. 
+The ``modin.pandas`` :doc:`DataFrame </supported_apis/dataframe_supported>` is a highly 
+scalable, parallel DataFrame. Modin transparently distributes the data and computation so 
+that you can continue using the same pandas API while being able to work with more data faster. 
+Modin lets you use all the CPU cores on your machine, and because it is lightweight, it 
+often has less memory overhead than pandas. See this :doc:`page </getting_started/pandas>` to 
+learn more about how Modin is different from pandas. 
 
 Why not just improve pandas?
 """"""""""""""""""""""""""""
@@ -37,7 +39,7 @@ Modin is designed to scale with the amount of hardware available.
 Even in a traditionally serial task like ``read_csv``, we see large gains by efficiently 
 distributing the work across your entire machine. Because it is so light-weight, 
 Modin provides speed-ups of up to 4x on a laptop with 4 physical cores. This speedup scales
-efficiently to larger machines with more cores. We have several published papers that
+efficiently to larger machines with more cores. We have several published papers_ that
 include performance results and comparisons against pandas.
 
 How much more data would I be able to process with Modin?
@@ -46,9 +48,9 @@ How much more data would I be able to process with Modin?
 We have focused heavily on bridging the solutions between DataFrames for small 
 data (e.g. pandas) and large data. Often data scientists require different tools 
 for doing the same thing on different sizes of data. The DataFrame solutions that 
-exist for 1MB do not scale to 1TB+, and the overheads of the solutions for 1TB+ 
+exist for 1MB do not scale to hundreds of GBs, and the overheads of the large-scale solutions 
 are too costly for datasets in the 1KB range. With Modin, because of its light-weight, 
-robust, and scalable nature, you get a fast DataFrame at 1MB and 1TB+.
+robust, and scalable nature, you get a fast DataFrame at 1MB and hundreds of GBs.
 
 How does Modin work under the hood?
 """"""""""""""""""""""""""""""""""""
@@ -56,12 +58,24 @@ How does Modin work under the hood?
 Modin is logically separated into different layers that represent the hierarchy of a 
 typical Database Management System. User queries which perform data transformation, 
 data ingress or data egress pass through the Modin query compiler which translates 
-queries from the pandas API Layer and sends them to the Modin Core DataFrame. The Modin
-Core DataFrame has an efficient dataframe partitioning schema which allows for extreme
-parallelization. From here, the Modin DataFrame works with task parallel frameworks like
+queries from the top-level pandas API Layer that users interact with to the Modin Core DataFrame_ layer. 
+The Modin Core DataFrame is our efficient DataFrame implementation that utilizes a partitioning schema 
+which allows for distributing tasks and queries. From here, the Modin DataFrame works with engines like
 Ray or Dask to execute computation, and then return the results to the user.
 
 For more details, take a look at our system :doc:`architecture </developer/architecture>`. 
+
+How do I use Jupyter or Colab notebooks with Modin?
+"""""""""""""""""""""""""""""""""""""""""""""""""""""
+
+Definitely! You can take a look at this Google Colab installation guide_ and 
+this notebook tutorial_. Once Modin is installed, just replace your pandas import
+with Modin: 
+
+.. code-block:: python
+
+   import modin.pandas as pd
+   # import pandas as pd
 
 If I’m only using my laptop, can I still get the benefits of Modin?
 """"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
@@ -71,14 +85,16 @@ light-weight, robust DataFrame. Because it is so light-weight, Modin provides
 speed-ups of up to 4x on a laptop with 4 physical cores.
 
 How do I use Jupyter or Colab notebooks with Modin?
-"""""""""""""""""""""""""""""""""""""""""""""""""""
+""""""""""""""""""""""""""""""""""""""""""""""""""""
 
-Just like you would use any other notebook, just replace your pandas import
-with Modin:
+You can take a look at this Google Colab installation guide_ and
+this notebook tutorial_. Once Modin is installed, just replace your pandas
+import with Modin:
 
 .. code-block:: python
-   # import pandas as pd
-   import modin.pandas as pd
+
+    # import pandas as pd
+    import modin.pandas as pd
 
 Which execution engine (Ray or Dask) should I use for Modin?
 """""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
@@ -91,11 +107,12 @@ compute engine, you can set the environment variable ``MODIN_ENGINE`` and
 Modin will do computation with that engine:
 
 .. code-block:: bash
-   pip install "modin[ray]" # Install Modin dependencies and Ray to run on Ray
-   export MODIN_ENGINE=ray  # Modin will use Ray
 
-   pip install "modin[dask]" # Install Modin dependencies and Dask to run on Dask
-   export MODIN_ENGINE=dask  # Modin will use Dask
+    pip install "modin[ray]" # Install Modin dependencies and Ray to run on Ray
+    export MODIN_ENGINE=ray  # Modin will use Ray
+
+    pip install "modin[dask]" # Install Modin dependencies and Dask to run on Dask
+    export MODIN_ENGINE=dask  # Modin will use Dask
 
 We also have an experimental OmniSciDB-based engine of Modin you can read about :doc:`here </developer/using_omnisci>`.
 We plan to support more execution engines in future. If you have a specific request, 
@@ -117,3 +134,6 @@ Also check out the `Github`_ to view open issues and make contributions.
 .. _Github: https://github.com/modin-project/modin
 .. _Ray: https://github.com/ray-project/ray/
 .. _Dask: https://dask.org/
+.. _papers: https://arxiv.org/abs/2001.00888
+.. _guide: https://modin.readthedocs.io/en/stable/installation.html?#installing-on-google-colab
+.. _tutorial: https://github.com/modin-project/modin/blob/master/examples/modin-scikit-learn-example.ipynb
