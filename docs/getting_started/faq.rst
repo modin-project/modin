@@ -65,18 +65,6 @@ Ray or Dask to execute computation, and then return the results to the user.
 
 For more details, take a look at our system :doc:`architecture </developer/architecture>`. 
 
-How do I use Jupyter or Colab notebooks with Modin?
-"""""""""""""""""""""""""""""""""""""""""""""""""""""
-
-Definitely! You can take a look at this Google Colab installation guide_ and 
-this notebook tutorial_. Once Modin is installed, just replace your pandas import
-with Modin: 
-
-.. code-block:: python
-
-   import modin.pandas as pd
-   # import pandas as pd
-
 If I’m only using my laptop, can I still get the benefits of Modin?
 """"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
 
