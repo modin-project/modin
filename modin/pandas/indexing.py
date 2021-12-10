@@ -770,9 +770,6 @@ class _LocIndexer(_LocationIndexerBase):
         print(item)
         print(type(item))
         row_loc, col_loc, ndims = self._parse_row_and_column_locators(key)
-        print("rl:", row_loc)
-        print("cl:", col_loc)
-        print("ndims:", ndims)
         append_axis = self._check_missing_loc(row_loc, col_loc)
         if ndims >= 1 and append_axis is not None:
             # We enter this codepath if we're either appending a row or a column
@@ -789,16 +786,32 @@ class _LocIndexer(_LocationIndexerBase):
                     new_qc = self.qc.concat(1, item._query_compiler)
                     self.df._update_inplace(new_query_compiler=new_qc)
                 else:
+                    exist_items = item
                     common_label_loc = np.isin(col_loc, self.qc.columns.values)
+                    if is_list_like(item) and not isinstance(item, (DataFrame, Series)):
+                        item = np.array(item)
+                        if len(item.shape) == 1:
+                            if item.shape[0] != len(col_loc):
+                                raise ValueError(
+                                    "Must have equal len keys and value when setting with an iterable"
+                                )
+                        else:
+                            if item.shape[0] != len(self.qc.index) or item.shape[
+                                1
+                            ] != len(col_loc):
+                                raise ValueError(
+                                    "Must have equal len keys and value when setting with an iterable"
+                                )
+                        exist_items = (
+                            item[:, common_label_loc]
+                            if len(item.shape) > 1
+                            else item[common_label_loc]
+                        )
+                    print(exist_items)
                     if len(common_label_loc) != 0:
                         # In this case we have some new cols and some old ones
-                        exist_items = item
-                        if is_list_like(item) and not isinstance(
-                            item, (DataFrame, Series)
-                        ):
-                            exist_items = item[:, common_label_loc]
                         self._set_item_existing_loc(
-                            row_loc, np.array(col_loc)[~common_label_loc], exist_items
+                            row_loc, np.array(col_loc)[common_label_loc], exist_items
                         )
             else:
                 pass
