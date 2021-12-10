@@ -1406,7 +1406,11 @@ def test_groupby_with_kwarg_dropna(groupby_kwargs, dropna):
         df_equals(md_grp.size(), pd_grp.size())
     # Grouping on level works incorrect in case of aggregation:
     # https://github.com/modin-project/modin/issues/2912
-    if any(col in modin_df.columns for col in by_kwarg):
+    # "BaseOnPython" tests are disabled because of the bug:
+    # https://github.com/modin-project/modin/issues/3827
+    if get_current_execution() != "BaseOnPython" and any(
+        col in modin_df.columns for col in by_kwarg
+    ):
         df_equals(md_grp.quantile(), pd_grp.quantile())
     # Default-to-pandas tests are disabled for multi-column 'by' because of the bug:
     # https://github.com/modin-project/modin/issues/3827
