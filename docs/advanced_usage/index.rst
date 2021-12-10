@@ -61,6 +61,13 @@ Modin provides an implementation of distributed XGBoost machine learning algorit
 :doc:`Modin XGBoost architecture documentation </flow/modin/experimental/xgboost>` for information about implementation and
 internal execution flow.
 
+Experimental APIs
+-----------------
+- :py:func:`~modin.experimental.pandas.read_csv_glob`
+- :py:func:`~modin.experimental.pandas.read_sql`
+- :py:func:`~modin.experimental.pandas.read_pickle_distributed`
+- :py:meth:`~modin.experimental.pandas.DataFrame.to_pickle_distributed`
+
 .. _`blog post`: https://medium.com/riselab/why-every-data-scientist-using-pandas-needs-modin-bringing-sql-to-dataframes-3b216b29a7c0
 .. _`Modin SQL documentation`: modin_sql.html
 .. _`Modin Spreadsheet API documentation`: spreadsheets_api.html
