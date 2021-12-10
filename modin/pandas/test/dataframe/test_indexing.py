@@ -1419,6 +1419,7 @@ def test___getitem__(data):
         (-3, -1),
         (1, -1, 2),
         (-1, 1, -1),
+        (None, None, 2),
     ]
 
     # slice test

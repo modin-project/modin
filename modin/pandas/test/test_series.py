@@ -350,6 +350,7 @@ def test___getitem__(data):
     pandas_series = pandas.Series(list(range(1000)))
     df_equals(modin_series[:30], pandas_series[:30])
     df_equals(modin_series[modin_series > 500], pandas_series[pandas_series > 500])
+    df_equals(modin_series[::2], pandas_series[::2])
 
     # Test empty series
     df_equals(pd.Series([])[:30], pandas.Series([])[:30])
