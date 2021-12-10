@@ -2,18 +2,19 @@ name: modin
 channels:
   - conda-forge
 dependencies:
-  - pandas==1.3.3
+  - pandas==1.3.4
   - numpy>=1.16.5
   - pyarrow>=1.0.0
   - libthrift<0.14.1  # ref: modin gh-2840
   - dask[complete]>=2.22.0
   - distributed>=2.22.0
+  - fsspec
   - xarray
   - Jinja2
   - pathlib
   - scipy
   - pip
-  - s3fs>=0.4.2
+  - s3fs>=2021.8
   - feather-format
   - lxml
   - openpyxl

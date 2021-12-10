@@ -16,7 +16,7 @@ import pytest
 import modin.pandas as pd
 import numpy as np
 from numpy.testing import assert_array_equal
-from modin.utils import get_current_backend, to_pandas
+from modin.utils import get_current_execution, to_pandas
 
 from .utils import (
     test_data_values,
@@ -232,8 +232,9 @@ def test_merge_asof_on_variations():
         pandas.DataFrame(left, index=left_index),
         pandas.DataFrame(right, index=right_index),
     )
-    modin_left, modin_right = pd.DataFrame(left, index=left_index), pd.DataFrame(
-        right, index=right_index
+    modin_left, modin_right = (
+        pd.DataFrame(left, index=left_index),
+        pd.DataFrame(right, index=right_index),
     )
     for on_arguments in [
         {"on": "a"},
@@ -701,8 +702,8 @@ def test_to_pandas_indices(data):
 
 
 @pytest.mark.skipif(
-    get_current_backend() != "BaseOnPython",
-    reason="This test make sense only on BaseOnPython backend.",
+    get_current_execution() != "BaseOnPython",
+    reason="This test make sense only on BaseOnPython execution.",
 )
 @pytest.mark.parametrize(
     "func, regex",

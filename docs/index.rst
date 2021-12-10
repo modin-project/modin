@@ -5,6 +5,15 @@
 
 ====
 
+.. toctree::
+   :hidden:
+   
+   getting_started/index
+   supported_apis/index
+   advanced_usage/index
+   developer/index
+   contact
+
 .. raw:: html
 
     <p align="center"><b>To use Modin, replace the pandas import:</b></p>
@@ -113,73 +122,12 @@ nature, you get a fast DataFrame at 1MB and 1TB+.
 
 **Modin is currently under active development. Requests and contributions are welcome!**
 
-**If you are interested in contributions please refer to 'developer documentation' section, where
-you can find 'Getting started' guide, system architecture and internal implementation details docs
-and lots of other useful information.**
-
-.. toctree::
-   :caption: Installation
-
-   installation
-
-.. toctree::
-   :caption: Getting Started
-
-   using_modin
-   out_of_core
-
-.. toctree::
-   :caption: Examples
-
-   examples/index
-
-.. toctree:: 
-   :caption: Experimental Features
-
-   experimental_features/index
-   experimental_features/modin_sql
-   experimental_features/spreadsheets_api
-   experimental_features/progress_bar
-   experimental_features/modin_xgboost
-   experimental_features/modin_in_the_cloud
-
-.. toctree::
-   :caption: How is Modin different from ...?
-
-   comparisons/pandas
-   comparisons/dask
-   comparisons/spark
-
-.. toctree::
-   :caption: Supported APIs
-
-   supported_apis/index
-   supported_apis/dataframe_supported
-   supported_apis/series_supported
-   supported_apis/utilities_supported
-   supported_apis/io_supported
-
-.. toctree::
-   :caption: Developer Documentation
-
-   contributing
-   developer/architecture
-   developer/partition_api
-
-.. toctree::
-   :caption: Engines, Backends, and APIs
-
-   UsingPandasonRay/index
-   UsingPandasonDask/index
-   UsingOmnisci/index
-   UsingPyarrowonRay/index
-
-.. toctree::
-   :caption: Help
-
-   troubleshooting
-   contact
+If you are interested in contributions please check out the :doc:`Getting Started</getting_started/index>`
+guide then refer to the :doc:`Developer Documentation</developer/index>` section,
+where you can find system architecture, internal implementation details, and other useful information.
+Also check out the `Github`_ to view open issues and make contributions.
 
 .. _Dataframe: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.html
 .. _Ray: https://github.com/ray-project/ray/
 .. _Dask: https://dask.org/
+.. _Github: https://github.com/modin-project/modin

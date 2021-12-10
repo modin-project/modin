@@ -28,9 +28,9 @@ test_cluster = create_cluster(
     "aws",
     "aws_credentials",
     cluster_name="rayscale-test",
-    region="eu-north-1",
-    zone="eu-north-1b",
-    image="ami-00e1e82d7d4ca80d3",
+    region="eu-central-1",
+    zone="eu-central-1b",
+    image="ami-05f7491af5eef733a",
 )
 with test_cluster:
     parameters = {
@@ -47,5 +47,5 @@ with test_cluster:
     # - J1_1e6_1e3_0_0.csv
     # - J1_1e6_1e6_0_0.csv
     for data_file in ["G1_5e5_1e2_0_0.csv", "J1_1e6_NA_0_0.csv"]:
-        parameters["data_file"] = f"https://modin-datasets.s3.amazonaws.com/h2o/{data_file}"
+        parameters["data_file"] = f"s3://modin-datasets/cloud/h2o/{data_file}"
         run_benchmark(parameters)

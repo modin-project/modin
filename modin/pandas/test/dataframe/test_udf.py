@@ -15,6 +15,7 @@ import pytest
 import numpy as np
 import pandas
 import matplotlib
+from modin.config import MinPartitionSize
 import modin.pandas as pd
 
 from pandas.core.dtypes.common import is_list_like
@@ -34,8 +35,11 @@ from modin.pandas.test.utils import (
     udf_func_values,
     udf_func_keys,
     test_data,
+    bool_arg_keys,
+    bool_arg_values,
+    arg_keys,
 )
-from modin.config import NPartitions, Backend
+from modin.config import NPartitions, StorageFormat
 
 NPartitions.put(4)
 
@@ -101,9 +105,9 @@ def test_aggregate_error_checking():
 
 
 @pytest.mark.xfail(
-    Backend.get() == "Pandas",
+    StorageFormat.get() == "Pandas",
     reason="DataFrame.apply(dict) raises an exception because of a bug in its"
-    "implementation for pandas backend, this prevents us from catching the desired"
+    "implementation for pandas storage format, this prevents us from catching the desired"
     "exception. You can track this bug at:"
     "https://github.com/modin-project/modin/issues/3221",
 )
@@ -142,6 +146,47 @@ def test_apply_text_func_with_level(level, data, func, axis):
         pandas.DataFrame(data, index=index),
         lambda df, *args, **kwargs: df.apply(func, *args, **kwargs),
         **func_kwargs,
+    )
+
+
+@pytest.mark.parametrize(
+    "column", ["A", ["A", "C"]], ids=arg_keys("column", ["A", ["A", "C"]])
+)
+@pytest.mark.parametrize(
+    "ignore_index", bool_arg_values, ids=arg_keys("ignore_index", bool_arg_keys)
+)
+def test_explode_single_partition(column, ignore_index):
+    # This test data has two columns where some items are lists that
+    # explode() should expand. In some rows, the columns have list-like
+    # elements that must be expanded, and in others, they have empty lists
+    # or items that aren't list-like at all.
+    data = {
+        "A": [[0, 1, 2], "foo", [], [3, 4]],
+        "B": 1,
+        "C": [["a", "b", "c"], np.nan, [], ["d", "e"]],
+    }
+    eval_general(
+        *create_test_dfs(data),
+        lambda df: df.explode(column, ignore_index=ignore_index),
+    )
+
+
+@pytest.mark.parametrize(
+    "column", ["A", ["A", "C"]], ids=arg_keys("column", ["A", ["A", "C"]])
+)
+@pytest.mark.parametrize(
+    "ignore_index", bool_arg_values, ids=arg_keys("ignore_index", bool_arg_keys)
+)
+def test_explode_all_partitions(column, ignore_index):
+    # Test explode with enough rows to fill all partitions. explode should
+    # expand every row in the input data into two rows. It's especially
+    # important that the input data has list-like elements that must be
+    # expanded at the boundaries of the partitions, e.g. at row 31.
+    num_rows = NPartitions.get() * MinPartitionSize.get()
+    data = {"A": [[3, 4]] * num_rows, "C": [["a", "b"]] * num_rows}
+    eval_general(
+        *create_test_dfs(data),
+        lambda df: df.explode(column, ignore_index=ignore_index),
     )
 
 

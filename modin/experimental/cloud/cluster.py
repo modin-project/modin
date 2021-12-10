@@ -17,7 +17,7 @@ from typing import NamedTuple, Union
 import atexit
 import warnings
 
-from modin import set_backends
+from modin import set_execution
 
 from .base import ConnectionDetails
 from .connection import Connection
@@ -94,11 +94,11 @@ class Provider:
 class BaseCluster:
     """
     Cluster manager for Modin. Knows how to use certain tools to spawn and destroy clusters,
-    can serve as context manager to switch execution engine and partition to remote.
+    can serve as context manager to switch execution engine and storage format to remote.
     """
 
     target_engine = None
-    target_partition = None
+    target_storage_format = None
     wrap_cmd = None
     Connector = Connection
 
@@ -130,7 +130,7 @@ class BaseCluster:
         self.worker_node_type = worker_node_type or provider.default_worker_type
         self.add_conda_packages = add_conda_packages
 
-        self.old_backends = None
+        self.old_execution = None
         self.connection: Connection = None
 
     def spawn(self, wait=False):
@@ -191,13 +191,15 @@ class BaseCluster:
     def __enter__(self):
         self.spawn(wait=True)  # make sure cluster is ready
         self.connection.activate()
-        self.old_backends = set_backends(self.target_engine, self.target_partition)
+        self.old_execution = set_execution(
+            self.target_engine, self.target_storage_format
+        )
         return self
 
     def __exit__(self, *a, **kw):
-        set_backends(*self.old_backends)
+        set_execution(*self.old_execution)
         self.connection.deactivate()
-        self.old_backends = None
+        self.old_execution = None
 
     # TODO: implement __del__() properly; naive implementation calling .destroy() crashes
     # somewhere in the innards of Ray when a cluster is destroyed during interpreter exit.

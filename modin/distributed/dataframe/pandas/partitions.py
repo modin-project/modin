@@ -15,7 +15,7 @@
 
 import numpy as np
 
-from modin.backends.pandas.query_compiler import PandasQueryCompiler
+from modin.core.storage_formats.pandas.query_compiler import PandasQueryCompiler
 from modin.pandas.dataframe import DataFrame
 
 
@@ -70,9 +70,9 @@ def unwrap_partitions(api_layer_object, axis=None, get_ip=False):
         actual_engine = type(
             api_layer_object._query_compiler._modin_frame._partitions[0][0]
         ).__name__
-        if actual_engine in ("PandasOnRayFramePartition",):
+        if actual_engine in ("PandasOnRayDataframePartition",):
             return _unwrap_partitions("oid")
-        elif actual_engine in ("PandasOnDaskFramePartition",):
+        elif actual_engine in ("PandasOnDaskDataframePartition",):
             return _unwrap_partitions("future")
         raise ValueError(
             f"Do not know how to unwrap '{actual_engine}' underlying partitions"
@@ -129,7 +129,7 @@ def from_partitions(
     Pass `index`, `columns`, `row_lengths` and `column_widths` to avoid triggering
     extra computations of the metadata when creating a DataFrame.
     """
-    from modin.data_management.factories.dispatcher import FactoryDispatcher
+    from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
 
     factory = FactoryDispatcher.get_factory()
 

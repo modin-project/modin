@@ -16,10 +16,10 @@
 import os
 import json
 
-from .compatibility import ASV_USE_BACKEND, ASV_DATASET_SIZE
+from .compatibility import ASV_USE_STORAGE_FORMAT, ASV_DATASET_SIZE
 
 RAND_LOW = 0
-RAND_HIGH = 1_000_000_000 if ASV_USE_BACKEND == "omnisci" else 100
+RAND_HIGH = 1_000_000_000 if ASV_USE_STORAGE_FORMAT == "omnisci" else 100
 
 BINARY_OP_DATA_SIZE = {
     "big": [
@@ -28,10 +28,7 @@ BINARY_OP_DATA_SIZE = {
         # [[20, 500_000], [10, 1_000_000]],
         [[500_000, 20], [1_000_000, 10]],
     ],
-    "small": [
-        [[250, 250], [250, 250]],
-        [[10_000, 20], [25_000, 10]],
-    ],
+    "small": [[[250, 250], [250, 250]], [[10_000, 20], [25_000, 10]]],
 }
 UNARY_OP_DATA_SIZE = {
     "big": [
@@ -40,44 +37,25 @@ UNARY_OP_DATA_SIZE = {
         # [10, 1_000_000],
         [1_000_000, 10],
     ],
-    "small": [
-        [250, 250],
-        [10_000, 10],
-    ],
+    "small": [[250, 250], [10_000, 10]],
 }
 SERIES_DATA_SIZE = {
-    "big": [
-        [100_000, 1],
-    ],
-    "small": [
-        [10_000, 1],
-    ],
+    "big": [[100_000, 1]],
+    "small": [[10_000, 1]],
 }
 
 
 OMNISCI_BINARY_OP_DATA_SIZE = {
-    "big": [
-        [[500_000, 20], [1_000_000, 10]],
-    ],
-    "small": [
-        [[10_000, 20], [25_000, 10]],
-    ],
+    "big": [[[500_000, 20], [1_000_000, 10]]],
+    "small": [[[10_000, 20], [25_000, 10]]],
 }
 OMNISCI_UNARY_OP_DATA_SIZE = {
-    "big": [
-        [1_000_000, 10],
-    ],
-    "small": [
-        [10_000, 10],
-    ],
+    "big": [[1_000_000, 10]],
+    "small": [[10_000, 10]],
 }
 OMNISCI_SERIES_DATA_SIZE = {
-    "big": [
-        [10_000_000, 1],
-    ],
-    "small": [
-        [100_000, 1],
-    ],
+    "big": [[10_000_000, 1]],
+    "small": [[100_000, 1]],
 }
 
 DEFAULT_GROUPBY_NGROUPS = {
@@ -90,7 +68,7 @@ _DEFAULT_CONFIG_T = [
     (
         UNARY_OP_DATA_SIZE[ASV_DATASET_SIZE],
         [
-            # Pandas backend benchmarks
+            # Pandas storage format benchmarks
             "TimeGroupByMultiColumn",
             "TimeGroupByDefaultAggregations",
             "TimeGroupByDictionaryAggregation",
@@ -122,7 +100,7 @@ _DEFAULT_CONFIG_T = [
     (
         BINARY_OP_DATA_SIZE[ASV_DATASET_SIZE],
         [
-            # Pandas backend benchmarks
+            # Pandas storage format benchmarks
             "TimeJoin",
             "TimeMerge",
             "TimeConcat",
@@ -133,7 +111,7 @@ _DEFAULT_CONFIG_T = [
     (
         SERIES_DATA_SIZE[ASV_DATASET_SIZE],
         [
-            # Pandas backend benchmarks
+            # Pandas storage format benchmarks
             "TimeFillnaSeries",
         ],
     ),
@@ -163,17 +141,11 @@ _DEFAULT_OMNISCI_CONFIG_T = [
     ),
     (
         OMNISCI_BINARY_OP_DATA_SIZE[ASV_DATASET_SIZE],
-        [
-            "omnisci.TimeMerge",
-            "omnisci.TimeAppend",
-        ],
+        ["omnisci.TimeMerge", "omnisci.TimeAppend"],
     ),
     (
         OMNISCI_SERIES_DATA_SIZE[ASV_DATASET_SIZE],
-        [
-            "omnisci.TimeBinaryOpSeries",
-            "omnisci.TimeValueCountsSeries",
-        ],
+        ["omnisci.TimeBinaryOpSeries", "omnisci.TimeValueCountsSeries"],
     ),
 ]
 DEFAULT_CONFIG = {}

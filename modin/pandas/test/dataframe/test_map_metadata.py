@@ -17,7 +17,7 @@ import pandas
 from pandas.testing import assert_index_equal
 import matplotlib
 import modin.pandas as pd
-from modin.utils import get_current_backend
+from modin.utils import get_current_execution
 
 from modin.pandas.test.utils import (
     random_state,
@@ -252,7 +252,7 @@ def test_at(data):
     pandas_df = pandas.DataFrame(data)
 
     key1 = modin_df.columns[0]
-    # Scaler
+    # Scalar
     df_equals(modin_df.at[0, key1], pandas_df.at[0, key1])
 
     # Series
@@ -285,7 +285,7 @@ def test_copy(data):
     new_modin_df = modin_df.copy()
 
     assert new_modin_df is not modin_df
-    if get_current_backend() != "BaseOnPython":
+    if get_current_execution() != "BaseOnPython":
         assert np.array_equal(
             new_modin_df._query_compiler._modin_frame._partitions,
             modin_df._query_compiler._modin_frame._partitions,
@@ -409,7 +409,7 @@ def test_append(data):
         # this. Once the Pandas bug is fixed and Modin upgrades to that
         # Pandas release, this sort will cause the test to fail, and the
         # next three lines should be deleted.
-        if get_current_backend() != "BaseOnPython":
+        if get_current_execution() != "BaseOnPython":
             assert list(modin_result.columns) == list(modin_df.columns) + [0]
             modin_result = modin_result[[0] + sorted(modin_df.columns)]
         df_equals(modin_result, pandas_result)

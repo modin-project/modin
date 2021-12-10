@@ -23,10 +23,10 @@ jobs:
           conda info
           conda list
       - name: Internals tests
-        run: python -m pytest modin/data_management/factories/test/test_dispatcher.py modin/experimental/cloud/test/test_cloud.py
+        run: python -m pytest modin/core/execution/dispatching/factories/test/test_dispatcher.py modin/experimental/cloud/test/test_cloud.py
       - run: python -m pytest modin/config/test
       - run: python -m pytest modin/test/test_envvar_catcher.py
-      - run: python -m pytest modin/test/backends/pandas/test_internals.py
+      - run: python -m pytest modin/test/storage_formats/pandas/test_internals.py
       - run: python -m pytest modin/test/test_envvar_npartitions.py
       - run: python -m pytest modin/test/test_partition_api.py
 
@@ -37,11 +37,11 @@ jobs:
         shell: bash -l {0}
     strategy:
       matrix:
-        backend: [BaseOnPython]
+        execution: [BaseOnPython]
     env:
       MODIN_MEMORY: 1000000000
       MODIN_TEST_DATASET_SIZE: "small"
-    name: Test ${{ matrix.backend }} backend, Python 3.7
+    name: Test ${{ matrix.execution }} execution, Python 3.7
     steps:
       - uses: actions/checkout@v2
         with:
@@ -59,23 +59,23 @@ jobs:
           conda list
       - name: Install HDF5
         run: sudo apt update && sudo apt install -y libhdf5-dev
-      - run: pytest -n 2 modin/experimental/xgboost/test/test_default.py --backend=${{ matrix.backend }}
-      - run: pytest -n 2 modin/pandas/test/dataframe/test_binary.py --backend=${{ matrix.backend }}
-      - run: pytest -n 2 modin/pandas/test/dataframe/test_default.py --backend=${{ matrix.backend }}
-      - run: pytest -n 2 modin/pandas/test/dataframe/test_indexing.py --backend=${{ matrix.backend }}
-      - run: pytest -n 2 modin/pandas/test/dataframe/test_iter.py --backend=${{ matrix.backend }}
-      - run: pytest -n 2 modin/pandas/test/dataframe/test_join_sort.py --backend=${{ matrix.backend }}
-      - run: pytest -n 2 modin/pandas/test/dataframe/test_map_metadata.py --backend=${{ matrix.backend }}
-      - run: pytest -n 2 modin/pandas/test/dataframe/test_reduction.py --backend=${{ matrix.backend }}
-      - run: pytest -n 2 modin/pandas/test/dataframe/test_udf.py --backend=${{ matrix.backend }}
-      - run: pytest -n 2 modin/pandas/test/dataframe/test_window.py --backend=${{ matrix.backend }}
-      - run: pytest -n 2 modin/pandas/test/dataframe/test_pickle.py --backend=${{ matrix.backend }}
-      - run: python -m pytest -n 2 modin/pandas/test/test_series.py --backend=${{ matrix.backend }}
-      - run: python -m pytest -n 2 modin/pandas/test/test_rolling.py --backend=${{ matrix.backend }}
-      - run: python -m pytest -n 2 modin/pandas/test/test_concat.py --backend=${{ matrix.backend }}
-      - run: python -m pytest -n 2 modin/pandas/test/test_groupby.py --backend=${{ matrix.backend }}
-      - run: python -m pytest -n 2 modin/pandas/test/test_reshape.py --backend=${{ matrix.backend }}
-      - run: python -m pytest -n 2 modin/pandas/test/test_general.py --backend=${{ matrix.backend }}
+      - run: pytest -n 2 modin/experimental/xgboost/test/test_default.py --execution=${{ matrix.execution }}
+      - run: pytest -n 2 modin/pandas/test/dataframe/test_binary.py --execution=${{ matrix.execution }}
+      - run: pytest -n 2 modin/pandas/test/dataframe/test_default.py --execution=${{ matrix.execution }}
+      - run: pytest -n 2 modin/pandas/test/dataframe/test_indexing.py --execution=${{ matrix.execution }}
+      - run: pytest -n 2 modin/pandas/test/dataframe/test_iter.py --execution=${{ matrix.execution }}
+      - run: pytest -n 2 modin/pandas/test/dataframe/test_join_sort.py --execution=${{ matrix.execution }}
+      - run: pytest -n 2 modin/pandas/test/dataframe/test_map_metadata.py --execution=${{ matrix.execution }}
+      - run: pytest -n 2 modin/pandas/test/dataframe/test_reduction.py --execution=${{ matrix.execution }}
+      - run: pytest -n 2 modin/pandas/test/dataframe/test_udf.py --execution=${{ matrix.execution }}
+      - run: pytest -n 2 modin/pandas/test/dataframe/test_window.py --execution=${{ matrix.execution }}
+      - run: pytest -n 2 modin/pandas/test/dataframe/test_pickle.py --execution=${{ matrix.execution }}
+      - run: python -m pytest -n 2 modin/pandas/test/test_series.py --execution=${{ matrix.execution }}
+      - run: python -m pytest -n 2 modin/pandas/test/test_rolling.py --execution=${{ matrix.execution }}
+      - run: python -m pytest -n 2 modin/pandas/test/test_concat.py --execution=${{ matrix.execution }}
+      - run: python -m pytest -n 2 modin/pandas/test/test_groupby.py --execution=${{ matrix.execution }}
+      - run: python -m pytest -n 2 modin/pandas/test/test_reshape.py --execution=${{ matrix.execution }}
+      - run: python -m pytest -n 2 modin/pandas/test/test_general.py --execution=${{ matrix.execution }}
       - run: |
           curl -o codecov https://codecov.io/bash
           VERSION=$(grep -o 'VERSION=\"[0-9\.]*\"' codecov | cut -d'"' -f2);
@@ -95,8 +95,8 @@ jobs:
     env:
       MODIN_EXPERIMENTAL: "True"
       MODIN_ENGINE: "native"
-      MODIN_BACKEND: "omnisci"
-    name: Test OmniSci backend, Python 3.7
+      MODIN_STORAGE_FORMAT: "omnisci"
+    name: Test OmniSci storage format, Python 3.7
     steps:
       - uses: actions/checkout@v2
         with:
@@ -114,7 +114,7 @@ jobs:
           conda list
       - name: Install HDF5
         run: sudo apt update && sudo apt install -y libhdf5-dev
-      - run: pytest modin/experimental/engines/omnisci_on_native/test/test_dataframe.py
+      - run: pytest modin/experimental/core/execution/native/implementations/omnisci_on_native/test/test_dataframe.py
       - run: pytest modin/pandas/test/test_io.py::TestCsv
       - run: |
           curl -o codecov https://codecov.io/bash
@@ -159,6 +159,8 @@ jobs:
         run: sudo apt update && sudo apt install -y libhdf5-dev
       - run: pytest -n 2 modin/experimental/xgboost/test/test_default.py
       - run: pytest -n 2 modin/experimental/xgboost/test/test_xgboost.py
+        if: matrix.engine == 'ray'
+      - run: pytest -n 2 modin/experimental/xgboost/test/test_dmatrix.py
         if: matrix.engine == 'ray'
       - run: pytest -n 2 modin/pandas/test/dataframe/test_binary.py
       - run: pytest -n 2 modin/pandas/test/dataframe/test_default.py
@@ -256,7 +258,7 @@ jobs:
       matrix:
         python-version: ["3.7", "3.8"]
     env:
-      MODIN_BACKEND: pyarrow
+      MODIN_STORAGE_FORMAT: pyarrow
       MODIN_EXPERIMENTAL: "True"
     name: test (pyarrow, python ${{matrix.python-version}})
     steps:
@@ -287,6 +289,7 @@ jobs:
         python-version: [ "3.7", "3.8" ]
         engine: ["ray", "dask"]
     env:
+      MODIN_EXPERIMENTAL: "True"
       MODIN_ENGINE: ${{matrix.engine}}
     name: test-spreadsheet (engine ${{matrix.engine}}, python ${{matrix.python-version}})
     steps:
@@ -304,4 +307,4 @@ jobs:
         run: |
           conda info
           conda list
-      - run: python -m pytest modin/spreadsheet/test/test_general.py
+      - run: python -m pytest modin/experimental/spreadsheet/test/test_general.py

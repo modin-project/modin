@@ -53,7 +53,7 @@ RUN cd "$modin_dir" \
 
 # setup environments for modin on omnisci engine work
 ENV MODIN_ENGINE "native"
-ENV MODIN_BACKEND "omnisci"
+ENV MODIN_STORAGE_FORMAT "omnisci"
 ENV MODIN_EXPERIMENTAL "true"
 
 # To work properly, run the following command in the container:

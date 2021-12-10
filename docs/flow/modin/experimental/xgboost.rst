@@ -10,7 +10,7 @@ and function :py:func:`~modin.experimental.xgboost.train` provide the user with 
 They are located in the ``modin.experimental.xgboost.xgboost`` module.
 
 The internal module ``modin.experimental.xgboost.xgboost.xgboost_ray`` contains the implementation of Modin XGBoost
-for the Ray backend. This module mainly consists of the Ray actor-class :py:class:`~modin.experimental.xgboost.xgboost_ray.ModinXGBoostActor`,
+for the Ray execution engine. This module mainly consists of the Ray actor-class :py:class:`~modin.experimental.xgboost.xgboost_ray.ModinXGBoostActor`,
 a function to distribute Modin's partitions between actors :py:func:`~modin.experimental.xgboost.xgboost_ray._assign_row_partitions_to_actors`,
 an internal :py:func:`~modin.experimental.xgboost.xgboost_ray._train`/:py:func:`~modin.experimental.xgboost.xgboost_ray._predict`
 function used from the public interfaces and additional util functions for computing cluster resources, actor creations etc.
@@ -38,8 +38,8 @@ data type of `dtrain` parameter is :py:class:`~modin.experimental.xgboost.DMatri
 
 .. autofunction:: modin.experimental.xgboost.train
 
-Internal execution flow on Ray backend
-''''''''''''''''''''''''''''''''''''''
+Internal execution flow on Ray engine
+'''''''''''''''''''''''''''''''''''''
 
 Internal functions :py:func:`~modin.experimental.xgboost.xgboost_ray._train` and
 :py:func:`~modin.experimental.xgboost.xgboost_ray._predict` work similar to xgboost.
