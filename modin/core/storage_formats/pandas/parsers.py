@@ -308,23 +308,21 @@ class PandasCSVGlobParser(PandasCSVParser):
         num_splits = kwargs.pop("num_splits", None)
         index_col = kwargs.get("index_col", None)
 
+        kwargs_bio = kwargs.copy()
+        compression = kwargs_bio.pop("compression", "infer")
+        storage_options = kwargs_bio.pop("storage_options", None) or {}
         pandas_dfs = []
         for fname, start, end in chunks:
             if start is not None and end is not None:
                 # pop "compression" from kwargs because bio is uncompressed
-                with OpenFile(
-                    fname,
-                    "rb",
-                    kwargs.pop("compression", "infer"),
-                    **(kwargs.pop("storage_options", None) or {}),
-                ) as bio:
-                    if kwargs.get("encoding", None) is not None:
+                with OpenFile(fname, "rb", compression, **storage_options) as bio:
+                    if kwargs_bio.get("encoding", None) is not None:
                         header = b"" + bio.readline()
                     else:
                         header = b""
                     bio.seek(start)
                     to_read = header + bio.read(end - start)
-                pandas_dfs.append(pandas.read_csv(BytesIO(to_read), **kwargs))
+                pandas_dfs.append(pandas.read_csv(BytesIO(to_read), **kwargs_bio))
             else:
                 # This only happens when we are reading with only one worker (Default)
                 return pandas.read_csv(fname, **kwargs)
