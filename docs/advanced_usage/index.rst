@@ -63,6 +63,8 @@ internal execution flow.
 
 Experimental APIs
 -----------------
+Modin also supports these APIs on top of pandas that are under active experimental development.
+
 - :py:func:`~modin.experimental.pandas.read_csv_glob`
 - :py:func:`~modin.experimental.pandas.read_sql`
 - :py:func:`~modin.experimental.pandas.read_pickle_distributed`
