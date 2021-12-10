@@ -142,10 +142,16 @@ def test_read_multiple_csv_s3():
 )
 def test_read_multiple_csv_s3_storage_opts(storage_options):
     path = "s3://modin-datasets/testing/multiple_csv/"
+    # Test the fact of handling of `storage_options`
     modin_df = pd.read_csv_glob(path, storage_options=storage_options)
     pandas_df = pd.concat(
-        [pandas.read_csv(f"{path}test_data{i}.csv") for i in range(2)],
-        storage_options=storage_options,
+        [
+            pandas.read_csv(
+                f"{path}test_data{i}.csv",
+                storage_options=storage_options,
+            )
+            for i in range(2)
+        ],
     ).reset_index(drop=True)
 
     df_equals(modin_df, pandas_df)
