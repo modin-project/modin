@@ -7,6 +7,7 @@ the #support channel on our Slack_ community or open a Github issue_.
 
 What’s the issue with pandas? Why should I use Modin?
 """"""""""""""""""""""""""""""""""""""""""""""""""""""
+
 While pandas works extremely well on small datasets, as soon as you start working with 
 medium to large datasets that are more than a few GBs, pandas can become painfully 
 slow or run out of memory. This is because pandas is single-threaded. In other words, 
@@ -15,14 +16,13 @@ larger data sets and adding more hardware does not lead to more performance gain
 
 The ``modin.pandas`` `DataFrame`_ is a highly scalable, parallel DataFrame. Modin
 transparently distributes the data and computation so that you can
-continue using the same pandas API while being able to work with more data faster. With Modin, 
-you are able to use all of the CPU cores on your machine, and because of it's light-weight
-nature often results in less memory overhead than pandas. See this 
+continue using the same pandas API while being able to work with more data faster. Modin lets you use all the CPU cores on your machine, and because it is lightweight, it often has less memory overhead than pandas.
 :doc:`page </getting_started/pandas>` to learn more about how Modin is different from pandas. 
 
 Why not just improve pandas?
 """"""""""""""""""""""""""""
-Pandas is a massive community and well established codebase. Many of the issues
+
+pandas is a massive community and well established codebase. Many of the issues
 we have identified and resolved with pandas are fundamental to its current
 implementation. While we would be happy to donate parts of Modin that
 make sense in pandas, many of these components would require significant (or
@@ -32,6 +32,7 @@ more about Modin's architecture, see the :doc:`architecture </developer/architec
 
 How much faster can I go with Modin compared to pandas?
 """"""""""""""""""""""""""""""""""""""""""""""""""""""""
+
 Modin is designed to scale with the amount of hardware available.
 Even in a traditionally serial task like ``read_csv``, we see large gains by efficiently 
 distributing the work across your entire machine. Because it is so light-weight, 
@@ -41,6 +42,7 @@ include performance results and comparisons against pandas.
 
 How much more data would I be able to process with Modin?
 """"""""""""""""""""""""""""""""""""""""""""""""""""""""""
+
 We have focused heavily on bridging the solutions between DataFrames for small 
 data (e.g. pandas) and large data. Often data scientists require different tools 
 for doing the same thing on different sizes of data. The DataFrame solutions that 
@@ -50,10 +52,11 @@ robust, and scalable nature, you get a fast DataFrame at 1MB and 1TB+.
 
 How does Modin work under the hood?
 """"""""""""""""""""""""""""""""""""
+
 Modin is logically separated into different layers that represent the hierarchy of a 
 typical Database Management System. User queries which perform data transformation, 
 data ingress or data egress pass through the Modin query compiler which translates 
-queries from the Pandas API Layer and sends them to the Modin Core DataFrame. The Modin
+queries from the pandas API Layer and sends them to the Modin Core DataFrame. The Modin
 Core DataFrame has an efficient dataframe partitioning schema which allows for extreme
 parallelization. From here, the Modin DataFrame works with task parallel frameworks like
 Ray or Dask to execute computation, and then return the results to the user.
@@ -62,14 +65,16 @@ For more details, take a look at our system :doc:`architecture </developer/archi
 
 If I’m only using my laptop, can I still get the benefits of Modin?
 """"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+
 Absolutely! Unlike other parallel DataFrame systems, Modin is an extremely 
 light-weight, robust DataFrame. Because it is so light-weight, Modin provides 
 speed-ups of up to 4x on a laptop with 4 physical cores.
 
-How do I use Jupyter or Colab notebooks with Modin? 
-""""""""""""""""""""""""""""""""""""""""""""
+How do I use Jupyter or Colab notebooks with Modin?
+"""""""""""""""""""""""""""""""""""""""""""""""""""
+
 Just like you would use any other notebook, just replace your pandas import
-with modin:
+with Modin:
 
 .. code-block:: python
    # import pandas as pd
@@ -77,10 +82,11 @@ with modin:
 
 Which execution engine (Ray or Dask) should I use for Modin?
 """""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
-Whichever one you want! Modin supports Ray_ and Dask_ backends to provide an effortless way 
+
+Whichever one you want! Modin supports Ray_ and Dask_ execution engines to provide an effortless way 
 to speed up your pandas workflows. Modin will automatically detect which engine you have 
 installed and use that for scheduling computation. If you don't have a preference, we recommend 
-starting with Modin's default Ray backend. If you want to use a specific 
+starting with Modin's default Ray engine. If you want to use a specific 
 compute engine, you can set the environment variable ``MODIN_ENGINE`` and 
 Modin will do computation with that engine:
 
@@ -92,11 +98,12 @@ Modin will do computation with that engine:
    export MODIN_ENGINE=dask  # Modin will use Dask
 
 We also have an experimental OmniSciDB-based engine of Modin you can read about :doc:`here </developer/using_omnisci>`.
-We plan to support more execution backends in future. If you have a specific request, 
+We plan to support more execution engines in future. If you have a specific request, 
 please post on the #feature-requests channel on our Slack_ community. 
 
 How can I contribute to Modin?
 """""""""""""""""""""""""""""""
+
 **Modin is currently under active development. Requests and contributions are welcome!**
 
 If you are interested in contributing please check out the :doc:`Getting Started</getting_started/index>`
