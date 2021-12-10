@@ -35,7 +35,7 @@ underlying IO module. For more information about IO module visit :doc:`related d
 
 Factory Dispatcher
 ''''''''''''''''''
-The ``modin.core.execution.dispatching.factories.dispatcher.FactoryDispatcher`` class provides 
+The :py:class:`~modin.core.execution.dispatching.factories.dispatcher.FactoryDispatcher` class provides 
 public methods whose interface corresponds to pandas IO functions, the only difference is that they return `QueryCompiler` of the
 selected storage format instead of high-level :py:class:`~modin.pandas.dataframe.DataFrame`. ``FactoryDispatcher`` is responsible for routing
 these IO calls to the factory which represents the selected execution.
