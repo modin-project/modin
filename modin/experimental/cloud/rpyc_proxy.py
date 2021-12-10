@@ -428,9 +428,13 @@ def make_proxy_cls(
 
         def __init__(self, *a, __remote_end__=None, **kw):
             if __remote_end__ is None:
-                if hasattr(self, "_preprocess_init_args"):
-                    a, kw = self._preprocess_init_args(*a, **kw)
-            if __remote_end__ is None:
+                try:
+                    preprocess = object.__getattribute__(self, "_preprocess_init_args")
+                except AttributeError:
+                    pass
+                else:
+                    a, kw = preprocess(*a, **kw)
+
                 __remote_end__ = remote_cls(*a, **kw)
             while True:
                 # unwrap the object if it's a wrapper
