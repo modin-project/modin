@@ -176,8 +176,9 @@ Data Ingress
 The data ingress operations workflow diagram is shown below. After a data 
 ingress function from pandas API (e.g. ``read_csv``) is called, the compiled
 query from pandas API is passed to the :doc:`Factory Dispatcher </flow/modin/core/execution/dispatching>`,
-which provides IO class based on the selected execution. Resulting IO class will contain
-IO methods with interfaces that correspond to pandas IO functions and it's name
+which defines a factory specific for the execution, which in turn, exposes the IO class
+whose responsibility is to perform a parallel read/write from/to a file. Resulting IO class
+will contain IO methods with interfaces that correspond to pandas IO functions and it's name
 will represent used execution. For example, ``PandasOnRayIO`` is the
 name of the IO class for cases using the Ray engine and pandas storage format. 
 This IO class defines the Modin frame and query compiler classes to ensure correct

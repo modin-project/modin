@@ -46,7 +46,7 @@ trace would be the following:
 .. figure:: /img/factory_dispatching.svg
     :align: center
 
-``modin.pandas.read_csv`` calls ``FactoryDispatcher.read_csv``, which calls ``.read_csv``
+``modin.pandas.read_csv`` calls ``FactoryDispatcher.read_csv``, which calls ``._read_csv``
 function of the factory of the selected execution, in our case it's ``PandasOnRayFactory._read_csv``,
 which in turn forwards this call to the actual implementation of ``read_csv`` — to the
 ``PandasOnRayIO.read_csv``. The result of ``modin.pandas.read_csv`` will return a high-level Modin
