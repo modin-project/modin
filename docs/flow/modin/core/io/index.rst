@@ -98,6 +98,11 @@ classes for reading files of different formats.
   
   * ``sql_dispatcher.py`` -  class for reading SQL queries or database tables.
 
+IO dispatcher examples
+======================
+- .. autoclass:: modin.core.io.text.csv_glob_dispatcher.CSVDispatcher
+- .. autoclass:: modin.core.io.text.csv_glob_dispatcher.CSVGlobDispatcher
+
 Handling ``skiprows`` Parameter
 '''''''''''''''''''''''''''''''
 

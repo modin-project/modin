@@ -52,3 +52,8 @@ which in turn forwards this call to the actual implementation of ``read_csv`` â€
 ``PandasOnRayIO.read_csv``. The result of ``modin.pandas.read_csv`` will return a high-level Modin
 DataFrame with the appropriate `QueryCompiler` bound to it, which is responsible for
 dispatching all of the further function calls.
+
+Factory examples
+================
+- .. autoclass:: modin.core.execution.dispatching.factories.factories.PandasOnRayFactory
+- .. autoclass:: modin.core.execution.dispatching.factories.factories.ExperimentalPandasOnRayFactory
