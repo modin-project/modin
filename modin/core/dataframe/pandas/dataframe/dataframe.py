@@ -2106,15 +2106,16 @@ class PandasDataframe(object):
                 enumerate_partitions=False,
             )
 
+            idx = pandas.RangeIndex(sum(new_widths if axis else new_lengths))
             if axis == 1:
                 # The number of rows does not change but `new_widths` does.
                 new_widths = compute_default_axes_lengths(
-                    sum(new_widths), NPartitions.get(), axis=axis
+                    pandas.DataFrame(columns=idx), NPartitions.get(), axis=axis
                 )
             else:
                 # The number of columns does not change but `new_lengths` does.
                 new_lengths = compute_default_axes_lengths(
-                    sum(new_lengths), NPartitions.get(), axis=axis
+                    pandas.DataFrame(index=idx), NPartitions.get(), axis=axis
                 )
 
         if axis == 0:
