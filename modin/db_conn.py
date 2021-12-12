@@ -19,8 +19,8 @@ database to read from it. Whereas it's possible in pandas to pass an open
 connection directly to `read_sql`, the open connection is not pickleable
 in Modin, so each worker must open its own connection.
 `ModinDatabaseConnection` saves the arguments that would normally be used to
-make a db connection. It can make and provide the a connection whenever the
-Modin driver or a worker wants one.
+make a db connection. It can make and provide a connection whenever the Modin
+driver or a worker wants one.
 """
 
 _PSYCOPG_LIB_NAME = "psycopg2"
