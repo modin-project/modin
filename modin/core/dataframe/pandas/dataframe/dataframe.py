@@ -2097,7 +2097,22 @@ class PandasDataframe(object):
             from modin.core.storage_formats.pandas.utils import (
                 compute_default_axes_lengths,
             )
-
+            #import pdb;pdb.set_trace()
+            print(f"SHAPE BEFORE: {new_partitions.shape}")
+            print(f"CURRENT WIDTHS: {new_widths}")
+            step = shape[axis] // NPartitions.get()  # some multiple of how many to combine
+            print(f"STEP FOR REPARTITIONING: {step}")
+            new_partitions = [self._partition_mgr_cls.map_axis_partitions(
+                axis=axis,
+                partitions=new_partitions[i:i+step] if axis == 0 else new_partitions[:, i:i+step],
+                map_func=lambda df: df,
+                keep_partitioning=False,
+                lengths=[sum(new_lengths) if axis == 0 else sum(new_widths)],
+                enumerate_partitions=False,
+            ) for i in range(0, new_partitions.shape[axis], step)]
+            new_partitions = np.concatenate(new_partitions, axis=axis)
+            print(f"SHAPE AFTER: {new_partitions.shape}")
+            '''
             new_partitions = self._partition_mgr_cls.map_axis_partitions(
                 axis=axis,
                 partitions=new_partitions,
@@ -2106,18 +2121,23 @@ class PandasDataframe(object):
                 lengths=None,
                 enumerate_partitions=False,
             )
+            '''
 
-            idx = pandas.RangeIndex(sum(new_widths if axis else new_lengths))
+            #idx = pandas.RangeIndex(sum(new_widths if axis else new_lengths))
             if axis == 1:
                 # The number of rows does not change but `new_widths` does.
-                new_widths = compute_default_axes_lengths(
-                    pandas.DataFrame(columns=idx), NPartitions.get(), axis=axis
-                )
+                #new_widths = compute_default_axes_lengths(
+                #    pandas.DataFrame(columns=idx), NPartitions.get(), axis=axis
+                #)
+                new_widths = [part.width() for part in new_partitions[0]]
+                print(f"WIDTHS AFTER: {new_widths}")
             else:
                 # The number of columns does not change but `new_lengths` does.
                 new_lengths = compute_default_axes_lengths(
                     pandas.DataFrame(index=idx), NPartitions.get(), axis=axis
                 )
+                new_lengths = [part.length() for part in new_partitions.T[0]]
+                print(f"LENGTHS AFTER: {new_lengths}")
 
         if axis == 0:
             new_index = self.index.append([other.index for other in others])
