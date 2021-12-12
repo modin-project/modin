@@ -2037,105 +2037,6 @@ class PandasDataframe(object):
         new_columns = self.columns.join(right_frame.columns, how=join_type)
         return self.__constructor__(new_frame, joined_index, new_columns, None, None)
 
-    def _repartition(self, partitions, axis, lengths, widths):
-        """
-        Repartition dataframe.
-
-        Parameters
-        ----------
-        partitions : np.ndarray
-            A 2D NumPy array of partitions to repartition.
-        axis : {0, 1}
-            Repartition axis.
-        lengths : list
-            The length of each partition in the rows. The "height" of
-            each of the block partitions.
-        widths : list
-            The width of each partition in the columns. The "width" of
-            each of the block partitions.
-
-        Returns
-        -------
-        tuple
-            Tuple of (new_partitions, new_lengths, new_widths)
-        """
-
-        def compute_schema(axis_lengths, axis):
-            """
-            Compute repartition schema.
-
-            The schema is a sequence of intervals in which the partitions to be combined are defined.
-            The interval is determined by the chunksize.
-
-            Parameters
-            ----------
-            axis_lengths : list
-                The length/width of each partition in the rows/columns.
-            axis : {0, 1}
-                Axis for creating the repartition scheme.
-
-            Returns
-            -------
-            tuple
-                Tuple of (schema, updated axis lengths aсcording to the schema)
-            """
-            from modin.core.storage_formats.pandas.utils import (
-                compute_chunksize,
-            )
-
-            idx = pandas.RangeIndex(sum(axis_lengths))
-            df = pandas.DataFrame(**{"columns" if axis == 1 else "index": idx})
-            chunksize = compute_chunksize(df, NPartitions.get(), axis=axis)
-
-            schema = []
-            # initialize the first interval
-            schema.append([0, None])
-            current_axis_length = 0
-
-            for idx, axis_length in enumerate(axis_lengths):
-                if current_axis_length + axis_length < chunksize:
-                    current_axis_length += axis_length
-                    continue
-                current_axis_length = 0
-                # update end of the interval
-                schema[-1][1] = idx + 1
-                if idx + 1 != len(axis_lengths):
-                    schema.append([idx + 1, None])
-            if schema[-1][1] is None:
-                schema[-1][1] = len(axis_lengths)
-
-            # update axis lengths aсcording to the schema
-            new_axis_lengths = list(
-                map(lambda t: sum(axis_lengths[t[0] : t[1]]), schema)
-            )
-            return schema, new_axis_lengths
-
-        axis_lengths = widths if axis == 1 else lengths
-        repartition_schema, axis_lengths = compute_schema(axis_lengths, axis)
-
-        new_lengths = axis_lengths if axis == 0 else lengths
-        new_widths = axis_lengths if axis == 1 else widths
-
-        new_partitions = []
-        for start, end in repartition_schema:
-            _parts = partitions[:, start:end] if axis == 1 else partitions[start:end]
-            if end - start == 1:
-                # Fast path; there is only one column/row partition in the merge interval
-                new_partitions.append(_parts)
-                continue
-            new_partitions.append(
-                self._partition_mgr_cls.map_axis_partitions(
-                    axis=axis,
-                    partitions=_parts,
-                    map_func=lambda df: df,
-                    keep_partitioning=False,
-                    lengths=[sum(new_widths) if axis == 1 else sum(new_lengths)],
-                    enumerate_partitions=False,
-                )
-            )
-        new_partitions = np.concatenate(new_partitions, axis=axis)
-        return new_partitions, new_lengths, new_widths
-
     def concat(self, axis, others, how, sort):
         """
         Concatenate `self` with one or more other Modin DataFrames.
@@ -2193,7 +2094,11 @@ class PandasDataframe(object):
         # specified by `NPartitions`, we can get a significant slowdown in subsequent operations.
         desired_partition_count = NPartitions.get() * 2
         if shape[axis] >= desired_partition_count:
-            new_partitions, new_lengths, new_widths = self._repartition(
+            (
+                new_partitions,
+                new_lengths,
+                new_widths,
+            ) = self._partition_mgr_cls.repartition(
                 new_partitions, axis, new_lengths, new_widths
             )
 
