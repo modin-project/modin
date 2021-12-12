@@ -2037,6 +2037,67 @@ class PandasDataframe(object):
         new_columns = self.columns.join(right_frame.columns, how=join_type)
         return self.__constructor__(new_frame, joined_index, new_columns, None, None)
 
+    def _reshape(self, partitions, axis, lengths, widths):
+        def compute_schema(axis_lengths, num_splits, axis):
+            from modin.core.storage_formats.pandas.utils import (
+                compute_chunksize,
+            )
+
+            idx = pandas.RangeIndex(sum(axis_lengths))
+            df = pandas.DataFrame(**{"columns" if axis == 1 else "index": idx})
+            chunksize = compute_chunksize(df, num_splits, axis=axis)
+
+            schema = []
+            schema.append([0, None])
+            current_axis_length = 0
+
+            for idx, axis_length in enumerate(axis_lengths):
+                if current_axis_length + axis_length < chunksize:
+                    current_axis_length += axis_length
+                    continue
+                schema[-1][1] = idx + 1
+                current_axis_length = 0
+                if idx + 1 != len(axis_lengths):
+                    schema.append([idx + 1, None])
+            if schema[-1][1] is None:
+                schema[-1][1] = len(axis_lengths)
+            new_axis_lengths = list(
+                map(lambda t: sum(axis_lengths[t[0] : t[1]]), schema)
+            )
+            return schema, new_axis_lengths
+
+        axis_lengths = widths if axis == 1 else lengths
+        repartition_schema, axis_lengths = compute_schema(
+            axis_lengths, NPartitions.get(), axis
+        )
+
+        if axis == 1:
+            new_widths = axis_lengths
+            new_lengths = lengths
+        else:
+            new_lengths = axis_lengths
+            new_widths = widths
+
+        new_partitions = []
+        for start, end in repartition_schema:
+            _parts = partitions[:, start:end] if axis == 1 else partitions[start:end]
+            if end - start == 1:
+                # Fast path; no need to merge several partitions into the one
+                new_partitions.append(_parts)
+                continue
+            new_partitions.append(
+                self._partition_mgr_cls.map_axis_partitions(
+                    axis=axis,
+                    partitions=_parts,
+                    map_func=lambda df: df,
+                    keep_partitioning=False,
+                    lengths=[sum(new_widths) if axis == 1 else sum(new_lengths)],
+                    enumerate_partitions=False,
+                )
+            )
+        new_partitions = np.concatenate(new_partitions, axis=axis)
+        return new_partitions, new_lengths, new_widths
+
     def concat(self, axis, others, how, sort):
         """
         Concatenate `self` with one or more other Modin DataFrames.
@@ -2094,50 +2155,9 @@ class PandasDataframe(object):
         # specified by `NPartitions`, we can get a significant slowdown in subsequent operations.
         desired_partition_count = NPartitions.get() * 2
         if shape[axis] >= desired_partition_count:
-            from modin.core.storage_formats.pandas.utils import (
-                compute_default_axes_lengths,
+            new_partitions, new_lengths, new_widths = self._reshape(
+                new_partitions, axis, new_lengths, new_widths
             )
-            #import pdb;pdb.set_trace()
-            print(f"SHAPE BEFORE: {new_partitions.shape}")
-            print(f"CURRENT WIDTHS: {new_widths}")
-            step = shape[axis] // NPartitions.get()  # some multiple of how many to combine
-            print(f"STEP FOR REPARTITIONING: {step}")
-            new_partitions = [self._partition_mgr_cls.map_axis_partitions(
-                axis=axis,
-                partitions=new_partitions[i:i+step] if axis == 0 else new_partitions[:, i:i+step],
-                map_func=lambda df: df,
-                keep_partitioning=False,
-                lengths=[sum(new_lengths) if axis == 0 else sum(new_widths)],
-                enumerate_partitions=False,
-            ) for i in range(0, new_partitions.shape[axis], step)]
-            new_partitions = np.concatenate(new_partitions, axis=axis)
-            print(f"SHAPE AFTER: {new_partitions.shape}")
-            '''
-            new_partitions = self._partition_mgr_cls.map_axis_partitions(
-                axis=axis,
-                partitions=new_partitions,
-                map_func=lambda df: df,
-                keep_partitioning=False,
-                lengths=None,
-                enumerate_partitions=False,
-            )
-            '''
-
-            #idx = pandas.RangeIndex(sum(new_widths if axis else new_lengths))
-            if axis == 1:
-                # The number of rows does not change but `new_widths` does.
-                #new_widths = compute_default_axes_lengths(
-                #    pandas.DataFrame(columns=idx), NPartitions.get(), axis=axis
-                #)
-                new_widths = [part.width() for part in new_partitions[0]]
-                print(f"WIDTHS AFTER: {new_widths}")
-            else:
-                # The number of columns does not change but `new_lengths` does.
-                new_lengths = compute_default_axes_lengths(
-                    pandas.DataFrame(index=idx), NPartitions.get(), axis=axis
-                )
-                new_lengths = [part.length() for part in new_partitions.T[0]]
-                print(f"LENGTHS AFTER: {new_lengths}")
 
         if axis == 0:
             new_index = self.index.append([other.index for other in others])

@@ -87,33 +87,6 @@ def compute_chunksize(
     return row_chunksize, col_chunksize
 
 
-def compute_default_axes_lengths(df, num_split, axis):
-    """
-    Compute the row/column partitions default lengths.
-
-    Parameters
-    ----------
-    df : pandas.DataFrame
-        DataFrame to compute default lengths for.
-    num_split : int
-        The number of partition lengths.
-    axis : int
-        Axis to split across.
-
-    Returns
-    -------
-    list
-        List of lengths, for index along the `axis`.
-    """
-    chunksize = compute_chunksize(df, num_split, axis=axis)
-    # `len(new_length)` isn't necessarily equals to `num_split`
-    new_lengths = [chunksize] * (df.shape[axis] // chunksize)
-    last_chunksize = df.shape[axis] % chunksize
-    if last_chunksize:
-        new_lengths.append(last_chunksize)
-    return new_lengths
-
-
 def split_result_of_axis_func_pandas(axis, num_splits, result, length_list=None):
     """
     Split pandas DataFrame evenly based on the provided number of splits.
