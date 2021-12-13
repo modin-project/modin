@@ -11,6 +11,7 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
+import re
 import pytest
 import numpy as np
 import math
@@ -1101,10 +1102,17 @@ def check_file_leaks(func):
                 try:
                     fstart.remove(item)
                 except ValueError:
-                    # ignore files in /proc/, as they have nothing to do with
-                    # modin reading any data (and this is what we care about)
-                    if not item[0].startswith("/proc/"):
-                        leaks.append(item)
+                    # Ignore files in /proc/, as they have nothing to do with
+                    # modin reading any data (and this is what we care about).
+                    if item[0].startswith("/proc/"):
+                        continue
+                    # Ignore files in /tmp/ray/session_*/logs (ray session logs)
+                    # because Ray intends to keep these logs open even after
+                    # work has been done.
+                    if re.search(r"/tmp/ray/session_.*/logs", item[0]):
+                        continue
+                    leaks.append(item)
+
             assert (
                 not leaks
             ), f"Unexpected open handles left for: {', '.join(item[0] for item in leaks)}"
