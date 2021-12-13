@@ -99,6 +99,7 @@ utilization over the entire cluster.
 
 Modular Design
 ______________
+
 Modin's highly modular design is architected to run on a variety of systems. 
 The goal for the extensible design is that users can take the same notebook seamlessly move between different clusters and environments and Modin can run on what you have. Currently, Modin support running on Dask's compute engine in addition to Ray. The modular design makes it easier for developers to different execution engines or compile to different memory formats. Modin can run on a Dask cluster in the same way that Dask DataFrame can, but they differ in all of the ways described above.
 
