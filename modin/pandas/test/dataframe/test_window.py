@@ -41,7 +41,10 @@ from modin.pandas.test.utils import (
     test_data_diff_dtype,
 )
 from modin.config import NPartitions
-from modin.test.test_utils import warns_that_defaulting_to_pandas
+from modin.test.test_utils import (
+    warns_that_defaulting_to_pandas,
+    default_to_pandas_ignore_string,
+)
 from modin.utils import get_current_execution
 
 NPartitions.put(4)
@@ -54,9 +57,7 @@ matplotlib.use("Agg")
 # instances of defaulting to pandas, but we should always default to pandas for
 # BaseOnPython.
 if get_current_execution() == "BaseOnPython":
-    pytestmark = pytest.mark.filterwarnings(
-        "default:.*defaulting to pandas.*:UserWarning"
-    )
+    pytestmark = pytest.mark.filterwarnings(default_to_pandas_ignore_string)
 
 
 @pytest.mark.parametrize("axis", [0, 1])

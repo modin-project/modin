@@ -37,6 +37,7 @@ from modin.pandas.test.utils import (
     eval_general,
     generate_multiindex,
     extra_test_parameters,
+    default_to_pandas_ignore_string,
 )
 from modin.config import NPartitions
 from modin.utils import get_current_execution
@@ -51,7 +52,7 @@ matplotlib.use("Agg")
 # have too many such instances.
 # TODO(https://github.com/modin-project/modin/issues/3655): catch all instances
 # of defaulting to pandas.
-pytestmark = pytest.mark.filterwarnings("default:.*defaulting to pandas.*:UserWarning")
+pytestmark = pytest.mark.filterwarnings(default_to_pandas_ignore_string)
 
 
 def eval_setitem(md_df, pd_df, value, col=None, loc=None):

@@ -71,6 +71,7 @@ from .utils import (
     df_equals_with_non_stable_indices,
     test_data_large_categorical_series_keys,
     test_data_large_categorical_series_values,
+    default_to_pandas_ignore_string,
 )
 from modin.config import NPartitions
 
@@ -79,7 +80,7 @@ from modin.config import NPartitions
 # have too many such instances.
 # TODO(https://github.com/modin-project/modin/issues/3655): catch all instances
 # of defaulting to pandas.
-pytestmark = pytest.mark.filterwarnings("default:.*defaulting to pandas.*:UserWarning")
+pytestmark = pytest.mark.filterwarnings(default_to_pandas_ignore_string)
 
 NPartitions.put(4)
 

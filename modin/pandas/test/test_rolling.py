@@ -16,7 +16,13 @@ import numpy as np
 import pandas
 import modin.pandas as pd
 
-from .utils import df_equals, test_data_values, test_data_keys, create_test_dfs
+from .utils import (
+    df_equals,
+    test_data_values,
+    test_data_keys,
+    create_test_dfs,
+    default_to_pandas_ignore_string,
+)
 from modin.config import NPartitions
 
 NPartitions.put(4)
@@ -26,7 +32,7 @@ NPartitions.put(4)
 # have too many such instances.
 # TODO(https://github.com/modin-project/modin/issues/3655): catch all instances
 # of defaulting to pandas.
-pytestmark = pytest.mark.filterwarnings("default:.*defaulting to pandas.*:UserWarning")
+pytestmark = pytest.mark.filterwarnings(default_to_pandas_ignore_string)
 
 
 def create_test_series(vals):

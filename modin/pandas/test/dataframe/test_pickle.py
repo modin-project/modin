@@ -18,16 +18,14 @@ import numpy as np
 import modin.pandas as pd
 from modin.config import PersistentPickle
 
-from modin.pandas.test.utils import df_equals
+from modin.pandas.test.utils import df_equals, default_to_pandas_ignore_string
 from modin.utils import get_current_execution
 
 # Our configuration in pytest.ini requires that we explicitly catch all
 # instances of defaulting to pandas, but we should always default to pandas for
 # BaseOnPython.
 if get_current_execution() == "BaseOnPython":
-    pytestmark = pytest.mark.filterwarnings(
-        "default:.*defaulting to pandas.*:UserWarning"
-    )
+    pytestmark = pytest.mark.filterwarnings(default_to_pandas_ignore_string)
 
 
 @pytest.fixture

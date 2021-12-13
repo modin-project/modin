@@ -31,6 +31,7 @@ from .utils import (
     test_groupby_data,
     dict_equals,
     value_equals,
+    default_to_pandas_ignore_string,
 )
 from modin.config import NPartitions
 
@@ -41,7 +42,7 @@ NPartitions.put(4)
 # have too many such instances.
 # TODO(https://github.com/modin-project/modin/issues/3655): catch all instances
 # of defaulting to pandas.
-pytestmark = pytest.mark.filterwarnings("default:.*defaulting to pandas.*:UserWarning")
+pytestmark = pytest.mark.filterwarnings(default_to_pandas_ignore_string)
 
 
 def modin_groupby_equals_pandas(modin_groupby, pandas_groupby):

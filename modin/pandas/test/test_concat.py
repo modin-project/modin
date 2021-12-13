@@ -23,6 +23,7 @@ from .utils import (
     generate_multiindex_dfs,
     generate_none_dfs,
     create_test_dfs,
+    default_to_pandas_ignore_string,
 )
 from modin.config import NPartitions
 from modin.utils import get_current_execution
@@ -33,9 +34,7 @@ NPartitions.put(4)
 # instances of defaulting to pandas, but we should always default to pandas for
 # BaseOnPython.
 if get_current_execution() == "BaseOnPython":
-    pytestmark = pytest.mark.filterwarnings(
-        "default:.*defaulting to pandas.*:UserWarning"
-    )
+    pytestmark = pytest.mark.filterwarnings(default_to_pandas_ignore_string)
 
 
 def test_df_concat():

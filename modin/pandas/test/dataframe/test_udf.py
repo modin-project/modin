@@ -38,6 +38,7 @@ from modin.pandas.test.utils import (
     bool_arg_keys,
     bool_arg_values,
     arg_keys,
+    default_to_pandas_ignore_string,
 )
 from modin.config import NPartitions, StorageFormat
 from modin.test.test_utils import warns_that_defaulting_to_pandas
@@ -52,7 +53,7 @@ matplotlib.use("Agg")
 # have too many such instances.
 # TODO(https://github.com/modin-project/modin/issues/3655): catch all instances
 # of defaulting to pandas.
-pytestmark = pytest.mark.filterwarnings("default:.*defaulting to pandas.*:UserWarning")
+pytestmark = pytest.mark.filterwarnings(default_to_pandas_ignore_string)
 
 
 def test_agg_dict():

@@ -18,15 +18,13 @@ import modin.pandas as pd
 
 from modin.test.test_utils import warns_that_defaulting_to_pandas
 from modin.utils import get_current_execution
-from .utils import df_equals, test_data_values
+from .utils import df_equals, test_data_values, default_to_pandas_ignore_string
 
 # Our configuration in pytest.ini requires that we explicitly catch all
 # instances of defaulting to pandas, but we should always default to pandas for
 # BaseOnPython.
 if get_current_execution() == "BaseOnPython":
-    pytestmark = pytest.mark.filterwarnings(
-        "default:.*defaulting to pandas.*:UserWarning"
-    )
+    pytestmark = pytest.mark.filterwarnings(default_to_pandas_ignore_string)
 
 
 def test_get_dummies():

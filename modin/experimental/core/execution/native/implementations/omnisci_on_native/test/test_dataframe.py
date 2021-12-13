@@ -20,7 +20,13 @@ import re
 
 from modin.config import IsExperimental, Engine, StorageFormat
 from modin.pandas.test.utils import io_ops_bad_exc
-from .utils import eval_io, ForceOmnisciImport, set_execution_mode, run_and_compare
+from .utils import (
+    eval_io,
+    ForceOmnisciImport,
+    set_execution_mode,
+    run_and_compare,
+    default_to_pandas_ignore_string,
+)
 from pandas.core.dtypes.common import is_list_like
 
 IsExperimental.put(True)
@@ -53,7 +59,7 @@ from modin.experimental.core.execution.native.implementations.omnisci_on_native.
 # have too many such instances.
 # TODO(https://github.com/modin-project/modin/issues/3655): catch all instances
 # of defaulting to pandas.
-pytestmark = pytest.mark.filterwarnings("default:.*defaulting to pandas.*:UserWarning")
+pytestmark = pytest.mark.filterwarnings(default_to_pandas_ignore_string)
 
 
 @pytest.mark.usefixtures("TestReadCSVFixture")

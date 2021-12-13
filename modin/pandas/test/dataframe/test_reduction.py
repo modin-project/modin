@@ -35,6 +35,7 @@ from modin.pandas.test.utils import (
     test_data_diff_dtype,
     df_equals_with_non_stable_indices,
     test_data_large_categorical_dataframe,
+    default_to_pandas_ignore_string,
 )
 from modin.config import NPartitions
 
@@ -46,7 +47,7 @@ matplotlib.use("Agg")
 # Our configuration in pytest.ini requires that we explicitly catch all
 # instances of defaulting to pandas, but some test modules, like this one,
 # have too many such instances.
-pytestmark = pytest.mark.filterwarnings("default:.*defaulting to pandas.*:UserWarning")
+pytestmark = pytest.mark.filterwarnings(default_to_pandas_ignore_string)
 
 
 @pytest.mark.parametrize("method", ["all", "any"])
