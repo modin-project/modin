@@ -44,6 +44,7 @@ Modin
 
 Comprehensive API support
 _________________________
+
 Modin is targeted toward parallelizing the entire pandas API and currently implements `more than 90% <https://github.com/modin-project/modin#pandas-api-coverage>`_ of the pandas API. Modin acts as a drop-in replacement for pandas, such that even if the API is not yet
 supported, it still works by falling back to running pandas. One of the key features
 of being a drop-in replacement is that not only will it work for existing code, if a
