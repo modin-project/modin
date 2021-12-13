@@ -22,20 +22,6 @@ statement as follows:
   # import modin.pandas as pd
   import modin.experimental.pandas as pd
 
-Implemented Operations
-''''''''''''''''''''''
-
-For now :py:class:`~modin.experimental.core.execution.ray.implementations.pandas_on_ray.io.io.ExperimentalPandasOnRayIO`
-implements two methods - :meth:`~modin.experimental.core.execution.ray.implementations.pandas_on_ray.io.io.ExperimentalPandasOnRayIO.read_sql` and
-:meth:`~modin.experimental.core.execution.ray.implementations.pandas_on_ray.io.io.ExperimentalPandasOnRayIO.read_csv_glob`.
-The first method allows the user to use typical ``pandas.read_sql`` function extended
-with `Spark-like parameters <https://spark.apache.org/docs/2.0.0/api/R/read.jdbc.html>`_
-such as ``partition_column``, ``lower_bound`` and ``upper_bound``. With these
-parameters, the user will be able to specify how to partition the imported data.
-The second implemented method allows to read multiple CSV files simultaneously
-when a `Python Glob <https://docs.python.org/3/library/glob.html>`_ object is
-provided as a parameter.
-
 Submodules Description
 ''''''''''''''''''''''
 
