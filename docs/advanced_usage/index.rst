@@ -20,6 +20,15 @@ integrated toolkit for data scientists. We are actively developing data science 
 such as DataFrame - spreadsheet integration, DataFrame algebra, progress bars, SQL queries
 on DataFrames, and more. Join the `Discourse`_ for the latest updates!
 
+Experimental APIs
+-----------------
+Modin also supports these APIs on top of pandas that are under active experimental development.
+
+- :py:func:`~modin.experimental.pandas.read_csv_glob` -- read multiple files in a directory
+- :py:func:`~modin.experimental.pandas.read_sql` -- add optional parameters for the database connection
+- :py:func:`~modin.experimental.pandas.read_pickle_distributed`  -- read multiple files in a directory
+- :py:meth:`~modin.experimental.pandas.DataFrame.to_pickle_distributed` -- write to multiple files in a directory
+
 Modin Spreadsheet API: Render Dataframes as Spreadsheets
 --------------------------------------------------------
 The Spreadsheet API for Modin allows you to render the dataframe as a spreadsheet to easily explore 
@@ -60,15 +69,6 @@ Modin provides an implementation of distributed XGBoost machine learning algorit
 :doc:`Distributed XGBoost on Modin documentation <modin_xgboost>` for details about installation and usage, as well as
 :doc:`Modin XGBoost architecture documentation </flow/modin/experimental/xgboost>` for information about implementation and
 internal execution flow.
-
-Experimental APIs
------------------
-Modin also supports these APIs on top of pandas that are under active experimental development.
-
-- :py:func:`~modin.experimental.pandas.read_csv_glob` -- read multiple files in a directory
-- :py:func:`~modin.experimental.pandas.read_sql` -- add optional parameters for the database connection
-- :py:func:`~modin.experimental.pandas.read_pickle_distributed`  -- read multiple files in a directory
-- :py:meth:`~modin.experimental.pandas.DataFrame.to_pickle_distributed` -- write to multiple files in a directory
 
 .. _`blog post`: https://medium.com/riselab/why-every-data-scientist-using-pandas-needs-modin-bringing-sql-to-dataframes-3b216b29a7c0
 .. _`Modin SQL documentation`: modin_sql.html
