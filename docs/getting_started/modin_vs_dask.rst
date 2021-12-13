@@ -5,7 +5,6 @@ Dask's DataFrame is effectively a meta-frame, partitioning and scheduling many s
 ``pandas.DataFrame`` objects. The Dask DataFrame does not implement the entire pandas
 API. 
 
-
 | **TLDR: Modin's API is identical to pandas, whereas Dask's is not.**
 | **Note: The projects are fundamentally different in their aims, so a fair comparison is challenging.**
 
