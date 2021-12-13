@@ -47,10 +47,12 @@ def lazy_metadata_decorator(
                 [self]
                 + [o for o in args if isinstance(o, PandasDataframe)]
                 + [o for _, o in kwargs.items() if isinstance(o, PandasDataframe)]
+                + [d for o in args if isinstance(o, list) for d in o if isinstance(d, PandasDataframe)]
+                + [d for _, o in kwargs.items() if isinstance(o, list) for d in o if isinstance(d, PandasDataframe)]
             ):
                 if apply_axis is not None:
                     if apply_axis == "both":
-                        if obj._deferred_index and self._deferred_column:
+                        if obj._deferred_index and obj._deferred_column:
                             obj._propagate_index_objs(axis=None)
                         elif obj._deferred_index:
                             obj._propagate_index_objs(axis=0)
