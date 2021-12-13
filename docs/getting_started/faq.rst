@@ -5,7 +5,7 @@ Below, you will find answers to the most commonly asked questions about
 Modin. If you still cannot find the answer you are looking for, please post on 
 the #support channel on our Slack_ community or open a Github issue_.
 
-What’s the issue with pandas? Why should I use Modin?
+What’s wrong with pandas and why should I use Modin?
 """"""""""""""""""""""""""""""""""""""""""""""""""""""
 
 While pandas works extremely well on small datasets, as soon as you start working with 
@@ -45,12 +45,7 @@ include performance results and comparisons against pandas.
 How much more data would I be able to process with Modin?
 """"""""""""""""""""""""""""""""""""""""""""""""""""""""""
 
-We have focused heavily on bridging the solutions between DataFrames for small 
-data (e.g. pandas) and large data. Often data scientists require different tools 
-for doing the same thing on different sizes of data. The DataFrame solutions that 
-exist for 1MB do not scale to hundreds of GBs, and the overheads of the large-scale solutions 
-are too costly for datasets in the 1KB range. With Modin, because of its light-weight, 
-robust, and scalable nature, you get a fast DataFrame at 1MB and hundreds of GBs.
+Often data scientists have to use different tools for operating on datasets of different sizes. This is not only because processing large dataframes is slow, but also pandas does not support working with dataframes that don't fit into the available memory. As a result, pandas workflows that work well for prototyping on a few MBs of data do not scale to tens or hundreds of GBs (depending on the size of your machine). Modin supports operating on data that does not fit in memory, so that you can comfortably work with hundreds of GBs without worrying about substantial slowdown or memory errors. For more information, see :doc:`out-of-memory support <getting_started/out_of_core.rst>` for Modin.
 
 How does Modin work under the hood?
 """"""""""""""""""""""""""""""""""""
@@ -70,14 +65,15 @@ If I’m only using my laptop, can I still get the benefits of Modin?
 
 Absolutely! Unlike other parallel DataFrame systems, Modin is an extremely 
 light-weight, robust DataFrame. Because it is so light-weight, Modin provides 
-speed-ups of up to 4x on a laptop with 4 physical cores.
+speed-ups of up to 4x on a laptop with 4 physical cores 
+and allows you to work on data that doesn't fit in your laptop's RAM.
 
 How do I use Jupyter or Colab notebooks with Modin?
 """"""""""""""""""""""""""""""""""""""""""""""""""""
 
 You can take a look at this Google Colab installation guide_ and
-this notebook tutorial_. Once Modin is installed, just replace your pandas
-import with Modin:
+this notebook tutorial_. Once Modin is installed, simply replace your pandas
+import with Modin import:
 
 .. code-block:: python
 
@@ -88,7 +84,9 @@ Which execution engine (Ray or Dask) should I use for Modin?
 """""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
 
 Whichever one you want! Modin supports Ray_ and Dask_ execution engines to provide an effortless way 
-to speed up your pandas workflows. Modin will automatically detect which engine you have 
+to speed up your pandas workflows. The best thing is that you don't need to know 
+anything about Ray and Dask in order to use Modin and Modin will automatically 
+detect which engine you have 
 installed and use that for scheduling computation. If you don't have a preference, we recommend 
 starting with Modin's default Ray engine. If you want to use a specific 
 compute engine, you can set the environment variable ``MODIN_ENGINE`` and 
