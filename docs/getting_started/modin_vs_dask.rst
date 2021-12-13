@@ -34,6 +34,7 @@ Dask DataFrame makes use of lazy evaluation, which means that the computation is
 
 Non-order preserving
 _____________________
+
 By default, pandas preserves the order of the DataFrame, so that users can expect a
 consistent, ordered view as they are operating on their DataFrame. However, Dask makes no
 guarantees about the order of rows in the DataFrame. This is because Dask sorts the 
