@@ -19,14 +19,8 @@ import pytest
 import re
 
 from modin.config import IsExperimental, Engine, StorageFormat
-from modin.pandas.test.utils import io_ops_bad_exc
-from .utils import (
-    eval_io,
-    ForceOmnisciImport,
-    set_execution_mode,
-    run_and_compare,
-    default_to_pandas_ignore_string,
-)
+from modin.pandas.test.utils import io_ops_bad_exc, default_to_pandas_ignore_string
+from .utils import eval_io, ForceOmnisciImport, set_execution_mode, run_and_compare
 from pandas.core.dtypes.common import is_list_like
 
 IsExperimental.put(True)

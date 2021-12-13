@@ -39,12 +39,10 @@ from modin.pandas.test.utils import (
     eval_general,
     create_test_dfs,
     test_data_diff_dtype,
-)
-from modin.config import NPartitions
-from modin.test.test_utils import (
-    warns_that_defaulting_to_pandas,
     default_to_pandas_ignore_string,
 )
+from modin.config import NPartitions
+from modin.test.test_utils import warns_that_defaulting_to_pandas
 from modin.utils import get_current_execution
 
 NPartitions.put(4)
