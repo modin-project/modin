@@ -2,8 +2,8 @@ Frequently Asked Questions (FAQs)
 =================================
 
 Below, you will find answers to the most commonly asked questions about
-Modin. If you still cannot find the answer you are looking for, please post on 
-the #support channel on our Slack_ community or open a Github issue_.
+Modin. If you still cannot find the answer you are looking for, please post your
+question on the #support channel on our Slack_ community or open a Github issue_.
 
 What’s wrong with pandas and why should I use Modin?
 """"""""""""""""""""""""""""""""""""""""""""""""""""""
@@ -45,7 +45,13 @@ include performance results and comparisons against pandas.
 How much more data would I be able to process with Modin?
 """"""""""""""""""""""""""""""""""""""""""""""""""""""""""
 
-Often data scientists have to use different tools for operating on datasets of different sizes. This is not only because processing large dataframes is slow, but also pandas does not support working with dataframes that don't fit into the available memory. As a result, pandas workflows that work well for prototyping on a few MBs of data do not scale to tens or hundreds of GBs (depending on the size of your machine). Modin supports operating on data that does not fit in memory, so that you can comfortably work with hundreds of GBs without worrying about substantial slowdown or memory errors. For more information, see :doc:`out-of-memory support <getting_started/out_of_core.rst>` for Modin.
+Often data scientists have to use different tools for operating on datasets of different sizes. 
+This is not only because processing large dataframes is slow, but also pandas does not support working 
+with dataframes that don't fit into the available memory. As a result, pandas workflows that work well 
+for prototyping on a few MBs of data do not scale to tens or hundreds of GBs (depending on the size 
+of your machine). Modin supports operating on data that does not fit in memory, so that you can comfortably 
+work with hundreds of GBs without worrying about substantial slowdown or memory errors. For more information, 
+see :doc:`out-of-memory support <getting_started/out_of_core.rst>` for Modin.
 
 How does Modin work under the hood?
 """"""""""""""""""""""""""""""""""""
