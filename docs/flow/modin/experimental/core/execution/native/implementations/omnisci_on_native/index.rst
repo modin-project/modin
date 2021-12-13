@@ -70,7 +70,7 @@ into the
 :py:class:`~modin.experimental.core.storage_formats.omnisci.query_compiler.DFAlgQueryCompiler`.
 The Query Compiler sanitizes an input object and passes it to one of the
 :py:class:`~modin.experimental.core.execution.native.implementations.omnisci_on_native.dataframe.dataframe.OmnisciOnNativeDataframe` 
-factory methods (``.from_*``). The Datarame's build method stores the passed object into a new Dataframe's partition
+factory methods (``.from_*``). The Dataframe's build method stores the passed object into a new Dataframe's partition
 and returns the resulted Dataframe, which is then wrapped into a Query Compiler, which is
 wrapped into a high-level Modin DataFrame, which is returned to the user.
 
