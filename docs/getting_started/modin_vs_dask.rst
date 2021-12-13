@@ -28,6 +28,7 @@ would be impossible to implement in Dask's architecture.
 
 Delayed Computation
 ___________________
+
 Dask DataFrame makes use of lazy evaluation, which means that the computation is delayed until users explicitly evaluate the results. This mode of evaluation places a lot of optimization responsibility on the user. Specifically, Dask DataFrame's API differs from pandas in that it requires users to explicitly call ``.compute()`` to materialize the result of the DataFrame computation. The need to explicitly trigger computation makes the API less convenient to work with, but allows Dask to perform holistic optimizations over the entire dataflow graph.
 
 Non-order preserving
