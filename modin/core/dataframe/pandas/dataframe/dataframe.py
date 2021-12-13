@@ -47,8 +47,20 @@ def lazy_metadata_decorator(
                 [self]
                 + [o for o in args if isinstance(o, PandasDataframe)]
                 + [o for _, o in kwargs.items() if isinstance(o, PandasDataframe)]
-                + [d for o in args if isinstance(o, list) for d in o if isinstance(d, PandasDataframe)]
-                + [d for _, o in kwargs.items() if isinstance(o, list) for d in o if isinstance(d, PandasDataframe)]
+                + [
+                    d
+                    for o in args
+                    if isinstance(o, list)
+                    for d in o
+                    if isinstance(d, PandasDataframe)
+                ]
+                + [
+                    d
+                    for _, o in kwargs.items()
+                    if isinstance(o, list)
+                    for d in o
+                    if isinstance(d, PandasDataframe)
+                ]
             ):
                 if apply_axis is not None:
                     if apply_axis == "both":
