@@ -111,10 +111,10 @@ differntly. Example of such behaviour is shown below.
   try :
       with open(test_filename, "w") as f:
           f.write(data)
-      
+
       pandas_df = pandas.read_csv(test_filename, **kwargs)
       pd_df = pd.read_csv(test_filename, **kwargs)
-      
+
       print(pandas_df)
       print(pd_df)
   finally:
@@ -195,4 +195,26 @@ funcion for example) as it is shown in the example below:
   pd_df = pd_df.set_index(index_col_name)
   pd_df.index.name = None
 
+Error when using OmniSci engine along with ``pyarrow.gandiva``: ``LLVM ERROR: inconsistency in registered CommandLine options``
+"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+
+This can happen when you use OmniSci engine along with ``pyarrow.gandiva``:
+
+.. code-block:: python
+
+  import modin.config as cfg
+  cfg.Engine.put("Native")  # 'omniscidbe'/'dbe' would be imported with dlopen flags
+  cfg.StorageFormat.put("Omnisci")
+  cfg.IsExperimental.put(True)
+  import modin.pandas as pd
+  import pyarrow.gandiva as gandiva  # Error
+  CommandLine Error: Option 'enable-vfe' registered more than once!
+  LLVM ERROR: inconsistency in registered CommandLine options
+  Aborted (core dumped)
+
+**Solution**
+
+Do not use OmniSci engine along with ``pyarrow.gandiva``.
+
 .. _issue: https://github.com/modin-project/modin/issues
+
