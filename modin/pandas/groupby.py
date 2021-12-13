@@ -846,6 +846,9 @@ class DataFrameGroupBy(object):
         --------
         pandas.core.groupby.GroupBy.groups
         """
+        # We end up using pure pandas to compute group indices, so raising a warning
+        ErrorMessage.default_to_pandas("Group indices computation")
+
         # Splitting level-by and column-by since we serialize them in a different ways
         by = None
         level = []
@@ -877,7 +880,6 @@ class DataFrameGroupBy(object):
             # end up using pandas implementation. Add the warning so the user is
             # aware.
             ErrorMessage.catch_bugs_and_request_email(self._axis == 1)
-            ErrorMessage.default_to_pandas("Groupby with multiple columns")
             if isinstance(by, list) and all(
                 is_label(self._df, o, self._axis) for o in by
             ):
