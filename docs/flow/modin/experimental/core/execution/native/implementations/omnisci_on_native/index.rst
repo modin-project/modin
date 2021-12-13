@@ -276,4 +276,3 @@ transform our frame (i.e. its Arrow table) into ``pandas.DataFrame`` format.
     calcite_builder
     calcite_serializer
     omnisci_worker
-
