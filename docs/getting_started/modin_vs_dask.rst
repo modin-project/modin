@@ -62,6 +62,7 @@ Eager evaluation is the default mode of operation for data scientists when worki
 
 Order preserving
 ________________
+
 Modin reproduces the intuitive behavior in pandas where the order of the DataFrame is preserved. Enforcing ordering on a parallel dataframe system like Modin requires non-trivial effort that involves decoupling of the logical and physical representation of the data underneath the hoods. Modin abstracts away the physical representation of the data and provides an ordered view that is consistent with user's expectations.
 
 Advanced: Architecture
