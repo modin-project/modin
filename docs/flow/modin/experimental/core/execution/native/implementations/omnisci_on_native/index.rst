@@ -1,6 +1,6 @@
 :orphan:
 
-OmniSciOnNative execution
+OmnisciOnNative execution
 =========================
 
 OmniSciDB is an open-source SQL-based relational database designed for the
@@ -11,7 +11,7 @@ OmniSciDB can be embedded into an application as a dynamic library that
 provides both C++ and Python APIs. A specialized in-memory storage layer
 provides an efficient way to import data in Arrow table format.
 
-`OmniSciOnNative` execution uses OmniSciDB for both as a storage format and for
+`OmnisciOnNative` execution uses OmniSciDB for both as a storage format and for
 actual data transformation.
 
 Relational engine limitations
@@ -51,51 +51,49 @@ returned as an Arrow table.
 Data Ingress
 ------------
 
-When a user imports data in Modin DataFrame (from a file or from some python
+When users import data in Modin DataFrame (from a file or from some python
 object like array or dictionary) they invoke one of the ``modin.pandas.io`` 
 functions (to read data from a file) or use :py:class:`~modin.pandas.dataframe.DataFrame` constructor
-(to create a Frame from an iterable object). Both of the paths lead to the
+(to create a DataFrame from an iterable object). Both of the paths lead to the
 :py:class:`~modin.core.execution.dispatching.factories.dispatcher.FactoryDispatcher`
-that defines a factory that will handle the import query. For `OmnisciOnNative`
+that defines a factory that handles the import query. For `OmnisciOnNative`
 execution, the factory is accordingly 
 :py:class:`~modin.core.execution.dispatching.factories.factories.ExperimentalOmnisciOnNativeFactory`.
-The factory then dispatches the import query: if the data is needed to be read from a file
+The factory dispatches the import query: if the data needs to be read from a file
 - the query is routed to the 
 :py:class:`~modin.experimental.core.execution.native.implementations.omnisci_on_native.io.OmnisciOnNativeIO`
 class, that uses Arrow Framework to read the file into a PyArrow Table, the resulted
-table is then passed to the 
+table is passed to the 
 :py:class:`~modin.experimental.core.storage_formats.omnisci.query_compiler.DFAlgQueryCompiler`.
 If the factory deals with importing a Python's iterable object, the query goes straight
 into the 
-:py:class:`~modin.experimental.core.storage_formats.omnisci.query_compiler.DFAlgQueryCompiler`
-bypassing
-:py:class:`~modin.experimental.core.execution.native.implementations.omnisci_on_native.io.OmnisciOnNativeIO`.
-The Query Compiler then sanitizes an input object and passes it to one of the
+:py:class:`~modin.experimental.core.storage_formats.omnisci.query_compiler.DFAlgQueryCompiler`.
+The Query Compiler sanitizes an input object and passes it to one of the
 :py:class:`~modin.experimental.core.execution.native.implementations.omnisci_on_native.dataframe.dataframe.OmnisciOnNativeDataframe` 
-factory methods (``.from_*``). The Frame's build method stores the passed object into a new Frame's partition
+factory methods (``.from_*``). The Datarame's build method stores the passed object into a new Dataframe's partition
 and returns the resulted Dataframe, which is then wrapped into a Query Compiler, which is
-then wrapped into a high-level Modin DataFrame, which is then returned to the user.
+wrapped into a high-level Modin DataFrame, which is returned to the user.
 
 .. figure:: /img/omnisci/omnisci_ingress.svg
    :align: center
 
 Note that during this ingress flow, no data is actually imported to the OmniSciDB. The need for
 importing to OmniSci is decided later at the execution stage by the Modin Core Dataframe layer.
-If the query requires for the data to be placed in OmniSciDB then the import is triggered.
+If the query requires for the data to be placed in OmniSciDB, the import is triggered.
 :py:class:`~modin.experimental.core.execution.native.implementations.omnisci_on_native.dataframe.dataframe.OmnisciOnNativeDataframe` 
 passes partition to import to the
 :py:class:`~modin.experimental.core.execution.native.implementations.omnisci_on_native.partitioning.partition_manager.OmnisciOnNativeDataframePartitionManager`
 that extracts a partition's underlying object and sends a request to import it to the OmniSci
 Server. The response for the request is a unique identifier for the just imported table
 at OmniSciDB, this identifier is placed in the partition. After that, the partition has
-a link to the concrete table in OmniSciDB to query, and the data is considered to be
+a reference to the concrete table in OmniSciDB to query, and the data is considered to be
 fully imported.
 
 .. figure:: /img/omnisci/omnisci_import.svg
    :align: center
 
-Data transformation flow
-------------------------
+Data Transformation
+-------------------
 
 .. figure:: /img/omnisci/omnisci_query_flow.svg
    :align: center
@@ -127,7 +125,7 @@ combines multiple operations into a single execution module. E.g. join,
 filter and aggregation can be executed in a single data scan.
 
 To utilize this feature and reduce data transformation and transfer
-overheads, all of the operations that doesn't require data materialization
+overheads, all of the operations that don't require data materialization
 are performed lazily.
 
 Lazy operations on a frame build a tree which is later translated into
