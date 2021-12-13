@@ -13,17 +13,18 @@
 
 """Utilities for OmniSci on Native execution."""
 
+import os
 import sys
 
 
 if sys.platform == "linux":
     prev = sys.getdlopenflags()
-    sys.setdlopenflags(1 | 256)  # RTLD_LAZY+RTLD_GLOBAL
+    sys.setdlopenflags(os.RTLD_LAZY | os.RTLD_GLOBAL)
 
 try:
     from omniscidbe import PyDbEngine  # noqa
 except ModuleNotFoundError:  # fallback for older omniscidbe4py package naming
     from dbe import PyDbEngine  # noqa
-
-if sys.platform == "linux":
-    sys.setdlopenflags(prev)
+finally:
+    if sys.platform == "linux":
+        sys.setdlopenflags(prev)
