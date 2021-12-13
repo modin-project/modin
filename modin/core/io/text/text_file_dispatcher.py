@@ -649,17 +649,17 @@ class TextFileDispatcher(FileDispatcher):
         if read_kwargs["chunksize"] is not None:
             return False
 
-        skiprows_unsupported = (
-            is_list_like(skiprows_md) and skiprows_md[0] < header_size
-        ) or (
-            callable(skiprows)
-            and any(
-                map(
-                    bool,
-                    cls._get_skip_mask(pandas.RangeIndex(header_size), skiprows),
-                )
+        skiprows_unsupported = False
+        if is_list_like(skiprows_md) and skiprows_md[0] < header_size:
+            skiprows_unsupported = True
+        elif callable(skiprows):
+            # check if `skiprows` callable gives True for any of header indices
+            is_intersection = any(
+                cls._get_skip_mask(pandas.RangeIndex(header_size), skiprows)
             )
-        )
+            if is_intersection:
+                skiprows_unsupported = True
+
         if skiprows_unsupported:
             ErrorMessage.single_warning(
                 "Values of `header` and `skiprows` parameters have intersections. "
