@@ -114,14 +114,9 @@ def test_merge():
     modin_df2 = pd.DataFrame(frame_data2)
     pandas_df2 = pandas.DataFrame(frame_data2)
 
-    join_type_outer = "outer"
-    join_type_inner = "inner"
-    for how in (join_type_outer, join_type_inner):
-        if how == join_type_outer:
-            warning_catcher = warns_that_defaulting_to_pandas()
-        else:
-            warning_catcher = contextlib.nullcontext()
-        with warning_catcher:
+    join_types = ["outer", "inner"]
+    for how in join_types :
+        with warns_that_defaulting_to_pandas() if how == "outer" else contextlib.nullcontext():
             modin_result = pd.merge(modin_df, modin_df2, how=how)
         pandas_result = pandas.merge(pandas_df, pandas_df2, how=how)
         df_equals(modin_result, pandas_result)
