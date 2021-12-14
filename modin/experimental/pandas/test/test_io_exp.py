@@ -136,6 +136,10 @@ def test_read_multiple_csv_s3():
     df_equals(modin_df, pandas_df)
 
 
+@pytest.mark.skipif(
+    Engine.get() != "Ray",
+    reason=f"{Engine.get()} engine doesn't have an experimental API.",
+)
 @pytest.mark.parametrize(
     "storage_options",
     [{"anon": False}, {"anon": True}, {"key": "123", "secret": "123"}, None],
