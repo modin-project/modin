@@ -15,8 +15,7 @@
 
 from modin.core.dataframe.pandas.dataframe.dataframe import PandasDataframe
 from ..partitioning.partition_manager import PandasOnDaskDataframePartitionManager
-
-from distributed.client import default_client
+from modin.core.execution.dask.common.task_wrapper import DaskTask
 
 
 class PandasOnDaskDataframe(PandasDataframe):
@@ -53,9 +52,8 @@ class PandasOnDaskDataframe(PandasDataframe):
         list
             A list of row partitions lengths.
         """
-        client = default_client()
         if self._row_lengths_cache is None:
-            self._row_lengths_cache = client.gather(
+            self._row_lengths_cache = DaskTask.materialize(
                 [obj.apply(lambda df: len(df)).future for obj in self._partitions.T[0]]
             )
         return self._row_lengths_cache
@@ -70,9 +68,8 @@ class PandasOnDaskDataframe(PandasDataframe):
         list
             A list of column partitions widths.
         """
-        client = default_client()
         if self._column_widths_cache is None:
-            self._column_widths_cache = client.gather(
+            self._column_widths_cache = DaskTask.materialize(
                 [
                     obj.apply(lambda df: len(df.columns)).future
                     for obj in self._partitions[0]

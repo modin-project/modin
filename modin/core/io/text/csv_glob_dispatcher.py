@@ -207,7 +207,7 @@ class CSVGlobDispatcher(CSVDispatcher):
 
             for chunks in splits:
                 args.update({"chunks": chunks})
-                partition_id = cls.deploy(cls.parse, num_splits + 2, args)
+                partition_id = cls.deploy(cls.parse, num_splits + 2, **args)
                 partition_ids.append(partition_id[:-2])
                 index_ids.append(partition_id[-2])
                 dtypes_ids.append(partition_id[-1])

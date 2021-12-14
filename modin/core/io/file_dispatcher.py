@@ -271,7 +271,7 @@ class FileDispatcher:
         return os.path.exists(file_path)
 
     @classmethod
-    def deploy(cls, func, args, num_returns):  # noqa: PR01
+    def deploy(cls, func, num_returns, *args, **kwargs):  # noqa: PR01
         """
         Deploy remote task.
 

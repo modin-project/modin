@@ -191,7 +191,7 @@ class ExcelDispatcher(TextFileDispatcher):
                 # If there is no data, exit before triggering computation.
                 if b"</row>" not in chunk and b"</sheetData>" in chunk:
                     break
-                remote_results_list = cls.deploy(cls.parse, num_splits + 2, args)
+                remote_results_list = cls.deploy(cls.parse, num_splits + 2, **args)
                 data_ids.append(remote_results_list[:-2])
                 index_ids.append(remote_results_list[-2])
                 dtypes_ids.append(remote_results_list[-1])
