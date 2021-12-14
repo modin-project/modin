@@ -168,22 +168,38 @@ The base storage format in Modin is pandas. In the default case, the Modin Dataf
 Data Ingress
 ''''''''''''
 
+.. note::
+   Data ingress operations (e.g. ``read_csv``) in Modin load data from the source into
+   partitions and vice versa for data egress (e.g. ``to_csv``) operation.
+   Improved performance is achieved by reading/writing in partitions in parallel.
+
+Data ingress starts with a function in the pandas API layer (e.g. ``read_csv``). Then the user's 
+query is passed to the :doc:`Factory Dispatcher </flow/modin/core/execution/dispatching>`,
+which defines a factory specific for the execution. The factory for execution contains an IO class
+(e.g. ``PandasOnRayIO``) whose responsibility is to perform a parallel read/write from/to a file.
+This IO class contains class methods with interfaces and names that are similar to pandas IO functions
+(e.g. ``PandasOnRayIO.read_csv``). The IO class declares the Modin Dataframe and Query Compiler
+classes specific for the execution engine and storage format to ensure the correct object is constructed.
+It also declares IO methods that are mix-ins containing a combination of the engine-specific class for
+deploying remote tasks, the class for parsing the given file format and the class handling the chunking
+of the format-specific file on the head node (see dispatcher classes implementation
+:doc:`details </flow/modin/core/io/index>`). The output from the IO class data ingress function is
+a :doc:`Modin Dataframe </flow/modin/core/dataframe/pandas/dataframe>`.
+
 .. image:: /img/generic_data_ingress.svg
    :align: center
 
 Data Egress
 '''''''''''
 
+Data egress operations (e.g. ``to_csv``) are similar to data ingress operations up to
+execution-specific IO class functions construction. Data egress functions of the IO class
+are defined slightly different from data ingress functions and created only
+specifically for the engine since partitions already have information about its storage
+format. Using the IO class, data is exported from partitions to the target file.
+
 .. image:: /img/generic_data_egress.svg
    :align: center
-
-Factory Dispatcher
-""""""""""""""""""
-
-The :doc:`Factory Dispatcher </flow/modin/core/execution/dispatching>` provides IO methods with interfaces that correspond to pandas IO functions,
-and is in charge of routing IO calls to a factory corresponding to the selected execution.
-The factory, in turn, contains the specific IO class, which it calls with the required arguments.
-The IO class is responsible for performing a parallel read/write from/to a file.
 
 Supported Execution Engines and Storage Formats
 '''''''''''''''''''''''''''''''''''''''''''''''

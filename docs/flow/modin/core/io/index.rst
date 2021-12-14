@@ -3,33 +3,12 @@
 IO Module Description
 """""""""""""""""""""
 
-High-Level Data Import Operation Workflow
-'''''''''''''''''''''''''''''''''''''''''
-
-.. note:: 
-    ``read_csv`` on PandasOnRay execution was taken as an example
-    in this chapter for reader convenience. For other import functions workflow and
-    classes/functions naming convension will be the same.
-
-Data import operation workflow diagram is shown below. After user calls high-level
-``modin.pandas.read_csv`` function, call is forwarded to the ``FactoryDispatcher``,
-which defines which factory from ``modin.core.execution.dispatching.factories.factories`` and
-execution specific IO class should be used (for Ray engine and pandas in-memory format
-IO class will be named ``PandasOnRayIO``). This class defines Modin frame and query
-compiler classes and ``read_*`` functions, which could be based on the following
-classes: ``RayTask`` - class for managing remote tasks by concrete distribution
-engine, ``PandasCSVParser`` - class for data parsing on the workers by specific
-execution engine and ``CSVDispatcher`` - class for files handling of concrete file format
-including chunking that is executed on the head node.
-
-.. image:: /img/data_import_workflow.png
-   :align: center
-
 Dispatcher Classes Workflow Overview
 ''''''''''''''''''''''''''''''''''''
 
-Call from ``read_csv`` function of ``PandasOnRayIO`` class is forwarded to the
-``_read`` function of ``CSVDispatcher`` class, where function parameters are
+Call from ``read_*`` function of execution-specific IO class (for example, ``PandasOnRayIO`` for
+Ray engine and pandas storage format) is forwarded to the ``_read`` function of file
+format-specific class (for example ``CSVDispatcher`` for CSV files), where function parameters are
 preprocessed to check if they are supported (otherwise default pandas implementation
 is used) and compute some metadata common for all partitions. Then file is splitted
 into chunks (mechanism of splitting is described below) and using this data, tasks
