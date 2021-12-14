@@ -361,7 +361,7 @@ class ModinDataframe(ABC):
         Notes
         -----
         During the join, this dataframe is considered the left, while the other is
-            treated as the right.
+        treated as the right.
 
         Only inner joins, left outer, right outer, and full outer joins are currently supported.
             Support for other join types (e.g. natural join) may be implemented in the future.
