@@ -90,6 +90,8 @@ def lazy_metadata_decorator(
                             obj._propagate_index_objs(axis=1)
                     elif apply_axis == "rows":
                         obj._propagate_index_objs(axis=0)
+                    elif apply_axis == "columns":
+                        obj._propagate_index_objs(axis=1)
             result = f(self, *args, **kwargs)
             if inherit and not transpose:
                 result._deferred_index = self._deferred_index
@@ -109,6 +111,8 @@ def lazy_metadata_decorator(
                     result._deferred_index = self._deferred_index
             elif apply_axis == "rows":
                 result._deferred_column = self._deferred_column
+            elif apply_axis == "columns":
+                result._deferred_index = self._deferred_index
             return result
 
         return magic
@@ -2194,7 +2198,8 @@ class PandasDataframe(object):
             new_partitions, new_index, new_columns, new_lengths, new_widths, new_dtypes
         )
 
-    @lazy_metadata_decorator(apply_axis="opposite", axis_arg=0)
+    #@lazy_metadata_decorator(apply_axis="opposite", axis_arg=0)
+    @lazy_metadata_decorator(apply_axis="both")
     def groupby_reduce(
         self,
         axis,
