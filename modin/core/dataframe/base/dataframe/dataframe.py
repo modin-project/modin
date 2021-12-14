@@ -364,7 +364,7 @@ class ModinDataframe(ABC):
         treated as the right.
 
         Only inner joins, left outer, right outer, and full outer joins are currently supported.
-            Support for other join types (e.g. natural join) may be implemented in the future.
+        Support for other join types (e.g. natural join) may be implemented in the future.
         """
         pass
 
