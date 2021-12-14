@@ -112,8 +112,8 @@ class ModinDataframe(ABC):
         This does not change the number of rows.
 
         The user-defined function may increase the number of columns (rows if axis=1),
-            but it should not remove or drop columns and each invocation of the function
-            must generate the same number of new columns.
+        but it should not remove or drop columns and each invocation of the function
+        must generate the same number of new columns.
         """
         pass
 
@@ -167,7 +167,7 @@ class ModinDataframe(ABC):
         Only one axis can be expanded at a time.
 
         The user-defined function may increase the number of rows (columns if axis=1),
-                but it should not remove or drop rows.
+        but it should not remove or drop rows.
         """
         pass
 
