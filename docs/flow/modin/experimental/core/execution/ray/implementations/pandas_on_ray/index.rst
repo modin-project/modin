@@ -8,11 +8,13 @@ execution architecturally unchanged and adds experimental features of ``Data Tra
 
 PandasOnRay and ExperimentalPandasOnRay differences
 ---------------------------------------------------
+
 - another Factory ``PandasOnRayFactory`` -> ``ExperimentalPandasOnRayFactory``
 - another IO class ``PandasOnRayIO`` -> ``ExperimentalPandasOnRayIO``
 
 ExperimentalPandasOnRayIO classes and modules
 ---------------------------------------------
+
 - :py:class:`~modin.experimental.core.execution.ray.implementations.pandas_on_ray.io.io.ExperimentalPandasOnRayIO`
 - :py:class:`~modin.core.execution.dispatching.factories.factories.ExperimentalPandasOnRayFactory`
 - :py:class:`~modin.core.io.text.csv_glob_dispatcher.CSVGlobDispatcher`
