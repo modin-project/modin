@@ -71,7 +71,7 @@ class JSONDispatcher(TextFileDispatcher):
             )
             for start, end in splits:
                 args.update({"start": start, "end": end})
-                partition_id = cls.deploy(cls.parse, num_splits + 3, args)
+                partition_id = cls.deploy(cls.parse, num_splits + 3, **args)
                 partition_ids.append(partition_id[:-3])
                 index_ids.append(partition_id[-3])
                 dtypes_ids.append(partition_id[-2])

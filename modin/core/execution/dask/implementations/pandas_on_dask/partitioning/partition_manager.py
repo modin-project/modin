@@ -14,6 +14,7 @@
 """Module houses class that implements ``PandasDataframePartitionManager``."""
 
 import numpy as np
+import pandas
 
 from modin.core.dataframe.pandas.partitioning.partition_manager import (
     PandasDataframePartitionManager,
@@ -24,9 +25,7 @@ from .axis_partition import (
 )
 from .partition import PandasOnDaskDataframePartition
 from modin.error_message import ErrorMessage
-import pandas
-
-from distributed.client import default_client
+from modin.core.execution.dask.common.task_wrapper import DaskTask
 
 
 class PandasOnDaskDataframePartitionManager(PandasDataframePartitionManager):
@@ -62,7 +61,6 @@ class PandasOnDaskDataframePartitionManager(PandasDataframePartitionManager):
         when you have deleted rows/columns internally, but do not know
         which ones were deleted.
         """
-        client = default_client()
         ErrorMessage.catch_bugs_and_request_email(not callable(index_func))
         func = cls.preprocess_func(index_func)
         if axis == 0:
@@ -78,7 +76,7 @@ class PandasOnDaskDataframePartitionManager(PandasDataframePartitionManager):
                 if len(partitions)
                 else []
             )
-        new_idx = client.gather(new_idx)
+        new_idx = DaskTask.materialize(new_idx)
         return new_idx[0].append(new_idx[1:]) if len(new_idx) else new_idx
 
     @classmethod

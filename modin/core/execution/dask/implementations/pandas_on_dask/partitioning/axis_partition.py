@@ -13,15 +13,15 @@
 
 """Module houses classes responsible for storing an axis partition and applying a function to it."""
 
+from distributed import Future
+from distributed.utils import get_ip
+import pandas
+
 from modin.core.dataframe.pandas.partitioning.axis_partition import (
     PandasDataframeAxisPartition,
 )
 from .partition import PandasOnDaskDataframePartition
-
-from distributed.client import default_client
-from distributed import Future
-from distributed.utils import get_ip
-import pandas
+from modin.core.execution.dask.common.task_wrapper import DaskTask
 
 
 class PandasOnDaskDataframeAxisPartition(PandasDataframeAxisPartition):
@@ -75,9 +75,11 @@ class PandasOnDaskDataframeAxisPartition(PandasDataframeAxisPartition):
         list
             A list of distributed.Future.
         """
-        client = default_client()
-        axis_result = client.submit(
+        lengths = kwargs.get("_lengths", None)
+        result_num_splits = len(lengths) if lengths else num_splits
+        axis_result = DaskTask.deploy(
             deploy_dask_func,
+            result_num_splits * 4,
             PandasDataframeAxisPartition.deploy_axis_func,
             axis,
             func,
@@ -87,16 +89,7 @@ class PandasOnDaskDataframeAxisPartition(PandasDataframeAxisPartition):
             *partitions,
             pure=False,
         )
-
-        lengths = kwargs.get("_lengths", None)
-        result_num_splits = len(lengths) if lengths else num_splits
-
-        # We have to do this to split it back up. It is already split, but we need to
-        # get futures for each.
-        return [
-            client.submit(lambda l: l[i], axis_result, pure=False)
-            for i in range(result_num_splits * 4)
-        ]
+        return axis_result
 
     @classmethod
     def deploy_func_between_two_axis_partitions(
@@ -128,9 +121,9 @@ class PandasOnDaskDataframeAxisPartition(PandasDataframeAxisPartition):
         list
             A list of distributed.Future.
         """
-        client = default_client()
-        axis_result = client.submit(
+        axis_result = DaskTask.deploy(
             deploy_dask_func,
+            num_splits * 4,
             PandasDataframeAxisPartition.deploy_func_between_two_axis_partitions,
             axis,
             func,
@@ -141,12 +134,7 @@ class PandasOnDaskDataframeAxisPartition(PandasDataframeAxisPartition):
             *partitions,
             pure=False,
         )
-        # We have to do this to split it back up. It is already split, but we need to
-        # get futures for each.
-        return [
-            client.submit(lambda l: l[i], axis_result, pure=False)
-            for i in range(num_splits * 4)
-        ]
+        return axis_result
 
     def _wrap_partitions(self, partitions):
         """

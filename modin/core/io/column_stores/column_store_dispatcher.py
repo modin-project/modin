@@ -59,12 +59,10 @@ class ColumnStoreDispatcher(FileDispatcher):
                 cls.deploy(
                     cls.parse,
                     NPartitions.get() + 2,
-                    dict(
-                        fname=fname,
-                        columns=cols,
-                        num_splits=NPartitions.get(),
-                        **kwargs,
-                    ),
+                    fname=fname,
+                    columns=cols,
+                    num_splits=NPartitions.get(),
+                    **kwargs,
                 )
                 for cols in col_partitions
             ]
