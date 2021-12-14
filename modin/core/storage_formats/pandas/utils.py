@@ -42,6 +42,8 @@ def compute_chunksize(axis_len, num_splits, default_block_size=None):
     if default_block_size is None:
         default_block_size = MinPartitionSize.get()
 
+    assert default_block_size > 0, "`default_block_size` should be > 0"
+
     chunksize = axis_len // num_splits
     if axis_len % num_splits:
         chunksize += 1
