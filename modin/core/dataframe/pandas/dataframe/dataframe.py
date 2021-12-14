@@ -1609,7 +1609,7 @@ class PandasDataframe(ModinDataframe):
         """
         return self.mask(
             col_positions=[
-                i for i in range(len(self.columns)) if self.dtypes[i] in types
+                i for i, dtype in enumerate(self.dtypes) if dtype in types
             ]
         )
 
