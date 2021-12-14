@@ -75,9 +75,9 @@ def lazy_metadata_decorator(
                             axis = args[axis_arg]
                         else:
                             axis = kwargs["axis"]
-                        if axis == 0 and obj._deferred_index:
+                        if axis == 0 and obj._deferred_column:
                             obj._propagate_index_objs(axis=1)
-                        elif axis == 1 and obj._deferred_column:
+                        elif axis == 1 and obj._deferred_index:
                             obj._propagate_index_objs(axis=0)
                     elif apply_axis == "same":
                         if "axis" not in kwargs:
@@ -88,8 +88,6 @@ def lazy_metadata_decorator(
                             obj._propagate_index_objs(axis=0)
                         elif axis == 1 and obj._deferred_column:
                             obj._propagate_index_objs(axis=1)
-                    elif apply_axis == "columns":
-                        obj._propagate_index_objs(axis=1)
                     elif apply_axis == "rows":
                         obj._propagate_index_objs(axis=0)
             result = f(self, *args, **kwargs)
@@ -99,6 +97,18 @@ def lazy_metadata_decorator(
             elif inherit and transpose:
                 result._deferred_index = self._deferred_column
                 result._deferred_column = self._deferred_index
+            if apply_axis == "opposite":
+                if axis == 0:
+                    result._deferred_index = self._deferred_index
+                else:
+                    result._deferred_column = self._deferred_column
+            elif apply_axis == "same":
+                if axis == 0:
+                    result._deferred_column = self._deferred_column
+                else:
+                    result._deferred_index = self._deferred_index
+            elif apply_axis == "rows":
+                result._deferred_column = self._deferred_column
             return result
 
         return magic
@@ -2343,6 +2353,7 @@ class PandasDataframe(object):
                     not df.axes[axis].equals(self.axes[axis]),
                     f"Internal and external indices on axis {axis} do not match.",
                 )
+
             df.index = self.index
             df.columns = self.columns
 
