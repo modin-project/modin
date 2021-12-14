@@ -649,18 +649,18 @@ class TextFileDispatcher(FileDispatcher):
         if read_kwargs["chunksize"] is not None:
             return False
 
-        skiprows_unsupported = False
+        skiprows_supported = True
         if is_list_like(skiprows_md) and skiprows_md[0] < header_size:
-            skiprows_unsupported = True
+            skiprows_supported = False
         elif callable(skiprows):
             # check if `skiprows` callable gives True for any of header indices
             is_intersection = any(
                 cls._get_skip_mask(pandas.RangeIndex(header_size), skiprows)
             )
             if is_intersection:
-                skiprows_unsupported = True
+                skiprows_supported = False
 
-        if skiprows_unsupported:
+        if not skiprows_supported:
             ErrorMessage.single_warning(
                 "Values of `header` and `skiprows` parameters have intersections. "
                 "This case doesn't supported by Modin, so pandas implementation will be used!"
