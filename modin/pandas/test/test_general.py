@@ -115,7 +115,7 @@ def test_merge():
     pandas_df2 = pandas.DataFrame(frame_data2)
 
     join_types = ["outer", "inner"]
-    for how in join_types :
+    for how in join_types:
         with warns_that_defaulting_to_pandas() if how == "outer" else contextlib.nullcontext():
             modin_result = pd.merge(modin_df, modin_df2, how=how)
         pandas_result = pandas.merge(pandas_df, pandas_df2, how=how)
@@ -142,7 +142,7 @@ def test_merge():
         df_equals(modin_result, pandas_result)
 
         # left_on and right_on col1
-        if how == join_type_outer:
+        if how == "outer":
             warning_catcher = warns_that_defaulting_to_pandas()
         else:
             warning_catcher = contextlib.nullcontext()
@@ -156,7 +156,7 @@ def test_merge():
         df_equals(modin_result, pandas_result)
 
         # left_on and right_on col2
-        if how == join_type_outer:
+        if how == "outer":
             warning_catcher = warns_that_defaulting_to_pandas()
         else:
             warning_catcher = contextlib.nullcontext()
@@ -169,6 +169,7 @@ def test_merge():
         )
         df_equals(modin_result, pandas_result)
 
+        # left_index and right_index
         modin_result = pd.merge(
             modin_df, modin_df2, how=how, left_index=True, right_index=True
         )

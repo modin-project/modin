@@ -11,6 +11,7 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
+import contextlib
 import pytest
 import itertools
 import pandas
@@ -34,6 +35,7 @@ from .utils import (
     default_to_pandas_ignore_string,
 )
 from modin.config import NPartitions
+from modin.test.test_utils import warns_that_defaulting_to_pandas
 
 NPartitions.put(4)
 
@@ -255,6 +257,18 @@ class GetColumn:
         return df[self.name]
 
 
+# Constructing the Modin Series in BaseOnPython mode causes a warning that we
+# are defaulting to Pandas. The pytest marker at the top of this file that
+# ignores such warnings doesn't apply to code that generates test params, so
+# catch the warning.
+with (
+    warns_that_defaulting_to_pandas()
+    if get_current_execution() == "BaseOnPython"
+    else contextlib.nullcontext()
+):
+    modin_series = pd.Series([1, 5, 7, 8])
+
+
 @pytest.mark.parametrize(
     "by",
     [
@@ -287,14 +301,14 @@ class GetColumn:
         ["col5", "col4"],
         ["col4", "col5"],
         ["col5", "col4", "col1"],
-        ["col1", pandas.Series([1, 5, 7, 8])],  # 15
-        [pandas.Series([1, 5, 7, 8])],
+        ["col1", modin_series],  # 15
+        [modin_series],
         [
-            pandas.Series([1, 5, 7, 8]),
-            pandas.Series([1, 5, 7, 8]),
-            pandas.Series([1, 5, 7, 8]),
-            pandas.Series([1, 5, 7, 8]),
-            pandas.Series([1, 5, 7, 8]),
+            modin_series,
+            modin_series,
+            modin_series,
+            modin_series,
+            modin_series,
         ],
         ["col1", GetColumn("col5")],
         [GetColumn("col1"), GetColumn("col5")],
@@ -480,7 +494,9 @@ def test_simple_row_groupby(by, as_index, col1_category):
     eval_general(modin_groupby, pandas_groupby, lambda df: df.tail(n), is_default=True)
     eval_quantile(modin_groupby, pandas_groupby)
     eval_general(modin_groupby, pandas_groupby, lambda df: df.take(), is_default=True)
-    if isinstance(by, list) and not any(isinstance(o, pandas.Series) for o in by):
+    if isinstance(by, list) and not any(
+        isinstance(o, (pd.Series, pandas.Series)) for o in by
+    ):
         # Not yet supported for non-original-column-from-dataframe Series in by:
         eval___getattr__(modin_groupby, pandas_groupby, "col3")
         eval___getitem__(modin_groupby, pandas_groupby, "col3")
@@ -1735,6 +1751,18 @@ def test_mixed_columns_not_from_df(columns, as_index):
     eval_general(md_grp, pd_grp, lambda grp: grp.first())
 
 
+# Constructing the Modin Series in BaseOnPython mode causes a warning that we
+# are defaulting to Pandas. The pytest marker at the top of this file that
+# ignores such warnings doesn't apply to code that generates test params, so
+# catch the warning.
+with (
+    warns_that_defaulting_to_pandas()
+    if get_current_execution() == "BaseOnPython"
+    else contextlib.nullcontext()
+):
+    modin_series = pd.Series([5, 6, 7, 8])
+
+
 @pytest.mark.parametrize(
     # When True, do df[obj], otherwise just use the obj
     "columns",
@@ -1747,7 +1775,7 @@ def test_mixed_columns_not_from_df(columns, as_index):
         [(True, "a"), (True, "b")],
         [(False, "a"), (False, "b"), (True, "c")],
         [(False, "a"), (True, "c")],
-        [(False, "a"), (False, pandas.Series([5, 6, 7, 8]))],
+        [(False, "a"), (False, modin_series)],
     ],
 )
 def test_unknown_groupby(columns):
