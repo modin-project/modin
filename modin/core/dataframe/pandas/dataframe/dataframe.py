@@ -1572,7 +1572,7 @@ class PandasDataframe(ModinDataframe):
             A new filtered dataframe.
         """
         assert (
-            axis == 0 or axis == 1
+            axis in (0, 1)
         ), "Axis argument to filter operator must be 0 (rows) or 1 (columns)"
 
         new_partitions = self._partition_mgr_cls.map_axis_partitions(
