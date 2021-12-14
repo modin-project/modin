@@ -16,6 +16,7 @@ import pandas
 import pytest
 import modin.experimental.pandas as pd
 from modin.config import Engine
+from modin.utils import get_current_execution
 from modin.pandas.test.utils import df_equals, teardown_test_files, test_data
 
 
@@ -137,8 +138,8 @@ def test_read_multiple_csv_s3():
 
 
 @pytest.mark.skipif(
-    Engine.get() != "Ray",
-    reason=f"{Engine.get()} engine doesn't have an experimental API.",
+    get_current_execution() != "ExperimentalPandasOnRay",
+    reason=f"Execution {get_current_execution()} isn't supported.",
 )
 @pytest.mark.parametrize(
     "storage_options",
