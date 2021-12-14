@@ -1329,35 +1329,31 @@ class PandasDataframePartitionManager(ABC):
             tuple
                 Tuple of (schema, updated axis lengths aсcording to the schema)
             """
-            from modin.core.storage_formats.pandas.utils import (
-                compute_chunksize,
-            )
-
             idx = pandas.RangeIndex(sum(axis_lengths))
+            # It will be possible to use axis length for `compute_chunksize` instead of dataframe
+            # after merge of https://github.com/modin-project/modin/issues/3768 happens.
             df = pandas.DataFrame(**{"columns" if axis == 1 else "index": idx})
             chunksize = compute_chunksize(df, NPartitions.get(), axis=axis)
 
             schema = []
-            # initialize the first interval
-            schema.append([0, None])
             current_axis_length = 0
 
             for idx, axis_length in enumerate(axis_lengths):
+                if current_axis_length == 0:
+                    # create new interval
+                    schema.append([idx, None])
                 if current_axis_length + axis_length < chunksize:
                     current_axis_length += axis_length
                     continue
                 current_axis_length = 0
                 # update end of the interval
                 schema[-1][1] = idx + 1
-                if idx + 1 != len(axis_lengths):
-                    schema.append([idx + 1, None])
+
             if schema[-1][1] is None:
                 schema[-1][1] = len(axis_lengths)
 
             # update axis lengths aсcording to the schema
-            new_axis_lengths = list(
-                map(lambda t: sum(axis_lengths[t[0] : t[1]]), schema)
-            )
+            new_axis_lengths = [sum(axis_lengths[t[0] : t[1]]) for t in schema]
             return schema, new_axis_lengths
 
         axis_lengths = widths if axis == 1 else lengths
@@ -1379,7 +1375,11 @@ class PandasDataframePartitionManager(ABC):
                     partitions=_parts,
                     map_func=lambda df: df,
                     keep_partitioning=False,
-                    lengths=[sum(new_widths) if axis == 1 else sum(new_lengths)],
+                    # The passed length must be greater than the sum of the merging
+                    # partitions lengths, so as not to lose some of the axis elements.
+                    # It is simply convenient to use the full axis length, since it
+                    # exactly fits the constraint.
+                    lengths=[sum(axis_lengths)],
                     enumerate_partitions=False,
                 )
             )
