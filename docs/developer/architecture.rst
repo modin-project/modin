@@ -173,9 +173,18 @@ Data Ingress
    partitions and vice versa for data egress (e.g. ``to_csv``) operation.
    Improved performance is achieved by reading/writing in partitions in parallel.
 
-After a data ingress function of the pandas API layer (e.g. ``read_csv``) is called, the user query is passed from that layer to the :doc:`Factory Dispatcher </flow/modin/core/execution/dispatching>`,
-which defines a factory specific for the execution, which in turn exposes the IO class
-whose responsibility is to perform a parallel read/write from/to a file. The resulting IO class contains IO methods with interfaces that correspond to pandas IO functions and its name represents the execution used. The IO class defines the Modin Dataframe and Query Compiler classes specific for the execution engine and storage format to ensure the correct object is constructed, as well as declares IO methods that are mix-ins containing a combination of the engine-specific class for deploying remote tasks, the class for parsing the given file format and the class handling the chunking of the format-specific file on the head node (see dispatcher classes implementation :doc:`details </flow/modin/core/io/index>`). The output from the IO class data ingress function is formatted into a Modin Dataframe.
+Data ingress starts with a function in the pandas API layer (e.g. ``read_csv``). Then the user's 
+query is passed to the :doc:`Factory Dispatcher </flow/modin/core/execution/dispatching>`,
+which defines a factory specific for the execution. The factory for execution contains an IO class
+(e.g. ``PandasOnRayIO``) whose responsibility is to perform a parallel read/write from/to a file.
+This IO class contains class methods with interfaces and names that are similar to pandas IO functions
+(e.g. ``PandasOnRayIO.read_csv``). The IO class declares the Modin Dataframe and Query Compiler
+classes specific for the execution engine and storage format to ensure the correct object is constructed.
+It also declares IO methods that are mix-ins containing a combination of the engine-specific class for
+deploying remote tasks, the class for parsing the given file format and the class handling the chunking
+of the format-specific file on the head node (see dispatcher classes implementation
+:doc:`details </flow/modin/core/io/index>`). The output from the IO class data ingress function is
+a :doc:`Modin Dataframe </flow/modin/core/dataframe/pandas/dataframe>`.
 
 .. image:: /img/generic_data_ingress.svg
    :align: center
