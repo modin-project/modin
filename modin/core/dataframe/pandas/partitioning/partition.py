@@ -145,9 +145,9 @@ class PandasDataframePartition(ABC):  # pragma: no cover
         Parameters
         ----------
         row_labels : list-like, slice or label
-            The indices for the rows to extract.
+            The row labels for the rows to extract.
         col_labels : list-like, slice or label
-            The indices for the columns to extract.
+            The column labels for the columns to extract.
 
         Returns
         -------

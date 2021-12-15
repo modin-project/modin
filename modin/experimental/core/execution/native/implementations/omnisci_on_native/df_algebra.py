@@ -399,7 +399,7 @@ class MaskNode(DFAlgNode):
     base : DFAlgNode
         A filtered frame.
     row_labels : list, optional
-        List of index values to select.
+        List of row labels to select.
     row_positions : list of int, optional
         List of rows ids to select.
 
@@ -408,7 +408,7 @@ class MaskNode(DFAlgNode):
     input : list of DFAlgNode
         Holds a single filtered frame.
     row_labels : list or None
-        List of index values to select.
+        List of row labels to select.
     row_positions : list of int or None
         List of rows ids to select.
     """

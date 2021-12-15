@@ -48,13 +48,13 @@ class ModinDataframe(ABC):
 
         Parameters
         ----------
-        row_labels : list of hashable, default: None
+        row_labels : list of hashable, optional
             The row labels to extract.
-        row_positions : list of int, default: None
+        row_positions : list of int, optional
             The row indices to extract.
-        col_labels : list of hashable, default: None
+        col_labels : list of hashable, optional
             The column labels to extract.
-        col_positions : list of int, default: None
+        col_positions : list of int, optional
             The column indices to extract.
 
         Returns
@@ -77,7 +77,7 @@ class ModinDataframe(ABC):
         Returns
         -------
         ModinDataframe
-             A new ModinDataframe from the filter provided.
+             A new ModinDataframe with only the columns whose dtypes appear in types.
         """
         pass
 
@@ -89,15 +89,15 @@ class ModinDataframe(ABC):
         dtypes: Optional[str] = None,
     ) -> "ModinDataframe":
         """
-        Apply a user-defined function row-wise (or column-wise if axis=1).
+        Apply a user-defined function row-wise if axis=0, column-wise if axis=1, and cell-wise if axis is None.
 
         Parameters
         ----------
         function : callable
             The function to map across the dataframe.
-        axis : int, default: None
+        axis : int, optional
             The axis to map over.
-        dtypes : str, default: None
+        dtypes : str, optional
             The data types for the result. This is an optimization
             because there are functions that always result in a particular data
             type, and this allows us to avoid (re)computing it.
@@ -109,11 +109,7 @@ class ModinDataframe(ABC):
 
         Notes
         -----
-        This does not change the number of rows.
-
-        The user-defined function may increase the number of columns (rows if axis=1),
-        but it should not remove or drop columns and each invocation of the function
-        must generate the same number of new columns.
+        This does not change the shape of the dataframe.
         """
         pass
 
@@ -128,12 +124,12 @@ class ModinDataframe(ABC):
             The axis to filter over.
         condition : callable
             The function to use for the filter. This function should filter the
-            data itself.
+            data itself. It accepts either a row or column (depending on the axis argument) and returns True to keep the row/col, otherwise False.
 
         Returns
         -------
         ModinDataframe
-             A new ModinDataframe from the filter provided.
+             A new ModinDataframe filtered by content according to the filter provided by condition.
         """
         pass
 
@@ -154,7 +150,7 @@ class ModinDataframe(ABC):
         function : callable
             The function to use to expand the data. This function should accept one
             row/column, and return multiple.
-        result_schema : dictionary, default: None
+        result_schema : dictionary, optional
             Mapping from column labels to data types that represents the types of the output dataframe.
 
         Returns
@@ -191,7 +187,7 @@ class ModinDataframe(ABC):
         window_size : int
             The number of row/columns to pass to the function.
             (The size of the sliding window).
-        result_schema : dictionary, default: None
+        result_schema : dictionary, optional
             Mapping from column labels to data types that represents the types of the output dataframe.
 
         Returns
@@ -228,7 +224,7 @@ class ModinDataframe(ABC):
             The operation to carry out on each of the groups. The operator is another
             algebraic operator with its own user-defined function parameter, depending
             on the output desired by the user.
-        result_schema : dictionary, default: None
+        result_schema : dictionary, optional
             Mapping from column labels to data types that represents the types of the output dataframe.
 
         Returns
@@ -246,7 +242,7 @@ class ModinDataframe(ABC):
             may be as small as a single row.
 
         Unlike the pandas API, an intermediate “GROUP BY” object is not present in this
-            algebra implementation.
+        algebra implementation.
         """
         pass
 
@@ -266,7 +262,7 @@ class ModinDataframe(ABC):
             The axis to perform the reduce over.
         function : callable
             The reduce function to apply to each column.
-        dtypes : str, default: None
+        dtypes : str, optional
             The data types for the result. This is an optimization
             because there are functions that always result in a particular data
             type, and this allows us to avoid (re)computing it.
@@ -298,7 +294,7 @@ class ModinDataframe(ABC):
             The axis to perform the tree reduce over.
         function : callable
             The tree reduce function to apply to each column.
-        dtypes : str, default: None
+        dtypes : str, optional
             The data types for the result. This is an optimization
             because there are functions that always result in a particular data
             type, and this allows us to avoid (re)computing it.
@@ -464,11 +460,11 @@ class ModinDataframe(ABC):
 
         Parameters
         ----------
-        new_row_labels : dictionary or callable, default: None
+        new_row_labels : dictionary or callable, optional
             Mapping from old row labels to new labels.
-        new_col_labels : dictionary or callable, default: None
+        new_col_labels : dictionary or callable, optional
             Mapping from old col labels to new labels.
-        level : int or list of ints, default: None
+        level : int or list of ints, optional
             Level(s) whose row labels to replace.
 
         Returns

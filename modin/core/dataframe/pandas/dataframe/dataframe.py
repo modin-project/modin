@@ -1249,7 +1249,7 @@ class PandasDataframe(ModinDataframe):
             The axis to perform the reduce over.
         function : callable
             The reduce function to apply to each column.
-        dtypes : str, default: None
+        dtypes : str, optional
             The data types for the result. This is an optimization
             because there are functions that always result in a particular data
             type, and this allows us to avoid (re)computing it.
@@ -1285,10 +1285,10 @@ class PandasDataframe(ModinDataframe):
             0 for columns and 1 for rows.
         map_func : callable
             Callable function to map the dataframe.
-        reduce_func : callable, default: None
+        reduce_func : callable, optional
             Callable function to reduce the dataframe.
             If none, then apply map_func twice.
-        dtypes : str, default: None
+        dtypes : str, optional
             The data types for the result. This is an optimization
             because there are functions that always result in a particular data
             type, and this allows us to avoid (re)computing it.
@@ -1318,7 +1318,7 @@ class PandasDataframe(ModinDataframe):
         ----------
         func : callable
             The function to apply.
-        dtypes : dtypes of the result, default: None
+        dtypes : dtypes of the result, optional
             The data types for the result. This is an optimization
             because there are functions that always result in a particular data
             type, and this allows us to avoid (re)computing it.
@@ -1363,7 +1363,7 @@ class PandasDataframe(ModinDataframe):
         window_size : int
             The number of row/columns to pass to the function.
             (The size of the sliding window).
-        result_schema : dict, default: None
+        result_schema : dict, optional
             Mapping from column labels to data types that represents the types of the output dataframe.
 
         Returns
@@ -1475,7 +1475,7 @@ class PandasDataframe(ModinDataframe):
             Mapping from old row labels to new labels.
         new_col_labels : dict or callable, default: None
             Mapping from old col labels to new labels.
-        level : int, default: None
+        level : int, optional
             Level whose row labels to replace.
 
         Returns
@@ -1772,10 +1772,10 @@ class PandasDataframe(ModinDataframe):
         apply_indices : list-like, default: None
             The labels to apply over. Must be given if axis is provided.
         row_labels : list-like, default: None
-            The row indices to apply over. Must be provided with
+            The row labels to apply over. Must be provided with
             `col_labels` to apply over both axes.
         col_labels : list-like, default: None
-            The column indices to apply over. Must be provided
+            The column labels to apply over. Must be provided
             with `row_labels` to apply over both axes.
         new_index : list-like, optional
             The index of the result. We may know this in advance,
@@ -2359,7 +2359,7 @@ class PandasDataframe(ModinDataframe):
             The operation to carry out on each of the groups. The operator is another
             algebraic operator with its own user-defined function parameter, depending
             on the output desired by the user.
-        result_schema : dict, default: None
+        result_schema : dict, optional
             Mapping from column labels to data types that represents the types of the output dataframe.
 
         Returns

@@ -278,11 +278,11 @@ class OmnisciOnNativeDataframe(PandasDataframe):
         Parameters
         ----------
         row_labels : list, optional
-            Indices of rows to select.
+            Row labels to select.
         row_positions : list-like of ints, optional
             Numeric indices of rows to select.
         col_labels : list, optional
-            Indices of columns to select.
+            Column labels to select.
         col_positions : list-like of ints, optional
             Numeric indices of columns to select.
 
