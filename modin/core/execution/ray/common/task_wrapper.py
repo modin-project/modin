@@ -67,7 +67,7 @@ class RayTask:
             Ray identifier of the result being put to Plasma store.
         """
         return _deploy_ray_func.options(num_returns=num_returns).remote(
-            func, *args, **kwargs
+            func, *args, kwargs
         )
 
     @classmethod
