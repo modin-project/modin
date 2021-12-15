@@ -6,7 +6,7 @@ Modin. If you still cannot find the answer you are looking for, please post your
 question on the #support channel on our Slack_ community or open a Github issue_.
 
 What’s wrong with pandas and why should I use Modin?
-""""""""""""""""""""""""""""""""""""""""""""""""""""""
+""""""""""""""""""""""""""""""""""""""""""""""""""""
 
 While pandas works extremely well on small datasets, as soon as you start working with 
 medium to large datasets that are more than a few GBs, pandas can become painfully 
@@ -14,7 +14,7 @@ slow or run out of memory. This is because pandas is single-threaded. In other w
 you can only process your data with one core at a time. This approach does not scale to 
 larger data sets and adding more hardware does not lead to more performance gain. 
 
-The ``modin.pandas`` :doc:`DataFrame </supported_apis/dataframe_supported>` is a highly 
+The :py:class:`~modin.pandas.dataframe.DataFrame` is a highly 
 scalable, parallel DataFrame. Modin transparently distributes the data and computation so 
 that you can continue using the same pandas API while being able to work with more data faster. 
 Modin lets you use all the CPU cores on your machine, and because it is lightweight, it 
@@ -33,7 +33,7 @@ pandas, which is why the pandas API is just a thin layer at the user level. To l
 more about Modin's architecture, see the :doc:`architecture </developer/architecture>` documentation.
 
 How much faster can I go with Modin compared to pandas?
-""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+"""""""""""""""""""""""""""""""""""""""""""""""""""""""
 
 Modin is designed to scale with the amount of hardware available.
 Even in a traditionally serial task like ``read_csv``, we see large gains by efficiently 
@@ -43,7 +43,7 @@ efficiently to larger machines with more cores. We have several published papers
 include performance results and comparisons against pandas.
 
 How much more data would I be able to process with Modin?
-""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+"""""""""""""""""""""""""""""""""""""""""""""""""""""""""
 
 Often data scientists have to use different tools for operating on datasets of different sizes. 
 This is not only because processing large dataframes is slow, but also pandas does not support working 
@@ -54,7 +54,7 @@ work with hundreds of GBs without worrying about substantial slowdown or memory 
 see :doc:`out-of-memory support <getting_started/out_of_core.rst>` for Modin.
 
 How does Modin work under the hood?
-""""""""""""""""""""""""""""""""""""
+"""""""""""""""""""""""""""""""""""
 
 Modin is logically separated into different layers that represent the hierarchy of a 
 typical Database Management System. User queries which perform data transformation, 
@@ -68,7 +68,7 @@ Ray or Dask to execute computation, and then return the results to the user.
 For more details, take a look at our system :doc:`architecture </developer/architecture>`. 
 
 If I’m only using my laptop, can I still get the benefits of Modin?
-""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
 
 Absolutely! Unlike other parallel DataFrame systems, Modin is an extremely 
 light-weight, robust DataFrame. Because it is so light-weight, Modin provides 
@@ -76,7 +76,7 @@ speed-ups of up to 4x on a laptop with 4 physical cores
 and allows you to work on data that doesn't fit in your laptop's RAM.
 
 How do I use Jupyter or Colab notebooks with Modin?
-""""""""""""""""""""""""""""""""""""""""""""""""""""
+"""""""""""""""""""""""""""""""""""""""""""""""""""
 
 You can take a look at this Google Colab installation guide_ and
 this notebook tutorial_. Once Modin is installed, simply replace your pandas
@@ -88,7 +88,7 @@ import with Modin import:
     import modin.pandas as pd
 
 Which execution engine (Ray or Dask) should I use for Modin?
-"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
 
 Whichever one you want! Modin supports Ray_ and Dask_ execution engines to provide an effortless way 
 to speed up your pandas workflows. The best thing is that you don't need to know 
@@ -112,7 +112,7 @@ We plan to support more execution engines in future. If you have a specific requ
 please post on the #feature-requests channel on our Slack_ community. 
 
 How can I contribute to Modin?
-"""""""""""""""""""""""""""""""
+""""""""""""""""""""""""""""""
 
 **Modin is currently under active development. Requests and contributions are welcome!**
 
