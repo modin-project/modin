@@ -1501,13 +1501,10 @@ class PandasDataframe(ModinDataframe):
 
         if new_row_labels:
             swap_row_labels = swap_labels(new_row_labels)
-            if isinstance(self.index, pandas.MultiIndex):
-                if level is None:
-                    new_index = new_index.map(swap_labels_levels)
-                else:
-                    new_index.set_levels(
-                        new_index.levels[level].map(swap_row_labels), level
-                    )
+            if isinstance(self.index, pandas.MultiIndex) and level is not None:
+                new_index.set_levels(
+                    new_index.levels[level].map(swap_row_labels), level
+                )
             else:
                 new_index = new_index.map(swap_row_labels)
         new_cols = self.columns.copy()
