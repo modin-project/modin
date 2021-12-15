@@ -194,7 +194,7 @@ class ModinDataframe(ABC):
         -------
         ModinDataframe
             A new ModinDataframe with the reduce function applied over windows of the specified
-                axis.
+            axis.
 
         Notes
         -----
