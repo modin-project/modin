@@ -1489,12 +1489,10 @@ class PandasDataframe(ModinDataframe):
         """
         new_index = self.index.copy()
 
-        def swap_labels(label_dict):
-            return (
-                lambda label: label_dict.get(label, label)
-                if isinstance(label_dict, dict)
-                else label_dict(label)
-            )
+        def make_label_swapper(label_dict):
+            if isinstance(label_dict, dict):
+                return lambda label: label_dict.get(label, label)
+            return label_dict
 
         def swap_labels_levels(index_tuple):
             return tuple(
