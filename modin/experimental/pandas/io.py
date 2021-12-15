@@ -276,8 +276,8 @@ def to_pickle_distributed(
     """
     Pickle (serialize) object to file.
 
-    If `*` in the filename all partitions are written to their own separate file,
-    otherwise default pandas implementation is used.
+    This experimental feature provides parallel writing into multiple pickle files which are
+    defined by glob pattern, otherwise (without glob pattern) default pandas implementation is used.
 
     Parameters
     ----------
