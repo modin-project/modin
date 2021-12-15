@@ -352,7 +352,7 @@ class ModinDataframe(ABC):
             simple equality, e.g. "left.col1 == right.col1" or can be arbitrarily complex.
         other : ModinDataframe
             The other data to join with, i.e. the right dataframe.
-        join_type : string
+        join_type : string {"inner", "left", "right", "full"}
             The type of join to perform.
 
         Returns
