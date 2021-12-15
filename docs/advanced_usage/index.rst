@@ -22,7 +22,8 @@ on DataFrames, and more. Join the `Discourse`_ for the latest updates!
 
 Experimental APIs
 -----------------
-Modin also supports these APIs on top of pandas that are under active experimental development.
+
+Modin also supports these experimental APIs on top of pandas that are under active development.
 
 - :py:func:`~modin.experimental.pandas.read_csv_glob` -- read multiple files in a directory
 - :py:func:`~modin.experimental.pandas.read_sql` -- add optional parameters for the database connection

@@ -98,7 +98,6 @@ classes for reading files of different formats.
   
   * ``sql_dispatcher.py`` -  class for reading SQL queries or database tables.
 
-
 Handling ``skiprows`` Parameter
 '''''''''''''''''''''''''''''''
 
