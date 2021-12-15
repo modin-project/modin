@@ -19,6 +19,7 @@ ModinDataframe is a parent abstract class for any dataframe class.
 
 from abc import ABC, abstractmethod
 from typing import List, Hashable, Optional, Callable, Union, Dict
+from modin.pandas import Axis
 
 
 class ModinDataframe(ABC):
@@ -43,8 +44,8 @@ class ModinDataframe(ABC):
         """
         Mask rows and columns in the dataframe.
 
-        Allow users to perform selection and projection on the row and column number (positional notation),
-        in addition to the row and column labels (named notation).
+        Allow users to perform selection and projection on the row and column labels (named notation),
+        in addition to the row and column number (positional notation).
 
         Parameters
         ----------
@@ -85,7 +86,7 @@ class ModinDataframe(ABC):
     def map(
         self,
         function: Callable,
-        axis: Optional[int] = None,
+        axis: Optional[Union[int, Axis]] = None,
         dtypes: Optional[str] = None,
     ) -> "ModinDataframe":
         """
@@ -93,9 +94,9 @@ class ModinDataframe(ABC):
 
         Parameters
         ----------
-        function : callable
+        function : callable(row|col|cell) -> row|col|cell
             The function to map across the dataframe.
-        axis : int, optional
+        axis : int or modin.pandas.Axis, optional
             The axis to map over.
         dtypes : str, optional
             The data types for the result. This is an optimization
@@ -114,17 +115,17 @@ class ModinDataframe(ABC):
         pass
 
     @abstractmethod
-    def filter(self, axis: int, condition: Callable) -> "ModinDataframe":
+    def filter(self, axis: Union[int, Axis], condition: Callable) -> "ModinDataframe":
         """
         Filter data based on the function provided along the specified axis.
 
         Parameters
         ----------
-        axis : int
+        axis : int or modin.pandas.Axis
             The axis to filter over.
-        condition : callable
+        condition : callable(row|col) -> bool
             The function to use for the filter. This function should filter the
-            data itself. It accepts either a row or column (depending on the axis argument) and returns True to keep the row/col, otherwise False.
+            data itself. It accepts either a row or column (depending on the axis argument) and returns True to keep the row/col, and False to drop it.
 
         Returns
         -------
@@ -136,7 +137,7 @@ class ModinDataframe(ABC):
     @abstractmethod
     def explode(
         self,
-        axis: int,
+        axis: Union[int, Axis],
         function: Callable,
         result_schema: Optional[Dict[Hashable, type]] = None,
     ) -> "ModinDataframe":
@@ -145,7 +146,7 @@ class ModinDataframe(ABC):
 
         Parameters
         ----------
-        axis : int
+        axis : int or modin.pandas.Axis
             The axis to expand over.
         function : callable
             The function to use to expand the data. This function should accept one
@@ -170,7 +171,7 @@ class ModinDataframe(ABC):
     @abstractmethod
     def window(
         self,
-        axis: int,
+        axis: Union[int, Axis],
         reduce_fn: Callable,
         window_size: int,
         result_schema: Optional[Dict[Hashable, type]] = None,
@@ -180,9 +181,9 @@ class ModinDataframe(ABC):
 
         Parameters
         ----------
-        axis : int
+        axis : int or modin.pandas.Axis
             The axis to slide over.
-        reduce_fn : callable
+        reduce_fn : callable(rowgroup|colgroup) -> row|col
             The reduce function to apply over the data.
         window_size : int
             The number of row/columns to pass to the function.
@@ -206,7 +207,7 @@ class ModinDataframe(ABC):
     @abstractmethod
     def groupby(
         self,
-        axis: int,
+        axis: Union[int, Axis],
         by: Union[str, List[str]],
         operator: Callable,
         result_schema: Optional[Dict[Hashable, type]] = None,
@@ -216,7 +217,7 @@ class ModinDataframe(ABC):
 
         Parameters
         ----------
-        axis : int
+        axis : int or modin.pandas.Axis
             The axis to apply the grouping over.
         by : string or list of strings
             One or more column labels to use for grouping.
@@ -249,7 +250,7 @@ class ModinDataframe(ABC):
     @abstractmethod
     def reduce(
         self,
-        axis: int,
+        axis: Union[int, Axis],
         function: Callable,
         dtypes: Optional[str] = None,
     ) -> "ModinDataframe":
@@ -258,9 +259,9 @@ class ModinDataframe(ABC):
 
         Parameters
         ----------
-        axis : int
+        axis : int or modin.pandas.Axis
             The axis to perform the reduce over.
-        function : callable
+        function : callable(row|col) -> single value
             The reduce function to apply to each column.
         dtypes : str, optional
             The data types for the result. This is an optimization
@@ -281,18 +282,20 @@ class ModinDataframe(ABC):
     @abstractmethod
     def tree_reduce(
         self,
-        axis: int,
+        axis: Union[int, Axis],
         function: Callable,
         dtypes: Optional[str] = None,
     ) -> "ModinDataframe":
         """
         Perform a user-defined per-column aggregation, where each column reduces down to a single value using a tree-reduce computation pattern.
 
+        The function is applied first over multiple partitions of a column, and then iteratively to the results until only a single value remains.
+
         Parameters
         ----------
-        axis : int
+        axis : int or modin.pandas.Axis
             The axis to perform the tree reduce over.
-        function : callable
+        function : callable(row|col) -> single value
             The tree reduce function to apply to each column.
         dtypes : str, optional
             The data types for the result. This is an optimization
@@ -331,14 +334,18 @@ class ModinDataframe(ABC):
 
     @abstractmethod
     def join(
-        self, axis: int, condition: Callable, other: "ModinDataframe", join_type: str
+        self,
+        axis: Union[int, Axis],
+        condition: Callable,
+        other: "ModinDataframe",
+        join_type: str,
     ) -> "ModinDataframe":
         """
         Join this dataframe with the other.
 
         Parameters
         ----------
-        axis : int
+        axis : int or modin.pandas.Axis
             The axis to perform the join on.
         condition : callable
             Function that determines which rows should be joined. The condition can be a
@@ -366,14 +373,16 @@ class ModinDataframe(ABC):
 
     @abstractmethod
     def concat(
-        self, axis: int, others: Union["ModinDataframe", List["ModinDataframe"]]
+        self,
+        axis: Union[int, Axis],
+        others: Union["ModinDataframe", List["ModinDataframe"]],
     ) -> "ModinDataframe":
         """
         Append the rows of identical column labels from multiple dataframes.
 
         Parameters
         ----------
-        axis : int
+        axis : int or modin.pandas.Axis
             The axis on which to perform the concatenation.
         others : ModinDataframe or list of ModinDataframes
             The other ModinDataframe(s) to concatenate.
@@ -480,14 +489,17 @@ class ModinDataframe(ABC):
 
     @abstractmethod
     def sort_by(
-        self, axis: int, columns: Union[str, List[str]], ascending: bool = True
+        self,
+        axis: Union[int, Axis],
+        columns: Union[str, List[str]],
+        ascending: bool = True,
     ) -> "ModinDataframe":
         """
         Logically reorder rows (columns if axis=1) lexicographically by the data in a column or set of columns.
 
         Parameters
         ----------
-        axis : int
+        axis : int or modin.pandas.Axis
             The axis to perform the sort over.
         columns : string or list of strings
             Column label(s) to use to determine lexicographical ordering.

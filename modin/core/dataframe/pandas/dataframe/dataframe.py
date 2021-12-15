@@ -31,6 +31,7 @@ from modin.core.storage_formats.pandas.parsers import (
 )
 from modin.core.dataframe.base.dataframe.dataframe import ModinDataframe
 from modin.pandas.indexing import is_range_like
+from modin.pandas import Axis
 
 
 class PandasDataframe(ModinDataframe):
@@ -1180,7 +1181,7 @@ class PandasDataframe(ModinDataframe):
         """
 
         def _tree_reduce_func(df, *args, **kwargs):
-            """Map-reducer function itself executing `func`, presenting the resulting pandas.Series as pandas.DataFrame."""
+            """Tree-reducer function itself executing `func`, presenting the resulting pandas.Series as pandas.DataFrame."""
             series_result = func(df, *args, **kwargs)
             if axis == 0 and isinstance(series_result, pandas.Series):
                 # In the case of axis=0, we need to keep the shape of the data
@@ -1236,18 +1237,18 @@ class PandasDataframe(ModinDataframe):
 
     def reduce(
         self,
-        axis: int,
+        axis: Union[int, Axis],
         function: Callable,
         dtypes: Optional[str] = None,
     ) -> "PandasDataframe":
         """
-        Perform a user-defined per-column aggregation, where each column reduces down to a single value.
+        Perform a user-defined per-column aggregation, where each column reduces down to a single value. Requires knowledge of the full axis for the reduction.
 
         Parameters
         ----------
-        axis : int
+        axis : int or modin.pandas.Axis
             The axis to perform the reduce over.
-        function : callable
+        function : callable(row|col) -> single value
             The reduce function to apply to each column.
         dtypes : str, optional
             The data types for the result. This is an optimization
@@ -1263,15 +1264,16 @@ class PandasDataframe(ModinDataframe):
         -----
         The user-defined function must reduce to a single value.
         """
-        function = self._build_treereduce_func(axis, function)
+        axis = Axis(axis)
+        function = self._build_treereduce_func(axis.value, function)
         new_parts = self._partition_mgr_cls.map_axis_partitions(
-            axis, self._partitions, function
+            axis.value, self._partitions, function
         )
-        return self._compute_tree_reduce_metadata(axis, new_parts)
+        return self._compute_tree_reduce_metadata(axis.value, new_parts)
 
     def tree_reduce(
         self,
-        axis: int,
+        axis: Union[int, Axis],
         map_func: Callable,
         reduce_func: Optional[Callable] = None,
         dtypes: Optional[str] = None,
@@ -1281,11 +1283,11 @@ class PandasDataframe(ModinDataframe):
 
         Parameters
         ----------
-        axis : {0, 1}
-            0 for columns and 1 for rows.
-        map_func : callable
+        axis : int or modin.pandas.Axis
+            The axis to perform the tree reduce over.
+        map_func : callable(row|col) -> row|col
             Callable function to map the dataframe.
-        reduce_func : callable, optional
+        reduce_func : callable(row|col) -> single value, optional
             Callable function to reduce the dataframe.
             If none, then apply map_func twice.
         dtypes : str, optional
@@ -1298,17 +1300,18 @@ class PandasDataframe(ModinDataframe):
         PandasDataframe
             A new dataframe.
         """
-        map_func = self._build_treereduce_func(axis, map_func)
+        axis = Axis(axis)
+        map_func = self._build_treereduce_func(axis.value, map_func)
         if reduce_func is None:
             reduce_func = map_func
         else:
-            reduce_func = self._build_treereduce_func(axis, reduce_func)
+            reduce_func = self._build_treereduce_func(axis.value, reduce_func)
 
         map_parts = self._partition_mgr_cls.map_partitions(self._partitions, map_func)
         reduce_parts = self._partition_mgr_cls.map_axis_partitions(
-            axis, map_parts, reduce_func
+            axis.value, map_parts, reduce_func
         )
-        return self._compute_tree_reduce_metadata(axis, reduce_parts)
+        return self._compute_tree_reduce_metadata(axis.value, reduce_parts)
 
     def map(self, func: Callable, dtypes: Optional[str] = None) -> "PandasDataframe":
         """
@@ -1316,7 +1319,7 @@ class PandasDataframe(ModinDataframe):
 
         Parameters
         ----------
-        func : callable
+        func : callable(row|col|cell) -> row|col|cell
             The function to apply.
         dtypes : dtypes of the result, optional
             The data types for the result. This is an optimization
@@ -1346,7 +1349,7 @@ class PandasDataframe(ModinDataframe):
 
     def window(
         self,
-        axis: int,
+        axis: Union[int, Axis],
         reduce_fn: Callable,
         window_size: int,
         result_schema: Optional[Dict[Hashable, type]] = None,
@@ -1356,9 +1359,9 @@ class PandasDataframe(ModinDataframe):
 
         Parameters
         ----------
-        axis : int
+        axis : int or modin.pandas.Axis
             The axis to slide over.
-        reduce_fn : callable
+        reduce_fn : callable(rowgroup|colgroup) -> row|col
             The reduce function to apply over the data.
         window_size : int
             The number of row/columns to pass to the function.
@@ -1427,14 +1430,18 @@ class PandasDataframe(ModinDataframe):
         pass
 
     def join(
-        self, axis: int, condition: Callable, other: ModinDataframe, join_type: str
+        self,
+        axis: Union[int, Axis],
+        condition: Callable,
+        other: ModinDataframe,
+        join_type: str,
     ) -> "PandasDataframe":
         """
         Join this dataframe with the other.
 
         Parameters
         ----------
-        axis : int
+        axis : int or modin.pandas.Axis
             The axis to perform the join on.
         condition : callable
             Function that determines which rows should be joined. The condition can be a
@@ -1500,16 +1507,19 @@ class PandasDataframe(ModinDataframe):
             return tuple(new_row_labels(label) for label in index_tuple)
 
         if new_row_labels:
-            swap_row_labels = swap_labels(new_row_labels)
-            if isinstance(self.index, pandas.MultiIndex) and level is not None:
-                new_index.set_levels(
-                    new_index.levels[level].map(swap_row_labels), level
-                )
+            swap_row_labels = make_label_swapper(new_row_labels)
+            if isinstance(self.index, pandas.MultiIndex):
+                if level is not None:
+                    new_index.set_levels(
+                        new_index.levels[level].map(swap_row_labels), level
+                    )
+                else:
+                    new_index = new_index.map(swap_labels_levels)
             else:
                 new_index = new_index.map(swap_row_labels)
         new_cols = self.columns.copy()
         if new_col_labels:
-            new_cols = new_cols.map(swap_labels(new_col_labels))
+            new_cols = new_cols.map(make_label_swapper(new_col_labels))
 
         def map_fn(df):
             return df.rename(index=new_row_labels, columns=new_col_labels, level=level)
@@ -1525,14 +1535,17 @@ class PandasDataframe(ModinDataframe):
         )
 
     def sort_by(
-        self, axis: int, columns: Union[str, List[str]], ascending: bool = True
+        self,
+        axis: Union[int, Axis],
+        columns: Union[str, List[str]],
+        ascending: bool = True,
     ) -> "PandasDataframe":
         """
         Logically reorder rows (columns if axis=1) lexicographically by the data in a column or set of columns.
 
         Parameters
         ----------
-        axis : int
+        axis : int or modin.pandas.Axis
             The axis to perform the sort over.
         columns : string or list
             Column label(s) to use to determine lexicographical ordering.
@@ -1546,15 +1559,15 @@ class PandasDataframe(ModinDataframe):
         """
         pass
 
-    def filter(self, axis: int, condition: Callable) -> "PandasDataframe":
+    def filter(self, axis: Union[Axis, int], condition: Callable) -> "PandasDataframe":
         """
         Filter data based on the function provided along an entire axis.
 
         Parameters
         ----------
-        axis : int
+        axis : int or modin.pandas.Axis
             The axis to filter over.
-        condition : callable
+        condition : callable(row|col) -> bool
             The function to use for the filter. This function should filter the
             data itself.
 
@@ -1563,20 +1576,26 @@ class PandasDataframe(ModinDataframe):
         PandasDataframe
             A new filtered dataframe.
         """
-        assert (
-            axis in (0, 1)
+        axis = Axis(axis)
+        assert axis in (
+            Axis.ROW_WISE,
+            Axis.COL_WISE,
         ), "Axis argument to filter operator must be 0 (rows) or 1 (columns)"
 
         new_partitions = self._partition_mgr_cls.map_axis_partitions(
-            axis, self._partitions, condition, keep_partitioning=True
+            axis.value, self._partitions, condition, keep_partitioning=True
         )
         new_axes, new_lengths = [0, 0], [0, 0]
 
-        new_axes[axis] = self.axes[axis]
-        new_axes[axis ^ 1] = self._compute_axis_labels(axis ^ 1, new_partitions)
+        new_axes[axis.value] = self.axes[axis.value]
+        new_axes[axis.value ^ 1] = self._compute_axis_labels(
+            axis.value ^ 1, new_partitions
+        )
 
-        new_lengths[axis] = self._axes_lengths[axis]
-        new_lengths[axis ^ 1] = None  # We do not know what the resulting widths will be
+        new_lengths[axis.value] = self._axes_lengths[axis.value]
+        new_lengths[
+            axis.value ^ 1
+        ] = None  # We do not know what the resulting widths will be
 
         return self.__constructor__(
             new_partitions,
@@ -1600,18 +1619,16 @@ class PandasDataframe(ModinDataframe):
              A new PandasDataframe from the filter provided.
         """
         return self.mask(
-            col_positions=[
-                i for i, dtype in enumerate(self.dtypes) if dtype in types
-            ]
+            col_positions=[i for i, dtype in enumerate(self.dtypes) if dtype in types]
         )
 
-    def explode(self, axis: int, func: Callable) -> "PandasDataframe":
+    def explode(self, axis: Union[int, Axis], func: Callable) -> "PandasDataframe":
         """
         Explode list-like entries along an entire axis.
 
         Parameters
         ----------
-        axis : int
+        axis : int or modin.pandas.Axis
             The axis specifying how to explode. If axis=1, explode according
             to columns.
         func : callable
@@ -1622,10 +1639,11 @@ class PandasDataframe(ModinDataframe):
         PandasFrame
             A new filtered dataframe.
         """
+        axis = Axis(axis)
         partitions = self._partition_mgr_cls.map_axis_partitions(
-            axis, self._partitions, func, keep_partitioning=True
+            axis.value, self._partitions, func, keep_partitioning=True
         )
-        if axis == 1:
+        if axis == Axis.COL_WISE:
             new_index = self._compute_axis_labels(0, partitions)
             new_columns = self.columns
         else:
@@ -2259,8 +2277,8 @@ class PandasDataframe(ModinDataframe):
 
     def concat(
         self,
-        axis: int,
-        others: Union["ModinDataframe", List["ModinDataframe"]],
+        axis: Union[int, Axis],
+        others: Union["PandasDataframe", List["PandasDataframe"]],
         how,
         sort,
     ) -> "PandasDataframe":
@@ -2269,7 +2287,7 @@ class PandasDataframe(ModinDataframe):
 
         Parameters
         ----------
-        axis : {0, 1}
+        axis : int or modin.pandas.Axis
             Axis to concatenate over.
         others : list
             List of Modin DataFrames to concatenate with.
@@ -2283,9 +2301,10 @@ class PandasDataframe(ModinDataframe):
         PandasDataframe
             New Modin DataFrame.
         """
+        axis = Axis(axis)
         # Fast path for equivalent columns and partitioning
         if (
-            axis == 0
+            axis == Axis.ROW_WISE
             and all(o.columns.equals(self.columns) for o in others)
             and all(o._column_widths == self._column_widths for o in others)
         ):
@@ -2297,7 +2316,7 @@ class PandasDataframe(ModinDataframe):
             ]
             new_widths = self._column_widths
         elif (
-            axis == 1
+            axis == Axis.COL_WISE
             and all(o.index.equals(self.index) for o in others)
             and all(o._row_lengths == self._row_lengths for o in others)
         ):
@@ -2310,12 +2329,14 @@ class PandasDataframe(ModinDataframe):
             ]
         else:
             left_parts, right_parts, joined_index = self._copartition(
-                axis ^ 1, others, how, sort, force_repartition=False
+                axis.value ^ 1, others, how, sort, force_repartition=False
             )
             new_lengths = None
             new_widths = None
-        new_partitions = self._partition_mgr_cls.concat(axis, left_parts, right_parts)
-        if axis == 0:
+        new_partitions = self._partition_mgr_cls.concat(
+            axis.value, left_parts, right_parts
+        )
+        if axis == Axis.ROW_WISE:
             new_index = self.index.append([other.index for other in others])
             new_columns = joined_index
             # TODO: Can optimize by combining if all dtypes are materialized
@@ -2333,7 +2354,7 @@ class PandasDataframe(ModinDataframe):
 
     def groupby(
         self,
-        axis: int,
+        axis: Union[int, Axis],
         by: Union[str, List[str]],
         operator: Callable,
         result_schema: Optional[Dict[Hashable, type]] = None,
@@ -2343,7 +2364,7 @@ class PandasDataframe(ModinDataframe):
 
         Parameters
         ----------
-        axis : int
+        axis : int or modin.pandas.Axis
             The axis to apply the grouping over.
         by : string or list of strings
             One or more column labels to use for grouping.

@@ -23,7 +23,9 @@ from pandas.core.indexes.api import ensure_index, Index, MultiIndex, RangeIndex
 from pandas.core.dtypes.common import get_dtype, is_list_like, is_bool_dtype
 from modin.error_message import ErrorMessage
 from modin.pandas.indexing import is_range_like
+from modin.pandas import Axis
 import pandas as pd
+from typing import List, Hashable, Optional, Tuple, Union
 
 from ..df_algebra import (
     MaskNode,
@@ -267,24 +269,28 @@ class OmnisciOnNativeDataframe(PandasDataframe):
 
     def mask(
         self,
-        row_labels=None,
-        row_positions=None,
-        col_labels=None,
-        col_positions=None,
-    ):
+        row_labels: Optional[List[Hashable]] = None,
+        row_positions: Optional[List[int]] = None,
+        col_labels: Optional[List[Hashable]] = None,
+        col_positions: Optional[List[int]] = None,
+    ) -> "OmnisciOnNativeDataframe":
         """
-        Mask operation.
+        Mask rows and columns in the dataframe.
+
+        Allow users to perform selection and projection on the row and column labels (named notation),
+        in addition to the row and column number (positional notation).
+
 
         Parameters
         ----------
-        row_labels : list, optional
-            Row labels to select.
-        row_positions : list-like of ints, optional
-            Numeric indices of rows to select.
-        col_labels : list, optional
-            Column labels to select.
-        col_positions : list-like of ints, optional
-            Numeric indices of columns to select.
+        row_labels : list of hashable, optional
+            The row labels to extract.
+        row_positions : list of int, optional
+            The row positions to extract.
+        col_labels : list of hashable, optional
+            The column labels to extract.
+        col_positions : list of int, optional
+            The column positions to extract.
 
         Returns
         -------
@@ -775,12 +781,12 @@ class OmnisciOnNativeDataframe(PandasDataframe):
 
     def join(
         self,
-        other,
-        how="inner",
-        left_on=None,
-        right_on=None,
-        sort=False,
-        suffixes=("_x", "_y"),
+        other: "OmnisciOnNativeDataframe",
+        how: Optional[str] = "inner",
+        left_on: Optional[List[str]] = None,
+        right_on: Optional[List[str]] = None,
+        sort: Optional[bool] = False,
+        suffixes: Optional[Tuple[str]] = ("_x", "_y"),
     ):
         """
         Join operation.
@@ -1103,14 +1109,19 @@ class OmnisciOnNativeDataframe(PandasDataframe):
         return lhs
 
     def concat(
-        self, axis, other_modin_frames, join="outer", sort=False, ignore_index=False
+        self,
+        axis: Union[int, Axis],
+        other_modin_frames: List["OmnisciOnNativeDataframe"],
+        join: Optional[str] = "outer",
+        sort: Optional[bool] = False,
+        ignore_index: Optional[bool] = False,
     ):
         """
         Concatenate frames along a particular axis.
 
         Parameters
         ----------
-        axis : 0 or 1
+        axis : int or modin.pandas.Axis
             The axis to concatenate along.
         other_modin_frames : list of OmnisciOnNativeDataframe
             Frames to concat.
@@ -1127,11 +1138,14 @@ class OmnisciOnNativeDataframe(PandasDataframe):
         OmnisciOnNativeDataframe
             The new frame.
         """
+        axis = Axis(axis)
         if not other_modin_frames:
             return self
 
-        if axis == 0:
-            return self._union_all(axis, other_modin_frames, join, sort, ignore_index)
+        if axis == Axis.ROW_WISE:
+            return self._union_all(
+                axis.value, other_modin_frames, join, sort, ignore_index
+            )
 
         base = self
         for frame in other_modin_frames:

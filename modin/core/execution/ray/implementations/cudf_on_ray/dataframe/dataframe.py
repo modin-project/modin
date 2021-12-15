@@ -23,6 +23,7 @@ from modin.core.execution.ray.implementations.pandas_on_ray.dataframe.dataframe 
     PandasOnRayDataframe,
 )
 from modin.error_message import ErrorMessage
+from typing import List, Hashable, Optional
 
 
 class cuDFOnRayDataframe(PandasOnRayDataframe):
@@ -115,10 +116,10 @@ class cuDFOnRayDataframe(PandasOnRayDataframe):
 
     def mask(
         self,
-        row_labels=None,
-        row_positions=None,
-        col_labels=None,
-        col_positions=None,
+        row_labels: Optional[List[Hashable]] = None,
+        row_positions: Optional[List[int]] = None,
+        col_labels: Optional[List[Hashable]] = None,
+        col_positions: Optional[List[int]] = None,
     ):
         """
         Lazily select columns or rows from given indices.
@@ -128,11 +129,11 @@ class cuDFOnRayDataframe(PandasOnRayDataframe):
         row_labels : list of hashable, optional
             The row labels to extract.
         row_positions : list of int, optional
-            The row indices to extract.
+            The row positions to extract.
         col_labels : list of hashable, optional
             The column labels to extract.
         col_positions : list of int, optional
-            The column indices to extract.
+            The column positions to extract.
 
         Returns
         -------
@@ -142,7 +143,7 @@ class cuDFOnRayDataframe(PandasOnRayDataframe):
         Notes
         -----
         If both `row_labels` and `row_positions` are set, `row_labels` will be used.
-        The same rule applied to `col_labels` and `col_positions`.
+        The same rule applies to `col_labels` and `col_positions`.
         """
         if isinstance(row_positions, slice) and (
             row_positions == slice(None) or row_positions == slice(0, None)

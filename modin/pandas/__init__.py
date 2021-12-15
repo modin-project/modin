@@ -12,6 +12,14 @@
 # governing permissions and limitations under the License.
 
 import pandas
+from enum import Enum
+
+
+class Axis(Enum):
+    ROW_WISE = 0
+    COL_WISE = 1
+    CELL_WISE = None
+
 
 __pandas_version__ = "1.3.4"
 
