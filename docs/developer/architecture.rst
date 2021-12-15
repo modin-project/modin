@@ -204,6 +204,10 @@ documentation page on :doc:`contributing </developer/contributing>`.
     - Uses native python execution - mainly used for debugging.
     - The storage format is `pandas` and the in-memory partition type is a pandas DataFrame.
     - For more information on the execution path, see the :doc:`pandas on Python </flow/modin/core/execution/python/implementations/pandas_on_python/index>` page.
+- :doc:`pandas on Ray` (experimental)
+    - Uses the Ray_ execution framework.
+    - The storage format is `pandas` and the in-memory partition type is a pandas DataFrame.
+    - For more information on the execution path, see the :doc:`pandas on Ray </flow/modin/experimental/core/execution/ray/implementations/pandas_on_ray/index>` page.
 - :doc:`OmniSci on Native </developer/using_omnisci>` (experimental)
     - Uses OmniSciDB as an engine.
     - The storage format is `omnisci` and the in-memory partition type is a pyarrow Table. When defaulting to pandas, the pandas DataFrame is used.
