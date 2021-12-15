@@ -101,7 +101,15 @@ classes for reading files of different formats.
 IO dispatcher examples
 ======================
 - .. autoclass:: modin.core.io.text.csv_glob_dispatcher.CSVDispatcher
+- .. autoclass:: modin.core.io.text.csv_glob_dispatcher.JSONDispatcher
+- .. autoclass:: modin.core.io.text.csv_glob_dispatcher.FWFDispatcher
+- .. autoclass:: modin.core.io.text.csv_glob_dispatcher.ExcelDispatcher
+- .. autoclass:: modin.core.io.text.csv_glob_dispatcher.FeatherDispatcher
+- .. autoclass:: modin.core.io.text.csv_glob_dispatcher.HDFDispatcher
+- .. autoclass:: modin.core.io.text.csv_glob_dispatcher.ParquetDispatcher
+- .. autoclass:: modin.core.io.text.csv_glob_dispatcher.SQLDispatcher
 - .. autoclass:: modin.core.io.text.csv_glob_dispatcher.CSVGlobDispatcher
+- .. autoclass:: modin.core.io.text.csv_glob_dispatcher.PickleExperimentalDispatcher
 
 Handling ``skiprows`` Parameter
 '''''''''''''''''''''''''''''''

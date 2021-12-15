@@ -17,7 +17,8 @@ be returned.
     If you are interested in the data parsing mechanism implementation details, please refer
     to the source code documentation.
 
-Examples
---------
-- .. autoclass:: modin.core.storage_formats.pandas.parsers.PandasCSVParser
-- .. autoclass:: modin.core.storage_formats.pandas.parsers.PandasCSVGlobParser
+Public API
+''''''''''
+
+.. automodule:: modin.core.storage_formats.pandas.parsers
+    :members:

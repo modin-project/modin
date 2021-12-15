@@ -55,5 +55,15 @@ dispatching all of the further function calls.
 
 Factory examples
 ================
+- .. autoclass:: modin.core.execution.dispatching.factories.factories.PandasOnPythonFactory
 - .. autoclass:: modin.core.execution.dispatching.factories.factories.PandasOnRayFactory
+- .. autoclass:: modin.core.execution.dispatching.factories.factories.PandasOnDaskFactory
+- .. autoclass:: modin.core.execution.dispatching.factories.factories.ExperimentalPandasOnPythonFactory
 - .. autoclass:: modin.core.execution.dispatching.factories.factories.ExperimentalPandasOnRayFactory
+- .. autoclass:: modin.core.execution.dispatching.factories.factories.ExperimentalPandasOnDaskFactory
+- .. autoclass:: modin.core.execution.dispatching.factories.factories.ExperimentalOmnisciOnNativeFactory
+- .. autoclass:: modin.core.execution.dispatching.factories.factories.ExperimentalPyarrowOnRayFactory
+- .. autoclass:: modin.core.execution.dispatching.factories.factories.CudfOnRayFactory
+- .. autoclass:: modin.core.execution.dispatching.factories.factories.ExperimentalPandasOnCloudpythonFactory
+- .. autoclass:: modin.core.execution.dispatching.factories.factories.ExperimentalPandasOnCloudrayFactory
+- .. autoclass:: modin.core.execution.dispatching.factories.factories.ExperimentalOmnisciOnCloudnativeFactory
