@@ -54,9 +54,7 @@ class CSVGlobDispatcher(CSVDispatcher):
         # Ensures that the file is a string file path. Otherwise, default to pandas.
         filepath_or_buffer = cls.get_path_or_buffer(filepath_or_buffer)
         if isinstance(filepath_or_buffer, str):
-            is_folder = filepath_or_buffer.endswith("/") or filepath_or_buffer.endswith(
-                "\\"
-            )
+            is_folder = filepath_or_buffer.endswith(os.sep)
             if "*" not in filepath_or_buffer and not is_folder:
                 warnings.warn(
                     "Shell-style wildcard '*' must be in the filename pattern in order to read multiple "
