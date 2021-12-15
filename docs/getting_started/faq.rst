@@ -60,7 +60,7 @@ Modin is logically separated into different layers that represent the hierarchy 
 typical Database Management System. User queries which perform data transformation, 
 data ingress or data egress pass through the Modin query compiler which translates 
 queries from the top-level pandas API Layer that users interact with to the Modin Core 
-:doc:`DataFrame </supported_apis/dataframe_supported>` layer. 
+:py:class:`~modin.pandas.dataframe.DataFrame` layer. 
 The Modin Core DataFrame is our efficient DataFrame implementation that utilizes a partitioning schema 
 which allows for distributing tasks and queries. From here, the Modin DataFrame works with engines like
 Ray or Dask to execute computation, and then return the results to the user.
