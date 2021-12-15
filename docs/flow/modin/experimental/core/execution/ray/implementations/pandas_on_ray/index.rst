@@ -4,7 +4,7 @@ ExperimentalPandasOnRay Execution
 =================================
 
 `ExperimentalPandasOnRay` execution keeps the underlying mechanisms of :doc:`PandasOnRay </flow/modin/core/execution/ray/implementations/pandas_on_ray/index>`
-execution architecturally unchanged and adds experimental features of ``Data Transformation``, ``Data Ingress`` and ``Data Egress`` (e.g. `read_pickle_distributed`).
+execution architecturally unchanged and adds experimental features of ``Data Transformation``, ``Data Ingress`` and ``Data Egress`` (e.g. :py:func:`~modin.experimental.pandas.read_pickle_distributed`).
 
 PandasOnRay and ExperimentalPandasOnRay differences
 ---------------------------------------------------
