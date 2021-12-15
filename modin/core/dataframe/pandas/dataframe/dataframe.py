@@ -2226,8 +2226,8 @@ class PandasDataframe(object):
             new_partitions, new_index, new_columns, new_lengths, new_widths, new_dtypes
         )
 
-    @lazy_metadata_decorator(apply_axis="opposite", axis_arg=0)
-    # @lazy_metadata_decorator(apply_axis="both")
+    # @lazy_metadata_decorator(apply_axis="opposite", axis_arg=0)
+    @lazy_metadata_decorator(apply_axis="both")
     def groupby_reduce(
         self,
         axis,
