@@ -21,7 +21,7 @@ class Axis(Enum):
     CELL_WISE = None
 
 
-__pandas_version__ = "1.3.4"
+__pandas_version__ = "1.3.5"
 
 if pandas.__version__ != __pandas_version__:
     import warnings

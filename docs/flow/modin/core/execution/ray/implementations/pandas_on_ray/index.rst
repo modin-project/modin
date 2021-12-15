@@ -1,10 +1,12 @@
+:orphan:
+
 PandasOnRay Execution
 =====================
 
 Queries that perform data transformation, data ingress or data egress using the `pandas on Ray` execution
 pass through the Modin components detailed below.
 
-To enable `pandas on Ray` execution, please refer to the usage section in :doc:`pandas on Ray </UsingPandasonRay/index>`.
+To enable `pandas on Ray` execution, please refer to the usage section in :doc:`pandas on Ray </developer/using_pandas_on_ray>`.
 
 Data Transformation
 '''''''''''''''''''

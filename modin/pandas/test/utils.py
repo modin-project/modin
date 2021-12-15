@@ -11,17 +11,20 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
+import re
 import pytest
 import numpy as np
 import math
 import pandas
+import itertools
 from pandas.testing import (
     assert_series_equal,
     assert_frame_equal,
     assert_index_equal,
     assert_extension_array_equal,
 )
-from modin.config.envvars import NPartitions
+from pandas.core.dtypes.common import is_list_like
+from modin.config import MinPartitionSize, NPartitions
 import modin.pandas as pd
 from modin.utils import to_pandas, try_cast_to_pandas
 from modin.config import TestDatasetSize, TrackFileLeaks
@@ -209,11 +212,11 @@ test_data_categorical_keys = list(test_data_categorical.keys())
 
 # Fully fill all of the partitions used in tests.
 test_data_large_categorical_dataframe = {
-    i: pandas.Categorical(np.arange(NPartitions.get() * 32))
-    for i in range(NPartitions.get() * 32)
+    i: pandas.Categorical(np.arange(NPartitions.get() * MinPartitionSize.get()))
+    for i in range(NPartitions.get() * MinPartitionSize.get())
 }
 test_data_large_categorical_series_values = [
-    pandas.Categorical(np.arange(NPartitions.get() * 32))
+    pandas.Categorical(np.arange(NPartitions.get() * MinPartitionSize.get()))
 ]
 test_data_large_categorical_series_keys = ["categorical_series"]
 
@@ -1099,10 +1102,17 @@ def check_file_leaks(func):
                 try:
                     fstart.remove(item)
                 except ValueError:
-                    # ignore files in /proc/, as they have nothing to do with
-                    # modin reading any data (and this is what we care about)
-                    if not item[0].startswith("/proc/"):
-                        leaks.append(item)
+                    # Ignore files in /proc/, as they have nothing to do with
+                    # modin reading any data (and this is what we care about).
+                    if item[0].startswith("/proc/"):
+                        continue
+                    # Ignore files in /tmp/ray/session_*/logs (ray session logs)
+                    # because Ray intends to keep these logs open even after
+                    # work has been done.
+                    if re.search(r"/tmp/ray/session_.*/logs", item[0]):
+                        continue
+                    leaks.append(item)
+
             assert (
                 not leaks
             ), f"Unexpected open handles left for: {', '.join(item[0] for item in leaks)}"
@@ -1349,3 +1359,14 @@ def make_default_file(file_type: str):
         return filename
 
     return _make_default_file, filenames
+
+
+def dict_equals(dict1, dict2):
+    """Check whether two dictionaries are equal and raise an ``AssertionError`` if they aren't."""
+    for key1, key2 in itertools.zip_longest(sorted(dict1), sorted(dict2)):
+        assert (key1 == key2) or (np.isnan(key1) and np.isnan(key2))
+        value1, value2 = dict1[key1], dict2[key2]
+        if is_list_like(value1):
+            np.testing.assert_array_equal(value1, value2)
+        else:
+            assert value1 == value2

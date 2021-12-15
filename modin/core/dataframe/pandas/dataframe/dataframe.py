@@ -31,6 +31,7 @@ from modin.core.storage_formats.pandas.parsers import (
 )
 from modin.core.dataframe.base.dataframe.dataframe import ModinDataframe
 from modin.pandas.indexing import is_range_like
+from modin.pandas.utils import is_full_grab_slice
 from modin.pandas import Axis
 
 
@@ -954,12 +955,7 @@ class PandasDataframe(ModinDataframe):
         if isinstance(indices, slice) or (is_range_like(indices) and indices.step == 1):
             # Converting range-like indexer to slice
             indices = slice(indices.start, indices.stop, indices.step)
-            # Detecting full-axis grab
-            if (
-                indices.start in (None, 0)
-                and indices.step in (None, 1)
-                and (indices.stop is None or indices.stop >= len(self.axes[axis]))
-            ):
+            if is_full_grab_slice(indices, sequence_len=len(self.axes[axis])):
                 return OrderedDict(
                     zip(
                         range(self._partitions.shape[axis]),
@@ -2586,10 +2582,13 @@ class PandasDataframe(ModinDataframe):
         new_partitions = self._partition_mgr_cls.lazy_map_partitions(
             self._partitions, lambda df: df.T
         ).T
-        new_dtypes = pandas.Series(
-            np.full(len(self.index), find_common_type(self.dtypes.values)),
-            index=self.index,
-        )
+        if self._dtypes is not None:
+            new_dtypes = pandas.Series(
+                np.full(len(self.index), find_common_type(self.dtypes.values)),
+                index=self.index,
+            )
+        else:
+            new_dtypes = None
         return self.__constructor__(
             new_partitions,
             self.columns,
