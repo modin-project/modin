@@ -200,7 +200,7 @@ class ModinDataframe(ABC):
         Notes
         -----
         The user-defined reduce function must reduce each window’s column
-            (row if axis=1) down to a single value.
+        (row if axis=1) down to a single value.
         """
         pass
 
