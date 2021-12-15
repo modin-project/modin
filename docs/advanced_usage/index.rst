@@ -20,15 +20,6 @@ integrated toolkit for data scientists. We are actively developing data science 
 such as DataFrame - spreadsheet integration, DataFrame algebra, progress bars, SQL queries
 on DataFrames, and more. Join the `Discourse`_ for the latest updates!
 
-Experimental APIs
------------------
-Modin also supports these APIs on top of pandas that are under active experimental development.
-
-- :py:func:`~modin.experimental.pandas.read_csv_glob` -- read multiple files in a directory
-- :py:func:`~modin.experimental.pandas.read_sql` -- add optional parameters for the database connection
-- :py:func:`~modin.experimental.pandas.read_pickle_distributed`  -- read multiple files in a directory
-- :py:meth:`~modin.experimental.pandas.DataFrame.to_pickle_distributed` -- write to multiple files in a directory
-
 Modin Spreadsheet API: Render Dataframes as Spreadsheets
 --------------------------------------------------------
 The Spreadsheet API for Modin allows you to render the dataframe as a spreadsheet to easily explore 
