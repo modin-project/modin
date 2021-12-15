@@ -39,11 +39,11 @@ def lazy_metadata_decorator(
 
     Parameters
     ----------
-    apply_axis : str
+    apply_axis : str, default: None
         The axes on which to apply the index object to the `self._partitions` lazily.
     inherit : bool, default: False
         Boolean if there is no lazy metadata propagation.
-    axis_arg : int
+    axis_arg : int, default: -1
         The index or column axis.
     transpose : bool, default: False
         Boolean for if a transpose operation is being used.
@@ -444,7 +444,7 @@ class PandasDataframe(object):
 
         Parameters
         ----------
-        axis : int
+        axis : int, default: None
             The deferred axis.
             0 for the index, 1 for the columns.
 
@@ -2226,7 +2226,8 @@ class PandasDataframe(object):
             new_partitions, new_index, new_columns, new_lengths, new_widths, new_dtypes
         )
 
-    @lazy_metadata_decorator(apply_axis="both")
+    @lazy_metadata_decorator(apply_axis="opposite", axis_arg=0)
+    # @lazy_metadata_decorator(apply_axis="both")
     def groupby_reduce(
         self,
         axis,
