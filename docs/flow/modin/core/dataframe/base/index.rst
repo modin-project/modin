@@ -1,12 +1,13 @@
 Purpose
 =======
+
 ``BaseDataframe`` serves the purpose of describing and defining the internal dataframe algebra.
 
-It is the core construction element which serves as a middle layer between high-level pandas-imitating API
-and lower-level query compiler. ``BaseDataframe`` is the interface which implementations actually translate the dataframe algebra calls to queries to the underlying compiler.
+It is the core construction element which serves as the client for :doc:`Modin query compiler</flow/modin/core/storage_formats/base/query_compiler>` and which implementations are actually executing the queries from the compiler by invoking functions over partition(s).
 
-The purpose of such translation is to reduce the vast amount of public pandas API to something smaller but sufficient.
-Query compiler level could reduce the API even further depending on the implementation.
+To execute the queries, a typical implementation also itroduces partitions and
+partition manager, interfaces for which we might consider standardising in the future.
+For now they're totally implementation-specific.
 
 Base dataframe and axis partitions are the interfaces that must be implemented by any backend that wants to be plugged in Modin.
 These classes are mostly abstract, however very simple and generic enough methods like
