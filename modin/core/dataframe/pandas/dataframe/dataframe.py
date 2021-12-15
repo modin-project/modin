@@ -35,7 +35,22 @@ def lazy_metadata_decorator(
     apply_axis=None, inherit=False, axis_arg=-1, transpose=False
 ):
     """
-    Lazily propagate metadata
+    Lazily propagate metadata for the ``PandasDataframe``.
+
+    Parameters
+    ----------
+    apply_axis : str
+        The axes on which to apply the index object to the `self._partitions` lazily.
+    inherit : bool, default: False
+        Boolean if there is no lazy metadata propagation.
+    axis_arg : int
+        The index or column axis.
+    transpose : bool, default: False
+        Boolean for if a transpose operation is being used.
+
+    Returns
+    -------
+    Wrapped Function.
     """
 
     def decorator(f):
@@ -424,6 +439,19 @@ class PandasDataframe(object):
         self._row_lengths_cache = [r for r in self._row_lengths if r != 0]
 
     def synchronize_labels(self, axis=None):
+        """
+        Set the deferred axes variables for the ``PandasDataframe``.
+
+        Parameters
+        ----------
+        axis : int
+            The deferred axis.
+            0 for the index, 1 for the columns.
+
+        Returns
+        -------
+        None.
+        """
         if axis is None:
             self._deferred_index = True
             self._deferred_column = True
