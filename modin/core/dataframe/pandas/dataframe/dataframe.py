@@ -896,8 +896,8 @@ class PandasDataframe(ModinDataframe):
             A new dataframe with the updated labels.
         """
 
-        def new_labels_mapper(x):
-            return str(x) + str(suffix)
+        def new_labels_mapper(x, suffix=str(suffix)):
+            return str(x) + suffix
 
         if axis == 0:
             return self.rename(new_row_labels=new_labels_mapper)
