@@ -16,9 +16,3 @@ be returned.
 .. note:: 
     If you are interested in the data parsing mechanism implementation details, please refer
     to the source code documentation.
-
-Public API
-''''''''''
-
-.. automodule:: modin.core.storage_formats.pandas.parsers
-    :members:
