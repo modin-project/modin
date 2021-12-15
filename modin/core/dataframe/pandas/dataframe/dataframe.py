@@ -1495,12 +1495,9 @@ class PandasDataframe(ModinDataframe):
             return label_dict
 
         def swap_labels_levels(index_tuple):
-            return tuple(
-                new_row_labels.get(label, label)
-                if isinstance(new_row_labels, dict)
-                else new_row_labels(label)
-                for label in index_tuple
-            )
+            if isinstance(new_row_labels, dict):
+                return tuple(new_row_labels.get(label, label) for label in index_tuple)
+            return tuple(new_row_labels(label) for label in index_tuple)
 
         if new_row_labels:
             swap_row_labels = swap_labels(new_row_labels)
