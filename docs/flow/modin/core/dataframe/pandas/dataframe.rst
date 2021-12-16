@@ -1,8 +1,8 @@
 PandasDataframe
 """""""""""""""
 
-``PandasDataframe`` should be a direct descendant of ``BaseDataframe`` which is being factored right now. Its purpose is to implement the abstract interfaces for usage with all ``pandas``-based :doc:`storage formats<flow/modin/core/storage_formats/index.html>`.
-``PandasDataframe`` could be inherited and augmented further by any specific implementation which needs it to take special care of some behaviour or to improve performance for certain execution engine.
+:py:class:`~modin.core.dataframe.pandas.dataframe.dataframe.PandasDataframe` should be a direct descendant of ``BaseDataframe`` which is being factored right now. Its purpose is to implement the abstract interfaces for usage with all ``pandas``-based :doc:`storage formats<flow/modin/core/storage_formats/index.html>`.
+:py:class:`~modin.core.dataframe.pandas.dataframe.dataframe.PandasDataframe` could be inherited and augmented further by any specific implementation which needs it to take special care of some behavior or to improve performance for certain execution engine.
 
 The class serves as the intermediate level
 between ``pandas`` query compiler and conforming partition manager. All queries formed
