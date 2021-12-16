@@ -7,8 +7,8 @@ Generic settings
 """"""""""""""""
 
 If you are working with a wide DataFrame and performing an operation that requires ``map`` Core Dataframe Algebra operator
-to be applied cell-wise, you may want to change the number of partitions DataFrame should partition into to avoid
-excessive amount of remote partitions, which is much greater than the number of CPUs.
+to be applied cell-wise, you may want to change the number of DataFrame partitions to avoid
+an excessive amount of remote partitions, which is much greater than the number of CPUs.
 
 .. code-block:: python
 
@@ -35,9 +35,9 @@ Operation-specific settings
 merge
 -----
 
-``merge`` operation in Modin uses broadcast join algorithm: combining a right Modin DataFrame into pandas DataFrame and
-broadcasting it to row partitions of the left Modin DataFrame. In order to minimize interprocess communication cost when doing
-inner join you may want to swap left and right DataFrames.
+``merge`` operation in Modin uses the broadcast join algorithm: combining a right Modin DataFrame into a pandas DataFrame and
+broadcasting it to the row partitions of the left Modin DataFrame. In order to minimize interprocess communication cost when doing
+an inner join you may want to swap left and right DataFrames.
 
 .. code-block:: python
 
