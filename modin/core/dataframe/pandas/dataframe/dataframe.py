@@ -458,7 +458,6 @@ class PandasDataframe(object):
             self._deferred_index = True
         else:
             self._deferred_column = True
-        return
 
     def _propagate_index_objs(self, axis=None):
         """
