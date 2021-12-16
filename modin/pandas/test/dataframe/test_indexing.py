@@ -372,6 +372,15 @@ def test_loc(data):
         modin_df.loc["NO_EXIST"]
 
 
+# This tests the bug from https://github.com/modin-project/modin/issues/3736
+def test_loc_setting_single_categorical_column():
+    modin_df = pd.DataFrame({"status": ["a", "b", "c"]}, dtype="category")
+    pandas_df = pandas.DataFrame({"status": ["a", "b", "c"]}, dtype="category")
+    modin_df.loc[1:3, "status"] = "a"
+    pandas_df.loc[1:3, "status"] = "a"
+    df_equals(modin_df, pandas_df)
+
+
 def test_loc_multi_index():
     modin_df = pd.read_csv(
         "modin/pandas/test/data/blah.csv", header=[0, 1, 2, 3], index_col=0
@@ -1437,6 +1446,7 @@ def test___getitem__(data):
         (-3, -1),
         (1, -1, 2),
         (-1, 1, -1),
+        (None, None, 2),
     ]
 
     # slice test

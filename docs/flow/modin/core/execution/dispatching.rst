@@ -35,7 +35,7 @@ underlying IO module. For more information about IO module visit :doc:`related d
 
 Factory Dispatcher
 ''''''''''''''''''
-The ``modin.core.execution.dispatching.factories.dispatcher.FactoryDispatcher`` class provides 
+The :py:class:`~modin.core.execution.dispatching.factories.dispatcher.FactoryDispatcher` class provides 
 public methods whose interface corresponds to pandas IO functions, the only difference is that they return `QueryCompiler` of the
 selected storage format instead of high-level :py:class:`~modin.pandas.dataframe.DataFrame`. ``FactoryDispatcher`` is responsible for routing
 these IO calls to the factory which represents the selected execution.
@@ -46,9 +46,15 @@ trace would be the following:
 .. figure:: /img/factory_dispatching.svg
     :align: center
 
-``modin.pandas.read_csv`` calls ``FactoryDispatcher.read_csv``, which calls ``.read_csv``
+``modin.pandas.read_csv`` calls ``FactoryDispatcher.read_csv``, which calls ``._read_csv``
 function of the factory of the selected execution, in our case it's ``PandasOnRayFactory._read_csv``,
 which in turn forwards this call to the actual implementation of ``read_csv`` — to the
 ``PandasOnRayIO.read_csv``. The result of ``modin.pandas.read_csv`` will return a high-level Modin
 DataFrame with the appropriate `QueryCompiler` bound to it, which is responsible for
 dispatching all of the further function calls.
+
+Public API
+''''''''''
+
+.. automodule:: modin.core.execution.dispatching.factories.factories
+    :members:

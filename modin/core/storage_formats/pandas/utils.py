@@ -13,6 +13,7 @@
 
 """Contains utility functions for frame partitioning."""
 
+from modin.config import MinPartitionSize
 import numpy as np
 import pandas
 
@@ -38,7 +39,12 @@ def get_default_chunksize(length, num_splits):
     )
 
 
-def compute_chunksize(df, num_splits, default_block_size=32, axis=None):
+def compute_chunksize(
+    df,
+    num_splits,
+    default_block_size=None,
+    axis=None,
+):
     """
     Compute the number of rows and/or columns to include in each partition.
 
@@ -48,8 +54,9 @@ def compute_chunksize(df, num_splits, default_block_size=32, axis=None):
         DataFrame to split.
     num_splits : int
         Number of splits to separate the DataFrame into.
-    default_block_size : int, default: 32
+    default_block_size : int, optional
         Minimum number of rows/columns in a single split.
+        If not specified, the value is assumed equal to ``MinPartitionSize``.
     axis : int, optional
         Axis to split across. If not specified - split accros both axes.
 
@@ -59,6 +66,9 @@ def compute_chunksize(df, num_splits, default_block_size=32, axis=None):
         If axis is 1 or 0, returns an integer number of rows/columns to split the
         DataFrame. If axis is None, returns a tuple containing both.
     """
+    default_block_size = (
+        MinPartitionSize.get() if default_block_size is None else default_block_size
+    )
     if axis == 0 or axis is None:
         row_chunksize = get_default_chunksize(len(df.index), num_splits)
         # Take the min of the default and the memory-usage chunksize first to avoid a
