@@ -123,6 +123,10 @@ class ExperimentalPandasOnRayIO(PandasOnRayIO):
         """
         Read SQL query or database table into a DataFrame.
 
+        The function extended with `Spark-like parameters <https://spark.apache.org/docs/2.0.0/api/R/read.jdbc.html>`_
+        such as ``partition_column``, ``lower_bound`` and ``upper_bound``. With these
+        parameters, the user will be able to specify how to partition the imported data.
+
         Parameters
         ----------
         sql : str or SQLAlchemy Selectable (select or text object)

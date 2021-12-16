@@ -231,10 +231,9 @@ def read_pickle_distributed(
     """
     Load pickled pandas object from files.
 
-    In experimental mode, we can use `*` in the filename. The files must contain
-    parts of one dataframe, which can be obtained, for example, by
-    `to_pickle_distributed` function.
-    Note: the number of partitions is equal to the number of input files.
+    This experimental feature provides parallel reading from multiple pickle files which are
+    defined by glob pattern. The files must contain parts of one dataframe, which can be
+    obtained, for example, by `to_pickle_distributed` function.
 
     Parameters
     ----------
@@ -256,6 +255,10 @@ def read_pickle_distributed(
     Returns
     -------
     unpickled : same type as object stored in file
+
+    Notes
+    -----
+    The number of partitions is equal to the number of input files.
     """
     Engine.subscribe(_update_engine)
     assert IsExperimental.get(), "This only works in experimental mode"
@@ -273,8 +276,8 @@ def to_pickle_distributed(
     """
     Pickle (serialize) object to file.
 
-    If `*` in the filename all partitions are written to their own separate file,
-    otherwise default pandas implementation is used.
+    This experimental feature provides parallel writing into multiple pickle files which are
+    defined by glob pattern, otherwise (without glob pattern) default pandas implementation is used.
 
     Parameters
     ----------
