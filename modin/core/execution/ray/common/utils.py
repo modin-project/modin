@@ -17,7 +17,6 @@ import os
 import sys
 import psutil
 import warnings
-import asyncio
 
 import ray
 
@@ -206,54 +205,3 @@ def initialize_ray(
         NPartitions._put(num_gpus)
     else:
         NPartitions._put(num_cpus)
-
-
-@ray.remote
-class SignalActor:  # pragma: no cover
-    """
-    Help synchronize across tasks and actors on cluster.
-
-    For details see: https://docs.ray.io/en/latest/advanced.html?highlight=signalactor#multi-node-synchronization-using-an-actor
-
-    Parameters
-    ----------
-    event_count : int
-        Number of events required for synchronization.
-    """
-
-    def __init__(self, event_count: int):
-        self.events = [asyncio.Event() for _ in range(event_count)]
-
-    def send(self, event_idx: int):
-        """
-        Indicate that event with `event_idx` has occured.
-
-        Parameters
-        ----------
-        event_idx : int
-        """
-        self.events[event_idx].set()
-
-    async def wait(self, event_idx: int):
-        """
-        Wait until event with `event_idx` has occured.
-
-        Parameters
-        ----------
-        event_idx : int
-        """
-        await self.events[event_idx].wait()
-
-    def is_set(self, event_idx: int) -> bool:
-        """
-        Check that event with `event_idx` had occured or not.
-
-        Parameters
-        ----------
-        event_idx : int
-
-        Returns
-        -------
-        bool
-        """
-        return self.events[event_idx].is_set()

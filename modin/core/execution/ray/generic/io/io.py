@@ -18,7 +18,7 @@ import os
 import pandas
 
 from modin.core.io import BaseIO
-from modin.core.execution.ray.common.utils import SignalActor
+from modin.core.execution.ray.common.task_wrapper import SignalActor
 import ray
 
 
