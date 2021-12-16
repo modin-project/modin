@@ -62,6 +62,11 @@ class ModinDataframe(ABC):
         -------
         ModinDataframe
              A new ModinDataframe from the mask provided.
+
+        Notes
+        -----
+        If both row_labels and row_positions are provided, an exception is raised.
+        The same rule applies for col_labels and col_positions.
         """
         pass
 
@@ -125,7 +130,8 @@ class ModinDataframe(ABC):
             The axis to filter over.
         condition : callable(row|col) -> bool
             The function to use for the filter. This function should filter the
-            data itself. It accepts either a row or column (depending on the axis argument) and returns True to keep the row/col, and False to drop it.
+            data itself. It accepts either a row or column (depending on the axis argument) and
+            returns True to keep the row/col, and False to drop it.
 
         Returns
         -------
@@ -177,7 +183,8 @@ class ModinDataframe(ABC):
         result_schema: Optional[Dict[Hashable, type]] = None,
     ) -> "ModinDataframe":
         """
-        Apply a sliding window operator that acts as a GROUPBY on each window, reducing each window to a single row (column).
+        Apply a sliding window operator that acts as a GROUPBY on each window, reducing each window
+        to a single row (column).
 
         Parameters
         ----------
@@ -283,13 +290,17 @@ class ModinDataframe(ABC):
     def tree_reduce(
         self,
         axis: Union[int, Axis],
-        function: Callable,
+        map_func: Callable,
+        reduce_func: Optional[Callable] = None,
         dtypes: Optional[str] = None,
     ) -> "ModinDataframe":
         """
-        Perform a user-defined per-column aggregation, where each column reduces down to a single value using a tree-reduce computation pattern.
+        Perform a user-defined per-column aggregation, where each column reduces down to a single
+        value using a tree-reduce computation pattern.
 
-        The function is applied first over multiple partitions of a column, and then iteratively to the results until only a single value remains.
+        The map function is applied first over multiple partitions of a column, and then the reduce
+        function (if specified, otherwise the map function is applied again) is applied to the
+        results to produce a single value.
 
         Parameters
         ----------

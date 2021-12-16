@@ -280,7 +280,6 @@ class OmnisciOnNativeDataframe(PandasDataframe):
         Allow users to perform selection and projection on the row and column labels (named notation),
         in addition to the row and column number (positional notation).
 
-
         Parameters
         ----------
         row_labels : list of hashable, optional
@@ -296,7 +295,29 @@ class OmnisciOnNativeDataframe(PandasDataframe):
         -------
         OmnisciOnNativeDataframe
             The new frame.
+
+        Notes
+        -----
+        If both row_labels and row_positions are provided, an exception is raised.
+        The same rule applies for col_labels and col_positions.
         """
+        if (
+            col_labels is None
+            and col_positions is None
+            and row_labels is None
+            and row_positions is None
+        ):
+            raise ValueError(
+                "None of col_labels, col_positions, row_labels, or row_positions were provided. Please specify at least one."
+            )
+        if not (row_labels is None or row_positions is None):
+            raise ValueError(
+                "Both row_labels and row_positions were provided - please provide only one of row_labels and row_positions."
+            )
+        if not (col_labels is None or col_positions is None):
+            raise ValueError(
+                "Both col_labels and col_positions were provided - please provide only one of col_labels and col_positions."
+            )
         base = self
 
         if col_labels is not None or col_positions is not None:
