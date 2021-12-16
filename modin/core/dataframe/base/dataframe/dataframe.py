@@ -52,11 +52,11 @@ class ModinDataframe(ABC):
         row_labels : list of hashable, optional
             The row labels to extract.
         row_positions : list of int, optional
-            The row indices to extract.
+            The row positions to extract.
         col_labels : list of hashable, optional
             The column labels to extract.
         col_positions : list of int, optional
-            The column indices to extract.
+            The column positions to extract.
 
         Returns
         -------
@@ -246,8 +246,8 @@ class ModinDataframe(ABC):
         No communication between groups is allowed in this algebra implementation.
 
         The number of rows (columns if axis=1) returned by the user-defined function
-            passed to the groupby may be at most the number of rows in the group, and
-            may be as small as a single row.
+        passed to the groupby may be at most the number of rows in the group, and
+        may be as small as a single row.
 
         Unlike the pandas API, an intermediate “GROUP BY” object is not present in this
         algebra implementation.
@@ -407,7 +407,7 @@ class ModinDataframe(ABC):
         Notes
         -----
         The concat operator incurs fixed overheads, and so this algebra places no
-            limit to the number of dataframes that may be concatenated in this way.
+        limit to the number of dataframes that may be concatenated in this way.
         """
         pass
 
@@ -423,9 +423,9 @@ class ModinDataframe(ABC):
 
         Notes
         -----
-        Transposing a dataframe is expensive, and thus, while the axes are swapped
-            logically immediately, the physical swap does not occur until absolutely necessary,
-            which helps motivate the axis argument to the other operators in this algebra.
+        Transposing a dataframe is expensive, and so it is performed lazily. The axes are swapped
+        logically immediately, but the physical swap does not occur until absolutely necessary,
+        which helps motivate the axis argument to the other operators in this algebra.
         """
         pass
 
@@ -446,8 +446,8 @@ class ModinDataframe(ABC):
 
         Notes
         -----
-        When multiple column labels are specified, a heirarchical set of labels is created, ordered by the ordering
-            of labels in the input.
+        When multiple column labels are specified, a hierarchical set of labels is created, ordered by the ordering
+        of labels in the input.
         """
         pass
 
@@ -464,7 +464,7 @@ class ModinDataframe(ABC):
         Notes
         -----
         In the case that the dataframe has hierarchical labels, all label "levels” are inserted into the dataframe
-            in the order they occur in the labels, with the outermost being in position 0.
+        in the order they occur in the labels, with the outermost being in position 0.
         """
         pass
 
@@ -481,9 +481,9 @@ class ModinDataframe(ABC):
         Parameters
         ----------
         new_row_labels : dictionary or callable, optional
-            Mapping from old row labels to new labels.
+            Mapping or callable that relates old row labels to new labels.
         new_col_labels : dictionary or callable, optional
-            Mapping from old col labels to new labels.
+            Mapping or callable that relates old col labels to new labels.
         level : int or list of ints, optional
             Level(s) whose row labels to replace.
 
@@ -502,7 +502,7 @@ class ModinDataframe(ABC):
     def sort_by(
         self,
         axis: Union[int, Axis],
-        columns: Union[str, List[str]],
+        labels: Union[str, List[str]],
         ascending: bool = True,
     ) -> "ModinDataframe":
         """
@@ -512,8 +512,10 @@ class ModinDataframe(ABC):
         ----------
         axis : int or modin.pandas.Axis
             The axis to perform the sort over.
-        columns : string or list of strings
-            Column label(s) to use to determine lexicographical ordering.
+        labels : string or list of strings
+            Column (row if axis=1) label(s) to use to determine lexicographical ordering. If multiple
+            columns (rows if axis=1) are provided, the sort is performed on the first column (row if axis=1),
+            with ties broken by the other columns (rows if axis=1) provided.
         ascending : boolean, default: True
             Whether to sort in ascending or descending order.
 

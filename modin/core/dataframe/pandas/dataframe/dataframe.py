@@ -434,11 +434,11 @@ class PandasDataframe(ModinDataframe):
         row_labels : list of hashable, optional
             The row labels to extract.
         row_positions : list-like of ints, optional
-            The row indices to extract.
+            The row positions to extract.
         col_labels : list of hashable, optional
             The column labels to extract.
         col_positions : list-like of ints, optional
-            The column indices to extract.
+            The column positions to extract.
 
         Returns
         -------
@@ -1384,7 +1384,7 @@ class PandasDataframe(ModinDataframe):
         Notes
         -----
         The user-defined reduce function must reduce each window’s column
-            (row if axis=1) down to a single value.
+        (row if axis=1) down to a single value.
         """
         pass
 
@@ -1466,10 +1466,10 @@ class PandasDataframe(ModinDataframe):
         Notes
         -----
         During the join, this dataframe is considered the left, while the other is
-            treated as the right.
+        treated as the right.
 
         Only inner joins, left outer, right outer, and full outer joins are currently supported.
-            Support for other join types (e.g. natural join) may be implemented in the future.
+        Support for other join types (e.g. natural join) may be implemented in the future.
         """
         pass
 
@@ -1484,10 +1484,10 @@ class PandasDataframe(ModinDataframe):
 
         Parameters
         ----------
-        new_row_labels : dict or callable, default: None
-            Mapping from old row labels to new labels.
-        new_col_labels : dict or callable, default: None
-            Mapping from old col labels to new labels.
+        new_row_labels : dictionary or callable, optional
+            Mapping or callable that relates old row labels to new labels.
+        new_col_labels : dictionary or callable, optional
+            Mapping or callable that relates old col labels to new labels.
         level : int, optional
             Level whose row labels to replace.
 
@@ -2392,11 +2392,11 @@ class PandasDataframe(ModinDataframe):
         No communication between groups is allowed in this algebra implementation.
 
         The number of rows (columns if axis=1) returned by the user-defined function
-            passed to the groupby may be at most the number of rows in the group, and
-            may be as small as a single row.
+        passed to the groupby may be at most the number of rows in the group, and
+        may be as small as a single row.
 
         Unlike the pandas API, an intermediate “GROUP BY” object is not present in this
-            algebra implementation.
+        algebra implementation.
         """
         pass
 
