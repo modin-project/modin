@@ -220,6 +220,10 @@ documentation page on :doc:`contributing </developer/contributing>`.
     - Uses native python execution - mainly used for debugging.
     - The storage format is `pandas` and the in-memory partition type is a pandas DataFrame.
     - For more information on the execution path, see the :doc:`pandas on Python </flow/modin/core/execution/python/implementations/pandas_on_python/index>` page.
+- :doc:`pandas on Ray` (experimental)
+    - Uses the Ray_ execution framework.
+    - The storage format is `pandas` and the in-memory partition type is a pandas DataFrame.
+    - For more information on the execution path, see the :doc:`experimental pandas on Ray </flow/modin/experimental/core/execution/ray/implementations/pandas_on_ray/index>` page.
 - :doc:`OmniSci on Native </developer/using_omnisci>` (experimental)
     - Uses OmniSciDB as an engine.
     - The storage format is `omnisci` and the in-memory partition type is a pyarrow Table. When defaulting to pandas, the pandas DataFrame is used.
@@ -326,7 +330,7 @@ details. The documentation covers most modules, with more docs being added every
    │   │   │   │   │       └─── :doc:`omnisci_on_native </flow/modin/experimental/core/execution/native/implementations/omnisci_on_native/index>`
    │   │   │   │   └───ray
    │   │   │   │       └───implementations
-   │   │   │   │           ├─── :doc:`pandas_on_ray </flow/modin/experimental/core/execution/ray/implementations/pandas_on_ray>`
+   │   │   │   │           ├─── :doc:`pandas_on_ray </flow/modin/experimental/core/execution/ray/implementations/pandas_on_ray/index>`
    │   │   │   │           └─── :doc:`pyarrow_on_ray </flow/modin/experimental/core/execution/ray/implementations/pyarrow_on_ray>`
    │   │   │   └─── :doc:`storage_formats </flow/modin/experimental/core/storage_formats/index>`
    │   │   │       └─── :doc:`omnisci </flow/modin/experimental/core/storage_formats/omnisci/index>`
