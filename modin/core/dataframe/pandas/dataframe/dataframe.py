@@ -29,10 +29,9 @@ from modin.error_message import ErrorMessage
 from modin.core.storage_formats.pandas.parsers import (
     find_common_type_cat as find_common_type,
 )
-from modin.core.dataframe.base.dataframe.dataframe import ModinDataframe
+from modin.core.dataframe.base.dataframe.dataframe import ModinDataframe, Axis
 from modin.pandas.indexing import is_range_like
 from modin.pandas.utils import is_full_grab_slice
-from modin.pandas import Axis
 
 
 class PandasDataframe(ModinDataframe):
@@ -1252,7 +1251,7 @@ class PandasDataframe(ModinDataframe):
 
         Parameters
         ----------
-        axis : int or modin.pandas.Axis
+        axis : int or modin.core.dataframe.base.dataframe.Axis
             The axis to perform the reduce over.
         function : callable(row|col) -> single value
             The reduce function to apply to each column.
@@ -1289,7 +1288,7 @@ class PandasDataframe(ModinDataframe):
 
         Parameters
         ----------
-        axis : int or modin.pandas.Axis
+        axis : int or modin.core.dataframe.base.dataframe.Axis
             The axis to perform the tree reduce over.
         map_func : callable(row|col) -> row|col
             Callable function to map the dataframe.
@@ -1365,7 +1364,7 @@ class PandasDataframe(ModinDataframe):
 
         Parameters
         ----------
-        axis : int or modin.pandas.Axis
+        axis : int or modin.core.dataframe.base.dataframe.Axis
             The axis to slide over.
         reduce_fn : callable(rowgroup|colgroup) -> row|col
             The reduce function to apply over the data.
@@ -1447,7 +1446,7 @@ class PandasDataframe(ModinDataframe):
 
         Parameters
         ----------
-        axis : int or modin.pandas.Axis
+        axis : int or modin.core.dataframe.base.dataframe.Axis
             The axis to perform the join on.
         condition : callable
             Function that determines which rows should be joined. The condition can be a
@@ -1551,7 +1550,7 @@ class PandasDataframe(ModinDataframe):
 
         Parameters
         ----------
-        axis : int or modin.pandas.Axis
+        axis : int or modin.core.dataframe.base.dataframe.Axisame.base.dataframe.Axis
             The axis to perform the sort over.
         columns : string or list
             Column label(s) to use to determine lexicographical ordering.
@@ -1571,7 +1570,7 @@ class PandasDataframe(ModinDataframe):
 
         Parameters
         ----------
-        axis : int or modin.pandas.Axis
+        axis : int or modin.core.dataframe.base.dataframe.Axisame.base.dataframe.Axis
             The axis to filter over.
         condition : callable(row|col) -> bool
             The function to use for the filter. This function should filter the
@@ -1634,7 +1633,7 @@ class PandasDataframe(ModinDataframe):
 
         Parameters
         ----------
-        axis : int or modin.pandas.Axis
+        axis : int or modin.core.dataframe.base.dataframe.Axisame.base.dataframe.Axisame.base.dataframe.Axis
             The axis specifying how to explode. If axis=1, explode according
             to columns.
         func : callable
@@ -2293,7 +2292,7 @@ class PandasDataframe(ModinDataframe):
 
         Parameters
         ----------
-        axis : int or modin.pandas.Axis
+        axis : int or modin.core.dataframe.base.dataframe.Axisame.base.dataframe.Axisame.base.dataframe.Axis
             Axis to concatenate over.
         others : list
             List of Modin DataFrames to concatenate with.
@@ -2370,7 +2369,7 @@ class PandasDataframe(ModinDataframe):
 
         Parameters
         ----------
-        axis : int or modin.pandas.Axis
+        axis : int or modin.core.dataframe.base.dataframe.Axisame.base.dataframe.Axis
             The axis to apply the grouping over.
         by : string or list of strings
             One or more column labels to use for grouping.

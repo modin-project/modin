@@ -14,6 +14,7 @@
 """Module provides ``OmnisciOnNativeDataframe`` class implementing lazy frame."""
 
 from modin.core.dataframe.pandas.dataframe.dataframe import PandasDataframe
+from modin.core.dataframe.base.dataframe.dataframe import Axis
 from modin.experimental.core.storage_formats.omnisci.query_compiler import (
     DFAlgQueryCompiler,
 )
@@ -23,7 +24,6 @@ from pandas.core.indexes.api import ensure_index, Index, MultiIndex, RangeIndex
 from pandas.core.dtypes.common import get_dtype, is_list_like, is_bool_dtype
 from modin.error_message import ErrorMessage
 from modin.pandas.indexing import is_range_like
-from modin.pandas import Axis
 import pandas as pd
 from typing import List, Hashable, Optional, Tuple, Union
 
@@ -1142,7 +1142,7 @@ class OmnisciOnNativeDataframe(PandasDataframe):
 
         Parameters
         ----------
-        axis : int or modin.pandas.Axis
+        axis : int or modin.core.dataframe.base.dataframe.Axis
             The axis to concatenate along.
         other_modin_frames : list of OmnisciOnNativeDataframe
             Frames to concat.
