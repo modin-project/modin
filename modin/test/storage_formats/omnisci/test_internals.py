@@ -86,3 +86,34 @@ sys.modules['dask'] = None
 
     if res.returncode != 0:
         pytest.fail(str(res.stderr))
+
+
+def test_compatibility_omnisci_with_pyarrow_gandiva():
+    """
+    Test that PyDbEngine and pyarrow.gandiva packages are still incompatible.
+
+    At the moment of writing this test PyDbEngine (5.8.0) and pyarrow.gandiva (3.0.0) are incompatible.
+    If this test appears to fail, it means that these packages are now compatible, if it's so,
+    change the failing assert statement and this doc-string accordingly.
+    """
+    res = subprocess.run(
+        [
+            sys.executable,
+            "-c",
+            """
+from modin.experimental.core.execution.native.implementations.omnisci_on_native.utils import PyDbEngine
+import pyarrow.gandiva
+""",
+        ],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    )
+    assert (
+        res.returncode != 0
+    ), "PyDbEngine and pyarrow.gandiva are now compatible! Please check the test's doc-string for further instructions."
+
+    if res.returncode != 0:
+        error_msg = res.stderr.decode("utf-8")
+        assert (
+            error_msg.find("LLVM ERROR") != -1
+        ), f"Expected to fail because LLVM error, but failed because of:\n{error_msg}"
