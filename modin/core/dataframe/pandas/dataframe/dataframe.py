@@ -61,7 +61,7 @@ def lazy_metadata_decorator(
             for obj in (
                 [self]
                 + [o for o in args if isinstance(o, PandasDataframe)]
-                + [o for _, o in kwargs.items() if isinstance(o, PandasDataframe)]
+                + [v for v in kwargs.values() if isinstance(v, PandasDataframe)]
                 + [
                     d
                     for o in args
@@ -77,36 +77,35 @@ def lazy_metadata_decorator(
                     if isinstance(d, PandasDataframe)
                 ]
             ):
-                if apply_axis is not None:
-                    if apply_axis == "both":
-                        if obj._deferred_index and obj._deferred_column:
-                            obj._propagate_index_objs(axis=None)
-                        elif obj._deferred_index:
-                            obj._propagate_index_objs(axis=0)
-                        elif obj._deferred_column:
-                            obj._propagate_index_objs(axis=1)
-                    elif apply_axis == "opposite":
-                        if "axis" not in kwargs:
-                            axis = args[axis_arg]
-                        else:
-                            axis = kwargs["axis"]
-                        if axis == 0 and obj._deferred_column:
-                            obj._propagate_index_objs(axis=1)
-                        elif axis == 1 and obj._deferred_index:
-                            obj._propagate_index_objs(axis=0)
-                    elif apply_axis == "same":
-                        if "axis" not in kwargs:
-                            axis = args[axis_arg]
-                        else:
-                            axis = kwargs["axis"]
-                        if axis == 0 and obj._deferred_index:
-                            obj._propagate_index_objs(axis=0)
-                        elif axis == 1 and obj._deferred_column:
-                            obj._propagate_index_objs(axis=1)
-                    elif apply_axis == "rows":
+                if apply_axis == "both":
+                    if obj._deferred_index and obj._deferred_column:
+                        obj._propagate_index_objs(axis=None)
+                    elif obj._deferred_index:
                         obj._propagate_index_objs(axis=0)
-                    elif apply_axis == "columns":
+                    elif obj._deferred_column:
                         obj._propagate_index_objs(axis=1)
+                elif apply_axis == "opposite":
+                    if "axis" not in kwargs:
+                        axis = args[axis_arg]
+                    else:
+                        axis = kwargs["axis"]
+                    if axis == 0 and obj._deferred_column:
+                        obj._propagate_index_objs(axis=1)
+                    elif axis == 1 and obj._deferred_index:
+                        obj._propagate_index_objs(axis=0)
+                elif apply_axis == "same":
+                    if "axis" not in kwargs:
+                        axis = args[axis_arg]
+                    else:
+                        axis = kwargs["axis"]
+                    if axis == 0 and obj._deferred_index:
+                        obj._propagate_index_objs(axis=0)
+                    elif axis == 1 and obj._deferred_column:
+                        obj._propagate_index_objs(axis=1)
+                elif apply_axis == "rows":
+                    obj._propagate_index_objs(axis=0)
+                elif apply_axis == "columns":
+                    obj._propagate_index_objs(axis=1)
             result = f(self, *args, **kwargs)
             if inherit and not transpose:
                 result._deferred_index = self._deferred_index
@@ -114,7 +113,7 @@ def lazy_metadata_decorator(
             elif inherit and transpose:
                 result._deferred_index = self._deferred_column
                 result._deferred_column = self._deferred_index
-            if apply_axis == "opposite":
+            elif apply_axis == "opposite":
                 if axis == 0:
                     result._deferred_index = self._deferred_index
                 else:
