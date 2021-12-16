@@ -183,8 +183,7 @@ class ModinDataframe(ABC):
         result_schema: Optional[Dict[Hashable, type]] = None,
     ) -> "ModinDataframe":
         """
-        Apply a sliding window operator that acts as a GROUPBY on each window, reducing each window
-        to a single row (column).
+        Apply a sliding window operator that acts as a GROUPBY on each window, reducing each window to a single row (column).
 
         Parameters
         ----------
@@ -295,8 +294,7 @@ class ModinDataframe(ABC):
         dtypes: Optional[str] = None,
     ) -> "ModinDataframe":
         """
-        Perform a user-defined per-column aggregation, where each column reduces down to a single
-        value using a tree-reduce computation pattern.
+        Perform a user-defined per-column aggregation, where each column reduces down to a single value using a tree-reduce computation pattern.
 
         The map function is applied first over multiple partitions of a column, and then the reduce
         function (if specified, otherwise the map function is applied again) is applied to the
@@ -306,8 +304,10 @@ class ModinDataframe(ABC):
         ----------
         axis : int or modin.pandas.Axis
             The axis to perform the tree reduce over.
-        function : callable(row|col) -> single value
-            The tree reduce function to apply to each column.
+        map_func : callable(row|col) -> row|col|single value
+            The map function to apply to each column.
+        reduce_func : callable(row|col) -> single value, optional
+            The reduce function to apply to the results of the map function.
         dtypes : str, optional
             The data types for the result. This is an optimization
             because there are functions that always result in a particular data
