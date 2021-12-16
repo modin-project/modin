@@ -53,11 +53,11 @@ def test_omnisci_import(import_strategy, has_other_engines):
 
     Parameters
     ----------
-    import_strategy : str
+    import_strategy : str,
         There are several scenarios of how a user can import Modin with OmniSci engine:
         configure Modin first to use OmniSci engine and then import ``modin.pandas`` or vice versa.
         This parameters holds a python code, implementing one of these scenarious.
-    has_other_engines : bool
+    has_other_engines : bool,
         The problem with import may appear depending on whether other engines are
         installed. This parameter indicates whether to remove modules for
         non-omnisci engines before the test.
@@ -88,29 +88,61 @@ sys.modules['dask'] = None
         pytest.fail(str(res.stderr))
 
 
-def test_omnisci_compatibility_with_pyarrow_gandiva():
-    """
-    Test that PyDbEngine and pyarrow.gandiva packages are still incompatible.
-
-    At the moment of writing this test PyDbEngine (5.8.0) and pyarrow.gandiva (3.0.0) are incompatible.
-    If this test appears to fail, it means that these packages are now compatible, if it's so,
-    change the failing assert statement and this doc-string accordingly.
-    """
-    res = subprocess.run(
-        [
-            sys.executable,
-            "-c",
+@pytest.mark.parametrize(
+    "import_strategy,expected_to_fail",
+    [
+        pytest.param(
             """
 from modin.experimental.core.execution.native.implementations.omnisci_on_native.utils import PyDbEngine
 import pyarrow.gandiva
 """,
-        ],
+            True,
+            id="import_pydbe_first-pyarrow_gandiva_second",
+        ),
+        pytest.param(
+            """
+import pyarrow.gandiva
+from modin.experimental.core.execution.native.implementations.omnisci_on_native.utils import PyDbEngine
+""",
+            False,
+            id="import_pyarrow_gandiva_first-pydbe_second",
+        ),
+    ],
+)
+def test_omnisci_compatibility_with_pyarrow_gandiva(import_strategy, expected_to_fail):
+    """
+    Test the current status of compatibility of PyDbEngine and pyarrow.gandiva packages.
+
+    If this test appears to fail, it means that these packages are now compatible/incopmatible,
+    if it's so, please post the actual compatibility status to the issue:
+    https://github.com/modin-project/modin/issues/3865
+    And then inverse `expected_to_fail` parameter for the scenario that has changed its behaviour.
+
+    Parameters
+    ----------
+    import_strategy : str,
+        There are several scenarios of how a user can import PyDbEngine and pyarrow.gandiva.
+        This parameters holds a python code, implementing one of the scenarious.
+    expected_to_fail : bool,
+        Indicates the estimated compatibility status for the specified `import_strategy`.
+        True - the strategy expected to fail, False - the strategy expected to pass.
+        Note: we can't use built-in ``pytest.marks.xfail`` as we need to check that the
+        expected failure was caused by LLVM error.
+    """
+    res = subprocess.run(
+        [sys.executable, "-c", import_strategy],
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
     )
-    assert (
-        res.returncode != 0
-    ), "PyDbEngine and pyarrow.gandiva are now compatible! Please check the test's doc-string for further instructions."
+
+    if expected_to_fail:
+        assert (
+            res.returncode != 0
+        ), "PyDbEngine and pyarrow.gandiva are now compatible! Please check the test's doc-string for further instructions."
+    else:
+        assert (
+            res.returncode == 0
+        ), "PyDbEngine and pyarrow.gandiva are now incompatible! Please check the test's doc-string for further instructions."
 
     if res.returncode != 0:
         error_msg = res.stderr.decode("utf-8")
