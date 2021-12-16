@@ -27,7 +27,7 @@ cfg.StorageFormat.put('Omnisci')
 cfg.IsExperimental.put(True)
 import modin.pandas as pd
 """,
-            id="config_first-import_second",
+            id="config_omnisci_first-import_modin_second",
         ),
         pytest.param(
             """
@@ -37,7 +37,7 @@ cfg.Engine.put('Native')
 cfg.StorageFormat.put('Omnisci')
 cfg.IsExperimental.put(True)
 """,
-            id="import_first-config_second",
+            id="import_modin_first-config_omnisci_second",
         ),
     ],
 )
@@ -46,7 +46,7 @@ def test_omnisci_import(import_strategy, has_other_engines):
     """
     Test import of OmniSci engine.
 
-    The import of PyDBEngine requires to set special open flags which makes it then
+    The import of PyDBEngine requires to set special dlopen flags which make it then
     incompatible to import some other libraries further (like ``pyarrow.gandiva``).
     This test verifies that it's not the case when a user naturally imports Modin
     with OmniSci engine.
@@ -54,12 +54,12 @@ def test_omnisci_import(import_strategy, has_other_engines):
     Parameters
     ----------
     import_strategy : str
-        There are several scenarios of how user can import Modin with OmniSci engine:
-        configure Modin first and then import ``modin.pandas`` or vice versa.
+        There are several scenarios of how a user can import Modin with OmniSci engine:
+        configure Modin first to use OmniSci engine and then import ``modin.pandas`` or vice versa.
         This parameters holds a python code, implementing one of these scenarious.
     has_other_engines : bool
         The problem with import may appear depending on whether other engines are
-        installed. This parameter indicates of whether to remove modules for
+        installed. This parameter indicates whether to remove modules for
         non-omnisci engines before the test.
 
     Notes
@@ -88,7 +88,7 @@ sys.modules['dask'] = None
         pytest.fail(str(res.stderr))
 
 
-def test_compatibility_omnisci_with_pyarrow_gandiva():
+def test_omnisci_compatibility_with_pyarrow_gandiva():
     """
     Test that PyDbEngine and pyarrow.gandiva packages are still incompatible.
 
@@ -116,4 +116,4 @@ import pyarrow.gandiva
         error_msg = res.stderr.decode("utf-8")
         assert (
             error_msg.find("LLVM ERROR") != -1
-        ), f"Expected to fail because LLVM error, but failed because of:\n{error_msg}"
+        ), f"Expected to fail because of LLVM error, but failed because of:\n{error_msg}"
