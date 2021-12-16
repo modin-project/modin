@@ -803,7 +803,7 @@ class PandasDataframe(object):
             row_lengths=self._row_lengths_cache,
             column_widths=new_column_widths,
         )
-        # Propagate the new row labels to the all dataframe partitions
+        # Set flag for propagating deferred row labels across dataframe partitions
         result.synchronize_labels(axis=0)
         return result
 
@@ -2224,8 +2224,7 @@ class PandasDataframe(object):
             new_partitions, new_index, new_columns, new_lengths, new_widths, new_dtypes
         )
 
-    # @lazy_metadata_decorator(apply_axis="opposite", axis_arg=0)
-    @lazy_metadata_decorator(apply_axis="both")
+    @lazy_metadata_decorator(apply_axis="opposite", axis_arg=0)
     def groupby_reduce(
         self,
         axis,
@@ -2264,6 +2263,8 @@ class PandasDataframe(object):
             New Modin DataFrame.
         """
         by_parts = by if by is None else by._partitions
+        if by is None:
+            self._propagate_index_objs(axis=0)
 
         if apply_indices is not None:
             numeric_indices = self.axes[axis ^ 1].get_indexer_for(apply_indices)
