@@ -1922,7 +1922,7 @@ class PandasDataframe(object):
         Returns
         -------
         tuple
-            Tuple of (left data, right data list, joined index).
+            Tuple of (left data, right data list, joined index, lengths of aligned partition blocks).
         """
         if isinstance(other, type(self)):
             other = [other]
@@ -2006,7 +2006,7 @@ class PandasDataframe(object):
             + [reindexed_base]
             + reindexed_other_list
         )
-        return reindexed_frames[0], reindexed_frames[1:], joined_index
+        return reindexed_frames[0], reindexed_frames[1:], joined_index, base_lengths
 
     def binary_op(self, op, right_frame, join_type="outer"):
         """
@@ -2083,11 +2083,19 @@ class PandasDataframe(object):
                 length for o in others for length in o._column_widths
             ]
         else:
-            left_parts, right_parts, joined_index = self._copartition(
+            left_parts, right_parts, joined_index, axis_lengths = self._copartition(
                 axis ^ 1, others, how, sort, force_repartition=False
             )
-            new_lengths = None
-            new_widths = None
+            if axis == 1:
+                new_lengths = axis_lengths
+                new_widths = self._column_widths + [
+                    length for o in others for length in o._column_widths
+                ]
+            else:
+                new_lengths = self._row_lengths + [
+                    length for o in others for length in o._row_lengths
+                ]
+                new_widths = axis_lengths
         new_partitions = self._partition_mgr_cls.concat(axis, left_parts, right_parts)
         shape = new_partitions.shape
         # In the case when the number of partitions significantly differs from the value
