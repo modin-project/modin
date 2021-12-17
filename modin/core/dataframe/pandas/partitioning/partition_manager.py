@@ -1364,15 +1364,17 @@ class PandasDataframePartitionManager(ABC):
 
         new_partitions = []
         for start, end in repartition_schema:
-            _parts = partitions[:, start:end] if axis == 1 else partitions[start:end]
+            parts_to_combine = (
+                partitions[:, start:end] if axis == 1 else partitions[start:end]
+            )
             if end - start == 1:
                 # Fast path; there is only one column/row partition in the merge interval
-                new_partitions.append(_parts)
+                new_partitions.append(parts_to_combine)
                 continue
             new_partitions.append(
                 cls.map_axis_partitions(
                     axis=axis,
-                    partitions=_parts,
+                    partitions=parts_to_combine,
                     map_func=lambda df: df,
                     keep_partitioning=False,
                     # The passed length must be greater than the sum of the merging
