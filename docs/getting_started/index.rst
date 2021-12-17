@@ -8,7 +8,7 @@ Getting Started
     using_modin
     out_of_core
     pandas
-    dask
+    modin_vs_dask
 
 .. meta::
     :description lang=en:
