@@ -25,7 +25,7 @@ from .axis_partition import (
 )
 from .partition import PandasOnDaskDataframePartition
 from modin.error_message import ErrorMessage
-from modin.core.execution.dask.common.task_wrapper import DaskTask
+from modin.core.execution.dask.common.task_wrapper import DaskWrapper
 
 
 class PandasOnDaskDataframePartitionManager(PandasDataframePartitionManager):
@@ -76,7 +76,7 @@ class PandasOnDaskDataframePartitionManager(PandasDataframePartitionManager):
                 if len(partitions)
                 else []
             )
-        new_idx = DaskTask.materialize(new_idx)
+        new_idx = DaskWrapper.materialize(new_idx)
         return new_idx[0].append(new_idx[1:]) if len(new_idx) else new_idx
 
     @classmethod

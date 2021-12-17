@@ -21,7 +21,7 @@ from modin.core.dataframe.pandas.partitioning.axis_partition import (
     PandasDataframeAxisPartition,
 )
 from .partition import PandasOnDaskDataframePartition
-from modin.core.execution.dask.common.task_wrapper import DaskTask
+from modin.core.execution.dask.common.task_wrapper import DaskWrapper
 
 
 class PandasOnDaskDataframeAxisPartition(PandasDataframeAxisPartition):
@@ -77,7 +77,7 @@ class PandasOnDaskDataframeAxisPartition(PandasDataframeAxisPartition):
         """
         lengths = kwargs.get("_lengths", None)
         result_num_splits = len(lengths) if lengths else num_splits
-        axis_result = DaskTask.deploy(
+        axis_result = DaskWrapper.deploy(
             deploy_dask_func,
             result_num_splits * 4,
             PandasDataframeAxisPartition.deploy_axis_func,
@@ -121,7 +121,7 @@ class PandasOnDaskDataframeAxisPartition(PandasDataframeAxisPartition):
         list
             A list of distributed.Future.
         """
-        axis_result = DaskTask.deploy(
+        axis_result = DaskWrapper.deploy(
             deploy_dask_func,
             num_splits * 4,
             PandasDataframeAxisPartition.deploy_func_between_two_axis_partitions,

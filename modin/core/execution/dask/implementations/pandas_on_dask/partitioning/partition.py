@@ -21,7 +21,7 @@ from dask.distributed import wait
 from modin.core.storage_formats.pandas.utils import length_fn_pandas, width_fn_pandas
 from modin.core.dataframe.pandas.partitioning.partition import PandasDataframePartition
 from modin.pandas.indexing import compute_sliced_len
-from modin.core.execution.dask.common.task_wrapper import DaskTask
+from modin.core.execution.dask.common.task_wrapper import DaskWrapper
 
 
 class PandasOnDaskDataframePartition(PandasDataframePartition):
@@ -90,14 +90,16 @@ class PandasOnDaskDataframePartition(PandasDataframePartition):
         """
         call_queue = self.call_queue + [[func, args, kwargs]]
         if len(call_queue) > 1:
-            futures = DaskTask.deploy(
+            futures = DaskWrapper.deploy(
                 apply_list_of_funcs, 2, call_queue, self.future, pure=False
             )
         else:
             # We handle `len(call_queue) == 1` in a different way because
             # this improves performance a bit.
             func, args, kwargs = call_queue[0]
-            futures = DaskTask.deploy(apply_func, 2, self.future, func, *args, **kwargs)
+            futures = DaskWrapper.deploy(
+                apply_func, 2, self.future, func, *args, **kwargs
+            )
         return PandasOnDaskDataframePartition(futures[0], ip=futures[1])
 
     def add_to_apply_calls(self, func, *args, **kwargs):
@@ -132,14 +134,16 @@ class PandasOnDaskDataframePartition(PandasDataframePartition):
             return
         call_queue = self.call_queue
         if len(call_queue) > 1:
-            futures = DaskTask.deploy(
+            futures = DaskWrapper.deploy(
                 apply_list_of_funcs, 2, call_queue, self.future, pure=False
             )
         else:
             # We handle `len(call_queue) == 1` in a different way because
             # this improves performance a bit.
             func, args, kwargs = call_queue[0]
-            futures = DaskTask.deploy(apply_func, 2, self.future, func, *args, **kwargs)
+            futures = DaskWrapper.deploy(
+                apply_func, 2, self.future, func, *args, **kwargs
+            )
         self.future = futures[0]
         self._ip_cache = futures[1]
         self.call_queue = []
@@ -167,11 +171,11 @@ class PandasOnDaskDataframePartition(PandasDataframePartition):
         """
         new_obj = super().mask(row_indices, col_indices)
         if isinstance(row_indices, slice) and isinstance(self._length_cache, Future):
-            new_obj._length_cache = DaskTask.deploy(
+            new_obj._length_cache = DaskWrapper.deploy(
                 compute_sliced_len, 1, row_indices, self._length_cache
             )
         if isinstance(col_indices, slice) and isinstance(self._width_cache, Future):
-            new_obj._width_cache = DaskTask.deploy(
+            new_obj._width_cache = DaskWrapper.deploy(
                 compute_sliced_len, 1, col_indices, self._width_cache
             )
         return new_obj
@@ -236,7 +240,7 @@ class PandasOnDaskDataframePartition(PandasDataframePartition):
         PandasOnDaskDataframePartition
             A new ``PandasOnDaskDataframePartition`` object.
         """
-        return cls(DaskTask.scatter(obj, hash=False))
+        return cls(DaskWrapper.put(obj, hash=False))
 
     @classmethod
     def preprocess_func(cls, func):
@@ -253,7 +257,7 @@ class PandasOnDaskDataframePartition(PandasDataframePartition):
         callable
             An object that can be accepted by ``apply``.
         """
-        return DaskTask.scatter(func, hash=False, broadcast=True)
+        return DaskWrapper.put(func, hash=False, broadcast=True)
 
     @classmethod
     def _length_extraction_fn(cls):
