@@ -109,14 +109,13 @@ class Engine(EnvironmentVariable, type=str):
                 )
             return "Dask"
         try:
-            from omniscidbe import PyDbEngine  # noqa
-        except ModuleNotFoundError:
-            try:
-                from dbe import PyDbEngine  # noqa
-            except ImportError:
-                pass
-            else:
-                return "Native"
+            # We import ``PyDbEngine`` from this module since correct import of ``PyDbEngine`` itself
+            # from Omnisci is located in it with all the necessary options for dlopen.
+            from modin.experimental.core.execution.native.implementations.omnisci_on_native.utils import (  # noqa
+                PyDbEngine,
+            )
+        except ImportError:
+            pass
         else:
             return "Native"
         raise ImportError(
@@ -402,6 +401,18 @@ class OmnisciLaunchParameters(EnvironmentVariable, type=dict):
             {key.replace("-", "_"): value for key, value in custom_parameters.items()}
         )
         return result
+
+
+class MinPartitionSize(EnvironmentVariable, type=int):
+    """
+    Minimum number of rows/columns in a single pandas partition split.
+
+    Once a partition for a pandas dataframe has more than this many elements,
+    Modin adds another partition.
+    """
+
+    varname = "MODIN_MIN_PARTITION_SIZE"
+    default = 32
 
 
 def _check_vars():

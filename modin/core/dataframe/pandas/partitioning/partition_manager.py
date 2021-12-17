@@ -1201,11 +1201,23 @@ class PandasDataframePartitionManager(ABC):
                     col_internal_idx, remote_part, col_idx, axis=1
                 )
 
+                # We want to eventually make item_to_distribute an np.ndarray,
+                # but that doesn't work for setting a subset of a categorical
+                # column, as per https://github.com/modin-project/modin/issues/3736.
+                # In that case, `item` is not an ndarray but instead some
+                # categorical variable, which we we don't need to distribute
+                # at all. Note that np.ndarray is not hashable, so it can't
+                # be a categorical variable.
+                # TODO(https://github.com/pandas-dev/pandas/issues/44703): Delete
+                # this special case once the pandas bug is fixed.
                 if item_to_distribute is not None:
-                    item = item_to_distribute[
-                        row_position_counter : row_position_counter + row_offset,
-                        col_position_counter : col_position_counter + col_offset,
-                    ]
+                    if isinstance(item_to_distribute, np.ndarray):
+                        item = item_to_distribute[
+                            row_position_counter : row_position_counter + row_offset,
+                            col_position_counter : col_position_counter + col_offset,
+                        ]
+                    else:
+                        item = item_to_distribute
                     item = {"item": item}
                 else:
                     item = {}

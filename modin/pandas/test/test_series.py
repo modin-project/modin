@@ -352,6 +352,7 @@ def test___getitem__(data):
     pandas_series = pandas.Series(list(range(1000)))
     df_equals(modin_series[:30], pandas_series[:30])
     df_equals(modin_series[modin_series > 500], pandas_series[pandas_series > 500])
+    df_equals(modin_series[::2], pandas_series[::2])
 
     # Test empty series
     df_equals(pd.Series([])[:30], pandas.Series([])[:30])
@@ -2103,6 +2104,15 @@ def test_loc(data):
         (slice(None), 1),
     ]
     df_equals(modin_result, pandas_result)
+
+
+# This tests the bug from https://github.com/modin-project/modin/issues/3736
+def test_loc_setting_categorical_series():
+    modin_series = pd.Series(["a", "b", "c"], dtype="category")
+    pandas_series = pandas.Series(["a", "b", "c"], dtype="category")
+    modin_series.loc[1:3] = "a"
+    pandas_series.loc[1:3] = "a"
+    df_equals(modin_series, pandas_series)
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
