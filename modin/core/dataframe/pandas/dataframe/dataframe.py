@@ -437,10 +437,6 @@ class PandasDataframe(object):
         axis : int, default: None
             The deferred axis.
             0 for the index, 1 for the columns.
-
-        Returns
-        -------
-        None.
         """
         if axis is None:
             self._deferred_index = True
