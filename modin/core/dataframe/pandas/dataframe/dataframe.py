@@ -35,12 +35,21 @@ def lazy_metadata_decorator(
     apply_axis=None, inherit=False, axis_arg=-1, transpose=False
 ):
     """
-    Lazily propagate metadata for the ``PandasDataframe``.
+    Lazily propagate metadata for the ``PandasDataframe``. This
+    decorator first adds the minimum required reindexing operations
+    to each partition's queue of functions to be lazily applied for
+    each PandasDataframe in the arguments by applying the function
+    run_f_on_minimally_updated_metadata. The decorator also sets the
+    flags for deferred metadata synchronization on the function result
+    if necessary.
 
     Parameters
     ----------
     apply_axis : str, default: None
         The axes on which to apply the index object to the `self._partitions` lazily.
+        Case "both": Add reindexing operations on both axes to partition queue.
+        Case "opposite": Add reindexing operations for reduce functions dependending on axis argument to partition queue.
+        Case "rows": Add reindexing operations on row axis to partition queue.
     inherit : bool, default: False
         Boolean if there is no lazy metadata propagation.
     axis_arg : int, default: -1
@@ -57,7 +66,7 @@ def lazy_metadata_decorator(
         from functools import wraps
 
         @wraps(f)
-        def magic(self, *args, **kwargs):
+        def run_f_on_minimally_updated_metadata(self, *args, **kwargs):
             for obj in (
                 [self]
                 + [o for o in args if isinstance(o, PandasDataframe)]
@@ -93,19 +102,8 @@ def lazy_metadata_decorator(
                         obj._propagate_index_objs(axis=1)
                     elif axis == 1 and obj._deferred_index:
                         obj._propagate_index_objs(axis=0)
-                elif apply_axis == "same":
-                    if "axis" not in kwargs:
-                        axis = args[axis_arg]
-                    else:
-                        axis = kwargs["axis"]
-                    if axis == 0 and obj._deferred_index:
-                        obj._propagate_index_objs(axis=0)
-                    elif axis == 1 and obj._deferred_column:
-                        obj._propagate_index_objs(axis=1)
                 elif apply_axis == "rows":
                     obj._propagate_index_objs(axis=0)
-                elif apply_axis == "columns":
-                    obj._propagate_index_objs(axis=1)
             result = f(self, *args, **kwargs)
             if inherit and not transpose:
                 result._deferred_index = self._deferred_index
@@ -118,18 +116,11 @@ def lazy_metadata_decorator(
                     result._deferred_index = self._deferred_index
                 else:
                     result._deferred_column = self._deferred_column
-            elif apply_axis == "same":
-                if axis == 0:
-                    result._deferred_column = self._deferred_column
-                else:
-                    result._deferred_index = self._deferred_index
             elif apply_axis == "rows":
                 result._deferred_column = self._deferred_column
-            elif apply_axis == "columns":
-                result._deferred_index = self._deferred_index
             return result
 
-        return magic
+        return run_f_on_minimally_updated_metadata
 
     return decorator
 
