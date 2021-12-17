@@ -32,7 +32,7 @@ from modin.core.storage_formats.pandas.parsers import (
 
 
 def lazy_metadata_decorator(
-    apply_axis=None, inherit=False, axis_arg=-1, transpose=False
+    apply_axis=None, axis_arg=-1, transpose=False
 ):
     """
     Lazily propagate metadata for the ``PandasDataframe``.
@@ -47,12 +47,11 @@ def lazy_metadata_decorator(
     Parameters
     ----------
     apply_axis : str, default: None
-        The axes on which to apply the index object to the `self._partitions` lazily.
+        The axes on which to apply the reindexing operations to the `self._partitions` lazily.
+        Case None: No lazy metadata propagation.
         Case "both": Add reindexing operations on both axes to partition queue.
-        Case "opposite": Add reindexing operations for reduce functions dependending on axis argument to partition queue.
+        Case "opposite": Add reindexing operations complementary to given axis.
         Case "rows": Add reindexing operations on row axis to partition queue.
-    inherit : bool, default: False
-        Boolean if there is no lazy metadata propagation.
     axis_arg : int, default: -1
         The index or column axis.
     transpose : bool, default: False
@@ -106,10 +105,10 @@ def lazy_metadata_decorator(
                 elif apply_axis == "rows":
                     obj._propagate_index_objs(axis=0)
             result = f(self, *args, **kwargs)
-            if inherit and not transpose:
+            if apply_axis is None and not transpose:
                 result._deferred_index = self._deferred_index
                 result._deferred_column = self._deferred_column
-            elif inherit and transpose:
+            elif apply_axis is None and transpose:
                 result._deferred_index = self._deferred_column
                 result._deferred_column = self._deferred_index
             elif apply_axis == "opposite":
@@ -535,7 +534,7 @@ class PandasDataframe(object):
             )
             self._deferred_column = False
 
-    @lazy_metadata_decorator(inherit=True)
+    @lazy_metadata_decorator(apply_axis=None)
     def mask(
         self,
         row_indices=None,
@@ -857,7 +856,7 @@ class PandasDataframe(object):
             col_idx = self.columns
         return self.__constructor__(ordered_cols, row_idx, col_idx)
 
-    @lazy_metadata_decorator(inherit=True)
+    @lazy_metadata_decorator(apply_axis=None)
     def copy(self):
         """
         Copy this object.
@@ -1384,7 +1383,7 @@ class PandasDataframe(object):
         )
         return self._compute_map_reduce_metadata(axis, reduce_parts)
 
-    @lazy_metadata_decorator(inherit=True)
+    @lazy_metadata_decorator(apply_axis=None)
     def map(self, func, dtypes=None):
         """
         Perform a function that maps across the entire dataset.
@@ -2394,7 +2393,7 @@ class PandasDataframe(object):
         """
         return self._partition_mgr_cls.to_numpy(self._partitions, **kwargs)
 
-    @lazy_metadata_decorator(inherit=True, transpose=True)
+    @lazy_metadata_decorator(apply_axis=None, transpose=True)
     def transpose(self):
         """
         Transpose the index and columns of this Modin DataFrame.
