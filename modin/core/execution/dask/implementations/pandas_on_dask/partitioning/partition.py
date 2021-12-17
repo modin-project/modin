@@ -131,7 +131,6 @@ class PandasOnDaskDataframePartition(PandasDataframePartition):
         if len(self.call_queue) == 0:
             return
         call_queue = self.call_queue
-
         if len(call_queue) > 1:
             futures = DaskTask.deploy(
                 apply_list_of_funcs, 2, call_queue, self.future, pure=False
