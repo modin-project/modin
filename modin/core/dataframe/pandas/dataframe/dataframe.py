@@ -1653,7 +1653,7 @@ class PandasDataframe(object):
             New Modin DataFrame.
         """
         # Only sort the indices if they do not match
-        left_parts, right_parts, joined_index = self._copartition(
+        left_parts, right_parts, joined_index, _ = self._copartition(
             axis, other, join_type, sort=not self.axes[axis].equals(other.axes[axis])
         )
         # unwrap list returned by `copartition`.
@@ -1946,7 +1946,12 @@ class PandasDataframe(object):
 
         # If all frames are empty
         if len(non_empty_frames_idx) == 0:
-            return self._partitions, [o._partitions for o in other], joined_index
+            return (
+                self._partitions,
+                [o._partitions for o in other],
+                joined_index,
+                None,
+            )
 
         base_frame_idx = non_empty_frames_idx[0]
         other_frames = frames[base_frame_idx + 1 :]
@@ -2026,7 +2031,7 @@ class PandasDataframe(object):
         PandasDataframe
             New Modin DataFrame.
         """
-        left_parts, right_parts, joined_index = self._copartition(
+        left_parts, right_parts, joined_index, _ = self._copartition(
             0, right_frame, join_type, sort=True
         )
         # unwrap list returned by `copartition`.
