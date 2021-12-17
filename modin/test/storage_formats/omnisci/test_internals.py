@@ -53,11 +53,11 @@ def test_omnisci_import(import_strategy, has_other_engines):
 
     Parameters
     ----------
-    import_strategy : str,
+    import_strategy : str
         There are several scenarios of how a user can import Modin with OmniSci engine:
         configure Modin first to use OmniSci engine and then import ``modin.pandas`` or vice versa.
-        This parameters holds a python code, implementing one of these scenarious.
-    has_other_engines : bool,
+        This parameters holds a python code, implementing one of these scenarios.
+    has_other_engines : bool
         The problem with import may appear depending on whether other engines are
         installed. This parameter indicates whether to remove modules for
         non-omnisci engines before the test.
@@ -89,7 +89,7 @@ sys.modules['dask'] = None
 
 
 @pytest.mark.parametrize(
-    "import_strategy,expected_to_fail",
+    "import_strategy, expected_to_fail",
     [
         pytest.param(
             """
@@ -120,10 +120,10 @@ def test_omnisci_compatibility_with_pyarrow_gandiva(import_strategy, expected_to
 
     Parameters
     ----------
-    import_strategy : str,
+    import_strategy : str
         There are several scenarios of how a user can import PyDbEngine and pyarrow.gandiva.
-        This parameters holds a python code, implementing one of the scenarious.
-    expected_to_fail : bool,
+        This parameters holds a python code, implementing one of the scenarios.
+    expected_to_fail : bool
         Indicates the estimated compatibility status for the specified `import_strategy`.
         True - the strategy expected to fail, False - the strategy expected to pass.
         Note: we can't use built-in ``pytest.marks.xfail`` as we need to check that the
