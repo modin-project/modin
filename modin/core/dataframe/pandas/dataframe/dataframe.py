@@ -37,8 +37,6 @@ def lazy_metadata_decorator(
     """
     Lazily propagate metadata for the ``PandasDataframe``.
 
-    Notes
-    -----
     This decorator first adds the minimum required reindexing operations
     to each partition's queue of functions to be lazily applied for
     each PandasDataframe in the arguments by applying the function
