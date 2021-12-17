@@ -33,10 +33,10 @@ if Engine.get() == "Ray":
     get_func = ray.get
     FutureType = ray.ObjectRef
 elif Engine.get() == "Dask":
-    from modin.core.execution.dask.common.task_wrapper import DaskTask
+    from modin.core.execution.dask.common.task_wrapper import DaskWrapper
     from distributed import Future
 
-    put_func = lambda x: DaskTask.scatter(x)  # noqa: E731
+    put_func = lambda x: DaskWrapper.put(x)  # noqa: E731
     get_func = lambda x: x.result()  # noqa: E731
     FutureType = Future
 elif Engine.get() == "Python":
@@ -138,9 +138,9 @@ def test_from_partitions(axis, index, columns, row_lengths, column_widths):
             futures = [ray.put(df1), ray.put(df2)]
     if Engine.get() == "Dask":
         if axis is None:
-            futures = [DaskTask.scatter([df1, df2], hash=False)]
+            futures = [DaskWrapper.put([df1, df2], hash=False)]
         else:
-            futures = DaskTask.scatter([df1, df2], hash=False)
+            futures = DaskWrapper.put([df1, df2], hash=False)
     actual_df = from_partitions(
         futures,
         axis,

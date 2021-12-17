@@ -16,7 +16,7 @@
 from modin.core.dataframe.pandas.partitioning.partition_manager import (
     PandasDataframePartitionManager,
 )
-from modin.core.execution.dask.common.task_wrapper import DaskTask
+from modin.core.execution.dask.common.task_wrapper import DaskWrapper
 from .virtual_partition import (
     PandasOnDaskDataframeColumnPartition,
     PandasOnDaskDataframeRowPartition,
@@ -47,4 +47,4 @@ class PandasOnDaskDataframePartitionManager(PandasDataframePartitionManager):
         list
             The objects wrapped by `partitions`.
         """
-        return DaskTask.materialize([partition.future for partition in partitions])
+        return DaskWrapper.materialize([partition.future for partition in partitions])

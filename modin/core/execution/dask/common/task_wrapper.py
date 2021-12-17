@@ -16,7 +16,7 @@
 from distributed.client import default_client
 
 
-class DaskTask:
+class DaskWrapper:
     """The class responsible for execution of remote operations."""
 
     @classmethod
@@ -69,9 +69,9 @@ class DaskTask:
         return client.gather(future)
 
     @classmethod
-    def scatter(cls, data, **kwargs):
+    def put(cls, data, **kwargs):
         """
-        Scatter data into distributed memory.
+        Put data into distributed memory.
 
         Parameters
         ----------
