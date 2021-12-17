@@ -320,10 +320,7 @@ class _LocationIndexerBase(object):
                 extra_log=f"Only None-slices are acceptable as a slice argument in masking, got: {col_lookup}",
             )
             col_lookup = None
-        if row_lookup is None and col_lookup is None:
-            qc_view = self.qc.copy()
-        else:
-            qc_view = self.qc.view(row_lookup, col_lookup)
+        qc_view = self.qc.view(row_lookup, col_lookup)
         if ndim == 2:
             return self.df.__constructor__(query_compiler=qc_view)
         if isinstance(self.df, Series) and not self.row_scalar:

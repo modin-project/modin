@@ -298,18 +298,9 @@ class OmnisciOnNativeDataframe(PandasDataframe):
 
         Notes
         -----
-        If both row_labels and row_positions are provided, an exception is raised.
+        If both row_labels and row_positions are provided, a ValueError is raised.
         The same rule applies for col_labels and col_positions.
         """
-        if (
-            col_labels is None
-            and col_positions is None
-            and row_labels is None
-            and row_positions is None
-        ):
-            raise ValueError(
-                "None of col_labels, col_positions, row_labels, or row_positions were provided. Please specify at least one."
-            )
         if not (row_labels is None or row_positions is None):
             raise ValueError(
                 "Both row_labels and row_positions were provided - please provide only one of row_labels and row_positions."
@@ -1793,7 +1784,7 @@ class OmnisciOnNativeDataframe(PandasDataframe):
         Parameters
         ----------
         row_positions : list of int
-            Numeric indices of rows to select.
+            Row positions to select.
 
         Returns
         -------

@@ -79,7 +79,7 @@ class ModinDataframe(ABC):
 
         Notes
         -----
-        If both row_labels and row_positions are provided, an exception is raised.
+        If both row_labels and row_positions are provided, a ValueError is raised.
         The same rule applies for col_labels and col_positions.
         """
         pass
