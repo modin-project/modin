@@ -12,13 +12,13 @@ In addition to wrapping a ``pandas.DataFrame``, the class also holds the followi
 
 An operation on a block partition can be performed in two modes:
 
-* asynchronously_ - via :meth:`~modin.core.execution.ray.implementations.pandas_on_ray.partitioning..PandasOnRayDataframePartition.apply`
-* lazily_ - via :meth:`~modin.core.execution.ray.implementations.pandas_on_ray.partitioning..PandasOnRayDataframePartition.add_to_apply_calls`
+* asynchronously_ - via :meth:`~modin.core.execution.ray.implementations.pandas_on_ray.PandasOnRayDataframePartition.apply`
+* lazily_ - via :meth:`~modin.core.execution.ray.implementations.pandas_on_ray.PandasOnRayDataframePartition.add_to_apply_calls`
 
 Public API
 ----------
 
-.. autoclass:: modin.core.execution.ray.implementations.pandas_on_ray.partitioning.partition.PandasOnRayDataframePartition
+.. autoclass:: modin.core.execution.ray.implementations.pandas_on_ray.PandasOnRayDataframePartition
   :members:
 
 .. _asynchronously: https://en.wikipedia.org/wiki/Asynchrony_(computer_programming)

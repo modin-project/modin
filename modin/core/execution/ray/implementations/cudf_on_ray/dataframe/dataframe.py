@@ -19,7 +19,7 @@ import ray
 from ..partitioning.partition import cuDFOnRayDataframePartition
 from ..partitioning.partition_manager import cuDFOnRayDataframePartitionManager
 
-from modin.core.execution.ray.implementations.pandas_on_ray.dataframe.dataframe import (
+from modin.core.execution.ray.implementations.pandas_on_ray import (
     PandasOnRayDataframe,
 )
 from modin.error_message import ErrorMessage

@@ -183,10 +183,8 @@ def initialize_ray(
             ray.init(**ray_init_kwargs)
 
         if StorageFormat.get() == "Cudf":
-            from modin.core.execution.ray.implementations.cudf_on_ray.frame.gpu_manager import (
+            from modin.core.execution.ray.implementations.cudf_on_ray import (
                 GPUManager,
-            )
-            from modin.core.execution.ray.implementations.cudf_on_ray.frame.partition_manager import (
                 GPU_MANAGERS,
             )
 

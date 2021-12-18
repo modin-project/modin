@@ -82,10 +82,10 @@ Let's consider simple example of creation and interacting with Modin ``Series``:
 
     # List of `Series` partitions
 
-    [[<modin.core.execution.ray.implementations.pandas_on_ray.partitioning.partition.PandasOnRayDataframePartition object at 0x7fc554e607f0>]
-    [<modin.core.execution.ray.implementations.pandas_on_ray.partitioning.partition.PandasOnRayDataframePartition object at 0x7fc554e9a4f0>]
-    [<modin.core.execution.ray.implementations.pandas_on_ray.partitioning.partition.PandasOnRayDataframePartition object at 0x7fc554e60820>]
-    [<modin.core.execution.ray.implementations.pandas_on_ray.partitioning.partition.PandasOnRayDataframePartition object at 0x7fc554e609d0>]]
+    [[<modin.core.execution.ray.implementations.pandas_on_ray.PandasOnRayDataframePartition object at 0x7fc554e607f0>]
+    [<modin.core.execution.ray.implementations.pandas_on_ray.PandasOnRayDataframePartition object at 0x7fc554e9a4f0>]
+    [<modin.core.execution.ray.implementations.pandas_on_ray.PandasOnRayDataframePartition object at 0x7fc554e60820>]
+    [<modin.core.execution.ray.implementations.pandas_on_ray.PandasOnRayDataframePartition object at 0x7fc554e609d0>]]
 
     # The first `Series` partition
     

@@ -418,7 +418,7 @@ class CudfOnRayFactory(BaseFactory):
     @classmethod
     @doc(_doc_factory_prepare_method, io_module_name="``cuDFOnRayIO``")
     def prepare(cls):
-        from modin.core.execution.ray.implementations.cudf_on_ray.io import cuDFOnRayIO
+        from modin.core.execution.ray.implementations.cudf_on_ray import cuDFOnRayIO
 
         cls.io_cls = cuDFOnRayIO
 
@@ -428,7 +428,7 @@ class PandasOnRayFactory(BaseFactory):
     @classmethod
     @doc(_doc_factory_prepare_method, io_module_name="``PandasOnRayIO``")
     def prepare(cls):
-        from modin.core.execution.ray.implementations.pandas_on_ray.io import (
+        from modin.core.execution.ray.implementations.pandas_on_ray import (
             PandasOnRayIO,
         )
 

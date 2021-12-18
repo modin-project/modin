@@ -21,9 +21,7 @@ from pandas.io.common import infer_compression
 import warnings
 
 from modin.core.io.file_dispatcher import OpenFile
-from modin.core.execution.ray.implementations.cudf_on_ray.partitioning.partition_manager import (
-    GPU_MANAGERS,
-)
+from modin.core.execution.ray.implementations.cudf_on_ray import GPU_MANAGERS
 from modin.core.storage_formats.pandas.utils import split_result_of_axis_func_pandas
 from modin.error_message import ErrorMessage
 

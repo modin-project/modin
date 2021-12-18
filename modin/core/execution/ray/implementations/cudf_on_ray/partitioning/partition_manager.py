@@ -24,9 +24,7 @@ from .partition import cuDFOnRayDataframePartition
 
 from modin.core.storage_formats.pandas.utils import split_result_of_axis_func_pandas
 from modin.config import GpuCount
-from modin.core.execution.ray.generic.partitioning.partition_manager import (
-    GenericRayDataframePartitionManager,
-)
+from modin.core.execution.ray.generic import GenericRayDataframePartitionManager
 
 # Global view of GPU Actors
 GPU_MANAGERS = []

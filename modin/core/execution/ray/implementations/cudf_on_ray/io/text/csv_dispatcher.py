@@ -16,7 +16,7 @@
 import numpy as np
 
 from modin.core.io import CSVDispatcher
-from modin.core.execution.ray.implementations.cudf_on_ray.partitioning.partition_manager import (
+from modin.core.execution.ray.implementations.cudf_on_ray import (
     GPU_MANAGERS,
 )
 from typing import Tuple

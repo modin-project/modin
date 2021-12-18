@@ -14,20 +14,14 @@
 """Module holds implementation of ``BaseIO`` using cuDF."""
 
 from modin.core.io import BaseIO
-from modin.core.execution.ray.implementations.cudf_on_ray.io import cuDFCSVDispatcher
 from modin.core.storage_formats.cudf.query_compiler import cuDFQueryCompiler
 from modin.core.execution.ray.implementations.cudf_on_ray.dataframe.dataframe import (
+    cuDFCSVDispatcher,
     cuDFOnRayDataframe,
-)
-from modin.core.execution.ray.implementations.cudf_on_ray.partitioning.partition_manager import (
     cuDFOnRayDataframePartitionManager,
-)
-from modin.core.execution.ray.implementations.cudf_on_ray.partitioning.partition import (
     cuDFOnRayDataframePartition,
 )
-
-
-from modin.core.execution.ray.common.task_wrapper import RayTask
+from modin.core.execution.ray.common import RayTask
 from modin.core.storage_formats.cudf.parser import cuDFCSVParser
 
 
