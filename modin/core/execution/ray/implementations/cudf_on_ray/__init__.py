@@ -13,26 +13,12 @@
 
 """Modin's functionality related to Ray execution engine and optimized for cuDF storage format."""
 
-from .dataframe import cuDFOnRayDataframe
-from .io import cuDFOnRayIO, cuDFCSVDispatcher
-from .partitioning import (
-    cuDFOnRayDataframeAxisPartition,
-    cuDFOnRayDataframeColumnPartition,
-    cuDFOnRayDataframeRowPartition,
-    GPUManager,
-    cuDFOnRayDataframePartitionManager,
-    cuDFOnRayDataframePartition,
-)
+from .io import cuDFOnRayIO
+from .partitioning import GPUManager, GPU_MANAGERS
 
 
 __all__ = [
-    "cuDFOnRayDataframe",
     "cuDFOnRayIO",
-    "cuDFCSVDispatcher",
-    "cuDFOnRayDataframeAxisPartition",
-    "cuDFOnRayDataframeColumnPartition",
-    "cuDFOnRayDataframeRowPartition",
     "GPUManager",
-    "cuDFOnRayDataframePartitionManager",
-    "cuDFOnRayDataframePartition",
+    "GPU_MANAGERS",
 ]

@@ -8,7 +8,7 @@ made up of list of block partitions that are stored in this class.
 Public API
 ----------
 
-.. autoclass:: modin.core.execution.ray.implementations.cudf_on_ray.cuDFOnRayDataframeAxisPartition
+.. autoclass:: modin.core.execution.ray.implementations.cudf_on_ray.partitioning.axis_partition.cuDFOnRayDataframeAxisPartition
   :members:
 
 cuOnRayDataframeColumnPartition
@@ -17,7 +17,7 @@ cuOnRayDataframeColumnPartition
 Public API
 ----------
 
-.. autoclass:: modin.core.execution.ray.implementations.cudf_on_ray.cuDFOnRayDataframeColumnPartition
+.. autoclass:: modin.core.execution.ray.implementations.cudf_on_ray.partitioning.axis_partition.cuDFOnRayDataframeColumnPartition
   :members:
 
 cuDFOnRayDataframeRowPartition
@@ -26,5 +26,5 @@ cuDFOnRayDataframeRowPartition
 Public API
 ----------
 
-.. autoclass:: modin.core.execution.ray.implementations.cudf_on_ray.cuDFOnRayDataframeRowPartition
+.. autoclass:: modin.core.execution.ray.implementations.cudf_on_ray.partitioning.axis_partition.cuDFOnRayDataframeRowPartition
   :members:

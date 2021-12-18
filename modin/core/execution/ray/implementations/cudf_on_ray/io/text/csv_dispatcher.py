@@ -16,9 +16,6 @@
 import numpy as np
 
 from modin.core.io import CSVDispatcher
-from modin.core.execution.ray.implementations.cudf_on_ray import (
-    GPU_MANAGERS,
-)
 from typing import Tuple
 
 
@@ -52,7 +49,7 @@ class cuDFCSVDispatcher(CSVDispatcher):
 
         def create_partition(i, j):
             return cls.frame_partition_cls(
-                GPU_MANAGERS[i],
+                cls.frame_partition_mgr_cls._get_gpu_managers()[i],
                 partition_ids[i][j],
                 length=row_lengths[i],
                 width=column_widths[j],

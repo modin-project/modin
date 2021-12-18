@@ -24,6 +24,6 @@ cuDFCSVDispatcher
 
 The ``cuDFCSVDispatcher`` class implements ``CSVDispatcher`` using cuDFOnRay execution.
 
-.. autoclass:: modin.core.execution.ray.implementations.cudf_on_ray.cuDFCSVDispatcher
+.. autoclass:: modin.core.execution.ray.implementations.cudf_on_ray.io.text.csv_dispatcher.cuDFCSVDispatcher
   :noindex:
   :members:

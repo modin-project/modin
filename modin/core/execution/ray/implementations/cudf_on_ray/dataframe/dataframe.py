@@ -13,18 +13,20 @@
 
 """Module houses class that implements ``PandasOnRayDataframe`` class using cuDF."""
 
+from typing import List, Hashable, Optional
+
 import numpy as np
 import ray
-
-from ..partitioning.partition import cuDFOnRayDataframePartition
-from ..partitioning.partition_manager import cuDFOnRayDataframePartitionManager
 
 from modin.core.execution.ray.implementations.pandas_on_ray import (
     PandasOnRayDataframe,
 )
 from modin.error_message import ErrorMessage
-from typing import List, Hashable, Optional
 from modin.pandas.utils import check_both_not_none
+from ..partitioning import (
+    cuDFOnRayDataframePartition,
+    cuDFOnRayDataframePartitionManager,
+)
 
 
 class cuDFOnRayDataframe(PandasOnRayDataframe):
