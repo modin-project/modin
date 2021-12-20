@@ -17,9 +17,6 @@ from .dataframe import PandasOnRayDataframe
 from .io import PandasOnRayIO
 from .partitioning import (
     PandasOnRayDataframePartition,
-    PandasOnRayDataframeAxisPartition,
-    PandasOnRayDataframeColumnPartition,
-    PandasOnRayDataframeRowPartition,
     PandasOnRayDataframePartitionManager,
 )
 
@@ -28,8 +25,5 @@ __all__ = [
     "PandasOnRayDataframe",
     "PandasOnRayIO",
     "PandasOnRayDataframePartition",
-    "PandasOnRayDataframeAxisPartition",
-    "PandasOnRayDataframeColumnPartition",
-    "PandasOnRayDataframeRowPartition",
     "PandasOnRayDataframePartitionManager",
 ]

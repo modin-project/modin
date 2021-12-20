@@ -8,7 +8,7 @@ a wrapper over a list of block partitions that are stored in this class.
 Public API
 ----------
 
-.. autoclass:: modin.core.execution.ray.implementations.pandas_on_ray.PandasOnRayDataframeAxisPartition
+.. autoclass:: modin.core.execution.ray.implementations.pandas_on_ray.partitioning.axis_partition.PandasOnRayDataframeAxisPartition
   :members:
 
 PandasOnRayDataframeColumnPartition
@@ -17,7 +17,7 @@ PandasOnRayDataframeColumnPartition
 Public API
 ----------
 
-.. autoclass:: modin.core.execution.ray.implementations.pandas_on_ray.PandasOnRayDataframeColumnPartition
+.. autoclass:: modin.core.execution.ray.implementations.pandas_on_ray.partitioning.axis_partition.PandasOnRayDataframeColumnPartition
   :members:
 
 PandasOnRayDataframeRowPartition
@@ -26,5 +26,5 @@ PandasOnRayDataframeRowPartition
 Public API
 ----------
 
-.. autoclass:: modin.core.execution.ray.implementations.pandas_on_ray.PandasOnRayDataframeRowPartition
+.. autoclass:: modin.core.execution.ray.implementations.pandas_on_ray.partitioning.axis_partition.PandasOnRayDataframeRowPartition
   :members:

@@ -18,11 +18,9 @@ from typing import List, Hashable, Optional
 import numpy as np
 import ray
 
-from modin.core.execution.ray.implementations.pandas_on_ray import (
-    PandasOnRayDataframe,
-)
 from modin.error_message import ErrorMessage
 from modin.pandas.utils import check_both_not_none
+from ...pandas_on_ray import PandasOnRayDataframe
 from ..partitioning import (
     cuDFOnRayDataframePartition,
     cuDFOnRayDataframePartitionManager,

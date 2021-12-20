@@ -13,7 +13,7 @@
 
 """Module houses class for tracking partitions with PyArrow storage format and Ray engine."""
 
-from modin.core.execution.ray.generic import GenericRayDataframePartitionManager
+from modin.core.execution.ray import GenericRayDataframePartitionManager
 from .axis_partition import (
     PyarrowOnRayDataframeColumnPartition,
     PyarrowOnRayDataframeRowPartition,

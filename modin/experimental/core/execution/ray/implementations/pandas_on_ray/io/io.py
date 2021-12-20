@@ -34,7 +34,7 @@ from modin.core.execution.ray.implementations.pandas_on_ray import (
     PandasOnRayDataframe,
     PandasOnRayDataframePartition,
 )
-from modin.core.execution.ray.common import RayTask
+from modin.core.execution.ray import RayTask
 from modin.config import NPartitions
 
 import ray
