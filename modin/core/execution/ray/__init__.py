@@ -13,12 +13,20 @@
 
 """Modin's functionality related to Ray execution engine."""
 
-from .common import initialize_ray, RayTask
-from .generic import GenericRayDataframePartitionManager, RayIO
+from .common import initialize_ray, RayTask, SignalActor
+from .generic import (
+    display_time_updates,
+    call_progress_bar,
+    GenericRayDataframePartitionManager,
+    RayIO,
+)
 
 __all__ = [
     "initialize_ray",
     "RayTask",
+    "SignalActor",
+    "display_time_updates",
+    "call_progress_bar",
     "GenericRayDataframePartitionManager",
     "RayIO",
 ]
