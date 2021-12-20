@@ -14,7 +14,7 @@ entities (``cuDFOnRayDataframe``, ``cuDFOnRayDataframePartition`` etc.).
 Public API
 ----------
 
-.. autoclass:: modin.core.execution.ray.implementations.cudf_on_ray.cuDFOnRayIO
+.. autoclass:: modin.core.execution.ray.implementations.cudf_on_ray.io.cuDFOnRayIO
   :noindex:
   :members:
 
