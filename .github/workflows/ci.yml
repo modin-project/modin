@@ -46,7 +46,7 @@ jobs:
           python-version: "3.7.x"
           architecture: "x64"
       - run: pip install -r docs/requirements-doc.txt
-      - run: cd docs && sphinx-build -b html . build
+      - run: cd docs && sphinx-build -T -E -b html . build
 
   lint-pydocstyle:
     name: lint (pydocstyle)
