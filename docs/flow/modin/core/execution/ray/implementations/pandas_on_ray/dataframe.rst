@@ -9,5 +9,5 @@ class using Ray distributed engine. It serves as an intermediate level between
 Public API
 ----------
 
-.. autoclass:: modin.core.execution.ray.implementations.pandas_on_ray.PandasOnRayDataframe
+.. autoclass:: modin.core.execution.ray.implementations.pandas_on_ray.dataframe.PandasOnRayDataframe
   :members:

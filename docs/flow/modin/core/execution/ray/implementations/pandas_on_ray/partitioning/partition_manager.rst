@@ -8,5 +8,5 @@ block/row/column partitions.
 Public API
 ----------
 
-.. autoclass:: modin.core.execution.ray.implementations.pandas_on_ray.PandasOnRayDataframePartitionManager
+.. autoclass:: modin.core.execution.ray.implementations.pandas_on_ray.partitioning.partition_manager.PandasOnRayDataframePartitionManager
   :members:

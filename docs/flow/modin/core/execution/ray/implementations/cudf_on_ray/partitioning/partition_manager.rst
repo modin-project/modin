@@ -10,5 +10,5 @@ block/row/column partitions.
 Public API
 ----------
 
-.. autoclass:: modin.core.execution.ray.implementations.cudf_on_ray.partitioning.cuDFOnRayDataframePartitionManager
+.. autoclass:: modin.core.execution.ray.implementations.cudf_on_ray.partitioning.partition_manager.cuDFOnRayDataframePartitionManager
   :members:
