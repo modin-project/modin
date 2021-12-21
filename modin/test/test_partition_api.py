@@ -37,7 +37,7 @@ elif Engine.get() == "Dask":
     from distributed import Future
 
     put_func = lambda x: DaskWrapper.put(x)  # noqa: E731
-    get_func = lambda x: x.result()  # noqa: E731
+    get_func = lambda x: DaskWrapper.materialize(x)  # noqa: E731
     FutureType = Future
 elif Engine.get() == "Python":
     put_func = lambda x: x  # noqa: E731
