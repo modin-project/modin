@@ -98,7 +98,7 @@ class PandasOnDaskDataframePartition(PandasDataframePartition):
             # this improves performance a bit.
             func, args, kwargs = call_queue[0]
             futures = DaskWrapper.deploy(
-                apply_func, 2, self.future, func, *args, **kwargs
+                apply_func, 2, self.future, func, *args, pure=False, **kwargs
             )
         return PandasOnDaskDataframePartition(futures[0], ip=futures[1])
 
@@ -142,7 +142,7 @@ class PandasOnDaskDataframePartition(PandasDataframePartition):
             # this improves performance a bit.
             func, args, kwargs = call_queue[0]
             futures = DaskWrapper.deploy(
-                apply_func, 2, self.future, func, *args, **kwargs
+                apply_func, 2, self.future, func, *args, pure=False, **kwargs
             )
         self.future = futures[0]
         self._ip_cache = futures[1]
