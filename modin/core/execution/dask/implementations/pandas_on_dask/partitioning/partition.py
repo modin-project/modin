@@ -63,9 +63,9 @@ class PandasOnDaskDataframePartition(PandasDataframePartition):
         """
         self.drain_call_queue()
         # blocking operation
-        if isinstance(self.future, pandas.DataFrame):
+        if not isinstance(self.future, Future):
             return self.future
-        return self.future.result()
+        return DaskWrapper.materialize(self.future)
 
     def apply(self, func, *args, **kwargs):
         """
@@ -242,9 +242,7 @@ class PandasOnDaskDataframePartition(PandasDataframePartition):
             The length of the object.
         """
         if self._length_cache is None:
-            self._length_cache = self.apply(lambda df: len(df)).future
-        if isinstance(self._length_cache, Future):
-            self._length_cache = self._length_cache.result()
+            self._length_cache = self.apply(lambda df: len(df)).get()
         return self._length_cache
 
     def width(self):
@@ -257,9 +255,7 @@ class PandasOnDaskDataframePartition(PandasDataframePartition):
             The width of the object.
         """
         if self._width_cache is None:
-            self._width_cache = self.apply(lambda df: len(df.columns)).future
-        if isinstance(self._width_cache, Future):
-            self._width_cache = self._width_cache.result()
+            self._width_cache = self.apply(lambda df: len(df.columns)).get()
         return self._width_cache
 
     def ip(self):
@@ -274,7 +270,7 @@ class PandasOnDaskDataframePartition(PandasDataframePartition):
         if self._ip_cache is None:
             self._ip_cache = self.apply(lambda df: df)._ip_cache
         if isinstance(self._ip_cache, Future):
-            self._ip_cache = self._ip_cache.result()
+            self._ip_cache = DaskWrapper.materialize(self._ip_cache)
         return self._ip_cache
 
 
