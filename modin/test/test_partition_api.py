@@ -97,8 +97,8 @@ def test_unwrap_partitions(axis):
                 )
             if Engine.get() == "Dask":
                 df_equals(
-                    expected_axis_partitions[item_idx].result(),
-                    actual_axis_partitions[item_idx].result(),
+                    get_func(expected_axis_partitions[item_idx]),
+                    get_func(actual_axis_partitions[item_idx]),
                 )
 
 
