@@ -17,6 +17,8 @@ import ray
 import cudf
 import pandas
 
+from modin.core.execution.ray.common.task_wrapper import RayWrapper
+
 
 @ray.remote(num_gpus=1)
 class GPUManager(object):
@@ -95,7 +97,7 @@ class GPUManager(object):
             return self.store_new_df(result)
         if not isinstance(other, int):
             assert isinstance(other, ray.ObjectRef)
-            df2 = ray.get(other)
+            df2 = RayWrapper.materialize(other)
         else:
             df2 = self.cudf_dataframe_dict[other]
         result = func(df1, df2, **kwargs)
@@ -140,7 +142,7 @@ class GPUManager(object):
             cudf.DataFrame.join if not axis else lambda x, y: cudf.concat([x, y])
         )
         if not isinstance(others[0], int):
-            other_dfs = ray.get(others)
+            other_dfs = RayWrapper.materialize(others)
         else:
             other_dfs = [self.cudf_dataframe_dict[i] for i in others]
         df1 = self.cudf_dataframe_dict[first]

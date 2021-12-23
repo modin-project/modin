@@ -32,6 +32,7 @@ from ray.util import get_node_ip_address
 import pandas
 
 from modin.distributed.dataframe.pandas import from_partitions
+from modin.core.execution.ray.common.task_wrapper import RayWrapper
 from .utils import RabitContext, RabitContextManager
 
 LOGGER = logging.getLogger("[modin.xgboost]")
@@ -360,7 +361,7 @@ def _assign_row_partitions_to_actors(
         # Get distribution of parts between nodes ({ip:[(part, position),..],..})
         init_parts_distribution = defaultdict(list)
         for idx, (ip, part_ref) in enumerate(
-            zip(ray.get(list(parts_ips_ref)), parts_ref)
+            zip(RayWrapper.materialize(list(parts_ips_ref)), parts_ref)
         ):
             init_parts_distribution[ip].append((part_ref, idx))
 
@@ -561,7 +562,7 @@ def _train(
         ]
         # All results should be the same because of Rabit tracking. So we just
         # return the first one.
-        result = ray.get(fut[0])
+        result = RayWrapper.materialize(fut[0])
         LOGGER.info(f"Training time: {time.time() - s} s")
         return result
 
@@ -645,8 +646,8 @@ def _predict(
     new_columns = list(range(result_num_columns))
 
     # Put common data in object store
-    booster = ray.put(booster)
-    new_columns_ref = ray.put(new_columns)
+    booster = RayWrapper.put(booster)
+    new_columns_ref = RayWrapper.put(new_columns)
 
     prediction_refs = [
         _map_predict.remote(booster, part, new_columns_ref, dmatrix_kwargs, **kwargs)

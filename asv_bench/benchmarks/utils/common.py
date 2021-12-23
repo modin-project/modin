@@ -508,7 +508,7 @@ def execute(
         if ASV_USE_ENGINE == "ray":
             from ray import wait
 
-            all(map(lambda partition: wait([partition.oid]), partitions.flatten()))
+            all(map(lambda partition: wait([partition.future]), partitions.flatten()))
         elif ASV_USE_ENGINE == "dask":
             from dask.distributed import wait
 

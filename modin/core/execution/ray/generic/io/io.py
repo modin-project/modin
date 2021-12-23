@@ -18,8 +18,7 @@ import os
 import pandas
 
 from modin.core.io import BaseIO
-from modin.core.execution.ray.common.task_wrapper import SignalActor
-import ray
+from modin.core.execution.ray.common.task_wrapper import RayWrapper, SignalActor
 
 
 class RayIO(BaseIO):
@@ -118,7 +117,9 @@ class RayIO(BaseIO):
         if not cls._to_csv_check_support(kwargs):
             return BaseIO.to_csv(qc, **kwargs)
 
-        signals = SignalActor.remote(len(qc._modin_frame._partitions) + 1)
+        signals = RayWrapper.create_actor(
+            SignalActor, len(qc._modin_frame._partitions) + 1
+        )
 
         def func(df, **kw):
             """
@@ -153,7 +154,7 @@ class RayIO(BaseIO):
             csv_kwargs["path_or_buf"].close()
 
             # each process waits for its turn to write to a file
-            ray.get(signals.wait.remote(partition_idx))
+            RayWrapper.materialize(signals.wait(partition_idx))
 
             # preparing to write data from the buffer to a file
             with pandas.io.common.get_handle(
@@ -170,12 +171,12 @@ class RayIO(BaseIO):
                 handles.handle.write(content)
 
             # signal that the next process can start writing to the file
-            ray.get(signals.send.remote(partition_idx + 1))
+            RayWrapper.materialize(signals.send(partition_idx + 1))
             # used for synchronization purposes
             return pandas.DataFrame()
 
         # signaling that the partition with id==0 can be written to the file
-        ray.get(signals.send.remote(0))
+        RayWrapper.materialize(signals.send(0))
         result = qc._modin_frame._partition_mgr_cls.map_axis_partitions(
             axis=1,
             partitions=qc._modin_frame._partitions,
@@ -186,7 +187,7 @@ class RayIO(BaseIO):
             max_retries=0,
         )
         # pending completion
-        ray.get([partition.oid for partition in result.flatten()])
+        RayWrapper.materialize([partition.future for partition in result.flatten()])
 
     @staticmethod
     def _to_parquet_check_support(kwargs):
@@ -259,4 +260,4 @@ class RayIO(BaseIO):
             lengths=None,
             enumerate_partitions=True,
         )
-        ray.get([part.oid for row in result for part in row])
+        RayWrapper.materialize([partition.future for partition in result.flatten()])

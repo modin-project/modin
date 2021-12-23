@@ -22,8 +22,7 @@ from pandas.core.dtypes.cast import find_common_type
 
 from ..partitioning.partition_manager import PyarrowOnRayDataframePartitionManager
 from modin.core.dataframe.pandas.dataframe.dataframe import PandasDataframe
-
-import ray
+from modin.core.execution.ray.common.task_wrapper import RayWrapper
 
 
 class PyarrowOnRayDataframe(PandasDataframe):
@@ -90,7 +89,7 @@ class PyarrowOnRayDataframe(PandasDataframe):
         each column.
         """
         dtypes = (
-            pandas.concat(ray.get(list_of_dtypes), axis=1)
+            pandas.concat(RayWrapper.materialize(list_of_dtypes), axis=1)
             .apply(lambda row: find_common_type(row.values), axis=1)
             .squeeze(axis=0)
         )

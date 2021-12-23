@@ -23,7 +23,7 @@ import ray
 
 
 @ray.remote
-def deploy_ray_func(func, args):  # pragma: no cover
+def deploy_ray_func(func, *args, **kwargs):  # pragma: no cover
     """
     Wrap `func` to ease calling it remotely.
 
@@ -31,18 +31,20 @@ def deploy_ray_func(func, args):  # pragma: no cover
     ----------
     func : callable
         A local function that we want to call remotely.
-    args : dict
-        Keyword arguments to pass to `func` when calling remotely.
+    *args : list
+        Positional arguments to pass to `func` when calling remotely.
+    **kwargs : dict
+        Keyword arguments to be passed in ``func``.
 
     Returns
     -------
     ray.ObjectRef or list
         Ray identifier of the result being put to Plasma store.
     """
-    return func(**args)
+    return func(*args, **kwargs)
 
 
-class RayTask:
+class RayWrapper:
     """Mixin that provides means of running functions remotely and getting local results."""
 
     @classmethod
@@ -66,6 +68,7 @@ class RayTask:
         ray.ObjectRef or list
             Ray identifier of the result being put to Plasma store.
         """
+        # return ray.remote(func, num_returns=num_returns).remote(*args, **kwargs)
         return deploy_ray_func.options(num_returns=num_returns).remote(
             func, *args, kwargs
         )
@@ -87,8 +90,50 @@ class RayTask:
         """
         return ray.get(obj_id)
 
+    @classmethod
+    def put(cls, data, **kwargs):
+        """
+        Store an object in the object store.
 
-@ray.remote
+        The object may not be evicted while a reference to the returned ID exists.
+
+        Parameters
+        ----------
+        data : object
+            The Python object to be stored.
+        **kwargs : dict
+            Additional keyword arguments to be passed in ``ray.put``.
+
+        Returns
+        -------
+        The object ref assigned to this value.
+        """
+        return ray.put(data, **kwargs)
+
+    @classmethod
+    def create_actor(cls, _class, *args, **kwargs):
+        """
+        TODO: add doc.
+        """
+        return ActorWrapper(_class, *args, **kwargs)
+
+
+class ActorWrapper:
+    def __init__(self, _cls, *args, **kwargs):
+        self._cls = _cls
+        self._remote_cls = ray.remote(_cls).remote(*args, **kwargs)
+
+    def __getattribute__(self, name):
+        if not name.startswith("_") and hasattr(self._cls, name):
+
+            def wrapper(*args, **kwargs):
+                print(name)
+                return self._remote_cls.__getattribute__(name).remote(*args, **kwargs)
+
+            return wrapper
+        return super().__getattribute__(name)
+
+
 class SignalActor:  # pragma: no cover
     """
     Help synchronize across tasks and actors on cluster.

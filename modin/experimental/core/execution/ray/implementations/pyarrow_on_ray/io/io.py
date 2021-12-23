@@ -22,11 +22,11 @@ from modin.experimental.core.execution.ray.implementations.pyarrow_on_ray.partit
     PyarrowOnRayDataframePartition,
 )
 from modin.core.storage_formats.pyarrow.parsers import PyarrowCSVParser
-from modin.core.execution.ray.common.task_wrapper import RayTask
+from modin.core.execution.ray.common.task_wrapper import RayWrapper
 from modin.core.io import CSVDispatcher
 
 
-class PyarrowOnRayCSVDispatcher(RayTask, PyarrowCSVParser, CSVDispatcher):
+class PyarrowOnRayCSVDispatcher(RayWrapper, PyarrowCSVParser, CSVDispatcher):
     """Class handles utils for reading `.csv` files with PyArrow storage format and Ray engine."""
 
     frame_cls = PyarrowOnRayDataframe

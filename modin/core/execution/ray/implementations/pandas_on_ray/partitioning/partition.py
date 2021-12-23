@@ -18,6 +18,7 @@ import pandas
 from modin.core.storage_formats.pandas.utils import length_fn_pandas, width_fn_pandas
 from modin.core.dataframe.pandas.partitioning.partition import PandasDataframePartition
 from modin.pandas.indexing import compute_sliced_len
+from modin.core.execution.ray.common.task_wrapper import RayWrapper
 
 import ray
 from ray.util import get_node_ip_address
@@ -61,6 +62,14 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
         self._width_cache = width
         self._ip_cache = ip
 
+    @property
+    def future(self):
+        """
+        Should be moved in abstract class.
+        """
+        # self.drain_call_queue ?
+        return self.oid
+
     def get(self):
         """
         Get the object wrapped by this partition out of the Plasma store.
@@ -72,7 +81,7 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
         """
         if len(self.call_queue):
             self.drain_call_queue()
-        return ray.get(self.oid)
+        return RayWrapper.materialize(self.oid)
 
     def apply(self, func, *args, **kwargs):
         """
@@ -256,7 +265,7 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
             A new ``PandasOnRayDataframePartition`` object.
         """
         return PandasOnRayDataframePartition(
-            ray.put(obj), len(obj.index), len(obj.columns)
+            RayWrapper.put(obj), len(obj.index), len(obj.columns)
         )
 
     @classmethod
@@ -274,7 +283,7 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
         ray.ObjectRef
             A reference to `func`.
         """
-        return ray.put(func)
+        return RayWrapper.put(func)
 
     def length(self):
         """
@@ -293,7 +302,7 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
                     self.oid
                 )
         if isinstance(self._length_cache, ObjectIDType):
-            self._length_cache = ray.get(self._length_cache)
+            self._length_cache = RayWrapper.materialize(self._length_cache)
         return self._length_cache
 
     def width(self):
@@ -313,7 +322,7 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
                     self.oid
                 )
         if isinstance(self._width_cache, ObjectIDType):
-            self._width_cache = ray.get(self._width_cache)
+            self._width_cache = RayWrapper.materialize(self._width_cache)
         return self._width_cache
 
     def ip(self):
@@ -331,7 +340,7 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
             else:
                 self._ip_cache = self.apply(lambda df: df)._ip_cache
         if isinstance(self._ip_cache, ObjectIDType):
-            self._ip_cache = ray.get(self._ip_cache)
+            self._ip_cache = RayWrapper.materialize(self._ip_cache)
         return self._ip_cache
 
     @classmethod
@@ -459,15 +468,15 @@ def apply_list_of_funcs(funcs, partition):  # pragma: no cover
 
     def deserialize(obj):
         if isinstance(obj, ObjectIDType):
-            return ray.get(obj)
+            return RayWrapper.materialize(obj)
         elif isinstance(obj, (tuple, list)) and any(
             isinstance(o, ObjectIDType) for o in obj
         ):
-            return ray.get(list(obj))
+            return RayWrapper.materialize(list(obj))
         elif isinstance(obj, dict) and any(
             isinstance(val, ObjectIDType) for val in obj.values()
         ):
-            return dict(zip(obj.keys(), ray.get(list(obj.values()))))
+            return dict(zip(obj.keys(), RayWrapper.materialize(list(obj.values()))))
         else:
             return obj
 

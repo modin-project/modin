@@ -21,6 +21,8 @@ import cupy as cp
 from modin.core.dataframe.pandas.partitioning.partition import PandasDataframePartition
 from pandas.core.dtypes.common import is_list_like
 
+from modin.core.execution.ray.common.task_wrapper import RayWrapper
+
 
 class cuDFOnRayDataframePartition(PandasDataframePartition):
     """
@@ -173,7 +175,7 @@ class cuDFOnRayDataframePartition(PandasDataframePartition):
         ray.ObjectRef
             A reference to `func` in Ray object store.
         """
-        return ray.put(func)
+        return RayWrapper.put(func)
 
     def length(self):
         """
@@ -277,7 +279,11 @@ class cuDFOnRayDataframePartition(PandasDataframePartition):
         -------
         int
         """
-        return ray.get(self.key) if isinstance(self.key, ray.ObjectRef) else self.key
+        return (
+            RayWrapper.materialize(self.key)
+            if isinstance(self.key, ray.ObjectRef)
+            else self.key
+        )
 
     def get_object_id(self):
         """
@@ -311,7 +317,7 @@ class cuDFOnRayDataframePartition(PandasDataframePartition):
         -------
         pandas.DataFrame
         """
-        return ray.get(
+        return RayWrapper.materialize(
             self.gpu_manager.apply_non_persistent.remote(
                 self.get_key(), None, cudf.DataFrame.to_pandas
             )
@@ -359,7 +365,7 @@ class cuDFOnRayDataframePartition(PandasDataframePartition):
             self.get_key(),
             lambda x: x,
         )
-        new_key = ray.get(new_key)
+        new_key = RayWrapper.materialize(new_key)
         return self.__constructor__(self.gpu_manager, new_key)
 
     # TODO(kvu35): buggy garbage collector reference issue #43

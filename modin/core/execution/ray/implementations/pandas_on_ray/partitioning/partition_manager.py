@@ -14,8 +14,10 @@
 """Module houses class that implements ``GenericRayDataframePartitionManager`` using Ray."""
 
 import inspect
-import numpy as np
 import threading
+
+import numpy as np
+import pandas
 
 from modin.config import ProgressBar
 from modin.core.execution.ray.generic.partitioning.partition_manager import (
@@ -28,9 +30,7 @@ from .axis_partition import (
 from .partition import PandasOnRayDataframePartition
 from modin.core.execution.ray.generic.modin_aqp import call_progress_bar
 from modin.error_message import ErrorMessage
-import pandas
-
-import ray
+from modin.core.execution.ray.common.task_wrapper import RayWrapper
 
 
 def progress_bar_wrapper(f):
@@ -124,17 +124,17 @@ class PandasOnRayDataframePartitionManager(GenericRayDataframePartitionManager):
         if axis == 0:
             # We grab the first column of blocks and extract the indices
             new_idx = (
-                [idx.apply(func).oid for idx in partitions.T[0]]
+                [idx.apply(func).future for idx in partitions.T[0]]
                 if len(partitions.T)
                 else []
             )
         else:
             new_idx = (
-                [idx.apply(func).oid for idx in partitions[0]]
+                [idx.apply(func).future for idx in partitions[0]]
                 if len(partitions)
                 else []
             )
-        new_idx = ray.get(new_idx)
+        new_idx = RayWrapper.materialize(new_idx)
         return new_idx[0].append(new_idx[1:]) if len(new_idx) else new_idx
 
     @classmethod

@@ -18,8 +18,7 @@ import numpy as np
 from modin.core.dataframe.pandas.partitioning.partition_manager import (
     PandasDataframePartitionManager,
 )
-
-import ray
+from modin.core.execution.ray.common.task_wrapper import RayWrapper
 
 
 class GenericRayDataframePartitionManager(PandasDataframePartitionManager):
@@ -41,9 +40,9 @@ class GenericRayDataframePartitionManager(PandasDataframePartitionManager):
         -------
         NumPy array
         """
-        parts = ray.get(
+        parts = RayWrapper.materialize(
             [
-                obj.apply(lambda df, **kwargs: df.to_numpy(**kwargs)).oid
+                obj.apply(lambda df, **kwargs: df.to_numpy(**kwargs)).future
                 for row in partitions
                 for obj in row
             ]

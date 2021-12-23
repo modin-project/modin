@@ -33,7 +33,7 @@ from modin.core.storage_formats.pandas.parsers import (
     PandasSQLParser,
     PandasExcelParser,
 )
-from modin.core.execution.ray.common.task_wrapper import RayTask
+from modin.core.execution.ray.common.task_wrapper import RayWrapper
 from modin.core.execution.ray.implementations.pandas_on_ray.partitioning.partition import (
     PandasOnRayDataframePartition,
 )
@@ -52,18 +52,20 @@ class PandasOnRayIO(RayIO):
         query_compiler_cls=PandasQueryCompiler,
         frame_cls=PandasOnRayDataframe,
     )
-    read_csv = type("", (RayTask, PandasCSVParser, CSVDispatcher), build_args).read
-    read_fwf = type("", (RayTask, PandasFWFParser, FWFDispatcher), build_args).read
-    read_json = type("", (RayTask, PandasJSONParser, JSONDispatcher), build_args).read
+    read_csv = type("", (RayWrapper, PandasCSVParser, CSVDispatcher), build_args).read
+    read_fwf = type("", (RayWrapper, PandasFWFParser, FWFDispatcher), build_args).read
+    read_json = type(
+        "", (RayWrapper, PandasJSONParser, JSONDispatcher), build_args
+    ).read
     read_parquet = type(
-        "", (RayTask, PandasParquetParser, ParquetDispatcher), build_args
+        "", (RayWrapper, PandasParquetParser, ParquetDispatcher), build_args
     ).read
     # Blocked on pandas-dev/pandas#12236. It is faster to default to pandas.
-    # read_hdf = type("", (RayTask, PandasHDFParser, HDFReader), build_args).read
+    # read_hdf = type("", (RayWrapper, PandasHDFParser, HDFReader), build_args).read
     read_feather = type(
-        "", (RayTask, PandasFeatherParser, FeatherDispatcher), build_args
+        "", (RayWrapper, PandasFeatherParser, FeatherDispatcher), build_args
     ).read
-    read_sql = type("", (RayTask, PandasSQLParser, SQLDispatcher), build_args).read
+    read_sql = type("", (RayWrapper, PandasSQLParser, SQLDispatcher), build_args).read
     read_excel = type(
-        "", (RayTask, PandasExcelParser, ExcelDispatcher), build_args
+        "", (RayWrapper, PandasExcelParser, ExcelDispatcher), build_args
     ).read

@@ -14,7 +14,6 @@
 """Module houses class that implements ``PandasOnRayDataframe`` class using cuDF."""
 
 import numpy as np
-import ray
 
 from ..partitioning.partition import cuDFOnRayDataframePartition
 from ..partitioning.partition_manager import cuDFOnRayDataframePartitionManager
@@ -22,6 +21,7 @@ from ..partitioning.partition_manager import cuDFOnRayDataframePartitionManager
 from modin.core.execution.ray.implementations.pandas_on_ray.dataframe.dataframe import (
     PandasOnRayDataframe,
 )
+from modin.core.execution.ray.common.task_wrapper import RayWrapper
 from modin.error_message import ErrorMessage
 
 
@@ -248,7 +248,7 @@ class cuDFOnRayDataframe(PandasOnRayDataframe):
         )
 
         shape = key_and_gpus.shape[:2]
-        keys = ray.get(key_and_gpus[:, :, 0].flatten().tolist())
+        keys = RayWrapper.materialize(key_and_gpus[:, :, 0].flatten().tolist())
         gpu_managers = key_and_gpus[:, :, 1].flatten().tolist()
         new_partitions = self._partition_mgr_cls._create_partitions(
             keys, gpu_managers

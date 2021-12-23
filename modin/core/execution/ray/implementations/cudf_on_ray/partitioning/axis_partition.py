@@ -14,9 +14,9 @@
 """Module houses classes of axis partitions implemented using Ray and cuDF."""
 
 import cudf
-import ray
 
 from .partition import cuDFOnRayDataframePartition
+from modin.core.execution.ray.common.task_wrapper import RayWrapper
 
 
 class cuDFOnRayDataframeAxisPartition(object):
@@ -74,7 +74,7 @@ class cuDFOnRayDataframeColumnPartition(cuDFOnRayDataframeAxisPartition):
         key = head_gpu_manager.reduce.remote(
             cudf_dataframe_object_ids, axis=self.axis, func=func
         )
-        key = ray.get(key)
+        key = RayWrapper.materialize(key)
         result = cuDFOnRayDataframePartition(gpu_manager=head_gpu_manager, key=key)
         return result
 
@@ -114,5 +114,5 @@ class cuDFOnRayDataframeRowPartition(cuDFOnRayDataframeAxisPartition):
 
         # FIXME: Method `gpu_manager.reduce_key_list` does not exist.
         key = gpu.reduce_key_list.remote(keys, func)
-        key = ray.get(key)
+        key = RayWrapper.materialize(key)
         return cuDFOnRayDataframePartition(gpu_manager=gpu, key=key)

@@ -51,6 +51,14 @@ class PandasOnDaskDataframePartition(PandasDataframePartition):
         self._width_cache = width
         self._ip_cache = ip
 
+    @property
+    def future(self):
+        """
+        Should be moved in abstract class.
+        """
+        # self.drain_call_queue ?
+        return self.future
+
     def get(self):
         """
         Get the object wrapped by this partition out of the distributed memory.

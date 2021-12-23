@@ -27,7 +27,7 @@ from modin.core.execution.ray.implementations.cudf_on_ray.partitioning.partition
 )
 
 
-from modin.core.execution.ray.common.task_wrapper import RayTask
+from modin.core.execution.ray.common.task_wrapper import RayWrapper
 from modin.core.storage_formats.cudf.parser import cuDFCSVParser
 
 
@@ -44,4 +44,4 @@ class cuDFOnRayIO(BaseIO):
         frame_partition_mgr_cls=cuDFOnRayDataframePartitionManager,
     )
 
-    read_csv = type("", (RayTask, cuDFCSVParser, cuDFCSVDispatcher), build_args).read
+    read_csv = type("", (RayWrapper, cuDFCSVParser, cuDFCSVDispatcher), build_args).read

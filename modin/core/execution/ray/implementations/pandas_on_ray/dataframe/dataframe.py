@@ -20,8 +20,7 @@ from modin.core.dataframe.pandas.dataframe.dataframe import PandasDataframe
 from modin.core.storage_formats.pandas.parsers import (
     find_common_type_cat as find_common_type,
 )
-
-import ray
+from modin.core.execution.ray.common.task_wrapper import RayWrapper
 
 
 class PandasOnRayDataframe(PandasDataframe):
@@ -70,7 +69,7 @@ class PandasOnRayDataframe(PandasDataframe):
         # the limited data seen by each worker. We use pandas to compute the exact dtype
         # over the whole column for each column.
         dtypes = (
-            pandas.concat(ray.get(list_of_dtypes), axis=1)
+            pandas.concat(RayWrapper.materialize(list_of_dtypes), axis=1)
             .apply(lambda row: find_common_type(row.values), axis=1)
             .squeeze(axis=0)
         )

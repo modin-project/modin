@@ -27,6 +27,7 @@ from modin.config import GpuCount
 from modin.core.execution.ray.generic.partitioning.partition_manager import (
     GenericRayDataframePartitionManager,
 )
+from modin.core.execution.ray.common.task_wrapper import RayWrapper
 
 # Global view of GPU Actors
 GPU_MANAGERS = []
@@ -53,7 +54,10 @@ def func(df, other, apply_func):
         The result of the `apply_func`
         (will be a ``ray.ObjectRef`` in outside level).
     """
-    return apply_func(ray.get(df.get.remote()), ray.get(other.get.remote()))
+    return apply_func(
+        RayWrapper.materialize(df.get.remote()),
+        RayWrapper.materialize(other.get.remote()),
+    )
 
 
 class cuDFOnRayDataframePartitionManager(GenericRayDataframePartitionManager):
@@ -126,7 +130,7 @@ class cuDFOnRayDataframePartitionManager(GenericRayDataframePartitionManager):
             put_func(cls._get_gpu_managers()[i], pandas_dfs[i])
             for i in range(num_splits)
         ]
-        keys = ray.get(keys)
+        keys = RayWrapper.materialize(keys)
         parts = cls._create_partitions(keys, cls._get_gpu_managers()).reshape(
             (num_splits, 1)
         )
@@ -196,7 +200,7 @@ class cuDFOnRayDataframePartitionManager(GenericRayDataframePartitionManager):
         This preprocesses the `func` first before applying it to the partitions.
         """
         preprocessed_map_func = cls.preprocess_func(func)
-        key_futures = ray.get(
+        key_futures = RayWrapper.materialize(
             [
                 partition.apply(preprocessed_map_func, **kwargs)
                 for partition in partitions

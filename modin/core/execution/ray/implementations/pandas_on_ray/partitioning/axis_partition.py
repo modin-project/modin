@@ -40,7 +40,7 @@ class PandasOnRayDataframeAxisPartition(PandasDataframeAxisPartition):
         for obj in list_of_blocks:
             obj.drain_call_queue()
         # Unwrap ray.ObjectRef from `PandasOnRayDataframePartition` object for ease of use
-        self.list_of_blocks = [obj.oid for obj in list_of_blocks]
+        self.list_of_blocks = [obj.future for obj in list_of_blocks]
         if get_ip:
             self.list_of_ips = [obj._ip_cache for obj in list_of_blocks]
 
