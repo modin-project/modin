@@ -127,7 +127,6 @@ class ActorWrapper:
         if not name.startswith("_") and hasattr(self._cls, name):
 
             def wrapper(*args, **kwargs):
-                print(name)
                 return self._remote_cls.__getattribute__(name).remote(*args, **kwargs)
 
             return wrapper
