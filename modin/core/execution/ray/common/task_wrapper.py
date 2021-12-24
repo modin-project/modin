@@ -50,6 +50,15 @@ class RayWrapper:
     """Mixin that provides means of running functions remotely and getting local results."""
 
     @classmethod
+    def _get_ray_kwargs(cls, kwargs):
+        options = {}
+        for param_name in ("num_cpus", "num_gpus", "max_retries", "resources"):
+            param_value = kwargs.pop(param_name, None)
+            if param_value is not None:
+                options[param_name] = param_value
+        return options
+
+    @classmethod
     def deploy(cls, func, num_returns, *args, **kwargs):
         """
         Run local `func` remotely.
@@ -70,11 +79,7 @@ class RayWrapper:
         ray.ObjectRef or list
             Ray identifier of the result being put to Plasma store.
         """
-        options = {}
-        for param_name in ("num_cpus", "num_gpus", "max_retries", "resources"):
-            param_value = kwargs.pop("param_name", None)
-            if param_value is not None:
-                options[param_name] = param_value
+        options = cls._get_ray_kwargs(kwargs)
 
         return deploy_ray_func.options(
             num_returns=num_returns,
@@ -136,7 +141,8 @@ class RayWrapper:
 class ActorWrapper:
     def __init__(self, _cls, *args, **kwargs):
         self._cls = _cls
-        self._remote_cls = ray.remote(_cls).remote(*args, **kwargs)
+        options = RayWrapper._get_ray_kwargs(kwargs)
+        self._remote_cls = ray.remote(_cls).options(**options).remote(*args, **kwargs)
 
     def __getattribute__(self, name):
         if not name.startswith("_") and hasattr(self._cls, name):
