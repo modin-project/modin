@@ -43,7 +43,7 @@ class PandasOnDaskDataframePartition(PandasDataframePartition):
     """
 
     def __init__(self, future, length=None, width=None, ip=None, call_queue=None):
-        self.future = future
+        self._future = future
         if call_queue is None:
             call_queue = []
         self.call_queue = call_queue
@@ -57,7 +57,7 @@ class PandasOnDaskDataframePartition(PandasDataframePartition):
         Should be moved in abstract class.
         """
         # self.drain_call_queue ?
-        return self.future
+        return self._future
 
     def get(self):
         """
@@ -70,9 +70,9 @@ class PandasOnDaskDataframePartition(PandasDataframePartition):
         """
         self.drain_call_queue()
         # blocking operation
-        if not isinstance(self.future, Future):
-            return self.future
-        return DaskWrapper.materialize(self.future)
+        if not isinstance(self._future, Future):
+            return self._future
+        return DaskWrapper.materialize(self._future)
 
     def apply(self, func, *args, **kwargs):
         """
@@ -99,14 +99,14 @@ class PandasOnDaskDataframePartition(PandasDataframePartition):
         call_queue = self.call_queue + [[func, args, kwargs]]
         if len(call_queue) > 1:
             futures = DaskWrapper.deploy(
-                apply_list_of_funcs, 2, call_queue, self.future, pure=False
+                apply_list_of_funcs, 2, call_queue, self._future, pure=False
             )
         else:
             # We handle `len(call_queue) == 1` in a different way because
             # this improves performance a bit.
             func, args, kwargs = call_queue[0]
             futures = DaskWrapper.deploy(
-                apply_func, 2, self.future, func, *args, pure=False, **kwargs
+                apply_func, 2, self._future, func, *args, pure=False, **kwargs
             )
         return PandasOnDaskDataframePartition(futures[0], ip=futures[1])
 
@@ -133,7 +133,7 @@ class PandasOnDaskDataframePartition(PandasDataframePartition):
         The keyword arguments are sent as a dictionary.
         """
         return PandasOnDaskDataframePartition(
-            self.future, call_queue=self.call_queue + [[func, args, kwargs]]
+            self._future, call_queue=self.call_queue + [[func, args, kwargs]]
         )
 
     def drain_call_queue(self):
@@ -143,23 +143,23 @@ class PandasOnDaskDataframePartition(PandasDataframePartition):
         call_queue = self.call_queue
         if len(call_queue) > 1:
             futures = DaskWrapper.deploy(
-                apply_list_of_funcs, 2, call_queue, self.future, pure=False
+                apply_list_of_funcs, 2, call_queue, self._future, pure=False
             )
         else:
             # We handle `len(call_queue) == 1` in a different way because
             # this improves performance a bit.
             func, args, kwargs = call_queue[0]
             futures = DaskWrapper.deploy(
-                apply_func, 2, self.future, func, *args, pure=False, **kwargs
+                apply_func, 2, self._future, func, *args, pure=False, **kwargs
             )
-        self.future = futures[0]
+        self._future = futures[0]
         self._ip_cache = futures[1]
         self.call_queue = []
 
     def wait(self):
         """Wait completing computations on the object wrapped by the partition."""
         self.drain_call_queue()
-        wait(self.future)
+        wait(self._future)
 
     def mask(self, row_indices, col_indices):
         """
@@ -198,7 +198,7 @@ class PandasOnDaskDataframePartition(PandasDataframePartition):
             A copy of this partition.
         """
         return PandasOnDaskDataframePartition(
-            self.future,
+            self._future,
             length=self._length_cache,
             width=self._width_cache,
             ip=self._ip_cache,
