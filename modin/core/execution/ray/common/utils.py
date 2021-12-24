@@ -31,6 +31,7 @@ from modin.config import (
     NPartitions,
     ValueSource,
 )
+from .task_wrapper import RayWrapper
 
 
 def _move_stdlib_ahead_of_site_packages(*args):
@@ -193,7 +194,9 @@ def initialize_ray(
             # Check that GPU_MANAGERS is empty because _update_engine can be called multiple times
             if not GPU_MANAGERS:
                 for i in range(GpuCount.get()):
-                    GPU_MANAGERS.append(GPUManager.remote(i))
+                    GPU_MANAGERS.append(
+                        RayWrapper.create_actor(GPUManager, i, num_gpus=1)
+                    )
     _move_stdlib_ahead_of_site_packages()
     ray.worker.global_worker.run_function_on_all_workers(
         _move_stdlib_ahead_of_site_packages
@@ -205,3 +208,6 @@ def initialize_ray(
         NPartitions._put(num_gpus)
     else:
         NPartitions._put(num_cpus)
+
+
+get_node_ip_address = ray.util.get_node_ip_address

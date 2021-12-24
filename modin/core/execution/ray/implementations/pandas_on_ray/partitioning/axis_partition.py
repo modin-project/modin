@@ -18,10 +18,9 @@ import pandas
 from modin.core.dataframe.pandas.partitioning.axis_partition import (
     PandasDataframeAxisPartition,
 )
+from modin.core.execution.ray.common.task_wrapper import ObjectRef, RayWrapper
+from modin.core.execution.ray.common.utils import get_node_ip_address
 from .partition import PandasOnRayDataframePartition
-
-import ray
-from ray.util import get_node_ip_address
 
 
 class PandasOnRayDataframeAxisPartition(PandasDataframeAxisPartition):
@@ -39,13 +38,13 @@ class PandasOnRayDataframeAxisPartition(PandasDataframeAxisPartition):
     def __init__(self, list_of_blocks, get_ip=False):
         for obj in list_of_blocks:
             obj.drain_call_queue()
-        # Unwrap ray.ObjectRef from `PandasOnRayDataframePartition` object for ease of use
+        # Unwrap ObjectRef from `PandasOnRayDataframePartition` object for ease of use
         self.list_of_blocks = [obj.future for obj in list_of_blocks]
         if get_ip:
             self.list_of_ips = [obj._ip_cache for obj in list_of_blocks]
 
     partition_type = PandasOnRayDataframePartition
-    instance_type = ray.ObjectRef
+    instance_type = ObjectRef
 
     @classmethod
     def deploy_axis_func(
@@ -77,10 +76,9 @@ class PandasOnRayDataframeAxisPartition(PandasDataframeAxisPartition):
         """
         lengths = kwargs.get("_lengths", None)
         max_retries = kwargs.pop("max_retries", None)
-        return deploy_ray_func.options(
-            num_returns=(num_splits if lengths is None else len(lengths)) * 4,
-            **({"max_retries": max_retries} if max_retries is not None else {}),
-        ).remote(
+        return RayWrapper.deploy(
+            _deploy_ray_func,
+            (num_splits if lengths is None else len(lengths)) * 4,
             PandasDataframeAxisPartition.deploy_axis_func,
             axis,
             func,
@@ -88,6 +86,7 @@ class PandasOnRayDataframeAxisPartition(PandasDataframeAxisPartition):
             kwargs,
             maintain_partitioning,
             *partitions,
+            **({"max_retries": max_retries} if max_retries is not None else {}),
         )
 
     @classmethod
@@ -120,7 +119,9 @@ class PandasOnRayDataframeAxisPartition(PandasDataframeAxisPartition):
         list
             A list of ``pandas.DataFrame``-s.
         """
-        return deploy_ray_func.options(num_returns=num_splits * 4).remote(
+        return RayWrapper.deploy(
+            _deploy_ray_func,
+            num_splits * 4,
             PandasDataframeAxisPartition.deploy_func_between_two_axis_partitions,
             axis,
             func,
@@ -133,12 +134,12 @@ class PandasOnRayDataframeAxisPartition(PandasDataframeAxisPartition):
 
     def _wrap_partitions(self, partitions):
         """
-        Wrap partitions passed as a list of ``ray.ObjectRef`` with ``PandasOnRayDataframePartition`` class.
+        Wrap partitions passed as a list of ``ObjectRef`` with ``PandasOnRayDataframePartition`` class.
 
         Parameters
         ----------
         partitions : list
-            List of ``ray.ObjectRef``.
+            List of ``ObjectRef``.
 
         Returns
         -------
@@ -187,8 +188,7 @@ class PandasOnRayDataframeRowPartition(PandasOnRayDataframeAxisPartition):
     axis = 1
 
 
-@ray.remote
-def deploy_ray_func(func, *args):  # pragma: no cover
+def _deploy_ray_func(func, *args):  # pragma: no cover
     """
     Execute a function on an axis partition in a worker process.
 

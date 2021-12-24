@@ -13,11 +13,12 @@
 
 """The module for working with displaying progress bars for Ray engine."""
 
-import ray
 import os
 import time
 import threading
 import warnings
+
+from modin.core.execution.ray.common.task_wrapper import RayWrapper
 
 progress_bars = {}
 bar_lock = threading.Lock()
@@ -31,7 +32,7 @@ def call_progress_bar(result_parts, line_no):
 
     Parameters
     ----------
-    result_parts : list of list of ray.ObjectRef
+    result_parts : list of list of ObjectRef
         Objects which are being computed for which progress is requested.
     line_no : int
         Line number in the call stack which we're displaying progress for.
@@ -80,7 +81,7 @@ def call_progress_bar(result_parts, line_no):
 
     threading.Thread(target=show_time_updates, args=(progress_bars[pbar_id],)).start()
     for i in range(1, len(futures) + 1):
-        ray.wait(futures, num_returns=i)
+        RayWrapper.wait(futures, num_returns=i)
         progress_bars[pbar_id].update(1)
         progress_bars[pbar_id].refresh()
     if progress_bars[pbar_id].n == progress_bars[pbar_id].total:

@@ -65,13 +65,13 @@ class cuDFOnRayDataframeColumnPartition(cuDFOnRayDataframeAxisPartition):
         gpu_managers = [partition.get_gpu_manager() for partition in self.partitions]
         head_gpu_manager = gpu_managers[0]
         cudf_dataframe_object_ids = [
-            gpu_manager.get.remote(key) for gpu_manager, key in zip(gpu_managers, keys)
+            gpu_manager.get(key) for gpu_manager, key in zip(gpu_managers, keys)
         ]
 
         # FIXME: The signature of `head_gpu_manager.reduce` requires
         # (first, others, func, axis=0, **kwargs) parameters, but `first`
         # parameter isn't present.
-        key = head_gpu_manager.reduce.remote(
+        key = head_gpu_manager.reduce(
             cudf_dataframe_object_ids, axis=self.axis, func=func
         )
         key = RayWrapper.materialize(key)
@@ -113,6 +113,6 @@ class cuDFOnRayDataframeRowPartition(cuDFOnRayDataframeAxisPartition):
         gpu = self.partitions[0].get_gpu_manager()
 
         # FIXME: Method `gpu_manager.reduce_key_list` does not exist.
-        key = gpu.reduce_key_list.remote(keys, func)
+        key = gpu.reduce_key_list(keys, func)
         key = RayWrapper.materialize(key)
         return cuDFOnRayDataframePartition(gpu_manager=gpu, key=key)

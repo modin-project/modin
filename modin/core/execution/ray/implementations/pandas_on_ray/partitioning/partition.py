@@ -18,19 +18,8 @@ import pandas
 from modin.core.storage_formats.pandas.utils import length_fn_pandas, width_fn_pandas
 from modin.core.dataframe.pandas.partitioning.partition import PandasDataframePartition
 from modin.pandas.indexing import compute_sliced_len
-from modin.core.execution.ray.common.task_wrapper import RayWrapper
-
-import ray
-from ray.util import get_node_ip_address
-from packaging import version
-
-ObjectIDType = ray.ObjectRef
-if version.parse(ray.__version__) >= version.parse("1.2.0"):
-    from ray.util.client.common import ClientObjectRef
-
-    ObjectIDType = (ray.ObjectRef, ClientObjectRef)
-
-compute_sliced_len = ray.remote(compute_sliced_len)
+from modin.core.execution.ray.common.task_wrapper import ObjectRef, RayWrapper
+from modin.core.execution.ray.common.utils import get_node_ip_address
 
 
 class PandasOnRayDataframePartition(PandasDataframePartition):
@@ -39,20 +28,20 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
 
     Parameters
     ----------
-    object_id : ray.ObjectRef
+    object_id : ObjectRef
         A reference to ``pandas.DataFrame`` that need to be wrapped with this class.
-    length : ray.ObjectRef or int, optional
+    length : ObjectRef or int, optional
         Length or reference to it of wrapped ``pandas.DataFrame``.
-    width : ray.ObjectRef or int, optional
+    width : ObjectRef or int, optional
         Width or reference to it of wrapped ``pandas.DataFrame``.
-    ip : ray.ObjectRef or str, optional
+    ip : ObjectRef or str, optional
         Node IP address or reference to it that holds wrapped ``pandas.DataFrame``.
     call_queue : list
         Call queue that needs to be executed on wrapped ``pandas.DataFrame``.
     """
 
     def __init__(self, object_id, length=None, width=None, ip=None, call_queue=None):
-        assert isinstance(object_id, ObjectIDType)
+        assert isinstance(object_id, ObjectRef)
 
         self.oid = object_id
         if call_queue is None:
@@ -89,7 +78,7 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
 
         Parameters
         ----------
-        func : callable or ray.ObjectRef
+        func : callable or ObjectRef
             A function to apply.
         *args : iterable
             Additional positional arguments to be passed in `func`.
@@ -103,18 +92,25 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
 
         Notes
         -----
-        It does not matter if `func` is callable or an ``ray.ObjectRef``. Ray will
+        It does not matter if `func` is callable or an ``ObjectRef``. Ray will
         handle it correctly either way. The keyword arguments are sent as a dictionary.
         """
         oid = self.oid
         call_queue = self.call_queue + [(func, args, kwargs)]
         if len(call_queue) > 1:
-            result, length, width, ip = apply_list_of_funcs.remote(call_queue, oid)
+            result, length, width, ip = RayWrapper.deploy(
+                _apply_list_of_funcs,
+                4,
+                call_queue,
+                oid,
+            )
         else:
             # We handle `len(call_queue) == 1` in a different way because
             # this dramatically improves performance.
             func, args, kwargs = call_queue[0]
-            result, length, width, ip = apply_func.remote(oid, func, *args, **kwargs)
+            result, length, width, ip = RayWrapper.deploy(
+                _apply_func, 4, oid, func, *args, **kwargs
+            )
         return PandasOnRayDataframePartition(result, length, width, ip)
 
     def add_to_apply_calls(self, func, *args, **kwargs):
@@ -123,7 +119,7 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
 
         Parameters
         ----------
-        func : callable or ray.ObjectRef
+        func : callable or ObjectRef
             Function to be added to the call queue.
         *args : iterable
             Additional positional arguments to be passed in `func`.
@@ -137,7 +133,7 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
 
         Notes
         -----
-        It does not matter if `func` is callable or an ``ray.ObjectRef``. Ray will
+        It does not matter if `func` is callable or an ``ObjectRef``. Ray will
         handle it correctly either way. The keyword arguments are sent as a dictionary.
         """
         return PandasOnRayDataframePartition(
@@ -156,7 +152,12 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
                 self._length_cache,
                 self._width_cache,
                 self._ip_cache,
-            ) = apply_list_of_funcs.remote(call_queue, oid)
+            ) = RayWrapper.deploy(
+                _apply_list_of_funcs,
+                4,
+                call_queue,
+                oid,
+            )
         else:
             # We handle `len(call_queue) == 1` in a different way because
             # this dramatically improves performance.
@@ -166,13 +167,13 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
                 self._length_cache,
                 self._width_cache,
                 self._ip_cache,
-            ) = apply_func.remote(oid, func, *args, **kwargs)
+            ) = RayWrapper.deploy(_apply_func, 4, oid, func, *args, **kwargs)
         self.call_queue = []
 
     def wait(self):
         """Wait completing computations on the object wrapped by the partition."""
         self.drain_call_queue()
-        ray.wait([self.oid])
+        RayWrapper.wait([self.oid])
 
     def __copy__(self):
         """
@@ -235,17 +236,19 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
             A new ``PandasOnRayDataframePartition`` object.
         """
         new_obj = super().mask(row_indices, col_indices)
-        if isinstance(row_indices, slice) and isinstance(
-            self._length_cache, ObjectIDType
-        ):
-            new_obj._length_cache = compute_sliced_len.remote(
-                row_indices, self._length_cache
+        if isinstance(row_indices, slice) and isinstance(self._length_cache, ObjectRef):
+            new_obj._length_cache = RayWrapper.deploy(
+                compute_sliced_len,
+                1,
+                row_indices,
+                self._length_cache,
             )
-        if isinstance(col_indices, slice) and isinstance(
-            self._width_cache, ObjectIDType
-        ):
-            new_obj._width_cache = compute_sliced_len.remote(
-                col_indices, self._width_cache
+        if isinstance(col_indices, slice) and isinstance(self._width_cache, ObjectRef):
+            new_obj._width_cache = RayWrapper.deploy(
+                compute_sliced_len,
+                1,
+                col_indices,
+                self._width_cache,
             )
         return new_obj
 
@@ -280,7 +283,7 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
 
         Returns
         -------
-        ray.ObjectRef
+        ObjectRef
             A reference to `func`.
         """
         return RayWrapper.put(func)
@@ -298,10 +301,12 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
             if len(self.call_queue):
                 self.drain_call_queue()
             else:
-                self._length_cache, self._width_cache = get_index_and_columns.remote(
-                    self.oid
+                self._length_cache, self._width_cache = RayWrapper.deploy(
+                    _get_index_and_columns,
+                    2,
+                    self.oid,
                 )
-        if isinstance(self._length_cache, ObjectIDType):
+        if isinstance(self._length_cache, ObjectRef):
             self._length_cache = RayWrapper.materialize(self._length_cache)
         return self._length_cache
 
@@ -318,10 +323,12 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
             if len(self.call_queue):
                 self.drain_call_queue()
             else:
-                self._length_cache, self._width_cache = get_index_and_columns.remote(
-                    self.oid
+                self._length_cache, self._width_cache = RayWrapper.deploy(
+                    _get_index_and_columns,
+                    2,
+                    self.oid,
                 )
-        if isinstance(self._width_cache, ObjectIDType):
+        if isinstance(self._width_cache, ObjectRef):
             self._width_cache = RayWrapper.materialize(self._width_cache)
         return self._width_cache
 
@@ -339,7 +346,7 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
                 self.drain_call_queue()
             else:
                 self._ip_cache = self.apply(lambda df: df)._ip_cache
-        if isinstance(self._ip_cache, ObjectIDType):
+        if isinstance(self._ip_cache, ObjectRef):
             self._ip_cache = RayWrapper.materialize(self._ip_cache)
         return self._ip_cache
 
@@ -380,8 +387,7 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
         return cls.put(pandas.DataFrame())
 
 
-@ray.remote(num_returns=2)
-def get_index_and_columns(df):
+def _get_index_and_columns(df):
     """
     Get the number of rows and columns of a pandas DataFrame.
 
@@ -400,8 +406,7 @@ def get_index_and_columns(df):
     return len(df.index), len(df.columns)
 
 
-@ray.remote(num_returns=4)
-def apply_func(partition, func, *args, **kwargs):  # pragma: no cover
+def _apply_func(partition, func, *args, **kwargs):  # pragma: no cover
     """
     Execute a function on the partition in a worker process.
 
@@ -442,8 +447,7 @@ def apply_func(partition, func, *args, **kwargs):  # pragma: no cover
     )
 
 
-@ray.remote(num_returns=4)
-def apply_list_of_funcs(funcs, partition):  # pragma: no cover
+def _apply_list_of_funcs(funcs, partition):  # pragma: no cover
     """
     Execute all operations stored in the call queue on the partition in a worker process.
 
@@ -467,14 +471,14 @@ def apply_list_of_funcs(funcs, partition):  # pragma: no cover
     """
 
     def deserialize(obj):
-        if isinstance(obj, ObjectIDType):
+        if isinstance(obj, ObjectRef):
             return RayWrapper.materialize(obj)
         elif isinstance(obj, (tuple, list)) and any(
-            isinstance(o, ObjectIDType) for o in obj
+            isinstance(o, ObjectRef) for o in obj
         ):
             return RayWrapper.materialize(list(obj))
         elif isinstance(obj, dict) and any(
-            isinstance(val, ObjectIDType) for val in obj.values()
+            isinstance(val, ObjectRef) for val in obj.values()
         ):
             return dict(zip(obj.keys(), RayWrapper.materialize(list(obj.values()))))
         else:

@@ -13,13 +13,13 @@
 
 """The module defines interface for an axis partition with PyArrow storage format and Ray engine."""
 
+import pyarrow
+
 from modin.core.dataframe.pandas.partitioning.axis_partition import (
     BaseDataframeAxisPartition,
 )
+from modin.core.execution.ray.common.task_wrapper import RayWrapper
 from .partition import PyarrowOnRayDataframePartition
-
-import ray
-import pyarrow
 
 
 class PyarrowOnRayDataframeAxisPartition(BaseDataframeAxisPartition):
@@ -69,9 +69,9 @@ class PyarrowOnRayDataframeAxisPartition(BaseDataframeAxisPartition):
         if other_axis_partition is not None:
             return [
                 PyarrowOnRayDataframePartition(obj)
-                for obj in deploy_ray_func_between_two_axis_partitions.options(
-                    num_returns=num_splits
-                ).remote(
+                for obj in RayWrapper.deploy(
+                    _deploy_ray_func_between_two_axis_partitions,
+                    num_splits,
                     self.axis,
                     func,
                     num_splits,
@@ -85,9 +85,7 @@ class PyarrowOnRayDataframeAxisPartition(BaseDataframeAxisPartition):
         args.extend(self.list_of_blocks)
         return [
             PyarrowOnRayDataframePartition(obj)
-            for obj in deploy_ray_axis_func.options(num_returns=num_splits).remote(
-                *args
-            )
+            for obj in RayWrapper.deploy(_deploy_ray_axis_func, num_splits, *args)
         ]
 
     def shuffle(self, func, num_splits=None, **kwargs):
@@ -119,9 +117,7 @@ class PyarrowOnRayDataframeAxisPartition(BaseDataframeAxisPartition):
         args.extend(self.list_of_blocks)
         return [
             PyarrowOnRayDataframePartition(obj)
-            for obj in deploy_ray_axis_func.options(num_returns=num_splits).remote(
-                *args
-            )
+            for obj in RayWrapper.deploy(_deploy_ray_axis_func, num_splits, *args)
         ]
 
 
@@ -243,8 +239,7 @@ def split_arrow_table_result(axis, result, num_partitions, num_splits, metadata)
         ]
 
 
-@ray.remote
-def deploy_ray_axis_func(axis, func, num_splits, kwargs, *partitions):
+def _deploy_ray_axis_func(axis, func, num_splits, kwargs, *partitions):
     """
     Deploy a function along a full axis in Ray.
 
@@ -276,8 +271,7 @@ def deploy_ray_axis_func(axis, func, num_splits, kwargs, *partitions):
     )
 
 
-@ray.remote
-def deploy_ray_func_between_two_axis_partitions(
+def _deploy_ray_func_between_two_axis_partitions(
     axis, func, num_splits, len_of_left, kwargs, *partitions
 ):
     """
@@ -315,27 +309,3 @@ def deploy_ray_func_between_two_axis_partitions(
     return split_arrow_table_result(
         axis, result, len(result.num_rows), num_splits, result.schema.metadata
     )
-
-
-@ray.remote
-def deploy_ray_shuffle_func(axis, func, num_splits, kwargs, *partitions):
-    """
-    Deploy shuffle function that defines the order of the data in this axis partition.
-
-    Parameters
-    ----------
-    axis : {0, 1}
-        The axis to perform the function along.
-    func : callable
-        The function to deploy.
-    num_splits : int
-        The number of splits to return.
-    kwargs : dict
-        A dictionary of keyword arguments.
-    *partitions : array-like
-        All partitions that make up the full axis (row or column).
-
-    Notes
-    -----
-    Function is deprecated.
-    """

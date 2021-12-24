@@ -11,7 +11,7 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-
+import multiprocessing as mp
 import pytest
 
 import modin
@@ -30,7 +30,6 @@ from sklearn.datasets import (
 )
 from sklearn.metrics import accuracy_score, mean_squared_error
 
-import multiprocessing as mp
 import ray
 
 

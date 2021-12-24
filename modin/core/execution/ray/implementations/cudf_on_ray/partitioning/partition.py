@@ -13,15 +13,13 @@
 
 """Module houses class that wraps data (block partition) and its metadata."""
 
-import ray
 import cudf
 import cupy
 import numpy as np
-import cupy as cp
+
 from modin.core.dataframe.pandas.partitioning.partition import PandasDataframePartition
 from pandas.core.dtypes.common import is_list_like
-
-from modin.core.execution.ray.common.task_wrapper import RayWrapper
+from modin.core.execution.ray.common.task_wrapper import ObjectRef, RayWrapper
 
 
 class cuDFOnRayDataframePartition(PandasDataframePartition):
@@ -32,12 +30,12 @@ class cuDFOnRayDataframePartition(PandasDataframePartition):
     ----------
     gpu_manager : modin.core.execution.ray.implementations.cudf_on_ray.partitioning.GPUManager
         A gpu manager to store cuDF dataframes.
-    key : ray.ObjectRef or int
+    key : ObjectRef or int
         An integer key (or reference to key) associated with
         ``cudf.DataFrame`` stored in `gpu_manager`.
-    length : ray.ObjectRef or int, optional
+    length : ObjectRef or int, optional
         Length or reference to it of wrapped ``pandas.DataFrame``.
-    width : ray.ObjectRef or int, optional
+    width : ObjectRef or int, optional
         Width or reference to it of wrapped ``pandas.DataFrame``.
     """
 
@@ -90,11 +88,11 @@ class cuDFOnRayDataframePartition(PandasDataframePartition):
 
         Returns
         -------
-        ray.ObjectRef
+        ObjectRef
             A reference to integer key of added pandas.DataFrame
             to internal dict-storage in `gpu_manager`.
         """
-        return gpu_manager.put.remote(pandas_dataframe)
+        return gpu_manager.put(pandas_dataframe)
 
     def apply(self, func, **kwargs):
         """
@@ -109,11 +107,11 @@ class cuDFOnRayDataframePartition(PandasDataframePartition):
 
         Returns
         -------
-        ray.ObjectRef
+        ObjectRef
             A reference to integer key of result
             in internal dict-storage of `self.gpu_manager`.
         """
-        return self.gpu_manager.apply.remote(self.get_key(), None, func, **kwargs)
+        return self.gpu_manager.apply(self.get_key(), None, func, **kwargs)
 
     # TODO: Check the need of this method
     def apply_result_not_dataframe(self, func, **kwargs):
@@ -129,12 +127,12 @@ class cuDFOnRayDataframePartition(PandasDataframePartition):
 
         Returns
         -------
-        ray.ObjectRef
+        ObjectRef
             A reference to integer key of result
             in internal dict-storage of `self.gpu_manager`.
         """
         # FIXME: Can't find `gpu_manager.apply_result_not_dataframe` method.
-        return self.gpu_manager.apply_result_not_dataframe.remote(
+        return self.gpu_manager.apply_result_not_dataframe(
             self.get_key(), func, **kwargs
         )
 
@@ -172,7 +170,7 @@ class cuDFOnRayDataframePartition(PandasDataframePartition):
 
         Returns
         -------
-        ray.ObjectRef
+        ObjectRef
             A reference to `func` in Ray object store.
         """
         return RayWrapper.put(func)
@@ -183,12 +181,12 @@ class cuDFOnRayDataframePartition(PandasDataframePartition):
 
         Returns
         -------
-        int or ray.ObjectRef
+        int or ObjectRef
             The length (or reference to length) of the object.
         """
         if self._length_cache:
             return self._length_cache
-        return self.gpu_manager.length.remote(self.get_key())
+        return self.gpu_manager.length(self.get_key())
 
     def width(self):
         """
@@ -196,12 +194,12 @@ class cuDFOnRayDataframePartition(PandasDataframePartition):
 
         Returns
         -------
-        int or ray.ObjectRef
+        int or ObjectRef
             The width (or reference to width) of the object.
         """
         if self._width_cache:
             return self._width_cache
-        return self.gpu_manager.width.remote(self.get_key())
+        return self.gpu_manager.width(self.get_key())
 
     def mask(self, row_indices, col_indices):
         """
@@ -216,7 +214,7 @@ class cuDFOnRayDataframePartition(PandasDataframePartition):
 
         Returns
         -------
-        ray.ObjectRef
+        ObjectRef
             A reference to integer key of result
             in internal dict-storage of `self.gpu_manager`.
         """
@@ -244,7 +242,7 @@ class cuDFOnRayDataframePartition(PandasDataframePartition):
             if isinstance(df.index, cudf.core.multiindex.MultiIndex) and is_list_like(
                 row_indices
             ):
-                new_row_indices = cp.full(
+                new_row_indices = cupy.full(
                     (1, df.index.size), False, dtype=bool
                 ).squeeze()
                 new_row_indices[row_indices] = True
@@ -252,7 +250,7 @@ class cuDFOnRayDataframePartition(PandasDataframePartition):
             return df.iloc[row_indices, col_indices]
 
         iloc = cuDFOnRayDataframePartition.preprocess_func(iloc)
-        return self.gpu_manager.apply.remote(
+        return self.gpu_manager.apply(
             self.key,
             None,
             iloc,
@@ -281,7 +279,7 @@ class cuDFOnRayDataframePartition(PandasDataframePartition):
         """
         return (
             RayWrapper.materialize(self.key)
-            if isinstance(self.key, ray.ObjectRef)
+            if isinstance(self.key, ObjectRef)
             else self.key
         )
 
@@ -291,11 +289,11 @@ class cuDFOnRayDataframePartition(PandasDataframePartition):
 
         Returns
         -------
-        ray.ObjectRef
+        ObjectRef
         """
         # FIXME: Can't find `gpu_manager.get_object_id` method. Probably, method
         # `gpu_manager.get_oid` should be used.
-        return self.gpu_manager.get_object_id.remote(self.get_key())
+        return self.gpu_manager.get_object_id(self.get_key())
 
     def get(self):
         """
@@ -303,11 +301,11 @@ class cuDFOnRayDataframePartition(PandasDataframePartition):
 
         Returns
         -------
-        ray.ObjectRef
+        ObjectRef
         """
         # FIXME: Can't find `gpu_manager.get` method. Probably, method
         # `gpu_manager.get_oid` should be used.
-        return self.gpu_manager.get.remote(self.get_key())
+        return self.gpu_manager.get(self.get_key())
 
     def to_pandas(self):
         """
@@ -318,7 +316,7 @@ class cuDFOnRayDataframePartition(PandasDataframePartition):
         pandas.DataFrame
         """
         return RayWrapper.materialize(
-            self.gpu_manager.apply_non_persistent.remote(
+            self.gpu_manager.apply_non_persistent(
                 self.get_key(), None, cudf.DataFrame.to_pandas
             )
         )
@@ -344,14 +342,14 @@ class cuDFOnRayDataframePartition(PandasDataframePartition):
                 return cupy.asnumpy(df.values)
 
         # FIXME: Can't find `gpu_manager.apply_result_not_dataframe` method.
-        return self.gpu_manager.apply_result_not_dataframe.remote(
+        return self.gpu_manager.apply_result_not_dataframe(
             self.get_key(),
             convert,
         )
 
     def free(self):
         """Free the dataFrame and associated `self.key` out of `self.gpu_manager`."""
-        self.gpu_manager.free.remote(self.get_key())
+        self.gpu_manager.free(self.get_key())
 
     def copy(self):
         """
@@ -361,7 +359,7 @@ class cuDFOnRayDataframePartition(PandasDataframePartition):
         -------
         cuDFOnRayDataframePartition
         """
-        new_key = self.gpu_manager.apply.remote(
+        new_key = self.gpu_manager.apply(
             self.get_key(),
             lambda x: x,
         )

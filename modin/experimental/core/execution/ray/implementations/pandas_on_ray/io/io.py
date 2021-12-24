@@ -39,8 +39,6 @@ from modin.core.execution.ray.implementations.pandas_on_ray.partitioning.partiti
 from modin.core.execution.ray.common.task_wrapper import RayWrapper
 from modin.config import NPartitions
 
-import ray
-
 
 class ExperimentalPandasOnRayIO(PandasOnRayIO):
     """
@@ -167,9 +165,9 @@ class ExperimentalPandasOnRayIO(PandasOnRayIO):
                 size = min_size
             start = end + 1
             end = start + size - 1
-            partition_id = _read_sql_with_offset_pandas_on_ray.options(
-                num_returns=num_splits + 1
-            ).remote(
+            partition_id = RayWrapper.deploy(
+                _read_sql_with_offset_pandas_on_ray,
+                num_splits + 1,
                 partition_column,
                 start,
                 end,
@@ -234,7 +232,6 @@ class ExperimentalPandasOnRayIO(PandasOnRayIO):
 
 
 # Ray functions are not detected by codecov (thus pragma: no cover)
-@ray.remote
 def _read_sql_with_offset_pandas_on_ray(
     partition_column,
     start,

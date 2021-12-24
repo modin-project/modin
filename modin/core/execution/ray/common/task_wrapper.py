@@ -18,8 +18,10 @@ To be used as a piece of building a Ray-based engine.
 """
 
 import asyncio
-
 import ray
+
+
+ObjectRef = ray.ObjectRef
 
 
 @ray.remote
@@ -68,9 +70,8 @@ class RayWrapper:
         ray.ObjectRef or list
             Ray identifier of the result being put to Plasma store.
         """
-        # return ray.remote(func, num_returns=num_returns).remote(*args, **kwargs)
         return deploy_ray_func.options(num_returns=num_returns).remote(
-            func, *args, kwargs
+            func, *args, **kwargs
         )
 
     @classmethod
@@ -109,6 +110,13 @@ class RayWrapper:
         The object ref assigned to this value.
         """
         return ray.put(data, **kwargs)
+
+    @classmethod
+    def wait(cls, obj_ids, *args, **kwargs):
+        """
+        TODO: add docs.
+        """
+        return ray.wait(obj_ids, *args, **kwargs)
 
     @classmethod
     def create_actor(cls, _class, *args, **kwargs):

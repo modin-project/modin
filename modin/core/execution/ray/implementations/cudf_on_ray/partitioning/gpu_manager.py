@@ -13,14 +13,12 @@
 
 """Module holds Ray actor-class that stores ``cudf.DataFrame``s."""
 
-import ray
 import cudf
 import pandas
 
-from modin.core.execution.ray.common.task_wrapper import RayWrapper
+from modin.core.execution.ray.common.task_wrapper import ObjectRef, RayWrapper
 
 
-@ray.remote(num_gpus=1)
 class GPUManager(object):
     """
     Ray actor-class to store ``cudf.DataFrame``-s and execute functions on it.
@@ -56,7 +54,7 @@ class GPUManager(object):
         Returns
         -------
         The type of return of `func`
-            The result of the `func` (will be a ``ray.ObjectRef`` in outside level).
+            The result of the `func` (will be a ``ObjectRef`` in outside level).
         """
         df1 = self.cudf_dataframe_dict[first]
         df2 = self.cudf_dataframe_dict[other] if other else None
@@ -77,7 +75,7 @@ class GPUManager(object):
         ----------
         first : int
             The first key associated with dataframe from `self.cudf_dataframe_dict`.
-        other : int or ray.ObjectRef
+        other : int or ObjectRef
             The second key associated with dataframe from `self.cudf_dataframe_dict`.
             If it isn't a real key, the `func` will be applied to the `first` only.
         func : callable
@@ -89,14 +87,14 @@ class GPUManager(object):
         -------
         int
             The new key of the new dataframe stored in `self.cudf_dataframe_dict`
-            (will be a ``ray.ObjectRef`` in outside level).
+            (will be a ``ObjectRef`` in outside level).
         """
         df1 = self.cudf_dataframe_dict[first]
         if not other:
             result = func(df1, **kwargs)
             return self.store_new_df(result)
         if not isinstance(other, int):
-            assert isinstance(other, ray.ObjectRef)
+            assert isinstance(other, ObjectRef)
             df2 = RayWrapper.materialize(other)
         else:
             df2 = self.cudf_dataframe_dict[other]
@@ -117,7 +115,7 @@ class GPUManager(object):
         ----------
         first : int
             The first key associated with dataframe from `self.cudf_dataframe_dict`.
-        others : list of int / list of ray.ObjectRef
+        others : list of int / list of ObjectRef
             The list of keys associated with dataframe from `self.cudf_dataframe_dict`.
         func : callable
             A function to apply.
@@ -130,7 +128,7 @@ class GPUManager(object):
         -------
         int
             The new key of the new dataframe stored in `self.cudf_dataframe_dict`
-            (will be a ``ray.ObjectRef`` in outside level).
+            (will be a ``ObjectRef`` in outside level).
 
         Notes
         -----
@@ -165,7 +163,7 @@ class GPUManager(object):
         -------
         int
             The key associated with added dataframe
-            (will be a ``ray.ObjectRef`` in outside level).
+            (will be a ``ObjectRef`` in outside level).
         """
         self.key += 1
         self.cudf_dataframe_dict[self.key] = df
@@ -191,7 +189,7 @@ class GPUManager(object):
         -------
         int
             The gpu_id from this object
-            (will be a ``ray.ObjectRef`` in outside level).
+            (will be a ``ObjectRef`` in outside level).
         """
         return self.gpu_id
 
@@ -207,7 +205,7 @@ class GPUManager(object):
         Returns
         -------
         cudf.DataFrame
-            Dataframe corresponding to `key`(will be a ``ray.ObjectRef``
+            Dataframe corresponding to `key`(will be a ``ObjectRef``
             in outside level).
         """
         return self.cudf_dataframe_dict[key]
@@ -225,7 +223,7 @@ class GPUManager(object):
         -------
         int
             The key associated with added dataframe
-            (will be a ``ray.ObjectRef`` in outside level).
+            (will be a ``ObjectRef`` in outside level).
         """
         if isinstance(pandas_df, pandas.Series):
             pandas_df = pandas_df.to_frame()

@@ -14,7 +14,6 @@
 """Module houses class that implements ``GenericRayDataframePartitionManager`` using cuDF."""
 
 import numpy as np
-import ray
 
 from .axis_partition import (
     cuDFOnRayDataframeColumnPartition,
@@ -31,33 +30,6 @@ from modin.core.execution.ray.common.task_wrapper import RayWrapper
 
 # Global view of GPU Actors
 GPU_MANAGERS = []
-
-
-# TODO: Check the need for this func
-@ray.remote(num_cpus=1, num_gpus=0.5)
-def func(df, other, apply_func):
-    """
-    Perform remotely `apply_func` on `df` and `other` objects.
-
-    Parameters
-    ----------
-    df : cuDFOnRayDataframePartition
-        Object to be processed.
-    other : cuDFOnRayDataframePartition
-        Object to be processed.
-    apply_func : callable
-        Function to apply.
-
-    Returns
-    -------
-    The type of return of `apply_func`
-        The result of the `apply_func`
-        (will be a ``ray.ObjectRef`` in outside level).
-    """
-    return apply_func(
-        RayWrapper.materialize(df.get.remote()),
-        RayWrapper.materialize(other.get.remote()),
-    )
 
 
 class cuDFOnRayDataframePartitionManager(GenericRayDataframePartitionManager):

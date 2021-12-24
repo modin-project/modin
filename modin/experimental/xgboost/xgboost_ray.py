@@ -27,18 +27,17 @@ import warnings
 
 import numpy as np
 import xgboost as xgb
-import ray
-from ray.util import get_node_ip_address
 import pandas
+import ray
 
 from modin.distributed.dataframe.pandas import from_partitions
 from modin.core.execution.ray.common.task_wrapper import RayWrapper
+from modin.core.execution.ray.common.utils import get_node_ip_address
 from .utils import RabitContext, RabitContextManager
 
 LOGGER = logging.getLogger("[modin.xgboost]")
 
 
-@ray.remote(num_cpus=0)
 class ModinXGBoostActor:
     """
     Ray actor-class runs training on the remote worker.
@@ -99,9 +98,9 @@ class ModinXGBoostActor:
         Parameters
         ----------
         *X_y : iterable
-            Sequence of ray.ObjectRef objects. First half of sequence is for
+            Sequence of ObjectRef objects. First half of sequence is for
             `X` data, second for `y`. When it is passed in actor, auto-materialization
-            of ray.ObjectRef -> pandas.DataFrame happens.
+            of ObjectRef -> pandas.DataFrame happens.
         add_as_eval_method : str, optional
             Name of eval data. Used in case when train data also used for evaluation.
         **dmatrix_kwargs : dict
@@ -119,9 +118,9 @@ class ModinXGBoostActor:
         Parameters
         ----------
         *X_y : iterable
-            Sequence of ray.ObjectRef objects. First half of sequence is for
+            Sequence of ObjectRef objects. First half of sequence is for
             `X` data, second for `y`. When it is passed in actor, auto-materialization
-            of ray.ObjectRef -> pandas.DataFrame happens.
+            of ObjectRef -> pandas.DataFrame happens.
         eval_method : str
             Name of eval data.
         **dmatrix_kwargs : dict
@@ -277,8 +276,12 @@ def create_actors(num_actors):
     actors = [
         (
             node_ip.split("node:")[-1],
-            ModinXGBoostActor.options(resources={node_ip: 0.01}).remote(
-                i, nthread=num_cpus_per_actor
+            RayWrapper.create_actor(
+                ModinXGBoostActor,
+                i,
+                nthread=num_cpus_per_actor,
+                num_cpus=0,
+                resources={node_ip: 0.01},
             ),
         )
         for i, node_ip in enumerate(actors_ips)
@@ -533,7 +536,7 @@ def _train(
             # Split data across workers
             _split_data_across_actors(
                 actors,
-                lambda actor, *X_y: actor.add_eval_data.remote(
+                lambda actor, *X_y: actor.add_eval_data(
                     *X_y, eval_method=eval_method, **dmatrix_kwargs
                 ),
                 eval_X,
@@ -543,7 +546,7 @@ def _train(
     # Split data across workers
     _split_data_across_actors(
         actors,
-        lambda actor, *X_y: actor.set_train_data.remote(
+        lambda actor, *X_y: actor.set_train_data(
             *X_y, add_as_eval_method=add_as_eval_method, **dmatrix_kwargs
         ),
         X_row_parts,
@@ -556,10 +559,7 @@ def _train(
         rabit_args = [("%s=%s" % item).encode() for item in env.items()]
 
         # Train
-        fut = [
-            actor.train.remote(rabit_args, params, *args, **kwargs)
-            for _, actor in actors
-        ]
+        fut = [actor.train(rabit_args, params, *args, **kwargs) for _, actor in actors]
         # All results should be the same because of Rabit tracking. So we just
         # return the first one.
         result = RayWrapper.materialize(fut[0])
@@ -567,18 +567,17 @@ def _train(
         return result
 
 
-@ray.remote
 def _map_predict(booster, part, columns, dmatrix_kwargs={}, **kwargs):
     """
     Run prediction on a remote worker.
 
     Parameters
     ----------
-    booster : xgboost.Booster or ray.ObjectRef
+    booster : xgboost.Booster or ObjectRef
         A trained booster.
-    part : pandas.DataFrame or ray.ObjectRef
+    part : pandas.DataFrame or ObjectRef
         Partition of full data used for local prediction.
-    columns : list or ray.ObjectRef
+    columns : list or ObjectRef
         Columns for the result.
     dmatrix_kwargs : dict, optional
         Keyword parameters for ``xgb.DMatrix``.
@@ -587,8 +586,8 @@ def _map_predict(booster, part, columns, dmatrix_kwargs={}, **kwargs):
 
     Returns
     -------
-    ray.ObjectRef
-        ``ray.ObjectRef`` with partial prediction.
+    ObjectRef
+        ``ObjectRef`` with partial prediction.
     """
     dmatrix = xgb.DMatrix(part, **dmatrix_kwargs)
     prediction = pandas.DataFrame(
@@ -650,7 +649,15 @@ def _predict(
     new_columns_ref = RayWrapper.put(new_columns)
 
     prediction_refs = [
-        _map_predict.remote(booster, part, new_columns_ref, dmatrix_kwargs, **kwargs)
+        RayWrapper.deploy(
+            _map_predict,
+            1,
+            booster,
+            part,
+            new_columns_ref,
+            dmatrix_kwargs,
+            **kwargs,
+        )
         for _, part in data.data
     ]
     predictions = from_partitions(
