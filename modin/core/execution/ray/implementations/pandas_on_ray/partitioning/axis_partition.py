@@ -75,7 +75,6 @@ class PandasOnRayDataframeAxisPartition(PandasDataframeAxisPartition):
             A list of ``pandas.DataFrame``-s.
         """
         lengths = kwargs.get("_lengths", None)
-        max_retries = kwargs.pop("max_retries", None)
         return RayWrapper.deploy(
             _deploy_ray_func,
             (num_splits if lengths is None else len(lengths)) * 4,
@@ -86,7 +85,6 @@ class PandasOnRayDataframeAxisPartition(PandasDataframeAxisPartition):
             kwargs,
             maintain_partitioning,
             *partitions,
-            **({"max_retries": max_retries} if max_retries is not None else {}),
         )
 
     @classmethod

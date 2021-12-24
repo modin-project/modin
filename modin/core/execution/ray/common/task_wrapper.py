@@ -70,9 +70,16 @@ class RayWrapper:
         ray.ObjectRef or list
             Ray identifier of the result being put to Plasma store.
         """
-        return deploy_ray_func.options(num_returns=num_returns).remote(
-            func, *args, **kwargs
-        )
+        options = {}
+        for param_name in ("num_cpus", "num_gpus", "max_retries", "resources"):
+            param_value = kwargs.pop("param_name", None)
+            if param_value is not None:
+                options[param_name] = param_value
+
+        return deploy_ray_func.options(
+            num_returns=num_returns,
+            **options,
+        ).remote(func, *args, **kwargs)
 
     @classmethod
     def materialize(cls, obj_id):
