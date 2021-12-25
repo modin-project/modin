@@ -67,3 +67,5 @@ class PandasOnDaskIO(BaseIO):
     read_excel = type(
         "", (DaskWrapper, PandasExcelParser, ExcelDispatcher), build_args
     ).read
+
+    to_csv = type("", (DaskWrapper, CSVDispatcher), {}).to_csv

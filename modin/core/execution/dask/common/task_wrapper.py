@@ -86,3 +86,11 @@ class DaskWrapper:
         """
         client = default_client()
         return client.scatter(data, **kwargs)
+
+    @classmethod
+    def create_actor(cls, _class, *args, **kwargs):
+        """
+        TODO: add doc.
+        """
+        client = default_client()
+        return client.submit(_class, *args, actor=True, **kwargs).result()

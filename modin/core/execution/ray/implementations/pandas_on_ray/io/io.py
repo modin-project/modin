@@ -13,7 +13,6 @@
 
 """The module holds the factory which performs I/O using pandas on Ray."""
 
-import io
 import os
 
 import pandas
@@ -38,7 +37,7 @@ from modin.core.storage_formats.pandas.parsers import (
     PandasSQLParser,
     PandasExcelParser,
 )
-from modin.core.execution.ray.common.task_wrapper import RayWrapper, SignalActor
+from modin.core.execution.ray.common.task_wrapper import RayWrapper
 from modin.core.execution.ray.implementations.pandas_on_ray.partitioning.partition import (
     PandasOnRayDataframePartition,
 )
@@ -74,6 +73,8 @@ class PandasOnRayIO(RayIO):
     read_excel = type(
         "", (RayWrapper, PandasExcelParser, ExcelDispatcher), build_args
     ).read
+
+    to_csv = type("", (RayWrapper, CSVDispatcher), {}).to_csv
 
     @classmethod
     def to_sql(cls, qc, **kwargs):
@@ -115,130 +116,6 @@ class PandasOnRayIO(RayIO):
         result = qc._modin_frame.apply_full_axis(1, func, new_index=[], new_columns=[])
         # FIXME: we should be waiting for completion less expensievely, maybe use _modin_frame.materialize()?
         result.to_pandas()  # blocking operation
-
-    @staticmethod
-    def _to_csv_check_support(kwargs):
-        """
-        Check if parallel version of ``to_csv`` could be used.
-
-        Parameters
-        ----------
-        kwargs : dict
-            Keyword arguments passed to ``.to_csv()``.
-
-        Returns
-        -------
-        bool
-            Whether parallel version of ``to_csv`` is applicable.
-        """
-        path_or_buf = kwargs["path_or_buf"]
-        compression = kwargs["compression"]
-        if not isinstance(path_or_buf, str):
-            return False
-        # case when the pointer is placed at the beginning of the file.
-        if "r" in kwargs["mode"] and "+" in kwargs["mode"]:
-            return False
-        # encodings with BOM don't support;
-        # instead of one mark in result bytes we will have them by the number of partitions
-        # so we should fallback in pandas for `utf-16`, `utf-32` with all aliases, in instance
-        # (`utf_32_be`, `utf_16_le` and so on)
-        if kwargs["encoding"] is not None:
-            encoding = kwargs["encoding"].lower()
-            if "u" in encoding or "utf" in encoding:
-                if "16" in encoding or "32" in encoding:
-                    return False
-        if compression is None or not compression == "infer":
-            return False
-        if any((path_or_buf.endswith(ext) for ext in [".gz", ".bz2", ".zip", ".xz"])):
-            return False
-        return True
-
-    @classmethod
-    def to_csv(cls, qc, **kwargs):
-        """
-        Write records stored in the `qc` to a CSV file.
-
-        Parameters
-        ----------
-        qc : BaseQueryCompiler
-            The query compiler of the Modin dataframe that we want to run ``to_csv`` on.
-        **kwargs : dict
-            Parameters for ``pandas.to_csv(**kwargs)``.
-        """
-        if not cls._to_csv_check_support(kwargs):
-            return RayIO.to_csv(qc, **kwargs)
-
-        signals = RayWrapper.create_actor(
-            SignalActor, len(qc._modin_frame._partitions) + 1
-        )
-
-        def func(df, **kw):
-            """
-            Dump a chunk of rows as csv, then save them to target maintaining order.
-
-            Parameters
-            ----------
-            df : pandas.DataFrame
-                A chunk of rows to write to a CSV file.
-            **kw : dict
-                Arguments to pass to ``pandas.to_csv(**kw)`` plus an extra argument
-                `partition_idx` serving as chunk index to maintain rows order.
-            """
-            partition_idx = kw["partition_idx"]
-            # the copy is made to not implicitly change the input parameters;
-            # to write to an intermediate buffer, we need to change `path_or_buf` in kwargs
-            csv_kwargs = kwargs.copy()
-            if partition_idx != 0:
-                # we need to create a new file only for first recording
-                # all the rest should be recorded in appending mode
-                if "w" in csv_kwargs["mode"]:
-                    csv_kwargs["mode"] = csv_kwargs["mode"].replace("w", "a")
-                # It is enough to write the header for the first partition
-                csv_kwargs["header"] = False
-
-            # for parallelization purposes, each partition is written to an intermediate buffer
-            path_or_buf = csv_kwargs["path_or_buf"]
-            is_binary = "b" in csv_kwargs["mode"]
-            csv_kwargs["path_or_buf"] = io.BytesIO() if is_binary else io.StringIO()
-            df.to_csv(**csv_kwargs)
-            content = csv_kwargs["path_or_buf"].getvalue()
-            csv_kwargs["path_or_buf"].close()
-
-            # each process waits for its turn to write to a file
-            RayWrapper.materialize(signals.wait(partition_idx))
-
-            # preparing to write data from the buffer to a file
-            with pandas.io.common.get_handle(
-                path_or_buf,
-                # in case when using URL in implicit text mode
-                # pandas try to open `path_or_buf` in binary mode
-                csv_kwargs["mode"] if is_binary else csv_kwargs["mode"] + "t",
-                encoding=kwargs["encoding"],
-                errors=kwargs["errors"],
-                compression=kwargs["compression"],
-                storage_options=kwargs["storage_options"],
-                is_text=False,
-            ) as handles:
-                handles.handle.write(content)
-
-            # signal that the next process can start writing to the file
-            RayWrapper.materialize(signals.send(partition_idx + 1))
-            # used for synchronization purposes
-            return pandas.DataFrame()
-
-        # signaling that the partition with id==0 can be written to the file
-        RayWrapper.materialize(signals.send(0))
-        result = qc._modin_frame._partition_mgr_cls.map_axis_partitions(
-            axis=1,
-            partitions=qc._modin_frame._partitions,
-            map_func=func,
-            keep_partitioning=True,
-            lengths=None,
-            enumerate_partitions=True,
-            max_retries=0,
-        )
-        # pending completion
-        RayWrapper.materialize([partition.future for partition in result.flatten()])
 
     @staticmethod
     def _to_parquet_check_support(kwargs):
