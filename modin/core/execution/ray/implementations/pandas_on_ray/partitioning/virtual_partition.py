@@ -14,6 +14,7 @@
 """Module houses classes responsible for storing an axis partition and applying a function to it."""
 
 import pandas
+from typing import List
 
 from modin.core.dataframe.pandas.partitioning.axis_partition import (
     PandasDataframeAxisPartition,
@@ -24,7 +25,7 @@ import ray
 from ray.util import get_node_ip_address
 
 
-class PandasOnRayDataframeAxisPartition(PandasDataframeAxisPartition):
+class PandasOnRayDataframeVirtualPartition(PandasDataframeAxisPartition):
     """
     The class implements the interface in ``PandasDataframeAxisPartition``.
 
@@ -36,16 +37,29 @@ class PandasOnRayDataframeAxisPartition(PandasDataframeAxisPartition):
         Whether to get node IP addresses to conforming partitions or not.
     """
 
-    def __init__(self, list_of_blocks, get_ip=False):
-        for obj in list_of_blocks:
-            obj.drain_call_queue()
-        # Unwrap ray.ObjectRef from `PandasOnRayDataframePartition` object for ease of use
-        self.list_of_blocks = [obj.oid for obj in list_of_blocks]
-        if get_ip:
-            self.list_of_ips = [obj._ip_cache for obj in list_of_blocks]
-
     partition_type = PandasOnRayDataframePartition
     instance_type = ray.ObjectRef
+    axis = None
+
+    def __init__(self, list_of_blocks, get_ip=False, full_axis=True):
+        if isinstance(list_of_blocks, PandasOnRayDataframePartition):
+            list_of_blocks = [list_of_blocks]
+        if any(isinstance(o, type(self)) for o in list_of_blocks):
+            raise NotImplementedError("Easy case first")
+        self.list_of_partitions_to_combine = list_of_blocks
+        self.full_axis = full_axis
+
+    @property
+    def list_of_blocks(self):
+        # Defer draining call queue until we get the partitions
+        # TODO Look into draining call queue at the same time as the task
+        for obj in self.list_of_partitions_to_combine:
+            obj.drain_call_queue()
+        return [o.oid for o in self.list_of_partitions_to_combine]
+
+    @property
+    def list_of_ips(self):
+        return [obj._ip_cache for obj in self.list_of_partitions_to_combine]
 
     @classmethod
     def deploy_axis_func(
@@ -150,8 +164,68 @@ class PandasOnRayDataframeAxisPartition(PandasDataframeAxisPartition):
             for (object_id, length, width, ip) in zip(*[iter(partitions)] * 4)
         ]
 
+    def apply(
+        self,
+        func,
+        num_splits=None,
+        other_axis_partition=None,
+        maintain_partitioning=True,
+        **kwargs,
+    ):
+        if not self.full_axis:
+            num_splits = 1
+        result = super(PandasOnRayDataframeVirtualPartition, self).apply(
+            func, num_splits, other_axis_partition, maintain_partitioning, **kwargs
+        )
+        if not self.full_axis:
+            # must unpack subset of the axis to ensure correct dimensions on partitions object
+            return result[0]
+        else:
+            return result
 
-class PandasOnRayDataframeColumnPartition(PandasOnRayDataframeAxisPartition):
+    def add_partitions(self, axis: int, parts: List[PandasOnRayDataframePartition]):
+        if axis == self.axis:
+            return type(self)(self.list_of_partitions_to_combine + parts)
+        else:
+            raise NotImplementedError("I'm doing the simple case first :)")
+
+    def mask(self, row_indices, col_indices):
+        # TODO be more intelligent about masking, don't force materialization if not necessary
+        return (
+            self.force_materialization()
+            .list_of_partitions_to_combine[0]
+            .mask(row_indices, col_indices)
+        )
+
+    def to_pandas(self):
+        return self.force_materialization().list_of_partitions_to_combine[0].to_pandas()
+
+    _length_cache = None
+
+    def length(self):
+        if self._length_cache is None:
+            if self.axis == 0:
+                self._length_cache = sum(
+                    o.length() for o in self.list_of_partitions_to_combine
+                )
+            else:
+                self._length_cache = self.list_of_partitions_to_combine[0].length()
+        return self._length_cache
+
+    _width_cache = None
+
+    def width(self):
+        if self._width_cache is None:
+            if self.axis == 1:
+                self._width_cache = sum(
+                    o.width() for o in self.list_of_partitions_to_combine
+                )
+            else:
+                self._width_cache = self.list_of_partitions_to_combine[0].width()
+        return self._width_cache
+
+
+class PandasOnRayDataframeColumnPartition(PandasOnRayDataframeVirtualPartition):
     """
     The column partition implementation.
 
@@ -169,7 +243,7 @@ class PandasOnRayDataframeColumnPartition(PandasOnRayDataframeAxisPartition):
     axis = 0
 
 
-class PandasOnRayDataframeRowPartition(PandasOnRayDataframeAxisPartition):
+class PandasOnRayDataframeRowPartition(PandasOnRayDataframeVirtualPartition):
     """
     The row partition implementation.
 

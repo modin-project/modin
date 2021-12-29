@@ -115,7 +115,7 @@ class PandasDataframePartitionManager(ABC):
     # END Abstract Methods
 
     @classmethod
-    def column_partitions(cls, partitions):
+    def column_partitions(cls, partitions, full_axis=True):
         """
         Get the list of `BaseDataframeAxisPartition` objects representing column-wise paritions.
 
@@ -132,12 +132,14 @@ class PandasDataframePartitionManager(ABC):
         Notes
         -----
         Each value in this list will be an `BaseDataframeAxisPartition` object.
-        `BaseDataframeAxisPartition` is located in `axis_partition.py`.
+        `BaseDataframeAxisPartition` is located in `virtual_partition.py`.
         """
         if not isinstance(partitions, list):
             partitions = [partitions]
         return [
-            cls._column_partitions_class(col) for frame in partitions for col in frame.T
+            cls._column_partitions_class(col, full_axis=full_axis)
+            for frame in partitions
+            for col in frame.T
         ]
 
     @classmethod
@@ -158,7 +160,7 @@ class PandasDataframePartitionManager(ABC):
         Notes
         -----
         Each value in this list will an `BaseDataframeAxisPartition` object.
-        `BaseDataframeAxisPartition` is located in `axis_partition.py`.
+        `BaseDataframeAxisPartition` is located in `virtual_partition.py`.
         """
         if not isinstance(partitions, list):
             partitions = [partitions]

@@ -1389,9 +1389,10 @@ def test_groupby_with_kwarg_dropna(groupby_kwargs, dropna):
         modin_df = modin_df.T
         pandas_df = pandas_df.T
 
-    md_grp, pd_grp = modin_df.groupby(
-        **groupby_kwargs, dropna=dropna
-    ), pandas_df.groupby(**groupby_kwargs, dropna=dropna)
+    md_grp, pd_grp = (
+        modin_df.groupby(**groupby_kwargs, dropna=dropna),
+        pandas_df.groupby(**groupby_kwargs, dropna=dropna),
+    )
     modin_groupby_equals_pandas(md_grp, pd_grp)
 
     by_kwarg = groupby_kwargs.get("by", [])

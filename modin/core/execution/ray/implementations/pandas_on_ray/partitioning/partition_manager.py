@@ -21,7 +21,7 @@ from modin.config import ProgressBar
 from modin.core.execution.ray.generic.partitioning.partition_manager import (
     GenericRayDataframePartitionManager,
 )
-from .axis_partition import (
+from .virtual_partition import (
     PandasOnRayDataframeColumnPartition,
     PandasOnRayDataframeRowPartition,
 )
@@ -136,6 +136,37 @@ class PandasOnRayDataframePartitionManager(GenericRayDataframePartitionManager):
             )
         new_idx = ray.get(new_idx)
         return new_idx[0].append(new_idx[1:]) if len(new_idx) else new_idx
+
+    @classmethod
+    def concat(cls, axis, left_parts, right_parts):
+        result = super(PandasOnRayDataframePartitionManager, cls).concat(
+            axis, left_parts, right_parts
+        )
+        return cls.rebalance_partitions(result)
+
+    @classmethod
+    def rebalance_partitions(cls, partitions):
+        from modin.config import NPartitions
+
+        heuristic = 1.5  # partitions can be 1.5x larger than ideal. Can be modified.
+        if partitions.shape[0] > NPartitions.get() * heuristic:
+            lengths = [[obj._length_cache for obj in row] for row in partitions]
+            # Naive rebalance
+            if any(l is None for row in lengths for l in row):
+                if partitions.shape[0] % NPartitions.get() == 0:
+                    step = partitions.shape[0] // NPartitions.get()
+                else:
+                    step = partitions.shape[0] // NPartitions.get() + 1
+                return np.array(
+                    [
+                        cls.column_partitions(partitions[i : i + step], full_axis=False)
+                        for i in range(0, partitions.shape[0], step)
+                    ]
+                )
+            else:
+                raise NotImplementedError("Make naive case work first")
+        else:
+            return partitions
 
     @classmethod
     def broadcast_apply(cls, axis, apply_func, left, right, other_name="r"):
