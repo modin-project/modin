@@ -24,6 +24,7 @@ from modin.utils import to_pandas
 from modin.pandas.utils import from_arrow
 import pyarrow as pa
 import os
+from scipy import sparse
 import sys
 import shutil
 import sqlalchemy as sa
@@ -2172,6 +2173,14 @@ class TestPickle:
 def test_from_arrow():
     _, pandas_df = create_test_dfs(TEST_DATA)
     modin_df = from_arrow(pa.Table.from_pandas(pandas_df))
+    df_equals(modin_df, pandas_df)
+
+
+def test_from_spmatrix():
+    data = sparse.eye(3)
+    with pytest.warns(UserWarning, match="defaulting to pandas.*"):
+        modin_df = pd.DataFrame.sparse.from_spmatrix(data)
+    pandas_df = pandas.DataFrame.sparse.from_spmatrix(data)
     df_equals(modin_df, pandas_df)
 
 
