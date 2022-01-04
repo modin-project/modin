@@ -30,7 +30,7 @@ def concatenate(dfs):
     Returns
     -------
     pandas.DataFrame
-        A pandas DataFrame
+        A pandas DataFrame.
     """
     categoricals_columns = set.intersection(
         *[set(df.select_dtypes("category").columns.tolist()) for df in dfs]
