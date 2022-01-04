@@ -8,7 +8,7 @@ Getting Started
     using_modin
     out_of_core
     pandas
-    modin_vs_dask
+    modin_vs_dask_vs_koalas
     faq
     troubleshooting
 
