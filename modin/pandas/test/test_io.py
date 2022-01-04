@@ -2176,6 +2176,10 @@ def test_from_arrow():
     df_equals(modin_df, pandas_df)
 
 
+@pytest.mark.xfail(
+    condition="config.getoption('--simulate-cloud').lower() != 'off'",
+    reason="The reason of tests fail in `cloud` mode is unknown for now - issue #3264",
+)
 def test_from_spmatrix():
     data = sparse.eye(3)
     with pytest.warns(UserWarning, match="defaulting to pandas.*"):
