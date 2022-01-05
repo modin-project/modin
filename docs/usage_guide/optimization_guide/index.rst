@@ -1,29 +1,29 @@
 Optimization Guide
 ==================
 
-Here you can find information on Modin optimizations both for general query pipeline and for specific operations.
+Here you can find more information about Modin's optimizations both for a pipeline of operations as well as for specific operations.
 
 
-Understanding of Modin's partitioning mechanism
+Understanding Modin's partitioning mechanism
 """""""""""""""""""""""""""""""""""""""""""""""
-Partitioning scheme is very important for performance, that's why we recommend you to get acknowledge Modin's
-underlying partitioning mechanism and how to tune it, in order to be able to achieve better performance.
+Modin's partitioning is crucial for performance; so we recommend expert users to understand Modin's
+partitioning mechanism and how to tune it, to achieve better performance.
 
-How does Modin partition a frame
---------------------------------
+How does Modin partition a dataframe
+------------------------------------
 
-Modin uses partitioning schema that partitions a frame along both axis, resulting into a matrix
-of even partitions. The row and column chunk sizes are computed independently based
-on the length of the appropriate axis and special Modin's :doc:`configuration variables </flow/modin/config>`
+Modin uses a partitioning scheme that partitions a dataframe along both axes, resulting in a matrix
+of partitions. The row and column chunk sizes are computed independently based
+on the length of the appropriate axis and Modin's special :doc:`configuration variables </flow/modin/config>`
 (``NPartitions`` and ``MinPartitionSize``):
 
-- `NPartitions` is the maximum amount of splits along an axis, by default it equals the number of cores on the machine.
-- `MinPartitionSize` is the minimum amount of rows/columns to do a split. Literally speaking, if the `MinPartitionSize`
-  is 32, there won't be any split along the column axis unless the amount of columns is greater than 32. Once it's greater
-  (for example 34) then the column axis is sliced into two partitions: containing 32 and 2 columns accordingly.
+- `NPartitions` is the maximum number of splits along an axis; by default, it equals the number of cores on the machine.
+- `MinPartitionSize` is the minimum number of rows/columns to do a split. For instance, if `MinPartitionSize`
+  is 32, the column axis will not be split unless the amount of columns is greater than 32. If it is is greater, for example, 34, 
+  then the column axis is sliced into two partitions: containing 32 and 2 columns accordingly.
 
-Beware that the ``NPartitions`` is a limit for the number of partitions `along a single axis`, which means, that
-the actual limit for the frame itself is the square of ``NPartitions``.
+Beware that ``NPartitions`` specifies a limit for the number of partitions `along a single axis`, which means, that
+the actual limit for the entire dataframe itself is the square of ``NPartitions``.
 
 .. figure:: /img/partitioning_mechanism/partitioning_examples.svg
    :align: center
