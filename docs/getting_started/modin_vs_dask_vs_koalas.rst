@@ -38,6 +38,7 @@ Partitioning and Parallelization
 API Coverage
 ------------
 
+One of the key benefits of pandas is its versatility, due to the wide array of operations, with more than 600+ API operations for data cleaning, feature engineering, data transformation, data summarization, data exploration, and machine learning. However, it is not trivial to develop scalable implementations of each of these operations in a dataframe system.
 **DaskDF and Koalas only implements about** `55%  <https://arxiv.org/abs/2001.00888>`_ **of the pandas API**; they do not implement certain APIs that would deviate from the row-wise partitioning approach, or would be inefficient with the row-wise parallelization. For example, Dask does not implement ``iloc``, ``MultiIndex``, ``apply(axis=0)``, ``quantile``(only approximate quantile is available), ``median``, and more. Given DaskDF's row-oriented architecture, ``iloc``, for example, can technically be implemented, but it would be inefficient, and column-wise operations such as ``apply(axis=0)`` would be impossible to implement. Similarly, Koalas does not implement ``apply(axis=0)`` (it only applies the function per row partition, giving a different result), ``quantile``,``median`` (only approximate quantile/median is available), ``MultiIndex``, ``combine``, ``compare`` and more.
 
 
