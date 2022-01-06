@@ -1,7 +1,7 @@
 Modin vs. Dask DataFrame vs. Koalas
 ===============================================
 
-Libraries such as Dask DataFrame (DaskDF for short) and Koalas aim to support the pandas API on top of distributed computing frameworks, Dask and Spark respectively. Instead, Modin aims to preserve the pandas API and semantics as is, while abstracting away the details of the distributed computing framework underneath. Thus, the aims of these libraries are fundamentally different.
+Libraries such as `Dask DataFrame <https://docs.dask.org/en/stable/dataframe.html>`_ (DaskDF for short) and `Koalas <https://koalas.readthedocs.io/en/latest/>`_ aim to support the pandas API on top of distributed computing frameworks, Dask and Spark respectively. Instead, Modin aims to preserve the pandas API and semantics as is, while abstracting away the details of the distributed computing framework underneath. Thus, the aims of these libraries are fundamentally different.
 
 Specifically, Modin enables pandas-like
 
