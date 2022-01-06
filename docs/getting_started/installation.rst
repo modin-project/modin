@@ -1,191 +1,189 @@
-===========
-Using Modin
-===========
+=============
+Installation
+=============
 
-Modin is an early stage `DataFrame`_ library that wraps `pandas`_ and transparently
-distributes the data and computation, accelerating your pandas workflows with **one line
-of code change.** The user does not need to know how many cores their system has, nor do
-they need to specify how to distribute the data. In fact, users can **continue using their
-previous pandas notebooks** while experiencing a considerable speedup from Modin, even on
-a single machine. Only a modification of the import statement is needed, as we
-demonstrate below. Once you’ve changed your import statement, you’re ready to use Modin
-just like you would pandas, since the API is identical to pandas.
+.. note:: 
+  | *Estimated Reading Time: 15 minutes*
+  | If you already installed Modin on your machine, you can skip this section.
 
-Quickstart
-----------------------------
+There are several ways to install Modin. Most users will want to install with
+``pip`` or using ``conda`` tool, but some users may want to build from the master branch
+on the `GitHub repo`_. The master branch has the most recent patches, but may be less
+stable than a release installed from ``pip`` or ``conda``.
 
-.. code-block:: python
+Installing with pip
+-------------------
 
-  # import pandas as pd
-  import modin.pandas as pd
+Stable version
+""""""""""""""
 
-**That's it. You're ready to use Modin on your previous pandas notebooks.** 
-
-We currently have most of the pandas API implemented and are working toward 
-full functional parity with pandas (as well as even more tools and features).
-
-Using Modin on a Single Node
-----------------------------
-
-**In local (without a cluster) modin will create and manage a local (dask or ray) cluster for the execution**
-
-In order to use the most up-to-date version of Modin, please follow the instructions on
-the :doc:`installation page <index>`.
-
-Once you import the library, you should see something similar to the following output:
-
-.. code-block:: text
-
-  >>> import modin.pandas as pd
-
-  Waiting for redis server at 127.0.0.1:14618 to respond...
-  Waiting for redis server at 127.0.0.1:31410 to respond...
-  Starting local scheduler with the following resources: {'CPU': 4, 'GPU': 0}.
-
-  ======================================================================
-  View the web UI at http://localhost:8889/notebooks/ray_ui36796.ipynb?token=ac25867d62c4ae87941bc5a0ecd5f517dbf80bd8e9b04218
-  ======================================================================
-
-Once you have executed  ``import modin.pandas as pd``, you're ready to begin
-running your pandas pipeline as you were before.
-
-APIs Supported
---------------
-
-Please note, the API is not yet complete. For some methods, you may see the following:
-
-.. code-block:: text
-
-  NotImplementedError: To contribute to Modin, please visit github.com/modin-project/modin.
-
-We have compiled a list of :doc:`currently supported methods </supported_apis/index>`.
-
-If you would like to request a particular method be implemented, feel free to `open an
-issue`_. Before you open an issue please make sure that someone else has not already
-requested that functionality.
-
-Connecting to a database for `read_sql`
----------------------------------------
-
-To make pandas read from a SQL database, you have two options:
-
-1) Pass a connection string, e.g. ``postgresql://reader:NWDMCE5xdipIjRrp@hh-pgsql-public.ebi.ac.uk:5432/pfmegrnargs``
-2) Pass an open database connection, e.g. for psycopg2, ``psycopg2.connect("dbname=pfmegrnargs user=reader password=NWDMCE5xdipIjRrp host=hh-pgsql-public.ebi.ac.uk")``
-
-The first option works with both Modin and pandas. If you try the second option
-in Modin, Modin will default to pandas because open database connections cannot be pickled.
-Pickling is required to send connection details to remote workers.
-To handle the unique requirements of distributed database access, Modin has a distributed
-database connection called ``ModinDatabaseConnection``:
-
-.. code-block:: python
-
-    import modin.pandas as pd
-    from modin.db_conn import ModinDatabaseConnection
-    con = ModinDatabaseConnection(
-        'psycopg2',
-        host='hh-pgsql-public.ebi.ac.uk',
-        dbname='pfmegrnargs',
-        user='reader',
-        password='NWDMCE5xdipIjRrp')
-    df = pd.read_sql("SELECT * FROM rnc_database",
-                con,
-            index_col=None,
-            coerce_float=True,
-            params=None,
-            parse_dates=None,
-            chunksize=None)
-
-
-The ``ModinDatabaseConnection`` will save any arguments you supply it and forward
-them to the workers to make their own connections.
-
-Using Modin on a Cluster (experimental)
----------------------------------------
-
-Modin is able to utilize Ray's built-in autoscaled cluster. However, this usage
-is still under heavy development. To launch a Ray autoscaled cluster using
-Amazon Web Service (AWS), you can use the file `examples/cluster/aws_example.yaml`
-as the config file when launching an autoscaled Ray cluster. For the commands,
-refer to the `autoscaler documentation`_.
-
-We will provide a sample config file for private servers and other cloud service
-providers as we continue to develop and improve Modin's cluster support.
-
-See more on the :doc:`Modin in the Cloud </advanced_usage/modin_in_the_cloud>`
-documentation page.
-
-Advanced usage (experimental)
------------------------------
-
-In some cases, it may be useful to customize your Ray environment. Below, we have listed
-a few ways you can solve common problems in data management with Modin by customizing
-your Ray environment. It is possible to use any of Ray's initialization parameters,
-which are all found in `Ray's documentation`_.
-
-.. code-block:: python
-
-   import ray
-   ray.init()
-   import modin.pandas as pd
-
-Modin will automatically connect to the Ray instance that is already running. This way,
-you can customize your Ray environment for use in Modin!
-
-Exceeding memory (Out of core pandas)
-"""""""""""""""""""""""""""""""""""""
-
-Modin experimentally supports out of core operations. See more on the :doc:`Out of Core <out_of_core>`
-documentation page.
-
-Reducing or limiting the resources Modin can use
-""""""""""""""""""""""""""""""""""""""""""""""""
-
-By default, Modin will use all of the resources available on your machine. It is
-possible, however, to limit the amount of resources Modin uses to free resources for
-another task or user. Here is how you would limit the number of CPUs Modin used in
-your bash environment variables:
+Modin can be installed with ``pip`` on Linux, Windows and MacOS. 
+To install the most recent stable release run the following:
 
 .. code-block:: bash
 
-   export MODIN_CPUS=4
+  pip install -U modin # -U for upgrade in case you have an older version
 
+Modin can be used with :doc:`Ray</developer/using_pandas_on_ray>`, :doc:`Dask</developer/using_pandas_on_dask>`, or :doc:`OmniSci</developer/using_omnisci>` engines. If you don't have Ray_ or Dask_ installed, you will need to install Modin with one of the targets:
 
-You can also specify this in your python script with ``os.environ``. **Make sure
-you update the CPUS before you import Modin!**:
+.. code-block:: bash
+
+  pip install modin[ray] # Install Modin dependencies and Ray to run on Ray
+  pip install modin[dask] # Install Modin dependencies and Dask to run on Dask
+  pip install modin[all] # Install all of the above
+
+Modin will automatically detect which engine you have installed and use that for
+scheduling computation! See below for OmniSci engine installation.
+
+Release candidates
+""""""""""""""""""
+
+Before most major releases, we will upload a release candidate to test and check if there are any problems. If you would like to install a pre-release of Modin, run the following:
+
+.. code-block:: bash
+
+  pip install --pre modin
+
+These pre-releases are uploaded for dependencies and users to test their existing code
+to ensure that it still works. If you find something wrong, please raise an issue_ or
+email the bug reporter: bug_reports@modin.org.
+
+Installing specific dependency sets
+"""""""""""""""""""""""""""""""""""
+
+Modin has a number of specific dependency sets for running Modin on different execution engines and
+storage formats or for different functionalities of Modin. Here is a list of dependency sets for Modin:
+
+.. code-block:: bash
+
+  pip install "modin[ray]" # If you want to use the Ray execution engine
+
+.. code-block:: bash
+
+  pip install "modin[dask]" # If you want to use the Dask execution engine
+
+Installing on Google Colab
+"""""""""""""""""""""""""""
+
+Modin can be used with Google Colab_ via the ``pip`` command, by running the following code in a new cell:
+
+.. code-block:: bash
+
+  !pip install modin[all]
+
+Since Colab preloads several of Modin's dependencies by default, we need to restart the Colab environment once Modin is installed by either clicking on the :code:`"RESTART RUNTIME"` button in the installation output or by run the following code:
 
 .. code-block:: python
 
-   import os
-   os.environ["MODIN_CPUS"] = "4"
-   import modin.pandas as pd
+  # Post-install automatically kill and restart Colab environment 
+  import os
+  os.kill(os.getpid(), 9)
 
-If you're using a specific engine and want more control over the environment Modin
-uses, you can start Ray or Dask in your environment and Modin will connect to it.
-**Make sure you start the environment before you import Modin!**
+Once you have restarted the Colab environment, you can use Modin in Colab in subsequent sessions.
 
-.. code-block:: python
+Note that on the free version of Colab, there is a `limit on the compute resource <https://research.google.com/colaboratory/faq.html>`_. To leverage the full power of Modin, you may have to upgrade to Colab Pro to get access to more compute resources.
 
-   import ray
-   ray.init(num_cpus=4)
-   import modin.pandas as pd
+Installing with conda
+---------------------
 
-Specifying ``num_cpus`` limits the number of processors that Modin uses. You may also
-specify more processors than you have available on your machine, however this will not
-improve the performance (and might end up hurting the performance of the system).
+Using conda-forge channel
+"""""""""""""""""""""""""
 
-Examples
---------
+Modin releases can be installed using ``conda`` from conda-forge channel. Starting from 0.10.1
+it is possible to install modin with chosen engine(s) alongside. Current options are:
 
-scikit-learn with LinearRegression
-""""""""""""""""""""""""""""""""""
++---------------------------------+---------------------------+-----------------------------+
+| **Package name in conda-forge** | **Engine(s)**             | **Supported OSs**           |
++---------------------------------+---------------------------+-----------------------------+
+| modin                           | Dask_                     |   Linux, Windows, MacOS     |
++---------------------------------+---------------------------+-----------------------------+
+| modin-dask                      | Dask                      |   Linux, Windows, MacOS     |
++---------------------------------+---------------------------+-----------------------------+
+| modin-ray                       | Ray_                      |       Linux, Windows        |
++---------------------------------+---------------------------+-----------------------------+
+| modin-omnisci                   | OmniSci_                  |          Linux              |
++---------------------------------+---------------------------+-----------------------------+
+| modin-all                       | Dask, Ray, OmniSci        |          Linux              |
++---------------------------------+---------------------------+-----------------------------+
 
-Here is a Jupyter Notebook example which uses Modin with scikit-learn
-and linear regression `sklearn LinearRegression`_.
+For installing Dask and Ray engines into conda environment following command should be used:
 
-.. _`DataFrame`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.html
-.. _`pandas`: https://pandas.pydata.org/pandas-docs/stable/
-.. _`open an issue`: https://github.com/modin-project/modin/issues
-.. _`autoscaler documentation`: https://ray.readthedocs.io/en/latest/autoscaling.html
-.. _`Ray's documentation`: https://ray.readthedocs.io/en/latest/api.html
-.. _sklearn LinearRegression: https://github.com/modin-project/modin/blob/master/examples/modin-scikit-learn-example.ipynb
+.. code-block:: bash
+
+  conda install -c conda-forge modin-ray modin-dask
+
+All set of engines could be available in conda environment by specifying:
+
+.. code-block:: bash
+
+  conda install -c conda-forge modin-all
+
+or explicitly:
+
+.. code-block:: bash
+
+  conda install -c conda-forge modin-ray modin-dask modin-omnisci
+
+Using Intel\ |reg| Distribution of Modin
+""""""""""""""""""""""""""""""""""""""""
+
+With ``conda`` it is also possible to install Intel Distribution of Modin, a special version of Modin 
+that is part of Intel\ |reg| oneAPI AI Analytics Toolkit. This version of Modin is powered by :doc:`OmniSci</developer/using_omnisci>` 
+engine that contains a bunch of optimizations for Intel hardware. More details can be found on `Intel Distribution of Modin`_ page.
+
+Installing from the GitHub master branch
+----------------------------------------
+
+If you'd like to try Modin using the most recent updates from the master branch, you can
+also use ``pip``.
+
+.. code-block:: bash
+
+  pip install git+https://github.com/modin-project/modin
+
+This will install directly from the repo without you having to manually clone it! Please be aware
+that these changes have not made it into a release and may not be completely stable.
+
+Windows
+-------
+
+All Modin engines except :doc:`OmniSci</developer/using_omnisci>` are available both on Windows and Linux as mentioned above.
+Default engine on Windows is :doc:`Ray</developer/using_pandas_on_ray>`.
+It is also possible to use Windows Subsystem For Linux (WSL_), but this is generally not recommended due to the limitations
+and poor performance of Ray on WSL, a roughly 2-3x worse than native Windows. 
+
+Building Modin from Source
+--------------------------
+
+If you're planning on :doc:`contributing </developer/contributing>` to Modin, you will need to ensure that you are
+building Modin from the local repository that you are working off of. Occasionally,
+there are issues in overlapping Modin installs from pypi and from source. To avoid these
+issues, we recommend uninstalling Modin before you install from source:
+
+.. code-block:: bash
+
+  pip uninstall modin
+
+To build from source, you first must clone the repo. We recommend forking the repository first
+through the GitHub interface, then cloning as follows:
+
+.. code-block:: bash
+
+  git clone https://github.com/<your-github-username>/modin.git
+
+Once cloned, ``cd`` into the ``modin`` directory and use ``pip`` to install:
+
+.. code-block:: bash
+
+  cd modin
+  pip install -e .
+
+.. _`GitHub repo`: https://github.com/modin-project/modin/tree/master
+.. _issue: https://github.com/modin-project/modin/issues
+.. _WSL: https://docs.microsoft.com/en-us/windows/wsl/install-win10
+.. _Ray: http://ray.readthedocs.io
+.. _Dask: https://github.com/dask/dask
+.. _OmniSci: https://www.omnisci.com/platform/omniscidb
+.. _`Intel Distribution of Modin`: https://software.intel.com/content/www/us/en/develop/tools/oneapi/components/distribution-of-modin.html#gs.86stqv
+.. |reg|    unicode:: U+000AE .. REGISTERED SIGN
+.. _Colab: https://colab.research.google.com/

@@ -5,6 +5,9 @@ Below, you will find answers to the most commonly asked questions about
 Modin. If you still cannot find the answer you are looking for, please post your
 question on the #support channel on our Slack_ community or open a Github issue_.
 
+FAQs: Why choose Modin?
+------------------------
+
 What’s wrong with pandas and why should I use Modin?
 """"""""""""""""""""""""""""""""""""""""""""""""""""
 
@@ -67,6 +70,9 @@ Ray or Dask to execute computation, and then return the results to the user.
 
 For more details, take a look at our system :doc:`architecture </developer/architecture>`. 
 
+FAQs: How to use Modin?
+------------------------
+
 If I’m only using my laptop, can I still get the benefits of Modin?
 """""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
 
@@ -88,7 +94,7 @@ import with Modin import:
     import modin.pandas as pd
 
 Which execution engine (Ray or Dask) should I use for Modin?
-""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
 
 Whichever one you want! Modin supports Ray_ and Dask_ execution engines to provide an effortless way 
 to speed up your pandas workflows. The best thing is that you don't need to know 
@@ -110,6 +116,42 @@ Modin will do computation with that engine:
 We also have an experimental OmniSciDB-based engine of Modin you can read about :doc:`here </developer/using_omnisci>`.
 We plan to support more execution engines in future. If you have a specific request, 
 please post on the #feature-requests channel on our Slack_ community. 
+
+How do I connect Modin to a database via `read_sql`?
+""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+
+To read from a SQL database, you have two options:
+
+1) Pass a connection string, e.g. ``postgresql://reader:NWDMCE5xdipIjRrp@hh-pgsql-public.ebi.ac.uk:5432/pfmegrnargs``
+2) Pass an open database connection, e.g. for psycopg2, ``psycopg2.connect("dbname=pfmegrnargs user=reader password=NWDMCE5xdipIjRrp host=hh-pgsql-public.ebi.ac.uk")``
+
+The first option works with both Modin and pandas. If you try the second option
+in Modin, Modin will default to pandas because open database connections cannot be pickled.
+Pickling is required to send connection details to remote workers.
+To handle the unique requirements of distributed database access, Modin has a distributed
+database connection called ``ModinDatabaseConnection``:
+
+.. code-block:: python
+
+    import modin.pandas as pd
+    from modin.db_conn import ModinDatabaseConnection
+    con = ModinDatabaseConnection(
+        'psycopg2',
+        host='hh-pgsql-public.ebi.ac.uk',
+        dbname='pfmegrnargs',
+        user='reader',
+        password='NWDMCE5xdipIjRrp')
+    df = pd.read_sql("SELECT * FROM rnc_database",
+            con,
+            index_col=None,
+            coerce_float=True,
+            params=None,
+            parse_dates=None,
+            chunksize=None)
+
+
+The ``ModinDatabaseConnection`` will save any arguments you supply it and forward
+them to the workers to make their own connections.
 
 How can I contribute to Modin?
 """"""""""""""""""""""""""""""

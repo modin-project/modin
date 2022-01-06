@@ -1,14 +1,19 @@
 Getting Started
 ===============
 
+.. note:: 
+  | *Estimated Reading Time: 10 minutes*
+  | You can follow along this tutorial in a Jupyter notebook `here <https://github.com/modin-project/modin/tree/master/examples/quickstart.ipynb>`_. 
+
 .. toctree::
-    :titlesonly:
     :hidden:
+    :maxdepth: 4
     
-    using_modin
-    out_of_core
-    pandas
-    dask
+    10-min Quickstart Guide <self>
+    installation
+    using_modin/using_modin
+    why_modin/why_modin
+    examples
     faq
     troubleshooting
 
@@ -16,181 +21,143 @@ Getting Started
     :description lang=en:
         Introduction to Modin.
 
-There are several ways to install Modin. Most users will want to install with
-``pip`` or using ``conda`` tool, but some users may want to build from the master branch
-on the `GitHub repo`_. The master branch has the most recent patches, but may be less
-stable than a release installed from ``pip`` or ``conda``.
+Quick Start Guide
+----------------
 
-Installing with pip
--------------------
-
-Stable version
-""""""""""""""
-
-Modin can be installed with ``pip`` on Linux, Windows and MacOS. 2 engines are available for those platforms:
-:doc:`Ray</developer/using_pandas_on_ray>` and :doc:`Dask</developer/using_pandas_on_dask>`
-To install the most recent stable release run the following:
+To install the most recent stable release for Modin run the following:
 
 .. code-block:: bash
 
-  pip install -U modin # -U for upgrade in case you have an older version
+  pip install modin[all] 
 
-If you don't have Ray_ or Dask_ installed, you will need to install Modin with one of the targets:
+For further instructions on how to install Modin with conda or for specific platforms or engines, see our detailed `installation guide <../getting_started/installation.html>`_.
 
-.. code-block:: bash
-
-  pip install modin[ray] # Install Modin dependencies and Ray to run on Ray
-  pip install modin[dask] # Install Modin dependencies and Dask to run on Dask
-  pip install modin[all] # Install all of the above
-
-Modin will automatically detect which engine you have installed and use that for
-scheduling computation!
-
-Release candidates
-""""""""""""""""""
-
-Before most major releases, we will upload a release candidate to test and check if there are any problems. If you would like to install a pre-release of Modin, run the following:
+Modin acts as a drop-in replacement for pandas so you simply have to replace the import of pandas with the import of Modin as follows to speed up your pandas workflows:
 
 .. code-block:: bash
 
-  pip install --pre modin
+  # import pandas as pd
+  import modin.pandas as pd
 
-These pre-releases are uploaded for dependencies and users to test their existing code
-to ensure that it still works. If you find something wrong, please raise an issue_ or
-email the bug reporter: bug_reports@modin.org.
+Example: Instant Scalability with No Extra Effort
+--------------------------------------------------
 
-Installing specific dependency sets
-"""""""""""""""""""""""""""""""""""
+When working on large datasets, pandas becomes painfully slow or `runs out of memory <../why_modin/out_of_core.html>`_. Modin automatically scales up your pandas workflows by parallelizing the dataframe operations, so that you can more effectively leverage the compute resources available.
 
-Modin has a number of specific dependency sets for running Modin on different execution engines and
-storage formats or for different functionalities of Modin. Here is a list of dependency sets for Modin:
-
-.. code-block:: bash
-
-  pip install "modin[dask]" # If you want to use the Dask execution engine
-
-Installing on Google Colab
-"""""""""""""""""""""""""""
-
-Modin can be used with Google Colab_ via the ``pip`` command, by running the following code in a new cell:
-
-.. code-block:: bash
-
-  !pip install modin[all]
-
-Since Colab preloads several of Modin's dependencies by default, we need to restart the Colab environment once Modin is installed by either clicking on the :code:`"RESTART RUNTIME"` button in the installation output or by run the following code:
+For the purpose of demonstration, we will load in modin as ``pd`` and pandas as ``pandas``.
 
 .. code-block:: python
 
-  # Post-install automatically kill and restart Colab environment 
-  import os
-  os.kill(os.getpid(), 9)
+  import modin.pandas as pd
+  import pandas
 
-Once you have restarted the Colab environment, you can use Modin in Colab in subsequent sessions.
+  #############################################
+  ### For the purpose of timing comparisons ###
+  #############################################
+  import time
+  import ray
+  ray.init()
+  #############################################
 
-Note that on the free version of Colab, there is a `limit on the compute resource <https://research.google.com/colaboratory/faq.html>`_. To leverage the full power of Modin, you may have to upgrade to Colab Pro to get access to more compute resources.
+In this toy example, we look at the NYC taxi dataset, which is around 120MB in size. You can download the dataset from `here <https://s3.amazonaws.com/nyc-tlc/trip+data/yellow_tripdata_2021-01.csv>`_ to run the example locally.
 
-Installing with conda
----------------------
+.. code-block:: python
 
-Using conda-forge channel
-"""""""""""""""""""""""""
+  # This may take a few minutes to download
+  import urllib.request
+  s3_path = "https://s3.amazonaws.com/nyc-tlc/trip+data/yellow_tripdata_2021-01.csv"
+  urllib.request.urlretrieve(s3_path, "taxi.csv")  
 
-Modin releases can be installed using ``conda`` from conda-forge channel. Starting from 0.10.1
-it is possible to install modin with chosen engine(s) alongside. Current options are:
+Faster Data Loading with ``read_csv``
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-+---------------------------------+---------------------------+-----------------------------+
-| **Package name in conda-forge** | **Engine(s)**             | **Supported OSs**           |
-+---------------------------------+---------------------------+-----------------------------+
-| modin                           | Dask_                     |   Linux, Windows, MacOS     |
-+---------------------------------+---------------------------+-----------------------------+
-| modin-dask                      | Dask                      |   Linux, Windows, MacOS     |
-+---------------------------------+---------------------------+-----------------------------+
-| modin-ray                       | Ray_                      |       Linux, Windows        |
-+---------------------------------+---------------------------+-----------------------------+
-| modin-omnisci                   | OmniSci_                  |          Linux              |
-+---------------------------------+---------------------------+-----------------------------+
-| modin-all                       | Dask, Ray, OmniSci        |          Linux              |
-+---------------------------------+---------------------------+-----------------------------+
+.. code-block:: python
+   
+  start = time.time()
 
-So for installing Dask and Ray engines into conda environment following command should be used:
+  pandas_df = pandas.read_csv(s3_path, parse_dates=["tpep_pickup_datetime", "tpep_dropoff_datetime"], quoting=3)
 
-.. code-block:: bash
+  end = time.time()
+  pandas_duration = end - start
+  print("Time to read with pandas: {} seconds".format(round(pandas_duration, 3)))
 
-  conda install -c conda-forge modin-ray modin-dask
+By running the same command ``read_csv`` with Modin, we generally get around 4X speedup for loading in the data in parallel. 
 
-All set of engines could be available in conda environment by specifying
+.. code-block:: python
 
-.. code-block:: bash
+  start = time.time()
 
-  conda install -c conda-forge modin-all
+  modin_df = pd.read_csv(s3_path, parse_dates=["tpep_pickup_datetime", "tpep_dropoff_datetime"], quoting=3)
 
-or explicitly
+  end = time.time()
+  modin_duration = end - start
+  print("Time to read with Modin: {} seconds".format(round(modin_duration, 3)))
 
-.. code-block:: bash
+  print("Modin is {}x faster than pandas at `read_csv`!".format(round(pandas_duration / modin_duration, 2)))
 
-  conda install -c conda-forge modin-ray modin-dask modin-omnisci
+Faster ``concat`` across multiple dataframes
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Using Intel\ |reg| Distribution of Modin
-""""""""""""""""""""""""""""""""""""""""
+Our previous ``read_csv`` example operated on a relatively small dataframe. In the following example, we duplicate the same taxi dataset 100 times and then concatenate them together, resulting in a dataset around 19GB in size.
 
-With ``conda`` it is also possible to install Intel Distribution of Modin, a special version of Modin 
-that is part of Intel\ |reg| oneAPI AI Analytics Toolkit. This version of Modin is powered by :doc:`OmniSci</developer/using_omnisci>` 
-engine that contains a bunch of optimizations for Intel hardware. More details can be found on `Intel Distribution of Modin`_ page.
+.. code-block:: python
 
-Installing from the GitHub master branch
-----------------------------------------
+  start = time.time()
 
-If you'd like to try Modin using the most recent updates from the master branch, you can
-also use ``pip``.
+  big_pandas_df = pandas.concat([pandas_df for _ in range(25)])
 
-.. code-block:: bash
+  end = time.time()
+  pandas_duration = end - start
+  print("Time to concat with pandas: {} seconds".format(round(pandas_duration, 3)))
 
-  pip install git+https://github.com/modin-project/modin
+.. code-block:: python
 
-This will install directly from the repo without you having to manually clone it! Please be aware
-that these changes have not made it into a release and may not be completely stable.
+  start = time.time()
 
-Windows
+  big_modin_df = pd.concat([modin_df for _ in range(25)])
+
+  end = time.time()
+  modin_duration = end - start
+  print("Time to concat with Modin: {} seconds".format(round(modin_duration, 3)))
+
+  print("Modin is {}x faster than pandas at `concat`!".format(round(pandas_duration / modin_duration, 2)))
+
+Modin speeds up the ``concat`` operation by more than 60X, taking less than a second to create the large dataframe, while pandas took close to a minute.
+
+
+Faster ``apply`` over a single column
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The performance benefits of Modin becomes aparent when we operate on large gigabyte-scale datasets. For example, let's say that we want to round up the number across a single column via the ``apply`` operation. 
+
+.. code-block:: python
+
+  start = time.time()
+  rounded_trip_distance_pandas = big_pandas_df["trip_distance"].apply(round)
+
+  end = time.time()
+  pandas_duration = end - start
+  print("Time to apply with pandas: {} seconds".format(round(pandas_duration, 3)))
+
+.. code-block:: python
+  
+  start = time.time()
+
+  rounded_trip_distance_modin = big_modin_df["trip_distance"].apply(round)
+
+  end = time.time()
+  modin_duration = end - start
+  print("Time to apply with Modin: {} seconds".format(round(modin_duration, 3)))
+
+  print("Modin is {}x faster than pandas at `apply` on one column!".format(round(pandas_duration / modin_duration, 2)))
+
+Modin is more than 30X faster at applying a single column of data, operating on 130+ million rows in a second.
+
+Summary
 -------
 
-All Modin engines except :doc:`OmniSci</developer/using_omnisci>` are available both on Windows and Linux as mentioned above.
-Default engine on Windows is :doc:`Ray</developer/using_pandas_on_ray>`.
-It is also possible to use Windows Subsystem For Linux (WSL_), but this is generally not recommended due to the limitations
-and poor performance of Ray on WSL, a roughly 2-3x cost. 
+Hopefully, this tutorial demonstrated how Modin delivers significant speedup on pandas operations without the need for any extra effort. Throughout example, we moved from working with 100MBs of data to 20GBs of data all without having to change anything or manually optimize our code to achieve the level of scalable performance that Modin provides.
 
-Building Modin from Source
---------------------------
+Note that in this quickstart example, we've only shown ``read_csv``, ``concat``, ``apply``, but these are not the only pandas operations that Modin optimizes for. In fact, Modin covers `more than 90\% of the pandas API <https://github.com/modin-project/modin/blob/master/README.md#pandas-api-coverage>`_, yielding considerable speedups for many common operations.
 
-If you're planning on :doc:`contributing </developer/contributing>` to Modin, you will need to ensure that you are
-building Modin from the local repository that you are working off of. Occasionally,
-there are issues in overlapping Modin installs from pypi and from source. To avoid these
-issues, we recommend uninstalling Modin before you install from source:
-
-.. code-block:: bash
-
-  pip uninstall modin
-
-To build from source, you first must clone the repo. We recommend forking the repository first
-through the GitHub interface, then cloning as follows:
-
-.. code-block:: bash
-
-  git clone https://github.com/<your-github-username>/modin.git
-
-Once cloned, ``cd`` into the ``modin`` directory and use ``pip`` to install:
-
-.. code-block:: bash
-
-  cd modin
-  pip install -e .
-
-.. _`GitHub repo`: https://github.com/modin-project/modin/tree/master
-.. _issue: https://github.com/modin-project/modin/issues
-.. _WSL: https://docs.microsoft.com/en-us/windows/wsl/install-win10
-.. _Ray: http://ray.readthedocs.io
-.. _Dask: https://github.com/dask/dask
-.. _OmniSci: https://www.omnisci.com/platform/omniscidb
-.. _`Intel Distribution of Modin`: https://software.intel.com/content/www/us/en/develop/tools/oneapi/components/distribution-of-modin.html#gs.86stqv
-.. |reg|    unicode:: U+000AE .. REGISTERED SIGN
-.. _Colab: https://colab.research.google.com/
+Next, we discuss how Modin can be used locally on a single machine (e.g., your laptop!) and on a cluster setting.

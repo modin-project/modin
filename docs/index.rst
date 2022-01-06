@@ -8,7 +8,7 @@
 .. toctree::
    :hidden:
    
-   getting_started/index
+   getting_started/quickstart
    supported_apis/index
    advanced_usage/index
    developer/index
