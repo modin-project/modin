@@ -15,7 +15,7 @@ As a result, Modin's coverage is `more than 90% <https://github.com/modin-projec
    :align: center
    :alt: Percentage coverage of the pandas API after deduplication
 
-For more technical details please see our VLDB 2022 paper, referenced `here <https://people.eecs.berkeley.edu/~totemtang/paper/Modin.pdf>`_. 
+For more technical details please see our VLDB 2022 research paper, referenced `here <https://people.eecs.berkeley.edu/~totemtang/paper/Modin.pdf>`_. 
 
 Brief Overview of DaskDF and Koalas
 -----------------------------------
