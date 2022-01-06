@@ -308,6 +308,10 @@ class PandasCSVGlobParser(PandasCSVParser):
         num_splits = kwargs.pop("num_splits", None)
         index_col = kwargs.get("index_col", None)
 
+        # `single_worker_read` just pass filename via chunks; need check
+        if isinstance(chunks, str):
+            return pandas.read_csv(chunks, **kwargs)
+
         # pop `compression` from kwargs because `bio` below is uncompressed
         compression = kwargs.pop("compression", "infer")
         storage_options = kwargs.pop("storage_options", None) or {}
