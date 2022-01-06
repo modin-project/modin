@@ -20,7 +20,7 @@ For more technical details please see our VLDB 2022 research paper, referenced `
 Brief Overview of DaskDF and Koalas
 -----------------------------------
 
-Dask's `DataFrame <https://docs.dask.org/en/stable/dataframe.html>`_ (DaskDF) is effectively a meta-frame, partitioning and scheduling many smaller ``pandas.DataFrame`` objects. Users construct a task graph of dataframe computation step by step and then trigger computation using the ``compute`` function.
+Dask's `DataFrame <https://docs.dask.org/en/stable/dataframe.html>`_ (DaskDF) is effectively a meta-DataFrame, partitioning and scheduling many smaller ``pandas.DataFrame`` objects. Users construct a task graph of dataframe computation step by step and then trigger computation using the ``compute`` function.
 
 
 Spark's `Koalas <https://koalas.readthedocs.io/en/latest/>`_ provides the pandas API on Spark, leveraging the preexisting Spark SQL optimizer to execute select pandas commands. Like DaskDF, Koalas also employs lazy computation, only triggering computation when the user requests to see the results.
