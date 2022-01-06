@@ -164,7 +164,33 @@ class PandasOnRayDataframePartitionManager(GenericRayDataframePartitionManager):
                     ]
                 )
             else:
-                raise NotImplementedError("Make naive case work first")
+                # if we have the lengths, then we need to be intelligent about how we rebalance
+                ideal_partition_size = (
+                    sum(row[0] for row in lengths) // NPartitions.get()
+                )
+                result_partitions = []
+                stop = 0
+                for i in range(NPartitions.get()):
+                    start = stop
+                    while (
+                        stop <= sum(row[0] for row in lengths)
+                        and sum(row[0] for row in lengths[start : stop + 1])
+                        < ideal_partition_size
+                    ):
+                        stop += 1
+                    if (
+                        sum(row[0] for row in lengths[start : stop + 1])
+                        > ideal_partition_size * heuristic
+                    ):
+                        raise NotImplementedError("Split implemented later")
+                    else:
+                        result_partitions.append(
+                            cls.column_partitions(
+                                (partitions[start : stop + 1]), full_axis=False
+                            )
+                        )
+                    stop += 1
+                return np.array(result_partitions)
         else:
             return partitions
 
