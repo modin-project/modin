@@ -24,6 +24,7 @@ from modin.core.execution.ray.implementations.pandas_on_ray.dataframe.dataframe 
 )
 from modin.error_message import ErrorMessage
 from typing import List, Hashable, Optional
+from modin.pandas.utils import check_both_not_none
 
 
 class cuDFOnRayDataframe(PandasOnRayDataframe):
@@ -142,14 +143,14 @@ class cuDFOnRayDataframe(PandasOnRayDataframe):
 
         Notes
         -----
-        If both row_labels and row_positions are provided, a ValueError is raised.
-        The same rule applies for col_labels and col_positions.
+        If both `row_labels` and `row_positions` are provided, a ValueError is raised.
+        The same rule applies for `col_labels` and `col_positions`.
         """
-        if not (row_labels is None or row_positions is None):
+        if check_both_not_none(row_labels, row_positions):
             raise ValueError(
                 "Both row_labels and row_positions were provided - please provide only one of row_labels and row_positions."
             )
-        if not (col_labels is None or col_positions is None):
+        if check_both_not_none(col_labels, col_positions):
             raise ValueError(
                 "Both col_labels and col_positions were provided - please provide only one of col_labels and col_positions."
             )

@@ -79,8 +79,8 @@ class ModinDataframe(ABC):
 
         Notes
         -----
-        If both row_labels and row_positions are provided, a ValueError is raised.
-        The same rule applies for col_labels and col_positions.
+        If both `row_labels` and `row_positions` are provided, a ValueError is raised.
+        The same rule applies for `col_labels` and `col_positions`.
         """
         pass
 
@@ -97,7 +97,7 @@ class ModinDataframe(ABC):
         Returns
         -------
         ModinDataframe
-             A new ModinDataframe with only the columns whose dtypes appear in types.
+             A new ModinDataframe with only the columns whose dtypes appear in `types`.
         """
         pass
 
@@ -109,7 +109,7 @@ class ModinDataframe(ABC):
         dtypes: Optional[str] = None,
     ) -> "ModinDataframe":
         """
-        Apply a user-defined function row-wise if axis=0, column-wise if axis=1, and cell-wise if axis is None.
+        Apply a user-defined function row-wise if `axis`=0, column-wise if `axis`=1, and cell-wise if `axis` is None.
 
         Parameters
         ----------
