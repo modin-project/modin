@@ -198,7 +198,7 @@ def is_label(obj, label, axis=0):
 
 
 def check_both_not_none(option1, option2):
-    """Checks that both `option1` and `option2` are not None."""
+    """Check that both `option1` and `option2` are not None."""
     return not (option1 is None or option2 is None)
 
 
