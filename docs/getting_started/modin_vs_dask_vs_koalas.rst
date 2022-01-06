@@ -1,7 +1,7 @@
 Modin vs. Dask DataFrame vs. Koalas
 ===============================================
 
-Libraries such as `Dask DataFrame <https://docs.dask.org/en/stable/dataframe.html>`_ (DaskDF for short) and `Koalas <https://koalas.readthedocs.io/en/latest/>`_ aim to support the pandas API on top of distributed computing frameworks, Dask and Spark respectively. Instead, Modin aims to preserve the pandas API and semantics as is, while abstracting away the details of the distributed computing framework underneath. Thus, the aims of these libraries are fundamentally different.
+Libraries such as `Dask DataFrame <https://docs.dask.org/en/stable/dataframe.html>`_ (DaskDF for short) and `Koalas <https://koalas.readthedocs.io/en/latest/>`_ aim to support the pandas API on top of distributed computing frameworks, Dask and Spark respectively. Instead, Modin aims to preserve the pandas API and behavior as is, while abstracting away the details of the distributed computing framework underneath. Thus, the aims of these libraries are fundamentally different.
 
 Specifically, Modin enables pandas-like
 
@@ -29,6 +29,9 @@ Spark's `Koalas <https://koalas.readthedocs.io/en/latest/>`_ provides the pandas
 
 Partitioning and Parallelization
 --------------------------------
+
+Modin, DaskDF, Koalas are all examples of parallel dataframe systems. Parallelism is achieved by partitioning a large dataframe into smaller ones that can be operated on in parallel. As a result, the partitioning scheme chosen by the system dictates the pandas functions that can or can not be supported.
+
 **DaskDF and Koalas only support row-oriented partitioning and parallelism.** This approach is analogous to relational databases. The dataframe is conceptually broken down into horizontal partitions along rows, where each partition is independently processed if possible. When DaskDF or Koalas are required to perform column-parallel operations that to be done on columns independently (e.g., dropping columns with null values via ``dropna`` on the column ``axis``), they either perform very poorly with no parallelism or do not support that operation.
 
 
@@ -39,7 +42,7 @@ API Coverage
 ------------
 
 One of the key benefits of pandas is its versatility, due to the wide array of operations, with more than 600+ API operations for data cleaning, feature engineering, data transformation, data summarization, data exploration, and machine learning. However, it is not trivial to develop scalable implementations of each of these operations in a dataframe system.
-**DaskDF and Koalas only implements about** `55%  <https://arxiv.org/abs/2001.00888>`_ **of the pandas API**; they do not implement certain APIs that would deviate from the row-wise partitioning approach, or would be inefficient with the row-wise parallelization. For example, Dask does not implement ``iloc``, ``MultiIndex``, ``apply(axis=0)``, ``quantile``(only approximate quantile is available), ``median``, and more. Given DaskDF's row-oriented architecture, ``iloc``, for example, can technically be implemented, but it would be inefficient, and column-wise operations such as ``apply(axis=0)`` would be impossible to implement. Similarly, Koalas does not implement ``apply(axis=0)`` (it only applies the function per row partition, giving a different result), ``quantile``,``median`` (only approximate quantile/median is available), ``MultiIndex``, ``combine``, ``compare`` and more.
+**DaskDF and Koalas only implements about** `55%  <https://arxiv.org/abs/2001.00888>`_ **of the pandas API**; they do not implement certain APIs that would deviate from the row-wise partitioning approach, or would be inefficient with the row-wise parallelization. For example, Dask does not implement ``iloc``, ``MultiIndex``, ``apply(axis=0)``, ``quantile`` (only approximate quantile is available), ``median``, and more. Given DaskDF's row-oriented architecture, ``iloc``, for example, can technically be implemented, but it would be inefficient, and column-wise operations such as ``apply(axis=0)`` would be impossible to implement. Similarly, Koalas does not implement ``apply(axis=0)`` (it only applies the function per row partition, giving a different result), ``quantile``, ``median`` (only approximate quantile/median is available), ``MultiIndex``, ``combine``, ``compare`` and more.
 
 
 **Modin supports all of the above pandas API functions, as well as others, with** `more than 90% <https://github.com/modin-project/modin#pandas-api-coverage>`_ **coverage of the pandas API.**  Modin additionally acts as a drop-in replacement for pandas, such that even if the API is not yet supported, it still works by falling back to running vanilla pandas. One of the key features of being a drop-in replacement is that not only will it work for existing code, if a user wishes to go back to running pandas directly, they are not locked in to using Modin and can switch between Modin and pandas at no cost. In other words, scripts and notebooks written in Modin can be converted to and from pandas as the user desires by simply replacing the import statement.
