@@ -79,7 +79,7 @@ Performance Comparison
 ----------------------
 **On operations supported by all systems, Modin provides substantial speedups.** Thanks to its optimized design, Modin is able to take advantage of multiple cores relative to both Koalas and DaskDF to efficiently execute pandas operations. It is notable that Koalas is often slower than pandas, due to the overhead of Spark. 
 
-. figure:: ../img/performance-not-all-supported.svg
+.. figure:: ../img/performance-not-all-supported.svg
    :align: center
    :alt: Scalability of operators supported by Modin but not by other systems
 
