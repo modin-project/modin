@@ -11,7 +11,6 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-import contextlib
 import pytest
 import itertools
 import pandas
@@ -35,7 +34,6 @@ from .utils import (
     default_to_pandas_ignore_string,
 )
 from modin.config import NPartitions
-from modin.test.test_utils import warns_that_defaulting_to_pandas
 
 NPartitions.put(4)
 
@@ -257,18 +255,6 @@ class GetColumn:
         return df[self.name]
 
 
-# Constructing the Modin Series in BaseOnPython mode causes a warning that we
-# are defaulting to Pandas. The pytest marker at the top of this file that
-# ignores such warnings doesn't apply to code that generates test params, so
-# catch the warning.
-with (
-    warns_that_defaulting_to_pandas()
-    if get_current_execution() == "BaseOnPython"
-    else contextlib.nullcontext()
-):
-    modin_series = pd.Series([1, 5, 7, 8])
-
-
 @pytest.mark.parametrize(
     "by",
     [
@@ -301,14 +287,14 @@ with (
         ["col5", "col4"],
         ["col4", "col5"],
         ["col5", "col4", "col1"],
-        ["col1", modin_series],  # 15
-        [modin_series],
+        ["col1", pd.Series([1, 5, 7, 8])],  # 15
+        [pd.Series([1, 5, 7, 8])],
         [
-            modin_series,
-            modin_series,
-            modin_series,
-            modin_series,
-            modin_series,
+            pd.Series([1, 5, 7, 8]),
+            pd.Series([1, 5, 7, 8]),
+            pd.Series([1, 5, 7, 8]),
+            pd.Series([1, 5, 7, 8]),
+            pd.Series([1, 5, 7, 8]),
         ],
         ["col1", GetColumn("col5")],
         [GetColumn("col1"), GetColumn("col5")],
@@ -1751,18 +1737,6 @@ def test_mixed_columns_not_from_df(columns, as_index):
     eval_general(md_grp, pd_grp, lambda grp: grp.first())
 
 
-# Constructing the Modin Series in BaseOnPython mode causes a warning that we
-# are defaulting to Pandas. The pytest marker at the top of this file that
-# ignores such warnings doesn't apply to code that generates test params, so
-# catch the warning.
-with (
-    warns_that_defaulting_to_pandas()
-    if get_current_execution() == "BaseOnPython"
-    else contextlib.nullcontext()
-):
-    modin_series = pd.Series([5, 6, 7, 8])
-
-
 @pytest.mark.parametrize(
     # When True, do df[obj], otherwise just use the obj
     "columns",
@@ -1775,7 +1749,7 @@ with (
         [(True, "a"), (True, "b")],
         [(False, "a"), (False, "b"), (True, "c")],
         [(False, "a"), (True, "c")],
-        [(False, "a"), (False, modin_series)],
+        [(False, "a"), (False, pd.Series([5, 6, 7, 8]))],
     ],
 )
 def test_unknown_groupby(columns):

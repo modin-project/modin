@@ -13,7 +13,6 @@
 
 import pytest
 
-import contextlib
 import numpy as np
 import pandas
 import matplotlib
@@ -291,24 +290,12 @@ def test_constructor(data):
     df_equals(pandas_df, modin_df)
 
 
-# Constructing the Modin Series in BaseOnPython mode causes a warning that we
-# are defaulting to Pandas. The pytest marker at the top of this file that
-# ignores such warnings doesn't apply to code that generates test params, so
-# catch the warning.
-with (
-    warns_that_defaulting_to_pandas()
-    if get_current_execution() == "BaseOnPython"
-    else contextlib.nullcontext()
-):
-    modin_series = pd.Series([1, 2, 3], dtype="int32")
-
-
 @pytest.mark.parametrize(
     "data",
     [
         np.arange(1, 10000, dtype=np.float32),
         [
-            modin_series,
+            pd.Series([1, 2, 3], dtype="int32"),
             pandas.Series([4, 5, 6], dtype="int64"),
             np.array([7, 8, 9], dtype=np.float32),
         ],
