@@ -345,6 +345,9 @@ class PandasDataframe(object):
         axis : int, default: None
             The axis to apply to. If it's None applies to both axes.
         """
+        print(
+            f"on synchronize labels, _partitions is {[type(x)  for partition in self._partitions for x in partition]}"
+        )
         self._filter_empties()
         if axis is None or axis == 0:
             cum_row_lengths = np.cumsum([0] + self._row_lengths)

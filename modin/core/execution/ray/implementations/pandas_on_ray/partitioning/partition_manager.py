@@ -149,47 +149,96 @@ class PandasOnRayDataframePartitionManager(GenericRayDataframePartitionManager):
         from modin.config import NPartitions
 
         heuristic = 1.5  # partitions can be 1.5x larger than ideal. Can be modified.
+        print(
+            f"partitions before rebalance: { [[obj._length_cache for obj in row] for row in partitions]}"
+        )
         if partitions.shape[0] > NPartitions.get() * heuristic:
             lengths = [[obj._length_cache for obj in row] for row in partitions]
+            if partitions.shape[0] % NPartitions.get() == 0:
+                ideal_partitions_per_axis_partition = (
+                    partitions.shape[0] // NPartitions.get()
+                )
+            else:
+                ideal_partitions_per_axis_partition = (
+                    partitions.shape[0] // NPartitions.get() + 1
+                )
             # Naive rebalance
             if any(l is None for row in lengths for l in row):
-                if partitions.shape[0] % NPartitions.get() == 0:
-                    step = partitions.shape[0] // NPartitions.get()
-                else:
-                    step = partitions.shape[0] // NPartitions.get() + 1
                 return np.array(
                     [
-                        cls.column_partitions(partitions[i : i + step], full_axis=False)
-                        for i in range(0, partitions.shape[0], step)
+                        cls.column_partitions(
+                            partitions[i : i + ideal_partitions_per_axis_partition],
+                            full_axis=False,
+                        )
+                        for i in range(
+                            0, partitions.shape[0], ideal_partitions_per_axis_partition
+                        )
                     ]
                 )
             else:
                 # if we have the lengths, then we need to be intelligent about how we rebalance
-                ideal_partition_size = (
-                    sum(row[0] for row in lengths) // NPartitions.get()
-                )
                 result_partitions = []
+                start = 0
                 stop = 0
+                total_rows = sum(row[0] for row in lengths)
+                print("rebalance according to lengths!")
+                if total_rows % NPartitions.get() == 0:
+                    ideal_partition_size = total_rows // NPartitions.get()
+                else:
+                    ideal_partition_size = total_rows // NPartitions.get() + 1
                 for i in range(NPartitions.get()):
-                    start = stop
+                    # We might pick up partitions too quickly and exhaust all of them.
+                    if start >= len(partitions):
+                        break
+                    stop = start
+                    partition_size = partitions[start][0]._length_cache
                     while (
-                        stop <= sum(row[0] for row in lengths)
-                        and sum(row[0] for row in lengths[start : stop + 1])
-                        < ideal_partition_size
+                        stop < len(partitions) and partition_size < ideal_partition_size
                     ):
                         stop += 1
-                    if (
-                        sum(row[0] for row in lengths[start : stop + 1])
-                        > ideal_partition_size * heuristic
-                    ):
-                        raise NotImplementedError("Split implemented later")
-                    else:
-                        result_partitions.append(
-                            cls.column_partitions(
-                                (partitions[start : stop + 1]), full_axis=False
+                        if stop < len(partitions):
+                            partition_size = (
+                                partition_size + partitions[stop][0]._length_cache
                             )
+                    print(
+                        f"built partition {i} with size {partition_size} and start {start} and stop {stop}"
+                    )
+                    if partition_size > ideal_partition_size * heuristic:
+                        print(
+                            f"partition {i} is too large. split the last partition in it"
                         )
-                    stop += 1
+                        correct_partition_size = int(
+                            ideal_partition_size * heuristic
+                        ) - sum(row[0]._length_cache for row in partitions[start:stop])
+                        print(f"using correct partition size {correct_partition_size}")
+                        # split the partition at index stop
+                        print(
+                            f"inserting at position {stop + 1} the objects {[ obj.mask(slice(correct_partition_size, None), slice(None)).get() for obj in partitions[stop]]}"
+                        )
+                        partitions = np.insert(
+                            partitions,
+                            stop + 1,
+                            [
+                                obj.mask(
+                                    slice(correct_partition_size, None), slice(None)
+                                )
+                                for obj in partitions[stop]
+                            ],
+                            0,
+                        )
+                        partitions[stop, :] = [
+                            obj.mask(slice(None, correct_partition_size), slice(None))
+                            for obj in partitions[stop]
+                        ]
+                        print(
+                            f"partitions after replacement: { [[obj._length_cache for obj in row] for row in partitions]}"
+                        )
+                    result_partitions.append(
+                        cls.column_partitions(
+                            (partitions[start : stop + 1]), full_axis=False
+                        )
+                    )
+                    start = stop + 1
                 return np.array(result_partitions)
         else:
             return partitions
