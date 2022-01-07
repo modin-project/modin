@@ -207,9 +207,9 @@ class PandasOnRayDataframePartitionManager(GenericRayDataframePartitionManager):
                         print(
                             f"partition {i} is too large. split the last partition in it"
                         )
-                        correct_partition_size = int(
-                            ideal_partition_size * heuristic
-                        ) - sum(row[0]._length_cache for row in partitions[start:stop])
+                        correct_partition_size = ideal_partition_size - sum(
+                            row[0]._length_cache for row in partitions[start:stop]
+                        )
                         print(f"using correct partition size {correct_partition_size}")
                         # split the partition at index stop
                         print(
