@@ -25,9 +25,7 @@ from .axis_partition import (
     PandasOnRayDataframeColumnPartition,
     PandasOnRayDataframeRowPartition,
 )
-from .partition import (
-    PandasOnRayDataframePartition,
-)
+from .partition import PandasOnRayDataframePartition
 from modin.core.execution.ray.generic.modin_aqp import call_progress_bar
 from modin.error_message import ErrorMessage
 import pandas
@@ -241,6 +239,7 @@ class PandasOnRayDataframePartitionManager(GenericRayDataframePartitionManager):
         keep_partitioning=False,
         lengths=None,
         enumerate_partitions=False,
+        **kwargs,
     ):
         """
         Apply `map_func` to every partition in `partitions` along given `axis`.
@@ -261,6 +260,8 @@ class PandasOnRayDataframePartitionManager(GenericRayDataframePartitionManager):
         enumerate_partitions : bool, default: False
             Whether or not to pass partition index into `map_func`.
             Note that `map_func` must be able to accept `partition_idx` kwarg.
+        **kwargs : dict
+            Additional options that could be used by different engines.
 
         Returns
         -------
@@ -273,7 +274,13 @@ class PandasOnRayDataframePartitionManager(GenericRayDataframePartitionManager):
         some global information about the axis.
         """
         return super(PandasOnRayDataframePartitionManager, cls).map_axis_partitions(
-            axis, partitions, map_func, keep_partitioning, lengths, enumerate_partitions
+            axis,
+            partitions,
+            map_func,
+            keep_partitioning,
+            lengths,
+            enumerate_partitions,
+            **kwargs,
         )
 
     @classmethod
@@ -395,6 +402,8 @@ class PandasOnRayDataframePartitionManager(GenericRayDataframePartitionManager):
         row_partitions_list,
         col_partitions_list,
         item_to_distribute=None,
+        row_lengths=None,
+        col_widths=None,
     ):
         """
         Apply a function along both axes.
@@ -411,6 +420,12 @@ class PandasOnRayDataframePartitionManager(GenericRayDataframePartitionManager):
             List of column partitions.
         item_to_distribute : item, optional
             The item to split up so it can be applied over both axes.
+        row_lengths : list of ints, optional
+            Lengths of partitions for every row. If not specified this information
+            is extracted from partitions itself.
+        col_widths : list of ints, optional
+            Widths of partitions for every column. If not specified this information
+            is extracted from partitions itself.
 
         Returns
         -------
@@ -431,6 +446,8 @@ class PandasOnRayDataframePartitionManager(GenericRayDataframePartitionManager):
             row_partitions_list,
             col_partitions_list,
             item_to_distribute,
+            row_lengths,
+            col_widths,
         )
 
     @classmethod

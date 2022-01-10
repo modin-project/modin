@@ -23,11 +23,7 @@ from modin.config import NPartitions
 
 
 class JSONDispatcher(TextFileDispatcher):
-    """
-    Class handles utils for reading `.json` files.
-
-    Inherits some common for text files util functions from `TextFileDispatcher` class.
-    """
+    """Class handles utils for reading `.json` files."""
 
     @classmethod
     def _read(cls, path_or_buf, **kwargs):

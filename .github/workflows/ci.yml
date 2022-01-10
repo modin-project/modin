@@ -141,6 +141,12 @@ jobs:
           python-version: 3.7
           channel-priority: strict
           use-only-tar-bz2: true # IMPORTANT: This needs to be set for caching to work properly!
+          # Miniconda setup sometimes fails because of an HTTP error. Retry
+          # it once if it fails. TODO(https://github.com/conda-incubator/setup-miniconda/issues/129):
+          # Get rid of this once setup-miniconda can be configured to retry
+          # setup on HTTP errors.
+          max_attempts: 2
+          retry_on: error
       - name: Conda environment
         run: |
           conda info
@@ -168,6 +174,12 @@ jobs:
           python-version: 3.7
           channel-priority: strict
           use-only-tar-bz2: true # IMPORTANT: This needs to be set for caching to work properly!
+          # Miniconda setup sometimes fails because of an http error. retry
+          # it once if it fails. todo(https://github.com/conda-incubator/setup-miniconda/issues/129):
+          # get rid of this once setup-miniconda can be configured to retry
+          # setup on http errors.
+          max_attempts: 2
+          retry_on: error
       - name: Conda environment
         run: |
           conda info
@@ -235,6 +247,12 @@ jobs:
           python-version: 3.7
           channel-priority: strict
           use-only-tar-bz2: true # IMPORTANT: This needs to be set for caching to work properly!
+          # Miniconda setup sometimes fails because of an http error. retry
+          # it once if it fails. todo(https://github.com/conda-incubator/setup-miniconda/issues/129):
+          # get rid of this once setup-miniconda can be configured to retry
+          # setup on http errors.
+          max_attempts: 2
+          retry_on: error
       - name: Conda environment
         run: |
           conda info
@@ -274,6 +292,12 @@ jobs:
           python-version: 3.7
           channel-priority: strict
           use-only-tar-bz2: true # IMPORTANT: This needs to be set for caching to work properly!
+          # Miniconda setup sometimes fails because of an http error. retry
+          # it once if it fails. todo(https://github.com/conda-incubator/setup-miniconda/issues/129):
+          # get rid of this once setup-miniconda can be configured to retry
+          # setup on http errors.
+          max_attempts: 2
+          retry_on: error
       - name: Conda environment
         run: |
           conda info
@@ -331,12 +355,19 @@ jobs:
           environment-file: requirements/env_omnisci.yml
           python-version: 3.7
           use-only-tar-bz2: true # IMPORTANT: This needs to be set for caching to work properly!
+          # Miniconda setup sometimes fails because of an http error. retry
+          # it once if it fails. todo(https://github.com/conda-incubator/setup-miniconda/issues/129):
+          # get rid of this once setup-miniconda can be configured to retry
+          # setup on http errors.
+          max_attempts: 2
+          retry_on: error
       - name: Conda environment
         run: |
           conda info
           conda list
       - name: Install HDF5
         run: sudo apt update && sudo apt install -y libhdf5-dev
+      - run: pytest modin/test/storage_formats/omnisci/test_internals.py
       - run: MODIN_BENCHMARK_MODE=True pytest modin/pandas/test/internals/test_benchmark_mode.py
       - run: pytest modin/experimental/core/execution/native/implementations/omnisci_on_native/test/test_dataframe.py
       - run: pytest modin/pandas/test/test_io.py::TestCsv --verbose
@@ -370,6 +401,12 @@ jobs:
         with:
           auto-activate-base: true
           activate-environment: ""
+          # Miniconda setup sometimes fails because of an http error. retry
+          # it once if it fails. todo(https://github.com/conda-incubator/setup-miniconda/issues/129):
+          # get rid of this once setup-miniconda can be configured to retry
+          # setup on http errors.
+          max_attempts: 2
+          retry_on: error
       - name: ASV installation
         run: |
           # FIXME: use the tag or release version of ASV as soon as it appears;
@@ -437,6 +474,12 @@ jobs:
           python-version: ${{matrix.python-version}}
           channel-priority: strict
           use-only-tar-bz2: true # IMPORTANT: This needs to be set for caching to work properly!
+          # Miniconda setup sometimes fails because of an http error. retry
+          # it once if it fails. todo(https://github.com/conda-incubator/setup-miniconda/issues/129):
+          # get rid of this once setup-miniconda can be configured to retry
+          # setup on http errors.
+          max_attempts: 2
+          retry_on: error
       - name: Conda environment
         run: |
           conda info
@@ -446,6 +489,8 @@ jobs:
       - run: MODIN_BENCHMARK_MODE=True pytest modin/pandas/test/internals/test_benchmark_mode.py
       - run: pytest -n 2 modin/experimental/xgboost/test/test_default.py
       - run: pytest -n 2 modin/experimental/xgboost/test/test_xgboost.py
+        if: matrix.engine == 'ray'
+      - run: pytest -n 2 modin/experimental/xgboost/test/test_dmatrix.py
         if: matrix.engine == 'ray'
       - run: pytest -n 2 modin/pandas/test/dataframe/test_binary.py
       - run: pytest -n 2 modin/pandas/test/dataframe/test_default.py
@@ -502,6 +547,12 @@ jobs:
           python-version: 3.7
           channel-priority: strict
           use-only-tar-bz2: true # IMPORTANT: This needs to be set for caching to work properly!
+          # Miniconda setup sometimes fails because of an http error. retry
+          # it once if it fails. todo(https://github.com/conda-incubator/setup-miniconda/issues/129):
+          # get rid of this once setup-miniconda can be configured to retry
+          # setup on http errors.
+          max_attempts: 2
+          retry_on: error
       - name: Conda environment
         run: |
           conda info
@@ -542,11 +593,18 @@ jobs:
           python-version: 3.7
           channel-priority: strict
           use-only-tar-bz2: true # IMPORTANT: This needs to be set for caching to work properly!
+          # Miniconda setup sometimes fails because of an http error. retry
+          # it once if it fails. todo(https://github.com/conda-incubator/setup-miniconda/issues/129):
+          # get rid of this once setup-miniconda can be configured to retry
+          # setup on http errors.
+          max_attempts: 2
+          retry_on: error
       - name: Conda environment
         run: |
           conda info
           conda list
       - run: python -m pytest --simulate-cloud=normal modin/pandas/test/test_io.py --verbose
+      - run: python -m pytest --simulate-cloud=normal modin/pandas/test/dataframe/test_default.py::test_kurt_kurtosis --verbose
       - # When running without parameters, some of the tests fail
         run: python -m pytest --simulate-cloud=normal modin/pandas/test/dataframe/test_binary.py::test_math_functions[add-rows-scalar]
       - run: |
@@ -604,6 +662,12 @@ jobs:
           channel-priority: strict
           use-only-tar-bz2: true # IMPORTANT: This needs to be set for caching to work properly!
           auto-update-conda: true # this enable `use-only-tar-bz2` feature on Windows
+          # Miniconda setup sometimes fails because of an http error. retry
+          # it once if it fails. todo(https://github.com/conda-incubator/setup-miniconda/issues/129):
+          # get rid of this once setup-miniconda can be configured to retry
+          # setup on http errors.
+          max_attempts: 2
+          retry_on: error
       - name: Conda environment
         run: |
           conda info
@@ -640,6 +704,12 @@ jobs:
           python-version: ${{matrix.python-version}}
           channel-priority: strict
           use-only-tar-bz2: true # IMPORTANT: This needs to be set for caching to work properly!
+          # Miniconda setup sometimes fails because of an http error. retry
+          # it once if it fails. todo(https://github.com/conda-incubator/setup-miniconda/issues/129):
+          # get rid of this once setup-miniconda can be configured to retry
+          # setup on http errors.
+          max_attempts: 2
+          retry_on: error
       - name: Conda environment
         run: |
           conda info
@@ -672,6 +742,12 @@ jobs:
           python-version: ${{matrix.python-version}}
           channel-priority: strict
           use-only-tar-bz2: true # IMPORTANT: This needs to be set for caching to work properly!
+          # Miniconda setup sometimes fails because of an http error. retry
+          # it once if it fails. todo(https://github.com/conda-incubator/setup-miniconda/issues/129):
+          # get rid of this once setup-miniconda can be configured to retry
+          # setup on http errors.
+          max_attempts: 2
+          retry_on: error
       - name: Conda environment
         run: |
           conda info

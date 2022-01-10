@@ -15,9 +15,7 @@
 
 import pandas
 
-from ..partitioning.partition_manager import (
-    PandasOnRayDataframePartitionManager,
-)
+from ..partitioning.partition_manager import PandasOnRayDataframePartitionManager
 from modin.core.dataframe.pandas.dataframe.dataframe import PandasDataframe
 from modin.core.storage_formats.pandas.parsers import (
     find_common_type_cat as find_common_type,

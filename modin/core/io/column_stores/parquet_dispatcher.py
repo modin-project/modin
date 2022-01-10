@@ -15,19 +15,13 @@
 
 import os
 
-from modin.core.io.column_stores.column_store_dispatcher import (
-    ColumnStoreDispatcher,
-)
+from modin.core.io.column_stores.column_store_dispatcher import ColumnStoreDispatcher
 from modin.error_message import ErrorMessage
+from modin.utils import import_optional_dependency
 
 
 class ParquetDispatcher(ColumnStoreDispatcher):
-    """
-    Class handles utils for reading `.parquet` files.
-
-    Inherits some common for columnar store files util functions from
-    `ColumnStoreDispatcher` class.
-    """
+    """Class handles utils for reading `.parquet` files."""
 
     @classmethod
     def _read(cls, path, engine, columns, **kwargs):
@@ -55,6 +49,10 @@ class ParquetDispatcher(ColumnStoreDispatcher):
         ParquetFile API is used. Please refer to the documentation here
         https://arrow.apache.org/docs/python/parquet.html
         """
+        import_optional_dependency(
+            "pyarrow",
+            "pyarrow is required to read parquet files.",
+        )
         from pyarrow.parquet import ParquetDataset
         from modin.pandas.io import PQ_INDEX_REGEX
 

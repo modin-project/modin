@@ -723,7 +723,7 @@ class TestGroupby:
         run_and_compare(groupby_count, data=self.data, cols=cols, as_index=as_index)
 
     @pytest.mark.xfail(
-        reason="Currently mean() passes a lambda into query compiler which cannot be executed on OmniSci storage format"
+        reason="Currently mean() passes a lambda into query compiler which cannot be executed on OmniSci engine"
     )
     @pytest.mark.parametrize("cols", cols_value)
     @pytest.mark.parametrize("as_index", bool_arg_values)
@@ -1955,7 +1955,7 @@ class TestDropna:
     @pytest.mark.parametrize("dropna", [True, False])
     def test_dropna_groupby(self, by, dropna):
         def applier(df, *args, **kwargs):
-            # OmniSci storage format preserves NaNs at the result of groupby,
+            # OmniSci engine preserves NaNs at the result of groupby,
             # so replacing NaNs with '0' to match with Pandas.
             # https://github.com/modin-project/modin/issues/2878
             return df.groupby(by=by, dropna=dropna).sum().fillna(0)
@@ -2026,16 +2026,9 @@ class TestConstructor:
 
 
 class TestArrowExecution:
-    data1 = {
-        "a": [1, 2, 3],
-        "b": [3, 4, 5],
-        "c": [6, 7, 8],
-    }
-    data2 = {
-        "a": [1, 2, 3],
-        "d": [3, 4, 5],
-        "e": [6, 7, 8],
-    }
+    data1 = {"a": [1, 2, 3], "b": [3, 4, 5], "c": [6, 7, 8]}
+    data2 = {"a": [1, 2, 3], "d": [3, 4, 5], "e": [6, 7, 8]}
+    data3 = {"a": [4, 5, 6], "b": [6, 7, 8], "c": [9, 10, 11]}
 
     def test_drop_rename_concat(self):
         def drop_rename_concat(df1, df2, lib, **kwargs):
@@ -2057,6 +2050,15 @@ class TestArrowExecution:
             return df + 1
 
         run_and_compare(apply, data={}, force_arrow_execute=True)
+
+    def test_append(self):
+        def apply(df1, df2, **kwargs):
+            tmp = df1.append(df2)
+            return tmp
+
+        run_and_compare(
+            apply, data=self.data1, data2=self.data3, force_arrow_execute=True
+        )
 
 
 if __name__ == "__main__":

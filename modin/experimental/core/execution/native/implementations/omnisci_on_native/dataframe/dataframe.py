@@ -17,9 +17,7 @@ from modin.core.dataframe.pandas.dataframe.dataframe import PandasDataframe
 from modin.experimental.core.storage_formats.omnisci.query_compiler import (
     DFAlgQueryCompiler,
 )
-from ..partitioning.partition_manager import (
-    OmnisciOnNativeDataframePartitionManager,
-)
+from ..partitioning.partition_manager import OmnisciOnNativeDataframePartitionManager
 
 from pandas.core.indexes.api import ensure_index, Index, MultiIndex, RangeIndex
 from pandas.core.dtypes.common import get_dtype, is_list_like, is_bool_dtype
@@ -281,11 +279,11 @@ class OmnisciOnNativeDataframe(PandasDataframe):
         ----------
         row_indices : list, optional
             Indices of rows to select.
-        row_numeric_idx : list of int, optional
+        row_numeric_idx : list-like of ints, optional
             Numeric indices of rows to select.
         col_indices : list, optional
             Indices of columns to select.
-        col_numeric_idx : list of int, optional
+        col_numeric_idx : list-like of ints, optional
             Numeric indices of columns to select.
 
         Returns
@@ -1038,9 +1036,7 @@ class OmnisciOnNativeDataframe(PandasDataframe):
             The new frame.
         """
         if how == "outer":
-            raise NotImplementedError(
-                "outer join is not supported in OmniSci storage format"
-            )
+            raise NotImplementedError("outer join is not supported in OmniSci engine")
 
         lhs = self._maybe_materialize_rowid()
         reset_index_names = False
@@ -1693,9 +1689,7 @@ class OmnisciOnNativeDataframe(PandasDataframe):
             )
         elif isinstance(self._op, TransformNode):
             return (
-                not self._uses_rowid
-                and self._op.is_simple_select()
-                and self._op.input[0]._can_execute_arrow()
+                self._op.is_simple_select() and self._op.input[0]._can_execute_arrow()
             )
         elif isinstance(self._op, UnionNode):
             return all(frame._can_execute_arrow() for frame in self._op.input)
@@ -1741,13 +1735,16 @@ class OmnisciOnNativeDataframe(PandasDataframe):
             The resulting table.
         """
         table = self._execute_arrow()
-        schema = table.schema
 
         new_fields = []
         new_columns = []
 
         for col, expr in exprs.items():
-            field = schema.field(f"F_{expr.column}")
+            if expr.column == "__rowid__" and "F___rowid__" not in table.schema.names:
+                arr = pyarrow.array(np.arange(0, table.num_rows))
+                table = table.append_column("F___rowid__", arr)
+
+            field = table.schema.field(f"F_{expr.column}")
             if col != expr.column:
                 field = field.with_name(f"F_{col}")
             new_fields.append(field)

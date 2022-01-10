@@ -68,6 +68,8 @@ from .utils import (
     generate_multiindex,
     test_data_diff_dtype,
     df_equals_with_non_stable_indices,
+    test_data_large_categorical_series_keys,
+    test_data_large_categorical_series_values,
 )
 from modin.config import NPartitions
 
@@ -350,6 +352,7 @@ def test___getitem__(data):
     pandas_series = pandas.Series(list(range(1000)))
     df_equals(modin_series[:30], pandas_series[:30])
     df_equals(modin_series[modin_series > 500], pandas_series[pandas_series > 500])
+    df_equals(modin_series[::2], pandas_series[::2])
 
     # Test empty series
     df_equals(pd.Series([])[:30], pandas.Series([])[:30])
@@ -974,35 +977,31 @@ def test_asof(where):
     # With NaN:
     values = [1, 2, np.nan, 4]
     index = [10, 20, 30, 40]
-    modin_series, pandas_series = pd.Series(values, index=index), pandas.Series(
-        values, index=index
+    modin_series, pandas_series = (
+        pd.Series(values, index=index),
+        pandas.Series(values, index=index),
     )
     df_equals(modin_series.asof(where), pandas_series.asof(where))
 
     # No NaN:
     values = [1, 2, 7, 4]
-    modin_series, pandas_series = pd.Series(values, index=index), pandas.Series(
-        values, index=index
+    modin_series, pandas_series = (
+        pd.Series(values, index=index),
+        pandas.Series(values, index=index),
     )
     df_equals(modin_series.asof(where), pandas_series.asof(where))
 
 
 @pytest.mark.parametrize(
     "where",
-    [
-        20,
-        30,
-        [10.5, 40.5],
-        [10],
-        pandas.Index([20, 30]),
-        pandas.Index([10.5]),
-    ],
+    [20, 30, [10.5, 40.5], [10], pandas.Index([20, 30]), pandas.Index([10.5])],
 )
 def test_asof_large(where):
     values = test_data["float_nan_data"]["col1"]
     index = list(range(len(values)))
-    modin_series, pandas_series = pd.Series(values, index=index), pandas.Series(
-        values, index=index
+    modin_series, pandas_series = (
+        pd.Series(values, index=index),
+        pandas.Series(values, index=index),
     )
     df_equals(modin_series.asof(where), pandas_series.asof(where))
 
@@ -1233,7 +1232,11 @@ def test_corr(data):
     df_equals(modin_result, pandas_result)
 
 
-@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+@pytest.mark.parametrize(
+    "data",
+    test_data_values + test_data_large_categorical_series_values,
+    ids=test_data_keys + test_data_large_categorical_series_keys,
+)
 def test_count(data):
     modin_series, pandas_series = create_test_series(data)
     df_equals(modin_series.count(), pandas_series.count())
@@ -2101,6 +2104,15 @@ def test_loc(data):
         (slice(None), 1),
     ]
     df_equals(modin_result, pandas_result)
+
+
+# This tests the bug from https://github.com/modin-project/modin/issues/3736
+def test_loc_setting_categorical_series():
+    modin_series = pd.Series(["a", "b", "c"], dtype="category")
+    pandas_series = pandas.Series(["a", "b", "c"], dtype="category")
+    modin_series.loc[1:3] = "a"
+    pandas_series.loc[1:3] = "a"
+    df_equals(modin_series, pandas_series)
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
@@ -3185,7 +3197,11 @@ def test_to_period():
         series.to_period()
 
 
-@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+@pytest.mark.parametrize(
+    "data",
+    test_data_values + test_data_large_categorical_series_values,
+    ids=test_data_keys + test_data_large_categorical_series_keys,
+)
 def test_to_numpy(data):
     modin_series, pandas_series = create_test_series(data)
     assert_array_equal(modin_series.values, pandas_series.values)
@@ -3440,6 +3456,18 @@ def test_value_counts(sort, normalize, bins, dropna, ascending):
         # does not raise an exception when it isn't a bool, when pandas do so,
         # visit modin-issue#3388 for more info.
         check_exception_type=None if sort and ascending is None else True,
+    )
+
+
+def test_value_counts_categorical():
+    # from issue #3571
+    data = np.array(["a"] * 50000 + ["b"] * 10000 + ["c"] * 1000)
+    random_state = np.random.RandomState(seed=42)
+    random_state.shuffle(data)
+
+    eval_general(
+        *create_test_series(data, dtype="category"),
+        lambda df: df.value_counts(),
     )
 
 

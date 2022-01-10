@@ -398,6 +398,20 @@ class BaseFactory(object):
         """
         return cls.io_cls.to_csv(*args, **kwargs)
 
+    @classmethod
+    def _to_parquet(cls, *args, **kwargs):
+        """
+        Write query compiler content to a parquet file.
+
+        Parameters
+        ----------
+        *args : args
+            Arguments to pass to the writer method.
+        **kwargs : kwargs
+            Arguments to pass to the writer method.
+        """
+        return cls.io_cls.to_parquet(*args, **kwargs)
+
 
 @doc(_doc_factory_class, execution_name="cuDFOnRay")
 class CudfOnRayFactory(BaseFactory):

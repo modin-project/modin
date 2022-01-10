@@ -114,6 +114,7 @@ jobs:
           conda list
       - name: Install HDF5
         run: sudo apt update && sudo apt install -y libhdf5-dev
+      - run: pytest modin/test/storage_formats/omnisci/test_internals.py
       - run: pytest modin/experimental/core/execution/native/implementations/omnisci_on_native/test/test_dataframe.py
       - run: pytest modin/pandas/test/test_io.py::TestCsv
       - run: |
@@ -159,6 +160,8 @@ jobs:
         run: sudo apt update && sudo apt install -y libhdf5-dev
       - run: pytest -n 2 modin/experimental/xgboost/test/test_default.py
       - run: pytest -n 2 modin/experimental/xgboost/test/test_xgboost.py
+        if: matrix.engine == 'ray'
+      - run: pytest -n 2 modin/experimental/xgboost/test/test_dmatrix.py
         if: matrix.engine == 'ray'
       - run: pytest -n 2 modin/pandas/test/dataframe/test_binary.py
       - run: pytest -n 2 modin/pandas/test/dataframe/test_default.py

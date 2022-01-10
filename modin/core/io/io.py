@@ -26,6 +26,7 @@ import pandas._libs.lib as lib
 from pandas._typing import CompressionOptions, FilePathOrBuffer, StorageOptions
 from pandas.util._decorators import doc
 
+from modin.db_conn import ModinDatabaseConnection
 from modin.error_message import ErrorMessage
 from modin.core.storage_formats.base.query_compiler import BaseQueryCompiler
 from modin.utils import _inherit_docstrings
@@ -665,6 +666,8 @@ class BaseIO(object):
         chunksize=None,
     ):  # noqa: PR01
         ErrorMessage.default_to_pandas("`read_sql`")
+        if isinstance(con, ModinDatabaseConnection):
+            con = con.get_connection()
         return cls.from_pandas(
             pandas.read_sql(
                 sql,
@@ -853,3 +856,19 @@ class BaseIO(object):
             obj = obj.to_pandas()
 
         return obj.to_csv(**kwargs)
+
+    @classmethod
+    @_inherit_docstrings(
+        pandas.DataFrame.to_parquet, apilink="pandas.DataFrame.to_parquet"
+    )
+    def to_parquet(cls, obj, **kwargs):  # noqa: PR01
+        """
+        Write object to the binary parquet format using pandas.
+
+        For parameters description please refer to pandas API.
+        """
+        ErrorMessage.default_to_pandas("`to_parquet`")
+        if isinstance(obj, BaseQueryCompiler):
+            obj = obj.to_pandas()
+
+        return obj.to_parquet(**kwargs)

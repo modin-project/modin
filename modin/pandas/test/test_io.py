@@ -18,6 +18,7 @@ from pandas.errors import ParserWarning
 import pandas._libs.lib as lib
 from pandas.core.dtypes.common import is_list_like
 from collections import OrderedDict
+from modin.db_conn import ModinDatabaseConnection, UnsupportedDatabaseException
 from modin.config import TestDatasetSize, Engine, StorageFormat, IsExperimental
 from modin.utils import to_pandas
 from modin.pandas.utils import from_arrow
@@ -42,6 +43,7 @@ from .utils import (
     dummy_decorator,
     create_test_dfs,
     COMP_TO_EXT,
+    teardown_test_file,
     teardown_test_files,
     generate_dataframe,
 )
@@ -58,6 +60,15 @@ if StorageFormat.get() == "Pandas":
     import modin.pandas as pd
 else:
     import modin.experimental.pandas as pd
+
+try:
+    import ray
+
+    EXCEPTIONS = (ray.exceptions.WorkerCrashedError,)
+except ImportError:
+    EXCEPTIONS = ()
+
+
 from modin.config import NPartitions
 
 NPartitions.put(4)
@@ -96,6 +107,39 @@ def setup_clipboard(row_size=NROWS):
     df.to_clipboard()
 
 
+def parquet_eval_to_file(modin_obj, pandas_obj, fn, extension, **fn_kwargs):
+    """
+    Helper function to test `to_parquet` method.
+
+    Parameters
+    ----------
+    modin_obj : pd.DataFrame
+        A Modin DataFrame or a Series to test `to_parquet` method.
+    pandas_obj: pandas.DataFrame
+        A pandas DataFrame or a Series to test `to_parquet` method.
+    fn : str
+        Name of the method, that should be tested.
+    extension : str
+        Extension of the test file.
+    """
+    unique_filename_modin = get_unique_filename(extension=extension)
+    unique_filename_pandas = get_unique_filename(extension=extension)
+
+    try:
+        getattr(modin_obj, fn)(unique_filename_modin, **fn_kwargs)
+        getattr(pandas_obj, fn)(unique_filename_pandas, **fn_kwargs)
+
+        pandas_df = pandas.read_parquet(unique_filename_pandas)
+        modin_df = pd.read_parquet(unique_filename_modin)
+        df_equals(pandas_df, modin_df)
+    finally:
+        teardown_test_file(unique_filename_pandas)
+        try:
+            teardown_test_file(unique_filename_modin)
+        except IsADirectoryError:
+            shutil.rmtree(unique_filename_modin)
+
+
 def eval_to_file(modin_obj, pandas_obj, fn, extension, **fn_kwargs):
     """Helper function to test `to_<extension>` methods.
 
@@ -109,7 +153,20 @@ def eval_to_file(modin_obj, pandas_obj, fn, extension, **fn_kwargs):
     unique_filename_pandas = get_unique_filename(extension=extension)
 
     try:
-        getattr(modin_obj, fn)(unique_filename_modin, **fn_kwargs)
+        # parameter `max_retries=0` is set for `to_csv` function on Ray engine,
+        # in order to increase the stability of tests, we repeat the call of
+        # the entire function manually
+        last_exception = None
+        for _ in range(3):
+            try:
+                getattr(modin_obj, fn)(unique_filename_modin, **fn_kwargs)
+            except EXCEPTIONS as exc:
+                last_exception = exc
+                continue
+            break
+        else:
+            raise last_exception
+
         getattr(pandas_obj, fn)(unique_filename_pandas, **fn_kwargs)
 
         assert assert_files_eq(unique_filename_modin, unique_filename_pandas)
@@ -362,11 +419,7 @@ class TestCsv:
 
     @pytest.mark.parametrize(
         "test_case",
-        [
-            "single_element",
-            "single_column",
-            "multiple_columns",
-        ],
+        ["single_element", "single_column", "multiple_columns"],
     )
     def test_read_csv_squeeze(self, request, test_case):
         if request.config.getoption("--simulate-cloud").lower() != "off":
@@ -835,11 +888,16 @@ class TestCsv:
             encoding_errors=encoding_errors,
         )
 
-    def test_read_csv_s3(self):
+    @pytest.mark.parametrize(
+        "storage_options",
+        [{"anon": False}, {"anon": True}, {"key": "123", "secret": "123"}, None],
+    )
+    def test_read_csv_s3(self, storage_options):
         eval_io(
             fn_name="read_csv",
             # read_csv kwargs
             filepath_or_buffer="s3://noaa-ghcn-pds/csv/1788.csv",
+            storage_options=storage_options,
         )
 
     @pytest.mark.parametrize("names", [list("XYZ"), None])
@@ -1074,6 +1132,30 @@ class TestCsv:
             index_col="col1",
         )
 
+    @pytest.mark.parametrize(
+        "skiprows",
+        [
+            lambda x: x > 20,
+            lambda x: True,
+            lambda x: x in [10, 20],
+            pytest.param(
+                lambda x: x << 10,
+                marks=pytest.mark.skipif(
+                    condition="config.getoption('--simulate-cloud').lower() != 'off'",
+                    reason="The reason of tests fail in `cloud` mode is unknown for now - issue #2340",
+                ),
+            ),
+        ],
+    )
+    def test_read_csv_skiprows_corner_cases(self, skiprows):
+        eval_io(
+            fn_name="read_csv",
+            check_kwargs_callable=not callable(skiprows),
+            # read_csv kwargs
+            filepath_or_buffer=pytest.csvs_names["test_read_csv_regular"],
+            skiprows=skiprows,
+        )
+
 
 class TestTable:
     def test_read_table(self, make_csv_file):
@@ -1234,7 +1316,7 @@ class TestParquet:
         reason="The reason of tests fail in `cloud` mode is unknown for now - issue #3264",
     )
     def test_read_parquet_s3(self, path_type):
-        dataset_url = "s3://aws-roda-hcls-datalake/chembl_27/chembl_27_public_tissue_dictionary/part-00000-66508102-96fa-4fd9-a0fd-5bc072a74293-c000.snappy.parquet"
+        dataset_url = "s3://modin-datasets/testing/test_data.parquet"
         if path_type == "object":
             import s3fs
 
@@ -1281,7 +1363,7 @@ class TestParquet:
     )
     def test_to_parquet(self):
         modin_df, pandas_df = create_test_dfs(TEST_DATA)
-        eval_to_file(
+        parquet_eval_to_file(
             modin_obj=modin_df,
             pandas_obj=pandas_df,
             fn="to_parquet",
@@ -1293,11 +1375,7 @@ class TestParquet:
         reason="The reason of tests fail in `cloud` mode is unknown for now - issue #3264",
     )
     def test_read_parquet_2462(self):
-        test_df = pd.DataFrame(
-            {
-                "col1": [["ad_1", "ad_2"], ["ad_3"]],
-            }
-        )
+        test_df = pandas.DataFrame({"col1": [["ad_1", "ad_2"], ["ad_3"]]})
 
         with tempfile.TemporaryDirectory() as directory:
             path = f"{directory}/data"
@@ -1316,6 +1394,19 @@ class TestJson:
             # read_json kwargs
             path_or_buf=make_json_file(lines=lines),
             lines=lines,
+        )
+
+    @pytest.mark.parametrize(
+        "storage_options",
+        [{"anon": False}, {"anon": True}, {"key": "123", "secret": "123"}, None],
+    )
+    def test_read_json_s3(self, storage_options):
+        eval_io(
+            fn_name="read_json",
+            path_or_buf="s3://modin-datasets/testing/test_data.json",
+            lines=True,
+            orient="records",
+            storage_options=storage_options,
         )
 
     def test_read_json_categories(self):
@@ -1577,7 +1668,9 @@ class TestHdf:
 
             modin_store.close()
             pandas_store.close()
-            assert assert_files_eq(unique_filename_modin, unique_filename_pandas)
+            modin_df = pandas.read_hdf(unique_filename_modin, key="foo", mode="r")
+            pandas_df = pandas.read_hdf(unique_filename_pandas, key="foo", mode="r")
+            df_equals(modin_df, pandas_df)
             assert isinstance(modin_store, pd.HDFStore)
 
             handle, hdf_file = tempfile.mkstemp(suffix=".hdf5", prefix="test_read")
@@ -1646,22 +1739,31 @@ class TestSql:
             pd.read_sql_table(table, conn)
 
         # Test SQLAlchemy engine
-        conn = sa.create_engine(conn)
+        sqlalchemy_engine = sa.create_engine(conn)
         eval_io(
             fn_name="read_sql",
             # read_sql kwargs
             sql=query,
-            con=conn,
+            con=sqlalchemy_engine,
         )
 
         # Test SQLAlchemy Connection
-        conn = conn.connect()
+        sqlalchemy_connection = sqlalchemy_engine.connect()
         eval_io(
             fn_name="read_sql",
             # read_sql kwargs
             sql=query,
-            con=conn,
+            con=sqlalchemy_connection,
         )
+
+        modin_df = pd.read_sql(
+            sql=query, con=ModinDatabaseConnection("sqlalchemy", conn)
+        )
+        pandas_df = pandas.read_sql(sql=query, con=sqlalchemy_connection)
+        df_equals(modin_df, pandas_df)
+
+        with pytest.raises(UnsupportedDatabaseException):
+            ModinDatabaseConnection("unsupported_database")
 
     @pytest.mark.xfail(
         condition="config.getoption('--simulate-cloud').lower() != 'off'",
@@ -1812,7 +1914,19 @@ class TestFwf:
 
         df_equals(modin_df, pd_df)
 
-    @pytest.mark.parametrize("nrows", [13, None])
+    @pytest.mark.parametrize(
+        "nrows",
+        [
+            pytest.param(
+                13,
+                marks=pytest.mark.xfail(
+                    Engine.get() == "Ray",
+                    reason="read_fwf bug on pandas side: pandas-dev/pandas#44021",
+                ),
+            ),
+            None,
+        ],
+    )
     def test_fwf_file_skiprows(self, make_fwf_file, nrows):
         unique_filename = make_fwf_file()
 
@@ -1915,6 +2029,17 @@ class TestFwf:
 
         df_equals(modin_df, pandas_df)
 
+    @pytest.mark.parametrize(
+        "storage_options",
+        [{"anon": False}, {"anon": True}, {"key": "123", "secret": "123"}, None],
+    )
+    def test_read_fwf_s3(self, storage_options):
+        eval_io(
+            fn_name="read_fwf",
+            filepath_or_buffer="s3://modin-datasets/testing/test_data.fwf",
+            storage_options=storage_options,
+        )
+
 
 class TestGbq:
     @pytest.mark.xfail(reason="Need to verify GBQ access")
@@ -1960,6 +2085,21 @@ class TestFeather:
             fn_name="read_feather",
             # read_feather kwargs
             path=make_feather_file(),
+        )
+
+    @pytest.mark.xfail(
+        condition="config.getoption('--simulate-cloud').lower() != 'off'",
+        reason="The reason of tests fail in `cloud` mode is unknown for now - issue #3264",
+    )
+    @pytest.mark.parametrize(
+        "storage_options",
+        [{"anon": False}, {"anon": True}, {"key": "123", "secret": "123"}, None],
+    )
+    def test_read_feather_s3(self, storage_options):
+        eval_io(
+            fn_name="read_feather",
+            path="s3://modin-datasets/testing/test_data.feather",
+            storage_options=storage_options,
         )
 
     @pytest.mark.xfail(

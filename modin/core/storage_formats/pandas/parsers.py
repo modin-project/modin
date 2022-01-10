@@ -50,6 +50,7 @@ from pandas.util._decorators import doc
 import warnings
 
 from modin.core.io.file_dispatcher import OpenFile
+from modin.db_conn import ModinDatabaseConnection
 from modin.core.storage_formats.pandas.utils import split_result_of_axis_func_pandas
 from modin.error_message import ErrorMessage
 
@@ -136,6 +137,68 @@ def find_common_type_cat(types):
 
 class PandasParser(object):
     """Base class for parser classes with pandas storage format."""
+
+    @staticmethod
+    @doc(_doc_parse_func, parameters=_doc_parse_parameters_common)
+    def generic_parse(fname, **kwargs):
+        warnings.filterwarnings("ignore")
+        num_splits = kwargs.pop("num_splits", None)
+        start = kwargs.pop("start", None)
+        end = kwargs.pop("end", None)
+        header_size = kwargs.pop("header_size", None)
+        encoding = kwargs.get("encoding", None)
+        callback = kwargs.pop("callback")
+        if start is None or end is None:
+            # This only happens when we are reading with only one worker (Default)
+            return callback(fname, **kwargs)
+
+        # pop "compression" from kwargs because bio is uncompressed
+        with OpenFile(
+            fname,
+            "rb",
+            kwargs.pop("compression", "infer"),
+            **(kwargs.pop("storage_options", None) or {}),
+        ) as bio:
+            header = b""
+            # In this case we beware that first line can contain BOM, so
+            # adding this line to the `header` for reading and then skip it
+            if encoding and (
+                "utf" in encoding
+                and "8" not in encoding
+                or encoding == "unicode_escape"
+                or encoding.replace("-", "_") == "utf_8_sig"
+            ):
+                # do not 'close' the wrapper - underlying buffer is managed by `bio` handle
+                fio = TextIOWrapper(bio, encoding=encoding, newline="")
+                if header_size == 0:
+                    header = fio.readline().encode(encoding)
+                    kwargs["skiprows"] = 1
+                for _ in range(header_size):
+                    header += fio.readline().encode(encoding)
+            elif encoding is not None:
+                if header_size == 0:
+                    header = bio.readline()
+                    # `skiprows` can be only None here, so don't check it's type
+                    # and just set to 1
+                    kwargs["skiprows"] = 1
+                for _ in range(header_size):
+                    header += bio.readline()
+            else:
+                for _ in range(header_size):
+                    header += bio.readline()
+
+            bio.seek(start)
+            to_read = header + bio.read(end - start)
+        pandas_df = callback(BytesIO(to_read), **kwargs)
+        index = (
+            pandas_df.index
+            if not isinstance(pandas_df.index, pandas.RangeIndex)
+            else len(pandas_df)
+        )
+        return _split_result_for_readers(1, num_splits, pandas_df) + [
+            index,
+            pandas_df.dtypes,
+        ]
 
     @classmethod
     def get_dtypes(cls, dtypes_ids):
@@ -227,58 +290,7 @@ class PandasCSVParser(PandasParser):
     @staticmethod
     @doc(_doc_parse_func, parameters=_doc_parse_parameters_common)
     def parse(fname, **kwargs):
-        warnings.filterwarnings("ignore")
-        num_splits = kwargs.pop("num_splits", None)
-        start = kwargs.pop("start", None)
-        end = kwargs.pop("end", None)
-        header_size = kwargs.pop("header_size", None)
-        encoding = kwargs.get("encoding", None)
-        if start is not None and end is not None:
-            # pop "compression" from kwargs because bio is uncompressed
-            with OpenFile(fname, "rb", kwargs.pop("compression", "infer")) as bio:
-                # In this case we beware that first line can contain BOM, so
-                # adding this line to the `header` for reading and then skip it
-                header = b""
-                if encoding and (
-                    "utf" in encoding
-                    and "8" not in encoding
-                    or encoding == "unicode_escape"
-                    or encoding.replace("-", "_") == "utf_8_sig"
-                ):
-                    # do not 'close' the wrapper - underlying buffer is managed by `bio` handle
-                    fio = TextIOWrapper(bio, encoding=encoding, newline="")
-                    if header_size == 0:
-                        header = fio.readline().encode(encoding)
-                        kwargs["skiprows"] = 1
-                    for _ in range(header_size):
-                        header += fio.readline().encode(encoding)
-                elif encoding is not None:
-                    if header_size == 0:
-                        header = bio.readline()
-                        # `skiprows` can be only None here, so don't check it's type
-                        # and just set to 1
-                        kwargs["skiprows"] = 1
-                    for _ in range(header_size):
-                        header += bio.readline()
-                else:
-                    for _ in range(header_size):
-                        header += bio.readline()
-
-                bio.seek(start)
-                to_read = header + bio.read(end - start)
-            pandas_df = pandas.read_csv(BytesIO(to_read), **kwargs)
-        else:
-            # This only happens when we are reading with only one worker (Default)
-            return pandas.read_csv(fname, **kwargs)
-        index = (
-            pandas_df.index
-            if not isinstance(pandas_df.index, pandas.RangeIndex)
-            else len(pandas_df)
-        )
-        return _split_result_for_readers(1, num_splits, pandas_df) + [
-            index,
-            pandas_df.dtypes,
-        ]
+        return PandasParser.generic_parse(fname, **kwargs)
 
 
 @doc(_doc_pandas_parser_class, data_type="multiple CSV files simultaneously")
@@ -296,11 +308,17 @@ class PandasCSVGlobParser(PandasCSVParser):
         num_splits = kwargs.pop("num_splits", None)
         index_col = kwargs.get("index_col", None)
 
+        # `single_worker_read` just pass filename via chunks; need check
+        if isinstance(chunks, str):
+            return pandas.read_csv(chunks, **kwargs)
+
+        # pop `compression` from kwargs because `bio` below is uncompressed
+        compression = kwargs.pop("compression", "infer")
+        storage_options = kwargs.pop("storage_options", None) or {}
         pandas_dfs = []
         for fname, start, end in chunks:
             if start is not None and end is not None:
-                # pop "compression" from kwargs because bio is uncompressed
-                with OpenFile(fname, "rb", kwargs.pop("compression", "infer")) as bio:
+                with OpenFile(fname, "rb", compression, **storage_options) as bio:
                     if kwargs.get("encoding", None) is not None:
                         header = b"" + bio.readline()
                     else:
@@ -310,7 +328,12 @@ class PandasCSVGlobParser(PandasCSVParser):
                 pandas_dfs.append(pandas.read_csv(BytesIO(to_read), **kwargs))
             else:
                 # This only happens when we are reading with only one worker (Default)
-                return pandas.read_csv(fname, **kwargs)
+                return pandas.read_csv(
+                    fname,
+                    compression=compression,
+                    storage_options=storage_options,
+                    **kwargs,
+                )
 
         # Combine read in data.
         if len(pandas_dfs) > 1:
@@ -358,32 +381,7 @@ class PandasFWFParser(PandasParser):
     @staticmethod
     @doc(_doc_parse_func, parameters=_doc_parse_parameters_common)
     def parse(fname, **kwargs):
-        num_splits = kwargs.pop("num_splits", None)
-        start = kwargs.pop("start", None)
-        end = kwargs.pop("end", None)
-        index_col = kwargs.get("index_col", None)
-        if start is not None and end is not None:
-            # pop "compression" from kwargs because bio is uncompressed
-            with OpenFile(fname, "rb", kwargs.pop("compression", "infer")) as bio:
-                if kwargs.get("encoding", None) is not None:
-                    header = b"" + bio.readline()
-                else:
-                    header = b""
-                bio.seek(start)
-                to_read = header + bio.read(end - start)
-            pandas_df = pandas.read_fwf(BytesIO(to_read), **kwargs)
-        else:
-            # This only happens when we are reading with only one worker (Default)
-            return pandas.read_fwf(fname, **kwargs)
-        if index_col is not None:
-            index = pandas_df.index
-        else:
-            # The lengths will become the RangeIndex
-            index = len(pandas_df)
-        return _split_result_for_readers(1, num_splits, pandas_df) + [
-            index,
-            pandas_df.dtypes,
-        ]
+        return PandasParser.generic_parse(fname, **kwargs)
 
 
 @doc(_doc_pandas_parser_class, data_type="excel files")
@@ -599,7 +597,12 @@ class PandasJSONParser(PandasParser):
         end = kwargs.pop("end", None)
         if start is not None and end is not None:
             # pop "compression" from kwargs because bio is uncompressed
-            with OpenFile(fname, "rb", kwargs.pop("compression", "infer")) as bio:
+            with OpenFile(
+                fname,
+                "rb",
+                kwargs.pop("compression", "infer"),
+                **(kwargs.pop("storage_options", None) or {}),
+            ) as bio:
                 bio.seek(start)
                 to_read = b"" + bio.read(end - start)
             columns = kwargs.pop("columns")
@@ -671,7 +674,12 @@ class PandasFeatherParser(PandasParser):
         num_splits = kwargs.pop("num_splits", None)
         if num_splits is None:
             return pandas.read_feather(fname, **kwargs)
-        df = feather.read_feather(fname, **kwargs)
+
+        with OpenFile(
+            fname,
+            **(kwargs.pop("storage_options", None) or {}),
+        ) as file:
+            df = feather.read_feather(file, **kwargs)
         # Append the length of the index here to build it externally
         return _split_result_for_readers(0, num_splits, df) + [len(df.index), df.dtypes]
 
@@ -690,6 +698,8 @@ index_col : str or list of str
     )
     def parse(sql, con, index_col, **kwargs):
         num_splits = kwargs.pop("num_splits", None)
+        if isinstance(con, ModinDatabaseConnection):
+            con = con.get_connection()
         if num_splits is None:
             return pandas.read_sql(sql, con, index_col=index_col, **kwargs)
         df = pandas.read_sql(sql, con, index_col=index_col, **kwargs)

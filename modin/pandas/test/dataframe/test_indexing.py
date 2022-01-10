@@ -39,6 +39,7 @@ from modin.pandas.test.utils import (
     extra_test_parameters,
 )
 from modin.config import NPartitions
+from modin.utils import get_current_execution
 
 NPartitions.put(4)
 
@@ -107,10 +108,7 @@ def test_asof_without_nan(dates, subset):
 
 @pytest.mark.parametrize(
     "lookup",
-    [
-        [60, 70, 90],
-        [60.5, 70.5, 100],
-    ],
+    [[60, 70, 90], [60.5, 70.5, 100]],
 )
 @pytest.mark.parametrize("subset", ["col2", "col1", ["col1", "col2"], None])
 def test_asof_large(lookup, subset):
@@ -267,6 +265,16 @@ def test_indexing_duplicate_axis(data):
     )
 
 
+@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test_set_index(data):
+    modin_df = pd.DataFrame(data)
+    pandas_df = pandas.DataFrame(data)
+
+    modin_result = modin_df.set_index([modin_df.index, modin_df.columns[0]])
+    pandas_result = pandas_df.set_index([pandas_df.index, pandas_df.columns[0]])
+    df_equals(modin_result, pandas_result)
+
+
 @pytest.mark.gpu
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_keys(data):
@@ -344,21 +352,33 @@ def test_loc(data):
     pandas_df_copy3.loc[lambda df: df[key1].isin(list(range(1000))), key1] = 42
     df_equals(modin_df_copy3, pandas_df_copy3)
 
-    # From issue #1775
-    df_equals(
-        modin_df.loc[lambda df: df.iloc[:, 0].isin(list(range(1000)))],
-        pandas_df.loc[lambda df: df.iloc[:, 0].isin(list(range(1000)))],
-    )
+    # Disabled for `BaseOnPython` because of the issue with `getitem_array`:
+    # https://github.com/modin-project/modin/issues/3701
+    if get_current_execution() != "BaseOnPython":
+        # From issue #1775
+        df_equals(
+            modin_df.loc[lambda df: df.iloc[:, 0].isin(list(range(1000)))],
+            pandas_df.loc[lambda df: df.iloc[:, 0].isin(list(range(1000)))],
+        )
 
-    # Read values, selecting rows with a callable and a column with a scalar.
-    df_equals(
-        pandas_df.loc[lambda df: df[key1].isin(list(range(1000))), key1],
-        modin_df.loc[lambda df: df[key1].isin(list(range(1000))), key1],
-    )
+        # Read values, selecting rows with a callable and a column with a scalar.
+        df_equals(
+            pandas_df.loc[lambda df: df[key1].isin(list(range(1000))), key1],
+            modin_df.loc[lambda df: df[key1].isin(list(range(1000))), key1],
+        )
 
     # From issue #1374
     with pytest.raises(KeyError):
         modin_df.loc["NO_EXIST"]
+
+
+# This tests the bug from https://github.com/modin-project/modin/issues/3736
+def test_loc_setting_single_categorical_column():
+    modin_df = pd.DataFrame({"status": ["a", "b", "c"]}, dtype="category")
+    pandas_df = pandas.DataFrame({"status": ["a", "b", "c"]}, dtype="category")
+    modin_df.loc[1:3, "status"] = "a"
+    pandas_df.loc[1:3, "status"] = "a"
+    df_equals(modin_df, pandas_df)
 
 
 def test_loc_multi_index():
@@ -431,6 +451,16 @@ def test_loc_multi_index():
     # From issue #1610
     df_equals(modin_df.loc[modin_df.index], pandas_df.loc[pandas_df.index])
     df_equals(modin_df.loc[modin_df.index[:7]], pandas_df.loc[pandas_df.index[:7]])
+
+
+def test_loc_empty():
+    pandas_df = pandas.DataFrame(index=range(5))
+    modin_df = pd.DataFrame(index=range(5))
+
+    df_equals(pandas_df.loc[1], modin_df.loc[1])
+    pandas_df.loc[1] = 3
+    modin_df.loc[1] = 3
+    df_equals(pandas_df, modin_df)
 
 
 @pytest.mark.parametrize("index", [["row1", "row2", "row3"]])
@@ -541,6 +571,16 @@ def test_iloc_nested_assignment(data):
     df_equals(modin_df, pandas_df)
 
 
+def test_iloc_empty():
+    pandas_df = pandas.DataFrame(index=range(5))
+    modin_df = pd.DataFrame(index=range(5))
+
+    df_equals(pandas_df.iloc[1], modin_df.iloc[1])
+    pandas_df.iloc[1] = 3
+    modin_df.iloc[1] = 3
+    df_equals(pandas_df, modin_df)
+
+
 def test_loc_series():
     md_df, pd_df = create_test_dfs({"a": [1, 2], "b": [3, 4]})
 
@@ -548,6 +588,29 @@ def test_loc_series():
     md_df.loc[md_df["a"] > 1, "b"] = np.log(md_df["b"])
 
     df_equals(pd_df, md_df)
+
+
+@pytest.mark.parametrize("locator_name", ["loc", "iloc"])
+@pytest.mark.parametrize(
+    "slice_indexer",
+    [
+        slice(None, None, -2),
+        slice(1, 10, None),
+        slice(None, 10, None),
+        slice(10, None, None),
+        slice(10, None, -2),
+        slice(-10, None, -2),
+        slice(None, 1_000_000_000, None),
+    ],
+)
+def test_loc_iloc_slice_indexer(locator_name, slice_indexer):
+    md_df, pd_df = create_test_dfs(test_data_values[0])
+    # Shifting the index, so labels won't match its position
+    shifted_index = pandas.RangeIndex(1, len(md_df) + 1)
+    md_df.index = shifted_index
+    pd_df.index = shifted_index
+
+    eval_general(md_df, pd_df, lambda df: getattr(df, locator_name)[slice_indexer])
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
@@ -1382,6 +1445,8 @@ def test___getitem__(data):
         (1, -1),
         (-3, -1),
         (1, -1, 2),
+        (-1, 1, -1),
+        (None, None, 2),
     ]
 
     # slice test
@@ -1539,6 +1604,14 @@ def test___setitem__(data):
     modin_df[1:5] = 10
     pandas_df[1:5] = 10
     df_equals(modin_df, pandas_df)
+
+    # Test assigning a single item in a Series for issue
+    # https://github.com/modin-project/modin/issues/3860
+    modin_single_item_series = pd.Series(99)
+    pandas_single_item_series = pandas.Series(99)
+    modin_single_item_series[:1] = pd.Series(100)
+    pandas_single_item_series[:1] = pandas.Series(100)
+    df_equals(modin_single_item_series, pandas_single_item_series)
 
 
 def test___setitem__partitions_aligning():

@@ -18,6 +18,8 @@ import sys
 import psutil
 import warnings
 
+import ray
+
 from modin.config import (
     StorageFormat,
     IsRayCluster,
@@ -27,6 +29,7 @@ from modin.config import (
     GpuCount,
     Memory,
     NPartitions,
+    ValueSource,
 )
 
 
@@ -107,12 +110,19 @@ def initialize_ray(
         What password to use when connecting to Redis.
         If not specified, ``modin.config.RayRedisPassword`` is used.
     """
-    import ray
-
     if not ray.is_initialized() or override_is_cluster:
         cluster = override_is_cluster or IsRayCluster.get()
         redis_address = override_redis_address or RayRedisAddress.get()
-        redis_password = override_redis_password or RayRedisPassword.get()
+        redis_password = (
+            (
+                ray.ray_constants.REDIS_DEFAULT_PASSWORD
+                if cluster
+                else RayRedisPassword.get()
+            )
+            if override_redis_password is None
+            and RayRedisPassword.get_value_source() == ValueSource.DEFAULT
+            else override_redis_password or RayRedisPassword.get()
+        )
 
         if cluster:
             # We only start ray in a cluster setting for the head node.
@@ -167,7 +177,6 @@ def initialize_ray(
                 "include_dashboard": False,
                 "ignore_reinit_error": True,
                 "object_store_memory": object_store_memory,
-                "address": redis_address,
                 "_redis_password": redis_password,
                 "_memory": object_store_memory,
             }

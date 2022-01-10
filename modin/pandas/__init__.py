@@ -13,7 +13,7 @@
 
 import pandas
 
-__pandas_version__ = "1.3.4"
+__pandas_version__ = "1.3.5"
 
 if pandas.__version__ != __pandas_version__:
     import warnings
@@ -105,8 +105,22 @@ _NOINIT_ENGINES = {
 def _update_engine(publisher: Parameter):
     global dask_client
     from modin.config import StorageFormat, CpuCount
+    from modin.config.envvars import IsExperimental
+    from modin.config.pubsub import ValueSource
 
-    if publisher.get() == "Ray":
+    if (
+        StorageFormat.get() == "Omnisci"
+        and publisher.get_value_source() == ValueSource.DEFAULT
+    ):
+        publisher.put("Native")
+        IsExperimental.put(True)
+    elif (
+        publisher.get() == "Native"
+        and StorageFormat.get_value_source() == ValueSource.DEFAULT
+    ):
+        StorageFormat.put("Omnisci")
+        IsExperimental.put(True)
+    elif publisher.get() == "Ray":
         if _is_first_update.get("Ray", True):
             from modin.core.execution.ray.common.utils import initialize_ray
 
