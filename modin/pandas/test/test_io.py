@@ -90,7 +90,6 @@ DATASET_SIZE_DICT = {
     "Big": 20000,
 }
 
-print('foo' 'bar', 'baz')
 a = ["aaa",
      "bbb"
      "ccc"]
