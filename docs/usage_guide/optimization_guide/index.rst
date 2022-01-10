@@ -31,10 +31,10 @@ the actual limit for the entire dataframe itself is the square of ``NPartitions`
 Full-axis functions
 -------------------
 
-Some of the aggregation functions require knowledge about the whole axis, for example at ``.apply(foo, axis=0)``
+Some of the aggregation functions require knowledge about the entire axis, for example at ``.apply(foo, axis=0)``
 the passed function ``foo`` expects to receive data for the whole column at once.
 
-When a full-axis function is applied, the partitions along this axis are being collected to a single worker
+When a full-axis function is applied, the partitions along this axis are collected at a single worker
 that processes the function. After the function is done, the data is split again across all of the workers.
 
 .. figure:: /img/partitioning_mechanism/full_axis_function.svg
@@ -53,8 +53,8 @@ As you can see from the examples above, the more the dataframe's shape is closer
 partitions to the square of ``NPartitions``. In the case of ``NPartitions`` equals to the number of workers,
 that means that a single worker is going to process multiple partitions at once, which slows down overall performance.
 
-If your workflow mainly operates with wide frames and non-full-axis functions, it makes sense to reduce the
-amount of `NPartitions` so a single worker would process a single partition.
+If your workflow mainly operates with wide dataframes and non-full-axis functions, it makes sense to reduce the
+``NPartitions`` value so a single worker would process a single partition.
 
 .. figure:: /img/partitioning_mechanism/repartition_square_frames.svg
    :align: center
@@ -69,7 +69,7 @@ Copy-pastable example, showing how tuning ``NPartition`` value for wide frames m
   import numpy as np
   import timeit
 
-  # Generating data for a square-like frame
+  # Generating data for a square-like dataframe
   data = np.random.randint(0, 100, size=(2**10, 2**10))
 
   # Explicitly setting `NPartitions` to its default value
@@ -78,7 +78,10 @@ Copy-pastable example, showing how tuning ``NPartition`` value for wide frames m
   # Each worker process `sqrt(cpu_count())` amount of partitions
   df = pd.DataFrame(data)
   print(f"10 times of .abs(): {timeit.timeit(lambda: df.abs(), number=10)}s.")
-  # Possible output: 2.59s.
+  print(f"NPartitions: {cfg.NPartitions.get()}")
+  # Possible output:
+  #     10 times of .abs(): 2.59s.
+  #     NPartitions: 112
 
   # Taking a square root of the the current `NPartitions` to make more even partitioning
   cfg.NPartitions.put(int(cpu_count() ** 0.5))
@@ -86,12 +89,15 @@ Copy-pastable example, showing how tuning ``NPartition`` value for wide frames m
   # Each worker process a single partition
   df = pd.DataFrame(data)
   print(f"10 times of .abs(): {timeit.timeit(lambda: df.abs(), number=10)}s.")
-  # Possible output: 0.24s.
+  print(f"NPartitions: {cfg.NPartitions.get()}")
+  # Possible output:
+  #     10 times of .abs(): 0.24s.
+  #     NPartitions: 10
 
 Avoid iterating over Modin DataFrame
-"""""""""""""""""""""""""""""""""""
+""""""""""""""""""""""""""""""""""""
 
-Use ``df.apply()`` or other aggregation methods when possible instead of iterating over a frame.
+Use ``df.apply()`` or other aggregation methods when possible instead of iterating over a dataframe.
 For-loops don't scale and forces the distributed data to be collected back at the driver.
 
 Copy-pastable example, showing how replacing a for-loop to the equivalent ``.apply()`` may improve performance:
@@ -108,7 +114,7 @@ Copy-pastable example, showing how replacing a for-loop to the equivalent ``.app
 
   result = []
   t1 = timer()
-  # Iterating over a frame forces to collect distributed data to the driver and doesn't scale
+  # Iterating over a dataframe forces to collect distributed data to the driver and doesn't scale
   for idx, row in md_df.iterrows():
       result.append((row[1] + row[2]) / row[3])
   print(f"Filling a list by iterating a Modin frame: {timer() - t1:.2f}s.")
@@ -129,15 +135,15 @@ Modin DataFrame allows for users to use their own aggregations built with this m
 :doc:`appropriate section </flow/modin/core/dataframe/algebra>` of the documentation for the steps to do it.
 
 Avoid mixing pandas and Modin DataFrames
-""""""""""""""""""""""""""""""""""""""
+""""""""""""""""""""""""""""""""""""""""
 
 Although Modin is considered to be a drop-in replacement for pandas, Modin and pandas are not intended to be used together
-in a single flow. Passing a pandas DataFrame as an argument for a Modin's frame method may either slowdown
+in a single flow. Passing a pandas DataFrame as an argument for a Modin's DataFrame method may either slowdown
 the function (because it has to process non-distributed object) or raise an error. You would also get an undefined
-behavior if you pass a Modin frame as an input to pandas methods, since pandas identifies Modin's objects as a simple iterable,
-and so can't use its potential.
+behavior if you pass a Modin DataFrame as an input to pandas methods, since pandas identifies Modin's objects as a simple iterable,
+and so can't leverage its benefits as a distributed dataframe.
 
-Copy-pastable example, showing how mixing pandas and Modin frames in a single flow may bottleneck performance:
+Copy-pastable example, showing how mixing pandas and Modin DataFrames in a single flow may bottleneck performance:
 
 .. code-block:: python
 
