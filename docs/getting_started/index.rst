@@ -9,6 +9,8 @@ Getting Started
     out_of_core
     pandas
     dask
+    faq
+    troubleshooting
 
 .. meta::
     :description lang=en:
