@@ -90,6 +90,11 @@ DATASET_SIZE_DICT = {
     "Big": 20000,
 }
 
+print('foo' 'bar', 'baz')
+a = ["aaa",
+     "bbb"
+     "ccc"]
+
 # Number of rows in the test file
 NROWS = DATASET_SIZE_DICT.get(TestDatasetSize.get(), DATASET_SIZE_DICT["Small"])
 
@@ -257,7 +262,7 @@ class TestCsv:
 
     @pytest.mark.parametrize("usecols", [lambda col_name: col_name in ["a", "b", "e"]])
     def test_from_csv_with_callable_usecols(self, usecols):
-        fname = "modin/pandas/test/data/test_usecols.csv"
+        fname = "modin/pandas/test/data/test_usecols" ".csv"
         pandas_df = pandas.read_csv(fname, usecols=usecols)
         modin_df = pd.read_csv(fname, usecols=usecols)
         df_equals(modin_df, pandas_df)
