@@ -41,16 +41,16 @@ that processes the function. After the function is done, the data is split again
    :align: center
 
 Note that the amount of remote calls is equal to the number of partitions, which means that since the number
-of partitions is decreased for full-axis functions it also decreases its parallelism potential.
+of partitions is decreased for full-axis functions it also decreases the potential for parallelism.
 
-Also note, that the reduction functions such as ``.sum()``, ``.mean()``, ``.max()``, etc are not considered
-to be full-axis and so not suffering from the decreasing of parallelism.
+Also note, that reduce functions such as ``.sum()``, ``.mean()``, ``.max()``, etc are not considered
+to be full-axis, so they do not suffer from the decreasing level of parallelism.
 
 How to tune partitioning
 ------------------------
 
-As you can see from the examples above, the more the frame's shape is closer to a square, the closer the number of
-partitions to the square of `NPartitions`. In the case of `NPartitions` equals to the number of workers,
+As you can see from the examples above, the more the dataframe's shape is closer to a square, the closer the number of
+partitions to the square of ``NPartitions``. In the case of ``NPartitions`` equals to the number of workers,
 that means that a single worker is going to process multiple partitions at once, which slows down overall performance.
 
 If your workflow mainly operates with wide frames and non-full-axis functions, it makes sense to reduce the
@@ -88,11 +88,11 @@ Copy-pastable example, showing how tuning ``NPartition`` value for wide frames m
   print(f"10 times of .abs(): {timeit.timeit(lambda: df.abs(), number=10)}s.")
   # Possible output: 0.24s.
 
-Do not iterate over Modin DataFrame
+Avoid iterating over Modin DataFrame
 """""""""""""""""""""""""""""""""""
 
 Use ``df.apply()`` or other aggregation methods when possible instead of iterating over a frame.
-For-loops don't scale and force to collect all the distributed data to the driver.
+For-loops don't scale and forces the distributed data to be collected back at the driver.
 
 Copy-pastable example, showing how replacing a for-loop to the equivalent ``.apply()`` may improve performance:
 
@@ -128,13 +128,13 @@ aggregation functions. These operators are present in the :doc:`algebra module <
 Modin DataFrame allows for users to use their own aggregations built with this module. Visit the 
 :doc:`appropriate section </flow/modin/core/dataframe/algebra>` of the documentation for the steps to do it.
 
-Do not mix pandas and Modin DataFrames
+Avoid mixing pandas and Modin DataFrames
 """"""""""""""""""""""""""""""""""""""
 
-Although Modin is considered to be a drop-in replacement for pandas, they are not intended to be used together
+Although Modin is considered to be a drop-in replacement for pandas, Modin and pandas are not intended to be used together
 in a single flow. Passing a pandas DataFrame as an argument for a Modin's frame method may either slowdown
 the function (because it has to process non-distributed object) or raise an error. You would also get an undefined
-behaviour if pass a Modin frame to pandas methods, pandas identifies Modin's objects as a simple iterable,
+behavior if you pass a Modin frame as an input to pandas methods, since pandas identifies Modin's objects as a simple iterable,
 and so can't use its potential.
 
 Copy-pastable example, showing how mixing pandas and Modin frames in a single flow may bottleneck performance:
