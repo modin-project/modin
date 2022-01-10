@@ -422,7 +422,7 @@ class MinPartitionSize(EnvironmentVariable, type=int):
 
         Parameters
         ----------
-        value : bool
+        value : int
             Config value to set.
         """
         if value <= 0:

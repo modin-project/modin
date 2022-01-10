@@ -20,14 +20,14 @@ import pandas
 
 def compute_chunksize(axis_len, num_splits, default_block_size=None):
     """
-    Compute the number of elemenents (rows/columns) to include in each partition.
+    Compute the number of elements (rows/columns) to include in each partition.
 
-    Chunksize is defined the same for the axes.
+    Chunksize is defined the same for both axes.
 
     Parameters
     ----------
     axis_len : int
-        Element count in a axe.
+        Element count in an axis.
     num_splits : int
         The number of splits.
     default_block_size : int, optional
@@ -47,7 +47,7 @@ def compute_chunksize(axis_len, num_splits, default_block_size=None):
     chunksize = axis_len // num_splits
     if axis_len % num_splits:
         chunksize += 1
-    # chunksize shouldn't be less that `default_block_size` to avoid a
+    # chunksize shouldn't be less than `default_block_size` to avoid a
     # large amount of small partitions.
     return max(chunksize, default_block_size)
 
