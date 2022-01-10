@@ -2119,7 +2119,13 @@ class BaseQueryCompiler(abc.ABC):
               corresponding row/column.
         """
         return DataFrameDefault.register(pandas.DataFrame.apply)(
-            self, func=func, axis=axis, *args, **kwargs
+            self,
+            func=func,
+            axis=axis,
+            raw=raw,
+            result_type=result_type,
+            *args,
+            **kwargs,
         )
 
     def explode(self, column):
