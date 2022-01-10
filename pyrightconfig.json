@@ -1,0 +1,17 @@
+{
+    "include": [
+      "modin",
+    ],
+    
+    "exclude": [
+      "**/node_modules",
+      "**/__pycache__",
+    ],
+  
+    "ignore": [
+    ],
+
+    "reportUnknownParameterType": true,
+  
+    "pythonVersion": "3.8",
+  }
