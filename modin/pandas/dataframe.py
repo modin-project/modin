@@ -2534,7 +2534,7 @@ class DataFrame(BasePandasDataset):
                 if len(self) > 0:
                     value = value[: len(self)]
             if not isinstance(
-                value, (Series, pandas.core.arrays.categorical.Categorical)
+                value, (Series, pd.Categorical)
             ):
                 value = list(value)
 
