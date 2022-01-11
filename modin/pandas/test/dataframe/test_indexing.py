@@ -1605,14 +1605,6 @@ def test___setitem__(data):
     pandas_df[1:5] = 10
     df_equals(modin_df, pandas_df)
 
-    # Test assigning a single item in a Series for issue
-    # https://github.com/modin-project/modin/issues/3860
-    modin_single_item_series = pd.Series(99)
-    pandas_single_item_series = pandas.Series(99)
-    modin_single_item_series[:1] = pd.Series(100)
-    pandas_single_item_series[:1] = pandas.Series(100)
-    df_equals(modin_single_item_series, pandas_single_item_series)
-
 
 def test___setitem__partitions_aligning():
     # from issue #2390
@@ -1725,6 +1717,16 @@ def test___setitem__unhashable_list():
     pandas_df = pandas.DataFrame([[0, 0]], columns=cols)
     pandas_df[cols] = pandas_df[cols]
     df_equals(modin_df, pandas_df)
+
+
+def test___setitem__single_item_in_series():
+    # Test assigning a single item in a Series for issue
+    # https://github.com/modin-project/modin/issues/3860
+    modin_series = pd.Series(99)
+    pandas_series = pandas.Series(99)
+    modin_series[:1] = pd.Series(100)
+    pandas_series[:1] = pandas.Series(100)
+    df_equals(modin_series, pandas_series)
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
