@@ -18,7 +18,7 @@ A Short Example Using the Google Play Store
     # read google play app store list from csv
     gstore_apps_df = pd.read_csv("https://tinyurl.com/googleplaystorecsv")
 
-.. figure:: ../img/modin_sql_google_play_table.png
+.. figure:: /img/modin_sql_google_play_table.png
     :align: center 
 
 Imagine that you want to quickly select from ‘gstore_apps_df’ the columns 
@@ -51,7 +51,7 @@ Let's explore a more complicated example.
     gstore_reviews_df = pd.read_csv("https://tinyurl.com/gstorereviewscsv")
 
 
-.. figure:: ../img/modin_sql_example2.png
+.. figure:: /img/modin_sql_example2.png
     :align: center 
 
 

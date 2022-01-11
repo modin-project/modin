@@ -112,7 +112,7 @@ refer to the `autoscaler documentation`_.
 We will provide a sample config file for private servers and other cloud service
 providers as we continue to develop and improve Modin's cluster support.
 
-See more on the :doc:`Modin in the Cloud </advanced_usage/modin_in_the_cloud>`
+See more on the :doc:`Modin in the Cloud </usage_guide/advanced_usage/modin_in_the_cloud>`
 documentation page.
 
 Advanced usage (experimental)

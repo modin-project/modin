@@ -38,7 +38,7 @@ the changes made to the dataframe and exporting them as reproducible code. Built
 the spreadsheet interface is able to provide interactive response times even at a scale of billions of rows. 
 See our `Modin Spreadsheet API documentation`_ for more details.
 
-.. figure:: ../img/modin_spreadsheet_mini_demo.gif
+.. figure:: /img/modin_spreadsheet_mini_demo.gif
    :align: center
    :width: 650px
    :height: 350px   
@@ -48,7 +48,7 @@ Progress Bar
 Visual progress bar for Dataframe operations such as groupby and fillna, as well as for file reading operations such as 
 read_csv. Built using the tqdm library and Ray execution engine. See `Progress Bar documentation`_ for more details.
 
-.. figure:: ../img/progress_bar_example.png
+.. figure:: /img/progress_bar_example.png
    :align: center   
 
 Dataframe Algebra
@@ -59,7 +59,7 @@ See our `paper`_ for more information, and full documentation is coming soon!
 SQL on Modin Dataframes
 ------------------------
 
-.. figure:: ../img/modin_sql_example.png
+.. figure:: /img/modin_sql_example.png
    :align: center   
 
 Read about Modin Dataframe support for SQL queries in this recent `blog post`_. Check out the `Modin SQL documentation`_ as well!

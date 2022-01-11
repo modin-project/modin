@@ -21,7 +21,7 @@ The following code snippet creates a spreadsheet using the FiveThirtyEight datas
     spreadsheet
 
 
-.. figure:: ../img/modin_spreadsheets_installation.png
+.. figure:: /img/modin_spreadsheets_installation.png
     :align: center
 
 Basic Manipulations through User Interface

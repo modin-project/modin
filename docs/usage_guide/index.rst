@@ -8,6 +8,7 @@ Here you can find tips and usage examples of how you can further optimize the pe
 
     examples/index
     optimization_guide/index
+    advanced_usage/index
 
 .. meta::
     :description lang=en:

@@ -354,4 +354,4 @@ details. The documentation covers most modules, with more docs being added every
 .. _issue: https://github.com/modin-project/modin/issues
 .. _Discourse: https://discuss.modin.org
 .. _task parallel: https://en.wikipedia.org/wiki/Task_parallelism
-.. _experimental features: /advanced_usage/index.html
+.. _experimental features: /usage_guide/advanced_usage/index.html
