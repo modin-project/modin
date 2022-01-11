@@ -90,9 +90,7 @@ DATASET_SIZE_DICT = {
     "Big": 20000,
 }
 
-a = ["aaa",
-     "bbb"
-     "ccc"]
+a = ["aaa", "bbb" "ccc"]
 
 # Number of rows in the test file
 NROWS = DATASET_SIZE_DICT.get(TestDatasetSize.get(), DATASET_SIZE_DICT["Small"])
