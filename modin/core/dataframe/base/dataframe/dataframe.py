@@ -28,7 +28,7 @@ class Axis(Enum):  # noqa: PR01
 
     The enum has 3 values - ROW_WISE to represent the row axis, COL_WISE to represent the
     column axis, and CELL_WISE to represent no axis. ROW_WISE operations iterate over the rows
-    COL_WISE operations over the columns, and CELL_WISE operations over block partitions.
+    COL_WISE operations over the columns, and CELL_WISE operations over any partitioning scheme.
     """
 
     ROW_WISE = 0
