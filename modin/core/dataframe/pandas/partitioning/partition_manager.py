@@ -25,9 +25,9 @@ import warnings
 
 from modin.error_message import ErrorMessage
 from modin.core.storage_formats.pandas.utils import compute_chunksize
+from modin.core.dataframe.pandas.utils import concatenate
 from modin.config import NPartitions, ProgressBar, BenchmarkMode
 
-from pandas.api.types import union_categoricals
 import os
 
 
@@ -603,32 +603,6 @@ class PandasDataframePartitionManager(ABC):
             return np.append(left_parts, right_parts, axis=axis)
 
     @classmethod
-    def concatenate(cls, dfs):
-        """
-        Concatenate pandas DataFrames with saving 'category' dtype.
-
-        Parameters
-        ----------
-        dfs : list
-            List of pandas DataFrames to concatenate.
-
-        Returns
-        -------
-        pandas.DataFrame
-            A pandas DataFrame
-        """
-        categoricals_columns = set.intersection(
-            *[set(df.select_dtypes("category").columns.tolist()) for df in dfs]
-        )
-
-        for col in categoricals_columns:
-            uc = union_categoricals([df[col] for df in dfs])
-            for df in dfs:
-                df[col] = pandas.Categorical(df[col], categories=uc.categories)
-
-        return pandas.concat(dfs)
-
-    @classmethod
     def to_pandas(cls, partitions):
         """
         Convert NumPy array of PandasDataframePartition to pandas DataFrame.
@@ -664,7 +638,7 @@ class PandasDataframePartitionManager(ABC):
         if len(df_rows) == 0:
             return pandas.DataFrame()
         else:
-            return cls.concatenate(df_rows)
+            return concatenate(df_rows)
 
     @classmethod
     def to_numpy(cls, partitions, **kwargs):
