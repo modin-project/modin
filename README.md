@@ -58,6 +58,7 @@ Each engine can also be installed individually:
 ```bash
 conda install -c conda-forge modin-ray  # Install Modin dependencies and Ray.
 conda install -c conda-forge modin-dask # Install Modin dependencies and Dask.
+conda install -c conda-forge modin-omnisci # Install Modin dependencies and Omnisci.
 ```
 
 ### Pandas API Coverage
