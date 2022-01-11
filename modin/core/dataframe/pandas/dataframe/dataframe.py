@@ -844,7 +844,7 @@ class PandasDataframe(object):
         return result
 
     @lazy_metadata_decorator(apply_axis="both")
-    def _reorder_labels(self, row_numeric_idx=None, col_numeric_idx=None):
+    def _reorder_labels(self, row_positions=None, col_positions=None):
         """
         Reorder the column and or rows in this DataFrame.
 
