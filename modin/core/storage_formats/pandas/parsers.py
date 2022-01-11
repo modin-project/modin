@@ -308,11 +308,17 @@ class PandasCSVGlobParser(PandasCSVParser):
         num_splits = kwargs.pop("num_splits", None)
         index_col = kwargs.get("index_col", None)
 
+        # `single_worker_read` just pass filename via chunks; need check
+        if isinstance(chunks, str):
+            return pandas.read_csv(chunks, **kwargs)
+
+        # pop `compression` from kwargs because `bio` below is uncompressed
+        compression = kwargs.pop("compression", "infer")
+        storage_options = kwargs.pop("storage_options", None) or {}
         pandas_dfs = []
         for fname, start, end in chunks:
             if start is not None and end is not None:
-                # pop "compression" from kwargs because bio is uncompressed
-                with OpenFile(fname, "rb", kwargs.pop("compression", "infer")) as bio:
+                with OpenFile(fname, "rb", compression, **storage_options) as bio:
                     if kwargs.get("encoding", None) is not None:
                         header = b"" + bio.readline()
                     else:
@@ -322,7 +328,12 @@ class PandasCSVGlobParser(PandasCSVParser):
                 pandas_dfs.append(pandas.read_csv(BytesIO(to_read), **kwargs))
             else:
                 # This only happens when we are reading with only one worker (Default)
-                return pandas.read_csv(fname, **kwargs)
+                return pandas.read_csv(
+                    fname,
+                    compression=compression,
+                    storage_options=storage_options,
+                    **kwargs,
+                )
 
         # Combine read in data.
         if len(pandas_dfs) > 1:

@@ -77,6 +77,12 @@ classes for reading files of different formats.
   
   * ``sql_dispatcher.py`` -  class for reading SQL queries or database tables.
 
+Public API
+''''''''''
+
+.. automodule:: modin.core.io
+    :members:
+
 Handling ``skiprows`` Parameter
 '''''''''''''''''''''''''''''''
 

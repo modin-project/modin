@@ -1714,9 +1714,7 @@ class OmnisciOnNativeDataframe(PandasDataframe):
             )
         elif isinstance(self._op, TransformNode):
             return (
-                not self._uses_rowid
-                and self._op.is_simple_select()
-                and self._op.input[0]._can_execute_arrow()
+                self._op.is_simple_select() and self._op.input[0]._can_execute_arrow()
             )
         elif isinstance(self._op, UnionNode):
             return all(frame._can_execute_arrow() for frame in self._op.input)
@@ -1762,13 +1760,16 @@ class OmnisciOnNativeDataframe(PandasDataframe):
             The resulting table.
         """
         table = self._execute_arrow()
-        schema = table.schema
 
         new_fields = []
         new_columns = []
 
         for col, expr in exprs.items():
-            field = schema.field(f"F_{expr.column}")
+            if expr.column == "__rowid__" and "F___rowid__" not in table.schema.names:
+                arr = pyarrow.array(np.arange(0, table.num_rows))
+                table = table.append_column("F___rowid__", arr)
+
+            field = table.schema.field(f"F_{expr.column}")
             if col != expr.column:
                 field = field.with_name(f"F_{col}")
             new_fields.append(field)

@@ -34,7 +34,99 @@ from modin.pandas.indexing import is_range_like
 from modin.pandas.utils import is_full_grab_slice, check_both_not_none
 
 
-class PandasDataframe(ModinDataframe):
+def lazy_metadata_decorator(apply_axis=None, axis_arg=-1, transpose=False):
+    """
+    Lazily propagate metadata for the ``PandasDataframe``.
+
+    This decorator first adds the minimum required reindexing operations
+    to each partition's queue of functions to be lazily applied for
+    each PandasDataframe in the arguments by applying the function
+    run_f_on_minimally_updated_metadata. The decorator also sets the
+    flags for deferred metadata synchronization on the function result
+    if necessary.
+
+    Parameters
+    ----------
+    apply_axis : str, default: None
+        The axes on which to apply the reindexing operations to the `self._partitions` lazily.
+        Case None: No lazy metadata propagation.
+        Case "both": Add reindexing operations on both axes to partition queue.
+        Case "opposite": Add reindexing operations complementary to given axis.
+        Case "rows": Add reindexing operations on row axis to partition queue.
+    axis_arg : int, default: -1
+        The index or column axis.
+    transpose : bool, default: False
+        Boolean for if a transpose operation is being used.
+
+    Returns
+    -------
+    Wrapped Function.
+    """
+
+    def decorator(f):
+        from functools import wraps
+
+        @wraps(f)
+        def run_f_on_minimally_updated_metadata(self, *args, **kwargs):
+            for obj in (
+                [self]
+                + [o for o in args if isinstance(o, PandasDataframe)]
+                + [v for v in kwargs.values() if isinstance(v, PandasDataframe)]
+                + [
+                    d
+                    for o in args
+                    if isinstance(o, list)
+                    for d in o
+                    if isinstance(d, PandasDataframe)
+                ]
+                + [
+                    d
+                    for _, o in kwargs.items()
+                    if isinstance(o, list)
+                    for d in o
+                    if isinstance(d, PandasDataframe)
+                ]
+            ):
+                if apply_axis == "both":
+                    if obj._deferred_index and obj._deferred_column:
+                        obj._propagate_index_objs(axis=None)
+                    elif obj._deferred_index:
+                        obj._propagate_index_objs(axis=0)
+                    elif obj._deferred_column:
+                        obj._propagate_index_objs(axis=1)
+                elif apply_axis == "opposite":
+                    if "axis" not in kwargs:
+                        axis = args[axis_arg]
+                    else:
+                        axis = kwargs["axis"]
+                    if axis == 0 and obj._deferred_column:
+                        obj._propagate_index_objs(axis=1)
+                    elif axis == 1 and obj._deferred_index:
+                        obj._propagate_index_objs(axis=0)
+                elif apply_axis == "rows":
+                    obj._propagate_index_objs(axis=0)
+            result = f(self, *args, **kwargs)
+            if apply_axis is None and not transpose:
+                result._deferred_index = self._deferred_index
+                result._deferred_column = self._deferred_column
+            elif apply_axis is None and transpose:
+                result._deferred_index = self._deferred_column
+                result._deferred_column = self._deferred_index
+            elif apply_axis == "opposite":
+                if axis == 0:
+                    result._deferred_index = self._deferred_index
+                else:
+                    result._deferred_column = self._deferred_column
+            elif apply_axis == "rows":
+                result._deferred_column = self._deferred_column
+            return result
+
+        return run_f_on_minimally_updated_metadata
+
+    return decorator
+
+
+class PandasDataframe(object):
     """
     An abstract class that represents the parent class for any pandas storage format dataframe class.
 
@@ -60,6 +152,9 @@ class PandasDataframe(ModinDataframe):
 
     _partition_mgr_cls = None
     _query_compiler_cls = PandasQueryCompiler
+    # These properties flag whether or not we are deferring the metadata synchronization
+    _deferred_index = False
+    _deferred_column = False
 
     @property
     def __constructor__(self):
@@ -336,6 +431,24 @@ class PandasDataframe(ModinDataframe):
 
     def synchronize_labels(self, axis=None):
         """
+        Set the deferred axes variables for the ``PandasDataframe``.
+
+        Parameters
+        ----------
+        axis : int, default: None
+            The deferred axis.
+            0 for the index, 1 for the columns.
+        """
+        if axis is None:
+            self._deferred_index = True
+            self._deferred_column = True
+        elif axis == 0:
+            self._deferred_index = True
+        else:
+            self._deferred_column = True
+
+    def _propagate_index_objs(self, axis=None):
+        """
         Synchronize labels by applying the index object for specific `axis` to the `self._partitions` lazily.
 
         Adds `set_axis` function to call-queue of each partition from `self._partitions`
@@ -376,6 +489,8 @@ class PandasDataframe(ModinDataframe):
                     for i in range(len(self._partitions))
                 ]
             )
+            self._deferred_index = False
+            self._deferred_column = False
         elif axis == 0:
 
             def apply_idx_objs(df, idx):
@@ -395,6 +510,7 @@ class PandasDataframe(ModinDataframe):
                     for i in range(len(self._partitions))
                 ]
             )
+            self._deferred_index = False
         elif axis == 1:
 
             def apply_idx_objs(df, cols):
@@ -417,7 +533,9 @@ class PandasDataframe(ModinDataframe):
             ErrorMessage.catch_bugs_and_request_email(
                 axis is not None and axis not in [0, 1]
             )
+            self._deferred_column = False
 
+    @lazy_metadata_decorator(apply_axis=None)
     def mask(
         self,
         row_labels: Optional[List[Hashable]] = None,
@@ -624,6 +742,7 @@ class PandasDataframe(ModinDataframe):
             row_positions=new_row_order, col_positions=new_col_order
         )
 
+    @lazy_metadata_decorator(apply_axis="rows")
     def from_labels(self) -> "PandasDataframe":
         """
         Convert the row labels to a column of data, inserted at the first position.
@@ -697,8 +816,8 @@ class PandasDataframe(ModinDataframe):
             row_lengths=self._row_lengths_cache,
             column_widths=new_column_widths,
         )
-        # Propagate the new row labels to the all dataframe partitions
-        result.synchronize_labels(0)
+        # Set flag for propagating deferred row labels across dataframe partitions
+        result.synchronize_labels(axis=0)
         return result
 
     def to_labels(self, column_list: List[Hashable]) -> "PandasDataframe":
@@ -724,7 +843,8 @@ class PandasDataframe(ModinDataframe):
         result.index = new_labels
         return result
 
-    def _reorder_labels(self, row_positions=None, col_positions=None):
+    @lazy_metadata_decorator(apply_axis="both")
+    def _reorder_labels(self, row_numeric_idx=None, col_numeric_idx=None):
         """
         Reorder the column and or rows in this DataFrame.
 
@@ -760,6 +880,7 @@ class PandasDataframe(ModinDataframe):
             col_idx = self.columns
         return self.__constructor__(ordered_cols, row_idx, col_idx)
 
+    @lazy_metadata_decorator(apply_axis=None)
     def copy(self):
         """
         Copy this object.
@@ -807,6 +928,7 @@ class PandasDataframe(ModinDataframe):
         dtypes.index = column_names
         return dtypes
 
+    @lazy_metadata_decorator(apply_axis="both")
     def astype(self, col_dtypes):
         """
         Convert the columns dtypes to given dtypes.
@@ -1152,7 +1274,6 @@ class PandasDataframe(ModinDataframe):
                     copy=True,
                     allow_dups=True,
                 )
-
             return lambda df: df.reindex(joined_index, axis=axis)
 
         return joined_index, make_reindexer
@@ -1238,6 +1359,7 @@ class PandasDataframe(ModinDataframe):
         )
         return result
 
+    @lazy_metadata_decorator(apply_axis="both")
     def reduce(
         self,
         axis: Union[int, Axis],
@@ -1274,6 +1396,7 @@ class PandasDataframe(ModinDataframe):
         )
         return self._compute_tree_reduce_metadata(axis.value, new_parts)
 
+    @lazy_metadata_decorator(apply_axis="opposite", axis_arg=0)
     def tree_reduce(
         self,
         axis: Union[int, Axis],
@@ -1316,6 +1439,7 @@ class PandasDataframe(ModinDataframe):
         )
         return self._compute_tree_reduce_metadata(axis.value, reduce_parts)
 
+    @lazy_metadata_decorator(apply_axis=None)
     def map(self, func: Callable, dtypes: Optional[str] = None) -> "PandasDataframe":
         """
         Perform a function that maps across the entire dataset.
@@ -1385,6 +1509,7 @@ class PandasDataframe(ModinDataframe):
         """
         pass
 
+    @lazy_metadata_decorator(apply_axis="both")
     def fold(self, axis, func):
         """
         Perform a function across an entire axis.
@@ -1562,6 +1687,7 @@ class PandasDataframe(ModinDataframe):
         """
         pass
 
+    @lazy_metadata_decorator(apply_axis="both")
     def filter(self, axis: Union[Axis, int], condition: Callable) -> "PandasDataframe":
         """
         Filter data based on the function provided along an entire axis.
@@ -1625,6 +1751,7 @@ class PandasDataframe(ModinDataframe):
             col_positions=[i for i, dtype in enumerate(self.dtypes) if dtype in types]
         )
 
+    @lazy_metadata_decorator(apply_axis="both")
     def explode(self, axis: Union[int, Axis], func: Callable) -> "PandasDataframe":
         """
         Explode list-like entries along an entire axis.
@@ -1654,6 +1781,7 @@ class PandasDataframe(ModinDataframe):
             new_columns = self._compute_axis_labels(1, partitions)
         return self.__constructor__(partitions, new_index, new_columns)
 
+    @lazy_metadata_decorator(apply_axis="both")
     def apply_full_axis(
         self,
         axis,
@@ -1700,6 +1828,7 @@ class PandasDataframe(ModinDataframe):
             other=None,
         )
 
+    @lazy_metadata_decorator(apply_axis="both")
     def apply_full_axis_select_indices(
         self,
         axis,
@@ -1761,6 +1890,7 @@ class PandasDataframe(ModinDataframe):
             new_columns = self.columns if axis == 0 else None
         return self.__constructor__(new_partitions, new_index, new_columns, None, None)
 
+    @lazy_metadata_decorator(apply_axis="both")
     def apply_select_indices(
         self,
         axis,
@@ -1867,6 +1997,7 @@ class PandasDataframe(ModinDataframe):
                 self._column_widths_cache,
             )
 
+    @lazy_metadata_decorator(apply_axis="both")
     def broadcast_apply(
         self, axis, func, other, join_type="left", preserve_labels=True, dtypes=None
     ):
@@ -1962,6 +2093,7 @@ class PandasDataframe(ModinDataframe):
             passed_len += len(internal)
         return result_dict
 
+    @lazy_metadata_decorator(apply_axis="both")
     def broadcast_apply_select_indices(
         self,
         axis,
@@ -2049,6 +2181,7 @@ class PandasDataframe(ModinDataframe):
 
         return self.__constructor__(new_partitions, *new_axes)
 
+    @lazy_metadata_decorator(apply_axis="both")
     def broadcast_apply_full_axis(
         self,
         axis,
@@ -2133,9 +2266,9 @@ class PandasDataframe(ModinDataframe):
             dtypes,
         )
         if new_index is not None:
-            result.synchronize_labels(0)
+            result.synchronize_labels(axis=0)
         if new_columns is not None:
-            result.synchronize_labels(1)
+            result.synchronize_labels(axis=1)
         return result
 
     def _copartition(self, axis, other, how, sort, force_repartition=False):
@@ -2249,6 +2382,7 @@ class PandasDataframe(ModinDataframe):
         )
         return reindexed_frames[0], reindexed_frames[1:], joined_index
 
+    @lazy_metadata_decorator(apply_axis="both")
     def binary_op(self, op, right_frame, join_type="outer"):
         """
         Perform an operation that requires joining with another Modin DataFrame.
@@ -2278,6 +2412,7 @@ class PandasDataframe(ModinDataframe):
         new_columns = self.columns.join(right_frame.columns, how=join_type)
         return self.__constructor__(new_frame, joined_index, new_columns, None, None)
 
+    @lazy_metadata_decorator(apply_axis="both")
     def concat(
         self,
         axis: Union[int, Axis],
@@ -2397,6 +2532,7 @@ class PandasDataframe(ModinDataframe):
         """
         pass
 
+    @lazy_metadata_decorator(apply_axis="opposite", axis_arg=0)
     def groupby_reduce(
         self,
         axis,
@@ -2435,6 +2571,8 @@ class PandasDataframe(ModinDataframe):
             New Modin DataFrame.
         """
         by_parts = by if by is None else by._partitions
+        if by is None:
+            self._propagate_index_objs(axis=0)
 
         if apply_indices is not None:
             numeric_indices = self.axes[axis ^ 1].get_indexer_for(apply_indices)
@@ -2537,6 +2675,7 @@ class PandasDataframe(ModinDataframe):
             return np.dtype(res)
         return res
 
+    @lazy_metadata_decorator(apply_axis="both")
     def to_pandas(self):
         """
         Convert this Modin DataFrame to a pandas DataFrame.
@@ -2574,6 +2713,7 @@ class PandasDataframe(ModinDataframe):
         """
         return self._partition_mgr_cls.to_numpy(self._partitions, **kwargs)
 
+    @lazy_metadata_decorator(apply_axis=None, transpose=True)
     def transpose(self):
         """
         Transpose the index and columns of this Modin DataFrame.
