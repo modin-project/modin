@@ -42,7 +42,6 @@ from modin.pandas.test.utils import (
 from modin.config import NPartitions
 from modin.utils import get_current_execution
 from modin.test.test_utils import warns_that_defaulting_to_pandas
-from pandas.testing import assert_frame_equal
 
 NPartitions.put(4)
 
@@ -1746,11 +1745,7 @@ def test___setitem__assigning_single_categorical_sets_correct_dtypes():
     modin_df["categories"] = pd.Categorical(["A"])
     pandas_df = pandas.DataFrame({"categories": ["A"]})
     pandas_df["categories"] = pandas.Categorical(["A"])
-    assert_frame_equal(
-        modin_df._to_pandas(),
-        pandas_df,
-        check_dtype=True,
-    )
+    df_equals(modin_df, pandas_df)
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
