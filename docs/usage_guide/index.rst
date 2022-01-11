@@ -1,7 +1,7 @@
 Usage Guide
 ===========
 
-Here you can find tips and usage examples of how you can further optimize the performance of your workload with Modin for both general use cases and for specific operations.
+Here you can find Modin usage examples and tips of how you can further optimize the performance of your workload with Modin both for general use cases and for specific operations.
 
 .. toctree::
     :maxdepth: 4
