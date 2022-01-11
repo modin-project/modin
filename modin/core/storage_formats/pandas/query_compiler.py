@@ -2379,11 +2379,12 @@ class PandasQueryCompiler(BaseQueryCompiler):
             # Sometimes `apply` can return a `Series`, but we require that internally
             # all objects are `DataFrame`s.
             result = df.apply(func_dict, *args, **kwargs)
-            return (
-                result.to_frame("__reduced__")
-                if isinstance(result, pandas.Series)
-                else result
-            )
+            return result
+            # return (
+            #     result.to_frame("__reduced__")
+            #     if isinstance(result, pandas.Series)
+            #     else result
+            # )
 
         func = {k: wrap_udf_function(v) if callable(v) else v for k, v in func.items()}
         return self.__constructor__(
@@ -2460,16 +2461,14 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
         def applyier(df):
             """Execute apply function against `df` held by partition."""
-            result = df.apply(func, *args, **kwargs)
+            result = df.apply(func, *args, axis=axis, **kwargs)
             return (
                 result.to_frame("__reduced__")
                 if isinstance(result, pandas.Series)
                 else result
             )
 
-        new_modin_frame = self._modin_frame.apply_full_axis(
-            axis, lambda df: df.apply(func, axis=axis, *args, **kwargs)
-        )
+        new_modin_frame = self._modin_frame.apply_full_axis(axis, applyier)
         return self.__constructor__(new_modin_frame)
 
     # END UDF
