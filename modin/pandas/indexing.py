@@ -451,7 +451,7 @@ class _LocationIndexerBase(object):
             if not all(idx in item.index for idx in index_values):
                 raise ValueError(
                     "Must have equal len keys and value when setting with "
-                    "an iterable"
+                    + "an iterable"
                 )
             if hasattr(item, "columns"):
                 column_values = self.qc.columns[col_lookup]
@@ -459,7 +459,7 @@ class _LocationIndexerBase(object):
                     # TODO: think if it is needed to handle cases when columns have duplicate names
                     raise ValueError(
                         "Must have equal len keys and value when setting "
-                        "with an iterable"
+                        + "with an iterable"
                     )
                 item = item.reindex(index=index_values, columns=column_values)
             else:
@@ -473,8 +473,8 @@ class _LocationIndexerBase(object):
         except ValueError:
             from_shape = np.array(item).shape
             raise ValueError(
-                "could not broadcast input array from shape {from_shape} into shape "
-                "{to_shape}".format(from_shape=from_shape, to_shape=to_shape)
+                f"could not broadcast input array from shape {from_shape} into shape "
+                + f"{to_shape}"
             )
 
     def _write_items(self, row_lookup, col_lookup, item):

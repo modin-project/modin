@@ -233,8 +233,8 @@ class PandasParser(object):
             ErrorMessage.missmatch_with_pandas(
                 operation="read_*",
                 message="Data types of partitions are different! "
-                "Please refer to the troubleshooting section of the Modin documentation "
-                "to fix this issue",
+                + "Please refer to the troubleshooting section of the Modin documentation "
+                + "to fix this issue",
             )
 
             # concat all elements of `partitions_dtypes` and find common dtype

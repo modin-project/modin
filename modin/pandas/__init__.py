@@ -18,10 +18,8 @@ __pandas_version__ = "1.4.1"
 
 if pandas.__version__ != __pandas_version__:
     warnings.warn(
-        "The pandas version installed {} does not match the supported pandas version in"
-        " Modin {}. This may cause undesired side effects!".format(
-            pandas.__version__, __pandas_version__
-        )
+        f"The pandas version installed {pandas.__version__} does not match the supported pandas version in"
+        + f" Modin {__pandas_version__}. This may cause undesired side effects!"
     )
 
 with warnings.catch_warnings():

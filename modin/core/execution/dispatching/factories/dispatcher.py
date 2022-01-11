@@ -131,7 +131,7 @@ class FactoryDispatcher(object):
             if factory_name == "ExperimentalOmnisciOnRayFactory":
                 msg = (
                     "OmniSci storage format no longer needs Ray engine; "
-                    "please specify MODIN_ENGINE='native'"
+                    + "please specify MODIN_ENGINE='native'"
                 )
                 raise FactoryNotFoundError(msg)
             if not IsExperimental.get():
@@ -139,13 +139,13 @@ class FactoryDispatcher(object):
                 if hasattr(factories, "Experimental" + factory_name):
                     msg = (
                         "{0} on {1} is only accessible through the experimental API.\nRun "
-                        "`import modin.experimental.pandas as pd` to use {0} on {1}."
+                        + "`import modin.experimental.pandas as pd` to use {0} on {1}."
                     )
                 else:
                     msg = (
                         "Cannot find a factory for partition '{}' and execution engine '{}'. "
-                        "Potential reason might be incorrect environment variable value for "
-                        f"{StorageFormat.varname} or {Engine.varname}"
+                        + "Potential reason might be incorrect environment variable value for "
+                        + f"{StorageFormat.varname} or {Engine.varname}"
                     )
                 raise FactoryNotFoundError(
                     msg.format(StorageFormat.get(), Engine.get())

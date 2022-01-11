@@ -571,7 +571,7 @@ def import_optional_dependency(name, message):
     except ImportError:
         raise ImportError(
             f"Missing optional dependency '{name}'. {message} "
-            f"Use pip or conda to install {name}."
+            + f"Use pip or conda to install {name}."
         ) from None
 
 

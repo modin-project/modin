@@ -15,6 +15,7 @@
 # noqa: MD02
 """Function examples for docstring testing."""
 
+
 class weakdict(dict):  # noqa: GL08
     __slots__ = ("__weakref__",)
 

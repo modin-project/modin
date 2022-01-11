@@ -572,7 +572,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
                         if len(last_col_name) not in (1, self.columns.nlevels):
                             raise ValueError(
                                 "col_fill=None is incompatible "
-                                f"with incomplete column name {last_col_name}"
+                                + f"with incomplete column name {last_col_name}"
                             )
                         col_fill = last_col_name[0]
                     columns_list = new_modin_frame.columns.tolist()
