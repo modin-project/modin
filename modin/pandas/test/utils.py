@@ -314,13 +314,13 @@ agg_func_except_values = list(agg_func_except.values())
 numeric_agg_funcs = ["sum mean", "sum sum", "sum df sum"]
 
 udf_func = {
-    "return self": lambda df: lambda x, *args, **kwargs: type(x)(x.values),
-    "change index": lambda df: lambda x, *args, **kwargs: pandas.Series(
+    "return self": lambda x, *args, **kwargs: type(x)(x.values),
+    "change index": lambda x, *args, **kwargs: pandas.Series(
         x.values, index=np.arange(-1, len(x.index) - 1)
     ),
-    "return none": lambda df: lambda x, *args, **kwargs: None,
-    "return empty": lambda df: lambda x, *args, **kwargs: pandas.Series(),
-    "access self": lambda df: lambda x, other, *args, **kwargs: pandas.Series(
+    "return none": lambda x, *args, **kwargs: None,
+    "return empty": lambda x, *args, **kwargs: pandas.Series(),
+    "access self": lambda x, other, *args, **kwargs: pandas.Series(
         x.values, index=other.index
     ),
 }
