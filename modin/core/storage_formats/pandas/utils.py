@@ -18,7 +18,7 @@ import numpy as np
 import pandas
 
 
-def compute_chunksize(axis_len, num_splits, default_block_size=None):
+def compute_chunksize(axis_len, num_splits, min_block_size=None):
     """
     Compute the number of elements (rows/columns) to include in each partition.
 
@@ -30,7 +30,7 @@ def compute_chunksize(axis_len, num_splits, default_block_size=None):
         Element count in an axis.
     num_splits : int
         The number of splits.
-    default_block_size : int, optional
+    min_block_size : int, optional
         Minimum number of rows/columns in a single split.
         If not specified, the value is assumed equal to ``MinPartitionSize``.
 
@@ -39,17 +39,17 @@ def compute_chunksize(axis_len, num_splits, default_block_size=None):
     int
         Integer number of rows/columns to split the DataFrame will be returned.
     """
-    if default_block_size is None:
-        default_block_size = MinPartitionSize.get()
+    if min_block_size is None:
+        min_block_size = MinPartitionSize.get()
 
-    assert default_block_size > 0, "`default_block_size` should be > 0"
+    assert min_block_size > 0, "`min_block_size` should be > 0"
 
     chunksize = axis_len // num_splits
     if axis_len % num_splits:
         chunksize += 1
-    # chunksize shouldn't be less than `default_block_size` to avoid a
+    # chunksize shouldn't be less than `min_block_size` to avoid a
     # large amount of small partitions.
-    return max(chunksize, default_block_size)
+    return max(chunksize, min_block_size)
 
 
 def split_result_of_axis_func_pandas(axis, num_splits, result, length_list=None):

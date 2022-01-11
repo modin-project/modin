@@ -429,6 +429,19 @@ class MinPartitionSize(EnvironmentVariable, type=int):
             raise ValueError(f"Min partition size should be > 0, passed value {value}")
         super().put(value)
 
+    @classmethod
+    def get(cls):
+        """
+        Get ``MinPartitionSize`` with extra checks.
+
+        Returns
+        -------
+        int
+        """
+        min_partition_size = super().get()
+        assert min_partition_size > 0, "`min_partition_size` should be > 0"
+        return min_partition_size
+
 
 def _check_vars():
     """
