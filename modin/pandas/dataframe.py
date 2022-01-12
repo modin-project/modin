@@ -365,14 +365,22 @@ class DataFrame(BasePandasDataset):
         if not isinstance(query_compiler, type(self._query_compiler)):
             return query_compiler
 
-        reduced_index = pandas.Index(["__reduced__"])
-        if query_compiler.get_axis(axis).equals(
-            reduced_index
-        ) or query_compiler.get_axis(axis ^ 1).equals(reduced_index):
-            result = Series(query_compiler=query_compiler)
+        if result_type == "reduce":
+            output_type = Series
+        elif result_type == "broadcast":
+            output_type = DataFrame
+        # the 'else' branch also handles 'result_type == "expand"' since it makes the output type
+        # depend on the `func` result (Series for a scalar, DataFrame for list-like)
         else:
-            result = DataFrame(query_compiler=query_compiler)
-        return result
+            reduced_index = pandas.Index(["__reduced__"])
+            if query_compiler.get_axis(axis).equals(
+                reduced_index
+            ) or query_compiler.get_axis(axis ^ 1).equals(reduced_index):
+                output_type = Series
+            else:
+                output_type = DataFrame
+
+        return output_type(query_compiler=query_compiler)
 
     def groupby(
         self,
