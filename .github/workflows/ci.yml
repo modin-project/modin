@@ -153,7 +153,7 @@ jobs:
           conda list
       - run: sudo apt update && sudo apt install -y libhdf5-dev
       - name: Install pandas release candidate
-        run: python -m pip install --upgrade --pre pandas==1.4.0rc0
+        run: conda install -c conda-forge/label/pandas_rc pandas==1.4.0rc0
       - name: Api tests
         run: python -m pytest modin/pandas/test/test_api.py
       - name: Executions Api tests
@@ -187,7 +187,7 @@ jobs:
           conda info
           conda list
       - name: Install pandas release candidate
-        run: python -m pip install --upgrade --pre pandas==1.4.0rc0
+        run: conda install -c conda-forge/label/pandas_rc pandas==1.4.0rc0
       - name: Headers tests
         run: python -m pytest modin/test/test_headers.py
 
@@ -207,7 +207,7 @@ jobs:
           python-version: "3.7.x"
           architecture: "x64"
       - name: Install pandas release candidate
-        run: python -m pip install --upgrade --pre pandas==1.4.0rc0
+        run: conda install -c conda-forge/label/pandas_rc pandas==1.4.0rc0
       - name: Clean install and run
         run: |
           python -m pip install -e .[all]
@@ -230,7 +230,7 @@ jobs:
           python-version: "3.7.x"
           architecture: "x64"
       - name: Install pandas release candidate
-        run: python -m pip install --upgrade --pre pandas==1.4.0rc0
+        run: conda install -c conda-forge/label/pandas_rc pandas==1.4.0rc0
       - name: Clean install and run
         run: |
           python -m pip install -e .[all]
@@ -266,7 +266,7 @@ jobs:
           conda info
           conda list
       - name: Install pandas release candidate
-        run: python -m pip install --upgrade --pre pandas==1.4.0rc0
+        run: conda install -c conda-forge/label/pandas_rc pandas==1.4.0rc0
       - name: Internals tests
         run: python -m pytest modin/core/execution/dispatching/factories/test/test_dispatcher.py modin/experimental/cloud/test/test_cloud.py
       - run: python -m pytest modin/config/test
@@ -315,7 +315,7 @@ jobs:
       - name: Install HDF5
         run: sudo apt update && sudo apt install -y libhdf5-dev
       - name: Install pandas release candidate
-        run: python -m pip install --upgrade --pre pandas==1.4.0rc0
+        run: conda install -c conda-forge/label/pandas_rc pandas==1.4.0rc0
       - run: pytest modin/experimental/xgboost/test/test_default.py --execution=${{ matrix.execution }}
       - run: python -m pytest -n 2 modin/test/storage_formats/base/test_internals.py --execution=${{ matrix.execution }}
       - run: pytest -n 2 modin/pandas/test/dataframe/test_binary.py --execution=${{ matrix.execution }}
@@ -380,7 +380,7 @@ jobs:
       - name: Install HDF5
         run: sudo apt update && sudo apt install -y libhdf5-dev
       - name: Install pandas release candidate
-        run: python -m pip install --upgrade --pre pandas==1.4.0rc0
+        run: conda install -c conda-forge/label/pandas_rc pandas==1.4.0rc0
       - run: pytest modin/test/storage_formats/omnisci/test_internals.py
       - run: MODIN_BENCHMARK_MODE=True pytest modin/pandas/test/internals/test_benchmark_mode.py
       - run: pytest modin/experimental/core/execution/native/implementations/omnisci_on_native/test/test_dataframe.py
@@ -428,7 +428,7 @@ jobs:
           # yet appeared in the release versions;
           pip install git+https://github.com/airspeed-velocity/asv.git@ef016e233cb9a0b19d517135104f49e0a3c380e9
       - name: Install pandas release candidate
-        run: python -m pip install --upgrade --pre pandas==1.4.0rc0
+        run: conda install -c conda-forge/label/pandas_rc pandas==1.4.0rc0
       - name: Running benchmarks
         run: |
           # ASV correctly creates environments for testing only from the branch
@@ -503,7 +503,7 @@ jobs:
       - name: Install HDF5
         run: sudo apt update && sudo apt install -y libhdf5-dev
       - name: Install pandas release candidate
-        run: python -m pip install --upgrade --pre pandas==1.4.0rc0
+        run: conda install -c conda-forge/label/pandas_rc pandas==1.4.0rc0
       - run: MODIN_BENCHMARK_MODE=True pytest modin/pandas/test/internals/test_benchmark_mode.py
       - run: pytest -n 2 modin/experimental/xgboost/test/test_default.py
       - run: pytest -n 2 modin/experimental/xgboost/test/test_xgboost.py
@@ -576,7 +576,7 @@ jobs:
           conda info
           conda list
       - name: Install pandas release candidate
-        run: python -m pip install --upgrade --pre pandas==1.4.0rc0
+        run: conda install -c conda-forge/label/pandas_rc pandas==1.4.0rc0
       - run: python -m pytest -n 2 modin/pandas/test/dataframe/test_map_metadata.py
       - run: python -m pytest -n 2 modin/pandas/test/test_series.py
       - run: python -m pytest modin/pandas/test/test_io.py --verbose
@@ -624,7 +624,7 @@ jobs:
           conda info
           conda list
       - name: Install pandas release candidate
-        run: python -m pip install --upgrade --pre pandas==1.4.0rc0
+        run: conda install -c conda-forge/label/pandas_rc pandas==1.4.0rc0
       - run: python -m pytest --simulate-cloud=normal modin/pandas/test/test_io.py --verbose
       - run: python -m pytest --simulate-cloud=normal modin/pandas/test/dataframe/test_default.py::test_kurt_kurtosis --verbose
       - # When running without parameters, some of the tests fail
@@ -695,7 +695,7 @@ jobs:
           conda info
           conda list
       - name: Install pandas release candidate
-        run: python -m pip install --upgrade --pre pandas==1.4.0rc0
+        run: conda install -c conda-forge/label/pandas_rc pandas==1.4.0rc0
       - run: python -m pytest ${{matrix.test-task}}
         if: matrix.test-task != 'modin/pandas/test/test_io.py'
       - timeout-minutes: 30
@@ -740,7 +740,7 @@ jobs:
           conda list
       - run: sudo apt update && sudo apt install -y libhdf5-dev
       - name: Install pandas release candidate
-        run: python -m pip install --upgrade --pre pandas==1.4.0rc0
+        run: conda install -c conda-forge/label/pandas_rc pandas==1.4.0rc0
       - run: python -m pytest modin/pandas/test/test_io.py::TestCsv --verbose
 
   test-spreadsheet:
@@ -779,5 +779,5 @@ jobs:
           conda info
           conda list
       - name: Install pandas release candidate
-        run: python -m pip install --upgrade --pre pandas==1.4.0rc0
+        run: conda install -c conda-forge/label/pandas_rc pandas==1.4.0rc0
       - run: python -m pytest modin/experimental/spreadsheet/test/test_general.py
