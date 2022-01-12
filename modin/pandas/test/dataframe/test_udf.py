@@ -233,7 +233,7 @@ def test_apply_udf(data, func):
     [
         pytest.param({0: "sum", 1: "min", -1: "mean"}, id="str_reduction"),
         pytest.param(
-            {0: "sum", 1: lambda df: df.quantile(), -1: "mean"},
+            {0: sum, 1: lambda df: df.quantile(), -1: "mean"},
             id="str+callable_reduction",
         ),
         pytest.param(

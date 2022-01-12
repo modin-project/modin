@@ -2459,7 +2459,16 @@ class PandasQueryCompiler(BaseQueryCompiler):
             # Can't precompute axis labels if the aggregation type is unknown
             new_index, new_columns = None, None
 
-        func = {k: wrap_udf_function(v) if callable(v) else v for k, v in func.items()}
+        func = {
+            k: (
+                wrap_udf_function(v)
+                if callable(v)
+                and not isinstance(v, BuiltinFunctionType)
+                and not isinstance(v, np.ufunc)
+                else v
+            )
+            for k, v in func.items()
+        }
 
         def dict_apply_builder(df, internal_indices):
             """
