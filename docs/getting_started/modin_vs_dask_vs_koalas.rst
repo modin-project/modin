@@ -70,6 +70,7 @@ Compatibility with Computational Frameworks
 .. figure:: ../img/performance-all-supported.svg
    :align: center
    :alt: Scalability of operators supported by Modin and other systems
+   :width: 95%
 
 Performance Comparison
 ----------------------
