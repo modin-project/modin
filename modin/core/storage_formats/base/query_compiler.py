@@ -2089,7 +2089,7 @@ class BaseQueryCompiler(abc.ABC):
             Target axis to apply the function along.
             0 is for index, 1 is for columns.
         raw : bool, default: False
-            Whether to pass a high-level DataFrame object (False) or a raw representation
+            Whether to pass a high-level Series object (False) or a raw representation
             of the data (True).
         result_type : {"expand", "reduce", "broadcast", None}, default: None
             Determines how to treat list-like return type of the `func` (works only if
@@ -2111,9 +2111,9 @@ class BaseQueryCompiler(abc.ABC):
             the following rules:
 
             - Index of the specified axis contains: the names of the passed functions if multiple
-              functions were passed, otherwise: indices of the `func` result if "expand" strategy
-              was used, indices of the original frame if "broadcast" strategy was used, a single
-              label "__reduced__" if "reduce" strategy was used.
+              functions are passed, otherwise: indices of the `func` result if "expand" strategy
+              is used, indices of the original frame if "broadcast" strategy is used, a single
+              label "__reduced__" if "reduce" strategy is used.
             - Labels of the opposite axis are preserved.
             - Each element is the result of execution of `func` against
               corresponding row/column.
