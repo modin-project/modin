@@ -2529,7 +2529,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         func = {k: wrap_udf_function(v) if callable(v) else v for k, v in func.items()}
 
         def dict_apply_builder(df, internal_indices):
-            """ "
+            """
             Apply dictionary function to the partition.
 
             Parameters
