@@ -362,6 +362,9 @@ class DataFrame(BasePandasDataset):
         query_compiler = super(DataFrame, self).apply(
             func, axis=axis, raw=raw, result_type=result_type, args=args, **kwargs
         )
+        if not isinstance(query_compiler, type(self._query_compiler)):
+            # A scalar was returned
+            return query_compiler
 
         if result_type == "reduce":
             output_type = Series
