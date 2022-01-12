@@ -554,7 +554,7 @@ class TextFileDispatcher(FileDispatcher):
         """
         # This is the number of splits for the columns
         num_splits = min(len(column_names) or 1, NPartitions.get())
-        column_chunksize = compute_chunksize(df, num_splits, axis=1)
+        column_chunksize = compute_chunksize(df.shape[1], num_splits)
         if column_chunksize > len(column_names):
             column_widths = [len(column_names)]
             # This prevents us from unnecessarily serializing a bunch of empty
