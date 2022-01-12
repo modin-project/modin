@@ -157,7 +157,7 @@ Windows
 All Modin engines except :doc:`OmniSci</developer/using_omnisci>` are available both on Windows and Linux as mentioned above.
 Default engine on Windows is :doc:`Ray</developer/using_pandas_on_ray>`.
 It is also possible to use Windows Subsystem For Linux (WSL_), but this is generally not recommended due to the limitations
-and poor performance of Ray on WSL, a roughly 2-3x cost.
+and poor performance of Ray on WSL, a roughly 2-3x worse than native windows.
 
 Building Modin from Source
 --------------------------
