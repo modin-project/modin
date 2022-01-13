@@ -1,20 +1,10 @@
-Getting Started
-===============
+=============
+Installation
+=============
 
-.. toctree::
-    :titlesonly:
-    :hidden:
-    
-    using_modin
-    out_of_core
-    pandas
-    dask
-    faq
-    troubleshooting
-
-.. meta::
-    :description lang=en:
-        Introduction to Modin.
+.. note:: 
+  | *Estimated Reading Time: 15 minutes*
+  | If you already installed Modin on your machine, you can skip this section.
 
 There are several ways to install Modin. Most users will want to install with
 ``pip`` or using ``conda`` tool, but some users may want to build from the master branch
@@ -27,15 +17,14 @@ Installing with pip
 Stable version
 """"""""""""""
 
-Modin can be installed with ``pip`` on Linux, Windows and MacOS. 2 engines are available for those platforms:
-:doc:`Ray</developer/using_pandas_on_ray>` and :doc:`Dask</developer/using_pandas_on_dask>`
+Modin can be installed with ``pip`` on Linux, Windows and MacOS. 
 To install the most recent stable release run the following:
 
 .. code-block:: bash
 
   pip install -U modin # -U for upgrade in case you have an older version
 
-If you don't have Ray_ or Dask_ installed, you will need to install Modin with one of the targets:
+Modin can be used with :doc:`Ray</developer/using_pandas_on_ray>`, :doc:`Dask</developer/using_pandas_on_dask>`, or :doc:`OmniSci</developer/using_omnisci>` engines. If you don't have Ray_ or Dask_ installed, you will need to install Modin with one of the targets:
 
 .. code-block:: bash
 
@@ -44,7 +33,7 @@ If you don't have Ray_ or Dask_ installed, you will need to install Modin with o
   pip install modin[all] # Install all of the above
 
 Modin will automatically detect which engine you have installed and use that for
-scheduling computation!
+scheduling computation! See below for OmniSci engine installation.
 
 Release candidates
 """"""""""""""""""
@@ -64,6 +53,10 @@ Installing specific dependency sets
 
 Modin has a number of specific dependency sets for running Modin on different execution engines and
 storage formats or for different functionalities of Modin. Here is a list of dependency sets for Modin:
+
+.. code-block:: bash
+
+  pip install "modin[ray]" # If you want to use the Ray execution engine
 
 .. code-block:: bash
 
@@ -113,19 +106,19 @@ it is possible to install modin with chosen engine(s) alongside. Current options
 | modin-all                       | Dask, Ray, OmniSci        |          Linux              |
 +---------------------------------+---------------------------+-----------------------------+
 
-So for installing Dask and Ray engines into conda environment following command should be used:
+For installing Dask and Ray engines into conda environment following command should be used:
 
 .. code-block:: bash
 
   conda install -c conda-forge modin-ray modin-dask
 
-All set of engines could be available in conda environment by specifying
+All set of engines could be available in conda environment by specifying:
 
 .. code-block:: bash
 
   conda install -c conda-forge modin-all
 
-or explicitly
+or explicitly:
 
 .. code-block:: bash
 
@@ -157,7 +150,7 @@ Windows
 All Modin engines except :doc:`OmniSci</developer/using_omnisci>` are available both on Windows and Linux as mentioned above.
 Default engine on Windows is :doc:`Ray</developer/using_pandas_on_ray>`.
 It is also possible to use Windows Subsystem For Linux (WSL_), but this is generally not recommended due to the limitations
-and poor performance of Ray on WSL, a roughly 2-3x cost. 
+and poor performance of Ray on WSL, a roughly 2-3x worse than native Windows. 
 
 Building Modin from Source
 --------------------------

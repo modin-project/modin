@@ -1,6 +1,9 @@
 Out-of-memory data with Modin
 =============================
 
+.. note:: 
+  | *Estimated Reading Time: 10 minutes*
+  
 When using pandas, you might run into a memory error if you are working with large datasets that cannot fit in memory or perform certain memory-intensive operations (e.g., joins). 
 
 Modin solves this problem by spilling over to disk, in other words, it uses your disk as an overflow for memory so that you can work with datasets that are too large to fit in memory. By default, Modin leverages out-of-core methods to handle datasets that don't fit in memory for both Ray and Dask engines.
