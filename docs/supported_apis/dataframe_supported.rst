@@ -41,10 +41,6 @@ default to pandas.
 +----------------------------+---------------------------+------------------------+----------------------------------------------------+
 | ``applymap``               | `applymap`_               | Y                      |                                                    |
 +----------------------------+---------------------------+------------------------+----------------------------------------------------+
-| ``as_blocks``              | `as_blocks`_              | D                      | Becomes a non-parallel object                      |
-+----------------------------+---------------------------+------------------------+----------------------------------------------------+
-| ``as_matrix``              | `as_matrix`_              | D                      | Becomes a non-parallel object                      |
-+----------------------------+---------------------------+------------------------+----------------------------------------------------+
 | ``asfreq``                 | `asfreq`_                 | D                      |                                                    |
 +----------------------------+---------------------------+------------------------+----------------------------------------------------+
 | ``asof``                   | `asof`_                   | Y                      |                                                    |
@@ -63,17 +59,11 @@ default to pandas.
 +----------------------------+---------------------------+------------------------+----------------------------------------------------+
 | ``bfill``                  | `bfill`_                  | Y                      |                                                    |
 +----------------------------+---------------------------+------------------------+----------------------------------------------------+
-| ``blocks``                 | `blocks`_                 | D                      |                                                    |
-+----------------------------+---------------------------+------------------------+----------------------------------------------------+
 | ``bool``                   | `bool`_                   | Y                      |                                                    |
 +----------------------------+---------------------------+------------------------+----------------------------------------------------+
 | ``boxplot``                | `boxplot`_                | D                      |                                                    |
 +----------------------------+---------------------------+------------------------+----------------------------------------------------+
 | ``clip``                   | `clip`_                   | Y                      |                                                    |
-+----------------------------+---------------------------+------------------------+----------------------------------------------------+
-| ``clip_lower``             | `clip_lower`_             | Y                      |                                                    |
-+----------------------------+---------------------------+------------------------+----------------------------------------------------+
-| ``clip_upper``             | `clip_upper`_             | Y                      |                                                    |
 +----------------------------+---------------------------+------------------------+----------------------------------------------------+
 | ``combine``                | `combine`_                | Y                      |                                                    |
 +----------------------------+---------------------------+------------------------+----------------------------------------------------+
@@ -154,11 +144,7 @@ default to pandas.
 +----------------------------+---------------------------+------------------------+----------------------------------------------------+
 | ``from_dict``              | `from_dict`_              | D                      |                                                    |
 +----------------------------+---------------------------+------------------------+----------------------------------------------------+
-| ``from_items``             | `from_items`_             | Y                      |                                                    |
-+----------------------------+---------------------------+------------------------+----------------------------------------------------+
 | ``from_records``           | `from_records`_           | D                      |                                                    |
-+----------------------------+---------------------------+------------------------+----------------------------------------------------+
-| ``ftypes``                 | `ftypes`_                 | Y                      |                                                    |
 +----------------------------+---------------------------+------------------------+----------------------------------------------------+
 | ``ge``                     | `ge`_                     | Y                      | See ``add``                                        |
 +----------------------------+---------------------------+------------------------+----------------------------------------------------+
@@ -386,8 +372,6 @@ default to pandas.
 +----------------------------+---------------------------+------------------------+----------------------------------------------------+
 | ``to_csv``                 | `to_csv`_                 | Y                      |                                                    |
 +----------------------------+---------------------------+------------------------+----------------------------------------------------+
-| ``to_dense``               | `to_dense`_               | D                      |                                                    |
-+----------------------------+---------------------------+------------------------+----------------------------------------------------+
 | ``to_dict``                | `to_dict`_                | D                      |                                                    |
 +----------------------------+---------------------------+------------------------+----------------------------------------------------+
 | ``to_excel``               | `to_excel`_               | D                      |                                                    |
@@ -404,8 +388,6 @@ default to pandas.
 +----------------------------+---------------------------+------------------------+----------------------------------------------------+
 | ``to_latex``               | `to_latex`_               | D                      |                                                    |
 +----------------------------+---------------------------+------------------------+----------------------------------------------------+
-| ``to_msgpack``             | `to_msgpack`_             | D                      |                                                    |
-+----------------------------+---------------------------+------------------------+----------------------------------------------------+
 | ``to_parquet``             | `to_parquet`_             | D                      |                                                    |
 +----------------------------+---------------------------+------------------------+----------------------------------------------------+
 | ``to_period``              | `to_period`_              | D                      |                                                    |
@@ -413,8 +395,6 @@ default to pandas.
 | ``to_pickle``              | `to_pickle`_              | D                      | Experimental implementation: to_pickle_distributed |
 +----------------------------+---------------------------+------------------------+----------------------------------------------------+
 | ``to_records``             | `to_records`_             | D                      |                                                    |
-+----------------------------+---------------------------+------------------------+----------------------------------------------------+
-| ``to_sparse``              | `to_sparse`_              | D                      |                                                    |
 +----------------------------+---------------------------+------------------------+----------------------------------------------------+
 | ``to_sql``                 | `to_sql`_                 | Y                      |                                                    |
 +----------------------------+---------------------------+------------------------+----------------------------------------------------+
@@ -468,8 +448,6 @@ default to pandas.
 .. _`append`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.append.html#pandas.DataFrame.append
 .. _`apply`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.apply.html#pandas.DataFrame.apply
 .. _`applymap`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.applymap.html#pandas.DataFrame.applymap
-.. _`as_blocks`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.as_blocks.html#pandas.DataFrame.as_blocks
-.. _`as_matrix`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.as_matrix.html#pandas.DataFrame.as_matrix
 .. _`asfreq`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.asfreq.html#pandas.DataFrame.asfreq
 .. _`asof`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.asof.html#pandas.DataFrame.asof
 .. _`assign`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.assign.html#pandas.DataFrame.assign
@@ -479,12 +457,9 @@ default to pandas.
 .. _`axes`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.axes.html#pandas.DataFrame.axes
 .. _`between_time`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.between_time.html#pandas.DataFrame.between_time
 .. _`bfill`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.bfill.html#pandas.DataFrame.bfill
-.. _`blocks`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.blocks.html#pandas.DataFrame.blocks
 .. _`bool`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.bool.html#pandas.DataFrame.bool
 .. _`boxplot`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.boxplot.html#pandas.DataFrame.boxplot
 .. _`clip`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.clip.html#pandas.DataFrame.clip
-.. _`clip_lower`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.clip_lower.html#pandas.DataFrame.clip_lower
-.. _`clip_upper`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.clip_upper.html#pandas.DataFrame.clip_upper
 .. _`combine`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.combine.html#pandas.DataFrame.combine
 .. _`combine_first`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.combine_first.html#pandas.DataFrame.combine_first
 .. _`compare`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.compare.html#pandas.DataFrame.compare
@@ -523,9 +498,7 @@ default to pandas.
 .. _`first_valid_index`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.first_valid_index.html#pandas.DataFrame.first_valid_index
 .. _`floordiv`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.floordiv.html#pandas.DataFrame.floordiv
 .. _`from_dict`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.from_dict.html#pandas.DataFrame.from_dict
-.. _`from_items`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.from_items.html#pandas.DataFrame.from_items
 .. _`from_records`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.from_records.html#pandas.DataFrame.from_records
-.. _`ftypes`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.ftypes.html#pandas.DataFrame.ftypes
 .. _`ge`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.ge.html#pandas.DataFrame.ge
 .. _`get`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.get.html#pandas.DataFrame.get
 .. _`get_dtype_counts`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.get_dtype_counts.html#pandas.DataFrame.get_dtype_counts
@@ -640,7 +613,6 @@ default to pandas.
 .. _`take`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.take.html#pandas.DataFrame.take
 .. _`to_clipboard`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.to_clipboard.html#pandas.DataFrame.to_clipboard
 .. _`to_csv`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.to_csv.html#pandas.DataFrame.to_csv
-.. _`to_dense`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.to_dense.html#pandas.DataFrame.to_dense
 .. _`to_dict`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.to_dict.html#pandas.DataFrame.to_dict
 .. _`to_excel`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.to_excel.html#pandas.DataFrame.to_excel
 .. _`to_feather`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.to_feather.html#pandas.DataFrame.to_feather
@@ -649,12 +621,10 @@ default to pandas.
 .. _`to_html`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.to_html.html#pandas.DataFrame.to_html
 .. _`to_json`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.to_json.html#pandas.DataFrame.to_json
 .. _`to_latex`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.to_latex.html#pandas.DataFrame.to_latex
-.. _`to_msgpack`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.to_msgpack.html#pandas.DataFrame.to_msgpack
 .. _`to_parquet`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.to_parquet.html#pandas.DataFrame.to_parquet
 .. _`to_period`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.to_period.html#pandas.DataFrame.to_period
 .. _`to_pickle`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.to_pickle.html#pandas.DataFrame.to_pickle
 .. _`to_records`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.to_records.html#pandas.DataFrame.to_records
-.. _`to_sparse`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.to_sparse.html#pandas.DataFrame.to_sparse
 .. _`to_sql`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.to_sql.html#pandas.DataFrame.to_sql
 .. _`to_stata`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.to_stata.html#pandas.DataFrame.to_stata
 .. _`to_string`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.to_string.html#pandas.DataFrame.to_string
