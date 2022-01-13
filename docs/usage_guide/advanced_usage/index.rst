@@ -5,6 +5,7 @@ Advanced Usage
    :titlesonly:
    :hidden:
 
+   /flow/modin/distributed/dataframe/pandas
    spreadsheets_api
    progress_bar
    modin_sql
@@ -29,6 +30,14 @@ Modin also supports these experimental APIs on top of pandas that are under acti
 - :py:func:`~modin.experimental.pandas.read_sql` -- add optional parameters for the database connection
 - :py:func:`~modin.experimental.pandas.read_pickle_distributed`  -- read multiple files in a directory
 - :py:meth:`~modin.experimental.pandas.DataFrame.to_pickle_distributed` -- write to multiple files in a directory
+
+DataFrame partitioning API
+--------------------------
+
+Modin DataFrame provides an API to manipulate with its partitions: you can extract raw partitions from
+:py:class:`~modin.pandas.dataframe.DataFrame`, modify their structure by reshuffling or applying some
+functions, and then inject them back to the DataFrame. Visit
+:doc:`partitioning API documentation </flow/modin/distributed/dataframe/pandas>` to learn more.
 
 Modin Spreadsheet API: Render Dataframes as Spreadsheets
 --------------------------------------------------------

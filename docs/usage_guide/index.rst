@@ -6,6 +6,7 @@ Here you can find Modin usage examples and tips of how you can further optimize 
 .. toctree::
     :maxdepth: 4
 
+    /flow/modin/config
     examples/index
     optimization_guide/index
     advanced_usage/index
