@@ -4,11 +4,11 @@ Getting Started
 .. toctree::
     :titlesonly:
     :hidden:
-    
+
     using_modin
     out_of_core
     pandas
-    dask
+    modin_vs_dask_vs_koalas
     faq
     troubleshooting
 
@@ -82,7 +82,7 @@ Since Colab preloads several of Modin's dependencies by default, we need to rest
 
 .. code-block:: python
 
-  # Post-install automatically kill and restart Colab environment 
+  # Post-install automatically kill and restart Colab environment
   import os
   os.kill(os.getpid(), 9)
 
@@ -134,8 +134,8 @@ or explicitly
 Using Intel\ |reg| Distribution of Modin
 """"""""""""""""""""""""""""""""""""""""
 
-With ``conda`` it is also possible to install Intel Distribution of Modin, a special version of Modin 
-that is part of Intel\ |reg| oneAPI AI Analytics Toolkit. This version of Modin is powered by :doc:`OmniSci</developer/using_omnisci>` 
+With ``conda`` it is also possible to install Intel Distribution of Modin, a special version of Modin
+that is part of Intel\ |reg| oneAPI AI Analytics Toolkit. This version of Modin is powered by :doc:`OmniSci</developer/using_omnisci>`
 engine that contains a bunch of optimizations for Intel hardware. More details can be found on `Intel Distribution of Modin`_ page.
 
 Installing from the GitHub master branch
@@ -157,7 +157,7 @@ Windows
 All Modin engines except :doc:`OmniSci</developer/using_omnisci>` are available both on Windows and Linux as mentioned above.
 Default engine on Windows is :doc:`Ray</developer/using_pandas_on_ray>`.
 It is also possible to use Windows Subsystem For Linux (WSL_), but this is generally not recommended due to the limitations
-and poor performance of Ray on WSL, a roughly 2-3x cost. 
+and poor performance of Ray on WSL, a roughly 2-3x worse than native windows.
 
 Building Modin from Source
 --------------------------
