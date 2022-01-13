@@ -2077,7 +2077,7 @@ class BaseQueryCompiler(abc.ABC):
     # UDF (apply and agg) methods
     # There is a wide range of behaviors that are supported, so a lot of the
     # logic can get a bit convoluted.
-    def apply(self, func, axis, *args, **kwargs):
+    def apply(self, func, axis, raw=False, result_type=None, *args, **kwargs):
         """
         Apply passed function across given axis.
 
@@ -2088,6 +2088,17 @@ class BaseQueryCompiler(abc.ABC):
         axis : {0, 1}
             Target axis to apply the function along.
             0 is for index, 1 is for columns.
+        raw : bool, default: False
+            Whether to pass a high-level Series object (False) or a raw representation
+            of the data (True).
+        result_type : {"expand", "reduce", "broadcast", None}, default: None
+            Determines how to treat list-like return type of the `func` (works only if
+            a single function was passed):
+                - "expand": expand list-like result into columns.
+                - "reduce": keep result into a single cell (opposite of "expand").
+                - "broadcast": broadcast result to original data shape (overwrite the
+                  existing column/row with the function result).
+                - None: use "expand" strategy if Series is returned, "reduce" otherwise.
         *args : iterable
             Positional arguments to pass to `func`.
         **kwargs : dict
@@ -2099,13 +2110,22 @@ class BaseQueryCompiler(abc.ABC):
             QueryCompiler that contains the results of execution and is built by
             the following rules:
 
-            - Labels of specified axis are the passed functions names.
+            - Index of the specified axis contains: the names of the passed functions if multiple
+              functions are passed, otherwise: indices of the `func` result if "expand" strategy
+              is used, indices of the original frame if "broadcast" strategy is used, a single
+              label "__reduced__" if "reduce" strategy is used.
             - Labels of the opposite axis are preserved.
             - Each element is the result of execution of `func` against
               corresponding row/column.
         """
         return DataFrameDefault.register(pandas.DataFrame.apply)(
-            self, func=func, axis=axis, *args, **kwargs
+            self,
+            func=func,
+            axis=axis,
+            raw=raw,
+            result_type=result_type,
+            *args,
+            **kwargs,
         )
 
     def explode(self, column):
