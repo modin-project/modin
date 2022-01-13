@@ -228,8 +228,7 @@ def test_apply_metadata():
 def test_apply_udf(data, func):
     eval_general(
         *create_test_dfs(data),
-        lambda df, *args, **kwargs: df.apply(*args, **kwargs),
-        func=func,
+        lambda df, *args, **kwargs: df.apply(func, *args, **kwargs),
         other=lambda df: df,
     )
 

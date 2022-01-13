@@ -2344,47 +2344,12 @@ class PandasQueryCompiler(BaseQueryCompiler):
         # convert it to pandas
         args = try_cast_to_pandas(args)
         kwargs = try_cast_to_pandas(kwargs)
-        if isinstance(func, str):
-            return self._apply_text_func_elementwise(func, axis, *args, **kwargs)
-        elif callable(func):
-            return self._callable_func(func, axis, *args, **kwargs)
-        elif isinstance(func, dict):
+        if isinstance(func, dict):
             return self._dict_func(func, axis, *args, **kwargs)
         elif is_list_like(func):
             return self._list_like_func(func, axis, *args, **kwargs)
         else:
-            pass
-
-    # FIXME: `_apply_text_func_elementwise` duplicates most of the logic of `_callable_func`,
-    # these methods should be combined.
-    def _apply_text_func_elementwise(self, func, axis, *args, **kwargs):
-        """
-        Apply passed string function to each row/column.
-
-        Parameters
-        ----------
-        func : str
-            Function name to apply.
-        axis : {0, 1}
-            Target axis to apply function along. 0 means apply to columns,
-            1 means apply to rows.
-        *args : args
-            Arguments to pass to the specified function.
-        **kwargs : kwargs
-            Arguments to pass to the specified function.
-
-        Returns
-        -------
-        PandasQueryCompiler
-            New QueryCompiler containing the results of passed function
-            for each row/column.
-        """
-        assert isinstance(func, str)
-        kwargs["axis"] = axis
-        new_modin_frame = self._modin_frame.apply_full_axis(
-            axis, lambda df: df.apply(func, *args, **kwargs)
-        )
-        return self.__constructor__(new_modin_frame)
+            return self._callable_func(func, axis, *args, **kwargs)
 
     def _dict_func(self, func, axis, *args, **kwargs):
         """
@@ -2469,7 +2434,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
         Parameters
         ----------
-        func : callable
+        func : callable or str
             Function to apply.
         axis : {0, 1}
             Target axis to apply function along. 0 means apply to columns,
@@ -2485,7 +2450,9 @@ class PandasQueryCompiler(BaseQueryCompiler):
             New QueryCompiler containing the results of passed function
             for each row/column.
         """
-        func = wrap_udf_function(func)
+        if callable(func):
+            func = wrap_udf_function(func)
+
         new_modin_frame = self._modin_frame.apply_full_axis(
             axis, lambda df: df.apply(func, axis=axis, *args, **kwargs)
         )
