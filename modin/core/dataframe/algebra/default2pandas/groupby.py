@@ -95,14 +95,12 @@ class GroupBy:
 
     @classmethod
     # FIXME: `grp` parameter is redundant and should be removed
-    def get_func(cls, grp, key, **kwargs):
+    def get_func(cls, key, **kwargs):
         """
         Extract aggregation function from groupby arguments.
 
         Parameters
         ----------
-        grp : pandas.DataFrameGroupBy
-            GroupBy object to apply aggregation on.
         key : callable or str
             Default aggregation function. If aggregation function is not specified
             via groupby arguments, then `key` function is used.
@@ -160,7 +158,7 @@ class GroupBy:
             by = cls.validate_by(by)
 
             grp = df.groupby(by, axis=axis, **groupby_kwargs)
-            agg_func = cls.get_func(grp, key, **kwargs)
+            agg_func = cls.get_func(key, **kwargs)
             result = agg_func(grp, *agg_args, **agg_kwargs)
 
             return result
@@ -191,7 +189,7 @@ class GroupBy:
             if not isinstance(by, (pandas.Series, pandas.DataFrame)):
                 by = cls.validate_by(by)
                 grp = df.groupby(by, axis=axis, **groupby_kwargs)
-                grp_agg_func = cls.get_func(grp, agg_func, **kwargs)
+                grp_agg_func = cls.get_func(agg_func, **kwargs)
                 return grp_agg_func(
                     grp,
                     *agg_args,
@@ -216,7 +214,7 @@ class GroupBy:
             groupby_kwargs["as_index"] = True
 
             grp = df.groupby(by, axis=axis, **groupby_kwargs)
-            func = cls.get_func(grp, agg_func, **kwargs)
+            func = cls.get_func(agg_func, **kwargs)
             result = func(grp, *agg_args, **agg_kwargs)
 
             if isinstance(result, pandas.Series):
