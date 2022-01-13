@@ -20,6 +20,7 @@ for pandas storage format.
 from collections import OrderedDict
 import numpy as np
 import pandas
+import datetime
 from pandas.core.indexes.api import ensure_index, Index, RangeIndex
 from pandas.core.dtypes.common import is_numeric_dtype, is_list_like
 from typing import List, Hashable, Optional, Callable, Union, Dict
@@ -2672,7 +2673,16 @@ class PandasDataframe(object):
         object
             Any dtype compatible with pandas.
         """
-        res = arrow_type.to_pandas_dtype()
+        import pyarrow
+
+        try:
+            res = arrow_type.to_pandas_dtype()
+        except NotImplementedError as e:
+            if pyarrow.types.is_time(arrow_type):
+                res = np.dtype(datetime.time)
+            else:
+                raise e
+
         if not isinstance(res, (np.dtype, str)):
             return np.dtype(res)
         return res

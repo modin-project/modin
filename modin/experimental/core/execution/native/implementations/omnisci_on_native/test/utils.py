@@ -15,6 +15,8 @@ import pytest
 import modin.pandas as pd
 from modin.utils import try_cast_to_pandas
 import pandas
+import datetime
+import numpy as np
 from pandas.api.types import is_datetime64_any_dtype
 import pyarrow as pa
 
@@ -87,22 +89,46 @@ def align_datetime_dtypes(*dfs):
     -----
     Passed Modin frames may be casted to pandas in the result.
     """
-    datetime_cols = {}
+    datetime_cols = dict()
+    time_cols = set()
     for df in dfs:
         for col, dtype in df.dtypes.items():
             # If we already decided to cast this column to DateTime no more actions are needed
             if col not in datetime_cols and is_datetime64_any_dtype(dtype):
                 datetime_cols[col] = dtype
+            # datetime.time is considered to be an 'object' dtype in pandas that's why
+            # we have to explicitly check the values type in the column
+            elif (
+                dtype == np.dtype("O")
+                and col not in time_cols
+                # Implying that the data is homogeneous, so checking the first value is enough
+                and (len(df) > 0 and isinstance(df[col].iloc[0], datetime.time))
+            ):
+                time_cols.add(col)
 
-    casted_dfs = (
+    if len(datetime_cols) == 0 and len(time_cols) == 0:
+        return dfs
+
+    def convert_to_time(value):
+        """Convert passed value to `datetime.time`."""
+        if isinstance(value, datetime.time):
+            return value
+        elif isinstance(value, str):
+            return datetime.time(*map(int, value.split(":")))
+        else:
+            return datetime.time(value)
+
+    casted_dfs = []
+    for df in dfs:
         # OmniSci has difficulties with casting to certain dtypes (i.e. datetime64),
-        # so casting it to pandas before doing 'astype'
-        tuple(try_cast_to_pandas(df).astype(datetime_cols) for df in dfs)
-        # This is required so we don't try to cast empty OmniSci frames to pandas:
-        # https://github.com/modin-project/modin/issues/3428
-        if len(datetime_cols)
-        else dfs
-    )
+        # so casting it to pandas
+        pandas_df = try_cast_to_pandas(df)
+        if len(datetime_cols):
+            pandas_df = pandas_df.astype(datetime_cols)
+        if len(time_cols):
+            pandas_df = pandas_df[time_cols].applymap(convert_to_time)
+        casted_dfs.append(pandas_df)
+
     return casted_dfs
 
 
