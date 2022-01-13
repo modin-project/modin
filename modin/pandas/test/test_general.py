@@ -25,14 +25,7 @@ from .utils import (
     test_data_keys,
     df_equals,
     sort_index_for_equal_values,
-    default_to_pandas_ignore_string,
 )
-
-# Our configuration in pytest.ini requires that we explicitly catch all
-# instances of defaulting to pandas, but we should always default to pandas for
-# BaseOnPython.
-if get_current_execution() == "BaseOnPython":
-    pytestmark = pytest.mark.filterwarnings(default_to_pandas_ignore_string)
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
