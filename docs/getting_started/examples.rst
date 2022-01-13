@@ -3,8 +3,8 @@ Examples and Resources
 
 The earlier sections have covered the basics of using Modin to speed up your pandas workflow. Here you can find additional resources to learn about Modin. To learn more about advanced usage for Modin, please refer to :doc:`this section </advanced_usage/index>`.
 
-Basic Usage Examples
----------------------
+Usage Examples
+---------------
 
 The following notebooks demonstrate how Modin can be used for scalable data science: 
 

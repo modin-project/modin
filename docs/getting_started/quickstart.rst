@@ -22,7 +22,7 @@ Getting Started
         Introduction to Modin.
 
 Quick Start Guide
-----------------
+------------------
 
 To install the most recent stable release for Modin run the following:
 
@@ -42,7 +42,7 @@ Modin acts as a drop-in replacement for pandas so you simply have to replace the
 Example: Instant Scalability with No Extra Effort
 --------------------------------------------------
 
-When working on large datasets, pandas becomes painfully slow or `runs out of memory <../why_modin/out_of_core.html>`_. Modin automatically scales up your pandas workflows by parallelizing the dataframe operations, so that you can more effectively leverage the compute resources available.
+When working on large datasets, pandas becomes painfully slow or :doc:`runs out of memory</getting_started/why_modin/out_of_core>`. Modin automatically scales up your pandas workflows by parallelizing the dataframe operations, so that you can more effectively leverage the compute resources available.
 
 For the purpose of demonstration, we will load in modin as ``pd`` and pandas as ``pandas``.
 
@@ -59,7 +59,7 @@ For the purpose of demonstration, we will load in modin as ``pd`` and pandas as 
   ray.init()
   #############################################
 
-In this toy example, we look at the NYC taxi dataset, which is around 120MB in size. You can download the dataset from `here <https://s3.amazonaws.com/nyc-tlc/trip+data/yellow_tripdata_2021-01.csv>`_ to run the example locally.
+In this toy example, we look at the NYC taxi dataset, which is around 120MB in size. You can download `this dataset <https://s3.amazonaws.com/nyc-tlc/trip+data/yellow_tripdata_2021-01.csv>`_ to run the example locally.
 
 .. code-block:: python
 
@@ -159,5 +159,3 @@ Summary
 Hopefully, this tutorial demonstrated how Modin delivers significant speedup on pandas operations without the need for any extra effort. Throughout example, we moved from working with 100MBs of data to 20GBs of data all without having to change anything or manually optimize our code to achieve the level of scalable performance that Modin provides.
 
 Note that in this quickstart example, we've only shown ``read_csv``, ``concat``, ``apply``, but these are not the only pandas operations that Modin optimizes for. In fact, Modin covers `more than 90\% of the pandas API <https://github.com/modin-project/modin/blob/master/README.md#pandas-api-coverage>`_, yielding considerable speedups for many common operations.
-
-Next, we discuss how Modin can be used locally on a single machine (e.g., your laptop!) and on a cluster setting.
