@@ -257,12 +257,14 @@ class DataFrameGroupBy(object):
             )
             result = result.dropna(subset=self._by.columns).sort_index()
         else:
-            result = self._wrap_aggregation(
-                type(self._query_compiler).groupby_shift,
-                numeric_only=False,
-                agg_kwargs=dict(
-                    periods=periods, freq=freq, axis=axis, fill_value=fill_value
-                ),
+            result = self._check_index_name(
+                self._wrap_aggregation(
+                    type(self._query_compiler).groupby_shift,
+                    numeric_only=False,
+                    agg_kwargs=dict(
+                        periods=periods, freq=freq, axis=axis, fill_value=fill_value
+                    ),
+                )
             )
         return result
 
