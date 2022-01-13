@@ -106,4 +106,4 @@ specify more processors than you have available on your machine; however this wi
 improve the performance (and might end up hurting the performance of the system).
 
 .. note:: 
-   Make sure to update the ``MODIN_CPUS`` configuration and initialize your preferred engine before you start working with the first operation using Modin! Otherwise Modin will opt for the default setting.
+   Make sure to update the ``MODIN_CPUS`` configuration and initialize your preferred engine before you start working with the first operation using Modin! Otherwise, Modin will opt for the default setting.
