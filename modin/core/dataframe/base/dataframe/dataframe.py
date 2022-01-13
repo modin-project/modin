@@ -24,7 +24,7 @@ from enum import Enum
 
 class Axis(Enum):  # noqa: PR01
     """
-    An enum that represents the axis argument provided to the algebra operators.
+    An enum that represents the `axis` argument provided to the algebra operators.
 
     The enum has 3 values - ROW_WISE to represent the row axis, COL_WISE to represent the
     column axis, and CELL_WISE to represent no axis. ROW_WISE operations iterate over the rows
@@ -36,6 +36,19 @@ class Axis(Enum):  # noqa: PR01
     CELL_WISE = None
 
 
+class JoinType(Enum):  # noqa: PR01
+    """
+    An enum that represents the `join_type` argument provided to the algebra operators.
+
+    The enum has 4 values - INNER to represent inner joins, LEFT to represent left joins, RIGHT to represent right joins, and OUTER to represent outer joins.
+    """
+
+    INNER = "inner"
+    LEFT = "left"
+    RIGHT = "right"
+    OUTER = "outer"
+
+
 class ModinDataframe(ABC):
     """
     An abstract class that represents the Parent class for any Dataframe class.
@@ -43,7 +56,7 @@ class ModinDataframe(ABC):
     This class is intended to specify the behaviors that a Dataframe must implement.
 
     For more details about how these methods were chosen, please refer to this
-    (http://www.vldb.org/pvldb/vol13/p2033-petersohn.pdf) paper, which specifies
+    (https://people.eecs.berkeley.edu/~totemtang/paper/Modin.pdf) paper, which specifies
     a Dataframe algebra that this class exposes.
     """
 
@@ -275,7 +288,7 @@ class ModinDataframe(ABC):
         dtypes: Optional[str] = None,
     ) -> "ModinDataframe":
         """
-        Perform a user-defined per-column aggregation, where each column reduces down to a single value.
+        Perform a user-defined aggregation on the specified axis, where the axis reduces down to a singleton.
 
         Parameters
         ----------
@@ -308,7 +321,7 @@ class ModinDataframe(ABC):
         dtypes: Optional[str] = None,
     ) -> "ModinDataframe":
         """
-        Perform a user-defined per-column aggregation, where each column reduces down to a single value using a tree-reduce computation pattern.
+        Perform a user-defined aggregation on the specified axis, where the axis reduces down to a singleton using a tree-reduce computation pattern.
 
         The map function is applied first over multiple partitions of a column, and then the reduce
         function (if specified, otherwise the map function is applied again) is applied to the
@@ -363,7 +376,7 @@ class ModinDataframe(ABC):
         axis: Union[int, Axis],
         condition: Callable,
         other: "ModinDataframe",
-        join_type: str,
+        join_type: Union[str, JoinType],
     ) -> "ModinDataframe":
         """
         Join this dataframe with the other.
@@ -377,7 +390,7 @@ class ModinDataframe(ABC):
             simple equality, e.g. "left.col1 == right.col1" or can be arbitrarily complex.
         other : ModinDataframe
             The other data to join with, i.e. the right dataframe.
-        join_type : string {"inner", "left", "right", "full"}
+        join_type : string  {"inner", "left", "right", "outer"} or modin.core.dataframe.base.dataframe.JoinType
             The type of join to perform.
 
         Returns
@@ -403,7 +416,7 @@ class ModinDataframe(ABC):
         others: Union["ModinDataframe", List["ModinDataframe"]],
     ) -> "ModinDataframe":
         """
-        Append the rows of identical column labels from multiple dataframes.
+        Append along the specified axis from multiple dataframes.
 
         Parameters
         ----------

@@ -29,7 +29,7 @@ from modin.error_message import ErrorMessage
 from modin.core.storage_formats.pandas.parsers import (
     find_common_type_cat as find_common_type,
 )
-from modin.core.dataframe.base.dataframe.dataframe import ModinDataframe, Axis
+from modin.core.dataframe.base.dataframe.dataframe import ModinDataframe, Axis, JoinType
 from modin.pandas.indexing import is_range_like
 from modin.pandas.utils import is_full_grab_slice, check_both_not_none
 
@@ -1367,7 +1367,7 @@ class PandasDataframe(object):
         dtypes: Optional[str] = None,
     ) -> "PandasDataframe":
         """
-        Perform a user-defined per-column aggregation, where each column reduces down to a single value. Requires knowledge of the full axis for the reduction.
+        Perform a user-defined aggregation on the specified axis, where the axis reduces down to a singleton. Requires knowledge of the full axis for the reduction.
 
         Parameters
         ----------
@@ -1562,7 +1562,7 @@ class PandasDataframe(object):
         axis: Union[int, Axis],
         condition: Callable,
         other: ModinDataframe,
-        join_type: str,
+        join_type: Union[str, JoinType],
     ) -> "PandasDataframe":
         """
         Join this dataframe with the other.
@@ -1576,7 +1576,7 @@ class PandasDataframe(object):
             simple equality, e.g. "left.col1 == right.col1" or can be arbitrarily complex.
         other : ModinDataframe
             The other data to join with, i.e. the right dataframe.
-        join_type : string {"inner", "left", "right", "full"}
+        join_type : string {"inner", "left", "right", "outer"} or modin.core.dataframe.base.dataframe.JoinType
             The type of join to perform.
 
         Returns
