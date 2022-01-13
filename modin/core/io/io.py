@@ -271,7 +271,7 @@ class BaseIO(object):
         return pd_obj
 
     @classmethod
-    @_inherit_docstrings(pandas.read_json, apilink="pandas.io.json.read_json")
+    @_inherit_docstrings(pandas.read_json, apilink="pandas.read_json")
     @doc(
         _doc_default_io_method,
         summary="Convert a JSON string to query compiler",
