@@ -1,6 +1,6 @@
 <!--
 Thank you for your contribution!
-Please review the contributing docs: https://modin.readthedocs.io/en/latest/CONTRIBUTING.html
+Please review the contributing docs: https://modin.readthedocs.io/en/latest/developer/contributing.html
 if you have questions about contributing.
 -->
 
@@ -8,7 +8,7 @@ if you have questions about contributing.
 
 <!-- Please give a short brief about these changes. -->
 
-- [ ] commit message follows format outlined [here](https://modin.readthedocs.io/en/latest/contributing.html)
+- [ ] commit message follows format outlined [here](https://modin.readthedocs.io/en/latest/developer/contributing.html)
 - [ ] passes `flake8 modin/ asv_bench/benchmarks scripts/doc_checker.py`
 - [ ] passes `black --check modin/ asv_bench/benchmarks scripts/doc_checker.py`
 - [ ] signed commit with `git commit -s` <!-- you can amend your commit with a signature via `git commit -amend -s` -->
