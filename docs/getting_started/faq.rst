@@ -94,7 +94,7 @@ import with Modin import:
     import modin.pandas as pd
 
 Which execution engine (Ray or Dask) should I use for Modin?
-""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
 
 Whichever one you want! Modin supports Ray_ and Dask_ execution engines to provide an effortless way 
 to speed up your pandas workflows. The best thing is that you don't need to know 
@@ -118,7 +118,7 @@ We plan to support more execution engines in future. If you have a specific requ
 please post on the #feature-requests channel on our Slack_ community. 
 
 How do I connect Modin to a database via `read_sql`?
-""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+""""""""""""""""""""""""""""""""""""""""""""""""""""
 
 To read from a SQL database, you have two options:
 

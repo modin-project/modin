@@ -1,5 +1,5 @@
-How Modin differs from pandas?
-===============================
+How does Modin differ from pandas?
+==================================
 
 .. note:: 
   | *Estimated Reading Time: 10 minutes*
