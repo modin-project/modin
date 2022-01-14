@@ -2441,14 +2441,51 @@ class PandasQueryCompiler(BaseQueryCompiler):
         if is_reduction:
             meta_df = empty_df.apply(func, axis=axis)
             if isinstance(meta_df, pandas.DataFrame):
+                # When multiple reduction functions per column are specified, the result
+                # of the function applied against `empty_df` is a 2D frame with the functions
+                # names at the index and aggregated names at the column:
+                # func = {
+                #     col_1: (reduction_1, reduction_2),
+                #     col_2: (reduction_2, reduction_3),
+                # }:
+                #              col_1   col_2
+                # reduction_1    NaN     NaN
+                # reduction_2    NaN     NaN
+                # reduction_3    NaN     NaN
+                # We can just use the `meta_df` index and columns in our result
                 new_index = meta_df.index
                 new_columns = meta_df.columns
             else:
+                # When each column is aggregated with a single reduction function, then
+                # the result is a single-row frame representing a Series:
+                # func = {
+                #     col_1: reduction_1, col_2: reduction_2
+                # }:
+                #               reduction_1   reduction_2
+                # __reduced__      result_1      result_2
+                # That's why the order of index and columns is inversed:
                 new_index = ["__reduced__"]
                 new_columns = meta_df.index
                 if axis == 1:
                     new_index, new_columns = new_columns, new_index
         elif is_reduction is False:
+            # When multiple aggregation functions per column are specified, the result
+            # is a 2D frame with unchanged indices and a MultiIndex column containing
+            # aggregated labels + aggregation function names at the lowest level:
+            # func = {
+            #     col_1: (aggregation_1, aggregation_2)
+            #     col_2: (aggregation_2, aggregation_3),
+            # }:
+            #                    col_1                           col_2
+            #            aggregation_1   aggregation_2   aggregation_2   aggregation_3
+            # index_1       result_1_1      result_1_2      result_1_3      result_1_4
+            #     ...             ...              ...             ...             ...
+            # index_m       result_m_1      result_m_2      result_m_3      result_m_4
+            # ^
+            # |
+            # original index
+            # `meta_df` contains only column labels when the index is empty (axis=0 case),
+            # that's why we have to take `new_index` from the `self` and `new_columns` from the `meta_df`.
             meta_df = empty_df.apply(func, axis=axis)
             new_index, new_columns = (
                 (self.index, meta_df.columns)
