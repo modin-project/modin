@@ -14,7 +14,7 @@
 """Module provides ``OmnisciOnNativeDataframe`` class implementing lazy frame."""
 
 from modin.core.dataframe.pandas.dataframe.dataframe import PandasDataframe
-from modin.core.dataframe.base.dataframe.enums import Axis, JoinType
+from modin.core.dataframe.base.dataframe.utils import Axis, JoinType
 from modin.experimental.core.storage_formats.omnisci.query_compiler import (
     DFAlgQueryCompiler,
 )
@@ -808,7 +808,7 @@ class OmnisciOnNativeDataframe(PandasDataframe):
         ----------
         other : OmnisciOnNativeDataframe
             A frame to join with.
-        how : str or modin.core.dataframe.base.enums.JoinType, default: JoinType.INNER
+        how : str or modin.core.dataframe.base.utils.JoinType, default: JoinType.INNER
             A type of join.
         left_on : list of str, optional
             A list of columns for the left frame to join on.
@@ -1135,7 +1135,7 @@ class OmnisciOnNativeDataframe(PandasDataframe):
 
         Parameters
         ----------
-        axis : int or modin.core.dataframe.base.enums.Axis
+        axis : int or modin.core.dataframe.base.utils.Axis
             The axis to concatenate along.
         other_modin_frames : list of OmnisciOnNativeDataframe
             Frames to concat.

@@ -30,7 +30,7 @@ from modin.core.storage_formats.pandas.parsers import (
     find_common_type_cat as find_common_type,
 )
 from modin.core.dataframe.base.dataframe.dataframe import ModinDataframe
-from modin.core.dataframe.base.dataframe.enums import Axis, JoinType
+from modin.core.dataframe.base.dataframe.utils import Axis, JoinType
 from modin.pandas.indexing import is_range_like
 from modin.pandas.utils import is_full_grab_slice, check_both_not_none
 
@@ -1372,7 +1372,7 @@ class PandasDataframe(object):
 
         Parameters
         ----------
-        axis : int or modin.core.dataframe.base.enums.Axis
+        axis : int or modin.core.dataframe.base.utils.Axis
             The axis to perform the reduce over.
         function : callable(row|col) -> single value
             The reduce function to apply to each column.
@@ -1410,7 +1410,7 @@ class PandasDataframe(object):
 
         Parameters
         ----------
-        axis : int or modin.core.dataframe.base.enums.Axis
+        axis : int or modin.core.dataframe.base.utils.Axis
             The axis to perform the tree reduce over.
         map_func : callable(row|col) -> row|col
             Callable function to map the dataframe.
@@ -1487,7 +1487,7 @@ class PandasDataframe(object):
 
         Parameters
         ----------
-        axis : int or modin.core.dataframe.base.enums.Axis
+        axis : int or modin.core.dataframe.base.utils.Axis
             The axis to slide over.
         reduce_fn : callable(rowgroup|colgroup) -> row|col
             The reduce function to apply over the data.
@@ -1570,14 +1570,14 @@ class PandasDataframe(object):
 
         Parameters
         ----------
-        axis : int or modin.core.dataframe.base.enums.Axis
+        axis : int or modin.core.dataframe.base.utils.Axis
             The axis to perform the join on.
         condition : callable
             Function that determines which rows should be joined. The condition can be a
             simple equality, e.g. "left.col1 == right.col1" or can be arbitrarily complex.
         other : ModinDataframe
             The other data to join with, i.e. the right dataframe.
-        join_type : string {"inner", "left", "right", "outer"} or modin.core.dataframe.base.enums.JoinType
+        join_type : string {"inner", "left", "right", "outer"} or modin.core.dataframe.base.utils.JoinType
             The type of join to perform.
 
         Returns
@@ -1674,7 +1674,7 @@ class PandasDataframe(object):
 
         Parameters
         ----------
-        axis : int or modin.core.dataframe.base.enums.Axis
+        axis : int or modin.core.dataframe.base.utils.Axis
             The axis to perform the sort over.
         columns : string or list
             Column label(s) to use to determine lexicographical ordering.
@@ -1695,7 +1695,7 @@ class PandasDataframe(object):
 
         Parameters
         ----------
-        axis : int or modin.core.dataframe.base.enums.Axis
+        axis : int or modin.core.dataframe.base.utils.Axis
             The axis to filter over.
         condition : callable(row|col) -> bool
             The function to use for the filter. This function should filter the
@@ -1759,7 +1759,7 @@ class PandasDataframe(object):
 
         Parameters
         ----------
-        axis : int or modin.core.dataframe.base.enums.Axis
+        axis : int or modin.core.dataframe.base.utils.Axis
             The axis specifying how to explode. If axis=1, explode according
             to columns.
         func : callable
@@ -2426,7 +2426,7 @@ class PandasDataframe(object):
 
         Parameters
         ----------
-        axis : int or modin.core.dataframe.base.enums.Axis
+        axis : int or modin.core.dataframe.base.utils.Axis
             Axis to concatenate over.
         others : list
             List of Modin DataFrames to concatenate with.
@@ -2503,7 +2503,7 @@ class PandasDataframe(object):
 
         Parameters
         ----------
-        axis : int or modin.core.dataframe.base.enums.Axis
+        axis : int or modin.core.dataframe.base.utils.Axis
             The axis to apply the grouping over.
         by : string or list of strings
             One or more column labels to use for grouping.
