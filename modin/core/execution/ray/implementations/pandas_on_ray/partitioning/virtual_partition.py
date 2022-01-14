@@ -41,19 +41,22 @@ class PandasOnRayDataframeVirtualPartition(PandasDataframeAxisPartition):
     instance_type = ray.ObjectRef
     axis = None
 
-    def __init__(self, list_of_blocks, get_ip=False, full_axis=True):
+    # TODO: delete get_ip
+    def __init__(self, list_of_blocks, get_ip=False, full_axis=True, call_queue=None):
         if isinstance(list_of_blocks, PandasOnRayDataframePartition):
             list_of_blocks = [list_of_blocks]
         if any(isinstance(o, type(self)) for o in list_of_blocks):
             raise NotImplementedError("Easy case first")
         self.list_of_partitions_to_combine = list_of_blocks
         self.full_axis = full_axis
+        self.call_queue = call_queue or []
 
     @property
     def list_of_blocks(self):
         # Defer draining call queue until we get the partitions
         # TODO Look into draining call queue at the same time as the task
-        self.drain_call_queue()
+        for partition in self.list_of_partitions_to_combine:
+            partition.drain_call_queue()
         return [o.oid for o in self.list_of_partitions_to_combine]
 
     @property
@@ -224,10 +227,14 @@ class PandasOnRayDataframeVirtualPartition(PandasDataframeAxisPartition):
         return self._width_cache
 
     def drain_call_queue(self):
-        # This implementation could be WRONG. I need to debug it.
+        def drain(df):
+            for func, args, kwargs in self.call_queue:
+                df = func(df, *args, **kwargs)
+            return df
 
-        for obj in self.list_of_partitions_to_combine:
-            obj.drain_call_queue()
+        drained = self.apply(drain)
+        self.list_of_partitions_to_combine = drained
+        self.call_queue = []
 
     def add_to_apply_calls(self, func, *args, **kwargs):
         # This implementation seems WRONG. I need to debug it.
@@ -235,20 +242,11 @@ class PandasOnRayDataframeVirtualPartition(PandasDataframeAxisPartition):
         # print(
         #     f"adding function to apply calls. the partitions are: {[type(partition.get()) for partition in self.list_of_partitions_to_combine]}"
         # )
-        print(
-            f"add_to_apply_calls has types: {[type(x) for x in self.list_of_partitions_to_combine]}"
+        return PandasOnRayDataframeVirtualPartition(
+            self.list_of_partitions_to_combine,
+            full_axis=self.full_axis,
+            call_queue=self.call_queue + [(func, args, kwargs)],
         )
-        to_return = [
-            partition.add_to_apply_calls(func, *args, **kwargs)
-            for partition in self.list_of_partitions_to_combine
-        ]
-        # print(
-        #     f"after adding function to apply calls, the partitions are: {[type(partition.get()) for partition in to_return]}"
-        # )
-        print(
-            f"add_to_apply_calls returns types: {[type(x) for x in self.list_of_partitions_to_combine]}"
-        )
-        return PandasOnRayDataframeVirtualPartition(to_return, full_axis=self.full_axis)
 
 
 class PandasOnRayDataframeColumnPartition(PandasOnRayDataframeVirtualPartition):
