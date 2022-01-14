@@ -176,6 +176,8 @@ class PandasOnRayDataframeVirtualPartition(PandasDataframeAxisPartition):
     ):
         if not self.full_axis:
             num_splits = 1
+        if len(self.call_queue) > 0:
+            self.drain_call_queue()
         result = super(PandasOnRayDataframeVirtualPartition, self).apply(
             func, num_splits, other_axis_partition, maintain_partitioning, **kwargs
         )
@@ -232,17 +234,12 @@ class PandasOnRayDataframeVirtualPartition(PandasDataframeAxisPartition):
                 df = func(df, *args, **kwargs)
             return df
 
-        drained = self.apply(drain)
+        drained = super(PandasOnRayDataframeVirtualPartition, self).apply(drain)
         self.list_of_partitions_to_combine = drained
         self.call_queue = []
 
     def add_to_apply_calls(self, func, *args, **kwargs):
-        # This implementation seems WRONG. I need to debug it.
-
-        # print(
-        #     f"adding function to apply calls. the partitions are: {[type(partition.get()) for partition in self.list_of_partitions_to_combine]}"
-        # )
-        return PandasOnRayDataframeVirtualPartition(
+        return type(self)(
             self.list_of_partitions_to_combine,
             full_axis=self.full_axis,
             call_queue=self.call_queue + [(func, args, kwargs)],

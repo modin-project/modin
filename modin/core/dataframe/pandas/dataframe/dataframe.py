@@ -2266,7 +2266,8 @@ class PandasDataframe(object):
             for axis in [0, 1]:
                 ErrorMessage.catch_bugs_and_request_email(
                     not df.axes[axis].equals(self.axes[axis]),
-                    f"Internal and external indices on axis {axis} do not match.",
+                    f"Internal and external indices on axis {axis} do not match."
+                    +f"{df.axes[axis]}\ncompared with\n{self.axes[axis]}",
                 )
             df.index = self.index
             df.columns = self.columns
