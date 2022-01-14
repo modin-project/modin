@@ -94,7 +94,6 @@ class GroupBy:
         return inplace_applyier
 
     @classmethod
-    # FIXME: `grp` parameter is redundant and should be removed
     def get_func(cls, key, **kwargs):
         """
         Extract aggregation function from groupby arguments.
@@ -539,3 +538,35 @@ class GroupByDefault(DefaultMethod):
             aggregation.
         """
         return cls.call(GroupBy.build_groupby(func), fn_name=func.__name__, **kwargs)
+
+    # This specifies a `pandas.DataFrameGroupBy` method to pass the `agg_func` to,
+    # it's based on `how` to apply it. Going by pandas documentation:
+    #   1. `.aggregate(func)` applies func row/column wise.
+    #   2. `.apply(func)` applies func to a DataFrames, holding a whole group (group-wise).
+    #   3. `.transform(func)` is the same as `.apply()` but also broadcast the `func`
+    #      result to the group's original shape.
+    __aggregation_methods_dict = {
+        "axis_wise": pandas.core.groupby.DataFrameGroupBy.aggregate,
+        "group_wise": pandas.core.groupby.DataFrameGroupBy.apply,
+        "transform": pandas.core.groupby.DataFrameGroupBy.transform,
+    }
+
+    @classmethod
+    def get_aggregation_method(cls, how):
+        """
+        Return `pandas.DataFrameGroupBy` method that implements the passed `how` UDF applying strategy.
+
+        Parameters
+        ----------
+        how : {"axis_wise", "group_wise", "transform"}
+            `how` parameter of the ``BaseQueryCompiler.groupby_agg``.
+
+        Returns
+        -------
+        callable(pandas.DataFrameGroupBy, callable, *args, **kwargs) -> [pandas.DataFrame | pandas.Series]
+
+        Notes
+        -----
+        Visit ``BaseQueryCompiler.groupby_agg`` doc-string for more information about `how` parameter.
+        """
+        return cls.__aggregation_methods_dict[how]

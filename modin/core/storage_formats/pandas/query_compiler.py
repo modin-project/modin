@@ -51,7 +51,7 @@ from modin.core.dataframe.algebra import (
     GroupByReduce,
     groupby_reduce_functions,
 )
-from modin.core.dataframe.algebra.default2pandas.groupby import GroupBy
+from modin.core.dataframe.algebra.default2pandas.groupby import GroupBy, GroupByDefault
 
 
 def _get_axis(axis):
@@ -2599,8 +2599,8 @@ class PandasQueryCompiler(BaseQueryCompiler):
             # passing 'group_wise' will make the function be applied to the 'by' columns as well,
             # this is exactly what we want when 'as_index=False'
             how="axis_wise" if groupby_kwargs.get("as_index", True) else "group_wise",
-            agg_args=tuple(),
-            agg_kwargs=dict(),
+            agg_args=agg_args,
+            agg_kwargs=agg_kwargs,
             groupby_kwargs=groupby_kwargs,
             drop=drop,
         )
@@ -2642,21 +2642,15 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 by, agg_func, axis, groupby_kwargs, agg_args, agg_kwargs, drop
             )
 
-        method_dict = {
-            "axis_wise": "aggregate",
-            "group_wise": "apply",
-            "transform": "transform",
-        }
-        method = method_dict[how]
-
         if isinstance(agg_func, dict):
             assert (
                 how == "axis_wise"
             ), f"Only 'axis_wise' aggregation is supported with dictionary functions, got: {how}"
         else:
             grp_agg_func = agg_func
-            agg_func = lambda grp, *args, **kwargs: getattr(grp, method)(  # noqa: E731
-                grp_agg_func, *args, **kwargs
+            method = GroupByDefault.get_aggregation_method(how)
+            agg_func = lambda grp, *args, **kwargs: method(  # noqa: E731
+                grp, grp_agg_func, *args, **kwargs
             )
 
         # since we're going to modify `groupby_kwargs` dict in a `groupby_agg_builder`,

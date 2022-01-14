@@ -2389,16 +2389,7 @@ class BaseQueryCompiler(abc.ABC):
         elif drop and isinstance(by, type(self)):
             by = list(by.columns)
 
-        method_dict = {
-            "axis_wise": "aggregate",
-            "group_wise": "apply",
-            "transform": "transform",
-        }
-        method = method_dict[how]
-
-        return GroupByDefault.register(
-            getattr(pandas.core.groupby.DataFrameGroupBy, method)
-        )(
+        return GroupByDefault.register(GroupByDefault.get_aggregation_method(how))(
             self,
             by=by,
             agg_func=agg_func,
