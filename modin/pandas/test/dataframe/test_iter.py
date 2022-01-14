@@ -30,6 +30,7 @@ from modin.pandas.test.utils import (
     test_data,
 )
 from modin.config import NPartitions
+from modin.test.test_utils import warns_that_defaulting_to_pandas
 
 NPartitions.put(4)
 
@@ -137,7 +138,7 @@ def test__options_display():
 
 def test___finalize__():
     data = test_data_values[0]
-    with pytest.warns(UserWarning):
+    with warns_that_defaulting_to_pandas():
         pd.DataFrame(data).__finalize__(None)
 
 
@@ -225,7 +226,8 @@ def test___repr__():
 "2016-08-26 09:00:16.413",5,60.193055,24.767427,5,"WALKING",85,"ON_BICYCLE",15,"UNKNOWN",0
 "2016-08-26 09:00:20.578",3,60.152996,24.745216,3.90000009536743,"STILL",69,"IN_VEHICLE",31,"UNKNOWN",0"""
     pandas_df = pandas.read_csv(io.StringIO(string_data))
-    modin_df = pd.read_csv(io.StringIO(string_data))
+    with warns_that_defaulting_to_pandas():
+        modin_df = pd.read_csv(io.StringIO(string_data))
     assert repr(pandas_df) == repr(modin_df)
 
 
