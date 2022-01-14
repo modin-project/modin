@@ -389,7 +389,7 @@ class ModinDataframe(ABC):
         others: Union["ModinDataframe", List["ModinDataframe"]],
     ) -> "ModinDataframe":
         """
-        Append along the specified axis from multiple dataframes.
+        Append rows/columns along the specified axis from multiple dataframes.
 
         Parameters
         ----------
