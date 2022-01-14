@@ -45,9 +45,46 @@ class PandasOnRayDataframeVirtualPartition(PandasDataframeAxisPartition):
     def __init__(self, list_of_blocks, get_ip=False, full_axis=True, call_queue=None):
         if isinstance(list_of_blocks, PandasOnRayDataframePartition):
             list_of_blocks = [list_of_blocks]
-        if any(isinstance(o, type(self)) for o in list_of_blocks):
-            raise NotImplementedError("Easy case first")
-        self.list_of_partitions_to_combine = list_of_blocks
+        if any(
+            isinstance(o, PandasOnRayDataframeVirtualPartition) for o in list_of_blocks
+        ):
+            # Check that all axis are the same in `list_of_blocks`
+            assert (
+                len(
+                    set(
+                        o.axis
+                        for o in list_of_blocks
+                        if isinstance(o, PandasOnRayDataframeVirtualPartition)
+                    )
+                )
+                == 1
+            )
+            # When the axis of all virtual partitions matches this axis, extend and combine the lists of
+            # physical partitions
+            if (
+                next(
+                    o
+                    for o in list_of_blocks
+                    if isinstance(o, PandasOnRayDataframeVirtualPartition)
+                ).axis
+                == self.axis
+            ):
+                new_list_of_blocks = []
+                for o in list_of_blocks:
+                    new_list_of_blocks.extend(o.list_of_blocks) if isinstance(
+                        o, PandasOnRayDataframeVirtualPartition
+                    ) else new_list_of_blocks.append(o)
+                self.list_of_partitions_to_combine = new_list_of_blocks
+            # Materialize partitions if the axis of this virtual does not match the virtual partitions
+            else:
+                self.list_of_partitions_to_combine = [
+                    obj.force_materialization().list_of_partitions_to_combine[0]
+                    if isinstance(obj, PandasOnRayDataframeVirtualPartition)
+                    else obj
+                    for obj in list_of_blocks
+                ]
+        else:
+            self.list_of_partitions_to_combine = list_of_blocks
         self.full_axis = full_axis
         self.call_queue = call_queue or []
 
