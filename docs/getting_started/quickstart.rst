@@ -22,7 +22,7 @@ Getting Started
         Introduction to Modin.
 
 Quick Start Guide
-------------------
+-----------------
 
 To install the most recent stable release for Modin run the following:
 
@@ -40,7 +40,7 @@ Modin acts as a drop-in replacement for pandas so you simply have to replace the
   import modin.pandas as pd
 
 Example: Instant Scalability with No Extra Effort
---------------------------------------------------
+-------------------------------------------------
 
 When working on large datasets, pandas becomes painfully slow or :doc:`runs out of memory</getting_started/why_modin/out_of_core>`. Modin automatically scales up your pandas workflows by parallelizing the dataframe operations, so that you can more effectively leverage the compute resources available.
 
@@ -69,7 +69,7 @@ In this toy example, we look at the NYC taxi dataset, which is around 120MB in s
   urllib.request.urlretrieve(s3_path, "taxi.csv")  
 
 Faster Data Loading with ``read_csv``
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. code-block:: python
    
@@ -126,7 +126,7 @@ Modin speeds up the ``concat`` operation by more than 60X, taking less than a se
 
 
 Faster ``apply`` over a single column
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 The performance benefits of Modin becomes aparent when we operate on large gigabyte-scale datasets. For example, let's say that we want to round up the number across a single column via the ``apply`` operation. 
 

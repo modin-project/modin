@@ -1,7 +1,7 @@
 Examples and Resources 
 ========================
 
-The earlier sections have covered the basics of using Modin to speed up your pandas workflow. Here you can find additional resources to learn about Modin. To learn more about advanced usage for Modin, please refer to :doc:`this section </advanced_usage/index>`.
+Here you can find additional resources to learn about Modin. To learn more about advanced usage for Modin, please refer to :doc:`this section </advanced_usage/index>`.
 
 Usage Examples
 ---------------
@@ -18,16 +18,16 @@ Tutorials
 
 The following tutorials cover the basic usage of Modin. `Here <https://www.youtube.com/watch?v=NglkafEmbhE>`_ is a one hour video tutorial that walks through these basic exercises.
 
-- Exercise 1: Introduction to Modin [`Source <https://github.com/modin-project/modin/blob/master/examples/tutorial/tutorial_Sources/introduction/exercise_1.ipynb>`_]
-- Exercise 2: Speed Improvements with Modin [`Source <https://github.com/modin-project/modin/blob/master/examples/tutorial/tutorial_Sources/introduction/exercise_2.ipynb>`_]
-- Exercise 3: Defaulting to pandas with Modin [`Source <https://github.com/modin-project/modin/blob/master/examples/tutorial/tutorial_Sources/introduction/exercise_3.ipynb>`_]
+- Exercise 1: Introduction to Modin [`Source <https://github.com/modin-project/modin/blob/master/examples/tutorial/tutorial_notebooks/introduction/exercise_1.ipynb>`_]
+- Exercise 2: Speed Improvements with Modin [`Source <https://github.com/modin-project/modin/blob/master/examples/tutorial/tutorial_notebooks/introduction/exercise_2.ipynb>`_]
+- Exercise 3: Defaulting to pandas with Modin [`Source <https://github.com/modin-project/modin/blob/master/examples/tutorial/tutorial_notebooks/introduction/exercise_3.ipynb>`_]
 
 
 The following tutorials covers more advanced features in Modin: 
 
-- Exercise 4: Experimental Features in Modin (Spreadsheet, Progress Bar) [`Source <https://github.com/modin-project/modin/blob/721d2d2fe2a46d3b7442e1ab2c7b70ad3bff0712/examples/tutorial/tutorial_Sources/introduction/exercise_4.ipynb>`_]
-- Exercise 5: Setting up Modin in a Cluster Environment [`Source <https://github.com/modin-project/modin/blob/721d2d2fe2a46d3b7442e1ab2c7b70ad3bff0712/examples/tutorial/tutorial_Sources/cluster/exercise_5.ipynb>`_]
-- Exercise 6: Running Modin in a Cluster Environment [`Source <https://github.com/modin-project/modin/blob/721d2d2fe2a46d3b7442e1ab2c7b70ad3bff0712/examples/tutorial/tutorial_Sources/cluster/exercise_6.ipynb>`_]
+- Exercise 4: Experimental Features in Modin (Spreadsheet, Progress Bar) [`Source <https://github.com/modin-project/modin/blob/721d2d2fe2a46d3b7442e1ab2c7b70ad3bff0712/examples/tutorial/tutorial_notebooks/introduction/exercise_4.ipynb>`_]
+- Exercise 5: Setting up Modin in a Cluster Environment [`Source <https://github.com/modin-project/modin/blob/721d2d2fe2a46d3b7442e1ab2c7b70ad3bff0712/examples/tutorial/tutorial_notebooks/cluster/exercise_5.ipynb>`_]
+- Exercise 6: Running Modin in a Cluster Environment [`Source <https://github.com/modin-project/modin/blob/721d2d2fe2a46d3b7442e1ab2c7b70ad3bff0712/examples/tutorial/tutorial_notebooks/cluster/exercise_6.ipynb>`_]
 
 Talks & Podcasts
 -----------------
