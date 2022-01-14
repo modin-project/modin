@@ -19,34 +19,7 @@ ModinDataframe is a parent abstract class for any dataframe class.
 
 from abc import ABC, abstractmethod
 from typing import List, Hashable, Optional, Callable, Union, Dict
-from enum import Enum
-
-
-class Axis(Enum):  # noqa: PR01
-    """
-    An enum that represents the `axis` argument provided to the algebra operators.
-
-    The enum has 3 values - ROW_WISE to represent the row axis, COL_WISE to represent the
-    column axis, and CELL_WISE to represent no axis. ROW_WISE operations iterate over the rows
-    COL_WISE operations over the columns, and CELL_WISE operations over any partitioning scheme.
-    """
-
-    ROW_WISE = 0
-    COL_WISE = 1
-    CELL_WISE = None
-
-
-class JoinType(Enum):  # noqa: PR01
-    """
-    An enum that represents the `join_type` argument provided to the algebra operators.
-
-    The enum has 4 values - INNER to represent inner joins, LEFT to represent left joins, RIGHT to represent right joins, and OUTER to represent outer joins.
-    """
-
-    INNER = "inner"
-    LEFT = "left"
-    RIGHT = "right"
-    OUTER = "outer"
+from modin.core.dataframe.base.dataframe.enums import Axis, JoinType
 
 
 class ModinDataframe(ABC):
@@ -128,7 +101,7 @@ class ModinDataframe(ABC):
         ----------
         function : callable(row|col|cell) -> row|col|cell
             The function to map across the dataframe.
-        axis : int or modin.core.dataframe.base.dataframe.Axis, optional
+        axis : int or modin.core.dataframe.base.enums.Axis, optional
             The axis to map over.
         dtypes : str, optional
             The data types for the result. This is an optimization
@@ -153,7 +126,7 @@ class ModinDataframe(ABC):
 
         Parameters
         ----------
-        axis : int or modin.core.dataframe.base.dataframe.Axis
+        axis : int or modin.core.dataframe.base.enums.Axis
             The axis to filter over.
         condition : callable(row|col) -> bool
             The function to use for the filter. This function should filter the
@@ -179,7 +152,7 @@ class ModinDataframe(ABC):
 
         Parameters
         ----------
-        axis : int or modin.core.dataframe.base.dataframe.Axis
+        axis : int or modin.core.dataframe.base.enums.Axis
             The axis to expand over.
         function : callable
             The function to use to expand the data. This function should accept one
@@ -214,7 +187,7 @@ class ModinDataframe(ABC):
 
         Parameters
         ----------
-        axis : int or modin.core.dataframe.base.dataframe.Axis
+        axis : int or modin.core.dataframe.base.enums.Axis
             The axis to slide over.
         reduce_fn : callable(rowgroup|colgroup) -> row|col
             The reduce function to apply over the data.
@@ -250,7 +223,7 @@ class ModinDataframe(ABC):
 
         Parameters
         ----------
-        axis : int or modin.core.dataframe.base.dataframe.Axis
+        axis : int or modin.core.dataframe.base.enums.Axis
             The axis to apply the grouping over.
         by : string or list of strings
             One or more column labels to use for grouping.
@@ -292,7 +265,7 @@ class ModinDataframe(ABC):
 
         Parameters
         ----------
-        axis : int or modin.core.dataframe.base.dataframe.Axis
+        axis : int or modin.core.dataframe.base.enums.Axis
             The axis to perform the reduce over.
         function : callable(row|col) -> single value
             The reduce function to apply to each column.
@@ -329,7 +302,7 @@ class ModinDataframe(ABC):
 
         Parameters
         ----------
-        axis : int or modin.core.dataframe.base.dataframe.Axis
+        axis : int or modin.core.dataframe.base.enums.Axis
             The axis to perform the tree reduce over.
         map_func : callable(row|col) -> row|col|single value
             The map function to apply to each column.
@@ -383,14 +356,14 @@ class ModinDataframe(ABC):
 
         Parameters
         ----------
-        axis : int or modin.core.dataframe.base.dataframe.Axis
+        axis : int or modin.core.dataframe.base.enums.Axis
             The axis to perform the join on.
         condition : callable
             Function that determines which rows should be joined. The condition can be a
             simple equality, e.g. "left.col1 == right.col1" or can be arbitrarily complex.
         other : ModinDataframe
             The other data to join with, i.e. the right dataframe.
-        join_type : string  {"inner", "left", "right", "outer"} or modin.core.dataframe.base.dataframe.JoinType
+        join_type : string  {"inner", "left", "right", "outer"} or modin.core.dataframe.base.enums.JoinType
             The type of join to perform.
 
         Returns
@@ -420,7 +393,7 @@ class ModinDataframe(ABC):
 
         Parameters
         ----------
-        axis : int or modin.core.dataframe.base.dataframe.Axis
+        axis : int or modin.core.dataframe.base.enums.Axis
             The axis on which to perform the concatenation.
         others : ModinDataframe or list of ModinDataframes
             The other ModinDataframe(s) to concatenate.
@@ -537,7 +510,7 @@ class ModinDataframe(ABC):
 
         Parameters
         ----------
-        axis : int or modin.core.dataframe.base.dataframe.Axis
+        axis : int or modin.core.dataframe.base.enums.Axis
             The axis to perform the sort over.
         labels : string or list of strings
             Column (row if axis=1) label(s) to use to determine lexicographical ordering. If multiple
