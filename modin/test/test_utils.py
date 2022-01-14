@@ -238,3 +238,16 @@ def test_format_string():
         new_line_placeholder5=multiline_value,
     )
     assert answer == expected
+
+
+def warns_that_defaulting_to_pandas():
+    """
+    Assert that code warns that it's defaulting to pandas.
+
+    Returns
+    -------
+    pytest.recwarn.WarningsChecker
+        A WarningsChecker checking for a UserWarning saying that Modin is
+        defaulting to Pandas.
+    """
+    return pytest.warns(UserWarning, match="defaulting to pandas")

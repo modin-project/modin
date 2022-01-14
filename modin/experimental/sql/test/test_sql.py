@@ -12,6 +12,7 @@
 # governing permissions and limitations under the License.
 
 import modin.pandas as pd
+from modin.test.test_utils import warns_that_defaulting_to_pandas
 import io
 
 titanic_snippet = """passenger_id,survived,p_class,name,sex,age,sib_sp,parch,ticket,fare,cabin,embarked
@@ -30,9 +31,12 @@ titanic_snippet = """passenger_id,survived,p_class,name,sex,age,sib_sp,parch,tic
 def test_sql_query():
     from modin.experimental.sql import query
 
-    df = pd.read_csv(io.StringIO(titanic_snippet))
+    # Modin can't read_csv from a buffer.
+    with warns_that_defaulting_to_pandas():
+        df = pd.read_csv(io.StringIO(titanic_snippet))
     sql = "SELECT survived, p_class, count(passenger_id) as count FROM (SELECT * FROM titanic WHERE survived = 1) as t1 GROUP BY survived, p_class"
-    query_result = query(sql, titanic=df)
+    with warns_that_defaulting_to_pandas():
+        query_result = query(sql, titanic=df)
     expected_df = (
         df[df.survived == 1]
         .groupby(["survived", "p_class"])
@@ -48,12 +52,16 @@ def test_sql_query():
 def test_sql_extension():
     import modin.experimental.sql  # noqa: F401
 
-    df = pd.read_csv(io.StringIO(titanic_snippet))
+    # Modin can't read_csv from a buffer.
+    with warns_that_defaulting_to_pandas():
+        df = pd.read_csv(io.StringIO(titanic_snippet))
 
     expected_df = df[df["survived"] == 1][["passenger_id", "survived"]]
 
     sql = "SELECT passenger_id, survived WHERE survived = 1"
-    query_result = df.sql(sql)
+    # DataFrame.convert_dtypes defaults to pandas.
+    with warns_that_defaulting_to_pandas():
+        query_result = df.sql(sql)
     assert list(query_result.columns) == ["passenger_id", "survived"]
     values_left = expected_df.values
     values_right = query_result.values
