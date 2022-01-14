@@ -126,7 +126,9 @@ def align_datetime_dtypes(*dfs):
         if len(datetime_cols):
             pandas_df = pandas_df.astype(datetime_cols)
         if len(time_cols):
-            pandas_df = pandas_df[time_cols].applymap(convert_to_time)
+            pandas_df[list(time_cols)] = pandas_df[list(time_cols)].applymap(
+                convert_to_time
+            )
         casted_dfs.append(pandas_df)
 
     return casted_dfs
