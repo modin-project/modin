@@ -8,7 +8,7 @@ In this section, we explain the design and motivation behind Modin and why you s
     
     pandas
     out_of_core
-    dask
+    modin_vs_dask_vs_koalas
 
 Modin is built on many years of research and development at UC Berkeley. For more information on how this works underneath the hoods, check out our publications in this space:
 
