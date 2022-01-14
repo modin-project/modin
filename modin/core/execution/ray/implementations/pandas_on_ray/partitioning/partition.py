@@ -53,6 +53,9 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
     def __init__(self, object_id, length=None, width=None, ip=None, call_queue=None):
         assert isinstance(object_id, ObjectIDType)
 
+        print(
+            f"creating a PandasOnRayDataframePartition of length {length} and width {width} and call_queue {call_queue}"
+        )
         self.oid = object_id
         if call_queue is None:
             call_queue = []

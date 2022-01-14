@@ -381,8 +381,12 @@ class PandasDataframe(object):
         elif axis == 0:
 
             def apply_idx_objs(df, idx):
+                print(f"trying to set axis of df {df} to idx {idx}")
                 return df.set_axis(idx, axis="index", inplace=False)
 
+            print(
+                f"synchronize_labels synchronizing labels of self.partitions: {[[(partition.length(), partition.width()) for partition in row] for row in self._partitions]} with cum_row_lengths: {cum_row_lengths}"
+            )
             self._partitions = np.array(
                 [
                     [

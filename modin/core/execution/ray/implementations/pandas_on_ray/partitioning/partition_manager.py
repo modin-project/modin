@@ -149,9 +149,9 @@ class PandasOnRayDataframePartitionManager(GenericRayDataframePartitionManager):
         from modin.config import NPartitions
 
         heuristic = 1.5  # partitions can be 1.5x larger than ideal. Can be modified.
-        print(
-            f"partitions before rebalance: { [[obj._length_cache for obj in row] for row in partitions]}"
-        )
+        # print(
+        #     f"partitions before rebalance: { [[obj.get()._length_cache for obj in row] for row in partitions]}"
+        # )
         if partitions.shape[0] > NPartitions.get() * heuristic:
             lengths = [[obj._length_cache for obj in row] for row in partitions]
             if partitions.shape[0] % NPartitions.get() == 0:
@@ -180,6 +180,9 @@ class PandasOnRayDataframePartitionManager(GenericRayDataframePartitionManager):
                 result_partitions = []
                 start = 0
                 stop = 0
+                print(
+                    f"the types of the objects in lengths: {[[type(obj) for obj in row] for row in lengths]}"
+                )
                 total_rows = sum(row[0] for row in lengths)
                 print("rebalance according to lengths!")
                 if total_rows % NPartitions.get() == 0:
