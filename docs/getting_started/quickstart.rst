@@ -30,9 +30,11 @@ To install the most recent stable release for Modin run the following:
 
   pip install modin[all] 
 
-For further instructions on how to install Modin with conda or for specific platforms or engines, see our detailed `installation guide <../getting_started/installation.html>`_.
+For further instructions on how to install Modin with conda or for specific platforms 
+or engines, see our detailed `installation guide <../getting_started/installation.html>`_.
 
-Modin acts as a drop-in replacement for pandas so you simply have to replace the import of pandas with the import of Modin as follows to speed up your pandas workflows:
+Modin acts as a drop-in replacement for pandas so you simply have to replace the import 
+of pandas with the import of Modin as follows to speed up your pandas workflows:
 
 .. code-block:: bash
 
@@ -42,9 +44,12 @@ Modin acts as a drop-in replacement for pandas so you simply have to replace the
 Example: Instant Scalability with No Extra Effort
 -------------------------------------------------
 
-When working on large datasets, pandas becomes painfully slow or :doc:`runs out of memory</getting_started/why_modin/out_of_core>`. Modin automatically scales up your pandas workflows by parallelizing the dataframe operations, so that you can more effectively leverage the compute resources available.
+When working on large datasets, pandas becomes painfully slow or :doc:`runs out of memory</getting_started/why_modin/out_of_core>`. Modin automatically scales up your 
+pandas workflows by parallelizing the dataframe operations, so that you can more 
+effectively leverage the compute resources available.
 
-For the purpose of demonstration, we will load in modin as ``pd`` and pandas as ``pandas``.
+For the purpose of demonstration, we will load in modin as ``pd`` and pandas as 
+``pandas``.
 
 .. code-block:: python
 
@@ -81,7 +86,8 @@ Faster Data Loading with ``read_csv``
   pandas_duration = end - start
   print("Time to read with pandas: {} seconds".format(round(pandas_duration, 3)))
 
-By running the same command ``read_csv`` with Modin, we generally get around 4X speedup for loading in the data in parallel. 
+By running the same command ``read_csv`` with Modin, we generally get around 4X speedup 
+for loading in the data in parallel. 
 
 .. code-block:: python
 
@@ -98,7 +104,9 @@ By running the same command ``read_csv`` with Modin, we generally get around 4X 
 Faster ``concat`` across multiple dataframes
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Our previous ``read_csv`` example operated on a relatively small dataframe. In the following example, we duplicate the same taxi dataset 100 times and then concatenate them together, resulting in a dataset around 19GB in size.
+Our previous ``read_csv`` example operated on a relatively small dataframe. In the 
+following example, we duplicate the same taxi dataset 100 times and then concatenate 
+them together, resulting in a dataset around 19GB in size.
 
 .. code-block:: python
 
@@ -122,13 +130,16 @@ Our previous ``read_csv`` example operated on a relatively small dataframe. In t
 
   print("Modin is {}x faster than pandas at `concat`!".format(round(pandas_duration / modin_duration, 2)))
 
-Modin speeds up the ``concat`` operation by more than 60X, taking less than a second to create the large dataframe, while pandas took close to a minute.
+Modin speeds up the ``concat`` operation by more than 60X, taking less than a second to 
+create the large dataframe, while pandas took close to a minute.
 
 
 Faster ``apply`` over a single column
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-The performance benefits of Modin becomes aparent when we operate on large gigabyte-scale datasets. For example, let's say that we want to round up the number across a single column via the ``apply`` operation. 
+The performance benefits of Modin becomes aparent when we operate on large 
+gigabyte-scale datasets. For example, let's say that we want to round up the number 
+across a single column via the ``apply`` operation. 
 
 .. code-block:: python
 
@@ -151,11 +162,19 @@ The performance benefits of Modin becomes aparent when we operate on large gigab
 
   print("Modin is {}x faster than pandas at `apply` on one column!".format(round(pandas_duration / modin_duration, 2)))
 
-Modin is more than 30X faster at applying a single column of data, operating on 130+ million rows in a second.
+Modin is more than 30X faster at applying a single column of data, operating on 130+ 
+million rows in a second.
 
 Summary
 -------
 
-Hopefully, this tutorial demonstrated how Modin delivers significant speedup on pandas operations without the need for any extra effort. Throughout example, we moved from working with 100MBs of data to 20GBs of data all without having to change anything or manually optimize our code to achieve the level of scalable performance that Modin provides.
+Hopefully, this tutorial demonstrated how Modin delivers significant speedup on pandas 
+operations without the need for any extra effort. Throughout example, we moved from 
+working with 100MBs of data to 20GBs of data all without having to change anything or 
+manually optimize our code to achieve the level of scalable performance that Modin 
+provides.
 
-Note that in this quickstart example, we've only shown ``read_csv``, ``concat``, ``apply``, but these are not the only pandas operations that Modin optimizes for. In fact, Modin covers `more than 90\% of the pandas API <https://github.com/modin-project/modin/blob/master/README.md#pandas-api-coverage>`_, yielding considerable speedups for many common operations.
+Note that in this quickstart example, we've only shown ``read_csv``, ``concat``, 
+``apply``, but these are not the only pandas operations that Modin optimizes for. In 
+fact, Modin covers `more than 90\% of the pandas API <https://github.com/modin-project/modin/blob/master/README.md#pandas-api-coverage>`_, yielding considerable speedups for 
+many common operations.

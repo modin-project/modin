@@ -7,11 +7,10 @@ Using Modin Locally
 
 ..   | You can follow along this tutorial in a Jupyter notebook `here <hhttps://github.com/modin-project/modin/tree/master/examples/tutorial/tutorial_notebooks/introduction/quickstart.  ipynb>`. 
 
-In our quickstart example, we have already seen how you can achieve considerable speedup from Modin, even on a single machine. 
-Users do not need to know how many cores their system has, nor do
-they need to specify how to distribute the data. In fact, users can **continue using their
-existing pandas code** while experiencing a considerable speedup from Modin, even on
-a single machine. 
+In our quickstart example, we have already seen how you can achieve considerable 
+speedup from Modin, even on a single machine. Users do not need to know how many cores their system has, nor do they need to specify how to distribute the data. In fact, 
+users can **continue using their existing pandas code** while experiencing a 
+considerable speedup from Modin, even on a single machine. 
 
 To use Modin on a single machine, only a modification of the import statement is needed. Once you've changed your import statement, you're ready to use Modin
 just like you would pandas, since the API is identical to pandas.
@@ -26,7 +25,11 @@ just like you would pandas, since the API is identical to pandas.
 Optional Configurations
 -------------------------
 
-When using Modin locally on a single machine or laptop (without a cluster), Modin will automatically create and manage a local Dask or Ray cluster for the executing your code. So when you run an operation for the first time with Modin, you will see a message like this, indicating that a Modin has automatically initialized a local cluster for you:
+When using Modin locally on a single machine or laptop (without a cluster), Modin will 
+automatically create and manage a local Dask or Ray cluster for the executing your 
+code. So when you run an operation for the first time with Modin, you will see a 
+message like this, indicating that a Modin has automatically initialized a local 
+cluster for you:
 
 .. code-block:: python
 
@@ -40,7 +43,8 @@ When using Modin locally on a single machine or laptop (without a cluster), Modi
     import ray
     ray.init()
 
- If you prefer to use Dask over Ray as your execution backend, you can use the following code to modify the default configuration:
+ If you prefer to use Dask over Ray as your execution backend, you can use the 
+ following code to modify the default configuration:
 
 .. code-block:: python
 
@@ -61,12 +65,17 @@ When using Modin locally on a single machine or laptop (without a cluster), Modi
 
       client = Client()
 
-Finally, if you already have an Ray or Dask engine initialized, Modin will automatically attach to whichever engine is available. If you are interested in using Modin with OmniSci engine, please refer to :doc:`these instructions </developer/using_omnisci>`. For additional information on other settings you can configure, see :doc:`this page </flow/modin/config>` for more details.
+Finally, if you already have an Ray or Dask engine initialized, Modin will 
+automatically attach to whichever engine is available. If you are interested in using 
+Modin with OmniSci engine, please refer to :doc:`these instructions </developer/using_omnisci>`. For additional information on other settings you can configure, see 
+:doc:`this page </flow/modin/config>` for more details.
 
 Advanced: Configuring the resources Modin uses
 -----------------------------------------------
 
-Modin automatically check the number of CPUs available on your machine and sets the number of partitions to be equal to the number of CPUs. You can verify this by running the following code:
+Modin automatically check the number of CPUs available on your machine and sets the 
+number of partitions to be equal to the number of CPUs. You can verify this by running 
+the following code:
 
 .. code-block:: python
 
@@ -75,9 +84,10 @@ Modin automatically check the number of CPUs available on your machine and sets 
 
 Modin fully utilizes the resources on your machine. To read more about how this works, see :doc:`this page</getting_started/why_modin/pandas/>` for more details.
 
-Since Modin will use all of the resources available on your machine by default, at times, it is possible that you may like to limit the amount of resources Modin uses to free resources for
-another task or user. Here is how you would limit the number of CPUs Modin used in
-your bash environment variables:
+Since Modin will use all of the resources available on your machine by default, at 
+times, it is possible that you may like to limit the amount of resources Modin uses to 
+free resources for another task or user. Here is how you would limit the number of CPUs 
+Modin used in your bash environment variables:
 
 .. code-block:: bash
 

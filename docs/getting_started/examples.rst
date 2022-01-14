@@ -1,7 +1,8 @@
 Examples and Resources 
 ========================
 
-Here you can find additional resources to learn about Modin. To learn more about advanced usage for Modin, please refer to :doc:`this section </advanced_usage/index>`.
+Here you can find additional resources to learn about Modin. To learn more about 
+advanced usage for Modin, please refer to :doc:`this section </advanced_usage/index>`.
 
 Usage Examples
 ---------------
