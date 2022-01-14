@@ -643,12 +643,6 @@ class PandasDataframePartitionManager(ABC):
         pandas.DataFrame
             A pandas DataFrame
         """
-        # print(
-        #     f"types of the retrieved objects: {[[type(obj) for obj in part] for part in partitions]}"
-        # )
-        # print(
-        #     f"the retrieved objects: {[[obj for obj in part] for part in partitions]}"
-        # )
         retrieved_objects = [[obj.to_pandas() for obj in part] for part in partitions]
         if all(
             isinstance(part, pandas.Series) for row in retrieved_objects for part in row

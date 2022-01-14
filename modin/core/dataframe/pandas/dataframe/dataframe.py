@@ -378,12 +378,8 @@ class PandasDataframe(object):
         elif axis == 0:
 
             def apply_idx_objs(df, idx):
-                print(f"trying to set axis of df {df} to idx {idx}")
                 return df.set_axis(idx, axis="index", inplace=False)
 
-            print(
-                f"synchronize_labels synchronizing labels of self.partitions: {[[(partition.length(), partition.width()) for partition in row] for row in self._partitions]} with cum_row_lengths: {cum_row_lengths}"
-            )
             self._partitions = np.array(
                 [
                     [
@@ -2263,8 +2259,7 @@ class PandasDataframe(object):
             for axis in [0, 1]:
                 ErrorMessage.catch_bugs_and_request_email(
                     not df.axes[axis].equals(self.axes[axis]),
-                    f"Internal and external indices on axis {axis} do not match."
-                    + f"{df.axes[axis]}\ncompared with\n{self.axes[axis]}",
+                    f"Internal and external indices on axis {axis} do not match.",
                 )
             df.index = self.index
             df.columns = self.columns

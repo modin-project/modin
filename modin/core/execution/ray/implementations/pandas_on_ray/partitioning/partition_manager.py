@@ -149,9 +149,6 @@ class PandasOnRayDataframePartitionManager(GenericRayDataframePartitionManager):
         from modin.config import NPartitions
 
         heuristic = 1.5  # partitions can be 1.5x larger than ideal. Can be modified.
-        # print(
-        #     f"partitions before rebalance: { [[obj.get()._length_cache for obj in row] for row in partitions]}"
-        # )
         if partitions.shape[0] > NPartitions.get() * heuristic:
             lengths = [[obj._length_cache for obj in row] for row in partitions]
             if partitions.shape[0] % NPartitions.get() == 0:
@@ -180,11 +177,7 @@ class PandasOnRayDataframePartitionManager(GenericRayDataframePartitionManager):
                 result_partitions = []
                 start = 0
                 stop = 0
-                # print(
-                #     f"the types of the objects in lengths: {[[type(obj) for obj in row] for row in lengths]}"
-                # )
                 total_rows = sum(row[0] for row in lengths)
-                # print("rebalance according to lengths!")
                 if total_rows % NPartitions.get() == 0:
                     ideal_partition_size = total_rows // NPartitions.get()
                 else:
@@ -203,21 +196,10 @@ class PandasOnRayDataframePartitionManager(GenericRayDataframePartitionManager):
                             partition_size = (
                                 partition_size + partitions[stop][0]._length_cache
                             )
-                    # print(
-                    #     f"built partition {i} with size {partition_size} and start {start} and stop {stop}"
-                    # )
                     if partition_size > ideal_partition_size * heuristic:
-                        # print(
-                        #     f"partition {i} is too large. split the last partition in it"
-                        # )
                         correct_partition_size = ideal_partition_size - sum(
                             row[0]._length_cache for row in partitions[start:stop]
                         )
-                        # print(f"using correct partition size {correct_partition_size}")
-                        # split the partition at index stop
-                        # print(
-                        #     f"inserting at position {stop + 1} the objects {[ obj.mask(slice(correct_partition_size, None), slice(None)).get() for obj in partitions[stop]]}"
-                        # )
                         partitions = np.insert(
                             partitions,
                             stop + 1,
@@ -233,9 +215,6 @@ class PandasOnRayDataframePartitionManager(GenericRayDataframePartitionManager):
                             obj.mask(slice(None, correct_partition_size), slice(None))
                             for obj in partitions[stop]
                         ]
-                        # print(
-                        #     f"partitions after replacement: { [[obj._length_cache for obj in row] for row in partitions]}"
-                        # )
                     result_partitions.append(
                         cls.column_partitions(
                             (partitions[start : stop + 1]), full_axis=False
