@@ -89,7 +89,7 @@ def align_datetime_dtypes(*dfs):
     -----
     Passed Modin frames may be casted to pandas in the result.
     """
-    datetime_cols = dict()
+    datetime_cols = {}
     time_cols = set()
     for df in dfs:
         for col, dtype in df.dtypes.items():
@@ -101,8 +101,13 @@ def align_datetime_dtypes(*dfs):
             elif (
                 dtype == np.dtype("O")
                 and col not in time_cols
-                # Implying that the data is homogeneous, so checking the first value is enough
-                and (len(df) > 0 and isinstance(df[col].iloc[0], datetime.time))
+                # OmniSci has difficulties with empty frames, so explicitly skip them
+                # https://github.com/modin-project/modin/issues/3428
+                and len(df) > 0
+                and all(
+                    isinstance(val, datetime.time) or pandas.isna(val)
+                    for val in df[col]
+                )
             ):
                 time_cols.add(col)
 
@@ -114,7 +119,7 @@ def align_datetime_dtypes(*dfs):
         if isinstance(value, datetime.time):
             return value
         elif isinstance(value, str):
-            return datetime.time(*map(int, value.split(":")))
+            return datetime.time.fromisoformat(value)
         else:
             return datetime.time(value)
 
