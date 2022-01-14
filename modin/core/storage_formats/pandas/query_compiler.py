@@ -20,6 +20,7 @@ queries for the ``PandasDataframe``.
 
 import numpy as np
 import pandas
+import functools
 from pandas.core.common import is_bool_indexer
 from pandas.core.indexing import check_bool_indexer
 from pandas.core.indexes.api import ensure_index_from_sequences
@@ -2647,10 +2648,8 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 how == "axis_wise"
             ), f"Only 'axis_wise' aggregation is supported with dictionary functions, got: {how}"
         else:
-            grp_agg_func = agg_func
-            method = GroupByDefault.get_aggregation_method(how)
-            agg_func = lambda grp, *args, **kwargs: method(  # noqa: E731
-                grp, grp_agg_func, *args, **kwargs
+            agg_func = functools.partial(
+                GroupByDefault.get_aggregation_method(how), func=agg_func
             )
 
         # since we're going to modify `groupby_kwargs` dict in a `groupby_agg_builder`,

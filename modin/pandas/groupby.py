@@ -1022,8 +1022,12 @@ class DataFrameGroupBy(object):
         ----------
         qc_method : callable
             The query compiler method to call.
-        numeric_only : bool, default: None
-            True for numeric only computations, False otherwise.
+        numeric_only : {None, True, False}, default: None
+            Specifies whether to aggregate non numeric columns:
+                - True: include only numeric columns (including categories that holds a numeric dtype)
+                - False: include all columns
+                - None: infer the parameter, ``False`` if there are no numeric types in the frame,
+                  ``True`` otherwise.
         agg_args : list-like, optional
             Positional arguments to pass to the aggregation function.
         agg_kwargs : dict-like, optional
@@ -1051,7 +1055,7 @@ class DataFrameGroupBy(object):
             by_cols = self._internal_by
             mask_cols = [
                 col
-                for col, dtype in self._df.dtypes.items()
+                for col, dtype in self._query_compiler.dtypes.items()
                 if (
                     is_numeric_dtype(dtype)
                     or (
