@@ -567,6 +567,7 @@ class PandasDataframe(object):
                 or len(row_internal_indices) > 0
             ]
         )
+        new_partitions = self._partition_mgr_cls.rebalance_partitions(new_partitions)
         intermediate = self.__constructor__(
             new_partitions,
             new_index,

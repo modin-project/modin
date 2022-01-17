@@ -41,7 +41,6 @@ class PandasOnRayDataframeVirtualPartition(PandasDataframeAxisPartition):
     instance_type = ray.ObjectRef
     axis = None
 
-    # TODO: delete get_ip
     def __init__(self, list_of_blocks, get_ip=False, full_axis=True, call_queue=None):
         if isinstance(list_of_blocks, PandasOnRayDataframePartition):
             list_of_blocks = [list_of_blocks]
@@ -71,9 +70,13 @@ class PandasOnRayDataframeVirtualPartition(PandasDataframeAxisPartition):
             ):
                 new_list_of_blocks = []
                 for o in list_of_blocks:
-                    new_list_of_blocks.extend(o.list_of_blocks) if isinstance(
+                    new_list_of_blocks.extend(
+                        o.list_of_partitions_to_combine
+                    ) if isinstance(
                         o, PandasOnRayDataframeVirtualPartition
-                    ) else new_list_of_blocks.append(o)
+                    ) else new_list_of_blocks.append(
+                        o
+                    )
                 self.list_of_partitions_to_combine = new_list_of_blocks
             # Materialize partitions if the axis of this virtual does not match the virtual partitions
             else:
@@ -230,8 +233,14 @@ class PandasOnRayDataframeVirtualPartition(PandasDataframeAxisPartition):
         else:
             raise NotImplementedError("I'm doing the simple case first :)")
 
+    def force_materialization(self, get_ip=False):
+        materialized = super(
+            PandasOnRayDataframeVirtualPartition, self
+        ).force_materialization(get_ip)
+        self.list_of_partitions_to_combine = materialized.list_of_partitions_to_combine
+        return materialized
+
     def mask(self, row_indices, col_indices):
-        # TODO be more intelligent about masking, don't force materialization if not necessary
         return (
             self.force_materialization()
             .list_of_partitions_to_combine[0]
