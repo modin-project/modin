@@ -22,8 +22,10 @@ from modin.db_conn import ModinDatabaseConnection, UnsupportedDatabaseException
 from modin.config import TestDatasetSize, Engine, StorageFormat, IsExperimental
 from modin.utils import to_pandas
 from modin.pandas.utils import from_arrow
+from modin.test.test_utils import warns_that_defaulting_to_pandas
 import pyarrow as pa
 import os
+from scipy import sparse
 import sys
 import shutil
 import sqlalchemy as sa
@@ -46,6 +48,7 @@ from .utils import (
     teardown_test_file,
     teardown_test_files,
     generate_dataframe,
+    default_to_pandas_ignore_string,
 )
 
 if StorageFormat.get() == "Omnisci":
@@ -70,6 +73,13 @@ except ImportError:
 
 
 from modin.config import NPartitions
+
+# Our configuration in pytest.ini requires that we explicitly catch all
+# instances of defaulting to pandas, but some test modules, like this one,
+# have too many such instances.
+# TODO(https://github.com/modin-project/modin/issues/3655): catch all instances
+# of defaulting to pandas.
+pytestmark = pytest.mark.filterwarnings(default_to_pandas_ignore_string)
 
 NPartitions.put(4)
 
@@ -923,7 +933,7 @@ class TestCsv:
         reason="The reason of tests fail in `cloud` mode is unknown for now - issue #2340",
     )
     def test_read_csv_default_to_pandas(self):
-        with pytest.warns(UserWarning):
+        with warns_that_defaulting_to_pandas():
             # This tests that we default to pandas on a buffer
             from io import StringIO
 
@@ -1426,7 +1436,7 @@ class TestJson:
         reason="The reason of tests fail in `cloud` mode is unknown for now - issue #3264",
     )
     def test_read_json_string_bytes(self, data):
-        with pytest.warns(UserWarning):
+        with warns_that_defaulting_to_pandas():
             modin_df = pd.read_json(data)
         # For I/O objects we need to rewind to reuse the same object.
         if hasattr(data, "seek"):
@@ -1732,10 +1742,10 @@ class TestSql:
             index_col="index",
         )
 
-        with pytest.warns(UserWarning):
+        with warns_that_defaulting_to_pandas():
             pd.read_sql_query(query, conn)
 
-        with pytest.warns(UserWarning):
+        with warns_that_defaulting_to_pandas():
             pd.read_sql_table(table, conn)
 
         # Test SQLAlchemy engine
@@ -2172,6 +2182,18 @@ class TestPickle:
 def test_from_arrow():
     _, pandas_df = create_test_dfs(TEST_DATA)
     modin_df = from_arrow(pa.Table.from_pandas(pandas_df))
+    df_equals(modin_df, pandas_df)
+
+
+@pytest.mark.xfail(
+    condition="config.getoption('--simulate-cloud').lower() != 'off'",
+    reason="The reason of tests fail in `cloud` mode is unknown for now - issue #3264",
+)
+def test_from_spmatrix():
+    data = sparse.eye(3)
+    with pytest.warns(UserWarning, match="defaulting to pandas.*"):
+        modin_df = pd.DataFrame.sparse.from_spmatrix(data)
+    pandas_df = pandas.DataFrame.sparse.from_spmatrix(data)
     df_equals(modin_df, pandas_df)
 
 

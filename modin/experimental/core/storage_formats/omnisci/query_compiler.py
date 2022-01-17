@@ -209,9 +209,9 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
     def getitem_column_array(self, key, numeric=False):
         shape_hint = "column" if len(key) == 1 else None
         if numeric:
-            new_modin_frame = self._modin_frame.mask(col_numeric_idx=key)
+            new_modin_frame = self._modin_frame.mask(col_positions=key)
         else:
-            new_modin_frame = self._modin_frame.mask(col_indices=key)
+            new_modin_frame = self._modin_frame.mask(col_labels=key)
         return self.__constructor__(new_modin_frame, shape_hint)
 
     def getitem_array(self, key):
@@ -269,7 +269,7 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
 
     def view(self, index=None, columns=None):
         return self.__constructor__(
-            self._modin_frame.mask(row_numeric_idx=index, col_numeric_idx=columns)
+            self._modin_frame.mask(row_positions=index, col_positions=columns)
         )
 
     def groupby_size(
@@ -507,7 +507,7 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
         assert index is None, "Only column drop is supported"
         return self.__constructor__(
             self._modin_frame.mask(
-                row_indices=index, col_indices=self.columns.drop(columns)
+                row_labels=index, col_labels=self.columns.drop(columns)
             )
         )
 

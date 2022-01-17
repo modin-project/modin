@@ -19,7 +19,7 @@ import pytest
 import re
 
 from modin.config import IsExperimental, Engine, StorageFormat
-from modin.pandas.test.utils import io_ops_bad_exc
+from modin.pandas.test.utils import io_ops_bad_exc, default_to_pandas_ignore_string
 from .utils import eval_io, ForceOmnisciImport, set_execution_mode, run_and_compare
 from pandas.core.dtypes.common import is_list_like
 
@@ -46,6 +46,14 @@ from modin.experimental.core.execution.native.implementations.omnisci_on_native.
 from modin.experimental.core.execution.native.implementations.omnisci_on_native.df_algebra import (
     FrameNode,
 )
+
+
+# Our configuration in pytest.ini requires that we explicitly catch all
+# instances of defaulting to pandas, but some test modules, like this one,
+# have too many such instances.
+# TODO(https://github.com/modin-project/modin/issues/3655): catch all instances
+# of defaulting to pandas.
+pytestmark = pytest.mark.filterwarnings(default_to_pandas_ignore_string)
 
 
 @pytest.mark.usefixtures("TestReadCSVFixture")
@@ -1184,9 +1192,9 @@ class TestAgg:
     def test_simple_agg_no_default(self, method):
         def applier(df, **kwargs):
             if isinstance(df, pd.DataFrame):
-                # At the end of reduction function it does inevitable `transpose`, which
+                # At the end of reduce function it does inevitable `transpose`, which
                 # is defaulting to pandas. The following logic check that `transpose` is the only
-                # function that falling back to pandas in the reduction operation flow.
+                # function that falling back to pandas in the reduce operation flow.
                 with pytest.warns(UserWarning) as warns:
                     res = getattr(df, method)()
                 assert (

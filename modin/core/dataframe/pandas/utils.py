@@ -11,26 +11,34 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-"""Modin Dataframe algebra (core operators)."""
 
-from .operator import Operator
-from .map import Map
-from .tree_reduce import TreeReduce
-from .reduce import Reduce
-from .fold import Fold
-from .binary import Binary
-from .groupby import (
-    GroupByReduce,
-    groupby_reduce_functions,
-)
+"""Collection of utility functions for the PandasDataFrame."""
 
-__all__ = [
-    "Operator",
-    "Map",
-    "TreeReduce",
-    "Reduce",
-    "Fold",
-    "Binary",
-    "GroupByReduce",
-    "groupby_reduce_functions",
-]
+import pandas
+from pandas.api.types import union_categoricals
+
+
+def concatenate(dfs):
+    """
+    Concatenate pandas DataFrames with saving 'category' dtype.
+
+    Parameters
+    ----------
+    dfs : list
+        List of pandas DataFrames to concatenate.
+
+    Returns
+    -------
+    pandas.DataFrame
+        A pandas DataFrame.
+    """
+    categoricals_columns = set.intersection(
+        *[set(df.select_dtypes("category").columns.tolist()) for df in dfs]
+    )
+
+    for col in categoricals_columns:
+        uc = union_categoricals([df[col] for df in dfs])
+        for df in dfs:
+            df[col] = pandas.Categorical(df[col], categories=uc.categories)
+
+    return pandas.concat(dfs)

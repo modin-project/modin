@@ -2077,7 +2077,7 @@ class BaseQueryCompiler(abc.ABC):
     # UDF (apply and agg) methods
     # There is a wide range of behaviors that are supported, so a lot of the
     # logic can get a bit convoluted.
-    def apply(self, func, axis, *args, **kwargs):
+    def apply(self, func, axis, raw=False, result_type=None, *args, **kwargs):
         """
         Apply passed function across given axis.
 
@@ -2088,6 +2088,17 @@ class BaseQueryCompiler(abc.ABC):
         axis : {0, 1}
             Target axis to apply the function along.
             0 is for index, 1 is for columns.
+        raw : bool, default: False
+            Whether to pass a high-level Series object (False) or a raw representation
+            of the data (True).
+        result_type : {"expand", "reduce", "broadcast", None}, default: None
+            Determines how to treat list-like return type of the `func` (works only if
+            a single function was passed):
+                - "expand": expand list-like result into columns.
+                - "reduce": keep result into a single cell (opposite of "expand").
+                - "broadcast": broadcast result to original data shape (overwrite the
+                  existing column/row with the function result).
+                - None: use "expand" strategy if Series is returned, "reduce" otherwise.
         *args : iterable
             Positional arguments to pass to `func`.
         **kwargs : dict
@@ -2099,13 +2110,22 @@ class BaseQueryCompiler(abc.ABC):
             QueryCompiler that contains the results of execution and is built by
             the following rules:
 
-            - Labels of specified axis are the passed functions names.
+            - Index of the specified axis contains: the names of the passed functions if multiple
+              functions are passed, otherwise: indices of the `func` result if "expand" strategy
+              is used, indices of the original frame if "broadcast" strategy is used, a single
+              label "__reduced__" if "reduce" strategy is used.
             - Labels of the opposite axis are preserved.
             - Each element is the result of execution of `func` against
               corresponding row/column.
         """
         return DataFrameDefault.register(pandas.DataFrame.apply)(
-            self, func=func, axis=axis, *args, **kwargs
+            self,
+            func=func,
+            axis=axis,
+            raw=raw,
+            result_type=result_type,
+            *args,
+            **kwargs,
         )
 
     def explode(self, column):
@@ -2134,7 +2154,7 @@ class BaseQueryCompiler(abc.ABC):
     # after the shuffle, there should be only a local map required.
 
     # FIXME: `map_args` and `reduce_args` leaked there from `PandasQueryCompiler.groupby_*`,
-    # pandas storage format implements groupby via MapReduce approach, but for other storage formats these
+    # pandas storage format implements groupby via TreeReduce approach, but for other storage formats these
     # parameters make no sense, they shouldn't be present in a base class.
 
     @doc_utils.doc_groupby_method(
@@ -3241,7 +3261,7 @@ class BaseQueryCompiler(abc.ABC):
             self, resample_kwargs, limit
         )
 
-    @doc_utils.doc_resample_reduction(
+    @doc_utils.doc_resample_reduce(
         result="number of non-NA values", refer_to="count", compatibility_params=False
     )
     def resample_count(self, resample_kwargs):
@@ -3267,7 +3287,7 @@ class BaseQueryCompiler(abc.ABC):
             self, resample_kwargs, method, limit
         )
 
-    @doc_utils.doc_resample_reduction(
+    @doc_utils.doc_resample_reduce(
         result="first element", refer_to="first", params="_method : str"
     )
     def resample_first(self, resample_kwargs, _method, *args, **kwargs):
@@ -3342,7 +3362,7 @@ class BaseQueryCompiler(abc.ABC):
             **kwargs,
         )
 
-    @doc_utils.doc_resample_reduction(
+    @doc_utils.doc_resample_reduce(
         result="last element", params="_method : str", refer_to="last"
     )
     def resample_last(self, resample_kwargs, _method, *args, **kwargs):
@@ -3350,7 +3370,7 @@ class BaseQueryCompiler(abc.ABC):
             self, resample_kwargs, _method, *args, **kwargs
         )
 
-    @doc_utils.doc_resample_reduction(
+    @doc_utils.doc_resample_reduce(
         result="maximum value", params="_method : str", refer_to="max"
     )
     def resample_max(self, resample_kwargs, _method, *args, **kwargs):
@@ -3358,7 +3378,7 @@ class BaseQueryCompiler(abc.ABC):
             self, resample_kwargs, _method, *args, **kwargs
         )
 
-    @doc_utils.doc_resample_reduction(
+    @doc_utils.doc_resample_reduce(
         result="mean value", params="_method : str", refer_to="mean"
     )
     def resample_mean(self, resample_kwargs, _method, *args, **kwargs):
@@ -3366,7 +3386,7 @@ class BaseQueryCompiler(abc.ABC):
             self, resample_kwargs, _method, *args, **kwargs
         )
 
-    @doc_utils.doc_resample_reduction(
+    @doc_utils.doc_resample_reduce(
         result="median value", params="_method : str", refer_to="median"
     )
     def resample_median(self, resample_kwargs, _method, *args, **kwargs):
@@ -3374,7 +3394,7 @@ class BaseQueryCompiler(abc.ABC):
             self, resample_kwargs, _method, *args, **kwargs
         )
 
-    @doc_utils.doc_resample_reduction(
+    @doc_utils.doc_resample_reduce(
         result="minimum value", params="_method : str", refer_to="min"
     )
     def resample_min(self, resample_kwargs, _method, *args, **kwargs):
@@ -3388,7 +3408,7 @@ class BaseQueryCompiler(abc.ABC):
             self, resample_kwargs, limit
         )
 
-    @doc_utils.doc_resample_reduction(
+    @doc_utils.doc_resample_reduce(
         result="number of unique values", params="_method : str", refer_to="nunique"
     )
     def resample_nunique(self, resample_kwargs, _method, *args, **kwargs):
@@ -3457,7 +3477,7 @@ class BaseQueryCompiler(abc.ABC):
             self, resample_kwargs, func, *args, **kwargs
         )
 
-    @doc_utils.doc_resample_reduction(
+    @doc_utils.doc_resample_reduce(
         result="product",
         params="""
         _method : str
@@ -3469,7 +3489,7 @@ class BaseQueryCompiler(abc.ABC):
             self, resample_kwargs, _method, min_count, *args, **kwargs
         )
 
-    @doc_utils.doc_resample_reduction(
+    @doc_utils.doc_resample_reduce(
         result="quantile", params="q : float", refer_to="quantile"
     )
     def resample_quantile(self, resample_kwargs, q, *args, **kwargs):
@@ -3477,7 +3497,7 @@ class BaseQueryCompiler(abc.ABC):
             self, resample_kwargs, q, *args, **kwargs
         )
 
-    @doc_utils.doc_resample_reduction(
+    @doc_utils.doc_resample_reduce(
         result="standart error of the mean",
         params="ddof : int, default: 1",
         refer_to="sem",
@@ -3487,7 +3507,7 @@ class BaseQueryCompiler(abc.ABC):
             self, resample_kwargs, ddof, *args, **kwargs
         )
 
-    @doc_utils.doc_resample_reduction(
+    @doc_utils.doc_resample_reduce(
         result="number of elements in a group", refer_to="size"
     )
     def resample_size(self, resample_kwargs, *args, **kwargs):
@@ -3495,7 +3515,7 @@ class BaseQueryCompiler(abc.ABC):
             self, resample_kwargs, *args, **kwargs
         )
 
-    @doc_utils.doc_resample_reduction(
+    @doc_utils.doc_resample_reduce(
         result="standart deviation", params="ddof : int", refer_to="std"
     )
     def resample_std(self, resample_kwargs, ddof, *args, **kwargs):
@@ -3503,7 +3523,7 @@ class BaseQueryCompiler(abc.ABC):
             self, resample_kwargs, ddof, *args, **kwargs
         )
 
-    @doc_utils.doc_resample_reduction(
+    @doc_utils.doc_resample_reduce(
         result="sum",
         params="""
         _method : str
@@ -3543,7 +3563,7 @@ class BaseQueryCompiler(abc.ABC):
             self, resample_kwargs, arg, *args, **kwargs
         )
 
-    @doc_utils.doc_resample_reduction(
+    @doc_utils.doc_resample_reduce(
         result="variance", params="ddof : int", refer_to="var"
     )
     def resample_var(self, resample_kwargs, ddof, *args, **kwargs):

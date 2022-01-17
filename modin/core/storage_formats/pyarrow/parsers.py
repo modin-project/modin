@@ -13,7 +13,7 @@
 
 """Module houses Modin parser classes, that are used for data parsing on the workers."""
 
-from modin.core.storage_formats.pandas.utils import get_default_chunksize
+from modin.core.storage_formats.pandas.utils import compute_chunksize
 from io import BytesIO
 import pandas
 
@@ -61,7 +61,7 @@ class PyarrowCSVParser:
         table = csv.read_csv(
             BytesIO(to_read), parse_options=csv.ParseOptions(header_rows=1)
         )
-        chunksize = get_default_chunksize(table.num_columns, num_splits)
+        chunksize = compute_chunksize(table.num_columns, num_splits)
         chunks = [
             pa.Table.from_arrays(table.columns[chunksize * i : chunksize * (i + 1)])
             for i in range(num_splits)

@@ -34,6 +34,20 @@ jobs:
       - run: pip install black
       - run: black --check --diff modin/ asv_bench/benchmarks scripts/doc_checker.py
 
+  build-docs:
+    name: build docs
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 1
+      - uses: actions/setup-python@v2
+        with:
+          python-version: "3.7.x"
+          architecture: "x64"
+      - run: pip install -r docs/requirements-doc.txt
+      - run: cd docs && sphinx-build -T -E -b html . build
+
   lint-pydocstyle:
     name: lint (pydocstyle)
     runs-on: ubuntu-latest
@@ -312,7 +326,7 @@ jobs:
       - run: pytest -n 2 modin/pandas/test/dataframe/test_iter.py --execution=${{ matrix.execution }}
       - run: pytest -n 2 modin/pandas/test/dataframe/test_join_sort.py --execution=${{ matrix.execution }}
       - run: pytest -n 2 modin/pandas/test/dataframe/test_map_metadata.py --execution=${{ matrix.execution }}
-      - run: pytest -n 2 modin/pandas/test/dataframe/test_reduction.py --execution=${{ matrix.execution }}
+      - run: pytest -n 2 modin/pandas/test/dataframe/test_reduce.py --execution=${{ matrix.execution }}
       - run: pytest -n 2 modin/pandas/test/dataframe/test_udf.py --execution=${{ matrix.execution }}
       - run: pytest -n 2 modin/pandas/test/dataframe/test_window.py --execution=${{ matrix.execution }}
       - run: pytest -n 2 modin/pandas/test/dataframe/test_pickle.py --execution=${{ matrix.execution }}
@@ -498,7 +512,7 @@ jobs:
       - run: pytest -n 2 modin/pandas/test/dataframe/test_iter.py
       - run: pytest -n 2 modin/pandas/test/dataframe/test_join_sort.py
       - run: pytest -n 2 modin/pandas/test/dataframe/test_map_metadata.py
-      - run: pytest -n 2 modin/pandas/test/dataframe/test_reduction.py
+      - run: pytest -n 2 modin/pandas/test/dataframe/test_reduce.py
       - run: pytest -n 2 modin/pandas/test/dataframe/test_udf.py
       - run: pytest -n 2 modin/pandas/test/dataframe/test_window.py
       - run: pytest -n 2 modin/pandas/test/dataframe/test_pickle.py
@@ -635,7 +649,7 @@ jobs:
           - modin/pandas/test/dataframe/test_iter.py
           - modin/pandas/test/dataframe/test_join_sort.py
           - modin/pandas/test/dataframe/test_map_metadata.py
-          - modin/pandas/test/dataframe/test_reduction.py
+          - modin/pandas/test/dataframe/test_reduce.py
           - modin/pandas/test/dataframe/test_udf.py
           - modin/pandas/test/dataframe/test_window.py
           - modin/pandas/test/dataframe/test_pickle.py

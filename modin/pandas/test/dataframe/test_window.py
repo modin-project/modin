@@ -41,6 +41,7 @@ from modin.pandas.test.utils import (
     test_data_diff_dtype,
 )
 from modin.config import NPartitions
+from modin.test.test_utils import warns_that_defaulting_to_pandas
 
 NPartitions.put(4)
 
@@ -491,7 +492,10 @@ def test_median_skew_std_var_sem_1953(method):
     modin_df = pd.DataFrame(data, index=arrays)
     pandas_df = pandas.DataFrame(data, index=arrays)
 
-    eval_general(modin_df, pandas_df, lambda df: getattr(df, method)(level=0))
+    # These shouldn't default to pandas: follow up on
+    # https://github.com/modin-project/modin/issues/1953
+    with warns_that_defaulting_to_pandas():
+        eval_general(modin_df, pandas_df, lambda df: getattr(df, method)(level=0))
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)

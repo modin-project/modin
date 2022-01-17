@@ -11,7 +11,11 @@
 <a href="https://modin.org/modin-bench/#/"><img src="https://img.shields.io/badge/benchmarked%20by-asv-blue.svg" align="center"></a>
 </p>
 
-<p align="center"><b>To use Modin, replace the pandas import:</b></p>
+### What is Modin?
+
+Modin is a drop-in replacement for [pandas](https://github.com/pandas-dev/pandas) that scales the single-threaded pandas to become multi-threaded, using all of your cores and offering instant speedup to your workflows. Modin works especially well on larger datasets, where pandas becomes painfully slow or runs out of memory.
+
+Using modin is as simple as replacing the pandas import:
 
 ```python
 # import pandas as pd
@@ -25,20 +29,17 @@ import modin.pandas as pd
 Modin can be installed with `pip`:
 
 ```bash
-pip install modin
+pip install modin[all] # (Recommended) Install Modin with all of Modin's currently supported engines.
 ```
 
-If you don't have [Ray](https://github.com/ray-project/ray) or 
-[Dask](https://github.com/dask/dask) installed, you will need to install Modin with one
-of the targets:
+If you want to install Modin with a specific engine, we recommend:
 
 ```bash
-pip install modin[ray] # Install Modin dependencies and Ray to run on Ray
-pip install modin[dask] # Install Modin dependencies and Dask to run on Dask
-pip install modin[all] # Install all of the above
+pip install modin[ray] # Install Modin dependencies and Ray.
+pip install modin[dask] # Install Modin dependencies and Dask.
 ```
-Modin will automatically detect which engine you have installed and use that for
-scheduling computation!
+
+Modin automatically detects which engine(s) you have installed and uses that for scheduling computation.
 
 #### From conda-forge
 
@@ -52,9 +53,9 @@ conda install -c conda-forge modin-all
 Each engine can also be installed individually:
 
 ```bash
-conda install -c conda-forge modin-ray  # install Ray engine with Modin
-conda install -c conda-forge modin-dask # install Dask engine with Modin
-conda install -c conda-forge modin-omnisci # install Omnisci engine with Modin
+conda install -c conda-forge modin-ray  # Install Modin dependencies and Ray.
+conda install -c conda-forge modin-dask # Install Modin dependencies and Dask.
+conda install -c conda-forge modin-omnisci # Install Modin dependencies and Omnisci.
 ```
 
 ### Pandas API Coverage

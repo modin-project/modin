@@ -1479,7 +1479,7 @@ class BasePandasDataset(object):
 
     def idxmax(self, axis=0, skipna=True):
         if not all(d != np.dtype("O") for d in self._get_dtypes()):
-            raise TypeError("reduction operation 'argmax' not allowed for this dtype")
+            raise TypeError("reduce operation 'argmax' not allowed for this dtype")
         axis = self._get_axis_number(axis)
         return self._reduce_dimension(
             self._query_compiler.idxmax(axis=axis, skipna=skipna)
@@ -1487,7 +1487,7 @@ class BasePandasDataset(object):
 
     def idxmin(self, axis=0, skipna=True):
         if not all(d != np.dtype("O") for d in self._get_dtypes()):
-            raise TypeError("reduction operation 'argmin' not allowed for this dtype")
+            raise TypeError("reduce operation 'argmin' not allowed for this dtype")
         axis = self._get_axis_number(axis)
         return self._reduce_dimension(
             self._query_compiler.idxmin(axis=axis, skipna=skipna)

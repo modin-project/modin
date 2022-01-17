@@ -532,7 +532,9 @@ class _LocationIndexerBase(object):
             for i, lookup in enumerate([row_lookup, col_lookup])
         ]
 
-        if (
+        if col_lookup_len == 1 and row_lookup_len == 1:
+            axis = None
+        elif (
             row_lookup_len == len(self.qc.index)
             and col_lookup_len == 1
             and isinstance(self.df, DataFrame)
