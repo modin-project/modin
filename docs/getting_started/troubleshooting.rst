@@ -166,6 +166,11 @@ funcion for example) as it is shown in the example below:
   pd_df.index.name = None
 
 
+Using Modin with python multiprocessing
+"""""""""""""""""""""""""""""""""""""""
+
+Note that Modin can not be used in conjunction with python multiprocessing. For example, if the Ray engine is selected, it can not be used alongside python multiprocessing.
+
 Common errors
 ---------------
 

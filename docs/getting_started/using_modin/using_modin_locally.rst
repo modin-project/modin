@@ -70,11 +70,6 @@ automatically attach to whichever engine is available. If you are interested in 
 Modin with OmniSci engine, please refer to :doc:`these instructions </developer/using_omnisci>`. For additional information on other settings you can configure, see 
 :doc:`this page </flow/modin/config>` for more details.
 
-.. note:: 
-   Note that Modin can not be used in conjunction with other distribution mechanism. 
-   For example, if the Ray engine is selected, it can not be used alongside python 
-   multiprocessing.
-
 Advanced: Configuring the resources Modin uses
 -----------------------------------------------
 
