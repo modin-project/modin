@@ -11,4 +11,4 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-"""Base Modin Dataframe class."""
+"""Base Modin Dataframe class and Axis and JoinType Enums."""
