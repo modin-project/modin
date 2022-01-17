@@ -343,7 +343,7 @@ df2
 df
 pd.melt(df, id_vars="treatment", value_vars=["age", "response"])
 df
-df.groupby("treatment").mean()  # mean is aggregation / reduction method
+df.groupby("treatment").mean()  # mean is aggregation / reduce method
 df.groupby("treatment").age.max()
 df.groupby("treatment")[["age", "response"]].min()
 df.info()

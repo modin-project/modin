@@ -1534,7 +1534,7 @@ def test_agg_func_None_rename(by_and_agg_dict, as_index):
 @pytest.mark.parametrize(
     "agg_fns",
     [["sum", "min", "max"], ["mean", "quantile"]],
-    ids=["reduction", "aggregation"],
+    ids=["reduce", "aggregation"],
 )
 @pytest.mark.parametrize(
     "intersection_with_by_cols",

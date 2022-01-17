@@ -398,25 +398,25 @@ class MaskNode(DFAlgNode):
     ----------
     base : DFAlgNode
         A filtered frame.
-    row_indices : list, optional
-        List of index values to select.
-    row_numeric_idx : list of int, optional
+    row_labels : list, optional
+        List of row labels to select.
+    row_positions : list of int, optional
         List of rows ids to select.
 
     Attributes
     ----------
     input : list of DFAlgNode
         Holds a single filtered frame.
-    row_indices : list or None
-        List of index values to select.
-    row_numeric_idx : list of int or None
+    row_labels : list or None
+        List of row labels to select.
+    row_positions : list of int or None
         List of rows ids to select.
     """
 
-    def __init__(self, base, row_indices=None, row_numeric_idx=None):
+    def __init__(self, base, row_labels=None, row_positions=None):
         self.input = [base]
-        self.row_indices = row_indices
-        self.row_numeric_idx = row_numeric_idx
+        self.row_labels = row_labels
+        self.row_positions = row_positions
 
     def copy(self):
         """
@@ -426,7 +426,7 @@ class MaskNode(DFAlgNode):
         -------
         MaskNode
         """
-        return MaskNode(self.input[0], self.row_indices, self.row_numeric_idx)
+        return MaskNode(self.input[0], self.row_labels, self.row_positions)
 
     def _prints(self, prefix):
         """
@@ -443,8 +443,8 @@ class MaskNode(DFAlgNode):
         """
         return (
             f"{prefix}MaskNode:\n"
-            f"{prefix}  row_indices: {self.row_indices}\n"
-            f"{prefix}  row_numeric_idx: {self.row_numeric_idx}\n"
+            f"{prefix}  row_labels: {self.row_labels}\n"
+            f"{prefix}  row_positions: {self.row_positions}\n"
             + self._prints_input(prefix + "  ")
         )
 
