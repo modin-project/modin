@@ -20,6 +20,7 @@ queries for the ``PandasDataframe``.
 
 import numpy as np
 import pandas
+import functools
 from pandas.core.common import is_bool_indexer
 from pandas.core.indexing import check_bool_indexer
 from pandas.core.indexes.api import ensure_index_from_sequences
@@ -51,7 +52,7 @@ from modin.core.dataframe.algebra import (
     GroupByReduce,
     groupby_reduce_functions,
 )
-from modin.core.dataframe.algebra.default2pandas.groupby import GroupBy
+from modin.core.dataframe.algebra.default2pandas.groupby import GroupBy, GroupByDefault
 
 
 def _get_axis(axis):
@@ -2468,20 +2469,26 @@ class PandasQueryCompiler(BaseQueryCompiler):
     groupby_sum = GroupByReduce.register("sum")
 
     def groupby_size(
-        self, by, axis, groupby_args, map_args, reduce_args, numeric_only, drop
+        self,
+        by,
+        axis,
+        groupby_kwargs,
+        agg_args,
+        agg_kwargs,
+        drop=False,
     ):
         result = self._groupby_dict_reduce(
             by=by,
             axis=axis,
             agg_func={self.columns[0]: [("__size_col__", "size")]},
-            agg_args=[],
-            agg_kwargs={},
-            groupby_kwargs=groupby_args,
+            agg_args=agg_args,
+            agg_kwargs=agg_kwargs,
+            groupby_kwargs=groupby_kwargs,
             drop=drop,
             method="size",
             default_to_pandas_func=lambda grp: grp.size(),
         )
-        if groupby_args.get("as_index", True):
+        if groupby_kwargs.get("as_index", True):
             result.columns = ["__reduced__"]
         elif isinstance(result.columns, pandas.MultiIndex):
             # Dropping one extra-level which was added because of renaming aggregation
@@ -2493,11 +2500,11 @@ class PandasQueryCompiler(BaseQueryCompiler):
     def _groupby_dict_reduce(
         self,
         by,
-        axis,
         agg_func,
+        axis,
+        groupby_kwargs,
         agg_args,
         agg_kwargs,
-        groupby_kwargs,
         drop=False,
         **kwargs,
     ):
@@ -2511,20 +2518,20 @@ class PandasQueryCompiler(BaseQueryCompiler):
         ----------
         by : PandasQueryCompiler, column or index label, Grouper or list of such
             Object that determine groups.
-        axis : {0, 1}
-            Axis to group and apply aggregation function along.
-            0 is for index, when 1 is for columns.
         agg_func : dict(label) -> str
             Dictionary that maps row/column labels to the function names.
             **Note:** specified functions have to be supported by ``modin.core.dataframe.algebra.GroupByReduce``.
             Supported functions are listed in the ``modin.core.dataframe.algebra.GroupByReduce.groupby_reduce_functions``
             dictionary.
-        agg_args : list
+        axis : {0, 1}
+            Axis to group and apply aggregation function along.
+            0 is for index, when 1 is for columns.
+        groupby_kwargs : dict
+            GroupBy parameters in the format of ``modin.pandas.DataFrame.groupby`` signature.
+        agg_args : list-like
             Serves the compatibility purpose. Does not affect the result.
         agg_kwargs : dict
             Arguments to pass to the aggregation functions.
-        groupby_kwargs : dict
-            GroupBy parameters in the format of ``modin.pandas.DataFrame.groupby`` signature.
         drop : bool, default: False
             If `by` is a QueryCompiler indicates whether or not by-data came
             from the `self`.
@@ -2571,22 +2578,43 @@ class PandasQueryCompiler(BaseQueryCompiler):
             query_compiler=self,
             by=by,
             axis=axis,
-            groupby_args=groupby_kwargs,
-            map_args=agg_kwargs,
-            reduce_args=agg_kwargs,
-            numeric_only=False,
+            groupby_kwargs=groupby_kwargs,
+            agg_args=agg_args,
+            agg_kwargs=agg_kwargs,
+            drop=drop,
+        )
+
+    def groupby_dtypes(
+        self,
+        by,
+        axis,
+        groupby_kwargs,
+        agg_args,
+        agg_kwargs,
+        drop=False,
+    ):
+        return self.groupby_agg(
+            by=by,
+            axis=axis,
+            agg_func=lambda df: df.dtypes,
+            # passing 'group_wise' will make the function be applied to the 'by' columns as well,
+            # this is exactly what we want when 'as_index=False'
+            how="axis_wise" if groupby_kwargs.get("as_index", True) else "group_wise",
+            agg_args=agg_args,
+            agg_kwargs=agg_kwargs,
+            groupby_kwargs=groupby_kwargs,
             drop=drop,
         )
 
     def groupby_agg(
         self,
         by,
-        is_multi_by,
-        axis,
         agg_func,
+        axis,
+        groupby_kwargs,
         agg_args,
         agg_kwargs,
-        groupby_kwargs,
+        how="axis_wise",
         drop=False,
     ):
         def is_reduce_fn(fn, deep_level=0):
@@ -2612,11 +2640,17 @@ class PandasQueryCompiler(BaseQueryCompiler):
             is_reduce_fn(x) for x in agg_func.values()
         ):
             return self._groupby_dict_reduce(
-                by, axis, agg_func, agg_args, agg_kwargs, groupby_kwargs, drop
+                by, agg_func, axis, groupby_kwargs, agg_args, agg_kwargs, drop
             )
 
-        if callable(agg_func):
-            agg_func = wrap_udf_function(agg_func)
+        if isinstance(agg_func, dict):
+            assert (
+                how == "axis_wise"
+            ), f"Only 'axis_wise' aggregation is supported with dictionary functions, got: {how}"
+        else:
+            agg_func = functools.partial(
+                GroupByDefault.get_aggregation_method(how), func=agg_func
+            )
 
         # since we're going to modify `groupby_kwargs` dict in a `groupby_agg_builder`,
         # we want to copy it to not propagate these changes into source dict, in case
@@ -2717,7 +2751,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 """Compute groupby aggregation for a single partition."""
                 grouped_df = df.groupby(by=by, axis=axis, **groupby_kwargs)
                 try:
-                    result = partition_agg_func(grouped_df, **agg_kwargs)
+                    result = partition_agg_func(grouped_df, *agg_args, **agg_kwargs)
                 except (DataError, TypeError):
                     # This happens when the partition is filled with non-numeric data and a
                     # numeric operation is done. We need to build the index here to avoid

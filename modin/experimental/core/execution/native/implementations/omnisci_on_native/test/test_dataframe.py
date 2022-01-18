@@ -730,9 +730,6 @@ class TestGroupby:
 
         run_and_compare(groupby_count, data=self.data, cols=cols, as_index=as_index)
 
-    @pytest.mark.xfail(
-        reason="Currently mean() passes a lambda into query compiler which cannot be executed on OmniSci engine"
-    )
     @pytest.mark.parametrize("cols", cols_value)
     @pytest.mark.parametrize("as_index", bool_arg_values)
     def test_groupby_mean(self, cols, as_index):
@@ -769,9 +766,6 @@ class TestGroupby:
 
         run_and_compare(lambda_func, data=self.data, force_lazy=False)
 
-    @pytest.mark.xfail(
-        reason="Function specified as a string should be passed into query compiler API, but currently it is transformed into a lambda"
-    )
     @pytest.mark.parametrize("cols", cols_value)
     @pytest.mark.parametrize("as_index", bool_arg_values)
     def test_groupby_agg_mean(self, cols, as_index):
@@ -815,7 +809,7 @@ class TestGroupby:
         run_and_compare(groupby, data=self.data)
 
     @pytest.mark.parametrize("by", [["a"], ["a", "b", "c"]])
-    @pytest.mark.parametrize("agg", ["sum", "size"])
+    @pytest.mark.parametrize("agg", ["sum", "size", "mean"])
     @pytest.mark.parametrize("as_index", [True, False])
     def test_groupby_agg_by_col(self, by, agg, as_index):
         def simple_agg(df, **kwargs):

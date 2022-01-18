@@ -276,9 +276,10 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
         self,
         by,
         axis,
-        groupby_args,
-        map_args,
-        **kwargs,
+        groupby_kwargs,
+        agg_args,
+        agg_kwargs,
+        drop=False,
     ):
         # Grouping on empty frame or on index level.
         if len(self.columns) == 0:
@@ -286,16 +287,18 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
                 "Grouping on empty frame or on index level is not yet implemented."
             )
 
-        groupby_args = groupby_args.copy()
-        as_index = groupby_args.get("as_index", True)
+        groupby_kwargs = groupby_kwargs.copy()
+        as_index = groupby_kwargs.get("as_index", True)
         # Setting 'as_index' to True to avoid 'by' and 'agg' columns naming conflict
-        groupby_args["as_index"] = True
+        groupby_kwargs["as_index"] = True
         new_frame = self._modin_frame.groupby_agg(
             by,
             axis,
             {self._modin_frame.columns[0]: "size"},
-            groupby_args,
-            **kwargs,
+            groupby_kwargs,
+            agg_args=agg_args,
+            agg_kwargs=agg_kwargs,
+            drop=drop,
         )
         if as_index:
             shape_hint = "column"
@@ -305,36 +308,59 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
             new_frame = new_frame._set_columns(["size"]).reset_index(drop=False)
         return self.__constructor__(new_frame, shape_hint=shape_hint)
 
-    def groupby_sum(self, by, axis, groupby_args, map_args, **kwargs):
+    def groupby_sum(self, by, axis, groupby_kwargs, agg_args, agg_kwargs, drop=False):
         new_frame = self._modin_frame.groupby_agg(
-            by, axis, "sum", groupby_args, **kwargs
+            by,
+            axis,
+            "sum",
+            groupby_kwargs,
+            agg_args=agg_args,
+            agg_kwargs=agg_kwargs,
+            drop=drop,
         )
         return self.__constructor__(new_frame)
 
-    def groupby_count(self, by, axis, groupby_args, map_args, **kwargs):
+    def groupby_count(self, by, axis, groupby_kwargs, agg_args, agg_kwargs, drop=False):
         new_frame = self._modin_frame.groupby_agg(
-            by, axis, "count", groupby_args, **kwargs
+            by,
+            axis,
+            "count",
+            groupby_kwargs,
+            agg_args=agg_args,
+            agg_kwargs=agg_kwargs,
+            drop=drop,
         )
         return self.__constructor__(new_frame)
 
     def groupby_agg(
         self,
         by,
-        is_multi_by,
-        axis,
         agg_func,
+        axis,
+        groupby_kwargs,
         agg_args,
         agg_kwargs,
-        groupby_kwargs,
+        how="axis_wise",
         drop=False,
     ):
-        # TODO: handle `is_multi_by`, `agg_args`, `drop` args
+        # TODO: handle `drop` args
         if callable(agg_func):
             raise NotImplementedError(
                 "Python callable is not a valid aggregation function for OmniSci storage format."
             )
+        if how != "axis_wise":
+            raise NotImplementedError(
+                f"'{how}' type of groupby-aggregation functions is not supported for OmniSci storage format."
+            )
+
         new_frame = self._modin_frame.groupby_agg(
-            by, axis, agg_func, groupby_kwargs, **agg_kwargs
+            by,
+            axis,
+            agg_func,
+            groupby_kwargs,
+            agg_args=agg_args,
+            agg_kwargs=agg_kwargs,
+            drop=drop,
         )
         return self.__constructor__(new_frame)
 

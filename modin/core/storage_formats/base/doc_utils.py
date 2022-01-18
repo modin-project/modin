@@ -643,18 +643,14 @@ def doc_groupby_method(result, refer_to, action=None):
     by : BaseQueryCompiler, column or index label, Grouper or list of such
         Object that determine groups.
     axis : {{0, 1}}
-        Axis to group and apply reduce function along.
+        Axis to group and apply aggregation function along.
         0 is for index, when 1 is for columns.
-    groupby_args : dict
+    groupby_kwargs : dict
         GroupBy parameters as expected by ``modin.pandas.DataFrame.groupby`` signature.
-    map_args : dict
-        Keyword arguments to pass to the reduce function. If GroupBy is implemented via TreeReduce
-        approach, this argument is passed at the map phase only.
-    reduce_args : dict, optional
-        If GroupBy is implemented with TreeReduce approach, specifies arguments to pass to
-        the reduce function at the reduce phase, has no effect otherwise.
-    numeric_only : bool, default: True
-        Whether or not to drop non-numeric columns before executing GroupBy.
+    agg_args : list-like
+        Positional arguments to pass to the `agg_func`.
+    agg_kwargs : dict
+        Key arguments to pass to the `agg_func`.
     drop : bool, default: False
         If `by` is a QueryCompiler indicates whether or not by-data came
         from the `self`.
