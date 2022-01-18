@@ -140,18 +140,58 @@ class PandasOnRayDataframePartitionManager(GenericRayDataframePartitionManager):
 
     @classmethod
     def concat(cls, axis, left_parts, right_parts):
+        """
+        Concatenate the blocks of partitions with another set of blocks.
+
+        Parameters
+        ----------
+        axis : int
+            The axis to concatenate to.
+        left_parts : np.ndarray
+            NumPy array of partitions to concatenate with.
+        right_parts : np.ndarray or list
+            NumPy array of partitions to be concatenated.
+
+        Returns
+        -------
+        np.ndarray
+            A new NumPy array with concatenated partitions.
+
+        Notes
+        -----
+        Assumes that the blocks are already the same shape on the
+        dimension being concatenated. A ValueError will be thrown if this
+        condition is not met.
+        """
         result = super(PandasOnRayDataframePartitionManager, cls).concat(
             axis, left_parts, right_parts
         )
-        return cls.rebalance_partitions(result)
+        if axis == 0:
+            return cls.rebalance_partitions(result)
+        else:
+            return result
 
     @classmethod
     def rebalance_partitions(cls, partitions):
+        """
+        Virtually shuffle unbalanced or too many partitions.
+
+        Parameters
+        ----------
+        partitions : np.ndarray
+            The partitions to rebalance.
+            
+        Returns
+        -------
+        np.ndarray
+            The original NumPy array if already well balanced or a new NumPy array with
+            rebalanced partitions.
+        """
         heuristic = 1.5  # partitions can be 1.5x larger than ideal. Can be modified.
         if partitions.shape[0] > NPartitions.get() * heuristic:
             # Naive rebalance
             lengths = [[obj._length_cache for obj in row] for row in partitions]
-            if any(l is None for row in lengths for l in row):
+            if any(_ is None for row in lengths for _ in row):
                 if partitions.shape[0] % NPartitions.get() == 0:
                     ideal_partitions_per_axis_partition = (
                         partitions.shape[0] // NPartitions.get()
