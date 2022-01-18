@@ -17,7 +17,7 @@ import inspect
 import numpy as np
 import threading
 
-from modin.config import ProgressBar
+from modin.config import ProgressBar, NPartitions
 from modin.core.execution.ray.generic.partitioning.partition_manager import (
     GenericRayDataframePartitionManager,
 )
@@ -27,6 +27,7 @@ from .virtual_partition import (
 )
 from .partition import PandasOnRayDataframePartition
 from modin.core.execution.ray.generic.modin_aqp import call_progress_bar
+from modin.core.storage_formats.pandas.utils import compute_chunksize
 from modin.error_message import ErrorMessage
 import pandas
 
@@ -146,21 +147,19 @@ class PandasOnRayDataframePartitionManager(GenericRayDataframePartitionManager):
 
     @classmethod
     def rebalance_partitions(cls, partitions):
-        from modin.config import NPartitions
-
         heuristic = 1.5  # partitions can be 1.5x larger than ideal. Can be modified.
         if partitions.shape[0] > NPartitions.get() * heuristic:
-            lengths = [[obj._length_cache for obj in row] for row in partitions]
-            if partitions.shape[0] % NPartitions.get() == 0:
-                ideal_partitions_per_axis_partition = (
-                    partitions.shape[0] // NPartitions.get()
-                )
-            else:
-                ideal_partitions_per_axis_partition = (
-                    partitions.shape[0] // NPartitions.get() + 1
-                )
             # Naive rebalance
+            lengths = [[obj._length_cache for obj in row] for row in partitions]
             if any(l is None for row in lengths for l in row):
+                if partitions.shape[0] % NPartitions.get() == 0:
+                    ideal_partitions_per_axis_partition = (
+                            partitions.shape[0] // NPartitions.get()
+                    )
+                else:
+                    ideal_partitions_per_axis_partition = (
+                            partitions.shape[0] // NPartitions.get() + 1
+                    )
                 return np.array(
                     [
                         cls.column_partitions(
@@ -176,43 +175,39 @@ class PandasOnRayDataframePartitionManager(GenericRayDataframePartitionManager):
                 # if we have the lengths, then we need to be intelligent about how we rebalance
                 result_partitions = []
                 start = 0
-                stop = 0
-                total_rows = sum(row[0] for row in lengths)
-                if total_rows % NPartitions.get() == 0:
-                    ideal_partition_size = total_rows // NPartitions.get()
-                else:
-                    ideal_partition_size = total_rows // NPartitions.get() + 1
+                total_rows = sum(part.length() for part in partitions[:, 0])
+                ideal_partition_size = compute_chunksize(total_rows, NPartitions.get())
+                # We don't need to do any rebalancing if the number of rows is too small
+                if total_rows < NPartitions.get() * heuristic:
+                    return partitions
                 for i in range(NPartitions.get()):
                     # We might pick up partitions too quickly and exhaust all of them.
                     if start >= len(partitions):
                         break
                     stop = start
-                    partition_size = partitions[start][0]._length_cache
+                    partition_size = partitions[start][0].length()
                     while (
                         stop < len(partitions) and partition_size < ideal_partition_size
                     ):
                         stop += 1
                         if stop < len(partitions):
                             partition_size = (
-                                partition_size + partitions[stop][0]._length_cache
+                                partition_size + partitions[stop][0].length()
                             )
                     if partition_size > ideal_partition_size * heuristic:
-                        correct_partition_size = ideal_partition_size - sum(
-                            row[0]._length_cache for row in partitions[start:stop]
-                        )
                         partitions = np.insert(
                             partitions,
                             stop + 1,
                             [
                                 obj.mask(
-                                    slice(correct_partition_size, None), slice(None)
+                                    slice(ideal_partition_size, None), slice(None)
                                 )
                                 for obj in partitions[stop]
                             ],
                             0,
                         )
                         partitions[stop, :] = [
-                            obj.mask(slice(None, correct_partition_size), slice(None))
+                            obj.mask(slice(None, ideal_partition_size), slice(None))
                             for obj in partitions[stop]
                         ]
                     result_partitions.append(
