@@ -64,6 +64,6 @@ smaller code footprint while still guaranteeing that it covers the entire pandas
 Modin has an internal algebra, which is roughly 15 operators, narrowed down from the
 original >200 that exist in pandas. The algebra is grounded in both practical and
 theoretical work. Learn more in our `VLDB 2020 paper`_. More information about this
-algebra can be found in the :doc:`../developer/architecture` documentation.
+algebra can be found in the :doc:`../development/architecture` documentation.
 
 .. _VLDB 2020 paper: https://arxiv.org/abs/2001.00888

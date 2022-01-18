@@ -8,7 +8,7 @@ If you're interested in getting involved in the development of Modin, but aren't
 where start, take a look at the issues tagged `Good first issue`_ or Documentation_.
 These are issues that would be good for getting familiar with the codebase and better
 understanding some of the more complex components of the architecture. There is
-documentation here about the :doc:`architecture </developer/architecture>` that you will
+documentation here about the :doc:`architecture </development/architecture>` that you will
 want to review in order to get started.
 
 Also, feel free to join the discussions on the `developer mailing list`_.
@@ -208,7 +208,7 @@ Contributing a new execution framework or in-memory format
 ----------------------------------------------------------
 
 If you are interested in contributing support for a new execution framework or in-memory
-format, please make sure you understand the :doc:`architecture </developer/architecture>` of Modin.
+format, please make sure you understand the :doc:`architecture </development/architecture>` of Modin.
 
 The best place to start the discussion for adding a new execution framework or in-memory
 format is the `developer mailing list`_.

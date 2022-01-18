@@ -1,9 +1,9 @@
-Developer
-=========
+Development
+===========
 
 .. toctree::
     :maxdepth: 4
-    
+
     contributing
     architecture
     partition_api
@@ -16,4 +16,4 @@ Developer
 
 .. meta::
     :description lang=en:
-        Developer-specific documentation.
+        Development-specific documentation.
