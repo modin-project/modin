@@ -1,16 +1,16 @@
 Optimization Guide
 ==================
 
-Modin has chosen default values for a lot of the configurations here that provide excellent performance in most 
+Modin has chosen default values for a lot of the configurations here that provide excellent performance in most
 cases. This page is for those who love to optimize their code and those who are curious about existing optimizations
-within Modin. Here you can find more information about Modin's optimizations both for a pipeline of operations as 
+within Modin. Here you can find more information about Modin's optimizations both for a pipeline of operations as
 well as for specific operations.
 
 Understanding Modin's partitioning mechanism
 """"""""""""""""""""""""""""""""""""""""""""
 
 Modin's partitioning is crucial for performance; so we recommend expert users to understand Modin's
-partitioning mechanism and how to tune it, to achieve better performance.
+partitioning mechanism and how to tune it in order to achieve better performance.
 
 How does Modin partition a dataframe
 ------------------------------------
@@ -23,7 +23,7 @@ on the length of the appropriate axis and Modin's special :doc:`configuration va
 - ``NPartitions`` is the maximum number of splits along an axis; by default, it equals to the number of cores
   on your local machine or cluster of nodes.
 - ``MinPartitionSize`` is the minimum number of rows/columns to do a split. For instance, if ``MinPartitionSize``
-  is 32, the column axis will not be split unless the amount of columns is greater than 32. If it is is greater, for example, 34, 
+  is 32, the column axis will not be split unless the amount of columns is greater than 32. If it is is greater, for example, 34,
   then the column axis is sliced into two partitions: containing 32 and 2 columns accordingly.
 
 Beware that ``NPartitions`` specifies a limit for the number of partitions `along a single axis`, which means, that
@@ -151,7 +151,7 @@ Use Modin's Dataframe Algebra API to implement custom parallel functions
 
 Modin provides a set of low-level parallel-implemented operators which can be used to build most of the
 aggregation functions. These operators are present in the :doc:`algebra module </flow/modin/core/dataframe/algebra>`.
-Modin DataFrame allows users to use their own aggregations built with this module. Visit the 
+Modin DataFrame allows users to use their own aggregations built with this module. Visit the
 :doc:`appropriate section </flow/modin/core/dataframe/algebra>` of the documentation for the steps to do it.
 
 Avoid mixing pandas and Modin DataFrames

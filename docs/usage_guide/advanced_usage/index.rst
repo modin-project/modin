@@ -11,13 +11,13 @@ Advanced Usage
    modin_sql
    modin_xgboost
    modin_in_the_cloud
-   
+
 .. meta::
     :description lang=en:
         Description of Modin's advanced features.
 
-Modin aims to not only optimize pandas, but also provide a comprehensive, 
-integrated toolkit for data scientists. We are actively developing data science tools 
+Modin aims to not only optimize pandas, but also provide a comprehensive,
+integrated toolkit for data scientists. We are actively developing data science tools
 such as DataFrame - spreadsheet integration, DataFrame algebra, progress bars, SQL queries
 on DataFrames, and more. Join the `Discourse`_ for the latest updates!
 
@@ -37,28 +37,28 @@ DataFrame partitioning API
 Modin DataFrame provides an API to directly access partitions: you can extract physical partitions from
 a :py:class:`~modin.pandas.dataframe.DataFrame`, modify their structure by reshuffling or applying some
 functions, and create a DataFrame from those modified partitions. Visit
-:doc:`partitioning API documentation </flow/modin/distributed/dataframe/pandas>` to learn more.
+:doc:`pandas partitioning API </flow/modin/distributed/dataframe/pandas>` documentation to learn more.
 
 Modin Spreadsheet API: Render Dataframes as Spreadsheets
 --------------------------------------------------------
-The Spreadsheet API for Modin allows you to render the dataframe as a spreadsheet to easily explore 
-your data and perform operations on a graphical user interface. The API also includes features for recording 
-the changes made to the dataframe and exporting them as reproducible code. Built on top of Modin and SlickGrid, 
-the spreadsheet interface is able to provide interactive response times even at a scale of billions of rows. 
+The Spreadsheet API for Modin allows you to render the dataframe as a spreadsheet to easily explore
+your data and perform operations on a graphical user interface. The API also includes features for recording
+the changes made to the dataframe and exporting them as reproducible code. Built on top of Modin and SlickGrid,
+the spreadsheet interface is able to provide interactive response times even at a scale of billions of rows.
 See our `Modin Spreadsheet API documentation`_ for more details.
 
 .. figure:: /img/modin_spreadsheet_mini_demo.gif
    :align: center
    :width: 650px
-   :height: 350px   
+   :height: 350px
 
 Progress Bar
 ------------
-Visual progress bar for Dataframe operations such as groupby and fillna, as well as for file reading operations such as 
+Visual progress bar for Dataframe operations such as groupby and fillna, as well as for file reading operations such as
 read_csv. Built using the tqdm library and Ray execution engine. See `Progress Bar documentation`_ for more details.
 
 .. figure:: /img/progress_bar_example.png
-   :align: center   
+   :align: center
 
 Dataframe Algebra
 -----------------
@@ -69,7 +69,7 @@ SQL on Modin Dataframes
 ------------------------
 
 .. figure:: /img/modin_sql_example.png
-   :align: center   
+   :align: center
 
 Read about Modin Dataframe support for SQL queries in this recent `blog post`_. Check out the `Modin SQL documentation`_ as well!
 

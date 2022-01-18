@@ -8,10 +8,10 @@
 .. toctree::
    :hidden:
 
-   getting_started/index
    supported_apis/index
-   developer/index
+   getting_started/index
    usage_guide/index
+   developer/index
    contact
 
 .. raw:: html

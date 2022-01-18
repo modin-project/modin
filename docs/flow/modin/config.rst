@@ -1,7 +1,7 @@
 :orphan:
 
-Config Module Overview
-""""""""""""""""""""""
+Modin configuration settings
+""""""""""""""""""""""""""""
 
 Using this module, the user can tune Modin's behavior. To see
 all avaliable configs just run `python -m modin.config`, this command will print all

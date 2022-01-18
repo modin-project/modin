@@ -1,7 +1,10 @@
 Usage Guide
 ===========
 
-Here you can find Modin usage examples and tips of how you can further optimize the performance of your workload with Modin both for general use cases and for specific operations.
+This guide describes both basic Modin usage and advanced, shows Modin usage examples,
+gives a look at configuration settings to tune Modin behavior, as well as provides tips on
+how you can further optimize the performance of your workload with Modin
+both for general use cases and for specific operations.
 
 .. toctree::
     :maxdepth: 4
