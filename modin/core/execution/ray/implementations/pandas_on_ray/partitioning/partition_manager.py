@@ -154,11 +154,11 @@ class PandasOnRayDataframePartitionManager(GenericRayDataframePartitionManager):
             if any(l is None for row in lengths for l in row):
                 if partitions.shape[0] % NPartitions.get() == 0:
                     ideal_partitions_per_axis_partition = (
-                            partitions.shape[0] // NPartitions.get()
+                        partitions.shape[0] // NPartitions.get()
                     )
                 else:
                     ideal_partitions_per_axis_partition = (
-                            partitions.shape[0] // NPartitions.get() + 1
+                        partitions.shape[0] // NPartitions.get() + 1
                     )
                 return np.array(
                     [
@@ -199,9 +199,7 @@ class PandasOnRayDataframePartitionManager(GenericRayDataframePartitionManager):
                             partitions,
                             stop + 1,
                             [
-                                obj.mask(
-                                    slice(ideal_partition_size, None), slice(None)
-                                )
+                                obj.mask(slice(ideal_partition_size, None), slice(None))
                                 for obj in partitions[stop]
                             ],
                             0,
