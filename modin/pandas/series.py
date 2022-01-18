@@ -543,11 +543,7 @@ class Series(BasePandasDataset):
         """
         Return Series as ndarray or ndarray-like depending on the dtype.
         """
-
-        def values(df):
-            return df.values
-
-        return self._default_to_pandas(values)
+        return self.to_numpy()
 
     def add(self, other, level=None, fill_value=None, axis=0):  # noqa: PR01, RT01, D200
         """
