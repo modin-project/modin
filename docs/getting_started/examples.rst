@@ -5,7 +5,7 @@ Here you can find additional resources to learn about Modin. To learn more about
 advanced usage for Modin, please refer to :doc:`this section </advanced_usage/index>`.
 
 Usage Examples
----------------
+--------------
 
 The following notebooks demonstrate how Modin can be used for scalable data science: 
 
@@ -15,7 +15,7 @@ The following notebooks demonstrate how Modin can be used for scalable data scie
 - Modin for Machine Learning with scikit-learn [`Source <https://github.com/modin-project/modin/blob/master/examples/modin-scikit-learn-example.ipynb>`_] 
 
 Tutorials  
-----------
+---------
 
 The following tutorials cover the basic usage of Modin. `Here <https://www.youtube.com/watch?v=NglkafEmbhE>`_ is a one hour video tutorial that walks through these basic exercises.
 
@@ -31,7 +31,7 @@ The following tutorials covers more advanced features in Modin:
 - Exercise 6: Running Modin in a Cluster Environment [`Source <https://github.com/modin-project/modin/blob/721d2d2fe2a46d3b7442e1ab2c7b70ad3bff0712/examples/tutorial/tutorial_notebooks/cluster/exercise_6.ipynb>`_]
 
 Talks & Podcasts
------------------
+----------------
 
 - `Scaling Interactive Data Science with Modin and Ray <https://www.youtube.com/watch?v=ycSf1IbBGWk>`_ (20 minute, Ray Summit 2021) 
 - `Unleash The Power Of Dataframes At Any Scale With Modin <https://www.pythonpodcast.com/modin-parallel-dataframe-episode-324/>`_  (40 minute, Python Podcast 2021) 

@@ -12,7 +12,8 @@ This is a list of the most frequently encountered issues when using Modin. Some 
 are working as intended, while others are known bugs that are being actively worked on.
 
 Warning during execution: ``defaulting to pandas``
-"""""""""""""""""""""""""""""""""""""""""""""""""""
+""""""""""""""""""""""""""""""""""""""""""""""""""
+
 Please note, that while Modin covers a large portion of the pandas API, not all functionality is implemented. For methods that are not yet implemented, such as ``asfreq``, you may see the following:
 
 .. code-block:: text
@@ -193,7 +194,7 @@ The python multiprocessing will cause conflicts with excessive resource use
 by launching duplicated Ray clusters on the same machine.
 
 Common errors
----------------
+-------------
 
 Error when using OmniSci engine along with ``pyarrow.gandiva``: ``LLVM ERROR: inconsistency in registered CommandLine options``
 """""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""

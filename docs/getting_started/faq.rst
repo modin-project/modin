@@ -6,7 +6,7 @@ Modin. If you still cannot find the answer you are looking for, please post your
 question on the #support channel on our Slack_ community or open a Github issue_.
 
 FAQs: Why choose Modin?
-------------------------
+-----------------------
 
 What’s wrong with pandas and why should I use Modin?
 """"""""""""""""""""""""""""""""""""""""""""""""""""
@@ -71,7 +71,7 @@ Ray or Dask to execute computation, and then return the results to the user.
 For more details, take a look at our system :doc:`architecture </developer/architecture>`. 
 
 FAQs: How to use Modin?
-------------------------
+-----------------------
 
 If I’m only using my laptop, can I still get the benefits of Modin?
 """""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""

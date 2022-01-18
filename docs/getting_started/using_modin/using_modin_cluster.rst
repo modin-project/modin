@@ -1,6 +1,6 @@
-==========================
+========================
 Using Modin in a Cluster
-==========================
+========================
 
 .. note:: 
   | *Estimated Reading Time: 15 minutes*
@@ -35,7 +35,7 @@ cloud providers or on-premise, you can also refer to the Ray documentation `here
 
 
 Connecting to a Ray Cluster
------------------------------
+---------------------------
 
 To connect to the Ray cluster, run the following command in your terminal: 
 
@@ -90,7 +90,7 @@ improvements in performance as we increase the number of resources Modin can use
    :scale: 90%
 
 Advanced: Configuring your Ray Environment
--------------------------------------------
+------------------------------------------
 
 In some cases, it may be useful to customize your Ray environment. Below, we have listed
 a few ways you can solve common problems in data management with Modin by customizing

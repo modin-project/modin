@@ -1,6 +1,6 @@
-=====================
+===================
 Using Modin Locally
-=====================
+===================
 
 .. note:: 
   | *Estimated Reading Time: 5 minutes*
@@ -23,7 +23,7 @@ just like you would pandas, since the API is identical to pandas.
 **That's it. You're ready to use Modin on your previous pandas workflows!** 
 
 Optional Configurations
--------------------------
+-----------------------
 
 When using Modin locally on a single machine or laptop (without a cluster), Modin will 
 automatically create and manage a local Dask or Ray cluster for the executing your 
@@ -71,7 +71,7 @@ Modin with OmniSci engine, please refer to :doc:`these instructions </developer/
 :doc:`this page </flow/modin/config>` for more details.
 
 Advanced: Configuring the resources Modin uses
------------------------------------------------
+----------------------------------------------
 
 Modin automatically check the number of CPUs available on your machine and sets the 
 number of partitions to be equal to the number of CPUs. You can verify this by running 
