@@ -1,7 +1,10 @@
 Optimization Guide
 ==================
 
-Here you can find more information about Modin's optimizations both for a pipeline of operations as well as for specific operations.
+Modin has chosen default values for a lot of the configurations here that provide excellent performance in most 
+cases. This page is for those who love to optimize their code and those who are curious about existing optimizations
+within Modin. Here you can find more information about Modin's optimizations both for a pipeline of operations as 
+well as for specific operations.
 
 Understanding Modin's partitioning mechanism
 """"""""""""""""""""""""""""""""""""""""""""

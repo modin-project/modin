@@ -34,9 +34,9 @@ Modin also supports these experimental APIs on top of pandas that are under acti
 DataFrame partitioning API
 --------------------------
 
-Modin DataFrame provides an API to manipulate with its partitions: you can extract raw partitions from
-:py:class:`~modin.pandas.dataframe.DataFrame`, modify their structure by reshuffling or applying some
-functions, and then inject them back to the DataFrame. Visit
+Modin DataFrame provides an API to directly access partitions: you can extract physical partitions from
+a :py:class:`~modin.pandas.dataframe.DataFrame`, modify their structure by reshuffling or applying some
+functions, and create a DataFrame from those modified partitions. Visit
 :doc:`partitioning API documentation </flow/modin/distributed/dataframe/pandas>` to learn more.
 
 Modin Spreadsheet API: Render Dataframes as Spreadsheets
