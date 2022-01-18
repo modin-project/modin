@@ -169,7 +169,28 @@ funcion for example) as it is shown in the example below:
 Using Modin with python multiprocessing
 """""""""""""""""""""""""""""""""""""""
 
-Note that Modin can not be used in conjunction with python multiprocessing. For example, if the Ray engine is selected, it can not be used alongside python multiprocessing.
+We strongly recommend not to mix the use of Modin with Ray or Dask engine selected
+in conjunction with python multiprocessing because that can lead to undefined behavior.
+One of such examples is shown below:
+
+.. code-block:: python
+  import modin.pandas as pd
+  
+  # Ray engine is used by default
+  df = pandas.DataFrame([1, 2, 3])
+  
+  def f(arg):
+    return df + arg
+
+  if __name__ == '__main__':
+    from multiprocessing import Pool
+    
+    with Pool(5) as p:
+        print(p.map(f, [1]))
+
+Even if this example may work on your machine, we do not recommend similar scenarios.
+The python multiprocessing will cause conflicts with excessive resource use
+by launching duplicated Ray clusters on the same machine.
 
 Common errors
 ---------------
