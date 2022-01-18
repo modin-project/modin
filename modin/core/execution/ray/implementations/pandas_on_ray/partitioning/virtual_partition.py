@@ -353,6 +353,7 @@ class PandasOnRayDataframeVirtualPartition(PandasDataframeAxisPartition):
 
     def drain_call_queue(self):
         """Execute all operations stored in the call queue on the object wrapped by this partition."""
+
         def drain(df):
             for func, args, kwargs in self.call_queue:
                 df = func(df, *args, **kwargs)
