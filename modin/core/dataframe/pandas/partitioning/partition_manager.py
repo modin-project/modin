@@ -17,18 +17,21 @@ Module holding base PartitionManager class - the thing that tracks partitions ac
 The manager also allows manipulating the data - running functions at each partition, shuffle over the distribution, etc.
 """
 
+import os
+import warnings
+import inspect
+import threading
 from abc import ABC
 from functools import wraps
+
 import numpy as np
 import pandas
-import warnings
 
 from modin.error_message import ErrorMessage
 from modin.core.storage_formats.pandas.utils import compute_chunksize
 from modin.core.dataframe.pandas.utils import concatenate
 from modin.config import NPartitions, ProgressBar, BenchmarkMode
-
-import os
+from modin.core.execution.ray.generic.modin_aqp import call_progress_bar
 
 
 def wait_computations_if_benchmark_mode(func):
@@ -67,6 +70,59 @@ def wait_computations_if_benchmark_mode(func):
 
         return wait
     return func
+
+
+def progress_bar_wrapper(f):
+    """
+    Wrap computation function inside a progress bar.
+
+    Spawns another thread which displays a progress bar showing
+    estimated completion time.
+
+    Parameters
+    ----------
+    f : callable
+        The name of the function to be wrapped.
+
+    Returns
+    -------
+    callable
+        Decorated version of `f` which reports progress.
+    """
+    from functools import wraps
+
+    @wraps(f)
+    def magic(*args, **kwargs):
+        result_parts = f(*args, **kwargs)
+        if ProgressBar.get():
+            current_frame = inspect.currentframe()
+            function_name = None
+            while function_name != "<module>":
+                (
+                    filename,
+                    line_number,
+                    function_name,
+                    lines,
+                    index,
+                ) = inspect.getframeinfo(current_frame)
+                current_frame = current_frame.f_back
+            t = threading.Thread(
+                target=call_progress_bar,
+                args=(result_parts, line_number),
+            )
+            t.start()
+            # We need to know whether or not we are in a jupyter notebook
+            from IPython import get_ipython
+
+            try:
+                ipy_str = str(type(get_ipython()))
+                if "zmqshell" not in ipy_str:
+                    t.join()
+            except Exception:
+                pass
+        return result_parts
+
+    return magic
 
 
 class PandasDataframePartitionManager(ABC):
@@ -470,21 +526,22 @@ class PandasDataframePartitionManager(ABC):
 
     @classmethod
     @wait_computations_if_benchmark_mode
+    @progress_bar_wrapper
     def map_partitions(cls, partitions, map_func):
         """
         Apply `map_func` to every partition in `partitions`.
 
         Parameters
         ----------
-        partitions : NumPy 2D array
-            Partitions housing the data of Modin Frame.
+        partitions : np.ndarray
+            A NumPy 2D array of partitions to perform operation on.
         map_func : callable
             Function to apply.
 
         Returns
         -------
-        NumPy array
-            An array of partitions
+        np.ndarray
+            A NumPy array of partitions.
         """
         preprocessed_map_func = cls.preprocess_func(map_func)
         return np.array(
@@ -496,21 +553,22 @@ class PandasDataframePartitionManager(ABC):
 
     @classmethod
     @wait_computations_if_benchmark_mode
+    @progress_bar_wrapper
     def lazy_map_partitions(cls, partitions, map_func):
         """
         Apply `map_func` to every partition in `partitions` *lazily*.
 
         Parameters
         ----------
-        partitions : NumPy 2D array
-            Partitions of Modin Frame.
+        partitions : np.ndarray
+            A NumPy 2D array of partitions to perform operation on.
         map_func : callable
             Function to apply.
 
         Returns
         -------
-        NumPy array
-            An array of partitions
+        np.ndarray
+            A NumPy array of partitions.
         """
         preprocessed_map_func = cls.preprocess_func(map_func)
         return np.array(
@@ -521,6 +579,7 @@ class PandasDataframePartitionManager(ABC):
         )
 
     @classmethod
+    @progress_bar_wrapper
     def map_axis_partitions(
         cls,
         axis,
@@ -538,13 +597,13 @@ class PandasDataframePartitionManager(ABC):
         ----------
         axis : {0, 1}
             Axis to perform the map across (0 - index, 1 - columns).
-        partitions : NumPy 2D array
-            Partitions of Modin Frame.
+        partitions : np.ndarray
+            A NumPy 2D array of partitions to perform operation on.
         map_func : callable
             Function to apply.
         keep_partitioning : bool, default: False
             Whether to keep partitioning for Modin Frame.
-            Setting it to True stops data shuffling between partitions.
+            Setting it to True prevents data shuffling between partitions.
         lengths : list of ints, default: None
             List of lengths to shuffle the object.
         enumerate_partitions : bool, default: False
@@ -555,8 +614,8 @@ class PandasDataframePartitionManager(ABC):
 
         Returns
         -------
-        NumPy array
-            An array of new partitions for Modin Frame.
+        np.ndarray
+            A NumPy array of new partitions for Modin Frame.
 
         Notes
         -----
@@ -820,6 +879,7 @@ class PandasDataframePartitionManager(ABC):
         return new_idx[0].append(new_idx[1:]) if len(new_idx) else new_idx
 
     @classmethod
+    @progress_bar_wrapper
     def _apply_func_to_list_of_partitions_broadcast(
         cls, func, partitions, other, **kwargs
     ):
@@ -852,9 +912,10 @@ class PandasDataframePartitionManager(ABC):
         ]
 
     @classmethod
+    @progress_bar_wrapper
     def _apply_func_to_list_of_partitions(cls, func, partitions, **kwargs):
         """
-        Apply a function to a list of remote partitions.
+        Apply a `func` to a list of remote `partitions`.
 
         Parameters
         ----------
@@ -879,11 +940,12 @@ class PandasDataframePartitionManager(ABC):
 
     @classmethod
     @wait_computations_if_benchmark_mode
+    @progress_bar_wrapper
     def apply_func_to_select_indices(
         cls, axis, partitions, func, indices, keep_remaining=False
     ):
         """
-        Apply a function to select indices.
+        Apply a `func` to select `indices` of `partitions`.
 
         Parameters
         ----------
@@ -993,16 +1055,17 @@ class PandasDataframePartitionManager(ABC):
 
     @classmethod
     @wait_computations_if_benchmark_mode
+    @progress_bar_wrapper
     def apply_func_to_select_indices_along_full_axis(
         cls, axis, partitions, func, indices, keep_remaining=False
     ):
         """
-        Apply a function to a select subset of full columns/rows.
+        Apply a `func` to a select subset of full columns/rows.
 
         Parameters
         ----------
         axis : {0, 1}
-            The axis to apply the function over.
+            The axis to apply the `func` over.
         partitions : np.ndarray
             The partitions to which the `func` will apply.
         func : callable
@@ -1108,6 +1171,7 @@ class PandasDataframePartitionManager(ABC):
 
     @classmethod
     @wait_computations_if_benchmark_mode
+    @progress_bar_wrapper
     def apply_func_to_indices_both_axis(
         cls,
         partitions,
@@ -1135,7 +1199,7 @@ class PandasDataframePartitionManager(ABC):
             Iterable of tuples, containing 2 values:
                 1. Integer column partition index.
                 2. Internal column indexer of this partition.
-        item_to_distribute : item, default: None
+        item_to_distribute : item, optional
             The item to split up so it can be applied over both axes.
         row_lengths : list of ints, optional
             Lengths of partitions for every row. If not specified this information
@@ -1152,7 +1216,7 @@ class PandasDataframePartitionManager(ABC):
         Notes
         -----
         For your func to operate directly on the indices provided,
-        it must use `row_internal_indices`, `col_internal_indices` as keyword
+        it must use ``row_internal_indices`` and ``col_internal_indices`` as keyword
         arguments.
         """
         partition_copy = partitions.copy()
@@ -1223,6 +1287,7 @@ class PandasDataframePartitionManager(ABC):
 
     @classmethod
     @wait_computations_if_benchmark_mode
+    @progress_bar_wrapper
     def binary_operation(cls, axis, left, func, right):
         """
         Apply a function that requires two PandasDataframe objects.
