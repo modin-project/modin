@@ -14,7 +14,6 @@
 """Module houses classes responsible for storing an axis partition and applying a function to it."""
 
 import pandas
-from typing import List
 
 from modin.core.dataframe.pandas.partitioning.axis_partition import (
     PandasDataframeAxisPartition,

@@ -180,7 +180,7 @@ class PandasOnRayDataframePartitionManager(GenericRayDataframePartitionManager):
         ----------
         partitions : np.ndarray
             The partitions to rebalance.
-            
+
         Returns
         -------
         np.ndarray
