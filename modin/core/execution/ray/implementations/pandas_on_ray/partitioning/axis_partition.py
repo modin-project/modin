@@ -32,15 +32,18 @@ class PandasOnRayDataframeAxisPartition(PandasDataframeAxisPartition):
     ----------
     list_of_blocks : list
         List of ``PandasOnRayDataframePartition`` objects.
+    axis : {0, 1}
+        The axis on which the partitions are located.
     get_ip : bool, default: False
         Whether to get node IP addresses to conforming partitions or not.
     """
 
-    def __init__(self, list_of_blocks, get_ip=False):
+    def __init__(self, list_of_blocks, axis, get_ip=False):
         for obj in list_of_blocks:
             obj.drain_call_queue()
         # Unwrap ray.ObjectRef from `PandasOnRayDataframePartition` object for ease of use
         self.list_of_blocks = [obj.oid for obj in list_of_blocks]
+        self.axis = axis
         if get_ip:
             self.list_of_ips = [obj._ip_cache for obj in list_of_blocks]
 
@@ -149,42 +152,6 @@ class PandasOnRayDataframeAxisPartition(PandasDataframeAxisPartition):
             self.partition_type(object_id, length, width, ip)
             for (object_id, length, width, ip) in zip(*[iter(partitions)] * 4)
         ]
-
-
-class PandasOnRayDataframeColumnPartition(PandasOnRayDataframeAxisPartition):
-    """
-    The column partition implementation.
-
-    All of the implementation for this class is in the parent class,
-    and this class defines the axis to perform the computation over.
-
-    Parameters
-    ----------
-    list_of_blocks : list
-        List of ``PandasOnRayDataframePartition`` objects.
-    get_ip : bool, default: False
-        Whether to get node IP addresses to conforming partitions or not.
-    """
-
-    axis = 0
-
-
-class PandasOnRayDataframeRowPartition(PandasOnRayDataframeAxisPartition):
-    """
-    The row partition implementation.
-
-    All of the implementation for this class is in the parent class,
-    and this class defines the axis to perform the computation over.
-
-    Parameters
-    ----------
-    list_of_blocks : list
-        List of ``PandasOnRayDataframePartition`` objects.
-    get_ip : bool, default: False
-        Whether to get node IP addresses to conforming partitions or not.
-    """
-
-    axis = 1
 
 
 @ray.remote

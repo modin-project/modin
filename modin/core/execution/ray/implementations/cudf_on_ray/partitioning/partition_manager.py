@@ -16,10 +16,7 @@
 import numpy as np
 import ray
 
-from .axis_partition import (
-    cuDFOnRayDataframeColumnPartition,
-    cuDFOnRayDataframeRowPartition,
-)
+from .axis_partition import cuDFOnRayDataframeAxisPartition
 from .partition import cuDFOnRayDataframePartition
 
 from modin.core.storage_formats.pandas.utils import split_result_of_axis_func_pandas
@@ -60,8 +57,7 @@ class cuDFOnRayDataframePartitionManager(GenericRayDataframePartitionManager):
     """The class implements the interface in ``GenericRayDataframePartitionManager`` using cuDF on Ray."""
 
     _partition_class = cuDFOnRayDataframePartition
-    _column_partitions_class = cuDFOnRayDataframeColumnPartition
-    _row_partition_class = cuDFOnRayDataframeRowPartition
+    _column_partitions_class = cuDFOnRayDataframeAxisPartition
 
     @classmethod
     def _create_partitions(cls, keys, gpu_managers):

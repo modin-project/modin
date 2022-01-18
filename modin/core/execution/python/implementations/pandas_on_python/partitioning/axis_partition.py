@@ -31,45 +31,16 @@ class PandasOnPythonDataframeAxisPartition(PandasDataframeAxisPartition):
     ----------
     list_of_blocks : list
         List with partition objects to create common axis partition from.
+    axis : {0, 1}
+        The axis on which the partitions are located.
     """
 
-    def __init__(self, list_of_blocks):
+    def __init__(self, list_of_blocks, axis):
         for obj in list_of_blocks:
             obj.drain_call_queue()
         # Unwrap from PandasDataframePartition object for ease of use
         self.list_of_blocks = [obj.data for obj in list_of_blocks]
+        self.axis = axis
 
     partition_type = PandasOnPythonDataframePartition
     instance_type = pandas.DataFrame
-
-
-class PandasOnPythonDataframeColumnPartition(PandasOnPythonDataframeAxisPartition):
-    """
-    The column partition implementation for pandas storage format and Python engine.
-
-    All of the implementation for this class is in the ``PandasOnPythonDataframeAxisPartition``
-    parent class, and this class defines the axis to perform the computation over.
-
-    Parameters
-    ----------
-    list_of_blocks : list
-        List with partition objects to create common axis partition from.
-    """
-
-    axis = 0
-
-
-class PandasOnPythonDataframeRowPartition(PandasOnPythonDataframeAxisPartition):
-    """
-    The row partition implementation for pandas storage format and Python engine.
-
-    All of the implementation for this class is in the ``PandasOnPythonDataframeAxisPartition``
-    parent class, and this class defines the axis to perform the computation over.
-
-    Parameters
-    ----------
-    list_of_blocks : list
-        List with partition objects to create common axis partition from.
-    """
-
-    axis = 1

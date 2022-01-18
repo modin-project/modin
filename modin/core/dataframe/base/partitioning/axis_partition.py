@@ -125,7 +125,7 @@ class BaseDataframeAxisPartition(ABC):  # pragma: no cover
         materialized = self.apply(
             lambda x: x, num_splits=1, maintain_partitioning=False
         )
-        return type(self)(materialized, get_ip=get_ip)
+        return type(self)(materialized, self.axis, get_ip=get_ip)
 
     def unwrap(self, squeeze=False, get_ip=False):
         """

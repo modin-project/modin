@@ -10,21 +10,3 @@ Public API
 
 .. autoclass:: modin.core.execution.ray.implementations.cudf_on_ray.partitioning.axis_partition.cuDFOnRayDataframeAxisPartition
   :members:
-
-cuOnRayDataframeColumnPartition
-"""""""""""""""""""""""""""""""
-
-Public API
-----------
-
-.. autoclass:: modin.core.execution.ray.implementations.cudf_on_ray.partitioning.axis_partition.cuDFOnRayDataframeColumnPartition
-  :members:
-
-cuDFOnRayDataframeRowPartition
-""""""""""""""""""""""""""""""
-
-Public API
-----------
-
-.. autoclass:: modin.core.execution.ray.implementations.cudf_on_ray.partitioning.axis_partition.cuDFOnRayDataframeRowPartition
-  :members:

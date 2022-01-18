@@ -27,26 +27,16 @@ class cuDFOnRayDataframeAxisPartition(object):
     ----------
     partitions : np.ndarray
         NumPy array with ``cuDFOnRayDataframePartition``-s.
+    axis : {0, 1}
+        The axis on which the partitions are located.
     """
 
-    def __init__(self, partitions):
+    def __init__(self, partitions, axis):
         self.partitions = [obj for obj in partitions]
+        self.axis = axis
 
     partition_type = cuDFOnRayDataframePartition
     instance_type = cudf.DataFrame
-
-
-class cuDFOnRayDataframeColumnPartition(cuDFOnRayDataframeAxisPartition):
-    """
-    The column partition implementation of ``cuDFOnRayDataframeAxisPartition``.
-
-    Parameters
-    ----------
-    partitions : np.ndarray
-        NumPy array with ``cuDFOnRayDataframePartition``-s.
-    """
-
-    axis = 0
 
     def reduce(self, func):
         """
@@ -61,58 +51,31 @@ class cuDFOnRayDataframeColumnPartition(cuDFOnRayDataframeAxisPartition):
         -------
         cuDFOnRayDataframePartition
         """
-        keys = [partition.get_key() for partition in self.partitions]
-        gpu_managers = [partition.get_gpu_manager() for partition in self.partitions]
-        head_gpu_manager = gpu_managers[0]
-        cudf_dataframe_object_ids = [
-            gpu_manager.get.remote(key) for gpu_manager, key in zip(gpu_managers, keys)
-        ]
+        if self.axis == 0:
+            keys = [partition.get_key() for partition in self.partitions]
+            gpu_managers = [
+                partition.get_gpu_manager() for partition in self.partitions
+            ]
+            head_gpu_manager = gpu_managers[0]
+            cudf_dataframe_object_ids = [
+                gpu_manager.get.remote(key)
+                for gpu_manager, key in zip(gpu_managers, keys)
+            ]
 
-        # FIXME: The signature of `head_gpu_manager.reduce` requires
-        # (first, others, func, axis=0, **kwargs) parameters, but `first`
-        # parameter isn't present.
-        key = head_gpu_manager.reduce.remote(
-            cudf_dataframe_object_ids, axis=self.axis, func=func
-        )
-        key = ray.get(key)
-        result = cuDFOnRayDataframePartition(gpu_manager=head_gpu_manager, key=key)
+            # FIXME: The signature of `head_gpu_manager.reduce` requires
+            # (first, others, func, axis=0, **kwargs) parameters, but `first`
+            # parameter isn't present.
+            key = head_gpu_manager.reduce.remote(
+                cudf_dataframe_object_ids, axis=self.axis, func=func
+            )
+            key = ray.get(key)
+            result = cuDFOnRayDataframePartition(gpu_manager=head_gpu_manager, key=key)
+        else:
+            keys = [partition.get_key() for partition in self.partitions]
+            gpu = self.partitions[0].get_gpu_manager()
+
+            # FIXME: Method `gpu_manager.reduce_key_list` does not exist.
+            key = gpu.reduce_key_list.remote(keys, func)
+            key = ray.get(key)
+            result = cuDFOnRayDataframePartition(gpu_manager=gpu, key=key)
         return result
-
-
-class cuDFOnRayDataframeRowPartition(cuDFOnRayDataframeAxisPartition):
-    """
-    The row partition implementation of ``cuDFOnRayDataframeAxisPartition``.
-
-    Parameters
-    ----------
-    partitions : np.ndarray
-        NumPy array with ``cuDFOnRayDataframePartition``-s.
-    """
-
-    axis = 1
-
-    def reduce(self, func):
-        """
-        Reduce partitions along `self.axis` and apply `func`.
-
-        Parameters
-        ----------
-        func : calalble
-            A func to apply.
-
-        Returns
-        -------
-        cuDFOnRayDataframePartition
-
-        Notes
-        -----
-        Since we are using row partitions, we can bypass the Ray plasma
-        store during axis reduce functions.
-        """
-        keys = [partition.get_key() for partition in self.partitions]
-        gpu = self.partitions[0].get_gpu_manager()
-
-        # FIXME: Method `gpu_manager.reduce_key_list` does not exist.
-        key = gpu.reduce_key_list.remote(keys, func)
-        key = ray.get(key)
-        return cuDFOnRayDataframePartition(gpu_manager=gpu, key=key)

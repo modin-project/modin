@@ -10,21 +10,3 @@ Public API
 
 .. autoclass:: modin.core.execution.ray.implementations.pandas_on_ray.partitioning.axis_partition.PandasOnRayDataframeAxisPartition
   :members:
-
-PandasOnRayDataframeColumnPartition
-"""""""""""""""""""""""""""""""""""
-
-Public API
-----------
-
-.. autoclass:: modin.core.execution.ray.implementations.pandas_on_ray.partitioning.axis_partition.PandasOnRayDataframeColumnPartition
-  :members:
-
-PandasOnRayDataframeRowPartition
-""""""""""""""""""""""""""""""""
-
-Public API
-----------
-
-.. autoclass:: modin.core.execution.ray.implementations.pandas_on_ray.partitioning.axis_partition.PandasOnRayDataframeRowPartition
-  :members:

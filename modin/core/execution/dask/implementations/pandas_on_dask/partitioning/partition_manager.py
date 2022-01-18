@@ -18,10 +18,7 @@ import numpy as np
 from modin.core.dataframe.pandas.partitioning.partition_manager import (
     PandasDataframePartitionManager,
 )
-from .axis_partition import (
-    PandasOnDaskDataframeColumnPartition,
-    PandasOnDaskDataframeRowPartition,
-)
+from .axis_partition import PandasOnDaskDataframeAxisPartition
 from .partition import PandasOnDaskDataframePartition
 from modin.error_message import ErrorMessage
 import pandas
@@ -34,8 +31,7 @@ class PandasOnDaskDataframePartitionManager(PandasDataframePartitionManager):
 
     # This object uses PandasOnDaskDataframePartition objects as the underlying store.
     _partition_class = PandasOnDaskDataframePartition
-    _column_partitions_class = PandasOnDaskDataframeColumnPartition
-    _row_partition_class = PandasOnDaskDataframeRowPartition
+    _axis_partition_class = PandasOnDaskDataframeAxisPartition
 
     @classmethod
     def get_indices(cls, axis, partitions, index_func):

@@ -32,15 +32,18 @@ class PandasOnDaskDataframeAxisPartition(PandasDataframeAxisPartition):
     ----------
     list_of_blocks : list
         List of ``PandasOnDaskDataframePartition`` objects.
+    axis : {0, 1}
+        The axis on which the partitions are located.
     get_ip : bool, default: False
         Whether to get node IP addresses of conforming partitions or not.
     """
 
-    def __init__(self, list_of_blocks, get_ip=False):
+    def __init__(self, list_of_blocks, axis, get_ip=False):
         for obj in list_of_blocks:
             obj.drain_call_queue()
         # Unwrap from PandasDataframePartition object for ease of use
         self.list_of_blocks = [obj.future for obj in list_of_blocks]
+        self.axis = axis
         if get_ip:
             self.list_of_ips = [obj._ip_cache for obj in list_of_blocks]
 
@@ -166,42 +169,6 @@ class PandasOnDaskDataframeAxisPartition(PandasDataframeAxisPartition):
             self.partition_type(future, length, width, ip)
             for (future, length, width, ip) in zip(*[iter(partitions)] * 4)
         ]
-
-
-class PandasOnDaskDataframeColumnPartition(PandasOnDaskDataframeAxisPartition):
-    """
-    The column partition implementation.
-
-    All of the implementation for this class is in the parent class,
-    and this class defines the axis to perform the computation over.
-
-    Parameters
-    ----------
-    list_of_blocks : list
-        List of ``PandasOnDaskDataframePartition`` objects.
-    get_ip : bool, default: False
-        Whether to get node IP addresses to conforming partitions or not.
-    """
-
-    axis = 0
-
-
-class PandasOnDaskDataframeRowPartition(PandasOnDaskDataframeAxisPartition):
-    """
-    The row partition implementation.
-
-    All of the implementation for this class is in the parent class,
-    and this class defines the axis to perform the computation over.
-
-    Parameters
-    ----------
-    list_of_blocks : list
-        List of ``PandasOnDaskDataframePartition`` objects.
-    get_ip : bool, default: False
-        Whether to get node IP addresses to conforming partitions or not.
-    """
-
-    axis = 1
 
 
 def deploy_dask_func(func, *args):

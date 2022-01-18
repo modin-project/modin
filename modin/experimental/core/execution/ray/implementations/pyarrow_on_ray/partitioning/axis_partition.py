@@ -32,11 +32,14 @@ class PyarrowOnRayDataframeAxisPartition(BaseDataframeAxisPartition):
     ----------
     list_of_blocks : list
         List with partition objects to create common axis partition for.
+    axis : {0, 1}
+        The axis on which the partitions are located.
     """
 
-    def __init__(self, list_of_blocks):
+    def __init__(self, list_of_blocks, axis):
         # Unwrap from PandasDataframePartition object for ease of use
         self.list_of_blocks = [obj.oid for obj in list_of_blocks]
+        self.axis = axis
 
     def apply(self, func, num_splits=None, other_axis_partition=None, **kwargs):
         """
@@ -123,38 +126,6 @@ class PyarrowOnRayDataframeAxisPartition(BaseDataframeAxisPartition):
                 *args
             )
         ]
-
-
-class PyarrowOnRayDataframeColumnPartition(PyarrowOnRayDataframeAxisPartition):
-    """
-    The column partition implementation for PyArrow storage format and Ray engine.
-
-    All of the implementation for this class is in the ``PyarrowOnRayDataframeAxisPartition``
-    parent class, and this class defines the axis to perform the computation over.
-
-    Parameters
-    ----------
-    list_of_blocks : list
-        List with partition objects to create common axis partition.
-    """
-
-    axis = 0
-
-
-class PyarrowOnRayDataframeRowPartition(PyarrowOnRayDataframeAxisPartition):
-    """
-    The row partition implementation for PyArrow storage format and Ray engine.
-
-    All of the implementation for this class is in the ``PyarrowOnRayDataframeAxisPartition``
-    parent class, and this class defines the axis to perform the computation over.
-
-    Parameters
-    ----------
-    list_of_blocks : list
-        List with partition objects to create common axis partition.
-    """
-
-    axis = 1
 
 
 def concat_arrow_table_partitions(axis, partitions):

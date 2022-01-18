@@ -21,10 +21,7 @@ from modin.config import ProgressBar
 from modin.core.execution.ray.generic.partitioning.partition_manager import (
     GenericRayDataframePartitionManager,
 )
-from .axis_partition import (
-    PandasOnRayDataframeColumnPartition,
-    PandasOnRayDataframeRowPartition,
-)
+from .axis_partition import PandasOnRayDataframeAxisPartition
 from .partition import PandasOnRayDataframePartition
 from modin.core.execution.ray.generic.modin_aqp import call_progress_bar
 from modin.error_message import ErrorMessage
@@ -91,8 +88,7 @@ class PandasOnRayDataframePartitionManager(GenericRayDataframePartitionManager):
 
     # This object uses RayRemotePartition objects as the underlying store.
     _partition_class = PandasOnRayDataframePartition
-    _column_partitions_class = PandasOnRayDataframeColumnPartition
-    _row_partition_class = PandasOnRayDataframeRowPartition
+    _axis_partition_class = PandasOnRayDataframeAxisPartition
 
     @classmethod
     def get_indices(cls, axis, partitions, index_func=None):

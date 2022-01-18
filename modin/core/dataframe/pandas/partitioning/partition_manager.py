@@ -78,10 +78,7 @@ class PandasDataframePartitionManager(ABC):
     """
 
     _partition_class = None
-    # Column partitions class is the class to use to create the column partitions.
-    _column_partitions_class = None
-    # Row partitions class is the class to use to create the row partitions.
-    _row_partition_class = None
+    _axis_partition_class = None
 
     @classmethod
     def preprocess_func(cls, map_func):
@@ -137,7 +134,9 @@ class PandasDataframePartitionManager(ABC):
         if not isinstance(partitions, list):
             partitions = [partitions]
         return [
-            cls._column_partitions_class(col) for frame in partitions for col in frame.T
+            cls._axis_partition_class(col, axis=0)
+            for frame in partitions
+            for col in frame.T
         ]
 
     @classmethod
@@ -162,7 +161,11 @@ class PandasDataframePartitionManager(ABC):
         """
         if not isinstance(partitions, list):
             partitions = [partitions]
-        return [cls._row_partition_class(row) for frame in partitions for row in frame]
+        return [
+            cls._axis_partition_class(row, axis=1)
+            for frame in partitions
+            for row in frame
+        ]
 
     @classmethod
     def axis_partition(cls, partitions, axis):

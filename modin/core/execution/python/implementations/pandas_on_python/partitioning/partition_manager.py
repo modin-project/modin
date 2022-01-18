@@ -16,10 +16,7 @@
 from modin.core.dataframe.pandas.partitioning.partition_manager import (
     PandasDataframePartitionManager,
 )
-from .axis_partition import (
-    PandasOnPythonDataframeColumnPartition,
-    PandasOnPythonDataframeRowPartition,
-)
+from .axis_partition import PandasOnPythonDataframeAxisPartition
 from .partition import PandasOnPythonDataframePartition
 
 
@@ -31,5 +28,4 @@ class PandasOnPythonDataframePartitionManager(PandasDataframePartitionManager):
     """
 
     _partition_class = PandasOnPythonDataframePartition
-    _column_partitions_class = PandasOnPythonDataframeColumnPartition
-    _row_partition_class = PandasOnPythonDataframeRowPartition
+    _axis_partition_class = PandasOnPythonDataframeAxisPartition

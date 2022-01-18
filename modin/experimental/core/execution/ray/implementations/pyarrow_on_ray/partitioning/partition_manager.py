@@ -16,10 +16,7 @@
 from modin.core.execution.ray.generic.partitioning.partition_manager import (
     GenericRayDataframePartitionManager,
 )
-from .axis_partition import (
-    PyarrowOnRayDataframeColumnPartition,
-    PyarrowOnRayDataframeRowPartition,
-)
+from .axis_partition import PyarrowOnRayDataframeAxisPartition
 from .partition import PyarrowOnRayDataframePartition
 
 
@@ -33,5 +30,4 @@ class PyarrowOnRayDataframePartitionManager(GenericRayDataframePartitionManager)
 
     # This object uses PyarrowOnRayDataframePartition objects as the underlying store.
     _partition_class = PyarrowOnRayDataframePartition
-    _column_partitions_class = PyarrowOnRayDataframeColumnPartition
-    _row_partition_class = PyarrowOnRayDataframeRowPartition
+    _axis_partition_class = PyarrowOnRayDataframeAxisPartition

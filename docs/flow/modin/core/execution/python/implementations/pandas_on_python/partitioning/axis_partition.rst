@@ -10,21 +10,3 @@ Public API
 ----------
 
 .. autoclass:: modin.core.execution.python.implementations.pandas_on_python.partitioning.axis_partition.PandasOnPythonDataframeAxisPartition
-
-PandasOnPythonFrameColumnPartition
-""""""""""""""""""""""""""""""""""
-
-Public API
-----------
-
-.. autoclass:: modin.core.execution.python.implementations.pandas_on_python.partitioning.axis_partition.PandasOnPythonDataframeColumnPartition
-  :members:
-
-PandasOnPythonFrameRowPartition
-"""""""""""""""""""""""""""""""
-
-Public API
-----------
-
-.. autoclass:: modin.core.execution.python.implementations.pandas_on_python.partitioning.axis_partition.PandasOnPythonDataframeRowPartition
-  :members:
