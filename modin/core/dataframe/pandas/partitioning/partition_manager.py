@@ -123,7 +123,7 @@ class PandasDataframePartitionManager(ABC):
         ----------
         partitions : list-like
             List of (smaller) partitions to be combined to column-wise partitions.
-        full_axis : bool
+        full_axis : bool, default: True
             Whether or not this partition contains the entire column axis.
 
         Returns
