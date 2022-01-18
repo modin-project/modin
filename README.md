@@ -15,7 +15,8 @@
 
 Modin is a drop-in replacement for [pandas](https://github.com/pandas-dev/pandas). While pandas is
 single-threaded, Modin lets you instantly speed up your workflows by scaling pandas so it uses all of your
-cores. Modin works especially well on larger datasets, where pandas becomes painfully slow or runs out of memory.
+cores. Modin works especially well on larger datasets, where pandas becomes painfully slow or runs 
+[out of memory](https://modin.readthedocs.io/en/latest/getting_started/out_of_core.html).
 
 Using modin is as simple as replacing the pandas import:
 
@@ -106,12 +107,11 @@ import modin.pandas as pd
 
 Check [this Modin docs section](https://modin.readthedocs.io/en/latest/developer/using_omnisci.html) for Omnisci engine setup.
 
-**Note: You should not change the engine after you have imported Modin as it will result in undefined behavior**
+**Note: You should not change the engine after your first operation with Modin as it will result in undefined behavior**
 
 #### Which engine should I use?
 
-If you are on Windows, you must use Dask as Ray does not support Windows. If you are on
-Linux or Mac OS, you can install and use either engine. There is no knowledge required
+On Linux, MacOS, and Windows you can install and use either Ray or Dask. There is no knowledge required
 to use either of these engines as Modin abstracts away all of the complexity, so feel
 free to pick either!
 
@@ -176,8 +176,10 @@ you would pandas.
 
 <img align="right" style="display:inline;" height="350" width="300" src="https://github.com/modin-project/modin/blob/master/docs/img/read_csv_benchmark.png?raw=true"></a>
 
-The `modin.pandas` DataFrame is an extremely light-weight parallel DataFrame. Modin 
-transparently distributes the data and computation so that you can continue using the same pandas API
+The `modin.pandas` DataFrame is an extremely light-weight parallel DataFrame. To see how Modin compares
+to other dataframe systems (namely Dask DataFrame and Koalas), check out 
+[this page](https://modin.readthedocs.io/en/latest/getting_started/modin_vs_dask_vs_koalas.html?).
+Modin transparently distributes the data and computation so that you can continue using the same pandas API
 while being able to work with more data faster. Because it is so light-weight, 
 Modin provides speed-ups of up to 4x on a laptop with 4 physical cores.
 
@@ -224,7 +226,7 @@ more information, and checkout [the difference between Modin and Dask!](https://
 ### More information and Getting Involved
 
 - Read the [documentation](https://modin.readthedocs.io/en/latest/) for more information.
-- Check out [our paper](http://www.vldb.org/pvldb/vol13/p2033-petersohn.pdf) to learn more about the theory underlying Modin.
+- Check out [our paper](https://people.eecs.berkeley.edu/~totemtang/paper/Modin.pdf) to learn more about the theory underlying Modin.
 - Ask questions or participate in discussions on our [Discourse](https://discuss.modin.org).
 - Let us know how you're using Modin! Join our community [Slack](https://modin.org/slack.html) to discuss and ask questions.
 - Submit bug reports to our [GitHub Issues Page](https://github.com/modin-project/modin/issues).
