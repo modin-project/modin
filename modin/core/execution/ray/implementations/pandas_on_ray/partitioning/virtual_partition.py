@@ -34,10 +34,10 @@ class PandasOnRayDataframeVirtualPartition(PandasDataframeAxisPartition):
         List of ``PandasOnRayDataframePartition`` objects.
     get_ip : bool, default: False
         Whether to get node IP addresses to conforming partitions or not.
-    full_axis : bool, default: True
-        Whether this partition spans an entire axis of the dataframe.
-    call_queue : list, default: None
-        Call queue that needs to be executed on the partition.
+    full_axis: bool, default: True
+        Whether or not the virtual partition encompasses the whole axis.
+    call_queue: list, optional
+        A list of tuples (callable, args, kwargs) that contains deferred calls.
     """
 
     partition_type = PandasOnRayDataframePartition
@@ -100,7 +100,7 @@ class PandasOnRayDataframeVirtualPartition(PandasDataframeAxisPartition):
     @property
     def list_of_blocks(self):
         """
-        Get the list of `pandas.DataFrame` that compose this partition.
+        Get the list of physical partition objects that compose this partition.
 
         Returns
         -------
@@ -116,7 +116,7 @@ class PandasOnRayDataframeVirtualPartition(PandasDataframeAxisPartition):
     @property
     def list_of_ips(self):
         """
-        Get the IPs holding the `pandas.DataFrames` composing this partition.
+        Get the IPs holding the physical objects composing this partition.
 
         Returns
         -------
@@ -237,12 +237,12 @@ class PandasOnRayDataframeVirtualPartition(PandasDataframeAxisPartition):
         **kwargs,
     ):
         """
-        Apply a function to the objects wrapped by this partition.
+        Apply a function to this axis partition along full axis.
 
         Parameters
         ----------
-        func : callable or ray.ObjectRef
-            A function to apply.
+        func : callable
+            The function to apply.
         num_splits : int, default: None
             The number of times to split the result object.
         other_axis_partition : PandasDataframeAxisPartition, default: None
@@ -256,12 +256,12 @@ class PandasOnRayDataframeVirtualPartition(PandasDataframeAxisPartition):
             orientation (the lengths will remain the same). This is ignored between
             two axis partitions.
         **kwargs : dict
-            Additional keyword arguments to be passed in `func`.
+            Additional keywords arguments to be passed in `func`.
 
         Returns
         -------
-        PandasOnRayDataframeVirtualPartition
-            A new ``PandasOnRayDataframeVirtualPartition`` object.
+        list
+            A list of `PandasOnRayDataframeVirtualPartition` objects.
         """
         if not self.full_axis:
             num_splits = 1
@@ -289,7 +289,7 @@ class PandasOnRayDataframeVirtualPartition(PandasDataframeAxisPartition):
         Returns
         -------
         PandasOnRayDataframeVirtualPartition
-            A partition composed of a single materialized partition.
+            An axis partition containing only a single materialized partition.
         """
         materialized = super(
             PandasOnRayDataframeVirtualPartition, self
@@ -384,26 +384,29 @@ class PandasOnRayDataframeVirtualPartition(PandasDataframeAxisPartition):
 
     def add_to_apply_calls(self, func, *args, **kwargs):
         """
-        Add a function to the call queue.
+                Add a function to the call queue.
 
-        Parameters
-        ----------
-        func : callable or ray.ObjectRef
-            Function to be added to the call queue.
-        *args : iterable
-            Additional positional arguments to be passed in `func`.
-        **kwargs : dict
-            Additional keyword arguments to be passed in `func`.
+                Parameters
+                ----------
+                func : callable or ray.ObjectRef
+                    Function to be added to the call queue.
+                *args : iterable
+                    Additional positional arguments to be passed in `func`.
+                **kwargs : dict
+                    Additional keyword arguments to be passed in `func`.
 
-        Returns
-        -------
-        PandasOnRayDataframeVirtualPartition
-            A new ``PandasOnRayDataframeVirtualPartition`` object.
+                Returns
+                -------
+                PandasOnRayDataframeVirtualPartition
+                    A new ``PandasOnRayDataframeVirtualPartition`` object.
+        <<<<<<< HEAD
 
-        Notes
-        -----
-        It does not matter if `func` is callable or an ``ray.ObjectRef``. Ray will
-        handle it correctly either way. The keyword arguments are sent as a dictionary.
+                Notes
+                -----
+                It does not matter if `func` is callable or an ``ray.ObjectRef``. Ray will
+                handle it correctly either way. The keyword arguments are sent as a dictionary.
+        =======
+        >>>>>>> refs/remotes/devin-petersohn/issues/3675
         """
         return type(self)(
             self.list_of_partitions_to_combine,

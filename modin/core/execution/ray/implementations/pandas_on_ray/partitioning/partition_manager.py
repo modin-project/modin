@@ -159,14 +159,17 @@ class PandasOnRayDataframePartitionManager(GenericRayDataframePartitionManager):
 
         Notes
         -----
-        Assumes that the blocks are already the same shape on the dimension
-        being concatenated. Will throw a ValueError if this condition is not
-        met.
+        Assumes that the blocks are already the same shape on the
+        dimension being concatenated. A ValueError will be thrown if this
+        condition is not met.
         """
         result = super(PandasOnRayDataframePartitionManager, cls).concat(
             axis, left_parts, right_parts
         )
-        return cls.rebalance_partitions(result)
+        if axis == 0:
+            return cls.rebalance_partitions(result)
+        else:
+            return result
 
     @classmethod
     def rebalance_partitions(cls, partitions):
