@@ -30,8 +30,7 @@ import pandas
 from modin.error_message import ErrorMessage
 from modin.core.storage_formats.pandas.utils import compute_chunksize
 from modin.core.dataframe.pandas.utils import concatenate
-from modin.config import NPartitions, ProgressBar, BenchmarkMode
-from modin.core.execution.ray.generic.modin_aqp import call_progress_bar
+from modin.config import NPartitions, ProgressBar, BenchmarkMode, Engine
 
 
 def wait_computations_if_benchmark_mode(func):
@@ -89,7 +88,16 @@ def progress_bar_wrapper(f):
     callable
         Decorated version of `f` which reports progress.
     """
+    if Engine.get() != "Ray":
+        if ProgressBar.get():
+            raise NotImplementedError(
+                f"ProgressBar doesn't work with '{Engine.get()}' engine."
+            )
+        else:
+            return f
+
     from functools import wraps
+    from modin.core.execution.ray.generic.modin_aqp import call_progress_bar
 
     @wraps(f)
     def magic(*args, **kwargs):
