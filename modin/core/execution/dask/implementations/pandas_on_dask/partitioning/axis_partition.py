@@ -34,9 +34,15 @@ class PandasOnDaskDataframeAxisPartition(PandasDataframeAxisPartition):
         List of ``PandasOnDaskDataframePartition`` objects.
     get_ip : bool, default: False
         Whether to get node IP addresses of conforming partitions or not.
+    full_axis : bool, default: True
+        Whether or not the virtual partition encompasses the whole axis.
     """
 
-    def __init__(self, list_of_blocks, get_ip=False):
+    def __init__(self, list_of_blocks, get_ip=False, full_axis=False):
+        if not full_axis:
+            raise NotImplementedError(
+                "Pandas on Python execution requires full-axis partitions."
+            )
         for obj in list_of_blocks:
             obj.drain_call_queue()
         # Unwrap from PandasDataframePartition object for ease of use

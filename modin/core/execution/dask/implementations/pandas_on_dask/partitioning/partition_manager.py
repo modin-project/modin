@@ -128,3 +128,22 @@ class PandasOnDaskDataframePartitionManager(PandasDataframePartitionManager):
                 for row_idx in range(len(left))
             ]
         )
+
+    @classmethod
+    def rebalance_partitions(cls, partitions):
+        """
+        Return the provided array of partitions without rebalancing it.
+
+        We haven't implemented partition rebalancing for Ray yet.
+
+        Parameters
+        ----------
+        partitions : np.ndarray
+            The 2-d array of partitions to rebalance.
+
+        Returns
+        -------
+        np.ndarray
+            The sume 2-d array.
+        """
+        return partitions
