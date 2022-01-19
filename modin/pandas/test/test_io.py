@@ -276,6 +276,10 @@ class TestCsv:
         ],
     )
     @pytest.mark.parametrize("skipfooter", [0, 10])
+    @pytest.mark.skip(
+        condition="config.getoption('--simulate-cloud').lower() != 'off'",
+        reason="We get a SIGABRT during this test in cloud mode - issue #4004",
+    )
     def test_read_csv_parsing_1(
         self,
         dtype,
@@ -327,6 +331,10 @@ class TestCsv:
         ],
     )
     @pytest.mark.parametrize("encoding", ["latin1", "windows-1251", None])
+    @pytest.mark.skip(
+        condition="config.getoption('--simulate-cloud').lower() != 'off'",
+        reason="We get a SIGABRT during this test in cloud mode - issue #4004",
+    )
     def test_read_csv_parsing_2(
         self,
         make_csv_file,
@@ -389,6 +397,10 @@ class TestCsv:
     @pytest.mark.parametrize("false_values", [["No"], ["No", "false"], None])
     @pytest.mark.parametrize("skipfooter", [0, 10])
     @pytest.mark.parametrize("nrows", [35, None])
+    @pytest.mark.skip(
+        condition="config.getoption('--simulate-cloud').lower() != 'off'",
+        reason="We get a SIGABRT during this test in cloud mode - issue #4004",
+    )
     def test_read_csv_parsing_3(
         self,
         true_values,
