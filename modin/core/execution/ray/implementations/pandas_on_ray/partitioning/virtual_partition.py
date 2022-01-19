@@ -34,9 +34,9 @@ class PandasOnRayDataframeVirtualPartition(PandasDataframeAxisPartition):
         List of ``PandasOnRayDataframePartition`` objects.
     get_ip : bool, default: False
         Whether to get node IP addresses to conforming partitions or not.
-    full_axis: bool, default: True
+    full_axis : bool, default: True
         Whether or not the virtual partition encompasses the whole axis.
-    call_queue: list, optional
+    call_queue : list, optional
         A list of tuples (callable, args, kwargs) that contains deferred calls.
     """
 
@@ -384,29 +384,26 @@ class PandasOnRayDataframeVirtualPartition(PandasDataframeAxisPartition):
 
     def add_to_apply_calls(self, func, *args, **kwargs):
         """
-                Add a function to the call queue.
+        Add a function to the call queue.
 
-                Parameters
-                ----------
-                func : callable or ray.ObjectRef
-                    Function to be added to the call queue.
-                *args : iterable
-                    Additional positional arguments to be passed in `func`.
-                **kwargs : dict
-                    Additional keyword arguments to be passed in `func`.
+        Parameters
+        ----------
+        func : callable or ray.ObjectRef
+            Function to be added to the call queue.
+        *args : iterable
+            Additional positional arguments to be passed in `func`.
+        **kwargs : dict
+            Additional keyword arguments to be passed in `func`.
 
-                Returns
-                -------
-                PandasOnRayDataframeVirtualPartition
-                    A new ``PandasOnRayDataframeVirtualPartition`` object.
-        <<<<<<< HEAD
+        Returns
+        -------
+        PandasOnRayDataframeVirtualPartition
+            A new ``PandasOnRayDataframeVirtualPartition`` object.
 
-                Notes
-                -----
-                It does not matter if `func` is callable or an ``ray.ObjectRef``. Ray will
-                handle it correctly either way. The keyword arguments are sent as a dictionary.
-        =======
-        >>>>>>> refs/remotes/devin-petersohn/issues/3675
+        Notes
+        -----
+        It does not matter if `func` is callable or an ``ray.ObjectRef``. Ray will
+        handle it correctly either way. The keyword arguments are sent as a dictionary.
         """
         return type(self)(
             self.list_of_partitions_to_combine,
