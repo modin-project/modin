@@ -412,7 +412,7 @@ class PandasOnRayDataframeVirtualPartition(PandasDataframeAxisPartition):
         )
 
 
-class PandasOnRayDataframeVirtualPartition(PandasOnRayDataframeVirtualPartition):
+class PandasOnRayDataframeColumnPartition(PandasOnRayDataframeVirtualPartition):
     """
     The column partition implementation.
 
