@@ -190,76 +190,96 @@ class PandasOnRayDataframePartitionManager(GenericRayDataframePartitionManager):
         np.ndarray
             A new NumPy array with rebalanced partitions.
         """
-        heuristic = 1.5  # partitions can be 1.5x larger than ideal. Can be modified.
-        if partitions.shape[0] > NPartitions.get() * heuristic:
-            # Naive rebalance
-            lengths = [[obj._length_cache for obj in row] for row in partitions]
-            if any(l is None for row in lengths for l in row):
-                if partitions.shape[0] % NPartitions.get() == 0:
-                    ideal_partitions_per_axis_partition = (
-                        partitions.shape[0] // NPartitions.get()
-                    )
-                else:
-                    ideal_partitions_per_axis_partition = (
-                        partitions.shape[0] // NPartitions.get() + 1
-                    )
-                return np.array(
-                    [
-                        cls.column_partitions(
-                            partitions[i : i + ideal_partitions_per_axis_partition],
-                            full_axis=False,
-                        )
-                        for i in range(
-                            0, partitions.shape[0], ideal_partitions_per_axis_partition
-                        )
-                    ]
-                )
-            else:
-                # if we have the lengths, then we need to be intelligent about how we rebalance
-                result_partitions = []
-                start = 0
-                total_rows = sum(part.length() for part in partitions[:, 0])
-                ideal_partition_size = compute_chunksize(total_rows, NPartitions.get())
-                # We don't need to do any rebalancing if the number of rows is too small
-                if total_rows < NPartitions.get() * heuristic:
-                    return partitions
-                for i in range(NPartitions.get()):
-                    # We might pick up partitions too quickly and exhaust all of them.
-                    if start >= len(partitions):
-                        break
-                    stop = start
-                    partition_size = partitions[start][0].length()
-                    while (
-                        stop < len(partitions) and partition_size < ideal_partition_size
-                    ):
-                        stop += 1
-                        if stop < len(partitions):
-                            partition_size = (
-                                partition_size + partitions[stop][0].length()
-                            )
-                    if partition_size > ideal_partition_size * heuristic:
-                        partitions = np.insert(
-                            partitions,
-                            stop + 1,
-                            [
-                                obj.mask(slice(ideal_partition_size, None), slice(None))
-                                for obj in partitions[stop]
-                            ],
-                            0,
-                        )
-                        partitions[stop, :] = [
-                            obj.mask(slice(None, ideal_partition_size), slice(None))
-                            for obj in partitions[stop]
-                        ]
-                    result_partitions.append(
-                        cls.column_partitions(
-                            (partitions[start : stop + 1]), full_axis=False
-                        )
-                    )
-                    start = stop + 1
-                return np.array(result_partitions)
-        else:
+        # We rebalance when the ratio of the number of existing partitions to
+        # the ideal number of partitions is larger than this threshold. The
+        # threshold is a heuristic that may need to be tuned for performance.
+        max_excess_of_num_partitions = 1.5
+        num_existing_partitions = partitions.shape[0]
+        ideal_num_new_partitions = NPartitions.get()
+        if (
+            num_existing_partitions
+            <= ideal_num_new_partitions * max_excess_of_num_partitions
+        ):
             return partitions
+        # If any partition has an unknown length, give each axis partition
+        # roughly the same number of row partitions.
+        if any(partition.length() is None for row in partitions for partition in row):
+            # We need each partition to go into an axis partition, but the
+            # number of axis partitions may not evenly divide the number of
+            # partitions.
+            ideal_existing_partitions_per_new_partition = compute_chunksize(
+                num_existing_partitions, ideal_num_new_partitions
+            )
+            return np.array(
+                [
+                    cls.column_partitions(
+                        partitions[i : i + ideal_existing_partitions_per_new_partition],
+                        full_axis=False,
+                    )
+                    for i in range(
+                        0,
+                        num_existing_partitions,
+                        ideal_existing_partitions_per_new_partition,
+                    )
+                ]
+            )
+        # If we have the number of rows in every partition, then we need to
+        # instead give each new partition roughly the same number of rows.
+
+        new_partitions = []
+        # `start` is the index of the first existing partition that we want to
+        # put into the current new partition
+        start = 0
+        total_rows = sum(part.length() for part in partitions[:, 0])
+        ideal_partition_size = compute_chunksize(total_rows, ideal_num_new_partitions)
+        # We don't need to do any rebalancing if the number of rows is too small.
+        if total_rows <= ideal_num_new_partitions * max_excess_of_num_partitions:
+            return partitions
+        for _ in range(ideal_num_new_partitions):
+            # We might pick up old partitions too quickly and exhaust all of
+            # them.
+            if start >= len(partitions):
+                break
+            # `stop` is the index of the last existing partition so far that we
+            # want to put into the current new partition
+            stop = start
+            partition_size = partitions[start][0].length()
+            # Add existing partitions into the current new partition until the
+            # number of rows in the new partition hits ideal_partition_size.
+            while stop < len(partitions) and partition_size < ideal_partition_size:
+                stop += 1
+                if stop < len(partitions):
+                    partition_size += partitions[stop][0].length()
+            # If the new partition is larger than we want, split the last
+            # current partition that it contains into two partitions, where
+            # the first partition has just enough rows to make the current
+            # new partition have length ideal_partition_size, and the second
+            # partition has the remainder.
+            if partition_size > ideal_partition_size * max_excess_of_num_partitions:
+                new_last_partition_size = ideal_partition_size - sum(
+                    row[0].length() for row in partitions[start:stop]
+                )
+                partitions = np.insert(
+                    partitions,
+                    stop + 1,
+                    [
+                        obj.mask(slice(new_last_partition_size, None), slice(None))
+                        for obj in partitions[stop]
+                    ],
+                    0,
+                )
+                partitions[stop, :] = [
+                    obj.mask(slice(None, new_last_partition_size), slice(None))
+                    for obj in partitions[stop]
+                ]
+            new_partitions.append(
+                cls.column_partitions(
+                    (partitions[start : stop + 1]),
+                    full_axis=False,
+                )
+            )
+            start = stop + 1
+        return np.array(new_partitions)
 
     @classmethod
     def broadcast_apply(cls, axis, apply_func, left, right, other_name="r"):
