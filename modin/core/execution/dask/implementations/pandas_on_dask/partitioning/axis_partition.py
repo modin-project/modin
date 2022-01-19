@@ -38,10 +38,10 @@ class PandasOnDaskDataframeAxisPartition(PandasDataframeAxisPartition):
         Whether or not the virtual partition encompasses the whole axis.
     """
 
-    def __init__(self, list_of_blocks, get_ip=False, full_axis=False):
+    def __init__(self, list_of_blocks, get_ip=False, full_axis=True):
         if not full_axis:
             raise NotImplementedError(
-                "Pandas on Python execution requires full-axis partitions."
+                "Pandas on Dask execution requires full-axis partitions."
             )
         for obj in list_of_blocks:
             obj.drain_call_queue()
