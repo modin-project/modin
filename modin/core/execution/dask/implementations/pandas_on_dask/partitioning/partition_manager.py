@@ -23,7 +23,6 @@ from .virtual_partition import (
     PandasOnDaskDataframeRowPartition,
 )
 from .partition import PandasOnDaskDataframePartition
-from modin.error_message import ErrorMessage
 
 
 class PandasOnDaskDataframePartitionManager(PandasDataframePartitionManager):
@@ -35,6 +34,24 @@ class PandasOnDaskDataframePartitionManager(PandasDataframePartitionManager):
     _row_partition_class = PandasOnDaskDataframeRowPartition
 
     @classmethod
+    def get_object_from_partitions(cls, partitions):
+        """
+        Get the objects wrapped by `partitions` in parallel.
+
+        Parameters
+        ----------
+        partitions : np.ndarray
+            NumPy array with ``PandasDataframePartition``-s.
+
+        Returns
+        -------
+        list
+            The objects wrapped by `partitions`.
+        """
+        client = default_client()
+        futures = [partition.future for partition in partitions]
+        return client.gather(futures)
+
     def get_indices(cls, axis, partitions, index_func):
         """
         Get the internal indices stored in the partitions.

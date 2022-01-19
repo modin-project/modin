@@ -31,6 +31,8 @@ from .partition import PandasOnRayDataframePartition
 from modin.core.execution.ray.generic.modin_aqp import call_progress_bar
 from modin.core.storage_formats.pandas.utils import compute_chunksize
 
+import ray
+
 
 def progress_bar_wrapper(f):
     """
@@ -92,6 +94,24 @@ class PandasOnRayDataframePartitionManager(GenericRayDataframePartitionManager):
     _partition_class = PandasOnRayDataframePartition
     _column_partitions_class = PandasOnRayDataframeColumnPartition
     _row_partition_class = PandasOnRayDataframeRowPartition
+
+    @classmethod
+    def get_object_from_partitions(cls, partitions):
+        """
+        Get the objects wrapped by `partitions` in parallel.
+
+        Parameters
+        ----------
+        partitions : np.ndarray
+            NumPy array with ``PandasDataframePartition``-s.
+
+        Returns
+        -------
+        list
+            The objects wrapped by `partitions`.
+        """
+        futures = [partition.oid for partition in partitions]
+        return ray.get(futures)
 
     @classmethod
     def concat(cls, axis, left_parts, right_parts):
