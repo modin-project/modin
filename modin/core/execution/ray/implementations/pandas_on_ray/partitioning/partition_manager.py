@@ -140,6 +140,29 @@ class PandasOnRayDataframePartitionManager(GenericRayDataframePartitionManager):
 
     @classmethod
     def concat(cls, axis, left_parts, right_parts):
+        """
+        Concatenate the blocks of partitions with another set of blocks.
+
+        Parameters
+        ----------
+        axis : int
+            The axis to concatenate to.
+        left_parts : np.ndarray
+            NumPy array of partitions to concatenate with.
+        right_parts : np.ndarray or list
+            NumPy array of partitions to be concatenated.
+
+        Returns
+        -------
+        np.ndarray
+            A new NumPy array with concatenated partitions.
+
+        Notes
+        -----
+        Assumes that the blocks are already the same shape on the dimension
+        being concatenated. Will throw a ValueError if this condition is not
+        met.
+        """
         result = super(PandasOnRayDataframePartitionManager, cls).concat(
             axis, left_parts, right_parts
         )
@@ -147,6 +170,26 @@ class PandasOnRayDataframePartitionManager(GenericRayDataframePartitionManager):
 
     @classmethod
     def rebalance_partitions(cls, partitions):
+        """
+        Rebalance a 2-d array of partitions.
+
+        Rebalance the partitions by building a new array
+        of partitions out of the original ones so that:
+          - If all partitions have a length, each new partition has roughly the
+            same number of rows from the original partitions.
+          - Otherwise, each new partition spans roughly the same number of old
+            partitions.
+
+        Parameters
+        ----------
+        partitions : np.ndarray
+            The 2-d array of partitions to rebalance.
+
+        Returns
+        -------
+        np.ndarray
+            A new NumPy array with rebalanced partitions.
+        """
         heuristic = 1.5  # partitions can be 1.5x larger than ideal. Can be modified.
         if partitions.shape[0] > NPartitions.get() * heuristic:
             # Naive rebalance
