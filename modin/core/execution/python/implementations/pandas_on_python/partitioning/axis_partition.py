@@ -60,6 +60,8 @@ class PandasOnPythonDataframeColumnPartition(PandasOnPythonDataframeAxisPartitio
     ----------
     list_of_blocks : list
         List with partition objects to create common axis partition from.
+    full_axis : bool, default: True
+        Whether or not the virtual partition encompasses the whole axis.
     """
 
     axis = 0
@@ -76,6 +78,8 @@ class PandasOnPythonDataframeRowPartition(PandasOnPythonDataframeAxisPartition):
     ----------
     list_of_blocks : list
         List with partition objects to create common axis partition from.
+    full_axis : bool, default: True
+        Whether or not the virtual partition encompasses the whole axis.
     """
 
     axis = 1
