@@ -187,6 +187,8 @@ class PandasOnDaskDataframeColumnPartition(PandasOnDaskDataframeAxisPartition):
         List of ``PandasOnDaskDataframePartition`` objects.
     get_ip : bool, default: False
         Whether to get node IP addresses to conforming partitions or not.
+    full_axis : bool, default: True
+        Whether or not the virtual partition encompasses the whole axis.
     """
 
     axis = 0
@@ -205,6 +207,8 @@ class PandasOnDaskDataframeRowPartition(PandasOnDaskDataframeAxisPartition):
         List of ``PandasOnDaskDataframePartition`` objects.
     get_ip : bool, default: False
         Whether to get node IP addresses to conforming partitions or not.
+    full_axis : bool, default: True
+        Whether or not the virtual partition encompasses the whole axis.
     """
 
     axis = 1

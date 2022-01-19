@@ -138,9 +138,6 @@ class PandasDataframePartitionManager(ABC):
         """
         if not isinstance(partitions, list):
             partitions = [partitions]
-        print(
-            f"trying to construct _column_partitions_class: {cls._column_partitions_class} with full_axis {full_axis}"
-        )
         return [
             cls._column_partitions_class(col, full_axis=full_axis)
             for frame in partitions
