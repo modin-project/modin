@@ -16,6 +16,7 @@
 import inspect
 import threading
 
+import numpy as np
 import ray
 
 from modin.config import ProgressBar, NPartitions
@@ -283,7 +284,6 @@ class PandasOnRayDataframePartitionManager(GenericRayDataframePartitionManager):
             )
             start = stop + 1
         return np.array(new_partitions)
-
 
     @classmethod
     @progress_bar_wrapper

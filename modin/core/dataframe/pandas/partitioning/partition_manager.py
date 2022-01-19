@@ -358,7 +358,6 @@ class PandasDataframePartitionManager(ABC):
             other = pandas.concat(others, axis=axis ^ 1)
             return apply_func(df, **{other_name: other})
 
-        [obj.drain_call_queue() for row in right for obj in row]
         map_func = cls.preprocess_func(map_func)
         rt_axis_parts = cls.axis_partition(right, axis ^ 1)
         return np.array(
