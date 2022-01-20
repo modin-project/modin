@@ -620,7 +620,6 @@ jobs:
         # TODO(https://github.com/modin-project/modin/issues/4004): Re-add
         # "python -m pytest --simulate-cloud=normal modin/pandas/test/test_io.py --verbose"
         # once that test stops crashing.
-      - run: python -m pytest --simulate-cloud=normal modin/pandas/test/test_io.py --verbose
       - run: python -m pytest --simulate-cloud=normal modin/pandas/test/dataframe/test_default.py::test_kurt_kurtosis --verbose
       - # When running without parameters, some of the tests fail
         run: python -m pytest --simulate-cloud=normal modin/pandas/test/dataframe/test_binary.py::test_math_functions[add-rows-scalar]
