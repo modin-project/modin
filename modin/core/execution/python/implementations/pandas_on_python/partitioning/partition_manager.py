@@ -39,7 +39,7 @@ class PandasOnPythonDataframePartitionManager(PandasDataframePartitionManager):
         """
         Return the provided array of partitions without rebalancing it.
 
-        We haven't implemented partition rebalancing for Python yet.
+        We haven't implemented partition rebalancing for `PandasOnPython` yet.
 
         Parameters
         ----------
