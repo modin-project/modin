@@ -134,7 +134,7 @@ class PandasOnDaskDataframePartitionManager(PandasDataframePartitionManager):
         """
         Return the provided array of partitions without rebalancing it.
 
-        We haven't implemented partition rebalancing for Ray yet.
+        We haven't implemented partition rebalancing for `PandasOnDask` yet.
 
         Parameters
         ----------
