@@ -578,7 +578,9 @@ def _get_modin_deps_info() -> dict[str, JSONSerializable]:
     """
     Returns Modin-specific dependencies information as a JSON serializable dictionary.
     """
-    result = {}
+    import modin  # delayed import so modin.__init__ is fully initialized
+
+    result = {"modin": modin.__version__}
 
     for pkg_name, pkg_version in [
         ("ray", MIN_RAY_VERSION),
