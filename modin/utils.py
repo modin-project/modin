@@ -25,9 +25,6 @@ from textwrap import dedent, indent
 from typing import Union
 from packaging import version
 
-MIN_RAY_VERSION = version.parse("1.4.0")
-MIN_DASK_VERSION = version.parse("2.22.0")
-
 import pandas
 import numpy as np
 
@@ -36,6 +33,9 @@ from pandas.util._print_versions import _get_sys_info, _get_dependency_info
 from pandas._typing import JSONSerializable
 
 from modin.config import Engine, StorageFormat, IsExperimental
+
+MIN_RAY_VERSION = version.parse("1.4.0")
+MIN_DASK_VERSION = version.parse("2.22.0")
 
 PANDAS_API_URL_TEMPLATE = f"https://pandas.pydata.org/pandas-docs/version/{pandas.__version__}/reference/api/{{}}.html"
 

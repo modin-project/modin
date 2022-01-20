@@ -21,7 +21,6 @@ from packaging import version
 import secrets
 
 from .pubsub import Parameter, _TYPE_PARAMS, ExactStr, ValueSource
-from modin.utils import MIN_RAY_VERSION, MIN_DASK_VERSION
 
 
 class EnvironmentVariable(Parameter, type=str, abstract=True):
@@ -82,6 +81,8 @@ class Engine(EnvironmentVariable, type=str):
         -------
         str
         """
+        from modin.utils import MIN_RAY_VERSION, MIN_DASK_VERSION
+
         if IsDebug.get():
             return "Python"
         try:
