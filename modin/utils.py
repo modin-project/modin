@@ -576,7 +576,12 @@ def import_optional_dependency(name, message):
 
 def _get_modin_deps_info() -> dict[str, JSONSerializable]:
     """
-    Returns Modin-specific dependencies information as a JSON serializable dictionary.
+    Return Modin-specific dependencies information as a JSON serializable dictionary.
+
+    Returns
+    -------
+    dict[str, JSONSerializable]
+        The dictionary of Modin dependencies and their versions.
     """
     import modin  # delayed import so modin.__init__ is fully initialized
 
@@ -612,6 +617,8 @@ def _get_modin_deps_info() -> dict[str, JSONSerializable]:
     return result
 
 
+# Disable flake8 checks for print() in this file
+# flake8: noqa: T001
 def show_versions(as_json: str | bool = False) -> None:
     """
     Provide useful information, important for bug reports.
@@ -621,7 +628,7 @@ def show_versions(as_json: str | bool = False) -> None:
 
     Parameters
     ----------
-    as_json : str or bool, default False
+    as_json : str or bool, default: False
         * If False, outputs info in a human readable form to the console.
         * If str, it will be considered as a path to a file.
           Info will be written to that file in JSON format.
