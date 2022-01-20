@@ -33,6 +33,7 @@ from pandas.util._print_versions import _get_sys_info, _get_dependency_info
 from pandas._typing import JSONSerializable
 
 from modin.config import Engine, StorageFormat, IsExperimental
+from modin._version import get_versions
 
 MIN_RAY_VERSION = version.parse("1.4.0")
 MIN_DASK_VERSION = version.parse("2.22.0")
@@ -637,9 +638,10 @@ def show_versions(as_json: str | bool = False) -> None:
     Notes
     -----
     This is mostly a copy of pandas.show_versions() but adds separate listing
-    of Modin-specific dependencies
+    of Modin-specific dependencies.
     """
     sys_info = _get_sys_info()
+    sys_info["commit"] = get_versions()["full-revisionid"]
     modin_deps = _get_modin_deps_info()
     deps = _get_dependency_info()
 
