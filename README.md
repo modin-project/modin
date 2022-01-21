@@ -61,30 +61,7 @@ conda install -c conda-forge modin-dask # Install Modin dependencies and Dask.
 conda install -c conda-forge modin-omnisci # Install Modin dependencies and Omnisci.
 ```
 
-### Pandas API Coverage
-
-<p align="center">
-
-| pandas Object     | Modin's Ray Engine Coverage                                                          | Modin's Dask Engine Coverage |
-|-------------------|:------------------------------------------------------------------------------------:|:---------------:|
-| `pd.DataFrame`    | <img src=https://img.shields.io/badge/api%20coverage-90.8%25-hunter.svg> | <img src=https://img.shields.io/badge/api%20coverage-90.8%25-hunter.svg> |
-| `pd.Series`       | <img src=https://img.shields.io/badge/api%20coverage-88.05%25-green.svg> | <img src=https://img.shields.io/badge/api%20coverage-88.05%25-green.svg> |
-| `pd.read_csv`     | ✅                                               | ✅ |
-| `pd.read_table`   | ✅                                               | ✅ |
-| `pd.read_parquet` | ✅                                               | ✅ |
-| `pd.read_sql`     | ✅                                               | ✅ |
-| `pd.read_feather` | ✅                                               | ✅ |
-| `pd.read_excel`   | ✅                                               | ✅ |
-| `pd.read_json`    | [✳️](https://github.com/modin-project/modin/issues/554)                                         | [✳️](https://github.com/modin-project/modin/issues/554) |
-| `pd.read_<other>` | [✴️](https://modin.readthedocs.io/en/latest/supported_apis/io_supported.html) | [✴️](https://modin.readthedocs.io/en/latest/supported_apis/io_supported.html) |
-
-
-</p>
-Some pandas APIs are easier to implement than other, so if something is missing feel
-free to open an issue!
-
-
-### Choosing a Compute Engine
+#### Choosing a Compute Engine
 
 If you want to choose a specific compute engine to run on, you can set the environment
 variable `MODIN_ENGINE` and Modin will do computation with that engine:
@@ -107,7 +84,7 @@ import modin.pandas as pd
 
 Check [this Modin docs section](https://modin.readthedocs.io/en/latest/development/using_omnisci.html) for Omnisci engine setup.
 
-**Note: You should not change the engine after your first operation with Modin as it will result in undefined behavior**
+**Note: You should not change the engine after your first operation with Modin as it will result in undefined behavior.**
 
 #### Which engine should I use?
 
@@ -120,50 +97,35 @@ engine based on [OmnisciDB](https://www.omnisci.com/platform/omniscidb) and incl
 [Intel® Distribution of Modin](https://software.intel.com/content/www/us/en/develop/tools/oneapi/components/distribution-of-modin.html),
 which is a part of [Intel® oneAPI AI Analytics Toolkit (AI Kit)](https://www.intel.com/content/www/us/en/developer/tools/oneapi/ai-analytics-toolkit.html).
 
-##### Advanced usage
 
-In Modin, you can start a custom environment in Dask or Ray and Modin will connect to
-that environment automatically. For example, if you'd like to limit the amount of
-resources that Modin uses, you can start a Dask Client or Initialize Ray and Modin will
-use those instances. Make sure you've set the correct environment variable so Modin
-knows which engine to connect to!
+### Pandas API Coverage
 
-For Ray:
-```python
-import ray
-ray.init(plasma_directory="/path/to/custom/dir", object_store_memory=10**10)
-# Modin will connect to the existing Ray environment
-import modin.pandas as pd
-```
+<p align="center">
 
-For Dask:
-```python
-from distributed import Client
-client = Client(n_workers=6)
-# Modin will connect to the Dask Client
-import modin.pandas as pd
-```
+| pandas Object     | Modin's Ray Engine Coverage                                                          | Modin's Dask Engine Coverage |
+|-------------------|:------------------------------------------------------------------------------------:|:---------------:|
+| `pd.DataFrame`    | <img src=https://img.shields.io/badge/api%20coverage-90.8%25-hunter.svg> | <img src=https://img.shields.io/badge/api%20coverage-90.8%25-hunter.svg> |
+| `pd.Series`       | <img src=https://img.shields.io/badge/api%20coverage-88.05%25-green.svg> | <img src=https://img.shields.io/badge/api%20coverage-88.05%25-green.svg> |
+| `pd.read_csv`     | ✅                                               | ✅ |
+| `pd.read_table`   | ✅                                               | ✅ |
+| `pd.read_parquet` | ✅                                               | ✅ |
+| `pd.read_sql`     | ✅                                               | ✅ |
+| `pd.read_feather` | ✅                                               | ✅ |
+| `pd.read_excel`   | ✅                                               | ✅ |
+| `pd.read_json`    | [✳️](https://github.com/modin-project/modin/issues/554)                                         | [✳️](https://github.com/modin-project/modin/issues/554) |
+| `pd.read_<other>` | [✴️](https://modin.readthedocs.io/en/latest/supported_apis/io_supported.html) | [✴️](https://modin.readthedocs.io/en/latest/supported_apis/io_supported.html) |
 
-This gives you the flexibility to start with custom resource constraints and limit the
-amount of resources Modin uses.
+</p>
+Some pandas APIs are easier to implement than other, so if something is missing feel
+free to open an issue!
 
-
-### Full Documentation
+### More about Modin 
 
 Visit the complete documentation on readthedocs: https://modin.readthedocs.io/en/latest/index.html
 
-### Scale your pandas workflow by changing a single line of code.
+#### Scale your pandas workflow by changing a single line of code.
 
-
-```python
-import modin.pandas as pd
-import numpy as np
-
-frame_data = np.random.randint(0, 100, size=(2**10, 2**8))
-df = pd.DataFrame(frame_data)
-```
-**In local mode (without a cluster), Modin will create and manage a local (Dask or Ray) cluster for the execution**
-
+**Note: In local mode (without a cluster), Modin will create and manage a local (Dask or Ray) cluster for the execution.**
 
 To use Modin, you do not need to know how many cores your system has and you do not need
 to  specify how to distribute the data. In fact, you can continue using your previous
@@ -176,9 +138,7 @@ you would pandas.
 
 <img align="right" style="display:inline;" height="350" width="300" src="https://github.com/modin-project/modin/blob/master/docs/img/read_csv_benchmark.png?raw=true"></a>
 
-The `modin.pandas` DataFrame is an extremely light-weight parallel DataFrame. To see how Modin compares
-to other dataframe systems (namely Dask DataFrame and Koalas), check out
-[this page](https://modin.readthedocs.io/en/latest/getting_started/modin_vs_dask_vs_koalas.html?).
+The `modin.pandas` DataFrame is an extremely light-weight parallel DataFrame. 
 Modin transparently distributes the data and computation so that you can continue using the same pandas API
 while working with more data faster. Because it is so light-weight,
 Modin provides speed-ups of up to 4x on a laptop with 4 physical cores.
@@ -204,7 +164,7 @@ for prototyping on a few MBs of data do not scale to tens or hundreds of GBs (de
 of your machine). Modin supports operating on data that does not fit in memory, so that you can comfortably
 work with hundreds of GBs without worrying about substantial slowdown or memory errors.
 
-With preliminary [cluster](https://modin.readthedocs.io/en/latest/getting_started/using_modin.html?#using-modin-on-a-cluster-experimental)
+With preliminary [cluster](https://modin.readthedocs.io/en/latest/getting_started/using_modin/using_modin_cluster.html)
 and [out of core](https://modin.readthedocs.io/en/latest/getting_started/out_of_core.html)
 support, Modin is a DataFrame library with both great single-node performance and high
 scalability in a cluster.
@@ -222,7 +182,7 @@ more information, and checkout [the difference between Modin and Dask!](https://
 **`modin.pandas` is currently under active development. Requests and contributions are welcome!**
 
 
-### More information and Getting Involved
+### General Resources and Getting Involved
 
 - Read the [documentation](https://modin.readthedocs.io/en/latest/) for more information.
 - Check out [our paper](https://people.eecs.berkeley.edu/~totemtang/paper/Modin.pdf) to learn more about the theory underlying Modin.
