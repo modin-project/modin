@@ -16,7 +16,7 @@ setup(
     version=versioneer.get_version(),
     cmdclass=versioneer.get_cmdclass(),
     description="Modin: Make your pandas code run faster by changing one line of code.",
-    packages=find_packages(),
+    packages=find_packages(exclude=["scripts", "scripts.*"]),
     include_package_data=True,
     license="Apache 2",
     url="https://github.com/modin-project/modin",
