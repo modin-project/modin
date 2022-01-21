@@ -47,7 +47,7 @@ Modin automatically detects which engine(s) you have installed and uses that for
 #### From conda-forge
 
 Installing from conda forge using `modin-all` will install Modin and 3 engines: ([Ray](https://github.com/ray-project/ray),
-[Dask](https://github.com/dask/dask) and [Omnisci](https://modin.readthedocs.io/en/latest/UsingOmnisci/index.html))
+[Dask](https://github.com/dask/dask), and [Omnisci](https://modin.readthedocs.io/en/latest/UsingOmnisci/index.html))
 
 ```bash
 conda install -c conda-forge modin-all
