@@ -105,7 +105,7 @@ os.environ["MODIN_ENGINE"] = "dask"  # Modin will use Dask
 import modin.pandas as pd
 ```
 
-Check [this Modin docs section](https://modin.readthedocs.io/en/latest/developer/using_omnisci.html) for Omnisci engine setup.
+Check [this Modin docs section](https://modin.readthedocs.io/en/latest/development/using_omnisci.html) for Omnisci engine setup.
 
 **Note: You should not change the engine after your first operation with Modin as it will result in undefined behavior**
 
@@ -115,7 +115,7 @@ On Linux, MacOS, and Windows you can install and use either Ray or Dask. There i
 to use either of these engines as Modin abstracts away all of the complexity, so feel
 free to pick either!
 
-On Linux you also can choose [Omnisci](https://modin.readthedocs.io/en/latest/developer/using_omnisci.html), which is an experimental
+On Linux you also can choose [Omnisci](https://modin.readthedocs.io/en/latest/development/using_omnisci.html), which is an experimental
 engine based on [OmnisciDB](https://www.omnisci.com/platform/omniscidb) and included in the 
 [Intel® Distribution of Modin](https://software.intel.com/content/www/us/en/develop/tools/oneapi/components/distribution-of-modin.html), 
 which is a part of [Intel® oneAPI AI Analytics Toolkit (AI Kit)](https://www.intel.com/content/www/us/en/developer/tools/oneapi/ai-analytics-toolkit.html).
