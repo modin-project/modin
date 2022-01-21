@@ -74,12 +74,11 @@ export MODIN_ENGINE=dask  # Modin will use Dask
 This can also be done within a notebook/interpreter before you import Modin:
 
 ```python
-import os
-
-os.environ["MODIN_ENGINE"] = "ray"  # Modin will use Ray
-os.environ["MODIN_ENGINE"] = "dask"  # Modin will use Dask
-
 import modin.pandas as pd
+from modin.config import Engine
+
+Engine.put("ray")  # Modin will use Ray
+Engine.put("dask")  # Modin will use Dask 
 ```
 
 Check [this Modin docs section](https://modin.readthedocs.io/en/latest/development/using_omnisci.html) for Omnisci engine setup.

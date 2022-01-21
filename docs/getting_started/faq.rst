@@ -115,6 +115,16 @@ and Modin will do computation with that engine:
     pip install "modin[dask]" # Install Modin dependencies and Dask to run on Dask
     export MODIN_ENGINE=dask  # Modin will use Dask
 
+This can also be done with:
+
+.. code-block:: python
+
+    import modin.pandas as pd
+    from modin.config import Engine
+
+    Engine.put("ray")  # Modin will use Ray
+    Engine.put("dask")  # Modin will use Dask 
+
 We also have an experimental OmniSciDB-based engine of Modin you can read about :doc:`here </development/using_omnisci>`.
 We plan to support more execution engines in future. If you have a specific request,
 please post on the #feature-requests channel on our Slack_ community.
