@@ -112,62 +112,6 @@ class PandasDataframePartitionManager(ABC):
     # END Abstract Methods
 
     @classmethod
-    def column_partitions(cls, partitions):
-        """
-        Get the list of `BaseDataframeAxisPartition` objects representing column-wise paritions.
-
-        Parameters
-        ----------
-        partitions : list-like
-            List of (smaller) partitions to be combined to column-wise partitions.
-
-        Returns
-        -------
-        list
-            A list of `BaseDataframeAxisPartition` objects.
-
-        Notes
-        -----
-        Each value in this list will be an `BaseDataframeAxisPartition` object.
-        `BaseDataframeAxisPartition` is located in `axis_partition.py`.
-        """
-        if not isinstance(partitions, list):
-            partitions = [partitions]
-        return [
-            cls._axis_partition_class(col, axis=0)
-            for frame in partitions
-            for col in frame.T
-        ]
-
-    @classmethod
-    def row_partitions(cls, partitions):
-        """
-        List of `BaseDataframeAxisPartition` objects representing row-wise partitions.
-
-        Parameters
-        ----------
-        partitions : list-like
-            List of (smaller) partitions to be combined to row-wise partitions.
-
-        Returns
-        -------
-        list
-            A list of `BaseDataframeAxisPartition` objects.
-
-        Notes
-        -----
-        Each value in this list will an `BaseDataframeAxisPartition` object.
-        `BaseDataframeAxisPartition` is located in `axis_partition.py`.
-        """
-        if not isinstance(partitions, list):
-            partitions = [partitions]
-        return [
-            cls._axis_partition_class(row, axis=1)
-            for frame in partitions
-            for row in frame
-        ]
-
-    @classmethod
     def axis_partition(cls, partitions, axis):
         """
         Logically partition along given axis (columns or rows).
@@ -184,11 +128,13 @@ class PandasDataframePartitionManager(ABC):
         list
             A list of `BaseDataframeAxisPartition` objects.
         """
-        return (
-            cls.column_partitions(partitions)
-            if not axis
-            else cls.row_partitions(partitions)
-        )
+        if not isinstance(partitions, list):
+            partitions = [partitions]
+        return [
+            cls._axis_partition_class(row, axis=axis)
+            for frame in partitions
+            for row in (frame.T if not axis else frame)
+        ]
 
     @classmethod
     def groupby_reduce(
@@ -1038,12 +984,8 @@ class PandasDataframePartitionManager(ABC):
             )
         else:
             selected_partitions = partitions
-        if not axis:
-            partitions_for_apply = cls.column_partitions(selected_partitions)
-            partitions_for_remaining = partitions.T
-        else:
-            partitions_for_apply = cls.row_partitions(selected_partitions)
-            partitions_for_remaining = partitions
+        partitions_for_apply = cls.axis_partition(selected_partitions, axis)
+        partitions_for_remaining = partitions if axis else partitions.T
         # We may have a command to perform different functions on different
         # columns at the same time. We attempt to handle this as efficiently as
         # possible here. Functions that use this in the dictionary format must
@@ -1232,12 +1174,8 @@ class PandasDataframePartitionManager(ABC):
         np.ndarray
             A NumPy array with new partitions.
         """
-        if axis:
-            left_partitions = cls.row_partitions(left)
-            right_partitions = cls.row_partitions(right)
-        else:
-            left_partitions = cls.column_partitions(left)
-            right_partitions = cls.column_partitions(right)
+        left_partitions = cls.axis_partition(left, axis)
+        right_partitions = cls.axis_partition(right, axis)
         func = cls.preprocess_func(func)
         result = np.array(
             [
