@@ -116,7 +116,7 @@ which is a part of [Intel® oneAPI AI Analytics Toolkit (AI Kit)](https://www.in
 | `pd.read_<other>` | [✴️](https://modin.readthedocs.io/en/latest/supported_apis/io_supported.html) | [✴️](https://modin.readthedocs.io/en/latest/supported_apis/io_supported.html) |
 
 </p>
-Some pandas APIs are easier to implement than other, so if something is missing feel
+Some pandas APIs are easier to implement than others, so if something is missing feel
 free to open an issue!
 
 ### More about Modin 
@@ -177,16 +177,26 @@ and improve:
 ![Architecture](docs/img/modin_architecture.png)
 
 Visit the [Documentation](https://modin.readthedocs.io/en/latest/development/architecture.html) for
-more information, and checkout [the difference between Modin and Dask!](https://github.com/modin-project/modin/tree/master/docs/modin_vs_dask.md).
+more information!
 
 **`modin.pandas` is currently under active development. Requests and contributions are welcome!**
 
 
 ### General Resources and Getting Involved
 
-- Read the [documentation](https://modin.readthedocs.io/en/latest/) for more information.
-- Check out [our paper](https://people.eecs.berkeley.edu/~totemtang/paper/Modin.pdf) to learn more about the theory underlying Modin.
-- Ask questions or participate in discussions on our [Discourse](https://discuss.modin.org).
-- Let us know how you're using Modin! Join our community [Slack](https://modin.org/slack.html) to discuss and ask questions.
-- Submit bug reports to our [GitHub Issues Page](https://github.com/modin-project/modin/issues).
-- Contributions are welcome! Open a [pull request](https://github.com/modin-project/modin/pulls).
+- [Documentation Link](https://modin.readthedocs.io/en/latest/)
+- [Modin Examples + Tutorials](https://modin.readthedocs.io/en/latest/getting_started/examples.html)
+- [Modin Talks + Blogs](https://modin.readthedocs.io/en/latest/getting_started/examples.html#talks-podcasts)
+- [Modin Slack](https://modin.org/slack.html)
+- [Modin Discourse](https://discuss.modin.org)
+- [Modin GitHub Issues Page](https://github.com/modin-project/modin/issues)
+- [Modin FAQs](https://modin.readthedocs.io/en/latest/getting_started/faq.html)
+- [Modin Troubleshooting Guide](https://modin.readthedocs.io/en/latest/getting_started/troubleshooting.html)
+- [Modin Paper](https://people.eecs.berkeley.edu/~totemtang/paper/Modin.pdf)
+
+For more information on how to contribute to Modin, check out the 
+[Modin Contribution Guide](https://modin.readthedocs.io/en/latest/development/contributing.html).
+
+### License
+
+[Apache License 2.0](LICENSE)
