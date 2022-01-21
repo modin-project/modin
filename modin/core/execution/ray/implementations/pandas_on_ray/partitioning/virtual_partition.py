@@ -30,9 +30,10 @@ class PandasOnRayDataframeVirtualPartition(PandasDataframeAxisPartition):
 
     Parameters
     ----------
-    list_of_blocks : list
+    list_of_blocks : Union[list, PandasOnRayDataframePartition]
         List of ``PandasOnRayDataframePartition`` and
-        ``PandasOnRayDataframeVirtualPartition`` objects.
+        ``PandasOnRayDataframeVirtualPartition`` objects, or a single
+        PandasOnRayDataframePartition.
     get_ip : bool, default: False
         Whether to get node IP addresses to conforming partitions or not.
     full_axis : bool, default: True
@@ -46,6 +47,8 @@ class PandasOnRayDataframeVirtualPartition(PandasDataframeAxisPartition):
     axis = None
 
     def __init__(self, list_of_blocks, get_ip=False, full_axis=True, call_queue=None):
+        if isinstance(list_of_blocks, PandasOnRayDataframePartition):
+            list_of_blocks = [list_of_blocks]
         self.full_axis = full_axis
         self.call_queue = call_queue or []
         # In the simple case, none of the partitions that will compose this
@@ -109,7 +112,7 @@ class PandasOnRayDataframeVirtualPartition(PandasDataframeAxisPartition):
         # Defer draining call queue until we get the partitions
         # TODO Look into draining call queue at the same time as the task
         result = [None] * len(self.list_of_partitions_to_combine)
-        for idx, partition in enumerate(idx, self.list_of_partitions_to_combine):
+        for idx, partition in enumerate(self.list_of_partitions_to_combine):
             partition.drain_call_queue()
             result[idx] = partition.oid
         return result
