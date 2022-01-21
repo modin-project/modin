@@ -649,7 +649,7 @@ def show_versions(as_json: str | bool = False) -> None:
         j = {
             "system": sys_info,
             "modin dependencies": modin_deps,
-            "pandas dependencies": deps,
+            "dependencies": deps,
         }
 
         if as_json is True:
