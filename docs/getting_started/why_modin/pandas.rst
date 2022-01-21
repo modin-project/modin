@@ -1,13 +1,15 @@
-Modin vs. pandas
-================
+How does Modin differ from pandas?
+==================================
 
-Modin exposes the pandas API through ``modin.pandas``, but it does not inherit the same
-pitfalls and design decisions that make it difficult to scale. This page will discuss
-how Modin's dataframe implementation differs from pandas, and how Modin scales pandas.
+.. note:: 
+  | *Estimated Reading Time: 10 minutes*
+
+In the earlier tutorials, we have seen how Modin can be used to speed up pandas workflows. Here, we discuss at a high level how Modin works, in particular, how Modin's dataframe implementation differs from pandas. 
 
 Scalablity of implementation
 ----------------------------
 
+Modin exposes the pandas API through ``modin.pandas``, but it does not inherit the same pitfalls and design decisions that make it difficult to scale. 
 The pandas implementation is inherently single-threaded. This means that only one of
 your CPU cores can be utilized at any given time. In a laptop, it would look something
 like this with pandas:

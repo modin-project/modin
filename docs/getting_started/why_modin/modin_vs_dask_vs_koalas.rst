@@ -11,7 +11,7 @@ Specifically, Modin enables pandas-like
 
 As a result, Modin's coverage is `more than 90% <https://github.com/modin-project/modin#pandas-api-coverage>`_ of the pandas API, while DaskDF and Koalas' coverage is about 55%. 
 
-.. figure:: ../img/api_coverage_comparison.svg
+.. figure:: ../../img/api_coverage_comparison.svg
    :align: center
    :alt: Percentage coverage of the pandas API after deduplication
 
@@ -67,7 +67,7 @@ Compatibility with Computational Frameworks
 
 **Modin's highly modular design is architected to run on a variety of systems, and support a variety of APIs.** The goal for the extensible design is that users can take the same notebook or script and seamlessly move between different clusters and environments, with Modin being able to support the pandas API on your preexisting infrastructure. Currently, Modin support running on Dask's compute engine in addition to Ray. The modular design makes it easier for developers to different execution engines or compile to different memory formats. Modin can run on a Dask cluster in the same way that DaskDF can, but they differ in the ways described above. In addition, Modin is continually expanding to support popular data processing APIs (SQL in addition to pandas, among other DSLs for data processing) while leveraging the same underlying execution framework. Modin's flexible architecture also means that as the `pandas API continues to evolve <https://data-apis.org/blog/announcing_the_consortium/>`_, Modin can quickly move towards supporting new versions of the pandas API.
 
-.. figure:: ../img/performance-all-supported.svg
+.. figure:: ../../img/performance-all-supported.svg
    :align: center
    :alt: Scalability of operators supported by Modin and other systems
    :width: 95%
@@ -77,7 +77,7 @@ Performance Comparison
 
 **On operations supported by all systems, Modin provides substantial speedups.** Thanks to its optimized design, Modin is able to take advantage of multiple cores relative to both Koalas and DaskDF to efficiently execute pandas operations. It is notable that Koalas is often slower than pandas, due to the overhead of Spark. 
 
-.. figure:: ../img/performance-not-all-supported.svg
+.. figure:: ../../img/performance-not-all-supported.svg
    :align: center
    :alt: Scalability of operators supported by Modin but not by other systems
 
