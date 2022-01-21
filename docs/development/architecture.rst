@@ -206,17 +206,17 @@ Supported Execution Engines and Storage Formats
 
 This is a list of execution engines and in-memory formats supported in Modin. If you
 would like to contribute a new execution engine or in-memory format, please see the
-documentation page on :doc:`contributing </developer/contributing>`.
+documentation page on :doc:`contributing </development/contributing>`.
 
-- :doc:`pandas on Ray </developer/using_pandas_on_ray>`
+- :doc:`pandas on Ray </development/using_pandas_on_ray>`
     - Uses the Ray_ execution framework.
     - The storage format is `pandas` and the in-memory partition type is a pandas DataFrame.
     - For more information on the execution path, see the :doc:`pandas on Ray </flow/modin/core/execution/ray/implementations/pandas_on_ray/index>` page.
-- :doc:`pandas on Dask </developer/using_pandas_on_dask>`
+- :doc:`pandas on Dask </development/using_pandas_on_dask>`
     - Uses the `Dask Futures`_ execution framework.
     - The storage format is `pandas` and the in-memory partition type is a pandas DataFrame.
     - For more information on the execution path, see the :doc:`pandas on Dask </flow/modin/core/execution/dask/implementations/pandas_on_dask/index>` page.
-- :doc:`pandas on Python </developer/using_pandas_on_python>`
+- :doc:`pandas on Python </development/using_pandas_on_python>`
     - Uses native python execution - mainly used for debugging.
     - The storage format is `pandas` and the in-memory partition type is a pandas DataFrame.
     - For more information on the execution path, see the :doc:`pandas on Python </flow/modin/core/execution/python/implementations/pandas_on_python/index>` page.
@@ -224,11 +224,11 @@ documentation page on :doc:`contributing </developer/contributing>`.
     - Uses the Ray_ execution framework.
     - The storage format is `pandas` and the in-memory partition type is a pandas DataFrame.
     - For more information on the execution path, see the :doc:`experimental pandas on Ray </flow/modin/experimental/core/execution/ray/implementations/pandas_on_ray/index>` page.
-- :doc:`OmniSci on Native </developer/using_omnisci>` (experimental)
+- :doc:`OmniSci on Native </development/using_omnisci>` (experimental)
     - Uses OmniSciDB as an engine.
     - The storage format is `omnisci` and the in-memory partition type is a pyarrow Table. When defaulting to pandas, the pandas DataFrame is used.
     - For more information on the execution path, see the :doc:`OmniSci on Native </flow/modin/experimental/core/execution/native/implementations/omnisci_on_native/index>` page.
-- :doc:`Pyarrow on Ray </developer/using_pyarrow_on_ray>` (experimental)
+- :doc:`Pyarrow on Ray </development/using_pyarrow_on_ray>` (experimental)
     - Uses the Ray_ execution framework.
     - The storage format is `pyarrow` and the in-memory partition type is a pyarrow Table.
     - For more information on the execution path, see the :doc:`Pyarrow on Ray </flow/modin/experimental/core/execution/ray/implementations/pyarrow_on_ray>` page.
