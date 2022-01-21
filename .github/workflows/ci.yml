@@ -326,7 +326,7 @@ jobs:
       - run: pytest -n 2 modin/pandas/test/dataframe/test_iter.py --execution=${{ matrix.execution }}
       - run: pytest -n 2 modin/pandas/test/dataframe/test_join_sort.py --execution=${{ matrix.execution }}
       - run: pytest -n 2 modin/pandas/test/dataframe/test_map_metadata.py --execution=${{ matrix.execution }}
-      - run: pytest -n 2 modin/pandas/test/dataframe/test_reduction.py --execution=${{ matrix.execution }}
+      - run: pytest -n 2 modin/pandas/test/dataframe/test_reduce.py --execution=${{ matrix.execution }}
       - run: pytest -n 2 modin/pandas/test/dataframe/test_udf.py --execution=${{ matrix.execution }}
       - run: pytest -n 2 modin/pandas/test/dataframe/test_window.py --execution=${{ matrix.execution }}
       - run: pytest -n 2 modin/pandas/test/dataframe/test_pickle.py --execution=${{ matrix.execution }}
@@ -512,7 +512,7 @@ jobs:
       - run: pytest -n 2 modin/pandas/test/dataframe/test_iter.py
       - run: pytest -n 2 modin/pandas/test/dataframe/test_join_sort.py
       - run: pytest -n 2 modin/pandas/test/dataframe/test_map_metadata.py
-      - run: pytest -n 2 modin/pandas/test/dataframe/test_reduction.py
+      - run: pytest -n 2 modin/pandas/test/dataframe/test_reduce.py
       - run: pytest -n 2 modin/pandas/test/dataframe/test_udf.py
       - run: pytest -n 2 modin/pandas/test/dataframe/test_window.py
       - run: pytest -n 2 modin/pandas/test/dataframe/test_pickle.py
@@ -617,7 +617,9 @@ jobs:
         run: |
           conda info
           conda list
-      - run: python -m pytest --simulate-cloud=normal modin/pandas/test/test_io.py --verbose
+        # TODO(https://github.com/modin-project/modin/issues/4004): Re-add
+        # "python -m pytest --simulate-cloud=normal modin/pandas/test/test_io.py --verbose"
+        # once that test stops crashing.
       - run: python -m pytest --simulate-cloud=normal modin/pandas/test/dataframe/test_default.py::test_kurt_kurtosis --verbose
       - # When running without parameters, some of the tests fail
         run: python -m pytest --simulate-cloud=normal modin/pandas/test/dataframe/test_binary.py::test_math_functions[add-rows-scalar]
@@ -649,7 +651,7 @@ jobs:
           - modin/pandas/test/dataframe/test_iter.py
           - modin/pandas/test/dataframe/test_join_sort.py
           - modin/pandas/test/dataframe/test_map_metadata.py
-          - modin/pandas/test/dataframe/test_reduction.py
+          - modin/pandas/test/dataframe/test_reduce.py
           - modin/pandas/test/dataframe/test_udf.py
           - modin/pandas/test/dataframe/test_window.py
           - modin/pandas/test/dataframe/test_pickle.py

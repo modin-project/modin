@@ -458,6 +458,8 @@ encoding_types = [
 # the type of this exceptions are the same
 io_ops_bad_exc = [TypeError, FileNotFoundError]
 
+default_to_pandas_ignore_string = "default:.*defaulting to pandas.*:UserWarning"
+
 # Files compression to extension mapping
 COMP_TO_EXT = {"gzip": "gz", "bz2": "bz2", "xz": "xz", "zip": "zip"}
 

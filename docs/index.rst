@@ -11,7 +11,7 @@
    getting_started/quickstart
    supported_apis/index
    advanced_usage/index
-   developer/index
+   development/index
    contact
 
 .. raw:: html
@@ -123,7 +123,7 @@ nature, you get a fast DataFrame at 1MB and 1TB+.
 **Modin is currently under active development. Requests and contributions are welcome!**
 
 If you are interested in learning more about Modin, please check out the :doc:`Getting Started</getting_started/quickstart>`
-guide then refer to the :doc:`Developer Documentation</developer/index>` section,
+guide then refer to the :doc:`Developer Documentation</development/index>` section,
 where you can find system architecture, internal implementation details, and other useful information.
 Also check out the `Github`_ to view open issues and make contributions.
 

@@ -128,7 +128,7 @@ Using Intel\ |reg| Distribution of Modin
 """"""""""""""""""""""""""""""""""""""""
 
 With ``conda`` it is also possible to install Intel Distribution of Modin, a special version of Modin
-that is part of Intel\ |reg| oneAPI AI Analytics Toolkit. This version of Modin is powered by :doc:`OmniSci</developer/using_omnisci>`
+that is part of Intel\ |reg| oneAPI AI Analytics Toolkit. This version of Modin is powered by :doc:`OmniSci</development/using_omnisci>`
 engine that contains a bunch of optimizations for Intel hardware. More details can be found on `Intel Distribution of Modin`_ page.
 
 Installing from the GitHub master branch
@@ -156,7 +156,7 @@ not recommended due to the limitations and poor performance of Ray on WSL, a rou
 Building Modin from Source
 --------------------------
 
-If you're planning on :doc:`contributing </developer/contributing>` to Modin, you will need to ensure that you are
+If you're planning on :doc:`contributing </development/contributing>` to Modin, you will need to ensure that you are
 building Modin from the local repository that you are working off of. Occasionally,
 there are issues in overlapping Modin installs from pypi and from source. To avoid these
 issues, we recommend uninstalling Modin before you install from source:

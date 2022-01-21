@@ -38,13 +38,20 @@ from modin.pandas.test.utils import (
     test_data_diff_dtype,
     modin_df_almost_equals_pandas,
     test_data_large_categorical_dataframe,
+    default_to_pandas_ignore_string,
 )
 from modin.config import NPartitions
+from modin.test.test_utils import warns_that_defaulting_to_pandas
 
 NPartitions.put(4)
 
 # Force matplotlib to not use any Xwindows backend.
 matplotlib.use("Agg")
+
+# Our configuration in pytest.ini requires that we explicitly catch all
+# instances of defaulting to pandas, but some test modules, like this one,
+# have too many such instances.
+pytestmark = pytest.mark.filterwarnings(default_to_pandas_ignore_string)
 
 
 @pytest.mark.parametrize(
@@ -69,7 +76,7 @@ matplotlib.use("Agg")
 )
 def test_ops_defaulting_to_pandas(op, make_args):
     modin_df = pd.DataFrame(test_data_diff_dtype).drop(["str_col", "bool_col"], axis=1)
-    with pytest.warns(UserWarning):
+    with warns_that_defaulting_to_pandas():
         operation = getattr(modin_df, op)
         if make_args is not None:
             operation(**make_args(modin_df))
@@ -83,7 +90,7 @@ def test_ops_defaulting_to_pandas(op, make_args):
 
 def test_style():
     data = test_data_values[0]
-    with pytest.warns(UserWarning):
+    with warns_that_defaulting_to_pandas():
         pd.DataFrame(data).style
 
 
@@ -91,7 +98,7 @@ def test_to_timestamp():
     idx = pd.date_range("1/1/2012", periods=5, freq="M")
     df = pd.DataFrame(np.random.randint(0, 100, size=(len(idx), 4)), index=idx)
 
-    with pytest.warns(UserWarning):
+    with warns_that_defaulting_to_pandas():
         df.to_period().to_timestamp()
 
 
@@ -116,7 +123,7 @@ def test_asfreq():
     index = pd.date_range("1/1/2000", periods=4, freq="T")
     series = pd.Series([0.0, None, 2.0, 3.0], index=index)
     df = pd.DataFrame({"s": series})
-    with pytest.warns(UserWarning):
+    with warns_that_defaulting_to_pandas():
         # We are only testing that this defaults to pandas, so we will just check for
         # the warning
         df.asfreq(freq="30S")

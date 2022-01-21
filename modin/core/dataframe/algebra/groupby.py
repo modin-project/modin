@@ -15,13 +15,13 @@
 
 import pandas
 
-from .map_reduce import MapReduce
+from .tree_reduce import TreeReduce
 from .default2pandas.groupby import GroupBy
 from modin.utils import try_cast_to_pandas, hashable
 from modin.error_message import ErrorMessage
 
 
-class GroupByReduce(MapReduce):
+class GroupByReduce(TreeReduce):
     """Builder class for GroupBy aggregation functions."""
 
     @classmethod
@@ -29,7 +29,7 @@ class GroupByReduce(MapReduce):
         """
         Build template GroupBy aggregation function.
 
-        Resulted function is applied in parallel via MapReduce algorithm.
+        Resulted function is applied in parallel via TreeReduce algorithm.
 
         Parameters
         ----------
@@ -48,7 +48,7 @@ class GroupByReduce(MapReduce):
         -------
         callable
             Function that takes query compiler and executes GroupBy aggregation
-            with MapReduce algorithm.
+            with TreeReduce algorithm.
         """
         if isinstance(map_func, str):
 
@@ -69,20 +69,16 @@ class GroupByReduce(MapReduce):
         )
 
     @classmethod
-    # FIXME:
-    #   1. Remove `drop` parameter since it isn't used.
-    #   2. `map_func` is not supposed to be `None`
-    #   3. Case when `map_args` or `groupby_args` is `None` (its default value) is unhandled.
     def map(
         cls,
         df,
+        map_func,
+        axis,
+        groupby_kwargs,
+        agg_args,
+        agg_kwargs,
         other=None,
-        axis=0,
         by=None,
-        groupby_args=None,
-        map_func=None,
-        map_args=None,
-        drop=False,
     ):
         """
         Execute Map phase of GroupByReduce.
@@ -94,23 +90,23 @@ class GroupByReduce(MapReduce):
         ----------
         df : pandas.DataFrame
             Serialized frame to group.
+        map_func : dict or callable(pandas.DataFrameGroupBy) -> pandas.DataFrame
+            Function to apply to the `GroupByObject`.
+        axis : {0, 1}
+            Axis to group and apply aggregation function along. 0 means index axis
+            when 1 means column axis.
+        groupby_kwargs : dict
+            Dictionary which carries arguments for `pandas.DataFrame.groupby`.
+        agg_args : list-like
+            Positional arguments to pass to the aggregation functions.
+        agg_kwargs : dict
+            Keyword arguments to pass to the aggregation functions.
         other : pandas.DataFrame, optional
             Serialized frame, whose columns are used to determine the groups.
             If not specified, `by` parameter is used.
-        axis : {0, 1}, default: 0
-            Axis to group and apply aggregation function along. 0 means index axis
-            when 1 means column axis.
         by : level index name or list of such labels, optional
             Index levels, that is used to determine groups.
             If not specified, `other` parameter is used.
-        groupby_args : dict, optional
-            Dictionary which carries arguments for `pandas.DataFrame.groupby`.
-        map_func : dict or callable(pandas.DataFrameGroupBy) -> pandas.DataFrame, default: None
-            Function to apply to the `GroupByObject`.
-        map_args : dict, optional
-            Arguments which will be passed to `map_func`.
-        drop : bool, default: False
-            Indicates whether or not by-data came from the `self` frame.
 
         Returns
         -------
@@ -120,8 +116,8 @@ class GroupByReduce(MapReduce):
         # Set `as_index` to True to track the metadata of the grouping object
         # It is used to make sure that between phases we are constructing the
         # right index and placing columns in the correct order.
-        groupby_args["as_index"] = True
-        groupby_args["observed"] = True
+        groupby_kwargs["as_index"] = True
+        groupby_kwargs["observed"] = True
         # We have to filter func-dict BEFORE inserting broadcasted 'by' columns
         # to avoid multiple aggregation results for 'by' cols in case they're
         # present in the func-dict:
@@ -141,25 +137,21 @@ class GroupByReduce(MapReduce):
             by_part = by
 
         result = apply_func(
-            df.groupby(by=by_part, axis=axis, **groupby_args), **map_args
+            df.groupby(by=by_part, axis=axis, **groupby_kwargs), *agg_args, **agg_kwargs
         )
         # Result could not always be a frame, so wrapping it into DataFrame
         return pandas.DataFrame(result)
 
     @classmethod
-    # FIXME:
-    #   1. spread `**kwargs` into an actual function arguments.
-    #   2. `reduce_func` is not supposed to be `None`
-    #   3. Case when `reduce_args` or `groupby_args` is `None` (its default value)
-    #      is unhandled.
     def reduce(
         cls,
         df,
+        reduce_func,
+        axis,
+        groupby_kwargs,
+        agg_args,
+        agg_kwargs,
         partition_idx=0,
-        axis=0,
-        groupby_args=None,
-        reduce_func=None,
-        reduce_args=None,
         drop=False,
         method=None,
     ):
@@ -172,17 +164,19 @@ class GroupByReduce(MapReduce):
         ----------
         df : pandas.DataFrame
             Serialized frame which contain groups to combine.
-        partition_idx : int, default: 0
-            Internal index of column partition to which this function is applied.
-        axis : {0, 1}, default: 0
+        reduce_func : dict or callable(pandas.DataFrameGroupBy) -> pandas.DataFrame
+            Function to apply to the `GroupByObject`.
+        axis : {0, 1}
             Axis to group and apply aggregation function along. 0 means index axis
             when 1 means column axis.
-        groupby_args : dict, optional
+        groupby_kwargs : dict
             Dictionary which carries arguments for `pandas.DataFrame.groupby`.
-        reduce_func : dict or callable(pandas.DataFrameGroupBy) -> pandas.DataFrame, default: None
-            Function to apply to the `GroupByObject`.
-        reduce_args : dict, optional
-            Arguments which will be passed to `reduce_func`.
+        agg_args : list-like
+            Positional arguments to pass to the aggregation functions.
+        agg_kwargs : dict
+            Keyword arguments to pass to the aggregation functions.
+        partition_idx : int, default: 0
+            Internal index of column partition to which this function is applied.
         drop : bool, default: False
             Indicates whether or not by-data came from the `self` frame.
         method : str, optional
@@ -204,18 +198,20 @@ class GroupByReduce(MapReduce):
             if len(to_drop) > 0:
                 df.drop(columns=by_part, errors="ignore", inplace=True)
 
-        groupby_args = groupby_args.copy()
-        as_index = groupby_args["as_index"]
+        groupby_kwargs = groupby_kwargs.copy()
+        as_index = groupby_kwargs["as_index"]
 
         # Set `as_index` to True to track the metadata of the grouping object
-        groupby_args["as_index"] = True
+        groupby_kwargs["as_index"] = True
 
         # since now index levels contain out 'by', in the reduce phace
         # we want to group on these levels
-        groupby_args["level"] = list(range(len(df.index.names)))
+        groupby_kwargs["level"] = list(range(len(df.index.names)))
 
         apply_func = cls.try_filter_dict(reduce_func, df)
-        result = apply_func(df.groupby(axis=axis, **groupby_args), **reduce_args)
+        result = apply_func(
+            df.groupby(axis=axis, **groupby_kwargs), *agg_args, **agg_kwargs
+        )
 
         if not as_index:
             GroupBy.handle_as_index_for_dataframe(
@@ -241,19 +237,18 @@ class GroupByReduce(MapReduce):
         cls,
         query_compiler,
         by,
-        axis,
-        groupby_args,
-        map_args,
         map_func,
         reduce_func,
-        reduce_args,
-        numeric_only=True,
+        axis,
+        groupby_kwargs,
+        agg_args,
+        agg_kwargs,
         drop=False,
         method=None,
         default_to_pandas_func=None,
     ):
         """
-        Execute GroupBy aggregation with MapReduce approach.
+        Execute GroupBy aggregation with TreeReduce approach.
 
         Parameters
         ----------
@@ -261,21 +256,19 @@ class GroupByReduce(MapReduce):
             Frame to group.
         by : BaseQueryCompiler, column or index label, Grouper or list of such
             Object that determine groups.
-        axis : {0, 1}, default: 0
-            Axis to group and apply aggregation function along. 0 means index axis
-            when 1 means column axis.
-        groupby_args : dict
-            Dictionary which carries arguments for pandas.DataFrame.groupby.
-        map_args : dict
-            Arguments which will be passed to `map_func`.
         map_func : dict or callable(pandas.DataFrameGroupBy) -> pandas.DataFrame
             Function to apply to the `GroupByObject` at the Map phase.
         reduce_func : dict or callable(pandas.DataFrameGroupBy) -> pandas.DataFrame
             Function to apply to the `GroupByObject` at the Reduce phase.
-        reduce_args : dict
-            Arguments which will be passed to `reduce_func`.
-        numeric_only : bool, default: True
-            Whether or not to drop non-numeric columns before executing GroupBy.
+        axis : {0, 1}
+            Axis to group and apply aggregation function along. 0 means index axis
+            when 1 means column axis.
+        groupby_kwargs : dict
+            Dictionary which carries arguments for pandas.DataFrame.groupby.
+        agg_args : list-like
+            Positional arguments to pass to the aggregation functions.
+        agg_kwargs : dict
+            Keyword arguments to pass to the aggregation functions.
         drop : bool, default: False
             Indicates whether or not by-data came from the `self` frame.
         method : str, optional
@@ -289,9 +282,13 @@ class GroupByReduce(MapReduce):
         The same type as `query_compiler`
             QueryCompiler which carries the result of GroupBy aggregation.
         """
-        if groupby_args.get("level", None) is None and (
-            not (isinstance(by, (type(query_compiler))) or hashable(by))
-            or isinstance(by, pandas.Grouper)
+        if (
+            axis != 0
+            or groupby_kwargs.get("level", None) is None
+            and (
+                not (isinstance(by, (type(query_compiler))) or hashable(by))
+                or isinstance(by, pandas.Grouper)
+            )
         ):
             by = try_cast_to_pandas(by, squeeze=True)
             # Since 'by' may be a 2D query compiler holding columns to group by,
@@ -306,15 +303,18 @@ class GroupByReduce(MapReduce):
                 )
             return query_compiler.default_to_pandas(
                 lambda df: default_to_pandas_func(
-                    df.groupby(by=by, axis=axis, **groupby_args), **map_args
+                    df.groupby(by=by, axis=axis, **groupby_kwargs),
+                    *agg_args,
+                    **agg_kwargs,
                 )
             )
-        assert axis == 0, "Can only groupby reduce with axis=0"
 
         # The bug only occurs in the case of Categorical 'by', so we might want to check whether any of
         # the 'by' dtypes is Categorical before going into this branch, however triggering 'dtypes'
         # computation if they're not computed may take time, so we don't do it
-        if not groupby_args.get("sort", True) and isinstance(by, type(query_compiler)):
+        if not groupby_kwargs.get("sort", True) and isinstance(
+            by, type(query_compiler)
+        ):
             ErrorMessage.missmatch_with_pandas(
                 operation="df.groupby(categorical_by, sort=False)",
                 message=(
@@ -323,24 +323,17 @@ class GroupByReduce(MapReduce):
                     "https://github.com/modin-project/modin/issues/3571"
                 ),
             )
-            groupby_args = groupby_args.copy()
-            groupby_args["sort"] = True
-
-        if numeric_only:
-            qc = query_compiler.getitem_column_array(
-                query_compiler._modin_frame.numeric_columns(True)
-            )
-        else:
-            qc = query_compiler
+            groupby_kwargs = groupby_kwargs.copy()
+            groupby_kwargs["sort"] = True
 
         map_fn, reduce_fn = cls.build_map_reduce_functions(
             by=by,
             axis=axis,
-            groupby_args=groupby_args,
+            groupby_kwargs=groupby_kwargs,
             map_func=map_func,
-            map_args=map_args,
             reduce_func=reduce_func,
-            reduce_args=reduce_args,
+            agg_args=agg_args,
+            agg_kwargs=agg_kwargs,
             drop=drop,
             method=method,
         )
@@ -350,7 +343,7 @@ class GroupByReduce(MapReduce):
         # Otherwise `by` was already bound to the Map function in `build_map_reduce_functions`.
         broadcastable_by = getattr(by, "_modin_frame", None)
         apply_indices = list(map_func.keys()) if isinstance(map_func, dict) else None
-        new_modin_frame = qc._modin_frame.groupby_reduce(
+        new_modin_frame = query_compiler._modin_frame.groupby_reduce(
             axis, broadcastable_by, map_fn, reduce_fn, apply_indices=apply_indices
         )
 
@@ -389,12 +382,12 @@ class GroupByReduce(MapReduce):
         cls,
         by,
         axis,
-        groupby_args,
+        groupby_kwargs,
         map_func,
-        map_args,
         reduce_func,
-        reduce_args,
-        drop,
+        agg_args,
+        agg_kwargs,
+        drop=False,
         method=None,
     ):
         """
@@ -404,19 +397,19 @@ class GroupByReduce(MapReduce):
         ----------
         by : BaseQueryCompiler, column or index label, Grouper or list of such
             Object that determine groups.
-        axis : {0, 1}, default: 0
+        axis : {0, 1}
             Axis to group and apply aggregation function along. 0 means index axis
             when 1 means column axis.
-        groupby_args : dict
+        groupby_kwargs : dict
             Dictionary which carries arguments for pandas.DataFrame.groupby.
         map_func : dict or callable(pandas.DataFrameGroupBy) -> pandas.DataFrame
             Function to apply to the `GroupByObject` at the Map phase.
-        map_args : dict
-            Arguments which will be passed to `map_func`.
         reduce_func : dict or callable(pandas.DataFrameGroupBy) -> pandas.DataFrame
             Function to apply to the `GroupByObject` at the Reduce phase.
-        reduce_args : dict
-            Arguments which will be passed to `reduce_func`.
+        agg_args : list-like
+            Positional arguments to pass to the aggregation functions.
+        agg_kwargs : dict
+            Keyword arguments to pass to the aggregation functions.
         drop : bool, default: False
             Indicates whether or not by-data came from the `self` frame.
         method : str, optional
@@ -437,13 +430,13 @@ class GroupByReduce(MapReduce):
             def wrapper(df, other=None):
                 return cls.map(
                     df,
-                    other,
+                    other=other,
                     axis=axis,
                     by=by,
-                    groupby_args=groupby_args.copy(),
+                    groupby_kwargs=groupby_kwargs.copy(),
                     map_func=map_func,
-                    map_args=map_args,
-                    drop=drop,
+                    agg_args=agg_args,
+                    agg_kwargs=agg_kwargs,
                     **kwargs,
                 )
 
@@ -460,9 +453,10 @@ class GroupByReduce(MapReduce):
                 return cls.reduce(
                     df,
                     axis=axis,
-                    groupby_args=groupby_args,
+                    groupby_kwargs=groupby_kwargs,
                     reduce_func=reduce_func,
-                    reduce_args=reduce_args,
+                    agg_args=agg_args,
+                    agg_kwargs=agg_kwargs,
                     drop=drop,
                     method=method,
                     **call_kwargs,
@@ -479,7 +473,7 @@ class GroupByReduce(MapReduce):
         return _map, _reduce
 
 
-# This dict is a map for function names and their equivalents in MapReduce
+# This dict is a map for function names and their equivalents in TreeReduce
 groupby_reduce_functions = {
     "all": ("all", "all"),
     "any": ("any", "any"),
