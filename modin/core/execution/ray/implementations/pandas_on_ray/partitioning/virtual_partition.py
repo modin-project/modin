@@ -105,7 +105,7 @@ class PandasOnRayDataframeVirtualPartition(PandasDataframeAxisPartition):
         Returns
         -------
         List
-            A list of `pandas.DataFrame`.
+            A list of ``ray.ObjectRef``.
         """
         # Defer draining call queue until we get the partitions
         # TODO Look into draining call queue at the same time as the task
@@ -121,7 +121,7 @@ class PandasOnRayDataframeVirtualPartition(PandasDataframeAxisPartition):
         Returns
         -------
         List
-            A list of IPs as distributed.Future or str.
+            A list of IPs as ``ray.ObjectRef`` or str.
         """
         return [obj._ip_cache for obj in self.list_of_partitions_to_combine]
 
