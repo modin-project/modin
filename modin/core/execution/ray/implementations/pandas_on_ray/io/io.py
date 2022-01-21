@@ -46,6 +46,7 @@ from modin.core.execution.ray.implementations.pandas_on_ray.partitioning.partiti
 from modin.core.execution.ray.implementations.pandas_on_ray.dataframe.dataframe import (
     PandasOnRayDataframe,
 )
+from modin.config import NPartitions
 
 
 class PandasOnRayIO(RayIO):
@@ -223,11 +224,22 @@ class PandasOnRayIO(RayIO):
             # used for synchronization purposes
             return pandas.DataFrame()
 
+        shape = qc._modin_frame._partitions.shape
+        desired_partition_count = NPartitions.get() * 1.5
+        partitions = qc._modin_frame._partitions
+        if shape[0] >= desired_partition_count:
+            partitions, _, _ = qc._modin_frame._partition_mgr_cls.repartition(
+                qc._modin_frame._partitions,
+                axis=0,
+                lengths=qc._modin_frame._row_lengths,
+                widths=qc._modin_frame._column_widths,
+            )
+
         # signaling that the partition with id==0 can be written to the file
         ray.get(signals.send.remote(0))
         result = qc._modin_frame._partition_mgr_cls.map_axis_partitions(
             axis=1,
-            partitions=qc._modin_frame._partitions,
+            partitions=partitions,
             map_func=func,
             keep_partitioning=True,
             lengths=None,

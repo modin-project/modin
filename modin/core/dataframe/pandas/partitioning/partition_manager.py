@@ -1260,3 +1260,105 @@ class PandasDataframePartitionManager(ABC):
             Partitions of Modin Dataframe on which all deferred calls should be performed.
         """
         [part.drain_call_queue() for row in partitions for part in row]
+
+    @classmethod
+    def repartition(cls, partitions, axis, lengths, widths):
+        """
+        Repartition dataframe.
+
+        Parameters
+        ----------
+        partitions : np.ndarray
+            A 2D NumPy array of partitions to repartition.
+        axis : {0, 1}
+            Repartition axis.
+        lengths : list
+            The length of each partition in the rows. The "height" of
+            each of the block partitions.
+        widths : list
+            The width of each partition in the columns. The "width" of
+            each of the block partitions.
+
+        Returns
+        -------
+        tuple
+            Tuple of (new_partitions, new_lengths, new_widths)
+        """
+
+        def compute_schema(axis_lengths, axis):
+            """
+            Compute repartition schema.
+
+            The schema is a sequence of intervals in which the partitions to be combined are defined.
+            The interval is determined by the chunksize.
+
+            Parameters
+            ----------
+            axis_lengths : list
+                The length/width of each partition in the rows/columns.
+            axis : {0, 1}
+                Axis for creating the repartition scheme.
+
+            Returns
+            -------
+            tuple
+                Tuple of (schema, updated axis lengths aсcording to the schema)
+            """
+            idx = pandas.RangeIndex(sum(axis_lengths))
+            # It will be possible to use axis length for `compute_chunksize` instead of dataframe
+            # after merge of https://github.com/modin-project/modin/issues/3768 happens.
+            df = pandas.DataFrame(**{"columns" if axis == 1 else "index": idx})
+            chunksize = compute_chunksize(df.shape[axis], NPartitions.get())
+
+            schema = []
+            current_axis_length = 0
+
+            for idx, axis_length in enumerate(axis_lengths):
+                if current_axis_length == 0:
+                    # create new interval
+                    schema.append([idx, None])
+                if current_axis_length + axis_length < chunksize:
+                    current_axis_length += axis_length
+                    continue
+                current_axis_length = 0
+                # update end of the interval
+                schema[-1][1] = idx + 1
+
+            if schema[-1][1] is None:
+                schema[-1][1] = len(axis_lengths)
+
+            # update axis lengths aсcording to the schema
+            new_axis_lengths = [sum(axis_lengths[t[0] : t[1]]) for t in schema]
+            return schema, new_axis_lengths
+
+        axis_lengths = widths if axis == 1 else lengths
+        repartition_schema, axis_lengths = compute_schema(axis_lengths, axis)
+
+        new_lengths = axis_lengths if axis == 0 else lengths
+        new_widths = axis_lengths if axis == 1 else widths
+
+        new_partitions = []
+        for start, end in repartition_schema:
+            parts_to_combine = (
+                partitions[:, start:end] if axis == 1 else partitions[start:end]
+            )
+            if end - start == 1:
+                # Fast path; there is only one column/row partition in the merge interval
+                new_partitions.append(parts_to_combine)
+                continue
+            new_partitions.append(
+                cls.map_axis_partitions(
+                    axis=axis,
+                    partitions=parts_to_combine,
+                    map_func=lambda df: df,
+                    keep_partitioning=False,
+                    # The passed length must be greater than the sum of the merging
+                    # partitions lengths, so as not to lose some of the axis elements.
+                    # It is simply convenient to use the full axis length, since it
+                    # exactly fits the constraint.
+                    lengths=[sum(axis_lengths)],
+                    enumerate_partitions=False,
+                )
+            )
+        new_partitions = np.concatenate(new_partitions, axis=axis)
+        return new_partitions, new_lengths, new_widths

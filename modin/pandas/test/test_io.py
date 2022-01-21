@@ -1074,6 +1074,27 @@ class TestCsv:
             modin_obj=modin_s, pandas_obj=pandas_s, fn="to_csv", extension="csv"
         )
 
+    @pytest.mark.skipif(
+        StorageFormat.get() == "Omnisci",
+        reason="to_csv is not implemented with OmniSci storage format yet - issue #3082",
+    )
+    @pytest.mark.xfail(
+        condition="config.getoption('--simulate-cloud').lower() != 'off'",
+        reason="The reason of tests fail in `cloud` mode is unknown for now - issue #2340",
+    )
+    def test_repartitioning_in_to_csv(self):
+        df_count_before_concat = 16
+        dfs = [None] * df_count_before_concat
+        pandas_dfs = [None] * df_count_before_concat
+        data = {"A": [1, 2, 3, 4, 5] * 3, "B": [6, 7, 8, 9, 10] * 3}
+        for i in range(df_count_before_concat):
+            dfs[i] = pd.DataFrame(data)
+            pandas_dfs[i] = pandas.DataFrame(data)
+
+        df = pd.concat(dfs, axis=0)
+        pandas_df = pandas.concat(pandas_dfs, axis=0)
+        eval_to_file(modin_obj=df, pandas_obj=pandas_df, fn="to_csv", extension="csv")
+
     def test_read_csv_within_decorator(self):
         @dummy_decorator()
         def wrapped_read_csv(file, method):
