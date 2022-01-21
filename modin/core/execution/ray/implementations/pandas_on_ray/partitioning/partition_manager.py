@@ -213,7 +213,7 @@ class PandasOnRayDataframePartitionManager(GenericRayDataframePartitionManager):
             # number of axis partitions may not evenly divide the number of
             # partitions.
             chunk_size = compute_chunksize(
-                num_existing_partitions, ideal_num_new_partitions
+                num_existing_partitions, ideal_num_new_partitions, min_block_size=1
             )
             return np.array(
                 [
@@ -235,8 +235,10 @@ class PandasOnRayDataframePartitionManager(GenericRayDataframePartitionManager):
         # `start` is the index of the first existing partition that we want to
         # put into the current new partition
         start = 0
-        total_rows = sum(part.length() for part in partitions[:, 0])
-        ideal_partition_size = compute_chunksize(total_rows, ideal_num_new_partitions)
+        total_rows = sum(part._length_cache for part in partitions[:, 0])
+        ideal_partition_size = compute_chunksize(
+            total_rows, ideal_num_new_partitions, min_block_size=1
+        )
         for _ in range(ideal_num_new_partitions):
             # We might pick up old partitions too quickly and exhaust all of
             # them.
@@ -245,13 +247,13 @@ class PandasOnRayDataframePartitionManager(GenericRayDataframePartitionManager):
             # `stop` is the index of the last existing partition so far that we
             # want to put into the current new partition
             stop = start
-            partition_size = partitions[start][0].length()
+            partition_size = partitions[start][0]._length_cache
             # Add existing partitions into the current new partition until the
             # number of rows in the new partition hits ideal_partition_size.
             while stop < len(partitions) and partition_size < ideal_partition_size:
                 stop += 1
                 if stop < len(partitions):
-                    partition_size += partitions[stop][0].length()
+                    partition_size += partitions[stop][0]._length_cache
             # If the new partition is larger than we want, split the last
             # current partition that it contains into two partitions, where
             # the first partition has just enough rows to make the current
@@ -259,7 +261,7 @@ class PandasOnRayDataframePartitionManager(GenericRayDataframePartitionManager):
             # partition has the remainder.
             if partition_size > ideal_partition_size * max_excess_of_num_partitions:
                 new_last_partition_size = ideal_partition_size - sum(
-                    row[0].length() for row in partitions[start:stop]
+                    row[0]._length_cache for row in partitions[start:stop]
                 )
                 partitions = np.insert(
                     partitions,
