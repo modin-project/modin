@@ -160,7 +160,7 @@ class PandasOnRayDataframePartitionManager(GenericRayDataframePartitionManager):
         Notes
         -----
         Assumes that the blocks are already the same shape on the
-        dimension being concatenated. A ValueError will be thrown if this
+        dimension being concatenated. A ``ValueError`` will be thrown if this
         condition is not met.
         """
         result = super(PandasOnRayDataframePartitionManager, cls).concat(
@@ -228,9 +228,9 @@ class PandasOnRayDataframePartitionManager(GenericRayDataframePartitionManager):
                     )
                 ]
             )
+
         # If we have the number of rows in every partition, then we need to
         # instead give each new partition roughly the same number of rows.
-
         new_partitions = []
         # `start` is the index of the first existing partition that we want to
         # put into the current new partition

@@ -109,9 +109,11 @@ class PandasOnRayDataframeVirtualPartition(PandasDataframeAxisPartition):
         """
         # Defer draining call queue until we get the partitions
         # TODO Look into draining call queue at the same time as the task
-        for partition in self.list_of_partitions_to_combine:
+        result = [None] * len(self.list_of_partitions_to_combine)
+        for idx, partition in enumerate(idx, self.list_of_partitions_to_combine):
             partition.drain_call_queue()
-        return [o.oid for o in self.list_of_partitions_to_combine]
+            result[idx] = partition.oid
+        return result
 
     @property
     def list_of_ips(self):
@@ -151,7 +153,7 @@ class PandasOnRayDataframeVirtualPartition(PandasDataframeAxisPartition):
         Returns
         -------
         list
-            A list of ``pandas.DataFrame``-s.
+            A list of ``ray.ObjectRef``-s.
         """
         lengths = kwargs.get("_lengths", None)
         max_retries = kwargs.pop("max_retries", None)
@@ -196,7 +198,7 @@ class PandasOnRayDataframeVirtualPartition(PandasDataframeAxisPartition):
         Returns
         -------
         list
-            A list of ``pandas.DataFrame``-s.
+            A list of ``ray.ObjectRef``-s.
         """
         return deploy_ray_func.options(num_returns=num_splits * 4).remote(
             PandasDataframeAxisPartition.deploy_func_between_two_axis_partitions,
