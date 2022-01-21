@@ -1166,6 +1166,26 @@ class TestCsv:
             skiprows=skiprows,
         )
 
+    def test_to_csv_with_index(self):
+        cols = 100
+        arows = 20000
+        keyrange = 100
+        values = np.vstack(
+            [
+                np.random.choice(keyrange, size=(arows)),
+                np.random.normal(size=(cols, arows)),
+            ]
+        ).transpose()
+        modin_df = pd.DataFrame(
+            values,
+            columns=["key"] + ["avalue" + str(i) for i in range(1, 1 + cols)],
+        ).set_index("key")
+        pandas_df = pandas.DataFrame(
+            values,
+            columns=["key"] + ["avalue" + str(i) for i in range(1, 1 + cols)],
+        ).set_index("key")
+        eval_to_file(modin_df, pandas_df, "to_csv", "csv")
+
 
 class TestTable:
     def test_read_table(self, make_csv_file):
