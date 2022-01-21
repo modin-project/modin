@@ -48,27 +48,18 @@ include performance results and comparisons against pandas.
 How much more data would I be able to process with Modin?
 """""""""""""""""""""""""""""""""""""""""""""""""""""""""
 
-<<<<<<< HEAD
 Often data scientists have to use different tools for operating on datasets of different sizes.
 This is not only because processing large dataframes is slow, but also pandas does not support working
 with dataframes that don't fit into the available memory. As a result, pandas workflows that work well
 for prototyping on a few MBs of data do not scale to tens or hundreds of GBs (depending on the size
 of your machine). Modin supports operating on data that does not fit in memory, so that you can comfortably
 work with hundreds of GBs without worrying about substantial slowdown or memory errors. For more information,
-see :doc:`out-of-memory support <getting_started/out_of_core.rst>` for Modin.
-=======
-Often data scientists have to use different tools for operating on datasets of different sizes. 
-This is not only because processing large dataframes is slow, but also pandas does not support working 
-with dataframes that don't fit into the available memory. As a result, pandas workflows that work well 
-for prototyping on a few MBs of data do not scale to tens or hundreds of GBs (depending on the size 
-of your machine). Modin supports operating on data that does not fit in memory, so that you can comfortably 
-work with hundreds of GBs without worrying about substantial slowdown or memory errors. For more information, 
 see :doc:`out-of-memory support <getting_started/out_of_core>` for Modin.
 
 How does Modin compare to Dask DataFrame and Koalas?
 """"""""""""""""""""""""""""""""""""""""""""""""""""
-Check out this :doc:`page <getting_started/modin_vs_dask_vs_koalas>` detailing the differences! 
->>>>>>> e59ec32f (address some more comments)
+
+Check out this :doc:`page <getting_started/modin_vs_dask_vs_koalas>` detailing the differences!
 
 How does Modin work under the hood?
 """""""""""""""""""""""""""""""""""
