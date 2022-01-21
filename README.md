@@ -180,7 +180,7 @@ The `modin.pandas` DataFrame is an extremely light-weight parallel DataFrame. To
 to other dataframe systems (namely Dask DataFrame and Koalas), check out
 [this page](https://modin.readthedocs.io/en/latest/getting_started/modin_vs_dask_vs_koalas.html?).
 Modin transparently distributes the data and computation so that you can continue using the same pandas API
-while being able to work with more data faster. Because it is so light-weight,
+while working with more data faster. Because it is so light-weight,
 Modin provides speed-ups of up to 4x on a laptop with 4 physical cores.
 
 In pandas, you are only able to use one core at a time when you are doing computation of
