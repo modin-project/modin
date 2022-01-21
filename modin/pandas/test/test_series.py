@@ -3218,7 +3218,7 @@ def test_series_values(data):
 
 
 def test_series_empty_values():
-    modin_series = pandas_series = pd.Series([])
+    modin_series, pandas_series = pd.Series(), pandas.Series()
     assert_array_equal(modin_series.values, pandas_series.values)
 
 
