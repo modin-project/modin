@@ -206,7 +206,7 @@ class PandasOnRayDataframePartitionManager(GenericRayDataframePartitionManager):
             return partitions
         # If any partition has an unknown length, give each axis partition
         # roughly the same number of row partitions.
-        if any(partition.length() is None for row in partitions for partition in row):
+        if any(partition._length_cache is None for row in partitions for partition in row):
             # We need each partition to go into an axis partition, but the
             # number of axis partitions may not evenly divide the number of
             # partitions.
