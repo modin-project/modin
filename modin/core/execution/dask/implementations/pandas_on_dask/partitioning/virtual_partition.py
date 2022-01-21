@@ -11,7 +11,7 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-"""Module houses classes responsible for storing an axis partition and applying a function to it."""
+"""Module houses classes responsible for storing a virtual partition and applying a function to it."""
 
 from modin.core.dataframe.pandas.partitioning.axis_partition import (
     PandasDataframeAxisPartition,

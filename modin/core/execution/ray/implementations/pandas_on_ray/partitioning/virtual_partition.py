@@ -31,7 +31,8 @@ class PandasOnRayDataframeVirtualPartition(PandasDataframeAxisPartition):
     Parameters
     ----------
     list_of_blocks : list
-        List of ``PandasOnRayDataframePartition`` objects.
+        List of ``PandasOnRayDataframePartition`` and
+        ``PandasOnRayDataframeVirtualPartition`` objects.
     get_ip : bool, default: False
         Whether to get node IP addresses to conforming partitions or not.
     full_axis : bool, default: True
@@ -45,8 +46,6 @@ class PandasOnRayDataframeVirtualPartition(PandasDataframeAxisPartition):
     axis = None
 
     def __init__(self, list_of_blocks, get_ip=False, full_axis=True, call_queue=None):
-        if isinstance(list_of_blocks, PandasOnRayDataframePartition):
-            list_of_blocks = [list_of_blocks]
         self.full_axis = full_axis
         self.call_queue = call_queue or []
         # In the simple case, none of the partitions that will compose this
@@ -265,6 +264,8 @@ class PandasOnRayDataframeVirtualPartition(PandasDataframeAxisPartition):
         list
             A list of `PandasOnRayDataframeVirtualPartition` objects.
         """
+        # If this is not a full axis partition, it already contains a subset of
+        # the full axis, so we shouldn't split the result further.
         if not self.full_axis:
             num_splits = 1
         if len(self.call_queue) > 0:
@@ -275,8 +276,8 @@ class PandasOnRayDataframeVirtualPartition(PandasDataframeAxisPartition):
         if self.full_axis:
             return result
         else:
-            # must unpack subset of the axis to ensure correct dimensions on
-            # partitions object
+            # If this is a full axis partition, just take out the single split
+            # in the result.
             return result[0]
 
     def force_materialization(self, get_ip=False):

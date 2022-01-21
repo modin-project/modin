@@ -179,7 +179,7 @@ class PandasOnRayDataframePartitionManager(GenericRayDataframePartitionManager):
         Rebalance the partitions by building a new array
         of partitions out of the original ones so that:
           - If all partitions have a length, each new partition has roughly the
-            same number of rows from the original partitions.
+            same number of rows.
           - Otherwise, each new partition spans roughly the same number of old
             partitions.
 
@@ -212,34 +212,31 @@ class PandasOnRayDataframePartitionManager(GenericRayDataframePartitionManager):
             # We need each partition to go into an axis partition, but the
             # number of axis partitions may not evenly divide the number of
             # partitions.
-            ideal_existing_partitions_per_new_partition = compute_chunksize(
+            chunk_size = compute_chunksize(
                 num_existing_partitions, ideal_num_new_partitions
             )
             return np.array(
                 [
                     cls.column_partitions(
-                        partitions[i : i + ideal_existing_partitions_per_new_partition],
+                        partitions[i : i + chunk_size],
                         full_axis=False,
                     )
                     for i in range(
                         0,
                         num_existing_partitions,
-                        ideal_existing_partitions_per_new_partition,
+                        chunk_size,
                     )
                 ]
             )
+        # If we know the number of rows in every partition, then we should try
+        # instead to give each new partition roughly the same number of rows.
 
-        # If we have the number of rows in every partition, then we need to
-        # instead give each new partition roughly the same number of rows.
         new_partitions = []
         # `start` is the index of the first existing partition that we want to
         # put into the current new partition
         start = 0
         total_rows = sum(part.length() for part in partitions[:, 0])
         ideal_partition_size = compute_chunksize(total_rows, ideal_num_new_partitions)
-        # We don't need to do any rebalancing if the number of rows is too small.
-        if total_rows <= ideal_num_new_partitions * max_excess_of_num_partitions:
-            return partitions
         for _ in range(ideal_num_new_partitions):
             # We might pick up old partitions too quickly and exhaust all of
             # them.
@@ -277,10 +274,11 @@ class PandasOnRayDataframePartitionManager(GenericRayDataframePartitionManager):
                     obj.mask(slice(None, new_last_partition_size), slice(None))
                     for obj in partitions[stop]
                 ]
+                partition_size = ideal_partition_size
             new_partitions.append(
                 cls.column_partitions(
                     (partitions[start : stop + 1]),
-                    full_axis=False,
+                    full_axis=partition_size == total_rows,
                 )
             )
             start = stop + 1

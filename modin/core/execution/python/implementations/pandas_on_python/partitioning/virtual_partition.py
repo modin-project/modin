@@ -11,7 +11,7 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-"""The module defines interface for an axis partition with pandas storage format and python engine."""
+"""The module defines interface for a virtual partition with pandas storage format and python engine."""
 
 import pandas
 

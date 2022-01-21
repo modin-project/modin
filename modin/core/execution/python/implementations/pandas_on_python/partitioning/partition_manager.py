@@ -33,22 +33,3 @@ class PandasOnPythonDataframePartitionManager(PandasDataframePartitionManager):
     _partition_class = PandasOnPythonDataframePartition
     _column_partitions_class = PandasOnPythonDataframeColumnPartition
     _row_partition_class = PandasOnPythonDataframeRowPartition
-
-    @classmethod
-    def rebalance_partitions(cls, partitions):
-        """
-        Return the provided array of partitions without rebalancing it.
-
-        We haven't implemented partition rebalancing for `PandasOnPython` yet.
-
-        Parameters
-        ----------
-        partitions : np.ndarray
-            The 2-d array of partitions to rebalance.
-
-        Returns
-        -------
-        np.ndarray
-            The sume 2-d array.
-        """
-        return partitions
