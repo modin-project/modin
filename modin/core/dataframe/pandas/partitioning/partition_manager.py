@@ -131,9 +131,9 @@ class PandasDataframePartitionManager(ABC):
         if not isinstance(partitions, list):
             partitions = [partitions]
         return [
-            cls._axis_partition_class(row, axis=axis)
+            cls._axis_partition_class(axis_part, axis=axis)
             for frame in partitions
-            for row in (frame.T if not axis else frame)
+            for axis_part in (frame.T if not axis else frame)
         ]
 
     @classmethod
