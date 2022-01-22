@@ -531,10 +531,11 @@ class PandasDataframe(object):
                     for i in range(len(self._partitions))
                 ]
             )
+            self._deferred_column = False
+        else:
             ErrorMessage.catch_bugs_and_request_email(
                 axis is not None and axis not in [0, 1]
             )
-            self._deferred_column = False
 
     @lazy_metadata_decorator(apply_axis=None)
     def mask(
