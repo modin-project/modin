@@ -3,7 +3,7 @@
 
 <p align="center">
 <a href="https://discuss.modin.org"><img alt="" src="https://img.shields.io/badge/discourse-forum-purple.svg?logo=discourse&logoColor=white" align="center"></a>
-<a href='https://modin.org/slack.html'><img src='https://img.shields.io/static/v1?label=chat&logo=slack&message=Slack&color=brightgreen' alt='Slack'  align="center"/></a>
+<a href='https://join.slack.com/t/modin-project/shared_invite/zt-yvk5hr3b-f08p_ulbuRWsAfg9rMY3uA'><img src='https://img.shields.io/static/v1?label=chat&logo=slack&message=Slack&color=brightgreen' alt='Slack'  align="center"/></a>
 <a href="https://codecov.io/gh/modin-project/modin"><img src="https://codecov.io/gh/modin-project/modin/branch/master/graph/badge.svg" align="center"/></a>
 <a href="https://github.com/modin-project/modin/actions"><img src="https://github.com/modin-project/modin/workflows/master/badge.svg" align="center"></a>
 <a href="https://modin.readthedocs.io/en/latest/?badge=latest"><img alt="" src="https://readthedocs.org/projects/modin/badge/?version=latest" align="center"></a>
@@ -186,7 +186,7 @@ more information!
 - [Documentation Link](https://modin.readthedocs.io/en/latest/)
 - [Modin Examples + Tutorials](https://modin.readthedocs.io/en/latest/getting_started/examples.html)
 - [Modin Talks + Blogs](https://modin.readthedocs.io/en/latest/getting_started/examples.html#talks-podcasts)
-- [Modin Slack](https://modin.org/slack.html)
+- [Modin Slack](https://join.slack.com/t/modin-project/shared_invite/zt-yvk5hr3b-f08p_ulbuRWsAfg9rMY3uA)
 - [Modin Discourse](https://discuss.modin.org)
 - [Modin GitHub Issues Page](https://github.com/modin-project/modin/issues)
 - [Modin FAQs](https://modin.readthedocs.io/en/latest/getting_started/faq.html)
