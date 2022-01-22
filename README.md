@@ -16,7 +16,7 @@
 Modin is a drop-in replacement for [pandas](https://github.com/pandas-dev/pandas). While pandas is
 single-threaded, Modin lets you instantly speed up your workflows by scaling pandas so it uses all of your
 cores. Modin works especially well on larger datasets, where pandas becomes painfully slow or runs
-[out of memory](https://modin.readthedocs.io/en/latest/getting_started/out_of_core.html).
+[out of memory](https://modin.readthedocs.io/en/latest/getting_started/why_modin/out_of_core.html).
 
 Using modin is as simple as replacing the pandas import:
 
@@ -46,7 +46,7 @@ Modin automatically detects which engine(s) you have installed and uses that for
 
 #### From conda-forge
 
-Installing from conda forge using `modin-all` will install Modin and 3 engines: [Ray](https://github.com/ray-project/ray),
+Installing from [conda forge](https://github.com/conda-forge/modin-feedstock) using `modin-all` will install Modin and three engines: [Ray](https://github.com/ray-project/ray),
 [Dask](https://github.com/dask/dask), and [Omnisci](https://www.omnisci.com/platform/omniscidb).
 
 ```bash
@@ -120,7 +120,7 @@ free to open an issue!
 
 ### More about Modin 
 
-Visit the complete documentation on readthedocs: https://modin.readthedocs.io/en/latest/index.html
+For the complete documentation on Modin, visit our [ReadTheDocs](https://modin.readthedocs.io/en/latest/index.html) page.
 
 #### Scale your pandas workflow by changing a single line of code.
 
