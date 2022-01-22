@@ -127,7 +127,8 @@ For the complete documentation on Modin, visit our [ReadTheDocs](https://modin.r
 
 _Note: In local mode (without a cluster), Modin will create and manage a local (Dask or Ray) cluster for the execution._
 
-To use Modin, you do not need to know how many cores your system has and you do not need
+To use Modin, you do not need to specify how to distribute the data, or even know how many 
+cores your system has. In fact, you can continue using your previous 
 to  specify how to distribute the data. In fact, you can continue using your previous
 pandas notebooks while experiencing a considerable speedup from Modin, even on a single
 machine. Once you've changed your import statement, you're ready to use Modin just like
@@ -156,7 +157,7 @@ df = pd.read_csv("my_dataset.csv")
 
 #### Modin is a DataFrame designed for datasets from 1MB to 1TB+
 
-Often data scientists have to use different tools
+Often data scientists have to switch between different tools
 for operating on datasets of different sizes. Processing large dataframes with pandas
 is slow, and pandas does not support working with dataframes that are too large to fit
 into the available memory. As a result, pandas workflows that work well
@@ -174,7 +175,7 @@ scalability in a cluster.
 We designed Modin to be modular so we can plug in different components as they develop
 and improve:
 
-![Architecture](docs/img/modin_architecture.png)
+<img src="docs/img/modin_architecture.png" alt="Modin's architecture" width="75%"></img>
 
 Visit the [Documentation](https://modin.readthedocs.io/en/latest/development/architecture.html) for
 more information!
