@@ -132,7 +132,7 @@ cores your system has. In fact, you can continue using your previous
 to  specify how to distribute the data. In fact, you can continue using your previous
 pandas notebooks while experiencing a considerable speedup from Modin, even on a single
 machine. Once you've changed your import statement, you're ready to use Modin just like
-you would pandas.
+you would with pandas!
 
 
 #### Faster pandas, even on your laptop
@@ -164,21 +164,17 @@ into the available memory. As a result, pandas workflows that work well
 for prototyping on a few MBs of data do not scale to tens or hundreds of GBs (depending on the size
 of your machine). Modin supports operating on data that does not fit in memory, so that you can comfortably
 work with hundreds of GBs without worrying about substantial slowdown or memory errors.
-
-With preliminary [cluster](https://modin.readthedocs.io/en/latest/getting_started/using_modin/using_modin_cluster.html)
+With [cluster](https://modin.readthedocs.io/en/latest/getting_started/using_modin/using_modin_cluster.html)
 and [out of core](https://modin.readthedocs.io/en/latest/getting_started/out_of_core.html)
 support, Modin is a DataFrame library with both great single-node performance and high
 scalability in a cluster.
 
 #### Modin Architecture
 
-We designed Modin to be modular so we can plug in different components as they develop
-and improve:
+We designed [Modin's architecture](https://modin.readthedocs.io/en/latest/development/architecture.html)
+to be modular so we can plug in different components as they develop and improve:
 
 <img src="docs/img/modin_architecture.png" alt="Modin's architecture" width="75%"></img>
-
-Visit the [Documentation](https://modin.readthedocs.io/en/latest/development/architecture.html) for
-more information!
 
 
 ### General Resources and Getting Involved
