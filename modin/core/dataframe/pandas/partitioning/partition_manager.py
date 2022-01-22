@@ -1284,6 +1284,7 @@ class PandasDataframePartitionManager(ABC):
         ----------
         partitions : np.ndarray
             The 2-d array of partitions to rebalance.
+
         Returns
         -------
         np.ndarray
