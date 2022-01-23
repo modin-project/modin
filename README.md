@@ -97,7 +97,6 @@ engine based on [OmnisciDB](https://www.omnisci.com/platform/omniscidb) and incl
 [Intel® Distribution of Modin](https://software.intel.com/content/www/us/en/develop/tools/oneapi/components/distribution-of-modin.html),
 which is a part of [Intel® oneAPI AI Analytics Toolkit (AI Kit)](https://www.intel.com/content/www/us/en/developer/tools/oneapi/ai-analytics-toolkit.html).
 
-
 ### Pandas API Coverage
 
 <p align="center">
@@ -127,13 +126,12 @@ For the complete documentation on Modin, visit our [ReadTheDocs](https://modin.r
 
 _Note: In local mode (without a cluster), Modin will create and manage a local (Dask or Ray) cluster for the execution._
 
-To use Modin, you do not need to specify how to distribute the data, or even know how many 
-cores your system has. In fact, you can continue using your previous 
+To use Modin, you do not need to specify how to distribute the data, or even know how many
+cores your system has. In fact, you can continue using your previous
 to  specify how to distribute the data. In fact, you can continue using your previous
 pandas notebooks while experiencing a considerable speedup from Modin, even on a single
 machine. Once you've changed your import statement, you're ready to use Modin just like
 you would with pandas!
-
 
 #### Faster pandas, even on your laptop
 
@@ -176,18 +174,35 @@ to be modular so we can plug in different components as they develop and improve
 
 <img src="docs/img/modin_architecture.png" alt="Modin's architecture" width="75%"></img>
 
+### Other Resources
 
-### General Resources and Getting Involved
+#### Getting Started with Modin
 
-- [Documentation Link](https://modin.readthedocs.io/en/latest/)
-- [Modin Examples + Tutorials](https://modin.readthedocs.io/en/latest/getting_started/examples.html)
-- [Modin Talks + Blogs](https://modin.readthedocs.io/en/latest/getting_started/examples.html#talks-podcasts)
-- [Modin Slack](https://join.slack.com/t/modin-project/shared_invite/zt-yvk5hr3b-f08p_ulbuRWsAfg9rMY3uA)
-- [Modin Discourse](https://discuss.modin.org)
-- [Modin GitHub Issues Page](https://github.com/modin-project/modin/issues)
-- [Modin FAQs](https://modin.readthedocs.io/en/latest/getting_started/faq.html)
-- [Modin Troubleshooting Guide](https://modin.readthedocs.io/en/latest/getting_started/troubleshooting.html)
-- [Modin Paper](https://people.eecs.berkeley.edu/~totemtang/paper/Modin.pdf)
+- [Documentation](https://modin.readthedocs.io/en/latest/)
+- [10-min Quickstart Guide](https://modin.readthedocs.io/en/latest/getting_started/quickstart.html)
+- [Examples and Tutorials](https://modin.readthedocs.io/en/latest/getting_started/examples.html)
+- [Videos and Blogposts](https://modin.readthedocs.io/en/latest/getting_started/examples.html#talks-podcasts)
+
+#### Modin Community
+
+- [Slack](https://join.slack.com/t/modin-project/shared_invite/zt-yvk5hr3b-f08p_ulbuRWsAfg9rMY3uA)
+- [Discourse](https://discuss.modin.org)
+- [Twitter](https://twitter.com/modin_project)
+- [Mailing List](https://groups.google.com/g/modin-dev)
+- [GitHub Issues](https://github.com/modin-project/modin/issues)
+- [StackOverflow](https://stackoverflow.com/questions/tagged/modin)
+
+#### Learn More about Modin
+
+- [Frequently Asked Questions (FAQs)](https://modin.readthedocs.io/en/latest/getting_started/faq.html)
+- [Troubleshooting Guide](https://modin.readthedocs.io/en/latest/getting_started/troubleshooting.html)
+- [Development Guide](https://modin.readthedocs.io/en/latest/development/index.html)
+- Modin is built on many years of research and development at UC Berkeley. Check out these selected papers to learn more about how Modin works:
+  - [Flexible Rule-Based Decomposition and Metadata Independence in Modin](https://people.eecs.berkeley.edu/~totemtang/paper/Modin.pdf) (VLDB 2021)
+  - [Dataframe Systems: Theory, Architecture, and Implementation](https://www2.eecs.berkeley.edu/Pubs/TechRpts/2021/EECS-2021-193.pdf) (PhD Dissertation 2021)
+  - [Towards Scalable Dataframe Systems](https://arxiv.org/pdf/2001.00888.pdf) (VLDB 2020)
+
+#### Getting Involved
 
 ***`modin.pandas` is currently under active development. Requests and contributions are welcome!***
 
