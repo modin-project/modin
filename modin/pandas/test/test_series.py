@@ -3213,6 +3213,21 @@ def test_to_period():
 )
 def test_to_numpy(data):
     modin_series, pandas_series = create_test_series(data)
+    assert_array_equal(modin_series.to_numpy(), pandas_series.to_numpy())
+
+
+@pytest.mark.parametrize(
+    "data",
+    test_data_values + test_data_large_categorical_series_values,
+    ids=test_data_keys + test_data_large_categorical_series_keys,
+)
+def test_series_values(data):
+    modin_series, pandas_series = create_test_series(data)
+    assert_array_equal(modin_series.values, pandas_series.values)
+
+
+def test_series_empty_values():
+    modin_series, pandas_series = pd.Series(), pandas.Series()
     assert_array_equal(modin_series.values, pandas_series.values)
 
 
