@@ -13,7 +13,7 @@ These classes are mostly abstract, however very simple and generic enough method
 :py:meth:`~modin.core.dataframe.base.partitioning.BaseDataframeAxisPartition.force_materialization` can be implemented at the base level because for now we do not expect them to differ in any implementation.
 
 ModinDataframe Interface
-=============================
+========================
 
 * :doc:`ModinDataframe <dataframe>` is an abstract class which represents the algebra operators a dataframe must expose.
 * :doc:`BaseDataframeAxisPartition <partitioning/axis_partition>` is an abstract class, representing a joined group of partitions along some axis (either rows or labels).
