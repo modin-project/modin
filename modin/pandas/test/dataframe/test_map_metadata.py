@@ -410,15 +410,6 @@ def test_append(data):
             modin_df.append(list(modin_df.iloc[-1]))
     else:
         modin_result = modin_df.append(list(modin_df.iloc[-1]))
-        # Pandas has bug where sort=False is ignored
-        # (https://github.com/pandas-dev/pandas/issues/35092), but Modin
-        # now does the right thing, so for now manually sort to workaround
-        # this. Once the Pandas bug is fixed and Modin upgrades to that
-        # Pandas release, this sort will cause the test to fail, and the
-        # next three lines should be deleted.
-        if get_current_execution() != "BaseOnPython":
-            assert list(modin_result.columns) == list(modin_df.columns) + [0]
-            modin_result = modin_result[[0] + sorted(modin_df.columns)]
         df_equals(modin_result, pandas_result)
 
     verify_integrity_values = [True, False]
