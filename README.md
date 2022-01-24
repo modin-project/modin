@@ -75,7 +75,6 @@ export MODIN_ENGINE=dask  # Modin will use Dask
 This can also be done within a notebook/interpreter before you import Modin:
 
 ```python
-import modin.pandas as pd
 from modin.config import Engine
 
 Engine.put("ray")  # Modin will use Ray
@@ -163,7 +162,7 @@ for prototyping on a few MBs of data do not scale to tens or hundreds of GBs (de
 of your machine). Modin supports operating on data that does not fit in memory, so that you can comfortably
 work with hundreds of GBs without worrying about substantial slowdown or memory errors.
 With [cluster](https://modin.readthedocs.io/en/latest/getting_started/using_modin/using_modin_cluster.html)
-and [out of core](https://modin.readthedocs.io/en/latest/getting_started/out_of_core.html)
+and [out of core](https://modin.readthedocs.io/en/latest/getting_started/why_modin/out_of_core.html)
 support, Modin is a DataFrame library with both great single-node performance and high
 scalability in a cluster.
 

@@ -100,6 +100,7 @@ import with Modin import:
 
 Which execution engine (Ray or Dask) should I use for Modin?
 """"""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+
 Modin lets you effortlessly speed up your pandas workflows with either Ray_'s or Dask_'s execution engine.
 You don't need to know anything about either engine in order to use it with Modin. If you only have one engine
 installed, Modin will automatically detect which engine you have installed and use that for scheduling computation.
@@ -119,7 +120,6 @@ This can also be done with:
 
 .. code-block:: python
 
-    import modin.pandas as pd
     from modin.config import Engine
 
     Engine.put("ray")  # Modin will use Ray
