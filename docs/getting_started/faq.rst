@@ -59,6 +59,8 @@ see :doc:`out-of-memory support <getting_started/why_modin/out_of_core>` for Mod
 How does Modin compare to Dask DataFrame and Koalas?
 """"""""""""""""""""""""""""""""""""""""""""""""""""
 
+TLDR: Modin has better coverage of the pandas API, has a flexible backend, better ordering semantics,
+and supports both row and column-parallel operations.
 Check out this :doc:`page <getting_started/why_modin/modin_vs_dask_vs_koalas>` detailing the differences!
 
 How does Modin work under the hood?

@@ -127,7 +127,6 @@ _Note: In local mode (without a cluster), Modin will create and manage a local (
 
 To use Modin, you do not need to specify how to distribute the data, or even know how many
 cores your system has. In fact, you can continue using your previous
-to  specify how to distribute the data. In fact, you can continue using your previous
 pandas notebooks while experiencing a considerable speedup from Modin, even on a single
 machine. Once you've changed your import statement, you're ready to use Modin just like
 you would with pandas!
