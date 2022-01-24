@@ -2020,8 +2020,7 @@ class DataFrame(BasePandasDataset):
         Return the sum of the values over the requested axis.
         """
         axis = self._get_axis_number(axis)
-        if skipna is None:
-            skipna = True
+        validate_bool_kwarg(skipna, "skipna", none_allowed=False)
         axis_to_apply = self.columns if axis else self.index
         if (
             skipna is not False
