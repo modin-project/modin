@@ -4,7 +4,7 @@ channels:
 dependencies:
   - pandas==1.4.0
   - pyarrow==5.0.0
-  - numpy>=1.16.5
+  - numpy>=1.18.5
   - fsspec
   - pip
   - pytest>=6.0.1
