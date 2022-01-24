@@ -3221,7 +3221,7 @@ class Resampler(object):
         if isinstance(
             key, (list, tuple, Series, pandas.Series, pandas.Index, np.ndarray)
         ):
-            if len(self._dataframe.columns.intersection(key)) != len(key):
+            if len(self._dataframe.columns.intersection(key)) != len(set(key)):
                 missed_keys = list(set(key).difference(self._dataframe.columns))
                 raise KeyError(f"Columns not found: {str(sorted(missed_keys))[1:-1]}")
             return _get_new_resampler(list(key))
