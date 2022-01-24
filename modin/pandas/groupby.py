@@ -17,7 +17,7 @@ import numpy as np
 import pandas
 import pandas.core.groupby
 from pandas.core.dtypes.common import is_list_like, is_numeric_dtype
-from pandas.core.aggregation import reconstruct_func
+from pandas.core.apply import reconstruct_func
 from pandas._libs.lib import no_default
 import pandas.core.common as com
 from types import BuiltinFunctionType

@@ -23,7 +23,7 @@ from typing import Any, Optional
 
 import pandas
 import pandas._libs.lib as lib
-from pandas._typing import CompressionOptions, FilePathOrBuffer, StorageOptions
+from pandas._typing import CompressionOptions, StorageOptions
 from pandas.util._decorators import doc
 
 from modin.db_conn import ModinDatabaseConnection
@@ -826,7 +826,7 @@ class BaseIO(object):
     def to_pickle(
         cls,
         obj: Any,
-        filepath_or_buffer: FilePathOrBuffer,
+        filepath_or_buffer,
         compression: CompressionOptions = "infer",
         protocol: int = pickle.HIGHEST_PROTOCOL,
         storage_options: StorageOptions = None,

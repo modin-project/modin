@@ -16,8 +16,7 @@
 import pandas
 import numpy as np
 
-from typing import Hashable, Iterable, Mapping, Optional, Union
-from pandas._typing import FrameOrSeriesUnion
+from typing import Hashable, Iterable, Mapping, Union
 from pandas.core.dtypes.common import is_list_like
 
 from modin.error_message import ErrorMessage
@@ -359,9 +358,7 @@ def value_counts(
 
 @_inherit_docstrings(pandas.concat)
 def concat(
-    objs: Union[
-        Iterable[FrameOrSeriesUnion], Mapping[Optional[Hashable], FrameOrSeriesUnion]
-    ],
+    objs: "Iterable[DataFrame | Series] | Mapping[Hashable, DataFrame | Series]",
     axis=0,
     join="outer",
     ignore_index: bool = False,
@@ -371,7 +368,7 @@ def concat(
     verify_integrity: bool = False,
     sort: bool = False,
     copy: bool = True,
-) -> FrameOrSeriesUnion:
+) -> "DataFrame | Series":
     if isinstance(objs, (pandas.Series, Series, DataFrame, str, pandas.DataFrame)):
         raise TypeError(
             "first argument must be an iterable of pandas "
