@@ -1625,8 +1625,7 @@ class DataFrame(BasePandasDataset):
         Return the product of the values over the requested axis.
         """
         axis = self._get_axis_number(axis)
-        if skipna is None:
-            skipna = True
+        validate_bool_kwarg(skipna, "skipna", none_allowed=False)
         if level is not None:
             if (
                 not self._query_compiler.has_multiindex(axis=axis)
