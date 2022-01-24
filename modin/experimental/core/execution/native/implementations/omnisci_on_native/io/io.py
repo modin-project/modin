@@ -37,7 +37,6 @@ import pyarrow as pa
 
 import pandas
 import pandas._libs.lib as lib
-from pandas._typing import FilePathOrBuffer
 from pandas.io.common import is_url
 
 ReadCsvKwargsType = Dict[
@@ -51,7 +50,7 @@ ReadCsvKwargsType = Dict[
         Sequence,
         Callable,
         Dialect,
-        FilePathOrBuffer,
+        None,
         None,
     ],
 ]
