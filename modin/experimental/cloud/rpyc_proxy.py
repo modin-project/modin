@@ -182,41 +182,6 @@ class WrappingConnection(rpyc.Connection):
                 return res
         return super().async_request(handler, *args, **kw)
 
-    def __patched_netref(self, id_pack):
-        """
-        Default RPyC behaviour is to defer almost everything to be always obtained
-        from remote side. This is almost always correct except when Python behaves
-        strangely. For example, when checking for isinstance() or issubclass() it
-        gets obj.__bases__ tuple and uses its elements *after* calling a decref
-        on the __bases__, because Python assumes that the class type holds
-        a reference to __bases__, which isn't true for RPyC proxy classes, so in
-        RPyC case the element gets destroyed and undefined behaviour happens.
-
-        So we're patching RPyC netref __getattribute__ to keep a reference
-        for certain read-only properties to better emulate local objects.
-
-        Also __array__() implementation works only for numpy arrays, but not other types,
-        like scalars (which should become arrays)
-        """
-        result = super()._netref_factory(id_pack)
-        cls = type(result)
-        if not hasattr(cls, "__readonly_cache__"):
-            orig_getattribute = cls.__getattribute__
-            type.__setattr__(cls, "__readonly_cache__", {})
-
-            def __getattribute__(this, name):
-                if name in {"__bases__", "__base__", "__mro__"}:
-                    cache = object.__getattribute__(this, "__readonly_cache__")
-                    try:
-                        return cache[name]
-                    except KeyError:
-                        res = cache[name] = orig_getattribute(this, name)
-                        return res
-                return orig_getattribute(this, name)
-
-            cls.__getattribute__ = __getattribute__
-        return result
-
     def _netref_factory(self, id_pack):
         id_name, cls_id, inst_id = id_pack
         id_name = str(id_name)
@@ -225,12 +190,12 @@ class WrappingConnection(rpyc.Connection):
             try:
                 cached_cls = self._remote_cls_cache[(id_name, cls_id)]
             except KeyError:
-                result = self.__patched_netref(id_pack)
+                result = super()._netref_factory(id_pack)
                 self._remote_cls_cache[(id_name, cls_id)] = type(result)
             else:
                 result = cached_cls(self, id_pack)
         else:
-            result = self.__patched_netref(id_pack)
+            result = super()._netref_factory(id_pack)
         # try getting __real_cls__ from result.__class__ BUT make sure to
         # NOT get it from some parent class for result.__class__, otherwise
         # multiple wrappings happen
