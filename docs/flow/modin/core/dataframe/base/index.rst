@@ -8,7 +8,7 @@ It is the core construction element and serves as the client for the :doc:`Modin
 The partitions and partition manager interfaces are currently implementation-specific, but may
 be standardized in the future.
 
-The ModinDataframe and axis partitions are the interfaces that must be implemented by any :doc:`execution backend</flow/modin/core/execution/dispatching>` in order for it to be plugged in to Modin.
+The :py:class:`~modin.core.dataframe.base.dataframe.dataframe.ModinDataframe` and axis partitions are the interfaces that must be implemented by any :doc:`execution backend</flow/modin/core/execution/dispatching>` in order for it to be plugged in to Modin.
 These classes are mostly abstract, however very simple and generic enough methods like
 :py:meth:`~modin.core.dataframe.base.partitioning.BaseDataframeAxisPartition.force_materialization` can be implemented at the base level because for now we do not expect them to differ in any implementation.
 
