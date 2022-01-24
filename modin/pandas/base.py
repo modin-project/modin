@@ -1548,8 +1548,7 @@ class BasePandasDataset(object):
         **kwargs,
     ):
         axis = self._get_axis_number(axis)
-        if skipna is None:
-            skipna = True
+        validate_bool_kwarg(skipna, "skipna", none_allowed=False)
         if level is not None:
             func_kwargs = {
                 "skipna": skipna,
