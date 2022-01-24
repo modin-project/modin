@@ -34,6 +34,7 @@ import sys
 from typing import IO, Optional, Union, Mapping, Iterator
 import warnings
 
+from modin.pandas import Categorical
 from modin.error_message import ErrorMessage
 from modin.utils import _inherit_docstrings, to_pandas, hashable
 from modin.config import Engine, IsExperimental, PersistentPickle
@@ -2533,7 +2534,7 @@ class DataFrame(BasePandasDataset):
                 value = value.T.reshape(-1)
                 if len(self) > 0:
                     value = value[: len(self)]
-            if not isinstance(value, Series):
+            if not isinstance(value, (Series, Categorical)):
                 value = list(value)
 
         if not self._query_compiler.lazy_execution and len(self.index) == 0:

@@ -1738,6 +1738,16 @@ def test___setitem__single_item_in_series():
     df_equals(modin_series, pandas_series)
 
 
+def test___setitem__assigning_single_categorical_sets_correct_dtypes():
+    # This test case comes from
+    # https://github.com/modin-project/modin/issues/3895
+    modin_df = pd.DataFrame({"categories": ["A"]})
+    modin_df["categories"] = pd.Categorical(["A"])
+    pandas_df = pandas.DataFrame({"categories": ["A"]})
+    pandas_df["categories"] = pandas.Categorical(["A"])
+    df_equals(modin_df, pandas_df)
+
+
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test___len__(data):
     modin_df = pd.DataFrame(data)
