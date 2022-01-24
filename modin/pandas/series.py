@@ -453,8 +453,8 @@ class Series(BasePandasDataset):
         -------
         str
         """
-        num_rows = pandas.get_option("max_rows") or 60
-        num_cols = pandas.get_option("max_columns") or 20
+        num_rows = pandas.get_option("display.max_rows") or 60
+        num_cols = pandas.get_option("display.max_columns") or 20
         temp_df = self._build_repr_df(num_rows, num_cols)
         if isinstance(temp_df, pandas.DataFrame) and not temp_df.empty:
             temp_df = temp_df.iloc[:, 0]
