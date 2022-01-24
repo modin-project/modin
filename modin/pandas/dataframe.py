@@ -31,7 +31,7 @@ import itertools
 import functools
 import numpy as np
 import sys
-from typing import IO, Optional, Union, Mapping, Iterator
+from typing import IO, Optional, Union, Iterator
 import warnings
 
 from modin.pandas import Categorical
@@ -1615,7 +1615,7 @@ class DataFrame(BasePandasDataset):
     def prod(
         self,
         axis=None,
-        skipna=None,
+        skipna=True,
         level=None,
         numeric_only=None,
         min_count=0,
@@ -1771,11 +1771,11 @@ class DataFrame(BasePandasDataset):
     def replace(
         self,
         to_replace=None,
-        value=None,
-        inplace=False,
+        value=no_default,
+        inplace: "bool" = False,
         limit=None,
-        regex=False,
-        method="pad",
+        regex: "bool" = False,
+        method: "str | lib.NoDefault" = no_default,
     ):  # noqa: PR01, RT01, D200
         """
         Replace values given in `to_replace` with `value`.
@@ -2010,7 +2010,7 @@ class DataFrame(BasePandasDataset):
     def sum(
         self,
         axis=None,
-        skipna=None,
+        skipna=True,
         level=None,
         numeric_only=None,
         min_count=0,
@@ -2211,17 +2211,19 @@ class DataFrame(BasePandasDataset):
 
     def to_stata(
         self,
-        path,
-        convert_dates=None,
-        write_index=True,
-        byteorder=None,
-        time_stamp=None,
-        data_label=None,
-        variable_labels=None,
-        version=114,
-        convert_strl=None,
-        compression: Union[str, Mapping[str, str], None] = "infer",
-        storage_options: StorageOptions = None,
+        path: "FilePath | WriteBuffer[bytes]",
+        convert_dates: "dict[Hashable, str] | None" = None,
+        write_index: "bool" = True,
+        byteorder: "str | None" = None,
+        time_stamp: "datetime.datetime | None" = None,
+        data_label: "str | None" = None,
+        variable_labels: "dict[Hashable, str] | None" = None,
+        version: "int | None" = 114,
+        convert_strl: "Sequence[Hashable] | None" = None,
+        compression: "CompressionOptions" = "infer",
+        storage_options: "StorageOptions" = None,
+        *,
+        value_labels: "dict[Hashable, dict[float | int, str]] | None" = None,
     ):  # pragma: no cover # noqa: PR01, RT01, D200
         """
         Export ``DataFrame`` object to Stata data format.
@@ -2239,6 +2241,7 @@ class DataFrame(BasePandasDataset):
             convert_strl=convert_strl,
             compression=compression,
             storage_options=storage_options,
+            value_labels=value_labels,
         )
 
     def to_timestamp(
@@ -2329,7 +2332,7 @@ class DataFrame(BasePandasDataset):
     def where(
         self,
         cond,
-        other=np.nan,
+        other=no_default,
         inplace=False,
         axis=None,
         level=None,

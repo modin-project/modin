@@ -35,7 +35,6 @@ from pandas._libs.lib import no_default
 from pandas._typing import (
     CompressionOptions,
     IndexKeyFunc,
-    FilePathOrBuffer,
     StorageOptions,
     TimedeltaConvertibleTypes,
     TimestampConvertibleTypes,
@@ -932,7 +931,13 @@ class BasePandasDataset(object):
         return self.loc[indexer] if axis == 0 else self.loc[:, indexer]
 
     def between_time(
-        self, start_time, end_time, include_start=True, include_end=True, axis=None
+        self: "BasePandasDataset",
+        start_time,
+        end_time,
+        include_start: "bool_t | lib.NoDefault" = no_default,
+        include_end: "bool_t | lib.NoDefault" = no_default,
+        inclusive: "str | None" = None,
+        axis=None,
     ):
         axis = self._get_axis_number(axis)
         idx = self.index if axis == 0 else self.columns
@@ -943,6 +948,7 @@ class BasePandasDataset(object):
                 end_time,
                 include_start=include_start,
                 include_end=include_end,
+                inclusive=inclusive,
             )
             .index
         )
@@ -1280,16 +1286,17 @@ class BasePandasDataset(object):
 
     def ewm(
         self,
-        com=None,
-        span=None,
-        halflife=None,
-        alpha=None,
-        min_periods=0,
-        adjust=True,
-        ignore_na=False,
-        axis=0,
-        times=None,
-    ):
+        com: "float | None" = None,
+        span: "float | None" = None,
+        halflife: "float | TimedeltaConvertibleTypes | None" = None,
+        alpha: "float | None" = None,
+        min_periods: "int | None" = 0,
+        adjust: "bool_t" = True,
+        ignore_na: "bool_t" = False,
+        axis: "Axis" = 0,
+        times: "str | np.ndarray | BasePandasDataset | None" = None,
+        method: "str" = "single",
+    ) -> "ExponentialMovingWindow":
         return self._default_to_pandas(
             "ewm",
             com=com,
@@ -1301,6 +1308,7 @@ class BasePandasDataset(object):
             ignore_na=ignore_na,
             axis=axis,
             times=times,
+            method=method,
         )
 
     def expanding(self, min_periods=1, center=None, axis=0, method="single"):
@@ -1528,7 +1536,14 @@ class BasePandasDataset(object):
 
         return _iLocIndexer(self)
 
-    def kurt(self, axis=None, skipna=None, level=None, numeric_only=None, **kwargs):
+    def kurt(
+        self,
+        axis: "Axis | None | lib.NoDefault" = no_default,
+        skipna=True,
+        level=None,
+        numeric_only=None,
+        **kwargs,
+    ):
         axis = self._get_axis_number(axis)
         if skipna is None:
             skipna = True
@@ -1582,7 +1597,7 @@ class BasePandasDataset(object):
 
         return _LocIndexer(self)
 
-    def mad(self, axis=None, skipna=None, level=None):
+    def mad(self, axis=None, skipna=True, level=None):
         axis = self._get_axis_number(axis)
         if skipna is None:
             skipna = True
@@ -1621,7 +1636,14 @@ class BasePandasDataset(object):
             try_cast=try_cast,
         )
 
-    def max(self, axis=None, skipna=None, level=None, numeric_only=None, **kwargs):
+    def max(
+        self,
+        axis: "int | None | lib.NoDefault" = no_default,
+        skipna=True,
+        level=None,
+        numeric_only=None,
+        **kwargs,
+    ):
         if skipna is None:
             skipna = True
         if level is not None:
@@ -1721,10 +1743,24 @@ class BasePandasDataset(object):
         )
         return self._reduce_dimension(result_qc)
 
-    def mean(self, axis=None, skipna=None, level=None, numeric_only=None, **kwargs):
+    def mean(
+        self,
+        axis: "int | None | lib.NoDefault" = no_default,
+        skipna=True,
+        level=None,
+        numeric_only=None,
+        **kwargs,
+    ):
         return self._stat_operation("mean", axis, skipna, level, numeric_only, **kwargs)
 
-    def median(self, axis=None, skipna=None, level=None, numeric_only=None, **kwargs):
+    def median(
+        self,
+        axis: "int | None | lib.NoDefault" = no_default,
+        skipna=True,
+        level=None,
+        numeric_only=None,
+        **kwargs,
+    ):
         return self._stat_operation(
             "median", axis, skipna, level, numeric_only, **kwargs
         )
@@ -1734,7 +1770,14 @@ class BasePandasDataset(object):
             self._query_compiler.memory_usage(index=index, deep=deep)
         )
 
-    def min(self, axis=None, skipna=None, level=None, numeric_only=None, **kwargs):
+    def min(
+        self,
+        axis: "int | None | lib.NoDefault" = no_default,
+        skipna=True,
+        level=None,
+        numeric_only=None,
+        **kwargs,
+    ):
         if skipna is None:
             skipna = True
         if level is not None:
@@ -1873,13 +1916,13 @@ class BasePandasDataset(object):
             return result
 
     def rank(
-        self,
+        self: "BasePandasDataset",
         axis=0,
-        method="average",
-        numeric_only=None,
-        na_option="keep",
-        ascending=True,
-        pct=False,
+        method: "str" = "average",
+        numeric_only: "bool_t | None | lib.NoDefault" = no_default,
+        na_option: "str" = "keep",
+        ascending: "bool_t" = True,
+        pct: "bool_t" = False,
     ):
         axis = self._get_axis_number(axis)
         return self.__constructor__(
@@ -2258,7 +2301,13 @@ class BasePandasDataset(object):
             return self.__constructor__(query_compiler=query_compiler)
 
     def sem(
-        self, axis=None, skipna=None, level=None, ddof=1, numeric_only=None, **kwargs
+        self,
+        axis=None,
+        skipna=True,
+        level=None,
+        ddof=1,
+        numeric_only=None,
+        **kwargs,
     ):
         return self._stat_operation(
             "sem", axis, skipna, level, numeric_only, ddof=ddof, **kwargs
@@ -2377,7 +2426,14 @@ class BasePandasDataset(object):
         else:
             return self.tshift(periods, freq)
 
-    def skew(self, axis=None, skipna=None, level=None, numeric_only=None, **kwargs):
+    def skew(
+        self,
+        axis: "int | None | lib.NoDefault" = no_default,
+        skipna=True,
+        level=None,
+        numeric_only=None,
+        **kwargs,
+    ):
         return self._stat_operation("skew", axis, skipna, level, numeric_only, **kwargs)
 
     def sort_index(
@@ -2446,7 +2502,13 @@ class BasePandasDataset(object):
         return self._create_or_update_from_compiler(result, inplace)
 
     def std(
-        self, axis=None, skipna=None, level=None, ddof=1, numeric_only=None, **kwargs
+        self,
+        axis=None,
+        skipna=True,
+        level=None,
+        ddof=1,
+        numeric_only=None,
+        **kwargs,
     ):
         return self._stat_operation(
             "std", axis, skipna, level, numeric_only, ddof=ddof, **kwargs
@@ -2703,7 +2765,7 @@ class BasePandasDataset(object):
 
     def to_pickle(
         self,
-        path: FilePathOrBuffer,
+        path,
         compression: CompressionOptions = "infer",
         protocol: int = pkl.HIGHEST_PROTOCOL,
         storage_options: StorageOptions = None,
@@ -2909,7 +2971,7 @@ class BasePandasDataset(object):
         return counted_values
 
     def var(
-        self, axis=None, skipna=None, level=None, ddof=1, numeric_only=None, **kwargs
+        self, axis=None, skipna=True, level=None, ddof=1, numeric_only=None, **kwargs
     ):
         return self._stat_operation(
             "var", axis, skipna, level, numeric_only, ddof=ddof, **kwargs

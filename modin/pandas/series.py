@@ -1161,6 +1161,23 @@ class Series(BasePandasDataset):
             skipna = True
         return super(Series, self).idxmin(axis=axis, skipna=skipna, *args, **kwargs)
 
+    def info(
+        self,
+        verbose: "bool | None" = None,
+        buf: "IO[str] | None" = None,
+        max_cols: "int | None" = None,
+        memory_usage: "bool | str | None" = None,
+        show_counts: "bool" = True,
+    ):
+        return self._default_to_pandas(
+            pandas.Series.info,
+            verbose=verbose,
+            buf=buf,
+            max_cols=max_cols,
+            memory_usage=memory_usage,
+            show_counts=show_counts,
+        )
+
     def interpolate(
         self,
         method="linear",
@@ -1218,7 +1235,12 @@ class Series(BasePandasDataset):
         return self.index
 
     def kurt(
-        self, axis=None, skipna=None, level=None, numeric_only=None, **kwargs
+        self,
+        axis: "Axis | None | lib.NoDefault" = no_default,
+        skipna=True,
+        level=None,
+        numeric_only=None,
+        **kwargs,
     ):  # noqa: PR01, RT01, D200
         """
         Return unbiased kurtosis over requested axis.
@@ -1260,6 +1282,27 @@ class Series(BasePandasDataset):
                 if pandas.isnull(s) is not True or na_action is None
                 else s
             )
+        )
+
+    def mask(
+        self,
+        cond,
+        other=np.nan,
+        inplace=False,
+        axis=None,
+        level=None,
+        errors=no_default,
+        try_cast=no_default,
+    ):
+        return self._default_to_pandas(
+            pandas.Series.mask,
+            cond,
+            other=other,
+            inplace=inplace,
+            axis=axis,
+            level=level,
+            errors=errors,
+            try_cast=try_cast,
         )
 
     def memory_usage(self, index=True, deep=False):  # noqa: PR01, RT01, D200
@@ -1409,7 +1452,7 @@ class Series(BasePandasDataset):
     def prod(
         self,
         axis=None,
-        skipna=None,
+        skipna=True,
         level=None,
         numeric_only=None,
         min_count=0,
@@ -1476,10 +1519,11 @@ class Series(BasePandasDataset):
 
         return data
 
-    def reindex(self, index=None, **kwargs):  # noqa: PR01, RT01, D200
+    def reindex(self, *args, **kwargs):  # noqa: PR01, RT01, D200
         """
         Conform Series to new index with optional filling logic.
         """
+        index = kwargs.pop("index", None)
         method = kwargs.pop("method", None)
         level = kwargs.pop("level", None)
         copy = kwargs.pop("copy", True)
@@ -1543,7 +1587,7 @@ class Series(BasePandasDataset):
         return self.__constructor__(query_compiler=self._query_compiler.repeat(repeats))
 
     def reset_index(
-        self, level=None, drop=False, name=None, inplace=False
+        self, level=None, drop=False, name=no_default, inplace=False
     ):  # noqa: PR01, RT01, D200
         """
         Generate a new Series with the index reset.
@@ -1653,11 +1697,11 @@ class Series(BasePandasDataset):
     def replace(
         self,
         to_replace=None,
-        value=None,
+        value=no_default,
         inplace=False,
         limit=None,
         regex=False,
-        method="pad",
+        method: "str | lib.NoDefault" = no_default,
     ):  # noqa: PR01, RT01, D200
         """
         Replace values given in `to_replace` with `value`.
@@ -1770,7 +1814,7 @@ class Series(BasePandasDataset):
     def sum(
         self,
         axis=None,
-        skipna=None,
+        skipna=True,
         level=None,
         numeric_only=None,
         min_count=0,
@@ -1843,7 +1887,9 @@ class Series(BasePandasDataset):
         """
         return self._default_to_pandas("to_dict", into=into)
 
-    def to_frame(self, name=None):  # noqa: PR01, RT01, D200
+    def to_frame(
+        self, name: "Hashable" = no_default
+    ) -> "DataFrame":  # noqa: PR01, RT01, D200
         """
         Convert Series to {label -> value} dict or dict-like object.
         """
@@ -2011,11 +2057,11 @@ class Series(BasePandasDataset):
     def where(
         self,
         cond,
-        other=np.nan,
+        other=no_default,
         inplace=False,
         axis=None,
         level=None,
-        errors="raise",
+        errors=no_default,
         try_cast=no_default,
     ):  # noqa: PR01, RT01, D200
         """
