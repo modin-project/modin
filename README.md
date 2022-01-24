@@ -151,7 +151,7 @@ import modin.pandas as pd
 df = pd.read_csv("my_dataset.csv")
 ```
 
-#### Modin is a DataFrame designed for datasets from 1MB to 1TB+
+#### Modin can handle the datasets that pandas can't 
 
 Often data scientists have to switch between different tools
 for operating on datasets of different sizes. Processing large dataframes with pandas
