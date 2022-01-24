@@ -2,7 +2,7 @@ channels:
   - conda-forge
 dependencies:
   - pandas==1.4.0
-  - numpy>=1.16.5
+  - numpy>=1.18.5
   - pyarrow>=4.0.1
   - fsspec
   - xarray
