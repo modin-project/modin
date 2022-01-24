@@ -1707,8 +1707,7 @@ class BasePandasDataset(object):
             `DataFrame` - self is DataFrame and level is specified.
         """
         axis = self._get_axis_number(axis)
-        if skipna is None:
-            skipna = True
+        validate_bool_kwarg(skipna, "skipna", none_allowed=False)
         if level is not None:
             return self._default_to_pandas(
                 op_name,

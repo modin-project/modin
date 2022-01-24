@@ -3512,8 +3512,8 @@ def test_var(data, skipna, ddof):
 
     try:
         pandas_result = pandas_series.var(skipna=skipna, ddof=ddof)
-    except Exception:
-        with pytest.raises(TypeError):
+    except Exception as e:
+        with pytest.raises(type(e)):
             modin_series.var(skipna=skipna, ddof=ddof)
     else:
         modin_result = modin_series.var(skipna=skipna, ddof=ddof)

@@ -1824,8 +1824,7 @@ class Series(BasePandasDataset):
         Return the sum of the values.
         """
         axis = self._get_axis_number(axis)
-        if skipna is None:
-            skipna = True
+        validate_bool_kwarg(skipna, "skipna", none_allowed=False)
         if numeric_only is True:
             raise NotImplementedError("Series.sum does not implement numeric_only")
         if level is not None:
