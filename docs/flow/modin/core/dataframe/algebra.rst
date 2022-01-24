@@ -6,7 +6,7 @@ Operators Module Description
 Brief description
 '''''''''''''''''
 Most of the functions that are evaluated by `QueryCompiler` can be categorized into
-one of the patterns: Map, MapReduce, Binary, Reduce, etc., called core operators. The ``modin.core.dataframe.algebra``
+one of the patterns: Map, TreeReduce, Binary, Reduce, etc., called core operators. The ``modin.core.dataframe.algebra``
 module provides templates to easily build such types of functions. These templates
 are supposed to be used at the `QueryCompiler` level since each built function accepts
 and returns `QueryCompiler`.
@@ -43,7 +43,7 @@ that the reduce function returns a one dimensional frame.
 .. figure:: /img/reduce_evaluation.svg
     :align: center
 
-MapReduce operator
+TreeReduce operator
 ------------------
 Applies an argument function that reduces specified axis into a scalar. First applies map function to each partition
 in parallel, then concatenates resulted partitions along the specified axis and applies reduce
@@ -72,7 +72,7 @@ expensive because the execution engine has to concatenate partitions along the s
 
 GroupBy operator
 ----------------
-Evaluates GroupBy aggregation for that type of functions that can be executed via MapReduce approach.
+Evaluates GroupBy aggregation for that type of functions that can be executed via TreeReduce approach.
 To be able to form groups engine broadcasts ``by`` partitions to each partition of the source frame.
 
 Default-to-pandas operator
@@ -88,23 +88,23 @@ new functions.
 Imagine you have a complex aggregation that can be implemented into a single query but
 doesn't have any implementation in pandas API. If you know how to implement this
 aggregation efficiently in a distributed frame, you may want to use one of the above described
-patterns (e.g. ``MapReduce``).
+patterns (e.g. ``TreeReduce``).
 
 Let's implement a function that counts non-NA values for each column or row
 (``pandas.DataFrame.count``). First, we need to determine the function type.
-MapReduce approach would be great: in a map phase, we'll count non-NA cells in each
+TreeReduce approach would be great: in a map phase, we'll count non-NA cells in each
 partition in parallel and then just sum its results in the reduce phase.
 
-To define the MapReduce function that does `count` + `sum` we just need to register the
+To define the TreeReduce function that does `count` + `sum` we just need to register the
 appropriate functions and then assign the result to the picked `QueryCompiler`
 (`PandasQueryCompiler` in our case):
 
 .. code-block:: python
 
     from modin.core.storage_formats import PandasQueryCompiler
-    from modin.core.dataframe.algebra import MapReduce
+    from modin.core.dataframe.algebra import TreeReduce
 
-    PandasQueryCompiler.custom_count = MapReduce.register(pandas.DataFrame.count, pandas.DataFrame.sum)
+    PandasQueryCompiler.custom_count = TreeReduce.register(pandas.DataFrame.count, pandas.DataFrame.sum)
 
 Then, we want to handle it from the :py:class:`~modin.pandas.dataframe.DataFrame`, so we need to create a way to do that:
 
