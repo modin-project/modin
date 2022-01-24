@@ -1601,8 +1601,7 @@ class BasePandasDataset(object):
 
     def mad(self, axis=None, skipna=True, level=None):
         axis = self._get_axis_number(axis)
-        if skipna is None:
-            skipna = True
+        validate_bool_kwarg(skipna, "skipna", none_allowed=False)
         if level is not None:
             if (
                 not self._query_compiler.has_multiindex(axis=axis)
@@ -1646,8 +1645,7 @@ class BasePandasDataset(object):
         numeric_only=None,
         **kwargs,
     ):
-        if skipna is None:
-            skipna = True
+        validate_bool_kwarg(skipna, "skipna", none_allowed=False)
         if level is not None:
             return self._default_to_pandas(
                 "max",
@@ -1707,8 +1705,7 @@ class BasePandasDataset(object):
             `DataFrame` - self is DataFrame and level is specified.
         """
         axis = self._get_axis_number(axis)
-        if skipna is None:
-            skipna = True
+        validate_bool_kwarg(skipna, "skipna", none_allowed=False)
         if level is not None:
             return self._default_to_pandas(
                 op_name,
@@ -1780,8 +1777,7 @@ class BasePandasDataset(object):
         numeric_only=None,
         **kwargs,
     ):
-        if skipna is None:
-            skipna = True
+        validate_bool_kwarg(skipna, "skipna", none_allowed=False)
         if level is not None:
             return self._default_to_pandas(
                 "min",
