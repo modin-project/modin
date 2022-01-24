@@ -316,6 +316,9 @@ def test_simple_row_groupby(by, as_index, col1_category):
 
     if col1_category:
         pandas_df = pandas_df.astype({"col1": "category"})
+        # As of pandas 1.4.0 operators like min cause TypeErrors to be raised on unordered
+        # categorical columns. We need to specify the categorical column as ordered to bypass this.
+        pandas_df["col1"] = pandas_df["col1"].cat.as_ordered()
 
     modin_df = from_pandas(pandas_df)
     n = 1
