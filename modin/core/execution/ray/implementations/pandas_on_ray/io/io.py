@@ -111,6 +111,8 @@ class PandasOnRayIO(RayIO):
             df.to_sql(**kwargs)
             return pandas.DataFrame()
 
+        # Ensure that the metadata is syncrhonized
+        qc._modin_frame._propagate_index_objs(axis=None)
         result = qc._modin_frame.apply_full_axis(1, func, new_index=[], new_columns=[])
         # FIXME: we should be waiting for completion less expensievely, maybe use _modin_frame.materialize()?
         result.to_pandas()  # blocking operation
@@ -225,6 +227,8 @@ class PandasOnRayIO(RayIO):
 
         # signaling that the partition with id==0 can be written to the file
         ray.get(signals.send.remote(0))
+        # Ensure that the metadata is syncrhonized
+        qc._modin_frame._propagate_index_objs(axis=None)
         result = qc._modin_frame._partition_mgr_cls.map_axis_partitions(
             axis=1,
             partitions=qc._modin_frame._partitions,
