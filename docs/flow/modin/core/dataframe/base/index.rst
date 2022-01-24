@@ -1,7 +1,7 @@
 Purpose
 =======
 
-The ``ModinDataframe`` serves the purpose of describing and defining the :doc:`Core Dataframe Algebra </flow/modin/core/dataframe/algebra>`.
+The :py:class:`~modin.core.dataframe.base.dataframe.dataframe.ModinDataframe` serves the purpose of describing and defining the :doc:`Core Dataframe Algebra </flow/modin/core/dataframe/algebra>`.
 
 It is the core construction element and serves as the client for the :doc:`Modin Query Compiler</flow/modin/core/storage_formats/base/query_compiler>`. Descendants that offer implementations execute the queries from the compiler by invoking functions over partitions via a partition manager.
 
