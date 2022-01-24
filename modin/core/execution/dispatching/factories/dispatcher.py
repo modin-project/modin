@@ -20,6 +20,7 @@ Dispatcher routes the work to execution-specific functions.
 from modin.config import Engine, StorageFormat, IsExperimental
 from modin.core.execution.dispatching.factories import factories
 from modin.utils import get_current_execution, _inherit_docstrings
+from modin.pandas import _update_engine
 
 
 class FactoryNotFoundError(AttributeError):
@@ -294,5 +295,6 @@ class FactoryDispatcher(object):
         return cls.__factory._to_parquet(*args, **kwargs)
 
 
+Engine.subscribe(_update_engine)
 Engine.subscribe(FactoryDispatcher._update_factory)
 StorageFormat.subscribe(FactoryDispatcher._update_factory)
