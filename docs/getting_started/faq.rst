@@ -21,7 +21,7 @@ The :py:class:`~modin.pandas.dataframe.DataFrame` is a highly
 scalable, parallel DataFrame. Modin transparently distributes the data and computation so
 that you can continue using the same pandas API while being able to work with more data faster.
 Modin lets you use all the CPU cores on your machine, and because it is lightweight, it
-often has less memory overhead than pandas. See this :doc:`page <getting_started/why_modin/pandas>` to
+often has less memory overhead than pandas. See this :doc:`page </getting_started/why_modin/pandas>` to
 learn more about how Modin is different from pandas.
 
 Why not just improve pandas?
@@ -54,14 +54,14 @@ with dataframes that don't fit into the available memory. As a result, pandas wo
 for prototyping on a few MBs of data do not scale to tens or hundreds of GBs (depending on the size
 of your machine). Modin supports operating on data that does not fit in memory, so that you can comfortably
 work with hundreds of GBs without worrying about substantial slowdown or memory errors. For more information,
-see :doc:`out-of-memory support <getting_started/why_modin/out_of_core>` for Modin.
+see :doc:`out-of-memory support </getting_started/why_modin/out_of_core>` for Modin.
 
 How does Modin compare to Dask DataFrame and Koalas?
 """"""""""""""""""""""""""""""""""""""""""""""""""""
 
 TLDR: Modin has better coverage of the pandas API, has a flexible backend, better ordering semantics,
 and supports both row and column-parallel operations.
-Check out this :doc:`page <getting_started/why_modin/modin_vs_dask_vs_koalas>` detailing the differences!
+Check out this :doc:`page </getting_started/why_modin/modin_vs_dask_vs_koalas>` detailing the differences!
 
 How does Modin work under the hood?
 """""""""""""""""""""""""""""""""""
@@ -75,7 +75,7 @@ The Modin Core DataFrame is our efficient DataFrame implementation that utilizes
 which allows for distributing tasks and queries. From here, the Modin DataFrame works with engines like
 Ray or Dask to execute computation, and then return the results to the user.
 
-For more details, take a look at our system :doc:`architecture <development/architecture>`.
+For more details, take a look at our system :doc:`architecture </development/architecture>`.
 
 FAQs: How to use Modin?
 -----------------------
@@ -172,7 +172,7 @@ How can I contribute to Modin?
 
 **Modin is currently under active development. Requests and contributions are welcome!**
 
-If you are interested in contributing please check out the :doc:`Contributing Guide<development/contributing>`
+If you are interested in contributing please check out the :doc:`Contributing Guide</development/contributing>`
 and then refer to the :doc:`Development Documentation</development/index>`,
 where you can find system architecture, internal implementation details, and other useful information.
 Also check out the `Github`_ to view open issues and make contributions.
