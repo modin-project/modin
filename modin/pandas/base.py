@@ -528,6 +528,9 @@ class BasePandasDataset(object):
         int
             0 or 1 - axis index in the array of axes stored in the dataframe.
         """
+        if axis is no_default:
+            axis = None
+
         return cls._pandas_class._get_axis_number(axis) if axis is not None else 0
 
     def __constructor__(self, *args, **kwargs):
