@@ -528,6 +528,9 @@ class BasePandasDataset(object):
         int
             0 or 1 - axis index in the array of axes stored in the dataframe.
         """
+        if axis is no_default:
+            axis = None
+
         return cls._pandas_class._get_axis_number(axis) if axis is not None else 0
 
     def __constructor__(self, *args, **kwargs):
@@ -3218,7 +3221,7 @@ class Resampler(object):
         if isinstance(
             key, (list, tuple, Series, pandas.Series, pandas.Index, np.ndarray)
         ):
-            if len(self._dataframe.columns.intersection(key)) != len(key):
+            if len(self._dataframe.columns.intersection(key)) != len(set(key)):
                 missed_keys = list(set(key).difference(self._dataframe.columns))
                 raise KeyError(f"Columns not found: {str(sorted(missed_keys))[1:-1]}")
             return _get_new_resampler(list(key))

@@ -5,7 +5,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
     long_description = fh.read()
 
 dask_deps = ["dask>=2.22.0", "distributed>=2.22.0"]
-ray_deps = ["ray[default]>=1.4.0", "pyarrow>=1.0"]
+ray_deps = ["ray[default]>=1.4.0", "pyarrow>=4.0.1"]
 remote_deps = ["rpyc==4.1.5", "cloudpickle", "boto3"]
 spreadsheet_deps = ["modin-spreadsheet>=0.1.0"]
 sql_deps = ["dfsql>=0.4.2", "pyparsing<=2.4.7"]
@@ -22,7 +22,7 @@ setup(
     url="https://github.com/modin-project/modin",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    install_requires=["pandas==1.3.5", "packaging", "numpy>=1.16.5", "fsspec"],
+    install_requires=["pandas==1.4.0", "packaging", "numpy>=1.18.5", "fsspec"],
     extras_require={
         # can be installed by pip install modin[dask]
         "dask": dask_deps,
@@ -32,5 +32,5 @@ setup(
         "sql": sql_deps,
         "all": all_deps,
     },
-    python_requires=">=3.7.1",
+    python_requires=">=3.8",
 )

@@ -253,4 +253,23 @@ def run_and_compare(
             constructor_kwargs=constructor_kwargs,
             **kwargs,
         )
+
+        # Currently, strings are converted to categories when exported from OmniSci,
+        # this makes the equality comparison fail. Converting string cols back to
+        # their original dtypes until the issue is resolved:
+        # https://github.com/modin-project/modin/issues/2747
+        if isinstance(exp_res, pd.DataFrame):
+            external_dtypes = exp_res.dtypes
+            exp_res = try_cast_to_pandas(exp_res)
+            internal_dtypes = exp_res.dtypes
+
+            new_schema = {}
+            for col in exp_res.columns:
+                if (
+                    internal_dtypes[col] == "category"
+                    and external_dtypes[col] != "category"
+                ):
+                    new_schema[col] = external_dtypes[col]
+            exp_res = exp_res.astype(new_schema)
+
         comparator(ref_res, exp_res)
