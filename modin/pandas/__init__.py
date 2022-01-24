@@ -14,7 +14,7 @@
 import pandas
 import warnings
 
-__pandas_version__ = "1.3.5"
+__pandas_version__ = "1.4.0"
 
 if pandas.__version__ != __pandas_version__:
     warnings.warn(
