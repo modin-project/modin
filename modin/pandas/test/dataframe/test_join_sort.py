@@ -459,6 +459,8 @@ def test_sort_multiindex(sort_remaining):
 def test_sort_values(
     data, by, axis, ascending, inplace, kind, na_position, ignore_index, key
 ):
+    if ascending is None:
+        pytest.skip("None is not a valid value for ascending.")
     if (axis == 1 or axis == "columns") and ignore_index:
         pytest.skip("Pandas bug #39426 which is fixed in Pandas 1.3")
 
