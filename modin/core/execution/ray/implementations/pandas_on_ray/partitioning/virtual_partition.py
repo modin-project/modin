@@ -126,7 +126,12 @@ class PandasOnRayDataframeVirtualPartition(PandasDataframeAxisPartition):
         List
             A list of IPs as ``ray.ObjectRef`` or str.
         """
-        return [obj._ip_cache for obj in self.list_of_partitions_to_combine]
+        # Defer draining call queue until we get the ip address
+        result = [None] * len(self.list_of_partitions_to_combine)
+        for idx, partition in enumerate(self.list_of_partitions_to_combine):
+            partition.drain_call_queue()
+            result[idx] = partition._ip_cache
+        return result
 
     @classmethod
     def deploy_axis_func(
