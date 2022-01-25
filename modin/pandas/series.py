@@ -1604,7 +1604,6 @@ class Series(BasePandasDataset):
             new_idx = pandas.RangeIndex(len(self.index))
             if inplace:
                 self.index = new_idx
-                self.name = name
             else:
                 result = self.copy()
                 result.index = new_idx
