@@ -770,9 +770,6 @@ def test_align(data):
 )
 def test_all(data, skipna):
     modin_series, pandas_series = create_test_series(data)
-    # We currently do not accept None for skipna, while pandas warns users that it will
-    # exception eventually, but still accepts it currently. We need this codepath to catch
-    # the exception Modin raises until pandas officially deprecates skipna=None.
     if skipna is None:
         with pytest.raises(ValueError):
             modin_series.all(skipna=skipna)
