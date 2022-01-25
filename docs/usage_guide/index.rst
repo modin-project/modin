@@ -11,7 +11,7 @@ both for general use cases and for specific operations.
 
     /flow/modin/config
     examples/index
-    optimization_guide/index
+    optimization_notes/index
     advanced_usage/index
 
 .. meta::

@@ -1,4 +1,4 @@
-Optimization Guide
+Optimization Notes
 ==================
 
 Modin has chosen default values for a lot of the configurations here that provide excellent performance in most

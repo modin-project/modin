@@ -41,6 +41,7 @@ functions, and create a DataFrame from those modified partitions. Visit
 
 Modin Spreadsheet API: Render Dataframes as Spreadsheets
 --------------------------------------------------------
+
 The Spreadsheet API for Modin allows you to render the dataframe as a spreadsheet to easily explore
 your data and perform operations on a graphical user interface. The API also includes features for recording
 the changes made to the dataframe and exporting them as reproducible code. Built on top of Modin and SlickGrid,
@@ -54,6 +55,7 @@ See our `Modin Spreadsheet API documentation`_ for more details.
 
 Progress Bar
 ------------
+
 Visual progress bar for Dataframe operations such as groupby and fillna, as well as for file reading operations such as
 read_csv. Built using the tqdm library and Ray execution engine. See `Progress Bar documentation`_ for more details.
 
@@ -62,6 +64,7 @@ read_csv. Built using the tqdm library and Ray execution engine. See `Progress B
 
 Dataframe Algebra
 -----------------
+
 A minimal set of operators that can be composed to express any dataframe query for use in query planning and optimization.
 See our `paper`_ for more information, and full documentation is coming soon!
 
@@ -75,6 +78,7 @@ Read about Modin Dataframe support for SQL queries in this recent `blog post`_. 
 
 Distributed XGBoost on Modin
 ----------------------------
+
 Modin provides an implementation of distributed XGBoost machine learning algorithm on Modin DataFrames. See our
 :doc:`Distributed XGBoost on Modin documentation <modin_xgboost>` for details about installation and usage, as well as
 :doc:`Modin XGBoost architecture documentation </flow/modin/experimental/xgboost>` for information about implementation and

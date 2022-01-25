@@ -8,9 +8,9 @@
 .. toctree::
    :hidden:
 
-   supported_apis/index
    getting_started/quickstart
    usage_guide/index
+   supported_apis/index
    development/index
    contact
 
