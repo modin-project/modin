@@ -2996,7 +2996,7 @@ def test_size(data):
 def test_skew(data, skipna):
     modin_series, pandas_series = create_test_series(data)
     try:
-        pandas_result =  pandas_series.skew(skipna=skipna)
+        pandas_result = pandas_series.skew(skipna=skipna)
     except Exception as e:
         with pytest.raises(type(e)):
             modin_series.skew(skipna=skipna)
