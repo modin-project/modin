@@ -229,9 +229,9 @@ class PandasOnRayDataframePartitionManager(GenericRayDataframePartitionManager):
                     )
                 ]
             )
+
         # If we know the number of rows in every partition, then we should try
         # instead to give each new partition roughly the same number of rows.
-
         new_partitions = []
         # `start` is the index of the first existing partition that we want to
         # put into the current new partition
@@ -250,7 +250,7 @@ class PandasOnRayDataframePartitionManager(GenericRayDataframePartitionManager):
             stop = start
             partition_size = partitions[start][0].length()
             # Add existing partitions into the current new partition until the
-            # number of rows in the new partition hits ideal_partition_size.
+            # number of rows in the new partition hits `ideal_partition_size`.
             while stop < len(partitions) and partition_size < ideal_partition_size:
                 stop += 1
                 if stop < len(partitions):
