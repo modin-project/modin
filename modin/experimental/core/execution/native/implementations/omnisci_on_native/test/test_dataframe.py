@@ -1187,11 +1187,12 @@ class TestAgg:
                 # At the end of reduce function it does inevitable `transpose`, which
                 # is defaulting to pandas. The following logic check that `transpose` is the only
                 # function that falling back to pandas in the reduce operation flow.
+                # Another warning comes from deprecated pandas.Int64Index usage.
                 with pytest.warns(UserWarning) as warns:
                     res = getattr(df, method)()
                 assert (
-                    len(warns) == 1
-                ), f"More than one warning were arisen: len(warns) != 1 ({len(warns)} != 1)"
+                    len(warns) == 2
+                ), f"More than two warnings were arisen: len(warns) != 2 ({len(warns)} != 2)"
                 message = warns[0].message.args[0]
                 assert (
                     re.match(r".*transpose.*defaulting to pandas", message) is not None
