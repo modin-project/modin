@@ -35,7 +35,7 @@ from modin.utils import _inherit_docstrings
 from modin.core.io.text.utils import CustomNewlineIterator
 from modin.config import NPartitions
 
-ColumnNamesTypes = Tuple[Union[pandas.Index, pandas.MultiIndex, pandas.Int64Index]]
+ColumnNamesTypes = Tuple[Union[pandas.Index, pandas.MultiIndex]]
 IndexColType = Union[int, str, bool, Sequence[int], Sequence[str], None]
 
 
