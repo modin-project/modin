@@ -30,7 +30,11 @@ import pandas.core.window.rolling
 import pandas.core.resample
 import pandas.core.generic
 from pandas.core.indexing import convert_to_index_sliceable
-from pandas.util._validators import validate_bool_kwarg, validate_percentile, validate_ascending
+from pandas.util._validators import (
+    validate_bool_kwarg,
+    validate_percentile,
+    validate_ascending,
+)
 from pandas._libs.lib import no_default
 from pandas._typing import (
     CompressionOptions,
