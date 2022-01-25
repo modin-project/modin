@@ -1592,11 +1592,19 @@ class Series(BasePandasDataset):
         """
         Generate a new Series with the index reset.
         """
+        if name is no_default:
+            # For backwards compatibility, keep columns as [0] instead of
+            #  [None] when self.name is None
+            if self.name is None:
+                name = 0
+            else:
+                name = self.name
+
         if drop and level is None:
             new_idx = pandas.RangeIndex(len(self.index))
             if inplace:
                 self.index = new_idx
-                self.name = name or self.name
+                self.name = name
             else:
                 result = self.copy()
                 result.index = new_idx
@@ -1607,8 +1615,7 @@ class Series(BasePandasDataset):
             )
         else:
             obj = self.copy()
-            if name is not None:
-                obj.name = name
+            obj.name = name
             from .dataframe import DataFrame
 
             return DataFrame(obj).reset_index(level=level, drop=drop, inplace=inplace)
