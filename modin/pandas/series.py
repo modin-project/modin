@@ -1523,6 +1523,14 @@ class Series(BasePandasDataset):
         """
         Conform Series to new index with optional filling logic.
         """
+        if args:
+            if len(args) > 1:
+                raise TypeError("Only one positional argument ('index') is allowed")
+            if "index" in kwargs:
+                raise TypeError(
+                    "'index' passed as both positional and keyword argument"
+                )
+            kwargs.update({"index": args[0]})
         index = kwargs.pop("index", None)
         method = kwargs.pop("method", None)
         level = kwargs.pop("level", None)
