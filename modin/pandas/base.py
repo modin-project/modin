@@ -708,6 +708,7 @@ class BasePandasDataset(object):
         )
 
     def all(self, axis=0, bool_only=None, skipna=True, level=None, **kwargs):
+        validate_bool_kwarg(skipna, "skipna", none_allowed=False)
         if axis is not None:
             axis = self._get_axis_number(axis)
             if bool_only and axis == 0:
@@ -765,6 +766,7 @@ class BasePandasDataset(object):
             return result
 
     def any(self, axis=0, bool_only=None, skipna=True, level=None, **kwargs):
+        validate_bool_kwarg(skipna, "skipna", none_allowed=False)
         if axis is not None:
             axis = self._get_axis_number(axis)
             if bool_only and axis == 0:
@@ -1601,7 +1603,7 @@ class BasePandasDataset(object):
 
     def mad(self, axis=None, skipna=True, level=None):
         axis = self._get_axis_number(axis)
-        validate_bool_kwarg(skipna, "skipna", none_allowed=False)
+        validate_bool_kwarg(skipna, "skipna", none_allowed=True)
         if level is not None:
             if (
                 not self._query_compiler.has_multiindex(axis=axis)

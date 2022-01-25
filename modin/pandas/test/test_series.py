@@ -770,7 +770,14 @@ def test_align(data):
 )
 def test_all(data, skipna):
     modin_series, pandas_series = create_test_series(data)
-    df_equals(modin_series.all(skipna=skipna), pandas_series.all(skipna=skipna))
+    try:
+        pandas_result = pandas_series.all(skipna=skipna)
+    except Exception as e:
+        with pytest.raises(type(e)):
+            modin_series.all(skipna=skipna)
+    else:
+        modin_result = modin_series.all(skipna=skipna)
+        df_equals(modin_result, pandas_result)
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
@@ -779,7 +786,14 @@ def test_all(data, skipna):
 )
 def test_any(data, skipna):
     modin_series, pandas_series = create_test_series(data)
-    df_equals(modin_series.any(skipna=skipna), pandas_series.any(skipna=skipna))
+    try:
+        pandas_result = pandas_series.any(skipna=skipna)
+    except Exception as e:
+        with pytest.raises(type(e)):
+            modin_series.any(skipna=skipna)
+    else:
+        modin_result = modin_series.any(skipna=skipna)
+        df_equals(modin_result, pandas_result)
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
@@ -2136,10 +2150,14 @@ def test_lt(data):
 @pytest.mark.parametrize("level", [0, -1, None])
 def test_mad(level, data, axis, skipna):
     modin_series, pandas_series = create_test_series(data)
-    df_equals(
-        modin_series.mad(axis=axis, skipna=skipna, level=level),
-        pandas_series.mad(axis=axis, skipna=skipna, level=level),
-    )
+    try:
+        pandas_result = pandas_series.mad(axis=axis, skipna=skipna, level=level)
+    except Exception as e:
+        with pytest.raises(type(e)):
+            modin_series.mad(axis=axis, skipna=skipna, level=level)
+    else:
+        modin_result = modin_series.mad(axis=axis, skipna=skipna, level=level)
+        df_equals(modin_result, pandas_result)
 
 
 @pytest.mark.parametrize("na_values", ["ignore", None], ids=["na_ignore", "na_none"])
@@ -2183,7 +2201,14 @@ def test_mask():
 )
 def test_max(data, skipna):
     modin_series, pandas_series = create_test_series(data)
-    df_equals(modin_series.max(skipna=skipna), pandas_series.max(skipna=skipna))
+    try:
+        pandas_result = pandas_series.max(skipna=skipna)
+    except Exception as e:
+        with pytest.raises(type(e)):
+            modin_series.max(skipna=skipna)
+    else:
+        modin_result = modin_series.max(skipna=skipna)
+        df_equals(modin_result, pandas_result)
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
@@ -2192,7 +2217,14 @@ def test_max(data, skipna):
 )
 def test_mean(data, skipna):
     modin_series, pandas_series = create_test_series(data)
-    df_equals(modin_series.mean(skipna=skipna), pandas_series.mean(skipna=skipna))
+    try:
+        pandas_result = pandas_series.mean(skipna=skipna)
+    except Exception as e:
+        with pytest.raises(type(e)):
+            modin_series.mean(skipna=skipna)
+    else:
+        modin_result = modin_series.mean(skipna=skipna)
+        df_equals(modin_result, pandas_result)
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
@@ -2201,7 +2233,14 @@ def test_mean(data, skipna):
 )
 def test_median(data, skipna):
     modin_series, pandas_series = create_test_series(data)
-    df_equals(modin_series.median(skipna=skipna), pandas_series.median(skipna=skipna))
+    try:
+        pandas_result = pandas_series.median(skipna=skipna)
+    except Exception as e:
+        with pytest.raises(type(e)):
+            modin_series.median(skipna=skipna)
+    else:
+        modin_result = modin_series.median(skipna=skipna)
+        df_equals(modin_result, pandas_result)
 
 
 @pytest.mark.parametrize(
@@ -2234,7 +2273,14 @@ def test_memory_usage(data, index):
 )
 def test_min(data, skipna):
     modin_series, pandas_series = create_test_series(data)
-    df_equals(modin_series.min(skipna=skipna), pandas_series.min(skipna=skipna))
+    try:
+        pandas_result = pandas_series.min(skipna=skipna)
+    except Exception as e:
+        with pytest.raises(type(e)):
+            modin_series.min(skipna=skipna)
+    else:
+        modin_result = modin_series.min(skipna=skipna)
+        df_equals(modin_result, pandas_result)
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
@@ -2949,7 +2995,14 @@ def test_size(data):
 )
 def test_skew(data, skipna):
     modin_series, pandas_series = create_test_series(data)
-    df_equals(modin_series.skew(skipna=skipna), pandas_series.skew(skipna=skipna))
+    try:
+        pandas_result =  pandas_series.skew(skipna=skipna)
+    except Exception as e:
+        with pytest.raises(type(e)):
+            modin_series.skew(skipna=skipna)
+    else:
+        modin_result = modin_series.skew(skipna=skipna)
+        df_equals(pandas_result, modin_result)
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
