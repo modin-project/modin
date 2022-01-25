@@ -11,8 +11,8 @@ both for general use cases and for specific operations.
 
     /flow/modin/config
     examples/index
-    optimization_notes/index
     advanced_usage/index
+    optimization_notes/index
 
 .. meta::
     :description lang=en:
