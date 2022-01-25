@@ -30,7 +30,7 @@ import pandas.core.window.rolling
 import pandas.core.resample
 import pandas.core.generic
 from pandas.core.indexing import convert_to_index_sliceable
-from pandas.util._validators import validate_bool_kwarg, validate_percentile
+from pandas.util._validators import validate_bool_kwarg, validate_percentile, validate_ascending
 from pandas._libs.lib import no_default
 from pandas._typing import (
     CompressionOptions,
@@ -2481,6 +2481,7 @@ class BasePandasDataset(object):
     ):
         axis = self._get_axis_number(axis)
         inplace = validate_bool_kwarg(inplace, "inplace")
+        ascending = validate_ascending(ascending)
         if axis == 0:
             result = self._query_compiler.sort_rows_by_column_values(
                 by,
