@@ -159,9 +159,9 @@ class PandasOnRayDataframePartitionManager(GenericRayDataframePartitionManager):
 
         Notes
         -----
-        Assumes that the blocks are already the same shape on the
-        dimension being concatenated. A ``ValueError`` will be thrown if this
-        condition is not met.
+        Assumes that the `left_parts` and `right_parts` blocks are already the same
+        shape on the dimension (opposite `axis`) as the one being concatenated. A
+        ``ValueError`` will be thrown if this condition is not met.
         """
         result = super(PandasOnRayDataframePartitionManager, cls).concat(
             axis, left_parts, right_parts
