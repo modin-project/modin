@@ -21,7 +21,7 @@ The :py:class:`~modin.pandas.dataframe.DataFrame` is a highly
 scalable, parallel DataFrame. Modin transparently distributes the data and computation so
 that you can continue using the same pandas API while being able to work with more data faster.
 Modin lets you use all the CPU cores on your machine, and because it is lightweight, it
-often has less memory overhead than pandas. See this :doc:`page </getting_started/pandas>` to
+often has less memory overhead than pandas. See this :doc:`page </getting_started/why_modin/pandas>` to
 learn more about how Modin is different from pandas.
 
 Why not just improve pandas?
@@ -54,7 +54,14 @@ with dataframes that don't fit into the available memory. As a result, pandas wo
 for prototyping on a few MBs of data do not scale to tens or hundreds of GBs (depending on the size
 of your machine). Modin supports operating on data that does not fit in memory, so that you can comfortably
 work with hundreds of GBs without worrying about substantial slowdown or memory errors. For more information,
-see :doc:`out-of-memory support <getting_started/out_of_core.rst>` for Modin.
+see :doc:`out-of-memory support </getting_started/why_modin/out_of_core>` for Modin.
+
+How does Modin compare to Dask DataFrame and Koalas?
+""""""""""""""""""""""""""""""""""""""""""""""""""""
+
+TLDR: Modin has better coverage of the pandas API, has a flexible backend, better ordering semantics,
+and supports both row and column-parallel operations.
+Check out this :doc:`page </getting_started/why_modin/modin_vs_dask_vs_koalas>` detailing the differences!
 
 How does Modin work under the hood?
 """""""""""""""""""""""""""""""""""
@@ -96,14 +103,12 @@ import with Modin import:
 Which execution engine (Ray or Dask) should I use for Modin?
 """"""""""""""""""""""""""""""""""""""""""""""""""""""""""""
 
-Whichever one you want! Modin supports Ray_ and Dask_ execution engines to provide an effortless way
-to speed up your pandas workflows. The best thing is that you don't need to know
-anything about Ray and Dask in order to use Modin and Modin will automatically
-detect which engine you have
-installed and use that for scheduling computation. If you don't have a preference, we recommend
-starting with Modin's default Ray engine. If you want to use a specific
-compute engine, you can set the environment variable ``MODIN_ENGINE`` and
-Modin will do computation with that engine:
+Modin lets you effortlessly speed up your pandas workflows with either Ray_'s or Dask_'s execution engine.
+You don't need to know anything about either engine in order to use it with Modin. If you only have one engine
+installed, Modin will automatically detect which engine you have installed and use that for scheduling computation.
+If you don't have a preference, we recommend starting with Modin's default Ray engine.
+If you want to use a specific compute engine, you can set the environment variable ``MODIN_ENGINE``
+and Modin will do computation with that engine:
 
 .. code-block:: bash
 
@@ -112,6 +117,15 @@ Modin will do computation with that engine:
 
     pip install "modin[dask]" # Install Modin dependencies and Dask to run on Dask
     export MODIN_ENGINE=dask  # Modin will use Dask
+
+This can also be done with:
+
+.. code-block:: python
+
+    from modin.config import Engine
+
+    Engine.put("ray")  # Modin will use Ray
+    Engine.put("dask")  # Modin will use Dask
 
 We also have an experimental OmniSciDB-based engine of Modin you can read about :doc:`here </development/using_omnisci>`.
 We plan to support more execution engines in future. If you have a specific request,
@@ -158,16 +172,16 @@ How can I contribute to Modin?
 
 **Modin is currently under active development. Requests and contributions are welcome!**
 
-If you are interested in contributing please check out the :doc:`Getting Started</getting_started/index>`
-guide then refer to the :doc:`Development Documentation</development/index>` section,
+If you are interested in contributing please check out the :doc:`Contributing Guide</development/contributing>`
+and then refer to the :doc:`Development Documentation</development/index>`,
 where you can find system architecture, internal implementation details, and other useful information.
 Also check out the `Github`_ to view open issues and make contributions.
 
 .. _issue: https://github.com/modin-project/modin/issues
-.. _Slack: https://modin.org/slack.html
+.. _Slack: https://join.slack.com/t/modin-project/shared_invite/zt-yvk5hr3b-f08p_ulbuRWsAfg9rMY3uA
 .. _Github: https://github.com/modin-project/modin
 .. _Ray: https://github.com/ray-project/ray/
-.. _Dask: https://dask.org/
-.. _papers: https://arxiv.org/abs/2001.00888
-.. _guide: https://modin.readthedocs.io/en/stable/installation.html?#installing-on-google-colab
+.. _Dask: https://github.com/dask/dask
+.. _papers: https://people.eecs.berkeley.edu/~totemtang/paper/Modin.pdf
+.. _guide: https://modin.readthedocs.io/en/latest/getting_started/installation.html#installing-on-google-colab
 .. _tutorial: https://github.com/modin-project/modin/tree/master/examples/tutorial

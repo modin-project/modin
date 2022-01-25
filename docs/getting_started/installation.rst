@@ -24,7 +24,7 @@ To install the most recent stable release run the following:
 
   pip install -U modin # -U for upgrade in case you have an older version
 
-Modin can be used with :doc:`Ray</developer/using_pandas_on_ray>`, :doc:`Dask</developer/using_pandas_on_dask>`, or :doc:`OmniSci</developer/using_omnisci>` engines. If you don't have Ray_ or Dask_ installed, you will need to install Modin with one of the targets:
+Modin can be used with :doc:`Ray</development/using_pandas_on_ray>`, :doc:`Dask</development/using_pandas_on_dask>`, or :doc:`OmniSci</development/using_omnisci>` engines. If you don't have Ray_ or Dask_ installed, you will need to install Modin with one of the targets:
 
 .. code-block:: bash
 
@@ -147,8 +147,8 @@ that these changes have not made it into a release and may not be completely sta
 Windows
 -------
 
-All Modin engines except :doc:`OmniSci</developer/using_omnisci>` are available both on Windows and Linux as mentioned above.
-Default engine on Windows is :doc:`Ray</developer/using_pandas_on_ray>`.
+All Modin engines except :doc:`OmniSci</development/using_omnisci>` are available both on Windows and Linux as mentioned above.
+Default engine on Windows is :doc:`Ray</development/using_pandas_on_ray>`.
 It is also possible to use Windows Subsystem For Linux (WSL_), but this is generally 
 not recommended due to the limitations and poor performance of Ray on WSL, a roughly 
 2-3x worse than native Windows. 

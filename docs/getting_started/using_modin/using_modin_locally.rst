@@ -67,7 +67,7 @@ cluster for you:
 
 Finally, if you already have an Ray or Dask engine initialized, Modin will 
 automatically attach to whichever engine is available. If you are interested in using 
-Modin with OmniSci engine, please refer to :doc:`these instructions </developer/using_omnisci>`. For additional information on other settings you can configure, see 
+Modin with OmniSci engine, please refer to :doc:`these instructions </development/using_omnisci>`. For additional information on other settings you can configure, see
 :doc:`this page </flow/modin/config>` for more details.
 
 Advanced: Configuring the resources Modin uses
