@@ -59,6 +59,8 @@ class PandasOnRayDataframeVirtualPartition(PandasDataframeAxisPartition):
             self.list_of_partitions_to_combine = list_of_blocks
             return
         # Check that all axis are the same in `list_of_blocks`
+        # We should never have mismatching axis in the current implementation. We add this
+        # defensive assertion to ensure that undefined behavior does not happen.
         assert (
             len(
                 set(
