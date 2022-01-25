@@ -11,17 +11,16 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-"""Module houses classes responsible for storing an axis partition and applying a function to it."""
+"""Module houses classes responsible for storing a virtual partition and applying a function to it."""
 
 import pandas
+import ray
+from ray.util import get_node_ip_address
 
 from modin.core.dataframe.pandas.partitioning.axis_partition import (
     PandasDataframeAxisPartition,
 )
 from .partition import PandasOnRayDataframePartition
-
-import ray
-from ray.util import get_node_ip_address
 
 
 class PandasOnRayDataframeVirtualPartition(PandasDataframeAxisPartition):
@@ -33,7 +32,7 @@ class PandasOnRayDataframeVirtualPartition(PandasDataframeAxisPartition):
     list_of_blocks : Union[list, PandasOnRayDataframePartition]
         List of ``PandasOnRayDataframePartition`` and
         ``PandasOnRayDataframeVirtualPartition`` objects, or a single
-        PandasOnRayDataframePartition.
+        ``PandasOnRayDataframePartition``.
     get_ip : bool, default: False
         Whether to get node IP addresses to conforming partitions or not.
     full_axis : bool, default: True
@@ -299,7 +298,7 @@ class PandasOnRayDataframeVirtualPartition(PandasDataframeAxisPartition):
         """
         materialized = super(
             PandasOnRayDataframeVirtualPartition, self
-        ).force_materialization(get_ip)
+        ).force_materialization(get_ip=get_ip)
         self.list_of_partitions_to_combine = materialized.list_of_partitions_to_combine
         return materialized
 
