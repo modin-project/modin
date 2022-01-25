@@ -708,4 +708,44 @@ def make_series_wrapper(Series):
     are overridded here, so what it mostly does is it produces a wrapper class
     inherited from normal Series but wrapping all access to remote end transparently.
     """
-    return _deliveringWrapper(Series, ["apply"], target_name="Series")
+
+    from modin.pandas.series import Series
+
+    conn = get_connection()
+
+    class ObtainingItems:
+        def items(self):
+            return conn.obtain_tuple(self.__remote_end__.items())
+
+        def iteritems(self):
+            return conn.obtain_tuple(self.__remote_end__.iteritems())
+
+    ObtainingItems = _deliveringWrapper(Series, mixin=ObtainingItems)
+
+    class SeriesOverrides(_prepare_loc_mixin()):
+        @classmethod
+        def _preprocess_init_args(
+            cls,
+            data=None,
+            index=None,
+            dtype=None,
+            name=None,
+            copy=False,
+            fastpath=False,
+            query_compiler=None,
+        ):
+
+            (data,) = conn.deliver((data,), {})[0]
+            return (), dict(
+                data=data,
+                index=index,
+                dtype=dtype,
+                name=name,
+                copy=copy,
+                fastpath=fastpath,
+                query_compiler=query_compiler,
+            )
+
+    DeliveringSeries = _deliveringWrapper(Series, ["apply"], SeriesOverrides, "Series")
+
+    return DeliveringSeries
