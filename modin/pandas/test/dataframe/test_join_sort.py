@@ -305,13 +305,23 @@ def test_merge(test_data, test_data2):
         )
         df_equals(modin_result, pandas_result)
 
-    # Named Series promoted to DF
-    s = pd.Series(frame_data2.get("col1"))
-    with pytest.raises(ValueError):
-        modin_df.merge(s)
+    # Cannot merge a Series without a name
+    ps = pandas.Series(frame_data2.get("col1"))
+    ms = pd.Series(frame_data2.get("col1"))
+    eval_general(
+        modin_df,
+        pandas_df,
+        lambda df: df.merge(ms) if isinstance(df, pd.DataFrame) else df.merge(ps),
+    )
 
-    s = pd.Series(frame_data2.get("col1"), name="col1")
-    df_equals(modin_df.merge(s), modin_df.merge(modin_df2[["col1"]]))
+    # merge a Series with a name
+    ps = pandas.Series(frame_data2.get("col1"), name="col1")
+    ms = pd.Series(frame_data2.get("col1"), name="col1")
+    eval_general(
+        modin_df,
+        pandas_df,
+        lambda df: df.merge(ms) if isinstance(df, pd.DataFrame) else df.merge(ps),
+    )
 
     with pytest.raises(TypeError):
         modin_df.merge("Non-valid type")

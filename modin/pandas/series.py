@@ -1894,9 +1894,13 @@ class Series(BasePandasDataset):
         """
         from .dataframe import DataFrame
 
+        if name is None:
+            name = no_default
+
         self_cp = self.copy()
-        if name is not None:
+        if name is not no_default:
             self_cp.name = name
+
         return DataFrame(self_cp)
 
     def to_list(self):  # noqa: RT01, D200
