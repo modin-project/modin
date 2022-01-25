@@ -354,8 +354,6 @@ jobs:
       run:
         shell: bash -l {0}
     env:
-      MODIN_EXPERIMENTAL: "True"
-      MODIN_ENGINE: "native"
       MODIN_STORAGE_FORMAT: "omnisci"
     name: Test OmniSci storage format, Python 3.8
     steps:

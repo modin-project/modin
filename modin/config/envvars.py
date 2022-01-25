@@ -81,6 +81,8 @@ class Engine(EnvironmentVariable, type=str):
         -------
         str
         """
+        from modin.utils import MIN_RAY_VERSION, MIN_DASK_VERSION
+
         if IsDebug.get():
             return "Python"
         try:
@@ -89,9 +91,9 @@ class Engine(EnvironmentVariable, type=str):
         except ImportError:
             pass
         else:
-            if version.parse(ray.__version__) < version.parse("1.4.0"):
+            if version.parse(ray.__version__) < MIN_RAY_VERSION:
                 raise ImportError(
-                    "Please `pip install modin[ray]` to install compatible Ray version."
+                    "Please `pip install modin[ray]` to install compatible Ray version (>={MIN_RAY_VERSION})."
                 )
             return "Ray"
         try:
@@ -101,11 +103,12 @@ class Engine(EnvironmentVariable, type=str):
         except ImportError:
             pass
         else:
-            if version.parse(dask.__version__) < version.parse(
-                "2.22.0"
-            ) or version.parse(distributed.__version__) < version.parse("2.22.0"):
+            if (
+                version.parse(dask.__version__) < MIN_DASK_VERSION
+                or version.parse(distributed.__version__) < MIN_DASK_VERSION
+            ):
                 raise ImportError(
-                    "Please `pip install modin[dask]` to install compatible Dask version."
+                    "Please `pip install modin[dask]` to install compatible Dask version (>={MIN_DASK_VERSION})."
                 )
             return "Dask"
         try:

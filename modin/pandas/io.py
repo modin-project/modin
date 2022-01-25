@@ -53,9 +53,9 @@ def _read(**kwargs):
     -------
     modin.pandas.DataFrame
     """
+    Engine.subscribe(_update_engine)
     from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
 
-    Engine.subscribe(_update_engine)
     squeeze = kwargs.pop("squeeze", False)
     pd_obj = FactoryDispatcher.read_csv(**kwargs)
     # This happens when `read_csv` returns a TextFileReader object for iterating through
@@ -210,9 +210,9 @@ def read_parquet(
     use_nullable_dtypes: bool = False,
     **kwargs,
 ):
+    Engine.subscribe(_update_engine)
     from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
 
-    Engine.subscribe(_update_engine)
     return DataFrame(
         query_compiler=FactoryDispatcher.read_parquet(
             path=path,
@@ -247,9 +247,9 @@ def read_json(
 ):
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
 
+    Engine.subscribe(_update_engine)
     from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
 
-    Engine.subscribe(_update_engine)
     return DataFrame(query_compiler=FactoryDispatcher.read_json(**kwargs))
 
 
@@ -272,9 +272,9 @@ def read_gbq(
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
     kwargs.update(kwargs.pop("kwargs", {}))
 
+    Engine.subscribe(_update_engine)
     from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
 
-    Engine.subscribe(_update_engine)
     return DataFrame(query_compiler=FactoryDispatcher.read_gbq(**kwargs))
 
 
@@ -298,9 +298,9 @@ def read_html(
 ):
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
 
+    Engine.subscribe(_update_engine)
     from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
 
-    Engine.subscribe(_update_engine)
     return DataFrame(query_compiler=FactoryDispatcher.read_html(**kwargs))
 
 
@@ -309,9 +309,9 @@ def read_clipboard(sep=r"\s+", **kwargs):  # pragma: no cover
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
     kwargs.update(kwargs.pop("kwargs", {}))
 
+    Engine.subscribe(_update_engine)
     from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
 
-    Engine.subscribe(_update_engine)
     return DataFrame(query_compiler=FactoryDispatcher.read_clipboard(**kwargs))
 
 
@@ -347,9 +347,9 @@ def read_excel(
 ) -> "DataFrame | dict[IntStrT, DataFrame]":
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
 
+    Engine.subscribe(_update_engine)
     from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
 
-    Engine.subscribe(_update_engine)
     intermediate = FactoryDispatcher.read_excel(**kwargs)
     if isinstance(intermediate, (OrderedDict, dict)):
         parsed = type(intermediate)()
@@ -377,9 +377,9 @@ def read_hdf(
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
     kwargs.update(kwargs.pop("kwargs", {}))
 
+    Engine.subscribe(_update_engine)
     from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
 
-    Engine.subscribe(_update_engine)
     return DataFrame(query_compiler=FactoryDispatcher.read_hdf(**kwargs))
 
 
@@ -392,9 +392,9 @@ def read_feather(
 ):
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
 
+    Engine.subscribe(_update_engine)
     from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
 
-    Engine.subscribe(_update_engine)
     return DataFrame(query_compiler=FactoryDispatcher.read_feather(**kwargs))
 
 
@@ -415,9 +415,9 @@ def read_stata(
 ):
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
 
+    Engine.subscribe(_update_engine)
     from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
 
-    Engine.subscribe(_update_engine)
     return DataFrame(query_compiler=FactoryDispatcher.read_stata(**kwargs))
 
 
@@ -432,9 +432,9 @@ def read_sas(
 ):  # pragma: no cover
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
 
+    Engine.subscribe(_update_engine)
     from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
 
-    Engine.subscribe(_update_engine)
     return DataFrame(query_compiler=FactoryDispatcher.read_sas(**kwargs))
 
 
@@ -446,9 +446,9 @@ def read_pickle(
 ):
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
 
+    Engine.subscribe(_update_engine)
     from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
 
-    Engine.subscribe(_update_engine)
     return DataFrame(query_compiler=FactoryDispatcher.read_pickle(**kwargs))
 
 
@@ -465,9 +465,9 @@ def read_sql(
 ):
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
 
+    Engine.subscribe(_update_engine)
     from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
 
-    Engine.subscribe(_update_engine)
     if kwargs.get("chunksize") is not None:
         ErrorMessage.default_to_pandas("Parameters provided [chunksize]")
         df_gen = pandas.read_sql(**kwargs)
@@ -485,10 +485,10 @@ def read_fwf(
     infer_nrows=100,
     **kwds,
 ):
+    Engine.subscribe(_update_engine)
     from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
     from pandas.io.parsers.base_parser import parser_defaults
 
-    Engine.subscribe(_update_engine)
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
     kwargs.update(kwargs.pop("kwds", {}))
     target_kwargs = parser_defaults.copy()
@@ -517,9 +517,9 @@ def read_sql_table(
 ):
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
 
+    Engine.subscribe(_update_engine)
     from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
 
-    Engine.subscribe(_update_engine)
     return DataFrame(query_compiler=FactoryDispatcher.read_sql_table(**kwargs))
 
 
@@ -536,9 +536,9 @@ def read_sql_query(
 ):
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
 
+    Engine.subscribe(_update_engine)
     from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
 
-    Engine.subscribe(_update_engine)
     return DataFrame(query_compiler=FactoryDispatcher.read_sql_query(**kwargs))
 
 
@@ -548,9 +548,9 @@ def read_spss(
     usecols: Union[Sequence[str], type(None)] = None,
     convert_categoricals: bool = True,
 ):
+    Engine.subscribe(_update_engine)
     from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
 
-    Engine.subscribe(_update_engine)
     return DataFrame(
         query_compiler=FactoryDispatcher.read_spss(path, usecols, convert_categoricals)
     )
@@ -564,9 +564,9 @@ def to_pickle(
     protocol: int = pickle.HIGHEST_PROTOCOL,
     storage_options: StorageOptions = None,
 ):
+    Engine.subscribe(_update_engine)
     from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
 
-    Engine.subscribe(_update_engine)
     if isinstance(obj, DataFrame):
         obj = obj._query_compiler
     return FactoryDispatcher.to_pickle(

@@ -234,6 +234,7 @@ from .general import (
     wide_to_long,
 )
 from .plotting import Plotting as plotting
+from modin.utils import show_versions
 
 __all__ = [
     "DataFrame",

@@ -84,4 +84,4 @@ Performance Comparison
 **Modin provides substantial speedups even on operators not supported by other systems.** Thanks to its flexible partitioning schemes that enable it to support the vast majority of pandas operations — be it row, column, or cell-oriented - Modin provides benefits on operations such as ``join``, ``median``, and ``infer_types``. While Koalas performs ``join`` slower than Pandas, Dask failed to support ``join`` on more than 20M rows, likely due poor support for `shuffles <https://coiled.io/blog/better-shuffling-in-dask-a-proof-of-concept/>`_. Details of the benchmark and additional join experiments can be found in `our paper <https://people.eecs.berkeley.edu/~totemtang/paper/Modin.pdf>`_.
 
 .. _documentation: http://docs.dask.org/en/latest/DataFrame.html#design.
-.. _Modin's documentation: https://modin.readthedocs.io/en/latest/developer/architecture.html
+.. _Modin's documentation: https://modin.readthedocs.io/en/latest/development/architecture.html
