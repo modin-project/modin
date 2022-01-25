@@ -2228,7 +2228,9 @@ def test_median(data, skipna):
         with pytest.raises(ValueError):
             modin_series.median(skipna=skipna)
     else:
-        df_equals(modin_series.median(skipna=skipna), pandas_series.median(skipna=skipna))
+        df_equals(
+            modin_series.median(skipna=skipna), pandas_series.median(skipna=skipna)
+        )
 
 
 @pytest.mark.parametrize(

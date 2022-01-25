@@ -77,7 +77,6 @@ with warnings.catch_warnings():
         Grouper,
         array,
         Period,
-        show_versions,
         DateOffset,
         timedelta_range,
         infer_freq,
