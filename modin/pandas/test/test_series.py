@@ -2211,7 +2211,11 @@ def test_max(data, skipna):
 )
 def test_mean(data, skipna):
     modin_series, pandas_series = create_test_series(data)
-    df_equals(modin_series.mean(skipna=skipna), pandas_series.mean(skipna=skipna))
+    if skipna is None:
+        with pytest.raises(ValueError):
+            modin_series.mean(skipna=skipna)
+    else:
+        df_equals(modin_series.mean(skipna=skipna), pandas_series.mean(skipna=skipna))
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
@@ -2257,7 +2261,11 @@ def test_memory_usage(data, index):
 )
 def test_min(data, skipna):
     modin_series, pandas_series = create_test_series(data)
-    df_equals(modin_series.min(skipna=skipna), pandas_series.min(skipna=skipna))
+    if skipna is None:
+        with pytest.raises(ValueError):
+            modin_series.min(skipna=skipna)
+    else:
+        df_equals(modin_series.min(skipna=skipna), pandas_series.min(skipna=skipna))
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
