@@ -11,18 +11,18 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-"""Module houses builder class for MapReduce operator."""
+"""Module houses builder class for TreeReduce operator."""
 
 from .operator import Operator
 
 
-class MapReduce(Operator):
-    """Builder class for MapReduce operator."""
+class TreeReduce(Operator):
+    """Builder class for TreeReduce operator."""
 
     @classmethod
     def call(cls, map_function, reduce_function, axis=None):
         """
-        Build MapReduce operator.
+        Build TreeReduce operator.
 
         Parameters
         ----------
@@ -37,14 +37,14 @@ class MapReduce(Operator):
         -------
         callable
             Function that takes query compiler and executes passed functions
-            with MapReduce algorithm.
+            with TreeReduce algorithm.
         """
 
         def caller(query_compiler, *args, **kwargs):
-            """Execute MapReduce function against passed query compiler."""
+            """Execute TreeReduce function against passed query compiler."""
             _axis = kwargs.get("axis") if axis is None else axis
             return query_compiler.__constructor__(
-                query_compiler._modin_frame.map_reduce(
+                query_compiler._modin_frame.tree_reduce(
                     cls.validate_axis(_axis),
                     lambda x: map_function(x, *args, **kwargs),
                     lambda y: reduce_function(y, *args, **kwargs),
@@ -57,7 +57,7 @@ class MapReduce(Operator):
     # FIXME: `register` is an alias for `call` method. One of them should be removed.
     def register(cls, map_function, reduce_function=None, **kwargs):
         """
-        Build MapReduce function.
+        Build TreeReduce function.
 
         Parameters
         ----------
@@ -72,7 +72,7 @@ class MapReduce(Operator):
         -------
         callable
             Function that takes query compiler and executes passed functions
-            with MapReduce algorithm.
+            with TreeReduce algorithm.
         """
         if reduce_function is None:
             reduce_function = map_function

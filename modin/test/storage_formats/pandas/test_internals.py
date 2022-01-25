@@ -100,8 +100,8 @@ def test_apply_func_to_both_axis(has_partitions_shape_cache, has_frame_shape_cac
         axis=None,
         func=func_to_apply,
         # Passing none-slices does not trigger shapes recomputation and so the cache is untouched.
-        row_indices=slice(None),
-        col_indices=slice(None),
+        row_labels=slice(None),
+        col_labels=slice(None),
         keep_remaining=True,
         new_index=pd_df.index,
         new_columns=pd_df.columns,

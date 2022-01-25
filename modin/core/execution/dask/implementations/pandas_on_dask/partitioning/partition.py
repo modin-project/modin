@@ -159,31 +159,31 @@ class PandasOnDaskDataframePartition(PandasDataframePartition):
         self.drain_call_queue()
         wait(self.future)
 
-    def mask(self, row_indices, col_indices):
+    def mask(self, row_labels, col_labels):
         """
         Lazily create a mask that extracts the indices provided.
 
         Parameters
         ----------
-        row_indices : list-like, slice or label
-            The indices for the rows to extract.
-        col_indices : list-like, slice or label
-            The indices for the columns to extract.
+        row_labels : list-like, slice or label
+            The row labels for the rows to extract.
+        col_labels : list-like, slice or label
+            The column labels for the columns to extract.
 
         Returns
         -------
         PandasOnDaskDataframePartition
             A new ``PandasOnDaskDataframePartition`` object.
         """
-        new_obj = super().mask(row_indices, col_indices)
+        new_obj = super().mask(row_labels, col_labels)
         client = default_client()
-        if isinstance(row_indices, slice) and isinstance(self._length_cache, Future):
+        if isinstance(row_labels, slice) and isinstance(self._length_cache, Future):
             new_obj._length_cache = client.submit(
-                compute_sliced_len, row_indices, self._length_cache
+                compute_sliced_len, row_labels, self._length_cache
             )
-        if isinstance(col_indices, slice) and isinstance(self._width_cache, Future):
+        if isinstance(col_labels, slice) and isinstance(self._width_cache, Future):
             new_obj._width_cache = client.submit(
-                compute_sliced_len, col_indices, self._width_cache
+                compute_sliced_len, col_labels, self._width_cache
             )
         return new_obj
 

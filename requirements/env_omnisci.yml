@@ -4,7 +4,6 @@ channels:
 dependencies:
   - pandas==1.3.5
   - pyarrow==5.0.0
-  - libthrift
   - numpy>=1.16.5
   - fsspec
   - pip
@@ -19,3 +18,4 @@ dependencies:
   - openpyxl
   - xlrd
   - sqlalchemy
+  - scipy

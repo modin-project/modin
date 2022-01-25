@@ -3,7 +3,7 @@ channels:
 dependencies:
   - pandas==1.3.5
   - numpy>=1.16.5
-  - pyarrow>=1.0.0
+  - pyarrow>=4.0.1
   - fsspec
   - xarray
   - Jinja2

@@ -20,6 +20,7 @@ queries for the ``PandasDataframe``.
 
 import numpy as np
 import pandas
+import functools
 from pandas.core.common import is_bool_indexer
 from pandas.core.indexing import check_bool_indexer
 from pandas.core.indexes.api import ensure_index_from_sequences
@@ -45,13 +46,13 @@ from modin.utils import (
 from modin.core.dataframe.algebra import (
     Fold,
     Map,
-    MapReduce,
-    Reduction,
+    TreeReduce,
+    Reduce,
     Binary,
     GroupByReduce,
     groupby_reduce_functions,
 )
-from modin.core.dataframe.algebra.default2pandas.groupby import GroupBy
+from modin.core.dataframe.algebra.default2pandas.groupby import GroupBy, GroupByDefault
 
 
 def _get_axis(axis):
@@ -667,7 +668,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
     # END Transpose
 
-    # MapReduce operations
+    # TreeReduce operations
 
     def is_monotonic_decreasing(self):
         def is_monotonic_decreasing(df):
@@ -683,12 +684,12 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
         return self.default_to_pandas(is_monotonic_increasing)
 
-    count = MapReduce.register(pandas.DataFrame.count, pandas.DataFrame.sum)
-    sum = MapReduce.register(pandas.DataFrame.sum)
-    prod = MapReduce.register(pandas.DataFrame.prod)
-    any = MapReduce.register(pandas.DataFrame.any, pandas.DataFrame.any)
-    all = MapReduce.register(pandas.DataFrame.all, pandas.DataFrame.all)
-    memory_usage = MapReduce.register(
+    count = TreeReduce.register(pandas.DataFrame.count, pandas.DataFrame.sum)
+    sum = TreeReduce.register(pandas.DataFrame.sum)
+    prod = TreeReduce.register(pandas.DataFrame.prod)
+    any = TreeReduce.register(pandas.DataFrame.any, pandas.DataFrame.any)
+    all = TreeReduce.register(pandas.DataFrame.all, pandas.DataFrame.all)
+    memory_usage = TreeReduce.register(
         pandas.DataFrame.memory_usage,
         lambda x, *args, **kwargs: pandas.DataFrame.sum(x),
         axis=0,
@@ -704,7 +705,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 kwargs["numeric_only"] = False
             return pandas.DataFrame.max(df, **kwargs)
 
-        return MapReduce.register(map_func, reduce_func)(self, axis=axis, **kwargs)
+        return TreeReduce.register(map_func, reduce_func)(self, axis=axis, **kwargs)
 
     def min(self, axis, **kwargs):
         def map_func(df, **kwargs):
@@ -716,7 +717,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 kwargs["numeric_only"] = False
             return pandas.DataFrame.min(df, **kwargs)
 
-        return MapReduce.register(map_func, reduce_func)(self, axis=axis, **kwargs)
+        return TreeReduce.register(map_func, reduce_func)(self, axis=axis, **kwargs)
 
     def mean(self, axis, **kwargs):
         if kwargs.get("level") is not None:
@@ -758,27 +759,27 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 count_cols = count_cols.sum(axis=axis, skipna=False)
             return sum_cols / count_cols
 
-        return MapReduce.register(
+        return TreeReduce.register(
             map_fn,
             reduce_fn,
         )(self, axis=axis, **kwargs)
 
-    # END MapReduce operations
+    # END TreeReduce operations
 
-    # Reduction operations
-    idxmax = Reduction.register(pandas.DataFrame.idxmax)
-    idxmin = Reduction.register(pandas.DataFrame.idxmin)
-    median = Reduction.register(pandas.DataFrame.median)
-    nunique = Reduction.register(pandas.DataFrame.nunique)
-    skew = Reduction.register(pandas.DataFrame.skew)
-    kurt = Reduction.register(pandas.DataFrame.kurt)
-    sem = Reduction.register(pandas.DataFrame.sem)
-    std = Reduction.register(pandas.DataFrame.std)
-    var = Reduction.register(pandas.DataFrame.var)
-    sum_min_count = Reduction.register(pandas.DataFrame.sum)
-    prod_min_count = Reduction.register(pandas.DataFrame.prod)
-    quantile_for_single_value = Reduction.register(pandas.DataFrame.quantile)
-    mad = Reduction.register(pandas.DataFrame.mad)
+    # Reduce operations
+    idxmax = Reduce.register(pandas.DataFrame.idxmax)
+    idxmin = Reduce.register(pandas.DataFrame.idxmin)
+    median = Reduce.register(pandas.DataFrame.median)
+    nunique = Reduce.register(pandas.DataFrame.nunique)
+    skew = Reduce.register(pandas.DataFrame.skew)
+    kurt = Reduce.register(pandas.DataFrame.kurt)
+    sem = Reduce.register(pandas.DataFrame.sem)
+    std = Reduce.register(pandas.DataFrame.std)
+    var = Reduce.register(pandas.DataFrame.var)
+    sum_min_count = Reduce.register(pandas.DataFrame.sum)
+    prod_min_count = Reduce.register(pandas.DataFrame.prod)
+    quantile_for_single_value = Reduce.register(pandas.DataFrame.quantile)
+    mad = Reduce.register(pandas.DataFrame.mad)
 
     def to_datetime(self, *args, **kwargs):
         if len(self.columns) == 1:
@@ -789,9 +790,9 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 ).to_frame()
             )(self, *args, **kwargs)
         else:
-            return Reduction.register(pandas.to_datetime, axis=1)(self, *args, **kwargs)
+            return Reduce.register(pandas.to_datetime, axis=1)(self, *args, **kwargs)
 
-    # END Reduction operations
+    # END Reduce operations
 
     def _resample_func(
         self, resample_kwargs, func_name, new_columns=None, df_op=None, *args, **kwargs
@@ -1504,9 +1505,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         # first_valid_index. The `to_pandas()` here is just for a single value and
         # `squeeze` will convert it to a scalar.
         first_result = (
-            self.__constructor__(
-                self._modin_frame.fold_reduce(0, first_valid_index_builder)
-            )
+            self.__constructor__(self._modin_frame.reduce(0, first_valid_index_builder))
             .min(axis=1)
             .to_pandas()
             .squeeze()
@@ -1524,9 +1523,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         # last_valid_index. The `to_pandas()` here is just for a single value and
         # `squeeze` will convert it to a scalar.
         first_result = (
-            self.__constructor__(
-                self._modin_frame.fold_reduce(0, last_valid_index_builder)
-            )
+            self.__constructor__(self._modin_frame.reduce(0, last_valid_index_builder))
             .max(axis=1)
             .to_pandas()
             .squeeze()
@@ -1961,9 +1958,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         def query_builder(df, **modin_internal_kwargs):
             return df.query(expr, inplace=False, **kwargs, **modin_internal_kwargs)
 
-        return self.__constructor__(
-            self._modin_frame.filter_full_axis(1, query_builder)
-        )
+        return self.__constructor__(self._modin_frame.filter(1, query_builder))
 
     def rank(self, **kwargs):
         axis = kwargs.get("axis", 0)
@@ -2159,13 +2154,13 @@ class PandasQueryCompiler(BaseQueryCompiler):
     def getitem_column_array(self, key, numeric=False):
         # Convert to list for type checking
         if numeric:
-            new_modin_frame = self._modin_frame.mask(col_numeric_idx=key)
+            new_modin_frame = self._modin_frame.mask(col_positions=key)
         else:
-            new_modin_frame = self._modin_frame.mask(col_indices=key)
+            new_modin_frame = self._modin_frame.mask(col_labels=key)
         return self.__constructor__(new_modin_frame)
 
     def getitem_row_array(self, key):
-        return self.__constructor__(self._modin_frame.mask(row_numeric_idx=key))
+        return self.__constructor__(self._modin_frame.mask(row_positions=key))
 
     def setitem(self, axis, key, value):
         return self._setitem(axis=axis, key=key, value=value, how=None)
@@ -2260,7 +2255,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
     # This will change the shape of the resulting data.
     def dropna(self, **kwargs):
         return self.__constructor__(
-            self._modin_frame.filter_full_axis(
+            self._modin_frame.filter(
                 kwargs.get("axis", 0) ^ 1,
                 lambda df: pandas.DataFrame.dropna(df, **kwargs),
             )
@@ -2280,7 +2275,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 )
             )
         new_modin_frame = self._modin_frame.mask(
-            row_numeric_idx=index, col_numeric_idx=columns
+            row_positions=index, col_positions=columns
         )
         return self.__constructor__(new_modin_frame)
 
@@ -2344,47 +2339,12 @@ class PandasQueryCompiler(BaseQueryCompiler):
         # convert it to pandas
         args = try_cast_to_pandas(args)
         kwargs = try_cast_to_pandas(kwargs)
-        if isinstance(func, str):
-            return self._apply_text_func_elementwise(func, axis, *args, **kwargs)
-        elif callable(func):
-            return self._callable_func(func, axis, *args, **kwargs)
-        elif isinstance(func, dict):
+        if isinstance(func, dict):
             return self._dict_func(func, axis, *args, **kwargs)
         elif is_list_like(func):
             return self._list_like_func(func, axis, *args, **kwargs)
         else:
-            pass
-
-    # FIXME: `_apply_text_func_elementwise` duplicates most of the logic of `_callable_func`,
-    # these methods should be combined.
-    def _apply_text_func_elementwise(self, func, axis, *args, **kwargs):
-        """
-        Apply passed string function to each row/column.
-
-        Parameters
-        ----------
-        func : str
-            Function name to apply.
-        axis : {0, 1}
-            Target axis to apply function along. 0 means apply to columns,
-            1 means apply to rows.
-        *args : args
-            Arguments to pass to the specified function.
-        **kwargs : kwargs
-            Arguments to pass to the specified function.
-
-        Returns
-        -------
-        PandasQueryCompiler
-            New QueryCompiler containing the results of passed function
-            for each row/column.
-        """
-        assert isinstance(func, str)
-        kwargs["axis"] = axis
-        new_modin_frame = self._modin_frame.apply_full_axis(
-            axis, lambda df: df.apply(func, *args, **kwargs)
-        )
-        return self.__constructor__(new_modin_frame)
+            return self._callable_func(func, axis, *args, **kwargs)
 
     def _dict_func(self, func, axis, *args, **kwargs):
         """
@@ -2469,7 +2429,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
         Parameters
         ----------
-        func : callable
+        func : callable or str
             Function to apply.
         axis : {0, 1}
             Target axis to apply function along. 0 means apply to columns,
@@ -2485,7 +2445,9 @@ class PandasQueryCompiler(BaseQueryCompiler):
             New QueryCompiler containing the results of passed function
             for each row/column.
         """
-        func = wrap_udf_function(func)
+        if callable(func):
+            func = wrap_udf_function(func)
+
         new_modin_frame = self._modin_frame.apply_full_axis(
             axis, lambda df: df.apply(func, axis=axis, *args, **kwargs)
         )
@@ -2507,20 +2469,26 @@ class PandasQueryCompiler(BaseQueryCompiler):
     groupby_sum = GroupByReduce.register("sum")
 
     def groupby_size(
-        self, by, axis, groupby_args, map_args, reduce_args, numeric_only, drop
+        self,
+        by,
+        axis,
+        groupby_kwargs,
+        agg_args,
+        agg_kwargs,
+        drop=False,
     ):
         result = self._groupby_dict_reduce(
             by=by,
             axis=axis,
             agg_func={self.columns[0]: [("__size_col__", "size")]},
-            agg_args=[],
-            agg_kwargs={},
-            groupby_kwargs=groupby_args,
+            agg_args=agg_args,
+            agg_kwargs=agg_kwargs,
+            groupby_kwargs=groupby_kwargs,
             drop=drop,
             method="size",
             default_to_pandas_func=lambda grp: grp.size(),
         )
-        if groupby_args.get("as_index", True):
+        if groupby_kwargs.get("as_index", True):
             result.columns = ["__reduced__"]
         elif isinstance(result.columns, pandas.MultiIndex):
             # Dropping one extra-level which was added because of renaming aggregation
@@ -2532,11 +2500,11 @@ class PandasQueryCompiler(BaseQueryCompiler):
     def _groupby_dict_reduce(
         self,
         by,
-        axis,
         agg_func,
+        axis,
+        groupby_kwargs,
         agg_args,
         agg_kwargs,
-        groupby_kwargs,
         drop=False,
         **kwargs,
     ):
@@ -2544,26 +2512,26 @@ class PandasQueryCompiler(BaseQueryCompiler):
         Group underlying data and apply aggregation functions to each group of the specified column/row.
 
         This method is responsible of performing dictionary groupby aggregation for such functions,
-        that can be implemented via MapReduce approach.
+        that can be implemented via TreeReduce approach.
 
         Parameters
         ----------
         by : PandasQueryCompiler, column or index label, Grouper or list of such
             Object that determine groups.
-        axis : {0, 1}
-            Axis to group and apply aggregation function along.
-            0 is for index, when 1 is for columns.
         agg_func : dict(label) -> str
             Dictionary that maps row/column labels to the function names.
             **Note:** specified functions have to be supported by ``modin.core.dataframe.algebra.GroupByReduce``.
             Supported functions are listed in the ``modin.core.dataframe.algebra.GroupByReduce.groupby_reduce_functions``
             dictionary.
-        agg_args : list
+        axis : {0, 1}
+            Axis to group and apply aggregation function along.
+            0 is for index, when 1 is for columns.
+        groupby_kwargs : dict
+            GroupBy parameters in the format of ``modin.pandas.DataFrame.groupby`` signature.
+        agg_args : list-like
             Serves the compatibility purpose. Does not affect the result.
         agg_kwargs : dict
             Arguments to pass to the aggregation functions.
-        groupby_kwargs : dict
-            GroupBy parameters in the format of ``modin.pandas.DataFrame.groupby`` signature.
         drop : bool, default: False
             If `by` is a QueryCompiler indicates whether or not by-data came
             from the `self`.
@@ -2610,26 +2578,47 @@ class PandasQueryCompiler(BaseQueryCompiler):
             query_compiler=self,
             by=by,
             axis=axis,
-            groupby_args=groupby_kwargs,
-            map_args=agg_kwargs,
-            reduce_args=agg_kwargs,
-            numeric_only=False,
+            groupby_kwargs=groupby_kwargs,
+            agg_args=agg_args,
+            agg_kwargs=agg_kwargs,
+            drop=drop,
+        )
+
+    def groupby_dtypes(
+        self,
+        by,
+        axis,
+        groupby_kwargs,
+        agg_args,
+        agg_kwargs,
+        drop=False,
+    ):
+        return self.groupby_agg(
+            by=by,
+            axis=axis,
+            agg_func=lambda df: df.dtypes,
+            # passing 'group_wise' will make the function be applied to the 'by' columns as well,
+            # this is exactly what we want when 'as_index=False'
+            how="axis_wise" if groupby_kwargs.get("as_index", True) else "group_wise",
+            agg_args=agg_args,
+            agg_kwargs=agg_kwargs,
+            groupby_kwargs=groupby_kwargs,
             drop=drop,
         )
 
     def groupby_agg(
         self,
         by,
-        is_multi_by,
-        axis,
         agg_func,
+        axis,
+        groupby_kwargs,
         agg_args,
         agg_kwargs,
-        groupby_kwargs,
+        how="axis_wise",
         drop=False,
     ):
         def is_reduce_fn(fn, deep_level=0):
-            """Check whether all functions which is defined by `fn` can be implemented via MapReduce approach."""
+            """Check whether all functions which is defined by `fn` can be implemented via TreeReduce approach."""
             if not isinstance(fn, str) and isinstance(fn, Container):
                 # `deep_level` parameter specifies the number of nested containers that was met:
                 # - if it's 0, then we're outside of container, `fn` could be either function name
@@ -2651,11 +2640,17 @@ class PandasQueryCompiler(BaseQueryCompiler):
             is_reduce_fn(x) for x in agg_func.values()
         ):
             return self._groupby_dict_reduce(
-                by, axis, agg_func, agg_args, agg_kwargs, groupby_kwargs, drop
+                by, agg_func, axis, groupby_kwargs, agg_args, agg_kwargs, drop
             )
 
-        if callable(agg_func):
-            agg_func = wrap_udf_function(agg_func)
+        if isinstance(agg_func, dict):
+            assert (
+                how == "axis_wise"
+            ), f"Only 'axis_wise' aggregation is supported with dictionary functions, got: {how}"
+        else:
+            agg_func = functools.partial(
+                GroupByDefault.get_aggregation_method(how), func=agg_func
+            )
 
         # since we're going to modify `groupby_kwargs` dict in a `groupby_agg_builder`,
         # we want to copy it to not propagate these changes into source dict, in case
@@ -2756,7 +2751,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 """Compute groupby aggregation for a single partition."""
                 grouped_df = df.groupby(by=by, axis=axis, **groupby_kwargs)
                 try:
-                    result = partition_agg_func(grouped_df, **agg_kwargs)
+                    result = partition_agg_func(grouped_df, *agg_args, **agg_kwargs)
                 except (DataError, TypeError):
                     # This happens when the partition is filled with non-numeric data and a
                     # numeric operation is done. We need to build the index here to avoid
@@ -3015,7 +3010,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             untouched_frame = None
         else:
             new_modin_frame = self._modin_frame.mask(
-                col_indices=columns
+                col_labels=columns
             ).apply_full_axis(
                 0, lambda df: pandas.get_dummies(df, **kwargs), new_index=self.index
             )
@@ -3034,7 +3029,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
     # Indexing
     def view(self, index=None, columns=None):
         return self.__constructor__(
-            self._modin_frame.mask(row_numeric_idx=index, col_numeric_idx=columns)
+            self._modin_frame.mask(row_positions=index, col_positions=columns)
         )
 
     def write_items(self, row_numeric_index, col_numeric_index, broadcasted_items):
@@ -3067,8 +3062,8 @@ class PandasQueryCompiler(BaseQueryCompiler):
         new_modin_frame = self._modin_frame.apply_select_indices(
             axis=None,
             func=iloc_mut,
-            row_indices=row_numeric_index,
-            col_indices=col_numeric_index,
+            row_labels=row_numeric_index,
+            col_labels=col_numeric_index,
             new_index=self.index,
             new_columns=self.columns,
             keep_remaining=True,

@@ -265,6 +265,9 @@ def pytest_configure(config):
 
     if execution == BASE_EXECUTION_NAME:
         set_base_execution(BASE_EXECUTION_NAME)
+        config.addinivalue_line(
+            "filterwarnings", "default:.*defaulting to pandas.*:UserWarning"
+        )
     else:
         partition, engine = execution.split("On")
         modin.set_execution(engine=engine, storage_format=partition)

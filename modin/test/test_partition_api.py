@@ -179,13 +179,11 @@ def test_from_partitions_mismatched_labels(axis, index, columns):
     df_equals(expected_df, actual_df)
 
 
-@pytest.mark.parametrize("row_indices", [[0, 2], slice(None)])
-@pytest.mark.parametrize("col_indices", [[0, 2], slice(None)])
+@pytest.mark.parametrize("row_labels", [[0, 2], slice(None)])
+@pytest.mark.parametrize("col_labels", [[0, 2], slice(None)])
 @pytest.mark.parametrize("is_length_future", [False, True])
 @pytest.mark.parametrize("is_width_future", [False, True])
-def test_mask_preserve_cache(
-    row_indices, col_indices, is_length_future, is_width_future
-):
+def test_mask_preserve_cache(row_labels, col_labels, is_length_future, is_width_future):
     def deserialize(obj):
         if isinstance(obj, FutureType):
             return get_func(obj)
@@ -206,11 +204,11 @@ def test_mask_preserve_cache(
 
     source_partition = PartitionClass(obj_id, *partition_shape)
     masked_partition = source_partition.mask(
-        row_indices=row_indices, col_indices=col_indices
+        row_labels=row_labels, col_labels=col_labels
     )
 
-    expected_length = compute_length(row_indices, len(df))
-    expected_width = compute_length(col_indices, len(df.columns))
+    expected_length = compute_length(row_labels, len(df))
+    expected_width = compute_length(col_labels, len(df.columns))
 
     # Check that the cache is preserved
     assert expected_length == deserialize(masked_partition._length_cache)

@@ -295,6 +295,10 @@ agg_func = {
     "str": str,
     "sum mean": ["sum", "mean"],
     "sum df sum": ["sum", lambda df: df.sum()],
+    # The case verifies that returning a scalar that is based on a frame's data doesn't cause a problem
+    "sum of certain elements": lambda axis: (
+        axis.iloc[0] + axis.iloc[-1] if isinstance(axis, pandas.Series) else axis + axis
+    ),
     "should raise TypeError": 1,
 }
 agg_func_keys = list(agg_func.keys())
@@ -311,13 +315,13 @@ agg_func_except_values = list(agg_func_except.values())
 numeric_agg_funcs = ["sum mean", "sum sum", "sum df sum"]
 
 udf_func = {
-    "return self": lambda df: lambda x, *args, **kwargs: type(x)(x.values),
-    "change index": lambda df: lambda x, *args, **kwargs: pandas.Series(
+    "return self": lambda x, *args, **kwargs: type(x)(x.values),
+    "change index": lambda x, *args, **kwargs: pandas.Series(
         x.values, index=np.arange(-1, len(x.index) - 1)
     ),
-    "return none": lambda df: lambda x, *args, **kwargs: None,
-    "return empty": lambda df: lambda x, *args, **kwargs: pandas.Series(),
-    "access self": lambda df: lambda x, other, *args, **kwargs: pandas.Series(
+    "return none": lambda x, *args, **kwargs: None,
+    "return empty": lambda x, *args, **kwargs: pandas.Series(),
+    "access self": lambda x, other, *args, **kwargs: pandas.Series(
         x.values, index=other.index
     ),
 }
@@ -454,6 +458,8 @@ encoding_types = [
 # the type of this exceptions are the same
 io_ops_bad_exc = [TypeError, FileNotFoundError]
 
+default_to_pandas_ignore_string = "default:.*defaulting to pandas.*:UserWarning"
+
 # Files compression to extension mapping
 COMP_TO_EXT = {"gzip": "gz", "bz2": "bz2", "xz": "xz", "zip": "zip"}
 
@@ -474,8 +480,10 @@ def df_categories_equals(df1, df2):
         else:
             return True
 
-    categories_columns = df1.select_dtypes(include="category").columns
-    for column in categories_columns:
+    df1_categorical_columns = df1.select_dtypes(include="category").columns
+    df2_categorical_columns = df2.select_dtypes(include="category").columns
+    assert df1_categorical_columns.equals(df2_categorical_columns)
+    for column in df1_categorical_columns:
         assert_extension_array_equal(
             df1[column].values,
             df2[column].values,
