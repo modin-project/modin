@@ -34,7 +34,7 @@ Uniformly apply a function argument to each partition in parallel.
     :align: center
 
 Reduce operator
-------------------
+---------------
 Applies an argument function that reduces each column or row on the specified axis into a scalar, but requires knowledge about the whole axis.
 Be aware that providing this knowledge may be expensive because the execution engine has to
 concatenate partitions along the specified axis. Also, note that the execution engine expects
@@ -44,14 +44,14 @@ that the reduce function returns a one dimensional frame.
     :align: center
 
 TreeReduce operator
-------------------
+-------------------
 Applies an argument function that reduces specified axis into a scalar. First applies map function to each partition
 in parallel, then concatenates resulted partitions along the specified axis and applies reduce
 function. In contrast with `Map function` template, here you're allowed to change partition shape
 in the map phase. Note that the execution engine expects that the reduce function returns a one dimensional frame.
 
 Binary operator
-----------------
+---------------
 Applies an argument function, that takes exactly two operands (first is always `QueryCompiler`).
 If both operands are query compilers then the execution engine broadcasts partitions of
 the right operand to the left.
