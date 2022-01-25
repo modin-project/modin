@@ -438,17 +438,10 @@ def test_last():
 @pytest.mark.parametrize("skipna", [None, True, False])
 def test_mad(data, axis, skipna):
     modin_df, pandas_df = pd.DataFrame(data), pandas.DataFrame(data)
-    # We currently do not accept None for skipna, while pandas warns users that it will
-    # exception eventually, but still accepts it currently. We need this codepath to catch
-    # the exception Modin raises until pandas officially deprecates skipna=None.
-    if skipna is None:
-        with pytest.raises(ValueError):
-            modin_df.mad(axis=axis, skipna=skipna, level=None)
-    else:
-        df_equals(
-            modin_df.mad(axis=axis, skipna=skipna, level=None),
-            pandas_df.mad(axis=axis, skipna=skipna, level=None),
-        )
+    df_equals(
+        modin_df.mad(axis=axis, skipna=skipna, level=None),
+        pandas_df.mad(axis=axis, skipna=skipna, level=None),
+    )
 
 
 @pytest.mark.parametrize("level", [-1, 0, 1])
