@@ -1,8 +1,8 @@
 Distributed XGBoost on Modin
 ============================
 
-Modin provides an implementation of distributed XGBoost machine learning 
-algorithm on Modin DataFrames. Please note that this feature is experimental and behavior or 
+Modin provides an implementation of `distributed XGBoost`_ machine learning
+algorithm on Modin DataFrames. Please note that this feature is experimental and behavior or
 interfaces could be changed.
 
 Install XGBoost on Modin
@@ -76,24 +76,24 @@ All processing will be in a `single node` mode.
 .. code-block:: python
 
   from sklearn import datasets
-  
+
   import ray
   ray.init() # Start the Ray runtime for single-node
-  
+
   import modin.pandas as pd
   import modin.experimental.xgboost as xgb
-  
+
   # Load iris dataset from sklearn
   iris = datasets.load_iris()
-  
+
   # Create Modin DataFrames
   X = pd.DataFrame(iris.data)
   y = pd.DataFrame(iris.target)
-  
+
   # Create DMatrix
   dtrain = xgb.DMatrix(X, y)
   dtest = xgb.DMatrix(X, y)
-  
+
   # Set training parameters
   xgb_params = {
       "eta": 0.3,
@@ -103,10 +103,10 @@ All processing will be in a `single node` mode.
       "eval_metric": "mlogloss",
   }
   steps = 20
-  
+
   # Create dict for evaluation results
   evals_result = dict()
-  
+
   # Run training
   model = xgb.train(
       xgb_params,
@@ -115,13 +115,13 @@ All processing will be in a `single node` mode.
       evals=[(dtrain, "train")],
       evals_result=evals_result
   )
-  
+
   # Print evaluation results
   print(f'Evals results:\n{evals_result}')
-  
+
   # Predict results
   prediction = model.predict(dtest)
-  
+
   # Print prediction results
   print(f'Prediction results:\n{prediction}')
 
@@ -130,3 +130,4 @@ All processing will be in a `single node` mode.
 .. _Dataframe: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.html
 .. _`starting ray`: https://docs.ray.io/en/master/starting-ray.html
 .. _`the Iris Dataset`: https://scikit-learn.org/stable/auto_examples/datasets/plot_iris_dataset.html
+.. _`distributed XGBoost`: https://medium.com/intel-analytics-software/distributed-xgboost-with-modin-on-ray-fc17edef7720

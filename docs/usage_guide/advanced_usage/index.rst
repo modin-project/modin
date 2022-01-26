@@ -57,7 +57,7 @@ Progress Bar
 ------------
 
 Visual progress bar for Dataframe operations such as groupby and fillna, as well as for file reading operations such as
-read_csv. Built using the tqdm library and Ray execution engine. See `Progress Bar documentation`_ for more details.
+read_csv. Built using the `tqdm`_ library and Ray execution engine. See `Progress Bar documentation`_ for more details.
 
 .. figure:: /img/progress_bar_example.png
    :align: center
@@ -79,7 +79,7 @@ Read about Modin Dataframe support for SQL queries in this recent `blog post`_. 
 Distributed XGBoost on Modin
 ----------------------------
 
-Modin provides an implementation of distributed XGBoost machine learning algorithm on Modin DataFrames. See our
+Modin provides an implementation of `distributed XGBoost`_ machine learning algorithm on Modin DataFrames. See our
 :doc:`Distributed XGBoost on Modin documentation <modin_xgboost>` for details about installation and usage, as well as
 :doc:`Modin XGBoost architecture documentation </flow/modin/experimental/xgboost>` for information about implementation and
 internal execution flow.
@@ -91,3 +91,5 @@ internal execution flow.
 .. _`Paper`: https://arxiv.org/pdf/2001.00888.pdf
 .. _`Discourse`: https://discuss.modin.org
 .. _`Slack`: https://modin.org/slack.html
+.. _`tqdm`: https://github.com/tqdm/tqdm
+.. _`distributed XGBoost`: https://medium.com/intel-analytics-software/distributed-xgboost-with-modin-on-ray-fc17edef7720
