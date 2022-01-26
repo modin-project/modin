@@ -51,7 +51,6 @@ ReadCsvKwargsType = Dict[
         Callable,
         Dialect,
         None,
-        None,
     ],
 ]
 
