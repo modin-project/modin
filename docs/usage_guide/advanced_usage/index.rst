@@ -18,8 +18,8 @@ Advanced Usage
 
 Modin aims to not only optimize pandas, but also provide a comprehensive,
 integrated toolkit for data scientists. We are actively developing data science tools
-such as DataFrame - spreadsheet integration, DataFrame algebra, progress bars, SQL queries
-on DataFrames, and more. Join the `Discourse`_ for the latest updates!
+such as DataFrame spreadsheet integration, DataFrame algebra, progress bars, SQL queries
+on DataFrames, and more. Join us on `Slack`_ and `Discourse`_ for the latest updates!
 
 Experimental APIs
 -----------------
@@ -39,8 +39,8 @@ a :py:class:`~modin.pandas.dataframe.DataFrame`, modify their structure by reshu
 functions, and create a DataFrame from those modified partitions. Visit
 :doc:`pandas partitioning API </flow/modin/distributed/dataframe/pandas>` documentation to learn more.
 
-Modin Spreadsheet API: Render Dataframes as Spreadsheets
---------------------------------------------------------
+Modin Spreadsheet API
+---------------------
 
 The Spreadsheet API for Modin allows you to render the dataframe as a spreadsheet to easily explore
 your data and perform operations on a graphical user interface. The API also includes features for recording
@@ -71,10 +71,10 @@ See our `paper`_ for more information, and full documentation is coming soon!
 SQL on Modin Dataframes
 ------------------------
 
+Read about Modin Dataframe support for SQL queries in this recent `blog post`_. Check out the `Modin SQL documentation`_ as well!
+
 .. figure:: /img/modin_sql_example.png
    :align: center
-
-Read about Modin Dataframe support for SQL queries in this recent `blog post`_. Check out the `Modin SQL documentation`_ as well!
 
 Distributed XGBoost on Modin
 ----------------------------
@@ -90,3 +90,4 @@ internal execution flow.
 .. _`Progress Bar documentation`: progress_bar.html
 .. _`Paper`: https://arxiv.org/pdf/2001.00888.pdf
 .. _`Discourse`: https://discuss.modin.org
+.. _`Slack`: https://modin.org/slack.html

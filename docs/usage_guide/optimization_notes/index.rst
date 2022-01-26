@@ -12,8 +12,8 @@ Understanding Modin's partitioning mechanism
 Modin's partitioning is crucial for performance; so we recommend expert users to understand Modin's
 partitioning mechanism and how to tune it in order to achieve better performance.
 
-How does Modin partition a dataframe
-------------------------------------
+How Modin partitions a dataframe
+--------------------------------
 
 Modin uses a partitioning scheme that partitions a dataframe along both axes, resulting in a matrix
 of partitions. The row and column chunk sizes are computed independently based
@@ -204,8 +204,8 @@ Copy-pastable example, showing how mixing pandas and Modin DataFrames in a singl
   # Possible output: TypeError
 
 
-Operation-specific settings
-"""""""""""""""""""""""""""
+Operation-specific optimizations
+""""""""""""""""""""""""""""""""
 
 merge
 -----
