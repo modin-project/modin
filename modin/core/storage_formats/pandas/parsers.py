@@ -189,9 +189,10 @@ class PandasParser(object):
 
             bio.seek(start)
             to_read = header + bio.read(end - start)
-        memory_map = kwargs.pop("memory_map")
+        if 'memory_map' in kwargs:
+            kwargs = kwargs.copy()
+            del kwargs['memory_map']
         pandas_df = callback(BytesIO(to_read), **kwargs)
-        kwargs["memory_map"] = memory_map
         index = (
             pandas_df.index
             if not isinstance(pandas_df.index, pandas.RangeIndex)
