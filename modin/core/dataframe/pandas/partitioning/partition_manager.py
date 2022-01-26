@@ -134,7 +134,7 @@ class PandasDataframePartitionManager(ABC):
         Notes
         -----
         Each value in this list will be an `BaseDataframeAxisPartition` object.
-        `BaseDataframeAxisPartition` is located in `virtual_partition.py`.
+        `BaseDataframeAxisPartition` is located in `axis_partition.py`.
         """
         if not isinstance(partitions, list):
             partitions = [partitions]
@@ -162,7 +162,7 @@ class PandasDataframePartitionManager(ABC):
         Notes
         -----
         Each value in this list will an `BaseDataframeAxisPartition` object.
-        `BaseDataframeAxisPartition` is located in `virtual_partition.py`.
+        `BaseDataframeAxisPartition` is located in `axis_partition.py`.
         """
         if not isinstance(partitions, list):
             partitions = [partitions]

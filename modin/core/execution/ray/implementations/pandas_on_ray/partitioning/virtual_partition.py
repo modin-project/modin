@@ -71,8 +71,8 @@ class PandasOnRayDataframeVirtualPartition(PandasDataframeAxisPartition):
             )
             == 1
         )
-        # When the axis of all virtual partitions matches this axis, extend and combine the lists of
-        # physical partitions
+        # When the axis of all virtual partitions matches this axis,
+        # extend and combine the lists of physical partitions.
         if (
             next(
                 o
@@ -285,8 +285,7 @@ class PandasOnRayDataframeVirtualPartition(PandasDataframeAxisPartition):
         if self.full_axis:
             return result
         else:
-            # If this is a full axis partition, just take out the single split
-            # in the result.
+            # If this is a full axis partition, just take out the single split in the result.
             return result[0]
 
     def force_materialization(self, get_ip=False):

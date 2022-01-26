@@ -234,19 +234,18 @@ class PandasOnRayDataframePartitionManager(GenericRayDataframePartitionManager):
         # instead to give each new partition roughly the same number of rows.
         new_partitions = []
         # `start` is the index of the first existing partition that we want to
-        # put into the current new partition
+        # put into the current new partition.
         start = 0
         total_rows = sum(part.length() for part in partitions[:, 0])
         ideal_partition_size = compute_chunksize(
             total_rows, ideal_num_new_partitions, min_block_size=1
         )
         for _ in range(ideal_num_new_partitions):
-            # We might pick up old partitions too quickly and exhaust all of
-            # them.
+            # We might pick up old partitions too quickly and exhaust all of them.
             if start >= len(partitions):
                 break
             # `stop` is the index of the last existing partition so far that we
-            # want to put into the current new partition
+            # want to put into the current new partition.
             stop = start
             partition_size = partitions[start][0].length()
             # Add existing partitions into the current new partition until the
@@ -258,7 +257,7 @@ class PandasOnRayDataframePartitionManager(GenericRayDataframePartitionManager):
             # If the new partition is larger than we want, split the last
             # current partition that it contains into two partitions, where
             # the first partition has just enough rows to make the current
-            # new partition have length ideal_partition_size, and the second
+            # new partition have length `ideal_partition_size`, and the second
             # partition has the remainder.
             if partition_size > ideal_partition_size * max_excess_of_num_partitions:
                 new_last_partition_size = ideal_partition_size - sum(
