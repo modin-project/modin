@@ -2679,11 +2679,11 @@ class PandasDataframe(object):
             res = arrow_type.to_pandas_dtype()
         # Conversion to pandas is not implemented for some arrow types,
         # perform manual conversion for them:
-        except NotImplementedError as e:
+        except NotImplementedError:
             if pyarrow.types.is_time(arrow_type):
                 res = np.dtype(datetime.time)
             else:
-                raise e
+                raise
 
         if not isinstance(res, (np.dtype, str)):
             return np.dtype(res)

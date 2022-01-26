@@ -123,15 +123,16 @@ def align_datetime_dtypes(*dfs):
         else:
             return datetime.time(value)
 
+    time_cols_list = list(time_cols)
     casted_dfs = []
     for df in dfs:
         # OmniSci has difficulties with casting to certain dtypes (i.e. datetime64),
         # so casting it to pandas
         pandas_df = try_cast_to_pandas(df)
-        if len(datetime_cols):
+        if datetime_cols:
             pandas_df = pandas_df.astype(datetime_cols)
-        if len(time_cols):
-            pandas_df[list(time_cols)] = pandas_df[list(time_cols)].applymap(
+        if time_cols:
+            pandas_df[time_cols_list] = pandas_df[time_cols_list].applymap(
                 convert_to_time
             )
         casted_dfs.append(pandas_df)
