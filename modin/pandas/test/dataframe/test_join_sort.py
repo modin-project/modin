@@ -311,7 +311,7 @@ def test_merge(test_data, test_data2):
     eval_general(
         modin_df,
         pandas_df,
-        lambda df: df.merge(ms) if isinstance(df, pd.DataFrame) else df.merge(ps),
+        lambda df: df.merge(ms if isinstance(df, pd.DataFrame) else ps),
     )
 
     # merge a Series with a name

@@ -1602,10 +1602,7 @@ class Series(BasePandasDataset):
         if name is no_default:
             # For backwards compatibility, keep columns as [0] instead of
             #  [None] when self.name is None
-            if self.name is None:
-                name = 0
-            else:
-                name = self.name
+            name = 0 if self.name is None else self.name
 
         if drop and level is None:
             new_idx = pandas.RangeIndex(len(self.index))
