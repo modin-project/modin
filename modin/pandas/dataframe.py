@@ -1163,6 +1163,8 @@ class DataFrame(BasePandasDataset):
                     )
                 )
             if loc < 0:
+                if loc < -len(self.columns):
+                    raise IndexError("index {0} is out of bounds for axis 0 with size {1}".format(loc, len(self.index)))
                 raise ValueError("unbounded slice")
             if isinstance(value, Series):
                 value = value._query_compiler
