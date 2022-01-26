@@ -746,6 +746,11 @@ def make_series_wrapper(Series):
                 query_compiler=query_compiler,
             )
 
+    @property
+    def dtypes(self):
+        remote_dtypes = self.__remote_end__.dtypes
+        return ObtainingItems(__remote_end__=remote_dtypes)
+
     DeliveringSeries = _deliveringWrapper(Series, ["apply"], SeriesOverrides, "Series")
 
     return DeliveringSeries
