@@ -1155,19 +1155,15 @@ class DataFrame(BasePandasDataset):
             ):
                 raise ValueError("Length of values does not match length of index")
             if not allow_duplicates and column in self.columns:
-                raise ValueError("cannot insert {0}, already exists".format(column))
+                raise ValueError(f"cannot insert {column}, already exists")
             if loc > len(self.columns):
                 raise IndexError(
-                    "index {0} is out of bounds for axis 0 with size {1}".format(
-                        loc, len(self.columns)
-                    )
+                    f"index {loc} is out of bounds for axis 0 with size {len(self.columns)}"
                 )
             if loc < 0:
                 if loc < -len(self.columns):
                     raise IndexError(
-                        "index {0} is out of bounds for axis 0 with size {1}".format(
-                            loc, len(self.index)
-                        )
+                        f"index {loc} is out of bounds for axis 0 with size {len(self.columns)}"
                     )
                 raise ValueError("unbounded slice")
             if isinstance(value, Series):
