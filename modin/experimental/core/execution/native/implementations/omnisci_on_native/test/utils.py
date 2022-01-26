@@ -15,6 +15,8 @@ import pytest
 import modin.pandas as pd
 from modin.utils import try_cast_to_pandas
 import pandas
+import datetime
+import numpy as np
 from pandas.api.types import is_datetime64_any_dtype
 import pyarrow as pa
 
@@ -88,21 +90,53 @@ def align_datetime_dtypes(*dfs):
     Passed Modin frames may be casted to pandas in the result.
     """
     datetime_cols = {}
+    time_cols = set()
     for df in dfs:
         for col, dtype in df.dtypes.items():
             # If we already decided to cast this column to DateTime no more actions are needed
             if col not in datetime_cols and is_datetime64_any_dtype(dtype):
                 datetime_cols[col] = dtype
+            # datetime.time is considered to be an 'object' dtype in pandas that's why
+            # we have to explicitly check the values type in the column
+            elif (
+                dtype == np.dtype("O")
+                and col not in time_cols
+                # OmniSci has difficulties with empty frames, so explicitly skip them
+                # https://github.com/modin-project/modin/issues/3428
+                and len(df) > 0
+                and all(
+                    isinstance(val, datetime.time) or pandas.isna(val)
+                    for val in df[col]
+                )
+            ):
+                time_cols.add(col)
 
-    casted_dfs = (
+    if len(datetime_cols) == 0 and len(time_cols) == 0:
+        return dfs
+
+    def convert_to_time(value):
+        """Convert passed value to `datetime.time`."""
+        if isinstance(value, datetime.time):
+            return value
+        elif isinstance(value, str):
+            return datetime.time.fromisoformat(value)
+        else:
+            return datetime.time(value)
+
+    time_cols_list = list(time_cols)
+    casted_dfs = []
+    for df in dfs:
         # OmniSci has difficulties with casting to certain dtypes (i.e. datetime64),
-        # so casting it to pandas before doing 'astype'
-        tuple(try_cast_to_pandas(df).astype(datetime_cols) for df in dfs)
-        # This is required so we don't try to cast empty OmniSci frames to pandas:
-        # https://github.com/modin-project/modin/issues/3428
-        if len(datetime_cols)
-        else dfs
-    )
+        # so casting it to pandas
+        pandas_df = try_cast_to_pandas(df)
+        if datetime_cols:
+            pandas_df = pandas_df.astype(datetime_cols)
+        if time_cols:
+            pandas_df[time_cols_list] = pandas_df[time_cols_list].applymap(
+                convert_to_time
+            )
+        casted_dfs.append(pandas_df)
+
     return casted_dfs
 
 

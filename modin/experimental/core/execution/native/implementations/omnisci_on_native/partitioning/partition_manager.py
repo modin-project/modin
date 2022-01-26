@@ -191,15 +191,23 @@ class OmnisciOnNativeDataframePartitionManager(PandasDataframePartitionManager):
             else:
                 obj = at
 
+        def is_supported_dtype(dtype):
+            """Check whether the passed pyarrow `dtype` is supported by OmniSci."""
+            if (
+                pyarrow.types.is_string(dtype)
+                or pyarrow.types.is_time(dtype)
+                or pyarrow.types.is_dictionary(dtype)
+            ):
+                return True
+            try:
+                pandas_dtype = dtype.to_pandas_dtype()
+                return pandas_dtype != np.dtype("O")
+            except NotImplementedError:
+                return False
+
         return (
             obj,
-            [
-                field.name
-                for field in obj.schema
-                if not isinstance(field.type, pyarrow.DictionaryType)
-                and field.type.to_pandas_dtype() == np.dtype("O")
-                and field.type != "string"
-            ],
+            [field.name for field in obj.schema if not is_supported_dtype(field.type)],
         )
 
     @classmethod

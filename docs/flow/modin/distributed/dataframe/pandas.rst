@@ -1,5 +1,5 @@
-Pandas Partition API
-====================
+Pandas partitioning API
+=======================
 
 This page contains a description of the API to extract partitions from and build Modin Dataframes.
 
