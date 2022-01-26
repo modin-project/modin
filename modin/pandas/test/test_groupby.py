@@ -181,7 +181,7 @@ def test_mixed_dtypes_groupby(as_index):
             {"col2": sum},
             {"col2": "max", "col4": "sum", "col5": "min"},
             {"col2": max, "col4": sum, "col5": "min"},
-            # Intersection of 'by' and agg cols for MapReduce impl
+            # Intersection of 'by' and agg cols for TreeReduce impl
             {"col0": "count", "col1": "count", "col2": "count"},
             # Intersection of 'by' and agg cols for FullAxis impl
             {"col0": "nunique", "col1": "nunique", "col2": "nunique"},
@@ -391,7 +391,7 @@ def test_simple_row_groupby(by, as_index, col1_category):
         "max",
         min,
         sum,
-        # Intersection of 'by' and agg cols for MapReduce impl
+        # Intersection of 'by' and agg cols for TreeReduce impl
         {"col1": "count", "col2": "count"},
         # Intersection of 'by' and agg cols for FullAxis impl
         {"col1": "nunique", "col2": "nunique"},
@@ -1403,7 +1403,7 @@ def test_groupby_with_kwarg_dropna(groupby_kwargs, dropna):
     modin_groupby_equals_pandas(md_grp, pd_grp)
 
     by_kwarg = groupby_kwargs.get("by", [])
-    # Disabled because of broken `dropna=False` for MapReduce implemented aggs:
+    # Disabled because of broken `dropna=False` for TreeReduce implemented aggs:
     # https://github.com/modin-project/modin/issues/3817
     if not (
         not dropna
@@ -1799,7 +1799,7 @@ def test_unknown_groupby(columns):
                     list(test_data_values[0].keys())[-1]: (sum, min, max),
                 }
             ),
-            id="Agg_and_by_intersection_MapReduce_implementation",
+            id="Agg_and_by_intersection_TreeReduce_implementation",
         ),
         pytest.param(
             lambda grp: grp.agg(
