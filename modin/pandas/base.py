@@ -524,7 +524,7 @@ class BasePandasDataset(object):
 
         Parameters
         ----------
-        axis : int, str
+        axis : int, str or pandas._libs.lib.NoDefault
             Axis name ('index' or 'columns') or number to be converted to axis index.
 
         Returns
@@ -943,8 +943,8 @@ class BasePandasDataset(object):
         self: "BasePandasDataset",
         start_time,
         end_time,
-        include_start: "bool_t | lib.NoDefault" = no_default,
-        include_end: "bool_t | lib.NoDefault" = no_default,
+        include_start: "bool_t | NoDefault" = no_default,
+        include_end: "bool_t | NoDefault" = no_default,
         inclusive: "str | None" = None,
         axis=None,
     ):
@@ -1547,7 +1547,7 @@ class BasePandasDataset(object):
 
     def kurt(
         self,
-        axis: "Axis | None | lib.NoDefault" = no_default,
+        axis: "Axis | None | NoDefault" = no_default,
         skipna=True,
         level=None,
         numeric_only=None,
@@ -1645,7 +1645,7 @@ class BasePandasDataset(object):
 
     def max(
         self,
-        axis: "int | None | lib.NoDefault" = no_default,
+        axis: "int | None | NoDefault" = no_default,
         skipna=True,
         level=None,
         numeric_only=None,
@@ -1750,7 +1750,7 @@ class BasePandasDataset(object):
 
     def mean(
         self,
-        axis: "int | None | lib.NoDefault" = no_default,
+        axis: "int | None | NoDefault" = no_default,
         skipna=True,
         level=None,
         numeric_only=None,
@@ -1760,7 +1760,7 @@ class BasePandasDataset(object):
 
     def median(
         self,
-        axis: "int | None | lib.NoDefault" = no_default,
+        axis: "int | None | NoDefault" = no_default,
         skipna=True,
         level=None,
         numeric_only=None,
@@ -1777,7 +1777,7 @@ class BasePandasDataset(object):
 
     def min(
         self,
-        axis: "int | None | lib.NoDefault" = no_default,
+        axis: "int | None | NoDefault" = no_default,
         skipna=True,
         level=None,
         numeric_only=None,
@@ -1923,7 +1923,7 @@ class BasePandasDataset(object):
         self: "BasePandasDataset",
         axis=0,
         method: "str" = "average",
-        numeric_only: "bool_t | None | lib.NoDefault" = no_default,
+        numeric_only: "bool_t | None | NoDefault" = no_default,
         na_option: "str" = "keep",
         ascending: "bool_t" = True,
         pct: "bool_t" = False,
@@ -2432,7 +2432,7 @@ class BasePandasDataset(object):
 
     def skew(
         self,
-        axis: "int | None | lib.NoDefault" = no_default,
+        axis: "int | None | NoDefault" = no_default,
         skipna=True,
         level=None,
         numeric_only=None,

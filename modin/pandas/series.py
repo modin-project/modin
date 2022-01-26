@@ -1236,7 +1236,7 @@ class Series(BasePandasDataset):
 
     def kurt(
         self,
-        axis: "Axis | None | lib.NoDefault" = no_default,
+        axis: "Axis | None | NoDefault" = no_default,
         skipna=True,
         level=None,
         numeric_only=None,
@@ -1714,7 +1714,7 @@ class Series(BasePandasDataset):
         inplace=False,
         limit=None,
         regex=False,
-        method: "str | lib.NoDefault" = no_default,
+        method: "str | NoDefault" = no_default,
     ):  # noqa: PR01, RT01, D200
         """
         Replace values given in `to_replace` with `value`.

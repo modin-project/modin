@@ -1776,7 +1776,7 @@ class DataFrame(BasePandasDataset):
         inplace: "bool" = False,
         limit=None,
         regex: "bool" = False,
-        method: "str | lib.NoDefault" = no_default,
+        method: "str | NoDefault" = no_default,
     ):  # noqa: PR01, RT01, D200
         """
         Replace values given in `to_replace` with `value`.
