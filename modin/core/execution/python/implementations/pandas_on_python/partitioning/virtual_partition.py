@@ -11,7 +11,7 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-"""The module defines interface for an axis partition with pandas storage format and python engine."""
+"""The module defines interface for a virtual partition with pandas storage format and python engine."""
 
 import pandas
 
@@ -31,9 +31,15 @@ class PandasOnPythonDataframeAxisPartition(PandasDataframeAxisPartition):
     ----------
     list_of_blocks : list
         List with partition objects to create common axis partition from.
+    full_axis : bool, default: True
+        Whether or not the virtual partition encompasses the whole axis.
     """
 
-    def __init__(self, list_of_blocks):
+    def __init__(self, list_of_blocks, full_axis: bool = True):
+        if not full_axis:
+            raise NotImplementedError(
+                "Pandas on Python execution requires full-axis partitions."
+            )
         for obj in list_of_blocks:
             obj.drain_call_queue()
         # Unwrap from PandasDataframePartition object for ease of use
@@ -54,6 +60,8 @@ class PandasOnPythonDataframeColumnPartition(PandasOnPythonDataframeAxisPartitio
     ----------
     list_of_blocks : list
         List with partition objects to create common axis partition from.
+    full_axis : bool, default: True
+        Whether or not the virtual partition encompasses the whole axis.
     """
 
     axis = 0
@@ -70,6 +78,8 @@ class PandasOnPythonDataframeRowPartition(PandasOnPythonDataframeAxisPartition):
     ----------
     list_of_blocks : list
         List with partition objects to create common axis partition from.
+    full_axis : bool, default: True
+        Whether or not the virtual partition encompasses the whole axis.
     """
 
     axis = 1

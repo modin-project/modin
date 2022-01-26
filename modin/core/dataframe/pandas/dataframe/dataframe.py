@@ -2452,9 +2452,7 @@ class PandasDataframe(object):
             joined_index = self.columns
             left_parts = self._partitions
             right_parts = [o._partitions for o in others]
-            new_lengths = self._row_lengths + [
-                length for o in others for length in o._row_lengths
-            ]
+            new_lengths = None
             new_widths = self._column_widths
         elif (
             axis == Axis.COL_WISE

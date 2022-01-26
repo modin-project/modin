@@ -11,41 +11,47 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-"""Module houses classes responsible for storing an axis partition and applying a function to it."""
-
-import pandas
+"""Module houses classes responsible for storing a virtual partition and applying a function to it."""
 
 from modin.core.dataframe.pandas.partitioning.axis_partition import (
     PandasDataframeAxisPartition,
 )
-from .partition import PandasOnRayDataframePartition
+from .partition import PandasOnDaskDataframePartition
 
-import ray
-from ray.util import get_node_ip_address
+from distributed.client import default_client
+from distributed import Future
+from distributed.utils import get_ip
+import pandas
 
 
-class PandasOnRayDataframeAxisPartition(PandasDataframeAxisPartition):
+class PandasOnDaskDataframeAxisPartition(PandasDataframeAxisPartition):
     """
     The class implements the interface in ``PandasDataframeAxisPartition``.
 
     Parameters
     ----------
     list_of_blocks : list
-        List of ``PandasOnRayDataframePartition`` objects.
+        List of ``PandasOnDaskDataframePartition`` objects.
     get_ip : bool, default: False
-        Whether to get node IP addresses to conforming partitions or not.
+        Whether to get node IP addresses of conforming partitions or not.
+    full_axis : bool, default: True
+        Whether or not the virtual partition encompasses the whole axis.
     """
 
-    def __init__(self, list_of_blocks, get_ip=False):
+    def __init__(self, list_of_blocks, get_ip=False, full_axis=True):
+        if not full_axis:
+            raise NotImplementedError(
+                "Pandas on Dask execution requires full-axis partitions."
+            )
         for obj in list_of_blocks:
             obj.drain_call_queue()
-        # Unwrap ray.ObjectRef from `PandasOnRayDataframePartition` object for ease of use
-        self.list_of_blocks = [obj.oid for obj in list_of_blocks]
+        # Unwrap from PandasDataframePartition object for ease of use
+        self.list_of_blocks = [obj.future for obj in list_of_blocks]
         if get_ip:
             self.list_of_ips = [obj._ip_cache for obj in list_of_blocks]
 
-    partition_type = PandasOnRayDataframePartition
-    instance_type = ray.ObjectRef
+    partition_type = PandasOnDaskDataframePartition
+    instance_type = Future
 
     @classmethod
     def deploy_axis_func(
@@ -61,7 +67,7 @@ class PandasOnRayDataframeAxisPartition(PandasDataframeAxisPartition):
         func : callable
             The function to perform.
         num_splits : int
-            The number of splits to return (see ``split_result_of_axis_func_pandas``).
+            The number of splits to return (see `split_result_of_axis_func_pandas`).
         kwargs : dict
             Additional keywords arguments to be passed in `func`.
         maintain_partitioning : bool
@@ -73,14 +79,11 @@ class PandasOnRayDataframeAxisPartition(PandasDataframeAxisPartition):
         Returns
         -------
         list
-            A list of ``pandas.DataFrame``-s.
+            A list of distributed.Future.
         """
-        lengths = kwargs.get("_lengths", None)
-        max_retries = kwargs.pop("max_retries", None)
-        return deploy_ray_func.options(
-            num_returns=(num_splits if lengths is None else len(lengths)) * 4,
-            **({"max_retries": max_retries} if max_retries is not None else {}),
-        ).remote(
+        client = default_client()
+        axis_result = client.submit(
+            deploy_dask_func,
             PandasDataframeAxisPartition.deploy_axis_func,
             axis,
             func,
@@ -88,7 +91,18 @@ class PandasOnRayDataframeAxisPartition(PandasDataframeAxisPartition):
             kwargs,
             maintain_partitioning,
             *partitions,
+            pure=False,
         )
+
+        lengths = kwargs.get("_lengths", None)
+        result_num_splits = len(lengths) if lengths else num_splits
+
+        # We have to do this to split it back up. It is already split, but we need to
+        # get futures for each.
+        return [
+            client.submit(lambda l: l[i], axis_result, pure=False)
+            for i in range(result_num_splits * 4)
+        ]
 
     @classmethod
     def deploy_func_between_two_axis_partitions(
@@ -104,7 +118,7 @@ class PandasOnRayDataframeAxisPartition(PandasDataframeAxisPartition):
         func : callable
             The function to perform.
         num_splits : int
-            The number of splits to return (see ``split_result_of_axis_func_pandas``).
+            The number of splits to return (see `split_result_of_axis_func_pandas`).
         len_of_left : int
             The number of values in `partitions` that belong to the left data set.
         other_shape : np.ndarray
@@ -118,9 +132,11 @@ class PandasOnRayDataframeAxisPartition(PandasDataframeAxisPartition):
         Returns
         -------
         list
-            A list of ``pandas.DataFrame``-s.
+            A list of distributed.Future.
         """
-        return deploy_ray_func.options(num_returns=num_splits * 4).remote(
+        client = default_client()
+        axis_result = client.submit(
+            deploy_dask_func,
             PandasDataframeAxisPartition.deploy_func_between_two_axis_partitions,
             axis,
             func,
@@ -129,29 +145,36 @@ class PandasOnRayDataframeAxisPartition(PandasDataframeAxisPartition):
             other_shape,
             kwargs,
             *partitions,
+            pure=False,
         )
+        # We have to do this to split it back up. It is already split, but we need to
+        # get futures for each.
+        return [
+            client.submit(lambda l: l[i], axis_result, pure=False)
+            for i in range(num_splits * 4)
+        ]
 
     def _wrap_partitions(self, partitions):
         """
-        Wrap partitions passed as a list of ``ray.ObjectRef`` with ``PandasOnRayDataframePartition`` class.
+        Wrap partitions passed as a list of distributed.Future with ``PandasOnDaskDataframePartition`` class.
 
         Parameters
         ----------
         partitions : list
-            List of ``ray.ObjectRef``.
+            List of distributed.Future.
 
         Returns
         -------
         list
-            List of ``PandasOnRayDataframePartition`` objects.
+            List of ``PandasOnDaskDataframePartition`` objects.
         """
         return [
-            self.partition_type(object_id, length, width, ip)
-            for (object_id, length, width, ip) in zip(*[iter(partitions)] * 4)
+            self.partition_type(future, length, width, ip)
+            for (future, length, width, ip) in zip(*[iter(partitions)] * 4)
         ]
 
 
-class PandasOnRayDataframeColumnPartition(PandasOnRayDataframeAxisPartition):
+class PandasOnDaskDataframeColumnPartition(PandasOnDaskDataframeAxisPartition):
     """
     The column partition implementation.
 
@@ -161,15 +184,17 @@ class PandasOnRayDataframeColumnPartition(PandasOnRayDataframeAxisPartition):
     Parameters
     ----------
     list_of_blocks : list
-        List of ``PandasOnRayDataframePartition`` objects.
+        List of ``PandasOnDaskDataframePartition`` objects.
     get_ip : bool, default: False
         Whether to get node IP addresses to conforming partitions or not.
+    full_axis : bool, default: True
+        Whether or not the virtual partition encompasses the whole axis.
     """
 
     axis = 0
 
 
-class PandasOnRayDataframeRowPartition(PandasOnRayDataframeAxisPartition):
+class PandasOnDaskDataframeRowPartition(PandasOnDaskDataframeAxisPartition):
     """
     The row partition implementation.
 
@@ -179,16 +204,17 @@ class PandasOnRayDataframeRowPartition(PandasOnRayDataframeAxisPartition):
     Parameters
     ----------
     list_of_blocks : list
-        List of ``PandasOnRayDataframePartition`` objects.
+        List of ``PandasOnDaskDataframePartition`` objects.
     get_ip : bool, default: False
         Whether to get node IP addresses to conforming partitions or not.
+    full_axis : bool, default: True
+        Whether or not the virtual partition encompasses the whole axis.
     """
 
     axis = 1
 
 
-@ray.remote
-def deploy_ray_func(func, *args):  # pragma: no cover
+def deploy_dask_func(func, *args):
     """
     Execute a function on an axis partition in a worker process.
 
@@ -203,13 +229,9 @@ def deploy_ray_func(func, *args):  # pragma: no cover
     -------
     list
         The result of the function ``func`` and metadata for it.
-
-    Notes
-    -----
-    Ray functions are not detected by codecov (thus pragma: no cover).
     """
     result = func(*args)
-    ip = get_node_ip_address()
+    ip = get_ip()
     if isinstance(result, pandas.DataFrame):
         return result, len(result), len(result.columns), ip
     elif all(isinstance(r, pandas.DataFrame) for r in result):
