@@ -7,10 +7,10 @@
 
 .. toctree::
    :hidden:
-   
+
    getting_started/quickstart
+   usage_guide/index
    supported_apis/index
-   advanced_usage/index
    development/index
    contact
 
