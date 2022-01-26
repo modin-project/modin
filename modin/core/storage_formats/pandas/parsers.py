@@ -40,7 +40,7 @@ Data parsing mechanism differs depending on the data format type:
 """
 
 from collections import OrderedDict
-from io import BytesIO, TextIOWrapper
+from io import BytesIO, StringIO, TextIOWrapper
 import numpy as np
 import pandas
 from pandas.core.dtypes.cast import find_common_type
@@ -53,6 +53,8 @@ from modin.core.io.file_dispatcher import OpenFile
 from modin.db_conn import ModinDatabaseConnection
 from modin.core.storage_formats.pandas.utils import split_result_of_axis_func_pandas
 from modin.error_message import ErrorMessage
+
+from tempfile import TemporaryFile
 
 _doc_pandas_parser_class = """
 Class for handling {data_type} on the workers using pandas storage format.
@@ -189,7 +191,9 @@ class PandasParser(object):
 
             bio.seek(start)
             to_read = header + bio.read(end - start)
+        memory_map = kwargs.pop("memory_map")
         pandas_df = callback(BytesIO(to_read), **kwargs)
+        kwargs["memory_map"] = memory_map
         index = (
             pandas_df.index
             if not isinstance(pandas_df.index, pandas.RangeIndex)
