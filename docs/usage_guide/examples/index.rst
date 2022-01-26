@@ -2,7 +2,7 @@ Modin Usage Examples
 ====================
 
 This section shows Modin usage examples in different scenarios like Modin on a local/remote cluster,
-Modin in the cloud, the use of Modin spreadsheet and whatnot.
+Modin in the cloud, the use of Modin spreadsheet.
 
 Tutorials
 ---------
@@ -20,9 +20,6 @@ The following tutorials covers more advanced features in Modin:
 - Exercise 5: Setting up Modin in a Cluster Environment [`Source <https://github.com/modin-project/modin/blob/721d2d2fe2a46d3b7442e1ab2c7b70ad3bff0712/examples/tutorial/tutorial_notebooks/cluster/exercise_5.ipynb>`_]
 - Exercise 6: Running Modin in a Cluster Environment [`Source <https://github.com/modin-project/modin/blob/721d2d2fe2a46d3b7442e1ab2c7b70ad3bff0712/examples/tutorial/tutorial_notebooks/cluster/exercise_6.ipynb>`_]
 
-- Using Experimental Modin in the cloud with the NYC Taxi Dataset on a AWS cluster [`Source <https://github.com/modin-project/modin/blob/master/examples/jupyter/NYC_Taxi_cloud.ipynb>`_]
-- Modin for Machine Learning with scikit-learn [`Source <https://github.com/modin-project/modin/blob/master/examples/modin-scikit-learn-example.ipynb>`_]
-
 Data Science Benchmarks
 -----------------------
 
@@ -33,9 +30,14 @@ Data Science Benchmarks
 Modin in the Cloud
 ------------------
 
-- Using Modin with the NYC Taxi Dataset [`Source <https://github.com/modin-project/modin/blob/master/examples/jupyter/NYC_Taxi.ipynb>`_]
+- Using Experimental Modin in the cloud with the NYC Taxi Dataset on an AWS cluster [`Source <https://github.com/modin-project/modin/blob/master/examples/jupyter/NYC_Taxi_cloud.ipynb>`_]
 
 Modin Spreadsheets
 ------------------
 
 - Using Modin along with the Spreadsheets API [`Source <https://github.com/modin-project/modin/blob/master/examples/spreadsheet/tutorial.ipynb>`_]
+
+Modin with scikit-learn
+-----------------------
+
+- Modin for Machine Learning with scikit-learn [`Source <https://github.com/modin-project/modin/blob/master/examples/modin-scikit-learn-example.ipynb>`_]

@@ -4,12 +4,15 @@ Examples and Resources
 Here you can find additional resources to learn about Modin. To learn more about
 advanced usage for Modin, please refer to :doc:`this section </usage_guide/index>`.
 
-Quick Start Guide
------------------
+Usage Examples
+--------------
 
-The following notebook demonstrates guickstart guide on how Modin can be used for scalable data science:
+The following notebooks demonstrate how Modin can be used for scalable data science:
 
 - Quickstart Guide to Modin [`Source <https://github.com/modin-project/modin/tree/master/examples/quickstart.ipynb>`_]
+- Using Modin with the NYC Taxi Dataset [`Source <https://github.com/modin-project/modin/blob/master/examples/jupyter/NYC_Taxi.ipynb>`_]
+- Using Experimental Modin in the cloud with the NYC Taxi Dataset on a AWS cluster [`Source <https://github.com/modin-project/modin/blob/master/examples/jupyter/NYC_Taxi_cloud.ipynb>`_]
+- Modin for Machine Learning with scikit-learn [`Source <https://github.com/modin-project/modin/blob/master/examples/modin-scikit-learn-example.ipynb>`_]
 
 Tutorials
 ---------
