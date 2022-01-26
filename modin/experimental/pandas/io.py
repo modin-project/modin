@@ -20,7 +20,7 @@ from typing import Union, IO, AnyStr, Callable, Optional
 
 import pandas
 import pandas._libs.lib as lib
-from pandas._typing import CompressionOptions, FilePathOrBuffer, StorageOptions
+from pandas._typing import CompressionOptions, StorageOptions
 
 from . import DataFrame
 from modin.config import IsExperimental, Engine
@@ -245,7 +245,7 @@ read_csv_glob = _make_parser_func(sep=",")
 
 
 def read_pickle_distributed(
-    filepath_or_buffer: FilePathOrBuffer,
+    filepath_or_buffer,
     compression: Optional[str] = "infer",
     storage_options: StorageOptions = None,
 ):
@@ -289,7 +289,7 @@ def read_pickle_distributed(
 
 def to_pickle_distributed(
     self,
-    filepath_or_buffer: FilePathOrBuffer,
+    filepath_or_buffer,
     compression: CompressionOptions = "infer",
     protocol: int = pickle.HIGHEST_PROTOCOL,
     storage_options: StorageOptions = None,

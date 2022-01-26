@@ -453,8 +453,8 @@ class Series(BasePandasDataset):
         -------
         str
         """
-        num_rows = pandas.get_option("max_rows") or 60
-        num_cols = pandas.get_option("max_columns") or 20
+        num_rows = pandas.get_option("display.max_rows") or 60
+        num_cols = pandas.get_option("display.max_columns") or 20
         temp_df = self._build_repr_df(num_rows, num_cols)
         if isinstance(temp_df, pandas.DataFrame) and not temp_df.empty:
             temp_df = temp_df.iloc[:, 0]
@@ -1161,6 +1161,23 @@ class Series(BasePandasDataset):
             skipna = True
         return super(Series, self).idxmin(axis=axis, skipna=skipna, *args, **kwargs)
 
+    def info(
+        self,
+        verbose: "bool | None" = None,
+        buf: "IO[str] | None" = None,
+        max_cols: "int | None" = None,
+        memory_usage: "bool | str | None" = None,
+        show_counts: "bool" = True,
+    ):
+        return self._default_to_pandas(
+            pandas.Series.info,
+            verbose=verbose,
+            buf=buf,
+            max_cols=max_cols,
+            memory_usage=memory_usage,
+            show_counts=show_counts,
+        )
+
     def interpolate(
         self,
         method="linear",
@@ -1218,7 +1235,12 @@ class Series(BasePandasDataset):
         return self.index
 
     def kurt(
-        self, axis=None, skipna=None, level=None, numeric_only=None, **kwargs
+        self,
+        axis: "Axis | None | NoDefault" = no_default,
+        skipna=True,
+        level=None,
+        numeric_only=None,
+        **kwargs,
     ):  # noqa: PR01, RT01, D200
         """
         Return unbiased kurtosis over requested axis.
@@ -1260,6 +1282,27 @@ class Series(BasePandasDataset):
                 if pandas.isnull(s) is not True or na_action is None
                 else s
             )
+        )
+
+    def mask(
+        self,
+        cond,
+        other=np.nan,
+        inplace=False,
+        axis=None,
+        level=None,
+        errors=no_default,
+        try_cast=no_default,
+    ):
+        return self._default_to_pandas(
+            pandas.Series.mask,
+            cond,
+            other=other,
+            inplace=inplace,
+            axis=axis,
+            level=level,
+            errors=errors,
+            try_cast=try_cast,
         )
 
     def memory_usage(self, index=True, deep=False):  # noqa: PR01, RT01, D200
@@ -1409,7 +1452,7 @@ class Series(BasePandasDataset):
     def prod(
         self,
         axis=None,
-        skipna=None,
+        skipna=True,
         level=None,
         numeric_only=None,
         min_count=0,
@@ -1419,8 +1462,7 @@ class Series(BasePandasDataset):
         Return the product of the values over the requested `axis`.
         """
         axis = self._get_axis_number(axis)
-        if skipna is None:
-            skipna = True
+        validate_bool_kwarg(skipna, "skipna", none_allowed=False)
         if level is not None:
             if (
                 not self._query_compiler.has_multiindex(axis=axis)
@@ -1476,10 +1518,19 @@ class Series(BasePandasDataset):
 
         return data
 
-    def reindex(self, index=None, **kwargs):  # noqa: PR01, RT01, D200
+    def reindex(self, *args, **kwargs):  # noqa: PR01, RT01, D200
         """
         Conform Series to new index with optional filling logic.
         """
+        if args:
+            if len(args) > 1:
+                raise TypeError("Only one positional argument ('index') is allowed")
+            if "index" in kwargs:
+                raise TypeError(
+                    "'index' passed as both positional and keyword argument"
+                )
+            kwargs.update({"index": args[0]})
+        index = kwargs.pop("index", None)
         method = kwargs.pop("method", None)
         level = kwargs.pop("level", None)
         copy = kwargs.pop("copy", True)
@@ -1543,16 +1594,20 @@ class Series(BasePandasDataset):
         return self.__constructor__(query_compiler=self._query_compiler.repeat(repeats))
 
     def reset_index(
-        self, level=None, drop=False, name=None, inplace=False
+        self, level=None, drop=False, name=no_default, inplace=False
     ):  # noqa: PR01, RT01, D200
         """
         Generate a new Series with the index reset.
         """
+        if name is no_default:
+            # For backwards compatibility, keep columns as [0] instead of
+            #  [None] when self.name is None
+            name = 0 if self.name is None else self.name
+
         if drop and level is None:
             new_idx = pandas.RangeIndex(len(self.index))
             if inplace:
                 self.index = new_idx
-                self.name = name or self.name
             else:
                 result = self.copy()
                 result.index = new_idx
@@ -1563,8 +1618,7 @@ class Series(BasePandasDataset):
             )
         else:
             obj = self.copy()
-            if name is not None:
-                obj.name = name
+            obj.name = name
             from .dataframe import DataFrame
 
             return DataFrame(obj).reset_index(level=level, drop=drop, inplace=inplace)
@@ -1653,11 +1707,11 @@ class Series(BasePandasDataset):
     def replace(
         self,
         to_replace=None,
-        value=None,
+        value=no_default,
         inplace=False,
         limit=None,
         regex=False,
-        method="pad",
+        method: "str | NoDefault" = no_default,
     ):  # noqa: PR01, RT01, D200
         """
         Replace values given in `to_replace` with `value`.
@@ -1770,7 +1824,7 @@ class Series(BasePandasDataset):
     def sum(
         self,
         axis=None,
-        skipna=None,
+        skipna=True,
         level=None,
         numeric_only=None,
         min_count=0,
@@ -1780,8 +1834,7 @@ class Series(BasePandasDataset):
         Return the sum of the values.
         """
         axis = self._get_axis_number(axis)
-        if skipna is None:
-            skipna = True
+        validate_bool_kwarg(skipna, "skipna", none_allowed=False)
         if numeric_only is True:
             raise NotImplementedError("Series.sum does not implement numeric_only")
         if level is not None:
@@ -1843,15 +1896,21 @@ class Series(BasePandasDataset):
         """
         return self._default_to_pandas("to_dict", into=into)
 
-    def to_frame(self, name=None):  # noqa: PR01, RT01, D200
+    def to_frame(
+        self, name: "Hashable" = no_default
+    ) -> "DataFrame":  # noqa: PR01, RT01, D200
         """
         Convert Series to {label -> value} dict or dict-like object.
         """
         from .dataframe import DataFrame
 
+        if name is None:
+            name = no_default
+
         self_cp = self.copy()
-        if name is not None:
+        if name is not no_default:
             self_cp.name = name
+
         return DataFrame(self_cp)
 
     def to_list(self):  # noqa: RT01, D200
@@ -2011,11 +2070,11 @@ class Series(BasePandasDataset):
     def where(
         self,
         cond,
-        other=np.nan,
+        other=no_default,
         inplace=False,
         axis=None,
         level=None,
-        errors="raise",
+        errors=no_default,
         try_cast=no_default,
     ):  # noqa: PR01, RT01, D200
         """
