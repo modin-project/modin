@@ -10,7 +10,7 @@ a significantly reduced set of operations that can be composed to form any panda
 
 The :py:class:`~modin.core.dataframe.pandas.dataframe.dataframe.PandasDataframe` is an example of a descendant of this class. It currently has implementations for some of the operators
 exposed in this class, and is currently being refactored to include implementations for all of the algebra operators. Please
-refer to the :doc:`PandasDataframe documentation <flow/modin/core/dataframe/pandas/dataframe>` for more information.
+refer to the :doc:`PandasDataframe documentation <flow/modin/core/dataframe/pandas/index>` for more information.
 
 The :py:class:`~modin.core.dataframe.base.dataframe.dataframe.ModinDataframe` is independent of implementation specific details such as partitioning, storage format, or execution engine.
 
