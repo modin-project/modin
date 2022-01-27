@@ -13,6 +13,7 @@
 
 """Module houses `CSVGlobDispatcher` class, that is used for reading multiple `.csv` files simultaneously."""
 
+from ast import parse
 from contextlib import ExitStack
 import csv
 import glob
@@ -240,7 +241,9 @@ class CSVGlobDispatcher(CSVDispatcher):
             # columns are on each partition.
             column_widths = None
             # Check if is list of lists
-            if isinstance(parse_dates, list) and isinstance(parse_dates[0], list):
+            if isinstance(parse_dates, list) and all(
+                isinstance(date, list) for date in parse_dates
+            ):
                 for group in parse_dates:
                     new_col_name = "_".join(group)
                     column_names = column_names.drop(group).insert(0, new_col_name)

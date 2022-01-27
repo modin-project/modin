@@ -119,6 +119,12 @@ class TestCsvGlob:
             with pytest.raises(FileNotFoundError):
                 pd.read_csv_glob("s3://nyc-tlc/trip data/yellow_tripdata_2020-")
 
+    # This addresses https://github.com/modin-project/modin/issues/4056
+    def test_read_single_csv_with_invalid_parse_dates(self):
+        modin_df = pd.read_csv_glob(pytest.files[0], parse_dates=[])
+        pandas_df = pandas.read_csv(pytest.files[0], parse_dates=[])
+        df_equals(modin_df, pandas_df)
+
 
 @pytest.mark.skipif(
     Engine.get() != "Ray", reason="Currently only support Ray engine for glob paths."

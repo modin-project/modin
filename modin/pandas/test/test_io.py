@@ -878,7 +878,13 @@ class TestCsv:
 
     @pytest.mark.parametrize("encoding", [None, "utf-8"])
     @pytest.mark.parametrize("encoding_errors", ["strict", "ignore"])
-    @pytest.mark.parametrize("parse_dates", [False, ["timestamp"]])
+    # Test an empty list of parse_dates, as well as a list of a single
+    # nonexistent column: shouldn't change behavior, but shouldn't cause an
+    # error either. Those cases are inspired by
+    # https://github.com/modin-project/modin/issues/4056
+    @pytest.mark.parametrize(
+        "parse_dates", [False, ["timestamp"], [], ["nonexistent_column"]]
+    )
     @pytest.mark.parametrize("index_col", [None, 0, 2])
     @pytest.mark.parametrize("header", ["infer", 0])
     @pytest.mark.parametrize(
