@@ -172,7 +172,7 @@ class ColumnStoreDispatcher(FileDispatcher):
             )
             col_partitions = [
                 columns[i : i + column_splits]
-                for i in range(0, len(columns), column_splits, 1)
+                for i in range(0, len(columns), column_splits)
             ]
         column_widths = [len(c) for c in col_partitions]
         return col_partitions, column_widths
