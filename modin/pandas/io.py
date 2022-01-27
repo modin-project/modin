@@ -26,7 +26,7 @@ import pandas._libs.lib as lib
 import pathlib
 import re
 from collections import OrderedDict
-from pandas._typing import CompressionOptions, FilePathOrBuffer, StorageOptions
+from pandas._typing import CompressionOptions, StorageOptions
 from typing import Union, IO, AnyStr, Sequence, Dict, List, Optional, Any
 
 from modin.error_message import ErrorMessage
@@ -53,9 +53,9 @@ def _read(**kwargs):
     -------
     modin.pandas.DataFrame
     """
+    Engine.subscribe(_update_engine)
     from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
 
-    Engine.subscribe(_update_engine)
     squeeze = kwargs.pop("squeeze", False)
     pd_obj = FactoryDispatcher.read_csv(**kwargs)
     # This happens when `read_csv` returns a TextFileReader object for iterating through
@@ -73,18 +73,18 @@ def _read(**kwargs):
 
 @_inherit_docstrings(pandas.read_csv)
 def read_csv(
-    filepath_or_buffer: Union[str, pathlib.Path, IO[AnyStr]],
+    filepath_or_buffer: "FilePath | ReadCsvBuffer[bytes] | ReadCsvBuffer[str]",
     sep=lib.no_default,
     delimiter=None,
     header="infer",
     names=lib.no_default,
     index_col=None,
     usecols=None,
-    squeeze=False,
+    squeeze=None,
     prefix=lib.no_default,
     mangle_dupe_cols=True,
-    dtype=None,
-    engine=None,
+    dtype: "DtypeArg | None" = None,
+    engine: "CSVEngine | None" = None,
     converters=None,
     true_values=None,
     false_values=None,
@@ -96,7 +96,7 @@ def read_csv(
     na_filter=True,
     verbose=False,
     skip_blank_lines=True,
-    parse_dates=False,
+    parse_dates=None,
     infer_datetime_format=False,
     keep_date_col=False,
     date_parser=None,
@@ -104,16 +104,16 @@ def read_csv(
     cache_dates=True,
     iterator=False,
     chunksize=None,
-    compression="infer",
+    compression: "CompressionOptions" = "infer",
     thousands=None,
-    decimal: str = ".",
+    decimal: "str" = ".",
     lineterminator=None,
     quotechar='"',
     quoting=0,
     escapechar=None,
     comment=None,
     encoding=None,
-    encoding_errors="strict",
+    encoding_errors: "str | None" = "strict",
     dialect=None,
     error_bad_lines=None,
     warn_bad_lines=None,
@@ -124,7 +124,7 @@ def read_csv(
     low_memory=True,
     memory_map=False,
     float_precision=None,
-    storage_options: StorageOptions = None,
+    storage_options: "StorageOptions" = None,
 ):
     # ISSUE #2408: parse parameter shared with pandas read_csv and read_table and update with provided args
     _pd_read_csv_signature = {
@@ -137,23 +137,24 @@ def read_csv(
 
 @_inherit_docstrings(pandas.read_table)
 def read_table(
-    filepath_or_buffer: Union[str, pathlib.Path, IO[AnyStr]],
+    filepath_or_buffer: "FilePath | ReadCsvBuffer[bytes] | ReadCsvBuffer[str]",
     sep=lib.no_default,
     delimiter=None,
     header="infer",
     names=lib.no_default,
     index_col=None,
     usecols=None,
-    squeeze=False,
+    squeeze=None,
     prefix=lib.no_default,
     mangle_dupe_cols=True,
-    dtype=None,
-    engine=None,
+    dtype: "DtypeArg | None" = None,
+    engine: "CSVEngine | None" = None,
     converters=None,
     true_values=None,
     false_values=None,
     skipinitialspace=False,
     skiprows=None,
+    skipfooter=0,
     nrows=None,
     na_values=None,
     keep_default_na=True,
@@ -168,26 +169,26 @@ def read_table(
     cache_dates=True,
     iterator=False,
     chunksize=None,
-    compression="infer",
+    compression: "CompressionOptions" = "infer",
     thousands=None,
-    decimal: str = ".",
+    decimal: "str" = ".",
     lineterminator=None,
     quotechar='"',
     quoting=0,
+    doublequote=True,
     escapechar=None,
     comment=None,
     encoding=None,
-    encoding_errors="strict",
+    encoding_errors: "str | None" = "strict",
     dialect=None,
     error_bad_lines=None,
     warn_bad_lines=None,
     on_bad_lines=None,
-    skipfooter=0,
-    doublequote=True,
     delim_whitespace=False,
     low_memory=True,
     memory_map=False,
     float_precision=None,
+    storage_options: "StorageOptions" = None,
 ):
     # ISSUE #2408: parse parameter shared with pandas read_csv and read_table and update with provided args
     _pd_read_csv_signature = {
@@ -209,9 +210,9 @@ def read_parquet(
     use_nullable_dtypes: bool = False,
     **kwargs,
 ):
+    Engine.subscribe(_update_engine)
     from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
 
-    Engine.subscribe(_update_engine)
     return DataFrame(
         query_compiler=FactoryDispatcher.read_parquet(
             path=path,
@@ -246,9 +247,9 @@ def read_json(
 ):
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
 
+    Engine.subscribe(_update_engine)
     from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
 
-    Engine.subscribe(_update_engine)
     return DataFrame(query_compiler=FactoryDispatcher.read_json(**kwargs))
 
 
@@ -271,9 +272,9 @@ def read_gbq(
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
     kwargs.update(kwargs.pop("kwargs", {}))
 
+    Engine.subscribe(_update_engine)
     from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
 
-    Engine.subscribe(_update_engine)
     return DataFrame(query_compiler=FactoryDispatcher.read_gbq(**kwargs))
 
 
@@ -297,9 +298,9 @@ def read_html(
 ):
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
 
+    Engine.subscribe(_update_engine)
     from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
 
-    Engine.subscribe(_update_engine)
     return DataFrame(query_compiler=FactoryDispatcher.read_html(**kwargs))
 
 
@@ -308,46 +309,47 @@ def read_clipboard(sep=r"\s+", **kwargs):  # pragma: no cover
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
     kwargs.update(kwargs.pop("kwargs", {}))
 
+    Engine.subscribe(_update_engine)
     from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
 
-    Engine.subscribe(_update_engine)
     return DataFrame(query_compiler=FactoryDispatcher.read_clipboard(**kwargs))
 
 
 @_inherit_docstrings(pandas.read_excel)
 def read_excel(
     io,
-    sheet_name=0,
-    header=0,
+    sheet_name: "str | int | list[IntStrT] | None" = 0,
+    header: "int | Sequence[int] | None" = 0,
     names=None,
-    index_col=None,
+    index_col: "int | Sequence[int] | None" = None,
     usecols=None,
-    squeeze=False,
-    dtype=None,
-    engine=None,
+    squeeze: "bool | None" = None,
+    dtype: "DtypeArg | None" = None,
+    engine: "Literal[('xlrd', 'openpyxl', 'odf', 'pyxlsb')] | None" = None,
     converters=None,
-    true_values=None,
-    false_values=None,
-    skiprows=None,
-    nrows=None,
+    true_values: "Iterable[Hashable] | None" = None,
+    false_values: "Iterable[Hashable] | None" = None,
+    skiprows: "Sequence[int] | int | Callable[[int], object] | None" = None,
+    nrows: "int | None" = None,
     na_values=None,
-    keep_default_na=True,
-    na_filter=True,
-    verbose=False,
+    keep_default_na: "bool" = True,
+    na_filter: "bool" = True,
+    verbose: "bool" = False,
     parse_dates=False,
     date_parser=None,
-    thousands=None,
-    comment=None,
-    skipfooter=0,
-    convert_float=None,
-    mangle_dupe_cols=True,
-    storage_options: StorageOptions = None,
-):
+    thousands: "str | None" = None,
+    decimal: "str" = ".",
+    comment: "str | None" = None,
+    skipfooter: "int" = 0,
+    convert_float: "bool | None" = None,
+    mangle_dupe_cols: "bool" = True,
+    storage_options: "StorageOptions" = None,
+) -> "DataFrame | dict[IntStrT, DataFrame]":
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
 
+    Engine.subscribe(_update_engine)
     from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
 
-    Engine.subscribe(_update_engine)
     intermediate = FactoryDispatcher.read_excel(**kwargs)
     if isinstance(intermediate, (OrderedDict, dict)):
         parsed = type(intermediate)()
@@ -375,9 +377,9 @@ def read_hdf(
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
     kwargs.update(kwargs.pop("kwargs", {}))
 
+    Engine.subscribe(_update_engine)
     from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
 
-    Engine.subscribe(_update_engine)
     return DataFrame(query_compiler=FactoryDispatcher.read_hdf(**kwargs))
 
 
@@ -390,9 +392,9 @@ def read_feather(
 ):
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
 
+    Engine.subscribe(_update_engine)
     from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
 
-    Engine.subscribe(_update_engine)
     return DataFrame(query_compiler=FactoryDispatcher.read_feather(**kwargs))
 
 
@@ -413,9 +415,9 @@ def read_stata(
 ):
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
 
+    Engine.subscribe(_update_engine)
     from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
 
-    Engine.subscribe(_update_engine)
     return DataFrame(query_compiler=FactoryDispatcher.read_stata(**kwargs))
 
 
@@ -430,23 +432,23 @@ def read_sas(
 ):  # pragma: no cover
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
 
+    Engine.subscribe(_update_engine)
     from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
 
-    Engine.subscribe(_update_engine)
     return DataFrame(query_compiler=FactoryDispatcher.read_sas(**kwargs))
 
 
 @_inherit_docstrings(pandas.read_pickle)
 def read_pickle(
-    filepath_or_buffer: FilePathOrBuffer,
+    filepath_or_buffer,
     compression: Optional[str] = "infer",
     storage_options: StorageOptions = None,
 ):
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
 
+    Engine.subscribe(_update_engine)
     from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
 
-    Engine.subscribe(_update_engine)
     return DataFrame(query_compiler=FactoryDispatcher.read_pickle(**kwargs))
 
 
@@ -463,9 +465,9 @@ def read_sql(
 ):
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
 
+    Engine.subscribe(_update_engine)
     from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
 
-    Engine.subscribe(_update_engine)
     if kwargs.get("chunksize") is not None:
         ErrorMessage.default_to_pandas("Parameters provided [chunksize]")
         df_gen = pandas.read_sql(**kwargs)
@@ -483,10 +485,10 @@ def read_fwf(
     infer_nrows=100,
     **kwds,
 ):
+    Engine.subscribe(_update_engine)
     from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
     from pandas.io.parsers.base_parser import parser_defaults
 
-    Engine.subscribe(_update_engine)
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
     kwargs.update(kwargs.pop("kwds", {}))
     target_kwargs = parser_defaults.copy()
@@ -515,9 +517,9 @@ def read_sql_table(
 ):
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
 
+    Engine.subscribe(_update_engine)
     from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
 
-    Engine.subscribe(_update_engine)
     return DataFrame(query_compiler=FactoryDispatcher.read_sql_table(**kwargs))
 
 
@@ -534,9 +536,9 @@ def read_sql_query(
 ):
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
 
+    Engine.subscribe(_update_engine)
     from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
 
-    Engine.subscribe(_update_engine)
     return DataFrame(query_compiler=FactoryDispatcher.read_sql_query(**kwargs))
 
 
@@ -546,9 +548,9 @@ def read_spss(
     usecols: Union[Sequence[str], type(None)] = None,
     convert_categoricals: bool = True,
 ):
+    Engine.subscribe(_update_engine)
     from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
 
-    Engine.subscribe(_update_engine)
     return DataFrame(
         query_compiler=FactoryDispatcher.read_spss(path, usecols, convert_categoricals)
     )
@@ -557,14 +559,14 @@ def read_spss(
 @_inherit_docstrings(pandas.to_pickle)
 def to_pickle(
     obj: Any,
-    filepath_or_buffer: FilePathOrBuffer,
+    filepath_or_buffer,
     compression: CompressionOptions = "infer",
     protocol: int = pickle.HIGHEST_PROTOCOL,
     storage_options: StorageOptions = None,
 ):
+    Engine.subscribe(_update_engine)
     from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
 
-    Engine.subscribe(_update_engine)
     if isinstance(obj, DataFrame):
         obj = obj._query_compiler
     return FactoryDispatcher.to_pickle(
@@ -597,9 +599,7 @@ def json_normalize(
 
 
 @_inherit_docstrings(pandas.read_orc)
-def read_orc(
-    path: FilePathOrBuffer, columns: Optional[List[str]] = None, **kwargs
-) -> DataFrame:
+def read_orc(path, columns: Optional[List[str]] = None, **kwargs) -> DataFrame:
     ErrorMessage.default_to_pandas("read_orc")
     Engine.subscribe(_update_engine)
     return DataFrame(pandas.read_orc(path, columns, **kwargs))

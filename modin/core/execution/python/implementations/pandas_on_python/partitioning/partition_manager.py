@@ -16,7 +16,7 @@
 from modin.core.dataframe.pandas.partitioning.partition_manager import (
     PandasDataframePartitionManager,
 )
-from .axis_partition import (
+from .virtual_partition import (
     PandasOnPythonDataframeColumnPartition,
     PandasOnPythonDataframeRowPartition,
 )

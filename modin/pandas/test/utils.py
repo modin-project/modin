@@ -480,8 +480,10 @@ def df_categories_equals(df1, df2):
         else:
             return True
 
-    categories_columns = df1.select_dtypes(include="category").columns
-    for column in categories_columns:
+    df1_categorical_columns = df1.select_dtypes(include="category").columns
+    df2_categorical_columns = df2.select_dtypes(include="category").columns
+    assert df1_categorical_columns.equals(df2_categorical_columns)
+    for column in df1_categorical_columns:
         assert_extension_array_equal(
             df1[column].values,
             df2[column].values,

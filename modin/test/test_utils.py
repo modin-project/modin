@@ -13,6 +13,7 @@
 
 import pytest
 import modin.utils
+import json
 
 from textwrap import dedent, indent
 
@@ -251,3 +252,14 @@ def warns_that_defaulting_to_pandas():
         defaulting to Pandas.
     """
     return pytest.warns(UserWarning, match="defaulting to pandas")
+
+
+@pytest.mark.parametrize("as_json", [True, False])
+def test_show_versions(as_json, capsys):
+    modin.utils.show_versions(as_json=as_json)
+    versions = capsys.readouterr().out
+    assert modin.__version__ in versions
+
+    if as_json:
+        versions = json.loads(versions)
+        assert versions["modin dependencies"]["modin"] == modin.__version__

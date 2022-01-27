@@ -1166,6 +1166,26 @@ class TestCsv:
             skiprows=skiprows,
         )
 
+    def test_to_csv_with_index(self):
+        cols = 100
+        arows = 20000
+        keyrange = 100
+        values = np.vstack(
+            [
+                np.random.choice(keyrange, size=(arows)),
+                np.random.normal(size=(cols, arows)),
+            ]
+        ).transpose()
+        modin_df = pd.DataFrame(
+            values,
+            columns=["key"] + ["avalue" + str(i) for i in range(1, 1 + cols)],
+        ).set_index("key")
+        pandas_df = pandas.DataFrame(
+            values,
+            columns=["key"] + ["avalue" + str(i) for i in range(1, 1 + cols)],
+        ).set_index("key")
+        eval_to_file(modin_df, pandas_df, "to_csv", "csv")
+
 
 class TestTable:
     def test_read_table(self, make_csv_file):
@@ -1924,19 +1944,7 @@ class TestFwf:
 
         df_equals(modin_df, pd_df)
 
-    @pytest.mark.parametrize(
-        "nrows",
-        [
-            pytest.param(
-                13,
-                marks=pytest.mark.xfail(
-                    Engine.get() == "Ray",
-                    reason="read_fwf bug on pandas side: pandas-dev/pandas#44021",
-                ),
-            ),
-            None,
-        ],
-    )
+    @pytest.mark.parametrize("nrows", [13, None])
     def test_fwf_file_skiprows(self, make_fwf_file, nrows):
         unique_filename = make_fwf_file()
 

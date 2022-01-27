@@ -18,11 +18,11 @@ jobs:
         with:
           activate-environment: modin
           environment-file: requirements/requirements-no-engine.yml
-          python-version: 3.7
+          python-version: 3.8
           channel-priority: strict
           use-only-tar-bz2: true # IMPORTANT: This needs to be set for caching to work properly!
       - name: install Ray nightly build
-        run: pip install https://s3-us-west-2.amazonaws.com/ray-wheels/latest/ray-2.0.0.dev0-cp37-cp37m-manylinux2014_x86_64.whl
+        run: pip install https://s3-us-west-2.amazonaws.com/ray-wheels/latest/ray-2.0.0.dev0-cp38-cp38-manylinux2014_x86_64.whl
       - name: Conda environment
         run: |
           conda info
@@ -63,7 +63,7 @@ jobs:
         with:
           activate-environment: modin
           environment-file: environment-dev.yml
-          python-version: 3.7
+          python-version: 3.8
           channel-priority: strict
           use-only-tar-bz2: true # IMPORTANT: This needs to be set for caching to work properly!
       - name: Conda environment
@@ -81,7 +81,7 @@ jobs:
         shell: bash -l {0}
     strategy:
       matrix:
-        python-version: ["3.7", "3.8"]
+        python-version: ["3.8"]
         test-task:
           - modin/pandas/test/dataframe/test_binary.py
           - modin/pandas/test/dataframe/test_default.py
@@ -118,8 +118,6 @@ jobs:
       - run: pip install -r requirements-dev.txt --use-deprecated=legacy-resolver
       # Use a ray master commit that includes the fix here: https://github.com/ray-project/ray/pull/16278
       # Can be changed after a Ray version > 1.4 is released.
-      - run: pip install https://s3-us-west-2.amazonaws.com/ray-wheels/master/c8e3ed9eec30119092ef966ee7b8982c8954c333/ray-2.0.0.dev0-cp37-cp37m-manylinux2014_x86_64.whl
-        if: matrix.python-version == '3.7'
       - run: pip install https://s3-us-west-2.amazonaws.com/ray-wheels/master/c8e3ed9eec30119092ef966ee7b8982c8954c333/ray-2.0.0.dev0-cp38-cp38-manylinux2014_x86_64.whl
         if: matrix.python-version == '3.8'
       - name: Install HDF5

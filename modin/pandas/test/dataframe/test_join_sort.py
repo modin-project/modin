@@ -305,13 +305,23 @@ def test_merge(test_data, test_data2):
         )
         df_equals(modin_result, pandas_result)
 
-    # Named Series promoted to DF
-    s = pd.Series(frame_data2.get("col1"))
-    with pytest.raises(ValueError):
-        modin_df.merge(s)
+    # Cannot merge a Series without a name
+    ps = pandas.Series(frame_data2.get("col1"))
+    ms = pd.Series(frame_data2.get("col1"))
+    eval_general(
+        modin_df,
+        pandas_df,
+        lambda df: df.merge(ms if isinstance(df, pd.DataFrame) else ps),
+    )
 
-    s = pd.Series(frame_data2.get("col1"), name="col1")
-    df_equals(modin_df.merge(s), modin_df.merge(modin_df2[["col1"]]))
+    # merge a Series with a name
+    ps = pandas.Series(frame_data2.get("col1"), name="col1")
+    ms = pd.Series(frame_data2.get("col1"), name="col1")
+    eval_general(
+        modin_df,
+        pandas_df,
+        lambda df: df.merge(ms if isinstance(df, pd.DataFrame) else ps),
+    )
 
     with pytest.raises(TypeError):
         modin_df.merge("Non-valid type")
@@ -449,6 +459,8 @@ def test_sort_multiindex(sort_remaining):
 def test_sort_values(
     data, by, axis, ascending, inplace, kind, na_position, ignore_index, key
 ):
+    if ascending is None:
+        pytest.skip("None is not a valid value for ascending.")
     if (axis == 1 or axis == "columns") and ignore_index:
         pytest.skip("Pandas bug #39426 which is fixed in Pandas 1.3")
 
