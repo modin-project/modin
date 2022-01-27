@@ -1,13 +1,15 @@
-Modin vs. pandas
-================
+How does Modin differ from pandas?
+==================================
 
-Modin exposes the pandas API through ``modin.pandas``, but it does not inherit the same
-pitfalls and design decisions that make it difficult to scale. This page will discuss
-how Modin's dataframe implementation differs from pandas, and how Modin scales pandas.
+.. note:: 
+  | *Estimated Reading Time: 10 minutes*
+
+In the earlier tutorials, we have seen how Modin can be used to speed up pandas workflows. Here, we discuss at a high level how Modin works, in particular, how Modin's dataframe implementation differs from pandas. 
 
 Scalablity of implementation
 ----------------------------
 
+Modin exposes the pandas API through ``modin.pandas``, but it does not inherit the same pitfalls and design decisions that make it difficult to scale. 
 The pandas implementation is inherently single-threaded. This means that only one of
 your CPU cores can be utilized at any given time. In a laptop, it would look something
 like this with pandas:
@@ -64,6 +66,6 @@ smaller code footprint while still guaranteeing that it covers the entire pandas
 Modin has an internal algebra, which is roughly 15 operators, narrowed down from the
 original >200 that exist in pandas. The algebra is grounded in both practical and
 theoretical work. Learn more in our `VLDB 2020 paper`_. More information about this
-algebra can be found in the :doc:`../developer/architecture` documentation.
+algebra can be found in the :doc:`architecture </development/architecture>` documentation.
 
 .. _VLDB 2020 paper: https://arxiv.org/abs/2001.00888

@@ -769,8 +769,7 @@ def test_align(data):
     "skipna", bool_arg_values, ids=arg_keys("skipna", bool_arg_keys)
 )
 def test_all(data, skipna):
-    modin_series, pandas_series = create_test_series(data)
-    df_equals(modin_series.all(skipna=skipna), pandas_series.all(skipna=skipna))
+    eval_general(*create_test_series(data), lambda df: df.all(skipna=skipna))
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
@@ -778,8 +777,7 @@ def test_all(data, skipna):
     "skipna", bool_arg_values, ids=arg_keys("skipna", bool_arg_keys)
 )
 def test_any(data, skipna):
-    modin_series, pandas_series = create_test_series(data)
-    df_equals(modin_series.any(skipna=skipna), pandas_series.any(skipna=skipna))
+    eval_general(*create_test_series(data), lambda df: df.any(skipna=skipna))
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
@@ -2135,10 +2133,9 @@ def test_lt(data):
 @pytest.mark.parametrize("skipna", [None, True, False])
 @pytest.mark.parametrize("level", [0, -1, None])
 def test_mad(level, data, axis, skipna):
-    modin_series, pandas_series = create_test_series(data)
-    df_equals(
-        modin_series.mad(axis=axis, skipna=skipna, level=level),
-        pandas_series.mad(axis=axis, skipna=skipna, level=level),
+    eval_general(
+        *create_test_series(data),
+        lambda df: df.mad(axis=axis, skipna=skipna, level=level),
     )
 
 
@@ -2182,8 +2179,7 @@ def test_mask():
     "skipna", bool_arg_values, ids=arg_keys("skipna", bool_arg_keys)
 )
 def test_max(data, skipna):
-    modin_series, pandas_series = create_test_series(data)
-    df_equals(modin_series.max(skipna=skipna), pandas_series.max(skipna=skipna))
+    eval_general(*create_test_series(data), lambda df: df.max(skipna=skipna))
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
@@ -2191,8 +2187,7 @@ def test_max(data, skipna):
     "skipna", bool_arg_values, ids=arg_keys("skipna", bool_arg_keys)
 )
 def test_mean(data, skipna):
-    modin_series, pandas_series = create_test_series(data)
-    df_equals(modin_series.mean(skipna=skipna), pandas_series.mean(skipna=skipna))
+    eval_general(*create_test_series(data), lambda df: df.mean(skipna=skipna))
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
@@ -2200,8 +2195,7 @@ def test_mean(data, skipna):
     "skipna", bool_arg_values, ids=arg_keys("skipna", bool_arg_keys)
 )
 def test_median(data, skipna):
-    modin_series, pandas_series = create_test_series(data)
-    df_equals(modin_series.median(skipna=skipna), pandas_series.median(skipna=skipna))
+    eval_general(*create_test_series(data), lambda df: df.median(skipna=skipna))
 
 
 @pytest.mark.parametrize(
@@ -2233,8 +2227,7 @@ def test_memory_usage(data, index):
     "skipna", bool_arg_values, ids=arg_keys("skipna", bool_arg_keys)
 )
 def test_min(data, skipna):
-    modin_series, pandas_series = create_test_series(data)
-    df_equals(modin_series.min(skipna=skipna), pandas_series.min(skipna=skipna))
+    eval_general(*create_test_series(data), lambda df: df.min(skipna=skipna))
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
@@ -2948,8 +2941,7 @@ def test_size(data):
     "skipna", bool_arg_values, ids=arg_keys("skipna", bool_arg_keys)
 )
 def test_skew(data, skipna):
-    modin_series, pandas_series = create_test_series(data)
-    df_equals(modin_series.skew(skipna=skipna), pandas_series.skew(skipna=skipna))
+    eval_general(*create_test_series(data), lambda df: df.skew(skipna=skipna))
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
@@ -3213,6 +3205,21 @@ def test_to_period():
 )
 def test_to_numpy(data):
     modin_series, pandas_series = create_test_series(data)
+    assert_array_equal(modin_series.to_numpy(), pandas_series.to_numpy())
+
+
+@pytest.mark.parametrize(
+    "data",
+    test_data_values + test_data_large_categorical_series_values,
+    ids=test_data_keys + test_data_large_categorical_series_keys,
+)
+def test_series_values(data):
+    modin_series, pandas_series = create_test_series(data)
+    assert_array_equal(modin_series.values, pandas_series.values)
+
+
+def test_series_empty_values():
+    modin_series, pandas_series = pd.Series(), pandas.Series()
     assert_array_equal(modin_series.values, pandas_series.values)
 
 
@@ -3497,8 +3504,8 @@ def test_var(data, skipna, ddof):
 
     try:
         pandas_result = pandas_series.var(skipna=skipna, ddof=ddof)
-    except Exception:
-        with pytest.raises(TypeError):
+    except Exception as e:
+        with pytest.raises(type(e)):
             modin_series.var(skipna=skipna, ddof=ddof)
     else:
         modin_result = modin_series.var(skipna=skipna, ddof=ddof)

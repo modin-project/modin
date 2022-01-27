@@ -15,7 +15,7 @@ jobs:
         with:
           activate-environment: modin
           environment-file: environment-dev.yml
-          python-version: 3.7
+          python-version: 3.8
           channel-priority: strict
           use-only-tar-bz2: true # IMPORTANT: This needs to be set for caching to work properly!
       - name: Conda environment
@@ -41,7 +41,7 @@ jobs:
     env:
       MODIN_MEMORY: 1000000000
       MODIN_TEST_DATASET_SIZE: "small"
-    name: Test ${{ matrix.execution }} execution, Python 3.7
+    name: Test ${{ matrix.execution }} execution, Python 3.8
     steps:
       - uses: actions/checkout@v2
         with:
@@ -50,7 +50,7 @@ jobs:
         with:
           activate-environment: modin
           environment-file: environment-dev.yml
-          python-version: 3.7
+          python-version: 3.8
           channel-priority: strict
           use-only-tar-bz2: true # IMPORTANT: This needs to be set for caching to work properly!
       - name: Conda environment
@@ -96,7 +96,7 @@ jobs:
       MODIN_EXPERIMENTAL: "True"
       MODIN_ENGINE: "native"
       MODIN_STORAGE_FORMAT: "omnisci"
-    name: Test OmniSci storage format, Python 3.7
+    name: Test OmniSci storage format, Python 3.8
     steps:
       - uses: actions/checkout@v2
         with:
@@ -106,7 +106,7 @@ jobs:
         with:
           activate-environment: modin_on_omnisci
           environment-file: requirements/env_omnisci.yml
-          python-version: 3.7
+          python-version: 3.8
           use-only-tar-bz2: true # IMPORTANT: This needs to be set for caching to work properly!
       - name: Conda environment
         run: |
@@ -135,7 +135,7 @@ jobs:
         shell: bash -l {0}
     strategy:
       matrix:
-        python-version: ["3.7", "3.8"]
+        python-version: ["3.8"]
         engine: ["python", "ray", "dask"]
     env:
       MODIN_ENGINE: ${{matrix.engine}}
@@ -202,7 +202,7 @@ jobs:
         shell: bash -l {0}
     strategy:
       matrix:
-        python-version: ["3.7", "3.8"]
+        python-version: ["3.8"]
         engine: ["ray", "dask"]
         test-task:
           - modin/pandas/test/dataframe/test_binary.py
@@ -257,7 +257,7 @@ jobs:
         shell: bash -l {0}
     strategy:
       matrix:
-        python-version: ["3.7", "3.8"]
+        python-version: ["3.8"]
     env:
       MODIN_STORAGE_FORMAT: pyarrow
       MODIN_EXPERIMENTAL: "True"
@@ -287,7 +287,7 @@ jobs:
         shell: bash -l {0}
     strategy:
       matrix:
-        python-version: [ "3.7", "3.8" ]
+        python-version: ["3.8"]
         engine: ["ray", "dask"]
     env:
       MODIN_EXPERIMENTAL: "True"

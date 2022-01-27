@@ -30,7 +30,7 @@ Notes:
 Architecture
 """"""""""""
 
-.. image:: ../img/modin_in_the_cloud_architecture.png
+.. image:: /img/modin_in_the_cloud_architecture.png
   :alt: Architecture of Modin in the Cloud
   :align: center
 

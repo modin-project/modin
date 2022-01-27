@@ -115,7 +115,7 @@ class PandasDataframePartitionManager(ABC):
     # END Abstract Methods
 
     @classmethod
-    def column_partitions(cls, partitions):
+    def column_partitions(cls, partitions, full_axis=True):
         """
         Get the list of `BaseDataframeAxisPartition` objects representing column-wise paritions.
 
@@ -123,6 +123,8 @@ class PandasDataframePartitionManager(ABC):
         ----------
         partitions : list-like
             List of (smaller) partitions to be combined to column-wise partitions.
+        full_axis : bool, default: True
+            Whether or not this partition contains the entire column axis.
 
         Returns
         -------
@@ -137,7 +139,9 @@ class PandasDataframePartitionManager(ABC):
         if not isinstance(partitions, list):
             partitions = [partitions]
         return [
-            cls._column_partitions_class(col) for frame in partitions for col in frame.T
+            cls._column_partitions_class(col, full_axis=full_axis)
+            for frame in partitions
+            for col in frame.T
         ]
 
     @classmethod
@@ -165,7 +169,7 @@ class PandasDataframePartitionManager(ABC):
         return [cls._row_partition_class(row) for frame in partitions for row in frame]
 
     @classmethod
-    def axis_partition(cls, partitions, axis):
+    def axis_partition(cls, partitions, axis, full_axis: bool = True):
         """
         Logically partition along given axis (columns or rows).
 
@@ -175,15 +179,25 @@ class PandasDataframePartitionManager(ABC):
             List of partitions to be combined.
         axis : {0, 1}
             0 for column partitions, 1 for row partitions.
+        full_axis : bool, default: True
+            Whether or not this partition contains the entire column axis.
 
         Returns
         -------
         list
             A list of `BaseDataframeAxisPartition` objects.
         """
+        make_column_partitions = axis == 0
+        if not full_axis and not make_column_partitions:
+            raise NotImplementedError(
+                (
+                    "Row partitions must contain the entire axis. We don't "
+                    + "support virtual partitioning for row partitions yet."
+                )
+            )
         return (
             cls.column_partitions(partitions)
-            if not axis
+            if make_column_partitions
             else cls.row_partitions(partitions)
         )
 
@@ -1260,3 +1274,20 @@ class PandasDataframePartitionManager(ABC):
             Partitions of Modin Dataframe on which all deferred calls should be performed.
         """
         [part.drain_call_queue() for row in partitions for part in row]
+
+    @classmethod
+    def rebalance_partitions(cls, partitions):
+        """
+        Return the provided array of partitions without rebalancing it.
+
+        Parameters
+        ----------
+        partitions : np.ndarray
+            The 2-d array of partitions to rebalance.
+
+        Returns
+        -------
+        np.ndarray
+            The same 2-d array.
+        """
+        return partitions

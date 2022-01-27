@@ -4,7 +4,7 @@ Progress Bar
 The progress bar allows users to see the estimated progress and completion time of each line they run, 
 in environments such as a shell or Jupyter notebook.
 
-.. figure:: ../img/progress_bar.gif
+.. figure:: /img/progress_bar.gif
    :align: center
 
 Quickstart

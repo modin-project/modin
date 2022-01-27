@@ -27,7 +27,6 @@ from csv import QUOTE_NONE
 import numpy as np
 import pandas
 import pandas._libs.lib as lib
-from pandas._typing import FilePathOrBuffer
 from pandas.core.dtypes.common import is_list_like
 
 from modin.core.io.file_dispatcher import FileDispatcher, OpenFile
@@ -36,7 +35,7 @@ from modin.utils import _inherit_docstrings
 from modin.core.io.text.utils import CustomNewlineIterator
 from modin.config import NPartitions
 
-ColumnNamesTypes = Tuple[Union[pandas.Index, pandas.MultiIndex, pandas.Int64Index]]
+ColumnNamesTypes = Tuple[Union[pandas.Index, pandas.MultiIndex]]
 IndexColType = Union[int, str, bool, Sequence[int], Sequence[str], None]
 
 
@@ -614,7 +613,7 @@ class TextFileDispatcher(FileDispatcher):
     @classmethod
     def check_parameters_support(
         cls,
-        filepath_or_buffer: FilePathOrBuffer,
+        filepath_or_buffer,
         read_kwargs: dict,
     ) -> bool:
         """
@@ -912,7 +911,7 @@ class TextFileDispatcher(FileDispatcher):
         return new_query_compiler
 
     @classmethod
-    def _read(cls, filepath_or_buffer: FilePathOrBuffer, **kwargs):
+    def _read(cls, filepath_or_buffer, **kwargs):
         """
         Read data from `filepath_or_buffer` according to `kwargs` parameters.
 

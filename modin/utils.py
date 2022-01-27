@@ -12,19 +12,31 @@
 # governing permissions and limitations under the License.
 
 """Collection of general utility functions, mostly for internal use."""
+from __future__ import annotations
 
 import importlib
 import types
 import re
+import sys
+import json
+import codecs
 
 from textwrap import dedent, indent
 from typing import Union
+from packaging import version
 
 import pandas
 import numpy as np
 
 from pandas.util._decorators import Appender
+from pandas.util._print_versions import _get_sys_info, _get_dependency_info
+from pandas._typing import JSONSerializable
+
 from modin.config import Engine, StorageFormat, IsExperimental
+from modin._version import get_versions
+
+MIN_RAY_VERSION = version.parse("1.4.0")
+MIN_DASK_VERSION = version.parse("2.22.0")
 
 PANDAS_API_URL_TEMPLATE = f"https://pandas.pydata.org/pandas-docs/version/{pandas.__version__}/reference/api/{{}}.html"
 
@@ -561,3 +573,104 @@ def import_optional_dependency(name, message):
             f"Missing optional dependency '{name}'. {message} "
             f"Use pip or conda to install {name}."
         ) from None
+
+
+def _get_modin_deps_info() -> dict[str, JSONSerializable]:
+    """
+    Return Modin-specific dependencies information as a JSON serializable dictionary.
+
+    Returns
+    -------
+    dict[str, JSONSerializable]
+        The dictionary of Modin dependencies and their versions.
+    """
+    import modin  # delayed import so modin.__init__ is fully initialized
+
+    result = {"modin": modin.__version__}
+
+    for pkg_name, pkg_version in [
+        ("ray", MIN_RAY_VERSION),
+        ("dask", MIN_DASK_VERSION),
+        ("distributed", MIN_DASK_VERSION),
+    ]:
+        try:
+            pkg = importlib.import_module(pkg_name)
+        except ImportError:
+            result[pkg_name] = None
+        else:
+            result[pkg_name] = pkg.__version__ + (
+                f" (outdated; >={pkg_version} required)"
+                if version.parse(pkg.__version__) < pkg_version
+                else ""
+            )
+
+    try:
+        # We import ``PyDbEngine`` from this module since correct import of ``PyDbEngine`` itself
+        # from Omnisci is located in it with all the necessary options for dlopen.
+        from modin.experimental.core.execution.native.implementations.omnisci_on_native.utils import (  # noqa
+            PyDbEngine,
+        )
+
+        result["omniscidbe"] = "present"
+    except ImportError:
+        result["omniscidbe"] = None
+
+    return result
+
+
+# Disable flake8 checks for print() in this file
+# flake8: noqa: T001
+def show_versions(as_json: str | bool = False) -> None:
+    """
+    Provide useful information, important for bug reports.
+
+    It comprises info about hosting operation system, pandas version,
+    and versions of other installed relative packages.
+
+    Parameters
+    ----------
+    as_json : str or bool, default: False
+        * If False, outputs info in a human readable form to the console.
+        * If str, it will be considered as a path to a file.
+          Info will be written to that file in JSON format.
+        * If True, outputs info in JSON format to the console.
+
+    Notes
+    -----
+    This is mostly a copy of pandas.show_versions() but adds separate listing
+    of Modin-specific dependencies.
+    """
+    sys_info = _get_sys_info()
+    sys_info["commit"] = get_versions()["full-revisionid"]
+    modin_deps = _get_modin_deps_info()
+    deps = _get_dependency_info()
+
+    if as_json:
+        j = {
+            "system": sys_info,
+            "modin dependencies": modin_deps,
+            "dependencies": deps,
+        }
+
+        if as_json is True:
+            sys.stdout.writelines(json.dumps(j, indent=2))
+        else:
+            assert isinstance(as_json, str)  # needed for mypy
+            with codecs.open(as_json, "wb", encoding="utf8") as f:
+                json.dump(j, f, indent=2)
+
+    else:
+        assert isinstance(sys_info["LOCALE"], dict)  # needed for mypy
+        language_code = sys_info["LOCALE"]["language-code"]
+        encoding = sys_info["LOCALE"]["encoding"]
+        sys_info["LOCALE"] = f"{language_code}.{encoding}"
+
+        maxlen = max(max(len(x) for x in d) for d in (deps, modin_deps))
+        print("\nINSTALLED VERSIONS")
+        print("------------------")
+        for k, v in sys_info.items():
+            print(f"{k:<{maxlen}}: {v}")
+        for name, d in (("Modin", modin_deps), ("pandas", deps)):
+            print(f"\n{name} dependencies\n{'-' * (len(name) + 13)}")
+            for k, v in d.items():
+                print(f"{k:<{maxlen}}: {v}")

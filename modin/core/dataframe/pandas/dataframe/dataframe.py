@@ -20,6 +20,7 @@ for pandas storage format.
 from collections import OrderedDict
 import numpy as np
 import pandas
+import datetime
 from pandas.core.indexes.api import ensure_index, Index, RangeIndex
 from pandas.core.dtypes.common import is_numeric_dtype, is_list_like
 from typing import List, Hashable, Optional, Callable, Union, Dict
@@ -531,10 +532,11 @@ class PandasDataframe(object):
                     for i in range(len(self._partitions))
                 ]
             )
+            self._deferred_column = False
+        else:
             ErrorMessage.catch_bugs_and_request_email(
                 axis is not None and axis not in [0, 1]
             )
-            self._deferred_column = False
 
     @lazy_metadata_decorator(apply_axis=None)
     def mask(
@@ -2450,9 +2452,7 @@ class PandasDataframe(object):
             joined_index = self.columns
             left_parts = self._partitions
             right_parts = [o._partitions for o in others]
-            new_lengths = self._row_lengths + [
-                length for o in others for length in o._row_lengths
-            ]
+            new_lengths = None
             new_widths = self._column_widths
         elif (
             axis == Axis.COL_WISE
@@ -2671,7 +2671,18 @@ class PandasDataframe(object):
         object
             Any dtype compatible with pandas.
         """
-        res = arrow_type.to_pandas_dtype()
+        import pyarrow
+
+        try:
+            res = arrow_type.to_pandas_dtype()
+        # Conversion to pandas is not implemented for some arrow types,
+        # perform manual conversion for them:
+        except NotImplementedError:
+            if pyarrow.types.is_time(arrow_type):
+                res = np.dtype(datetime.time)
+            else:
+                raise
+
         if not isinstance(res, (np.dtype, str)):
             return np.dtype(res)
         return res
