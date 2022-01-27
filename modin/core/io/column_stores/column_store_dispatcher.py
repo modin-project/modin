@@ -122,7 +122,9 @@ class ColumnStoreDispatcher(FileDispatcher):
             List with lengths of index chunks.
         """
         num_partitions = NPartitions.get()
-        index_len = cls.materialize(partition_ids[-2][0])
+        index_len = (
+            0 if len(partition_ids) == 0 else cls.materialize(partition_ids[-2][0])
+        )
         if isinstance(index_len, int):
             index = pandas.RangeIndex(index_len)
         else:
@@ -164,9 +166,11 @@ class ColumnStoreDispatcher(FileDispatcher):
             if len(columns) % num_partitions == 0
             else len(columns) // num_partitions + 1
         )
+        # If columns is empty, column_splits == 0, but the third argument, the
+        # step, in the range constructor must be nonzero, so use 1 instead.
         col_partitions = [
             columns[i : i + column_splits]
-            for i in range(0, len(columns), column_splits)
+            for i in range(0, len(columns), max(column_splits, 1))
         ]
         column_widths = [len(c) for c in col_partitions]
         return col_partitions, column_widths
@@ -215,7 +219,11 @@ class ColumnStoreDispatcher(FileDispatcher):
         partition_ids = cls.call_deploy(path, col_partitions, **kwargs)
         index, row_lens = cls.build_index(partition_ids)
         remote_parts = cls.build_partition(partition_ids[:-2], row_lens, column_widths)
-        dtypes = cls.build_dtypes(partition_ids[-1], columns)
+        dtypes = (
+            cls.build_dtypes(partition_ids[-1], columns)
+            if len(partition_ids) > 0
+            else None
+        )
         new_query_compiler = cls.query_compiler_cls(
             cls.frame_cls(
                 remote_parts,
