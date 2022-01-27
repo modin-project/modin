@@ -22,7 +22,7 @@ Key Features and Updates
 * Update testing suite
   *
 * Documentation improvements
-  *
+  * DOCS-#4077: Add release notes template to docs folder (#4078)
 * Dependencies
   *
 
