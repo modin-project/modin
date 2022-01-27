@@ -160,18 +160,20 @@ class ColumnStoreDispatcher(FileDispatcher):
             List with lengths of `col_partitions` subarrays
             (number of columns that should be read by workers).
         """
-        num_partitions = NPartitions.get()
-        column_splits = (
-            len(columns) // num_partitions
-            if len(columns) % num_partitions == 0
-            else len(columns) // num_partitions + 1
-        )
-        # If columns is empty, column_splits == 0, but the third argument, the
-        # step, in the range constructor must be nonzero, so use 1 instead.
-        col_partitions = [
-            columns[i : i + column_splits]
-            for i in range(0, len(columns), max(column_splits, 1))
-        ]
+        columns_length = len(columns)
+        if columns_length == 0:
+            col_partitions = []
+        else:
+            num_partitions = NPartitions.get()
+            column_splits = (
+                columns_length // num_partitions
+                if columns_length % num_partitions == 0
+                else columns_length // num_partitions + 1
+            )
+            col_partitions = [
+                columns[i : i + column_splits]
+                for i in range(0, len(columns), column_splits, 1)
+            ]
         column_widths = [len(c) for c in col_partitions]
         return col_partitions, column_widths
 
