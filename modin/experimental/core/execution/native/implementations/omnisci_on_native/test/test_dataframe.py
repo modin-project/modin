@@ -274,6 +274,7 @@ class TestCSV:
             ["c2"],
             [["col2", "col3"]],
             {"col23": ["col2", "col3"]},
+            [],
         ],
     )
     @pytest.mark.parametrize("names", [None, [f"c{x}" for x in range(1, 7)]])
@@ -285,7 +286,8 @@ class TestCSV:
     ):
 
         parse_dates_unsupported = isinstance(parse_dates, dict) or (
-            isinstance(parse_dates, list) and isinstance(parse_dates[0], list)
+            isinstance(parse_dates, list)
+            and all(isinstance(date, list) for date in parse_dates)
         )
         if parse_dates_unsupported and engine == "arrow" and not names:
             pytest.skip(
