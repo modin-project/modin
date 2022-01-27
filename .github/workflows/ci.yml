@@ -1,5 +1,8 @@
 name: ci
-on: pull_request
+on:
+  pull_request:
+    paths:
+      - modin/**
 jobs:
   lint-commit:
     name: lint (commit)
