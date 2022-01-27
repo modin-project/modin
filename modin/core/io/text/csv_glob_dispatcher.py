@@ -13,6 +13,7 @@
 
 """Module houses `CSVGlobDispatcher` class, that is used for reading multiple `.csv` files simultaneously."""
 
+from ast import parse
 from contextlib import ExitStack
 import csv
 import glob
