@@ -2698,7 +2698,9 @@ class PandasDataframe(object):
         """
         df = self._partition_mgr_cls.to_pandas(self._partitions)
         if df.empty:
-            df = pandas.DataFrame(columns=self.columns, index=self.index)
+            df = pandas.DataFrame(columns=self.columns, index=self.index).astype(
+                self.dtypes
+            )
         else:
             for axis in [0, 1]:
                 ErrorMessage.catch_bugs_and_request_email(

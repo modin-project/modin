@@ -19,6 +19,7 @@ import numpy as np
 from numpy.testing import assert_array_equal
 from modin.utils import get_current_execution, to_pandas
 from modin.test.test_utils import warns_that_defaulting_to_pandas
+from pandas.testing import assert_frame_equal, assert_series_equal
 
 from .utils import (
     test_data_values,
@@ -765,3 +766,15 @@ def test_empty_dataframe():
 def test_empty_series():
     s = pd.Series([])
     pd.to_numeric(s)
+
+
+def test_to_pandas_empty_series():
+    pandas_series = pandas.Series([], dtype="bool")
+    modin_series = pd.Series(pandas_series)
+    assert_series_equal(pandas_series, modin_series._to_pandas(), check_dtype=True)
+
+
+def test_to_pandas_empty_dataframe():
+    pandas_df = pandas.DataFrame([[]], dtype="bool")
+    modin_df = pd.DataFrame(pandas_df)
+    assert_frame_equal(pandas_df, modin_df._to_pandas(), check_dtype=True)
