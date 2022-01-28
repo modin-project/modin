@@ -467,7 +467,7 @@ class OmnisciOnNativeIO(BaseIO, TextFileDispatcher):
 
         parse_dates_unsupported = isinstance(parse_dates, dict) or (
             isinstance(parse_dates, list)
-            and len(list) > 0
+            and len(parse_dates) > 0
             and all(isinstance(date, list) for date in parse_dates)
         )
         if parse_dates_unsupported:
