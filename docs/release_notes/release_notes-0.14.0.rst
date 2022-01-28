@@ -72,6 +72,7 @@ Key Features and Updates
 
 Contributors
 ------------
+
 @prutskov
 @amyskov
 @paulovn
