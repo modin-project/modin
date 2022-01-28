@@ -4,7 +4,7 @@ Key Features and Updates
 ------------------------
 
 * Stability and Bugfixes
-  *
+  * Allow pickling empty dataframes and series (5fc9565)
 * Performance enhancements
   *
 * Benchmarking enhancements
