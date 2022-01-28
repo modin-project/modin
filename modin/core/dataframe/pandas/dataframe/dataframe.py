@@ -1870,7 +1870,7 @@ class PandasDataframe(ClassLogger):
         reduce_fn : callable(rowgroup|colgroup) -> row|col
             The reduce function to apply over the data.
         window_size : int
-            The number of row/columns to pass to the function.
+            The number of rows/columns to pass to the function.
             (The size of the sliding window).
         result_schema : dict, optional
             Mapping from column labels to data types that represents the types of the output dataframe.
@@ -1886,7 +1886,36 @@ class PandasDataframe(ClassLogger):
         The user-defined reduce function must reduce each window’s column
         (row if axis=1) down to a single value.
         """
-        pass
+        
+        def window_function(df):
+            # modifying the dataframe that's passed in or create a new df
+            # creating new df means will have 2 copies of the df in memory
+            # so just modify the dataframe that's passed in
+            # ok to modify bc the broadcast_axis makes a copy
+            # pass by value, not pass by reference
+            # when call df_equals, need to convert from modin frame to pandas
+
+            n = (axis == 0) ? len(df.columns) : df.index
+
+            for i in range(0, n):
+                window = (axis == 0) ? df.columns[i : i + window_size] : df.index[i : i + window_size]
+
+                result = reduce_fn(window)
+                result_data = np.append(result_data, result)
+
+            return result_data
+
+        new_partitions = self._partition_mgr_cls.map_axis_partitions(
+            axis, self._partitions, window_function
+        )
+
+        return self.__constructor__(
+            new_partitions,
+            self.index,
+            self.columns,
+            self._row_lengths,
+            self._column_widths,
+        )
 
     @lazy_metadata_decorator(apply_axis="both")
     def fold(self, axis, func, new_columns=None):
