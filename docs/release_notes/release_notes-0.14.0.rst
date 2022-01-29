@@ -4,7 +4,7 @@ Key Features and Updates
 ------------------------
 
 * Stability and Bugfixes
-  * Fix to_pandas() dtypes for empty dataframes and series (8312829)
+  * Fix to_pandas() dtypes for empty dataframes and series (4108)
 * Performance enhancements
   *
 * Benchmarking enhancements

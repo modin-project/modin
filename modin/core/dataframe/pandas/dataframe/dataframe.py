@@ -2413,7 +2413,20 @@ class PandasDataframe(object):
             1, left_parts, lambda l, r: op(l, r), right_parts
         )
         new_columns = self.columns.join(right_frame.columns, how=join_type)
-        return self.__constructor__(new_frame, joined_index, new_columns, None, None)
+        return self.__constructor__(
+            partitions=new_frame,
+            index=joined_index,
+            columns=new_columns,
+            # In cases where the result of the operation is empty, the new
+            # frame can't deduce the dtypes from its partitions as usual,
+            # because it has no partitions. Instead we have to compute the
+            # dtypes by applying the operation to empty dataframes and passing
+            # the resulting dtypes to the new frame.
+            dtypes=op(
+                pandas.DataFrame(index=self.index, columns=self.columns),
+                pandas.DataFrame(index=right_frame.index, columns=right_frame.columns),
+            ).dtypes,
+        )
 
     @lazy_metadata_decorator(apply_axis="both")
     def concat(
