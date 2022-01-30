@@ -23,8 +23,8 @@ jobs:
           conda info
           conda list
       - name: Internals tests
-        run: python -m pytest modin/core/execution/dispatching/factories/test/test_dispatcher.py modin/experimental/cloud/test/test_cloud.py
-      - run: python -m pytest modin/config/test
+        run: python -m pytest modin/test/core/execution/dispatching/factories/test_dispatcher.py modin/test/experimental/cloud/test_cloud.py
+      - run: python -m pytest modin/test/config
       - run: python -m pytest modin/test/test_envvar_catcher.py
       - run: python -m pytest modin/test/storage_formats/pandas/test_internals.py
       - run: python -m pytest modin/test/test_envvar_npartitions.py
@@ -59,7 +59,7 @@ jobs:
           conda list
       - name: Install HDF5
         run: sudo apt update && sudo apt install -y libhdf5-dev
-      - run: pytest -n 2 modin/experimental/xgboost/test/test_default.py --execution=${{ matrix.execution }}
+      - run: pytest -n 2 modin/test/experimental/xgboost/test_default.py --execution=${{ matrix.execution }}
       - run: pytest -n 2 modin/test/pandas/dataframe/test_binary.py --execution=${{ matrix.execution }}
       - run: pytest -n 2 modin/test/pandas/dataframe/test_default.py --execution=${{ matrix.execution }}
       - run: pytest -n 2 modin/test/pandas/dataframe/test_indexing.py --execution=${{ matrix.execution }}
@@ -106,7 +106,7 @@ jobs:
       - name: Install HDF5
         run: sudo apt update && sudo apt install -y libhdf5-dev
       - run: pytest modin/test/storage_formats/omnisci/test_internals.py
-      - run: pytest modin/experimental/core/execution/native/implementations/omnisci_on_native/test/test_dataframe.py
+      - run: pytest modin/test/experimental/core/execution/native/implementations/omnisci_on_native/test_dataframe.py
       - run: pytest modin/test/pandas/test_io.py::TestCsv
       - uses: codecov/codecov-action@v2
 
@@ -140,10 +140,10 @@ jobs:
           conda list
       - name: Install HDF5
         run: sudo apt update && sudo apt install -y libhdf5-dev
-      - run: pytest -n 2 modin/experimental/xgboost/test/test_default.py
-      - run: pytest -n 2 modin/experimental/xgboost/test/test_xgboost.py
+      - run: pytest -n 2 modin/test/experimental/xgboost/test_default.py
+      - run: pytest -n 2 modin/test/experimental/xgboost/test_xgboost.py
         if: matrix.engine == 'ray'
-      - run: pytest -n 2 modin/experimental/xgboost/test/test_dmatrix.py
+      - run: pytest -n 2 modin/test/experimental/xgboost/test_dmatrix.py
         if: matrix.engine == 'ray'
       - run: pytest -n 2 modin/test/pandas/dataframe/test_binary.py
       - run: pytest -n 2 modin/test/pandas/dataframe/test_default.py
@@ -165,7 +165,7 @@ jobs:
       - run: python -m pytest -n 2 modin/test/pandas/test_reshape.py
       - run: python -m pytest -n 2 modin/test/pandas/test_general.py
       - run: python -m pytest modin/test/pandas/test_io.py
-      - run: python -m pytest modin/experimental/pandas/test/test_io_exp.py
+      - run: python -m pytest modin/test/experimental/pandas/test_io_exp.py
       - uses: codecov/codecov-action@v2
 
   test-windows:
@@ -280,4 +280,4 @@ jobs:
         run: |
           conda info
           conda list
-      - run: python -m pytest modin/experimental/spreadsheet/test/test_general.py
+      - run: python -m pytest modin/test/experimental/spreadsheet/test_general.py
