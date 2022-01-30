@@ -30,7 +30,7 @@ jobs:
       - run: sudo apt update && sudo apt install -y libhdf5-dev
       - name: Run Modin tests
         run: |
-          pytest modin/experimental/xgboost/test/test_default.py
+          pytest modin/test/experimental/xgboost/test_default.py
           pytest modin/test/pandas/dataframe/test_binary.py
           pytest modin/test/pandas/dataframe/test_default.py
           pytest modin/test/pandas/dataframe/test_indexing.py
@@ -47,7 +47,7 @@ jobs:
           pytest modin/test/pandas/test_reshape.py
           pytest modin/test/pandas/test_general.py
           pytest modin/test/pandas/test_io.py
-          pytest modin/experimental/pandas/test/test_io_exp.py
+          pytest modin/test/experimental/pandas/test_io_exp.py
 
   test-docs:
     runs-on: ubuntu-latest
