@@ -1881,7 +1881,7 @@ class PandasDataframe(object):
             self._partition_mgr_cls.apply_func_to_select_indices_along_full_axis(
                 axis,
                 self._partitions,
-                self._build_mapreduce_func(axis, func),
+                self._build_treereduce_func(axis, func),
                 dict_indices,
                 keep_remaining=keep_remaining,
             )
