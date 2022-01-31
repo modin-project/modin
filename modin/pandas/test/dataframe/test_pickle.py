@@ -39,6 +39,9 @@ def persistent(request):
     PersistentPickle.put(old)
 
 
+@pytest.mark.parametrize(
+    "modin_df", [pytest.param(modin_df), pytest.param(pd.DataFrame(), id="empty_df")]
+)
 def test_dataframe_pickle(modin_df, persistent):
     other = pickle.loads(pickle.dumps(modin_df))
     df_equals(modin_df, other)
