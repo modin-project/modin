@@ -13,7 +13,7 @@ git+https://github.com/modin-project/modin.git@master#egg=modin[all]
 sphinxcontrib_plantuml
 sphinx-issues
 xgboost
-# FIXME: redthedocs builds are failing when using a newer pip version.
+# FIXME: readthedocs builds are failing when using a newer pip version.
 # This temporal workaround should be removed after original issue resolved:
 # https://github.com/readthedocs/readthedocs.org/issues/8864
 pip==21.3.1
