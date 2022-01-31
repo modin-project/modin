@@ -3,6 +3,7 @@ on:
   pull_request:
     paths:
       - modin/**
+      - .github/**
 jobs:
   lint-commit:
     name: lint (commit)
